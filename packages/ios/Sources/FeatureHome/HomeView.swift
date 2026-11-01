@@ -40,6 +40,7 @@ struct HomeView: View {
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
+      .task(id: session.play.ledger) { await keepStreakCurrent() }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
@@ -64,6 +65,16 @@ struct HomeView: View {
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
         }
       #endif
+  }
+
+  /// Tells the pet the shared streak, and again each minute because a day rolling over ends it.
+  private func keepStreakCurrent() async {
+    while !Task.isCancelled {
+      let calendar = Calendar.current
+      let today = TreatDay.key(for: .now, calendar: calendar)
+      store.send(.pet(.streakChanged(session.play.streak(today: today, calendar: calendar))))
+      try? await Task.sleep(for: .seconds(60))
+    }
   }
 
   private var canvasPresented: Binding<Bool> {
@@ -128,12 +139,42 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .transition(.opacity)
       }
+      catNaming
+      latestReceived
       treatPanel
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
+    .calmAnimation(value: session.play.catName)
+  }
+
+  /// A way to answer the newest note the partner sent.
+  @ViewBuilder private var latestReceived: some View {
+    if let note = session.notes.first(where: { $0.direction == .received }) {
+      ListRow("Latest note", subtitle: "Send something back") {
+        EmptyView()
+      } trailing: {
+        ReactionBar(chosen: session.play.reactions[note.id]) { session.react(to: note, $0) }
+      }
+      .card()
+      .sensoryFeedback(.impact(flexibility: .soft), trigger: session.play.reactions[note.id])
+    }
+  }
+
+  /// The cat's name once the pair has one, or the prompt to choose it.
+  @ViewBuilder private var catNaming: some View {
+    if let name = session.play.catName {
+      Text(name)
+        .billetType(.heading)
+        .foregroundStyle(Palette.paper.color)
+        .accessibilityIdentifier("catNameLabel")
+        .transition(.opacity)
+    } else if session.hasConnected {
+      NamePanel { session.nameCat($0) }
+        .transition(.opacity)
+    }
   }
 
   /// The cat's middle third. A tap pets it on this phone and tells the partner's.
@@ -182,6 +223,10 @@ struct HomeView: View {
       HeartBurst(trigger: session.play.petsReceived, tint: Palette.light.color)
         .offset(x: Spacing.wide, y: -Spacing.wide)
       TreatDrop(trigger: session.treatFalling)
+      HeartBurst(
+        trigger: session.reactionsSeen,
+        tint: (session.lastReaction ?? .heart).tint.color,
+        symbol: (session.lastReaction ?? .heart).symbol)
     }
   }
 

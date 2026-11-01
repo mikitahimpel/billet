@@ -1,23 +1,25 @@
 import DesignSystem
 import SwiftUI
 
-/// A small heart that floats up and fades each time `trigger` changes.
+/// A small mark, a heart unless told otherwise, that floats up and fades each time `trigger` changes.
 ///
 /// A SwiftUI overlay, so it works over any scene.
 public struct HeartBurst: View {
   private let trigger: Int
   private let tint: Color
+  private let symbol: String
   @State private var hearts: [Int] = []
 
-  public init(trigger: Int, tint: Color = Palette.clayLit.color) {
+  public init(trigger: Int, tint: Color = Palette.clayLit.color, symbol: String = "heart.fill") {
     self.trigger = trigger
     self.tint = tint
+    self.symbol = symbol
   }
 
   public var body: some View {
     ZStack {
       ForEach(hearts, id: \.self) { id in
-        FloatingHeart(tint: tint, drift: CGFloat((id % 5) - 2) * Spacing.small)
+        FloatingHeart(tint: tint, symbol: symbol, drift: CGFloat((id % 5) - 2) * Spacing.small)
           .transition(.identity)
       }
     }
@@ -35,13 +37,14 @@ public struct HeartBurst: View {
 
 private struct FloatingHeart: View {
   let tint: Color
+  let symbol: String
   let drift: CGFloat
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var risen = false
 
   var body: some View {
-    Image(systemName: "heart.fill")
+    Image(systemName: symbol)
       .font(IconStyle.font)
       .scaleEffect(risen ? 1.4 : 1)
       .foregroundStyle(tint)

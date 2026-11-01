@@ -16,6 +16,7 @@ public struct SettingsView: View {
 
   private let code: String
   private let partnerStatus: String
+  private let catName: String?
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?
   private let onLogOut: () async -> String?
@@ -31,12 +32,14 @@ public struct SettingsView: View {
   public init(
     code: String,
     partnerStatus: String,
+    catName: String? = nil,
     scenes: [any PetScene],
     selectedSceneID: Binding<String?>,
     onLogOut: @escaping () async -> String?
   ) {
     self.code = code
     self.partnerStatus = partnerStatus
+    self.catName = catName
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
     self.onLogOut = onLogOut
@@ -68,7 +71,11 @@ public struct SettingsView: View {
   private var pair: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("Pair")
-      SettingsRow("Partner", value: partnerStatus).card()
+      SettingsGroup {
+        SettingsRow("Partner", value: partnerStatus)
+        ListDivider()
+        SettingsRow("Cat", value: catName ?? "Not named yet")
+      }
       PairCodeCard(code: code)
     }
   }

@@ -61,7 +61,7 @@ private struct RooftopView: View {
     .onChange(of: world.noteArrived, initial: true) { _, arrived in
       rive?.setNoteArrived(arrived)
     }
-    .task(id: world) {
+    .task(id: world.step) {
       await RooftopPetScene.pacing.play(world, onEvent: onEvent)
     }
   }

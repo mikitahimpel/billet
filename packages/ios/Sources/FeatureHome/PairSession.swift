@@ -1,5 +1,6 @@
 import BilletKit
 import Delivery
+import DesignSystem
 import FeatureInbox
 import Foundation
 import Observation
@@ -22,6 +23,9 @@ final class PairSession {
   private(set) var notes: [NoteRecord] = []
   private(set) var notesFailedToLoad = false
   private(set) var play: PairPlay
+  /// Counts up each time the partner reacts to a note this device sent, and holds that reaction.
+  private(set) var reactionsSeen = 0
+  private(set) var lastReaction: Reaction?
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
 
@@ -90,8 +94,17 @@ final class PairSession {
   }
 
   func send(_ strokes: [Stroke]) {
-    store.send(.drawingSent(strokes))
-    keep(strokes, .sent)
+    let id = UUID()
+    store.send(.drawingSent(strokes, id: id))
+    keep(strokes, .sent, id: id)
+  }
+
+  /// Reacts to a note the partner sent, here at once and then in the room. A note this device
+  /// sent itself cannot be reacted to.
+  func react(to note: NoteRecord, _ reaction: Reaction) {
+    guard note.direction == .received else { return }
+    play.reactionGiven(to: note.id, reaction)
+    Task { [delivery] in await delivery.react(note.id, reaction) }
   }
 
   /// Pets the cat here and tells the partner's phone.
@@ -99,6 +112,14 @@ final class PairSession {
     play.petGiven()
     let at = TreatDay.timestamp(for: now(), calendar: .current)
     Task { [delivery] in await delivery.play(.pet, at) }
+  }
+
+  /// Names the cat here at once and tells the room. If the partner named it first, the room's
+  /// name replaces this one.
+  func nameCat(_ raw: String) {
+    guard let name = CatName.clean(raw) else { return }
+    play.named(name)
+    Task { [delivery] in await delivery.nameCat(name) }
   }
 
   func giveTreat(on day: String) {
@@ -128,19 +149,31 @@ final class PairSession {
       case .connecting, .refused: break
       }
       status = newStatus
+      store.send(.pet(.partnerPresence(newStatus == .partnerHere)))
       onStatus?(newStatus)
-    case .note(let strokes):
+    case .note(let strokes, let id):
       store.send(.noteReceived(strokes))
-      keep(strokes, .received)
+      keep(strokes, .received, id: id)
+    case .reactions(let table):
+      let changed = play.reactionsReceived(table)
+      // Replayed ones arrive before the first room frame, and are shown without a flourish.
+      guard hasConnected else { return }
+      let mine = Set(notes.filter { $0.direction == .sent }.map(\.id))
+      if let (_, reaction) = changed.first(where: { mine.contains($0.key) }) {
+        lastReaction = reaction
+        reactionsSeen += 1
+      }
     case .partnerPetted:
       play.petReceived()
     case .treats(let days):
       applyTreat { $0.treatsReceived(days) }
+    case .catName(let name):
+      play.named(name)
     }
   }
 
-  private func keep(_ strokes: [Stroke], _ direction: NoteRecord.Direction) {
-    let note = NoteRecord(direction: direction, date: now(), strokes: strokes)
+  private func keep(_ strokes: [Stroke], _ direction: NoteRecord.Direction, id: UUID) {
+    let note = NoteRecord(id: id, direction: direction, date: now(), strokes: strokes)
     // Shown straight away: a failed save costs the note after a restart, not on screen.
     notes.insert(note, at: 0)
     let previous = lastSave

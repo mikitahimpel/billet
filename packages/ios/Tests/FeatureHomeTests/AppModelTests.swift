@@ -1,4 +1,5 @@
 import Delivery
+import DesignSystem
 import FeatureInbox
 import Foundation
 import Persistence
@@ -14,10 +15,20 @@ private final class FakeRoom {
   private(set) var closed = 0
   private(set) var opened = 0
   private(set) var delivered: [[Stroke]] = []
+  private(set) var deliveredIDs: [UUID] = []
+  private(set) var names: [String] = []
+  private(set) var reacted: [(UUID, Reaction)] = []
 
   var delivery: NoteDelivery {
     NoteDelivery(
-      deliver: { strokes in await MainActor.run { self.delivered.append(strokes) } },
+      deliver: { strokes, id in
+        await MainActor.run {
+          self.delivered.append(strokes)
+          self.deliveredIDs.append(id)
+        }
+      },
+      nameCat: { name in await MainActor.run { self.names.append(name) } },
+      react: { note, reaction in await MainActor.run { self.reacted.append((note, reaction)) } },
       updates: {
         AsyncStream { continuation in
           MainActor.assumeIsolated {
@@ -113,6 +124,84 @@ struct AppModelTests {
     #expect(isPaired(model))
   }
 
+  @Test func partnerPresenceReachesThePetWorld() async throws {
+    let (_, session) = try await paired()
+    #expect(session.store.state.pet.world.partnerHere)
+    await room.emit(.status(.partnerAway))
+    #expect(!session.store.state.pet.world.partnerHere)
+    await room.emit(.status(.connecting))
+    #expect(!session.store.state.pet.world.partnerHere)
+  }
+
+  @Test func theRoomsCatNameShowsAndAnEmptyOneIsNotSent() async throws {
+    let (_, session) = try await paired()
+    session.nameCat("   ")
+    #expect(session.play.catName == nil)
+    #expect(room.names.isEmpty)
+    session.nameCat(" Mochi ")
+    #expect(session.play.catName == "Mochi")
+    await room.emit(.catName("Biscuit"))
+    #expect(session.play.catName == "Biscuit")
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.names == ["Mochi"])
+  }
+
+  @Test func reactingToAReceivedNoteSendsItOnce() async throws {
+    let (_, session) = try await paired()
+    let id = UUID()
+    await room.emit(.note(strokes, id: id))
+    let received = try #require(session.notes.first)
+    #expect(received.id == id)
+    session.react(to: received, .heart)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.reacted.map(\.0) == [id])
+    #expect(room.reacted.map(\.1) == [.heart])
+    #expect(session.play.reactions[id] == .heart)
+  }
+
+  @Test func aSentNoteCannotBeReactedTo() async throws {
+    let (_, session) = try await paired()
+    session.send(strokes)
+    let sent = try #require(session.notes.first)
+    session.react(to: sent, .heart)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.reacted.isEmpty)
+    #expect(session.play.reactions.isEmpty)
+  }
+
+  @Test func theSentNoteKeepsTheIDTheRoomWasGiven() async throws {
+    let (_, session) = try await paired()
+    session.send(strokes)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.deliveredIDs == [try #require(session.notes.first).id])
+  }
+
+  @Test func aPartnerReactionToMyNoteAnimatesOnceAndReplaysDoNot() async throws {
+    let (_, session) = try await paired()
+    session.send(strokes)
+    let id = try #require(session.notes.first).id
+    await room.emit(.reactions([id: .stamp]))
+    #expect(session.reactionsSeen == 1)
+    #expect(session.lastReaction == .stamp)
+    await room.emit(.reactions([id: .stamp]))
+    #expect(session.reactionsSeen == 1)
+    await room.emit(.reactions([id: .heart, UUID(): .heart]))
+    #expect(session.reactionsSeen == 2)
+    #expect(session.lastReaction == .heart)
+  }
+
+  @Test func reactionsBeforeTheFirstRoomFrameShowWithoutAnimation() async throws {
+    let model = makeModel()
+    model.join(code: code)
+    let session = try #require(model.session)
+    let id = UUID()
+    session.send(strokes)
+    let sentID = try #require(session.notes.first).id
+    await room.emit(.reactions([sentID: .heart, id: .heart]))
+    #expect(session.play.reactions[sentID] == .heart)
+    #expect(session.reactionsSeen == 0)
+  }
+
   @Test func aFullRoomReturnsToPairingWithAClearError() async {
     let model = makeModel()
     model.join(code: code)
@@ -177,7 +266,7 @@ struct AppModelTests {
   @Test func sentAndReceivedNotesAreKept() async throws {
     let (_, session) = try await paired()
     session.send(strokes)
-    await room.emit(.note(strokes))
+    await room.emit(.note(strokes, id: UUID()))
     await session.savesFinished()
     #expect(session.notes.map(\.direction) == [.received, .sent])
     let stored = try await NoteArchive(storage: .directory(directory)).notes()
@@ -213,7 +302,7 @@ struct AppModelTests {
     let (model, session) = try await paired()
     let continuation = room.continuation
     _ = await model.logOut()
-    continuation?.yield(.note(strokes))
+    continuation?.yield(.note(strokes, id: UUID()))
     try await Task.sleep(for: .milliseconds(30))
     await session.savesFinished()
     #expect(session.notes.isEmpty)

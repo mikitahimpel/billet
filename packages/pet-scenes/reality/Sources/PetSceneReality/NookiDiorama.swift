@@ -49,6 +49,10 @@ final class NookiDiorama {
   private var noteIsOpen = false
   private var noteOpening: Float = 0
   private var bowlLevel: Float = 0
+  private let windowLight = Entity()
+  private var windowPane: ModelEntity?
+  /// Eased 0...1 towards the frame's light.
+  private var light: Float = 0
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
@@ -72,6 +76,10 @@ final class NookiDiorama {
   private static let yarnRadius: Float = 0.07
   private static let lookLimit: Float = 1
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
+  /// Extra turn towards the window when the partner is here.
+  private static let windowTurn: Float = -0.55
+  private static let windowCentre: SIMD3<Float> = [-0.28, 0.52, -0.59]
+  private static let lightPerSecond: Float = 1.5
 
   init() {
     root.addChild(room)
@@ -110,7 +118,9 @@ final class NookiDiorama {
   /// Shows `world` from the start of its step.
   func show(_ world: PetWorld) {
     guard world != self.world else { return }
+    let sameStep = world.step == self.world.step
     self.world = world
+    guard !sameStep else { return }
     stepStart = clock
     if world.noteArrived { noteIsOpen = false }
     apply(elapsed: 0, delta: 0)
@@ -243,7 +253,7 @@ final class NookiDiorama {
   private var isBusy: Bool {
     !camera.isAtRest || world.activity != .sleeping || petStart != nil || !wobbles.isEmpty
       || lookStart != nil || lookTurn != 0
-      || noteOpening != (noteIsOpen ? 1 : 0)
+      || noteOpening != (noteIsOpen ? 1 : 0) || light != (world.partnerHere ? 1 : 0)
   }
 
   private func apply(elapsed: Double, delta: Float) {
@@ -275,7 +285,9 @@ final class NookiDiorama {
     let drop = min(frame.walk / Self.bedDrop, 1)
     spot.y = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * drop
     mochi.position = spot + [0, 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight, 0]
-    mochi.orientation = simd_quatf(angle: frame.heading + lookTurn, axis: [0, 1, 0])
+    if frame.light != light { easeLight(to: frame.light, delta: delta) }
+    mochi.orientation = simd_quatf(
+      angle: frame.heading + lookTurn + Self.windowTurn * light, axis: [0, 1, 0])
   }
 
   private func applyFeatures(_ frame: NookiFrame) {
@@ -370,6 +382,15 @@ final class NookiDiorama {
     return snap || abs(goal - next) < 0.005 ? goal : next
   }
 
+  private func easeLight(to target: Float, delta: Float) {
+    let toward = target - light
+    let step = reduceMotion ? abs(toward) : Self.lightPerSecond * delta
+    light = abs(toward) <= step ? target : light + (toward < 0 ? -step : step)
+    windowLight.components.set(
+      PointLightComponent(color: Tone.glow.color, intensity: 900 * light, attenuationRadius: 1.2))
+    windowPane?.model?.materials = [Self.glass(light: light)]
+  }
+
   // MARK: - Room
 
   private func buildRoom() {
@@ -381,6 +402,7 @@ final class NookiDiorama {
     box([0.76, 0.006, 0.006], .ink, at: [-0.08, 0.6, -0.59])
     streakMarks.position = [0.2, 0.72, -0.597]
     room.addChild(streakMarks)
+    buildWindow()
   }
 
   private func buildBowl() {
@@ -410,6 +432,27 @@ final class NookiDiorama {
       mark.position = [Float(day % 7) * 0.02, -Float(day / 7) * 0.04, 0]
       streakMarks.addChild(mark)
     }
+  }
+
+  /// A small window on the back wall. Its pane glows and a light spills into the room while the
+  /// partner is here.
+  private func buildWindow() {
+    box([0.25, 0.3, 0.014], .walnut, at: Self.windowCentre + [0, 0, 0.004])
+    let pane = ModelEntity(
+      mesh: .generateBox(width: 0.21, height: 0.26, depth: 0.004),
+      materials: [Self.glass(light: 0)])
+    pane.position = Self.windowCentre + [0, 0, 0.013]
+    root.addChild(pane)
+    windowPane = pane
+    windowLight.position = Self.windowCentre + [0, 0, 0.25]
+    root.addChild(windowLight)
+  }
+
+  private static func glass(light: Float) -> PhysicallyBasedMaterial {
+    var material = clay(.night)
+    material.emissiveColor = .init(color: Tone.glow.color)
+    material.emissiveIntensity = 2.5 * light
+    return material
   }
 
   private func buildNote() {
@@ -635,7 +678,7 @@ final class NookiDiorama {
 }
 
 private enum Tone {
-  case honey, plaster, walnut, ink, paper, heart, lamp, evening, ceiling, bounce
+  case honey, plaster, walnut, ink, paper, heart, lamp, evening, ceiling, bounce, night, glow
 
   private var rgb: (CGFloat, CGFloat, CGFloat) {
     switch self {
@@ -649,6 +692,8 @@ private enum Tone {
     case .evening: (1, 0.66, 0.42)
     case .ceiling: (1, 0.84, 0.66)
     case .bounce: (0.5, 0.34, 0.28)
+    case .night: (0.12, 0.16, 0.26)
+    case .glow: (1, 0.82, 0.5)
     }
   }
 

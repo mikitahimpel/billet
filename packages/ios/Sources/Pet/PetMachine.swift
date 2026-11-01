@@ -26,10 +26,22 @@ public enum PetMachine: Machine {
     case noteArrived
     case deliveryFinished(delivery: Int)
     case settled(delivery: Int)
+    case partnerPresence(Bool)
+    case streakChanged(Int)
   }
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     var next = state
+    switch event {
+    case .partnerPresence(let here):
+      next.world.partnerHere = here
+      return (next, [])
+    case .streakChanged(let days):
+      next.world.streak = max(0, days)
+      return (next, [])
+    case .noteArrived, .deliveryFinished, .settled:
+      break
+    }
     switch (state.world.activity, event) {
     case (.sleeping, .noteArrived):
       return startDelivery(next)
@@ -53,7 +65,7 @@ public enum PetMachine: Machine {
 
     case (.sleeping, .deliveryFinished), (.delivering, .deliveryFinished),
       (.settling, .deliveryFinished), (.sleeping, .settled), (.delivering, .settled),
-      (.settling, .settled):
+      (.settling, .settled), (_, .partnerPresence), (_, .streakChanged):
       return (next, [])
     }
   }

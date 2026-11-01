@@ -77,4 +77,38 @@ struct PetMachineTests {
     ])
     #expect(PetMachine.transition(settlingSecond, .settled(delivery: 1)).0 == settlingSecond)
   }
+
+  @Test func partnerPresenceLightsTheWindowWithoutTouchingTheDelivery() {
+    let delivering = apply([.noteArrived])
+    let (here, outputs) = PetMachine.transition(delivering, .partnerPresence(true))
+    #expect(here.world.partnerHere)
+    #expect(here.world.step == delivering.world.step)
+    #expect(outputs.isEmpty)
+    #expect(!PetMachine.transition(here, .partnerPresence(false)).0.world.partnerHere)
+  }
+
+  @Test func partnerStaysHereAcrossDeliverySteps() {
+    let state = apply([
+      .partnerPresence(true), .noteArrived, .deliveryFinished(delivery: 1), .settled(delivery: 1),
+    ])
+    #expect(state.world.partnerHere)
+    #expect(state.world.activity == .sleeping)
+  }
+
+  @Test func streakIsKeptThroughDeliveriesAndNeverNegative() {
+    let state = apply([
+      .streakChanged(4), .noteArrived, .deliveryFinished(delivery: 1), .settled(delivery: 1),
+    ])
+    #expect(state.world.streak == 4)
+    #expect(apply([.streakChanged(-2)]).world.streak == 0)
+    let (same, outputs) = PetMachine.transition(state, .streakChanged(4))
+    #expect(same == state)
+    #expect(outputs.isEmpty)
+  }
+
+  @Test func streakDoesNotChangeTheStep() {
+    let delivering = apply([.noteArrived])
+    #expect(
+      PetMachine.transition(delivering, .streakChanged(9)).0.world.step == delivering.world.step)
+  }
 }

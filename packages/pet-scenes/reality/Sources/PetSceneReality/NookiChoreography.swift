@@ -23,6 +23,9 @@ struct NookiFrame: Equatable {
   var stretch: Float = 0
   /// Which way Mochi faces, as a yaw in radians.
   var heading: Float = NookiChoreography.restHeading
+  /// How much of the window's light the room shows, and how far Mochi has turned to it: 0 or 1.
+  /// The diorama eases towards it, so a change does not jump.
+  var light: Float = 0
 }
 
 /// The animation of each step, as a pure function of time.
@@ -57,6 +60,14 @@ enum NookiChoreography {
   ]
 
   static func frame(_ world: PetWorld, elapsed: Double, reduceMotion: Bool = false) -> NookiFrame {
+    var frame = stepFrame(world, elapsed: elapsed, reduceMotion: reduceMotion)
+    frame.light = world.partnerHere ? 1 : 0
+    return frame
+  }
+
+  private static func stepFrame(
+    _ world: PetWorld, elapsed: Double, reduceMotion: Bool
+  ) -> NookiFrame {
     switch world.activity {
     case .sleeping:
       let hung: Float = world.delivery > 0 ? 1 : 0

@@ -48,7 +48,7 @@ struct NookiView: View {
     .onChange(of: world, initial: true) { _, world in
       diorama.show(world)
     }
-    .task(id: world) {
+    .task(id: world.step) {
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
   }

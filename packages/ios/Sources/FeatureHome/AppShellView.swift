@@ -38,13 +38,18 @@ struct AppShellView: View {
         .tabEntrance(destination == .home)
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
-        NotesView(notes: session.notes, loadFailed: session.notesFailedToLoad)
-          .tabEntrance(destination == .notes)
+        NotesView(
+          notes: session.notes, loadFailed: session.notesFailedToLoad,
+          reactions: session.play.reactions,
+          onReact: { session.react(to: $0, $1) }
+        )
+        .tabEntrance(destination == .notes)
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
         SettingsView(
           code: session.room.code,
           partnerStatus: line.text,
+          catName: session.play.catName,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
           onLogOut: onLogOut
