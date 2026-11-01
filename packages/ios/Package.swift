@@ -44,6 +44,7 @@ let homeTarget: Target = .target(
   dependencies: [
     "BilletKit",
     "FeatureCanvas",
+    "Ink",
     "Wire",
     .product(name: "RiveRuntime", package: "rive-ios"),
   ],

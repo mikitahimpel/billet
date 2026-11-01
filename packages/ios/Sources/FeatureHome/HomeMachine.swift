@@ -24,14 +24,32 @@ public enum HomeMachine: Machine {
     public var cat: Cat
     /// Notes that arrived while the cat was busy, played one at a time.
     public var waitingNotes: Int
+    /// Drawings not yet carried in, oldest first.
+    public var inbox: [[Stroke]]
+    /// The drawing the cat is hanging, or hung last.
+    public var hungDrawing: [Stroke]?
 
-    public init(screen: Screen = .home, cat: Cat = .sleeping, waitingNotes: Int = 0) {
+    public init(
+      screen: Screen = .home,
+      cat: Cat = .sleeping,
+      waitingNotes: Int = 0,
+      inbox: [[Stroke]] = [],
+      hungDrawing: [Stroke]? = nil
+    ) {
       self.screen = screen
       self.cat = cat
       self.waitingNotes = waitingNotes
+      self.inbox = inbox
+      self.hungDrawing = hungDrawing
     }
 
     public var noteArrived: Bool { cat == .delivering }
+
+    fileprivate mutating func takeNextDrawing() {
+      if !inbox.isEmpty {
+        hungDrawing = inbox.removeFirst()
+      }
+    }
   }
 
   public enum Output: Hashable, Sendable {
@@ -44,6 +62,7 @@ public enum HomeMachine: Machine {
     case canvasOpened
     case canvasClosed
     case drawingSent([Stroke])
+    case noteReceived([Stroke])
     case noteArrived
     case deliveryPlayed
     case settlingPlayed
@@ -66,8 +85,13 @@ public enum HomeMachine: Machine {
       next.screen = .home
       return (next, [.deliver(strokes)])
 
+    case (_, .noteReceived(let strokes)):
+      next.inbox.append(strokes)
+      return transition(next, .noteArrived)
+
     case (.sleeping, .noteArrived):
       next.cat = .delivering
+      next.takeNextDrawing()
       return (next, [.holdDelivery])
 
     case (.delivering, .noteArrived), (.settling, .noteArrived):
@@ -81,6 +105,7 @@ public enum HomeMachine: Machine {
     case (.settling, .settlingPlayed) where state.waitingNotes > 0:
       next.waitingNotes -= 1
       next.cat = .delivering
+      next.takeNextDrawing()
       return (next, [.holdDelivery])
 
     case (.settling, .settlingPlayed):

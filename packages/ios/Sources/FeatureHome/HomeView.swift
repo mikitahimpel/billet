@@ -1,18 +1,30 @@
 import BilletKit
+import CoreGraphics
 import FeatureCanvas
 import SwiftUI
 
 /// The main screen: the Little House with its cat, and the way into the canvas.
 public struct HomeView: View {
+  @Environment(\.scenePhase) private var scenePhase
   @State private var store: Store<HomeMachine>
+  @State private var delivery: NoteDelivery
   @State private var scene = LittleHouseScene()
+  @State private var status = NoteDelivery.Status.connecting
+  @State private var hungImage: CGImage?
+  @State private var hangCount = 0
 
-  public init(delivery: NoteDelivery = .localFake) {
+  private let code: String
+  private let onChangeCode: () -> Void
+
+  public init(delivery: NoteDelivery, code: String, onChangeCode: @escaping () -> Void) {
+    _delivery = State(initialValue: delivery)
     _store = State(
       initialValue: Store(
         initial: HomeMachine.State(),
         run: { await HomeRunner.run($0, delivery: delivery) }
       ))
+    self.code = code
+    self.onChangeCode = onChangeCode
   }
 
   public var body: some View {
@@ -31,6 +43,23 @@ public struct HomeView: View {
     .onChange(of: store.state.noteArrived) { _, arrived in
       scene?.setNoteArrived(arrived)
     }
+    .task(id: scenePhase == .active) {
+      guard scenePhase == .active else { return }
+      for await update in delivery.updates() {
+        switch update {
+        case .status(let newStatus): status = newStatus
+        case .note(let strokes): store.send(.noteReceived(strokes))
+        }
+      }
+    }
+    .task(id: store.state.noteArrived) {
+      guard store.state.noteArrived else { return }
+      hungImage = nil
+      try? await Task.sleep(for: HungNote.revealDelay)
+      guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
+      hungImage = HungNote.image(of: drawing)
+      hangCount += 1
+    }
   }
 
   private var house: some View {
@@ -43,6 +72,12 @@ public struct HomeView: View {
       if let scene {
         scene.view
           .accessibilityLabel("Little House with the cat")
+          .overlay {
+            if let hungImage {
+              HungNote(drawing: hungImage)
+                .id(hangCount)
+            }
+          }
       }
       Button("Draw a note") { store.send(.canvasOpened) }
         .buttonStyle(.borderedProminent)
@@ -50,7 +85,31 @@ public struct HomeView: View {
         .tint(Self.door)
         .padding(.bottom, 24)
     }
+    .overlay(alignment: .top) { roomStatus }
     .accessibilityHidden(store.state.screen == .canvas)
+  }
+
+  private var roomStatus: some View {
+    VStack(spacing: 8) {
+      Text(statusText)
+        .font(.footnote.monospaced())
+        .foregroundStyle(.white)
+      if status != .partnerHere {
+        Button("Change code", action: onChangeCode)
+          .font(.footnote)
+          .tint(.white)
+      }
+    }
+    .padding(.top, 8)
+  }
+
+  private var statusText: String {
+    switch status {
+    case .connecting: "Connecting…"
+    case .partnerAway: "Waiting for partner · \(code)"
+    case .partnerHere: "Partner here"
+    case .refused: "This room is full"
+    }
   }
 
   // The artboard's top and bottom edge colours, so the art runs on into the taller screen.

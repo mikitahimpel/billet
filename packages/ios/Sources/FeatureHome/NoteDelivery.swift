@@ -1,17 +1,49 @@
+import Foundation
 import Wire
 
-/// Hands a finished drawing to whoever receives notes, and returns when it has arrived.
-///
-/// Real delivery replaces ``NoteDelivery/localFake``: encode the strokes, send them through the
-/// outbox, and let `HomeMachine.Event.noteArrived` come from an incoming note instead.
+/// Sends finished drawings to the partner and reports what arrives from them.
 public struct NoteDelivery: Sendable {
-  public var deliver: @Sendable ([Stroke]) async -> Void
-
-  public init(deliver: @escaping @Sendable ([Stroke]) async -> Void) {
-    self.deliver = deliver
+  public enum Status: Hashable, Sendable {
+    case connecting
+    case partnerAway
+    case partnerHere
+    /// The room turned this device away, so reconnecting cannot help.
+    case refused
   }
 
-  /// FAKE. Nothing leaves the device and the drawing is dropped: the sender's own cat plays the
-  /// delivery straight away, with no backend, pairing or partner involved.
+  public enum Update: Hashable, Sendable {
+    case status(Status)
+    case note([Stroke])
+  }
+
+  public var deliver: @Sendable ([Stroke]) async -> Void
+  /// Holds the connection open for as long as the stream is being read.
+  public var updates: @Sendable () -> AsyncStream<Update>
+
+  public init(
+    deliver: @escaping @Sendable ([Stroke]) async -> Void,
+    updates: @escaping @Sendable () -> AsyncStream<Update> = { AsyncStream { $0.finish() } }
+  ) {
+    self.deliver = deliver
+    self.updates = updates
+  }
+
+  /// Delivery through the room socket at `url`, while the app is open.
+  public static func live(url: URL) -> NoteDelivery {
+    let socket = LiveDelivery(url: url)
+    return NoteDelivery(
+      deliver: { await socket.send($0) },
+      updates: {
+        AsyncStream { continuation in
+          let connection = Task {
+            await socket.run(continuation)
+            continuation.finish()
+          }
+          continuation.onTermination = { _ in connection.cancel() }
+        }
+      })
+  }
+
+  /// FAKE. Nothing leaves the device and nothing arrives. For tests.
   public static let localFake = NoteDelivery { _ in }
 }

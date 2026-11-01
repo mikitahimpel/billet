@@ -13,7 +13,7 @@ enum HomeRunner {
     switch output {
     case .deliver(let strokes):
       await delivery.deliver(strokes)
-      return .noteArrived
+      return nil
     case .holdDelivery:
       await sleep(deliveryHold)
       return .deliveryPlayed
