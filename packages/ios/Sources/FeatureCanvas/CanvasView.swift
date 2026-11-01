@@ -61,6 +61,7 @@ public struct CanvasView: View {
             Circle()
               .fill(color.color)
               .frame(width: 32, height: 32)
+              .overlay(Circle().stroke(Color.secondary, lineWidth: 1))
               .overlay(
                 Circle().stroke(Color.primary, lineWidth: store.state.color == color ? 3 : 0)
               )
