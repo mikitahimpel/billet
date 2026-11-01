@@ -8,10 +8,55 @@ public struct PrimaryButtonStyle: ButtonStyle {
     configuration.label
       .billetType(.heading)
       .foregroundStyle(Palette.ink.color)
-      .frame(maxWidth: .infinity, minHeight: 68)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .frame(maxWidth: .infinity, minHeight: Target.primary)
       .background(Palette.gold.color, in: .rect(cornerRadius: Radius.control))
+      .lampGlow()
       .opacity(configuration.isPressed ? 0.85 : 1)
-      .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+      .scaleEffect(configuration.isPressed ? 0.985 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
+  }
+}
+
+/// The quieter action beside a primary one: a lit panel with cream text.
+public struct SecondaryButtonStyle: ButtonStyle {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .billetType(.body)
+      .foregroundStyle(Palette.paper.color)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .frame(maxWidth: .infinity, minHeight: Target.minimum)
+      .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
+      .overlay {
+        RoundedRectangle(cornerRadius: Radius.control)
+          .strokeBorder(Palette.lightWarm.color.opacity(Glow.edgeOpacity), lineWidth: 1)
+      }
+      .contentShape(.rect(cornerRadius: Radius.control))
+      .opacity(configuration.isPressed ? 0.75 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
+  }
+}
+
+/// A small action that sits inside a row or a bar: text on the upper rung, at least 44pt tall.
+public struct InlineButtonStyle: ButtonStyle {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .billetType(.label)
+      .foregroundStyle(Palette.paper.color)
+      .padding(.horizontal, Spacing.medium)
+      .frame(minHeight: Target.minimum)
+      .background(Palette.raisedTop.color, in: .rect(cornerRadius: Radius.control))
+      .contentShape(.rect(cornerRadius: Radius.control))
+      .opacity(configuration.isPressed ? 0.75 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
   }
 }
 

@@ -18,10 +18,14 @@ public struct PairCodeCard: View {
     VStack(spacing: Spacing.medium) {
       Text(verbatim: code)
         .font(.custom(BilletFonts.monoFamily, size: 28, relativeTo: .title))
-        .foregroundStyle(Palette.paper.color)
+        .foregroundStyle(Palette.gold.color)
         .minimumScaleFactor(0.5)
         .lineLimit(1)
         .textSelection(.enabled)
+        .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
+        .frame(maxWidth: .infinity)
+        .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
         .accessibilityLabel(code.map(String.init).joined(separator: " "))
         .accessibilityIdentifier("pairCode")
       ViewThatFits(in: .horizontal) {
@@ -31,7 +35,7 @@ public struct PairCodeCard: View {
     }
     .padding(Spacing.medium)
     .frame(maxWidth: .infinity)
-    .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
+    .litPanel()
   }
 
   @ViewBuilder private var actions: some View {
