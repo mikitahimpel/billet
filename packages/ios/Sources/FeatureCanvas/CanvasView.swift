@@ -4,7 +4,7 @@ import Ink
 import SwiftUI
 import Wire
 
-/// A sheet of warm paper under the lamp, with the tools floating in glass along its lower edge.
+/// A sheet of warm paper under the lamp, with the tools in glass on their own row below it.
 public struct CanvasView: View {
   @State private var store = Store<CanvasMachine>(
     initial: CanvasMachine.State(), run: CanvasMachine.run)
@@ -29,18 +29,8 @@ public struct CanvasView: View {
         IconButton("xmark", label: "Close", action: onClose)
         Spacer()
       }
-      ZStack(alignment: .bottom) {
-        sheet
-          .padding(.bottom, Target.minimum / 2 + Spacing.small)
-        VStack(spacing: Spacing.small) {
-          if choosingInk {
-            inks
-              .transition(.opacity.combined(with: .move(edge: .bottom)))
-          }
-          toolbar
-        }
-        .padding(.horizontal, Spacing.small)
-      }
+      sheet
+      tools
       BilletButton("Send", rank: .primary, action: send)
         .disabled(store.state.drawing.isEmpty || sending)
     }
@@ -57,6 +47,7 @@ public struct CanvasView: View {
   private var sheet: some View {
     GeometryReader { geometry in
       let width = max(geometry.size.width, 1)
+      let height = max(geometry.size.height, 1)
       ZStack {
         CanvasPaper()
         StrokeLayer(strokes: lifted)
@@ -67,7 +58,10 @@ public struct CanvasView: View {
           .gesture(
             DragGesture(minimumDistance: 0)
               .onChanged { value in
-                let point = Point(x: value.location.x / width, y: value.location.y / width)
+                // A drag that runs off the paper stays on its edge, so no ink lands under the tools.
+                let point = Point(
+                  x: min(max(value.location.x, 0), width) / width,
+                  y: min(max(value.location.y, 0), height) / width)
                 store.send(
                   store.state.inProgress == nil ? .strokeBegan(point) : .strokeMoved(point))
               }
@@ -84,6 +78,18 @@ public struct CanvasView: View {
       .offset(y: sending && !reduceMotion ? -geometry.size.height * 1.2 : 0)
       .opacity(sending ? 0 : 1)
       .animation(.easeIn(duration: Self.sendDuration), value: sending)
+    }
+  }
+
+  /// The inks take the toolbar's place, so the row never covers the paper. Picking one puts the
+  /// toolbar back, including the ink already in use.
+  @ViewBuilder private var tools: some View {
+    if choosingInk {
+      inks
+        .transition(.opacity)
+    } else {
+      toolbar
+        .transition(.opacity)
     }
   }
 
