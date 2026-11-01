@@ -9,6 +9,7 @@ import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures, type RouteFailure } from "@billet/backend-auth/auth-routes";
 import { MediaKey } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { routes } from "@billet/contracts-http-api/routes";
 import {
   ListNotesResponse,
   SendNoteRequest,
@@ -71,8 +72,8 @@ export const NotesRoutes = HttpRouter.use((router) =>
     const principal = principalOf(yield* AuthService);
 
     yield* router.add(
-      "POST",
-      "/v1/media",
+      routes.uploadImage.method,
+      routes.uploadImage.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const request = yield* HttpServerRequest.HttpServerRequest;
@@ -86,8 +87,8 @@ export const NotesRoutes = HttpRouter.use((router) =>
 
     // A key has slashes in it, so it is the rest of the path.
     yield* router.add(
-      "GET",
-      "/v1/media/*",
+      routes.downloadImage.method,
+      routes.downloadImage.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const params = yield* HttpRouter.params;
@@ -101,8 +102,8 @@ export const NotesRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
-      "POST",
-      "/v1/notes",
+      routes.sendNote.method,
+      routes.sendNote.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const request = yield* HttpServerRequest.schemaBodyJson(SendNoteRequest).pipe(
@@ -116,8 +117,8 @@ export const NotesRoutes = HttpRouter.use((router) =>
     // `after` is the last `seq` the client holds. Sequences have no gaps, so the next page starts
     // at `after` plus the number of notes returned.
     yield* router.add(
-      "GET",
-      "/v1/notes",
+      routes.listNotes.method,
+      routes.listNotes.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const { after = 0, limit = historyPageLimit } =

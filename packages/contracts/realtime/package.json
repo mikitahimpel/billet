@@ -6,7 +6,8 @@
   "sideEffects": false,
   "exports": {
     "./client-message": "./src/client-message.ts",
-    "./server-message": "./src/server-message.ts"
+    "./server-message": "./src/server-message.ts",
+    "./socket-route": "./src/socket-route.ts"
   },
   "scripts": {
     "lint": "oxlint .",

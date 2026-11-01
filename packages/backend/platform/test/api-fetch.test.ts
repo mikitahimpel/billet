@@ -9,6 +9,7 @@ import {
   appleIssuer,
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
+import { mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
@@ -494,5 +495,21 @@ describe("notes", () => {
       image,
       compact: { strokes: [{ points: [10, 20, 30, 40] }] },
     });
+  });
+});
+
+describe("routes from the contracts", () => {
+  const send = (method: string, path: string) =>
+    exports.default.fetch(new Request(`https://billet.test${path}`, { method }));
+  const concrete = (path: string) => (path.endsWith("*") ? mediaPath("pairs/p/notes/n.png") : path);
+
+  it.each(Object.entries(routes))("%s is served at its method and path", async (_, route) => {
+    // Whatever the answer is, it is not "no such route".
+    expect((await send(route.method, concrete(route.path))).status).not.toBe(404);
+  });
+
+  it.each(Object.entries(routes))("%s is is not served under another path", async (_, route) => {
+    const moved = concrete(route.path).replace("/v1/", "/v1/moved/");
+    expect((await send(route.method, moved)).status).toBe(404);
   });
 });

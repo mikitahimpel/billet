@@ -9,7 +9,8 @@
     "./auth": "./src/auth.ts",
     "./device": "./src/device.ts",
     "./invite": "./src/invite.ts",
-    "./note": "./src/note.ts"
+    "./note": "./src/note.ts",
+    "./routes": "./src/routes.ts"
   },
   "scripts": {
     "lint": "oxlint .",
