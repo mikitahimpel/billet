@@ -5,3 +5,7 @@ import Testing
 @Test func nameIsBillet() {
   #expect(BilletInfo.name == "billet")
 }
+
+@Test func throwawayFailure() {
+  #expect(1 == 2)
+}
