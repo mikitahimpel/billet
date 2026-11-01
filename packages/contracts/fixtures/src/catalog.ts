@@ -1,10 +1,20 @@
 import { Schema } from "effect";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
-import { InviteCode, MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { DeviceId, InviteCode, MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { PushToken } from "@billet/contracts-domain/push-token";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import {
+  AuthChallengeResponse,
+  AuthNonce,
+  IdentityToken,
+  SessionResponse,
+  SessionToken,
+  SignInWithAppleRequest,
+} from "@billet/contracts-http-api/auth";
+import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import {
   ClaimInviteRequest,
   ClaimInviteResponse,
@@ -46,6 +56,13 @@ const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
 const code = Schema.decodeUnknownSync(InviteCode)("INVITE-1");
+
+const deviceId = Schema.decodeUnknownSync(DeviceId)("device-1");
+// Sample shapes only: none of these was ever a real credential.
+const nonce = Schema.decodeUnknownSync(AuthNonce)("nonce-sample-".padEnd(43, "0"));
+const sessionToken = Schema.decodeUnknownSync(SessionToken)("session-sample-".padEnd(43, "0"));
+const identityToken = Schema.decodeUnknownSync(IdentityToken)("header.payload.signature");
+const pushToken = Schema.decodeUnknownSync(PushToken)("ab".repeat(32));
 
 const stroke: Stroke = Stroke.make({
   color: "#B8485F",
@@ -89,8 +106,21 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
   fixture("ListNotesResponse", ListNotesResponse, { default: { notes: [drawing, photo] } }),
+  fixture("AuthChallengeResponse", AuthChallengeResponse, {
+    default: { nonce, expiresAt: 1_700_000_300_000 },
+  }),
+  fixture("SignInWithAppleRequest", SignInWithAppleRequest, { default: { identityToken } }),
+  fixture("SessionResponse", SessionResponse, {
+    default: { sessionToken, expiresAt: 1_707_776_000_000, userId: alice, deviceId },
+  }),
+  fixture("RegisterPushTokenRequest", RegisterPushTokenRequest, {
+    alert: { kind: "alert", environment: "production", token: pushToken },
+    widget: { kind: "widget", environment: "sandbox", token: pushToken },
+  }),
   fixture("ApiError", ApiError, {
     unauthorized: ApiError.cases.Unauthorized.make({}),
+    "invalid-request": ApiError.cases.InvalidRequest.make({}),
+    unavailable: ApiError.cases.Unavailable.make({}),
     "not-found": ApiError.cases.NotFound.make({}),
     "invalid-invite": ApiError.cases.InvalidInvite.make({}),
     "already-paired": ApiError.cases.AlreadyPaired.make({}),

@@ -9,7 +9,8 @@
     "./ids": "./src/ids.ts",
     "./ink": "./src/ink.ts",
     "./note": "./src/note.ts",
-    "./delivery-lane": "./src/delivery-lane.ts"
+    "./delivery-lane": "./src/delivery-lane.ts",
+    "./push-token": "./src/push-token.ts"
   },
   "scripts": {
     "lint": "oxlint .",
