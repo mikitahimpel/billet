@@ -32,6 +32,7 @@ public struct ButtonLabel: View {
         .multilineTextAlignment(.center)
     }
     .foregroundStyle(isEnabled ? rank.textColor : Palette.muted.color)
+    .padding(.horizontal, Spacing.medium)
     .frame(maxWidth: .infinity, minHeight: Target.row)
     .contentShape(.capsule)
   }
