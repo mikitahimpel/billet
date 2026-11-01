@@ -38,7 +38,8 @@ import Wire
       events.append(event)
       if events.count == 3 { break }
     }
-    #expect(events == [
+    #expect(
+      events == [
         .opened(attempt: 1), .received(attempt: 1, .presence(.drawing)), .dropped(attempt: 1),
       ])
   }

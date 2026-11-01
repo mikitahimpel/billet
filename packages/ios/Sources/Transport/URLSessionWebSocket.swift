@@ -62,7 +62,8 @@ extension WebSocketConnection {
 
 extension URLSessionWebSocketTask {
   fileprivate func ping() async throws {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+    try await withCheckedThrowingContinuation {
+      (continuation: CheckedContinuation<Void, any Error>) in
       sendPing { error in
         if let error {
           continuation.resume(throwing: error)
