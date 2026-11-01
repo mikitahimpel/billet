@@ -9,6 +9,7 @@ import {
   appleIssuer,
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
+import { limits } from "../src/rate-limit.ts";
 import { mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
@@ -511,6 +512,22 @@ describe("routes from the contracts", () => {
   it.each(Object.entries(routes))("%s is is not served under another path", async (_, route) => {
     const moved = concrete(route.path).replace("/v1/", "/v1/moved/");
     expect((await send(route.method, moved)).status).toBe(404);
+  });
+});
+
+describe("rate limits in the Worker", () => {
+  const challengeFrom = () =>
+    exports.default.fetch(
+      new Request("https://billet.test/v1/auth/challenge", {
+        method: "POST",
+        headers: { "cf-connecting-ip": "203.0.113.50" },
+      }),
+    );
+
+  it("answers 429 past the limit on a limited route, and not on others", async () => {
+    for (let i = 0; i < limits.auth; i++) expect((await challengeFrom()).status).toBe(200);
+    expect((await challengeFrom()).status).toBe(429);
+    expect((await call("/v1/notes")).status).not.toBe(429);
   });
 });
 

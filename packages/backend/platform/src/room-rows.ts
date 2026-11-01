@@ -18,3 +18,12 @@ export const StoredNote = Schema.Struct({ seq: Schema.Int, body: Schema.String }
 
 /** A row with every column shape a table can have, for tests that check the check. */
 export const SampleRow = Schema.Struct({ id: Schema.String, createdAt: EpochMillis });
+
+/** What a `delivery` row holds. */
+export const StoredDelivery = Schema.Struct({
+  noteId: Schema.String,
+  lane: Schema.String,
+  status: Schema.String,
+  attempts: Schema.Int,
+  nextAttemptAt: Schema.Int,
+});

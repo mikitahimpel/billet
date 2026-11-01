@@ -20,9 +20,9 @@ import {
   users,
 } from "../src/directory-schema.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
-import { SampleRow, StoredNote, StoredRoom } from "../src/room-rows.ts";
+import { SampleRow, StoredDelivery, StoredNote, StoredRoom } from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { note, room } from "../src/room-schema.ts";
+import { delivery, note, room } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
@@ -36,6 +36,7 @@ const checked = [
   ["pair_members", pairMembers, StoredPairMember],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
+  ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["room", room, StoredRoom],
   ["sessions", sessions, StoredSession],

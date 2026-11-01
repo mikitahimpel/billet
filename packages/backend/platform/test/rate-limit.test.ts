@@ -1,4 +1,4 @@
-import { env, exports } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { groupOf, limitRequest, limits, windowMillis } from "../src/rate-limit.ts";
 import { resetDirectory } from "./directory-migrations.ts";
@@ -74,13 +74,5 @@ describe("limitRequest", () => {
     ).toBeUndefined();
     expect(warn).toHaveBeenCalledWith("rate limit counter unavailable");
     warn.mockRestore();
-  });
-
-  it("is applied by the Worker to the limited routes only", async () => {
-    await spend("/v1/auth/challenge", limits.auth);
-    const refused = await exports.default.fetch(post("/v1/auth/challenge"));
-    expect(refused.status).toBe(429);
-    const other = await exports.default.fetch(post("/v1/notes"));
-    expect(other.status).not.toBe(429);
   });
 });

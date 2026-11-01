@@ -39,7 +39,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(2);
+      expect(history(state.storage)).toHaveLength(3);
     });
   });
 
@@ -155,8 +155,8 @@ describe("room migrations", () => {
         ],
       });
       expect(notes).toEqual([{ seq: 1, note: photo }]);
-      expect(userTables(state.storage).toSorted()).toEqual(["note", "room"]);
-      expect(history(state.storage)).toHaveLength(2);
+      expect(userTables(state.storage).toSorted()).toEqual(["delivery", "note", "room"]);
+      expect(history(state.storage)).toHaveLength(3);
     });
   });
 });

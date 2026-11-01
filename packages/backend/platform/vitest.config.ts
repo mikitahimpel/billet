@@ -29,6 +29,7 @@ export default defineConfig({
               durableObjects: {
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },
+                LANE_ROOM: { className: "LaneRoom", useSQLite: true },
                 LEGACY_ROOM: { className: "LegacyRoom", useSQLite: true },
                 BROKEN_ROOM: { className: "BrokenRoom", useSQLite: true },
               },

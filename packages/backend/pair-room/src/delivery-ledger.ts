@@ -1,0 +1,72 @@
+/**
+ * Which note has been handed to which delivery lane, and how far it got. Pure: the Durable Object
+ * persists the entries and fires the alarm; this module only decides. A lane here is the name of a
+ * `DeliveryLane` case: the order between lanes is not this module's business.
+ */
+export type DeliveryStatus = "pending" | "delivered" | "abandoned";
+
+export interface DeliveryEntry {
+  readonly noteId: string;
+  readonly lane: string;
+  readonly status: DeliveryStatus;
+  /** Attempts that ended in "retry" so far. */
+  readonly attempts: number;
+  /** Epoch millis. Meaningful while `pending`. */
+  readonly nextAttemptAt: number;
+}
+
+/** What one try of a lane reported. */
+export type DeliveryOutcome = "Delivered" | "Retry" | "Abandon";
+
+export const maxAttempts = 5;
+const firstBackoffMillis = 5_000;
+const longestBackoffMillis = 15 * 60_000;
+
+/** Wait before the next try, after `attempts` failures: 5 s, 10 s, 20 s, ... up to 15 minutes. */
+export const backoffMillis = (attempts: number): number =>
+  Math.min(firstBackoffMillis * 2 ** Math.max(0, attempts - 1), longestBackoffMillis);
+
+/**
+ * The entry for a note on a lane. Asking again for a pair that already has one returns it
+ * unchanged, so a repeated send can never start a second delivery.
+ */
+export const enqueue = (
+  existing: DeliveryEntry | undefined,
+  noteId: string,
+  lane: string,
+  now: number,
+): DeliveryEntry =>
+  existing ?? { noteId, lane, status: "pending", attempts: 0, nextAttemptAt: now };
+
+export const isDue = (entry: DeliveryEntry, now: number): boolean =>
+  entry.status === "pending" && entry.nextAttemptAt <= now;
+
+/**
+ * Applies what a try reported. Only a pending entry changes: a late or repeated report for a
+ * delivered or abandoned one is ignored. The `maxAttempts`th retry abandons the delivery.
+ */
+export const settle = (
+  entry: DeliveryEntry,
+  outcome: DeliveryOutcome,
+  now: number,
+): DeliveryEntry => {
+  if (entry.status !== "pending") return entry;
+  switch (outcome) {
+    case "Delivered":
+      return { ...entry, status: "delivered" };
+    case "Abandon":
+      return { ...entry, status: "abandoned" };
+    case "Retry": {
+      const attempts = entry.attempts + 1;
+      return attempts >= maxAttempts
+        ? { ...entry, status: "abandoned", attempts }
+        : { ...entry, attempts, nextAttemptAt: now + backoffMillis(attempts) };
+    }
+  }
+};
+
+/** When the alarm should next fire, or nothing when no entry is pending. */
+export const nextAlarmAt = (entries: ReadonlyArray<DeliveryEntry>): number | undefined => {
+  const times = entries.filter((e) => e.status === "pending").map((e) => e.nextAttemptAt);
+  return times.length === 0 ? undefined : Math.min(...times);
+};

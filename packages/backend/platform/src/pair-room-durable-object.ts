@@ -10,6 +10,15 @@ import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
+import { deliveriesOf } from "./pair-room-deliveries.ts";
+import {
+  enqueue,
+  isDue,
+  nextAlarmAt,
+  settle,
+  type DeliveryEntry,
+  type DeliveryOutcome,
+} from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
 
 /** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
@@ -32,12 +41,25 @@ export class PairRoom extends DurableObject {
    * database lives in a scope that is never closed: the object has no shutdown hook, and eviction
    * drops it.
    */
-  private readonly runtime = this.ctx.blockConcurrencyWhile(async () => {
-    const database = await Effect.runPromise(
-      openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe())),
-    );
-    return ManagedRuntime.make(PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))));
-  });
+  private readonly database = this.ctx.blockConcurrencyWhile(() =>
+    Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
+  );
+
+  private readonly runtime = this.database.then((database) =>
+    ManagedRuntime.make(PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database)))),
+  );
+
+  /** The lanes each accepted note is handed to. None until a lane has a sender (#10). */
+  protected deliveryLanes: ReadonlyArray<string> = [];
+
+  /** Tries one lane once. Without one configured the alarm has nothing to do. */
+  protected laneSender:
+    | {
+        readonly send: (
+          entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">,
+        ) => Promise<DeliveryOutcome>;
+      }
+    | undefined = undefined;
 
   private async run<A>(program: (room: RoomService["Service"]) => Effect.Effect<A>): Promise<A> {
     return (await this.runtime).runPromise(RoomService.use(program));
@@ -47,8 +69,57 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.dispatch({ _tag: "Open", pairId, members }));
   }
 
-  sendNote(author: UserId, request: SendNoteRequest): Promise<RoomDecision> {
-    return this.run((room) => room.sendNote(author, request));
+  async sendNote(author: UserId, request: SendNoteRequest): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.sendNote(author, request));
+    if (decision._tag === "Accepted") {
+      for (const output of decision.outputs) {
+        if (output._tag === "NoteAppended") await this.enqueueDeliveries(output.entry.note.id);
+      }
+    }
+    return decision;
+  }
+
+  /** Hands a note to every configured lane, once each, and makes sure the alarm will run. */
+  private async enqueueDeliveries(noteId: string): Promise<void> {
+    if (this.deliveryLanes.length === 0) return;
+    const deliveries = deliveriesOf(await this.database);
+    const now = Date.now();
+    for (const lane of this.deliveryLanes) {
+      const existing = await Effect.runPromise(deliveries.find(noteId, lane));
+      if (existing === undefined) {
+        await Effect.runPromise(deliveries.save(enqueue(existing, noteId, lane, now)));
+      }
+    }
+    await this.scheduleAlarm();
+  }
+
+  private async scheduleAlarm(): Promise<void> {
+    const entries = await Effect.runPromise(deliveriesOf(await this.database).all);
+    const at = nextAlarmAt(entries);
+    if (at !== undefined) await this.ctx.storage.setAlarm(at);
+  }
+
+  /** The delivery rows, for tests and diagnostics. */
+  async deliveries(): Promise<ReadonlyArray<DeliveryEntry>> {
+    return Effect.runPromise(deliveriesOf(await this.database).all);
+  }
+
+  /**
+   * Works through the pending deliveries that are due, one try each. A sender that throws counts
+   * as a retry, so a failing lane backs off instead of ending the alarm. Delivered and abandoned
+   * entries are never sent again, which is what makes a repeated alarm harmless.
+   */
+  override async alarm(): Promise<void> {
+    const sender = this.laneSender;
+    if (sender === undefined) return;
+    const deliveries = deliveriesOf(await this.database);
+    const now = Date.now();
+    for (const entry of await Effect.runPromise(deliveries.all)) {
+      if (!isDue(entry, now)) continue;
+      const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
+      await Effect.runPromise(deliveries.save(settle(entry, outcome, Date.now())));
+    }
+    await this.scheduleAlarm();
   }
 
   setPresence(user: UserId, state: PresenceState): Promise<RoomDecision> {
