@@ -34,8 +34,9 @@ invite code. Claiming an invite is transactional.
 
 Decision: `packages/backend/platform` uses Drizzle through `drizzle-orm/effect-d1` (on
 `@effect/sql-d1`) and `drizzle-orm/effect-sqlite-do` (on `@effect/sql-sqlite-do`). We write no custom
-Effect wrapper. Alchemy generates and applies D1 migrations. Each `PairRoom` applies its own with the
-drizzle migrator when it activates.
+Effect wrapper. Alchemy generates and applies D1 migrations. On Durable Object SQLite,
+`openRoomDatabase` applies them with the drizzle migrator when an object activates. `PairRoom` moves
+to it in #67.
 
 - `drizzle-orm` and `drizzle-kit` are pinned to `1.0.0-rc.5-ab785fc`, a release candidate and not a
   stable release.

@@ -33,8 +33,8 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 - `apps/api` is the composition root only. The Durable Object class, the placeholder response and the
   binding types live in `packages/backend/platform`, the only place that touches bindings. The
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
-- The `PairRoom` class and the fetch response are placeholders. The reducer, the adapter and the
-  routes arrive with later tickets.
+- The `PairRoom` rules live in `packages/backend/pair-room`. The fetch response is still a
+  placeholder, so no route reaches the object yet: the routes arrive with later tickets.
 - Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
   committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
   read only by a real deploy.
@@ -67,7 +67,7 @@ committed migration. drizzle-kit may ask about renames or data loss, so run it i
 | Schema | `src/directory-schema.ts` | `src/room-schema.ts` |
 | Files | `migrations/directory/` | `migrations/room/` |
 | Generated with | `drizzle-kit generate --dialect sqlite` | the same, plus `--driver durable-sqlite` |
-| Applied by | `alchemy deploy` | `openRoomDatabase`, when the object activates |
+| Applied by | `alchemy deploy` | `openRoomDatabase`, called when the object activates |
 | History table | `__alchemy_migrations` | `__drizzle_migrations` |
 
 - The Alchemy docs do not say how Durable Object files are made. `--driver durable-sqlite` adds a
@@ -77,9 +77,13 @@ committed migration. drizzle-kit may ask about renames or data loss, so run it i
 - If a schema change has no migration, `Drizzle.Schema` generates one during the deploy and applies it
   unreviewed. That is what the test prevents.
 
+`PairRoom` itself does not use `openRoomDatabase` yet: `pair-room-sqlite-store.ts` still runs its own
+hand-written migrations until #67 moves it to Drizzle. The two histories are separate tables, so they
+do not collide.
+
 ### When a Durable Object migration fails
 
-The object migrates inside `blockConcurrencyWhile`, in its constructor, so no request gets in first.
+Call `openRoomDatabase` inside `blockConcurrencyWhile`, in the constructor, so no request gets in first.
 All pending migrations run in one transaction, so a failure leaves the schema as it was. The object
 then resets, the request fails, and every later request retries and fails the same way. Data is safe,
 but that room is down until a fixed migration ships.

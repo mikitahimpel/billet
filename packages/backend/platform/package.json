@@ -7,7 +7,7 @@
   "exports": {
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
-    "./pair-room-placeholder": "./src/pair-room-placeholder.ts",
+    "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
     "./room-database": "./src/room-database.ts",
     "./room-schema": "./src/room-schema.ts",
@@ -21,7 +21,10 @@
     "db:generate": "drizzle-kit generate --dialect sqlite --schema ./src/directory-schema.ts --out ./migrations/directory && drizzle-kit generate --dialect sqlite --driver durable-sqlite --schema ./src/room-schema.ts --out ./migrations/room"
   },
   "dependencies": {
+    "@billet/backend-pair-room": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "@billet/contracts-realtime": "workspace:*",
     "@effect/sql-d1": "catalog:",
     "@effect/sql-sqlite-do": "catalog:",
     "drizzle-orm": "catalog:",

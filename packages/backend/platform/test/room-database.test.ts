@@ -6,7 +6,7 @@ import { PlatformProbe } from "../src/platform-probe.ts";
 import { openRoomDatabase } from "../src/room-database.ts";
 import { roomProbe } from "../src/room-schema.ts";
 
-const room = (name: string) => env.PAIR_ROOM.get(env.PAIR_ROOM.idFromName(name));
+const room = (name: string) => env.ACTIVATED_ROOM.get(env.ACTIVATED_ROOM.idFromName(name));
 
 const tables = (storage: DurableObjectStorage) =>
   storage.sql
@@ -20,7 +20,7 @@ const history = (storage: DurableObjectStorage) =>
 const run = <A, E>(effect: Effect.Effect<A, E, Scope.Scope>) =>
   Effect.runPromise(Effect.scoped(effect));
 
-describe("PairRoom migrations", () => {
+describe("room migrations", () => {
   it("are applied on activation, before any request", async () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toContain("room_probe");

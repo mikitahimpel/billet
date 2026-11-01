@@ -133,11 +133,51 @@ importers:
 
   apps/ios: {}
 
-  packages/backend/platform:
+  packages/backend/pair-room:
     dependencies:
       '@billet/contracts-domain':
         specifier: workspace:*
         version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      '@billet/contracts-realtime':
+        specifier: workspace:*
+        version: link:../../contracts/realtime
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
+    devDependencies:
+      '@billet/config-typescript':
+        specifier: workspace:*
+        version: link:../../config/typescript
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.75.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.90.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/backend/platform:
+    dependencies:
+      '@billet/backend-pair-room':
+        specifier: workspace:*
+        version: link:../pair-room
+      '@billet/contracts-domain':
+        specifier: workspace:*
+        version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      '@billet/contracts-realtime':
+        specifier: workspace:*
+        version: link:../../contracts/realtime
       '@effect/sql-d1':
         specifier: 'catalog:'
         version: 4.1.1(effect@4.1.1)
