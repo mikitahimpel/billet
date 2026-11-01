@@ -1,4 +1,5 @@
-// Fails when a Swift file under Sources/Surfaces imports a Feature target.
+// Fails when a Swift file under Sources/Surfaces imports a Feature target, or any file under
+// Sources imports a graphics engine.
 // docs/architecture.md: Surfaces may import Domain, Ink and DesignSystem, not any feature target.
 // A plain `swift build` does not enforce this (see the PR for #3), so ios:build and ios:test run it.
 import { readdirSync, readFileSync } from "node:fs";
@@ -33,24 +34,38 @@ function stripComments(text) {
     .replace(/\/\/.*$/gm, "");
 }
 
-const violations = [];
-for (const file of swiftFiles(surfaces)) {
-  stripComments(readFileSync(file, "utf8"))
-    .split("\n")
-    .forEach((line, index) => {
-      for (const statement of line.split(";")) {
-        const module = importPattern.exec(statement)?.[1];
-        if (module !== undefined && featureTargets.has(module)) {
-          violations.push(
-            `${relative(process.cwd(), file)}:${index + 1}: Surfaces imports ${module}`,
-          );
-        }
-      }
-    });
+function importViolations(files, describe) {
+  return files.flatMap((file) =>
+    stripComments(readFileSync(file, "utf8"))
+      .split("\n")
+      .flatMap((line, index) =>
+        line.split(";").flatMap((statement) => {
+          const module = importPattern.exec(statement)?.[1];
+          const problem = module === undefined ? undefined : describe(module);
+          return problem === undefined
+            ? []
+            : [`${relative(process.cwd(), file)}:${index + 1}: ${problem}`];
+        }),
+      ),
+  );
 }
+
+// Graphics engines stay in packages/pet-scenes, so Pet, FeatureHome and the widget never link one.
+const engines = new Set(["RiveRuntime", "RealityKit"]);
+
+const violations = [
+  ...importViolations(swiftFiles(surfaces), (module) =>
+    featureTargets.has(module) ? `Surfaces imports ${module}` : undefined,
+  ),
+  ...importViolations(swiftFiles(sources), (module) =>
+    engines.has(module) ? `imports the engine ${module}` : undefined,
+  ),
+];
 
 if (violations.length > 0) {
   console.error(violations.join("\n"));
-  console.error("Surfaces may import Domain, Ink and DesignSystem, not any feature target.");
+  console.error(
+    "Surfaces may import Domain, Ink and DesignSystem, not any feature target. Engines belong in packages/pet-scenes.",
+  );
   process.exit(1);
 }

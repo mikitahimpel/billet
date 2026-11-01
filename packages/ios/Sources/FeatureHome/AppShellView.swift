@@ -1,11 +1,14 @@
 import DesignSystem
 import FeatureInbox
 import FeatureSettings
+import PetScene
 import SwiftUI
 
 /// The three tabs of a paired device. Drawing is opened from Home and is not a tab.
 struct AppShellView: View {
   let session: PairSession
+  let scenes: [any PetScene]
+  @Binding var selectedSceneID: String?
   let onChangeCode: () -> Void
   let onLogOut: () async -> String?
 
@@ -16,7 +19,11 @@ struct AppShellView: View {
   var body: some View {
     TabView {
       Tab("Home", systemImage: "house") {
-        HomeView(session: session, onChangeCode: onChangeCode)
+        HomeView(
+          session: session,
+          scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
+          onChangeCode: onChangeCode
+        )
           .tabBarStyled()
       }
       Tab("Notes", systemImage: "tray") {
@@ -25,7 +32,11 @@ struct AppShellView: View {
       }
       Tab("Settings", systemImage: "gearshape") {
         SettingsView(
-          code: session.room.code, partnerStatus: line.text, onLogOut: onLogOut
+          code: session.room.code,
+          partnerStatus: line.text,
+          scenes: scenes,
+          selectedSceneID: $selectedSceneID,
+          onLogOut: onLogOut
         )
         .tabBarStyled()
       }

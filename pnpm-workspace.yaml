@@ -11,12 +11,20 @@ overrides:
   "@effect/platform-node-shared": 4.0.6
 
 catalog:
-  # Alchemy v2 is beta: pin exact, bump alchemy and @alchemy.run/* together (see docs/alchemy.md).
+  # Alchemy v2 is beta: pin exact, bump alchemy, @alchemy.run/*, drizzle-orm and drizzle-kit together
+  # (see docs/alchemy.md). drizzle-orm and drizzle-kit are a release candidate, and
+  # @alchemy.run/drizzle peers on exactly this build.
   alchemy: 2.0.0-beta.84
   "@alchemy.run/cloudflare": 2.0.0-beta.84
+  "@alchemy.run/drizzle": 2.0.0-beta.84
+  "@alchemy.run/sql": 2.0.0-beta.84
   "@cloudflare/vitest-pool-workers": 0.23.0
   "@cloudflare/workers-types": 5.20261101.1
+  "@effect/sql-d1": 4.1.1
+  "@effect/sql-sqlite-do": 4.1.1
   "@types/node": 24.19.2
+  drizzle-kit: 1.0.0-rc.5-ab785fc
+  drizzle-orm: 1.0.0-rc.5-ab785fc
   effect: 4.1.1
   oxfmt: 0.75.0
   oxlint: 1.90.0

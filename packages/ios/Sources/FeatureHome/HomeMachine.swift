@@ -1,61 +1,38 @@
 import BilletKit
+import Pet
 import Wire
 
-/// The home screen: which screen is up, and where the cat is in delivering notes.
-///
-/// `noteArrived` is what the Rive scene is told. It stays true while the cat delivers and sits
-/// proudly, then falls back to false so the cat settles and the next note can play from sleep.
+/// The home screen: which screen is up. The pet's own scenario runs in ``PetMachine``.
 public enum HomeMachine: Machine {
   public enum Screen: Hashable, Sendable {
     case home
     case canvas
   }
 
-  public enum Cat: Hashable, Sendable {
-    case sleeping
-    /// Waking, carrying, hanging the note, then sitting proudly.
-    case delivering
-    /// Going back to sleep. `noteArrived` has to stay false until this has played.
-    case settling
-  }
-
   public struct State: Hashable, Sendable {
     public var screen: Screen
-    public var cat: Cat
-    /// Notes that arrived while the cat was busy, played one at a time.
-    public var waitingNotes: Int
+    public var pet: PetMachine.State
     /// Drawings not yet carried in, oldest first.
     public var inbox: [[Stroke]]
-    /// The drawing the cat is hanging, or hung last.
+    /// The drawing the pet is hanging, or hung last.
     public var hungDrawing: [Stroke]?
 
     public init(
       screen: Screen = .home,
-      cat: Cat = .sleeping,
-      waitingNotes: Int = 0,
+      pet: PetMachine.State = PetMachine.State(),
       inbox: [[Stroke]] = [],
       hungDrawing: [Stroke]? = nil
     ) {
       self.screen = screen
-      self.cat = cat
-      self.waitingNotes = waitingNotes
+      self.pet = pet
       self.inbox = inbox
       self.hungDrawing = hungDrawing
-    }
-
-    public var noteArrived: Bool { cat == .delivering }
-
-    fileprivate mutating func takeNextDrawing() {
-      if !inbox.isEmpty {
-        hungDrawing = inbox.removeFirst()
-      }
     }
   }
 
   public enum Output: Hashable, Sendable {
     case deliver([Stroke])
-    case holdDelivery
-    case holdSettling
+    case pet(PetMachine.Output)
   }
 
   public enum Event: Hashable, Sendable {
@@ -63,60 +40,35 @@ public enum HomeMachine: Machine {
     case canvasClosed
     case drawingSent([Stroke])
     case noteReceived([Stroke])
-    case noteArrived
-    case deliveryPlayed
-    case settlingPlayed
+    case pet(PetMachine.Event)
   }
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     var next = state
-    switch (state.cat, event) {
-    case (.sleeping, .canvasOpened), (.delivering, .canvasOpened), (.settling, .canvasOpened):
+    switch event {
+    case .canvasOpened:
       next.screen = .canvas
       return (next, [])
 
-    case (.sleeping, .canvasClosed), (.delivering, .canvasClosed), (.settling, .canvasClosed):
+    case .canvasClosed:
       next.screen = .home
       return (next, [])
 
-    case (.sleeping, .drawingSent(let strokes)),
-      (.delivering, .drawingSent(let strokes)),
-      (.settling, .drawingSent(let strokes)):
+    case .drawingSent(let strokes):
       next.screen = .home
       return (next, [.deliver(strokes)])
 
-    case (_, .noteReceived(let strokes)):
+    case .noteReceived(let strokes):
       next.inbox.append(strokes)
-      return transition(next, .noteArrived)
+      return transition(next, .pet(.noteArrived))
 
-    case (.sleeping, .noteArrived):
-      next.cat = .delivering
-      next.takeNextDrawing()
-      return (next, [.holdDelivery])
-
-    case (.delivering, .noteArrived), (.settling, .noteArrived):
-      next.waitingNotes += 1
-      return (next, [])
-
-    case (.delivering, .deliveryPlayed):
-      next.cat = .settling
-      return (next, [.holdSettling])
-
-    case (.settling, .settlingPlayed) where state.waitingNotes > 0:
-      next.waitingNotes -= 1
-      next.cat = .delivering
-      next.takeNextDrawing()
-      return (next, [.holdDelivery])
-
-    case (.settling, .settlingPlayed):
-      next.cat = .sleeping
-      return (next, [])
-
-    case (.sleeping, .deliveryPlayed),
-      (.settling, .deliveryPlayed),
-      (.sleeping, .settlingPlayed),
-      (.delivering, .settlingPlayed):
-      return (next, [])
+    case .pet(let event):
+      let (pet, outputs) = PetMachine.transition(state.pet, event)
+      next.pet = pet
+      if pet.world.delivery != state.pet.world.delivery, !next.inbox.isEmpty {
+        next.hungDrawing = next.inbox.removeFirst()
+      }
+      return (next, outputs.map(Output.pet))
     }
   }
 }

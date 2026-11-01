@@ -2,6 +2,7 @@ import BilletKit
 import Delivery
 import Foundation
 import Ink
+import Pet
 import Testing
 import Wire
 
@@ -18,8 +19,7 @@ struct HomeMachineTests {
   @Test func startsAsleepOnHome() {
     let state = HomeMachine.State()
     #expect(state.screen == .home)
-    #expect(state.cat == .sleeping)
-    #expect(!state.noteArrived)
+    #expect(state.pet.world.activity == .sleeping)
   }
 
   @Test func canvasOpensAndCloses() {
@@ -27,8 +27,8 @@ struct HomeMachineTests {
     #expect(apply([.canvasOpened, .canvasClosed]).screen == .home)
   }
 
-  @Test func closingTheCanvasDoesNotWakeTheCat() {
-    #expect(apply([.canvasOpened, .canvasClosed]).cat == .sleeping)
+  @Test func closingTheCanvasDoesNotWakeThePet() {
+    #expect(apply([.canvasOpened, .canvasClosed]).pet.world.activity == .sleeping)
   }
 
   @Test func sendingReturnsHomeAndDeliversTheDrawing() {
@@ -36,80 +36,48 @@ struct HomeMachineTests {
       apply([.canvasOpened]), .drawingSent(strokes))
     #expect(state.screen == .home)
     #expect(outputs == [.deliver(strokes)])
-    #expect(!state.noteArrived)
+    #expect(!state.pet.world.noteArrived)
   }
 
-  @Test func arrivalSetsNoteArrivedAndHoldsTheDelivery() {
-    let (state, outputs) = HomeMachine.transition(HomeMachine.State(), .noteArrived)
-    #expect(state.noteArrived)
-    #expect(outputs == [.holdDelivery])
+  @Test func petEventsReachThePetAndItsOutputsComeBack() {
+    let (state, outputs) = HomeMachine.transition(HomeMachine.State(), .pet(.noteArrived))
+    #expect(state.pet.world.noteArrived)
+    #expect(outputs == [.pet(.deliveryDeadline(delivery: 1))])
   }
 
-  @Test func playedDeliveryResetsNoteArrived() {
-    let (state, outputs) = HomeMachine.transition(apply([.noteArrived]), .deliveryPlayed)
-    #expect(!state.noteArrived)
-    #expect(state.cat == .settling)
-    #expect(outputs == [.holdSettling])
+  @Test func canvasStaysOpenWhileThePetDelivers() {
+    let state = apply([.canvasOpened, .pet(.noteArrived)])
+    #expect(state.screen == .canvas)
+    #expect(state.pet.world.noteArrived)
   }
 
-  @Test func secondNotePlaysAgainAfterTheFirst() {
-    let asleep = apply([.noteArrived, .deliveryPlayed, .settlingPlayed])
-    #expect(asleep.cat == .sleeping)
-    let (state, outputs) = HomeMachine.transition(asleep, .noteArrived)
-    #expect(state.noteArrived)
-    #expect(outputs == [.holdDelivery])
-  }
-
-  @Test func noteDuringDeliveryWaitsItsTurn() {
-    let busy = apply([.noteArrived, .noteArrived])
-    #expect(busy.waitingNotes == 1)
-    let settling = HomeMachine.transition(busy, .deliveryPlayed).0
-    #expect(!settling.noteArrived)
-    let (state, outputs) = HomeMachine.transition(settling, .settlingPlayed)
-    #expect(state.noteArrived)
-    #expect(state.waitingNotes == 0)
-    #expect(outputs == [.holdDelivery])
-  }
-
-  @Test func noteDuringSettlingWaitsItsTurn() {
-    let state = apply([.noteArrived, .deliveryPlayed, .noteArrived])
-    #expect(state.cat == .settling)
-    #expect(!state.noteArrived)
-    #expect(state.waitingNotes == 1)
-  }
-
-  @Test func lateHoldsAreIgnored() {
-    #expect(apply([.deliveryPlayed, .settlingPlayed]) == HomeMachine.State())
-    let delivering = apply([.noteArrived])
-    #expect(HomeMachine.transition(delivering, .settlingPlayed).0 == delivering)
-  }
-
-  @Test @MainActor func storeRunsTheWholeDelivery() async {
+  @Test @MainActor func storeRunsTheWholeDeliveryWithoutAScene() async {
     let store = Store<HomeMachine>(initial: HomeMachine.State()) {
       await HomeRunner.run($0, delivery: .localFake, sleep: { _ in })
     }
-    store.send(.drawingSent(strokes))
+    store.send(.noteReceived(strokes))
     await store.settled()
-    #expect(store.state == HomeMachine.State(cat: .sleeping))
+    #expect(store.state.pet.world == PetWorld(activity: .sleeping, delivery: 1))
   }
 
   @Test func receivedNoteWakesTheCatWithItsDrawing() {
     let (state, outputs) = HomeMachine.transition(HomeMachine.State(), .noteReceived(strokes))
-    #expect(state.noteArrived)
+    #expect(state.pet.world.noteArrived)
     #expect(state.hungDrawing == strokes)
     #expect(state.inbox.isEmpty)
-    #expect(outputs == [.holdDelivery])
+    #expect(outputs == [.pet(.deliveryDeadline(delivery: 1))])
   }
 
   @Test func notesHangInTheOrderTheyArrived() {
     let later = [Stroke(color: "#FFFFFF", width: 1, points: [Point(x: 0.2, y: 0.2)])]
     let busy = apply([.noteReceived(strokes), .noteReceived(later)])
     #expect(busy.hungDrawing == strokes)
-    #expect(busy.waitingNotes == 1)
+    #expect(busy.pet.waitingNotes == 1)
     let next = apply([
-      .noteReceived(strokes), .noteReceived(later), .deliveryPlayed, .settlingPlayed,
+      .noteReceived(strokes), .noteReceived(later), .pet(.deliveryFinished(delivery: 1)),
+      .pet(.settled(delivery: 1)),
     ])
-    #expect(next.noteArrived)
+    #expect(next.pet.world.noteArrived)
     #expect(next.hungDrawing == later)
   }
 }
@@ -128,6 +96,17 @@ struct DemoDeliveryTests {
 
   @Test func garbledInkIsRejected() {
     #expect(throws: (any Error).self) { try NoteInk.decode("not base64!") }
+  }
+
+  @Test func logOutClearsTheLegacyStoreToo() throws {
+    let legacy = try #require(UserDefaults(suiteName: "demo-room-logout-legacy"))
+    let shared = try #require(UserDefaults(suiteName: "demo-room-logout-shared"))
+    legacy.removePersistentDomain(forName: "demo-room-logout-legacy")
+    shared.removePersistentDomain(forName: "demo-room-logout-shared")
+    _ = DemoRoom.pair(code: "ABCDEFGHJK", in: legacy)
+    #expect(DemoRoom.saved(in: shared, legacy: legacy) != nil)
+    DemoRoom.logOut(in: shared, legacy: legacy)
+    #expect(DemoRoom.saved(in: shared, legacy: legacy) == nil)
   }
 
   @Test func generatedCodesAreValid() {

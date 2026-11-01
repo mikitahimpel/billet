@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import PetScene
 import SwiftUI
 import UserNotifications
 
@@ -7,7 +8,7 @@ import UserNotifications
   import UIKit
 #endif
 
-/// Partner and pair status, notifications, links, app version, and log out.
+/// Partner and pair status, the pet scene, notifications, links, app version, and log out.
 public struct SettingsView: View {
   private static let privacyPolicy = URL(
     string: "https://github.com/mikitahimpel/billet/blob/main/docs/privacy.md")
@@ -15,6 +16,8 @@ public struct SettingsView: View {
 
   private let code: String
   private let partnerStatus: String
+  private let scenes: [any PetScene]
+  @Binding private var selectedSceneID: String?
   private let onLogOut: () async -> String?
 
   @Environment(\.openURL) private var openURL
@@ -26,10 +29,16 @@ public struct SettingsView: View {
 
   /// - Parameter onLogOut: Logs out and returns a message to show if that failed.
   public init(
-    code: String, partnerStatus: String, onLogOut: @escaping () async -> String?
+    code: String,
+    partnerStatus: String,
+    scenes: [any PetScene],
+    selectedSceneID: Binding<String?>,
+    onLogOut: @escaping () async -> String?
   ) {
     self.code = code
     self.partnerStatus = partnerStatus
+    self.scenes = scenes
+    _selectedSceneID = selectedSceneID
     self.onLogOut = onLogOut
   }
 
@@ -43,6 +52,9 @@ public struct SettingsView: View {
             .foregroundStyle(Palette.paper.color)
             .accessibilityAddTraits(.isHeader)
           pair
+          if scenes.count > 1 {
+            sceneSection
+          }
           notificationSection
           links
           logOut
@@ -70,6 +82,13 @@ public struct SettingsView: View {
       SettingsHeading("Pair")
       SettingsRow("Partner", value: partnerStatus)
       PairCodeCard(code: code)
+    }
+  }
+
+  private var sceneSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      SettingsHeading("Scene")
+      PetScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID)
     }
   }
 

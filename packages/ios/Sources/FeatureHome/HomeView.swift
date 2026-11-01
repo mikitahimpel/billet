@@ -5,16 +5,17 @@ import FeatureCanvas
 import Foundation
 import Ink
 import Pet
+import PetScene
 import SwiftUI
 
-/// The main screen: the Little House with its cat, and the way into the canvas.
+/// The main screen: the chosen pet scene, and the way into the canvas.
 struct HomeView: View {
-  @State private var scene = LittleHouseScene()
   @State private var hungImage: CGImage?
   @State private var hangCount = 0
   @State private var petBounce = false
 
   let session: PairSession
+  let scene: (any PetScene)?
   let onChangeCode: () -> Void
 
   private var store: Store<HomeMachine> { session.store }
@@ -23,20 +24,19 @@ struct HomeView: View {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
+  private var noteArrived: Bool { store.state.pet.world.noteArrived }
+
   var body: some View {
-    house
+    home
       .animation(.easeInOut(duration: 0.25), value: line)
-      .onChange(of: store.state.noteArrived) { _, arrived in
-        scene?.setNoteArrived(arrived)
-      }
       .task { await DemoPush.requestPermission() }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
-      .task(id: store.state.noteArrived) {
-        guard store.state.noteArrived else { return }
+      .task(id: noteArrived) {
+        guard noteArrived, let wall = scene?.noteWall else { return }
         hungImage = nil
-        try? await Task.sleep(for: HungNote.revealDelay)
+        try? await Task.sleep(for: wall.revealDelay)
         guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
         hungImage = NoteImage.cgImage(of: drawing)
         hangCount += 1
@@ -59,23 +59,19 @@ struct HomeView: View {
     )
   }
 
-  private var house: some View {
+  private var home: some View {
     ZStack(alignment: .bottom) {
-      VStack(spacing: 0) {
-        Self.sky
-        Self.hill
-      }
-      .ignoresSafeArea(edges: .top)
+      Palette.skyNight.color.ignoresSafeArea()
       if let scene {
-        scene.view
-          .accessibilityLabel("Little House with the cat")
+        scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
+          .id(scene.id)
           .scaleEffect(petBounce ? 1.03 : 1)
           .animation(.spring(duration: 0.3, bounce: 0.6), value: petBounce)
           .overlay { petTapTarget }
           .overlay { catReactions }
           .overlay {
-            if let hungImage {
-              HungNote(drawing: hungImage)
+            if let hungImage, let wall = scene.noteWall {
+              HungNote(drawing: hungImage, wall: wall)
                 .id(hangCount)
             }
           }
@@ -168,8 +164,4 @@ struct HomeView: View {
     .background(Palette.plate.color, in: .rect(cornerRadius: Radius.control))
     .accessibilityElement(children: .combine)
   }
-
-  // The artboard's top and bottom edge colours, so the art runs on into the taller screen.
-  private static let sky = Color(red: 0x0E / 255, green: 0x2E / 255, blue: 0x2A / 255)
-  private static let hill = Color(red: 0x14 / 255, green: 0x3B / 255, blue: 0x33 / 255)
 }

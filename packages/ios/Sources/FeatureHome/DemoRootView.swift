@@ -4,6 +4,7 @@ import FeatureInbox
 import Foundation
 import Ink
 import Persistence
+import PetScene
 import SwiftUI
 import WidgetKit
 
@@ -12,12 +13,16 @@ public struct DemoRootView: View {
   private static let pairingTimeout = Duration.seconds(15)
 
   private let host: String
+  private let scenes: [any PetScene]
+  @Binding private var selectedSceneID: String?
 
   @Environment(\.scenePhase) private var scenePhase
   @State private var model: AppModel
 
-  public init(host: String) {
+  public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
     self.host = host
+    self.scenes = scenes
+    _selectedSceneID = selectedSceneID
     // Without the bundled faces SwiftUI falls back to the system font, which still reads fine.
     try? BilletFonts.register()
     _model = State(
@@ -61,6 +66,8 @@ public struct DemoRootView: View {
       case .paired(let session):
         AppShellView(
           session: session,
+          scenes: scenes,
+          selectedSceneID: $selectedSceneID,
           onChangeCode: { model.changeCode() },
           onLogOut: { await model.logOut() }
         )

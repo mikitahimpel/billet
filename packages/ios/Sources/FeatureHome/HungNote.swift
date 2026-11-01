@@ -1,18 +1,12 @@
 import CoreGraphics
+import DesignSystem
+import PetScene
 import SwiftUI
 
-/// The received drawing, laid exactly over the `NoteNew` node in `LittleHouse.riv`.
+/// The received drawing, laid exactly over the note a scene hangs on its wall.
 ///
-/// The Rive note is the same on every delivery, so this paper covers it. Sizes and keyframes
-/// mirror that node and must change with it.
+/// The scene's note is the same on every delivery, so this paper covers it.
 struct HungNote: View {
-  /// Frame 468 of Deliver at 60 fps, when the Rive note first shows.
-  static let revealDelay = Duration.seconds(468.0 / 60.0)
-
-  private static let artboard = CGSize(width: 780, height: 980)
-  private static let paper = CGRect(x: 336, y: 455, width: 112, height: 138)
-  private static let peg = CGPoint(x: 392, y: 446)
-  private static let paperColor = Color(red: 0xFB / 255, green: 0xF3 / 255, blue: 0xE4 / 255)
 
   private struct Swing {
     var scale = 1.0
@@ -20,28 +14,29 @@ struct HungNote: View {
   }
 
   let drawing: CGImage
+  let wall: PetSceneNoteWall
 
   @State private var hasAppeared = false
 
   var body: some View {
     GeometryReader { geometry in
       let scale = min(
-        geometry.size.width / Self.artboard.width, geometry.size.height / Self.artboard.height)
-      let left = (geometry.size.width - Self.artboard.width * scale) / 2
-      let top = (geometry.size.height - Self.artboard.height * scale) / 2
+        geometry.size.width / wall.artboard.width, geometry.size.height / wall.artboard.height)
+      let left = (geometry.size.width - wall.artboard.width * scale) / 2
+      let top = (geometry.size.height - wall.artboard.height * scale) / 2
       let anchor = UnitPoint(
-        x: (Self.peg.x - Self.paper.minX) / Self.paper.width,
-        y: (Self.peg.y - Self.paper.minY) / Self.paper.height)
+        x: (wall.peg.x - wall.paper.minX) / wall.paper.width,
+        y: (wall.peg.y - wall.paper.minY) / wall.paper.height)
 
       RoundedRectangle(cornerRadius: 4 * scale)
-        .fill(Self.paperColor)
+        .fill(Palette.paper.color)
         .overlay {
           Image(decorative: drawing, scale: 1)
             .resizable()
             .scaledToFit()
             .padding(4 * scale)
         }
-        .frame(width: Self.paper.width * scale, height: Self.paper.height * scale)
+        .frame(width: wall.paper.width * scale, height: wall.paper.height * scale)
         .keyframeAnimator(initialValue: Swing(), trigger: hasAppeared) { content, swing in
           content
             .scaleEffect(swing.scale, anchor: anchor)
@@ -60,7 +55,7 @@ struct HungNote: View {
             LinearKeyframe(0.02, duration: 0.33)
           }
         }
-        .position(x: left + Self.paper.midX * scale, y: top + Self.paper.midY * scale)
+        .position(x: left + wall.paper.midX * scale, y: top + wall.paper.midY * scale)
     }
     .allowsHitTesting(false)
     .accessibilityElement()
