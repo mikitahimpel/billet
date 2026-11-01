@@ -13,7 +13,7 @@ let roundTrips: [String: RoundTrip] = [:]
 let fixturesDirectory = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .deletingLastPathComponent().deletingLastPathComponent()
-  .appending(path: "packages/contracts/fixtures", directoryHint: .isDirectory)
+  .appending(path: "packages/contracts/fixtures/golden", directoryHint: .isDirectory)
 
 func fixtureURLs() -> [URL] {
   guard
@@ -58,6 +58,6 @@ func reportsFixtureCount() {
   let count = fixtureURLs().count
   print(
     count == 0
-      ? "No golden fixtures in packages/contracts/fixtures yet; nothing to round-trip."
+      ? "No golden fixtures in packages/contracts/fixtures/golden yet; nothing to round-trip."
       : "Round-tripping \(count) golden fixture(s).")
 }

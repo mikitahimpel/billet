@@ -5,38 +5,23 @@
     "//#format:check:root": {
       "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/docs/**"]
     },
-    "lint": {
+    "//#lint:root": {
       "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/*",
+        "$TURBO_ROOT$/.*",
         "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
+      ]
+    },
+    "//#typecheck:root": {
+      "inputs": [
+        "$TURBO_ROOT$/*.ts",
+        "$TURBO_ROOT$/tsconfig.json",
+        "$TURBO_ROOT$/packages/config/typescript/*.json"
       ]
     },
     "format:check": {
       "dependsOn": ["//#format:check:root"],
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.oxfmtrc.json"]
-    },
-    "transit": {
-      "dependsOn": ["^transit"]
-    },
-    "typecheck": {
-      "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/config/typescript/*.json"]
-    },
-    "test": {
-      "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$"]
-    },
-    "ios:test": {
-      "outputs": [],
-      "inputs": [
-        "$TURBO_ROOT$/packages/contracts/fixtures/**",
-        "Sources/**",
-        "Tests/**",
-        "Package.swift",
-        "$TURBO_ROOT$/.xcode-version",
-        "$TURBO_ROOT$/.swift-format"
-      ]
     },
     "ios:build": {
       "outputs": [],
@@ -44,6 +29,7 @@
         "Sources/**",
         "Tests/**",
         "Package.swift",
+        "scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format",
         "App/**",
@@ -71,6 +57,37 @@
     "ios:generate": {
       "outputs": [],
       "inputs": ["project.yml", "$TURBO_ROOT$/.xcode-version"]
+    },
+    "ios:test": {
+      "outputs": [],
+      "inputs": [
+        "$TURBO_ROOT$/packages/contracts/fixtures/**",
+        "Sources/**",
+        "Tests/**",
+        "Package.swift",
+        "scripts/**",
+        "$TURBO_ROOT$/.xcode-version",
+        "$TURBO_ROOT$/.swift-format"
+      ]
+    },
+    "lint": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
+      ],
+      "dependsOn": ["//#lint:root"]
+    },
+    "test": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit", "//#typecheck:root"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/config/typescript/*.json"]
     }
   }
 }
