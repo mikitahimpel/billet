@@ -13,6 +13,11 @@ public struct NookiPetScene: PetScene {
   public init() {}
 
   public let handlesTouches = true
+  public let hasShop = true
+
+  public func makeShopPreview(item: ShopItem) -> AnyView? {
+    AnyView(NookiShopPreview(item: item))
+  }
 
   public func makeView(
     world: PetWorld,

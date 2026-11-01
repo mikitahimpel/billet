@@ -17,6 +17,7 @@ import Wire
 final class PairSession {
   let room: DemoRoom
   let store: Store<HomeMachine>
+  let shop: ShopStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -42,11 +43,13 @@ final class PairSession {
     room: DemoRoom,
     delivery: NoteDelivery,
     archive: NoteArchive,
+    shop: ShopStore,
     now: @escaping @Sendable () -> Date = { .now }
   ) {
     self.room = room
     self.delivery = delivery
     self.archive = archive
+    self.shop = shop
     self.now = now
     play = PairPlay(device: room.device)
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }

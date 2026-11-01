@@ -3,6 +3,7 @@ import FeatureInbox
 import Foundation
 import Observation
 import Persistence
+import Pet
 
 /// Why a pairing attempt ended without a pair.
 enum PairFailure: Hashable, Sendable {
@@ -130,7 +131,8 @@ final class AppModel {
   private func makeSession(_ room: DemoRoom) -> PairSession? {
     guard let delivery = dependencies.delivery(room) else { return nil }
     return PairSession(
-      room: room, delivery: delivery, archive: dependencies.archive, now: dependencies.now)
+      room: room, delivery: delivery, archive: dependencies.archive,
+      shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now)
   }
 
   private func pair(code: String, creating: Bool) {

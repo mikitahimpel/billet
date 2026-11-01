@@ -65,6 +65,14 @@ public protocol PetScene {
     onEvent: @escaping @MainActor (PetSceneEvent) -> Void
   ) -> AnyView
 
+  /// True when the scene draws what the shop puts in the room and previews its items.
+  var hasShop: Bool { get }
+
+  /// A live 3D preview of `item` that turns slowly, or `nil` when the scene has none. The host
+  /// keeps one preview view alive and hands it a new item, so the view must swap models rather
+  /// than rebuild.
+  func makeShopPreview(item: ShopItem) -> AnyView?
+
   /// PNG data for a pose, or `nil` when the scene has none.
   func posePNG(_ pose: PetPose) -> Data?
 }
@@ -73,6 +81,8 @@ extension PetScene {
   public var credit: String? { nil }
   public var noteWall: PetSceneNoteWall? { nil }
   public var handlesTouches: Bool { false }
+  public var hasShop: Bool { false }
+  public func makeShopPreview(item: ShopItem) -> AnyView? { nil }
 
   public func makeView(
     world: PetWorld,

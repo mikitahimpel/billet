@@ -80,6 +80,7 @@ private struct NookiStage: View {
   let play: PetPlayState
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
+  @State private var shopRoom = NookiShopRoom()
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
@@ -94,6 +95,7 @@ private struct NookiStage: View {
     RealityView { content in
       content.camera = .virtual
       content.add(diorama.root)
+      content.add(shopRoom.root)
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
@@ -126,6 +128,11 @@ private struct NookiStage: View {
     .onChange(of: play, initial: true) { _, play in
       diorama.show(play)
     }
+    .onChange(of: play.room, initial: true) { _, room in shopRoom.apply(room) }
+    .onChange(of: play.treatsUsed) {
+      shopRoom.drop(play.lastTreat)
+      reactToTreat()
+    }
     .onChange(of: reduceMotion, initial: true) { _, reduced in
       diorama.setReduceMotion(reduced)
     }
@@ -136,6 +143,14 @@ private struct NookiStage: View {
 
   private var isOnScreen: Bool {
     isAppeared && hostShowsScene && scenePhase == .active
+  }
+
+  /// Mochi wakes and hops once the treat has landed. Only the cat reacts: nothing is sent upward.
+  private func reactToTreat() {
+    Task {
+      try? await Task.sleep(for: .seconds(NookiShopRoom.fallDuration))
+      _ = diorama.perform(.mochi)
+    }
   }
 
   private func perform(_ target: NookiTarget) {
