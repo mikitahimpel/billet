@@ -156,6 +156,7 @@ struct HomeView: View {
       overnightStayNotice
       catCameBackNotice
       todaysWordCard
+      sundayPostCard
       catNaming
       latestReceived
       treatPanel
@@ -177,6 +178,12 @@ struct HomeView: View {
             .transition(.opacity)
         }
       }
+    }
+  }
+
+  @ViewBuilder private var sundayPostCard: some View {
+    if session.labs.isOn(LabExperiment.sundayPost) {
+      SundayPostSection(notes: session.notes, catName: session.play.catName)
     }
   }
 
