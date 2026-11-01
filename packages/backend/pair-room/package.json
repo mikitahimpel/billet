@@ -1,0 +1,35 @@
+{
+  "name": "@billet/backend-pair-room",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./decide": "./src/decide.ts",
+    "./note-id-source": "./src/note-id-source.ts",
+    "./room-command": "./src/room-command.ts",
+    "./room-decision": "./src/room-decision.ts",
+    "./room-service": "./src/room-service.ts",
+    "./room-state": "./src/room-state.ts",
+    "./room-store": "./src/room-store.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "@billet/contracts-realtime": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
