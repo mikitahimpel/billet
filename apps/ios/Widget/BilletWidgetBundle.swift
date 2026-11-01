@@ -1,4 +1,5 @@
 import CoreGraphics
+import DesignSystem
 import Persistence
 import Pet
 import Surfaces
@@ -8,6 +9,11 @@ import WidgetKit
 
 @main
 struct BilletWidgetBundle: WidgetBundle {
+  init() {
+    // Without the bundled faces the widget falls back to the system font, which still reads fine.
+    try? BilletFonts.register()
+  }
+
   var body: some Widget {
     LatestNoteWidget()
     PetPoseWidget()
@@ -46,7 +52,7 @@ struct LatestNoteEntryView: View {
       HStack {
         NoteSilhouette(image: image)
         Text(caption)
-          .font(.headline)
+          .billetType(.label)
       }
       .widgetAccentable()
       .containerBackground(.clear, for: .widget)
@@ -54,7 +60,7 @@ struct LatestNoteEntryView: View {
       VStack(spacing: 1) {
         NoteSilhouette(image: image)
         Text(caption)
-          .font(.system(size: 9))
+          .font(.custom(BilletFonts.groteskFamily, size: 9, relativeTo: .caption2))
           .lineLimit(1)
           .minimumScaleFactor(0.7)
       }
@@ -63,7 +69,7 @@ struct LatestNoteEntryView: View {
       .containerBackground(.clear, for: .widget)
     default:
       LatestNoteView(image: image)
-        .containerBackground(LatestNoteView.paper, for: .widget)
+        .containerBackground(for: .widget) { EveningBackground() }
     }
   }
 }
@@ -116,10 +122,12 @@ struct PetPoseWidget: Widget {
             .scaledToFill()
             .accessibilityLabel("Your pet, asleep")
         } else {
-          Text("billet")
+          Text(verbatim: "billet")
+            .billetType(.heading)
+            .foregroundStyle(Palette.paper.color)
         }
       }
-      .containerBackground(.fill.tertiary, for: .widget)
+      .containerBackground(for: .widget) { EveningBackground() }
     }
     .configurationDisplayName("Your pet")
     .description("Your pet, asleep at home.")

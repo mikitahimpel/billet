@@ -53,13 +53,14 @@ targets:
         # Temporary icon from the Little House art, until the real mark lands in #35.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: billet
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
   BilletWidget:
     type: app-extension
     platform: iOS
     sources: [Widget]
     dependencies:
       - package: Billet
-        products: [Persistence, Pet, Surfaces]
+        products: [DesignSystem, Persistence, Pet, Surfaces]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:
