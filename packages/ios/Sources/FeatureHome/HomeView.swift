@@ -120,6 +120,7 @@ struct HomeView: View {
         .id(scene.id)
         .environment(\.petSceneOnScreen, store.state.screen == .home)
         .environment(\.petSceneRenovator, session.renovator)
+        .environment(\.petSceneDrawing, hungImage)
         .transition(.opacity)
         .scaleEffect(petBounce && !reduceMotion ? 1.012 : 1)
         .calmAnimation(value: petBounce)
