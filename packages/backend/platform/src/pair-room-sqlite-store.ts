@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Schema } from "effect";
+import { Context, Effect, Layer, Option, Schema } from "effect";
 import { Note } from "@billet/contracts-domain/note";
 import {
   RoomState,
@@ -48,7 +48,12 @@ const migrate = (storage: DurableObjectStorage): void => {
 
 const NoteJson = Schema.fromJsonString(Note);
 const encodeNote = Schema.encodeSync(NoteJson);
-const decodeNote = Schema.decodeSync(NoteJson);
+const decodeNoteOption = Schema.decodeOption(NoteJson);
+
+/** The most notes one call returns. A smaller, zero or negative `limit` is honoured, never unbounded. */
+export const MAX_NOTES_PER_PAGE = 100;
+const pageSize = (limit: number): number =>
+  Math.max(0, Math.min(Math.trunc(limit), MAX_NOTES_PER_PAGE));
 const decodeRoom = Schema.decodeUnknownSync(RoomState);
 
 type RoomRow = {
@@ -113,16 +118,24 @@ export const SqliteRoomStore = Layer.effect(
           });
         }),
       notesAfter: (afterSeq: number, limit: number) =>
-        Effect.sync(() =>
-          sql
+        Effect.gen(function* () {
+          const rows = sql
             .exec<{ seq: number; body: string }>(
               "SELECT seq, body FROM note WHERE seq > ? ORDER BY seq LIMIT ?",
               afterSeq,
-              limit,
+              pageSize(limit),
             )
-            .toArray()
-            .map(({ seq, body }) => ({ seq, note: decodeNote(body) })),
-        ),
+            .toArray();
+          const page: SequencedNote[] = [];
+          for (const { seq, body } of rows) {
+            const note = decodeNoteOption(body);
+            // A body this code cannot read must not block the room. Clients resume by `seq`, so
+            // the gap is harmless; the log line carries the seq and nothing from the body.
+            if (Option.isNone(note)) yield* Effect.logWarning("note body unreadable", { seq });
+            else page.push({ seq, note: note.value });
+          }
+          return page;
+        }),
     };
   }),
 );

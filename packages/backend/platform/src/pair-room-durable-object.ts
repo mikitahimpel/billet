@@ -77,6 +77,12 @@ export class PairRoom extends DurableObject {
    */
   override webSocketClose(socket: WebSocket, code: number): void {
     if (code === 1006 || code === 1015) return;
-    socket.close(code === 1005 ? 1000 : code);
+    try {
+      socket.close(code === 1005 ? 1000 : code);
+    } catch {
+      // A client can send a code the runtime refuses to echo (RFC 6455 forbids them). Answer
+      // with a protocol error instead of leaving the connection open.
+      socket.close(1002, "invalid close code");
+    }
   }
 }
