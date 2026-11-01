@@ -29,6 +29,8 @@ final class PairSession {
   let frames: FramedNotes
   /// Notes held back until a set time, for the "sealed note" experiment.
   let sealed: SealedBoxStore
+  /// The porch light, for the experiment that lets the streak wait.
+  let porch: PorchLightStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -66,6 +68,7 @@ final class PairSession {
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
     sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
     self.room = room
     self.delivery = delivery
@@ -142,6 +145,13 @@ final class PairSession {
         keep(note.strokes, .received, id: note.id)
       }
     }
+  }
+
+  /// The shared streak on `day`, counting through the nights the porch light covers.
+  func streak(today day: String, calendar: Calendar) -> Int {
+    let paused =
+      labs.isOn(LabExperiment.porchLight) ? porch.covered(now: now(), calendar: calendar) : []
+    return play.ledger.streak(today: day, calendar: calendar, paused: paused)
   }
 
   /// This phone's finger went down on the cat, or came up.

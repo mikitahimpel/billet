@@ -16,6 +16,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case sealedNote
   case twoWisps
   case wallpaperShortcut
+  case porchLight
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -43,6 +44,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sealedNote: .notes
     case .twoWisps: .cat
     case .wallpaperShortcut: .notes
+    case .porchLight: .cat
     }
   }
 
@@ -58,6 +60,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sealedNote: "Sealed note"
     case .twoWisps: "Two wisps"
     case .wallpaperShortcut: "Wallpaper shortcut"
+    case .porchLight: "Porch light"
     }
   }
 
@@ -65,6 +68,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .porchLight:
+      "Going away? Leave the porch light on for up to three nights and the streak waits for you. Free, always."
     case .wallpaperShortcut:
       "A Shortcuts action returns your partner's latest note on the night sky, sized for the Lock Screen. A received note also offers Make a wallpaper to save its picture."
     case .twoWisps:
@@ -98,6 +103,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sealedNote: true
     case .twoWisps: true
     case .wallpaperShortcut: true
+    case .porchLight: true
     }
   }
 }

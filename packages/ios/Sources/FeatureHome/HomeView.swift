@@ -55,7 +55,9 @@ struct HomeView: View {
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
-      .task(id: session.play.ledger) { await keepStreakCurrent() }
+      .task(id: StreakInputs(ledger: session.play.ledger, porch: session.porch.light)) {
+        await keepStreakCurrent()
+      }
       .task { await keepSealedNotesCurrent() }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
@@ -88,7 +90,7 @@ struct HomeView: View {
     while !Task.isCancelled {
       let calendar = Calendar.current
       let today = TreatDay.key(for: .now, calendar: calendar)
-      store.send(.pet(.streakChanged(session.play.streak(today: today, calendar: calendar))))
+      store.send(.pet(.streakChanged(session.streak(today: today, calendar: calendar))))
       try? await Task.sleep(for: .seconds(60))
     }
   }
@@ -182,6 +184,7 @@ struct HomeView: View {
       catNaming
       latestReceived
       treatPanel
+      porchLightCard
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
@@ -200,6 +203,12 @@ struct HomeView: View {
             .transition(.opacity)
         }
       }
+    }
+  }
+
+  @ViewBuilder private var porchLightCard: some View {
+    if session.labs.isOn(LabExperiment.porchLight) {
+      PorchLightSection(store: session.porch)
     }
   }
 
@@ -323,7 +332,7 @@ struct HomeView: View {
     let day = TreatDay.key(for: today, calendar: calendar)
     return PetPlayState(
       treat: PetPlayState.Treat(session.play.status(on: day)),
-      streak: session.play.streak(today: day, calendar: calendar),
+      streak: session.streak(today: day, calendar: calendar),
       petsReceived: session.play.petsReceived,
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
@@ -351,7 +360,7 @@ struct HomeView: View {
       let day = TreatDay.key(for: context.date, calendar: calendar)
       TreatPanel(
         status: session.play.status(on: day),
-        streak: session.play.streak(today: day, calendar: calendar),
+        streak: session.streak(today: day, calendar: calendar),
         onGive: { session.giveTreat(on: day) }
       )
     }
@@ -434,4 +443,10 @@ extension PetPlayState.Treat {
     case .fed: self = .fed
     }
   }
+}
+
+/// What the streak is worked out from, so it is worked out again when either changes.
+private struct StreakInputs: Equatable {
+  let ledger: TreatLedger
+  let porch: PorchLight?
 }
