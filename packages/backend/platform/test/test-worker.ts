@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { Effect } from "effect";
+import { respondApi } from "../src/api-fetch.ts";
 import { openRoomDatabase } from "../src/room-database.ts";
 
 import type { RoomMigrations } from "../src/room-database.ts";
@@ -32,6 +33,4 @@ export class BrokenRoom extends DurableObject {
   }
 }
 
-export default {
-  fetch: () => new Response(null, { status: 404 }),
-};
+export default { fetch: respondApi };

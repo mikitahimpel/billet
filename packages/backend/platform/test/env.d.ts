@@ -4,6 +4,10 @@ declare namespace Cloudflare {
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
   }
+
+  interface Exports {
+    readonly default: Fetcher;
+  }
 }
 
 // Vite resolves this at build time.

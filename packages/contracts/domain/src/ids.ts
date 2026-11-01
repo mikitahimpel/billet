@@ -5,6 +5,10 @@ const nonEmpty = Schema.String.check(Schema.isNonEmpty());
 export const UserId = nonEmpty.pipe(Schema.brand("UserId"));
 export type UserId = typeof UserId.Type;
 
+/** One signed-in install of the app. The server assigns it at sign-in. */
+export const DeviceId = nonEmpty.pipe(Schema.brand("DeviceId"));
+export type DeviceId = typeof DeviceId.Type;
+
 export const NoteId = nonEmpty.pipe(Schema.brand("NoteId"));
 export type NoteId = typeof NoteId.Type;
 

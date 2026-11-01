@@ -1,0 +1,6 @@
+{
+  "deviceId": "device-1",
+  "expiresAt": 1707776000000,
+  "sessionToken": "session-sample-0000000000000000000000000000",
+  "userId": "user-alice"
+}
