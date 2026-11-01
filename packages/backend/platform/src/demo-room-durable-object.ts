@@ -1,4 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
+import {
+  MAX_QUEUED_PETS,
+  parsePlay,
+  recordTreat,
+  type PlayFrame,
+  type QueuedPet,
+  type TreatDays,
+} from "./demo-play.ts";
 import { sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
@@ -24,6 +32,14 @@ interface QueuedNote {
 }
 
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+const petFrame = (pet: PlayFrame & { readonly from: string }) => ({
+  type: "play",
+  id: pet.id,
+  kind: pet.kind,
+  at: pet.at,
+  from: pet.from,
+});
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -62,6 +78,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     const { 0: client, 1: server } = new WebSocketPair();
     this.ctx.acceptWebSocket(server, [id]);
     await this.replay(server, id);
+    await this.replayPlay(server, id);
     this.announcePresence();
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -91,6 +108,10 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       await this.ctx.storage.put("tokens", { ...tokens, [sender]: token.toLowerCase() });
       return;
     }
+    if (frame["type"] === "play") {
+      await this.handlePlay(socket, sender, frame);
+      return;
+    }
     if (frame["type"] !== "note") return;
     const { id, ink } = frame;
     if (typeof id !== "string" || !UUID.test(id) || typeof ink !== "string") return;
@@ -112,6 +133,62 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
 
   override webSocketError(socket: WebSocket): void {
     this.announcePresence(socket);
+  }
+
+  /**
+   * A pet is relayed to the partner, or kept (newest few) until they connect. A treat is recorded
+   * once per device per day, and the whole ledger goes to both sockets so phones agree.
+   */
+  private async handlePlay(
+    socket: WebSocket,
+    sender: string,
+    frame: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
+    const play = parsePlay(frame);
+    if (play === undefined) return;
+    const seen = (await this.ctx.storage.get<string[]>("seen")) ?? [];
+    if (!seen.includes(play.id)) {
+      await this.ctx.storage.put("seen", [...seen, play.id].slice(-200));
+      if (play.kind === "treat") {
+        const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
+        await this.ctx.storage.put("treatDays", recordTreat(days, sender, play.at));
+        await this.broadcastTreats();
+      } else {
+        const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
+        const partner = devices.find((d) => d !== sender);
+        if (partner !== undefined) await this.relayPet({ ...play, from: sender, to: partner });
+      }
+    }
+    socket.send(JSON.stringify({ type: "ack", id: play.id }));
+  }
+
+  private async relayPet(pet: QueuedPet): Promise<void> {
+    const [target] = this.ctx.getWebSockets(pet.to);
+    if (target !== undefined) {
+      target.send(JSON.stringify(petFrame(pet)));
+      return;
+    }
+    const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
+    await this.ctx.storage.put("pets", [...queue, pet].slice(-MAX_QUEUED_PETS));
+  }
+
+  private async replayPlay(socket: WebSocket, device: string): Promise<void> {
+    const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
+    socket.send(JSON.stringify({ type: "treats", days }));
+    const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
+    const mine = queue.filter((p) => p.to === device);
+    if (mine.length === 0) return;
+    await this.ctx.storage.put(
+      "pets",
+      queue.filter((p) => p.to !== device),
+    );
+    for (const pet of mine) socket.send(JSON.stringify(petFrame(pet)));
+  }
+
+  private async broadcastTreats(): Promise<void> {
+    const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
+    const message = JSON.stringify({ type: "treats", days });
+    for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }
 
   private async deliverOrQueue(note: QueuedNote): Promise<void> {
