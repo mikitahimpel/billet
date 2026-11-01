@@ -8,7 +8,11 @@ typealias RoundTrip = @Sendable (Data) throws -> Data
 
 /// Decodes with `T`, then encodes the result back.
 func codec<T: Codable & Sendable>(_ type: T.Type) -> RoundTrip {
-  { data in try JSONEncoder().encode(JSONDecoder().decode(T.self, from: data)) }
+  { data in
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+    return try encoder.encode(JSONDecoder().decode(T.self, from: data))
+  }
 }
 
 /// Maps a fixture's top-level directory name to the Wire type that must round-trip it.
