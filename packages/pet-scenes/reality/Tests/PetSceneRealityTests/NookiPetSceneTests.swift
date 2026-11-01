@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Pet
 import PetScene
@@ -61,6 +62,22 @@ struct NookiPetSceneTests {
     await diorama.mochiLoading?.value
     #expect(diorama.entityCount > 100)
     #expect(!diorama.isMochiMissing)
+  }
+
+  @Test func aDrawingShownBeforeTheRoomLoadsReachesTheNote() async throws {
+    let context = try #require(
+      CGContext(
+        data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+    let diorama = NookiDiorama()
+    diorama.show(drawing: try #require(context.makeImage()))
+    diorama.startLoading()
+    await diorama.loading?.value
+    for _ in 0..<300 where !diorama.noteShowsDrawing {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    #expect(diorama.noteShowsDrawing)
   }
 
   @Test func loadingTwiceBuildsOneRoom() async {

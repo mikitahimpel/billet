@@ -62,6 +62,8 @@ final class NookiDiorama {
   private var ballSpeed: Float = 0
   private var lantern: Entity?
   private var shownDrawing: CGImage?
+  /// The paper chosen so far. A drawing can arrive before the note is built.
+  private var shownPaper: (material: PhysicallyBasedMaterial, hasDrawing: Bool)?
   /// The paint a tap puts on while the room is being changed.
   var paint = NookiSwatch.cream
   private var isFollowingTilt = false
@@ -201,10 +203,14 @@ final class NookiDiorama {
   }
 
   private func applyPaper(_ paper: PhysicallyBasedMaterial, hasDrawing: Bool) {
+    shownPaper = (paper, hasDrawing)
     noteSheet?.model?.materials = [paper]
     noteMark?.isEnabled = !hasDrawing
     plane.setPaper(paper)
   }
+
+  /// Whether the note wears a delivered drawing rather than its plain mark.
+  var noteShowsDrawing: Bool { noteMark?.isEnabled == false }
 
   /// Shows the pair's play. A new pet from the partner gets the same reaction as a tap.
   func show(_ play: PetPlayState) {
@@ -647,6 +653,7 @@ final class NookiDiorama {
     note.isEnabled = false
     Self.makeTappable(note, size: [0.26, 0.32, 0.02], center: .zero)
     room.addChild(note)
+    if let shownPaper { applyPaper(shownPaper.material, hasDrawing: shownPaper.hasDrawing) }
   }
 
   /// A large collider behind everything, so a tap that misses every object still arrives and can
