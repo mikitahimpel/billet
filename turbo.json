@@ -33,6 +33,7 @@
         "Sources/**",
         "Tests/**",
         "Package.swift",
+        "scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format"
       ]
@@ -43,6 +44,7 @@
         "Sources/**",
         "Tests/**",
         "Package.swift",
+        "scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format",
         "App/**",
