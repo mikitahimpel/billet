@@ -1,23 +1,8 @@
+import Delivery
 import Foundation
 import Ink
+import WidgetKit
 import Wire
-
-/// A note's `ink` field: base64 of the compact stroke JSON.
-enum NoteInk {
-  /// A socket frame carries far more than a push, so drawings keep their detail.
-  private static let budget = 256 * 1024
-
-  static func encode(_ strokes: [Stroke]) throws -> String {
-    let compact = try InkEncoder.encodeWithinBudget(
-      strokes, parameters: InkEncoder.Parameters(budget: budget))
-    return try JSONEncoder().encode(compact).base64EncodedString()
-  }
-
-  static func decode(_ ink: String) throws -> [Stroke] {
-    guard let data = Data(base64Encoded: ink) else { throw CocoaError(.coderReadCorrupt) }
-    return try InkDecoder.decode(JSONDecoder().decode(CompactStrokes.self, from: data))
-  }
-}
 
 /// One device's socket to its room, kept open only while ``run(_:)`` runs.
 ///
@@ -28,6 +13,11 @@ actor LiveDelivery {
     var type = "note"
     let id: String
     let ink: String
+  }
+
+  private struct PushToken: Encodable, Sendable {
+    var type = "push-token"
+    let token: String
   }
 
   private struct Frame: Decodable {
@@ -56,6 +46,13 @@ actor LiveDelivery {
     if let openSocket {
       await Self.write(note, to: openSocket)
     }
+  }
+
+  /// Tells the room where to send pushes. Also runs on every connect, so a token that arrives
+  /// while offline still reaches the room.
+  func sendPushToken() async {
+    guard let openSocket, let token = DemoRoom.pushToken() else { return }
+    await Self.write(PushToken(token: token), to: openSocket)
   }
 
   /// Connects and reconnects with backoff until cancelled or the server refuses this device.
@@ -114,6 +111,7 @@ actor LiveDelivery {
       updates.yield(.status(frame.partnerPresent == true ? .partnerHere : .partnerAway))
       if openSocket !== task {
         openSocket = task
+        await sendPushToken()
         for note in outbox {
           await Self.write(note, to: task)
         }
@@ -124,6 +122,8 @@ actor LiveDelivery {
       guard let id = frame.id, let ink = frame.ink, receivedIDs.insert(id).inserted,
         let strokes = try? NoteInk.decode(ink)
       else { return }
+      NoteImage.saveLatest(strokes)
+      WidgetCenter.shared.reloadAllTimelines()
       updates.yield(.note(strokes))
     default:
       break
@@ -131,8 +131,10 @@ actor LiveDelivery {
   }
 
   /// A failed write surfaces as a failed receive, which reconnects and resends.
-  private static func write(_ note: Outgoing, to task: URLSessionWebSocketTask) async {
-    guard let data = try? JSONEncoder().encode(note) else { return }
+  private static func write(
+    _ frame: some Encodable & Sendable, to task: URLSessionWebSocketTask
+  ) async {
+    guard let data = try? JSONEncoder().encode(frame) else { return }
     try? await task.send(.string(String(decoding: data, as: UTF8.self)))
   }
 }

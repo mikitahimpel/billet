@@ -43,6 +43,7 @@ let homeTarget: Target = .target(
   name: "FeatureHome",
   dependencies: [
     "BilletKit",
+    "Delivery",
     "FeatureCanvas",
     "Ink",
     "Wire",
@@ -59,7 +60,9 @@ let testTargets: [Target] = [
   .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
   .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
-  .testTarget(name: "FeatureHomeTests", dependencies: ["BilletKit", "FeatureHome", "Wire"]),
+  .testTarget(
+    name: "FeatureHomeTests",
+    dependencies: ["BilletKit", "Delivery", "FeatureHome", "Ink", "Wire"]),
 ]
 
 let products: [String] = library.map(\.name) + features + ["FeatureHome"]

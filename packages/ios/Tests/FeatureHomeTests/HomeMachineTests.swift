@@ -1,5 +1,7 @@
 import BilletKit
+import Delivery
 import Foundation
+import Ink
 import Testing
 import Wire
 
@@ -155,10 +157,85 @@ struct DemoDeliveryTests {
     #expect(DemoRoom.saved(in: defaults) == second)
   }
 
+  @Test func pairingCarriesOverFromBeforeTheAppGroup() throws {
+    let legacy = try #require(UserDefaults(suiteName: "demo-room-legacy"))
+    let shared = try #require(UserDefaults(suiteName: "demo-room-shared"))
+    legacy.removePersistentDomain(forName: "demo-room-legacy")
+    shared.removePersistentDomain(forName: "demo-room-shared")
+    let earlier = DemoRoom.pair(code: "ABCDEFGHJK", in: legacy)
+    #expect(DemoRoom.saved(in: shared, legacy: legacy) == earlier)
+    #expect(DemoRoom.saved(in: shared, legacy: shared) == earlier)
+  }
+
+  @Test func noteRequestAddsThisDevice() {
+    let room = DemoRoom(code: "ABCDEFGHJK", device: "d")
+    let url = room.noteRequestURL(noteURL: "https://example.test/demo/rooms/ABCDEFGHJK/notes/n")
+    #expect(url?.absoluteString == "https://example.test/demo/rooms/ABCDEFGHJK/notes/n?device=d")
+  }
+
+  @Test func noteRequestRefusesOtherRoomsAndPlainHTTP() {
+    let room = DemoRoom(code: "ABCDEFGHJK", device: "d")
+    #expect(
+      room.noteRequestURL(noteURL: "https://example.test/demo/rooms/ZZZZZZZZZZ/notes/n") == nil)
+    #expect(
+      room.noteRequestURL(noteURL: "http://example.test/demo/rooms/ABCDEFGHJK/notes/n") == nil)
+    #expect(room.noteRequestURL(noteURL: "https://example.test/other") == nil)
+  }
+
+  @Test func pushedNoteIsFetchedAndSaved() async throws {
+    let room = DemoRoom(code: "ABCDEFGHJK", device: "d")
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [StubNoteRoute.self]
+    let session = URLSession(configuration: configuration)
+    let file = FileManager.default.temporaryDirectory.appendingPathComponent(
+      "\(UUID().uuidString).png")
+    defer { try? FileManager.default.removeItem(at: file) }
+    let base = "https://example.test/demo/rooms/ABCDEFGHJK/notes/"
+
+    #expect(await room.saveNote(noteURL: base + "found", session: session, to: file))
+    #expect(NoteImage.loadLatest(from: file) != nil)
+    #expect(!(await room.saveNote(noteURL: base + "missing", session: session, to: file)))
+  }
+
+  @Test func noteBecomesAPNGFile() throws {
+    let directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let file = directory.appendingPathComponent("note.png")
+    #expect(NoteImage.saveLatest(strokes, to: file))
+    let data = try Data(contentsOf: file)
+    #expect(data.starts(with: [0x89, 0x50, 0x4E, 0x47]))
+    #expect(NoteImage.loadLatest(from: file) != nil)
+  }
+
   @Test func fittedDrawingFillsTheSquare() throws {
-    let points = try #require(HungNote.fitted(strokes).first?.points)
+    let points = try #require(NoteImage.fitted(strokes).first?.points)
     let span = (points.map(\.y).max() ?? 0) - (points.map(\.y).min() ?? 0)
     #expect(abs(span - 0.84) < 0.0001)
     #expect(points.allSatisfy { (0...1).contains($0.x) && (0...1).contains($0.y) })
+  }
+}
+
+/// Answers like the room's note route: this device's stored note, or 404.
+private final class StubNoteRoute: URLProtocol {
+  override class func canInit(with request: URLRequest) -> Bool { true }
+  override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+  override func stopLoading() {}
+
+  override func startLoading() {
+    guard let client, let url = request.url else { return }
+    let found = url.path.hasSuffix("found") && url.query == "device=d"
+    let stroke = Stroke(
+      color: "#000000", width: 0.01, points: [Point(x: 0, y: 0), Point(x: 1, y: 1)])
+    let ink = (try? NoteInk.encode([stroke])) ?? ""
+    let body = Data(#"{"id":"n","ink":"\#(ink)","from":"p"}"#.utf8)
+    let response = HTTPURLResponse(
+      url: url, statusCode: found ? 200 : 404, httpVersion: nil, headerFields: nil)
+    if let response {
+      client.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+    }
+    client.urlProtocol(self, didLoad: found ? body : Data())
+    client.urlProtocolDidFinishLoading(self)
   }
 }

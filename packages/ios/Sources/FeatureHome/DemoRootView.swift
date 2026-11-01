@@ -1,3 +1,4 @@
+import Delivery
 import SwiftUI
 
 /// Pairs on first launch, then shows the home screen connected to the room on `host`.

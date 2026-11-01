@@ -1,6 +1,7 @@
 import BilletKit
 import CoreGraphics
 import FeatureCanvas
+import Ink
 import SwiftUI
 
 /// The main screen: the Little House with its cat, and the way into the canvas.
@@ -43,6 +44,10 @@ public struct HomeView: View {
     .onChange(of: store.state.noteArrived) { _, arrived in
       scene?.setNoteArrived(arrived)
     }
+    .task { await DemoPush.requestPermission() }
+    .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
+      Task { await delivery.pushTokenChanged() }
+    }
     .task(id: scenePhase == .active) {
       guard scenePhase == .active else { return }
       for await update in delivery.updates() {
@@ -57,7 +62,7 @@ public struct HomeView: View {
       hungImage = nil
       try? await Task.sleep(for: HungNote.revealDelay)
       guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
-      hungImage = HungNote.image(of: drawing)
+      hungImage = NoteImage.cgImage(of: drawing)
       hangCount += 1
     }
   }
