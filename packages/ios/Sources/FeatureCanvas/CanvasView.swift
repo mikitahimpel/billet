@@ -5,7 +5,8 @@ import Wire
 
 /// A neutral drawing surface with system controls. Placeholder styling until a design is chosen.
 public struct CanvasView: View {
-  @State private var store = Store<CanvasMachine>(initial: CanvasMachine.State(), run: CanvasMachine.run)
+  @State private var store = Store<CanvasMachine>(
+    initial: CanvasMachine.State(), run: CanvasMachine.run)
 
   public init() {}
 
@@ -15,6 +16,9 @@ public struct CanvasView: View {
         let width = max(geometry.size.width, 1)
         Canvas { context, size in
           context.withCGContext { cgContext in
+            // StrokeRenderer assumes a bottom-left origin; this context is already top-left.
+            cgContext.translateBy(x: 0, y: size.height)
+            cgContext.scaleBy(x: 1, y: -1)
             do {
               try StrokeRenderer.draw(store.state.visibleStrokes, in: cgContext, size: size)
             } catch {
