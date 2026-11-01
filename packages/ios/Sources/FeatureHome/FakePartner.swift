@@ -17,13 +17,16 @@ struct FakePartnerPace: Sendable {
   var petBack: Duration
   /// After a treat, before the partner gives theirs.
   var treatBack: Duration
+  /// How long a sealed note from the partner stays closed. Short, so it can be watched opening.
+  var sealedFor: Duration
   /// Between the things the partner does when nobody has done anything.
   var idle: [Duration]
 
   static let calm = FakePartnerPace(
     arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
-    treatBack: .seconds(5), idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
+    treatBack: .seconds(5), sealedFor: .seconds(90),
+    idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
 
 /// FAKE. A partner that lives in this app, so everything can be tried on one phone. It answers
@@ -129,7 +132,7 @@ actor FakePartnerRoom {
     case 0: drawNote()
     case 1: emit(.partnerPetted)
     case 2: giveTreat()
-    default: drawNote()
+    default: sealNote()
     }
   }
 
@@ -144,6 +147,12 @@ actor FakePartnerRoom {
 
   private func drawNote() {
     emit(.note(FakePartnerDrawings.drawing(number: drawn), id: UUID()))
+    drawn += 1
+  }
+
+  private func sealNote() {
+    let opens = now().addingTimeInterval(Double(pace.sealedFor.components.seconds))
+    emit(.sealedNote(FakePartnerDrawings.drawing(number: drawn), id: UUID(), opensAt: opens))
     drawn += 1
   }
 

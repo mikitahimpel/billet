@@ -11,7 +11,8 @@ struct FakePartnerTests {
   private static let quick = FakePartnerPace(
     arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
     reply: .milliseconds(30),
-    petBack: .milliseconds(10), treatBack: .milliseconds(10), idle: [])
+    petBack: .milliseconds(10), treatBack: .milliseconds(10), sealedFor: .seconds(60),
+    idle: [])
 
   private func collect(
     _ delivery: NoteDelivery, count: Int, after act: @Sendable () async -> Void = {}
@@ -92,10 +93,11 @@ struct FakePartnerTests {
       case .note: "note"
       case .partnerPetted: "pet"
       case .treats: "treat"
+      case .sealedNote: "sealed"
       default: "other"
       }
     }
-    #expect(kinds == ["note", "pet", "treat", "note"])
+    #expect(kinds == ["note", "pet", "treat", "sealed"])
   }
 
   @Test func everyDrawingHasInkInsideTheUnitSquare() {

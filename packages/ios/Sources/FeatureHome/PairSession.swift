@@ -27,6 +27,8 @@ final class PairSession {
   let labs: WidgetFeaturesModel
   /// The notes hung in frames, for the "framed notes" experiment.
   let frames: FramedNotes
+  /// Notes held back until a set time, for the "sealed note" experiment.
+  let sealed: SealedBoxStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -62,6 +64,7 @@ final class PairSession {
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
     self.room = room
     self.delivery = delivery
     self.archive = archive
@@ -116,6 +119,30 @@ final class PairSession {
 
   func send(_ strokes: [Stroke]) {
     let id = UUID()
+    if labs.isOn(LabExperiment.sealedNote), sealed.sealNext {
+      sealed.sealNext = false
+      let opens = SealedBox.tomorrowMorning(after: now(), calendar: .current)
+      sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opens, direction: .outgoing))
+      store.send(.canvasClosed)
+      return
+    }
+    dispatch(strokes, id: id)
+  }
+
+  /// Opens the sealed notes whose time has come: this phone's go to the partner, the partner's
+  /// are carried in by the cat.
+  func openSealedNotes() {
+    for note in sealed.release(at: now()) {
+      switch note.direction {
+      case .outgoing: dispatch(note.strokes, id: note.id)
+      case .incoming:
+        store.send(.noteReceived(note.strokes))
+        keep(note.strokes, .received, id: note.id)
+      }
+    }
+  }
+
+  private func dispatch(_ strokes: [Stroke], id: UUID) {
     store.send(.drawingSent(strokes, id: id))
     catReturn.sent(id)
     keep(strokes, .sent, id: id)
@@ -185,6 +212,8 @@ final class PairSession {
         lastReaction = reaction
         reactionsSeen += 1
       }
+    case .sealedNote(let strokes, let id, let opensAt):
+      sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
     case .noteOpened(let id):
       catReturn.opened(id, at: now())
     case .partnerPetted:

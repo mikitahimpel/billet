@@ -27,6 +27,9 @@ public struct NoteDelivery: Sendable {
     /// The partner opened a note this device sent. Only the fake partner says this for now: the
     /// room has no frame for it.
     case noteOpened(UUID)
+    /// A note from the partner that stays closed until `opensAt`. Only the fake partner sends
+    /// these for now: the room has no frame for them.
+    case sealedNote([Stroke], id: UUID, opensAt: Date)
   }
 
   /// This device's ID, to tell its own treats from the partner's.

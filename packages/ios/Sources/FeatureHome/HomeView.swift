@@ -56,6 +56,7 @@ struct HomeView: View {
         Task { await session.pushTokenChanged() }
       }
       .task(id: session.play.ledger) { await keepStreakCurrent() }
+      .task { await keepSealedNotesCurrent() }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
@@ -89,6 +90,14 @@ struct HomeView: View {
       let today = TreatDay.key(for: .now, calendar: calendar)
       store.send(.pet(.streakChanged(session.play.streak(today: today, calendar: calendar))))
       try? await Task.sleep(for: .seconds(60))
+    }
+  }
+
+  /// Opens sealed notes as their time comes while Home is up.
+  private func keepSealedNotesCurrent() async {
+    while !Task.isCancelled {
+      session.openSealedNotes()
+      try? await Task.sleep(for: .seconds(5))
     }
   }
 
@@ -168,6 +177,7 @@ struct HomeView: View {
       catCameBackNotice
       todaysWordCard
       sundayPostCard
+      sealedNoteCards
       catNaming
       latestReceived
       treatPanel
@@ -189,6 +199,12 @@ struct HomeView: View {
             .transition(.opacity)
         }
       }
+    }
+  }
+
+  @ViewBuilder private var sealedNoteCards: some View {
+    if session.labs.isOn(LabExperiment.sealedNote) {
+      SealedNoteSection(store: session.sealed, catName: session.play.catName)
     }
   }
 
