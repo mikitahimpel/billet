@@ -3,6 +3,7 @@ import Delivery
 import DesignSystem
 import FeatureInbox
 import Foundation
+import Labs
 import Observation
 import Persistence
 import Pet
@@ -33,6 +34,8 @@ final class PairSession {
   /// Counts up each time the partner reacts to a note this device sent, and holds that reaction.
   private(set) var reactionsSeen = 0
   private(set) var lastReaction: Reaction?
+  /// The cat's trip with the last note this device sent, for the "cat came back" experiment.
+  private(set) var catReturn = CatReturn()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
 
@@ -110,6 +113,7 @@ final class PairSession {
   func send(_ strokes: [Stroke]) {
     let id = UUID()
     store.send(.drawingSent(strokes, id: id))
+    catReturn.sent(id)
     keep(strokes, .sent, id: id)
   }
 
@@ -177,6 +181,8 @@ final class PairSession {
         lastReaction = reaction
         reactionsSeen += 1
       }
+    case .noteOpened(let id):
+      catReturn.opened(id, at: now())
     case .partnerPetted:
       play.petReceived()
     case .treats(let days):

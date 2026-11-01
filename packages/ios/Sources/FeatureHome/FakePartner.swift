@@ -7,6 +7,8 @@ import Wire
 struct FakePartnerPace: Sendable {
   /// Before the partner shows as here.
   var arrival: Duration
+  /// After a note is sent, before the partner opens it.
+  var open: Duration
   /// After a note is sent, before the partner reacts to it.
   var reaction: Duration
   /// After a note is sent, before the partner draws one back.
@@ -19,7 +21,8 @@ struct FakePartnerPace: Sendable {
   var idle: [Duration]
 
   static let calm = FakePartnerPace(
-    arrival: .seconds(1), reaction: .seconds(4), reply: .seconds(12), petBack: .seconds(2),
+    arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
+    petBack: .seconds(2),
     treatBack: .seconds(5), idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
 
@@ -60,6 +63,7 @@ actor FakePartnerRoom {
   }
 
   func noteSent(_ id: UUID) {
+    after(pace.open) { $0.emit(.noteOpened(id)) }
     after(pace.reaction) { $0.react(to: id) }
     after(pace.reply) { $0.drawNote() }
   }

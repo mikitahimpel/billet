@@ -154,6 +154,7 @@ struct HomeView: View {
       }
       fakePartnerNotice
       overnightStayNotice
+      catCameBackNotice
       catNaming
       latestReceived
       treatPanel
@@ -164,6 +165,18 @@ struct HomeView: View {
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
     .calmAnimation(value: catAway)
+  }
+
+  /// A TimelineView lets the satchel go away on its own once its twelve hours are up.
+  @ViewBuilder private var catCameBackNotice: some View {
+    if session.labs.isOn(LabExperiment.catCameBack) {
+      TimelineView(.everyMinute) { context in
+        if session.catReturn.isBack(now: context.date) {
+          CatCameBackRow(catName: session.play.catName)
+            .transition(.opacity)
+        }
+      }
+    }
   }
 
   @ViewBuilder private var overnightStayNotice: some View {

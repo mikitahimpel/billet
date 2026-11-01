@@ -9,6 +9,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case fakePartner
   case overnightStay
   case drawnReplay
+  case catCameBack
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -29,6 +30,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .fakePartner: .demo
     case .overnightStay: .cat
     case .drawnReplay: .notes
+    case .catCameBack: .cat
     }
   }
 
@@ -37,6 +39,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .fakePartner: "Fake partner"
     case .overnightStay: "Overnight stay"
     case .drawnReplay: "Watch it being drawn"
+    case .catCameBack: "The cat came back"
     }
   }
 
@@ -44,6 +47,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .catCameBack:
+      "Once your partner has opened your note, Home shows the cat back with an empty satchel for twelve hours."
     case .drawnReplay:
       "Open a note and the ink appears stroke by stroke, in the order it was drawn. The pace is made up, since notes carry no timestamps."
     case .overnightStay:
@@ -56,6 +61,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .fakePartner: false
     case .overnightStay: true
     case .drawnReplay: true
+    case .catCameBack: true
     }
   }
 }

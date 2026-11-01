@@ -9,7 +9,8 @@ import Wire
 struct FakePartnerTests {
   /// Waits a moment instead of a real time, so a test does not run for seconds.
   private static let quick = FakePartnerPace(
-    arrival: .milliseconds(1), reaction: .milliseconds(10), reply: .milliseconds(30),
+    arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
+    reply: .milliseconds(30),
     petBack: .milliseconds(10), treatBack: .milliseconds(10), idle: [])
 
   private func collect(
@@ -33,22 +34,23 @@ struct FakePartnerTests {
     #expect(seen == [.status(.connecting), .status(.partnerHere)])
   }
 
-  @Test func aSentNoteGetsAReactionAndThenAReply() async {
+  @Test func aSentNoteIsOpenedThenReactedToThenAnswered() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let id = UUID()
-    let seen = await collect(delivery, count: 4) {
+    let seen = await collect(delivery, count: 5) {
       await delivery.deliver([], id)
     }
-    guard seen.count == 4 else {
+    guard seen.count == 5 else {
       Issue.record("saw \(seen)")
       return
     }
-    #expect(seen[2] == .reactions([id: .heart]))
-    if case .note(let strokes, _) = seen[3] {
+    #expect(seen[2] == .noteOpened(id))
+    #expect(seen[3] == .reactions([id: .heart]))
+    if case .note(let strokes, _) = seen[4] {
       #expect(!strokes.isEmpty)
     } else {
-      Issue.record("expected a note, got \(seen[3])")
+      Issue.record("expected a note, got \(seen[4])")
     }
   }
 

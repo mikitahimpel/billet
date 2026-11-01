@@ -24,6 +24,9 @@ public struct NoteDelivery: Sendable {
     case catName(String)
     /// The room's table of reactions: note to the reaction its receiver sent.
     case reactions([UUID: Reaction])
+    /// The partner opened a note this device sent. Only the fake partner says this for now: the
+    /// room has no frame for it.
+    case noteOpened(UUID)
   }
 
   /// This device's ID, to tell its own treats from the partner's.
