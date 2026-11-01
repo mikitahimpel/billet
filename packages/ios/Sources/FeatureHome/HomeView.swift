@@ -2,6 +2,7 @@ import BilletKit
 import CoreGraphics
 import DesignSystem
 import FeatureCanvas
+import FeatureInbox
 import Foundation
 import Ink
 import Labs
@@ -36,6 +37,11 @@ struct HomeView: View {
   private var catAway: Bool {
     session.labs.isOn(LabExperiment.overnightStay)
       && OvernightStay.place(after: session.notes).isAway
+  }
+
+  /// The notes in frames, in the order they were hung.
+  private var framedNotes: [NoteRecord] {
+    session.frames.wall.hung.compactMap { id in session.notes.first { $0.id == id } }
   }
 
   private var delivery: Int { store.state.pet.world.delivery }
@@ -131,6 +137,11 @@ struct HomeView: View {
           }
         }
         .overlay { catReactions }
+        .overlay(alignment: .topLeading) {
+          if session.labs.isOn(LabExperiment.framedNotes) {
+            FramedWallView(notes: framedNotes)
+          }
+        }
         .overlay(alignment: .bottom) {
           if catAway { OvernightStayView().padding(.bottom, Spacing.wide) }
         }

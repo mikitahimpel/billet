@@ -46,7 +46,9 @@ struct AppShellView: View {
           reactions: session.play.reactions,
           onReact: { session.react(to: $0, $1) },
           detailDrawing: labs.isOn(LabExperiment.drawnReplay)
-            ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil
+            ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil,
+          detailActions: labs.isOn(LabExperiment.framedNotes)
+            ? { AnyView(FrameNoteButton(note: $0, framed: session.frames)) } : nil
         )
         .tabEntrance(destination == .notes)
       }

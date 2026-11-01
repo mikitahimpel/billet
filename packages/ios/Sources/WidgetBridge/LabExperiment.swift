@@ -12,6 +12,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case catCameBack
   case todaysWord
   case sundayPost
+  case framedNotes
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -35,6 +36,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catCameBack: .cat
     case .todaysWord: .notes
     case .sundayPost: .notes
+    case .framedNotes: .notes
     }
   }
 
@@ -46,6 +48,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catCameBack: "The cat came back"
     case .todaysWord: "Today's word"
     case .sundayPost: "Sunday post"
+    case .framedNotes: "Framed notes"
     }
   }
 
@@ -53,6 +56,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .framedNotes:
+      "Hang a received note in a frame from its full-screen view. Up to three frames hang on the wall of the room. The choice stays on this phone."
     case .sundayPost:
       "On Sundays the cat brings one page of the week's notes, from the notes on this phone, to save or share. Other days Home offers a peek at the week so far."
     case .todaysWord:
@@ -74,6 +79,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catCameBack: true
     case .todaysWord: true
     case .sundayPost: true
+    case .framedNotes: true
     }
   }
 }

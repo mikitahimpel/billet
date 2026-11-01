@@ -25,6 +25,8 @@ final class PairSession {
   let isFakePartner: Bool
   /// The lab switches. Each experiment checks its own.
   let labs: WidgetFeaturesModel
+  /// The notes hung in frames, for the "framed notes" experiment.
+  let frames: FramedNotes
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -59,6 +61,7 @@ final class PairSession {
   ) {
     self.isFakePartner = isFakePartner
     self.labs = labs
+    frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
     self.room = room
     self.delivery = delivery
     self.archive = archive
@@ -100,6 +103,7 @@ final class PairSession {
       notes = (notes.filter { !storedIDs.contains($0.id) } + stored)
         .sorted { $0.date > $1.date }
       notesFailedToLoad = false
+      frames.prune(keeping: notes)
     } catch {
       notesFailedToLoad = true
     }

@@ -9,6 +9,7 @@ public struct NotesView: View {
   private let reactions: [UUID: Reaction]
   private let onReact: ((NoteRecord, Reaction) -> Void)?
   private let detailDrawing: ((NoteRecord) -> AnyView)?
+  private let detailActions: ((NoteRecord) -> AnyView)?
 
   @Namespace private var zoom
   @State private var opened: NoteRecord?
@@ -17,14 +18,17 @@ public struct NotesView: View {
   ///   - reactions: The reaction each note has received.
   ///   - onReact: Called when a received note is reacted to. `nil` shows no way to react.
   ///   - detailDrawing: Shows a note's drawing in the full-screen view instead of the still one.
+  ///   - detailActions: Extra controls shown under a note in the full-screen view.
   public init(
     notes: [NoteRecord],
     loadFailed: Bool = false,
     reactions: [UUID: Reaction] = [:],
     onReact: ((NoteRecord, Reaction) -> Void)? = nil,
-    detailDrawing: ((NoteRecord) -> AnyView)? = nil
+    detailDrawing: ((NoteRecord) -> AnyView)? = nil,
+    detailActions: ((NoteRecord) -> AnyView)? = nil
   ) {
     self.detailDrawing = detailDrawing
+    self.detailActions = detailActions
     self.notes = notes
     self.loadFailed = loadFailed
     self.reactions = reactions
@@ -59,6 +63,7 @@ public struct NotesView: View {
       .fullScreenCover(item: $opened) { note in
         NoteDetailView(
           note: note, reaction: reactions[note.id], drawing: detailDrawing?(note),
+          actions: detailActions?(note),
           onReact: note.direction == .received ? onReact.map { react in { react(note, $0) } } : nil
         ) { opened = nil }
         .navigationTransition(.zoom(sourceID: note.id, in: zoom))
@@ -113,6 +118,8 @@ struct NoteDetailView: View {
   let reaction: Reaction?
   /// Stands in for the still drawing when given.
   let drawing: AnyView?
+  /// Extra controls under the note.
+  let actions: AnyView?
   /// `nil` when the note is not one to react to.
   let onReact: ((Reaction) -> Void)?
   let onClose: () -> Void
@@ -146,6 +153,7 @@ struct NoteDetailView: View {
           ReactionMark(reaction)
             .padding(.top, Spacing.small)
         }
+        if let actions { actions }
         Spacer(minLength: 0)
       }
       .padding(Spacing.medium)
