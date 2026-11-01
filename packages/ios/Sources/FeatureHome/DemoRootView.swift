@@ -62,12 +62,18 @@ public struct DemoRootView: View {
   }
 
   @ViewBuilder private var content: some View {
-    if host.isEmpty {
+    if host.isEmpty, !model.isFakePartner {
       ZStack {
         EveningBackground()
-        Text("This build has no demo host.")
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
+        VStack(spacing: Spacing.medium) {
+          Text("This build has no demo host.")
+            .billetType(.body)
+            .foregroundStyle(Palette.paper.color)
+          BilletButton("Try alone with a fake partner", rank: .secondary) {
+            model.labs.set(LabExperiment.fakePartner, on: true)
+          }
+        }
+        .padding(.horizontal, Spacing.medium)
       }
     } else {
       switch model.stage {
