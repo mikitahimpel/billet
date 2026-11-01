@@ -1,0 +1,44 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "cc94f1c1-9b38-443a-b206-75546076acb8",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "directory_probe",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "directory_probe"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "table": "directory_probe"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "directory_probe_pk",
+      "table": "directory_probe",
+      "entityType": "pks"
+    }
+  ],
+  "renames": []
+}

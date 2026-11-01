@@ -13,13 +13,17 @@
     "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'",
     "alchemy": "alchemy",
     "typecheck:root": "tsc --noEmit -p tsconfig.json",
-    "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' ."
+    "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
+    "db:generate": "pnpm --filter @billet/backend-platform db:generate"
   },
   "devDependencies": {
     "@alchemy.run/cloudflare": "catalog:",
+    "@alchemy.run/drizzle": "catalog:",
     "@effect/platform-node": "catalog:infra",
     "@types/node": "catalog:",
     "alchemy": "catalog:",
+    "drizzle-kit": "catalog:",
+    "drizzle-orm": "catalog:",
     "effect": "catalog:infra",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

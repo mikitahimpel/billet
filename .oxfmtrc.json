@@ -5,6 +5,8 @@
     "pnpm-lock.yaml",
     "**/*.md",
     "**/.build/**",
-    "packages/contracts/fixtures/golden/**"
+    "packages/contracts/fixtures/golden/**",
+    "packages/backend/platform/migrations/**/migrations.js",
+    "packages/backend/platform/migrations/**/snapshot.json"
   ]
 }

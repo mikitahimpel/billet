@@ -12,6 +12,7 @@ pnpm format:check                         # oxfmt check; `pnpm format` writes
 pnpm ios:test                             # swift test in packages/ios (Mac only)
 pnpm ios:build                            # swift build in packages/ios (Mac only)
 pnpm alchemy dev                          # local infrastructure, no credentials (docs/alchemy.md)
+pnpm db:generate                          # Drizzle migrations for D1 and Durable Object SQLite
 ```
 
 Swift tasks are named `ios:*`, never `test` or `build`, so the default TS commands skip them.
