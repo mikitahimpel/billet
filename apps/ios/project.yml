@@ -22,6 +22,8 @@ packages:
   # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
   PetSceneRive:
     path: ../../packages/pet-scenes/rive
+  PetSceneReality:
+    path: ../../packages/pet-scenes/reality
 targets:
   Billet:
     type: application
@@ -31,6 +33,7 @@ targets:
       - package: Billet
         products: [FeatureHome, Persistence, PetSceneCatalog]
       - package: PetSceneRive
+      - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService
     entitlements:

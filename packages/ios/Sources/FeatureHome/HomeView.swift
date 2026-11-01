@@ -39,7 +39,12 @@ public struct HomeView: View {
     }
     .animation(.easeInOut(duration: 0.25), value: store.state.screen)
     .sheet(isPresented: $choosingScene) {
-      ScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID)
+      NavigationStack {
+        PetScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID) {
+          choosingScene = false
+        }
+      }
+      .presentationDetents([.medium])
     }
   }
 

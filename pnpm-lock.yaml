@@ -350,6 +350,12 @@ importers:
 
   packages/ios: {}
 
+  packages/pet-scenes/reality:
+    dependencies:
+      '@billet/ios':
+        specifier: workspace:*
+        version: link:../../ios
+
   packages/pet-scenes/rive:
     dependencies:
       '@billet/ios':

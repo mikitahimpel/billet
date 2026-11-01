@@ -1,6 +1,7 @@
 import FeatureHome
 import Persistence
 import PetSceneCatalog
+import PetSceneReality
 import PetSceneRive
 import SwiftUI
 import WidgetKit
@@ -8,7 +9,7 @@ import WidgetKit
 @main
 struct BilletApp: App {
   @State private var catalog = PetSceneCatalog(
-    scenes: [LittleHousePetScene()],
+    scenes: [LittleHousePetScene(), NookiPetScene()],
     defaults: .standard,
     poses: try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     onPosesPublished: { WidgetCenter.shared.reloadAllTimelines() }
