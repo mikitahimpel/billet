@@ -22,15 +22,19 @@ public struct PetScenePicker: View {
   public var body: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       VStack(spacing: 0) {
-        ForEach(scenes, id: \.id) { scene in
+        ForEach(Array(scenes.enumerated()), id: \.element.id) { index, scene in
+          if index > 0 {
+            ListDivider()
+          }
           row(scene)
         }
       }
-      .litPanel(cornerRadius: Radius.control)
+      .card()
       if !credits.isEmpty {
         Text(credits)
           .billetType(.caption)
           .foregroundStyle(Palette.muted.color)
+          .padding(.horizontal, Spacing.medium)
       }
     }
   }
@@ -38,29 +42,21 @@ public struct PetScenePicker: View {
   private func row(_ scene: any PetScene) -> some View {
     let selected = scene.id == selectedSceneID
     return Button {
-      withAnimation(Motion.gentle) { selectedSceneID = scene.id }
+      withAnimation(Motion.spring) { selectedSceneID = scene.id }
       onChoose()
     } label: {
-      HStack {
-        Text(scene.title)
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
-        Spacer(minLength: Spacing.medium)
+      ListRow(scene.title) {
+        EmptyView()
+      } trailing: {
         if selected {
-          Sparkle()
-            .fill(Palette.gold.color)
-            .frame(width: 16, height: 16)
-            .lampGlow()
-            .accessibilityHidden(true)
+          RowIcon("checkmark", color: Palette.gold)
+            .transition(.opacity)
         }
       }
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .frame(maxWidth: .infinity, minHeight: Target.minimum)
-      .contentShape(.rect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(RowButtonStyle())
     .accessibilityAddTraits(selected ? .isSelected : [])
+    .sensoryFeedback(.selection, trigger: selected)
   }
 
   private var credits: String {

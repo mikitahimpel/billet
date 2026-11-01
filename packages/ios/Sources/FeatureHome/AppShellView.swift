@@ -6,20 +6,13 @@ import SwiftUI
 
 /// The three tabs of a paired device. Drawing is opened from Home and is not a tab.
 ///
-/// Every tab stays alive behind the shared bar, so a delivery keeps playing on Home while Notes or
-/// Settings is in front.
+/// A native `TabView`, so iOS 26 gives it Liquid Glass and content runs on under it.
 struct AppShellView: View {
   private enum Destination: Hashable {
     case home
     case notes
     case settings
   }
-
-  private static let tabs = [
-    EveningTab(id: Destination.home, title: "Home", systemImage: "house.fill"),
-    EveningTab(id: Destination.notes, title: "Notes", systemImage: "note.text"),
-    EveningTab(id: Destination.settings, title: "Settings", systemImage: "gearshape.fill"),
-  ]
 
   let session: PairSession
   let scenes: [any PetScene]
@@ -34,18 +27,20 @@ struct AppShellView: View {
   }
 
   var body: some View {
-    ZStack {
-      tab(.home) {
+    TabView(selection: $destination) {
+      Tab("Home", systemImage: "house", value: .home) {
         HomeView(
           session: session,
           scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
           onChangeCode: onChangeCode
         )
+        .tabEntrance(destination == .home)
       }
-      tab(.notes) {
+      Tab("Notes", systemImage: "note.text", value: .notes) {
         NotesView(notes: session.notes, loadFailed: session.notesFailedToLoad)
+          .tabEntrance(destination == .notes)
       }
-      tab(.settings) {
+      Tab("Settings", systemImage: "gearshape", value: .settings) {
         SettingsView(
           code: session.room.code,
           partnerStatus: line.text,
@@ -53,19 +48,48 @@ struct AppShellView: View {
           selectedSceneID: $selectedSceneID,
           onLogOut: onLogOut
         )
+        .tabEntrance(destination == .settings)
       }
     }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      EveningTabBar(tabs: Self.tabs, selection: $destination)
-    }
-    .background { EveningBackground() }
+    .tint(Palette.gold.color)
+    .sensoryFeedback(.selection, trigger: destination)
+    .modifier(WarmTabBarFallback())
   }
+}
 
-  private func tab(_ id: Destination, content: () -> some View) -> some View {
-    let selected = destination == id
-    return content()
-      .opacity(selected ? 1 : 0)
-      .allowsHitTesting(selected)
-      .accessibilityHidden(!selected)
+extension View {
+  /// Lets a tab's content rise softly into place when the tab is chosen. Only the position moves:
+  /// fading it here shows a hidden tab through the one in front during the pairing transition.
+  fileprivate func tabEntrance(_ isSelected: Bool) -> some View {
+    modifier(TabEntrance(isSelected: isSelected))
+  }
+}
+
+private struct TabEntrance: ViewModifier {
+  let isSelected: Bool
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func body(content: Content) -> some View {
+    content
+      .offset(y: isSelected || reduceMotion ? 0 : Spacing.small)
+      .calmAnimation(value: isSelected)
+  }
+}
+
+/// iOS 18 has no glass, so the bar gets the warm panel colour instead.
+private struct WarmTabBarFallback: ViewModifier {
+  func body(content: Content) -> some View {
+    #if os(iOS)
+      if #available(iOS 26, *) {
+        content
+      } else {
+        content
+          .toolbarBackground(Palette.raised.color, for: .tabBar)
+          .toolbarBackground(.visible, for: .tabBar)
+      }
+    #else
+      content
+    #endif
   }
 }

@@ -15,7 +15,6 @@ let package = Package(
     .target(
       name: "PetSceneRive",
       dependencies: [
-        .product(name: "DesignSystem", package: "ios"),
         .product(name: "Pet", package: "ios"),
         .product(name: "PetScene", package: "ios"),
         .product(name: "RiveRuntime", package: "rive-ios"),

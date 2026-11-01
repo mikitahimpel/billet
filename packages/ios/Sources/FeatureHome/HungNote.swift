@@ -16,7 +16,9 @@ struct HungNote: View {
   let drawing: CGImage
   let wall: PetSceneNoteWall
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var hasAppeared = false
+  @State private var glowing = false
 
   var body: some View {
     GeometryReader { geometry in
@@ -28,7 +30,7 @@ struct HungNote: View {
         x: (wall.peg.x - wall.paper.minX) / wall.paper.width,
         y: (wall.peg.y - wall.paper.minY) / wall.paper.height)
 
-      RoundedRectangle(cornerRadius: 4 * scale)
+      RoundedRectangle(cornerRadius: Radius.paper * scale)
         .fill(Palette.paper.color)
         .overlay {
           Image(decorative: drawing, scale: 1)
@@ -37,6 +39,7 @@ struct HungNote: View {
             .padding(4 * scale)
         }
         .frame(width: wall.paper.width * scale, height: wall.paper.height * scale)
+        .shadow(color: Palette.light.color.opacity(glowing ? 0.7 : 0), radius: Glow.lamp)
         .keyframeAnimator(initialValue: Swing(), trigger: hasAppeared) { content, swing in
           content
             .scaleEffect(swing.scale, anchor: anchor)
@@ -60,6 +63,10 @@ struct HungNote: View {
     .allowsHitTesting(false)
     .accessibilityElement()
     .accessibilityLabel("Received note")
-    .onAppear { hasAppeared = true }
+    .onAppear {
+      if !reduceMotion { hasAppeared = true }
+      withAnimation(.easeOut(duration: 0.6)) { glowing = true }
+      withAnimation(.easeInOut(duration: 2.4).delay(0.8)) { glowing = false }
+    }
   }
 }

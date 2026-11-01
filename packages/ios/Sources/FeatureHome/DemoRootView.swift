@@ -44,6 +44,7 @@ public struct DemoRootView: View {
     content
       .preferredColorScheme(.dark)
       .tint(Palette.gold.color)
+      .calmAnimation(value: model.isPaired)
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
           model.session?.connect()

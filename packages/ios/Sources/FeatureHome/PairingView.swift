@@ -26,101 +26,97 @@ struct PairingView: View {
           ScenePanel {
             SceneCanvas(HouseArt.art(for: .lit))
           }
-          .frame(maxWidth: 260)
           .lampGlow()
           .accessibilityHidden(true)
-          content
+          message
+          failureMessage
         }
-        .padding(Spacing.large)
+        .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
         .frame(maxWidth: .infinity)
       }
       .scrollBounceBehavior(.basedOnSize)
+      .safeAreaInset(edge: .bottom, spacing: 0) {
+        GlassGroup {
+          VStack(spacing: Spacing.small) { actions }
+        }
+        .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
+      }
     }
-    .animation(Motion.gentle, value: step)
+    .calmAnimation(value: step)
+    .calmAnimation(value: model.failure)
   }
 
-  @ViewBuilder private var content: some View {
+  /// The state of the flow, as the screen shows it.
+  private enum Screen {
+    case welcome
+    case enterCode
+    case creating(PairSession)
+    case joining
+  }
+
+  private var screen: Screen {
     switch model.stage {
-    case .pairing(let session, creating: true):
-      creating(session)
-    case .pairing(_, creating: false):
-      joining
-    case .unpaired, .paired:
-      switch step {
-      case .welcome: welcome
-      case .enterCode: enterCode
-      }
+    case .pairing(let session, creating: true): .creating(session)
+    case .pairing(_, creating: false): .joining
+    case .unpaired, .paired: step == .welcome ? .welcome : .enterCode
     }
   }
 
-  private var welcome: some View {
-    VStack(spacing: Spacing.large) {
-      VStack(spacing: Spacing.small) {
-        Text("A little house for two")
-          .billetType(.title)
-          .foregroundStyle(Palette.paper.color)
-          .accessibilityAddTraits(.isHeader)
-        Text("Draw a note and the cat carries it to your partner's wall.")
-          .billetType(.body)
-          .foregroundStyle(Palette.paperTurned.color)
-      }
-      .multilineTextAlignment(.center)
-      failureMessage
-      Button("Create pair") { model.createPair() }
-        .buttonStyle(PrimaryButtonStyle())
-      Button("Enter code") { step = .enterCode }
-        .buttonStyle(SecondaryButtonStyle())
-    }
-  }
-
-  private func creating(_ session: PairSession) -> some View {
-    VStack(spacing: Spacing.large) {
-      VStack(spacing: Spacing.small) {
-        Text("Your pair code")
-          .billetType(.title)
-          .foregroundStyle(Palette.paper.color)
-          .accessibilityAddTraits(.isHeader)
-        Text("Send this to your partner. They choose Enter code and type it in.")
-          .billetType(.body)
-          .foregroundStyle(Palette.paperTurned.color)
-      }
-      .multilineTextAlignment(.center)
+  @ViewBuilder private var message: some View {
+    switch screen {
+    case .welcome:
+      heading(
+        "A little house for two",
+        detail: "Draw a note and the cat carries it to your partner's wall.")
+    case .enterCode:
+      heading("Enter your partner's code", detail: "They'll find it on their phone.")
+      codeField
+    case .creating(let session):
+      heading(
+        "Your pair code",
+        detail: "Send this to your partner. They choose Enter code and type it in.")
       PairCodeCard(code: session.room.code)
-      if session.hasConnected {
-        Button("Continue") { model.finishCreating() }
-          .buttonStyle(PrimaryButtonStyle())
-      } else {
+      if !session.hasConnected {
         LoadingLine("Setting up your pair…")
       }
-      Button("Cancel") { model.cancelPairing() }
-        .buttonStyle(SecondaryButtonStyle())
-    }
-  }
-
-  private var joining: some View {
-    VStack(spacing: Spacing.large) {
+    case .joining:
       LoadingLine("Joining your partner…")
-      Button("Cancel") { model.cancelPairing() }
-        .buttonStyle(SecondaryButtonStyle())
     }
   }
 
-  private var enterCode: some View {
-    VStack(spacing: Spacing.large) {
-      Text("Enter your partner's code")
+  @ViewBuilder private var actions: some View {
+    switch screen {
+    case .welcome:
+      BilletButton("Create pair", rank: .primary) { model.createPair() }
+      BilletButton("Enter code", rank: .secondary) { step = .enterCode }
+    case .enterCode:
+      BilletButton("Join", rank: .primary) { model.join(code: typedCode) }
+        .disabled(typedCode.isEmpty)
+      BilletButton("Back", rank: .secondary) { step = .welcome }
+    case .creating(let session):
+      if session.hasConnected {
+        BilletButton("Continue", rank: .primary) { model.finishCreating() }
+      }
+      BilletButton("Cancel", rank: .secondary) { model.cancelPairing() }
+    case .joining:
+      BilletButton("Cancel", rank: .secondary) { model.cancelPairing() }
+    }
+  }
+
+  private func heading(_ title: String, detail: String) -> some View {
+    VStack(spacing: Spacing.small) {
+      Text(title)
         .billetType(.title)
         .foregroundStyle(Palette.paper.color)
-        .multilineTextAlignment(.center)
         .accessibilityAddTraits(.isHeader)
-      codeField
-      failureMessage
-      Button("Join") { model.join(code: typedCode) }
-        .buttonStyle(PrimaryButtonStyle())
-        .disabled(typedCode.isEmpty)
-        .opacity(typedCode.isEmpty ? 0.5 : 1)
-      Button("Back") { step = .welcome }
-        .buttonStyle(SecondaryButtonStyle())
+      Text(detail)
+        .billetType(.body)
+        .foregroundStyle(Palette.muted.color)
     }
+    .multilineTextAlignment(.center)
+    .frame(maxWidth: .infinity)
   }
 
   private var codeField: some View {
@@ -132,9 +128,9 @@ struct PairingView: View {
       #if os(iOS)
         .textInputAutocapitalization(.characters)
       #endif
-      .padding(Spacing.small)
-      .frame(minHeight: Target.primary)
-      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
+      .padding(.horizontal, Spacing.medium)
+      .frame(minHeight: Target.row)
+      .card()
       .accessibilityIdentifier("partnerCode")
   }
 
@@ -146,7 +142,8 @@ struct PairingView: View {
         .multilineTextAlignment(.center)
         .padding(Spacing.medium)
         .frame(maxWidth: .infinity)
-        .litPanel(cornerRadius: Radius.control)
+        .card()
+        .transition(.opacity)
         .accessibilityIdentifier("pairingError")
     }
   }

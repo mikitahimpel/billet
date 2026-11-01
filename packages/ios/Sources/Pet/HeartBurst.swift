@@ -3,24 +3,21 @@ import SwiftUI
 
 /// A small heart that floats up and fades each time `trigger` changes.
 ///
-/// A SwiftUI overlay, so it works over any scene. `tint` and `size` set the look; the partner's
-/// purr uses a smaller, softer heart than a tap on your own phone.
+/// A SwiftUI overlay, so it works over any scene.
 public struct HeartBurst: View {
   private let trigger: Int
-  private let size: CGFloat
   private let tint: Color
   @State private var hearts: [Int] = []
 
-  public init(trigger: Int, size: CGFloat = 28, tint: Color = Palette.clayLit.color) {
+  public init(trigger: Int, tint: Color = Palette.clayLit.color) {
     self.trigger = trigger
-    self.size = size
     self.tint = tint
   }
 
   public var body: some View {
     ZStack {
       ForEach(hearts, id: \.self) { id in
-        FloatingHeart(size: size, tint: tint, drift: CGFloat((id % 5) - 2) * 10)
+        FloatingHeart(tint: tint, drift: CGFloat((id % 5) - 2) * Spacing.small)
           .transition(.identity)
       }
     }
@@ -37,18 +34,19 @@ public struct HeartBurst: View {
 }
 
 private struct FloatingHeart: View {
-  let size: CGFloat
   let tint: Color
   let drift: CGFloat
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var risen = false
 
   var body: some View {
     Image(systemName: "heart.fill")
-      .font(.system(size: size))
+      .font(IconStyle.font)
+      .scaleEffect(risen ? 1.4 : 1)
       .foregroundStyle(tint)
-      .offset(x: drift, y: risen ? -90 : 0)
+      .offset(x: drift, y: risen && !reduceMotion ? -Spacing.page : 0)
       .opacity(risen ? 0 : 1)
-      .scaleEffect(risen ? 1.2 : 0.7)
       .onAppear { withAnimation(.easeOut(duration: 1.5)) { risen = true } }
   }
 }

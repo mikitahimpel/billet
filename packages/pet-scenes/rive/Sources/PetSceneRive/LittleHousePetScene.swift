@@ -1,4 +1,3 @@
-import DesignSystem
 import Foundation
 import Pet
 import PetScene
@@ -47,13 +46,11 @@ private struct LittleHouseView: View {
 
   var body: some View {
     ZStack {
-      VStack(spacing: 0) {
-        Palette.sky.color
-        Palette.meadow.color
-      }
-      .ignoresSafeArea()
       if let rive {
         rive.view
+          .aspectRatio(Self.artboardRatio, contentMode: .fit)
+          .mask { Self.fade(.leading, .trailing) }
+          .mask { Self.fade(.top, .bottom) }
           .accessibilityLabel("Little House with the cat")
       }
     }
@@ -63,5 +60,21 @@ private struct LittleHouseView: View {
     .task(id: world) {
       await LittleHousePetScene.pacing.play(world, onEvent: onEvent)
     }
+  }
+
+  private static let artboardRatio: CGFloat = 780.0 / 980.0
+
+  /// Dissolves the artboard's edges into whatever is behind the scene.
+  private static func fade(_ start: UnitPoint, _ end: UnitPoint) -> some View {
+    LinearGradient(
+      stops: [
+        .init(color: .clear, location: 0),
+        .init(color: .black, location: 0.06),
+        .init(color: .black, location: 0.94),
+        .init(color: .clear, location: 1),
+      ],
+      startPoint: start,
+      endPoint: end
+    )
   }
 }

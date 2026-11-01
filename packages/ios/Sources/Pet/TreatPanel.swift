@@ -15,57 +15,32 @@ public struct TreatPanel: View {
   }
 
   public var body: some View {
-    ViewThatFits(in: .horizontal) {
-      HStack(spacing: Spacing.small) {
-        streakPlate
-        message
-        Spacer(minLength: 0)
-        giveButton
-      }
-      VStack(alignment: .leading, spacing: Spacing.small) {
-        HStack(spacing: Spacing.small) {
-          streakPlate
-          message
-        }
-        giveButton
+    ListRow(streakText, subtitle: statusText) {
+      streakPlate
+    } trailing: {
+      switch status {
+      case .neither, .waitingOnMe:
+        IconButton("fish", label: "Give a treat", action: onGive)
+          .transition(.opacity)
+      case .waitingOnPartner, .fed:
+        RowIcon(status == .fed ? "checkmark.circle.fill" : "hourglass", color: Palette.gold)
+          .frame(width: Target.minimum, height: Target.minimum)
+          .transition(.opacity)
       }
     }
-    .padding(Spacing.small)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .litPanel(cornerRadius: Radius.control)
+    .card()
+    .calmAnimation(value: status)
   }
 
   private var streakPlate: some View {
     Text(verbatim: "\(streak)")
       .billetType(.numeral)
       .foregroundStyle(Palette.gold.color)
-      .padding(.horizontal, Spacing.small)
+      .contentTransition(.numericText(value: Double(streak)))
+      .calmAnimation(value: streak)
       .frame(minWidth: Target.minimum, minHeight: Target.minimum)
       .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
       .accessibilityHidden(true)
-  }
-
-  private var message: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(streakText)
-        .billetType(.label)
-        .foregroundStyle(Palette.paper.color)
-      Text(statusText)
-        .billetType(.caption)
-        .foregroundStyle(Palette.paperTurned.color)
-    }
-    .fixedSize(horizontal: false, vertical: true)
-    .accessibilityElement(children: .combine)
-  }
-
-  @ViewBuilder private var giveButton: some View {
-    switch status {
-    case .neither, .waitingOnMe:
-      Button("Give a treat", action: onGive)
-        .buttonStyle(InlineButtonStyle())
-    case .waitingOnPartner, .fed:
-      EmptyView()
-    }
   }
 
   private var statusText: String {
@@ -79,7 +54,7 @@ public struct TreatPanel: View {
 
   private var streakText: String {
     switch streak {
-    case 0: "Treats together start a streak"
+    case 0: "Start a streak"
     case 1: "1 day together"
     default: "\(streak) days together"
     }
@@ -89,6 +64,7 @@ public struct TreatPanel: View {
 /// A treat that drops onto the cat once both partners have given theirs.
 public struct TreatDrop: View {
   private let trigger: Bool
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var fallen = false
 
   public init(trigger: Bool) {
@@ -97,10 +73,11 @@ public struct TreatDrop: View {
 
   public var body: some View {
     Image(systemName: "fish.fill")
-      .font(.system(size: 30))
+      .font(IconStyle.font)
+      .scaleEffect(1.6)
       .foregroundStyle(Palette.gold.color)
       .lampGlow()
-      .offset(y: fallen ? 40 : -140)
+      .offset(y: reduceMotion ? 0 : (fallen ? Spacing.section : -Spacing.page * 2))
       .opacity(trigger ? (fallen ? 0 : 1) : 0)
       .allowsHitTesting(false)
       .accessibilityHidden(true)

@@ -68,6 +68,13 @@ final class AppModel {
     }
   }
 
+  var isPaired: Bool {
+    switch stage {
+    case .paired: true
+    case .unpaired, .pairing: false
+    }
+  }
+
   func createPair() {
     pair(code: DemoRoom.generateCode(), creating: true)
   }
