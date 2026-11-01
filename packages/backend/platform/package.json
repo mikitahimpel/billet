@@ -10,6 +10,8 @@
     "./auth-repository-live": "./src/auth-repository-live.ts",
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
+    "./demo-room-durable-object": "./src/demo-room-durable-object.ts",
+    "./demo-route": "./src/demo-route.ts",
     "./media-store-live": "./src/media-store-live.ts",
     "./pair-rooms-live": "./src/pair-rooms-live.ts",
     "./pairing-repository-live": "./src/pairing-repository-live.ts",
