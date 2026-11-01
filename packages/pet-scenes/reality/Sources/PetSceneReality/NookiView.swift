@@ -83,6 +83,9 @@ private struct NookiStage: View {
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
+  @State private var isRenovating = false
+  @State private var paint = NookiSwatch.cream
+  @State private var viewSize = SIMD2<Float>(1, 1)
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.scenePhase) private var scenePhase
@@ -94,9 +97,20 @@ private struct NookiStage: View {
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
+    .onGeometryChange(for: CGSize.self) {
+      $0.size
+    } action: { size in
+      viewSize = SIMD2(Float(size.width), Float(size.height))
+    }
     .simultaneousGesture(orbit)
     .simultaneousGesture(pinch)
+    .simultaneousGesture(lift)
     .gesture(tap)
+    .overlay(alignment: .topLeading) {
+      NookiRenovateControls(isOpen: $isRenovating, paint: $paint) { diorama.resetRoom() }
+    }
+    .onChange(of: isRenovating) { _, isOn in diorama.renovation.isOn = isOn }
+    .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
     .accessibilityElement()
     .accessibilityLabel("Mochi's room")
     .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
@@ -137,19 +151,47 @@ private struct NookiStage: View {
       }
   }
 
+  /// A swipe that starts on the yarn throws it. Any other swipe orbits.
   private var orbit: some Gesture {
     DragGesture(minimumDistance: 6)
+      .targetedToAnyEntity()
       .onChanged { value in
+        guard value.entity.name != NookiTarget.yarn.rawValue, !diorama.renovation.isLifting else {
+          return
+        }
+        let translation = value.gestureValue.translation
         diorama.orbit(
-          byX: Float(value.translation.width - lastDrag.width),
-          y: Float(value.translation.height - lastDrag.height))
-        lastDrag = value.translation
+          byX: Float(translation.width - lastDrag.width),
+          y: Float(translation.height - lastDrag.height))
+        lastDrag = translation
       }
       .onEnded { value in
+        let velocity = value.gestureValue.velocity
         lastDrag = .zero
-        diorama.endOrbit(
-          velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
+        if diorama.renovation.isLifting {
+          return
+        } else if value.entity.name == NookiTarget.yarn.rawValue {
+          diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
+        } else {
+          diorama.endOrbit(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
+        }
       }
+  }
+
+  /// Holding a piece while the room is open lifts it, and it follows the finger until let go.
+  private var lift: some Gesture {
+    LongPressGesture(minimumDuration: 0.3, maximumDistance: 24)
+      .sequenced(before: DragGesture(minimumDistance: 0))
+      .targetedToAnyEntity()
+      .onChanged { value in
+        guard isRenovating, case .second(true, let drag) = value.gestureValue else { return }
+        if !diorama.renovation.isLifting, !diorama.lift(value.entity) { return }
+        if let drag {
+          diorama.moveLifted(
+            to: SIMD2(Float(drag.location.x), Float(drag.location.y)), in: viewSize)
+        }
+      }
+      .onEnded { _ in diorama.dropLifted() }
   }
 
   private var pinch: some Gesture {

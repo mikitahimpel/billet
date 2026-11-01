@@ -29,7 +29,12 @@ struct NookiTouchTests {
         == NookiTouch(reaction: .toggleNote))
   }
 
-  @Test(arguments: [NookiTarget.plant, .bookcase, .bed, .yarn])
+  @Test func theYarnGetsNudged() {
+    #expect(
+      NookiTouch.of(.yarn, world: world, noteIsOpen: false) == NookiTouch(reaction: .nudgeYarn))
+  }
+
+  @Test(arguments: [NookiTarget.plant, .bookcase, .bed])
   func objectsOnlyWobble(target: NookiTarget) {
     #expect(
       NookiTouch.of(target, world: world, noteIsOpen: false)

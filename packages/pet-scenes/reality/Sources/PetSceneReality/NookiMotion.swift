@@ -68,11 +68,6 @@ enum NookiMotion {
   static func sway(_ time: Double, reduceMotion: Bool) -> Float {
     reduceMotion ? 0 : Float(0.016 * sin(time * 0.9))
   }
-
-  /// How far the yarn has drifted from its place, in metres.
-  static func yarnDrift(_ time: Double, reduceMotion: Bool) -> Float {
-    reduceMotion ? 0 : Float(0.04 * sin(time * 0.35))
-  }
 }
 
 extension NookiFrame {

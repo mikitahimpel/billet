@@ -30,11 +30,14 @@ struct NookiCamera: Equatable {
   private(set) var yawVelocity: Float = 0
   private(set) var pitchVelocity: Float = 0
   private(set) var isReturningHome = false
+  private(set) var lean = SIMD2<Float>.zero
   private var isHeld = false
 
   var position: SIMD3<Float> {
-    let flat = cos(pitch)
-    return Self.target + distance * [flat * sin(yaw), sin(pitch), flat * cos(yaw)]
+    let shownYaw = Self.leaned(yaw, by: lean.x, in: Self.yawLimits)
+    let shownPitch = Self.leaned(pitch, by: lean.y, in: Self.pitchLimits)
+    let flat = cos(shownPitch)
+    return Self.target + distance * [flat * sin(shownYaw), sin(shownPitch), flat * cos(shownYaw)]
   }
 
   /// True when nothing is moving, so the scene can drop to its idle update rate.
@@ -45,6 +48,12 @@ struct NookiCamera: Equatable {
   private var isInsideLimits: Bool {
     Self.yawLimits.contains(yaw) && Self.pitchLimits.contains(pitch)
       && Self.distanceLimits.contains(distance)
+  }
+
+  /// Swings the view from where the orbit put it. The orbit itself does not move, and the view
+  /// stays inside the limits, or no further out than an overshoot has taken it.
+  mutating func lean(to lean: SIMD2<Float>) {
+    self.lean = lean
   }
 
   /// Follows a drag, in radians. Stops any coasting or trip home.
@@ -78,7 +87,7 @@ struct NookiCamera: Equatable {
     pitchVelocity = 0
     isReturningHome = animated
     if !animated {
-      self = Self.home
+      arriveHome()
     }
   }
 
@@ -110,8 +119,14 @@ struct NookiCamera: Equatable {
     distance += (Self.home.distance - distance) * blend
     let gap = max(abs(Self.home.yaw - yaw), abs(Self.home.pitch - pitch))
     if gap < Self.closeEnough, abs(Self.home.distance - distance) < Self.closeEnough * 10 {
-      self = Self.home
+      arriveHome()
     }
+  }
+
+  private mutating func arriveHome() {
+    let lean = lean
+    self = Self.home
+    self.lean = lean
   }
 
   private mutating func springBack(_ delta: Float) {
@@ -133,6 +148,12 @@ struct NookiCamera: Equatable {
     yaw = Self.clamped(yaw, to: Self.yawLimits)
     pitch = Self.clamped(pitch, to: Self.pitchLimits)
     distance = Self.clamped(distance, to: Self.distanceLimits)
+  }
+
+  private static func leaned(
+    _ value: Float, by lean: Float, in limits: ClosedRange<Float>
+  ) -> Float {
+    min(max(value + lean, min(limits.lowerBound, value)), max(limits.upperBound, value))
   }
 
   private static func resisted(

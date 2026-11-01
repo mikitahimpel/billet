@@ -13,7 +13,6 @@ struct NookiMotionTests {
       #expect(NookiMotion.bellSwing(time, energy: 1, reduceMotion: true) == 0)
       #expect(NookiMotion.flicker(time, reduceMotion: true) == 1)
       #expect(NookiMotion.sway(time, reduceMotion: true) == 0)
-      #expect(NookiMotion.yarnDrift(time, reduceMotion: true) == 0)
       #expect(NookiMotion.wobble(time, reduceMotion: true) == 0)
     }
   }
