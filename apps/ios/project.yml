@@ -22,7 +22,7 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        product: FeatureCanvas
+        product: FeatureHome
       - target: BilletWidget
       - target: BilletNotificationService
     entitlements:

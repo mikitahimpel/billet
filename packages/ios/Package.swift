@@ -26,21 +26,43 @@ let featureDependencies = [
   "BilletKit", "Domain", "Wire", "Ink", "DesignSystem", "Transport", "Persistence",
 ]
 
+let libraryTargets: [Target] = library.map {
+  .target(name: $0.name, dependencies: $0.dependencies.map { .init(stringLiteral: $0) })
+}
+
+let featureTargets: [Target] = features.map {
+  .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
+}
+
+// The only target that links Rive. Surfaces and the widget stay free of it.
+let homeTarget: Target = .target(
+  name: "FeatureHome",
+  dependencies: [
+    "BilletKit",
+    "FeatureCanvas",
+    "Wire",
+    .product(name: "RiveRuntime", package: "rive-ios"),
+  ],
+  resources: [.copy("Resources/LittleHouse.riv")]
+)
+
+let testTargets: [Target] = [
+  .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
+  .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
+  .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
+  .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
+  .testTarget(name: "FeatureHomeTests", dependencies: ["BilletKit", "FeatureHome", "Wire"]),
+]
+
+let products: [String] = library.map(\.name) + features + ["FeatureHome"]
+
 let package = Package(
   name: "Billet",
   platforms: [.iOS(.v18), .macOS(.v15)],
-  products: (library.map(\.name) + features).map { .library(name: $0, targets: [$0]) },
-  targets: library.map {
-    .target(name: $0.name, dependencies: $0.dependencies.map { .init(stringLiteral: $0) })
-  }
-    + features.map {
-      .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
-    }
-    + [
-      .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
-      .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
-      .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
-      .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
-    ],
+  products: products.map { .library(name: $0, targets: [$0]) },
+  dependencies: [
+    .package(url: "https://github.com/rive-app/rive-ios.git", exact: "6.29.0")
+  ],
+  targets: libraryTargets + featureTargets + [homeTarget] + testTargets,
   swiftLanguageModes: [.v6]
 )

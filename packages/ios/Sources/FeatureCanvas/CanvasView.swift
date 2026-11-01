@@ -8,10 +8,23 @@ public struct CanvasView: View {
   @State private var store = Store<CanvasMachine>(
     initial: CanvasMachine.State(), run: CanvasMachine.run)
 
-  public init() {}
+  private let onClose: () -> Void
+  private let onSend: ([Stroke]) -> Void
+
+  public init(onClose: @escaping () -> Void, onSend: @escaping ([Stroke]) -> Void) {
+    self.onClose = onClose
+    self.onSend = onSend
+  }
 
   public var body: some View {
     VStack(spacing: 12) {
+      HStack {
+        Button("Close", action: onClose)
+        Spacer()
+        Button("Send") { onSend(store.state.drawing) }
+          .buttonStyle(.borderedProminent)
+          .disabled(store.state.drawing.isEmpty)
+      }
       GeometryReader { geometry in
         let width = max(geometry.size.width, 1)
         Canvas { context, size in
