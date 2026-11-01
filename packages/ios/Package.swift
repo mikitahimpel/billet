@@ -20,8 +20,8 @@ let library: [(name: String, dependencies: [String])] = [
   ("Persistence", ["Domain"]),
   ("Delivery", ["Domain", "Wire", "Ink", "Persistence"]),
   ("Surfaces", ["Domain", "Ink", "DesignSystem"]),
-  ("Pet", ["BilletKit"]),
-  ("PetScene", ["Pet"]),
+  ("Pet", ["BilletKit", "DesignSystem"]),
+  ("PetScene", ["DesignSystem", "Pet"]),
   ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
 ]
 

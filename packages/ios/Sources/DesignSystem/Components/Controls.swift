@@ -43,6 +43,25 @@ public struct SecondaryButtonStyle: ButtonStyle {
   }
 }
 
+/// The one action that cannot be taken back: lit clay, cream text.
+public struct DestructiveButtonStyle: ButtonStyle {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .billetType(.body)
+      .foregroundStyle(Palette.paper.color)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .frame(maxWidth: .infinity, minHeight: Target.minimum)
+      .background(Palette.clay.color, in: .rect(cornerRadius: Radius.control))
+      .contentShape(.rect(cornerRadius: Radius.control))
+      .opacity(configuration.isPressed ? 0.75 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
+  }
+}
+
 /// A small action that sits inside a row or a bar: text on the upper rung, at least 44pt tall.
 public struct InlineButtonStyle: ButtonStyle {
   public init() {}

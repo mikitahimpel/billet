@@ -216,6 +216,21 @@ public struct EveningDialog<Actions: View>: View {
   }
 }
 
+extension View {
+  /// Shows `dialog` over the whole screen, tab bar included, with the page dimmed behind it.
+  public func eveningDialog<Dialog: View>(
+    isPresented: Binding<Bool>, @ViewBuilder dialog: @escaping () -> Dialog
+  ) -> some View {
+    #if os(iOS)
+      fullScreenCover(isPresented: isPresented) {
+        dialog().presentationBackground(.clear)
+      }
+    #else
+      sheet(isPresented: isPresented, content: dialog)
+    #endif
+  }
+}
+
 /// One tab of ``EveningTabBar``.
 public struct EveningTab<ID: Hashable>: Identifiable {
   public let id: ID
