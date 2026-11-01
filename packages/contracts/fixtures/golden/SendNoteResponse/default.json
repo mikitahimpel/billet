@@ -1,0 +1,24 @@
+{
+  "note": {
+    "_tag": "Drawing",
+    "author": "user-alice",
+    "compact": {
+      "strokes": [
+        {
+          "color": "#2A1A1C",
+          "points": [
+            10,
+            20,
+            30,
+            40
+          ],
+          "width": 3
+        }
+      ],
+      "version": 1
+    },
+    "id": "note-1",
+    "image": "pairs/pair-1/notes/note-1.png",
+    "sentAt": 1700000000000
+  }
+}

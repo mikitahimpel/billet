@@ -5,7 +5,11 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./pair-id": "./src/pair-id.ts"
+    "./pair-id": "./src/pair-id.ts",
+    "./ids": "./src/ids.ts",
+    "./ink": "./src/ink.ts",
+    "./note": "./src/note.ts",
+    "./delivery-lane": "./src/delivery-lane.ts"
   },
   "scripts": {
     "lint": "oxlint .",

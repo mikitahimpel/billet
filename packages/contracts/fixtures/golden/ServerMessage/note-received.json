@@ -1,0 +1,11 @@
+{
+  "_tag": "NoteReceived",
+  "note": {
+    "_tag": "Photo",
+    "author": "user-bob",
+    "id": "note-1",
+    "image": "pairs/pair-1/notes/note-1.png",
+    "sentAt": 1700000001000
+  },
+  "seq": 9
+}

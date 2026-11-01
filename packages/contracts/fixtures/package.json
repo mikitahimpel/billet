@@ -1,0 +1,31 @@
+{
+  "name": "@billet/contracts-fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./catalog": "./src/catalog.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "@billet/contracts-push": "workspace:*",
+    "@billet/contracts-realtime": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@types/node": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

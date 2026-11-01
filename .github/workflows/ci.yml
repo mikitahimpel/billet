@@ -44,3 +44,11 @@ jobs:
 
       - name: Lint, typecheck, test and format check
         run: pnpm turbo run lint typecheck test format:check
+
+      # The fixtures package regenerates packages/contracts/fixtures/golden on every test
+      # run (its test task is uncached). Intent-to-add makes new files show up in the diff.
+      - name: Check golden fixtures are fresh
+        run: |
+          pnpm turbo run test --filter=@billet/contracts-fixtures
+          git add --intent-to-add packages/contracts/fixtures/golden
+          git diff --exit-code -- packages/contracts/fixtures/golden
