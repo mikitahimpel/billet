@@ -1,0 +1,77 @@
+name: iOS
+
+# Swift checks on a Mac runner. Path-filtered so TypeScript-only pull requests
+# never start it; no branch filter on pull_request, so stacked PRs run too.
+# A path-filtered workflow cannot be a required status check.
+on:
+  pull_request:
+    paths: &paths
+      - apps/ios/**
+      - packages/ios/**
+      - packages/contracts/**
+      - .xcode-version
+      - .swift-format
+      - .github/workflows/ios.yml
+  push:
+    branches: [main]
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  # Pushes to main run to completion; only superseded pull request runs are cancelled.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Select Xcode from .xcode-version
+        run: |
+          version="$(tr -d '[:space:]' < .xcode-version)"
+          app="/Applications/Xcode_${version}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app is not installed on this runner (.xcode-version is $version)"
+            ls -d /Applications/Xcode_*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          xcodebuild -version
+          xcodebuild -version | head -n 1 | grep -qx "Xcode ${version}"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Pinned release, verified by checksum, so project generation cannot drift.
+      - name: Install XcodeGen
+        env:
+          XCODEGEN_VERSION: 2.46.0
+          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: swift-format lint
+        run: pnpm turbo run ios:format:check
+
+      - name: Swift tests and fixture conformance
+        run: pnpm turbo run ios:test
+
+      - name: Xcode build
+        run: pnpm turbo run ios:build

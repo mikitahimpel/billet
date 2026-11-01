@@ -14,7 +14,7 @@ let library: [(name: String, dependencies: [String])] = [
   ("BilletKit", []),
   ("Domain", []),
   ("Wire", ["Domain"]),
-  ("Ink", ["Domain"]),
+  ("Ink", ["BilletKit", "Domain", "Wire"]),
   ("DesignSystem", []),
   ("Transport", ["Domain", "Wire"]),
   ("Persistence", ["Domain"]),
@@ -36,6 +36,10 @@ let package = Package(
     + features.map {
       .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
     }
-    + [.testTarget(name: "BilletKitTests", dependencies: ["BilletKit"])],
+    + [
+      .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
+      .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
+      .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
+    ],
   swiftLanguageModes: [.v6]
 )

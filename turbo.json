@@ -26,6 +26,7 @@
     "ios:build": {
       "outputs": [],
       "inputs": [
+        "$TURBO_ROOT$/packages/contracts/fixtures/golden/**",
         "Sources/**",
         "Tests/**",
         "Package.swift",
@@ -61,6 +62,7 @@
     "ios:test": {
       "outputs": [],
       "inputs": [
+        "$TURBO_ROOT$/packages/contracts/fixtures/**",
         "Sources/**",
         "Tests/**",
         "Package.swift",
