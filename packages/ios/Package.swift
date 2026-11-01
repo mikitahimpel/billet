@@ -40,6 +40,7 @@ let package = Package(
       .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
       .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
       .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
+      .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
     ],
   swiftLanguageModes: [.v6]
 )
