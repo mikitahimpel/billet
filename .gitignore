@@ -1,0 +1,17 @@
+node_modules
+.turbo
+dist
+build
+.build
+DerivedData
+*.xcodeproj
+*.xcworkspace
+!Package.resolved
+xcuserdata
+.DS_Store
+.alchemy
+.wrangler
+.env
+.env.*
+!.env.pass
+!.env.example
