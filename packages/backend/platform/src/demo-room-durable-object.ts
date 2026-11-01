@@ -1,10 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   MAX_QUEUED_PETS,
+  keepFirstName,
   parsePlay,
+  recordReaction,
   recordTreat,
   type PlayFrame,
   type QueuedPet,
+  type Reactions,
   type TreatDays,
 } from "./demo-play.ts";
 import { sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
@@ -121,6 +124,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     const seen = (await this.ctx.storage.get<string[]>("seen")) ?? [];
     if (!seen.includes(id)) {
       await this.ctx.storage.put("seen", [...seen, id].slice(-200));
+      const senders = (await this.ctx.storage.get<Record<string, string>>("noteFrom")) ?? {};
+      await this.ctx.storage.put(
+        "noteFrom",
+        Object.fromEntries(Object.entries({ ...senders, [id.toLowerCase()]: sender }).slice(-200)),
+      );
       const queued =
         partner === undefined
           ? undefined
@@ -144,7 +152,9 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
 
   /**
    * A pet is relayed to the partner, or kept (newest few) until they connect. A treat is recorded
-   * once per device per day, and the whole ledger goes to both sockets so phones agree.
+   * once per device per day, and the whole ledger goes to both sockets so phones agree. The cat's
+   * name is the first one given. A reaction is accepted only from the receiver of that note, and
+   * the whole table goes to both sockets.
    */
   private async handlePlay(
     socket: WebSocket,
@@ -160,6 +170,22 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
         await this.ctx.storage.put("treatDays", recordTreat(days, sender, play.at));
         await this.broadcastTreats();
+      } else if (play.kind === "name") {
+        const current = await this.ctx.storage.get<string>("catName");
+        const name = keepFirstName(current, play.name);
+        if (current === undefined) await this.ctx.storage.put("catName", name);
+        this.broadcast({ type: "name", name });
+      } else if (play.kind === "react") {
+        const senders = (await this.ctx.storage.get<Record<string, string>>("noteFrom")) ?? {};
+        const author = senders[play.note];
+        if (author !== undefined && author !== sender) {
+          const reactions = (await this.ctx.storage.get<Reactions>("reactions")) ?? {};
+          await this.ctx.storage.put(
+            "reactions",
+            recordReaction(reactions, play.note, play.reaction),
+          );
+          await this.broadcastReactions();
+        }
       } else {
         const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
         const partner = devices.find((d) => d !== sender);
@@ -182,6 +208,12 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   private async replayPlay(socket: WebSocket, device: string): Promise<void> {
     const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
     socket.send(JSON.stringify({ type: "treats", days }));
+    const name = await this.ctx.storage.get<string>("catName");
+    if (name !== undefined) socket.send(JSON.stringify({ type: "name", name }));
+    const reactions = (await this.ctx.storage.get<Reactions>("reactions")) ?? {};
+    if (Object.keys(reactions).length > 0) {
+      socket.send(JSON.stringify({ type: "reactions", reactions }));
+    }
     const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
     const mine = queue.filter((p) => p.to === device);
     if (mine.length === 0) return;
@@ -194,7 +226,16 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
 
   private async broadcastTreats(): Promise<void> {
     const days = (await this.ctx.storage.get<TreatDays>("treatDays")) ?? {};
-    const message = JSON.stringify({ type: "treats", days });
+    this.broadcast({ type: "treats", days });
+  }
+
+  private async broadcastReactions(): Promise<void> {
+    const reactions = (await this.ctx.storage.get<Reactions>("reactions")) ?? {};
+    this.broadcast({ type: "reactions", reactions });
+  }
+
+  private broadcast(frame: Readonly<Record<string, unknown>>): void {
+    const message = JSON.stringify(frame);
     for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }
 

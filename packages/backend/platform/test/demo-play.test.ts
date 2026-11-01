@@ -2,7 +2,15 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
-import { dayOf, parsePlay, recordTreat } from "../src/demo-play.ts";
+import {
+  MAX_REACTIONS,
+  dayOf,
+  keepFirstName,
+  parseName,
+  parsePlay,
+  recordReaction,
+  recordTreat,
+} from "../src/demo-play.ts";
 
 const { DEMO_ROOM } = env as unknown as { DEMO_ROOM: DurableObjectNamespace<DemoRoom> };
 
@@ -156,5 +164,153 @@ describe("demo room play", () => {
     a.socket.send(play(uuid(9), "coin", "2026-11-01T10:00:00Z"));
     await settle();
     expect(ofType(a.frames, "ack")).toEqual([]);
+  });
+});
+
+const at = "2026-11-01T10:00:00+01:00";
+const nameFrame = (id: string, name: unknown) =>
+  JSON.stringify({ type: "play", id, kind: "name", at, name });
+const reactFrame = (id: string, note: string, reaction: unknown) =>
+  JSON.stringify({ type: "play", id, kind: "react", at, note, reaction });
+const noteFrame = (id: string) => JSON.stringify({ type: "note", id, ink: "x" });
+
+describe("name and reaction parsing", () => {
+  it("trims a name and keeps emoji whole", () => {
+    expect(parseName("  Mochi ")).toBe("Mochi");
+    expect(parseName("🐈".repeat(24))).toBe("🐈".repeat(24));
+  });
+
+  it("rejects an empty, too long or control-character name", () => {
+    expect(parseName("   ")).toBeUndefined();
+    expect(parseName("x".repeat(25))).toBeUndefined();
+    expect(parseName("a\nb")).toBeUndefined();
+    expect(parseName(7)).toBeUndefined();
+  });
+
+  it("reads a name frame and a react frame", () => {
+    expect(parsePlay({ id: uuid(1), kind: "name", at, name: " Mochi " })).toEqual({
+      id: uuid(1),
+      kind: "name",
+      at,
+      name: "Mochi",
+    });
+    expect(
+      parsePlay({ id: uuid(1), kind: "react", at, note: uuid(2).toUpperCase(), reaction: "stamp" }),
+    ).toEqual({ id: uuid(1), kind: "react", at, note: uuid(2), reaction: "stamp" });
+  });
+
+  it("rejects a react frame with a bad note or reaction", () => {
+    expect(parsePlay({ id: uuid(1), kind: "react", at, note: "x", reaction: "heart" })).toBe(
+      undefined,
+    );
+    expect(parsePlay({ id: uuid(1), kind: "react", at, note: uuid(2), reaction: "coin" })).toBe(
+      undefined,
+    );
+    expect(parsePlay({ id: uuid(1), kind: "name", at })).toBeUndefined();
+  });
+});
+
+describe("name and reaction rules", () => {
+  it("keeps the first name", () => {
+    expect(keepFirstName(undefined, "Mochi")).toBe("Mochi");
+    expect(keepFirstName("Mochi", "Biscuit")).toBe("Mochi");
+  });
+
+  it("replaces a reaction on the same note and drops the oldest past the cap", () => {
+    const first = recordReaction({}, uuid(1), "heart");
+    expect(recordReaction(first, uuid(1), "stamp")).toEqual({ [uuid(1)]: "stamp" });
+    let table = {};
+    for (let n = 1; n <= MAX_REACTIONS + 5; n++) table = recordReaction(table, uuid(n), "heart");
+    expect(Object.keys(table)).toHaveLength(MAX_REACTIONS);
+    expect(table).not.toHaveProperty(uuid(1));
+  });
+});
+
+describe("demo room name", () => {
+  it("shows the first name to both phones and ignores a later one", async () => {
+    const code = "NAMEKEEP23";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    a.socket.send(nameFrame(uuid(20), "Mochi"));
+    await settle();
+    b.socket.send(nameFrame(uuid(21), "Biscuit"));
+    await settle();
+    expect(ofType(a.frames, "name")).toEqual([
+      { type: "name", name: "Mochi" },
+      { type: "name", name: "Mochi" },
+    ]);
+    expect(ofType(b.frames, "name").at(-1)).toEqual({ type: "name", name: "Mochi" });
+    expect(ofType(b.frames, "ack")).toContainEqual({ type: "ack", id: uuid(21) });
+  });
+
+  it("tells a phone that connects later", async () => {
+    const code = "NAMEBACK23";
+    const a = await connect(code, alice);
+    a.socket.send(nameFrame(uuid(22), "Mochi"));
+    await settle();
+    a.socket.close(1000);
+    await settle();
+    const back = await connect(code, alice);
+    await settle();
+    expect(ofType(back.frames, "name")).toEqual([{ type: "name", name: "Mochi" }]);
+  });
+
+  it("drops an invalid name without an ack", async () => {
+    const a = await connect("NAMEBAD234", alice);
+    a.socket.send(nameFrame(uuid(23), "x".repeat(25)));
+    await settle();
+    expect(ofType(a.frames, "ack")).toEqual([]);
+    expect(ofType(a.frames, "name")).toEqual([]);
+  });
+});
+
+describe("demo room reactions", () => {
+  it("shows a reaction to both phones when the receiver reacts", async () => {
+    const code = "REACTWEB23";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    a.socket.send(noteFrame(uuid(30)));
+    await settle();
+    b.socket.send(reactFrame(uuid(31), uuid(30), "heart"));
+    await settle();
+    const expected = { type: "reactions", reactions: { [uuid(30)]: "heart" } };
+    expect(ofType(a.frames, "reactions")).toEqual([expected]);
+    expect(ofType(b.frames, "reactions")).toEqual([expected]);
+    b.socket.send(reactFrame(uuid(32), uuid(30), "stamp"));
+    await settle();
+    expect(ofType(a.frames, "reactions").at(-1)).toEqual({
+      type: "reactions",
+      reactions: { [uuid(30)]: "stamp" },
+    });
+  });
+
+  it("ignores a reaction from the sender of the note, or to an unknown note", async () => {
+    const code = "REACTSEK23";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    a.socket.send(noteFrame(uuid(33)));
+    await settle();
+    a.socket.send(reactFrame(uuid(34), uuid(33), "heart"));
+    b.socket.send(reactFrame(uuid(35), uuid(36), "heart"));
+    await settle();
+    expect(ofType(a.frames, "reactions")).toEqual([]);
+    expect(ofType(b.frames, "reactions")).toEqual([]);
+  });
+
+  it("replays reactions to a phone that connects later", async () => {
+    const code = "REACTAGAN3";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    a.socket.send(noteFrame(uuid(37)));
+    await settle();
+    b.socket.send(reactFrame(uuid(38), uuid(37), "stamp"));
+    await settle();
+    a.socket.close(1000);
+    await settle();
+    const back = await connect(code, alice);
+    await settle();
+    expect(ofType(back.frames, "reactions")).toEqual([
+      { type: "reactions", reactions: { [uuid(37)]: "stamp" } },
+    ]);
   });
 });
