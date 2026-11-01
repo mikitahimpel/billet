@@ -16,7 +16,7 @@ let library: [(name: String, dependencies: [String])] = [
   ("Wire", ["Domain"]),
   ("Ink", ["BilletKit", "Domain", "Wire"]),
   ("DesignSystem", []),
-  ("Transport", ["Domain", "Wire"]),
+  ("Transport", ["BilletKit", "Domain", "Wire"]),
   ("Persistence", ["Domain"]),
   ("Delivery", ["Domain", "Wire", "Ink", "Persistence"]),
   ("Surfaces", ["Domain", "Ink", "DesignSystem"]),
@@ -39,6 +39,8 @@ let package = Package(
     + [
       .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
       .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
+      .testTarget(name: "TransportTests", dependencies: ["BilletKit", "Transport", "Wire"]),
+      .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
       .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
     ],
   swiftLanguageModes: [.v6]
