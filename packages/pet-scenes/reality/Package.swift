@@ -12,6 +12,7 @@ let package = Package(
     .target(
       name: "PetSceneReality",
       dependencies: [
+        .product(name: "DesignSystem", package: "ios"),
         .product(name: "Pet", package: "ios"),
         .product(name: "PetScene", package: "ios"),
       ],

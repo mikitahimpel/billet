@@ -54,11 +54,15 @@ final class NookiDiorama {
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
   private let physics = NookiPhysics()
+  let renovation: NookiRenovation
   private var yarnPlay = NookiYarnPlay(
     bed: NookiDiorama.bedSpot, floor: NookiDiorama.wallSpot.y,
     restHeading: NookiChoreography.restHeading)
   private var ballWas: SIMD3<Float>?
   private var ballSpeed: Float = 0
+  private var lantern: Entity?
+  /// The paint a tap puts on while the room is being changed.
+  var paint = NookiSwatch.cream
   private var isFollowingTilt = false
   private let mochiDeadline: Duration
   private var settlingFrames = NookiDiorama.framesBeforeReady
@@ -95,20 +99,24 @@ final class NookiDiorama {
   private static let noteReadingScale: Float = 2
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let lookLimit: Float = 1
+  private static let fieldOfView: Float = 30
+  private static let noticeDistance: Float = 0.6
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
 
   /// Starts empty and cheap, so a view can hold one before anything heavy has run.
   init(
     loadModel: @escaping NookiModelLoader = NookiFurniture.bundledModel,
     mochiDeadline: Duration = .seconds(12),
-    tiltSource: any NookiTiltSource = NookiTiltSources.standard()
+    tiltSource: any NookiTiltSource = NookiTiltSources.standard(),
+    layoutStore: NookiLayoutStore = NookiLayoutStore(defaults: .standard)
   ) {
+    renovation = NookiRenovation(store: layoutStore)
     self.loadModel = loadModel
     self.tiltSource = tiltSource
     self.mochiDeadline = mochiDeadline
     root.addChild(room)
     room.isEnabled = false
-    lens.camera.fieldOfViewInDegrees = 30
+    lens.camera.fieldOfViewInDegrees = Self.fieldOfView
     root.addChild(lens)
     aimLens()
   }
@@ -144,6 +152,10 @@ final class NookiDiorama {
     await Task.yield()
     buildDust()
     buildStreakMarks(play.streak)
+    if let lantern { renovation.attach(lantern, to: NookiFurniture.tableName) }
+    renovation.attach(lanternLight, to: NookiFurniture.tableName)
+    renovation.attach(lampLight, to: NookiFurniture.lampName)
+    renovation.applyStored()
     room.isEnabled = isOnScreen
     isLoaded = true
     updateTiltFollowing()
@@ -240,6 +252,34 @@ final class NookiDiorama {
       NookiPhysics.flick(screenVelocity: [velocityX, velocityY], cameraYaw: camera.yaw))
   }
 
+  // MARK: - Changing the room
+
+  /// Lifts the piece under a finger, if there is one.
+  func lift(_ entity: Entity) -> Bool {
+    renovation.lift(entity)
+  }
+
+  /// Follows a finger at `point`, for a view of `size`, both in points.
+  func moveLifted(to point: SIMD2<Float>, in size: SIMD2<Float>) {
+    let floor = NookiFloorRay.floorPoint(
+      under: point, viewSize: size, camera: camera.position, target: NookiCamera.target,
+      verticalFieldOfView: Self.fieldOfView)
+    if let floor { renovation.move(towards: floor) }
+  }
+
+  /// Sets a lifted piece down. Mochi looks up and stirs if it lands close by.
+  func dropLifted() {
+    guard let landed = renovation.drop() else { return }
+    let bed = SIMD3(Self.bedSpot.x, 0, Self.bedSpot.z)
+    guard simd_distance(SIMD3(landed.x, 0, landed.z), bed) < Self.noticeDistance else { return }
+    look(at: landed)
+    petStart = clock
+  }
+
+  func resetRoom() {
+    renovation.reset(reduceMotion: reduceMotion)
+  }
+
   // MARK: - Camera
 
   /// Follows a drag, in screen points since the last step.
@@ -274,6 +314,10 @@ final class NookiDiorama {
   /// Handles a tap on `entity`, and returns the event to report, if any. A target reacts at once,
   /// and a second quick tap anywhere sends the camera home instead.
   func tap(_ entity: Entity, at time: TimeInterval) -> PetSceneEvent? {
+    if renovation.isOn {
+      renovation.paint(entity, paint, reduceMotion: reduceMotion)
+      return nil
+    }
     if tapTimer.isDoubleTap(at: time) {
       camera.goHome(animated: !reduceMotion)
       aimLens()
@@ -308,7 +352,11 @@ final class NookiDiorama {
     guard !reduceMotion, target != .mochi, let holder = holders[target] ?? noteHolder(target) else {
       return
     }
-    let offset = holder.position(relativeTo: nil) - mochi.position(relativeTo: nil)
+    look(at: holder.position(relativeTo: nil))
+  }
+
+  private func look(at point: SIMD3<Float>) {
+    let offset = point - mochi.position(relativeTo: nil)
     let facing = atan2(-offset.x, -offset.z)
     let turn = remainder(facing - NookiChoreography.restHeading, 2 * .pi)
     lookGoal = min(max(turn, -Self.lookLimit), Self.lookLimit)
@@ -335,6 +383,7 @@ final class NookiDiorama {
     idleDelta = 0
     stepTilt(Float(step))
     stepYarn(step)
+    renovation.step(Float(step), reduceMotion: reduceMotion)
     if !camera.isAtRest {
       camera.step(Float(step))
       aimLens()
@@ -344,7 +393,8 @@ final class NookiDiorama {
 
   /// True while something should move at full rate. A sleeping room runs at the idle step.
   private var isBusy: Bool {
-    !camera.isAtRest || tilt.isMoving || tilt.pull != .zero || yarnPlay.isPlaying
+    !camera.isAtRest || renovation.isMoving || tilt.isMoving || tilt.pull != .zero
+      || yarnPlay.isPlaying
       || ballSpeed > NookiYarnPlay.noticeSpeed / 2 || world.activity != .sleeping || petStart != nil
       || !wobbles.isEmpty
       || lookStart != nil || lookTurn != 0
@@ -490,10 +540,20 @@ final class NookiDiorama {
       ([1.2, 0.09, 0.012], .walnut, [0.05, 0.045, -0.594]),
       ([0.76, 0.006, 0.006], .ink, [-0.08, 0.6, -0.59]),
     ]
+    var built: [ModelEntity] = []
     for part in parts {
-      box(part.size, part.tone, at: part.position)
+      built.append(box(part.size, part.tone, at: part.position))
       await Task.yield()
     }
+    for surface in built.prefix(3) {
+      Self.makeTappable(
+        surface, size: surface.visualBounds(relativeTo: surface).extents, center: .zero)
+    }
+    renovation.setSurfaces(
+      walls: [built[1], built[2]], floor: built[0], wall: Tone.plaster.rgbVector,
+      ground: Tone.honey.rgbVector)
+    renovation.addFixed(centre: [Self.bedSpot.x, Self.bedSpot.z], half: [0.28, 0.28])
+    renovation.addFixed(centre: [Self.bowlPosition.x, Self.bowlPosition.z], half: [0.1, 0.1])
     streakMarks.position = [0.2, 0.72, -0.597]
     room.addChild(streakMarks)
   }
@@ -559,11 +619,13 @@ final class NookiDiorama {
     lens.addChild(backstop)
   }
 
-  private func box(_ size: SIMD3<Float>, _ tone: Tone, at position: SIMD3<Float>) {
+  @discardableResult
+  private func box(_ size: SIMD3<Float>, _ tone: Tone, at position: SIMD3<Float>) -> ModelEntity {
     let model = ModelEntity(
       mesh: .generateBox(size: size, cornerRadius: 0.004), materials: [Self.clay(tone)])
     model.position = position
     room.addChild(model)
+    return model
   }
 
   private func place(_ item: NookiFurniture) async {
@@ -593,7 +655,12 @@ final class NookiDiorama {
       holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
       holder.addChild(model)
       room.addChild(holder)
-      if item.isSolid { physics.addSolid(to: holder, size: size) }
+      if item.name == NookiFurniture.lanternName { lantern = holder }
+      if item.isSolid {
+        physics.addSolid(to: holder, size: size)
+        renovation.register(item.name, holder: holder, half: item.footprint(size))
+        Self.makeTappable(holder, size: size, center: [0, size.y / 2, 0])
+      }
       if let target {
         holder.name = target.rawValue
         holders[target] = holder
@@ -803,6 +870,10 @@ final class NookiDiorama {
 private enum Tone {
   case honey, plaster, walnut, ink, paper, heart, lamp, evening, ceiling, bounce
 
+  var rgbVector: SIMD3<Float> {
+    SIMD3(Float(rgb.0), Float(rgb.1), Float(rgb.2))
+  }
+
   private var rgb: (CGFloat, CGFloat, CGFloat) {
     switch self {
     case .honey: (0.72, 0.5, 0.3)
@@ -839,8 +910,20 @@ struct NookiFurniture: Sendable {
   var position: SIMD3<Float>
   var yaw: Float
   var target: NookiTarget?
-  /// True for a piece the ball bounces off, not one it rolls over.
+  /// True for a piece the ball bounces off and that can be moved.
   var isSolid = false
+
+  static let lanternName = "Item_lantern"
+  static let tableName = "Item_teatable"
+  static let lampName = "Item_lamp"
+  private static let standingShare: Float = 0.8
+
+  /// Half the floor this piece takes up, for a model of `size`.
+  func footprint(_ size: SIMD3<Float>) -> SIMD2<Float> {
+    let (across, along) = (abs(cos(yaw)), abs(sin(yaw)))
+    return SIMD2(
+      across * size.x + along * size.z, along * size.x + across * size.z) / 2 * Self.standingShare
+  }
 
   static let bundledModel: NookiModelLoader = { name throws(NookiLoadError) in
     do {
