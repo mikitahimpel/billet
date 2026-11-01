@@ -5,7 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./pair-room-placeholder": "./src/pair-room-placeholder.ts",
+    "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
     "./worker-env": "./src/worker-env.ts"
   },
@@ -15,8 +15,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@billet/backend-pair-room": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "@billet/contracts-realtime": "workspace:*",
+    "effect": "catalog:"
+  },
   "devDependencies": {
     "@billet/config-typescript": "workspace:*",
+    "@cloudflare/vitest-pool-workers": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",

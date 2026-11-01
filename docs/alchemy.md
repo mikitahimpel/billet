@@ -29,8 +29,8 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 - `apps/api` is the composition root only. The Durable Object class, the placeholder response and the
   binding types live in `packages/backend/platform`, the only place that touches bindings. The
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
-- The `PairRoom` class and the fetch response are placeholders. The reducer, the adapter and the
-  routes arrive with later tickets.
+- The `PairRoom` rules live in `packages/backend/pair-room`. The fetch response is still a
+  placeholder, so no route reaches the object yet: the routes arrive with later tickets.
 - Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
   committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
   read only by a real deploy.
@@ -65,6 +65,10 @@ Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Bille
 | --- | --- | --- |
 | `CLOUDFLARE_ACCOUNT_ID` | `cloudflare` | `account_id` |
 | `CLOUDFLARE_API_TOKEN` | `cloudflare` | `api_token` |
+| `APNS_KEY` | `Apple` | `APNS_KEY` |
+| `APNS_KEY_ID` | `Apple` | `APNS_KEY_ID` |
+| `APPLE_SIGN_IN_KEY` | `Apple` | `APPLE_SIGN_IN_KEY` |
+| `APPLE_SIGN_IN_KEY_ID` | `Apple` | `APPLE_SIGN_IN_KEY_ID` |
 
 The API token needs Workers Scripts, D1 and R2 edit on the account. Create one item per vault.
 
