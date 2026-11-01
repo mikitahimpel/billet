@@ -20,6 +20,7 @@ struct BilletWidgetBundle: WidgetBundle {
     PetCatControl()
     SendHeartControl()
     OpenCanvasControl()
+    CatTripActivity()
     LatestNoteWidget()
     PetPoseWidget()
   }

@@ -44,10 +44,12 @@ struct HomeView: View {
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
+        await session.trips.noteOnItsWay(catName: session.play.catName, reveal: wall.revealDelay)
         try? await Task.sleep(for: wall.revealDelay)
         guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
         hungImage = NoteImage.cgImage(of: drawing)
         hangCount += 1
+        await session.trips.noteHung()
       }
       .task(id: line) {
         withAnimation(Motion.spring) { showsStatus = true }

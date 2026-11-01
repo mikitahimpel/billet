@@ -187,3 +187,24 @@ extension Result {
     #expect(ActionButtonState.kinds(features: features, surface: .lockScreen).isEmpty)
   }
 }
+
+@Suite struct LiveActivitySurfaceTests {
+  @Test func theTripHeartNeedsNoButtonFlagButAnswersANote() {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    var features = WidgetFeatures()
+    features.set(.buttonHeart, on: false)
+    let withNote = WidgetSnapshot(
+      treatDay: TreatDay.key(for: now, calendar: calendar), latestReceivedNote: UUID(),
+      updatedAt: now)
+    let result = WidgetActionRequest.decide(
+      .heart, at: .liveActivity, features: features, snapshot: withNote, pending: [], now: now,
+      calendar: calendar)
+    #expect((try? result.get()) != nil)
+    let none = WidgetActionRequest.decide(
+      .heart, at: .liveActivity, features: features, snapshot: nil, pending: [], now: now,
+      calendar: calendar)
+    #expect(none == .failure(.noNote))
+  }
+}

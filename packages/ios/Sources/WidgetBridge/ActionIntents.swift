@@ -102,3 +102,25 @@ public struct OpenCanvasIntent: AppIntent {
 
 /// Lets the app and the widget both see the intents defined here.
 public struct WidgetBridgeIntents: AppIntentsPackage {}
+
+#if os(iOS)
+  import ActivityKit
+
+  /// The heart button of the cat's trip. It queues the heart like any widget button and marks the
+  /// activity, so the Lock Screen shows it was asked for.
+  public struct HeartTripIntent: LiveActivityIntent {
+    public static let title: LocalizedStringResource = "Send a heart"
+    public static let isDiscoverable = false
+
+    public init() {}
+
+    public func perform() async throws -> some IntentResult {
+      guard ActionSubmission.submit(.heart, at: .liveActivity) else { return .result() }
+      for activity in Activity<CatTripAttributes>.activities {
+        let content = CatTrip.hearted(activity.content.state)
+        await activity.update(ActivityContent(state: content, staleDate: nil))
+      }
+      return .result()
+    }
+  }
+#endif
