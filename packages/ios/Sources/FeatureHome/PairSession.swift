@@ -19,6 +19,8 @@ final class PairSession {
   let store: Store<HomeMachine>
   let shop: ShopStore
   let renovator: RoomRenovator
+  /// True when the partner is the scripted one from Labs.
+  let isFakePartner: Bool
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -45,8 +47,10 @@ final class PairSession {
     delivery: NoteDelivery,
     archive: NoteArchive,
     shop: ShopStore,
-    now: @escaping @Sendable () -> Date = { .now }
+    now: @escaping @Sendable () -> Date = { .now },
+    isFakePartner: Bool = false
   ) {
+    self.isFakePartner = isFakePartner
     self.room = room
     self.delivery = delivery
     self.archive = archive

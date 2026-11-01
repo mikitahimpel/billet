@@ -141,6 +141,7 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .transition(.opacity)
       }
+      fakePartnerNotice
       catNaming
       latestReceived
       treatPanel
@@ -150,6 +151,20 @@ struct HomeView: View {
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
+  }
+
+  /// Said plainly, so nobody takes the scripted replies for a person.
+  @ViewBuilder private var fakePartnerNotice: some View {
+    if session.isFakePartner {
+      Text("Fake partner: the replies are scripted and stay on this phone.")
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, Spacing.medium)
+        .frame(minHeight: Target.minimum)
+        .card()
+        .accessibilityIdentifier("fakePartnerNotice")
+    }
   }
 
   /// A way to answer the newest note the partner sent.
@@ -269,7 +284,7 @@ struct HomeView: View {
         .fill(statusLight.color)
         .frame(width: Spacing.small, height: Spacing.small)
         .accessibilityHidden(true)
-      Text(line.text)
+      Text(session.isFakePartner ? "Fake partner · \(line.text)" : line.text)
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)

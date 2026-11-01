@@ -3,6 +3,7 @@ import FeatureInbox
 import FeatureSettings
 import PetScene
 import SwiftUI
+import WidgetBridge
 
 /// The three tabs of a paired device. Drawing is opened from Home and is not a tab.
 ///
@@ -17,6 +18,7 @@ struct AppShellView: View {
   let session: PairSession
   let scenes: [any PetScene]
   @Binding var selectedSceneID: String?
+  let labs: WidgetFeaturesModel
   let onChangeCode: () -> Void
   let onLogOut: () async -> String?
 
@@ -47,7 +49,8 @@ struct AppShellView: View {
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
         SettingsView(
-          code: session.room.code,
+          code: session.isFakePartner ? nil : session.room.code,
+          labs: labs,
           partnerStatus: line.text,
           catName: session.play.catName,
           scenes: scenes,

@@ -4,6 +4,7 @@ import Foundation
 import Observation
 import Persistence
 import Pet
+import WidgetBridge
 
 /// Why a pairing attempt ended without a pair.
 enum PairFailure: Hashable, Sendable {
@@ -43,22 +44,75 @@ final class AppModel {
     var clearSurfaces: @Sendable () async -> Void
     var pairingTimeout: Duration
     var now: @Sendable () -> Date = { .now }
+    /// The saved lab flags. `nil` leaves every experiment at its default.
+    var labs: WidgetFeaturesModel?
+    /// Where the fake partner keeps its notes, apart from the real archive.
+    var fakeArchive: NoteArchive?
+    var fakeDelivery: (DemoRoom) -> NoteDelivery = { .fakePartner(device: $0.device) }
   }
 
   private(set) var stage = Stage.unpaired
   private(set) var failure: PairFailure?
+  let labs: WidgetFeaturesModel
 
+  /// What the screen showed before the fake partner took over, to return to when it leaves.
+  @ObservationIgnored private var beforeFake: Stage?
   @ObservationIgnored private let dependencies: Dependencies
   @ObservationIgnored private var timeout: Task<Void, Never>?
 
   init(dependencies: Dependencies) {
     self.dependencies = dependencies
+    labs = dependencies.labs ?? WidgetFeaturesModel(store: nil)
     if let room = DemoRoom.saved(in: dependencies.defaults),
       let session = makeSession(room)
     {
       stage = .paired(session)
       Task { await session.loadNotes() }
     }
+    if labs.isOn(LabExperiment.fakePartner) { enterFakePartner() }
+  }
+
+  /// True while the screens show the scripted partner instead of a real room.
+  var isFakePartner: Bool { beforeFake != nil }
+
+  /// Follows the Labs switch for the fake partner.
+  func fakePartnerSwitched(on: Bool) {
+    if on { enterFakePartner() } else { leaveFakePartner() }
+  }
+
+  /// Shows Home with a scripted partner. The real room stays closed, and the real notes are not
+  /// touched: the fake partner keeps its own.
+  private func enterFakePartner() {
+    guard beforeFake == nil, let archive = dependencies.fakeArchive else { return }
+    let wasPairing: Stage = stage
+    session?.disconnect()
+    timeout?.cancel()
+    let room = DemoRoom(code: "fake-partner", device: "fake-me")
+    let fake = PairSession(
+      room: room, delivery: dependencies.fakeDelivery(room), archive: archive,
+      shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now,
+      isFakePartner: true)
+    beforeFake = wasPairing
+    stage = .paired(fake)
+    fake.connect()
+    Task {
+      try? await archive.erase()
+      await fake.loadNotes()
+    }
+  }
+
+  /// Leaving from a button on a fake-partner screen turns the Labs switch off as well.
+  private func leaveByLabs() {
+    labs.set(LabExperiment.fakePartner, on: false)
+    leaveFakePartner()
+  }
+
+  private func leaveFakePartner() {
+    guard let previous = beforeFake else { return }
+    session?.disconnect()
+    beforeFake = nil
+    stage = previous
+    session?.connect()
   }
 
   /// The session whose connection should follow the app's foreground state.
@@ -103,6 +157,7 @@ final class AppModel {
 
   /// Leaves a room that turned this device away, keeping its notes and device ID.
   func changeCode() {
+    guard !isFakePartner else { return leaveByLabs() }
     guard let session else { return }
     abandon(session)
   }
@@ -111,6 +166,10 @@ final class AppModel {
   /// Nothing on the backend changes. Returns a message if the notes could not be erased, in which
   /// case the device stays paired and reconnects.
   func logOut() async -> String? {
+    guard !isFakePartner else {
+      leaveByLabs()
+      return nil
+    }
     guard let session else { return nil }
     session.disconnect()
     await session.savesFinished()

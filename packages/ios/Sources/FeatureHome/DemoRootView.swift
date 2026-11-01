@@ -6,6 +6,7 @@ import Ink
 import Persistence
 import PetScene
 import SwiftUI
+import WidgetBridge
 import WidgetKit
 
 /// Shows pairing or the tabs, and keeps the room connection open while the app is in front.
@@ -36,7 +37,10 @@ public struct DemoRootView: View {
             NoteImage.removeLatest()
             WidgetCenter.shared.reloadAllTimelines()
           },
-          pairingTimeout: Self.pairingTimeout
+          pairingTimeout: Self.pairingTimeout,
+          labs: WidgetFeaturesModel(
+            store: .appGroup(), onChange: { WidgetCenter.shared.reloadAllTimelines() }),
+          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
   }
 
@@ -45,6 +49,9 @@ public struct DemoRootView: View {
       .preferredColorScheme(.dark)
       .tint(Palette.gold.color)
       .calmAnimation(value: model.isPaired)
+      .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
+        model.fakePartnerSwitched(on: on)
+      }
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
           model.session?.connect()
@@ -71,11 +78,16 @@ public struct DemoRootView: View {
           session: session,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
+          labs: model.labs,
           onChangeCode: { model.changeCode() },
           onLogOut: { await model.logOut() }
         )
       }
     }
+  }
+
+  private static var fakeNotesDirectory: URL {
+    URL.applicationSupportDirectory.appending(path: "FakePartnerNotes", directoryHint: .isDirectory)
   }
 
   private static var notesDirectory: URL {

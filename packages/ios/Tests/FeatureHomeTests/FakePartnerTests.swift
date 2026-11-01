@@ -1,0 +1,113 @@
+import Foundation
+import Pet
+import Testing
+import Wire
+
+@testable import FeatureHome
+
+@Suite("FakePartner")
+struct FakePartnerTests {
+  /// Waits a moment instead of a real time, so a test does not run for seconds.
+  private static let quick = FakePartnerPace(
+    arrival: .milliseconds(1), reaction: .milliseconds(10), reply: .milliseconds(30),
+    petBack: .milliseconds(10), treatBack: .milliseconds(10), idle: [])
+
+  private func collect(
+    _ delivery: NoteDelivery, count: Int, after act: @Sendable () async -> Void = {}
+  ) async -> [NoteDelivery.Update] {
+    var seen: [NoteDelivery.Update] = []
+    var updates = delivery.updates().makeAsyncIterator()
+    // The connection is open once it has said so; only then does the user act.
+    if let first = await updates.next() { seen.append(first) }
+    await act()
+    while seen.count < count, let update = await updates.next() {
+      seen.append(update)
+    }
+    return seen
+  }
+
+  @Test func theFakePartnerArrivesAfterConnecting() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 2)
+    #expect(seen == [.status(.connecting), .status(.partnerHere)])
+  }
+
+  @Test func aSentNoteGetsAReactionAndThenAReply() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let id = UUID()
+    let seen = await collect(delivery, count: 4) {
+      await delivery.deliver([], id)
+    }
+    guard seen.count == 4 else {
+      Issue.record("saw \(seen)")
+      return
+    }
+    #expect(seen[2] == .reactions([id: .heart]))
+    if case .note(let strokes, _) = seen[3] {
+      #expect(!strokes.isEmpty)
+    } else {
+      Issue.record("expected a note, got \(seen[3])")
+    }
+  }
+
+  @Test func aPetIsPettedBack() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 3) {
+      await delivery.play(.pet, "2026-11-02T08:00:00+01:00")
+    }
+    #expect(seen.last == .partnerPetted)
+  }
+
+  @Test func aTreatIsAnsweredWithTheFakePartnersOwnToday() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me",
+      room: FakePartnerRoom(
+        pace: Self.quick, now: { Date(timeIntervalSince1970: 1_800_000_000) }))
+    let seen = await collect(delivery, count: 3) {
+      await delivery.play(.treat, "x")
+    }
+    let day = TreatDay.key(for: Date(timeIntervalSince1970: 1_800_000_000), calendar: .current)
+    #expect(seen.last == .treats([day: [FakePartnerRoom.device]]))
+  }
+
+  @Test func theCatNameIsEchoed() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 3) { await delivery.nameCat("Mochi") }
+    #expect(seen.last == .catName("Mochi"))
+  }
+
+  @Test func idleMovesCycleThroughNotesPetsAndTreats() async {
+    var pace = Self.quick
+    pace.idle = [.milliseconds(1)]
+    let delivery = NoteDelivery.fakePartner(device: "me", room: FakePartnerRoom(pace: pace))
+    let seen = await collect(delivery, count: 6)
+    let kinds = seen.dropFirst(2).map { update -> String in
+      switch update {
+      case .note: "note"
+      case .partnerPetted: "pet"
+      case .treats: "treat"
+      default: "other"
+      }
+    }
+    #expect(kinds == ["note", "pet", "treat", "note"])
+  }
+
+  @Test func everyDrawingHasInkInsideTheUnitSquare() {
+    for number in 0..<10 {
+      let strokes = FakePartnerDrawings.drawing(number: number)
+      #expect(!strokes.isEmpty)
+      for point in strokes.flatMap(\.points) {
+        #expect((0...1).contains(point.x) && (0...1).contains(point.y))
+      }
+    }
+  }
+
+  @Test func theDrawingsDiffer() {
+    let first = (0..<5).map { FakePartnerDrawings.drawing(number: $0) }
+    #expect(Set(first).count == 5)
+  }
+}
