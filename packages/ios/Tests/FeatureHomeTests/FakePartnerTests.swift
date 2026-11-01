@@ -33,16 +33,23 @@ struct FakePartnerTests {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let seen = await collect(delivery, count: 3)
-    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose)))
+    #expect(
+      seen.last == .partnerGlow(PartnerGlow(colour: .rose, timeZoneID: FakePartnerRoom.timeZoneID)))
   }
 
   @Test func theirLampFollowsOursOutAndBackOn() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     var seen = await collect(delivery, count: 4) { await delivery.signal(.lamp(on: false)) }
-    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose, lampOn: false)))
+    #expect(
+      seen.last
+        == .partnerGlow(
+          PartnerGlow(colour: .rose, lampOn: false, timeZoneID: FakePartnerRoom.timeZoneID)))
     seen = await collect(delivery, count: 4) { await delivery.signal(.lamp(on: true)) }
-    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose, lampOn: true)))
+    #expect(
+      seen.last
+        == .partnerGlow(
+          PartnerGlow(colour: .rose, lampOn: true, timeZoneID: FakePartnerRoom.timeZoneID)))
   }
 
   @Test func theFakePartnerArrivesAfterConnecting() async {

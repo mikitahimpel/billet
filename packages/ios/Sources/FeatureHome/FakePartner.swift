@@ -41,6 +41,8 @@ struct FakePartnerPace: Sendable {
 /// Only the settings toggle brings it in; the real room connection never touches this file.
 actor FakePartnerRoom {
   static let device = "fake-partner"
+  /// Far enough from most users that the sky differs from their own.
+  static let timeZoneID = "Asia/Tokyo"
 
   private let pace: FakePartnerPace
   private let now: @Sendable () -> Date
@@ -179,7 +181,7 @@ actor FakePartnerRoom {
   }
 
   private func emitGlow() {
-    emit(.partnerGlow(PartnerGlow(colour: colour, lampOn: lampOn)))
+    emit(.partnerGlow(PartnerGlow(colour: colour, lampOn: lampOn, timeZoneID: Self.timeZoneID)))
   }
 
   private func holdCat() {

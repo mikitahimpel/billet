@@ -194,6 +194,7 @@ struct HomeView: View {
       catNaming
       latestReceived
       lampColourCard
+      theirSkyCard
       treatPanel
       porchLightCard
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
@@ -225,6 +226,12 @@ struct HomeView: View {
         store: session.lamp, catName: session.play.catName, showsColours: colours,
         showsGoodnight: goodnight
       ) { session.lampChanged(out: $0) }
+    }
+  }
+
+  @ViewBuilder private var theirSkyCard: some View {
+    if session.labs.isOn(LabExperiment.theirSky) {
+      TheirSkySection(store: session.lamp)
     }
   }
 

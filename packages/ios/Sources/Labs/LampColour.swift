@@ -39,9 +39,12 @@ public struct PartnerGlow: Hashable, Sendable {
   public var colour: LampColour
   /// False once the partner has said goodnight.
   public var lampOn: Bool
+  /// The partner's time zone, such as `Asia/Tokyo`. Nothing finer than that is shared.
+  public var timeZoneID: String?
 
-  public init(colour: LampColour = .standard, lampOn: Bool = true) {
+  public init(colour: LampColour = .standard, lampOn: Bool = true, timeZoneID: String? = nil) {
     self.colour = colour
     self.lampOn = lampOn
+    self.timeZoneID = timeZoneID
   }
 }
