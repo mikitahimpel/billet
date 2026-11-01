@@ -10,6 +10,8 @@ public struct PairPlay: Equatable, Sendable {
   public private(set) var petsGiven = 0
   /// Counts up each time the partner's pet arrives.
   public private(set) var petsReceived = 0
+  /// The name the pair gave the cat, once either of them has chosen one.
+  public private(set) var catName: String?
 
   public init(device: String) {
     self.device = device
@@ -36,6 +38,11 @@ public struct PairPlay: Equatable, Sendable {
     guard status(on: day) == .neither || status(on: day) == .waitingOnMe else { return false }
     ledger.give(device: device, on: day)
     return true
+  }
+
+  /// Takes the name the room reports. The room keeps the first name, so it overrides a local one.
+  public mutating func named(_ name: String) {
+    catName = name
   }
 
   public mutating func treatsReceived(_ days: [String: Set<String>]) {

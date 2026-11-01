@@ -44,6 +44,7 @@ struct AppShellView: View {
         SettingsView(
           code: session.room.code,
           partnerStatus: line.text,
+          catName: session.play.catName,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
           onLogOut: onLogOut

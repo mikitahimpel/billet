@@ -14,10 +14,12 @@ private final class FakeRoom {
   private(set) var closed = 0
   private(set) var opened = 0
   private(set) var delivered: [[Stroke]] = []
+  private(set) var names: [String] = []
 
   var delivery: NoteDelivery {
     NoteDelivery(
       deliver: { strokes in await MainActor.run { self.delivered.append(strokes) } },
+      nameCat: { name in await MainActor.run { self.names.append(name) } },
       updates: {
         AsyncStream { continuation in
           MainActor.assumeIsolated {
@@ -120,6 +122,19 @@ struct AppModelTests {
     #expect(!session.store.state.pet.world.partnerHere)
     await room.emit(.status(.connecting))
     #expect(!session.store.state.pet.world.partnerHere)
+  }
+
+  @Test func theRoomsCatNameShowsAndAnEmptyOneIsNotSent() async throws {
+    let (_, session) = try await paired()
+    session.nameCat("   ")
+    #expect(session.play.catName == nil)
+    #expect(room.names.isEmpty)
+    session.nameCat(" Mochi ")
+    #expect(session.play.catName == "Mochi")
+    await room.emit(.catName("Biscuit"))
+    #expect(session.play.catName == "Biscuit")
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.names == ["Mochi"])
   }
 
   @Test func aFullRoomReturnsToPairingWithAClearError() async {

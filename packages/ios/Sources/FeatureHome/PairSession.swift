@@ -101,6 +101,14 @@ final class PairSession {
     Task { [delivery] in await delivery.play(.pet, at) }
   }
 
+  /// Names the cat here at once and tells the room. If the partner named it first, the room's
+  /// name replaces this one.
+  func nameCat(_ raw: String) {
+    guard let name = CatName.clean(raw) else { return }
+    play.named(name)
+    Task { [delivery] in await delivery.nameCat(name) }
+  }
+
   func giveTreat(on day: String) {
     applyTreat { _ = $0.treatGiven(on: day) }
     let at = TreatDay.timestamp(for: now(), calendar: .current)
@@ -137,6 +145,8 @@ final class PairSession {
       play.petReceived()
     case .treats(let days):
       applyTreat { $0.treatsReceived(days) }
+    case .catName(let name):
+      play.named(name)
     }
   }
 

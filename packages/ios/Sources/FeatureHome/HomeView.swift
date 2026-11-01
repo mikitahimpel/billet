@@ -122,12 +122,28 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .transition(.opacity)
       }
+      catNaming
       treatPanel
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
+    .calmAnimation(value: session.play.catName)
+  }
+
+  /// The cat's name once the pair has one, or the prompt to choose it.
+  @ViewBuilder private var catNaming: some View {
+    if let name = session.play.catName {
+      Text(name)
+        .billetType(.heading)
+        .foregroundStyle(Palette.paper.color)
+        .accessibilityIdentifier("catNameLabel")
+        .transition(.opacity)
+    } else if session.hasConnected {
+      NamePanel { session.nameCat($0) }
+        .transition(.opacity)
+    }
   }
 
   /// The cat's middle third. A tap pets it on this phone and tells the partner's.

@@ -26,6 +26,7 @@ actor LiveDelivery {
     let id: String
     let kind: String
     let at: String
+    var name: String?
   }
 
   private struct Frame: Decodable {
@@ -35,6 +36,7 @@ actor LiveDelivery {
     let ink: String?
     let kind: String?
     let days: [String: [String]]?
+    let name: String?
   }
 
   private static let refusedStatusCodes: Set<Int> = [400, 403]
@@ -42,6 +44,7 @@ actor LiveDelivery {
 
   private let url: URL
   private var outbox: [Outgoing] = []
+  /// Plays that wait for the server's ack: treats and the cat's name.
   private var treatOutbox: [OutgoingPlay] = []
   private var receivedIDs: Set<String> = []
   private var openSocket: URLSessionWebSocketTask?
@@ -77,6 +80,15 @@ actor LiveDelivery {
       treatOutbox.append(frame)
       if let openSocket { await Self.write(frame, to: openSocket) }
     }
+  }
+
+  /// The name goes like a treat: kept until acked and sent again after a reconnect.
+  func nameCat(_ name: String) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    let frame = OutgoingPlay(
+      id: UUID().uuidString.lowercased(), kind: "name", at: at, name: name)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
   }
 
   /// Connects and reconnects with backoff until cancelled or the server refuses this device.
@@ -152,6 +164,8 @@ actor LiveDelivery {
       updates.yield(.partnerPetted)
     case "treats":
       updates.yield(.treats((frame.days ?? [:]).mapValues(Set.init)))
+    case "name":
+      if let name = frame.name { updates.yield(.catName(name)) }
     case "note":
       guard let id = frame.id, let ink = frame.ink, receivedIDs.insert(id).inserted,
         let strokes = try? NoteInk.decode(ink)
