@@ -109,7 +109,8 @@ private struct NookiStage: View {
     .simultaneousGesture(orbit)
     .simultaneousGesture(pinch)
     .simultaneousGesture(lift)
-    .gesture(tap)
+    .simultaneousGesture(brush)
+    .simultaneousGesture(tap)
     .overlay(alignment: .topLeading) {
       NookiRenovateControls(isOpen: $isRenovating, paint: $paint) { diorama.resetRoom() }
     }
@@ -161,10 +162,12 @@ private struct NookiStage: View {
       }
   }
 
-  /// While the room is open a swipe from a piece belongs to that piece, so the view stays still
-  /// while the hold that lifts it is deciding.
+  /// While the room is open a swipe from a piece or a surface belongs to it, so the view stays
+  /// still while the hold that lifts a piece is deciding, and while paint goes on.
   private func isHoldingPiece(_ entity: Entity) -> Bool {
-    diorama.renovation.isLifting || (isRenovating && diorama.renovation.isPiece(entity))
+    diorama.renovation.isLifting
+      || (isRenovating
+        && (diorama.renovation.isPiece(entity) || diorama.renovation.isSurface(entity)))
   }
 
   /// A swipe that starts on the yarn throws it. Any other swipe orbits.
@@ -191,6 +194,16 @@ private struct NookiStage: View {
         } else {
           diorama.endOrbit(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
         }
+      }
+  }
+
+  /// While the room is open, a touch on a wall or the floor paints it, whether a tap or a stroke.
+  private var brush: some Gesture {
+    DragGesture(minimumDistance: 0)
+      .targetedToAnyEntity()
+      .onChanged { value in
+        guard isRenovating, !diorama.renovation.isLifting else { return }
+        diorama.paintSurface(value.entity)
       }
   }
 

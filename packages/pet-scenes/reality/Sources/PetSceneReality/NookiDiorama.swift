@@ -285,6 +285,10 @@ final class NookiDiorama {
 
   // MARK: - Changing the room
 
+  func paintSurface(_ entity: Entity) {
+    renovation.paint(entity, paint, reduceMotion: reduceMotion)
+  }
+
   /// Lifts the piece under a finger, if there is one.
   func lift(_ entity: Entity) -> Bool {
     renovation.lift(entity)
@@ -345,10 +349,7 @@ final class NookiDiorama {
   /// Handles a tap on `entity`, and returns the event to report, if any. A target reacts at once,
   /// and a second quick tap anywhere sends the camera home instead.
   func tap(_ entity: Entity, at time: TimeInterval) -> PetSceneEvent? {
-    if renovation.isOn {
-      renovation.paint(entity, paint, reduceMotion: reduceMotion)
-      return nil
-    }
+    if renovation.isOn { return nil }
     if tapTimer.isDoubleTap(at: time) {
       camera.goHome(animated: !reduceMotion)
       aimLens()
