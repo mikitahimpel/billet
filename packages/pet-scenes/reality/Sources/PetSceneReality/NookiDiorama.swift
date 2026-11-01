@@ -11,6 +11,7 @@ import SwiftUI
 final class NookiDiorama {
   let root = Entity()
 
+  private let lens = PerspectiveCamera()
   private let mochi = Entity()
   private let note = Entity()
   private var closedEyes: [Entity] = []
@@ -20,8 +21,12 @@ final class NookiDiorama {
   private var clock = 0.0
   private var stepStart = 0.0
   private var subscription: EventSubscription?
+  private var camera = NookiCamera()
+  private var reduceMotion = false
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
+
+  private static let orbitPerPoint: Float = 0.006
 
   // Mochi lies in the bed in the middle of the rug, turned towards the camera.
   private static let mochiPosition: SIMD3<Float> = [0.05, 0.095, 0.12]
@@ -36,6 +41,9 @@ final class NookiDiorama {
     buildNote()
     mochi.position = Self.mochiPosition
     root.addChild(mochi)
+    lens.camera.fieldOfViewInDegrees = 30
+    root.addChild(lens)
+    aimLens()
   }
 
   /// Loads the models. A missing asset leaves a gap in the room and is logged.
@@ -68,8 +76,50 @@ final class NookiDiorama {
     }
   }
 
+  func setReduceMotion(_ reduced: Bool) {
+    reduceMotion = reduced
+  }
+
+  // MARK: - Camera
+
+  /// Follows a drag, in screen points since the last step.
+  func orbit(byX deltaX: Float, y deltaY: Float) {
+    camera.drag(yaw: -deltaX * Self.orbitPerPoint, pitch: deltaY * Self.orbitPerPoint)
+    aimLens()
+  }
+
+  /// Lets go of a drag, with its velocity in points per second.
+  func endOrbit(velocityX: Float, velocityY: Float) {
+    camera.release(
+      yawVelocity: -velocityX * Self.orbitPerPoint,
+      pitchVelocity: velocityY * Self.orbitPerPoint,
+      coasting: !reduceMotion)
+  }
+
+  func zoom(by scale: Float) {
+    camera.zoom(by: scale)
+    aimLens()
+  }
+
+  func endZoom() {
+    camera.release(yawVelocity: 0, pitchVelocity: 0, coasting: !reduceMotion)
+  }
+
+  func returnCameraHome() {
+    camera.goHome(animated: !reduceMotion)
+    aimLens()
+  }
+
+  private func aimLens() {
+    lens.look(at: NookiCamera.target, from: camera.position, relativeTo: nil)
+  }
+
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    if !camera.isAtRest {
+      camera.step(Float(delta))
+      aimLens()
+    }
     apply(elapsed: clock - stepStart)
   }
 
