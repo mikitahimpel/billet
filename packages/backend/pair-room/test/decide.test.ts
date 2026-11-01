@@ -186,3 +186,28 @@ describe("tagged unions", () => {
     expect(() => Schema.decodeUnknownSync(RoomState)({ lastSeq: 0 })).toThrow();
   });
 });
+
+describe("RoomState invariants", () => {
+  const member = (user: typeof alice) => ({ user, presence: "idle" as const });
+  const make = (overrides: Record<string, unknown>) =>
+    Schema.decodeUnknownSync(RoomState)({
+      _tag: "Active",
+      pairId,
+      members: [member(alice), member(bob)],
+      lastSeq: 0,
+      streakDays: 0,
+      ...overrides,
+    });
+
+  it("accepts a valid room", () => {
+    expect(make({})).toMatchObject({ _tag: "Active", lastSeq: 0 });
+  });
+
+  it.each([
+    ["the same user twice", { members: [member(alice), member(alice)] }],
+    ["a negative lastSeq", { lastSeq: -1 }],
+    ["a negative streakDays", { streakDays: -1 }],
+  ])("rejects %s", (_, overrides) => {
+    expect(() => make(overrides)).toThrow();
+  });
+});

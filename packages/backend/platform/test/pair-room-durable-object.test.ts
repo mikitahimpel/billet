@@ -219,3 +219,71 @@ describe("PairRoom sockets", () => {
     expect(await closed).toBe(1000);
   });
 });
+
+describe("PairRoom notes page", () => {
+  const drawing = SendNoteRequest.cases.Photo.make({ image });
+
+  it("skips a note body it cannot decode instead of failing the page", async () => {
+    const room = await openRoom();
+    await room.sendNote(alice, drawing);
+    await room.sendNote(alice, drawing);
+    await room.sendNote(bob, drawing);
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("UPDATE note SET body = ? WHERE seq = 2", '{"old":"shape"}');
+    });
+    const page = await room.notes(0, 10);
+    expect(page.map((entry) => entry.seq)).toEqual([1, 3]);
+  });
+
+  it("never returns an unbounded page", async () => {
+    const room = await openRoom();
+    await room.sendNote(alice, drawing);
+    await runInDurableObject(room, (_, state) => {
+      const body = state.storage.sql.exec<{ body: string }>("SELECT body FROM note").one().body;
+      for (let seq = 2; seq <= 150; seq++) {
+        state.storage.sql.exec("INSERT INTO note (seq, body) VALUES (?, ?)", seq, body);
+      }
+    });
+    expect(await room.notes(0, -1)).toEqual([]);
+    expect(await room.notes(0, 0)).toEqual([]);
+    expect(await room.notes(0, 1_000_000)).toHaveLength(100);
+  });
+});
+
+describe("PairRoom close handling", () => {
+  it("answers a close that carries no code", async () => {
+    const room = await openRoom();
+    const { webSocket } = await connect(room, upgrade(alice));
+    webSocket?.accept();
+    const closed = new Promise<number>((resolve) => {
+      webSocket?.addEventListener("close", (event) => {
+        resolve(event.code);
+      });
+    });
+
+    webSocket?.close();
+
+    expect(await closed).toBe(1000);
+  });
+
+  it.each([0, 999, 1004, 5000, 65535])("does not throw on the invalid code %i", async (code) => {
+    const room = await openRoom();
+    const { webSocket } = await connect(room, upgrade(alice));
+    webSocket?.accept();
+    const closed = new Promise<number>((resolve) => {
+      webSocket?.addEventListener("close", (event) => {
+        resolve(event.code);
+      });
+    });
+
+    await runInDurableObject(room, (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      expect(() => {
+        instance.webSocketClose(socket, code);
+      }).not.toThrow();
+    });
+
+    expect(await closed).toBe(1002);
+  });
+});
