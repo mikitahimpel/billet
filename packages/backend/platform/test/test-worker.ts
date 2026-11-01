@@ -35,6 +35,11 @@ ${body}
   };
 }
 
+/** DemoRoom whose APNs request never completes, to prove an ack does not wait on it. */
+export class HangingApnsRoom extends StubbedDemoRoom {
+  protected override apnsFetch = (): Promise<Response> => new Promise(() => {});
+}
+
 export { PairRoom } from "../src/pair-room-durable-object.ts";
 
 const migrateOnActivation = (ctx: DurableObjectState, migrations?: RoomMigrations) =>

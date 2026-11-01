@@ -4,6 +4,9 @@ declare namespace Cloudflare {
     readonly STUB_DEMO_ROOM: DurableObjectNamespace<
       import("../src/demo-room-durable-object.ts").DemoRoom
     >;
+    readonly HANG_DEMO_ROOM: DurableObjectNamespace<
+      import("../src/demo-room-durable-object.ts").DemoRoom
+    >;
     readonly DEMO_ROOM: DurableObjectNamespace<
       import("../src/demo-room-durable-object.ts").DemoRoom
     >;

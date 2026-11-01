@@ -148,3 +148,30 @@ describe("demo push and note fetch", () => {
     expect(frames).toContainEqual({ type: "note", id: noteId, ink: "QUJD", from: alice });
   });
 });
+
+describe("demo ack latency", () => {
+  const { HANG_DEMO_ROOM } = env as unknown as { HANG_DEMO_ROOM: DurableObjectNamespace<DemoRoom> };
+
+  it("acks a note for an offline partner even when APNs never answers", async () => {
+    const code = "ACKFAST234";
+    const open = async (device: string) => {
+      const response = await routeDemo(request(code, device), HANG_DEMO_ROOM)!;
+      const socket = response.webSocket!;
+      const frames: unknown[] = [];
+      socket.addEventListener("message", (event) => {
+        frames.push(JSON.parse(event.data as string));
+      });
+      socket.accept();
+      return { socket, frames };
+    };
+    const a = await open(alice);
+    const b = await open(bob);
+    b.socket.send(JSON.stringify({ type: "push-token", token: "cd".repeat(32) }));
+    await settle();
+    b.socket.close(1000);
+    await settle();
+    a.socket.send(JSON.stringify({ type: "note", id: noteId, ink: "QUJD" }));
+    await settle();
+    expect(a.frames).toContainEqual({ type: "ack", id: noteId });
+  });
+});

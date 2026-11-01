@@ -27,6 +27,7 @@ export default defineConfig({
               d1Databases: ["DB"],
               durableObjects: {
                 STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
+                HANG_DEMO_ROOM: { className: "HangingApnsRoom", useSQLite: true },
                 DEMO_ROOM: { className: "DemoRoom", useSQLite: true },
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },

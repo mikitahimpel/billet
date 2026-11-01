@@ -121,7 +121,14 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     const seen = (await this.ctx.storage.get<string[]>("seen")) ?? [];
     if (!seen.includes(id)) {
       await this.ctx.storage.put("seen", [...seen, id].slice(-200));
-      if (partner !== undefined) await this.deliverOrQueue({ id, ink, from: sender, to: partner });
+      const queued =
+        partner === undefined
+          ? undefined
+          : await this.deliverOrQueue({ id, ink, from: sender, to: partner });
+      socket.send(JSON.stringify({ type: "ack", id }));
+      // The ack means "stored"; it must not wait on APNs, which is external and can stall.
+      if (queued !== undefined) this.ctx.waitUntil(this.alertPartner(queued));
+      return;
     }
     socket.send(JSON.stringify({ type: "ack", id }));
   }
@@ -191,15 +198,16 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }
 
-  private async deliverOrQueue(note: QueuedNote): Promise<void> {
+  /** Resolves to the note when it was queued because the partner has no open socket. */
+  private async deliverOrQueue(note: QueuedNote): Promise<QueuedNote | undefined> {
     const [target] = this.ctx.getWebSockets(note.to);
     if (target !== undefined) {
       target.send(JSON.stringify({ type: "note", id: note.id, ink: note.ink, from: note.from }));
-      return;
+      return undefined;
     }
     const queue = (await this.ctx.storage.get<QueuedNote[]>("queue")) ?? [];
     await this.ctx.storage.put("queue", [...queue, note].slice(-MAX_QUEUED_NOTES));
-    await this.alertPartner(note);
+    return note;
   }
 
   private async alertPartner(note: QueuedNote): Promise<void> {
