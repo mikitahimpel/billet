@@ -43,47 +43,32 @@ public struct SettingsView: View {
   }
 
   public var body: some View {
-    ZStack {
-      EveningBackground()
-      ScrollView {
-        VStack(alignment: .leading, spacing: Spacing.large) {
-          Text("Settings").screenTitle()
-          pair
-          if scenes.count > 1 {
-            sceneSection
-          }
-          notificationSection
-          links
-          logOut
-          version
-        }
-        .padding(Spacing.medium)
+    ScreenScaffold("Settings") {
+      pair
+      if scenes.count > 1 {
+        sceneSection
       }
+      notificationSection
+      links
+      logOut
+      version
     }
     .task(id: scenePhase) { notifications = await Self.notificationStatus() }
-    .eveningDialog(isPresented: $confirmingLogOut) {
-      EveningDialog(
-        title: "Log out of billet?",
-        message: "This forgets the pair code and deletes the notes on this device. You and your "
-          + "partner will need a new code to pair again."
-      ) {
-        Button("Log out") {
-          confirmingLogOut = false
-          performLogOut()
-        }
-        .buttonStyle(DestructiveButtonStyle())
-        Button("Cancel") { confirmingLogOut = false }
-          .buttonStyle(SecondaryButtonStyle())
-      }
+    .alert("Log out of billet?", isPresented: $confirmingLogOut) {
+      Button("Log out", role: .destructive) { performLogOut() }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text(
+        "This forgets the pair code and deletes the notes on this device. You and your partner "
+          + "will need a new code to pair again."
+      )
     }
   }
 
   private var pair: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("Pair")
-      SettingsGroup {
-        SettingsRow("Partner", value: partnerStatus)
-      }
+      SettingsRow("Partner", value: partnerStatus).card()
       PairCodeCard(code: code)
     }
   }
@@ -100,7 +85,7 @@ public struct SettingsView: View {
       SettingsHeading("Notifications")
       SettingsGroup {
         SettingsRow("Status", value: notifications ?? "Checking…")
-        SettingsSeparator()
+        ListDivider()
         SettingsLink("Open iOS Settings") {
           #if canImport(UIKit)
             if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
@@ -119,7 +104,7 @@ public struct SettingsView: View {
         SettingsLink("Privacy Policy") {
           if let url = Self.privacyPolicy { openURL(url) }
         }
-        SettingsSeparator()
+        ListDivider()
         SettingsLink("Send feedback") {
           if let url = Self.feedback { openURL(url) }
         }
@@ -129,15 +114,15 @@ public struct SettingsView: View {
 
   private var logOut: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
-      Button(loggingOut ? "Logging out…" : "Log out") {
+      BilletButton(loggingOut ? "Logging out…" : "Log out", rank: .secondary) {
         confirmingLogOut = true
       }
-      .buttonStyle(SecondaryButtonStyle())
       .disabled(loggingOut)
       if let logOutError {
         Text(logOutError)
           .billetType(.label)
           .foregroundStyle(Palette.paper.color)
+          .padding(.horizontal, Spacing.medium)
       }
     }
   }
@@ -173,7 +158,7 @@ public struct SettingsView: View {
   }
 }
 
-/// Rows sharing one lit panel.
+/// Rows sharing one card.
 private struct SettingsGroup<Rows: View>: View {
   private let rows: Rows
 
@@ -184,15 +169,7 @@ private struct SettingsGroup<Rows: View>: View {
   var body: some View {
     VStack(spacing: 0) { rows }
       .frame(maxWidth: .infinity)
-      .litPanel(cornerRadius: Radius.control)
-  }
-}
-
-private struct SettingsSeparator: View {
-  var body: some View {
-    Palette.paper.color.opacity(0.1)
-      .frame(height: 1)
-      .padding(.horizontal, Spacing.medium)
+      .card()
   }
 }
 
@@ -207,11 +184,12 @@ private struct SettingsHeading: View {
     Text(title)
       .billetType(.label)
       .foregroundStyle(Palette.muted.color)
+      .padding(.horizontal, Spacing.medium)
       .accessibilityAddTraits(.isHeader)
   }
 }
 
-/// A label and its value, which stack when large text no longer fits one line.
+/// A label and its value.
 private struct SettingsRow: View {
   private let title: String
   private let value: String
@@ -222,29 +200,16 @@ private struct SettingsRow: View {
   }
 
   var body: some View {
-    ViewThatFits(in: .horizontal) {
-      HStack {
-        titleText
-        Spacer(minLength: Spacing.medium)
-        valueText
-      }
-      VStack(alignment: .leading, spacing: Spacing.hair) {
-        titleText
-        valueText
-      }
+    ListRow(title) {
+      EmptyView()
+    } trailing: {
+      Text(value)
+        .billetType(.body)
+        .foregroundStyle(Palette.muted.color)
+        .multilineTextAlignment(.trailing)
+        .contentTransition(.opacity)
     }
-    .padding(.horizontal, Spacing.medium)
-    .padding(.vertical, Spacing.small)
-    .frame(maxWidth: .infinity, minHeight: Target.minimum, alignment: .leading)
     .accessibilityElement(children: .combine)
-  }
-
-  private var titleText: some View {
-    Text(title).billetType(.body).foregroundStyle(Palette.paper.color)
-  }
-
-  private var valueText: some View {
-    Text(value).billetType(.body).foregroundStyle(Palette.muted.color)
   }
 }
 
@@ -259,17 +224,12 @@ private struct SettingsLink: View {
 
   var body: some View {
     Button(action: action) {
-      HStack {
-        Text(title).billetType(.body)
-        Spacer(minLength: Spacing.medium)
-        Image(systemName: "arrow.up.forward").accessibilityHidden(true)
+      ListRow(title) {
+        EmptyView()
+      } trailing: {
+        RowIcon("arrow.up.forward")
       }
-      .foregroundStyle(Palette.paper.color)
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .frame(maxWidth: .infinity, minHeight: Target.minimum)
-      .contentShape(.rect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(RowButtonStyle())
   }
 }
