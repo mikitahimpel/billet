@@ -33,6 +33,8 @@ final class PairSession {
   let porch: PorchLightStore
   /// The lamp colours, for the experiment that shares how today feels.
   let lamp: LampStore
+  /// The day of the next visit, for the suitcase by the door.
+  let visit: NextVisitStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -70,6 +72,7 @@ final class PairSession {
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    visit = NextVisitStore(key: isFakePartner ? "labs.nextVisit.fake" : "labs.nextVisit")
     lamp = LampStore(key: isFakePartner ? "labs.lampColour.fake" : "labs.lampColour")
     porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
     sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
