@@ -25,7 +25,7 @@ public struct DemoRootView: View {
         dependencies: AppModel.Dependencies(
           defaults: DemoRoom.sharedDefaults,
           archive: NoteArchive(storage: .directory(Self.notesDirectory)),
-          delivery: { room in room.socketURL(host: host).map(NoteDelivery.live(url:)) },
+          delivery: { room in room.socketURL(host: host).map { .live(url: $0, device: room.device) } },
           clearSurfaces: {
             NoteImage.removeLatest()
             WidgetCenter.shared.reloadAllTimelines()

@@ -4,6 +4,7 @@ import FeatureInbox
 import Foundation
 import Observation
 import Persistence
+import Pet
 import Wire
 
 /// A live pairing: the room connection, the cat's state and the notes kept for it.
@@ -20,6 +21,9 @@ final class PairSession {
   private(set) var hasConnected = false
   private(set) var notes: [NoteRecord] = []
   private(set) var notesFailedToLoad = false
+  private(set) var play: PairPlay
+  /// True while the shared treat falls onto the cat.
+  private(set) var treatFalling = false
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
@@ -40,6 +44,7 @@ final class PairSession {
     self.delivery = delivery
     self.archive = archive
     self.now = now
+    play = PairPlay(device: room.device)
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
   }
 
@@ -89,6 +94,32 @@ final class PairSession {
     keep(strokes, .sent)
   }
 
+  /// Pets the cat here and tells the partner's phone.
+  func pet() {
+    play.petGiven()
+    let at = TreatDay.timestamp(for: now(), calendar: .current)
+    Task { [delivery] in await delivery.play(.pet, at) }
+  }
+
+  func giveTreat(on day: String) {
+    applyTreat { _ = $0.treatGiven(on: day) }
+    let at = TreatDay.timestamp(for: now(), calendar: .current)
+    Task { [delivery] in await delivery.play(.treat, at) }
+  }
+
+  /// Changes the play state, and drops the treat on the cat when that made today's treat shared.
+  private func applyTreat(_ change: (inout PairPlay) -> Void) {
+    let day = TreatDay.key(for: now(), calendar: .current)
+    let before = play.status(on: day)
+    change(&play)
+    guard before != .fed, play.status(on: day) == .fed else { return }
+    treatFalling = true
+    Task {
+      try? await Task.sleep(for: .seconds(1.5))
+      treatFalling = false
+    }
+  }
+
   private func apply(_ update: NoteDelivery.Update) async {
     switch update {
     case .status(let newStatus):
@@ -101,6 +132,10 @@ final class PairSession {
     case .note(let strokes):
       store.send(.noteReceived(strokes))
       keep(strokes, .received)
+    case .partnerPetted:
+      play.petReceived()
+    case .treats(let days):
+      applyTreat { $0.treatsReceived(days) }
     }
   }
 

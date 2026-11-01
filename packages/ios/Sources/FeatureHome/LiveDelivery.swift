@@ -1,6 +1,7 @@
 import Delivery
 import Foundation
 import Ink
+import Pet
 import WidgetKit
 import Wire
 
@@ -20,11 +21,20 @@ actor LiveDelivery {
     let token: String
   }
 
+  private struct OutgoingPlay: Encodable, Sendable {
+    var type = "play"
+    let id: String
+    let kind: String
+    let at: String
+  }
+
   private struct Frame: Decodable {
     let type: String
     let partnerPresent: Bool?
     let id: String?
     let ink: String?
+    let kind: String?
+    let days: [String: [String]]?
   }
 
   private static let refusedStatusCodes: Set<Int> = [400, 403]
@@ -32,6 +42,7 @@ actor LiveDelivery {
 
   private let url: URL
   private var outbox: [Outgoing] = []
+  private var treatOutbox: [OutgoingPlay] = []
   private var receivedIDs: Set<String> = []
   private var openSocket: URLSessionWebSocketTask?
 
@@ -53,6 +64,19 @@ actor LiveDelivery {
   func sendPushToken() async {
     guard let openSocket, let token = DemoRoom.pushToken() else { return }
     await Self.write(PushToken(token: token), to: openSocket)
+  }
+
+  /// A pet only matters now, so it is dropped when the socket is down. A treat waits for the ack
+  /// and is sent again after a reconnect.
+  func play(_ kind: PlayKind, at time: String) async {
+    let frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: kind.rawValue, at: time)
+    switch kind {
+    case .pet:
+      if let openSocket { await Self.write(frame, to: openSocket) }
+    case .treat:
+      treatOutbox.append(frame)
+      if let openSocket { await Self.write(frame, to: openSocket) }
+    }
   }
 
   /// Connects and reconnects with backoff until cancelled or the server refuses this device.
@@ -115,9 +139,19 @@ actor LiveDelivery {
         for note in outbox {
           await Self.write(note, to: task)
         }
+        for treat in treatOutbox {
+          await Self.write(treat, to: task)
+        }
       }
     case "ack":
       outbox.removeAll { $0.id == frame.id }
+      treatOutbox.removeAll { $0.id == frame.id }
+    case "play":
+      guard frame.kind == PlayKind.pet.rawValue, let id = frame.id, receivedIDs.insert(id).inserted
+      else { return }
+      updates.yield(.partnerPetted)
+    case "treats":
+      updates.yield(.treats((frame.days ?? [:]).mapValues(Set.init)))
     case "note":
       guard let id = frame.id, let ink = frame.ink, receivedIDs.insert(id).inserted,
         let strokes = try? NoteInk.decode(ink)

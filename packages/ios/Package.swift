@@ -16,6 +16,7 @@ let library: [(name: String, dependencies: [String])] = [
   ("Wire", ["Domain"]),
   ("Ink", ["BilletKit", "Domain", "Wire"]),
   ("DesignSystem", []),
+  ("Pet", []),
   ("Transport", ["BilletKit", "Domain", "Wire"]),
   ("Persistence", ["Domain"]),
   ("Delivery", ["Domain", "Wire", "Ink", "Persistence"]),
@@ -50,6 +51,7 @@ let homeTarget: Target = .target(
     "FeatureSettings",
     "Ink",
     "Persistence",
+    "Pet",
     "Wire",
     .product(name: "RiveRuntime", package: "rive-ios"),
   ],
@@ -63,6 +65,7 @@ let testTargets: [Target] = [
   .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
   .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
   .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
+  .testTarget(name: "PetTests", dependencies: ["Pet"]),
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
   .testTarget(
     name: "FeatureHomeTests",
