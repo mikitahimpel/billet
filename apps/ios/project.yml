@@ -33,6 +33,8 @@ targets:
     entitlements:
       path: App/Billet.entitlements
       properties:
+        aps-environment: development
+        com.apple.developer.applesignin: [Default]
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
     settings:
