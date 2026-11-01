@@ -13,6 +13,7 @@ import { MediaStoreLive } from "./media-store-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
+import { limitRequest } from "./rate-limit.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 const apiRoutes = (env: WorkerEnv) =>
@@ -42,6 +43,9 @@ export const respondApi = async (
   ctx: ExecutionContext,
 ): Promise<Response> => {
   if (!new URL(request.url).pathname.startsWith("/v1/")) return respondPlaceholder();
+
+  const limited = await limitRequest(request, env.DB);
+  if (limited !== undefined) return limited;
 
   const { handler, dispose } = HttpRouter.toWebHandler(apiRoutes(env), { disableLogger: true });
   try {

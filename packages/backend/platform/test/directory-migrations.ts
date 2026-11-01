@@ -73,6 +73,7 @@ export const resetDirectory = async () => {
       "devices",
       "users",
       "auth_challenges",
+      "rate_limits",
     ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
   );
 };

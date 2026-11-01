@@ -106,3 +106,18 @@ export const pushTokens = sqliteTable(
     uniqueIndex("push_tokens_token_kind_unique").on(table.token, table.kind),
   ],
 );
+
+// Fixed-window request counters. `bucket` is a SHA-256 of the route group and the caller's address,
+// never the address itself. Old windows are deleted as new ones are written.
+export const rateLimits = sqliteTable(
+  "rate_limits",
+  {
+    bucket: text("bucket").notNull(),
+    windowStart: integer("window_start").notNull(),
+    count: integer("count").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.bucket, table.windowStart] }),
+    index("rate_limits_window_start_index").on(table.windowStart),
+  ],
+);

@@ -513,3 +513,65 @@ describe("routes from the contracts", () => {
     expect((await send(route.method, moved)).status).toBe(404);
   });
 });
+
+describe("what the Worker logs", () => {
+  it("never writes a token, a code, a nonce or note content", async () => {
+    const lines: string[] = [];
+    const record = (...args: unknown[]) => {
+      lines.push(
+        args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" "),
+      );
+    };
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(record),
+    );
+
+    const secrets: string[] = [];
+    try {
+      const { nonce } = await challenge();
+      const identity = await identityToken(nonce);
+      secrets.push(nonce, identity);
+      const owner = await signedInAs("subject-owner");
+      const claimer = await signedInAs("subject-claimer");
+      secrets.push(owner, claimer);
+      const code = await inviteFrom(owner);
+      secrets.push(code);
+      await claimWith(claimer, code);
+
+      const image = await uploaded(owner);
+      const marker = [4242, 4243, 4244, 4245];
+      await call(
+        "/v1/notes",
+        json(
+          {
+            _tag: "Drawing",
+            image,
+            compact: { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points: marker }] },
+          },
+          "POST",
+          owner,
+        ),
+      );
+      secrets.push(marker.join(","));
+
+      // The failure paths are where a careless log would quote its input.
+      const [header, , signature] = (await identityToken((await challenge()).nonce)).split(".");
+      const forged = [header, Base64Url.encode(claims("x", { sub: "forged" })), signature].join(
+        ".",
+      );
+      secrets.push(forged);
+      await call("/v1/auth/apple", json({ identityToken: forged }));
+      await call("/v1/notes", { method: "GET", headers: bearer("not-a-real-session-token") });
+      secrets.push("not-a-real-session-token");
+      await claimWith(claimer, "WRONGCODE1");
+      appleFetch.mockRejectedValue(new Error(`offline ${owner}`));
+      await signIn();
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+
+    expect(lines.length).toBeGreaterThan(0);
+    const output = lines.join("\n");
+    for (const secret of secrets) expect(output).not.toContain(secret);
+  });
+});
