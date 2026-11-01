@@ -16,7 +16,7 @@ public struct NotesView: View {
 
   public var body: some View {
     ZStack {
-      Palette.page.color.ignoresSafeArea()
+      EveningBackground()
       if notes.isEmpty {
         empty
       } else {
@@ -33,10 +33,7 @@ public struct NotesView: View {
   private var list: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.medium) {
-        Text("Notes")
-          .billetType(.title)
-          .foregroundStyle(Palette.paper.color)
-          .accessibilityAddTraits(.isHeader)
+        Text("Notes").screenTitle()
         LazyVStack(spacing: Spacing.small) {
           ForEach(notes) { note in
             Button {
@@ -54,21 +51,12 @@ public struct NotesView: View {
   }
 
   private var empty: some View {
-    VStack(spacing: Spacing.small) {
-      Text(loadFailed ? "Notes couldn't be loaded" : "No notes yet")
-        .billetType(.heading)
-        .foregroundStyle(Palette.paper.color)
-      Text(
-        loadFailed
-          ? "Your saved notes couldn't be read on this device."
-          : "Notes you send and receive will hang here."
-      )
-      .billetType(.body)
-      .foregroundStyle(Palette.muted.color)
-      .multilineTextAlignment(.center)
-    }
-    .padding(Spacing.wide)
-    .accessibilityElement(children: .combine)
+    EmptyWire(
+      title: loadFailed ? "Notes couldn't be loaded" : "No notes yet",
+      message: loadFailed
+        ? "Your saved notes couldn't be read on this device."
+        : "Notes you send and receive will hang here."
+    )
   }
 }
 
@@ -94,7 +82,7 @@ private struct NoteRow: View {
     }
     .padding(Spacing.small)
     .frame(minHeight: Target.minimum)
-    .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
+    .litPanel(cornerRadius: Radius.control)
     .contentShape(.rect(cornerRadius: Radius.control))
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(note.accessibilityTitle)
@@ -108,25 +96,25 @@ struct NoteDetailView: View {
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
-      Palette.page.color.ignoresSafeArea()
+      EveningBackground()
       VStack(spacing: Spacing.medium) {
         Spacer(minLength: Spacing.page)
         NoteDrawing(note: note, side: 1080)
+          .rotationEffect(.degrees(note.handTilt / 2))
+          .lampGlow()
           .accessibilityLabel("Drawing")
         Text(note.direction.title)
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)
         Text(note.date, format: .dateTime.weekday(.wide).day().month().hour().minute())
           .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
+          .foregroundStyle(Palette.paperTurned.color)
           .multilineTextAlignment(.center)
         Spacer(minLength: 0)
       }
       .padding(Spacing.medium)
       Button("Close", action: onClose)
-        .billetType(.body)
-        .foregroundStyle(Palette.paper.color)
-        .frame(minWidth: Target.minimum, minHeight: Target.minimum)
+        .buttonStyle(InlineButtonStyle())
         .padding(.horizontal, Spacing.medium)
         .accessibilityLabel("Close note")
     }
@@ -143,6 +131,11 @@ extension NoteRecord.Direction {
 }
 
 extension NoteRecord {
+  /// A small tilt that stays the same for a note, as if it were pinned up by hand.
+  fileprivate var handTilt: Double {
+    date.timeIntervalSince1970.truncatingRemainder(dividingBy: 5).rounded(.down) - 2
+  }
+
   fileprivate var accessibilityTitle: String {
     "\(direction.title) note, \(date.formatted(date: .abbreviated, time: .shortened))"
   }

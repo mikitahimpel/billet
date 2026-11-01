@@ -44,13 +44,10 @@ public struct SettingsView: View {
 
   public var body: some View {
     ZStack {
-      Palette.page.color.ignoresSafeArea()
+      EveningBackground()
       ScrollView {
         VStack(alignment: .leading, spacing: Spacing.large) {
-          Text("Settings")
-            .billetType(.title)
-            .foregroundStyle(Palette.paper.color)
-            .accessibilityAddTraits(.isHeader)
+          Text("Settings").screenTitle()
           pair
           if scenes.count > 1 {
             sceneSection
@@ -64,23 +61,29 @@ public struct SettingsView: View {
       }
     }
     .task(id: scenePhase) { notifications = await Self.notificationStatus() }
-    .confirmationDialog(
-      "Log out of billet?", isPresented: $confirmingLogOut, titleVisibility: .visible
-    ) {
-      Button("Log out", role: .destructive) { performLogOut() }
-      Button("Cancel", role: .cancel) {}
-    } message: {
-      Text(
-        "This forgets the pair code and deletes the notes on this device. You and your partner "
-          + "will need a new code to pair again."
-      )
+    .eveningDialog(isPresented: $confirmingLogOut) {
+      EveningDialog(
+        title: "Log out of billet?",
+        message: "This forgets the pair code and deletes the notes on this device. You and your "
+          + "partner will need a new code to pair again."
+      ) {
+        Button("Log out") {
+          confirmingLogOut = false
+          performLogOut()
+        }
+        .buttonStyle(DestructiveButtonStyle())
+        Button("Cancel") { confirmingLogOut = false }
+          .buttonStyle(SecondaryButtonStyle())
+      }
     }
   }
 
   private var pair: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("Pair")
-      SettingsRow("Partner", value: partnerStatus)
+      SettingsGroup {
+        SettingsRow("Partner", value: partnerStatus)
+      }
       PairCodeCard(code: code)
     }
   }
@@ -95,13 +98,16 @@ public struct SettingsView: View {
   private var notificationSection: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("Notifications")
-      SettingsRow("Status", value: notifications ?? "Checking…")
-      SettingsLink("Open iOS Settings") {
-        #if canImport(UIKit)
-          if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-            openURL(url)
-          }
-        #endif
+      SettingsGroup {
+        SettingsRow("Status", value: notifications ?? "Checking…")
+        SettingsSeparator()
+        SettingsLink("Open iOS Settings") {
+          #if canImport(UIKit)
+            if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+              openURL(url)
+            }
+          #endif
+        }
       }
     }
   }
@@ -109,28 +115,24 @@ public struct SettingsView: View {
   private var links: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("About")
-      SettingsLink("Privacy Policy") {
-        if let url = Self.privacyPolicy { openURL(url) }
-      }
-      SettingsLink("Send feedback") {
-        if let url = Self.feedback { openURL(url) }
+      SettingsGroup {
+        SettingsLink("Privacy Policy") {
+          if let url = Self.privacyPolicy { openURL(url) }
+        }
+        SettingsSeparator()
+        SettingsLink("Send feedback") {
+          if let url = Self.feedback { openURL(url) }
+        }
       }
     }
   }
 
   private var logOut: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
-      Button {
+      Button(loggingOut ? "Logging out…" : "Log out") {
         confirmingLogOut = true
-      } label: {
-        Text(loggingOut ? "Logging out…" : "Log out")
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
-          .frame(maxWidth: .infinity, minHeight: Target.minimum)
-          .background(Palette.raisedTop.color, in: .rect(cornerRadius: Radius.control))
-          .contentShape(.rect(cornerRadius: Radius.control))
       }
-      .buttonStyle(.plain)
+      .buttonStyle(SecondaryButtonStyle())
       .disabled(loggingOut)
       if let logOutError {
         Text(logOutError)
@@ -168,6 +170,29 @@ public struct SettingsView: View {
     case .notDetermined: "Not set up"
     @unknown default: "Unknown"
     }
+  }
+}
+
+/// Rows sharing one lit panel.
+private struct SettingsGroup<Rows: View>: View {
+  private let rows: Rows
+
+  init(@ViewBuilder rows: () -> Rows) {
+    self.rows = rows()
+  }
+
+  var body: some View {
+    VStack(spacing: 0) { rows }
+      .frame(maxWidth: .infinity)
+      .litPanel(cornerRadius: Radius.control)
+  }
+}
+
+private struct SettingsSeparator: View {
+  var body: some View {
+    Palette.paper.color.opacity(0.1)
+      .frame(height: 1)
+      .padding(.horizontal, Spacing.medium)
   }
 }
 
@@ -211,7 +236,6 @@ private struct SettingsRow: View {
     .padding(.horizontal, Spacing.medium)
     .padding(.vertical, Spacing.small)
     .frame(maxWidth: .infinity, minHeight: Target.minimum, alignment: .leading)
-    .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
     .accessibilityElement(children: .combine)
   }
 
@@ -244,8 +268,7 @@ private struct SettingsLink: View {
       .padding(.horizontal, Spacing.medium)
       .padding(.vertical, Spacing.small)
       .frame(maxWidth: .infinity, minHeight: Target.minimum)
-      .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
-      .contentShape(.rect(cornerRadius: Radius.control))
+      .contentShape(.rect)
     }
     .buttonStyle(.plain)
   }
