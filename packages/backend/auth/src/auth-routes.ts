@@ -23,7 +23,7 @@ const respondSession = HttpServerResponse.schemaJson(SessionResponse);
 /** These responses carry credentials or one-time values. */
 const noStore = { "cache-control": "no-store" };
 
-type RouteFailure =
+export type RouteFailure =
   | AuthRejected
   | AuthUnavailable
   | HttpBody.HttpBodyError
@@ -34,7 +34,7 @@ type RouteFailure =
  * The one place failures become responses. Logs carry fixed labels only: never a token, a header
  * or a schema error, whose message can quote the input.
  */
-const respondFailures = <R>(
+export const respondFailures = <R>(
   effect: Effect.Effect<HttpServerResponse.HttpServerResponse, RouteFailure, R>,
 ) =>
   effect.pipe(
@@ -62,16 +62,18 @@ const bearerToken = Effect.gen(function* () {
     : yield* new AuthRejected({ reason: "bearer-missing" });
 });
 
+/** The caller of the current request, from its bearer token. Check it before reading the body. */
+export const principalOf = (
+  auth: AuthService["Service"],
+): Effect.Effect<Principal, AuthRejected | AuthUnavailable, HttpServerRequest.HttpServerRequest> =>
+  Effect.flatMap(bearerToken, auth.authenticate);
+
 /** The auth and device routes of the API. Needs `AuthService`, which the Worker composes. */
 export const AuthRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const auth = yield* AuthService;
 
-    const principal: Effect.Effect<
-      Principal,
-      AuthRejected | AuthUnavailable,
-      HttpServerRequest.HttpServerRequest
-    > = Effect.flatMap(bearerToken, auth.authenticate);
+    const principal = principalOf(auth);
 
     yield* router.add(
       "POST",

@@ -65,8 +65,14 @@ export const applyDirectoryMigrations = async () =>
 export const resetDirectory = async () => {
   await applyDirectoryMigrations();
   await env.DB.batch(
-    ["push_tokens", "sessions", "devices", "users", "auth_challenges"].map((table) =>
-      env.DB.prepare(`DELETE FROM ${table}`),
-    ),
+    [
+      "pair_members",
+      "invites",
+      "push_tokens",
+      "sessions",
+      "devices",
+      "users",
+      "auth_challenges",
+    ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
   );
 };

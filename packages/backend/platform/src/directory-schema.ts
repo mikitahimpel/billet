@@ -60,6 +60,36 @@ export const authChallenges = sqliteTable(
   (table) => [index("auth_challenges_expires_at_index").on(table.expiresAt)],
 );
 
+// `code_hash` is SHA-256 of the invite code, which is never stored. A user has one invite at a time.
+export const invites = sqliteTable(
+  "invites",
+  {
+    codeHash: text("code_hash").primaryKey(),
+    ownerId: text("owner_id")
+      .notNull()
+      .references(() => users.id),
+    createdAt: integer("created_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("invites_owner_id_unique").on(table.ownerId),
+    index("invites_expires_at_index").on(table.expiresAt),
+  ],
+);
+
+// The pair lookup. Keying on the user is what makes one partner per account a database rule.
+export const pairMembers = sqliteTable(
+  "pair_members",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => users.id),
+    pairId: text("pair_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("pair_members_pair_id_index").on(table.pairId)],
+);
+
 export const pushTokens = sqliteTable(
   "push_tokens",
   {

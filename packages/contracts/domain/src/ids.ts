@@ -12,8 +12,14 @@ export type DeviceId = typeof DeviceId.Type;
 export const NoteId = nonEmpty.pipe(Schema.brand("NoteId"));
 export type NoteId = typeof NoteId.Type;
 
-/** Opaque invite code. The format is a pairing decision (#15), so only non-empty is enforced. */
-export const InviteCode = nonEmpty.pipe(Schema.brand("InviteCode"));
+/** 32 symbols, without 0, O, 1 and I, so that a code survives being read aloud or typed. */
+export const inviteCodeAlphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+export const inviteCodeLength = 10;
+
+/** A one-time pairing code: 50 random bits, uppercase. */
+export const InviteCode = Schema.String.check(Schema.isPattern(/^[2-9A-HJ-NP-Z]{10}$/)).pipe(
+  Schema.brand("InviteCode"),
+);
 export type InviteCode = typeof InviteCode.Type;
 
 /** Key of a note image in the private R2 bucket. */

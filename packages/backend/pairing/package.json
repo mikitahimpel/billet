@@ -1,0 +1,35 @@
+{
+  "name": "@billet/backend-pairing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./pairing-error": "./src/pairing-error.ts",
+    "./pairing-repository": "./src/pairing-repository.ts",
+    "./pairing-routes": "./src/pairing-routes.ts",
+    "./pairing-service": "./src/pairing-service.ts",
+    "./test/in-memory-pairing-repository": "./test/in-memory-pairing-repository.ts",
+    "./test/pairing-repository-contract": "./test/pairing-repository-contract.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -5,10 +5,19 @@ import {
   StoredSession,
   StoredUser,
 } from "@billet/backend-auth/auth-repository";
+import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
-import { authChallenges, devices, pushTokens, sessions, users } from "../src/directory-schema.ts";
+import {
+  authChallenges,
+  devices,
+  invites,
+  pairMembers,
+  pushTokens,
+  sessions,
+  users,
+} from "../src/directory-schema.ts";
 import { PlatformProbe } from "../src/platform-probe.ts";
 import * as roomSchema from "../src/room-schema.ts";
 import { roomProbe } from "../src/room-schema.ts";
@@ -21,6 +30,8 @@ import { getTableName, tablesOf } from "./table-columns.ts";
 const checked = [
   ["auth_challenges", authChallenges, StoredChallenge],
   ["devices", devices, StoredDevice],
+  ["invites", invites, StoredInvite],
+  ["pair_members", pairMembers, StoredPairMember],
   ["push_tokens", pushTokens, StoredPushToken],
   ["room_probe", roomProbe, PlatformProbe],
   ["sessions", sessions, StoredSession],

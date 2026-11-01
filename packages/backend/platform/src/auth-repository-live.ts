@@ -7,7 +7,7 @@ import {
   SessionRecord,
 } from "@billet/backend-auth/auth-repository";
 import { UserId } from "@billet/contracts-domain/ids";
-import { type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
+import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
 import { authChallenges, devices, pushTokens, sessions, users } from "./directory-schema.ts";
 
 // A storage error can quote bound values, so nothing from it survives this label.
@@ -15,29 +15,12 @@ const unavailable = () => new AuthUnavailable({ reason: "directory-unavailable" 
 
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
-interface Compilable {
-  readonly toSQL: () => { readonly sql: string; readonly params: ReadonlyArray<unknown> };
-}
-
 const decodeSession = Schema.decodeUnknownEffect(SessionRecord);
 const decodePushTokens = Schema.decodeUnknownEffect(Schema.Array(PushTokenRecord));
 const decodeCreatedUser = Schema.decodeUnknownEffect(Schema.Tuple([Schema.Struct({ id: UserId })]));
 
-const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] => {
-  /**
-   * Runs the statements as one D1 batch, which is a transaction: D1 has no interactive ones, so
-   * `db.transaction` can't be used and a later statement can't depend on JavaScript reading an
-   * earlier result. Returns each statement's rows.
-   */
-  const atomically = (statements: ReadonlyArray<Compilable>) =>
-    db.$client.batch(
-      statements.map((statement) => {
-        const { sql: text, params } = statement.toSQL();
-        return db.$client.unsafe(text, params);
-      }),
-    );
-
-  return AuthRepository.of({
+const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
+  AuthRepository.of({
     saveChallenge: (nonceHash, expiresAt) =>
       guarded(db.insert(authChallenges).values({ nonceHash, expiresAt })).pipe(Effect.asVoid),
 
@@ -55,7 +38,7 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
         .from(users)
         .where(eq(users.appleSubject, session.appleSubject))})`;
       return guarded(
-        atomically([
+        atomically(db, [
           db
             .insert(users)
             .values({
@@ -125,7 +108,7 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
     savePushToken: (deviceId, record) => {
       const { environment, kind, token, updatedAt } = record;
       return guarded(
-        atomically([
+        atomically(db, [
           db
             .delete(pushTokens)
             .where(
@@ -162,7 +145,7 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
 
     deleteExpired: (now) =>
       guarded(
-        atomically([
+        atomically(db, [
           db
             .delete(devices)
             .where(
@@ -178,7 +161,6 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
         ]),
       ).pipe(Effect.asVoid),
   });
-};
 
 /** `AuthRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
 export const AuthRepositoryLive = (binding: D1Database): Layer.Layer<AuthRepository> =>

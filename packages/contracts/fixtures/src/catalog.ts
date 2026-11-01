@@ -55,7 +55,7 @@ const bob = Schema.decodeUnknownSync(UserId)("user-bob");
 const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
-const code = Schema.decodeUnknownSync(InviteCode)("INVITE-1");
+const code = Schema.decodeUnknownSync(InviteCode)("ABCD2345EF");
 
 const deviceId = Schema.decodeUnknownSync(DeviceId)("device-1");
 // Sample shapes only: none of these was ever a real credential.
