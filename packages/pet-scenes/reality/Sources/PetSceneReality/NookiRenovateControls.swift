@@ -1,14 +1,15 @@
 import DesignSystem
 import SwiftUI
 
-/// The small control that opens the room for changes, and the tray of paints it opens.
+/// The small control that opens the room for changes, and the tray of paints it opens. The tray
+/// sits at the foot of the scene, clear of the walls it paints.
 struct NookiRenovateControls: View {
   @Binding var isOpen: Bool
   @Binding var paint: NookiSwatch
   let onReset: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    ZStack(alignment: .topLeading) {
       Button {
         isOpen.toggle()
       } label: {
@@ -18,7 +19,10 @@ struct NookiRenovateControls: View {
       }
       .buttonStyle(.plain)
       .accessibilityLabel(isOpen ? "Done changing the room" : "Change the room")
-      if isOpen { tray }
+      if isOpen {
+        tray
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+      }
     }
     .padding(12)
   }
