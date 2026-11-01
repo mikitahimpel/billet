@@ -26,9 +26,6 @@ export default defineConfig({
               compatibilityFlags: ["nodejs_compat"],
               d1Databases: ["DB"],
               durableObjects: {
-                STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
-                HANG_DEMO_ROOM: { className: "HangingApnsRoom", useSQLite: true },
-                DEMO_ROOM: { className: "DemoRoom", useSQLite: true },
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },
                 BROKEN_ROOM: { className: "BrokenRoom", useSQLite: true },
@@ -39,6 +36,28 @@ export default defineConfig({
         test: {
           name: "workerd",
           include: ["test/**/*.test.ts"],
+          exclude: ["test/**/*.node.test.ts", "test/demo-*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        plugins: [
+          cloudflareTest({
+            main: "./test/demo-worker.ts",
+            miniflare: {
+              compatibilityDate: "2026-08-15",
+              compatibilityFlags: ["nodejs_compat"],
+              durableObjects: {
+                STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
+                HANG_DEMO_ROOM: { className: "HangingApnsRoom", useSQLite: true },
+                DEMO_ROOM: { className: "DemoRoom", useSQLite: true },
+              },
+            },
+          }),
+        ],
+        test: {
+          name: "workerd-demo",
+          include: ["test/demo-*.test.ts"],
           exclude: ["test/**/*.node.test.ts"],
         },
       },
