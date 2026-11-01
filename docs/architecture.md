@@ -30,6 +30,26 @@ couple means deleting one Durable Object and its R2 prefix.
 D1 holds only what a single `PairRoom` cannot know: which pair a user belongs to, and who owns a given
 invite code. Claiming an invite is transactional.
 
+### Database access: Drizzle on the official Effect drivers
+
+Decision: `packages/backend/platform` uses Drizzle through `drizzle-orm/effect-d1` (on
+`@effect/sql-d1`) and `drizzle-orm/effect-sqlite-do` (on `@effect/sql-sqlite-do`). We write no custom
+Effect wrapper. Alchemy generates and applies D1 migrations. Each `PairRoom` applies its own with the
+drizzle migrator when it activates.
+
+- `drizzle-orm` and `drizzle-kit` are pinned to `1.0.0-rc.5-ab785fc`, a release candidate and not a
+  stable release.
+- This is the fallback from the first design, which used `Drizzle.DurableObject` and
+  `Cloudflare.SqlMigrations`. They need an Effect-native Durable Object, which crashes the Alchemy CLI
+  on effect 4.1, so the Worker stays free of Alchemy. See [alchemy.md](alchemy.md#drizzle), which also
+  covers how migration files are generated and what a failed migration does.
+- Effect Schema stays the domain and wire types. `drizzle-orm/effect-schema` only derives schemas from
+  tables, and the domain is hand-written with brands and tagged unions, so it cannot generate them. A
+  test derives each table's schema instead, and fails if a column's name, type or nullability differs
+  from the domain type. Add every new table to `test/schema-drift.test.ts`.
+- `platform-probe.ts` and the two probe tables exist only so there is something to migrate. The
+  tickets that add real tables remove them.
+
 ### R2: note images
 
 Images live in a private R2 bucket. Media routes check authorisation before serving anything.
@@ -157,7 +177,8 @@ Revisit this if CI takes more than 15 minutes after caching.
 
 ## Tooling
 
-Effect `4.1.1` and Alchemy `2.0.0-beta.84` are pinned exactly. Vitest is `^4.1`, because
+Effect `4.1.1`, Alchemy `2.0.0-beta.84` and `drizzle-orm` `1.0.0-rc.5-ab785fc` are pinned exactly.
+Vitest is `^4.1`, because
 `@cloudflare/vitest-pool-workers` 0.23 requires it. The rest of the toolchain is oxlint, oxfmt,
 Turborepo, XcodeGen, swift-format and Node 24.
 

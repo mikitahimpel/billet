@@ -7,25 +7,29 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 
 ## Versions
 
-- `alchemy` and `@alchemy.run/cloudflare` are `2.0.0-beta.84`, exact-pinned in the pnpm catalog.
-  Bump them together.
+- `alchemy`, `@alchemy.run/cloudflare` and `@alchemy.run/drizzle` are `2.0.0-beta.84`, exact-pinned in
+  the pnpm catalog. `drizzle-orm` and `drizzle-kit` are exact-pinned to `1.0.0-rc.5-ab785fc`, the build
+  `@alchemy.run/drizzle` peers on. It is a release candidate. Upgrade all of them together.
 - The root tooling uses the `infra` catalog: `effect` and `@effect/platform-node` `4.0.6`. Alchemy
   beta.84 imports `effect/Crypto`, which effect 4.1 renamed to `effect/crypto`, so it crashes on the
   `4.1.1` used by the rest of the repo. A pnpm override pins `@effect/platform-node-shared` to
   `4.0.6` for the same reason. Only the root uses these. Drop the catalog and the override when
-  Alchemy supports effect 4.1.
+  Alchemy supports effect 4.1. `@effect/sql-d1` then also stops warning about its `effect` peer at the
+  root. That warning is harmless while the root imports `@alchemy.run/drizzle/Schema` and
+  `/Providers`, not the package root.
 
 ## What the stack declares
 
 | Logical id | Resource | Binding on `Api` |
 | --- | --- | --- |
-| `Database` | `Cloudflare.D1.Database`, the cross-couple directory (no tables yet) | `DB` |
+| `DirectorySchema` | `Drizzle.Schema`, the D1 tables and their migrations | |
+| `Database` | `Cloudflare.D1.Database`, the cross-couple directory | `DB` |
 | `Media` | `Cloudflare.R2.Bucket`, private: no public access, no custom domain | `MEDIA` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
 | `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts` | |
 
 - `Api` is an async Worker: a plain module that exports `fetch` and the `PairRoom` class. The Worker
-  code never imports Alchemy.
+  code never imports `alchemy` or `@alchemy.run/*` (see [Drizzle](#drizzle)).
 - `apps/api` is the composition root only. The Durable Object class, the placeholder response and the
   binding types live in `packages/backend/platform`, the only place that touches bindings. The
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
@@ -34,7 +38,56 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 - Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
   committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
   read only by a real deploy.
-- When the first D1 tables exist, add `migrations: "./apps/api/migrations"` to `Database`.
+
+## Drizzle
+
+`packages/backend/platform` uses the official Effect drivers directly: `drizzle-orm/effect-d1` in
+`directory-database.ts` and `drizzle-orm/effect-sqlite-do` in `room-database.ts`. Alchemy only does
+infrastructure, including the D1 migrations.
+
+### Why not `Drizzle.DurableObject`
+
+The first design used `Cloudflare.SqlMigrations` and `Drizzle.DurableObject`. They need an
+Effect-native `Cloudflare.DurableObject`, and the Alchemy CLI loads that class in Node. On effect 4.1.1
+it loads `@alchemy.run/cloudflare`, which reaches the `effect/Crypto` import in
+`alchemy/lib/Auth/OAuthFlow.js` and crashes with `Cannot find module .../effect/dist/Crypto.js`.
+
+`Drizzle.D1` and `Drizzle.DurableObject` do run in a plain Worker, but the second one then needs
+`DurableObjectState` provided by hand. That is the wrapper this design avoids, and it adds Alchemy
+modules to the bundle. With the direct drivers the Worker bundle has no `alchemy` or `@alchemy.run`
+source, and every `effect` source is 4.1.1. Revisit this when Alchemy supports effect 4.1.
+
+### Migrations
+
+Change a schema, then run `pnpm db:generate` and commit the result. A test fails if a schema has no
+committed migration. drizzle-kit may ask about renames or data loss, so run it in a terminal.
+
+| | D1 | Durable Object SQLite |
+| --- | --- | --- |
+| Schema | `src/directory-schema.ts` | `src/room-schema.ts` |
+| Files | `migrations/directory/` | `migrations/room/` |
+| Generated with | `drizzle-kit generate --dialect sqlite` | the same, plus `--driver durable-sqlite` |
+| Applied by | `alchemy deploy` | `openRoomDatabase`, when the object activates |
+| History table | `__alchemy_migrations` | `__drizzle_migrations` |
+
+- The Alchemy docs do not say how Durable Object files are made. `--driver durable-sqlite` adds a
+  `migrations.js` that imports each `.sql` file. Alchemy's bundler imports `.sql` as text, so no
+  codegen is needed. The test config has a small plugin that does the same. `migrations.d.ts` is
+  written by hand and stays when the files are regenerated.
+- If a schema change has no migration, `Drizzle.Schema` generates one during the deploy and applies it
+  unreviewed. That is what the test prevents.
+
+### When a Durable Object migration fails
+
+The object migrates inside `blockConcurrencyWhile`, in its constructor, so no request gets in first.
+All pending migrations run in one transaction, so a failure leaves the schema as it was. The object
+then resets, the request fails, and every later request retries and fails the same way. Data is safe,
+but that room is down until a fixed migration ships.
+
+- Objects migrate one by one as they activate. A bad migration breaks each room when it is next used,
+  not at deploy time.
+- Never edit a migration that has shipped. The history stores names, with no content hash, so an
+  object that has applied it will not notice. Ship a new migration instead.
 
 ## Stages and state
 
@@ -93,9 +146,8 @@ from the runner in a final step that runs even when the deploy fails. Read the l
 `dev` run for anything private before enabling `prod`. To deploy on push later,
 add a `push` trigger in a separate change, once the above works.
 
-## Not verified without credentials
+## Verified and not verified
 
-Everything except a real deploy is checked: typecheck, lint, tests, and an `alchemy dev` run that
-planned and created all four resources locally. The pieces below have not run against Cloudflare:
-`alchemy deploy`, the D1 state store, the `pass://Billet Release/...` reference (a vault name with a
-space), and the workflow on a runner.
+`alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
+`dev` stage. The `prod` stage, the `pass://Billet Release/...` reference (a vault name with a space)
+and the workflow on a runner have not.
