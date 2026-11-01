@@ -1,14 +1,85 @@
+import Foundation
+import ImageIO
 import Pet
 import PetScene
 import RealityKit
 import SwiftUI
 
+/// Opens instantly on a still of the room, builds the real one behind it, and fades across once
+/// the room has rendered. The pet's steps keep their pace throughout.
 struct NookiView: View {
   let world: PetWorld
   let play: PetPlayState
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var diorama = NookiDiorama()
+  /// Made once, after the first frame. A default value here would run on every parent update.
+  @State private var diorama: NookiDiorama?
+  @State private var poster: CGImage?
+  @State private var isReady = false
+  @State private var isMochiMissing = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    ZStack {
+      if let diorama {
+        NookiStage(diorama: diorama, world: world, play: play, onEvent: onEvent)
+      }
+      if !isReady, let poster {
+        Image(decorative: poster, scale: 1)
+          .resizable()
+          .scaledToFit()
+          .allowsHitTesting(false)
+          .transition(.opacity)
+      }
+    }
+    .overlay(alignment: .top) {
+      if isMochiMissing {
+        Text("Mochi couldn't load")
+          .font(.footnote)
+          .padding(8)
+          .background(.thinMaterial, in: Capsule())
+          .padding(.top, 8)
+      }
+    }
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: isReady)
+    .task {
+      if poster == nil { poster = await NookiPoster.load() }
+      await Task.yield()
+      guard diorama == nil else { return }
+      let made = NookiDiorama()
+      let ready = $isReady
+      made.onReady = { ready.wrappedValue = true }
+      let missing = $isMochiMissing
+      made.onMochiMissing = { missing.wrappedValue = $0 }
+      diorama = made
+      made.startLoading()
+    }
+    .task(id: world.step) {
+      await NookiChoreography.pacing.play(world, onEvent: onEvent)
+    }
+  }
+}
+
+/// The still shown until the room has rendered, decoded away from the main actor.
+enum NookiPoster {
+  static func load() async -> CGImage? {
+    await Task.detached(priority: .userInitiated) {
+      guard
+        let url = Bundle.module.url(forResource: "pose-sleeping", withExtension: "png"),
+        let source = CGImageSourceCreateWithURL(url as CFURL, nil)
+      else { return nil }
+      return CGImageSourceCreateImageAtIndex(
+        source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+    }.value
+  }
+}
+
+private struct NookiStage: View {
+  let diorama: NookiDiorama
+  let world: PetWorld
+  let play: PetPlayState
+  let onEvent: @MainActor (PetSceneEvent) -> Void
+
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
@@ -20,7 +91,6 @@ struct NookiView: View {
     RealityView { content in
       content.camera = .virtual
       content.add(diorama.root)
-      await diorama.load()
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
@@ -47,9 +117,6 @@ struct NookiView: View {
     }
     .onChange(of: world, initial: true) { _, world in
       diorama.show(world)
-    }
-    .task(id: world.step) {
-      await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
   }
 

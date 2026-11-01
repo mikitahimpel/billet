@@ -43,7 +43,8 @@ private struct LittleHouseView: View {
   let world: PetWorld
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var rive = PetWorldRive(fileName: "LittleHouse", artboardName: "LittleHouse")
+  /// Made once, after the first frame. A default value here would run on every parent update.
+  @State private var rive: PetWorldRive?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -58,7 +59,12 @@ private struct LittleHouseView: View {
           .accessibilityLabel("Little House with the cat")
       }
     }
-    .onChange(of: world.noteArrived, initial: true) { _, arrived in
+    .task {
+      guard rive == nil else { return }
+      rive = PetWorldRive(fileName: "LittleHouse", artboardName: "LittleHouse")
+      rive?.setNoteArrived(world.noteArrived)
+    }
+    .onChange(of: world.noteArrived) { _, arrived in
       rive?.setNoteArrived(arrived)
     }
     .task(id: world.step) {

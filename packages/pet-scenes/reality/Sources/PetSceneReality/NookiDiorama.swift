@@ -11,6 +11,10 @@ import SwiftUI
 @MainActor
 final class NookiDiorama {
   let root = Entity()
+  /// Called once, when the room has rendered and a poster over it can go.
+  var onReady: (() -> Void)?
+  /// Called when Mochi is found to be missing, and again if a late load puts things right.
+  var onMochiMissing: ((Bool) -> Void)?
 
   private let room = Entity()
   private let lens = PerspectiveCamera()
@@ -40,6 +44,15 @@ final class NookiDiorama {
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
   private var isOnScreen = true
+  private var isLoaded = false
+  private(set) var loading: Task<Void, Never>?
+  private(set) var mochiLoading: Task<Void, Never>?
+  private(set) var isMochiMissing = false
+  private var hasMochi = false
+  private let missingMark = Entity()
+  private let loadModel: NookiModelLoader
+  private let mochiDeadline: Duration
+  private var settlingFrames = NookiDiorama.framesBeforeReady
   private var subscription: EventSubscription?
   private var camera = NookiCamera()
   private var tapTimer = NookiTapTimer()
@@ -54,10 +67,13 @@ final class NookiDiorama {
   /// Eased 0...1 towards the frame's light.
   private var light: Float = 0
 
+  static let mochiScale: Float = 1.25
+  static let missingMarkName = "mochi-missing"
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
   private static let orbitPerPoint: Float = 0.006
   private static let idleStep = 1.0 / 30
+  private static let framesBeforeReady = 4
   private static let lampIntensity: Float = 2600
   private static let lanternIntensity: Float = 500
 
@@ -72,7 +88,7 @@ final class NookiDiorama {
   /// How far in front of the lens an opened note sits, and how much larger it gets.
   private static let noteReadingDistance: Float = 2.4
   private static let noteReadingScale: Float = 2
-  private static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
+  static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let yarnRadius: Float = 0.07
   private static let lookLimit: Float = 1
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
@@ -81,38 +97,59 @@ final class NookiDiorama {
   private static let windowCentre: SIMD3<Float> = [-0.28, 0.52, -0.59]
   private static let lightPerSecond: Float = 1.5
 
-  init() {
+  /// Starts empty and cheap, so a view can hold one before anything heavy has run.
+  init(
+    loadModel: @escaping NookiModelLoader = NookiFurniture.bundledModel,
+    mochiDeadline: Duration = .seconds(12)
+  ) {
+    self.loadModel = loadModel
+    self.mochiDeadline = mochiDeadline
     root.addChild(room)
+    room.isEnabled = false
     lens.camera.fieldOfViewInDegrees = 30
     root.addChild(lens)
-    buildRoom()
-    buildBowl()
-    buildNote()
-    buildBackstop()
-    mochi.position = Self.bedSpot
-    room.addChild(mochi)
     aimLens()
   }
 
-  /// Loads the models. A missing asset leaves a gap in the room and is logged.
-  func load() async {
-    await place("Item_rug", width: 0.86, at: [0.05, 0.002, 0.12], yaw: 0)
-    await place("Item_donutbed", width: 0.5, at: [0.05, 0.012, 0.12], yaw: 0, target: .bed)
-    await place(
-      "Item_bookcase", height: 0.72, at: [-0.46, 0, -0.1], yaw: .pi / 2, target: .bookcase)
-    await place("Item_monstera", height: 0.62, at: [-0.4, 0, -0.42], yaw: 0, target: .plant)
-    await place("Item_armchair", width: 0.5, at: [0.42, 0, -0.38], yaw: -.pi / 4)
-    await place("Item_lamp", height: 0.46, at: [0.62, 0, 0.02], yaw: 0, target: .lamp)
-    await place("Item_teatable", height: 0.2, at: [0.54, 0, 0.42], yaw: 0)
-    await place("Item_lantern", height: 0.15, at: [0.54, 0.2, 0.42], yaw: 0)
-    await place("Item_tower", height: 0.62, at: [-0.46, 0, 0.5], yaw: 0)
-    await place("Item_print", height: 0.26, at: [0.45, 0.46, -0.59], yaw: 0)
-    await place("Item_yarn", width: 0.14, at: Self.yarnPosition, yaw: 0, target: .yarn)
-    await place("Item_mouse", height: 0.07, at: [-0.2, 0, 0.56], yaw: 0.8)
+  /// Builds the room once, a step at a time so the main actor keeps drawing. The work belongs to
+  /// the diorama, not to the view that asked: a cover over the view cancels the view's tasks, and
+  /// a cancelled load would leave a room with no lights or models and nothing to resume it. An
+  /// asset that fails to load leaves a gap in the room and is logged. `onReady` follows once the
+  /// room has rendered.
+  func startLoading() {
+    guard loading == nil else { return }
+    loading = Task { await load() }
+  }
+
+  private func load() async {
+    await buildRoom()
+    await buildBowl()
+    await Task.yield()
+    buildNote()
+    buildBackstop()
+    mochi.position = Self.bedSpot
+    mochi.name = NookiTarget.mochi.rawValue
+    Self.makeTappable(mochi, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
+    room.addChild(mochi)
+    await Task.yield()
+    startLoadingMochi()
+    let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
+    for piece in furniture { await piece.value }
     findLampParts()
-    await loadMochi()
+    await Task.yield()
     await addLighting()
+    await Task.yield()
     buildDust()
+    buildStreakMarks(play.streak)
+    room.isEnabled = isOnScreen
+    isLoaded = true
+  }
+
+  /// How many entities the room holds so far.
+  var entityCount: Int {
+    var count = 0
+    Self.visit(root) { _ in count += 1 }
+    return count
   }
 
   /// Shows `world` from the start of its step.
@@ -131,7 +168,7 @@ final class NookiDiorama {
     let petted = play.petsReceived > self.play.petsReceived
     self.play = play
     if petted { petStart = clock }
-    if play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
+    if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
   func startUpdates(from content: RealityViewCameraContent) {
@@ -153,7 +190,7 @@ final class NookiDiorama {
   /// Off screen, the room leaves the render and updates stop.
   func setOnScreen(_ onScreen: Bool) {
     isOnScreen = onScreen
-    room.isEnabled = onScreen
+    room.isEnabled = onScreen && isLoaded
   }
 
   // MARK: - Camera
@@ -236,7 +273,12 @@ final class NookiDiorama {
   // MARK: - Updates
 
   private func tick(_ delta: TimeInterval) {
-    guard isOnScreen else { return }
+    guard isOnScreen, isLoaded else { return }
+    if settlingFrames > 0 {
+      settlingFrames -= 1
+      if settlingFrames == 0 { onReady?() }
+      return
+    }
     clock += delta
     idleDelta += delta
     guard isBusy || idleDelta >= Self.idleStep else { return }
@@ -393,25 +435,32 @@ final class NookiDiorama {
 
   // MARK: - Room
 
-  private func buildRoom() {
-    box([1.3, 0.08, 1.3], .honey, at: [0.05, -0.04, 0.05])
-    box([0.06, 0.86, 1.3], .plaster, at: [-0.63, 0.43, 0.05])
-    box([1.36, 0.86, 0.06], .plaster, at: [0.02, 0.43, -0.63])
-    box([0.012, 0.09, 1.2], .walnut, at: [-0.594, 0.045, 0.05])
-    box([1.2, 0.09, 0.012], .walnut, at: [0.05, 0.045, -0.594])
-    box([0.76, 0.006, 0.006], .ink, at: [-0.08, 0.6, -0.59])
+  private func buildRoom() async {
+    let parts: [(size: SIMD3<Float>, tone: Tone, position: SIMD3<Float>)] = [
+      ([1.3, 0.08, 1.3], .honey, [0.05, -0.04, 0.05]),
+      ([0.06, 0.86, 1.3], .plaster, [-0.63, 0.43, 0.05]),
+      ([1.36, 0.86, 0.06], .plaster, [0.02, 0.43, -0.63]),
+      ([0.012, 0.09, 1.2], .walnut, [-0.594, 0.045, 0.05]),
+      ([1.2, 0.09, 0.012], .walnut, [0.05, 0.045, -0.594]),
+      ([0.76, 0.006, 0.006], .ink, [-0.08, 0.6, -0.59]),
+    ]
+    for part in parts {
+      box(part.size, part.tone, at: part.position)
+      await Task.yield()
+    }
     streakMarks.position = [0.2, 0.72, -0.597]
     room.addChild(streakMarks)
     buildWindow()
   }
 
-  private func buildBowl() {
+  private func buildBowl() async {
     let bowl = Entity()
     bowl.position = Self.bowlPosition
     let dish = ModelEntity(
       mesh: .generateCylinder(height: 0.04, radius: 0.075), materials: [Self.clay(.heart)])
     dish.position = [0, 0.02, 0]
     bowl.addChild(dish)
+    await Task.yield()
     let treats = ModelEntity(
       mesh: .generateSphere(radius: 0.066), materials: [Self.clay(.walnut)])
     treats.scale = [1, 0.5, 1]
@@ -420,6 +469,7 @@ final class NookiDiorama {
     bowlFill.isEnabled = false
     bowl.addChild(bowlFill)
     room.addChild(bowl)
+    await Task.yield()
   }
 
   /// One mark per day of the streak, in rows of seven like a calendar scratched on the wall.
@@ -492,16 +542,12 @@ final class NookiDiorama {
     room.addChild(model)
   }
 
-  private func place(
-    _ name: String,
-    width: Float? = nil,
-    height: Float? = nil,
-    at position: SIMD3<Float>,
-    yaw: Float,
-    target: NookiTarget? = nil
-  ) async {
+  private func place(_ item: NookiFurniture) async {
+    let (width, height, position, yaw, target) = (
+      item.width, item.height, item.position, item.yaw, item.target
+    )
     do {
-      let model = try await Entity(named: name, in: .module)
+      let model = try await loadModel(item.name)
       let bounds = model.visualBounds(relativeTo: nil)
       let scale =
         width.map { $0 / max(bounds.extents.x, bounds.extents.z) }
@@ -524,7 +570,7 @@ final class NookiDiorama {
         Self.makeTappable(holder, size: size, center: [0, size.y / 2, 0])
       }
     } catch {
-      Self.log.error("Loading \(name) failed: \(String(describing: error))")
+      Self.log.error("\(String(describing: error), privacy: .public)")
     }
   }
 
@@ -561,18 +607,73 @@ final class NookiDiorama {
 
   // MARK: - Mochi
 
+  /// Starts Mochi ahead of the furniture, on its own task so that a slow cat cannot hold up the
+  /// room. Mochi is reported missing on failure, or at the deadline if the load is still going;
+  /// a late arrival clears that.
+  private func startLoadingMochi() {
+    mochiLoading = Task { await loadMochi() }
+    let deadline = mochiDeadline
+    Task { [weak self] in
+      try? await Task.sleep(for: deadline)
+      self?.reportMochiIfAbsent()
+    }
+  }
+
   private func loadMochi() async {
     do {
-      let model = try await Entity(named: "Cat", in: .module)
-      let bounds = model.visualBounds(relativeTo: nil)
-      model.scale = .one * 1.25
-      model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * 1.25
+      let model = try await loadModel("Cat")
+      guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil)) else {
+        throw NookiLoadError.noGeometry("Cat")
+      }
+      model.scale = .one * Self.mochiScale
+      model.position = offset
       mochi.addChild(model)
       findFeatures(in: model)
-      mochi.name = NookiTarget.mochi.rawValue
-      Self.makeTappable(mochi, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
+      hasMochi = true
+      setMochiMissing(false)
     } catch {
-      Self.log.error("Loading Cat failed: \(String(describing: error))")
+      Self.log.error("\(String(describing: error), privacy: .public)")
+      setMochiMissing(true)
+    }
+  }
+
+  private func reportMochiIfAbsent() {
+    if !hasMochi { setMochiMissing(true) }
+  }
+
+  /// Where the model goes so that it sits centred on its own floor, or nil for bounds that hold
+  /// nothing a viewer could see.
+  static func mochiOffset(_ bounds: BoundingBox) -> SIMD3<Float>? {
+    let corners = [bounds.min, bounds.max]
+    guard !bounds.isEmpty, corners.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
+    else { return nil }
+    return -[bounds.center.x, bounds.min.y, bounds.center.z] * mochiScale
+  }
+
+  /// A crossed-out card on the bed, so a cat that failed to load cannot pass for an empty room.
+  private func setMochiMissing(_ missing: Bool) {
+    guard missing != isMochiMissing else { return }
+    isMochiMissing = missing
+    missingMark.removeFromParent()
+    if missing {
+      if missingMark.children.isEmpty { buildMissingMark() }
+      mochi.addChild(missingMark)
+    }
+    onMochiMissing?(missing)
+  }
+
+  private func buildMissingMark() {
+    missingMark.name = Self.missingMarkName
+    missingMark.position = [0, 0.14, 0]
+    let card = ModelEntity(
+      mesh: .generateBox(width: 0.2, height: 0.2, depth: 0.008), materials: [Self.clay(.paper)])
+    missingMark.addChild(card)
+    for angle in [Float.pi / 4, -Float.pi / 4] {
+      let bar = ModelEntity(
+        mesh: .generateBox(width: 0.2, height: 0.024, depth: 0.012),
+        materials: [Self.clay(.heart)])
+      bar.orientation = simd_quatf(angle: angle, axis: [0, 0, 1])
+      missingMark.addChild(bar)
     }
   }
 
@@ -701,4 +802,50 @@ private enum Tone {
     RealityKit.Material.Color(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1)
   }
   var cgColor: CGColor { CGColor(red: rgb.0, green: rgb.1, blue: rgb.2, alpha: 1) }
+}
+
+typealias NookiModelLoader = @MainActor @Sendable (String) async throws(NookiLoadError) -> Entity
+
+enum NookiLoadError: Error, Equatable {
+  case unreadable(String, reason: String)
+  case noGeometry(String)
+}
+
+/// One bought piece of the room and where it stands. Fits by `width` or `height`.
+struct NookiFurniture: Sendable {
+  var name: String
+  var width: Float?
+  var height: Float?
+  var position: SIMD3<Float>
+  var yaw: Float
+  var target: NookiTarget?
+
+  static let bundledModel: NookiModelLoader = { name throws(NookiLoadError) in
+    do {
+      return try await Entity(named: name, in: .module)
+    } catch {
+      throw .unreadable(name, reason: String(describing: error))
+    }
+  }
+
+  @MainActor static let items = [
+    NookiFurniture(name: "Item_rug", width: 0.86, position: [0.05, 0.002, 0.12], yaw: 0),
+    NookiFurniture(
+      name: "Item_donutbed", width: 0.5, position: [0.05, 0.012, 0.12], yaw: 0, target: .bed),
+    NookiFurniture(
+      name: "Item_bookcase", height: 0.72, position: [-0.46, 0, -0.1], yaw: .pi / 2,
+      target: .bookcase),
+    NookiFurniture(
+      name: "Item_monstera", height: 0.62, position: [-0.4, 0, -0.42], yaw: 0, target: .plant),
+    NookiFurniture(name: "Item_armchair", width: 0.5, position: [0.42, 0, -0.38], yaw: -.pi / 4),
+    NookiFurniture(
+      name: "Item_lamp", height: 0.46, position: [0.62, 0, 0.02], yaw: 0, target: .lamp),
+    NookiFurniture(name: "Item_teatable", height: 0.2, position: [0.54, 0, 0.42], yaw: 0),
+    NookiFurniture(name: "Item_lantern", height: 0.15, position: [0.54, 0.2, 0.42], yaw: 0),
+    NookiFurniture(name: "Item_tower", height: 0.62, position: [-0.46, 0, 0.5], yaw: 0),
+    NookiFurniture(name: "Item_print", height: 0.26, position: [0.45, 0.46, -0.59], yaw: 0),
+    NookiFurniture(
+      name: "Item_yarn", width: 0.14, position: NookiDiorama.yarnPosition, yaw: 0, target: .yarn),
+    NookiFurniture(name: "Item_mouse", height: 0.07, position: [-0.2, 0, 0.56], yaw: 0.8),
+  ]
 }
