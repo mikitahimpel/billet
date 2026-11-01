@@ -36,16 +36,20 @@ const verifyWith = (fetch: typeof globalThis.fetch, token: Redacted.Redacted<str
   );
 
 describe("AppleIdentityLive", () => {
-  it("reads Apple's key URL without following redirects", async () => {
+  it("reads Apple's key URL without following redirects, cached only on success", async () => {
     const { token, publicJwk } = await Effect.runPromise(signed);
-    const requests: Array<{ url: string; redirect: string | undefined }> = [];
+    const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
     const fetch: typeof globalThis.fetch = (input, init) => {
-      requests.push({ url: String(input), redirect: init?.redirect });
+      requests.push({ url: String(input), init });
       return Promise.resolve(Response.json({ keys: [publicJwk] }));
     };
     const exit = await verifyWith(fetch, token);
     expect(exit).toEqual(Exit.succeed({ subject: "subject", nonce: "nonce" }));
-    expect(requests).toEqual([{ url: appleKeysUrl, redirect: "manual" }]);
+    expect(requests.map(({ url }) => url)).toEqual([appleKeysUrl]);
+    expect(requests[0]?.init).toMatchObject({
+      redirect: "manual",
+      cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 600, "300-599": 0 } },
+    });
   });
 
   it("issues nothing when the fetch fails", async () => {

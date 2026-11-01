@@ -5,7 +5,9 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./api-fetch": "./src/api-fetch.ts",
     "./apple-identity-live": "./src/apple-identity-live.ts",
+    "./auth-repository-live": "./src/auth-repository-live.ts",
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
     "./pair-room-durable-object": "./src/pair-room-durable-object.ts",

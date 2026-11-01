@@ -1,5 +1,5 @@
 import { getTableColumns, getTableName, is } from "drizzle-orm";
-import { SQLiteTable } from "drizzle-orm/sqlite-core";
+import { getTableConfig, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 export interface ColumnInfo {
   readonly name: string;
@@ -15,18 +15,21 @@ export const tablesOf = (schemaModule: Record<string, unknown>): ReadonlyArray<S
   Object.values(schemaModule).filter((value): value is SQLiteTable => is(value, SQLiteTable));
 
 /**
- * The columns a Drizzle table declares. drizzle-kit writes a primary key without `NOT NULL`, and
- * `PRAGMA table_info` reports it as nullable, so a primary key is compared by `primaryKey` alone.
+ * The columns a Drizzle table declares. drizzle-kit writes a single-column primary key without
+ * `NOT NULL`, and `PRAGMA table_info` reports it as nullable, so that key is compared by
+ * `primaryKey` alone. Columns of a composite key keep their `NOT NULL`.
  */
-export const declaredColumns = (table: SQLiteTable): ReadonlyArray<ColumnInfo> =>
-  Object.values(getTableColumns(table))
+export const declaredColumns = (table: SQLiteTable): ReadonlyArray<ColumnInfo> => {
+  const composite = getTableConfig(table).primaryKeys.flatMap((key) => key.columns);
+  return Object.values(getTableColumns(table))
     .map((column) => ({
       name: column.name,
       type: column.getSQLType().toUpperCase(),
       notNull: column.notNull && !column.primary,
-      primaryKey: column.primary,
+      primaryKey: column.primary || composite.includes(column),
     }))
     .toSorted(byName);
+};
 
 interface TableInfoRow {
   readonly name: string;

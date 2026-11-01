@@ -61,6 +61,7 @@ export const makeInMemoryAuthRepository = (): InMemoryAuthRepository => {
         const session = sessions.get(sessionHash);
         if (session === undefined) return;
         sessions.delete(sessionHash);
+        devices.delete(session.deviceId);
         pushTokens.delete(session.deviceId);
       }),
     savePushToken: (deviceId, record) =>
@@ -83,6 +84,7 @@ export const makeInMemoryAuthRepository = (): InMemoryAuthRepository => {
         for (const [hash, session] of sessions) {
           if (session.expiresAt > now) continue;
           sessions.delete(hash);
+          devices.delete(session.deviceId);
           pushTokens.delete(session.deviceId);
         }
       }),

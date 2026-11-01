@@ -27,8 +27,11 @@ couple means deleting one Durable Object and its R2 prefix.
 
 ### D1: the cross-couple directory
 
-D1 holds only what a single `PairRoom` cannot know: which pair a user belongs to, and who owns a given
-invite code. Claiming an invite is transactional.
+D1 holds only what a single `PairRoom` cannot know: users, their devices and sessions, which pair a
+user belongs to, and who owns a given invite code. Claiming an invite is transactional.
+
+D1 has no interactive transactions. An operation that spans statements runs as one D1 batch, through
+`D1Client.batch`, so a later statement reads earlier results in SQL rather than in JavaScript.
 
 ### Database access: Drizzle on the official Effect drivers
 
@@ -50,8 +53,7 @@ to it in #67.
   from the domain type. The test fails on any exported table it does not list, so a new table needs
   its domain type added to `test/schema-drift.test.ts`. Other tests apply the migrations to an empty
   database and compare `PRAGMA table_info` with each table's columns.
-- `platform-probe.ts` and the two probe tables exist only so there is something to migrate. The
-  tickets that add real tables remove them.
+- `platform-probe.ts` and `room_probe` exist only so there is something to migrate. #67 removes them.
 
 ### R2: note images
 
@@ -91,15 +93,18 @@ stored hashed in D1. The widget and extensions read the token from a shared Keyc
    device, so a session belongs to exactly one device. Sessions last 90 days from the last use.
 4. The device registers one push token per kind (`PUT /v1/devices/current/push-token`), which replaces
    the last one. A token moves to whichever device registered it last, and sign-out deletes the
-   device's tokens, so a phone never receives another account's notes.
+   device and its tokens, so a phone never receives another account's notes.
 
 Failures are uniform: any rejection is a 401, and if Apple's keys or the database can't be read the
 answer is a 503. Nothing is granted on a failure, and an expired key set is never used. Logs carry
 fixed reason labels only.
 
 `packages/backend/auth` holds this logic on injected services: `IdentityVerifier` and `AuthRepository`.
-`platform` provides the real ones. The Worker does not serve these routes until the Drizzle
-repository from #66 exists.
+`platform` provides the real ones, and `respondApi` serves the routes under `/v1/`.
+
+`respondApi` builds the router for each request, because a Worker request must not wait on I/O that
+another request started, and `Jwks` shares its in-flight fetch between callers. So Apple's keys are
+cached by Cloudflare, in the key fetch itself, for 10 minutes. Only successful responses are cached.
 
 ### Privacy
 

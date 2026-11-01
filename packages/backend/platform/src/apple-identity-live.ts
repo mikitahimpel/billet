@@ -6,15 +6,22 @@ import { AppleIdentityVerifier, appleKeysUrl } from "@billet/backend-auth/apple-
 import type { IdentityVerifier } from "@billet/backend-auth/identity-verifier";
 
 // `Jwks` refuses any response from another URL, and manual redirects stop the request being sent.
+// Only successful responses reach Cloudflare's cache, so a failure at Apple's end is never replayed.
 const AppleKeysClient = FetchHttpClient.layer.pipe(
-  Layer.provide(Layer.succeed(FetchHttpClient.RequestInit, { redirect: "manual" })),
+  Layer.provide(
+    Layer.succeed(FetchHttpClient.RequestInit, {
+      redirect: "manual",
+      cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 600, "300-599": 0 } },
+    }),
+  ),
 );
 
 /**
- * Apple's keys, cached per isolate. The defaults are the policy: keys are reused for 10 minutes and
- * refetched once for an unknown `kid`, at most every 30 seconds, so rotation is picked up and random
- * `kid`s can't drive traffic to Apple. A failed or slow (over 5 seconds) fetch fails the sign-in,
- * and an expired key set is never used.
+ * Build this once per request. `Jwks` shares one in-flight fetch between its callers, and a Worker
+ * request must not wait on I/O started by another, so the layer can't outlive a request. The key
+ * cache is therefore Cloudflare's, shared across requests through the subrequest: forged tokens
+ * can't drive traffic to Apple, and a rotated key is picked up within 10 minutes. A failed or slow
+ * (over 5 seconds) fetch fails the sign-in, and an expired key set is never used.
  */
 const AppleKeys = Jwks.layerRemote({ url: appleKeysUrl }).pipe(
   // Only a malformed constant above can fail this.
