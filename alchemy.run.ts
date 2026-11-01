@@ -5,6 +5,8 @@
 // and CLOUDFLARE_API_TOKEN, read only by a real deploy. `alchemy dev` emulates every resource here
 // locally and needs no credentials.
 import * as Cloudflare from "@alchemy.run/cloudflare";
+import { providers as drizzleProviders } from "@alchemy.run/drizzle/Providers";
+import { Schema } from "@alchemy.run/drizzle/Schema";
 import * as Alchemy from "alchemy";
 import * as State from "alchemy/State";
 import * as Effect from "effect/Effect";
@@ -14,9 +16,21 @@ import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
-// The cross-couple directory. Tables arrive with the tickets that need them; once there are
-// migrations, add `migrations: "./apps/api/migrations"` here.
-export const Database = Cloudflare.D1.Database("Database");
+// The tables of the cross-couple directory. A deploy applies the committed migrations.
+// `pnpm db:generate` writes them, and a test fails if a schema change has none.
+// Import the subpaths above, not the package root: that pulls `@effect/sql-d1`, which needs effect
+// 4.1, into this effect 4.0 process.
+export const DirectorySchema = Schema("DirectorySchema", {
+  schema: "./packages/backend/platform/src/directory-schema.ts",
+  out: "./packages/backend/platform/migrations/directory",
+  dialect: "sqlite",
+});
+
+// The cross-couple directory.
+export const Database = Effect.gen(function* () {
+  const migrations = yield* DirectorySchema;
+  return yield* Cloudflare.D1.Database("Database", { migrations });
+});
 
 // Note images. Private: no public access and no custom domain, so every read goes through the
 // Worker and its authorisation checks.
@@ -40,7 +54,7 @@ const state = Layer.unwrap(
 export default Alchemy.Stack(
   "billet",
   {
-    providers: Cloudflare.providers(),
+    providers: Layer.mergeAll(Cloudflare.providers(), drizzleProviders()),
     state,
   },
   Effect.gen(function* () {

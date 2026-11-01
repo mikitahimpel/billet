@@ -8,7 +8,7 @@ public repo both rule out copying).
 
 Greenfield project. Stack: SwiftUI + WidgetKit client, and a Cloudflare backend on Effect TS with
 Durable Objects, D1 and pnpm. Both sides follow one idea: discriminated unions, explicit state
-machines, injected dependencies. The look starts from Memoxia's warm system and shifts romantic.
+machines, injected dependencies. The look is Little House (see Design direction).
 
 **Decided with you:** name `billet`; lock screen = widget + Live Activity; free first, paywall after
 launch; public repo.
@@ -138,34 +138,20 @@ at setup). oxlint, oxfmt, Turborepo. XcodeGen with no committed `.xcodeproj`. sw
 **Defaults:** iOS 18 minimum, with WidgetKit push gated on iOS 26. Bundle ID `com.mikitahimpel.billet`.
 MIT licence. iPhone only at launch. One partner per account.
 
-## Design direction: "candlelight letter"
+## Design direction: Little House
 
-Start from `docs/DESIGN.md` in Memoxia: quiet premium, warm-only palette, dark-first, one obvious
-anchor per screen, ink for primary actions, the 28pt/capsule radius roles, measured contrast, one
-gutter, wave seams. Your screenshot's candlelit tone fits this well.
+Owner decision, 2026-11-01. The couple shares one tiny house on a night hill, seen as a warm-lit
+cross-section, in flat geometric scenes. Notes come through the letterbox and hang on the living-room
+wall. The streak is the house number, and the house grows with it through a fixed set of art states.
+Everything comes in twos, and two wisps cross to form one heart.
 
-Shift toward romantic:
-
-| Role | Memoxia | billet starting point |
-| --- | --- | --- |
-| Dark page | `#121010` | `#161011`, wine-black |
-| Dark rungs | `#231E18`, `#302822` | `#261A1B`, `#352325` |
-| Light page | `#F6F2ED` | `#F8F0EC`, letter paper |
-| Ink | `#211D1A` | `#2A1A1C` |
-| Cream on fields | `#FBF3E6` | Keep |
-| Plate fields | amber, umber, clay | wine `#5E1F2E`, dusk rose `#7A3B46`, ember `#6E2F1E` |
-| Reserved colour | coral, mascot only | wax-seal rose `#B8485F`, seal only |
-
-- **Hex values are starting points.** Each must clear Memoxia's floors in a test: 4.5:1 text, 3:1
-  marks, visible rungs.
-- **Type changes on purpose.** Handwriting moves from secondary aside to the emotional centre, and a
-  literary serif (Fraunces or Cormorant, OFL) joins for display only. This reverses Memoxia's
-  "no serif" rule.
-- **The wax seal replaces the mascot.** It gets the same strict rule: its rose appears only on the
-  seal, never as a button or selection colour.
-- **Never:** pink gradients, confetti hearts or anything childish. The user's drawing is the
+- **[docs/design.md](design.md) is the source of truth,** including tokens, the five house art
+  states, the widget rule, and what was rejected and why.
+- **Contrast is measured in tests:** 4.5:1 text, 3:1 marks, visible rungs.
+- **Type:** Schibsted Grotesk and DM Mono, both OFL. The note itself is the only hand-drawn thing.
+- **The medium widget is a recomposed single room,** never a scaled-down house.
+- **Never:** pink gradients, confetti, cupids or anything childish. The user's drawing is the
   decoration.
-- `docs/design.md` records this in Memoxia's format, including what was rejected and why.
 
 ## Tickets
 
@@ -234,7 +220,7 @@ Each becomes a GitHub issue with scope, "done when", and dependencies, under one
 
 | # | Ticket | Needs |
 | --- | --- | --- |
-| 35 | App name, icon, wax-seal mark, domain, trademark check | 8 |
+| 35 | App name, icon, final mark, domain, trademark check | 8 |
 | 36 | Privacy policy, terms, privacy manifest, nutrition labels | 21 |
 | 37 | Fastlane and TestFlight pipeline | 4 |
 | 38 | Crash and delivery monitoring | 19, 33 |

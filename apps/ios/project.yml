@@ -22,7 +22,7 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        product: BilletKit
+        product: FeatureCanvas
       - target: BilletWidget
       - target: BilletNotificationService
     entitlements:
@@ -47,11 +47,15 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+    info:
+      path: Widget/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
         INFOPLIST_KEY_CFBundleDisplayName: billet
-        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
   BilletNotificationService:
     type: app-extension
     platform: iOS
