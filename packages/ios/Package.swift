@@ -23,6 +23,7 @@ let library: [(name: String, dependencies: [String])] = [
   ("Pet", ["BilletKit", "DesignSystem"]),
   ("PetScene", ["DesignSystem", "Pet"]),
   ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
+  ("WidgetBridge", ["Persistence"]),
 ]
 
 let featureDependencies = [
@@ -38,7 +39,7 @@ let libraryTargets: [Target] = library.map {
 }
 
 let featureTargets: [Target] = features.map { feature in
-  let extra = feature == "FeatureSettings" ? ["PetScene"] : []
+  let extra = feature == "FeatureSettings" ? ["PetScene", "WidgetBridge"] : []
   return .target(
     name: feature,
     dependencies: (featureDependencies + extra).map { .init(stringLiteral: $0) })
@@ -59,6 +60,7 @@ let homeTarget: Target = .target(
     "Persistence",
     "Pet",
     "PetScene",
+    "WidgetBridge",
     "Wire",
   ]
 )
@@ -78,6 +80,7 @@ let testTargets: [Target] = [
     ]),
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
+  .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "WidgetBridge"]),
   .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
   .testTarget(
     name: "PetSceneCatalogTests",
