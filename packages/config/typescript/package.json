@@ -5,6 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    "./base.json": "./base.json"
+    "./base.json": "./base.json",
+    "./workers.json": "./workers.json",
+    "./node.json": "./node.json"
   }
 }

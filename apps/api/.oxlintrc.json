@@ -1,0 +1,10 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["../../packages/config/oxlint/oxlintrc.json"],
+  "overrides": [
+    {
+      "files": ["src/worker.ts"],
+      "rules": { "import/no-default-export": "off" }
+    }
+  ]
+}

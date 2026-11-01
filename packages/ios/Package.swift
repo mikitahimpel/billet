@@ -36,6 +36,9 @@ let package = Package(
     + features.map {
       .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
     }
-    + [.testTarget(name: "BilletKitTests", dependencies: ["BilletKit"])],
+    + [
+      .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
+      .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
+    ],
   swiftLanguageModes: [.v6]
 )
