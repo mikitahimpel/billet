@@ -14,6 +14,7 @@ catalog:
   # Alchemy v2 is beta: pin exact, bump alchemy and @alchemy.run/* together (see docs/alchemy.md).
   alchemy: 2.0.0-beta.84
   "@alchemy.run/cloudflare": 2.0.0-beta.84
+  "@cloudflare/vitest-pool-workers": 0.23.0
   "@cloudflare/workers-types": 5.20261101.1
   "@types/node": 24.19.2
   effect: 4.1.1

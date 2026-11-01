@@ -1,0 +1,78 @@
+import { DurableObject } from "cloudflare:workers";
+import { Effect, Layer, ManagedRuntime, Schema } from "effect";
+import { UserId } from "@billet/contracts-domain/ids";
+import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { PresenceState } from "@billet/contracts-realtime/client-message";
+import { isMember } from "@billet/backend-pair-room/decide";
+import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
+import { RoomService } from "@billet/backend-pair-room/room-service";
+import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
+import { PairRoomLive } from "./pair-room-runtime.ts";
+import { RoomStorage } from "./pair-room-sqlite-store.ts";
+
+/** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
+export const ROOM_USER_HEADER = "x-billet-user";
+
+const decodeUser = Schema.decodeUnknownOption(UserId);
+
+/**
+ * One couple. This class only moves calls into the runtime: the rules are in
+ * `@billet/backend-pair-room` and the SQL is in `pair-room-sqlite-store.ts`.
+ *
+ * The runtime holds the lock that orders this room's commands, so it must stay per object: do not
+ * share a `memoMap` here. It holds no resources that outlive the object, and Durable Objects have
+ * no shutdown hook, so eviction simply drops it and the next event builds a new one.
+ */
+export class PairRoom extends DurableObject {
+  private readonly runtime = ManagedRuntime.make(
+    PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomStorage, this.ctx.storage))),
+  );
+
+  private run<A>(program: (room: RoomService["Service"]) => Effect.Effect<A>): Promise<A> {
+    return this.runtime.runPromise(RoomService.use(program));
+  }
+
+  open(pairId: PairId, members: readonly [UserId, UserId]): Promise<RoomDecision> {
+    return this.run((room) => room.dispatch({ _tag: "Open", pairId, members }));
+  }
+
+  sendNote(author: UserId, request: SendNoteRequest): Promise<RoomDecision> {
+    return this.run((room) => room.sendNote(author, request));
+  }
+
+  setPresence(user: UserId, state: PresenceState): Promise<RoomDecision> {
+    return this.run((room) => room.dispatch({ _tag: "SetPresence", user, state }));
+  }
+
+  snapshot(): Promise<RoomState> {
+    return this.run((room) => room.state);
+  }
+
+  /** Notes with `seq` above `afterSeq`, in order. */
+  notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {
+    return this.run((room) => room.notesAfter(afterSeq, limit));
+  }
+
+  /**
+   * Accepts a partner's hibernatable WebSocket. The object can leave memory while the socket stays
+   * open, so an idle room costs nothing. Handling its messages is the relay, which is #17.
+   */
+  override async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response(null, { status: 426 });
+    }
+    const user = decodeUser(request.headers.get(ROOM_USER_HEADER));
+    if (user._tag === "None") return new Response(null, { status: 400 });
+    if (!isMember(await this.snapshot(), user.value)) return new Response(null, { status: 403 });
+
+    const { 0: client, 1: server } = new WebSocketPair();
+    this.ctx.acceptWebSocket(server, [user.value]);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  /** Answers a client's close. 1005 means the client sent no code, and cannot be sent back. */
+  override webSocketClose(socket: WebSocket, code: number): void {
+    socket.close(code === 1005 ? 1000 : code);
+  }
+}
