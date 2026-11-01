@@ -14,6 +14,9 @@ declare namespace Cloudflare {
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
     readonly LEGACY_ROOM: DurableObjectNamespace;
+    readonly LANE_ROOM: DurableObjectNamespace<
+      import("../src/pair-room-durable-object.ts").PairRoom
+    >;
   }
 
   interface Exports {

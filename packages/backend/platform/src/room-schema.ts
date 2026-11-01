@@ -1,4 +1,4 @@
-import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // Durable Object SQLite tables, one set per `PairRoom`. `pnpm db:generate` writes the migrations.
@@ -24,3 +24,17 @@ export const note = sqliteTable("note", {
   seq: integer("seq").primaryKey(),
   body: text("body").notNull(),
 });
+
+// One row per note and delivery lane: how far that delivery got. The alarm works through the
+// pending ones. See `delivery-ledger.ts` in the pair-room package for the rules.
+export const delivery = sqliteTable(
+  "delivery",
+  {
+    noteId: text("note_id").notNull(),
+    lane: text("lane").notNull(),
+    status: text("status").notNull(),
+    attempts: integer("attempts").notNull(),
+    nextAttemptAt: integer("next_attempt_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.noteId, table.lane] })],
+);

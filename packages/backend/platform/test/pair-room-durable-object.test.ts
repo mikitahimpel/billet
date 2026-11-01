@@ -136,6 +136,7 @@ describe("PairRoom storage", () => {
     expect(names.map(({ name }) => name)).toEqual([
       expect.stringContaining("_init"),
       expect.stringContaining("_pair_room"),
+      expect.stringContaining("_delivery"),
     ]);
   });
 

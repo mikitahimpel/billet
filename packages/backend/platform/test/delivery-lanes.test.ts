@@ -1,0 +1,137 @@
+import { env } from "cloudflare:workers";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { Schema } from "effect";
+import { describe, expect, it } from "vitest";
+import { maxAttempts } from "@billet/backend-pair-room/delivery-ledger";
+import { MediaKey, UserId } from "@billet/contracts-domain/ids";
+import { PairId } from "@billet/contracts-domain/pair-id";
+import { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { PairRoom } from "../src/pair-room-durable-object.ts";
+
+const alice = Schema.decodeUnknownSync(UserId)("user-alice");
+const bob = Schema.decodeUnknownSync(UserId)("user-bob");
+const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
+const photo = SendNoteRequest.cases.Photo.make({
+  image: Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png"),
+});
+
+/** A room whose lane sender follows `script`; "Delivered" once the script runs out. */
+const laneRoom = async (script: ReadonlyArray<string> = []) => {
+  const room = env.LANE_ROOM.get(env.LANE_ROOM.newUniqueId());
+  await room.open(pairId, [alice, bob]);
+  await runInDurableObject(room, (_, state) => state.storage.put("laneScript", [...script]));
+  return room;
+};
+
+const calls = (room: ReturnType<typeof env.LANE_ROOM.get>) =>
+  runInDurableObject(
+    room,
+    async (_, state) => ((await state.storage.get<unknown[]>("laneCalls")) ?? []).length,
+  );
+
+/** Moves every pending delivery to "now", as if its wait had passed. */
+const letWaitsPass = (room: ReturnType<typeof env.LANE_ROOM.get>) =>
+  runInDurableObject(room, (_, state) => {
+    state.storage.sql.exec("UPDATE delivery SET next_attempt_at = 0 WHERE status = 'pending'");
+  });
+
+const alarmAt = (room: ReturnType<typeof env.LANE_ROOM.get>) =>
+  runInDurableObject(room, (_, state) => state.storage.getAlarm());
+
+type Room = ReturnType<typeof env.LANE_ROOM.get>;
+
+/** The first try follows the send at once, so tests wait for its outcome instead of assuming one. */
+const untilDeliveries = async (
+  room: Room,
+  check: (entries: Awaited<ReturnType<Room["deliveries"]>>) => boolean,
+): Promise<void> => {
+  const end = Date.now() + 4000;
+  while (!check(await room.deliveries())) {
+    if (Date.now() > end) throw new Error("Never saw the expected deliveries");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+};
+
+describe("delivery lanes", () => {
+  it("hands an accepted note to its lane, and the alarm delivers it once", async () => {
+    const room = await laneRoom();
+    await room.sendNote(alice, photo);
+    await untilDeliveries(room, (entries) => entries[0]?.status === "delivered");
+    expect(await room.deliveries()).toMatchObject([{ lane: "AlertPush", status: "delivered" }]);
+    expect(await alarmAt(room)).toBeNull();
+
+    await runDurableObjectAlarm(room);
+    await runDurableObjectAlarm(room);
+    expect(await calls(room)).toBe(1);
+  });
+
+  it("starts one delivery for a note however often it is handed over", async () => {
+    const room = await laneRoom();
+    await room.sendNote(alice, photo);
+    const [entry] = await room.deliveries();
+    await runInDurableObject(room, (instance) => {
+      const enqueue = (instance as unknown as { enqueueDeliveries(id: string): Promise<void> })
+        .enqueueDeliveries;
+      return Promise.all([
+        enqueue.call(instance, entry!.noteId),
+        enqueue.call(instance, entry!.noteId),
+      ]);
+    });
+    await untilDeliveries(room, (entries) => entries[0]?.status === "delivered");
+    expect(await room.deliveries()).toHaveLength(1);
+    await runDurableObjectAlarm(room);
+    expect(await calls(room)).toBe(1);
+  });
+
+  it("retries after a failure, with the alarm moved to the wait", async () => {
+    const room = await laneRoom(["throw", "Retry"]);
+    await room.sendNote(alice, photo);
+
+    await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+    expect(await room.deliveries()).toMatchObject([{ status: "pending", attempts: 1 }]);
+    expect(await alarmAt(room)).toBeGreaterThan(Date.now());
+
+    // Before its wait is over the entry is not due, so firing early does nothing.
+    await runDurableObjectAlarm(room);
+    expect(await calls(room)).toBe(1);
+
+    await letWaitsPass(room);
+    await runDurableObjectAlarm(room);
+    expect(await room.deliveries()).toMatchObject([{ status: "pending", attempts: 2 }]);
+
+    await letWaitsPass(room);
+    await runDurableObjectAlarm(room);
+    expect(await room.deliveries()).toMatchObject([{ status: "delivered", attempts: 2 }]);
+    expect(await calls(room)).toBe(3);
+    expect(await alarmAt(room)).toBeNull();
+  });
+
+  it("abandons after the attempt limit and stops the alarm", async () => {
+    const room = await laneRoom(Array.from({ length: maxAttempts }, () => "Retry"));
+    await room.sendNote(alice, photo);
+    await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+    for (let i = 1; i < maxAttempts; i++) {
+      await letWaitsPass(room);
+      await runDurableObjectAlarm(room);
+    }
+    expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: maxAttempts }]);
+    expect(await alarmAt(room)).toBeNull();
+    expect(await calls(room)).toBe(maxAttempts);
+  });
+
+  it("abandons at once when the lane says so, for example a dead token", async () => {
+    const room = await laneRoom(["Abandon"]);
+    await room.sendNote(alice, photo);
+    await untilDeliveries(room, (entries) => entries[0]?.status === "abandoned");
+    expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: 0 }]);
+  });
+
+  it("does nothing for a room without lanes", async () => {
+    const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
+    const room = PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
+    await room.open(pairId, [alice, bob]);
+    await room.sendNote(alice, photo);
+    expect(await room.deliveries()).toEqual([]);
+    expect(await runInDurableObject(room, (_, state) => state.storage.getAlarm())).toBeNull();
+  });
+});
