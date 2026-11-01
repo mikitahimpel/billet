@@ -58,6 +58,7 @@ export default Alchemy.Stack(
     state,
   },
   Effect.gen(function* () {
+    const stage = yield* Alchemy.Stage;
     const db = yield* Database;
     const media = yield* Media;
 
@@ -69,6 +70,8 @@ export default Alchemy.Stack(
         DB: db,
         MEDIA: media,
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
+        // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
+        ...(stage === "dev" ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom") } : {}),
       },
       dev: { host: "0.0.0.0", port: 8787 },
     });

@@ -7,6 +7,8 @@
   "exports": {
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
+    "./demo-room-durable-object": "./src/demo-room-durable-object.ts",
+    "./demo-route": "./src/demo-route.ts",
     "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
     "./room-database": "./src/room-database.ts",

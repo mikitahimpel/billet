@@ -1,6 +1,9 @@
 declare namespace Cloudflare {
   interface Env {
     readonly DB: D1Database;
+    readonly DEMO_ROOM: DurableObjectNamespace<
+      import("../src/demo-room-durable-object.ts").DemoRoom
+    >;
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
   }

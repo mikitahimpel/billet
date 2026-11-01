@@ -5,6 +5,7 @@ import { openRoomDatabase } from "../src/room-database.ts";
 import type { RoomMigrations } from "../src/room-database.ts";
 
 // The Worker under test: exports the object class, as apps/api/src/worker.ts does.
+export { DemoRoom } from "../src/demo-room-durable-object.ts";
 export { PairRoom } from "../src/pair-room-durable-object.ts";
 
 const migrateOnActivation = (ctx: DurableObjectState, migrations?: RoomMigrations) =>

@@ -1,3 +1,4 @@
+import type { DemoRoom } from "./demo-room-durable-object.ts";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 
 // The bindings of the `Api` Worker. Keep in step with `env` in the root alchemy.run.ts.
@@ -8,4 +9,6 @@ export interface WorkerEnv {
   readonly MEDIA: R2Bucket;
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
+  /** Temporary demo rooms. Bound on the dev stage only. */
+  readonly DEMO_ROOM?: DurableObjectNamespace<DemoRoom>;
 }
