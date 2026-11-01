@@ -31,7 +31,8 @@ private final class FakeRoom {
 
   func emit(_ update: NoteDelivery.Update) async {
     continuation?.yield(update)
-    try? await Task.sleep(for: .milliseconds(30))
+    // Long enough for the session's task to run on a loaded machine.
+    try? await Task.sleep(for: .milliseconds(250))
   }
 }
 

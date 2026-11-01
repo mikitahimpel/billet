@@ -24,7 +24,7 @@ struct AppShellView: View {
           scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
           onChangeCode: onChangeCode
         )
-          .tabBarStyled()
+        .tabBarStyled()
       }
       Tab("Notes", systemImage: "tray") {
         NotesView(notes: session.notes, loadFailed: session.notesFailedToLoad)
