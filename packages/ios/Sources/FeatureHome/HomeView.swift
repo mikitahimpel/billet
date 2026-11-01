@@ -4,9 +4,11 @@ import DesignSystem
 import FeatureCanvas
 import Foundation
 import Ink
+import Labs
 import Pet
 import PetScene
 import SwiftUI
+import WidgetBridge
 
 /// The main screen: the chosen pet scene, and the way into the canvas.
 struct HomeView: View {
@@ -28,6 +30,12 @@ struct HomeView: View {
 
   private var line: ConnectionLine {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
+  }
+
+  /// The cat is with the partner: the last note on this device is one it sent.
+  private var catAway: Bool {
+    session.labs.isOn(LabExperiment.overnightStay)
+      && OvernightStay.place(after: session.notes).isAway
   }
 
   private var delivery: Int { store.state.pet.world.delivery }
@@ -123,6 +131,9 @@ struct HomeView: View {
           }
         }
         .overlay { catReactions }
+        .overlay(alignment: .bottom) {
+          if catAway { OvernightStayView().padding(.bottom, Spacing.wide) }
+        }
         .overlay {
           if let hungImage, let wall = scene.noteWall {
             HungNote(drawing: hungImage, wall: wall)
@@ -142,6 +153,7 @@ struct HomeView: View {
           .transition(.opacity)
       }
       fakePartnerNotice
+      overnightStayNotice
       catNaming
       latestReceived
       treatPanel
@@ -151,6 +163,24 @@ struct HomeView: View {
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
+    .calmAnimation(value: catAway)
+  }
+
+  @ViewBuilder private var overnightStayNotice: some View {
+    if catAway {
+      let name = session.play.catName
+      ListRow(
+        OvernightStayCaption.title(catName: name),
+        subtitle: OvernightStayCaption.detail(catName: name)
+      ) {
+        EmptyView()
+      } trailing: {
+        EmptyView()
+      }
+      .card()
+      .transition(.opacity)
+      .accessibilityIdentifier("overnightStayNotice")
+    }
   }
 
   /// Said plainly, so nobody takes the scripted replies for a person.
@@ -233,7 +263,8 @@ struct HomeView: View {
       petsReceived: session.play.petsReceived,
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
-      lastTreat: session.shop.state.lastTreat
+      lastTreat: session.shop.state.lastTreat,
+      catAway: catAway
     )
   }
 

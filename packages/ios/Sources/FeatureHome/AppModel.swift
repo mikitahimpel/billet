@@ -91,7 +91,7 @@ final class AppModel {
     let fake = PairSession(
       room: room, delivery: dependencies.fakeDelivery(room), archive: archive,
       shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now,
-      isFakePartner: true)
+      isFakePartner: true, labs: labs)
     beforeFake = wasPairing
     stage = .paired(fake)
     fake.connect()
@@ -191,7 +191,8 @@ final class AppModel {
     guard let delivery = dependencies.delivery(room) else { return nil }
     return PairSession(
       room: room, delivery: delivery, archive: dependencies.archive,
-      shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now)
+      shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now,
+      labs: labs)
   }
 
   private func pair(code: String, creating: Bool) {

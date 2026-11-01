@@ -24,6 +24,10 @@ let library: [(name: String, dependencies: [String])] = [
   ("PetScene", ["DesignSystem", "Pet"]),
   ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
   ("WidgetBridge", ["Persistence"]),
+  (
+    "Labs",
+    ["Domain", "Wire", "Ink", "DesignSystem", "Persistence", "Pet", "WidgetBridge", "FeatureInbox"]
+  ),
 ]
 
 let featureDependencies = [
@@ -57,6 +61,7 @@ let homeTarget: Target = .target(
     "FeatureInbox",
     "FeatureSettings",
     "Ink",
+    "Labs",
     "Persistence",
     "Pet",
     "PetScene",
@@ -80,6 +85,11 @@ let testTargets: [Target] = [
     ]),
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
+  .testTarget(
+    name: "LabsTests",
+    dependencies: [
+      "Domain", "FeatureInbox", "Ink", "Labs", "Persistence", "Pet", "WidgetBridge", "Wire",
+    ]),
   .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "WidgetBridge"]),
   .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
   .testTarget(

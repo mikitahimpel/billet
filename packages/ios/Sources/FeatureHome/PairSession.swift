@@ -6,6 +6,7 @@ import Foundation
 import Observation
 import Persistence
 import Pet
+import WidgetBridge
 import Wire
 
 /// A live pairing: the room connection, the cat's state and the notes kept for it.
@@ -21,6 +22,8 @@ final class PairSession {
   let renovator: RoomRenovator
   /// True when the partner is the scripted one from Labs.
   let isFakePartner: Bool
+  /// The lab switches. Each experiment checks its own.
+  let labs: WidgetFeaturesModel
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -48,9 +51,11 @@ final class PairSession {
     archive: NoteArchive,
     shop: ShopStore,
     now: @escaping @Sendable () -> Date = { .now },
-    isFakePartner: Bool = false
+    isFakePartner: Bool = false,
+    labs: WidgetFeaturesModel = WidgetFeaturesModel(store: nil)
   ) {
     self.isFakePartner = isFakePartner
+    self.labs = labs
     self.room = room
     self.delivery = delivery
     self.archive = archive
