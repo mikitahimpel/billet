@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
+import { waitFor } from "./demo-wait.ts";
 import {
   MAX_REACTIONS,
   dayOf,
@@ -18,7 +19,18 @@ const alice = "11111111-1111-4111-8111-111111111111";
 const bob = "22222222-2222-4222-8222-222222222222";
 const uuid = (n: number) => `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, "0")}`;
 
-const connect = async (code: string, device: string) => {
+type Frame = Record<string, unknown>;
+
+interface Peer {
+  readonly socket: WebSocket;
+  readonly frames: Frame[];
+  /** Sends a frame and waits for the server's ack of `id`. */
+  readonly sendAcked: (frame: string, id: string) => Promise<void>;
+  readonly waitFor: (check: (frames: Frame[]) => boolean, what: string) => Promise<void>;
+}
+
+/** Connects and returns once the server's `room` frame has arrived: replays are sent before it. */
+const connect = async (code: string, device: string): Promise<Peer> => {
   const response = await routeDemo(
     new Request(`https://host/demo/rooms/${code}/socket?device=${device}`, {
       headers: { Upgrade: "websocket" },
@@ -26,15 +38,37 @@ const connect = async (code: string, device: string) => {
     DEMO_ROOM,
   )!;
   const socket = response.webSocket!;
-  const frames: Array<Record<string, unknown>> = [];
+  const frames: Frame[] = [];
   socket.accept();
   socket.addEventListener("message", (event) => {
     frames.push(JSON.parse(event.data as string));
   });
-  return { socket, frames };
+  const peer: Peer = {
+    socket,
+    frames,
+    waitFor: (check, what) => waitFor(() => check(frames), what),
+    sendAcked: async (frame, id) => {
+      socket.send(frame);
+      await waitFor(
+        () => frames.some((f) => f["type"] === "ack" && f["id"] === id),
+        `ack of ${id}`,
+      );
+    },
+  };
+  await peer.waitFor((f) => f.some((x) => x["type"] === "room"), "the room frame");
+  return peer;
 };
 
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
+/** Closes `peer` and waits until `partner` is told it left, so the server has seen the close. */
+const leave = async (peer: Peer, partner: Peer): Promise<void> => {
+  const before = partner.frames.length;
+  peer.socket.close(1000);
+  await partner.waitFor(
+    (f) => f.slice(before).some((x) => x["type"] === "room" && x["partnerPresent"] === false),
+    "the partner leaving",
+  );
+};
+
 const play = (id: string, kind: string, at: string) =>
   JSON.stringify({ type: "play", id, kind, at });
 const ofType = (frames: Array<Record<string, unknown>>, type: string) =>
@@ -87,9 +121,8 @@ describe("demo room play", () => {
   it("relays a pet live and acks the sender", async () => {
     const a = await connect("PETPASS234", alice);
     const b = await connect("PETPASS234", bob);
-    a.socket.send(play(uuid(1), "pet", "2026-11-01T10:00:00+01:00"));
-    await settle();
-    expect(ofType(a.frames, "ack")).toContainEqual({ type: "ack", id: uuid(1) });
+    await a.sendAcked(play(uuid(1), "pet", "2026-11-01T10:00:00+01:00"), uuid(1));
+    await b.waitFor((f) => ofType(f, "play").length === 1, "the pet on the partner");
     expect(ofType(b.frames, "play")).toContainEqual({
       type: "play",
       id: uuid(1),
@@ -102,58 +135,59 @@ describe("demo room play", () => {
   it("replays a pet once when the partner opens the app later", async () => {
     const a = await connect("PETSTAY234", alice);
     const first = await connect("PETSTAY234", bob);
-    first.socket.close(1000);
-    await settle();
-    a.socket.send(play(uuid(2), "pet", "2026-11-01T10:00:00+01:00"));
-    await settle();
+    await leave(first, a);
+    await a.sendAcked(play(uuid(2), "pet", "2026-11-01T10:00:00+01:00"), uuid(2));
     const again = await connect("PETSTAY234", bob);
-    await settle();
     expect(ofType(again.frames, "play")).toHaveLength(1);
-    again.socket.close(1000);
-    await settle();
+    await leave(again, a);
     const third = await connect("PETSTAY234", bob);
-    await settle();
     expect(ofType(third.frames, "play")).toEqual([]);
   });
 
   it("ignores a repeated pet id", async () => {
     const a = await connect("PETSAMEK23", alice);
     const b = await connect("PETSAMEK23", bob);
-    for (let i = 0; i < 2; i++) a.socket.send(play(uuid(3), "pet", "2026-11-01T10:00:00Z"));
-    await settle();
-    expect(ofType(b.frames, "play")).toHaveLength(1);
+    await a.sendAcked(play(uuid(3), "pet", "2026-11-01T10:00:00Z"), uuid(3));
+    await a.sendAcked(play(uuid(3), "pet", "2026-11-01T10:00:00Z"), uuid(3));
+    await a.sendAcked(play(uuid(10), "pet", "2026-11-01T10:00:00Z"), uuid(10));
+    await b.waitFor((f) => ofType(f, "play").some((x) => x["id"] === uuid(10)), "the later pet");
+    expect(ofType(b.frames, "play").filter((x) => x["id"] === uuid(3))).toHaveLength(1);
   });
 
   it("shares each treat with both phones and counts a device once per day", async () => {
     const code = "TREATSYNC3";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(play(uuid(4), "treat", "2026-11-01T09:00:00+01:00"));
-    a.socket.send(play(uuid(5), "treat", "2026-11-01T18:00:00+01:00"));
-    await settle();
+    await a.sendAcked(play(uuid(4), "treat", "2026-11-01T09:00:00+01:00"), uuid(4));
+    await a.sendAcked(play(uuid(5), "treat", "2026-11-01T18:00:00+01:00"), uuid(5));
+    await b.waitFor((f) => ofType(f, "treats").length >= 3, "two treat updates on the partner");
     expect(ofType(b.frames, "treats").at(-1)).toEqual({
       type: "treats",
       days: { "2026-11-01": [alice] },
     });
-    b.socket.send(play(uuid(6), "treat", "2026-11-01T19:00:00+01:00"));
-    await settle();
+    await b.sendAcked(play(uuid(6), "treat", "2026-11-01T19:00:00+01:00"), uuid(6));
     const expected = { type: "treats", days: { "2026-11-01": [alice, bob] } };
+    await a.waitFor(
+      (f) =>
+        ofType(f, "treats").at(-1)?.["days"] !== undefined &&
+        JSON.stringify(ofType(f, "treats").at(-1)) === JSON.stringify(expected),
+      "both treats on A",
+    );
     expect(ofType(a.frames, "treats").at(-1)).toEqual(expected);
-    expect(ofType(b.frames, "treats").at(-1)).toEqual(expected);
+    await b.waitFor(
+      (f) => JSON.stringify(ofType(f, "treats").at(-1)) === JSON.stringify(expected),
+      "both treats on B",
+    );
   });
 
   it("keeps treat days across a reconnect and a day boundary", async () => {
     const code = "TREATRESYN";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(play(uuid(7), "treat", "2026-11-01T23:50:00+01:00"));
-    b.socket.send(play(uuid(8), "treat", "2026-11-02T00:10:00+01:00"));
-    await settle();
-    a.socket.close(1000);
-    b.socket.close(1000);
-    await settle();
+    await a.sendAcked(play(uuid(7), "treat", "2026-11-01T23:50:00+01:00"), uuid(7));
+    await b.sendAcked(play(uuid(8), "treat", "2026-11-02T00:10:00+01:00"), uuid(8));
+    await leave(a, b);
     const back = await connect(code, alice);
-    await settle();
     expect(ofType(back.frames, "treats")).toEqual([
       { type: "treats", days: { "2026-11-01": [alice], "2026-11-02": [bob] } },
     ]);
@@ -162,8 +196,8 @@ describe("demo room play", () => {
   it("drops a malformed play frame without an ack", async () => {
     const a = await connect("PAPERBAD34", alice);
     a.socket.send(play(uuid(9), "coin", "2026-11-01T10:00:00Z"));
-    await settle();
-    expect(ofType(a.frames, "ack")).toEqual([]);
+    await a.sendAcked(play(uuid(11), "pet", "2026-11-01T10:00:00Z"), uuid(11));
+    expect(ofType(a.frames, "ack")).toEqual([{ type: "ack", id: uuid(11) }]);
   });
 });
 
@@ -231,68 +265,65 @@ describe("demo room name", () => {
     const code = "NAMEKEEP23";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(nameFrame(uuid(20), "Mochi"));
-    await settle();
-    b.socket.send(nameFrame(uuid(21), "Biscuit"));
-    await settle();
+    await a.sendAcked(nameFrame(uuid(20), "Mochi"), uuid(20));
+    await b.sendAcked(nameFrame(uuid(21), "Biscuit"), uuid(21));
+    await a.waitFor((f) => ofType(f, "name").length === 2, "both name broadcasts on A");
     expect(ofType(a.frames, "name")).toEqual([
       { type: "name", name: "Mochi" },
       { type: "name", name: "Mochi" },
     ]);
     expect(ofType(b.frames, "name").at(-1)).toEqual({ type: "name", name: "Mochi" });
-    expect(ofType(b.frames, "ack")).toContainEqual({ type: "ack", id: uuid(21) });
   });
 
   it("tells a phone that connects later", async () => {
     const code = "NAMEBACK23";
     const a = await connect(code, alice);
-    a.socket.send(nameFrame(uuid(22), "Mochi"));
-    await settle();
-    a.socket.close(1000);
-    await settle();
+    const b = await connect(code, bob);
+    await a.sendAcked(nameFrame(uuid(22), "Mochi"), uuid(22));
+    await leave(a, b);
     const back = await connect(code, alice);
-    await settle();
     expect(ofType(back.frames, "name")).toEqual([{ type: "name", name: "Mochi" }]);
   });
 
   it("drops an invalid name without an ack", async () => {
     const a = await connect("NAMEBAD234", alice);
     a.socket.send(nameFrame(uuid(23), "x".repeat(25)));
-    await settle();
-    expect(ofType(a.frames, "ack")).toEqual([]);
+    await a.sendAcked(play(uuid(24), "pet", at), uuid(24));
+    expect(ofType(a.frames, "ack")).toEqual([{ type: "ack", id: uuid(24) }]);
     expect(ofType(a.frames, "name")).toEqual([]);
   });
 });
 
 describe("demo room reactions", () => {
+  const reactions = (id: string, value: string) => ({
+    type: "reactions",
+    reactions: { [id]: value },
+  });
+  const lastReactions = (frames: Frame[]) => JSON.stringify(ofType(frames, "reactions").at(-1));
+
   it("shows a reaction to both phones when the receiver reacts", async () => {
     const code = "REACTWEB23";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(noteFrame(uuid(30)));
-    await settle();
-    b.socket.send(reactFrame(uuid(31), uuid(30), "heart"));
-    await settle();
-    const expected = { type: "reactions", reactions: { [uuid(30)]: "heart" } };
-    expect(ofType(a.frames, "reactions")).toEqual([expected]);
-    expect(ofType(b.frames, "reactions")).toEqual([expected]);
-    b.socket.send(reactFrame(uuid(32), uuid(30), "stamp"));
-    await settle();
-    expect(ofType(a.frames, "reactions").at(-1)).toEqual({
-      type: "reactions",
-      reactions: { [uuid(30)]: "stamp" },
-    });
+    await a.sendAcked(noteFrame(uuid(30)), uuid(30));
+    await b.sendAcked(reactFrame(uuid(31), uuid(30), "heart"), uuid(31));
+    const heart = reactions(uuid(30), "heart");
+    await a.waitFor((f) => lastReactions(f) === JSON.stringify(heart), "the heart on A");
+    await b.waitFor((f) => lastReactions(f) === JSON.stringify(heart), "the heart on B");
+    expect(ofType(a.frames, "reactions")).toEqual([heart]);
+    expect(ofType(b.frames, "reactions")).toEqual([heart]);
+    await b.sendAcked(reactFrame(uuid(32), uuid(30), "stamp"), uuid(32));
+    const stamp = reactions(uuid(30), "stamp");
+    await a.waitFor((f) => lastReactions(f) === JSON.stringify(stamp), "the stamp on A");
   });
 
   it("ignores a reaction from the sender of the note, or to an unknown note", async () => {
     const code = "REACTSEK23";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(noteFrame(uuid(33)));
-    await settle();
-    a.socket.send(reactFrame(uuid(34), uuid(33), "heart"));
-    b.socket.send(reactFrame(uuid(35), uuid(36), "heart"));
-    await settle();
+    await a.sendAcked(noteFrame(uuid(33)), uuid(33));
+    await a.sendAcked(reactFrame(uuid(34), uuid(33), "heart"), uuid(34));
+    await b.sendAcked(reactFrame(uuid(35), uuid(36), "heart"), uuid(35));
     expect(ofType(a.frames, "reactions")).toEqual([]);
     expect(ofType(b.frames, "reactions")).toEqual([]);
   });
@@ -301,16 +332,10 @@ describe("demo room reactions", () => {
     const code = "REACTAGAN3";
     const a = await connect(code, alice);
     const b = await connect(code, bob);
-    a.socket.send(noteFrame(uuid(37)));
-    await settle();
-    b.socket.send(reactFrame(uuid(38), uuid(37), "stamp"));
-    await settle();
-    a.socket.close(1000);
-    await settle();
+    await a.sendAcked(noteFrame(uuid(37)), uuid(37));
+    await b.sendAcked(reactFrame(uuid(38), uuid(37), "stamp"), uuid(38));
+    await leave(a, b);
     const back = await connect(code, alice);
-    await settle();
-    expect(ofType(back.frames, "reactions")).toEqual([
-      { type: "reactions", reactions: { [uuid(37)]: "stamp" } },
-    ]);
+    expect(ofType(back.frames, "reactions")).toEqual([reactions(uuid(37), "stamp")]);
   });
 });
