@@ -101,4 +101,6 @@ extension EnvironmentValues {
   /// False while something covers the scene, so it can stop animating. Hosts set this; a scene
   /// also pauses by itself when its view leaves the screen or the app goes to the background.
   @Entry public var petSceneOnScreen = true
+  /// The drawing of the note being delivered, for scenes that show it themselves.
+  @Entry public var petSceneDrawing: CGImage? = nil
 }

@@ -91,6 +91,7 @@ private struct NookiStage: View {
   @State private var viewSize = SIMD2<Float>(1, 1)
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
+  @Environment(\.petSceneDrawing) private var drawing
   @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
@@ -118,6 +119,9 @@ private struct NookiStage: View {
     .accessibilityLabel("Mochi's room")
     .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
     .accessibilityAction(named: "Turn the lamp on or off") { perform(.lamp) }
+    .accessibilityAction(named: "Catch the paper plane") {
+      if world.noteArrived { perform(.plane) }
+    }
     .accessibilityAction(named: "Open the note") {
       if world.delivery > 0 { perform(.note) }
     }
@@ -134,6 +138,9 @@ private struct NookiStage: View {
     }
     .onChange(of: world, initial: true) { _, world in
       diorama.show(world)
+    }
+    .onChange(of: drawing, initial: true) { _, drawing in
+      diorama.show(drawing: drawing)
     }
   }
 

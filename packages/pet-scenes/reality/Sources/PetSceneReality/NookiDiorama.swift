@@ -54,6 +54,10 @@ final class NookiDiorama {
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
   private let physics = NookiPhysics()
+  private var flight = NookiPlaneFlight()
+  private lazy var plane = NookiPaperPlane(paper: Self.clay(.paper))
+  private var noteSheet: ModelEntity?
+  private var noteMark: ModelEntity?
   let renovation: NookiRenovation
   private var yarnPlay = NookiYarnPlay(
     bed: NookiDiorama.bedSpot, floor: NookiDiorama.wallSpot.y,
@@ -61,6 +65,7 @@ final class NookiDiorama {
   private var ballWas: SIMD3<Float>?
   private var ballSpeed: Float = 0
   private var lantern: Entity?
+  private var shownDrawing: CGImage?
   /// The paint a tap puts on while the room is being changed.
   var paint = NookiSwatch.cream
   private var isFollowingTilt = false
@@ -173,8 +178,34 @@ final class NookiDiorama {
     guard world != self.world else { return }
     self.world = world
     stepStart = clock
-    if world.noteArrived { noteIsOpen = false }
+    if world.noteArrived {
+      noteIsOpen = false
+      flight = NookiPlaneFlight()
+    }
     apply(elapsed: 0, delta: 0)
+  }
+
+  /// Puts the delivered drawing on the plane and the note, or plain paper if there is none.
+  func show(drawing: CGImage?) {
+    guard drawing !== shownDrawing else { return }
+    shownDrawing = drawing
+    guard let drawing else {
+      applyPaper(Self.clay(.paper), hasDrawing: false)
+      return
+    }
+    Task {
+      let texture = try? await TextureResource(image: drawing, options: .init(semantic: .color))
+      guard let texture, drawing === shownDrawing else { return }
+      var paper = Self.clay(.paper)
+      paper.baseColor = .init(tint: .white, texture: .init(texture))
+      applyPaper(paper, hasDrawing: true)
+    }
+  }
+
+  private func applyPaper(_ paper: PhysicallyBasedMaterial, hasDrawing: Bool) {
+    noteSheet?.model?.materials = [paper]
+    noteMark?.isEnabled = !hasDrawing
+    plane.setPaper(paper)
   }
 
   /// Shows the pair's play. A new pet from the partner gets the same reaction as a tap.
@@ -340,6 +371,8 @@ final class NookiDiorama {
       noteIsOpen.toggle()
     case .wobble(let target):
       wobbles[target] = clock
+    case .catchPlane:
+      flight.tap(at: clock - stepStart)
     case .nudgeYarn:
       physics.setVelocity(NookiPhysics.flick(screenVelocity: [240, -240], cameraYaw: camera.yaw))
     }
@@ -402,7 +435,14 @@ final class NookiDiorama {
   }
 
   private func apply(elapsed: Double, delta: Float) {
-    var frame = NookiChoreography.frame(world, elapsed: elapsed, reduceMotion: reduceMotion)
+    let isFlying = world.noteArrived && !reduceMotion
+    let shownTime = isFlying ? flight.choreographyTime(elapsed) : elapsed
+    var frame = NookiChoreography.frame(world, elapsed: shownTime, reduceMotion: reduceMotion)
+    if isFlying {
+      frame.hop = max(frame.hop, flight.leap(elapsed))
+      if !flight.isCaught(at: elapsed) { frame.note = 0 }
+    }
+    applyPlane(isFlying: isFlying, elapsed: elapsed)
     if let petStart {
       let since = clock - petStart
       frame = frame.combined(with: NookiMotion.pet(since, reduceMotion: reduceMotion))
@@ -506,6 +546,17 @@ final class NookiDiorama {
     bowlFill.scale = [0.5 + 0.5 * bowlLevel, max(bowlLevel, 0.01), 0.5 + 0.5 * bowlLevel]
   }
 
+  private func applyPlane(isFlying: Bool, elapsed: Double) {
+    let inFlight = isFlying && !flight.isCaught(at: elapsed)
+    plane.entity.isEnabled = inFlight
+    guard inFlight else { return }
+    let pose = flight.pose(
+      at: elapsed, mochi: mochi.position + [0, Self.carryHeight, 0])
+    plane.show(pose)
+    look(at: pose.position)
+    lookStart = clock
+  }
+
   private func applyNote(_ frame: NookiFrame, elapsed: Double, delta: Float) {
     noteOpening = Self.eased(
       noteOpening, to: noteIsOpen ? 1 : 0, rate: 8, delta: delta, snap: reduceMotion)
@@ -595,11 +646,14 @@ final class NookiDiorama {
       mesh: .generateBox(width: 0.22, height: 0.28, depth: 0.004),
       materials: [Self.clay(.paper)])
     note.addChild(sheet)
+    noteSheet = sheet
+    room.addChild(plane.entity)
     let mark = ModelEntity(
       mesh: .generateSphere(radius: 0.022), materials: [Self.clay(.heart)])
     mark.position = [0, -0.02, 0.003]
     mark.scale = [1, 1, 0.1]
     note.addChild(mark)
+    noteMark = mark
     let peg = ModelEntity(
       mesh: .generateBox(width: 0.018, height: 0.05, depth: 0.012),
       materials: [Self.clay(.walnut)])
