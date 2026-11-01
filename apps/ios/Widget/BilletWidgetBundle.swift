@@ -1,37 +1,57 @@
+import Persistence
+import Pet
 import SwiftUI
+import UIKit
 import WidgetKit
 
 @main
 struct BilletWidgetBundle: WidgetBundle {
   var body: some Widget {
-    PlaceholderWidget()
+    PetPoseWidget()
   }
 }
 
-struct PlaceholderEntry: TimelineEntry {
+struct PetPoseEntry: TimelineEntry {
   let date: Date
+  let image: UIImage?
 }
 
-struct PlaceholderProvider: TimelineProvider {
-  func placeholder(in context: Context) -> PlaceholderEntry {
-    PlaceholderEntry(date: .now)
+/// Reads the pose the app published for the chosen scene. The app reloads timelines when the
+/// choice changes, so one entry with no refresh is enough.
+struct PetPoseProvider: TimelineProvider {
+  private func entry() -> PetPoseEntry {
+    let storage = try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier)
+    let data = try? storage?.read(PetPose.sleeping.fileName)
+    return PetPoseEntry(date: .now, image: data.flatMap(UIImage.init(data:)))
   }
 
-  func getSnapshot(in context: Context, completion: @escaping (PlaceholderEntry) -> Void) {
-    completion(PlaceholderEntry(date: .now))
+  func placeholder(in context: Context) -> PetPoseEntry {
+    PetPoseEntry(date: .now, image: nil)
   }
 
-  func getTimeline(in context: Context, completion: @escaping (Timeline<PlaceholderEntry>) -> Void)
-  {
-    completion(Timeline(entries: [PlaceholderEntry(date: .now)], policy: .never))
+  func getSnapshot(in context: Context, completion: @escaping (PetPoseEntry) -> Void) {
+    completion(entry())
+  }
+
+  func getTimeline(in context: Context, completion: @escaping (Timeline<PetPoseEntry>) -> Void) {
+    completion(Timeline(entries: [entry()], policy: .never))
   }
 }
 
-struct PlaceholderWidget: Widget {
+struct PetPoseWidget: Widget {
   var body: some WidgetConfiguration {
-    StaticConfiguration(kind: "PlaceholderWidget", provider: PlaceholderProvider()) { _ in
-      Text("billet")
-        .containerBackground(.fill.tertiary, for: .widget)
+    StaticConfiguration(kind: "PetPoseWidget", provider: PetPoseProvider()) { entry in
+      Group {
+        if let image = entry.image {
+          Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .accessibilityLabel("Your pet, asleep")
+        } else {
+          Text("billet")
+        }
+      }
+      .containerBackground(.fill.tertiary, for: .widget)
     }
     .supportedFamilies([.systemSmall])
   }

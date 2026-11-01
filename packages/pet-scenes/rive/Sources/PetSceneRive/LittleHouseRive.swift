@@ -2,10 +2,10 @@ import Foundation
 @preconcurrency import RiveRuntime
 import SwiftUI
 
-/// The Rive scene in `Resources/LittleHouse.riv`: artboard `LittleHouse`, state machine `World`,
+/// The Rive file in `Resources/LittleHouse.riv`: artboard `LittleHouse`, state machine `World`,
 /// view model `PetWorld`.
 @MainActor
-final class LittleHouseScene {
+final class LittleHouseRive {
   private let viewModel: RiveViewModel
   private var world: RiveDataBindingViewModel.Instance?
 

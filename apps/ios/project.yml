@@ -19,6 +19,9 @@ settings:
 packages:
   Billet:
     path: ../../packages/ios
+  # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
+  PetSceneRive:
+    path: ../../packages/pet-scenes/rive
 targets:
   Billet:
     type: application
@@ -26,7 +29,8 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        product: FeatureHome
+        products: [FeatureHome, Persistence, PetSceneCatalog]
+      - package: PetSceneRive
       - target: BilletWidget
       - target: BilletNotificationService
     entitlements:
@@ -52,7 +56,7 @@ targets:
     sources: [Widget]
     dependencies:
       - package: Billet
-        product: Surfaces
+        products: [Persistence, Pet, Surfaces]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:

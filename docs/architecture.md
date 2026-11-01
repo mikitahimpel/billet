@@ -137,7 +137,7 @@ packages/
   contracts/{domain,http-api,realtime,push,fixtures}
   backend/{platform,auth,pairing,pair-room,notes,push,accounts}
   config/{typescript,oxlint}
-  ios/                  One SwiftPM package, many targets:
+  ios/                  Main SwiftPM package, many targets:
     BilletKit           Machine, Store
     Domain              Pure types
     Wire                Codable contract types
@@ -147,8 +147,19 @@ packages/
     Persistence         App Group, Keychain
     Delivery            Shared by app and notification extension
     Surfaces            Widget and Live Activity views
-    Feature*            Onboarding, Pairing, Canvas, Inbox, Settings
+    Feature*            Home, Onboarding, Pairing, Canvas, Inbox, Settings
+    Pet                 World state and the delivery scenario, no graphics
+    PetScene            The contract between the pet and a scene
+    PetSceneCatalog     The linked scenes and the user's choice
+  pet-scenes/{rive,reality}   One SwiftPM package per graphics engine
 ```
+
+### Pet scenes
+
+The App target lists the scenes it ships, and removing one means not linking its package. Rive and
+RealityKit stay inside `packages/pet-scenes`; `ios:test` fails if `packages/ios` imports either.
+Scenes show `PetWorld` and report events, and `Pet` finishes a step by deadline if a scene hangs.
+The widget links no engine: the catalog copies the chosen scene's PNG poses to the App Group.
 
 The SwiftPM dependency graph enforces boundaries at compile time. For example, `Surfaces` may import
 `Domain`, `Ink` and `DesignSystem`, but not any feature target.

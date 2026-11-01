@@ -20,6 +20,9 @@ let library: [(name: String, dependencies: [String])] = [
   ("Persistence", ["Domain"]),
   ("Delivery", ["Domain", "Wire", "Ink", "Persistence"]),
   ("Surfaces", ["Domain", "Ink", "DesignSystem"]),
+  ("Pet", ["BilletKit"]),
+  ("PetScene", ["Pet"]),
+  ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
 ]
 
 let featureDependencies = [
@@ -38,16 +41,11 @@ let featureTargets: [Target] = features.map {
   .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
 }
 
-// The only target that links Rive. Surfaces and the widget stay free of it.
+// Knows scenes only through the PetScene contract. No graphics engine links into this package:
+// each engine lives in its own package under packages/pet-scenes, chosen by the App target.
 let homeTarget: Target = .target(
   name: "FeatureHome",
-  dependencies: [
-    "BilletKit",
-    "FeatureCanvas",
-    "Wire",
-    .product(name: "RiveRuntime", package: "rive-ios"),
-  ],
-  resources: [.copy("Resources/LittleHouse.riv")]
+  dependencies: ["BilletKit", "FeatureCanvas", "Wire", "Pet", "PetScene"]
 )
 
 let testTargets: [Target] = [
@@ -58,7 +56,12 @@ let testTargets: [Target] = [
   .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
   .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
-  .testTarget(name: "FeatureHomeTests", dependencies: ["BilletKit", "FeatureHome", "Wire"]),
+  .testTarget(name: "FeatureHomeTests", dependencies: ["BilletKit", "FeatureHome", "Pet", "Wire"]),
+  .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
+  .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
+  .testTarget(
+    name: "PetSceneCatalogTests",
+    dependencies: ["Persistence", "Pet", "PetScene", "PetSceneCatalog"]),
 ]
 
 let products: [String] = library.map(\.name) + features + ["FeatureHome"]
@@ -67,9 +70,6 @@ let package = Package(
   name: "Billet",
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: products.map { .library(name: $0, targets: [$0]) },
-  dependencies: [
-    .package(url: "https://github.com/rive-app/rive-ios.git", exact: "6.29.0")
-  ],
   targets: libraryTargets + featureTargets + [homeTarget] + testTargets,
   swiftLanguageModes: [.v6]
 )

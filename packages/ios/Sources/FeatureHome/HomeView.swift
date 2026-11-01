@@ -1,13 +1,23 @@
 import BilletKit
 import FeatureCanvas
+import Pet
+import PetScene
 import SwiftUI
 
-/// The main screen: the Little House with its cat, and the way into the canvas.
+/// The main screen: the chosen pet scene, and the ways into the canvas and the scene list.
 public struct HomeView: View {
+  private let scenes: [any PetScene]
+  @Binding private var selectedSceneID: String?
   @State private var store: Store<HomeMachine>
-  @State private var scene = LittleHouseScene()
+  @State private var choosingScene = false
 
-  public init(delivery: NoteDelivery = .localFake) {
+  public init(
+    scenes: [any PetScene],
+    selectedSceneID: Binding<String?>,
+    delivery: NoteDelivery = .localFake
+  ) {
+    self.scenes = scenes
+    _selectedSceneID = selectedSceneID
     _store = State(
       initialValue: Store(
         initial: HomeMachine.State(),
@@ -17,7 +27,7 @@ public struct HomeView: View {
 
   public var body: some View {
     ZStack {
-      house
+      home
       if store.state.screen == .canvas {
         CanvasView(
           onClose: { store.send(.canvasClosed) },
@@ -28,33 +38,44 @@ public struct HomeView: View {
       }
     }
     .animation(.easeInOut(duration: 0.25), value: store.state.screen)
-    .onChange(of: store.state.noteArrived) { _, arrived in
-      scene?.setNoteArrived(arrived)
+    .sheet(isPresented: $choosingScene) {
+      ScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID)
     }
   }
 
-  private var house: some View {
+  private var selectedScene: (any PetScene)? {
+    scenes.first { $0.id == selectedSceneID } ?? scenes.first
+  }
+
+  private var home: some View {
     ZStack(alignment: .bottom) {
-      VStack(spacing: 0) {
-        Self.sky
-        Self.hill
-      }
-      .ignoresSafeArea()
-      if let scene {
-        scene.view
-          .accessibilityLabel("Little House with the cat")
+      Color.clear
+      if let scene = selectedScene {
+        scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
+          .id(scene.id)
       }
       Button("Draw a note") { store.send(.canvasOpened) }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .tint(Self.door)
+        .tint(Self.action)
         .padding(.bottom, 24)
+    }
+    .overlay(alignment: .topTrailing) {
+      if scenes.count > 1 {
+        Button {
+          choosingScene = true
+        } label: {
+          Image(systemName: "paintpalette")
+            .padding(10)
+            .background(.thinMaterial, in: .circle)
+        }
+        .tint(.primary)
+        .accessibilityLabel("Choose a scene")
+        .padding(16)
+      }
     }
     .accessibilityHidden(store.state.screen == .canvas)
   }
 
-  // The artboard's top and bottom edge colours, so the art runs on into the taller screen.
-  private static let sky = Color(red: 0x0E / 255, green: 0x2E / 255, blue: 0x2A / 255)
-  private static let hill = Color(red: 0x14 / 255, green: 0x3B / 255, blue: 0x33 / 255)
-  private static let door = Color(red: 0.78, green: 0.3, blue: 0.16)
+  private static let action = Color(red: 0.78, green: 0.3, blue: 0.16)
 }

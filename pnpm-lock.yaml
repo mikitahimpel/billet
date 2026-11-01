@@ -350,6 +350,12 @@ importers:
 
   packages/ios: {}
 
+  packages/pet-scenes/rive:
+    dependencies:
+      '@billet/ios':
+        specifier: workspace:*
+        version: link:../../ios
+
 packages:
 
   '@alchemy.run/acme@2.0.0-beta.84':

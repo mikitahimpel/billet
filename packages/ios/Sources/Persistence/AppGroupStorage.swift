@@ -2,6 +2,9 @@ import Foundation
 
 /// Named files in a directory shared by the app and its extensions.
 public struct AppGroupStorage: Sendable {
+  /// The App Group shared by the app, the widget and the notification service.
+  public static let billetIdentifier = "group.com.mikitahimpel.billet"
+
   public var read: @Sendable (_ name: String) throws(PersistenceError) -> Data?
   public var write: @Sendable (_ name: String, _ data: Data) throws(PersistenceError) -> Void
   public var remove: @Sendable (_ name: String) throws(PersistenceError) -> Void
