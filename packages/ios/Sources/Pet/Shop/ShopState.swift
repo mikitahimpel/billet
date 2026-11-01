@@ -80,13 +80,19 @@ public struct ShopState: Codable, Hashable, Sendable {
   }
 
   /// Puts an owned material on a wall or the floor. The material stays owned.
-  public mutating func paint(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
+  public mutating func paint(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome
+  {
     guard !applied.contains(transaction) else { return .duplicate }
     guard case .material(let surface, _) = item.look else { throw .wrongKind }
     guard owns(item) else { throw .notInCloset }
     layout.paint(surface, with: item.id)
     applied.insert(transaction)
     return .applied
+  }
+
+  /// Bares a surface. The material stays owned.
+  public mutating func clearPaint(on surface: RoomSurface) {
+    layout.paint(surface, with: nil)
   }
 
   /// Uses one treat up.

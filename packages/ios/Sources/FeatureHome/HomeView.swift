@@ -36,7 +36,7 @@ struct HomeView: View {
     home
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
-      .modifier(HomeShop(shop: session.shop, scene: scene))
+      .modifier(HomeShop(shop: session.shop, renovator: session.renovator, scene: scene))
       .task { await DemoPush.requestPermission() }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
@@ -113,6 +113,7 @@ struct HomeView: View {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
         .id(scene.id)
         .environment(\.petSceneOnScreen, store.state.screen == .home)
+        .environment(\.petSceneRenovator, session.renovator)
         .transition(.opacity)
         .scaleEffect(petBounce && !reduceMotion ? 1.012 : 1)
         .calmAnimation(value: petBounce)

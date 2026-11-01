@@ -12,6 +12,7 @@ final class NookiShopRoom {
 
   private let models: NookiShopModels
   private let catalog: ShopCatalog
+  private let renovation: NookiRenovation?
   private var pieces: [RoomLayout.Placement.ID: Entity] = [:]
   private var loading: [RoomLayout.Placement.ID: Task<Void, Never>] = [:]
   private var surfaces: [RoomSurface: ModelEntity] = [:]
@@ -23,11 +24,23 @@ final class NookiShopRoom {
 
   init(
     catalog: ShopCatalog = .standard,
-    models: NookiShopModels = NookiShopModels()
+    models: NookiShopModels = NookiShopModels(),
+    renovation: NookiRenovation? = nil
   ) {
     self.catalog = catalog
     self.models = models
+    self.renovation = renovation
   }
+
+  /// The floor a piece of `item` needs, before its model has loaded.
+  static func footprint(of item: ShopItem) -> SIMD2<Float> {
+    guard case .furniture(_, let fit, let size, _) = item.look else { return .zero }
+    let half = Float(size) / 2
+    return .one * (fit == .width ? half : min(half, maximumHalfWidth))
+  }
+
+  /// A piece fitted by height can be tall and narrow, so its height says little about its width.
+  private static let maximumHalfWidth: Float = 0.2
 
   /// Brings the room in line with `layout`: new pieces appear, removed ones go, surfaces recolour.
   func apply(_ layout: RoomLayout) {
@@ -35,6 +48,7 @@ final class NookiShopRoom {
     let wanted = Set(layout.placements.map(\.id))
     for id in Array(pieces.keys) where !wanted.contains(id) {
       pieces.removeValue(forKey: id)?.removeFromParent()
+      renovation?.unregister(placement: id)
     }
     for id in Array(loading.keys) where !wanted.contains(id) {
       loading.removeValue(forKey: id)?.cancel()
@@ -55,15 +69,23 @@ final class NookiShopRoom {
     else { return }
     let holder = Entity()
     holder.addChild(entity)
-    if case .furniture(_, _, _, let mount) = item.look, mount == .wall {
-      holder.name = "wall"
-    }
+    let isOnWall: Bool
+    if case .furniture(_, _, _, .wall) = item.look { isOnWall = true } else { isOnWall = false }
+    if isOnWall { holder.name = "wall" }
     position(holder, for: placement, item: item)
     pieces[placement.id] = holder
     root.addChild(holder)
+    guard !isOnWall else { return }
+    let bounds = entity.visualBounds(relativeTo: holder)
+    NookiDiorama.makeTappable(holder, size: bounds.extents, center: bounds.center)
+    renovation?.register(
+      placement: placement.id, holder: holder,
+      half: SIMD2(bounds.extents.x, bounds.extents.z) / 2)
   }
 
-  private func position(_ holder: Entity, for placement: RoomLayout.Placement, item: ShopItem? = nil) {
+  private func position(
+    _ holder: Entity, for placement: RoomLayout.Placement, item: ShopItem? = nil
+  ) {
     let item = item ?? catalog.item(placement.item)
     var height: Float = 0
     if let item, case .furniture(_, _, _, .wall) = item.look { height = 0.46 }
@@ -75,7 +97,7 @@ final class NookiShopRoom {
 
   /// Thin slabs laid just proud of the walls and floor, which stay as the diorama built them.
   private static let slabs: [RoomSurface: (size: SIMD3<Float>, centre: SIMD3<Float>)] = [
-    .floor: ([1.3, 0.0015, 1.3], [0.05, 0.00075, 0.05]),
+    .floor: ([1.3, 0.0015, 1.3], [0.05, 0.00075, 0.05])
   ]
   private static let wallSlabs: [(size: SIMD3<Float>, centre: SIMD3<Float>)] = [
     ([1.3, 0.86, 0.0015], [0.05, 0.43, -0.59925]),
@@ -91,7 +113,9 @@ final class NookiShopRoom {
     }
     let material = NookiShopModels.material(tone.swatch)
     if let slab = surfaces[surface] {
-      for child in slab.children.compactMap({ $0 as? ModelEntity }) { child.model?.materials = [material] }
+      for child in slab.children.compactMap({ $0 as? ModelEntity }) {
+        child.model?.materials = [material]
+      }
       slab.isEnabled = true
       return
     }

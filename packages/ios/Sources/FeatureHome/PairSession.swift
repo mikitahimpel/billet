@@ -18,6 +18,7 @@ final class PairSession {
   let room: DemoRoom
   let store: Store<HomeMachine>
   let shop: ShopStore
+  let renovator: RoomRenovator
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -50,6 +51,7 @@ final class PairSession {
     self.delivery = delivery
     self.archive = archive
     self.shop = shop
+    renovator = RoomRenovator(store: shop)
     self.now = now
     play = PairPlay(device: room.device)
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }

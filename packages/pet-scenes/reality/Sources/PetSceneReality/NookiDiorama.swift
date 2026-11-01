@@ -715,7 +715,7 @@ final class NookiDiorama {
     }
   }
 
-  private static func makeTappable(
+  static func makeTappable(
     _ entity: Entity, size: SIMD3<Float>, center: SIMD3<Float>
   ) {
     entity.components.set(

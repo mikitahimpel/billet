@@ -75,6 +75,13 @@ public final class ShopStore {
     }
   }
 
+  public func clearPaint(on surface: RoomSurface) {
+    guard state.layout.material(on: surface) != nil else { return }
+    var next = state
+    next.clearPaint(on: surface)
+    commit(next)
+  }
+
   @discardableResult
   public func use(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
     try change { (state: inout ShopState) throws(ShopError) in

@@ -224,7 +224,8 @@ public struct ShopView<Preview: View>: View {
     }
     .billetButton(.primary)
     .disabled(isOwned || !canAfford)
-    .accessibilityLabel(isOwned ? "\(item.name), owned" : "Buy \(item.name) for \(item.price) stamps")
+    .accessibilityLabel(
+      isOwned ? "\(item.name), owned" : "Buy \(item.name) for \(item.price) stamps")
   }
 
   private func select(_ item: ShopItem) {

@@ -54,6 +54,6 @@ struct NookiRenovateControls: View {
     }
     .padding(10)
     .frame(maxWidth: 320, alignment: .leading)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: Radius.plate))
   }
 }

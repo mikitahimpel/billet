@@ -78,7 +78,8 @@ public struct ClosetView: View {
                 .foregroundStyle(Palette.paper.color)
                 .accessibilityAddTraits(.isHeader)
               ForEach(owned) { item in ownedRow(item) }
-              ForEach(placed, id: \.placement.id) { entry in placedRow(entry.item, entry.placement) }
+              ForEach(placed, id: \.placement.id) { entry in placedRow(entry.item, entry.placement)
+              }
             }
           }
         }

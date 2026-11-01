@@ -13,7 +13,8 @@ public struct ShopStorage: Sendable {
   }
 
   /// One JSON value under `key`. A value that no longer decodes counts as no shop yet.
-  public static func defaults(_ defaults: UserDefaults, key: String = "billet.shop") -> ShopStorage {
+  public static func defaults(_ defaults: UserDefaults, key: String = "billet.shop") -> ShopStorage
+  {
     nonisolated(unsafe) let defaults = defaults
     return ShopStorage(
       load: {

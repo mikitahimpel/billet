@@ -99,6 +99,27 @@ struct NookiFloorPlan {
     return fits(area, for: name, in: layout) ? cell : nil
   }
 
+  /// The free cell closest to `point` for something of `half` extent, for a piece not yet placed.
+  func openCell(half: SIMD2<Float>, near point: SIMD2<Float>, in layout: NookiLayout)
+    -> NookiLayout.Cell?
+  {
+    let columns =
+      Int(
+        (Self.floorMin.x / Self.cellSize).rounded(.up))...Int(
+        (Self.floorMax.x / Self.cellSize).rounded(.down))
+    let rows =
+      Int(
+        (Self.floorMin.y / Self.cellSize).rounded(.up))...Int(
+        (Self.floorMax.y / Self.cellSize).rounded(.down))
+    let cells = columns.flatMap { column in
+      rows.map { NookiLayout.Cell(column: column, row: $0) }
+    }
+    return
+      cells
+      .filter { fits(Area(centre: Self.centre(of: $0), half: half), for: "", in: layout) }
+      .min { simd_distance(Self.centre(of: $0), point) < simd_distance(Self.centre(of: $1), point) }
+  }
+
   private func fits(_ area: Area, for name: String, in layout: NookiLayout) -> Bool {
     guard all(area.centre - area.half .>= Self.floorMin),
       all(area.centre + area.half .<= Self.floorMax)

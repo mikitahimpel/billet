@@ -111,4 +111,6 @@ extension EnvironmentValues {
   /// False while something covers the scene, so it can stop animating. Hosts set this; a scene
   /// also pauses by itself when its view leaves the screen or the app goes to the background.
   @Entry public var petSceneOnScreen = true
+  /// Links a scene's renovate mode to the closet. `nil` when the host has no shop.
+  @Entry public var petSceneRenovator: RoomRenovator?
 }

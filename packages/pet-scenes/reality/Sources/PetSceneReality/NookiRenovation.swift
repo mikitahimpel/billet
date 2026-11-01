@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import RealityKit
 import simd
 
@@ -10,6 +11,8 @@ import simd
   private static let liftRate: Float = 14
   private static let paintLength: Float = 0.6
   private static let landingLength: Float = 0.6
+  /// New pieces go as near here as there is room: the open floor in front of the bed.
+  private static let openFloor = SIMD2<Float>(-0.1, 0.4)
 
   private struct Fade {
     var surfaces: [ModelEntity]
@@ -34,6 +37,10 @@ import simd
 
   private(set) var layout: NookiLayout
   var isOn = false
+  /// Told when a surface takes one of the free paints.
+  var onPainted: ((RoomSurface) -> Void)?
+  /// Told where a piece from the shop was set down.
+  var onPlacementMoved: ((RoomLayout.Placement.ID, SIMD3<Float>) -> Void)?
 
   init(store: NookiLayoutStore) {
     self.store = store
@@ -68,6 +75,30 @@ import simd
       centre: SIMD2(holder.position.x, holder.position.z), half: half)
   }
 
+  /// Makes a piece from the shop movable. The shop's layout holds where it stands.
+  func register(placement id: RoomLayout.Placement.ID, holder: Entity, half: SIMD2<Float>) {
+    register(Self.name(of: id), holder: holder, half: half)
+  }
+
+  func unregister(placement id: RoomLayout.Placement.ID) {
+    let name = Self.name(of: id)
+    if lifted == name { lifted = nil }
+    holders[name] = nil
+    plan.homes[name] = nil
+    landings[name] = nil
+  }
+
+  /// Where a new piece of `half` extent can stand, or nil if the floor is full.
+  func openSpot(half: SIMD2<Float>) -> SIMD2<Float>? {
+    plan.openCell(half: half, near: Self.openFloor, in: layout).map(NookiFloorPlan.centre)
+  }
+
+  private static let placementPrefix = "placement:"
+
+  private static func name(of id: RoomLayout.Placement.ID) -> String {
+    placementPrefix + id
+  }
+
   /// Makes `entity` travel with the piece `name`.
   func attach(_ entity: Entity, to name: String) {
     guard let holder = holders[name] else { return }
@@ -92,10 +123,12 @@ import simd
       layout.wall = swatch
       fade(walls, from: wallShown, to: swatch.rgb, reduceMotion: reduceMotion)
       wallShown = swatch.rgb
+      onPainted?(.wall)
     } else if let floor, entity === floor {
       layout.floor = swatch
       fade([floor], from: floorShown, to: swatch.rgb, reduceMotion: reduceMotion)
       floorShown = swatch.rgb
+      onPainted?(.floor)
     } else {
       return false
     }
@@ -140,9 +173,17 @@ import simd
   func drop() -> SIMD3<Float>? {
     guard let lifted, let holder = holders[lifted] else { return nil }
     self.lifted = nil
+    if lifted.hasPrefix(Self.placementPrefix) { settle(lifted, at: holder.position) }
     store.save(layout)
     landings[lifted] = 0
     return holder.position
+  }
+
+  /// A shop piece has no original spot to return to: where it lands becomes its home.
+  private func settle(_ name: String, at position: SIMD3<Float>) {
+    plan.homes[name]?.centre = SIMD2(position.x, position.z)
+    layout.pieces[name] = nil
+    onPlacementMoved?(String(name.dropFirst(Self.placementPrefix.count)), position)
   }
 
   /// Puts everything back as it first was.

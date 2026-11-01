@@ -231,7 +231,8 @@ struct ShopTests {
 
   // MARK: Store
 
-  @MainActor private func store(_ storage: ShopStorage = .memory(), grant: Int = 1000) -> ShopStore {
+  @MainActor private func store(_ storage: ShopStorage = .memory(), grant: Int = 1000) -> ShopStore
+  {
     ShopStore(storage: storage, grant: grant)
   }
 

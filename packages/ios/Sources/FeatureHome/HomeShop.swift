@@ -15,6 +15,7 @@ struct HomeShop: ViewModifier {
   }
 
   let shop: ShopStore
+  let renovator: RoomRenovator
   let scene: (any PetScene)?
 
   @State private var sheet: Sheet?
@@ -36,6 +37,8 @@ struct HomeShop: ViewModifier {
           .transition(.opacity)
         }
       }
+      // A placed piece is moved in the room itself, so the closet gets out of the way.
+      .onChange(of: renovator.placements) { sheet = nil }
       .sheet(item: isAvailable ? $sheet : .constant(nil)) { sheet in
         switch sheet {
         case .shop:
@@ -47,7 +50,7 @@ struct HomeShop: ViewModifier {
           .presentationDetents([.large])
         case .closet:
           ClosetView(
-            store: shop, renovator: DirectRenovator(store: shop),
+            store: shop, renovator: renovator,
             onOpenShop: { self.sheet = .shop }, onClose: { self.sheet = nil }
           )
           // The room stays in view and live, so the cat can be seen reacting to a treat.

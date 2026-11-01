@@ -72,9 +72,12 @@ final class NookiShopModels {
     let floorColour = surface == .floor ? colour : Palette.woodShade
     let corner = Entity()
     corner.addChild(
-      part(.generateBox(size: [0.5, 0.36, 0.03], cornerRadius: 0.004), wallColour, at: [0, 0.2, -0.235]))
+      part(
+        .generateBox(size: [0.5, 0.36, 0.03], cornerRadius: 0.004), wallColour,
+        at: [0, 0.2, -0.235]))
     corner.addChild(
-      part(.generateBox(size: [0.5, 0.03, 0.5], cornerRadius: 0.004), floorColour, at: [0, 0.015, 0]))
+      part(
+        .generateBox(size: [0.5, 0.03, 0.5], cornerRadius: 0.004), floorColour, at: [0, 0.015, 0]))
     corner.position.y = -0.1
     return corner
   }
@@ -86,7 +89,8 @@ final class NookiShopModels {
     case .fish:
       let body = part(.generateSphere(radius: 0.06), Palette.woodLit, at: [0, 0.04, 0])
       body.scale = [1.7, 0.7, 0.45]
-      let tail = part(.generateBox(size: [0.07, 0.07, 0.012], cornerRadius: 0.004), Palette.woodLit,
+      let tail = part(
+        .generateBox(size: [0.07, 0.07, 0.012], cornerRadius: 0.004), Palette.woodLit,
         at: [0.12, 0.04, 0])
       tail.orientation = simd_quatf(angle: .pi / 4, axis: [0, 0, 1])
       let eye = part(.generateSphere(radius: 0.008), Palette.ink, at: [-0.09, 0.055, 0.025])

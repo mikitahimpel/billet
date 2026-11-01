@@ -80,7 +80,7 @@ private struct NookiStage: View {
   let play: PetPlayState
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var shopRoom = NookiShopRoom()
+  @State private var shopRoom: NookiShopRoom
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
@@ -89,7 +89,19 @@ private struct NookiStage: View {
   @State private var viewSize = SIMD2<Float>(1, 1)
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
+  @Environment(\.petSceneRenovator) private var renovator
   @Environment(\.scenePhase) private var scenePhase
+
+  init(
+    diorama: NookiDiorama, world: PetWorld, play: PetPlayState,
+    onEvent: @escaping @MainActor (PetSceneEvent) -> Void
+  ) {
+    self.diorama = diorama
+    self.world = world
+    self.play = play
+    self.onEvent = onEvent
+    _shopRoom = State(initialValue: NookiShopRoom(renovation: diorama.renovation))
+  }
 
   var body: some View {
     RealityView { content in
@@ -109,9 +121,10 @@ private struct NookiStage: View {
     .simultaneousGesture(lift)
     .gesture(tap)
     .overlay(alignment: .topLeading) {
-      NookiRenovateControls(isOpen: $isRenovating, paint: $paint) { diorama.resetRoom() }
+      NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
     }
     .onChange(of: isRenovating) { _, isOn in diorama.renovation.isOn = isOn }
+    .onChange(of: renovator?.placements) { isRenovating = true }
     .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
     .accessibilityElement()
     .accessibilityLabel("Mochi's room")
@@ -120,8 +133,14 @@ private struct NookiStage: View {
     .accessibilityAction(named: "Open the note") {
       if world.delivery > 0 { perform(.note) }
     }
-    .onAppear { isAppeared = true }
-    .onDisappear { isAppeared = false }
+    .onAppear {
+      isAppeared = true
+      connectRenovator()
+    }
+    .onDisappear {
+      isAppeared = false
+      renovator?.openSpot = nil
+    }
     .onChange(of: isOnScreen, initial: true) { _, onScreen in
       diorama.setOnScreen(onScreen)
     }
@@ -143,6 +162,28 @@ private struct NookiStage: View {
 
   private var isOnScreen: Bool {
     isAppeared && hostShowsScene && scenePhase == .active
+  }
+
+  /// Puts this room's plan behind the closet, and sends what happens in the room to the shop.
+  private func connectRenovator() {
+    guard let renovator else { return }
+    let renovation = diorama.renovation
+    renovation.onPainted = { renovator.cleared($0) }
+    renovation.onPlacementMoved = { id, position in
+      renovator.moved(placement: id, x: Double(position.x), z: Double(position.z))
+    }
+    renovator.openSpot = { item in
+      renovation.openSpot(half: NookiShopRoom.footprint(of: item)).map {
+        (x: Double($0.x), z: Double($0.y))
+      }
+    }
+  }
+
+  /// Bare walls and floor, free paint and the shop's materials alike. Furniture stays bought.
+  private func resetRoom() {
+    diorama.resetRoom()
+    renovator?.cleared(.wall)
+    renovator?.cleared(.floor)
   }
 
   /// Mochi wakes and hops once the treat has landed. Only the cat reacts: nothing is sent upward.
