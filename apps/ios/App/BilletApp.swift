@@ -20,7 +20,7 @@ struct BilletApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
   private let demoHost = Bundle.main.object(forInfoDictionaryKey: "BilletDemoHost") as? String ?? ""
   @State private var catalog = PetSceneCatalog(
-    scenes: [LittleHousePetScene(), NookiPetScene()],
+    scenes: [LittleHousePetScene(), NookiPetScene(), RooftopPetScene()],
     defaults: .standard,
     poses: try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     onPosesPublished: { WidgetCenter.shared.reloadAllTimelines() }
