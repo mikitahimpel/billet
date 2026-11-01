@@ -19,7 +19,7 @@ Versions come from the catalog in `pnpm-workspace.yaml`: use `"catalog:"` in `pa
 ## Layout and boundaries
 
 - Workspaces are `apps/*`, `packages/<context>/<name>` and `packages/ios`.
-- kebab-case for folders, files and `exports` subpaths.
+- kebab-case for folders, `exports` subpaths, and TypeScript and config files. Swift files are the exception (see Swift).
 - No barrels: no `index.ts` that re-exports. Import the module you need.
 - Explicit `exports` is the only package boundary. Never import across packages by relative path.
 - Only `platform` packages (`packages/<context>/platform`) touch Worker bindings or runtime globals.
@@ -31,6 +31,7 @@ Secrets live in Proton Pass. Commit only references (`API_KEY=pass://Billet/<ite
 
 ## Swift
 
+- Swift files are PascalCase, named after their main type (`PairingError.swift`). Kebab-case applies to TypeScript and config files only.
 - `switch` over enums is exhaustive, with no `default`.
 - Use typed throws (`throws(PairingError)`).
 - Dependencies are explicit parameters. No singletons or global containers.
