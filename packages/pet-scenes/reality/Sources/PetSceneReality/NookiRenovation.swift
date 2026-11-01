@@ -116,6 +116,10 @@ import simd
 
   // MARK: - Moving
 
+  func isPiece(_ entity: Entity) -> Bool {
+    holders.values.contains { $0 === entity }
+  }
+
   /// Picks up the piece `entity` belongs to. Returns whether there was one.
   func lift(_ entity: Entity) -> Bool {
     guard isOn, lifted == nil, let name = holders.first(where: { $0.value === entity })?.key else {

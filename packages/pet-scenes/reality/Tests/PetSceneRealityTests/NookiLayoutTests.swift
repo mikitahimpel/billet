@@ -123,6 +123,12 @@ import simd
     return (renovation, chair, table, store)
   }
 
+  @Test func onlyRegisteredEntitiesArePieces() throws {
+    let (renovation, chair, _, _) = try make()
+    #expect(renovation.isPiece(chair))
+    #expect(!renovation.isPiece(Entity()))
+  }
+
   @Test func nothingLiftsWhileTheRoomIsClosed() throws {
     let (renovation, chair, _, _) = try make()
     renovation.isOn = false

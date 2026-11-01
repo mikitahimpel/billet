@@ -161,12 +161,18 @@ private struct NookiStage: View {
       }
   }
 
+  /// While the room is open a swipe from a piece belongs to that piece, so the view stays still
+  /// while the hold that lifts it is deciding.
+  private func isHoldingPiece(_ entity: Entity) -> Bool {
+    diorama.renovation.isLifting || (isRenovating && diorama.renovation.isPiece(entity))
+  }
+
   /// A swipe that starts on the yarn throws it. Any other swipe orbits.
   private var orbit: some Gesture {
     DragGesture(minimumDistance: 6)
       .targetedToAnyEntity()
       .onChanged { value in
-        guard value.entity.name != NookiTarget.yarn.rawValue, !diorama.renovation.isLifting else {
+        guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
         let translation = value.gestureValue.translation
@@ -178,7 +184,7 @@ private struct NookiStage: View {
       .onEnded { value in
         let velocity = value.gestureValue.velocity
         lastDrag = .zero
-        if diorama.renovation.isLifting {
+        if isHoldingPiece(value.entity) {
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
