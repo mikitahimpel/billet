@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import Pet
 import PetScene
@@ -47,8 +48,8 @@ private struct LittleHouseView: View {
   var body: some View {
     ZStack {
       VStack(spacing: 0) {
-        Self.sky
-        Self.hill
+        Palette.sky.color
+        Palette.meadow.color
       }
       .ignoresSafeArea()
       if let rive {
@@ -63,8 +64,4 @@ private struct LittleHouseView: View {
       await LittleHousePetScene.pacing.play(world, onEvent: onEvent)
     }
   }
-
-  // The artboard's top and bottom edge colours, so the art runs on into the taller screen.
-  private static let sky = Color(red: 0x0E / 255, green: 0x2E / 255, blue: 0x2A / 255)
-  private static let hill = Color(red: 0x14 / 255, green: 0x3B / 255, blue: 0x33 / 255)
 }

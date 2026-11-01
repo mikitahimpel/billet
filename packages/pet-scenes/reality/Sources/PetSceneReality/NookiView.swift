@@ -18,7 +18,6 @@ struct NookiView: View {
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
-    .background(Self.backdrop)
     .accessibilityElement()
     .accessibilityLabel("Mochi's room")
     .onChange(of: world, initial: true) { _, world in
@@ -28,8 +27,6 @@ struct NookiView: View {
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
   }
-
-  private static let backdrop = Color(red: 0.13, green: 0.16, blue: 0.23)
 
   /// A long lens from far away keeps the room nearly isometric on a tall screen.
   private static var camera: Entity {

@@ -20,12 +20,15 @@ struct PairingView: View {
 
   var body: some View {
     ZStack {
-      Palette.page.color.ignoresSafeArea()
+      EveningBackground()
       ScrollView {
         VStack(spacing: Spacing.large) {
-          SceneCanvas(TinyHouseArt.art)
-            .frame(width: 120)
-            .accessibilityHidden(true)
+          ScenePanel {
+            SceneCanvas(HouseArt.art(for: .lit))
+          }
+          .frame(maxWidth: 260)
+          .lampGlow()
+          .accessibilityHidden(true)
           content
         }
         .padding(Spacing.large)
@@ -33,7 +36,7 @@ struct PairingView: View {
       }
       .scrollBounceBehavior(.basedOnSize)
     }
-    .animation(.easeInOut(duration: 0.2), value: step)
+    .animation(Motion.gentle, value: step)
   }
 
   @ViewBuilder private var content: some View {
@@ -59,13 +62,14 @@ struct PairingView: View {
           .accessibilityAddTraits(.isHeader)
         Text("Draw a note and the cat carries it to your partner's wall.")
           .billetType(.body)
-          .foregroundStyle(Palette.muted.color)
+          .foregroundStyle(Palette.paperTurned.color)
       }
       .multilineTextAlignment(.center)
       failureMessage
       Button("Create pair") { model.createPair() }
         .buttonStyle(PrimaryButtonStyle())
-      SecondaryButton("Enter code") { step = .enterCode }
+      Button("Enter code") { step = .enterCode }
+        .buttonStyle(SecondaryButtonStyle())
     }
   }
 
@@ -78,7 +82,7 @@ struct PairingView: View {
           .accessibilityAddTraits(.isHeader)
         Text("Send this to your partner. They choose Enter code and type it in.")
           .billetType(.body)
-          .foregroundStyle(Palette.muted.color)
+          .foregroundStyle(Palette.paperTurned.color)
       }
       .multilineTextAlignment(.center)
       PairCodeCard(code: session.room.code)
@@ -88,14 +92,16 @@ struct PairingView: View {
       } else {
         LoadingLine("Setting up your pair…")
       }
-      SecondaryButton("Cancel") { model.cancelPairing() }
+      Button("Cancel") { model.cancelPairing() }
+        .buttonStyle(SecondaryButtonStyle())
     }
   }
 
   private var joining: some View {
     VStack(spacing: Spacing.large) {
       LoadingLine("Joining your partner…")
-      SecondaryButton("Cancel") { model.cancelPairing() }
+      Button("Cancel") { model.cancelPairing() }
+        .buttonStyle(SecondaryButtonStyle())
     }
   }
 
@@ -112,22 +118,23 @@ struct PairingView: View {
         .buttonStyle(PrimaryButtonStyle())
         .disabled(typedCode.isEmpty)
         .opacity(typedCode.isEmpty ? 0.5 : 1)
-      SecondaryButton("Back") { step = .welcome }
+      Button("Back") { step = .welcome }
+        .buttonStyle(SecondaryButtonStyle())
     }
   }
 
   private var codeField: some View {
     TextField("Partner's code", text: $partnerCode)
-      .font(.custom(BilletFonts.monoFamily, size: 21, relativeTo: .title3))
-      .foregroundStyle(Palette.paper.color)
+      .billetType(.numeral)
+      .foregroundStyle(Palette.gold.color)
       .multilineTextAlignment(.center)
       .autocorrectionDisabled()
       #if os(iOS)
         .textInputAutocapitalization(.characters)
       #endif
       .padding(Spacing.small)
-      .frame(minHeight: Target.minimum)
-      .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
+      .frame(minHeight: Target.primary)
+      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
       .accessibilityIdentifier("partnerCode")
   }
 
@@ -139,51 +146,8 @@ struct PairingView: View {
         .multilineTextAlignment(.center)
         .padding(Spacing.medium)
         .frame(maxWidth: .infinity)
-        .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
+        .litPanel(cornerRadius: Radius.control)
         .accessibilityIdentifier("pairingError")
     }
-  }
-}
-
-/// A spinner and what it is waiting for.
-private struct LoadingLine: View {
-  private let text: String
-
-  init(_ text: String) {
-    self.text = text
-  }
-
-  var body: some View {
-    HStack(spacing: Spacing.small) {
-      ProgressView().tint(Palette.paper.color)
-      Text(text)
-        .billetType(.body)
-        .foregroundStyle(Palette.paper.color)
-    }
-    .frame(minHeight: Target.minimum)
-    .accessibilityElement(children: .combine)
-  }
-}
-
-/// The quieter action beside a primary one.
-private struct SecondaryButton: View {
-  private let title: String
-  private let action: () -> Void
-
-  init(_ title: String, action: @escaping () -> Void) {
-    self.title = title
-    self.action = action
-  }
-
-  var body: some View {
-    Button(action: action) {
-      Text(title)
-        .billetType(.body)
-        .foregroundStyle(Palette.paper.color)
-        .frame(maxWidth: .infinity, minHeight: Target.minimum)
-        .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
-        .contentShape(.rect(cornerRadius: Radius.control))
-    }
-    .buttonStyle(.plain)
   }
 }

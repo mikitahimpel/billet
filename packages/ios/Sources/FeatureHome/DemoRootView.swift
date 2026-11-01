@@ -43,6 +43,7 @@ public struct DemoRootView: View {
   public var body: some View {
     content
       .preferredColorScheme(.dark)
+      .tint(Palette.gold.color)
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
           model.session?.connect()
@@ -55,7 +56,7 @@ public struct DemoRootView: View {
   @ViewBuilder private var content: some View {
     if host.isEmpty {
       ZStack {
-        Palette.page.color.ignoresSafeArea()
+        EveningBackground()
         Text("This build has no demo host.")
           .billetType(.body)
           .foregroundStyle(Palette.paper.color)

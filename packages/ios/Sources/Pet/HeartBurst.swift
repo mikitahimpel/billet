@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 
 /// A small heart that floats up and fades each time `trigger` changes.
@@ -10,7 +11,7 @@ public struct HeartBurst: View {
   private let tint: Color
   @State private var hearts: [Int] = []
 
-  public init(trigger: Int, size: CGFloat = 28, tint: Color = .pink) {
+  public init(trigger: Int, size: CGFloat = 28, tint: Color = Palette.clayLit.color) {
     self.trigger = trigger
     self.size = size
     self.tint = tint

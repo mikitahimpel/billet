@@ -28,7 +28,7 @@ struct HomeView: View {
 
   var body: some View {
     home
-      .animation(.easeInOut(duration: 0.25), value: line)
+      .animation(Motion.gentle, value: line)
       .task { await DemoPush.requestPermission() }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
@@ -60,31 +60,54 @@ struct HomeView: View {
   }
 
   private var home: some View {
-    ZStack(alignment: .bottom) {
-      Palette.skyNight.color.ignoresSafeArea()
-      if let scene {
-        scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
-          .id(scene.id)
-          .scaleEffect(petBounce ? 1.03 : 1)
-          .animation(.spring(duration: 0.3, bounce: 0.6), value: petBounce)
-          .overlay { petTapTarget }
-          .overlay { catReactions }
-          .overlay {
-            if let hungImage, let wall = scene.noteWall {
-              HungNote(drawing: hungImage, wall: wall)
-                .id(hangCount)
-            }
-          }
+    ZStack {
+      VStack(spacing: 0) {
+        Palette.sky.color
+        Palette.meadow.color
       }
+      .ignoresSafeArea()
       VStack(spacing: Spacing.small) {
-        treatPanel
-        Button("Draw a note") { store.send(.canvasOpened) }
-          .buttonStyle(PrimaryButtonStyle())
+        roomStatus
+        petScene
+          .frame(maxWidth: .infinity, minHeight: 160, maxHeight: .infinity)
+          .layoutPriority(-1)
+        controls
       }
       .padding(.horizontal, Spacing.medium)
-      .padding(.bottom, Spacing.medium)
+      .padding(.bottom, Spacing.small)
     }
-    .overlay(alignment: .top) { roomStatus }
+  }
+
+  @ViewBuilder private var petScene: some View {
+    if let scene {
+      scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
+        .id(scene.id)
+        .scaleEffect(petBounce ? 1.015 : 1)
+        .animation(Motion.settle, value: petBounce)
+        .overlay { petTapTarget }
+        .overlay { catReactions }
+        .overlay {
+          if let hungImage, let wall = scene.noteWall {
+            HungNote(drawing: hungImage, wall: wall)
+              .id(hangCount)
+          }
+        }
+    }
+  }
+
+  private var controls: some View {
+    VStack(spacing: Spacing.small) {
+      if session.notes.isEmpty, !session.notesFailedToLoad {
+        Text("The wall is empty. Draw the first note.")
+          .billetType(.label)
+          .foregroundStyle(Palette.paperTurned.color)
+          .multilineTextAlignment(.center)
+      }
+      treatPanel
+      Button("Draw a note") { store.send(.canvasOpened) }
+        .buttonStyle(PrimaryButtonStyle())
+    }
+    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
   }
 
   /// The cat's middle third. A tap pets it on this phone and tells the partner's.
@@ -104,7 +127,7 @@ struct HomeView: View {
   private var catReactions: some View {
     ZStack {
       HeartBurst(trigger: session.play.petsGiven)
-      HeartBurst(trigger: session.play.petsReceived, size: 18, tint: .pink.opacity(0.8))
+      HeartBurst(trigger: session.play.petsReceived, size: 18, tint: Palette.light.color)
         .offset(x: 40, y: -30)
       TreatDrop(trigger: session.treatFalling)
     }
@@ -127,41 +150,38 @@ struct HomeView: View {
       statusPill
       if line == .refused {
         Button("Change code", action: onChangeCode)
-          .billetType(.label)
-          .foregroundStyle(Palette.paper.color)
-          .frame(minHeight: Target.minimum)
-      }
-      if session.notes.isEmpty, !session.notesFailedToLoad {
-        emptyHint
+          .buttonStyle(InlineButtonStyle())
       }
     }
     .padding(.top, Spacing.small)
-    .padding(.horizontal, Spacing.medium)
+    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
   }
 
   private var statusPill: some View {
-    Text(line.text)
-      .billetType(.label)
-      .foregroundStyle(Palette.paper.color)
-      .multilineTextAlignment(.center)
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.control))
-      .accessibilityIdentifier("connectionStatus")
+    HStack(spacing: Spacing.small) {
+      Circle()
+        .fill(statusLight.color)
+        .frame(width: 8, height: 8)
+        .shadow(color: statusLight.color.opacity(0.8), radius: 4)
+        .accessibilityHidden(true)
+      Text(line.text)
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .multilineTextAlignment(.center)
+    }
+    .padding(.horizontal, Spacing.medium)
+    .padding(.vertical, Spacing.small)
+    .litPanel(cornerRadius: Radius.control)
+    .accessibilityElement(children: .combine)
+    .accessibilityIdentifier("connectionStatus")
   }
 
-  private var emptyHint: some View {
-    VStack(spacing: Spacing.hair) {
-      Text("The wall is empty")
-        .billetType(.heading)
-        .foregroundStyle(Palette.paper.color)
-      Text("Draw the first note. It will hang here when your partner sends one back.")
-        .billetType(.label)
-        .foregroundStyle(Palette.paperTurned.color)
+  private var statusLight: Swatch {
+    switch line {
+    case .partnerHere: Palette.gold
+    case .partnerAway: Palette.muted
+    case .connecting, .reconnecting: Palette.woodLit
+    case .refused: Palette.clayLit
     }
-    .multilineTextAlignment(.center)
-    .padding(Spacing.medium)
-    .background(Palette.plate.color, in: .rect(cornerRadius: Radius.control))
-    .accessibilityElement(children: .combine)
   }
 }

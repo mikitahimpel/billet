@@ -1,3 +1,4 @@
+import DesignSystem
 import SwiftUI
 
 /// The list of linked scenes, with the attribution their assets require.
@@ -19,29 +20,47 @@ public struct PetScenePicker: View {
   }
 
   public var body: some View {
-    List {
-      Section {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      VStack(spacing: 0) {
         ForEach(scenes, id: \.id) { scene in
-          Button {
-            selectedSceneID = scene.id
-            onChoose()
-          } label: {
-            HStack {
-              Text(scene.title)
-              Spacer()
-              if scene.id == selectedSceneID {
-                Image(systemName: "checkmark")
-                  .accessibilityLabel("Selected")
-              }
-            }
-          }
-          .tint(.primary)
+          row(scene)
         }
-      } footer: {
+      }
+      .litPanel(cornerRadius: Radius.control)
+      if !credits.isEmpty {
         Text(credits)
+          .billetType(.caption)
+          .foregroundStyle(Palette.muted.color)
       }
     }
-    .navigationTitle("Scene")
+  }
+
+  private func row(_ scene: any PetScene) -> some View {
+    let selected = scene.id == selectedSceneID
+    return Button {
+      withAnimation(Motion.gentle) { selectedSceneID = scene.id }
+      onChoose()
+    } label: {
+      HStack {
+        Text(scene.title)
+          .billetType(.body)
+          .foregroundStyle(Palette.paper.color)
+        Spacer(minLength: Spacing.medium)
+        if selected {
+          Sparkle()
+            .fill(Palette.gold.color)
+            .frame(width: 16, height: 16)
+            .lampGlow()
+            .accessibilityHidden(true)
+        }
+      }
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .frame(maxWidth: .infinity, minHeight: Target.minimum)
+      .contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+    .accessibilityAddTraits(selected ? .isSelected : [])
   }
 
   private var credits: String {
