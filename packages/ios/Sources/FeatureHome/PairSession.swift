@@ -40,6 +40,8 @@ final class PairSession {
   private(set) var lastReaction: Reaction?
   /// The cat's trip with the last note this device sent, for the "cat came back" experiment.
   private(set) var catReturn = CatReturn()
+  /// Both fingers on the cat, for the "two wisps" experiment.
+  private(set) var hold = TogetherHold()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
 
@@ -142,6 +144,11 @@ final class PairSession {
     }
   }
 
+  /// This phone's finger went down on the cat, or came up.
+  func holdChanged(_ holding: Bool) {
+    hold.iHold(holding, at: now())
+  }
+
   private func dispatch(_ strokes: [Stroke], id: UUID) {
     store.send(.drawingSent(strokes, id: id))
     catReturn.sent(id)
@@ -214,6 +221,8 @@ final class PairSession {
       }
     case .sealedNote(let strokes, let id, let opensAt):
       sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
+    case .partnerHolding(let holding):
+      hold.partnerHolds(holding, at: now())
     case .noteOpened(let id):
       catReturn.opened(id, at: now())
     case .partnerPetted:

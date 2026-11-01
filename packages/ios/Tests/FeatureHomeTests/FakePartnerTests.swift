@@ -12,7 +12,7 @@ struct FakePartnerTests {
     arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
     reply: .milliseconds(30),
     petBack: .milliseconds(10), treatBack: .milliseconds(10), sealedFor: .seconds(60),
-    idle: [])
+    holdFor: .milliseconds(5), idle: [])
 
   private func collect(
     _ delivery: NoteDelivery, count: Int, after act: @Sendable () async -> Void = {}
@@ -87,17 +87,18 @@ struct FakePartnerTests {
     var pace = Self.quick
     pace.idle = [.milliseconds(1)]
     let delivery = NoteDelivery.fakePartner(device: "me", room: FakePartnerRoom(pace: pace))
-    let seen = await collect(delivery, count: 6)
+    let seen = await collect(delivery, count: 7)
     let kinds = seen.dropFirst(2).map { update -> String in
       switch update {
       case .note: "note"
       case .partnerPetted: "pet"
       case .treats: "treat"
       case .sealedNote: "sealed"
+      case .partnerHolding(let on): on ? "hold" : "let go"
       default: "other"
       }
     }
-    #expect(kinds == ["note", "pet", "treat", "sealed"])
+    #expect(kinds == ["note", "pet", "treat", "sealed", "hold"])
   }
 
   @Test func everyDrawingHasInkInsideTheUnitSquare() {

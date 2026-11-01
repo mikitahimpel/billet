@@ -14,6 +14,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case sundayPost
   case framedNotes
   case sealedNote
+  case twoWisps
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -39,6 +40,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sundayPost: .notes
     case .framedNotes: .notes
     case .sealedNote: .notes
+    case .twoWisps: .cat
     }
   }
 
@@ -52,6 +54,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sundayPost: "Sunday post"
     case .framedNotes: "Framed notes"
     case .sealedNote: "Sealed note"
+    case .twoWisps: "Two wisps"
     }
   }
 
@@ -59,6 +62,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .twoWisps:
+      "Hold the cat at the same moment as your partner, and the two chimney wisps cross into a heart, with a soft buzz. The fake partner holds for ten seconds now and then."
     case .sealedNote:
       "Seal a note until tomorrow morning: the cat sits on it, with a countdown, and it goes when the time comes. With the fake partner, one of its notes arrives sealed for 90 seconds."
     case .framedNotes:
@@ -86,6 +91,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .sundayPost: true
     case .framedNotes: true
     case .sealedNote: true
+    case .twoWisps: true
     }
   }
 }

@@ -19,13 +19,15 @@ struct FakePartnerPace: Sendable {
   var treatBack: Duration
   /// How long a sealed note from the partner stays closed. Short, so it can be watched opening.
   var sealedFor: Duration
+  /// How long the partner keeps a finger on the cat.
+  var holdFor: Duration
   /// Between the things the partner does when nobody has done anything.
   var idle: [Duration]
 
   static let calm = FakePartnerPace(
     arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
-    treatBack: .seconds(5), sealedFor: .seconds(90),
+    treatBack: .seconds(5), sealedFor: .seconds(90), holdFor: .seconds(10),
     idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
 
@@ -128,11 +130,12 @@ actor FakePartnerRoom {
   }
 
   private func idleMove(_ step: Int) {
-    switch step % 4 {
+    switch step % 5 {
     case 0: drawNote()
     case 1: emit(.partnerPetted)
     case 2: giveTreat()
-    default: sealNote()
+    case 3: sealNote()
+    default: holdCat()
     }
   }
 
@@ -148,6 +151,11 @@ actor FakePartnerRoom {
   private func drawNote() {
     emit(.note(FakePartnerDrawings.drawing(number: drawn), id: UUID()))
     drawn += 1
+  }
+
+  private func holdCat() {
+    emit(.partnerHolding(true))
+    after(pace.holdFor) { $0.emit(.partnerHolding(false)) }
   }
 
   private func sealNote() {

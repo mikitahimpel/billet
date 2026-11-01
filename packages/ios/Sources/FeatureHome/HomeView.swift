@@ -178,6 +178,7 @@ struct HomeView: View {
       todaysWordCard
       sundayPostCard
       sealedNoteCards
+      twoWispsCard
       catNaming
       latestReceived
       treatPanel
@@ -198,6 +199,14 @@ struct HomeView: View {
           CatCameBackRow(catName: session.play.catName)
             .transition(.opacity)
         }
+      }
+    }
+  }
+
+  @ViewBuilder private var twoWispsCard: some View {
+    if session.labs.isOn(LabExperiment.twoWisps) {
+      TwoWispsSection(hold: session.hold, catName: session.play.catName) {
+        session.holdChanged($0)
       }
     }
   }
