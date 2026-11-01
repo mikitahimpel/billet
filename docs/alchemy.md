@@ -46,7 +46,7 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
   stack (so `destroy` keeps it) and holds Worker secrets in plaintext, like the local store.
 - `Cloudflare.state()` is not used: it keeps its token in the account's Secrets Store, which the
   deploy token should not need.
-- `.alchemy` is never committed: it is in `.gitignore`, and `git ls-files | grep -c .alchemy` must
+- `.alchemy` is never committed: it is in `.gitignore`, and `git ls-files | grep -cF .alchemy` must
   print `0`. The repository is public.
 
 ```sh
@@ -88,7 +88,9 @@ owner:
 4. adds required reviewers to the `prod` environment.
 
 The workflow runs the checks, deploys, prints the log with the `workers.dev` address masked (public
-repository logs are public), and smoke-tests the Worker URL for HTTP 200. To deploy on push later,
+repository logs are public), and smoke-tests the Worker URL for HTTP 200. The account ID is masked too, and the raw log is deleted
+from the runner in a final step that runs even when the deploy fails. Read the log of the first
+`dev` run for anything private before enabling `prod`. To deploy on push later,
 add a `push` trigger in a separate change, once the above works.
 
 ## Not verified without credentials
