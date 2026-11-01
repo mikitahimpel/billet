@@ -155,6 +155,7 @@ struct HomeView: View {
       fakePartnerNotice
       overnightStayNotice
       catCameBackNotice
+      todaysWordCard
       catNaming
       latestReceived
       treatPanel
@@ -176,6 +177,12 @@ struct HomeView: View {
             .transition(.opacity)
         }
       }
+    }
+  }
+
+  @ViewBuilder private var todaysWordCard: some View {
+    if session.labs.isOn(LabExperiment.todaysWord) {
+      TodaysWordSection(notes: session.notes) { store.send(.canvasOpened) }
     }
   }
 
