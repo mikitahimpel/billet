@@ -5,12 +5,16 @@ import SwiftUI
 
 struct NookiView: View {
   let world: PetWorld
+  let play: PetPlayState
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @State private var diorama = NookiDiorama()
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
+  @State private var isAppeared = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.petSceneOnScreen) private var hostShowsScene
+  @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
     RealityView { content in
@@ -22,9 +26,22 @@ struct NookiView: View {
     .ignoresSafeArea()
     .simultaneousGesture(orbit)
     .simultaneousGesture(pinch)
-    .simultaneousGesture(TapGesture(count: 2).onEnded { diorama.returnCameraHome() })
+    .gesture(tap)
     .accessibilityElement()
     .accessibilityLabel("Mochi's room")
+    .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
+    .accessibilityAction(named: "Turn the lamp on or off") { perform(.lamp) }
+    .accessibilityAction(named: "Open the note") {
+      if world.delivery > 0 { perform(.note) }
+    }
+    .onAppear { isAppeared = true }
+    .onDisappear { isAppeared = false }
+    .onChange(of: isOnScreen, initial: true) { _, onScreen in
+      diorama.setOnScreen(onScreen)
+    }
+    .onChange(of: play, initial: true) { _, play in
+      diorama.show(play)
+    }
     .onChange(of: reduceMotion, initial: true) { _, reduced in
       diorama.setReduceMotion(reduced)
     }
@@ -34,6 +51,23 @@ struct NookiView: View {
     .task(id: world) {
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
+  }
+
+  private var isOnScreen: Bool {
+    isAppeared && hostShowsScene && scenePhase == .active
+  }
+
+  private func perform(_ target: NookiTarget) {
+    if let event = diorama.perform(target) { onEvent(event) }
+  }
+
+  private var tap: some Gesture {
+    SpatialTapGesture()
+      .targetedToAnyEntity()
+      .onEnded { value in
+        let time = ProcessInfo.processInfo.systemUptime
+        if let event = diorama.tap(value.entity, at: time) { onEvent(event) }
+      }
   }
 
   private var orbit: some Gesture {

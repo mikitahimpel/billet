@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import OSLog
 import Pet
+import PetScene
 import RealityKit
 import SwiftUI
 
@@ -11,22 +12,42 @@ import SwiftUI
 final class NookiDiorama {
   let root = Entity()
 
+  private let room = Entity()
   private let lens = PerspectiveCamera()
   private let mochi = Entity()
   private let note = Entity()
+  private let bowlFill = Entity()
+  private let streakMarks = Entity()
+  private let lampLight = Entity()
   private var closedEyes: [Entity] = []
   private var openEyes: [Entity] = []
   private var ears: [Entity] = []
+  private var holders: [NookiTarget: Entity] = [:]
+  private var holderOrientations: [NookiTarget: simd_quatf] = [:]
+  private var wobbles: [NookiTarget: Double] = [:]
+  private var lampParts: [(model: ModelEntity, material: Int, glow: Float)] = []
   private var world = PetWorld()
+  private var play = PetPlayState()
   private var clock = 0.0
   private var stepStart = 0.0
+  private var petStart: Double?
+  private var idleDelta = 0.0
+  private var isOnScreen = true
   private var subscription: EventSubscription?
   private var camera = NookiCamera()
+  private var tapTimer = NookiTapTimer()
   private var reduceMotion = false
+  private var lampIsOn = true
+  private var lampLevel: Float = 1
+  private var noteIsOpen = false
+  private var noteOpening: Float = 0
+  private var bowlLevel: Float = 0
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
   private static let orbitPerPoint: Float = 0.006
+  private static let idleStep = 1.0 / 30
+  private static let lampIntensity: Float = 2200
 
   // Mochi lies in the bed in the middle of the rug, turned towards the camera.
   private static let mochiPosition: SIMD3<Float> = [0.05, 0.095, 0.12]
@@ -35,24 +56,33 @@ final class NookiDiorama {
   private static let wakeTurn: Float = 0.5
   private static let noteHome: SIMD3<Float> = [0.08, 0.46, -0.565]
   private static let noteStart: SIMD3<Float> = [0.75, 1.05, -0.1]
+  /// How far in front of the lens an opened note sits, and how much larger it gets.
+  private static let noteReadingDistance: Float = 2.4
+  private static let noteReadingScale: Float = 2
+  private static let bowlPosition: SIMD3<Float> = [0.3, 0, 0.56]
 
   init() {
-    buildRoom()
-    buildNote()
-    mochi.position = Self.mochiPosition
-    root.addChild(mochi)
+    root.addChild(room)
     lens.camera.fieldOfViewInDegrees = 30
     root.addChild(lens)
+    buildRoom()
+    buildBowl()
+    buildNote()
+    buildBackstop()
+    mochi.position = Self.mochiPosition
+    room.addChild(mochi)
     aimLens()
   }
 
   /// Loads the models. A missing asset leaves a gap in the room and is logged.
   func load() async {
     await place("Item_rug", width: 0.86, at: [0.05, 0.002, 0.12], yaw: 0)
-    await place("Item_donutbed", width: 0.5, at: [0.05, 0.012, 0.12], yaw: 0)
-    await place("Item_bookcase", height: 0.72, at: [-0.46, 0, -0.1], yaw: .pi / 2)
-    await place("Item_monstera", height: 0.62, at: [-0.4, 0, -0.42], yaw: 0)
-    await place("Item_lamp", height: 0.4, at: [0.52, 0, -0.08], yaw: 0)
+    await place("Item_donutbed", width: 0.5, at: [0.05, 0.012, 0.12], yaw: 0, target: .bed)
+    await place(
+      "Item_bookcase", height: 0.72, at: [-0.46, 0, -0.1], yaw: .pi / 2, target: .bookcase)
+    await place("Item_monstera", height: 0.62, at: [-0.4, 0, -0.42], yaw: 0, target: .plant)
+    await place("Item_lamp", height: 0.4, at: [0.52, 0, -0.08], yaw: 0, target: .lamp)
+    findLampParts()
     await loadMochi()
     await addLighting()
   }
@@ -62,7 +92,16 @@ final class NookiDiorama {
     guard world != self.world else { return }
     self.world = world
     stepStart = clock
-    apply(elapsed: 0)
+    if world.noteArrived { noteIsOpen = false }
+    apply(elapsed: 0, delta: 0)
+  }
+
+  /// Shows the pair's play. A new pet from the partner gets the same reaction as a tap.
+  func show(_ play: PetPlayState) {
+    let petted = play.petsReceived > self.play.petsReceived
+    self.play = play
+    if petted { petStart = clock }
+    if play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
   func startUpdates(from content: RealityViewCameraContent) {
@@ -78,6 +117,12 @@ final class NookiDiorama {
 
   func setReduceMotion(_ reduced: Bool) {
     reduceMotion = reduced
+  }
+
+  /// Off screen, the room leaves the render and updates stop.
+  func setOnScreen(_ onScreen: Bool) {
+    isOnScreen = onScreen
+    room.isEnabled = onScreen
   }
 
   // MARK: - Camera
@@ -105,27 +150,70 @@ final class NookiDiorama {
     camera.release(yawVelocity: 0, pitchVelocity: 0, coasting: !reduceMotion)
   }
 
-  func returnCameraHome() {
-    camera.goHome(animated: !reduceMotion)
-    aimLens()
-  }
-
   private func aimLens() {
     lens.look(at: NookiCamera.target, from: camera.position, relativeTo: nil)
   }
 
-  private func tick(_ delta: TimeInterval) {
-    clock += delta
-    if !camera.isAtRest {
-      camera.step(Float(delta))
+  // MARK: - Touch
+
+  /// Handles a tap on `entity`, and returns the event to report, if any. A target reacts at once,
+  /// and a second quick tap anywhere sends the camera home instead.
+  func tap(_ entity: Entity, at time: TimeInterval) -> PetSceneEvent? {
+    if tapTimer.isDoubleTap(at: time) {
+      camera.goHome(animated: !reduceMotion)
       aimLens()
+      return nil
     }
-    apply(elapsed: clock - stepStart)
+    guard let target = NookiTarget(rawValue: entity.name) else { return nil }
+    return perform(target)
   }
 
-  private func apply(elapsed: Double) {
-    let frame = NookiChoreography.frame(world, elapsed: elapsed)
-    let breath = 0.018 * sin(Float(clock) * 1.6) * (1 - frame.wake)
+  /// Runs what a tap on `target` does. The accessibility actions come in here too.
+  func perform(_ target: NookiTarget) -> PetSceneEvent? {
+    let touch = NookiTouch.of(target, world: world, noteIsOpen: noteIsOpen)
+    switch touch.reaction {
+    case .wakeAndHop:
+      petStart = clock
+    case .toggleLamp:
+      lampIsOn.toggle()
+    case .toggleNote:
+      noteIsOpen.toggle()
+    case .wobble(let target):
+      wobbles[target] = clock
+    }
+    return touch.event
+  }
+
+  // MARK: - Updates
+
+  private func tick(_ delta: TimeInterval) {
+    guard isOnScreen else { return }
+    clock += delta
+    idleDelta += delta
+    guard isBusy || idleDelta >= Self.idleStep else { return }
+    let step = idleDelta
+    idleDelta = 0
+    if !camera.isAtRest {
+      camera.step(Float(step))
+      aimLens()
+    }
+    apply(elapsed: clock - stepStart, delta: Float(step))
+  }
+
+  /// True while something should move at full rate. A sleeping room runs at the idle step.
+  private var isBusy: Bool {
+    !camera.isAtRest || world.activity != .sleeping || petStart != nil || !wobbles.isEmpty
+      || noteOpening != (noteIsOpen ? 1 : 0)
+  }
+
+  private func apply(elapsed: Double, delta: Float) {
+    var frame = NookiChoreography.frame(world, elapsed: elapsed)
+    if let petStart {
+      let since = clock - petStart
+      frame = frame.combined(with: NookiMotion.pet(since, reduceMotion: reduceMotion))
+      if since >= NookiMotion.petLength { self.petStart = nil }
+    }
+    let breath = reduceMotion ? 0 : 0.018 * sin(Float(clock) * 1.6) * (1 - frame.wake)
     mochi.scale = [
       1 - 0.04 * frame.wake + breath * 0.5,
       1 + 0.14 * frame.wake + breath,
@@ -138,11 +226,64 @@ final class NookiDiorama {
     for eye in openEyes { eye.isEnabled = frame.eyesOpen }
     for ear in ears { ear.scale = .one * (1 + 0.15 * frame.wake) }
 
+    applyWobbles()
+    applyLamp(delta)
+    applyBowl(delta)
+    applyNote(frame, elapsed: elapsed, delta: delta)
+  }
+
+  private func applyWobbles() {
+    for (target, start) in wobbles {
+      let since = clock - start
+      let tilt = NookiMotion.wobble(since, reduceMotion: reduceMotion)
+      if let holder = holders[target], let base = holderOrientations[target] {
+        holder.orientation = base * simd_quatf(angle: tilt, axis: [0, 0, 1])
+      }
+      if since >= NookiMotion.wobbleLength { wobbles[target] = nil }
+    }
+  }
+
+  private func applyLamp(_ delta: Float) {
+    let goal: Float = lampIsOn ? 1 : 0
+    guard lampLevel != goal else { return }
+    lampLevel = Self.eased(lampLevel, to: goal, rate: 6, delta: delta, snap: reduceMotion)
+    lampLight.components[PointLightComponent.self]?.intensity = Self.lampIntensity * lampLevel
+    for part in lampParts {
+      guard var material = part.model.model?.materials[part.material] as? PhysicallyBasedMaterial
+      else { continue }
+      material.emissiveIntensity = part.glow * (0.05 + 0.95 * lampLevel)
+      part.model.model?.materials[part.material] = material
+    }
+  }
+
+  private func applyBowl(_ delta: Float) {
+    let goal = play.treat.bowlFill
+    guard bowlLevel != goal else { return }
+    bowlLevel = Self.eased(bowlLevel, to: goal, rate: 3, delta: delta, snap: reduceMotion)
+    bowlFill.isEnabled = bowlLevel > 0
+    bowlFill.scale = [0.5 + 0.5 * bowlLevel, max(bowlLevel, 0.01), 0.5 + 0.5 * bowlLevel]
+  }
+
+  private func applyNote(_ frame: NookiFrame, elapsed: Double, delta: Float) {
+    noteOpening = Self.eased(
+      noteOpening, to: noteIsOpen ? 1 : 0, rate: 8, delta: delta, snap: reduceMotion)
     note.isEnabled = frame.note > 0
-    note.position = mix(Self.noteStart, Self.noteHome, t: frame.note)
-    note.scale = .one * (0.3 + 0.7 * frame.note)
-    let swing = 0.2 * sin(Float(elapsed) * 3) * (1 - frame.note)
-    note.orientation = simd_quatf(angle: swing, axis: [0, 0, 1])
+    let hanging = mix(Self.noteStart, Self.noteHome, t: frame.note)
+    let toLens = simd_normalize(NookiCamera.target - camera.position)
+    let reading = camera.position + toLens * Self.noteReadingDistance
+    note.position = mix(hanging, reading, t: noteOpening)
+    let hangingScale = 0.3 + 0.7 * frame.note
+    note.scale = .one * (hangingScale + (Self.noteReadingScale - hangingScale) * noteOpening)
+    let swing = reduceMotion ? 0 : 0.2 * sin(Float(elapsed) * 3) * (1 - frame.note)
+    note.orientation = simd_slerp(
+      simd_quatf(angle: swing, axis: [0, 0, 1]), lens.orientation(relativeTo: nil), noteOpening)
+  }
+
+  private static func eased(
+    _ value: Float, to goal: Float, rate: Float, delta: Float, snap: Bool
+  ) -> Float {
+    let next = value + (goal - value) * (1 - exp(-rate * delta))
+    return snap || abs(goal - next) < 0.005 ? goal : next
   }
 
   // MARK: - Room
@@ -154,9 +295,41 @@ final class NookiDiorama {
     box([0.012, 0.09, 1.2], .walnut, at: [-0.594, 0.045, 0.05])
     box([1.2, 0.09, 0.012], .walnut, at: [0.05, 0.045, -0.594])
     box([1.05, 0.006, 0.006], .ink, at: [0.05, 0.6, -0.59])
+    streakMarks.position = [0.2, 0.72, -0.597]
+    room.addChild(streakMarks)
+  }
+
+  private func buildBowl() {
+    let bowl = Entity()
+    bowl.position = Self.bowlPosition
+    let dish = ModelEntity(
+      mesh: .generateCylinder(height: 0.04, radius: 0.075), materials: [Self.clay(.heart)])
+    dish.position = [0, 0.02, 0]
+    bowl.addChild(dish)
+    let treats = ModelEntity(
+      mesh: .generateSphere(radius: 0.066), materials: [Self.clay(.walnut)])
+    treats.scale = [1, 0.5, 1]
+    bowlFill.addChild(treats)
+    bowlFill.position = [0, 0.04, 0]
+    bowlFill.isEnabled = false
+    bowl.addChild(bowlFill)
+    room.addChild(bowl)
+  }
+
+  /// One mark per day of the streak, in rows of seven like a calendar scratched on the wall.
+  private func buildStreakMarks(_ streak: Int) {
+    for mark in Array(streakMarks.children) { mark.removeFromParent() }
+    for day in 0..<min(streak, 28) {
+      let mark = ModelEntity(
+        mesh: .generateBox(width: 0.008, height: 0.03, depth: 0.004),
+        materials: [Self.clay(.paper)])
+      mark.position = [Float(day % 7) * 0.02, -Float(day / 7) * 0.04, 0]
+      streakMarks.addChild(mark)
+    }
   }
 
   private func buildNote() {
+    note.name = NookiTarget.note.rawValue
     let sheet = ModelEntity(
       mesh: .generateBox(width: 0.22, height: 0.28, depth: 0.004),
       materials: [Self.clay(.paper)])
@@ -172,14 +345,24 @@ final class NookiDiorama {
     peg.position = [0, 0.14, 0.006]
     note.addChild(peg)
     note.isEnabled = false
-    root.addChild(note)
+    Self.makeTappable(note, size: [0.26, 0.32, 0.02], center: .zero)
+    room.addChild(note)
+  }
+
+  /// A large collider behind everything, so a tap that misses every object still arrives and can
+  /// count towards a double tap.
+  private func buildBackstop() {
+    let backstop = Entity()
+    backstop.position = [0, 0, -30]
+    Self.makeTappable(backstop, size: [80, 80, 0.1], center: .zero)
+    lens.addChild(backstop)
   }
 
   private func box(_ size: SIMD3<Float>, _ tone: Tone, at position: SIMD3<Float>) {
     let model = ModelEntity(
       mesh: .generateBox(size: size, cornerRadius: 0.004), materials: [Self.clay(tone)])
     model.position = position
-    root.addChild(model)
+    room.addChild(model)
   }
 
   private func place(
@@ -187,7 +370,8 @@ final class NookiDiorama {
     width: Float? = nil,
     height: Float? = nil,
     at position: SIMD3<Float>,
-    yaw: Float
+    yaw: Float,
+    target: NookiTarget? = nil
   ) async {
     do {
       let model = try await Entity(named: name, in: .module)
@@ -201,9 +385,38 @@ final class NookiDiorama {
       holder.position = position
       holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
       holder.addChild(model)
-      root.addChild(holder)
+      room.addChild(holder)
+      if let target {
+        holder.name = target.rawValue
+        holders[target] = holder
+        holderOrientations[target] = holder.orientation
+        let size = bounds.extents * scale
+        Self.makeTappable(holder, size: size, center: [0, size.y / 2, 0])
+      }
     } catch {
       Self.log.error("Loading \(name) failed: \(String(describing: error))")
+    }
+  }
+
+  private static func makeTappable(
+    _ entity: Entity, size: SIMD3<Float>, center: SIMD3<Float>
+  ) {
+    entity.components.set(
+      CollisionComponent(shapes: [.generateBox(size: size).offsetBy(translation: center)]))
+    entity.components.set(InputTargetComponent())
+  }
+
+  private func findLampParts() {
+    guard let lamp = holders[.lamp] else { return }
+    Self.visit(lamp) { entity in
+      guard let model = entity as? ModelEntity, let materials = model.model?.materials else {
+        return
+      }
+      for (index, material) in materials.enumerated() {
+        if let glowing = material as? PhysicallyBasedMaterial, glowing.emissiveIntensity > 0 {
+          lampParts.append((model, index, glowing.emissiveIntensity))
+        }
+      }
     }
   }
 
@@ -217,6 +430,8 @@ final class NookiDiorama {
       model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * 1.25
       mochi.addChild(model)
       findFeatures(in: model)
+      mochi.name = NookiTarget.mochi.rawValue
+      Self.makeTappable(mochi, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
     } catch {
       Self.log.error("Loading Cat failed: \(String(describing: error))")
     }
@@ -243,9 +458,9 @@ final class NookiDiorama {
       let ambient = Entity()
       ambient.components.set(
         ImageBasedLightComponent(source: .single(environment), intensityExponent: 0.6))
-      root.addChild(ambient)
+      room.addChild(ambient)
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
-      Self.visit(root) { $0.components.set(receiver) }
+      Self.visit(room) { $0.components.set(receiver) }
     }
 
     let sun = Entity()
@@ -253,13 +468,13 @@ final class NookiDiorama {
       DirectionalLightComponent(color: Tone.lamp.color, intensity: 1800))
     sun.components.set(DirectionalLightComponent.Shadow(maximumDistance: 4, depthBias: 2))
     sun.look(at: .zero, from: [1.2, 2.4, 1.6], relativeTo: nil)
-    root.addChild(sun)
+    room.addChild(sun)
 
-    let lamp = Entity()
-    lamp.position = [0.46, 0.5, -0.02]
-    lamp.components.set(
-      PointLightComponent(color: Tone.lamp.color, intensity: 2200, attenuationRadius: 1.4))
-    root.addChild(lamp)
+    lampLight.position = [0.46, 0.5, -0.02]
+    lampLight.components.set(
+      PointLightComponent(
+        color: Tone.lamp.color, intensity: Self.lampIntensity, attenuationRadius: 1.4))
+    room.addChild(lampLight)
   }
 
   private static func visit(_ entity: Entity, _ body: (Entity) -> Void) {

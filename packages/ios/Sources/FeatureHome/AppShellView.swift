@@ -32,7 +32,8 @@ struct AppShellView: View {
         HomeView(
           session: session,
           scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
-          onChangeCode: onChangeCode
+          onChangeCode: onChangeCode,
+          onOpenNotes: { destination = .notes }
         )
         .tabEntrance(destination == .home)
       }

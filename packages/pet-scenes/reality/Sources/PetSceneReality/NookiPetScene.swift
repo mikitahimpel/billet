@@ -12,11 +12,21 @@ public struct NookiPetScene: PetScene {
 
   public init() {}
 
+  public let handlesTouches = true
+
   public func makeView(
     world: PetWorld,
     onEvent: @escaping @MainActor (PetSceneEvent) -> Void
   ) -> AnyView {
-    AnyView(NookiView(world: world, onEvent: onEvent))
+    makeView(world: world, play: PetPlayState(), onEvent: onEvent)
+  }
+
+  public func makeView(
+    world: PetWorld,
+    play: PetPlayState,
+    onEvent: @escaping @MainActor (PetSceneEvent) -> Void
+  ) -> AnyView {
+    AnyView(NookiView(world: world, play: play, onEvent: onEvent))
   }
 
   public func posePNG(_ pose: PetPose) -> Data? {

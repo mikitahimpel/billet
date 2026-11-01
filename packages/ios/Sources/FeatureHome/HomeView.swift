@@ -22,6 +22,7 @@ struct HomeView: View {
   let session: PairSession
   let scene: (any PetScene)?
   let onChangeCode: () -> Void
+  let onOpenNotes: () -> Void
 
   private var store: Store<HomeMachine> { session.store }
 
@@ -97,12 +98,17 @@ struct HomeView: View {
 
   @ViewBuilder private var petScene: some View {
     if let scene {
-      scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
+      scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
         .id(scene.id)
+        .environment(\.petSceneOnScreen, store.state.screen == .home)
         .transition(.opacity)
         .scaleEffect(petBounce && !reduceMotion ? 1.012 : 1)
         .calmAnimation(value: petBounce)
-        .overlay { petTapTarget }
+        .overlay {
+          if !scene.handlesTouches {
+            petTapTarget
+          }
+        }
         .overlay { catReactions }
         .overlay {
           if let hungImage, let wall = scene.noteWall {
@@ -136,12 +142,38 @@ struct HomeView: View {
       .contentShape(Rectangle())
       .padding(.horizontal, Spacing.page)
       .padding(.vertical, Spacing.page * 2)
-      .onTapGesture {
-        session.pet()
-        petBounce.toggle()
-      }
+      .onTapGesture(perform: pet)
       .accessibilityLabel("Pet the cat")
       .accessibilityAddTraits(.isButton)
+  }
+
+  private func pet() {
+    session.pet()
+    petBounce.toggle()
+  }
+
+  private func handle(_ event: PetSceneEvent) {
+    if let event = PetMachine.Event(event) {
+      store.send(.pet(event))
+      return
+    }
+    switch event {
+    case .petted: pet()
+    case .noteOpened: onOpenNotes()
+    case .deliveryFinished, .settled: break
+    }
+  }
+
+  /// What the pair has done today, as the scene shows it.
+  private var playState: PetPlayState {
+    let calendar = Calendar.current
+    let today = Date.now
+    let day = TreatDay.key(for: today, calendar: calendar)
+    return PetPlayState(
+      treat: PetPlayState.Treat(session.play.status(on: day)),
+      streak: session.play.streak(today: day, calendar: calendar),
+      petsReceived: session.play.petsReceived
+    )
   }
 
   private var catReactions: some View {
@@ -230,5 +262,16 @@ extension View {
     #else
       self
     #endif
+  }
+}
+
+extension PetPlayState.Treat {
+  fileprivate init(_ status: TreatLedger.Status) {
+    switch status {
+    case .neither: self = .neither
+    case .waitingOnPartner: self = .waitingOnPartner
+    case .waitingOnMe: self = .waitingOnMe
+    case .fed: self = .fed
+    }
   }
 }
