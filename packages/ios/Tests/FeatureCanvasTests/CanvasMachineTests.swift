@@ -24,11 +24,11 @@ struct CanvasMachineTests {
   }
 
   @Test func endedStrokeIsCommittedWithToolAndColor() {
-    let state = apply([.toolSelected(.marker), .colorSelected(.red)] + oneStroke)
+    let state = apply([.toolSelected(.marker), .colorSelected(.clay)] + oneStroke)
     #expect(state.inProgress == nil)
     #expect(
       state.drawing == [
-        Stroke(color: CanvasColor.red.hex, width: CanvasTool.marker.width, points: [a, b])
+        Stroke(color: CanvasColor.clay.hex, width: CanvasTool.marker.width, points: [a, b])
       ])
   }
 
@@ -58,9 +58,9 @@ struct CanvasMachineTests {
   }
 
   @Test func toolAndColorChangesAreIgnoredMidStroke() {
-    let state = apply([.strokeBegan(a), .toolSelected(.marker), .colorSelected(.blue)])
+    let state = apply([.strokeBegan(a), .toolSelected(.marker), .colorSelected(.forest)])
     #expect(state.tool == .pen)
-    #expect(state.color == .black)
+    #expect(state.color == .ink)
   }
 
   @Test func historyActionsAreIgnoredMidStroke() {
