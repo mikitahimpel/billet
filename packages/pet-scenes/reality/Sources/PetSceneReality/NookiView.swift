@@ -105,6 +105,39 @@ private struct NookiStage: View {
   }
 
   var body: some View {
+    room
+      .onAppear {
+        isAppeared = true
+        connectRenovator()
+      }
+      .onDisappear {
+        isAppeared = false
+        renovator?.openSpot = nil
+      }
+      .onChange(of: isOnScreen, initial: true) { _, onScreen in
+        diorama.setOnScreen(onScreen)
+      }
+      .onChange(of: play, initial: true) { _, play in
+        diorama.show(play)
+      }
+      .onChange(of: play.room, initial: true) { _, room in shopRoom.apply(room) }
+      .onChange(of: play.treatsUsed) {
+        shopRoom.drop(play.lastTreat)
+        reactToTreat()
+      }
+      .onChange(of: reduceMotion, initial: true) { _, reduced in
+        diorama.setReduceMotion(reduced)
+      }
+      .onChange(of: world, initial: true) { _, world in
+        diorama.show(world)
+      }
+      .onChange(of: drawing, initial: true) { _, drawing in
+        diorama.show(drawing: drawing)
+      }
+  }
+
+  /// The rendered room with its gestures, its controls and what VoiceOver offers.
+  private var room: some View {
     RealityView { content in
       content.camera = .virtual
       content.add(diorama.root)
@@ -137,34 +170,6 @@ private struct NookiStage: View {
     }
     .accessibilityAction(named: "Open the note") {
       if world.delivery > 0 { perform(.note) }
-    }
-    .onAppear {
-      isAppeared = true
-      connectRenovator()
-    }
-    .onDisappear {
-      isAppeared = false
-      renovator?.openSpot = nil
-    }
-    .onChange(of: isOnScreen, initial: true) { _, onScreen in
-      diorama.setOnScreen(onScreen)
-    }
-    .onChange(of: play, initial: true) { _, play in
-      diorama.show(play)
-    }
-    .onChange(of: play.room, initial: true) { _, room in shopRoom.apply(room) }
-    .onChange(of: play.treatsUsed) {
-      shopRoom.drop(play.lastTreat)
-      reactToTreat()
-    }
-    .onChange(of: reduceMotion, initial: true) { _, reduced in
-      diorama.setReduceMotion(reduced)
-    }
-    .onChange(of: world, initial: true) { _, world in
-      diorama.show(world)
-    }
-    .onChange(of: drawing, initial: true) { _, drawing in
-      diorama.show(drawing: drawing)
     }
   }
 
