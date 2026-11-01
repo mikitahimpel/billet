@@ -37,11 +37,6 @@ struct NookiPetSceneTests {
     }
   }
 
-  @Test func mochiIsStillUnrigged() async throws {
-    let model = try await Entity(named: "Cat", in: .module)
-    #expect(model.availableAnimations.isEmpty)
-  }
-
   @Test func aNewDioramaBuildsNothingUntilLoaded() {
     #expect(NookiDiorama().entityCount <= 3)
   }

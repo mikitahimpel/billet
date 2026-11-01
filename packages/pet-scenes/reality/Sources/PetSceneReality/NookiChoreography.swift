@@ -7,8 +7,6 @@ struct NookiFrame: Equatable {
   /// How far Mochi has risen, from curled up at 0 to awake at 1.
   var wake: Float = 0
   var eyesOpen = false
-  /// How far the mouth has opened, from 0 to 1.
-  var mouth: Float = 0
   /// How far the note has come towards Mochi, from out of sight at 0 to carried at 1.
   var note: Float = 0
   /// How far the carried note has gone to the wire, from 0 to hanging at 1.
@@ -27,9 +25,9 @@ struct NookiFrame: Equatable {
 
 /// The animation of each step, as a pure function of time.
 ///
-/// `Cat.usdz` has no skeleton or clips, and Mochi stays curled up in its one pose. Mochi travels
-/// the way a toy would: hopping as a whole, with squash and stretch, and the note rides above it to
-/// the wall. Reduce Motion keeps Mochi in the bed and lets the note appear on the wire.
+/// The body's own movement comes from Mochi's clips; this says where it goes and what it is doing.
+/// The note rides above Mochi to the wall. Reduce Motion keeps Mochi in the bed and lets the note
+/// appear on the wire.
 enum NookiChoreography {
   static let pacing = PetScenePacing(delivery: .seconds(9), settling: .seconds(2.5))
 
@@ -44,7 +42,6 @@ enum NookiChoreography {
   private static let noteComes = 0.8...1.6
   private static let notePins = 3.4...4.0
   private static let happyHop = 4.0...4.8
-  private static let mouthOpens = 0.2...0.7
   private static let wakeLength = 1.0
   private static let eyesOpenAt = 0.3
   private static let settleLength = 2.0
@@ -78,7 +75,6 @@ enum NookiChoreography {
     var frame = NookiFrame(
       wake: ease(elapsed / wakeLength),
       eyesOpen: elapsed >= eyesOpenAt,
-      mouth: ease(fraction(elapsed, in: mouthOpens)) * (elapsed < 1.6 ? 1 : 0.3),
       note: ease(fraction(elapsed, in: noteComes)),
       pinned: ease(fraction(elapsed, in: notePins)),
       heading: track(headings, at: elapsed)

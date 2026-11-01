@@ -2,8 +2,8 @@ import Foundation
 
 /// Reactions to touch and the room's idle loops, as pure functions of time.
 ///
-/// Reduce Motion stills everything here except the eyes opening, which is a change of state rather
-/// than movement.
+/// Reduce Motion stills everything here except waking, which is a change of state rather than
+/// movement.
 enum NookiMotion {
   /// How long an object keeps wobbling.
   static let wobbleLength = 1.5
@@ -11,11 +11,6 @@ enum NookiMotion {
   static let petLength = 2.0
   /// How long Mochi keeps looking at something tapped.
   static let lookLength = 1.6
-
-  private static let blinkPeriod = 3.7
-  private static let blinkLength = 0.14
-  private static let twitchPeriod = 6.3
-  private static let twitchLength = 0.45
 
   /// Tilt of a tapped object, in radians, dying away.
   static func wobble(_ elapsed: Double, reduceMotion: Bool) -> Float {
@@ -33,29 +28,8 @@ enum NookiMotion {
     return NookiFrame(
       wake: Float(min(max(rise, 0), 1)),
       eyesOpen: eyesOpen,
-      mouth: Float(min(max(rise, 0), 1)),
       hop: (0...1).contains(hop) ? NookiChoreography.arch(hop) * 0.6 : 0
     )
-  }
-
-  /// Height of the open eyes, from 1 open to nearly shut during a blink.
-  static func blink(_ time: Double, reduceMotion: Bool) -> Float {
-    guard !reduceMotion else { return 1 }
-    return time.truncatingRemainder(dividingBy: blinkPeriod) < blinkLength ? 0.1 : 1
-  }
-
-  /// Tilt of one ear, in radians. Each ear twitches now and then, out of step with the other.
-  static func earTwitch(_ time: Double, ear: Int, reduceMotion: Bool) -> Float {
-    guard !reduceMotion else { return 0 }
-    let phase = (time + Double(ear) * 2.1).truncatingRemainder(dividingBy: twitchPeriod)
-    guard phase < twitchLength else { return 0 }
-    return Float(0.25 * sin(phase / twitchLength * 3 * .pi) * (1 - phase / twitchLength))
-  }
-
-  /// Sideways swing of the bell, in metres, larger the more Mochi is moving.
-  static func bellSwing(_ time: Double, energy: Float, reduceMotion: Bool) -> Float {
-    guard !reduceMotion else { return 0 }
-    return Float(sin(time * 7)) * (0.0008 + 0.005 * min(energy, 1))
   }
 
   /// The lamp's brightness, close to 1.
@@ -76,7 +50,6 @@ extension NookiFrame {
     var combined = self
     combined.wake = max(wake, other.wake)
     combined.eyesOpen = eyesOpen || other.eyesOpen
-    combined.mouth = max(mouth, other.mouth)
     combined.hop = max(hop, other.hop)
     return combined
   }

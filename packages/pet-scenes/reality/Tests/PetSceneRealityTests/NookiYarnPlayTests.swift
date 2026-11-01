@@ -82,6 +82,15 @@ import simd
     #expect(play.pose.spot.y >= NookiYarnPlay.ballHeight)
   }
 
+  @Test func aProudMochiTurnsToTheViewer() {
+    var play = newPlay()
+    run(&play, seconds: 0.1, speed: 1)
+    while play.phase != .proud { run(&play, seconds: Self.step) }
+    run(&play, seconds: 1.5)
+    let wanted = atan2(-Float(0.6), -Float(0.8))
+    #expect(abs(remainder(play.pose.frame.heading - wanted, 2 * .pi)) < 0.05)
+  }
+
   @Test func aDeliveryCallsMochiBack() {
     var play = newPlay()
     run(&play, seconds: 0.1, speed: 1)

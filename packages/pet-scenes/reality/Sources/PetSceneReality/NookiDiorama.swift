@@ -25,11 +25,6 @@ final class NookiDiorama {
   private let lampLight = Entity()
   private let lanternLight = Entity()
   private let dust = Entity()
-  private var closedEyes: [Entity] = []
-  private var openEyes: [Entity] = []
-  private var ears: [(part: Entity, base: simd_quatf, side: Int)] = []
-  private var bell: (part: Entity, base: SIMD3<Float>)?
-  private var mouth: Entity?
   private var holders: [NookiTarget: Entity] = [:]
   private var holderOrientations: [NookiTarget: simd_quatf] = [:]
   private var wobbles: [NookiTarget: Double] = [:]
@@ -49,6 +44,7 @@ final class NookiDiorama {
   private(set) var mochiLoading: Task<Void, Never>?
   private(set) var isMochiMissing = false
   private var hasMochi = false
+  private(set) var animator: NookiCatAnimator?
   private let missingMark = Entity()
   private let loadModel: NookiModelLoader
   private let tiltSource: any NookiTiltSource
@@ -81,7 +77,7 @@ final class NookiDiorama {
   private var noteOpening: Float = 0
   private var bowlLevel: Float = 0
 
-  static let mochiScale: Float = 1.25
+  nonisolated static let mochiScale: Float = 1.25
   static let missingMarkName = "mochi-missing"
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
@@ -104,6 +100,8 @@ final class NookiDiorama {
   private static let noteReadingScale: Float = 2
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let lookLimit: Float = 1
+  /// How fast Mochi covers its walk to the wall, in metres a second.
+  private static let walkPace: Float = 0.23
   private static let fieldOfView: Float = 30
   private static let noticeDistance: Float = 0.6
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
@@ -380,8 +378,7 @@ final class NookiDiorama {
     return touch.event
   }
 
-  /// Turns Mochi's whole body towards a tapped object for a moment. Its head is part of the body
-  /// mesh, so it cannot turn alone.
+  /// Turns Mochi's whole body towards a tapped object for a moment. No clip turns the head alone.
   private func lookTowards(_ target: NookiTarget) {
     guard !reduceMotion, target != .mochi, let holder = holders[target] ?? noteHolder(target) else {
       return
@@ -459,7 +456,7 @@ final class NookiDiorama {
       awaySpot = pose.spot
     }
     applyBody(frame, awaySpot: awaySpot, delta: delta)
-    applyFeatures(frame)
+    applyClip(frame)
     applyHolders()
     applyLamp(delta)
     applyBowl(delta)
@@ -471,10 +468,11 @@ final class NookiDiorama {
     let goal = lookStart == nil ? 0 : lookGoal
     lookTurn = Self.eased(lookTurn, to: goal, rate: 7, delta: delta, snap: reduceMotion)
 
-    let breath = reduceMotion ? 0 : 0.018 * sin(Float(clock) * 1.6) * (1 - frame.wake)
-    let upright = 0.14 * frame.wake + 0.1 * frame.stretch + breath
-    let wide = -0.04 * frame.wake - 0.05 * frame.stretch + breath * 0.5
-    mochi.scale = [1 + wide, 1 + upright, 1 + wide]
+    if !NookiClip.walksWithRig {
+      let upright = 0.1 * frame.stretch
+      let wide = -0.05 * frame.stretch
+      mochi.scale = [1 + wide, 1 + upright, 1 + wide]
+    }
 
     var spot = mix(Self.bedSpot, Self.wallSpot, t: frame.walk)
     let drop = min(frame.walk / Self.bedDrop, 1)
@@ -484,24 +482,10 @@ final class NookiDiorama {
     mochi.orientation = simd_quatf(angle: frame.heading + lookTurn, axis: [0, 1, 0])
   }
 
-  private func applyFeatures(_ frame: NookiFrame) {
-    for eye in closedEyes { eye.isEnabled = !frame.eyesOpen }
-    let blink = NookiMotion.blink(clock, reduceMotion: reduceMotion)
-    for eye in openEyes {
-      eye.isEnabled = frame.eyesOpen
-      eye.scale = [1, blink, 1]
-    }
-    for ear in ears {
-      let twitch = NookiMotion.earTwitch(clock, ear: ear.side, reduceMotion: reduceMotion)
-      ear.part.orientation = ear.base * simd_quatf(angle: twitch, axis: [1, 0, 0])
-      ear.part.scale = .one * (1 + 0.15 * frame.wake)
-    }
-    mouth?.scale = [1 + 0.25 * frame.mouth, 1 + 1.6 * frame.mouth, 1]
-    if let bell {
-      let energy = frame.stepHeight + frame.hop + frame.wake * 0.2
-      let swing = NookiMotion.bellSwing(clock, energy: energy, reduceMotion: reduceMotion)
-      bell.part.position = bell.base + [swing, 0, 0]
-    }
+  private func applyClip(_ frame: NookiFrame) {
+    let clip = NookiClip.choose(frame: frame, yarn: yarnPlay.phase)
+    let travel = yarnPlay.isPlaying ? yarnPlay.travelSpeed : Self.walkPace
+    animator?.play(clip, rate: clip == .walk ? NookiClip.walkRate(forTravelAt: travel) : 1)
   }
 
   private func applyHolders() {
@@ -771,8 +755,9 @@ final class NookiDiorama {
       }
       model.scale = .one * Self.mochiScale
       model.position = offset
+      animator = NookiCatAnimator(model: model)
+      animator?.play(.sleep, blend: 0)
       mochi.addChild(model)
-      findFeatures(in: model)
       hasMochi = true
       setMochiMissing(false)
     } catch {
@@ -818,23 +803,6 @@ final class NookiDiorama {
         materials: [Self.clay(.heart)])
       bar.orientation = simd_quatf(angle: angle, axis: [0, 0, 1])
       missingMark.addChild(bar)
-    }
-  }
-
-  private func findFeatures(in model: Entity) {
-    closedEyes = ["Eye1", "Eye_1"].compactMap { model.findEntity(named: $0) }
-    ears = [("Ear1", 0), ("Ear_1", 1), ("EarInner1", 0), ("EarInner_1", 1)].compactMap {
-      name, side in
-      model.findEntity(named: name).map { ($0, $0.orientation, side) }
-    }
-    bell = model.findEntity(named: "Bell").map { ($0, $0.position) }
-    mouth = model.findEntity(named: "Mouth")
-    openEyes = closedEyes.map { closed in
-      let eye = ModelEntity(mesh: .generateSphere(radius: 0.012), materials: [Self.clay(.ink)])
-      eye.position = closed.position(relativeTo: model)
-      eye.isEnabled = false
-      model.addChild(eye)
-      return eye
     }
   }
 
