@@ -30,6 +30,7 @@
     "ios:test": {
       "outputs": [],
       "inputs": [
+        "$TURBO_ROOT$/packages/contracts/fixtures/**",
         "Sources/**",
         "Tests/**",
         "Package.swift",
