@@ -26,6 +26,7 @@ export default defineConfig({
               compatibilityFlags: ["nodejs_compat"],
               d1Databases: ["DB"],
               durableObjects: {
+                STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
                 DEMO_ROOM: { className: "DemoRoom", useSQLite: true },
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },

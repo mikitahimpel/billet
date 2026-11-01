@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
@@ -83,5 +84,67 @@ describe("demo route outside the dev stage", () => {
 
   it("leaves other paths alone", () => {
     expect(routeDemo(new Request("https://host/"), undefined)).toBeUndefined();
+  });
+});
+
+describe("demo push and note fetch", () => {
+  const { STUB_DEMO_ROOM } = env as unknown as { STUB_DEMO_ROOM: DurableObjectNamespace<DemoRoom> };
+  const token = "ab".repeat(32);
+  const code = "PSHTST2345";
+
+  const connectStub = async (device: string) => {
+    const response = await routeDemo(request(code, device), STUB_DEMO_ROOM)!;
+    const socket = response.webSocket!;
+    socket.accept();
+    return socket;
+  };
+
+  it("sends one APNs alert for a note the partner socket cannot take, and serves the note", async () => {
+    const a = await connectStub(alice);
+    const b = await connectStub(bob);
+    b.send(JSON.stringify({ type: "push-token", token }));
+    await settle();
+    b.close(1000);
+    await settle();
+    a.send(JSON.stringify({ type: "note", id: noteId, ink: "QUJD" }));
+    await settle();
+
+    const stub = STUB_DEMO_ROOM.get(STUB_DEMO_ROOM.idFromName(code));
+    const calls = await runInDurableObject(stub, (_, state) =>
+      state.storage.get<{ url: string; headers: Record<string, string>; body: string }[]>(
+        "apnsCalls",
+      ),
+    );
+    expect(calls).toHaveLength(1);
+    const call = calls![0]!;
+    expect(call.url).toBe(`https://api.push.apple.com/3/device/${token}`);
+    expect(call.headers["apns-topic"]).toBe("com.mikitahimpel.billet");
+    expect(call.headers["apns-push-type"]).toBe("alert");
+    expect(call.headers["authorization"]).toMatch(/^bearer [\w-]+\.[\w-]+\.[\w-]+$/);
+    const payload = JSON.parse(call.body);
+    expect(payload.aps["mutable-content"]).toBe(1);
+    expect(payload.aps.alert.body).toBe("New note");
+    expect(payload.noteURL).toBe(`https://host/demo/rooms/${code}/notes/${noteId}`);
+    expect(call.body).not.toContain(token);
+
+    const fetchNote = (device: string, id = noteId) =>
+      routeDemo(
+        new Request(`https://host/demo/rooms/${code}/notes/${id}?device=${device}`),
+        STUB_DEMO_ROOM,
+      )!;
+    const found = await fetchNote(bob);
+    expect(found.status).toBe(200);
+    expect(await found.json()).toEqual({ id: noteId, ink: "QUJD", from: alice });
+    expect((await fetchNote(bob)).status).toBe(200);
+    expect((await fetchNote(alice)).status).toBe(404);
+    expect((await fetchNote(carol)).status).toBe(404);
+
+    const again = await connectStub(bob);
+    const frames: unknown[] = [];
+    again.addEventListener("message", (event) => {
+      frames.push(JSON.parse(event.data as string));
+    });
+    await settle();
+    expect(frames).toContainEqual({ type: "note", id: noteId, ink: "QUJD", from: alice });
   });
 });

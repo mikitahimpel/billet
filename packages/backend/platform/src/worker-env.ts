@@ -10,5 +10,8 @@ export interface WorkerEnv {
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
   /** Temporary demo rooms. Bound on the dev stage only. */
+  /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
+  readonly APNS_KEY?: string;
+  readonly APNS_KEY_ID?: string;
   readonly DEMO_ROOM?: DurableObjectNamespace<DemoRoom>;
 }

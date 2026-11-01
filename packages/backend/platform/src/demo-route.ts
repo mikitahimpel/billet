@@ -1,6 +1,7 @@
-import { DEVICE_HEADER, type DemoRoom } from "./demo-room-durable-object.ts";
+import { CODE_HEADER, DEVICE_HEADER, type DemoRoom } from "./demo-room-durable-object.ts";
 
-const ROUTE = /^\/demo\/rooms\/([23456789ABCDEFGHJKMNPQRSTVWXYZ]{10})\/socket$/;
+const ROUTE =
+  /^\/demo\/rooms\/([23456789ABCDEFGHJKMNPQRSTVWXYZ]{10})\/(?:socket|notes\/[0-9a-fA-F-]{36})$/;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /**
@@ -22,5 +23,6 @@ export const routeDemo = (
   }
   const headers = new Headers(request.headers);
   headers.set(DEVICE_HEADER, device);
+  headers.set(CODE_HEADER, match[1] ?? "");
   return rooms.get(rooms.idFromName(match[1] ?? "")).fetch(new Request(request, { headers }));
 };

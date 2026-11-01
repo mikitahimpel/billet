@@ -1,10 +1,20 @@
 import { DurableObject } from "cloudflare:workers";
+import { sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
 export const DEVICE_HEADER = "x-demo-device";
+export const CODE_HEADER = "x-demo-code";
 
 const CLOSE_TOO_BIG = 1009;
+
+export interface DemoRoomEnv {
+  readonly APNS_KEY?: string;
+  readonly APNS_KEY_ID?: string;
+}
+
+const NOTE_PATH = /^\/demo\/rooms\/[^/]+\/notes\/([^/]+)$/;
+const TOKEN = /^[0-9a-fA-F]{32,200}$/;
 
 interface QueuedNote {
   readonly id: string;
@@ -22,12 +32,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * Temporary demo room: two anonymous devices exchange notes. Undelivered notes live in the
  * object's key-value storage; sockets are hibernatable and tagged with their device id.
  */
-export class DemoRoom extends DurableObject {
+export class DemoRoom extends DurableObject<DemoRoomEnv> {
+  /** APNs transport; tests replace it with a stub. */
+  protected apnsFetch: ApnsFetch = (url, init) => fetch(url, init);
+
+  protected apnsCredentials(): Promise<ApnsCredentials | undefined> {
+    const { APNS_KEY: key, APNS_KEY_ID: keyId } = this.env;
+    return Promise.resolve(key === undefined || keyId === undefined ? undefined : { key, keyId });
+  }
+
   override async fetch(request: Request): Promise<Response> {
-    if (request.headers.get("Upgrade") !== "websocket") return new Response(null, { status: 426 });
     const device = request.headers.get(DEVICE_HEADER);
     if (device === null || !UUID.test(device)) return new Response(null, { status: 400 });
     const id = device.toLowerCase();
+    const url = new URL(request.url);
+    const noteMatch = NOTE_PATH.exec(url.pathname);
+    if (noteMatch !== null) return this.readNote(id, (noteMatch[1] ?? "").toLowerCase());
+    if (request.headers.get("Upgrade") !== "websocket") return new Response(null, { status: 426 });
+    const code = request.headers.get(CODE_HEADER);
+    if (code !== null) await this.ctx.storage.put("code", code);
+    await this.ctx.storage.put("origin", url.origin);
 
     const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
     if (!devices.includes(id)) {
@@ -59,7 +83,15 @@ export class DemoRoom extends DurableObject {
     } catch {
       return;
     }
-    if (!isRecord(frame) || frame["type"] !== "note") return;
+    if (!isRecord(frame)) return;
+    if (frame["type"] === "push-token") {
+      const token = frame["token"];
+      if (typeof token !== "string" || !TOKEN.test(token)) return;
+      const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
+      await this.ctx.storage.put("tokens", { ...tokens, [sender]: token.toLowerCase() });
+      return;
+    }
+    if (frame["type"] !== "note") return;
     const { id, ink } = frame;
     if (typeof id !== "string" || !UUID.test(id) || typeof ink !== "string") return;
 
@@ -90,6 +122,28 @@ export class DemoRoom extends DurableObject {
     }
     const queue = (await this.ctx.storage.get<QueuedNote[]>("queue")) ?? [];
     await this.ctx.storage.put("queue", [...queue, note].slice(-MAX_QUEUED_NOTES));
+    await this.alertPartner(note);
+  }
+
+  private async alertPartner(note: QueuedNote): Promise<void> {
+    const credentials = await this.apnsCredentials();
+    if (credentials === undefined) return;
+    const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
+    const token = tokens[note.to];
+    const code = await this.ctx.storage.get<string>("code");
+    const origin = await this.ctx.storage.get<string>("origin");
+    if (token === undefined || code === undefined || origin === undefined) return;
+    const noteURL = `${origin}/demo/rooms/${code}/notes/${note.id}`;
+    await sendNoteAlert(credentials, token, noteURL, this.apnsFetch);
+  }
+
+  private async readNote(device: string, noteId: string): Promise<Response> {
+    const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
+    if (!devices.includes(device)) return new Response(null, { status: 404 });
+    const queue = (await this.ctx.storage.get<QueuedNote[]>("queue")) ?? [];
+    const note = queue.find((n) => n.to === device && n.id.toLowerCase() === noteId);
+    if (note === undefined) return new Response(null, { status: 404 });
+    return Response.json({ id: note.id, ink: note.ink, from: note.from });
   }
 
   private async replay(socket: WebSocket, device: string): Promise<void> {
