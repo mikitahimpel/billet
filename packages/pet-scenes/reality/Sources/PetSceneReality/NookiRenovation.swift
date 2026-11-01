@@ -119,18 +119,19 @@ import simd
   /// Paints what `entity` is, if it is a wall or the floor. Returns whether it was.
   @discardableResult
   func paint(_ entity: Entity, _ swatch: NookiSwatch, reduceMotion: Bool) -> Bool {
+    guard isSurface(entity) else { return false }
     if let wall = entity as? ModelEntity, walls.contains(wall) {
+      onPainted?(.wall)
+      guard layout.wall != swatch else { return true }
       layout.wall = swatch
       fade(walls, from: wallShown, to: swatch.rgb, reduceMotion: reduceMotion)
       wallShown = swatch.rgb
-      onPainted?(.wall)
-    } else if let floor, entity === floor {
+    } else if let floor {
+      onPainted?(.floor)
+      guard layout.floor != swatch else { return true }
       layout.floor = swatch
       fade([floor], from: floorShown, to: swatch.rgb, reduceMotion: reduceMotion)
       floorShown = swatch.rgb
-      onPainted?(.floor)
-    } else {
-      return false
     }
     store.save(layout)
     return true
@@ -148,6 +149,14 @@ import simd
   }
 
   // MARK: - Moving
+
+  func isSurface(_ entity: Entity) -> Bool {
+    entity === floor || walls.contains { $0 === entity }
+  }
+
+  func isPiece(_ entity: Entity) -> Bool {
+    holders.values.contains { $0 === entity }
+  }
 
   /// Picks up the piece `entity` belongs to. Returns whether there was one.
   func lift(_ entity: Entity) -> Bool {

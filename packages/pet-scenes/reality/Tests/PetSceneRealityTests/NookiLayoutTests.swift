@@ -123,6 +123,34 @@ import simd
     return (renovation, chair, table, store)
   }
 
+  @Test func paintGoesOnWallsAndFloorAndIsSaved() throws {
+    let (renovation, chair, _, store) = try make()
+    let (wall, floor) = (ModelEntity(), ModelEntity())
+    renovation.setSurfaces(walls: [wall], floor: floor, wall: .zero, ground: .zero)
+    #expect(renovation.paint(wall, .moss, reduceMotion: true))
+    #expect(renovation.paint(floor, .cocoa, reduceMotion: true))
+    #expect(!renovation.paint(chair, .clay, reduceMotion: true))
+    #expect(store.load().wall == .moss)
+    #expect(store.load().floor == .cocoa)
+  }
+
+  @Test func aStrokeOfTheSamePaintStartsNoNewFade() throws {
+    let (renovation, _, _, _) = try make()
+    let wall = ModelEntity()
+    renovation.setSurfaces(walls: [wall], floor: ModelEntity(), wall: .zero, ground: .zero)
+    renovation.paint(wall, .moss, reduceMotion: false)
+    for _ in 0..<60 { renovation.step(1.0 / 60, reduceMotion: false) }
+    #expect(!renovation.isMoving)
+    renovation.paint(wall, .moss, reduceMotion: false)
+    #expect(!renovation.isMoving)
+  }
+
+  @Test func onlyRegisteredEntitiesArePieces() throws {
+    let (renovation, chair, _, _) = try make()
+    #expect(renovation.isPiece(chair))
+    #expect(!renovation.isPiece(Entity()))
+  }
+
   @Test func nothingLiftsWhileTheRoomIsClosed() throws {
     let (renovation, chair, _, _) = try make()
     renovation.isOn = false

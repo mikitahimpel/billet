@@ -113,4 +113,6 @@ extension EnvironmentValues {
   @Entry public var petSceneOnScreen = true
   /// Links a scene's renovate mode to the closet. `nil` when the host has no shop.
   @Entry public var petSceneRenovator: RoomRenovator?
+  /// The drawing of the note being delivered, for scenes that show it themselves.
+  @Entry public var petSceneDrawing: CGImage? = nil
 }

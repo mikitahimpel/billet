@@ -29,6 +29,11 @@ struct NookiTouchTests {
         == NookiTouch(reaction: .toggleNote))
   }
 
+  @Test func thePlaneGetsCaught() {
+    #expect(
+      NookiTouch.of(.plane, world: world, noteIsOpen: false) == NookiTouch(reaction: .catchPlane))
+  }
+
   @Test func theYarnGetsNudged() {
     #expect(
       NookiTouch.of(.yarn, world: world, noteIsOpen: false) == NookiTouch(reaction: .nudgeYarn))
