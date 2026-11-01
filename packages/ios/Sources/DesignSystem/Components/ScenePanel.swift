@@ -9,6 +9,6 @@ public struct ScenePanel<Scene: View>: View {
   }
 
   public var body: some View {
-    scene.clipShape(.rect(cornerRadius: Radius.scene, style: .continuous))
+    scene.clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
   }
 }

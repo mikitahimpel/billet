@@ -1,188 +1,215 @@
 import SwiftUI
 
-/// The one primary action on a screen: gold, full width, dark text.
-public struct PrimaryButtonStyle: ButtonStyle {
-  public init() {}
-
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .billetType(.heading)
-      .foregroundStyle(Palette.ink.color)
-      .multilineTextAlignment(.center)
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .frame(maxWidth: .infinity, minHeight: Target.primary)
-      .background(Palette.gold.color, in: .rect(cornerRadius: Radius.control))
-      .lampGlow()
-      .opacity(configuration.isPressed ? 0.85 : 1)
-      .scaleEffect(configuration.isPressed ? 0.985 : 1)
-      .animation(Motion.quick, value: configuration.isPressed)
-  }
+/// How much a button asks for. There is one of each on a screen's main path.
+public enum ButtonRank: Sendable {
+  case primary
+  case secondary
 }
 
-/// The quieter action beside a primary one: a lit panel with cream text.
-public struct SecondaryButtonStyle: ButtonStyle {
-  public init() {}
+/// The inside of a button: its words, an optional symbol, full width and at least 44pt tall.
+public struct ButtonLabel: View {
+  private let title: String
+  private let rank: ButtonRank
+  private let systemImage: String?
 
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .billetType(.body)
-      .foregroundStyle(Palette.paper.color)
-      .multilineTextAlignment(.center)
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .frame(maxWidth: .infinity, minHeight: Target.minimum)
-      .background(Palette.raised.color, in: .rect(cornerRadius: Radius.control))
-      .overlay {
-        RoundedRectangle(cornerRadius: Radius.control)
-          .strokeBorder(Palette.lightWarm.color.opacity(Glow.edgeOpacity), lineWidth: 1)
-      }
-      .contentShape(.rect(cornerRadius: Radius.control))
-      .opacity(configuration.isPressed ? 0.75 : 1)
-      .animation(Motion.quick, value: configuration.isPressed)
-  }
-}
+  @Environment(\.isEnabled) private var isEnabled
 
-/// The one action that cannot be taken back: lit clay, cream text.
-public struct DestructiveButtonStyle: ButtonStyle {
-  public init() {}
-
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .billetType(.body)
-      .foregroundStyle(Palette.paper.color)
-      .multilineTextAlignment(.center)
-      .padding(.horizontal, Spacing.medium)
-      .padding(.vertical, Spacing.small)
-      .frame(maxWidth: .infinity, minHeight: Target.minimum)
-      .background(Palette.clay.color, in: .rect(cornerRadius: Radius.control))
-      .contentShape(.rect(cornerRadius: Radius.control))
-      .opacity(configuration.isPressed ? 0.75 : 1)
-      .animation(Motion.quick, value: configuration.isPressed)
-  }
-}
-
-/// A small action that sits inside a row or a bar: text on the upper rung, at least 44pt tall.
-public struct InlineButtonStyle: ButtonStyle {
-  public init() {}
-
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .billetType(.label)
-      .foregroundStyle(Palette.paper.color)
-      .padding(.horizontal, Spacing.medium)
-      .frame(minHeight: Target.minimum)
-      .background(Palette.raisedTop.color, in: .rect(cornerRadius: Radius.control))
-      .contentShape(.rect(cornerRadius: Radius.control))
-      .opacity(configuration.isPressed ? 0.75 : 1)
-      .animation(Motion.quick, value: configuration.isPressed)
-  }
-}
-
-/// A square tool on a tray. Selection lifts it one rung and strengthens its edge.
-public struct ToolButtonStyle: ButtonStyle {
-  private let isSelected: Bool
-
-  public init(isSelected: Bool = false) {
-    self.isSelected = isSelected
-  }
-
-  public func makeBody(configuration: Configuration) -> some View {
-    configuration.label
-      .foregroundStyle(Palette.paper.color)
-      .frame(width: 56, height: 56)
-      .background(
-        (isSelected ? Palette.raisedTop : Palette.raised).color,
-        in: .rect(cornerRadius: Radius.control)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: Radius.control)
-          .strokeBorder(Palette.paper.color.opacity(isSelected ? 0.6 : 0), lineWidth: 1)
-      }
-      .opacity(configuration.isPressed ? 0.7 : 1)
-  }
-}
-
-/// A drawn icon, in the same stroke weight as the rest of the tool set.
-public struct ToolIcon: View {
-  public enum Kind: Sendable {
-    case brush
-    case undo
-  }
-
-  private let kind: Kind
-
-  public init(_ kind: Kind) {
-    self.kind = kind
+  public init(_ title: String, rank: ButtonRank, systemImage: String? = nil) {
+    self.title = title
+    self.rank = rank
+    self.systemImage = systemImage
   }
 
   public var body: some View {
-    Canvas { context, size in
-      let scale = size.width / 28
-      context.scaleBy(x: scale, y: scale)
-      context.stroke(
-        ScenePath.parse(Self.data(for: kind)),
-        with: .color(Palette.paper.color),
-        style: StrokeStyle(lineWidth: 2.2, lineCap: .round, lineJoin: .round)
-      )
+    HStack(spacing: Spacing.small) {
+      if let systemImage {
+        Image(systemName: systemImage)
+          .font(IconStyle.font)
+          .accessibilityHidden(true)
+      }
+      Text(title)
+        .billetType(.action)
+        .multilineTextAlignment(.center)
     }
-    .frame(width: 28, height: 28)
-    .accessibilityHidden(true)
+    .foregroundStyle(isEnabled ? rank.textColor : Palette.muted.color)
+    .frame(maxWidth: .infinity, minHeight: Target.row)
+    .contentShape(.capsule)
   }
+}
 
-  private static func data(for kind: Kind) -> String {
-    switch kind {
-    case .brush:
-      "M23 4 L12 15 M15 18 L10 13 M10 13 C6 14 8 18 4 22 C10 24 15 22 15 18"
-    case .undo:
-      "M10 6 L5 11 L10 16 M5 11 H17 C21 11 23 14 23 17 C23 20 21 23 17 23 H12"
+extension ButtonRank {
+  fileprivate var textColor: Color {
+    switch self {
+    case .primary: Palette.ink.color
+    case .secondary: Palette.paper.color
     }
   }
 }
 
-/// One ink on the tray.
-public enum InkChoice: CaseIterable, Sendable {
-  case ink
-  case clay
-  case green
-  case gold
+/// The app's one text button.
+public struct BilletButton: View {
+  private let title: String
+  private let rank: ButtonRank
+  private let systemImage: String?
+  private let action: () -> Void
 
-  /// The colour it lays on paper. The swatch shows exactly this.
-  public var swatch: Swatch {
-    switch self {
-    case .ink: Palette.ink
-    case .clay: Palette.clayLit
-    case .green: Palette.greenLit
-    case .gold: Palette.inkGold
-    }
+  public init(
+    _ title: String, rank: ButtonRank, systemImage: String? = nil,
+    action: @escaping () -> Void
+  ) {
+    self.title = title
+    self.rank = rank
+    self.systemImage = systemImage
+    self.action = action
   }
 
-  fileprivate var name: LocalizedStringResource {
-    switch self {
-    case .ink: LocalizedStringResource("Ink", bundle: .atURL(Bundle.module.bundleURL))
-    case .clay: LocalizedStringResource("Clay", bundle: .atURL(Bundle.module.bundleURL))
-    case .green: LocalizedStringResource("Green", bundle: .atURL(Bundle.module.bundleURL))
-    case .gold: LocalizedStringResource("Gold", bundle: .atURL(Bundle.module.bundleURL))
+  public var body: some View {
+    Button(action: action) {
+      ButtonLabel(title, rank: rank, systemImage: systemImage)
     }
-  }
-
-  /// The darkest ink would vanish on the tray, so it wears a ring.
-  fileprivate var needsRing: Bool {
-    switch self {
-    case .ink: true
-    case .clay, .green, .gold: false
-    }
+    .billetButton(rank)
   }
 }
 
-/// Picks an ink. The hit area is 48pt; the swatch inside is 30pt.
-public struct InkSwatch: View {
-  private let choice: InkChoice
+extension View {
+  /// Styles a `Button` or `ShareLink`: Liquid Glass on iOS 26, warm material before it.
+  public func billetButton(_ rank: ButtonRank) -> some View {
+    buttonStyle(ControlStyle(fill: rank == .primary ? Palette.gold : nil))
+  }
+}
+
+/// The app's one icon button: a 44pt circle holding a symbol. Selection turns it gold.
+public struct IconButton: View {
+  private let systemImage: String
+  private let label: String
   private let isSelected: Bool
   private let action: () -> Void
 
-  public init(_ choice: InkChoice, isSelected: Bool, action: @escaping () -> Void) {
-    self.choice = choice
+  @Environment(\.isEnabled) private var isEnabled
+
+  public init(
+    _ systemImage: String, label: String, isSelected: Bool = false,
+    action: @escaping () -> Void
+  ) {
+    self.systemImage = systemImage
+    self.label = label
+    self.isSelected = isSelected
+    self.action = action
+  }
+
+  public var body: some View {
+    Button(action: action) {
+      Image(systemName: systemImage)
+        .font(IconStyle.font)
+        .foregroundStyle(iconColor)
+        .frame(width: Target.minimum, height: Target.minimum)
+        .contentShape(.circle)
+    }
+    .buttonStyle(ControlStyle(fill: isSelected ? Palette.gold : nil))
+    .accessibilityLabel(label)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .calmAnimation(Motion.quick, value: isSelected)
+  }
+
+  private var iconColor: Color {
+    guard isEnabled else { return Palette.muted.color }
+    return (isSelected ? Palette.ink : Palette.paper).color
+  }
+}
+
+/// Keeps neighbouring glass controls one surface on iOS 26.
+public struct GlassGroup<Content: View>: View {
+  private let content: Content
+
+  public init(@ViewBuilder content: () -> Content) {
+    self.content = content()
+  }
+
+  public var body: some View {
+    if #available(iOS 26, macOS 26, *) {
+      GlassEffectContainer(spacing: Spacing.small) { content }
+    } else {
+      content
+    }
+  }
+}
+
+extension View {
+  /// Floats this content above the scene: Liquid Glass on iOS 26, warm material before it.
+  public func floatingGlass() -> some View {
+    modifier(FloatingGlass())
+  }
+}
+
+private struct FloatingGlass: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 26, macOS 26, *) {
+      content.glassEffect(.regular, in: .capsule)
+    } else {
+      content.background(.ultraThinMaterial, in: .capsule)
+    }
+  }
+}
+
+/// The one surface of every control: glass on iOS 26, warm material before it, or `fill` when the
+/// control is lit. A disabled control is never lit, so its muted label stays readable on the glass.
+/// A circle is a capsule with equal sides.
+private struct ControlStyle: ButtonStyle {
+  let fill: Swatch?
+
+  @Environment(\.isEnabled) private var isEnabled
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func makeBody(configuration: Configuration) -> some View {
+    surface(configuration.label, fill: isEnabled ? fill : nil)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
+  }
+
+  @ViewBuilder private func surface(_ label: Configuration.Label, fill: Swatch?) -> some View {
+    if #available(iOS 26, macOS 26, *) {
+      if let fill {
+        label.glassEffect(.regular.tint(fill.color).interactive(), in: .capsule)
+      } else {
+        label.glassEffect(.regular.interactive(), in: .capsule)
+      }
+    } else {
+      label.background {
+        if let fill {
+          Capsule().fill(fill.color)
+        } else {
+          Capsule().fill(.ultraThinMaterial)
+          Capsule().fill(Palette.raised.color.opacity(0.6))
+        }
+      }
+    }
+  }
+}
+
+/// Press feedback for a whole list row.
+public struct RowButtonStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .opacity(configuration.isPressed ? 0.7 : 1)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.985 : 1)
+      .animation(Motion.quick, value: configuration.isPressed)
+  }
+}
+
+/// Picks an ink. The hit area is 44pt; the swatch inside is 30pt.
+public struct InkSwatch: View {
+  private let color: Color
+  private let name: String
+  private let isSelected: Bool
+  private let action: () -> Void
+
+  public init(_ color: Color, name: String, isSelected: Bool, action: @escaping () -> Void) {
+    self.color = color
+    self.name = name
     self.isSelected = isSelected
     self.action = action
   }
@@ -191,23 +218,20 @@ public struct InkSwatch: View {
     Button(action: action) {
       ZStack {
         Circle()
-          .strokeBorder(Palette.paper.color.opacity(isSelected ? 1 : 0), lineWidth: 2)
+          .strokeBorder(Palette.gold.color.opacity(isSelected ? 1 : 0), lineWidth: 2)
         Circle()
-          .fill(choice.swatch.color)
+          .fill(color)
           .overlay {
-            Circle()
-              .strokeBorder(
-                Palette.paper.color.opacity(choice.needsRing ? 0.45 : 0),
-                lineWidth: 2
-              )
+            Circle().strokeBorder(Palette.paper.color.opacity(0.45), lineWidth: 1)
           }
           .frame(width: 30, height: 30)
       }
-      .frame(width: 48, height: 48)
+      .frame(width: Target.minimum, height: Target.minimum)
       .contentShape(.circle)
     }
-    .buttonStyle(.plain)
-    .accessibilityLabel(Text(choice.name))
+    .buttonStyle(RowButtonStyle())
+    .accessibilityLabel(name)
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .calmAnimation(Motion.quick, value: isSelected)
   }
 }

@@ -12,25 +12,19 @@ public struct ComponentGallery: View {
       Text(verbatim: "Keep going and the house grows.").billetType(.body)
       Text(verbatim: "On your wall").billetType(.label).foregroundStyle(Palette.muted.color)
       HStack(spacing: Spacing.small) {
-        Button {
-        } label: {
-          ToolIcon(.brush)
-        }
-        .buttonStyle(ToolButtonStyle(isSelected: true))
-        ForEach(InkChoice.allCases, id: \.self) { choice in
-          InkSwatch(choice, isSelected: choice == .green) {}
-        }
-        Button {
-        } label: {
-          ToolIcon(.undo)
-        }
-        .buttonStyle(ToolButtonStyle())
+        IconButton("pencil", label: "Pen", isSelected: true) {}
+        IconButton("arrow.uturn.backward", label: "Undo") {}
+        InkSwatch(Palette.ink.color, name: "Ink", isSelected: false) {}
+        InkSwatch(Palette.greenLit.color, name: "Green", isSelected: true) {}
       }
-      Button {
-      } label: {
-        Text(verbatim: "Send to Mira")
+      BilletButton("Send to Mira", rank: .primary) {}
+      BilletButton("Not now", rank: .secondary) {}
+      ListRow("Scene", subtitle: "Little House") {
+        EmptyView()
+      } trailing: {
+        EmptyView()
       }
-      .buttonStyle(PrimaryButtonStyle())
+      .card()
       HStack(spacing: Spacing.large) {
         HousePlate(47)
         LockHouseGlyph()

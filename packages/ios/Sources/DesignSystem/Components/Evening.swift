@@ -67,10 +67,10 @@ public struct EveningBackground: View {
 }
 
 extension View {
-  /// Stands this content on a lamp-lit panel: warm ground lifting towards the top corner, a lit
-  /// hairline, and a soft shadow on the page.
-  public func litPanel(cornerRadius: CGFloat = Radius.panel) -> some View {
-    let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+  /// The app's one card: a lamp-lit ground lifting towards the top corner, a lit hairline, and a
+  /// soft shadow on the page.
+  public func card() -> some View {
+    let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
     return
       self
       .background {
@@ -97,12 +97,108 @@ extension View {
   public func lampGlow() -> some View {
     shadow(color: Palette.light.color.opacity(Glow.lampOpacity), radius: Glow.lamp)
   }
+}
 
-  /// The screen title, in the one place and voice every tab uses.
-  public func screenTitle() -> some View {
-    billetType(.title)
-      .foregroundStyle(Palette.paper.color)
-      .accessibilityAddTraits(.isHeader)
+/// The frame of a tab: the evening behind, one title, and content that scrolls under the glass.
+public struct ScreenScaffold<Content: View>: View {
+  private let title: String
+  private let content: Content
+
+  public init(_ title: String, @ViewBuilder content: () -> Content) {
+    self.title = title
+    self.content = content()
+  }
+
+  public var body: some View {
+    ZStack {
+      EveningBackground()
+      ScrollView {
+        VStack(alignment: .leading, spacing: Spacing.large) {
+          Text(title)
+            .billetType(.title)
+            .foregroundStyle(Palette.paper.color)
+            .accessibilityAddTraits(.isHeader)
+          content
+        }
+        .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
+}
+
+/// The app's one list row. `leading` and `trailing` hold whatever the row needs at its edges.
+public struct ListRow<Leading: View, Trailing: View>: View {
+  private let title: String
+  private let subtitle: String?
+  private let leading: Leading
+  private let trailing: Trailing
+
+  public init(
+    _ title: String,
+    subtitle: String? = nil,
+    @ViewBuilder leading: () -> Leading,
+    @ViewBuilder trailing: () -> Trailing
+  ) {
+    self.title = title
+    self.subtitle = subtitle
+    self.leading = leading()
+    self.trailing = trailing()
+  }
+
+  public var body: some View {
+    HStack(spacing: Spacing.medium) {
+      leading
+      VStack(alignment: .leading, spacing: 0) {
+        Text(title)
+          .billetType(.body)
+          .foregroundStyle(Palette.paper.color)
+        if let subtitle {
+          Text(subtitle)
+            .billetType(.label)
+            .foregroundStyle(Palette.muted.color)
+            .contentTransition(.opacity)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      trailing
+    }
+    .padding(.horizontal, Spacing.medium)
+    .padding(.vertical, Spacing.small)
+    .frame(maxWidth: .infinity, minHeight: Target.row, alignment: .leading)
+    .contentShape(.rect)
+  }
+}
+
+/// The hairline between rows in one card.
+public struct ListDivider: View {
+  public init() {}
+
+  public var body: some View {
+    Palette.paper.color.opacity(0.1)
+      .frame(height: 1)
+      .padding(.leading, Spacing.medium)
+      .accessibilityHidden(true)
+  }
+}
+
+/// A trailing symbol in a list row, in the app's one icon weight.
+public struct RowIcon: View {
+  private let systemImage: String
+  private let color: Swatch
+
+  public init(_ systemImage: String, color: Swatch = Palette.muted) {
+    self.systemImage = systemImage
+    self.color = color
+  }
+
+  public var body: some View {
+    Image(systemName: systemImage)
+      .font(IconStyle.font)
+      .foregroundStyle(color.color)
+      .accessibilityHidden(true)
   }
 }
 
@@ -151,6 +247,7 @@ public struct EmptyWire: View {
       .accessibilityElement(children: .combine)
     }
     .padding(Spacing.wide)
+    .frame(maxWidth: .infinity)
   }
 
   private var wire: some View {
@@ -164,7 +261,8 @@ public struct EmptyWire: View {
         style: StrokeStyle(lineWidth: 2, lineCap: .round))
       for x in [size.width * 0.32, size.width * 0.68] {
         let peg = CGRect(x: x - 2.5, y: 8, width: 5, height: 18)
-        context.fill(Path(roundedRect: peg, cornerRadius: 2), with: .color(Palette.woodLit.color))
+        context.fill(
+          Path(roundedRect: peg, cornerRadius: Radius.paper), with: .color(Palette.woodLit.color))
       }
     }
     .frame(width: 180, height: 32)
@@ -175,125 +273,5 @@ public struct EmptyWire: View {
         .offset(x: 14, y: -12)
     }
     .accessibilityHidden(true)
-  }
-}
-
-/// A question asked in the room's own light instead of a system sheet.
-public struct EveningDialog<Actions: View>: View {
-  private let title: String
-  private let message: String
-  private let actions: Actions
-
-  public init(title: String, message: String, @ViewBuilder actions: () -> Actions) {
-    self.title = title
-    self.message = message
-    self.actions = actions()
-  }
-
-  public var body: some View {
-    ZStack {
-      Palette.pageDeep.color.opacity(0.7).ignoresSafeArea()
-      ScrollView {
-        VStack(spacing: Spacing.medium) {
-          Text(title)
-            .billetType(.heading)
-            .foregroundStyle(Palette.paper.color)
-            .accessibilityAddTraits(.isHeader)
-          Text(message)
-            .billetType(.body)
-            .foregroundStyle(Palette.paperTurned.color)
-          actions
-        }
-        .multilineTextAlignment(.center)
-        .padding(Spacing.large)
-        .litPanel()
-        .padding(Spacing.large)
-        .containerRelativeFrame(.vertical, alignment: .center) { length, _ in length }
-      }
-      .scrollBounceBehavior(.basedOnSize)
-    }
-    .accessibilityAddTraits(.isModal)
-  }
-}
-
-extension View {
-  /// Shows `dialog` over the whole screen, tab bar included, with the page dimmed behind it.
-  public func eveningDialog<Dialog: View>(
-    isPresented: Binding<Bool>, @ViewBuilder dialog: @escaping () -> Dialog
-  ) -> some View {
-    #if os(iOS)
-      fullScreenCover(isPresented: isPresented) {
-        dialog().presentationBackground(.clear)
-      }
-    #else
-      sheet(isPresented: isPresented, content: dialog)
-    #endif
-  }
-}
-
-/// One tab of ``EveningTabBar``.
-public struct EveningTab<ID: Hashable>: Identifiable {
-  public let id: ID
-  public let title: String
-  public let systemImage: String
-
-  public init(id: ID, title: String, systemImage: String) {
-    self.id = id
-    self.title = title
-    self.systemImage = systemImage
-  }
-}
-
-/// The tab bar: a low lit shelf with labels. The chosen tab catches the light.
-public struct EveningTabBar<ID: Hashable>: View {
-  private let tabs: [EveningTab<ID>]
-  @Binding private var selection: ID
-
-  public init(tabs: [EveningTab<ID>], selection: Binding<ID>) {
-    self.tabs = tabs
-    _selection = selection
-  }
-
-  public var body: some View {
-    HStack(spacing: Spacing.hair) {
-      ForEach(tabs) { tab in
-        item(tab)
-      }
-    }
-    .padding(Spacing.hair)
-    .litPanel(cornerRadius: Radius.control + Spacing.hair)
-    .padding(.horizontal, Spacing.medium)
-    .padding(.top, Spacing.hair)
-    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-  }
-
-  private func item(_ tab: EveningTab<ID>) -> some View {
-    let selected = tab.id == selection
-    return Button {
-      withAnimation(Motion.gentle) { selection = tab.id }
-    } label: {
-      VStack(spacing: 2) {
-        Image(systemName: tab.systemImage)
-          .font(.system(size: 18, weight: .medium))
-          .frame(height: 22)
-          .accessibilityHidden(true)
-        Text(tab.title)
-          .billetType(.caption)
-          .lineLimit(1)
-          .minimumScaleFactor(0.7)
-      }
-      .foregroundStyle((selected ? Palette.ink : Palette.muted).color)
-      .frame(maxWidth: .infinity, minHeight: 52)
-      .background {
-        if selected {
-          RoundedRectangle(cornerRadius: Radius.control)
-            .fill(Palette.gold.color)
-            .lampGlow()
-        }
-      }
-      .contentShape(.rect(cornerRadius: Radius.control))
-    }
-    .buttonStyle(.plain)
-    .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }

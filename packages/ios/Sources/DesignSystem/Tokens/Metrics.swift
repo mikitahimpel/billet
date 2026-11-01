@@ -1,4 +1,5 @@
 import CoreGraphics
+import SwiftUI
 
 /// The spacing rhythm. A gap off this scale is a bug.
 public enum Spacing {
@@ -11,18 +12,20 @@ public enum Spacing {
   public static let page: CGFloat = 64
 }
 
-/// Corner radii, by what they belong to.
+/// The one corner scale. Controls are capsules and circles, so they have no radius. Anything
+/// nested in a rounded shape is concentric with it: see ``nested(in:padding:)``.
 public enum Radius {
-  /// A scene panel.
-  public static let scene: CGFloat = 40
-  /// A lit panel.
-  public static let panel: CGFloat = 24
-  /// A button or tool.
-  public static let control: CGFloat = 18
-  /// A house number plate.
-  public static let plate: CGFloat = 6
+  /// A card or scene panel.
+  public static let card: CGFloat = 24
+  /// Something standing inside a card, on the card's own margin.
+  public static let plate = nested(in: card, padding: Spacing.medium)
   /// A sheet of paper.
   public static let paper: CGFloat = 3
+
+  /// The corner that stays concentric with `outer` at `padding` inside it.
+  public static func nested(in outer: CGFloat, padding: CGFloat) -> CGFloat {
+    max(outer - padding, 0)
+  }
 }
 
 /// Light and depth. Glows are soft and warm; shadows only ever fall on the dark page.
@@ -37,10 +40,15 @@ public enum Glow {
   public static let edgeOpacity = 0.14
 }
 
+/// The one size and weight of every SF Symbol.
+public enum IconStyle {
+  public static let font = Font.system(size: 17, weight: .medium)
+}
+
 /// Interaction sizes.
 public enum Target {
   /// The smallest thing a thumb is asked to hit.
   public static let minimum: CGFloat = 44
-  /// The primary action.
-  public static let primary: CGFloat = 60
+  /// One line of a list.
+  public static let row: CGFloat = 52
 }

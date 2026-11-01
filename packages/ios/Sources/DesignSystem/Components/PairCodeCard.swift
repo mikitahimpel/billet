@@ -35,24 +35,24 @@ public struct PairCodeCard: View {
     }
     .padding(Spacing.medium)
     .frame(maxWidth: .infinity)
-    .litPanel()
+    .card()
   }
 
   @ViewBuilder private var actions: some View {
     Button {
       copy()
     } label: {
-      Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-        .labelStyle(CodeActionLabelStyle())
+      ButtonLabel(
+        copied ? "Copied" : "Copy", rank: .secondary,
+        systemImage: copied ? "checkmark" : "doc.on.doc")
     }
-    .buttonStyle(.plain)
+    .billetButton(.secondary)
     .accessibilityLabel(copied ? "Code copied" : "Copy code")
 
     ShareLink(item: "Pair with me on billet: \(code)") {
-      Label("Share", systemImage: "square.and.arrow.up")
-        .labelStyle(CodeActionLabelStyle())
+      ButtonLabel("Share", rank: .secondary, systemImage: "square.and.arrow.up")
     }
-    .buttonStyle(.plain)
+    .billetButton(.secondary)
     .accessibilityLabel("Share code")
   }
 
@@ -60,21 +60,6 @@ public struct PairCodeCard: View {
     #if canImport(UIKit)
       UIPasteboard.general.string = code
     #endif
-    copied = true
-  }
-}
-
-private struct CodeActionLabelStyle: LabelStyle {
-  func makeBody(configuration: Configuration) -> some View {
-    HStack(spacing: Spacing.small) {
-      configuration.icon
-      configuration.title
-    }
-    .billetType(.label)
-    .foregroundStyle(Palette.paper.color)
-    .padding(.horizontal, Spacing.medium)
-    .frame(maxWidth: .infinity, minHeight: Target.minimum)
-    .background(Palette.raisedTop.color, in: .rect(cornerRadius: Radius.control))
-    .contentShape(.rect(cornerRadius: Radius.control))
+    withAnimation(Motion.quick) { copied = true }
   }
 }
