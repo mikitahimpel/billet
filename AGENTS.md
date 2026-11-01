@@ -11,6 +11,7 @@ pnpm turbo run lint typecheck test        # TypeScript checks, safe on Linux (no
 pnpm format:check                         # oxfmt check; `pnpm format` writes
 pnpm ios:test                             # swift test in packages/ios (Mac only)
 pnpm ios:build                            # swift build in packages/ios (Mac only)
+pnpm alchemy dev                          # local infrastructure, no credentials (docs/alchemy.md)
 ```
 
 Swift tasks are named `ios:*`, never `test` or `build`, so the default TS commands skip them.
