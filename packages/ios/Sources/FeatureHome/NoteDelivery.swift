@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import Labs
 import Pet
 import Wire
 
@@ -33,6 +34,9 @@ public struct NoteDelivery: Sendable {
     /// The partner put a finger on the cat, or lifted it. Only the fake partner says this for
     /// now: the room has no realtime frame for it.
     case partnerHolding(Bool)
+    /// The colour of the partner's lamp. Only the fake partner says this for now: the room has no
+    /// frame for it.
+    case partnerGlow(PartnerGlow)
   }
 
   /// This device's ID, to tell its own treats from the partner's.

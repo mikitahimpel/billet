@@ -31,6 +31,8 @@ final class PairSession {
   let sealed: SealedBoxStore
   /// The porch light, for the experiment that lets the streak wait.
   let porch: PorchLightStore
+  /// The lamp colours, for the experiment that shares how today feels.
+  let lamp: LampStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -68,6 +70,7 @@ final class PairSession {
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    lamp = LampStore(key: isFakePartner ? "labs.lampColour.fake" : "labs.lampColour")
     porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
     sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
     self.room = room
@@ -231,6 +234,8 @@ final class PairSession {
       }
     case .sealedNote(let strokes, let id, let opensAt):
       sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
+    case .partnerGlow(let glow):
+      lamp.partnerGlows(glow)
     case .partnerHolding(let holding):
       hold.partnerHolds(holding, at: now())
     case .noteOpened(let id):

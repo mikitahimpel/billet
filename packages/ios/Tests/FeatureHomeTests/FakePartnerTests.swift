@@ -1,4 +1,5 @@
 import Foundation
+import Labs
 import Pet
 import Testing
 import Wire
@@ -28,6 +29,13 @@ struct FakePartnerTests {
     return seen
   }
 
+  @Test func theFakePartnerArrivesWithALampLit() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 3)
+    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose)))
+  }
+
   @Test func theFakePartnerArrivesAfterConnecting() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
@@ -39,26 +47,26 @@ struct FakePartnerTests {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let id = UUID()
-    let seen = await collect(delivery, count: 5) {
+    let seen = await collect(delivery, count: 6) {
       await delivery.deliver([], id)
     }
-    guard seen.count == 5 else {
+    guard seen.count == 6 else {
       Issue.record("saw \(seen)")
       return
     }
-    #expect(seen[2] == .noteOpened(id))
-    #expect(seen[3] == .reactions([id: .heart]))
-    if case .note(let strokes, _) = seen[4] {
+    #expect(seen[3] == .noteOpened(id))
+    #expect(seen[4] == .reactions([id: .heart]))
+    if case .note(let strokes, _) = seen[5] {
       #expect(!strokes.isEmpty)
     } else {
-      Issue.record("expected a note, got \(seen[4])")
+      Issue.record("expected a note, got \(seen[5])")
     }
   }
 
   @Test func aPetIsPettedBack() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
-    let seen = await collect(delivery, count: 3) {
+    let seen = await collect(delivery, count: 4) {
       await delivery.play(.pet, "2026-11-02T08:00:00+01:00")
     }
     #expect(seen.last == .partnerPetted)
@@ -69,7 +77,7 @@ struct FakePartnerTests {
       device: "me",
       room: FakePartnerRoom(
         pace: Self.quick, now: { Date(timeIntervalSince1970: 1_800_000_000) }))
-    let seen = await collect(delivery, count: 3) {
+    let seen = await collect(delivery, count: 4) {
       await delivery.play(.treat, "x")
     }
     let day = TreatDay.key(for: Date(timeIntervalSince1970: 1_800_000_000), calendar: .current)
@@ -79,7 +87,7 @@ struct FakePartnerTests {
   @Test func theCatNameIsEchoed() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
-    let seen = await collect(delivery, count: 3) { await delivery.nameCat("Mochi") }
+    let seen = await collect(delivery, count: 4) { await delivery.nameCat("Mochi") }
     #expect(seen.last == .catName("Mochi"))
   }
 
@@ -87,8 +95,8 @@ struct FakePartnerTests {
     var pace = Self.quick
     pace.idle = [.milliseconds(1)]
     let delivery = NoteDelivery.fakePartner(device: "me", room: FakePartnerRoom(pace: pace))
-    let seen = await collect(delivery, count: 7)
-    let kinds = seen.dropFirst(2).map { update -> String in
+    let seen = await collect(delivery, count: 8)
+    let kinds = seen.dropFirst(3).map { update -> String in
       switch update {
       case .note: "note"
       case .partnerPetted: "pet"

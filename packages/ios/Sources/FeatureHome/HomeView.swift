@@ -183,6 +183,7 @@ struct HomeView: View {
       twoWispsCard
       catNaming
       latestReceived
+      lampColourCard
       treatPanel
       porchLightCard
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
@@ -203,6 +204,12 @@ struct HomeView: View {
             .transition(.opacity)
         }
       }
+    }
+  }
+
+  @ViewBuilder private var lampColourCard: some View {
+    if session.labs.isOn(LabExperiment.lampColours) {
+      LampColourSection(store: session.lamp)
     }
   }
 

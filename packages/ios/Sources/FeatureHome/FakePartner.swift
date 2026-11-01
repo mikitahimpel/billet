@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import Labs
 import Pet
 import Wire
 
@@ -46,6 +47,7 @@ actor FakePartnerRoom {
   private var current: UUID?
   private var idle: Task<Void, Never>?
   private var drawn = 0
+  private var lamp = 0
   private var reactions: [UUID: Reaction] = [:]
 
   init(
@@ -97,6 +99,7 @@ actor FakePartnerRoom {
     idle = Task { [pace, sleep] in
       await sleep(pace.arrival)
       emit(.status(.partnerHere))
+      emit(.partnerGlow(PartnerGlow(colour: .rose)))
       var step = 0
       while !Task.isCancelled, !pace.idle.isEmpty {
         await sleep(pace.idle[step % pace.idle.count])
@@ -130,12 +133,13 @@ actor FakePartnerRoom {
   }
 
   private func idleMove(_ step: Int) {
-    switch step % 5 {
+    switch step % 6 {
     case 0: drawNote()
     case 1: emit(.partnerPetted)
     case 2: giveTreat()
     case 3: sealNote()
-    default: holdCat()
+    case 4: holdCat()
+    default: changeLamp()
     }
   }
 
@@ -151,6 +155,11 @@ actor FakePartnerRoom {
   private func drawNote() {
     emit(.note(FakePartnerDrawings.drawing(number: drawn), id: UUID()))
     drawn += 1
+  }
+
+  private func changeLamp() {
+    lamp += 1
+    emit(.partnerGlow(PartnerGlow(colour: LampColour.allCases[lamp % LampColour.allCases.count])))
   }
 
   private func holdCat() {

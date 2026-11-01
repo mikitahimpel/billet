@@ -17,17 +17,20 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case twoWisps
   case wallpaperShortcut
   case porchLight
+  case lampColours
 
   public enum Group: CaseIterable, Sendable {
     case demo
     case cat
     case notes
+    case home
 
     public var title: String {
       switch self {
       case .demo: "Try it alone"
       case .cat: "The cat"
       case .notes: "Notes"
+      case .home: "The house"
       }
     }
   }
@@ -45,6 +48,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .twoWisps: .cat
     case .wallpaperShortcut: .notes
     case .porchLight: .cat
+    case .lampColours: .home
     }
   }
 
@@ -61,6 +65,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .twoWisps: "Two wisps"
     case .wallpaperShortcut: "Wallpaper shortcut"
     case .porchLight: "Porch light"
+    case .lampColours: "Lamp colours"
     }
   }
 
@@ -68,6 +73,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .lampColours:
+      "Choose a lamp colour for how today feels. Your partner's window shows theirs. No labels. The fake partner changes its colour now and then."
     case .porchLight:
       "Going away? Leave the porch light on for up to three nights and the streak waits for you. Free, always."
     case .wallpaperShortcut:
@@ -104,6 +111,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .twoWisps: true
     case .wallpaperShortcut: true
     case .porchLight: true
+    case .lampColours: true
     }
   }
 }
