@@ -1,65 +1,54 @@
 import BilletKit
 import CoreGraphics
+import DesignSystem
 import FeatureCanvas
 import SwiftUI
 
 /// The main screen: the Little House with its cat, and the way into the canvas.
-public struct HomeView: View {
-  @Environment(\.scenePhase) private var scenePhase
-  @State private var store: Store<HomeMachine>
-  @State private var delivery: NoteDelivery
+struct HomeView: View {
   @State private var scene = LittleHouseScene()
-  @State private var status = NoteDelivery.Status.connecting
   @State private var hungImage: CGImage?
   @State private var hangCount = 0
 
-  private let code: String
-  private let onChangeCode: () -> Void
+  let session: PairSession
+  let onChangeCode: () -> Void
 
-  public init(delivery: NoteDelivery, code: String, onChangeCode: @escaping () -> Void) {
-    _delivery = State(initialValue: delivery)
-    _store = State(
-      initialValue: Store(
-        initial: HomeMachine.State(),
-        run: { await HomeRunner.run($0, delivery: delivery) }
-      ))
-    self.code = code
-    self.onChangeCode = onChangeCode
+  private var store: Store<HomeMachine> { session.store }
+
+  private var line: ConnectionLine {
+    ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
-  public var body: some View {
-    ZStack {
-      house
-      if store.state.screen == .canvas {
-        CanvasView(
-          onClose: { store.send(.canvasClosed) },
-          onSend: { store.send(.drawingSent($0)) }
-        )
-        .background(.background)
-        .transition(.move(edge: .bottom))
+  var body: some View {
+    house
+      .animation(.easeInOut(duration: 0.25), value: line)
+      .onChange(of: store.state.noteArrived) { _, arrived in
+        scene?.setNoteArrived(arrived)
       }
-    }
-    .animation(.easeInOut(duration: 0.25), value: store.state.screen)
-    .onChange(of: store.state.noteArrived) { _, arrived in
-      scene?.setNoteArrived(arrived)
-    }
-    .task(id: scenePhase == .active) {
-      guard scenePhase == .active else { return }
-      for await update in delivery.updates() {
-        switch update {
-        case .status(let newStatus): status = newStatus
-        case .note(let strokes): store.send(.noteReceived(strokes))
+      .task(id: store.state.noteArrived) {
+        guard store.state.noteArrived else { return }
+        hungImage = nil
+        try? await Task.sleep(for: HungNote.revealDelay)
+        guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
+        hungImage = HungNote.image(of: drawing)
+        hangCount += 1
+      }
+      #if os(iOS)
+        .fullScreenCover(isPresented: canvasPresented) {
+          CanvasView(
+            onClose: { store.send(.canvasClosed) },
+            onSend: { session.send($0) }
+          )
+          .background(Palette.page.color)
         }
-      }
-    }
-    .task(id: store.state.noteArrived) {
-      guard store.state.noteArrived else { return }
-      hungImage = nil
-      try? await Task.sleep(for: HungNote.revealDelay)
-      guard !Task.isCancelled, let drawing = store.state.hungDrawing else { return }
-      hungImage = HungNote.image(of: drawing)
-      hangCount += 1
-    }
+      #endif
+  }
+
+  private var canvasPresented: Binding<Bool> {
+    Binding(
+      get: { store.state.screen == .canvas },
+      set: { if !$0 { store.send(.canvasClosed) } }
+    )
   }
 
   private var house: some View {
@@ -68,7 +57,7 @@ public struct HomeView: View {
         Self.sky
         Self.hill
       }
-      .ignoresSafeArea()
+      .ignoresSafeArea(edges: .top)
       if let scene {
         scene.view
           .accessibilityLabel("Little House with the cat")
@@ -80,40 +69,57 @@ public struct HomeView: View {
           }
       }
       Button("Draw a note") { store.send(.canvasOpened) }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .tint(Self.door)
-        .padding(.bottom, 24)
+        .buttonStyle(PrimaryButtonStyle())
+        .padding(.horizontal, Spacing.medium)
+        .padding(.bottom, Spacing.medium)
     }
     .overlay(alignment: .top) { roomStatus }
-    .accessibilityHidden(store.state.screen == .canvas)
   }
 
   private var roomStatus: some View {
-    VStack(spacing: 8) {
-      Text(statusText)
-        .font(.footnote.monospaced())
-        .foregroundStyle(.white)
-      if status != .partnerHere {
+    VStack(spacing: Spacing.small) {
+      statusPill
+      if line == .refused {
         Button("Change code", action: onChangeCode)
-          .font(.footnote)
-          .tint(.white)
+          .billetType(.label)
+          .foregroundStyle(Palette.paper.color)
+          .frame(minHeight: Target.minimum)
+      }
+      if session.notes.isEmpty, !session.notesFailedToLoad {
+        emptyHint
       }
     }
-    .padding(.top, 8)
+    .padding(.top, Spacing.small)
+    .padding(.horizontal, Spacing.medium)
   }
 
-  private var statusText: String {
-    switch status {
-    case .connecting: "Connecting…"
-    case .partnerAway: "Waiting for partner · \(code)"
-    case .partnerHere: "Partner here"
-    case .refused: "This room is full"
+  private var statusPill: some View {
+    Text(line.text)
+      .billetType(.label)
+      .foregroundStyle(Palette.paper.color)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.control))
+      .accessibilityIdentifier("connectionStatus")
+  }
+
+  private var emptyHint: some View {
+    VStack(spacing: Spacing.hair) {
+      Text("The wall is empty")
+        .billetType(.heading)
+        .foregroundStyle(Palette.paper.color)
+      Text("Draw the first note. It will hang here when your partner sends one back.")
+        .billetType(.label)
+        .foregroundStyle(Palette.paperTurned.color)
     }
+    .multilineTextAlignment(.center)
+    .padding(Spacing.medium)
+    .background(Palette.plate.color, in: .rect(cornerRadius: Radius.control))
+    .accessibilityElement(children: .combine)
   }
 
   // The artboard's top and bottom edge colours, so the art runs on into the taller screen.
   private static let sky = Color(red: 0x0E / 255, green: 0x2E / 255, blue: 0x2A / 255)
   private static let hill = Color(red: 0x14 / 255, green: 0x3B / 255, blue: 0x33 / 255)
-  private static let door = Color(red: 0.78, green: 0.3, blue: 0.16)
 }

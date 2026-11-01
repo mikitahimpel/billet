@@ -37,6 +37,12 @@ struct DemoRoom: Hashable, Sendable {
     defaults.removeObject(forKey: codeKey)
   }
 
+  /// Removes everything that identifies this device, so a later pairing starts as a new device.
+  static func logOut(in defaults: UserDefaults = .standard) {
+    defaults.removeObject(forKey: codeKey)
+    defaults.removeObject(forKey: deviceKey)
+  }
+
   func socketURL(host: String) -> URL? {
     let scheme = host.hasPrefix("127.0.0.1") ? "ws" : "wss"
     return URL(string: "\(scheme)://\(host)/demo/rooms/\(code)/socket?device=\(device)")
