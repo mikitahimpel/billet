@@ -14,7 +14,7 @@ import Wire
   }
 
   @Test func connectStartsAttemptOneWithATimeout() {
-    let (state, outputs) = Machine.transition(.initial, .connectRequested)
+    let (state, outputs) = Machine.transition(State.initial, .connectRequested)
     #expect(state == Self.state(.connecting(failures: 0), attempt: 1))
     #expect(outputs == [.open(attempt: 1), .startConnectTimeout(attempt: 1)])
   }
@@ -77,7 +77,7 @@ import Wire
   }
 
   @Test func aConnectThatNeverAnswersTimesOutAndRetries() {
-    var state = Machine.initial
+    var state = State.initial
     var outputs: [Machine.Output] = []
     let events: [Machine.Event] = [
       .connectRequested, .connectTimedOut(attempt: 1), .retryElapsed(attempt: 1),
@@ -90,7 +90,7 @@ import Wire
   }
 
   @Test func dropThenResumeEndToEnd() {
-    var state = Machine.initial
+    var state = State.initial
     var outputs: [Machine.Output] = []
     let events: [Machine.Event] = [
       .connectRequested, .opened(attempt: 1),
