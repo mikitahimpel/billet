@@ -6,9 +6,34 @@ import Testing
 /// Decodes a fixture into its Wire type and encodes it back to JSON.
 typealias RoundTrip = @Sendable (Data) throws -> Data
 
+/// Decodes with `T`, then encodes the result back.
+func codec<T: Codable & Sendable>(_ type: T.Type) -> RoundTrip {
+  { data in
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+    return try encoder.encode(JSONDecoder().decode(T.self, from: data))
+  }
+}
+
 /// Maps a fixture's top-level directory name to the Wire type that must round-trip it.
 /// Every Wire type adds its entry here; a fixture without one fails.
-let roundTrips: [String: RoundTrip] = [:]
+let roundTrips: [String: RoundTrip] = [
+  "PairId": codec(PairId.self),
+  "CompactStrokes": codec(CompactStrokes.self),
+  "Stroke": codec(Stroke.self),
+  "Note": codec(Note.self),
+  "DeliveryLane": codec(DeliveryLane.self),
+  "CreateInviteResponse": codec(CreateInviteResponse.self),
+  "ClaimInviteRequest": codec(ClaimInviteRequest.self),
+  "ClaimInviteResponse": codec(ClaimInviteResponse.self),
+  "SendNoteRequest": codec(SendNoteRequest.self),
+  "SendNoteResponse": codec(SendNoteResponse.self),
+  "ListNotesResponse": codec(ListNotesResponse.self),
+  "ApiError": codec(ApiError.self),
+  "ClientMessage": codec(ClientMessage.self),
+  "ServerMessage": codec(ServerMessage.self),
+  "PushPayload": codec(PushPayload.self),
+]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
