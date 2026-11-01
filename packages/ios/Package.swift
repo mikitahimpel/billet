@@ -31,7 +31,11 @@ let package = Package(
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: (library.map(\.name) + features).map { .library(name: $0, targets: [$0]) },
   targets: library.map {
-    .target(name: $0.name, dependencies: $0.dependencies.map { .init(stringLiteral: $0) })
+    .target(
+      name: $0.name,
+      dependencies: $0.dependencies.map { .init(stringLiteral: $0) },
+      resources: $0.name == "DesignSystem" ? [.copy("Resources/Fonts")] : nil
+    )
   }
     + features.map {
       .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
@@ -40,6 +44,7 @@ let package = Package(
       .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
       .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
       .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
+      .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
     ],
   swiftLanguageModes: [.v6]
 )
