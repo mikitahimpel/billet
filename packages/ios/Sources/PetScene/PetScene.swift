@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Pet
 import SwiftUI
@@ -6,6 +7,24 @@ import SwiftUI
 public enum PetSceneEvent: Hashable, Sendable {
   case deliveryFinished(delivery: Int)
   case settled(delivery: Int)
+}
+
+/// Where a scene's own note sits, so the received drawing can be laid exactly over it. Rects are in
+/// the scene's artboard, which is fitted and centred in the scene's view.
+public struct PetSceneNoteWall: Hashable, Sendable {
+  public var artboard: CGSize
+  public var paper: CGRect
+  /// The point the paper swings from.
+  public var peg: CGPoint
+  /// How long into a delivery the scene's note first shows.
+  public var revealDelay: Duration
+
+  public init(artboard: CGSize, paper: CGRect, peg: CGPoint, revealDelay: Duration) {
+    self.artboard = artboard
+    self.paper = paper
+    self.peg = peg
+    self.revealDelay = revealDelay
+  }
 }
 
 /// One way of showing the pet, usually backed by a graphics engine.
@@ -20,6 +39,8 @@ public protocol PetScene {
   var title: String { get }
   /// Attribution the scene's assets require, shown with the scene list.
   var credit: String? { get }
+  /// `nil` when the scene draws its own note and no drawing can be laid over it.
+  var noteWall: PetSceneNoteWall? { get }
 
   /// `world` changes while the view stays alive, so the view reacts to the new value.
   func makeView(
@@ -33,6 +54,7 @@ public protocol PetScene {
 
 extension PetScene {
   public var credit: String? { nil }
+  public var noteWall: PetSceneNoteWall? { nil }
 }
 
 extension PetMachine.Event {

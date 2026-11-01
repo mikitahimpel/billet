@@ -22,3 +22,4 @@ The app shows this credit in the scene list.
 - `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.
 - `packages/pet-scenes/rive/Sources/PetSceneRive/Resources/LittleHouse.riv` is billet's Little House
   scene.
+- `packages/pet-scenes/rive/Sources/PetSceneRive/Resources/Rooftop.riv` is billet's Rooftop scene.
