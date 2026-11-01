@@ -1,0 +1,9 @@
+{
+  "name": "@billet/ios",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "ios:test": "swift test",
+    "ios:build": "swift build"
+  }
+}
