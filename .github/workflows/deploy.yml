@@ -53,7 +53,9 @@ jobs:
         run: pnpm turbo run lint typecheck test format:check
 
       # Alchemy's output goes to a file first and is printed with the workers.dev address masked:
-      # the logs of a public repository are public, and the subdomain names the account.
+      # the logs of a public repository are public, and the subdomain names the account. The account
+      # ID only exists inside `pp run`, so the inner shell registers it as a masked value before
+      # the deploy starts. The log file is removed by the cleanup step.
       - name: Deploy
         env:
           PROTON_PASS_AGENT_REASON: billet deploy ${{ inputs.stage }}
@@ -62,8 +64,10 @@ jobs:
           env_file=.env.pass
           if [ "$STAGE" = "prod" ]; then env_file=.env.pass.release; fi
           status=0
-          pp run --env-file "$env_file" -- pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input \
-            > "$RUNNER_TEMP/deploy.log" 2>&1 || status=$?
+          pp run --env-file "$env_file" -- sh -c '
+            if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"; fi
+            exec pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input > "$RUNNER_TEMP/deploy.log" 2>&1
+          ' || status=$?
           sed -E 's#https://[A-Za-z0-9.-]*workers\.dev#https://<masked>.workers.dev#g' "$RUNNER_TEMP/deploy.log"
           exit "$status"
 
@@ -71,9 +75,14 @@ jobs:
         run: |
           set -uo pipefail
           url=$(grep -oE 'https://[A-Za-z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1)
-          rm -f "$RUNNER_TEMP/deploy.log"
           if [ -z "$url" ]; then echo "No Worker URL in the deploy output"; exit 1; fi
           echo "::add-mask::$url"
           code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$url" || true)
           echo "Worker answered HTTP $code"
           test "$code" = "200"
+
+      # The raw log is unmasked, and a self-hosted runner keeps its temp files, so remove it even
+      # when the deploy or the smoke test failed.
+      - name: Remove deploy log
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy.log"
