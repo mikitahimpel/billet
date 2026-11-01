@@ -140,18 +140,26 @@ private struct NookiStage: View {
       }
   }
 
+  /// A swipe that starts on the yarn throws it. Any other swipe orbits.
   private var orbit: some Gesture {
     DragGesture(minimumDistance: 6)
+      .targetedToAnyEntity()
       .onChanged { value in
+        guard value.entity.name != NookiTarget.yarn.rawValue else { return }
+        let translation = value.gestureValue.translation
         diorama.orbit(
-          byX: Float(value.translation.width - lastDrag.width),
-          y: Float(value.translation.height - lastDrag.height))
-        lastDrag = value.translation
+          byX: Float(translation.width - lastDrag.width),
+          y: Float(translation.height - lastDrag.height))
+        lastDrag = translation
       }
       .onEnded { value in
+        let velocity = value.gestureValue.velocity
         lastDrag = .zero
-        diorama.endOrbit(
-          velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
+        if value.entity.name == NookiTarget.yarn.rawValue {
+          diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
+        } else {
+          diorama.endOrbit(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
+        }
       }
   }
 

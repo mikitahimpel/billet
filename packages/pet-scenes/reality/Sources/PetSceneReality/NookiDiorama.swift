@@ -53,6 +53,12 @@ final class NookiDiorama {
   private let loadModel: NookiModelLoader
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
+  private let physics = NookiPhysics()
+  private var yarnPlay = NookiYarnPlay(
+    bed: NookiDiorama.bedSpot, floor: NookiDiorama.wallSpot.y,
+    restHeading: NookiChoreography.restHeading)
+  private var ballWas: SIMD3<Float>?
+  private var ballSpeed: Float = 0
   private var isFollowingTilt = false
   private let mochiDeadline: Duration
   private var settlingFrames = NookiDiorama.framesBeforeReady
@@ -77,8 +83,8 @@ final class NookiDiorama {
   private static let lanternIntensity: Float = 500
 
   // Mochi lies in the bed in the middle of the rug, and hops to a spot under the wire.
-  private static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
-  private static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
+  fileprivate static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
+  fileprivate static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
   /// Share of the walk spent dropping from the bed to the floor.
   private static let bedDrop: Float = 0.25
   private static let carryHeight: Float = 0.34
@@ -88,7 +94,6 @@ final class NookiDiorama {
   private static let noteReadingDistance: Float = 2.4
   private static let noteReadingScale: Float = 2
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
-  private static let yarnRadius: Float = 0.07
   private static let lookLimit: Float = 1
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
 
@@ -120,6 +125,7 @@ final class NookiDiorama {
 
   private func load() async {
     await buildRoom()
+    physics.buildShell(in: room)
     await buildBowl()
     await Task.yield()
     buildNote()
@@ -209,6 +215,31 @@ final class NookiDiorama {
     aimLens()
   }
 
+  /// Reads the ball, moves the game on and passes the phone's lean to the ball.
+  private func stepYarn(_ delta: Double) {
+    guard physics.ball.parent != nil else { return }
+    var at = physics.ball.position(relativeTo: room)
+    if NookiPhysics.isLost(at) {
+      physics.putBack(at: Self.yarnPosition)
+      at = physics.ball.position(relativeTo: room)
+    }
+    if let ballWas, delta > 0 { ballSpeed = simd_distance(at, ballWas) / Float(delta) }
+    ballWas = at
+    yarnPlay.step(
+      ball: NookiYarnPlay.Ball(position: SIMD2(at.x, at.z), speed: ballSpeed),
+      delta: delta,
+      canPlay: world.activity == .sleeping && !noteIsOpen,
+      reduceMotion: reduceMotion)
+    physics.setHeld(yarnPlay.holdsBall)
+    physics.push(NookiPhysics.push(lean: tilt.pull, cameraYaw: camera.yaw))
+  }
+
+  /// Throws the ball, for a swipe ending at a screen velocity in points per second.
+  func flickYarn(velocityX: Float, velocityY: Float) {
+    physics.setVelocity(
+      NookiPhysics.flick(screenVelocity: [velocityX, velocityY], cameraYaw: camera.yaw))
+  }
+
   // MARK: - Camera
 
   /// Follows a drag, in screen points since the last step.
@@ -265,6 +296,8 @@ final class NookiDiorama {
       noteIsOpen.toggle()
     case .wobble(let target):
       wobbles[target] = clock
+    case .nudgeYarn:
+      physics.setVelocity(NookiPhysics.flick(screenVelocity: [240, -240], cameraYaw: camera.yaw))
     }
     return touch.event
   }
@@ -301,6 +334,7 @@ final class NookiDiorama {
     let step = idleDelta
     idleDelta = 0
     stepTilt(Float(step))
+    stepYarn(step)
     if !camera.isAtRest {
       camera.step(Float(step))
       aimLens()
@@ -310,7 +344,8 @@ final class NookiDiorama {
 
   /// True while something should move at full rate. A sleeping room runs at the idle step.
   private var isBusy: Bool {
-    !camera.isAtRest || tilt.isMoving || world.activity != .sleeping || petStart != nil
+    !camera.isAtRest || tilt.isMoving || tilt.pull != .zero || yarnPlay.isPlaying
+      || ballSpeed > NookiYarnPlay.noticeSpeed / 2 || world.activity != .sleeping || petStart != nil
       || !wobbles.isEmpty
       || lookStart != nil || lookTurn != 0
       || noteOpening != (noteIsOpen ? 1 : 0)
@@ -323,7 +358,16 @@ final class NookiDiorama {
       frame = frame.combined(with: NookiMotion.pet(since, reduceMotion: reduceMotion))
       if since >= NookiMotion.petLength { self.petStart = nil }
     }
-    applyBody(frame, delta: delta)
+    var awaySpot: SIMD3<Float>?
+    if yarnPlay.isPlaying {
+      let pose = yarnPlay.pose
+      var body = pose.frame
+      body.note = frame.note
+      body.pinned = frame.pinned
+      frame = body
+      awaySpot = pose.spot
+    }
+    applyBody(frame, awaySpot: awaySpot, delta: delta)
     applyFeatures(frame)
     applyHolders()
     applyLamp(delta)
@@ -331,7 +375,7 @@ final class NookiDiorama {
     applyNote(frame, elapsed: elapsed, delta: delta)
   }
 
-  private func applyBody(_ frame: NookiFrame, delta: Float) {
+  private func applyBody(_ frame: NookiFrame, awaySpot: SIMD3<Float>?, delta: Float) {
     if let lookStart, clock - lookStart >= NookiMotion.lookLength { self.lookStart = nil }
     let goal = lookStart == nil ? 0 : lookGoal
     lookTurn = Self.eased(lookTurn, to: goal, rate: 7, delta: delta, snap: reduceMotion)
@@ -344,6 +388,7 @@ final class NookiDiorama {
     var spot = mix(Self.bedSpot, Self.wallSpot, t: frame.walk)
     let drop = min(frame.walk / Self.bedDrop, 1)
     spot.y = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * drop
+    if let awaySpot { spot = awaySpot }
     mochi.position = spot + [0, 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight, 0]
     mochi.orientation = simd_quatf(angle: frame.heading + lookTurn, axis: [0, 1, 0])
   }
@@ -382,12 +427,6 @@ final class NookiDiorama {
       if tilt != 0 || wobbles[target] != nil || target == .plant {
         holder.orientation = base * simd_quatf(angle: tilt, axis: [0, 0, 1])
       }
-    }
-    if let yarn = holders[.yarn] {
-      let drift = NookiMotion.yarnDrift(clock, reduceMotion: reduceMotion)
-      yarn.position = Self.yarnPosition + [drift, 0, 0]
-      yarn.children.first?.orientation = simd_quatf(
-        angle: -drift / Self.yarnRadius, axis: [0, 0, 1])
     }
   }
 
@@ -539,19 +578,26 @@ final class NookiDiorama {
         ?? height.map { $0 / bounds.extents.y } ?? 1
       model.scale = .one * scale
       model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
+      let size = bounds.extents * scale
+      if target == .yarn {
+        model.position.y -= size.y / 2
+        physics.ball.name = NookiTarget.yarn.rawValue
+        physics.ball.addChild(model)
+        room.addChild(physics.ball)
+        physics.prepareBall(at: position)
+        holders[.yarn] = physics.ball
+        return
+      }
       let holder = Entity()
       holder.position = position
       holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
-      if target == .yarn {
-        Self.centreModel(model, in: holder, raisedBy: bounds.extents.y * scale / 2)
-      }
       holder.addChild(model)
       room.addChild(holder)
+      if item.isSolid { physics.addSolid(to: holder, size: size) }
       if let target {
         holder.name = target.rawValue
         holders[target] = holder
         holderOrientations[target] = holder.orientation
-        let size = bounds.extents * scale
         Self.makeTappable(holder, size: size, center: [0, size.y / 2, 0])
       }
     } catch {
@@ -565,15 +611,6 @@ final class NookiDiorama {
     entity.components.set(
       CollisionComponent(shapes: [.generateBox(size: size).offsetBy(translation: center)]))
     entity.components.set(InputTargetComponent())
-  }
-
-  /// Moves the holder's origin up to the model's centre, so spinning the model rolls it in place.
-  private static func centreModel(_ model: Entity, in holder: Entity, raisedBy height: Float) {
-    model.position.y -= height
-    let spinner = Entity()
-    spinner.position.y = height
-    holder.addChild(spinner)
-    spinner.addChild(model)
   }
 
   private func findLampParts() {
@@ -802,6 +839,8 @@ struct NookiFurniture: Sendable {
   var position: SIMD3<Float>
   var yaw: Float
   var target: NookiTarget?
+  /// True for a piece the ball bounces off, not one it rolls over.
+  var isSolid = false
 
   static let bundledModel: NookiModelLoader = { name throws(NookiLoadError) in
     do {
@@ -817,15 +856,20 @@ struct NookiFurniture: Sendable {
       name: "Item_donutbed", width: 0.5, position: [0.05, 0.012, 0.12], yaw: 0, target: .bed),
     NookiFurniture(
       name: "Item_bookcase", height: 0.72, position: [-0.46, 0, -0.1], yaw: .pi / 2,
-      target: .bookcase),
+      target: .bookcase, isSolid: true),
     NookiFurniture(
-      name: "Item_monstera", height: 0.62, position: [-0.4, 0, -0.42], yaw: 0, target: .plant),
-    NookiFurniture(name: "Item_armchair", width: 0.5, position: [0.42, 0, -0.38], yaw: -.pi / 4),
+      name: "Item_monstera", height: 0.62, position: [-0.4, 0, -0.42], yaw: 0, target: .plant,
+      isSolid: true),
     NookiFurniture(
-      name: "Item_lamp", height: 0.46, position: [0.62, 0, 0.02], yaw: 0, target: .lamp),
-    NookiFurniture(name: "Item_teatable", height: 0.2, position: [0.54, 0, 0.42], yaw: 0),
+      name: "Item_armchair", width: 0.5, position: [0.42, 0, -0.38], yaw: -.pi / 4, isSolid: true),
+    NookiFurniture(
+      name: "Item_lamp", height: 0.46, position: [0.62, 0, 0.02], yaw: 0, target: .lamp,
+      isSolid: true),
+    NookiFurniture(
+      name: "Item_teatable", height: 0.2, position: [0.54, 0, 0.42], yaw: 0, isSolid: true),
     NookiFurniture(name: "Item_lantern", height: 0.15, position: [0.54, 0.2, 0.42], yaw: 0),
-    NookiFurniture(name: "Item_tower", height: 0.62, position: [-0.46, 0, 0.5], yaw: 0),
+    NookiFurniture(
+      name: "Item_tower", height: 0.62, position: [-0.46, 0, 0.5], yaw: 0, isSolid: true),
     NookiFurniture(name: "Item_print", height: 0.26, position: [0.45, 0.46, -0.59], yaw: 0),
     NookiFurniture(
       name: "Item_yarn", width: 0.14, position: NookiDiorama.yarnPosition, yaw: 0, target: .yarn),

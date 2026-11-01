@@ -20,6 +20,7 @@ struct NookiTouch: Equatable {
     case toggleLamp
     case toggleNote
     case wobble(NookiTarget)
+    case nudgeYarn
   }
 
   var reaction: Reaction
@@ -35,8 +36,10 @@ struct NookiTouch: Equatable {
       return NookiTouch(
         reaction: .toggleNote,
         event: noteIsOpen ? nil : .noteOpened(delivery: world.delivery))
-    case .plant, .bookcase, .bed, .yarn:
+    case .plant, .bookcase, .bed:
       return NookiTouch(reaction: .wobble(target))
+    case .yarn:
+      return NookiTouch(reaction: .nudgeYarn)
     }
   }
 }
