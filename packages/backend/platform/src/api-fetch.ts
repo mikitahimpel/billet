@@ -3,17 +3,21 @@ import { Digest, SecureRandom } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
+import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
+import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 const apiRoutes = (db: D1Database) =>
-  AuthRoutes.pipe(
-    Layer.provide(AuthService.layer),
+  Layer.mergeAll(AuthRoutes, PairingRoutes).pipe(
+    Layer.provide(Layer.mergeAll(AuthService.layer, PairingService.layer)),
     Layer.provide(
       Layer.mergeAll(
         AuthRepositoryLive(db),
+        PairingRepositoryLive(db),
         AppleIdentityLive,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,

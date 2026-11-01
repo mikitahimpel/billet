@@ -10,6 +10,7 @@ import {
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
+import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import { resetDirectory } from "./directory-migrations.ts";
 
 const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
@@ -76,7 +77,33 @@ const signedIn = async () => {
   return { nonce, session: Schema.decodeUnknownSync(SessionResponse)(await response.json()) };
 };
 
-const tables = ["users", "devices", "sessions", "auth_challenges", "push_tokens"];
+const signedInAs = async (subject: string) => {
+  const { response } = await signIn({ sub: subject });
+  expect(response.status).toBe(200);
+  return Schema.decodeUnknownSync(SessionResponse)(await response.json()).sessionToken;
+};
+
+const inviteFrom = async (token: string) => {
+  const response = await call("/v1/invites", json({}, "POST", token));
+  expect(response.status).toBe(200);
+  return Schema.decodeUnknownSync(CreateInviteResponse)(await response.json()).code;
+};
+
+const claimWith = (token: string, code: string) =>
+  call("/v1/invites/claim", json({ code }, "POST", token));
+
+const pairRows = async () =>
+  (await env.DB.prepare("SELECT pair_id FROM pair_members").all<{ pair_id: string }>()).results;
+
+const tables = [
+  "users",
+  "devices",
+  "sessions",
+  "auth_challenges",
+  "push_tokens",
+  "invites",
+  "pair_members",
+];
 
 const everythingStored = async () =>
   JSON.stringify(
@@ -154,6 +181,62 @@ describe("the Api Worker", () => {
       });
     expect((await signOut()).status).toBe(204);
     expect((await signOut()).status).toBe(401);
+  });
+
+  it("pairs two signed-in users with a code, and keeps only its hash", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    const code = await inviteFrom(owner);
+
+    const stored = await everythingStored();
+    expect(stored).not.toContain(code);
+    const rows = await env.DB.prepare("SELECT code_hash FROM invites").all();
+    expect(rows.results).toEqual([{ code_hash: await sha256Hex(code) }]);
+
+    const response = await claimWith(claimer, code);
+    expect(response.status).toBe(200);
+    const { pairId } = Schema.decodeUnknownSync(ClaimInviteResponse)(await response.json());
+    expect(await pairRows()).toEqual([{ pair_id: pairId }, { pair_id: pairId }]);
+    expect(await env.DB.prepare("SELECT * FROM invites").first()).toBeNull();
+  });
+
+  it("answers one success to two concurrent claims of one code", async () => {
+    const owner = await signedInAs("subject-owner");
+    const first = await signedInAs("subject-first");
+    const second = await signedInAs("subject-second");
+    const code = await inviteFrom(owner);
+
+    const responses = await Promise.all([claimWith(first, code), claimWith(second, code)]);
+
+    expect(responses.map(({ status }) => status).toSorted()).toEqual([200, 404]);
+    expect(await pairRows()).toHaveLength(2);
+  });
+
+  it("refuses a paired user another code", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    const other = await signedInAs("subject-other");
+    expect((await claimWith(claimer, await inviteFrom(owner))).status).toBe(200);
+
+    const response = await claimWith(claimer, await inviteFrom(other));
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ _tag: "AlreadyPaired" });
+  });
+
+  it("clears the pair lookup on unpair, and the two can pair again", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    expect((await claimWith(claimer, await inviteFrom(owner))).status).toBe(200);
+
+    const unpair = await call("/v1/pair", {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${owner}` },
+    });
+    expect(unpair.status).toBe(204);
+    expect(await pairRows()).toEqual([]);
+
+    expect((await claimWith(owner, await inviteFrom(claimer))).status).toBe(200);
+    expect(await pairRows()).toHaveLength(2);
   });
 
   it.each([

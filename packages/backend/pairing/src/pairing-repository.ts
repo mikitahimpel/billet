@@ -1,0 +1,57 @@
+import { Context, type Effect, type Option, Schema } from "effect";
+import { TokenHash } from "@billet/backend-auth/auth-repository";
+import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import { PairId } from "@billet/contracts-domain/pair-id";
+import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
+
+/** What each stored table holds. A test in `platform` fails if a table's columns differ. */
+export const StoredInvite = Schema.Struct({
+  codeHash: TokenHash,
+  ownerId: UserId,
+  createdAt: EpochMillis,
+  expiresAt: EpochMillis,
+});
+export type StoredInvite = typeof StoredInvite.Type;
+
+export const StoredPairMember = Schema.Struct({
+  userId: UserId,
+  pairId: PairId,
+  createdAt: EpochMillis,
+});
+
+export interface InviteClaim {
+  readonly codeHash: TokenHash;
+  readonly claimerId: UserId;
+  /** A new id. It becomes the pair's only if this claim wins. */
+  readonly pairId: PairId;
+  readonly now: EpochMillis;
+}
+
+/**
+ * Persistence for invites and the pair lookup. Each method is one atomic operation, every storage
+ * failure is `PairingUnavailable`, and raw invite codes never reach it.
+ * `test/pairing-repository-contract.ts` is the behaviour any implementation must pass.
+ */
+export class PairingRepository extends Context.Service<
+  PairingRepository,
+  {
+    /**
+     * Replaces the owner's invite, and removes every expired one. Fails, changing nothing for the
+     * owner, if the owner has a partner.
+     */
+    readonly saveInvite: (
+      invite: StoredInvite,
+    ) => Effect.Effect<void, AlreadyPaired | PairingUnavailable>;
+    /**
+     * Pairs the claimer with the invite's owner and removes both users' invites, all or nothing, so
+     * of any number of concurrent claims of one code, only one succeeds. The claimer's own code
+     * is `InvalidInvite`. A failed claim leaves the invite as it was.
+     */
+    readonly claimInvite: (
+      claim: InviteClaim,
+    ) => Effect.Effect<void, InvalidInvite | AlreadyPaired | PairingUnavailable>;
+    readonly findPair: (userId: UserId) => Effect.Effect<Option.Option<PairId>, PairingUnavailable>;
+    /** Removes the lookup of both partners. Does nothing for a user without a partner. */
+    readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+  }
+>()("@billet/backend-pairing/PairingRepository") {}

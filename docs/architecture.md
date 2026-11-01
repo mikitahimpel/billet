@@ -106,6 +106,31 @@ fixed reason labels only.
 another request started, and `Jwks` shares its in-flight fetch between callers. So Apple's keys are
 cached by Cloudflare, in the key fetch itself, for 10 minutes. Only successful responses are cached.
 
+### Pairing
+
+A user asks for an invite (`POST /v1/invites`), sends the code to their partner, and the partner claims
+it (`POST /v1/invites/claim`), which returns the new pair's id. Either partner can end it
+(`DELETE /v1/pair`). Pairing keeps two tables in D1:
+
+- `invites` says who owns a code. A code is 10 symbols from a 32-symbol alphabet with no `0`, `O`, `1`
+  or `I`: 50 random bits. Only its SHA-256 is stored, and it lasts 24 hours. A user has one invite, so
+  a new one replaces the last, and saving an invite also removes every expired one.
+- `pair_members` is the pair lookup, one row per user. Its key is the user, so one partner per account
+  holds even if the code is wrong. A pair is the two rows that share a `pair_id`.
+
+A claim is one D1 batch. The first statement adds the claimer only if the invite is live, belongs to
+someone else, and neither user has a partner. The next adds the owner only if the first wrote a row,
+and the next deletes both users' invites. Batches run one at a time, so the claim that comes second
+finds no invite and gets `InvalidInvite`. A last statement reads the claimer's row to tell the outcomes
+apart.
+
+Failures are `InvalidInvite` (404) for any code that can't be claimed, with no hint why, and
+`AlreadyPaired` (409) for a caller with a partner. Unpair removes both rows, and succeeds for a user
+with no partner so that a client can retry it. Pairing again gives a new `pair_id`, so a new room.
+
+`packages/backend/pairing` holds this logic on an injected `PairingRepository`, which `platform`
+provides.
+
 ### Privacy
 
 Traffic uses TLS, the R2 bucket is private, and media routes are authorised. End-to-end encryption is

@@ -1,4 +1,5 @@
-/// Wire form of the contracts `InviteCode`: a non-empty string.
+/// Wire form of the contracts `InviteCode`. The server checks its format; the client checks only
+/// that it is not empty.
 public struct InviteCode: Codable, Hashable, Sendable {
   public let rawValue: String
 
