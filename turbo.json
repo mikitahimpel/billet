@@ -1,0 +1,39 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "//#format:check:root": {
+      "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/docs/**"]
+    },
+    "lint": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.oxlintrc.json",
+        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
+      ]
+    },
+    "format:check": {
+      "dependsOn": ["//#format:check:root"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.oxfmtrc.json"]
+    },
+    "transit": {
+      "dependsOn": ["^transit"]
+    },
+    "typecheck": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/packages/config/typescript/*.json"]
+    },
+    "test": {
+      "dependsOn": ["transit"],
+      "inputs": ["$TURBO_DEFAULT$"]
+    },
+    "ios:test": {
+      "outputs": [],
+      "inputs": ["Sources/**", "Tests/**", "Package.swift", "$TURBO_ROOT$/.xcode-version"]
+    },
+    "ios:build": {
+      "outputs": [],
+      "inputs": ["Sources/**", "Tests/**", "Package.swift", "$TURBO_ROOT$/.xcode-version"]
+    }
+  }
+}

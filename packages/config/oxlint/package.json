@@ -1,0 +1,10 @@
+{
+  "name": "@billet/config-oxlint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./oxlintrc.json": "./oxlintrc.json"
+  }
+}
