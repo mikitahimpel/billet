@@ -36,6 +36,7 @@ struct HomeView: View {
     home
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
+      .modifier(HomeShop(shop: session.shop, scene: scene))
       .task { await DemoPush.requestPermission() }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
@@ -213,7 +214,10 @@ struct HomeView: View {
     return PetPlayState(
       treat: PetPlayState.Treat(session.play.status(on: day)),
       streak: session.play.streak(today: day, calendar: calendar),
-      petsReceived: session.play.petsReceived
+      petsReceived: session.play.petsReceived,
+      room: session.shop.state.layout,
+      treatsUsed: session.shop.state.treatsUsed,
+      lastTreat: session.shop.state.lastTreat
     )
   }
 

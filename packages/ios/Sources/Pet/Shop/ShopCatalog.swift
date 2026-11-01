@@ -22,6 +22,12 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     case wall
   }
 
+  /// Which measure of a model its catalog size fixes.
+  public enum Fit: String, Codable, Hashable, Sendable {
+    case width
+    case height
+  }
+
   /// The colours a material can take, named after the palette swatch they come from.
   public enum Tone: String, Codable, Hashable, Sendable {
     case clayLit, clay, greenLit, green, paperTurned, woodLit, wood, woodShade, skyLit, lightWarm
@@ -35,8 +41,8 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
 
   /// What the item is, which also decides how it is used.
   public enum Look: Codable, Hashable, Sendable {
-    /// A model from the Reality bundle, fitted by its height in metres.
-    case furniture(model: String, height: Double, mount: Mount)
+    /// A model from the Reality bundle, scaled so its `fit` measures `size` metres.
+    case furniture(model: String, fit: Fit, size: Double, mount: Mount)
     case material(surface: RoomSurface, tone: Tone)
     case treat(shape: TreatShape)
   }
@@ -98,18 +104,18 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
   ]
 
   private static let furniture: [ShopItem] = [
-    piece("armchair", "Armchair", 30, "Item_armchair", 0.38),
-    piece("bookcase", "Bookcase", 34, "Item_bookcase", 0.6),
-    piece("donutbed", "Donut bed", 22, "Item_donutbed", 0.2),
-    piece("lamp", "Floor lamp", 24, "Item_lamp", 0.46),
-    piece("lantern", "Lantern", 14, "Item_lantern", 0.15),
-    piece("monstera", "Monstera", 18, "Item_monstera", 0.55),
-    piece("print", "Framed print", 16, "Item_print", 0.26, mount: .wall),
-    piece("rug", "Round rug", 20, "Item_rug", 0.02),
-    piece("teatable", "Tea table", 18, "Item_teatable", 0.2),
-    piece("tower", "Cat tower", 36, "Item_tower", 0.6),
-    piece("yarn", "Ball of yarn", 6, "Item_yarn", 0.1),
-    piece("mouse", "Toy mouse", 6, "Item_mouse", 0.07),
+    piece("armchair", "Armchair", 30, "Item_armchair", .width, 0.4),
+    piece("bookcase", "Bookcase", 34, "Item_bookcase", .height, 0.6),
+    piece("donutbed", "Donut bed", 22, "Item_donutbed", .width, 0.4),
+    piece("lamp", "Floor lamp", 24, "Item_lamp", .height, 0.46),
+    piece("lantern", "Lantern", 14, "Item_lantern", .height, 0.15),
+    piece("monstera", "Monstera", 18, "Item_monstera", .height, 0.55),
+    piece("print", "Framed print", 16, "Item_print", .height, 0.26, mount: .wall),
+    piece("rug", "Round rug", 20, "Item_rug", .width, 0.6),
+    piece("teatable", "Tea table", 18, "Item_teatable", .height, 0.2),
+    piece("tower", "Cat tower", 36, "Item_tower", .height, 0.6),
+    piece("yarn", "Ball of yarn", 6, "Item_yarn", .width, 0.12),
+    piece("mouse", "Toy mouse", 6, "Item_mouse", .height, 0.07),
   ]
 
   private static let treats: [ShopItem] = [
@@ -125,11 +131,11 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
   }
 
   private static func piece(
-    _ id: String, _ name: String, _ price: Int, _ model: String, _ height: Double,
-    mount: ShopItem.Mount = .floor
+    _ id: String, _ name: String, _ price: Int, _ model: String, _ fit: ShopItem.Fit,
+    _ size: Double, mount: ShopItem.Mount = .floor
   ) -> ShopItem {
     ShopItem(
       id: "furniture-\(id)", name: name, price: price,
-      look: .furniture(model: model, height: height, mount: mount))
+      look: .furniture(model: model, fit: fit, size: size, mount: mount))
   }
 }

@@ -40,7 +40,7 @@ public struct ShopState: Codable, Hashable, Sendable {
   public mutating func buy(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
     guard !applied.contains(transaction) else { return .duplicate }
     if item.ownsAtMostOne, owns(item) { throw .alreadyOwned }
-    try wallet.debit(item.price, id: Self.spendID(transaction))
+    _ = try wallet.debit(item.price, id: Self.spendID(transaction))
     closet.add(item.id)
     applied.insert(transaction)
     return .applied
@@ -52,7 +52,7 @@ public struct ShopState: Codable, Hashable, Sendable {
     _ item: ShopItem, transaction: String, at spot: (x: Double, z: Double)? = nil
   ) throws(ShopError) -> ShopOutcome {
     guard !applied.contains(transaction) else { return .duplicate }
-    guard case .furniture(_, _, let mount) = item.look else { throw .wrongKind }
+    guard case .furniture(_, _, _, let mount) = item.look else { throw .wrongKind }
     guard closet.count(of: item.id) > 0 else { throw .notInCloset }
     guard let target = spot ?? layout.freeSpot(for: mount) else { throw .roomIsFull }
     try closet.take(item.id)
