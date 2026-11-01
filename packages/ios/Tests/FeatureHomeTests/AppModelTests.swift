@@ -3,7 +3,9 @@ import DesignSystem
 import FeatureInbox
 import Foundation
 import Persistence
+import Pet
 import Testing
+import WidgetBridge
 import Wire
 
 @testable import FeatureHome
@@ -17,6 +19,7 @@ private final class FakeRoom {
   private(set) var delivered: [[Stroke]] = []
   private(set) var deliveredIDs: [UUID] = []
   private(set) var names: [String] = []
+  private(set) var plays: [PlayKind] = []
   private(set) var reacted: [(UUID, Reaction)] = []
 
   var delivery: NoteDelivery {
@@ -27,6 +30,7 @@ private final class FakeRoom {
           self.deliveredIDs.append(id)
         }
       },
+      play: { kind, _ in await MainActor.run { self.plays.append(kind) } },
       nameCat: { name in await MainActor.run { self.names.append(name) } },
       react: { note, reaction in await MainActor.run { self.reacted.append((note, reaction)) } },
       updates: {
@@ -157,6 +161,62 @@ struct AppModelTests {
     #expect(room.reacted.map(\.0) == [id])
     #expect(room.reacted.map(\.1) == [.heart])
     #expect(session.play.reactions[id] == .heart)
+  }
+
+  private func action(
+    _ kind: WidgetActionKind, day: String? = nil, note: UUID? = nil
+  ) -> WidgetAction {
+    WidgetAction(
+      kind: kind, at: .now, day: day ?? TreatDay.key(for: .now, calendar: .current), note: note)
+  }
+
+  @Test func widgetActionsGoThroughTheAppsOwnPaths() async throws {
+    let (_, session) = try await paired()
+    let id = UUID()
+    await room.emit(.note(strokes, id: id))
+    #expect(session.perform(action(.pet), now: .now) == .done)
+    #expect(session.perform(action(.treat), now: .now) == .done)
+    #expect(session.perform(action(.heart, note: id), now: .now) == .done)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(Set(room.plays) == [.pet, .treat])
+    #expect(room.plays.count == 2)
+    #expect(room.reacted.map(\.0) == [id])
+    #expect(session.play.petsGiven == 1)
+  }
+
+  @Test func widgetActionsWaitForTheRoomAndNeverFakeASend() async throws {
+    let model = makeModel()
+    model.join(code: code)
+    let session = try #require(model.session)
+    #expect(session.status == .connecting)
+    #expect(session.perform(action(.pet), now: .now) == .keep)
+    #expect(session.perform(action(.treat), now: .now) == .keep)
+    #expect(session.perform(action(.heart, note: UUID()), now: .now) == .keep)
+    try await Task.sleep(for: .milliseconds(50))
+    #expect(room.plays.isEmpty)
+    #expect(session.play.petsGiven == 0)
+    #expect(session.perform(action(.openCanvas), now: .now) == .done)
+    #expect(session.store.state.screen == .canvas)
+  }
+
+  @Test func staleOrRepeatedWidgetActionsAreDropped() async throws {
+    let (_, session) = try await paired()
+    #expect(session.perform(action(.treat, day: "2000-01-01"), now: .now) == .drop)
+    #expect(session.perform(action(.heart), now: .now) == .drop)
+    let today = TreatDay.key(for: .now, calendar: .current)
+    session.giveTreat(on: today)
+    #expect(session.perform(action(.treat), now: .now) == .drop)
+  }
+
+  @Test func drainingRemovesWhatItDidAndLeavesWhatItCouldNot() async throws {
+    let queue = ActionQueue(
+      directory: FileManager.default.temporaryDirectory.appending(path: UUID().uuidString))
+    let (_, session) = try await paired()
+    try queue.enqueue(action(.pet))
+    try queue.enqueue(action(.heart, note: UUID()))
+    try queue.enqueue(action(.openCanvas))
+    #expect(session.drain(queue))
+    #expect(queue.pending(at: .now).map(\.kind) == [.heart])
   }
 
   @Test func aSentNoteCannotBeReactedTo() async throws {

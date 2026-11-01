@@ -6,6 +6,7 @@ import Foundation
 import Observation
 import Persistence
 import Pet
+import WidgetBridge
 import Wire
 
 /// A live pairing: the room connection, the cat's state and the notes kept for it.
@@ -19,6 +20,7 @@ final class PairSession {
   let store: Store<HomeMachine>
   let shop: ShopStore
   let renovator: RoomRenovator
+  let trips: CatTripController
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -45,7 +47,8 @@ final class PairSession {
     delivery: NoteDelivery,
     archive: NoteArchive,
     shop: ShopStore,
-    now: @escaping @Sendable () -> Date = { .now }
+    now: @escaping @Sendable () -> Date = { .now },
+    trips: CatTripController = .live()
   ) {
     self.room = room
     self.delivery = delivery
@@ -53,6 +56,7 @@ final class PairSession {
     self.shop = shop
     renovator = RoomRenovator(store: shop)
     self.now = now
+    self.trips = trips
     play = PairPlay(device: room.device)
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
   }
@@ -125,6 +129,70 @@ final class PairSession {
     guard let name = CatName.clean(raw) else { return }
     play.named(name)
     Task { [delivery] in await delivery.nameCat(name) }
+  }
+
+  /// What became of an action taken outside the app.
+  enum Disposition: Equatable {
+    case done
+    /// It cannot be carried out yet, so it stays queued.
+    case keep
+    /// It is no longer meaningful, so it is dropped without being sent.
+    case drop
+  }
+
+  private var isConnected: Bool {
+    switch status {
+    case .partnerAway, .partnerHere: true
+    case .connecting, .refused: false
+    }
+  }
+
+  /// Carries out one action from a widget, control or Live Activity through the same paths a tap
+  /// in the app takes. Anything that must reach the partner waits until the room is connected.
+  func perform(_ action: WidgetAction, now: Date, calendar: Calendar = .current) -> Disposition {
+    switch action.kind {
+    case .openCanvas:
+      store.send(.canvasOpened)
+      return .done
+    case .pet:
+      guard isConnected else { return .keep }
+      pet()
+      return .done
+    case .treat:
+      let today = TreatDay.key(for: now, calendar: calendar)
+      guard action.day == today else { return .drop }
+      switch play.status(on: today) {
+      case .waitingOnPartner, .fed: return .drop
+      case .neither, .waitingOnMe: break
+      }
+      guard isConnected else { return .keep }
+      giveTreat(on: today)
+      return .done
+    case .heart:
+      guard let id = action.note else { return .drop }
+      guard isConnected, let note = notes.first(where: { $0.id == id }) else { return .keep }
+      react(to: note, .heart)
+      return .done
+    }
+  }
+
+  /// Carries out what the queue holds and removes what was handled. Returns true when it opened
+  /// the canvas.
+  @discardableResult
+  func drain(_ queue: ActionQueue, now: Date = .now) -> Bool {
+    var openedCanvas = false
+    for action in queue.pending(at: now) {
+      switch perform(action, now: now) {
+      case .done:
+        openedCanvas = openedCanvas || action.kind == .openCanvas
+        queue.remove(action)
+      case .drop:
+        queue.remove(action)
+      case .keep:
+        break
+      }
+    }
+    return openedCanvas
   }
 
   func giveTreat(on day: String) {

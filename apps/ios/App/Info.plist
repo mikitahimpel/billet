@@ -4,6 +4,8 @@
 <dict>
 	<key>BilletDemoHost</key>
 	<string>$(BILLET_DEMO_HOST)</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

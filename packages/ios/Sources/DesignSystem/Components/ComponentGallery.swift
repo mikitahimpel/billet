@@ -25,6 +25,8 @@ public struct ComponentGallery: View {
         EmptyView()
       }
       .card()
+      ToggleRow("Cat mood", subtitle: "How the cat feels right now.", isOn: .constant(true))
+        .card()
       HStack(spacing: Spacing.large) {
         HousePlate(47)
         LockHouseGlyph()

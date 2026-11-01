@@ -1,8 +1,11 @@
+import Delivery
 import DesignSystem
 import FeatureInbox
 import FeatureSettings
+import Pet
 import PetScene
 import SwiftUI
+import WidgetBridge
 
 /// The three tabs of a paired device. Drawing is opened from Home and is not a tab.
 ///
@@ -17,10 +20,36 @@ struct AppShellView: View {
   let session: PairSession
   let scenes: [any PetScene]
   @Binding var selectedSceneID: String?
+  let widgetFeatures: WidgetFeaturesModel
+  let publisher: WidgetPublisher
   let onChangeCode: () -> Void
   let onLogOut: () async -> String?
 
+  @Environment(\.scenePhase) private var scenePhase
   @State private var destination = Destination.home
+
+  /// Everything the widgets show that can change while the app is open.
+  private struct PublishKey: Hashable {
+    let ledger: TreatLedger
+    let catName: String?
+    let status: NoteDelivery.Status
+    let latestNote: UUID?
+    let noteCount: Int
+    let active: Bool
+  }
+
+  /// When the app may be able to carry out what widgets queued: it is open, or the room changed.
+  private struct DrainKey: Hashable {
+    let active: Bool
+    let status: NoteDelivery.Status
+  }
+
+  private var publishKey: PublishKey {
+    PublishKey(
+      ledger: session.play.ledger, catName: session.play.catName, status: session.status,
+      latestNote: session.notes.first?.id,
+      noteCount: session.notes.count, active: scenePhase == .active)
+  }
 
   private var line: ConnectionLine {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
@@ -31,6 +60,7 @@ struct AppShellView: View {
       Tab("Home", systemImage: "house", value: .home) {
         HomeView(
           session: session,
+          widgetFeatures: widgetFeatures,
           scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
           onChangeCode: onChangeCode,
           onOpenNotes: { destination = .notes }
@@ -52,6 +82,7 @@ struct AppShellView: View {
           catName: session.play.catName,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
+          widgetFeatures: widgetFeatures,
           onLogOut: onLogOut
         )
         .tabEntrance(destination == .settings)
@@ -59,6 +90,18 @@ struct AppShellView: View {
     }
     .tint(Palette.gold.color)
     .sensoryFeedback(.selection, trigger: destination)
+    .task(id: DrainKey(active: scenePhase == .active, status: session.status)) {
+      guard scenePhase == .active, let queue = ActionQueue.appGroup() else { return }
+      if session.drain(queue) { destination = .home }
+    }
+    .task(id: publishKey) {
+      while !Task.isCancelled {
+        publisher.publish(
+          play: session.play, notes: session.notes,
+          partnerHere: scenePhase == .active && session.status == .partnerHere)
+        try? await Task.sleep(for: WidgetPublisher.refresh)
+      }
+    }
     .modifier(WarmTabBarFallback())
   }
 }

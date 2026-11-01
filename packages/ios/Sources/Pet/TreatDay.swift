@@ -17,7 +17,7 @@ public enum TreatDay {
   }
 
   /// The day before `key`, or nil when `key` is not a valid day.
-  static func previous(_ key: String, calendar: Calendar) -> String? {
+  public static func previous(_ key: String, calendar: Calendar) -> String? {
     let parts = key.split(separator: "-").compactMap { Int($0) }
     guard parts.count == 3,
       let date = calendar.date(

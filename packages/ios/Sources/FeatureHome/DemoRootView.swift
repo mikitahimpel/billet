@@ -6,6 +6,7 @@ import Ink
 import Persistence
 import PetScene
 import SwiftUI
+import WidgetBridge
 import WidgetKit
 
 /// Shows pairing or the tabs, and keeps the room connection open while the app is in front.
@@ -18,6 +19,8 @@ public struct DemoRootView: View {
 
   @Environment(\.scenePhase) private var scenePhase
   @State private var model: AppModel
+  @State private var widgetFeatures: WidgetFeaturesModel
+  private let publisher = WidgetPublisher.live()
 
   public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
     self.host = host
@@ -25,6 +28,13 @@ public struct DemoRootView: View {
     _selectedSceneID = selectedSceneID
     // Without the bundled faces SwiftUI falls back to the system font, which still reads fine.
     try? BilletFonts.register()
+    _widgetFeatures = State(
+      initialValue: WidgetFeaturesModel(store: .appGroup()) {
+        WidgetCenter.shared.reloadAllTimelines()
+        #if os(iOS)
+          ControlCenter.shared.reloadAllControls()
+        #endif
+      })
     _model = State(
       initialValue: AppModel(
         dependencies: AppModel.Dependencies(
@@ -34,6 +44,7 @@ public struct DemoRootView: View {
           },
           clearSurfaces: {
             NoteImage.removeLatest()
+            WidgetSnapshotStore.appGroup()?.remove()
             WidgetCenter.shared.reloadAllTimelines()
           },
           pairingTimeout: Self.pairingTimeout
@@ -71,6 +82,8 @@ public struct DemoRootView: View {
           session: session,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
+          widgetFeatures: widgetFeatures,
+          publisher: publisher,
           onChangeCode: { model.changeCode() },
           onLogOut: { await model.logOut() }
         )

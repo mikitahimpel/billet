@@ -3,6 +3,7 @@ import Foundation
 import PetScene
 import SwiftUI
 import UserNotifications
+import WidgetBridge
 
 #if canImport(UIKit)
   import UIKit
@@ -19,6 +20,7 @@ public struct SettingsView: View {
   private let catName: String?
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?
+  private let widgetFeatures: WidgetFeaturesModel?
   private let onLogOut: () async -> String?
 
   @Environment(\.openURL) private var openURL
@@ -35,6 +37,7 @@ public struct SettingsView: View {
     catName: String? = nil,
     scenes: [any PetScene],
     selectedSceneID: Binding<String?>,
+    widgetFeatures: WidgetFeaturesModel? = nil,
     onLogOut: @escaping () async -> String?
   ) {
     self.code = code
@@ -42,6 +45,7 @@ public struct SettingsView: View {
     self.catName = catName
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
+    self.widgetFeatures = widgetFeatures
     self.onLogOut = onLogOut
   }
 
@@ -52,6 +56,9 @@ public struct SettingsView: View {
         sceneSection
       }
       notificationSection
+      if let widgetFeatures {
+        widgetSection(widgetFeatures)
+      }
       links
       logOut
       version
@@ -99,6 +106,31 @@ public struct SettingsView: View {
               openURL(url)
             }
           #endif
+        }
+      }
+    }
+  }
+
+  /// One switch per widget and Lock Screen feature, grouped by what it does.
+  private func widgetSection(_ model: WidgetFeaturesModel) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.medium) {
+      SettingsHeading("Widgets & Lock Screen")
+      ForEach(WidgetFeature.Group.allCases, id: \.self) { group in
+        VStack(alignment: .leading, spacing: Spacing.small) {
+          Text(group.title)
+            .billetType(.caption)
+            .foregroundStyle(Palette.muted.color)
+            .padding(.horizontal, Spacing.medium)
+          SettingsGroup {
+            let features = WidgetFeature.allCases.filter { $0.group == group }
+            ForEach(features, id: \.self) { feature in
+              if feature != features.first { ListDivider() }
+              ToggleRow(
+                feature.title, subtitle: feature.detail,
+                isOn: Binding(
+                  get: { model.isOn(feature) }, set: { model.set(feature, on: $0) }))
+            }
+          }
         }
       }
     }
