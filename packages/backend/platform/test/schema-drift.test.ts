@@ -19,10 +19,10 @@ import {
   sessions,
   users,
 } from "../src/directory-schema.ts";
-import { PlatformProbe } from "../src/platform-probe.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
+import { SampleRow, StoredNote, StoredRoom } from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { roomProbe } from "../src/room-schema.ts";
+import { note, room } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
@@ -36,7 +36,8 @@ const checked = [
   ["pair_members", pairMembers, StoredPairMember],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
-  ["room_probe", roomProbe, PlatformProbe],
+  ["note", note, StoredNote],
+  ["room", room, StoredRoom],
   ["sessions", sessions, StoredSession],
   ["users", users, StoredUser],
 ] as const;
@@ -74,6 +75,6 @@ describe("tables match their Effect Schema", () => {
       }),
     ],
   ])("catches %s", (_, table) => {
-    expect(tableShape(table)).not.toEqual(domainShape(PlatformProbe));
+    expect(tableShape(table)).not.toEqual(domainShape(SampleRow));
   });
 });

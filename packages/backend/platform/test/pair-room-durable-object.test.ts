@@ -128,10 +128,15 @@ describe("PairRoom storage", () => {
     const room = await openRoom();
     await evictDurableObject(room);
     await room.snapshot();
-    const versions = await runInDurableObject(room, (_, state) =>
-      state.storage.sql.exec<{ version: number }>("SELECT version FROM migration").toArray(),
+    const names = await runInDurableObject(room, (_, state) =>
+      state.storage.sql
+        .exec<{ name: string }>("SELECT name FROM __drizzle_migrations ORDER BY name")
+        .toArray(),
     );
-    expect(versions).toEqual([{ version: 1 }]);
+    expect(names.map(({ name }) => name)).toEqual([
+      expect.stringContaining("_init"),
+      expect.stringContaining("_pair_room"),
+    ]);
   });
 
   it("rolls the state back if appending the note fails", async () => {
