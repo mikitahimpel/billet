@@ -218,6 +218,22 @@ export const describePairingRepositoryContract = (
       expect(after).toEqual([Option.none(), Option.none()]);
     });
 
+    it("finds both members of a pair, and nobody once it has ended", async () => {
+      const repository = await make();
+      const pairId = pair("pair-user-b-user-a");
+      const [before, after] = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana));
+          const members = yield* repository.findMembers(pairId);
+          yield* repository.unpair(ana);
+          return [members, yield* repository.findMembers(pairId)] as const;
+        }),
+      );
+      expect(before.toSorted()).toEqual([ana, ben]);
+      expect(after).toEqual([]);
+    });
+
     it("leaves other pairs alone on unpair, and does nothing for an unpaired user", async () => {
       const repository = await make();
       const found = await Effect.runPromise(

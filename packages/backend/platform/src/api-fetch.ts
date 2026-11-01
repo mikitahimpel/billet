@@ -3,21 +3,27 @@ import { Digest, SecureRandom } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
+import { NotesRoutes } from "@billet/backend-notes/notes-routes";
+import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { MediaStoreLive } from "./media-store-live.ts";
+import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
-const apiRoutes = (db: D1Database) =>
-  Layer.mergeAll(AuthRoutes, PairingRoutes).pipe(
-    Layer.provide(Layer.mergeAll(AuthService.layer, PairingService.layer)),
+const apiRoutes = (env: WorkerEnv) =>
+  Layer.mergeAll(AuthRoutes, PairingRoutes, NotesRoutes).pipe(
+    Layer.provide(Layer.mergeAll(AuthService.layer, PairingService.layer, NotesService.layer)),
     Layer.provide(
       Layer.mergeAll(
-        AuthRepositoryLive(db),
-        PairingRepositoryLive(db),
+        AuthRepositoryLive(env.DB),
+        PairingRepositoryLive(env.DB),
+        MediaStoreLive(env.MEDIA),
+        PairRoomsLive(env.PAIR_ROOM),
         AppleIdentityLive,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
@@ -37,7 +43,7 @@ export const respondApi = async (
 ): Promise<Response> => {
   if (!new URL(request.url).pathname.startsWith("/v1/")) return respondPlaceholder();
 
-  const { handler, dispose } = HttpRouter.toWebHandler(apiRoutes(env.DB), { disableLogger: true });
+  const { handler, dispose } = HttpRouter.toWebHandler(apiRoutes(env), { disableLogger: true });
   try {
     return await handler(request);
   } finally {

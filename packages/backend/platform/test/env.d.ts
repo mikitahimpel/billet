@@ -1,6 +1,7 @@
 declare namespace Cloudflare {
   interface Env {
     readonly DB: D1Database;
+    readonly MEDIA: R2Bucket;
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
   }

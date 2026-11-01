@@ -10,6 +10,8 @@
     "./auth-repository-live": "./src/auth-repository-live.ts",
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
+    "./media-store-live": "./src/media-store-live.ts",
+    "./pair-rooms-live": "./src/pair-rooms-live.ts",
     "./pairing-repository-live": "./src/pairing-repository-live.ts",
     "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
@@ -26,6 +28,7 @@
   },
   "dependencies": {
     "@billet/backend-auth": "workspace:*",
+    "@billet/backend-notes": "workspace:*",
     "@billet/backend-pair-room": "workspace:*",
     "@billet/backend-pairing": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
