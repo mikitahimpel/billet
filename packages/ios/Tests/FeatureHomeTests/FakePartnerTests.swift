@@ -13,7 +13,7 @@ struct FakePartnerTests {
     arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
     reply: .milliseconds(30),
     petBack: .milliseconds(10), treatBack: .milliseconds(10), sealedFor: .seconds(60),
-    holdFor: .milliseconds(5), idle: [])
+    holdFor: .milliseconds(5), lampFollows: .milliseconds(10), idle: [])
 
   private func collect(
     _ delivery: NoteDelivery, count: Int, after act: @Sendable () async -> Void = {}
@@ -34,6 +34,15 @@ struct FakePartnerTests {
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let seen = await collect(delivery, count: 3)
     #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose)))
+  }
+
+  @Test func theirLampFollowsOursOutAndBackOn() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    var seen = await collect(delivery, count: 4) { await delivery.signal(.lamp(on: false)) }
+    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose, lampOn: false)))
+    seen = await collect(delivery, count: 4) { await delivery.signal(.lamp(on: true)) }
+    #expect(seen.last == .partnerGlow(PartnerGlow(colour: .rose, lampOn: true)))
   }
 
   @Test func theFakePartnerArrivesAfterConnecting() async {

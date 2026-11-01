@@ -130,7 +130,17 @@ struct HomeView: View {
       }
       .padding(.bottom, Spacing.small)
     }
+    .overlay { nightOverlay }
     .overlay(alignment: .top) { roomStatus }
+  }
+
+  /// Dark over the scene while both lamps are out.
+  @ViewBuilder private var nightOverlay: some View {
+    if session.labs.isOn(LabExperiment.lightsOut) {
+      TimelineView(.everyMinute) { context in
+        NightOverlay(night: session.lamp.night(at: context.date))
+      }
+    }
   }
 
   @ViewBuilder private var petScene: some View {
@@ -208,8 +218,13 @@ struct HomeView: View {
   }
 
   @ViewBuilder private var lampColourCard: some View {
-    if session.labs.isOn(LabExperiment.lampColours) {
-      LampColourSection(store: session.lamp)
+    let colours = session.labs.isOn(LabExperiment.lampColours)
+    let goodnight = session.labs.isOn(LabExperiment.lightsOut)
+    if colours || goodnight {
+      LampColourSection(
+        store: session.lamp, catName: session.play.catName, showsColours: colours,
+        showsGoodnight: goodnight
+      ) { session.lampChanged(out: $0) }
     }
   }
 

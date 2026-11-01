@@ -37,8 +37,11 @@ public enum LampColour: String, CaseIterable, Codable, Sendable {
 /// What this phone knows about the partner's window.
 public struct PartnerGlow: Hashable, Sendable {
   public var colour: LampColour
+  /// False once the partner has said goodnight.
+  public var lampOn: Bool
 
-  public init(colour: LampColour = .standard) {
+  public init(colour: LampColour = .standard, lampOn: Bool = true) {
     self.colour = colour
+    self.lampOn = lampOn
   }
 }

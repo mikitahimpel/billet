@@ -22,6 +22,8 @@ struct FakePartnerPace: Sendable {
   var sealedFor: Duration
   /// How long the partner keeps a finger on the cat.
   var holdFor: Duration
+  /// After the user's lamp goes out or comes back, before the partner's follows.
+  var lampFollows: Duration
   /// Between the things the partner does when nobody has done anything.
   var idle: [Duration]
 
@@ -29,6 +31,7 @@ struct FakePartnerPace: Sendable {
     arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
     treatBack: .seconds(5), sealedFor: .seconds(90), holdFor: .seconds(10),
+    lampFollows: .seconds(8),
     idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
 
@@ -47,7 +50,8 @@ actor FakePartnerRoom {
   private var current: UUID?
   private var idle: Task<Void, Never>?
   private var drawn = 0
-  private var lamp = 0
+  private var colour = LampColour.rose
+  private var lampOn = true
   private var reactions: [UUID: Reaction] = [:]
 
   init(
@@ -85,6 +89,17 @@ actor FakePartnerRoom {
   }
 
   /// The room confirms a name after a moment, as the real one does.
+  /// The partner's lamp follows the user's a little later.
+  func signalled(_ signal: LabSignal) {
+    switch signal {
+    case .lamp(let on):
+      after(pace.lampFollows) {
+        $0.lampOn = on
+        $0.emitGlow()
+      }
+    }
+  }
+
   func catNamed(_ name: String) {
     after(pace.petBack) { $0.emit(.catName(name)) }
   }
@@ -99,7 +114,7 @@ actor FakePartnerRoom {
     idle = Task { [pace, sleep] in
       await sleep(pace.arrival)
       emit(.status(.partnerHere))
-      emit(.partnerGlow(PartnerGlow(colour: .rose)))
+      emitGlow()
       var step = 0
       while !Task.isCancelled, !pace.idle.isEmpty {
         await sleep(pace.idle[step % pace.idle.count])
@@ -158,8 +173,13 @@ actor FakePartnerRoom {
   }
 
   private func changeLamp() {
-    lamp += 1
-    emit(.partnerGlow(PartnerGlow(colour: LampColour.allCases[lamp % LampColour.allCases.count])))
+    let all = LampColour.allCases
+    colour = all[((all.firstIndex(of: colour) ?? 0) + 1) % all.count]
+    emitGlow()
+  }
+
+  private func emitGlow() {
+    emit(.partnerGlow(PartnerGlow(colour: colour, lampOn: lampOn)))
   }
 
   private func holdCat() {
@@ -189,6 +209,7 @@ extension NoteDelivery {
       play: { kind, _ in await room.played(kind) },
       nameCat: { await room.catNamed($0) },
       react: { _, _ in },
+      signal: { await room.signalled($0) },
       updates: { room.updates() })
   }
 }

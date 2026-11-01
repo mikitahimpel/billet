@@ -18,6 +18,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case wallpaperShortcut
   case porchLight
   case lampColours
+  case lightsOut
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -49,6 +50,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wallpaperShortcut: .notes
     case .porchLight: .cat
     case .lampColours: .home
+    case .lightsOut: .home
     }
   }
 
@@ -66,6 +68,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wallpaperShortcut: "Wallpaper shortcut"
     case .porchLight: "Porch light"
     case .lampColours: "Lamp colours"
+    case .lightsOut: "Lights out"
     }
   }
 
@@ -73,6 +76,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .lightsOut:
+      "Say goodnight and your lamp goes out. When both are out the cat curls up and the house goes dark. The fake partner puts its lamp out eight seconds after you."
     case .lampColours:
       "Choose a lamp colour for how today feels. Your partner's window shows theirs. No labels. The fake partner changes its colour now and then."
     case .porchLight:
@@ -112,6 +117,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wallpaperShortcut: true
     case .porchLight: true
     case .lampColours: true
+    case .lightsOut: true
     }
   }
 }

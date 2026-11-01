@@ -157,6 +157,12 @@ final class PairSession {
     return play.ledger.streak(today: day, calendar: calendar, paused: paused)
   }
 
+  /// This phone's lamp went out or came back on. The partner is told through `signal`, which the
+  /// real room ignores.
+  func lampChanged(out: Bool) {
+    Task { [delivery] in await delivery.signal(.lamp(on: !out)) }
+  }
+
   /// This phone's finger went down on the cat, or came up.
   func holdChanged(_ holding: Bool) {
     hold.iHold(holding, at: now())

@@ -5,12 +5,74 @@ import SwiftUI
 /// means what the two of you say it means.
 public struct LampColourSection: View {
   private let store: LampStore
+  private let catName: String?
+  private let showsColours: Bool
+  private let showsGoodnight: Bool
+  private let onGoodnight: (Bool) -> Void
 
-  public init(store: LampStore) {
+  /// - Parameters:
+  ///   - showsColours: Whether the colour choice and the partner's window show.
+  ///   - showsGoodnight: Whether the goodnight button shows.
+  ///   - onGoodnight: Called with true when this phone's lamp goes out, and false when it comes
+  ///     back on.
+  public init(
+    store: LampStore, catName: String?, showsColours: Bool, showsGoodnight: Bool,
+    onGoodnight: @escaping (Bool) -> Void
+  ) {
     self.store = store
+    self.catName = catName
+    self.showsColours = showsColours
+    self.showsGoodnight = showsGoodnight
+    self.onGoodnight = onGoodnight
   }
 
   public var body: some View {
+    VStack(spacing: Spacing.small) {
+      if showsColours { colours }
+      if showsGoodnight { goodnight }
+    }
+    .padding(Spacing.medium)
+    .frame(maxWidth: .infinity)
+    .card()
+    .calmAnimation(value: store.theirs?.colour)
+    .accessibilityIdentifier("lampColours")
+  }
+
+  private var goodnight: some View {
+    TimelineView(.everyMinute) { context in
+      let night = store.night(at: context.date)
+      VStack(spacing: Spacing.small) {
+        Text(Self.words(night, catName: catName))
+          .billetType(.label)
+          .foregroundStyle(Palette.muted.color)
+          .multilineTextAlignment(.center)
+        switch night {
+        case .waitingOnThem, .asleep:
+          BilletButton("Light the lamp again", rank: .secondary) {
+            store.wakeUp()
+            onGoodnight(false)
+          }
+        case .awake, .waitingOnMe:
+          BilletButton("Say goodnight", rank: .secondary, systemImage: "moon") {
+            store.sayGoodnight(at: .now)
+            onGoodnight(true)
+          }
+        }
+      }
+    }
+  }
+
+  static func words(_ night: LightsOut.Night, catName: String?) -> String {
+    let cat = catName ?? "The cat"
+    switch night {
+    case .awake: return "Put your lamp out when you are going to sleep."
+    case .waitingOnThem: return "Your lamp is out. \(cat) waits for theirs."
+    case .waitingOnMe: return "Your partner's lamp is out."
+    case .asleep: return "Both lamps are out. \(cat) has curled up."
+    }
+  }
+
+  private var colours: some View {
     HStack(alignment: .center, spacing: Spacing.medium) {
       VStack(alignment: .leading, spacing: Spacing.small) {
         Text("Your lamp")
@@ -49,11 +111,6 @@ public struct LampColourSection: View {
         store.theirs.map { "Your partner's lamp is \($0.colour.spokenName)" }
           ?? "Your partner has not set a lamp")
     }
-    .padding(Spacing.medium)
-    .frame(maxWidth: .infinity)
-    .card()
-    .calmAnimation(value: store.theirs?.colour)
-    .accessibilityIdentifier("lampColours")
   }
 
   private struct Window: View {
@@ -73,5 +130,23 @@ public struct LampColourSection: View {
           color: (colour?.swatch ?? Palette.muted).color.opacity(colour == nil ? 0 : 0.6),
           radius: 10)
     }
+  }
+}
+
+/// The dark laid over the scene while both lamps are out. Touches go through.
+public struct NightOverlay: View {
+  private let night: LightsOut.Night
+
+  public init(night: LightsOut.Night) {
+    self.night = night
+  }
+
+  public var body: some View {
+    Palette.skyNight.color
+      .opacity(night == .asleep ? 0.62 : 0)
+      .allowsHitTesting(false)
+      .ignoresSafeArea()
+      .calmAnimation(value: night)
+      .accessibilityHidden(true)
   }
 }
