@@ -93,9 +93,10 @@ kept: it's legible and the owner chose the board with it. #35 can revisit it wit
 
 ## Space and shape
 
-Spacing is `4 / 8 / 16 / 24 / 32 / 48 / 64`. Radii belong to objects: 40 for a scene panel, 18 for a
-control, 6 for a house plate, 3 for paper. Nothing else is rounded another way. The smallest target
-is 44pt.
+Spacing is `4 / 8 / 16 / 24 / 32 / 48 / 64`. Radii belong to objects: 24 for a card or scene panel, 16 for a plate standing inside a card and
+as the floor for anything nested, 10 for paper in the interface. Controls are capsules. Art inside
+a scene keeps its own smaller radii: 8 for a scene plate, 3 for scene paper, 1.5 for a peg. Nothing
+else is rounded another way. The smallest target is 44pt.
 
 ## Motion
 

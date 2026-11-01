@@ -94,7 +94,7 @@ private struct LittleHouseView: View {
         .frame(width: Self.plaque.width / 1.8, height: Self.plaque.height / 1.8)
         .scaleEffect(1.8)
         .frame(width: Self.plaque.width, height: Self.plaque.height)
-        .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
+        .background(Palette.plate.color, in: .rect(cornerRadius: Radius.scenePlate))
         .scaleEffect(scale)
         .position(x: Self.plaque.midX * scale, y: Self.plaque.midY * scale)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: world.streak)

@@ -262,7 +262,7 @@ public struct EmptyWire: View {
       for x in [size.width * 0.32, size.width * 0.68] {
         let peg = CGRect(x: x - 2.5, y: 8, width: 5, height: 18)
         context.fill(
-          Path(roundedRect: peg, cornerRadius: Radius.paper), with: .color(Palette.woodLit.color))
+          Path(roundedRect: peg, cornerRadius: Radius.peg), with: .color(Palette.woodLit.color))
       }
     }
     .frame(width: 180, height: 32)

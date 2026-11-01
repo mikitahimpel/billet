@@ -30,7 +30,7 @@ struct HungNote: View {
         x: (wall.peg.x - wall.paper.minX) / wall.paper.width,
         y: (wall.peg.y - wall.paper.minY) / wall.paper.height)
 
-      RoundedRectangle(cornerRadius: Radius.paper * scale)
+      RoundedRectangle(cornerRadius: Radius.scenePaper * scale)
         .fill(Palette.paper.color)
         .overlay {
           Image(decorative: drawing, scale: 1)

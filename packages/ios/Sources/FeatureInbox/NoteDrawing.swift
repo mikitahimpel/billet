@@ -23,6 +23,7 @@ struct NoteDrawing: View {
         }
       }
       .aspectRatio(1, contentMode: .fit)
+      .clipShape(.rect(cornerRadius: Radius.paper))
       .shadow(color: Palette.pageDeep.color.opacity(0.5), radius: 3, x: 1, y: 2)
       .task(id: note.id) {
         let strokes = note.strokes

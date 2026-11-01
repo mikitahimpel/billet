@@ -17,14 +17,21 @@ public enum Spacing {
 public enum Radius {
   /// A card or scene panel.
   public static let card: CGFloat = 24
-  /// Something standing inside a card, on the card's own margin.
-  public static let plate = nested(in: card, padding: Spacing.medium)
-  /// A sheet of paper.
-  public static let paper: CGFloat = 3
+  /// Something standing inside a card, and the floor for anything nested.
+  public static let plate: CGFloat = 16
+  /// A sheet of paper in the interface: the canvas, note thumbnails, note detail.
+  public static let paper: CGFloat = 10
 
-  /// The corner that stays concentric with `outer` at `padding` inside it.
+  /// A plate drawn inside a scene, at the scene's own scale.
+  public static let scenePlate: CGFloat = 8
+  /// Paper drawn inside a scene, where it has to match the scene's artwork.
+  public static let scenePaper: CGFloat = 3
+  /// A peg holding paper to a line.
+  public static let peg: CGFloat = 1.5
+
+  /// The corner that stays concentric with `outer` at `padding` inside it, never below `plate`.
   public static func nested(in outer: CGFloat, padding: CGFloat) -> CGFloat {
-    max(outer - padding, 0)
+    max(outer - padding, plate)
   }
 }
 

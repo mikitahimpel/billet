@@ -18,9 +18,9 @@ public struct HousePlate: View {
       .foregroundStyle(Palette.gold.color)
       .padding(.horizontal, 10 * scale)
       .frame(minWidth: 56 * scale, minHeight: 38 * scale)
-      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate * scale))
+      .background(Palette.plate.color, in: .rect(cornerRadius: Radius.scenePlate * scale))
       .overlay {
-        RoundedRectangle(cornerRadius: Radius.nested(in: Radius.plate, padding: 2) * scale)
+        RoundedRectangle(cornerRadius: (Radius.scenePlate - 2) * scale)
           .strokeBorder(Palette.gold.color, lineWidth: 1.2 * scale)
           .padding(2 * scale)
       }
