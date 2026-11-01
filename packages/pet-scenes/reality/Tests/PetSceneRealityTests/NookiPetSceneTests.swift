@@ -22,6 +22,8 @@ struct NookiPetSceneTests {
 
   @Test(arguments: [
     "Cat", "Item_rug", "Item_donutbed", "Item_bookcase", "Item_monstera", "Item_lamp",
+    "Item_armchair", "Item_lantern", "Item_print", "Item_teatable", "Item_tower", "Item_yarn",
+    "Item_mouse",
   ])
   func bundledModelLoads(name: String) async throws {
     let model = try await Entity(named: name, in: .module)
@@ -30,7 +32,7 @@ struct NookiPetSceneTests {
 
   @Test func mochiHasTheSeparateMeshesTheWakeAnimationSwaps() async throws {
     let model = try await Entity(named: "Cat", in: .module)
-    for name in ["Eye1", "Eye_1", "Ear1", "Ear_1", "EarInner1", "EarInner_1"] {
+    for name in ["Eye1", "Eye_1", "Ear1", "Ear_1", "EarInner1", "EarInner_1", "Bell", "Mouth"] {
       #expect(model.findEntity(named: name) != nil, "missing \(name)")
     }
   }

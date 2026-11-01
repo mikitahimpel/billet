@@ -10,6 +10,7 @@ enum NookiTarget: String, CaseIterable {
   case plant
   case bookcase
   case bed
+  case yarn
 }
 
 /// What a tap does: the scene's own reaction, and the event it reports, if any.
@@ -34,7 +35,7 @@ struct NookiTouch: Equatable {
       return NookiTouch(
         reaction: .toggleNote,
         event: noteIsOpen ? nil : .noteOpened(delivery: world.delivery))
-    case .plant, .bookcase, .bed:
+    case .plant, .bookcase, .bed, .yarn:
       return NookiTouch(reaction: .wobble(target))
     }
   }
