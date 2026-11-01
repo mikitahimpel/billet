@@ -26,6 +26,7 @@
     "ios:build": {
       "outputs": [],
       "inputs": [
+        "$TURBO_ROOT$/packages/contracts/fixtures/golden/**",
         "Sources/**",
         "Tests/**",
         "Package.swift",

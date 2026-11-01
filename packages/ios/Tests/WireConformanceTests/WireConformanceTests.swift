@@ -41,11 +41,36 @@ func roundTrip(fixture url: URL) throws {
   }
   let original = try Data(contentsOf: url)
   let encoded = try transform(original)
-  let before = try JSONSerialization.jsonObject(with: original, options: [.fragmentsAllowed])
-  let after = try JSONSerialization.jsonObject(with: encoded, options: [.fragmentsAllowed])
-  guard (before as AnyObject).isEqual(after) else {
+  guard compact(original) == compact(encoded) else {
     throw Mismatch(description: "\(relative): re-encoded JSON differs from the fixture")
   }
+}
+
+/// Strips whitespace outside strings and keeps every other byte, so `1`, `1.0`, `true` and key
+/// order must match the fixture exactly. Fixtures are canonical (sorted keys), so a round trip
+/// must encode with `.sortedKeys` and `.withoutEscapingSlashes`.
+func compact(_ data: Data) -> [UInt8] {
+  var output: [UInt8] = []
+  var inString = false
+  var escaped = false
+  for byte in data {
+    if inString {
+      if escaped {
+        escaped = false
+      } else if byte == UInt8(ascii: "\\") {
+        escaped = true
+      } else if byte == UInt8(ascii: "\"") {
+        inString = false
+      }
+      output.append(byte)
+    } else if byte == UInt8(ascii: "\"") {
+      inString = true
+      output.append(byte)
+    } else if ![0x20, 0x09, 0x0A, 0x0D].contains(byte) {
+      output.append(byte)
+    }
+  }
+  return output
 }
 
 @Test("Wire round-trips fixture", arguments: fixtureURLs())
@@ -53,11 +78,9 @@ func wireRoundTrips(fixture: URL) throws {
   try roundTrip(fixture: fixture)
 }
 
-@Test("Reports when there are no fixtures to round-trip")
-func reportsFixtureCount() {
-  let count = fixtureURLs().count
-  print(
-    count == 0
-      ? "No golden fixtures in packages/contracts/fixtures/golden yet; nothing to round-trip."
-      : "Round-tripping \(count) golden fixture(s).")
+@Test("Golden fixtures exist")
+func goldenFixturesExist() {
+  #expect(
+    !fixtureURLs().isEmpty,
+    "No fixtures found in \(fixturesDirectory.path); conformance would check nothing.")
 }
