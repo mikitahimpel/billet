@@ -36,6 +36,7 @@ export default defineConfig({
         ],
         test: {
           name: "workerd",
+          sequence: { groupOrder: 1 },
           include: ["test/**/*.test.ts"],
           exclude: ["test/**/*.node.test.ts", "test/demo-*.test.ts"],
         },
@@ -58,6 +59,7 @@ export default defineConfig({
         ],
         test: {
           name: "workerd-demo",
+          sequence: { groupOrder: 1 },
           include: ["test/demo-*.test.ts"],
           exclude: ["test/**/*.node.test.ts"],
         },
@@ -67,6 +69,9 @@ export default defineConfig({
           name: "node",
           environment: "node",
           include: ["test/**/*.node.test.ts"],
+          // drizzle-kit spawns here and has only the default timeout, so it runs before the
+          // workerd projects instead of beside them. Three projects at once starved it on CI.
+          sequence: { groupOrder: 0 },
         },
       },
     ],
