@@ -59,6 +59,25 @@ before anything is built on it.
 Users sign in with Apple. The Worker verifies the identity token and issues an opaque session token,
 stored hashed in D1. The widget and extensions read the token from a shared Keychain group.
 
+1. The app asks for a challenge (`POST /v1/auth/challenge`). The server stores only the nonce's hash,
+   for 10 minutes, and the app passes the nonce to Apple unchanged as the request's `nonce`.
+2. The app posts the identity token (`POST /v1/auth/apple`). The Worker checks the RS256 signature
+   against Apple's keys, then `iss`, `aud`, `exp`, `sub` and `nonce`, and deletes the nonce, so each
+   token signs in once. The Apple `sub` is stored; email and name are not.
+3. The server returns a 256-bit opaque session token and keeps only its SHA-256. Sign-in creates the
+   device, so a session belongs to exactly one device. Sessions last 90 days from the last use.
+4. The device registers one push token per kind (`PUT /v1/devices/current/push-token`), which replaces
+   the last one. A token moves to whichever device registered it last, and sign-out deletes the
+   device's tokens, so a phone never receives another account's notes.
+
+Failures are uniform: any rejection is a 401, and if Apple's keys or the database can't be read the
+answer is a 503. Nothing is granted on a failure, and an expired key set is never used. Logs carry
+fixed reason labels only.
+
+`packages/backend/auth` holds this logic on injected services: `IdentityVerifier` and `AuthRepository`.
+`platform` provides the real ones. The Worker does not serve these routes until the Drizzle
+repository from #66 exists.
+
 ### Privacy
 
 Traffic uses TLS, the R2 bucket is private, and media routes are authorised. End-to-end encryption is

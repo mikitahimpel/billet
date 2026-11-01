@@ -103,7 +103,45 @@ importers:
 
   apps/ios: {}
 
+  packages/backend/auth:
+    dependencies:
+      '@billet/contracts-domain':
+        specifier: workspace:*
+        version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
+    devDependencies:
+      '@billet/config-typescript':
+        specifier: workspace:*
+        version: link:../../config/typescript
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 5.20261101.1
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.75.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.90.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(yaml@2.9.1))
+
   packages/backend/platform:
+    dependencies:
+      '@billet/backend-auth':
+        specifier: workspace:*
+        version: link:../auth
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
     devDependencies:
       '@billet/config-typescript':
         specifier: workspace:*
