@@ -1,5 +1,11 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./packages/config/oxlint/oxlintrc.json"],
-  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", "**/.build/**"]
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", "**/.build/**"],
+  "overrides": [
+    {
+      "files": ["alchemy.run.ts"],
+      "rules": { "import/no-default-export": "off" }
+    }
+  ]
 }

@@ -1,0 +1,4 @@
+{
+  "extends": "./packages/config/typescript/node.json",
+  "include": ["alchemy.run.ts", "alchemy-d1-state.ts"]
+}
