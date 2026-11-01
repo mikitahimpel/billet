@@ -51,6 +51,9 @@ final class NookiDiorama {
   private var hasMochi = false
   private let missingMark = Entity()
   private let loadModel: NookiModelLoader
+  private let tiltSource: any NookiTiltSource
+  private var tilt = NookiTilt()
+  private var isFollowingTilt = false
   private let mochiDeadline: Duration
   private var settlingFrames = NookiDiorama.framesBeforeReady
   private var subscription: EventSubscription?
@@ -92,9 +95,11 @@ final class NookiDiorama {
   /// Starts empty and cheap, so a view can hold one before anything heavy has run.
   init(
     loadModel: @escaping NookiModelLoader = NookiFurniture.bundledModel,
-    mochiDeadline: Duration = .seconds(12)
+    mochiDeadline: Duration = .seconds(12),
+    tiltSource: any NookiTiltSource = NookiTiltSources.standard()
   ) {
     self.loadModel = loadModel
+    self.tiltSource = tiltSource
     self.mochiDeadline = mochiDeadline
     root.addChild(room)
     room.isEnabled = false
@@ -135,6 +140,7 @@ final class NookiDiorama {
     buildStreakMarks(play.streak)
     room.isEnabled = isOnScreen
     isLoaded = true
+    updateTiltFollowing()
   }
 
   /// How many entities the room holds so far.
@@ -175,12 +181,32 @@ final class NookiDiorama {
   func setReduceMotion(_ reduced: Bool) {
     reduceMotion = reduced
     dust.isEnabled = !reduced
+    updateTiltFollowing()
   }
 
   /// Off screen, the room leaves the render and updates stop.
   func setOnScreen(_ onScreen: Bool) {
     isOnScreen = onScreen
     room.isEnabled = onScreen && isLoaded
+    updateTiltFollowing()
+  }
+
+  private func updateTiltFollowing() {
+    let follow = isOnScreen && isLoaded && !reduceMotion
+    guard follow != isFollowingTilt else { return }
+    isFollowingTilt = follow
+    if follow { tiltSource.start() } else { tiltSource.stop() }
+  }
+
+  private func stepTilt(_ delta: Float) {
+    if isFollowingTilt, let gravity = tiltSource.gravity {
+      tilt.update(gravity: gravity, delta: delta)
+    } else {
+      tilt.settle(delta: delta)
+    }
+    guard tilt.lean != camera.lean else { return }
+    camera.lean(to: tilt.lean)
+    aimLens()
   }
 
   // MARK: - Camera
@@ -274,6 +300,7 @@ final class NookiDiorama {
     guard isBusy || idleDelta >= Self.idleStep else { return }
     let step = idleDelta
     idleDelta = 0
+    stepTilt(Float(step))
     if !camera.isAtRest {
       camera.step(Float(step))
       aimLens()
@@ -283,7 +310,8 @@ final class NookiDiorama {
 
   /// True while something should move at full rate. A sleeping room runs at the idle step.
   private var isBusy: Bool {
-    !camera.isAtRest || world.activity != .sleeping || petStart != nil || !wobbles.isEmpty
+    !camera.isAtRest || tilt.isMoving || world.activity != .sleeping || petStart != nil
+      || !wobbles.isEmpty
       || lookStart != nil || lookTurn != 0
       || noteOpening != (noteIsOpen ? 1 : 0)
   }
