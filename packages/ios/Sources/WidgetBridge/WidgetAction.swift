@@ -106,6 +106,7 @@ public enum ActionSurface: String, Codable, CaseIterable, Sendable {
   case lockScreen
   case control
   case liveActivity
+  case shortcut
 }
 
 /// Decides whether an action from a widget is queued, and says why when it is not.
@@ -145,6 +146,8 @@ public enum WidgetActionRequest {
       }
     case .liveActivity:
       return []
+    case .shortcut:
+      return kind == .openCanvas ? [.canvasShortcut] : []
     }
   }
 

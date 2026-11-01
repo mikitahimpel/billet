@@ -18,12 +18,16 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
   case controlHeart
   case controlCanvas
   case liveActivity
+  case canvasShortcut
+  case questionCard
+  case doodleCard
 
   public enum Group: CaseIterable, Sendable {
     case pictures
     case buttons
     case controls
     case liveActivity
+    case canvas
 
     public var title: String {
       switch self {
@@ -31,6 +35,7 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
       case .buttons: "Buttons"
       case .controls: "Controls"
       case .liveActivity: "Live Activity"
+      case .canvas: "Canvas"
       }
     }
   }
@@ -46,6 +51,8 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
       .controls
     case .liveActivity:
       .liveActivity
+    case .canvasShortcut, .questionCard, .doodleCard:
+      .canvas
     }
   }
 
@@ -67,6 +74,9 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .controlHeart: "Control: send a heart"
     case .controlCanvas: "Control: draw a note"
     case .liveActivity: "The cat is on its way"
+    case .canvasShortcut: "Draw from a shortcut"
+    case .questionCard: "Today's question"
+    case .doodleCard: "Doodle prompt"
     }
   }
 
@@ -88,9 +98,17 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .controlHeart: "For the Lock Screen and Control Center."
     case .controlCanvas: "Opens billet straight on the canvas."
     case .liveActivity: "Shows the cat carrying a note on the Lock Screen, with a heart button."
+    case .canvasShortcut: "A Shortcuts action that opens billet straight on the canvas."
+    case .questionCard: "A question to answer with a drawing, on Home."
+    case .doodleCard: "Something small to doodle, on Home."
     }
   }
 
   /// Whether the feature is on until the owner turns it off.
-  public var defaultOn: Bool { true }
+  public var defaultOn: Bool {
+    switch self {
+    case .doodleCard: false
+    default: true
+    }
+  }
 }

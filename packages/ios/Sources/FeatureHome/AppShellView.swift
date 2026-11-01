@@ -60,6 +60,7 @@ struct AppShellView: View {
       Tab("Home", systemImage: "house", value: .home) {
         HomeView(
           session: session,
+          widgetFeatures: widgetFeatures,
           scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
           onChangeCode: onChangeCode,
           onOpenNotes: { destination = .notes }

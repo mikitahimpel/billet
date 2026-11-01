@@ -7,6 +7,7 @@ import Ink
 import Pet
 import PetScene
 import SwiftUI
+import WidgetBridge
 
 /// The main screen: the chosen pet scene, and the way into the canvas.
 struct HomeView: View {
@@ -20,6 +21,7 @@ struct HomeView: View {
   @State private var showsStatus = true
 
   let session: PairSession
+  let widgetFeatures: WidgetFeaturesModel
   let scene: (any PetScene)?
   let onChangeCode: () -> Void
   let onOpenNotes: () -> Void
@@ -61,6 +63,8 @@ struct HomeView: View {
       #if os(iOS)
         .fullScreenCover(isPresented: canvasPresented) {
           CanvasView(
+            prompt: DailyPrompt.canvasPrompt(
+              features: widgetFeatures.features, day: TreatDay.key(for: .now, calendar: .current)),
             onClose: { store.send(.canvasClosed) },
             onSend: { session.send($0) }
           )
@@ -144,6 +148,7 @@ struct HomeView: View {
       catNaming
       latestReceived
       treatPanel
+      promptCards
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
@@ -162,6 +167,21 @@ struct HomeView: View {
       }
       .card()
       .sensoryFeedback(.impact(flexibility: .soft), trigger: session.play.reactions[note.id])
+    }
+  }
+
+  /// The day's question and doodle, for whichever of the two is switched on.
+  @ViewBuilder private var promptCards: some View {
+    let day = TreatDay.key(for: .now, calendar: .current)
+    if widgetFeatures.isOn(.questionCard) {
+      PromptCard(title: "Today's question", prompt: DailyPrompt.question(on: day)) {
+        store.send(.canvasOpened)
+      }
+    }
+    if widgetFeatures.isOn(.doodleCard) {
+      PromptCard(title: "Doodle prompt", prompt: DailyPrompt.doodle(on: day)) {
+        store.send(.canvasOpened)
+      }
     }
   }
 

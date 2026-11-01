@@ -15,10 +15,15 @@ public struct CanvasView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  private let prompt: String?
   private let onClose: () -> Void
   private let onSend: ([Stroke]) -> Void
 
-  public init(onClose: @escaping () -> Void, onSend: @escaping ([Stroke]) -> Void) {
+  /// - Parameter prompt: Something to draw, shown beside the close button.
+  public init(
+    prompt: String? = nil, onClose: @escaping () -> Void, onSend: @escaping ([Stroke]) -> Void
+  ) {
+    self.prompt = prompt
     self.onClose = onClose
     self.onSend = onSend
   }
@@ -28,6 +33,13 @@ public struct CanvasView: View {
       HStack {
         IconButton("xmark", label: "Close", action: onClose)
         Spacer()
+        if let prompt {
+          Text(prompt)
+            .billetType(.label)
+            .foregroundStyle(Palette.paperTurned.color)
+            .multilineTextAlignment(.trailing)
+            .accessibilityIdentifier("canvasPrompt")
+        }
       }
       sheet
       tools

@@ -9,7 +9,7 @@ extension ActionSurface: AppEnum {
   public static let typeDisplayRepresentation: TypeDisplayRepresentation = "Where"
   public static let caseDisplayRepresentations: [ActionSurface: DisplayRepresentation] = [
     .home: "Home Screen", .lockScreen: "Lock Screen", .control: "Control",
-    .liveActivity: "Live Activity",
+    .liveActivity: "Live Activity", .shortcut: "Shortcut",
   ]
 }
 
