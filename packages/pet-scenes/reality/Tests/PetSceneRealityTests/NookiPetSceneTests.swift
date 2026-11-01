@@ -50,7 +50,9 @@ struct NookiPetSceneTests {
     let diorama = NookiDiorama()
     diorama.startLoading()
     await diorama.loading?.value
+    await diorama.mochiLoading?.value
     #expect(diorama.entityCount > 100)
+    #expect(!diorama.isMochiMissing)
   }
 
   @Test func aCancelledCallerStillGetsTheWholeRoom() async {
@@ -61,7 +63,9 @@ struct NookiPetSceneTests {
     }
     await caller.value
     await diorama.loading?.value
+    await diorama.mochiLoading?.value
     #expect(diorama.entityCount > 100)
+    #expect(!diorama.isMochiMissing)
   }
 
   @Test func loadingTwiceBuildsOneRoom() async {
@@ -71,6 +75,122 @@ struct NookiPetSceneTests {
     diorama.startLoading()
     await first?.value
     #expect(diorama.loading == first)
+  }
+
+  @Test func mochiStartsBeforeAnyFurniture() async {
+    let started = StartedModels()
+    let diorama = NookiDiorama(loadModel: { name throws(NookiLoadError) in
+      started.names.append(name)
+      return Entity()
+    })
+    diorama.startLoading()
+    await diorama.loading?.value
+    #expect(started.names.first == "Cat")
+    #expect(started.names.count == NookiFurniture.items.count + 1)
+  }
+
+  @Test func furnitureLoadsTogetherNotInTurn() async {
+    let started = StartedModels()
+    let (gate, opening) = AsyncStream<Void>.makeStream()
+    let diorama = NookiDiorama(loadModel: { name throws(NookiLoadError) in
+      started.names.append(name)
+      if started.names.count == NookiFurniture.items.count + 1 { opening.finish() }
+      for await _ in gate {}
+      return Entity()
+    })
+    diorama.startLoading()
+    await diorama.loading?.value
+    #expect(started.names.count == NookiFurniture.items.count + 1)
+  }
+
+  @Test func aCatThatFailsIsShownAsMissing() async {
+    let diorama = NookiDiorama(loadModel: Self.failing("Cat"))
+    var reported: [Bool] = []
+    diorama.onMochiMissing = { reported.append($0) }
+    diorama.startLoading()
+    await diorama.loading?.value
+    await diorama.mochiLoading?.value
+    #expect(diorama.isMochiMissing)
+    #expect(reported == [true])
+    #expect(diorama.root.findEntity(named: NookiDiorama.missingMarkName) != nil)
+  }
+
+  @Test func aCatWithNoGeometryIsShownAsMissing() async {
+    let diorama = NookiDiorama(loadModel: { _ throws(NookiLoadError) in Entity() })
+    diorama.startLoading()
+    await diorama.loading?.value
+    await diorama.mochiLoading?.value
+    #expect(diorama.isMochiMissing)
+  }
+
+  @Test func aCatThatHangsNeitherHoldsUpTheRoomNorPassesSilently() async throws {
+    let (gate, _) = AsyncStream<Void>.makeStream()
+    let diorama = NookiDiorama(
+      loadModel: { name throws(NookiLoadError) in
+        if name == "Cat" { for await _ in gate {} }
+        return Entity()
+      },
+      mochiDeadline: .milliseconds(20))
+    diorama.startLoading()
+    await diorama.loading?.value
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(diorama.isMochiMissing)
+  }
+
+  @Test func aLateCatClearsTheMissingMark() async throws {
+    let (gate, opening) = AsyncStream<Void>.makeStream()
+    let diorama = NookiDiorama(
+      loadModel: { name throws(NookiLoadError) in
+        if name == "Cat" {
+          for await _ in gate {}
+          return try await NookiFurniture.bundledModel(name)
+        }
+        return Entity()
+      },
+      mochiDeadline: .milliseconds(20))
+    diorama.startLoading()
+    await diorama.loading?.value
+    try await Task.sleep(for: .milliseconds(200))
+    #expect(diorama.isMochiMissing)
+    opening.finish()
+    await diorama.mochiLoading?.value
+    #expect(!diorama.isMochiMissing)
+    #expect(diorama.root.findEntity(named: NookiDiorama.missingMarkName) == nil)
+  }
+
+  @Test func aFailedChairLeavesTheCat() async {
+    let diorama = NookiDiorama(loadModel: Self.failing("Item_armchair"))
+    diorama.startLoading()
+    await diorama.loading?.value
+    await diorama.mochiLoading?.value
+    #expect(!diorama.isMochiMissing)
+  }
+
+  @Test func mochiOffsetRefusesBoundsWithNothingInThem() {
+    #expect(NookiDiorama.mochiOffset(BoundingBox.empty) == nil)
+    let broken = BoundingBox(min: [.nan, 0, 0], max: [1, 1, 1])
+    #expect(NookiDiorama.mochiOffset(broken) == nil)
+  }
+
+  @Test func mochiOffsetStandsTheModelOnTheFloorAtItsCentre() throws {
+    let bounds = BoundingBox(min: [-0.1, 0.2, 0.1], max: [0.3, 0.4, 0.3])
+    let offset = try #require(NookiDiorama.mochiOffset(bounds))
+    let expected = SIMD3<Float>(-0.1, -0.2, -0.2) * NookiDiorama.mochiScale
+    #expect(simd_distance(offset, expected) < 0.0001)
+  }
+
+  @Test func theBundledCatHasPlausibleBounds() async throws {
+    let cat = try await NookiFurniture.bundledModel("Cat")
+    let bounds = cat.visualBounds(relativeTo: nil)
+    #expect(NookiDiorama.mochiOffset(bounds) != nil)
+    #expect(bounds.extents.max() > 0.1 && bounds.extents.max() < 1)
+  }
+
+  private static func failing(_ failed: String) -> NookiModelLoader {
+    { name throws(NookiLoadError) in
+      if name == failed { throw .unreadable(name, reason: "test") }
+      return try await NookiFurniture.bundledModel(name)
+    }
   }
 
   @Test func posterDecodes() async {
@@ -83,4 +203,8 @@ struct NookiPetSceneTests {
       #expect(png.starts(with: [0x89, 0x50, 0x4E, 0x47]))
     }
   }
+}
+
+@MainActor private final class StartedModels: Sendable {
+  var names: [String] = []
 }

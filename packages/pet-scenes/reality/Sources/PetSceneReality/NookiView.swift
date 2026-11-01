@@ -16,6 +16,7 @@ struct NookiView: View {
   @State private var diorama: NookiDiorama?
   @State private var poster: CGImage?
   @State private var isReady = false
+  @State private var isMochiMissing = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -31,6 +32,15 @@ struct NookiView: View {
           .transition(.opacity)
       }
     }
+    .overlay(alignment: .top) {
+      if isMochiMissing {
+        Text("Mochi couldn't load")
+          .font(.footnote)
+          .padding(8)
+          .background(.thinMaterial, in: Capsule())
+          .padding(.top, 8)
+      }
+    }
     .background(Self.backdrop)
     .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: isReady)
     .task {
@@ -40,6 +50,8 @@ struct NookiView: View {
       let made = NookiDiorama()
       let ready = $isReady
       made.onReady = { ready.wrappedValue = true }
+      let missing = $isMochiMissing
+      made.onMochiMissing = { missing.wrappedValue = $0 }
       diorama = made
       made.startLoading()
     }
