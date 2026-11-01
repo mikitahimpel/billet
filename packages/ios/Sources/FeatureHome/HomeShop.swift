@@ -27,6 +27,7 @@ struct HomeShop: ViewModifier {
         if isAvailable {
           GlassGroup {
             HStack(spacing: Spacing.small) {
+              IconButton("archivebox.fill", label: "Closet") { sheet = .closet }
               IconButton("bag.fill", label: "Shop") { sheet = .shop }
             }
           }
@@ -39,13 +40,19 @@ struct HomeShop: ViewModifier {
         switch sheet {
         case .shop:
           ShopView(
-            store: shop, onOpenCloset: {}, onClose: { self.sheet = nil }
+            store: shop, onOpenCloset: { self.sheet = .closet }, onClose: { self.sheet = nil }
           ) { item in
             scene?.makeShopPreview(item: item) ?? AnyView(EmptyView())
           }
           .presentationDetents([.large])
         case .closet:
-          EmptyView()
+          ClosetView(
+            store: shop, renovator: DirectRenovator(store: shop),
+            onOpenShop: { self.sheet = .shop }, onClose: { self.sheet = nil }
+          )
+          // The room stays in view and live, so the cat can be seen reacting to a treat.
+          .presentationDetents([.medium, .large])
+          .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
       }
   }
