@@ -12,6 +12,11 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     GENERATE_INFOPLIST_FILE: YES
+  configs:
+    # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
+    Release:
+      DEVELOPMENT_TEAM: 2666YPBJTB
+      CODE_SIGN_STYLE: Automatic
 packages:
   Billet:
     path: ../../packages/ios
@@ -34,6 +39,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_FILE: App/Info.plist
+        # Temporary icon from the Little House art, until the real mark lands in #35.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: billet
   BilletWidget:
     type: app-extension
@@ -50,6 +58,8 @@ targets:
     info:
       path: Widget/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -71,6 +81,8 @@ targets:
     info:
       path: NotificationService/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.usernotifications.service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService

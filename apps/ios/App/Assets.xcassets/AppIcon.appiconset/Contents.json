@@ -1,0 +1,14 @@
+{
+  "images": [
+    {
+      "filename": "AppIcon-temporary.png",
+      "idiom": "universal",
+      "platform": "ios",
+      "size": "1024x1024"
+    }
+  ],
+  "info": {
+    "author": "temporary icon from the Little House art, replace in #35",
+    "version": 1
+  }
+}
