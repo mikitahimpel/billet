@@ -15,10 +15,12 @@ import {
   invites,
   pairMembers,
   pushTokens,
+  rateLimits,
   sessions,
   users,
 } from "../src/directory-schema.ts";
 import { PlatformProbe } from "../src/platform-probe.ts";
+import { StoredRateLimit } from "../src/rate-limit.ts";
 import * as roomSchema from "../src/room-schema.ts";
 import { roomProbe } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
@@ -33,6 +35,7 @@ const checked = [
   ["invites", invites, StoredInvite],
   ["pair_members", pairMembers, StoredPairMember],
   ["push_tokens", pushTokens, StoredPushToken],
+  ["rate_limits", rateLimits, StoredRateLimit],
   ["room_probe", roomProbe, PlatformProbe],
   ["sessions", sessions, StoredSession],
   ["users", users, StoredUser],
