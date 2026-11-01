@@ -85,8 +85,26 @@ import Testing
         == .failure(.duplicate))
   }
 
-  @Test func openingTheCanvasAlwaysQueues() {
-    #expect(decide(.openCanvas, .control).isSuccess)
+  @Test(arguments: [
+    (WidgetActionKind.pet, WidgetFeature.controlPet),
+    (.heart, .controlHeart),
+    (.openCanvas, .controlCanvas),
+  ])
+  func eachControlChecksItsOwnFlag(_ kind: WidgetActionKind, _ flag: WidgetFeature) {
+    #expect(decide(kind, .control).isSuccess)
+    var features = WidgetFeatures()
+    features.set(flag, on: false)
+    #expect(decide(kind, .control, features: features) == .failure(.off))
+    // The button flags on the Home Screen do not switch the controls.
+    var buttons = WidgetFeatures()
+    for button in [WidgetFeature.buttonPet, .buttonHeart, .buttonTreat] {
+      buttons.set(button, on: false)
+    }
+    #expect(decide(kind, .control, features: buttons).isSuccess)
+  }
+
+  @Test func openingTheCanvasFromAButtonSurfaceNeedsNoFlag() {
+    #expect(decide(.openCanvas, .home).isSuccess)
   }
 
   @Test func queueKeepsOrderRemovesAndDropsStale() throws {

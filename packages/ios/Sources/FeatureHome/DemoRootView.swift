@@ -31,6 +31,9 @@ public struct DemoRootView: View {
     _widgetFeatures = State(
       initialValue: WidgetFeaturesModel(store: .appGroup()) {
         WidgetCenter.shared.reloadAllTimelines()
+        #if os(iOS)
+          ControlCenter.shared.reloadAllControls()
+        #endif
       })
     _model = State(
       initialValue: AppModel(

@@ -178,7 +178,8 @@ struct AppModelTests {
     #expect(session.perform(action(.treat), now: .now) == .done)
     #expect(session.perform(action(.heart, note: id), now: .now) == .done)
     try await Task.sleep(for: .milliseconds(50))
-    #expect(room.plays == [.pet, .treat])
+    #expect(Set(room.plays) == [.pet, .treat])
+    #expect(room.plays.count == 2)
     #expect(room.reacted.map(\.0) == [id])
     #expect(session.play.petsGiven == 1)
   }

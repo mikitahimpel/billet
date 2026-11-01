@@ -17,6 +17,9 @@ struct BilletWidgetBundle: WidgetBundle {
   var body: some Widget {
     PicturesWidget()
     ActionsWidget()
+    PetCatControl()
+    SendHeartControl()
+    OpenCanvasControl()
     LatestNoteWidget()
     PetPoseWidget()
   }

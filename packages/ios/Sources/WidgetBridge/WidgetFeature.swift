@@ -14,15 +14,20 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
   case buttonPet
   case buttonHeart
   case lockScreenButtons
+  case controlPet
+  case controlHeart
+  case controlCanvas
 
   public enum Group: CaseIterable, Sendable {
     case pictures
     case buttons
+    case controls
 
     public var title: String {
       switch self {
       case .pictures: "Pictures"
       case .buttons: "Buttons"
+      case .controls: "Controls"
       }
     }
   }
@@ -34,6 +39,8 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
       .pictures
     case .buttonTreat, .buttonPet, .buttonHeart, .lockScreenButtons:
       .buttons
+    case .controlPet, .controlHeart, .controlCanvas:
+      .controls
     }
   }
 
@@ -51,6 +58,9 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .buttonPet: "Pet the cat"
     case .buttonHeart: "Send a heart"
     case .lockScreenButtons: "Buttons on the Lock Screen"
+    case .controlPet: "Control: pet the cat"
+    case .controlHeart: "Control: send a heart"
+    case .controlCanvas: "Control: draw a note"
     }
   }
 
@@ -68,6 +78,9 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .buttonPet: "A button on the Home Screen widget."
     case .buttonHeart: "Answers your partner's newest note."
     case .lockScreenButtons: "Let the buttons run from Lock Screen widgets too."
+    case .controlPet: "For the Lock Screen and Control Center."
+    case .controlHeart: "For the Lock Screen and Control Center."
+    case .controlCanvas: "Opens billet straight on the canvas."
     }
   }
 
