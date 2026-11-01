@@ -1,4 +1,5 @@
 import { Effect, Layer } from "effect";
+import { routes } from "@billet/contracts-http-api/routes";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures, type RouteFailure } from "@billet/backend-auth/auth-routes";
@@ -44,8 +45,8 @@ export const PairingRoutes = HttpRouter.use((router) =>
     const principal = principalOf(yield* AuthService);
 
     yield* router.add(
-      "POST",
-      "/v1/invites",
+      routes.createInvite.method,
+      routes.createInvite.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const invite = yield* pairing.createInvite(userId);
@@ -54,8 +55,8 @@ export const PairingRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
-      "POST",
-      "/v1/invites/claim",
+      routes.claimInvite.method,
+      routes.claimInvite.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const { code } = yield* HttpServerRequest.schemaBodyJson(ClaimInviteRequest);
@@ -66,8 +67,8 @@ export const PairingRoutes = HttpRouter.use((router) =>
 
     // Idempotent: a client that lost the response can retry, and either partner can call it.
     yield* router.add(
-      "DELETE",
-      "/v1/pair",
+      routes.unpair.method,
+      routes.unpair.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
         yield* pairing.unpair(userId);

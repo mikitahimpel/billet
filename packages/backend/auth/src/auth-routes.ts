@@ -13,6 +13,7 @@ import {
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
+import { authorizationHeader, bearerPrefix, routes } from "@billet/contracts-http-api/routes";
 import { AuthRejected, type AuthUnavailable } from "./auth-error.ts";
 import { AuthService, type Principal } from "./auth-service.ts";
 
@@ -52,11 +53,9 @@ export const respondFailures = <R>(
     Effect.orDie,
   );
 
-const bearerPrefix = "Bearer ";
-
 const bearerToken = Effect.gen(function* () {
   const { headers } = yield* HttpServerRequest.HttpServerRequest;
-  const header = headers["authorization"];
+  const header = headers[authorizationHeader];
   return header?.startsWith(bearerPrefix)
     ? Redacted.make(header.slice(bearerPrefix.length))
     : yield* new AuthRejected({ reason: "bearer-missing" });
@@ -76,16 +75,16 @@ export const AuthRoutes = HttpRouter.use((router) =>
     const principal = principalOf(auth);
 
     yield* router.add(
-      "POST",
-      "/v1/auth/challenge",
+      routes.authChallenge.method,
+      routes.authChallenge.path,
       Effect.flatMap(auth.issueChallenge, (challenge) =>
         respondChallenge(challenge, { headers: noStore }),
       ).pipe(respondFailures),
     );
 
     yield* router.add(
-      "POST",
-      "/v1/auth/apple",
+      routes.authApple.method,
+      routes.authApple.path,
       Effect.gen(function* () {
         const body = yield* HttpServerRequest.schemaBodyJson(SignInWithAppleRequest);
         const session = yield* auth.signInWithApple(Redacted.make(body.identityToken));
@@ -94,8 +93,8 @@ export const AuthRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
-      "POST",
-      "/v1/auth/sign-out",
+      routes.authSignOut.method,
+      routes.authSignOut.path,
       Effect.gen(function* () {
         yield* auth.signOut(yield* principal);
         return HttpServerResponse.empty({ status: 204 });
@@ -103,8 +102,8 @@ export const AuthRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
-      "PUT",
-      "/v1/devices/current/push-token",
+      routes.registerPushToken.method,
+      routes.registerPushToken.path,
       Effect.gen(function* () {
         const caller = yield* principal;
         const body = yield* HttpServerRequest.schemaBodyJson(RegisterPushTokenRequest);
