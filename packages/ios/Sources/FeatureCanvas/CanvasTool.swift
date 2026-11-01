@@ -10,6 +10,13 @@ public enum CanvasTool: CaseIterable, Hashable, Sendable {
     }
   }
 
+  public var systemImage: String {
+    switch self {
+    case .pen: "pencil"
+    case .marker: "highlighter"
+    }
+  }
+
   public var title: String {
     switch self {
     case .pen: "Pen"

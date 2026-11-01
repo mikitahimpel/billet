@@ -4,10 +4,16 @@ import Ink
 import SwiftUI
 import Wire
 
-/// A sheet of paper under the lamp, with the inks and tools on a lit tray below it.
+/// A sheet of warm paper under the lamp, with the tools floating in glass along its lower edge.
 public struct CanvasView: View {
   @State private var store = Store<CanvasMachine>(
     initial: CanvasMachine.State(), run: CanvasMachine.run)
+  @State private var choosingInk = false
+  @State private var lifted: [Stroke] = []
+  @State private var liftedOpacity = 0.0
+  @State private var sending = false
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private let onClose: () -> Void
   private let onSend: ([Stroke]) -> Void
@@ -20,124 +26,192 @@ public struct CanvasView: View {
   public var body: some View {
     VStack(spacing: Spacing.small) {
       HStack {
-        Button("Close", action: onClose)
-          .buttonStyle(InlineButtonStyle())
+        IconButton("xmark", label: "Close", action: onClose)
         Spacer()
       }
-      GeometryReader { geometry in
-        let width = max(geometry.size.width, 1)
-        Canvas { context, size in
-          context.withCGContext { cgContext in
-            // StrokeRenderer assumes a bottom-left origin; this context is already top-left.
-            cgContext.translateBy(x: 0, y: size.height)
-            cgContext.scaleBy(x: 1, y: -1)
-            do {
-              try StrokeRenderer.draw(store.state.visibleStrokes, in: cgContext, size: size)
-            } catch {
-              assertionFailure("Canvas strokes failed to render: \(error)")
-            }
+      ZStack(alignment: .bottom) {
+        sheet
+          .padding(.bottom, Target.minimum / 2 + Spacing.small)
+        VStack(spacing: Spacing.small) {
+          if choosingInk {
+            inks
+              .transition(.opacity.combined(with: .move(edge: .bottom)))
           }
+          toolbar
         }
-        .background(Palette.paper.color)
-        .clipShape(.rect(cornerRadius: Radius.paper))
-        .lampGlow()
-        .contentShape(Rectangle())
-        .gesture(
-          DragGesture(minimumDistance: 0)
-            .onChanged { value in
-              let point = Point(x: value.location.x / width, y: value.location.y / width)
-              store.send(store.state.inProgress == nil ? .strokeBegan(point) : .strokeMoved(point))
-            }
-            .onEnded { _ in store.send(.strokeEnded) }
-        )
-        .accessibilityLabel("Drawing canvas")
+        .padding(.horizontal, Spacing.small)
       }
-
-      controls
+      BilletButton("Send", rank: .primary, action: send)
+        .disabled(store.state.drawing.isEmpty || sending)
     }
     .padding(Spacing.medium)
     .background { EveningBackground() }
-  }
-
-  private var controls: some View {
-    VStack(spacing: Spacing.small) {
-      VStack(spacing: Spacing.small) {
-        HStack(spacing: Spacing.small) {
-          ForEach(CanvasTool.allCases, id: \.self) { tool in
-            toolButton(tool)
-          }
-        }
-        ViewThatFits(in: .horizontal) {
-          HStack(spacing: Spacing.hair) { inks }
-          ScrollView(.horizontal) {
-            HStack(spacing: Spacing.hair) { inks }
-          }
-        }
-        HStack(spacing: Spacing.small) {
-          Button("Undo") { store.send(.undo) }
-            .buttonStyle(InlineButtonStyle())
-            .disabled(!store.state.canUndo)
-            .opacity(store.state.canUndo ? 1 : 0.5)
-          Button("Redo") { store.send(.redo) }
-            .buttonStyle(InlineButtonStyle())
-            .disabled(!store.state.canRedo)
-            .opacity(store.state.canRedo ? 1 : 0.5)
-          Spacer()
-          Button("Clear") { store.send(.cleared) }
-            .buttonStyle(InlineButtonStyle())
-            .disabled(!store.state.canClear)
-            .opacity(store.state.canClear ? 1 : 0.5)
-        }
-      }
-      .padding(Spacing.small)
-      .litPanel(cornerRadius: Radius.control)
-      Button("Send") { onSend(store.state.drawing) }
-        .buttonStyle(PrimaryButtonStyle())
-        .disabled(store.state.drawing.isEmpty)
-        .opacity(store.state.drawing.isEmpty ? 0.5 : 1)
-    }
+    .calmAnimation(value: choosingInk)
+    .sensoryFeedback(.impact(flexibility: .soft), trigger: sending) { _, now in now }
+    .sensoryFeedback(.selection, trigger: store.state.tool)
+    .sensoryFeedback(.selection, trigger: store.state.color)
     .dynamicTypeSize(...DynamicTypeSize.accessibility1)
   }
 
-  private func toolButton(_ tool: CanvasTool) -> some View {
-    let selected = store.state.tool == tool
-    return Button {
-      store.send(.toolSelected(tool))
-    } label: {
-      Text(tool.title)
-        .billetType(.label)
-        .foregroundStyle((selected ? Palette.ink : Palette.paper).color)
-        .frame(maxWidth: .infinity, minHeight: Target.minimum)
-        .background(
-          (selected ? Palette.gold : Palette.raisedTop).color,
-          in: .rect(cornerRadius: Radius.control)
-        )
-        .contentShape(.rect(cornerRadius: Radius.control))
+  /// The paper and whatever is drawn on it. Sending folds it back and lifts it off the screen.
+  private var sheet: some View {
+    GeometryReader { geometry in
+      let width = max(geometry.size.width, 1)
+      ZStack {
+        CanvasPaper()
+        StrokeLayer(strokes: lifted)
+          .opacity(liftedOpacity)
+          .accessibilityHidden(true)
+        StrokeLayer(strokes: store.state.visibleStrokes)
+          .contentShape(Rectangle())
+          .gesture(
+            DragGesture(minimumDistance: 0)
+              .onChanged { value in
+                let point = Point(x: value.location.x / width, y: value.location.y / width)
+                store.send(
+                  store.state.inProgress == nil ? .strokeBegan(point) : .strokeMoved(point))
+              }
+              .onEnded { _ in store.send(.strokeEnded) }
+          )
+          .accessibilityLabel("Drawing canvas")
+          .accessibilityIdentifier("drawingCanvas")
+      }
+      .clipShape(.rect(cornerRadius: Radius.paper))
+      .rotation3DEffect(
+        .degrees(sending && !reduceMotion ? 24 : 0), axis: (x: 1, y: 0, z: 0),
+        anchor: .top, perspective: 0.5
+      )
+      .offset(y: sending && !reduceMotion ? -geometry.size.height * 1.2 : 0)
+      .opacity(sending ? 0 : 1)
+      .animation(.easeIn(duration: Self.sendDuration), value: sending)
     }
-    .buttonStyle(.plain)
-    .accessibilityAddTraits(selected ? .isSelected : [])
+  }
+
+  private var toolbar: some View {
+    GlassGroup {
+      HStack(spacing: Spacing.small) {
+        ForEach(CanvasTool.allCases, id: \.self) { tool in
+          IconButton(tool.systemImage, label: tool.title, isSelected: store.state.tool == tool) {
+            store.send(.toolSelected(tool))
+          }
+        }
+        InkSwatch(store.state.color.color, name: "Ink colour", isSelected: choosingInk) {
+          choosingInk.toggle()
+        }
+        .floatingGlass()
+        Spacer(minLength: 0)
+        IconButton("arrow.uturn.backward", label: "Undo", action: undo)
+          .disabled(!store.state.canUndo)
+        IconButton("arrow.uturn.forward", label: "Redo") { store.send(.redo) }
+          .disabled(!store.state.canRedo)
+        IconButton("trash", label: "Clear", action: clear)
+          .disabled(!store.state.canClear)
+      }
+    }
   }
 
   private var inks: some View {
-    ForEach(CanvasColor.allCases, id: \.self) { color in
-      let selected = store.state.color == color
-      Button {
-        store.send(.colorSelected(color))
-      } label: {
-        ZStack {
-          Circle().strokeBorder(Palette.paper.color.opacity(selected ? 1 : 0), lineWidth: 2)
-          Circle()
-            .fill(color.color)
-            .overlay { Circle().strokeBorder(Palette.paper.color.opacity(0.45), lineWidth: 1) }
-            .frame(width: 30, height: 30)
+    HStack(spacing: 0) {
+      ForEach(CanvasColor.allCases, id: \.self) { color in
+        InkSwatch(color.color, name: color.title, isSelected: store.state.color == color) {
+          store.send(.colorSelected(color))
+          choosingInk = false
         }
-        .frame(width: Target.minimum + 4, height: Target.minimum + 4)
-        .contentShape(.circle)
+        .frame(maxWidth: .infinity)
       }
-      .buttonStyle(.plain)
-      .frame(maxWidth: .infinity)
-      .accessibilityLabel(color.title)
-      .accessibilityAddTraits(selected ? .isSelected : [])
     }
+    .padding(.horizontal, Spacing.small)
+    .floatingGlass()
+  }
+
+  private func undo() {
+    fadeAway(Array(store.state.drawing.suffix(1)))
+    store.send(.undo)
+  }
+
+  private func clear() {
+    fadeAway(store.state.drawing)
+    store.send(.cleared)
+  }
+
+  /// Lets strokes that have just left the drawing dissolve instead of vanishing.
+  private func fadeAway(_ strokes: [Stroke]) {
+    lifted = strokes
+    liftedOpacity = 1
+    withAnimation(.easeOut(duration: 0.35)) { liftedOpacity = 0 }
+  }
+
+  private func send() {
+    guard !sending else { return }
+    choosingInk = false
+    sending = true
+    let drawing = store.state.drawing
+    Task {
+      try? await Task.sleep(for: .seconds(Self.sendDuration))
+      onSend(drawing)
+    }
+  }
+
+  private static let sendDuration = 0.5
+}
+
+/// The strokes alone, over a clear ground, so the paper under them never redraws.
+private struct StrokeLayer: View {
+  let strokes: [Stroke]
+
+  var body: some View {
+    Canvas { context, size in
+      context.withCGContext { cgContext in
+        // StrokeRenderer assumes a bottom-left origin; this context is already top-left.
+        cgContext.translateBy(x: 0, y: size.height)
+        cgContext.scaleBy(x: 1, y: -1)
+        do {
+          try StrokeRenderer.draw(strokes, in: cgContext, size: size)
+        } catch {
+          assertionFailure("Canvas strokes failed to render: \(error)")
+        }
+      }
+    }
+  }
+}
+
+/// Warm paper with a little grain, lit from above. It takes no input, so it draws once.
+private struct CanvasPaper: View {
+  private static let grainCount = 1400
+
+  var body: some View {
+    ZStack {
+      Palette.paper.color
+      Canvas { context, size in
+        var generator = SeededGenerator()
+        for _ in 0..<Self.grainCount {
+          let x = Double.random(in: 0...size.width, using: &generator)
+          let y = Double.random(in: 0...size.height, using: &generator)
+          let fleck = Path(ellipseIn: CGRect(x: x, y: y, width: 1.2, height: 0.8))
+          context.fill(fleck, with: .color(Palette.wood.color.opacity(0.1)))
+        }
+      }
+      LinearGradient(
+        colors: [
+          Palette.light.color.opacity(0.22), .clear, Palette.paperTurned.color.opacity(0.3),
+        ],
+        startPoint: .top,
+        endPoint: .bottom
+      )
+    }
+    .drawingGroup()
+    .accessibilityHidden(true)
+  }
+}
+
+/// The same flecks on every run, so the paper never shimmers between redraws.
+private struct SeededGenerator: RandomNumberGenerator {
+  private var state: UInt64 = 0x9E37_79B9_7F4A_7C15
+
+  mutating func next() -> UInt64 {
+    state ^= state << 13
+    state ^= state >> 7
+    state ^= state << 17
+    return state
   }
 }
