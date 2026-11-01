@@ -45,6 +45,10 @@ export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
         return Effect.void;
       }),
     findPair: (userId) => Effect.sync(() => Option.fromNullishOr(pairs.get(userId))),
+    findMembers: (pairId) =>
+      Effect.sync(() =>
+        [...pairs].filter(([, memberPair]) => memberPair === pairId).map(([member]) => member),
+      ),
     unpair: (userId) =>
       Effect.sync(() => {
         const pairId = pairs.get(userId);

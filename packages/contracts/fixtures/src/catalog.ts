@@ -24,6 +24,7 @@ import {
   ListNotesResponse,
   SendNoteRequest,
   SendNoteResponse,
+  UploadImageResponse,
 } from "@billet/contracts-http-api/note";
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
@@ -100,6 +101,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("CreateInviteResponse", CreateInviteResponse, { default: { code } }),
   fixture("ClaimInviteRequest", ClaimInviteRequest, { default: { code } }),
   fixture("ClaimInviteResponse", ClaimInviteResponse, { default: { pairId } }),
+  fixture("UploadImageResponse", UploadImageResponse, { default: { image } }),
   fixture("SendNoteRequest", SendNoteRequest, {
     drawing: SendNoteRequest.cases.Drawing.make({ compact, image }),
     photo: SendNoteRequest.cases.Photo.make({ image }),

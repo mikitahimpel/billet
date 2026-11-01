@@ -1,0 +1,36 @@
+{
+  "name": "@billet/backend-notes",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./media-store": "./src/media-store.ts",
+    "./notes-error": "./src/notes-error.ts",
+    "./notes-routes": "./src/notes-routes.ts",
+    "./notes-service": "./src/notes-service.ts",
+    "./pair-rooms": "./src/pair-rooms.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/backend-pair-room": "workspace:*",
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

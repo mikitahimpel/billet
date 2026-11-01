@@ -141,6 +141,7 @@ describe("pairing routes without storage", () => {
     saveInvite: () => down,
     claimInvite: () => down,
     findPair: () => down,
+    findMembers: () => down,
     unpair: () => down,
   });
   afterAll(() => app.dispose());

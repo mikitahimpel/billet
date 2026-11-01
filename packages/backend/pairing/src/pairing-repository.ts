@@ -51,6 +51,10 @@ export class PairingRepository extends Context.Service<
       claim: InviteClaim,
     ) => Effect.Effect<void, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly findPair: (userId: UserId) => Effect.Effect<Option.Option<PairId>, PairingUnavailable>;
+    /** The users in a pair: none once it has ended. */
+    readonly findMembers: (
+      pairId: PairId,
+    ) => Effect.Effect<ReadonlyArray<UserId>, PairingUnavailable>;
     /** Removes the lookup of both partners. Does nothing for a user without a partner. */
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
   }

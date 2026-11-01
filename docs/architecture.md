@@ -57,7 +57,8 @@ to it in #67.
 
 ### R2: note images
 
-Images live in a private R2 bucket. Media routes check authorisation before serving anything.
+Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`. Media routes check
+authorisation before serving anything.
 
 ### Two renditions of every note
 
@@ -130,6 +131,33 @@ with no partner so that a client can retry it. Pairing again gives a new `pair_i
 
 `packages/backend/pairing` holds this logic on an injected `PairingRepository`, which `platform`
 provides.
+
+### Notes and media
+
+A note is sent in two steps, and both need a session and a partner:
+
+1. `POST /v1/media` takes the PNG as the raw body, up to 10 MiB, and returns its `image` key,
+   `pairs/<pairId>/notes/<uuid>.png`. Bytes without the PNG signature are refused.
+2. `POST /v1/notes` takes `SendNoteRequest`, naming that key. For a drawing it also carries the compact
+   rendition, at most 3072 bytes of JSON, the budget of the iOS encoder. The image must exist under the
+   couple's prefix.
+
+`GET /v1/media/<key>` serves an image, with `cache-control: no-store`. `GET /v1/notes` returns notes
+oldest first, from `PairRoom`. `after` is the last `seq` the client holds, default 0, and `limit` is
+1 to 100, default 100. Sequences have no gaps, so the next page starts at `after` plus the notes
+returned.
+
+Every request starts from the pair D1 says the caller is in, never from one the client names: the
+room is the one named after that pair, and a key is only read if it starts with that pair's prefix.
+Anyone else gets the 404 of a key that doesn't exist, so a response never shows that an image exists,
+and the bucket isn't read. Unpairing ends access for both partners, and pairing again gives a new
+prefix and room.
+
+Pairing commits in D1 and doesn't reach the room, so the first note opens it, with the members from D1.
+A repeated open is accepted, so two first notes at once are safe.
+
+`packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
+`platform` provides.
 
 ### Privacy
 

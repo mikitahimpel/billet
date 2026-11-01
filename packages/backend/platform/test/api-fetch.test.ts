@@ -9,8 +9,14 @@ import {
   appleIssuer,
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
+import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
+import {
+  ListNotesResponse,
+  SendNoteResponse,
+  UploadImageResponse,
+} from "@billet/contracts-http-api/note";
 import { resetDirectory } from "./directory-migrations.ts";
 
 const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
@@ -116,6 +122,50 @@ const sha256Hex = async (text: string) =>
   [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+
+const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
+
+const pairOf = async (first: string, second: string) => {
+  const [owner, claimer] = [await signedInAs(first), await signedInAs(second)];
+  const response = await claimWith(claimer, await inviteFrom(owner));
+  expect(response.status).toBe(200);
+  const { pairId } = Schema.decodeUnknownSync(ClaimInviteResponse)(await response.json());
+  return { owner, claimer, pairId };
+};
+
+const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** Starts as a PNG and holds every byte value, so any text decoding along the way would show. */
+const pngBytes = Uint8Array.from([...pngSignature, ...Array.from({ length: 256 }, (_, i) => i)]);
+
+const upload = (token: string, body: BodyInit = pngBytes) =>
+  call("/v1/media", { body, headers: { ...bearer(token), "content-type": "image/png" } });
+
+const uploaded = async (token: string) => {
+  const response = await upload(token);
+  expect(response.status).toBe(200);
+  return Schema.decodeUnknownSync(UploadImageResponse)(await response.json()).image;
+};
+
+const readImage = (key: string, token: string) =>
+  call(`/v1/media/${key}`, { method: "GET", headers: bearer(token) });
+
+const sendPhoto = (token: string, image: string) =>
+  call("/v1/notes", json({ _tag: "Photo", image }, "POST", token));
+
+const sentPhoto = async (token: string) => {
+  const response = await sendPhoto(token, await uploaded(token));
+  expect(response.status).toBe(200);
+  return Schema.decodeUnknownSync(SendNoteResponse)(await response.json()).note;
+};
+
+const historyFor = async (token: string, query = "") => {
+  const response = await call(`/v1/notes${query}`, { method: "GET", headers: bearer(token) });
+  expect(response.status).toBe(200);
+  return Schema.decodeUnknownSync(ListNotesResponse)(await response.json()).notes;
+};
+
+const imageSizeInBytes = Number(imageSizeLimit);
 
 const appleFetch = vi.fn<typeof fetch>();
 
@@ -279,5 +329,170 @@ describe("the Api Worker", () => {
     const results = await Promise.all(Array.from({ length: 5 }, () => signIn()));
     expect(results.map(({ response }) => response.status)).toEqual([200, 200, 200, 200, 200]);
     expect(appleFetch).toHaveBeenCalledTimes(5);
+  });
+});
+
+describe("note images", () => {
+  it("returns identical bytes to both partners, stored under the couple's prefix", async () => {
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const key = await uploaded(owner);
+
+    expect(key.startsWith(`pairs/${pairId}/`)).toBe(true);
+    expect(await env.MEDIA.head(key)).not.toBeNull();
+
+    for (const reader of [owner, claimer]) {
+      const response = await readImage(key, reader);
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe("image/png");
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(new Uint8Array(await response.arrayBuffer())).toEqual(pngBytes);
+    }
+  });
+
+  it("answers 404 to anyone outside the pair, the same as for a key that doesn't exist", async () => {
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const key = await uploaded(owner);
+    const stranger = await signedInAs("subject-stranger");
+    const otherCouple = await pairOf("subject-other-a", "subject-other-b");
+
+    const missing = await readImage(`pairs/${pairId}/notes/missing.png`, owner);
+    expect(missing.status).toBe(404);
+    const body = await missing.json();
+
+    for (const outsider of [stranger, otherCouple.owner, otherCouple.claimer]) {
+      const response = await readImage(key, outsider);
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual(body);
+    }
+
+    const unpair = await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) });
+    expect(unpair.status).toBe(204);
+    expect((await readImage(key, claimer)).status).toBe(404);
+    expect(await env.MEDIA.head(key)).not.toBeNull();
+  });
+
+  it("answers 401 without a session", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const key = await uploaded(owner);
+    expect((await call(`/v1/media/${key}`, { method: "GET" })).status).toBe(401);
+    expect((await call("/v1/media", { body: pngBytes })).status).toBe(401);
+  });
+
+  it("refuses an upload from a user with no partner", async () => {
+    expect((await upload(await signedInAs("subject-alone"))).status).toBe(404);
+  });
+
+  it("refuses bytes that aren't a PNG, and an image over the limit", async () => {
+    const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
+
+    expect((await upload(owner, "not an image")).status).toBe(400);
+
+    const oversized = new Uint8Array(imageSizeInBytes + 1);
+    oversized.set(pngSignature);
+    expect((await upload(owner, oversized)).status).toBe(400);
+
+    const stored = await env.MEDIA.list({ prefix: `pairs/${pairId}/` });
+    expect(stored.objects).toEqual([]);
+  });
+});
+
+describe("notes", () => {
+  it("opens the room on the first note and returns history in order, to both partners", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    expect(await historyFor(owner)).toEqual([]);
+
+    const sent = [
+      await sentPhoto(owner),
+      await sentPhoto(claimer),
+      await sentPhoto(owner),
+      await sentPhoto(owner),
+    ];
+
+    expect(await historyFor(owner)).toEqual(sent);
+    expect(await historyFor(claimer)).toEqual(sent);
+  });
+
+  it("orders concurrent first notes from both partners without losing one", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const notes = await Promise.all([sentPhoto(owner), sentPhoto(claimer), sentPhoto(owner)]);
+    const history = await historyFor(owner);
+    expect(history.map(({ id }) => id).toSorted()).toEqual(notes.map(({ id }) => id).toSorted());
+  });
+
+  it("pages through history from a sequence number", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const sent = [
+      await sentPhoto(owner),
+      await sentPhoto(owner),
+      await sentPhoto(owner),
+      await sentPhoto(owner),
+    ];
+    expect(await historyFor(owner, "?limit=2")).toEqual(sent.slice(0, 2));
+    expect(await historyFor(owner, "?after=2&limit=1")).toEqual(sent.slice(2, 3));
+    expect(await historyFor(owner, "?after=4")).toEqual([]);
+  });
+
+  it.each(["?limit=-1", "?limit=0", "?limit=101", "?limit=two", "?after=-1", "?after=1.5"])(
+    "refuses the query %s",
+    async (query) => {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      const response = await call(`/v1/notes${query}`, { method: "GET", headers: bearer(owner) });
+      expect(response.status).toBe(400);
+    },
+  );
+
+  it("keeps each couple's history to itself", async () => {
+    const one = await pairOf("subject-one-a", "subject-one-b");
+    const two = await pairOf("subject-two-a", "subject-two-b");
+    const note = await sentPhoto(one.owner);
+
+    expect(await historyFor(one.claimer)).toEqual([note]);
+    expect(await historyFor(two.owner)).toEqual([]);
+  });
+
+  it("answers 404 to a user with no partner", async () => {
+    const stranger = await signedInAs("subject-stranger");
+    const response = await call("/v1/notes", { method: "GET", headers: bearer(stranger) });
+    expect(response.status).toBe(404);
+  });
+
+  it("refuses a note whose image isn't in the couple's prefix", async () => {
+    const one = await pairOf("subject-one-a", "subject-one-b");
+    const two = await pairOf("subject-two-a", "subject-two-b");
+
+    const theirs = await sendPhoto(two.owner, await uploaded(one.owner));
+    expect(theirs.status).toBe(404);
+    const unknown = await sendPhoto(one.owner, `pairs/${one.pairId}/notes/never-uploaded.png`);
+    expect(unknown.status).toBe(404);
+    expect(await historyFor(one.owner)).toEqual([]);
+    expect(await historyFor(two.owner)).toEqual([]);
+  });
+
+  it("keeps both renditions of a drawing, and refuses a compact one over budget", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const drawing = (points: ReadonlyArray<number>) =>
+      call(
+        "/v1/notes",
+        json(
+          {
+            _tag: "Drawing",
+            image,
+            compact: { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points }] },
+          },
+          "POST",
+          owner,
+        ),
+      );
+
+    expect((await drawing(Array.from({ length: 1_600 }, () => 1))).status).toBe(400);
+    expect((await drawing([10, 20, 30, 40])).status).toBe(200);
+
+    const [note] = await historyFor(owner);
+    expect(note).toMatchObject({
+      _tag: "Drawing",
+      image,
+      compact: { strokes: [{ points: [10, 20, 30, 40] }] },
+    });
   });
 });
