@@ -2,30 +2,30 @@ import Foundation
 @preconcurrency import RiveRuntime
 import SwiftUI
 
-/// The Rive file in `Resources/LittleHouse.riv`: artboard `LittleHouse`, state machine `World`,
-/// view model `PetWorld`.
+/// A bundled Rive scene: an artboard with state machine `World`, bound to view model `PetWorld`,
+/// whose boolean `noteArrived` runs Sleep, Deliver, Proud and Settle.
 @MainActor
-final class LittleHouseRive {
+final class PetWorldRive {
   private let viewModel: RiveViewModel
   private var world: RiveDataBindingViewModel.Instance?
 
   /// Returns `nil` when the bundled file does not load or lacks the `noteArrived` property.
-  init?() {
+  init?(fileName: String, artboardName: String) {
     let model: RiveModel
     do {
-      model = try RiveModel(fileName: "LittleHouse", in: .module)
+      model = try RiveModel(fileName: fileName, in: .module)
     } catch {
-      assertionFailure("LittleHouse.riv failed to load: \(error)")
+      assertionFailure("\(fileName).riv failed to load: \(error)")
       return nil
     }
     var bound: RiveDataBindingViewModel.Instance?
     model.enableAutoBind { bound = $0 }
     viewModel = RiveViewModel(
       model, stateMachineName: "World", fit: .contain, alignment: .center,
-      artboardName: "LittleHouse")
+      artboardName: artboardName)
     world = bound
     guard world?.booleanProperty(fromPath: "noteArrived") != nil else {
-      assertionFailure("LittleHouse.riv has no bound noteArrived property")
+      assertionFailure("\(fileName).riv has no bound noteArrived property")
       return nil
     }
   }

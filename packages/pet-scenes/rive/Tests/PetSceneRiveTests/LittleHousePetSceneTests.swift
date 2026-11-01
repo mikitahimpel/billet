@@ -22,7 +22,7 @@ struct LittleHousePetSceneTests {
   }
 
   @Test func bundledFileHasTheBoundNoteArrivedProperty() {
-    #expect(LittleHouseRive() != nil)
+    #expect(PetWorldRive(fileName: "LittleHouse", artboardName: "LittleHouse") != nil)
   }
 
   @Test func everyPoseIsAPNG() throws {

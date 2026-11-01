@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Pet
 import SwiftUI
@@ -13,6 +14,24 @@ public enum PetSceneEvent: Hashable, Sendable {
   case noteOpened(delivery: Int)
 }
 
+/// Where a scene's own note sits, so the received drawing can be laid exactly over it. Rects are in
+/// the scene's artboard, which is fitted and centred in the scene's view.
+public struct PetSceneNoteWall: Hashable, Sendable {
+  public var artboard: CGSize
+  public var paper: CGRect
+  /// The point the paper swings from.
+  public var peg: CGPoint
+  /// How long into a delivery the scene's note first shows.
+  public var revealDelay: Duration
+
+  public init(artboard: CGSize, paper: CGRect, peg: CGPoint, revealDelay: Duration) {
+    self.artboard = artboard
+    self.paper = paper
+    self.peg = peg
+    self.revealDelay = revealDelay
+  }
+}
+
 /// One way of showing the pet, usually backed by a graphics engine.
 ///
 /// A scene only shows ``PetWorld`` and reports events; it never decides what happens next. It has
@@ -25,6 +44,8 @@ public protocol PetScene {
   var title: String { get }
   /// Attribution the scene's assets require, shown with the scene list.
   var credit: String? { get }
+  /// `nil` when the scene draws its own note and no drawing can be laid over it.
+  var noteWall: PetSceneNoteWall? { get }
 
   /// True when the scene takes touches itself and reports ``PetSceneEvent/petted``, so the host
   /// must not lay its own pet target over it.
@@ -59,6 +80,7 @@ extension PetScene {
   ) -> AnyView {
     makeView(world: world, onEvent: onEvent)
   }
+  public var noteWall: PetSceneNoteWall? { nil }
 }
 
 extension PetMachine.Event {

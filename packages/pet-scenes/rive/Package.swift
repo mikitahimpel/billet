@@ -1,8 +1,8 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// The only package that links Rive. Dropping it from apps/ios/project.yml removes Rive and the
-// Little House from the app.
+// The only package that links Rive. Dropping it from apps/ios/project.yml removes Rive, the Little
+// House and the Rooftop from the app.
 let package = Package(
   name: "PetSceneRive",
   platforms: [.iOS(.v18), .macOS(.v15)],
@@ -23,6 +23,9 @@ let package = Package(
         .copy("Resources/LittleHouse.riv"),
         .copy("Resources/pose-sleeping.png"),
         .copy("Resources/pose-proud.png"),
+        .copy("Resources/Rooftop.riv"),
+        .copy("Resources/rooftop-pose-sleeping.png"),
+        .copy("Resources/rooftop-pose-proud.png"),
       ]
     ),
     .testTarget(

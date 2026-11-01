@@ -35,7 +35,7 @@ private struct LittleHouseView: View {
   let world: PetWorld
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var rive = LittleHouseRive()
+  @State private var rive = PetWorldRive(fileName: "LittleHouse", artboardName: "LittleHouse")
 
   var body: some View {
     ZStack {

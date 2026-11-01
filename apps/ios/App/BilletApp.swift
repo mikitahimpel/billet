@@ -9,7 +9,7 @@ import WidgetKit
 @main
 struct BilletApp: App {
   @State private var catalog = PetSceneCatalog(
-    scenes: [LittleHousePetScene(), NookiPetScene()],
+    scenes: [LittleHousePetScene(), NookiPetScene(), RooftopPetScene()],
     defaults: .standard,
     poses: try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     onPosesPublished: { WidgetCenter.shared.reloadAllTimelines() }
