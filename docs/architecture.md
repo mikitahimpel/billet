@@ -47,7 +47,9 @@ to it in #67.
 - Effect Schema stays the domain and wire types. `drizzle-orm/effect-schema` only derives schemas from
   tables, and the domain is hand-written with brands and tagged unions, so it cannot generate them. A
   test derives each table's schema instead, and fails if a column's name, type or nullability differs
-  from the domain type. Add every new table to `test/schema-drift.test.ts`.
+  from the domain type. The test fails on any exported table it does not list, so a new table needs
+  its domain type added to `test/schema-drift.test.ts`. Other tests apply the migrations to an empty
+  database and compare `PRAGMA table_info` with each table's columns.
 - `platform-probe.ts` and the two probe tables exist only so there is something to migrate. The
   tickets that add real tables remove them.
 

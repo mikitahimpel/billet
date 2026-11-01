@@ -6,8 +6,16 @@ import { MigrationError } from "@alchemy.run/sql/Migrations/Format";
 import { Effect, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { openDirectoryDatabase } from "../src/directory-database.ts";
+import * as directorySchema from "../src/directory-schema.ts";
 import { directoryProbe } from "../src/directory-schema.ts";
 import { PlatformProbe } from "../src/platform-probe.ts";
+import {
+  appliedColumns,
+  declaredColumns,
+  getTableName,
+  isBookkeeping,
+  tablesOf,
+} from "./table-columns.ts";
 
 const files = import.meta.glob<string>("../migrations/directory/*/migration.sql", {
   eager: true,
@@ -91,5 +99,28 @@ describe("directory migrations", () => {
     expect((await env.DB.prepare("SELECT id FROM directory_probe").all()).results).toEqual([
       { id: "a" },
     ]);
+  });
+
+  it("leave the tables and columns the Drizzle schema declares, and no others", async () => {
+    await applyAll();
+    const tables = tablesOf(directorySchema);
+    const names = (
+      await env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all<{
+        name: string;
+      }>()
+    ).results
+      .map(({ name }) => name)
+      .filter((name) => !isBookkeeping(name));
+    expect(names.toSorted()).toEqual(tables.map(getTableName).toSorted());
+
+    for (const table of tables) {
+      const info = await env.DB.prepare(`PRAGMA table_info(${getTableName(table)})`).all<{
+        name: string;
+        type: string;
+        notnull: number;
+        pk: number;
+      }>();
+      expect(appliedColumns(info.results)).toEqual(declaredColumns(table));
+    }
   });
 });

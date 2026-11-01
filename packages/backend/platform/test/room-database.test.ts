@@ -4,7 +4,15 @@ import { Effect, Schema, type Scope } from "effect";
 import { describe, expect, it } from "vitest";
 import { PlatformProbe } from "../src/platform-probe.ts";
 import { openRoomDatabase } from "../src/room-database.ts";
+import * as roomSchema from "../src/room-schema.ts";
 import { roomProbe } from "../src/room-schema.ts";
+import {
+  appliedColumns,
+  declaredColumns,
+  getTableName,
+  isBookkeeping,
+  tablesOf,
+} from "./table-columns.ts";
 
 const room = (name: string) => env.ACTIVATED_ROOM.get(env.ACTIVATED_ROOM.idFromName(name));
 
@@ -13,6 +21,9 @@ const tables = (storage: DurableObjectStorage) =>
     .exec<{ name: string }>("SELECT name FROM sqlite_master WHERE type = 'table'")
     .toArray()
     .map(({ name }) => name);
+
+const userTables = (storage: DurableObjectStorage) =>
+  tables(storage).filter((name) => !isBookkeeping(name));
 
 const history = (storage: DurableObjectStorage) =>
   storage.sql.exec("SELECT name FROM __drizzle_migrations").toArray();
@@ -25,6 +36,22 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toContain("room_probe");
       expect(history(state.storage)).toHaveLength(1);
+    });
+  });
+
+  it("leave the tables and columns the Drizzle schema declares, and no others", async () => {
+    await runInDurableObject(room("columns"), (_, state) => {
+      const tables = tablesOf(roomSchema);
+      expect(tables.length).toBeGreaterThan(0);
+      expect(userTables(state.storage).toSorted()).toEqual(tables.map(getTableName).toSorted());
+      for (const table of tables) {
+        const info = state.storage.sql
+          .exec<{ name: string; type: string; notnull: number; pk: number }>(
+            `PRAGMA table_info(${getTableName(table)})`,
+          )
+          .toArray();
+        expect(appliedColumns(info)).toEqual(declaredColumns(table));
+      }
     });
   });
 
