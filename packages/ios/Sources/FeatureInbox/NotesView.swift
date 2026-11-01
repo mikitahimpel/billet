@@ -6,13 +6,25 @@ import SwiftUI
 public struct NotesView: View {
   private let notes: [NoteRecord]
   private let loadFailed: Bool
+  private let reactions: [UUID: Reaction]
+  private let onReact: ((NoteRecord, Reaction) -> Void)?
 
   @Namespace private var zoom
   @State private var opened: NoteRecord?
 
-  public init(notes: [NoteRecord], loadFailed: Bool = false) {
+  /// - Parameters:
+  ///   - reactions: The reaction each note has received.
+  ///   - onReact: Called when a received note is reacted to. `nil` shows no way to react.
+  public init(
+    notes: [NoteRecord],
+    loadFailed: Bool = false,
+    reactions: [UUID: Reaction] = [:],
+    onReact: ((NoteRecord, Reaction) -> Void)? = nil
+  ) {
     self.notes = notes
     self.loadFailed = loadFailed
+    self.reactions = reactions
+    self.onReact = onReact
   }
 
   public var body: some View {
@@ -41,7 +53,10 @@ public struct NotesView: View {
     .calmAnimation(value: notes.count)
     #if os(iOS)
       .fullScreenCover(item: $opened) { note in
-        NoteDetailView(note: note) { opened = nil }
+        NoteDetailView(
+          note: note, reaction: reactions[note.id],
+          onReact: note.direction == .received ? onReact.map { react in { react(note, $0) } } : nil
+        ) { opened = nil }
         .navigationTransition(.zoom(sourceID: note.id, in: zoom))
       }
     #endif
@@ -51,7 +66,7 @@ public struct NotesView: View {
     let button = Button {
       opened = note
     } label: {
-      NoteRow(note: note)
+      NoteRow(note: note, reaction: reactions[note.id])
     }
     .buttonStyle(RowButtonStyle())
     .accessibilityHint("Opens the note full screen")
@@ -66,6 +81,7 @@ public struct NotesView: View {
 /// One line of the list: the drawing, its direction, and when.
 private struct NoteRow: View {
   let note: NoteRecord
+  let reaction: Reaction?
 
   @ScaledMetric(relativeTo: .body) private var thumbnail: CGFloat = 64
 
@@ -77,16 +93,22 @@ private struct NoteRow: View {
       NoteDrawing(note: note, side: 216)
         .frame(width: thumbnail, height: thumbnail)
     } trailing: {
-      RowIcon("chevron.forward")
+      HStack(spacing: Spacing.small) {
+        if let reaction { ReactionMark(reaction) }
+        RowIcon("chevron.forward")
+      }
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(note.accessibilityTitle)
+    .accessibilityLabel(note.accessibilityTitle + (reaction.map { ", \($0.title)" } ?? ""))
   }
 }
 
 /// One note, as large as the screen allows.
 struct NoteDetailView: View {
   let note: NoteRecord
+  let reaction: Reaction?
+  /// `nil` when the note is not one to react to.
+  let onReact: ((Reaction) -> Void)?
   let onClose: () -> Void
 
   var body: some View {
@@ -105,6 +127,13 @@ struct NoteDetailView: View {
           .billetType(.label)
           .foregroundStyle(Palette.muted.color)
           .multilineTextAlignment(.center)
+        if let onReact {
+          ReactionBar(chosen: reaction, onReact: onReact)
+            .padding(.top, Spacing.small)
+        } else if let reaction {
+          ReactionMark(reaction)
+            .padding(.top, Spacing.small)
+        }
         Spacer(minLength: 0)
       }
       .padding(Spacing.medium)

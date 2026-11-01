@@ -1,4 +1,5 @@
 import BilletKit
+import Foundation
 import Pet
 import Wire
 
@@ -31,14 +32,14 @@ public enum HomeMachine: Machine {
   }
 
   public enum Output: Hashable, Sendable {
-    case deliver([Stroke])
+    case deliver([Stroke], id: UUID)
     case pet(PetMachine.Output)
   }
 
   public enum Event: Hashable, Sendable {
     case canvasOpened
     case canvasClosed
-    case drawingSent([Stroke])
+    case drawingSent([Stroke], id: UUID)
     case noteReceived([Stroke])
     case pet(PetMachine.Event)
   }
@@ -54,9 +55,9 @@ public enum HomeMachine: Machine {
       next.screen = .home
       return (next, [])
 
-    case .drawingSent(let strokes):
+    case .drawingSent(let strokes, let id):
       next.screen = .home
-      return (next, [.deliver(strokes)])
+      return (next, [.deliver(strokes, id: id)])
 
     case .noteReceived(let strokes):
       next.inbox.append(strokes)

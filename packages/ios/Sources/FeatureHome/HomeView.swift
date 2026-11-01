@@ -123,6 +123,7 @@ struct HomeView: View {
           .transition(.opacity)
       }
       catNaming
+      latestReceived
       treatPanel
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
@@ -130,6 +131,19 @@ struct HomeView: View {
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
+  }
+
+  /// A way to answer the newest note the partner sent.
+  @ViewBuilder private var latestReceived: some View {
+    if let note = session.notes.first(where: { $0.direction == .received }) {
+      ListRow("Latest note", subtitle: "Send something back") {
+        EmptyView()
+      } trailing: {
+        ReactionBar(chosen: session.play.reactions[note.id]) { session.react(to: note, $0) }
+      }
+      .card()
+      .sensoryFeedback(.impact(flexibility: .soft), trigger: session.play.reactions[note.id])
+    }
   }
 
   /// The cat's name once the pair has one, or the prompt to choose it.
@@ -166,6 +180,10 @@ struct HomeView: View {
       HeartBurst(trigger: session.play.petsReceived, tint: Palette.light.color)
         .offset(x: Spacing.wide, y: -Spacing.wide)
       TreatDrop(trigger: session.treatFalling)
+      HeartBurst(
+        trigger: session.reactionsSeen,
+        tint: (session.lastReaction ?? .heart).tint.color,
+        symbol: (session.lastReaction ?? .heart).symbol)
     }
   }
 

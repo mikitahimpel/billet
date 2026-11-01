@@ -1,4 +1,5 @@
 import Delivery
+import DesignSystem
 import Foundation
 import Ink
 import Pet
@@ -27,6 +28,8 @@ actor LiveDelivery {
     let kind: String
     let at: String
     var name: String?
+    var note: String?
+    var reaction: String?
   }
 
   private struct Frame: Decodable {
@@ -37,6 +40,7 @@ actor LiveDelivery {
     let kind: String?
     let days: [String: [String]]?
     let name: String?
+    let reactions: [String: String]?
   }
 
   private static let refusedStatusCodes: Set<Int> = [400, 403]
@@ -53,9 +57,9 @@ actor LiveDelivery {
     self.url = url
   }
 
-  func send(_ strokes: [Stroke]) async {
+  func send(_ strokes: [Stroke], id: UUID) async {
     guard let ink = try? NoteInk.encode(strokes) else { return }
-    let note = Outgoing(id: UUID().uuidString.lowercased(), ink: ink)
+    let note = Outgoing(id: id.uuidString.lowercased(), ink: ink)
     outbox.append(note)
     if let openSocket {
       await Self.write(note, to: openSocket)
@@ -87,6 +91,16 @@ actor LiveDelivery {
     let at = TreatDay.timestamp(for: .now, calendar: .current)
     let frame = OutgoingPlay(
       id: UUID().uuidString.lowercased(), kind: "name", at: at, name: name)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// A reaction goes like a treat: kept until acked and sent again after a reconnect.
+  func react(to note: UUID, _ reaction: Reaction) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    let frame = OutgoingPlay(
+      id: UUID().uuidString.lowercased(), kind: "react", at: at,
+      note: note.uuidString.lowercased(), reaction: reaction.rawValue)
     treatOutbox.append(frame)
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
@@ -164,15 +178,23 @@ actor LiveDelivery {
       updates.yield(.partnerPetted)
     case "treats":
       updates.yield(.treats((frame.days ?? [:]).mapValues(Set.init)))
+    case "reactions":
+      var table: [UUID: Reaction] = [:]
+      for (note, name) in frame.reactions ?? [:] {
+        if let id = UUID(uuidString: note), let reaction = Reaction(rawValue: name) {
+          table[id] = reaction
+        }
+      }
+      updates.yield(.reactions(table))
     case "name":
       if let name = frame.name { updates.yield(.catName(name)) }
     case "note":
-      guard let id = frame.id, let ink = frame.ink, receivedIDs.insert(id).inserted,
-        let strokes = try? NoteInk.decode(ink)
+      guard let id = frame.id, let ink = frame.ink, let noteID = UUID(uuidString: id),
+        receivedIDs.insert(id).inserted, let strokes = try? NoteInk.decode(ink)
       else { return }
       NoteImage.saveLatest(strokes)
       WidgetCenter.shared.reloadAllTimelines()
-      updates.yield(.note(strokes))
+      updates.yield(.note(strokes, id: noteID))
     default:
       break
     }

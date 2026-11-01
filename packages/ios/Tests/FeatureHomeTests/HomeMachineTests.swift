@@ -31,11 +31,13 @@ struct HomeMachineTests {
     #expect(apply([.canvasOpened, .canvasClosed]).pet.world.activity == .sleeping)
   }
 
+  private let id = UUID()
+
   @Test func sendingReturnsHomeAndDeliversTheDrawing() {
     let (state, outputs) = HomeMachine.transition(
-      apply([.canvasOpened]), .drawingSent(strokes))
+      apply([.canvasOpened]), .drawingSent(strokes, id: id))
     #expect(state.screen == .home)
-    #expect(outputs == [.deliver(strokes)])
+    #expect(outputs == [.deliver(strokes, id: id)])
     #expect(!state.pet.world.noteArrived)
   }
 

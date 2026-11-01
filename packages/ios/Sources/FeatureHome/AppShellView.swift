@@ -37,7 +37,10 @@ struct AppShellView: View {
         .tabEntrance(destination == .home)
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
-        NotesView(notes: session.notes, loadFailed: session.notesFailedToLoad)
+        NotesView(
+          notes: session.notes, loadFailed: session.notesFailedToLoad,
+          reactions: session.play.reactions,
+          onReact: { session.react(to: $0, $1) })
           .tabEntrance(destination == .notes)
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
