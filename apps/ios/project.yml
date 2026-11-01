@@ -1,0 +1,81 @@
+name: Billet
+options:
+  bundleIdPrefix: com.mikitahimpel
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    GENERATE_INFOPLIST_FILE: YES
+packages:
+  Billet:
+    path: ../../packages/ios
+targets:
+  Billet:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies:
+      - package: Billet
+        product: BilletKit
+      - target: BilletWidget
+      - target: BilletNotificationService
+    entitlements:
+      path: App/Billet.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_CFBundleDisplayName: billet
+  BilletWidget:
+    type: app-extension
+    platform: iOS
+    sources: [Widget]
+    dependencies:
+      - package: Billet
+        product: Surfaces
+    entitlements:
+      path: Widget/BilletWidget.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
+        INFOPLIST_KEY_CFBundleDisplayName: billet
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  BilletNotificationService:
+    type: app-extension
+    platform: iOS
+    sources: [NotificationService]
+    dependencies:
+      - package: Billet
+        product: Delivery
+    entitlements:
+      path: NotificationService/BilletNotificationService.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+    info:
+      path: NotificationService/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
+        INFOPLIST_KEY_CFBundleDisplayName: billet
+schemes:
+  Billet:
+    build:
+      targets:
+        Billet: all

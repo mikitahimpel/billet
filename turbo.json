@@ -25,11 +25,49 @@
     },
     "ios:build": {
       "outputs": [],
-      "inputs": ["Sources/**", "Tests/**", "Package.swift", "$TURBO_ROOT$/.xcode-version"]
+      "inputs": [
+        "Sources/**",
+        "Tests/**",
+        "Package.swift",
+        "scripts/**",
+        "$TURBO_ROOT$/.xcode-version",
+        "$TURBO_ROOT$/.swift-format",
+        "App/**",
+        "Widget/**",
+        "NotificationService/**",
+        "project.yml"
+      ]
+    },
+    "ios:format": {
+      "cache": false
+    },
+    "ios:format:check": {
+      "outputs": [],
+      "inputs": [
+        "Sources/**",
+        "Tests/**",
+        "Package.swift",
+        "$TURBO_ROOT$/.xcode-version",
+        "$TURBO_ROOT$/.swift-format",
+        "App/**",
+        "Widget/**",
+        "NotificationService/**"
+      ]
+    },
+    "ios:generate": {
+      "outputs": [],
+      "inputs": ["project.yml", "$TURBO_ROOT$/.xcode-version"]
     },
     "ios:test": {
       "outputs": [],
-      "inputs": ["Sources/**", "Tests/**", "Package.swift", "$TURBO_ROOT$/.xcode-version"]
+      "inputs": [
+        "Sources/**",
+        "Tests/**",
+        "Package.swift",
+        "scripts/**",
+        "$TURBO_ROOT$/.xcode-version",
+        "$TURBO_ROOT$/.swift-format"
+      ]
     },
     "lint": {
       "inputs": [
