@@ -8,6 +8,7 @@ public struct NotesView: View {
   private let loadFailed: Bool
   private let reactions: [UUID: Reaction]
   private let onReact: ((NoteRecord, Reaction) -> Void)?
+  private let detailDrawing: ((NoteRecord) -> AnyView)?
 
   @Namespace private var zoom
   @State private var opened: NoteRecord?
@@ -15,12 +16,15 @@ public struct NotesView: View {
   /// - Parameters:
   ///   - reactions: The reaction each note has received.
   ///   - onReact: Called when a received note is reacted to. `nil` shows no way to react.
+  ///   - detailDrawing: Shows a note's drawing in the full-screen view instead of the still one.
   public init(
     notes: [NoteRecord],
     loadFailed: Bool = false,
     reactions: [UUID: Reaction] = [:],
-    onReact: ((NoteRecord, Reaction) -> Void)? = nil
+    onReact: ((NoteRecord, Reaction) -> Void)? = nil,
+    detailDrawing: ((NoteRecord) -> AnyView)? = nil
   ) {
+    self.detailDrawing = detailDrawing
     self.notes = notes
     self.loadFailed = loadFailed
     self.reactions = reactions
@@ -54,7 +58,7 @@ public struct NotesView: View {
     #if os(iOS)
       .fullScreenCover(item: $opened) { note in
         NoteDetailView(
-          note: note, reaction: reactions[note.id],
+          note: note, reaction: reactions[note.id], drawing: detailDrawing?(note),
           onReact: note.direction == .received ? onReact.map { react in { react(note, $0) } } : nil
         ) { opened = nil }
         .navigationTransition(.zoom(sourceID: note.id, in: zoom))
@@ -107,6 +111,8 @@ private struct NoteRow: View {
 struct NoteDetailView: View {
   let note: NoteRecord
   let reaction: Reaction?
+  /// Stands in for the still drawing when given.
+  let drawing: AnyView?
   /// `nil` when the note is not one to react to.
   let onReact: ((Reaction) -> Void)?
   let onClose: () -> Void
@@ -116,10 +122,16 @@ struct NoteDetailView: View {
       EveningBackground()
       VStack(spacing: Spacing.small) {
         Spacer(minLength: Spacing.page)
-        NoteDrawing(note: note, side: 1080)
-          .lampGlow()
-          .accessibilityLabel("Drawing")
-          .padding(.bottom, Spacing.medium)
+        Group {
+          if let drawing {
+            drawing
+          } else {
+            NoteDrawing(note: note, side: 1080)
+          }
+        }
+        .lampGlow()
+        .accessibilityLabel("Drawing")
+        .padding(.bottom, Spacing.medium)
         Text(note.direction.title)
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)

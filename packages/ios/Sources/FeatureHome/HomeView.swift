@@ -191,6 +191,7 @@ struct HomeView: View {
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
         .frame(minHeight: Target.minimum)
         .card()
         .accessibilityIdentifier("fakePartnerNotice")

@@ -1,6 +1,7 @@
 import DesignSystem
 import FeatureInbox
 import FeatureSettings
+import Labs
 import PetScene
 import SwiftUI
 import WidgetBridge
@@ -43,7 +44,9 @@ struct AppShellView: View {
         NotesView(
           notes: session.notes, loadFailed: session.notesFailedToLoad,
           reactions: session.play.reactions,
-          onReact: { session.react(to: $0, $1) }
+          onReact: { session.react(to: $0, $1) },
+          detailDrawing: labs.isOn(LabExperiment.drawnReplay)
+            ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil
         )
         .tabEntrance(destination == .notes)
       }
