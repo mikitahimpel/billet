@@ -11,6 +11,8 @@ import SwiftUI
 @MainActor
 final class NookiDiorama {
   let root = Entity()
+  /// Called once, when the room has rendered and a poster over it can go.
+  var onReady: (() -> Void)?
 
   private let room = Entity()
   private let lens = PerspectiveCamera()
@@ -40,6 +42,9 @@ final class NookiDiorama {
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
   private var isOnScreen = true
+  private var isLoaded = false
+  private(set) var loading: Task<Void, Never>?
+  private var settlingFrames = NookiDiorama.framesBeforeReady
   private var subscription: EventSubscription?
   private var camera = NookiCamera()
   private var tapTimer = NookiTapTimer()
@@ -54,6 +59,7 @@ final class NookiDiorama {
 
   private static let orbitPerPoint: Float = 0.006
   private static let idleStep = 1.0 / 30
+  private static let framesBeforeReady = 4
   private static let lampIntensity: Float = 2600
   private static let lanternIntensity: Float = 500
 
@@ -73,38 +79,74 @@ final class NookiDiorama {
   private static let lookLimit: Float = 1
   private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
 
+  /// Starts empty and cheap, so a view can hold one before anything heavy has run.
   init() {
     root.addChild(room)
+    room.isEnabled = false
     lens.camera.fieldOfViewInDegrees = 30
     root.addChild(lens)
-    buildRoom()
-    buildBowl()
+    aimLens()
+  }
+
+  /// Builds the room once, a step at a time so the main actor keeps drawing. The work belongs to
+  /// the diorama, not to the view that asked: a cover over the view cancels the view's tasks, and
+  /// a cancelled load would leave a room with no lights or models and nothing to resume it. An
+  /// asset that fails to load leaves a gap in the room and is logged. `onReady` follows once the
+  /// room has rendered.
+  func startLoading() {
+    guard loading == nil else { return }
+    loading = Task { await load() }
+  }
+
+  private func load() async {
+    await buildRoom()
+    await buildBowl()
+    await Task.yield()
     buildNote()
     buildBackstop()
     mochi.position = Self.bedSpot
     room.addChild(mochi)
-    aimLens()
-  }
-
-  /// Loads the models. A missing asset leaves a gap in the room and is logged.
-  func load() async {
+    await Task.yield()
     await place("Item_rug", width: 0.86, at: [0.05, 0.002, 0.12], yaw: 0)
+    await Task.yield()
     await place("Item_donutbed", width: 0.5, at: [0.05, 0.012, 0.12], yaw: 0, target: .bed)
+    await Task.yield()
     await place(
       "Item_bookcase", height: 0.72, at: [-0.46, 0, -0.1], yaw: .pi / 2, target: .bookcase)
+    await Task.yield()
     await place("Item_monstera", height: 0.62, at: [-0.4, 0, -0.42], yaw: 0, target: .plant)
+    await Task.yield()
     await place("Item_armchair", width: 0.5, at: [0.42, 0, -0.38], yaw: -.pi / 4)
+    await Task.yield()
     await place("Item_lamp", height: 0.46, at: [0.62, 0, 0.02], yaw: 0, target: .lamp)
+    await Task.yield()
     await place("Item_teatable", height: 0.2, at: [0.54, 0, 0.42], yaw: 0)
+    await Task.yield()
     await place("Item_lantern", height: 0.15, at: [0.54, 0.2, 0.42], yaw: 0)
+    await Task.yield()
     await place("Item_tower", height: 0.62, at: [-0.46, 0, 0.5], yaw: 0)
+    await Task.yield()
     await place("Item_print", height: 0.26, at: [0.45, 0.46, -0.59], yaw: 0)
+    await Task.yield()
     await place("Item_yarn", width: 0.14, at: Self.yarnPosition, yaw: 0, target: .yarn)
+    await Task.yield()
     await place("Item_mouse", height: 0.07, at: [-0.2, 0, 0.56], yaw: 0.8)
     findLampParts()
     await loadMochi()
+    await Task.yield()
     await addLighting()
+    await Task.yield()
     buildDust()
+    buildStreakMarks(play.streak)
+    room.isEnabled = isOnScreen
+    isLoaded = true
+  }
+
+  /// How many entities the room holds so far.
+  var entityCount: Int {
+    var count = 0
+    Self.visit(root) { _ in count += 1 }
+    return count
   }
 
   /// Shows `world` from the start of its step.
@@ -121,7 +163,7 @@ final class NookiDiorama {
     let petted = play.petsReceived > self.play.petsReceived
     self.play = play
     if petted { petStart = clock }
-    if play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
+    if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
   func startUpdates(from content: RealityViewCameraContent) {
@@ -143,7 +185,7 @@ final class NookiDiorama {
   /// Off screen, the room leaves the render and updates stop.
   func setOnScreen(_ onScreen: Bool) {
     isOnScreen = onScreen
-    room.isEnabled = onScreen
+    room.isEnabled = onScreen && isLoaded
   }
 
   // MARK: - Camera
@@ -226,7 +268,12 @@ final class NookiDiorama {
   // MARK: - Updates
 
   private func tick(_ delta: TimeInterval) {
-    guard isOnScreen else { return }
+    guard isOnScreen, isLoaded else { return }
+    if settlingFrames > 0 {
+      settlingFrames -= 1
+      if settlingFrames == 0 { onReady?() }
+      return
+    }
     clock += delta
     idleDelta += delta
     guard isBusy || idleDelta >= Self.idleStep else { return }
@@ -372,24 +419,31 @@ final class NookiDiorama {
 
   // MARK: - Room
 
-  private func buildRoom() {
-    box([1.3, 0.08, 1.3], .honey, at: [0.05, -0.04, 0.05])
-    box([0.06, 0.86, 1.3], .plaster, at: [-0.63, 0.43, 0.05])
-    box([1.36, 0.86, 0.06], .plaster, at: [0.02, 0.43, -0.63])
-    box([0.012, 0.09, 1.2], .walnut, at: [-0.594, 0.045, 0.05])
-    box([1.2, 0.09, 0.012], .walnut, at: [0.05, 0.045, -0.594])
-    box([0.76, 0.006, 0.006], .ink, at: [-0.08, 0.6, -0.59])
+  private func buildRoom() async {
+    let parts: [(size: SIMD3<Float>, tone: Tone, position: SIMD3<Float>)] = [
+      ([1.3, 0.08, 1.3], .honey, [0.05, -0.04, 0.05]),
+      ([0.06, 0.86, 1.3], .plaster, [-0.63, 0.43, 0.05]),
+      ([1.36, 0.86, 0.06], .plaster, [0.02, 0.43, -0.63]),
+      ([0.012, 0.09, 1.2], .walnut, [-0.594, 0.045, 0.05]),
+      ([1.2, 0.09, 0.012], .walnut, [0.05, 0.045, -0.594]),
+      ([0.76, 0.006, 0.006], .ink, [-0.08, 0.6, -0.59]),
+    ]
+    for part in parts {
+      box(part.size, part.tone, at: part.position)
+      await Task.yield()
+    }
     streakMarks.position = [0.2, 0.72, -0.597]
     room.addChild(streakMarks)
   }
 
-  private func buildBowl() {
+  private func buildBowl() async {
     let bowl = Entity()
     bowl.position = Self.bowlPosition
     let dish = ModelEntity(
       mesh: .generateCylinder(height: 0.04, radius: 0.075), materials: [Self.clay(.heart)])
     dish.position = [0, 0.02, 0]
     bowl.addChild(dish)
+    await Task.yield()
     let treats = ModelEntity(
       mesh: .generateSphere(radius: 0.066), materials: [Self.clay(.walnut)])
     treats.scale = [1, 0.5, 1]
@@ -398,6 +452,7 @@ final class NookiDiorama {
     bowlFill.isEnabled = false
     bowl.addChild(bowlFill)
     room.addChild(bowl)
+    await Task.yield()
   }
 
   /// One mark per day of the streak, in rows of seven like a calendar scratched on the wall.

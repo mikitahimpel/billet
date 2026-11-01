@@ -44,7 +44,8 @@ private struct RooftopView: View {
   let world: PetWorld
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var rive = PetWorldRive(fileName: "Rooftop", artboardName: "Rooftop")
+  /// Made once, after the first frame. A default value here would run on every parent update.
+  @State private var rive: PetWorldRive?
 
   var body: some View {
     ZStack {
@@ -58,7 +59,12 @@ private struct RooftopView: View {
           .accessibilityLabel("A rooftop at night with the cat")
       }
     }
-    .onChange(of: world.noteArrived, initial: true) { _, arrived in
+    .task {
+      guard rive == nil else { return }
+      rive = PetWorldRive(fileName: "Rooftop", artboardName: "Rooftop")
+      rive?.setNoteArrived(world.noteArrived)
+    }
+    .onChange(of: world.noteArrived) { _, arrived in
       rive?.setNoteArrived(arrived)
     }
     .task(id: world) {

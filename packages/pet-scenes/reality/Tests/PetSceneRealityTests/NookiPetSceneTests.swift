@@ -42,6 +42,41 @@ struct NookiPetSceneTests {
     #expect(model.availableAnimations.isEmpty)
   }
 
+  @Test func aNewDioramaBuildsNothingUntilLoaded() {
+    #expect(NookiDiorama().entityCount <= 3)
+  }
+
+  @Test func theRoomLoadsInFull() async {
+    let diorama = NookiDiorama()
+    diorama.startLoading()
+    await diorama.loading?.value
+    #expect(diorama.entityCount > 100)
+  }
+
+  @Test func aCancelledCallerStillGetsTheWholeRoom() async {
+    let diorama = NookiDiorama()
+    let caller = Task { @MainActor in
+      withUnsafeCurrentTask { $0?.cancel() }
+      diorama.startLoading()
+    }
+    await caller.value
+    await diorama.loading?.value
+    #expect(diorama.entityCount > 100)
+  }
+
+  @Test func loadingTwiceBuildsOneRoom() async {
+    let diorama = NookiDiorama()
+    diorama.startLoading()
+    let first = diorama.loading
+    diorama.startLoading()
+    await first?.value
+    #expect(diorama.loading == first)
+  }
+
+  @Test func posterDecodes() async {
+    #expect(await NookiPoster.load() != nil)
+  }
+
   @Test func everyPoseIsAPNG() throws {
     for pose in PetPose.allCases {
       let png = try #require(scene.posePNG(pose))
