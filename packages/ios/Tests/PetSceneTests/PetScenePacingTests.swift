@@ -42,4 +42,9 @@ struct PetScenePacingTests {
     #expect(PetMachine.Event(.deliveryFinished(delivery: 2)) == .deliveryFinished(delivery: 2))
     #expect(PetMachine.Event(.settled(delivery: 2)) == .settled(delivery: 2))
   }
+
+  @Test func hostEventsAreNotPetEvents() {
+    #expect(PetMachine.Event(.petted) == nil)
+    #expect(PetMachine.Event(.noteOpened(delivery: 2)) == nil)
+  }
 }

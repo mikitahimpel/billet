@@ -56,8 +56,11 @@ public struct HomeView: View {
     ZStack(alignment: .bottom) {
       Color.clear
       if let scene = selectedScene {
-        scene.makeView(world: store.state.pet.world) { store.send(.pet(PetMachine.Event($0))) }
-          .id(scene.id)
+        scene.makeView(world: store.state.pet.world) { event in
+          if let event = PetMachine.Event(event) { store.send(.pet(event)) }
+        }
+        .id(scene.id)
+        .environment(\.petSceneOnScreen, store.state.screen == .home && !choosingScene)
       }
       Button("Draw a note") { store.send(.canvasOpened) }
         .buttonStyle(.borderedProminent)
