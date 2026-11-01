@@ -52,6 +52,7 @@ private struct LittleHouseView: View {
         rive.view
           .aspectRatio(Self.artboardRatio, contentMode: .fit)
           .overlay { windowLight }
+          .overlay { doorNumber }
           .mask { Self.fade(.leading, .trailing) }
           .mask { Self.fade(.top, .bottom) }
           .accessibilityLabel("Little House with the cat")
@@ -70,6 +71,30 @@ private struct LittleHouseView: View {
   /// The house's side window in the artboard. `LittleHouse.riv` binds only `noteArrived`, so the
   /// glow is drawn here and the cat's own pose is left as it is.
   private static let window = CGRect(x: 523, y: 543, width: 119, height: 119)
+
+  /// The plaque by the door, where the house number is baked into the artwork. `LittleHouse.riv`
+  /// exposes no text for it, so a plate drawn here covers the number and shows the pair's streak.
+  private static let plaque = CGRect(x: 140, y: 589, width: 62, height: 38)
+
+  private var doorNumber: some View {
+    GeometryReader { proxy in
+      let scale = proxy.size.width / Self.artboard.width
+      Text(verbatim: "\(world.streak)")
+        .billetType(.numeral)
+        .foregroundStyle(Palette.gold.color)
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+        .contentTransition(.numericText(value: Double(world.streak)))
+        .frame(width: Self.plaque.width / 1.8, height: Self.plaque.height / 1.8)
+        .scaleEffect(1.8)
+        .frame(width: Self.plaque.width, height: Self.plaque.height)
+        .background(Palette.plate.color, in: .rect(cornerRadius: Radius.plate))
+        .scaleEffect(scale)
+        .position(x: Self.plaque.midX * scale, y: Self.plaque.midY * scale)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.4), value: world.streak)
+        .accessibilityLabel("House number \(world.streak)")
+    }
+  }
 
   /// A warm light behind the window's panes and a soft spill beyond them, while the partner is here.
   private var windowLight: some View {

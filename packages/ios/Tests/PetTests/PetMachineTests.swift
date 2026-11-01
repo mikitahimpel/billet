@@ -94,4 +94,21 @@ struct PetMachineTests {
     #expect(state.world.partnerHere)
     #expect(state.world.activity == .sleeping)
   }
+
+  @Test func streakIsKeptThroughDeliveriesAndNeverNegative() {
+    let state = apply([
+      .streakChanged(4), .noteArrived, .deliveryFinished(delivery: 1), .settled(delivery: 1),
+    ])
+    #expect(state.world.streak == 4)
+    #expect(apply([.streakChanged(-2)]).world.streak == 0)
+    let (same, outputs) = PetMachine.transition(state, .streakChanged(4))
+    #expect(same == state)
+    #expect(outputs.isEmpty)
+  }
+
+  @Test func streakDoesNotChangeTheStep() {
+    let delivering = apply([.noteArrived])
+    #expect(
+      PetMachine.transition(delivering, .streakChanged(9)).0.world.step == delivering.world.step)
+  }
 }

@@ -14,11 +14,16 @@ public struct PetWorld: Hashable, Sendable {
 
   /// True while the partner has the app open. Scenes light the window and the pet looks at it.
   public var partnerHere: Bool
+  /// The pair's shared streak of days with a treat. A scene with a door shows it as the number.
+  public var streak: Int
 
-  public init(activity: Activity = .sleeping, delivery: Int = 0, partnerHere: Bool = false) {
+  public init(
+    activity: Activity = .sleeping, delivery: Int = 0, partnerHere: Bool = false, streak: Int = 0
+  ) {
     self.activity = activity
     self.delivery = delivery
     self.partnerHere = partnerHere
+    self.streak = streak
   }
 
   /// The delivery step alone. A scene paces and restarts its animation on this, so the partner

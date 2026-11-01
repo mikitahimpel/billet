@@ -39,6 +39,7 @@ struct HomeView: View {
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
+      .task(id: session.play.ledger) { await keepStreakCurrent() }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
@@ -63,6 +64,16 @@ struct HomeView: View {
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
         }
       #endif
+  }
+
+  /// Tells the pet the shared streak, and again each minute because a day rolling over ends it.
+  private func keepStreakCurrent() async {
+    while !Task.isCancelled {
+      let calendar = Calendar.current
+      let today = TreatDay.key(for: .now, calendar: calendar)
+      store.send(.pet(.streakChanged(session.play.streak(today: today, calendar: calendar))))
+      try? await Task.sleep(for: .seconds(60))
+    }
   }
 
   private var canvasPresented: Binding<Bool> {
