@@ -10,9 +10,17 @@
     "test": "turbo run test",
     "ios:test": "turbo run ios:test",
     "ios:build": "turbo run ios:build",
-    "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'"
+    "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'",
+    "alchemy": "alchemy",
+    "typecheck:root": "tsc --noEmit -p tsconfig.json",
+    "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' ."
   },
   "devDependencies": {
+    "@alchemy.run/cloudflare": "catalog:",
+    "@effect/platform-node": "catalog:infra",
+    "@types/node": "catalog:",
+    "alchemy": "catalog:",
+    "effect": "catalog:infra",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
     "turbo": "catalog:",
