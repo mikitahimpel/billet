@@ -95,8 +95,19 @@ final class AppModel {
     beforeFake = wasPairing
     stage = .paired(fake)
     fake.connect()
+    let now = dependencies.now()
     Task {
       try? await archive.erase()
+      // A little history, so the experiments that look back have something to find.
+      for (component, drawing) in [(Calendar.Component.year, 0), (.month, 3)] {
+        guard let then = Calendar.current.date(byAdding: component, value: -1, to: now) else {
+          continue
+        }
+        _ = try? await archive.add(
+          NoteRecord(
+            direction: .received, date: then, strokes: FakePartnerDrawings.drawing(number: drawing))
+        )
+      }
       await fake.loadNotes()
     }
   }

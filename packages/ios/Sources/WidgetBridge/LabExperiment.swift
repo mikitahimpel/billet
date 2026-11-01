@@ -21,6 +21,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case lightsOut
   case theirSky
   case nextVisit
+  case onThisDay
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -55,6 +56,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lightsOut: .home
     case .theirSky: .home
     case .nextVisit: .home
+    case .onThisDay: .notes
     }
   }
 
@@ -75,6 +77,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lightsOut: "Lights out"
     case .theirSky: "Their sky"
     case .nextVisit: "Next visit"
+    case .onThisDay: "On this day"
     }
   }
 
@@ -82,6 +85,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .onThisDay:
+      "The cat digs out a note from this day a year ago, or a month ago. It needs history: the fake partner starts with one note of each."
     case .nextVisit:
       "Set the day you next meet. Home counts down, and a small suitcase by the door fills up as it nears. The day is kept on this phone."
     case .theirSky:
@@ -130,6 +135,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lightsOut: true
     case .theirSky: true
     case .nextVisit: true
+    case .onThisDay: true
     }
   }
 }

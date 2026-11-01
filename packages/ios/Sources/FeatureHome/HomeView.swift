@@ -188,6 +188,7 @@ struct HomeView: View {
       overnightStayNotice
       catCameBackNotice
       todaysWordCard
+      onThisDayCard
       sundayPostCard
       sealedNoteCards
       twoWispsCard
@@ -227,6 +228,12 @@ struct HomeView: View {
         store: session.lamp, catName: session.play.catName, showsColours: colours,
         showsGoodnight: goodnight
       ) { session.lampChanged(out: $0) }
+    }
+  }
+
+  @ViewBuilder private var onThisDayCard: some View {
+    if session.labs.isOn(LabExperiment.onThisDay) {
+      OnThisDaySection(notes: session.notes, catName: session.play.catName)
     }
   }
 
