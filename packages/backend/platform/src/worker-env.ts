@@ -9,9 +9,9 @@ export interface WorkerEnv {
   readonly MEDIA: R2Bucket;
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
-  /** Temporary demo rooms. Bound on the dev stage only. */
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
+  /** Temporary demo rooms. Bound on the dev stage only. */
   readonly DEMO_ROOM?: DurableObjectNamespace<DemoRoom>;
 }

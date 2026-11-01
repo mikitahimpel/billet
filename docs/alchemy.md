@@ -30,11 +30,11 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 
 - `Api` is an async Worker: a plain module that exports `fetch` and the `PairRoom` class. The Worker
   code never imports `alchemy` or `@alchemy.run/*` (see [Drizzle](#drizzle)).
-- `apps/api` is the composition root only. The Durable Object class, the placeholder response and the
+- `apps/api` is the composition root only. The Durable Object class, `respondApi` and the
   binding types live in `packages/backend/platform`, the only place that touches bindings. The
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
-- The `PairRoom` rules live in `packages/backend/pair-room`. The fetch response is still a
-  placeholder, so no route reaches the object yet: the routes arrive with later tickets.
+- The `PairRoom` rules live in `packages/backend/pair-room`. `/v1/` serves the auth, pairing, notes and
+  media routes, and anything else answers the placeholder that the deploy smoke test reads.
 - Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
   committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
   read only by a real deploy.
@@ -60,7 +60,8 @@ source, and every `effect` source is 4.1.1. Revisit this when Alchemy supports e
 ### Migrations
 
 Change a schema, then run `pnpm db:generate` and commit the result. A test fails if a schema has no
-committed migration. drizzle-kit may ask about renames or data loss, so run it in a terminal.
+committed migration. drizzle-kit may ask about renames or data loss, so run it in a terminal. To add
+tables and drop one in a change without that prompt, generate the additions first and the drop second.
 
 | | D1 | Durable Object SQLite |
 | --- | --- | --- |
