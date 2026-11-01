@@ -57,4 +57,17 @@ struct NookiChoreographyTests {
   @Test func sleepAfterADeliveryMatchesTheEndOfSettling() {
     #expect(frame(.sleeping, at: 0) == frame(.settling, at: seconds.settling))
   }
+
+  @Test func windowLightFollowsThePartnerInEveryStep() {
+    for activity in [PetWorld.Activity.sleeping, .delivering, .settling] {
+      let here = NookiChoreography.frame(
+        PetWorld(activity: activity, delivery: 1, partnerHere: true), elapsed: 2)
+      let away = NookiChoreography.frame(PetWorld(activity: activity, delivery: 1), elapsed: 2)
+      #expect(here.light == 1)
+      #expect(away.light == 0)
+      var rest = here
+      rest.light = 0
+      #expect(rest == away)
+    }
+  }
 }

@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import Pet
 import PetScene
@@ -43,12 +44,14 @@ private struct LittleHouseView: View {
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @State private var rive = LittleHouseRive()
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     ZStack {
       if let rive {
         rive.view
           .aspectRatio(Self.artboardRatio, contentMode: .fit)
+          .overlay { windowLight }
           .mask { Self.fade(.leading, .trailing) }
           .mask { Self.fade(.top, .bottom) }
           .accessibilityLabel("Little House with the cat")
@@ -57,12 +60,39 @@ private struct LittleHouseView: View {
     .onChange(of: world.noteArrived, initial: true) { _, arrived in
       rive?.setNoteArrived(arrived)
     }
-    .task(id: world) {
+    .task(id: world.step) {
       await LittleHousePetScene.pacing.play(world, onEvent: onEvent)
     }
   }
 
   private static let artboardRatio: CGFloat = 780.0 / 980.0
+  private static let artboard = CGSize(width: 780, height: 980)
+  /// The house's side window in the artboard. `LittleHouse.riv` binds only `noteArrived`, so the
+  /// glow is drawn here and the cat's own pose is left as it is.
+  private static let window = CGRect(x: 523, y: 543, width: 119, height: 119)
+
+  /// A warm light behind the window's panes and a soft spill beyond them, while the partner is here.
+  private var windowLight: some View {
+    GeometryReader { proxy in
+      let scale = proxy.size.width / Self.artboard.width
+      ZStack {
+        RoundedRectangle(cornerRadius: 6 * scale)
+          .fill(Palette.gold.color.opacity(0.55))
+          .blendMode(.plusLighter)
+          .frame(width: Self.window.width * scale, height: Self.window.height * scale)
+          .blur(radius: 6 * scale)
+        Circle()
+          .fill(Palette.gold.color.opacity(0.28))
+          .frame(width: Self.window.width * 2.4 * scale)
+          .blur(radius: 28 * scale)
+      }
+      .position(x: Self.window.midX * scale, y: Self.window.midY * scale)
+      .opacity(world.partnerHere ? 1 : 0)
+      .animation(reduceMotion ? nil : .easeInOut(duration: 0.8), value: world.partnerHere)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+    }
+  }
 
   /// Dissolves the artboard's edges into whatever is behind the scene.
   private static func fade(_ start: UnitPoint, _ end: UnitPoint) -> some View {

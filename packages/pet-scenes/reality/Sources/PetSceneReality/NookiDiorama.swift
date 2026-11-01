@@ -19,10 +19,15 @@ final class NookiDiorama {
   private var ears: [Entity] = []
   private var world = PetWorld()
   private var clock = 0.0
+  private var lastDelta: Float = 0
   private var stepStart = 0.0
   private var subscription: EventSubscription?
   private var camera = NookiCamera()
   private var reduceMotion = false
+  private let windowLight = Entity()
+  private var windowPane: ModelEntity?
+  /// Eased 0...1 towards the frame's light.
+  private var light: Float = 0
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
@@ -35,6 +40,10 @@ final class NookiDiorama {
   private static let wakeTurn: Float = 0.5
   private static let noteHome: SIMD3<Float> = [0.08, 0.46, -0.565]
   private static let noteStart: SIMD3<Float> = [0.75, 1.05, -0.1]
+  /// Extra turn towards the window when the partner is here.
+  private static let lookTurn: Float = -0.55
+  private static let windowCentre: SIMD3<Float> = [-0.28, 0.52, -0.59]
+  private static let lightPerSecond: Float = 1.5
 
   init() {
     buildRoom()
@@ -60,7 +69,9 @@ final class NookiDiorama {
   /// Shows `world` from the start of its step.
   func show(_ world: PetWorld) {
     guard world != self.world else { return }
+    let sameStep = world.step == self.world.step
     self.world = world
+    guard !sameStep else { return }
     stepStart = clock
     apply(elapsed: 0)
   }
@@ -116,6 +127,7 @@ final class NookiDiorama {
 
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    lastDelta = Float(delta)
     if !camera.isAtRest {
       camera.step(Float(delta))
       aimLens()
@@ -132,8 +144,11 @@ final class NookiDiorama {
       1 - 0.04 * frame.wake + breath * 0.5,
     ]
     mochi.position = Self.mochiPosition + [0, 0.02 * frame.wake + 0.05 * frame.hop, 0]
+    if frame.light != light { easeLight(to: frame.light) }
     mochi.orientation = simd_quatf(
-      angle: Self.mochiYaw + Self.wakeTurn * frame.wake, axis: [0, 1, 0])
+      angle: Self.mochiYaw + Self.wakeTurn * frame.wake + Self.lookTurn * light,
+      axis: [0, 1, 0])
+
     for eye in closedEyes { eye.isEnabled = !frame.eyesOpen }
     for eye in openEyes { eye.isEnabled = frame.eyesOpen }
     for ear in ears { ear.scale = .one * (1 + 0.15 * frame.wake) }
@@ -145,6 +160,15 @@ final class NookiDiorama {
     note.orientation = simd_quatf(angle: swing, axis: [0, 0, 1])
   }
 
+  private func easeLight(to target: Float) {
+    let toward = target - light
+    let step = reduceMotion ? abs(toward) : Self.lightPerSecond * lastDelta
+    light = abs(toward) <= step ? target : light + (toward < 0 ? -step : step)
+    windowLight.components.set(
+      PointLightComponent(color: Tone.glow.color, intensity: 900 * light, attenuationRadius: 1.2))
+    windowPane?.model?.materials = [Self.glass(light: light)]
+  }
+
   // MARK: - Room
 
   private func buildRoom() {
@@ -154,6 +178,28 @@ final class NookiDiorama {
     box([0.012, 0.09, 1.2], .walnut, at: [-0.594, 0.045, 0.05])
     box([1.2, 0.09, 0.012], .walnut, at: [0.05, 0.045, -0.594])
     box([1.05, 0.006, 0.006], .ink, at: [0.05, 0.6, -0.59])
+    buildWindow()
+  }
+
+  /// A small window on the back wall. Its pane glows and a light spills into the room while the
+  /// partner is here.
+  private func buildWindow() {
+    box([0.25, 0.3, 0.014], .walnut, at: Self.windowCentre + [0, 0, 0.004])
+    let pane = ModelEntity(
+      mesh: .generateBox(width: 0.21, height: 0.26, depth: 0.004),
+      materials: [Self.glass(light: 0)])
+    pane.position = Self.windowCentre + [0, 0, 0.013]
+    root.addChild(pane)
+    windowPane = pane
+    windowLight.position = Self.windowCentre + [0, 0, 0.25]
+    root.addChild(windowLight)
+  }
+
+  private static func glass(light: Float) -> PhysicallyBasedMaterial {
+    var material = clay(.night)
+    material.emissiveColor = .init(color: Tone.glow.color)
+    material.emissiveIntensity = 2.5 * light
+    return material
   }
 
   private func buildNote() {
@@ -293,7 +339,7 @@ final class NookiDiorama {
 }
 
 private enum Tone {
-  case honey, plaster, walnut, ink, paper, heart, lamp, ceiling, bounce
+  case honey, plaster, walnut, ink, paper, heart, lamp, ceiling, bounce, night, glow
 
   private var rgb: (CGFloat, CGFloat, CGFloat) {
     switch self {
@@ -306,6 +352,8 @@ private enum Tone {
     case .lamp: (1, 0.87, 0.72)
     case .ceiling: (1, 0.93, 0.82)
     case .bounce: (0.6, 0.47, 0.4)
+    case .night: (0.12, 0.16, 0.26)
+    case .glow: (1, 0.82, 0.5)
     }
   }
 

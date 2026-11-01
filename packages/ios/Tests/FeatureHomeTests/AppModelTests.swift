@@ -113,6 +113,15 @@ struct AppModelTests {
     #expect(isPaired(model))
   }
 
+  @Test func partnerPresenceReachesThePetWorld() async throws {
+    let (_, session) = try await paired()
+    #expect(session.store.state.pet.world.partnerHere)
+    await room.emit(.status(.partnerAway))
+    #expect(!session.store.state.pet.world.partnerHere)
+    await room.emit(.status(.connecting))
+    #expect(!session.store.state.pet.world.partnerHere)
+  }
+
   @Test func aFullRoomReturnsToPairingWithAClearError() async {
     let model = makeModel()
     model.join(code: code)

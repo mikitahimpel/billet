@@ -77,4 +77,21 @@ struct PetMachineTests {
     ])
     #expect(PetMachine.transition(settlingSecond, .settled(delivery: 1)).0 == settlingSecond)
   }
+
+  @Test func partnerPresenceLightsTheWindowWithoutTouchingTheDelivery() {
+    let delivering = apply([.noteArrived])
+    let (here, outputs) = PetMachine.transition(delivering, .partnerPresence(true))
+    #expect(here.world.partnerHere)
+    #expect(here.world.step == delivering.world.step)
+    #expect(outputs.isEmpty)
+    #expect(!PetMachine.transition(here, .partnerPresence(false)).0.world.partnerHere)
+  }
+
+  @Test func partnerStaysHereAcrossDeliverySteps() {
+    let state = apply([
+      .partnerPresence(true), .noteArrived, .deliveryFinished(delivery: 1), .settled(delivery: 1),
+    ])
+    #expect(state.world.partnerHere)
+    #expect(state.world.activity == .sleeping)
+  }
 }

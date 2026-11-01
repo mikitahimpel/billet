@@ -128,6 +128,7 @@ final class PairSession {
       case .connecting, .refused: break
       }
       status = newStatus
+      store.send(.pet(.partnerPresence(newStatus == .partnerHere)))
       onStatus?(newStatus)
     case .note(let strokes):
       store.send(.noteReceived(strokes))
