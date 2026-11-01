@@ -1,7 +1,5 @@
 import CoreGraphics
-import Ink
 import SwiftUI
-import Wire
 
 /// The received drawing, laid exactly over the `NoteNew` node in `LittleHouse.riv`.
 ///
@@ -68,13 +66,5 @@ struct HungNote: View {
     .accessibilityElement()
     .accessibilityLabel("Received note")
     .onAppear { hasAppeared = true }
-  }
-
-  static func image(of strokes: [Stroke], side: Int = 480) -> CGImage? {
-    NoteImage.render(strokes, side: side)
-  }
-
-  nonisolated static func fitted(_ strokes: [Stroke]) -> [Stroke] {
-    NoteImage.fitted(strokes)
   }
 }

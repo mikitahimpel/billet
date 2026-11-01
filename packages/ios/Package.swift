@@ -43,6 +43,7 @@ let homeTarget: Target = .target(
   name: "FeatureHome",
   dependencies: [
     "BilletKit",
+    "Delivery",
     "DesignSystem",
     "FeatureCanvas",
     "FeatureInbox",
@@ -65,7 +66,7 @@ let testTargets: [Target] = [
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
   .testTarget(
     name: "FeatureHomeTests",
-    dependencies: ["BilletKit", "FeatureHome", "FeatureInbox", "Persistence", "Wire"]),
+    dependencies: ["BilletKit", "Delivery", "FeatureHome", "FeatureInbox", "Ink", "Persistence", "Wire"]),
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
 ]
 

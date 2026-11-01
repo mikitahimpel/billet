@@ -1,4 +1,5 @@
 import BilletKit
+import Delivery
 import FeatureInbox
 import Foundation
 import Observation
@@ -58,6 +59,11 @@ final class PairSession {
   func disconnect() {
     connection?.cancel()
     connection = nil
+  }
+
+  /// Tells the room about a push token that changed while this connection is open.
+  func pushTokenChanged() async {
+    await delivery.pushTokenChanged()
   }
 
   func loadNotes() async {

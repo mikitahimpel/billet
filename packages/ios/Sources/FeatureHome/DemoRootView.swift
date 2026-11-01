@@ -1,6 +1,8 @@
+import Delivery
 import DesignSystem
 import FeatureInbox
 import Foundation
+import Ink
 import Persistence
 import SwiftUI
 import WidgetKit
@@ -21,10 +23,13 @@ public struct DemoRootView: View {
     _model = State(
       initialValue: AppModel(
         dependencies: AppModel.Dependencies(
-          defaults: .standard,
+          defaults: DemoRoom.sharedDefaults,
           archive: NoteArchive(storage: .directory(Self.notesDirectory)),
           delivery: { room in room.socketURL(host: host).map(NoteDelivery.live(url:)) },
-          clearSurfaces: { WidgetCenter.shared.reloadAllTimelines() },
+          clearSurfaces: {
+            NoteImage.removeLatest()
+            WidgetCenter.shared.reloadAllTimelines()
+          },
           pairingTimeout: Self.pairingTimeout
         )))
   }

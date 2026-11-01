@@ -26,7 +26,7 @@ struct NoteDrawing: View {
       .task(id: note.id) {
         let strokes = note.strokes
         let side = side
-        image = await Task.detached { NoteImage.render(strokes, side: side) }.value
+        image = await Task.detached { NoteImage.cgImage(of: strokes, side: side) }.value
       }
   }
 }
