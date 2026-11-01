@@ -53,7 +53,6 @@ to it in #67.
   from the domain type. The test fails on any exported table it does not list, so a new table needs
   its domain type added to `test/schema-drift.test.ts`. Other tests apply the migrations to an empty
   database and compare `PRAGMA table_info` with each table's columns.
-- `platform-probe.ts` and `room_probe` exist only so there is something to migrate. #67 removes them.
 
 ### R2: note images
 

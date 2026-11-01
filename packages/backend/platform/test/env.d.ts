@@ -13,6 +13,7 @@ declare namespace Cloudflare {
     readonly MEDIA: R2Bucket;
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
+    readonly LEGACY_ROOM: DurableObjectNamespace;
   }
 
   interface Exports {

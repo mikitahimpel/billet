@@ -1,11 +1,14 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { Effect, Schema, type Scope } from "effect";
+import { Effect, Layer, Schema, type Scope } from "effect";
 import { describe, expect, it } from "vitest";
-import { PlatformProbe } from "../src/platform-probe.ts";
 import { openRoomDatabase } from "../src/room-database.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { roomProbe } from "../src/room-schema.ts";
+import { Note } from "@billet/contracts-domain/note";
+import { RoomStore } from "@billet/backend-pair-room/room-store";
+import { RoomDb, SqliteRoomStore } from "../src/pair-room-sqlite-store.ts";
+import { StoredNote } from "../src/room-rows.ts";
+import { note } from "../src/room-schema.ts";
 import {
   appliedColumns,
   declaredColumns,
@@ -34,8 +37,9 @@ const run = <A, E>(effect: Effect.Effect<A, E, Scope.Scope>) =>
 describe("room migrations", () => {
   it("are applied on activation, before any request", async () => {
     await runInDurableObject(room("fresh"), (_, state) => {
-      expect(tables(state.storage)).toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(1);
+      expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
+      expect(tables(state.storage)).not.toContain("room_probe");
+      expect(history(state.storage)).toHaveLength(2);
     });
   });
 
@@ -58,16 +62,16 @@ describe("room migrations", () => {
   it("re-apply as a no-op and keep the data", async () => {
     await runInDurableObject(room("again"), async (_, state) => {
       const before = history(state.storage);
-      const row = { id: "a", createdAt: 1 };
+      const row = { seq: 1, body: "{}" };
       const rows = await run(
         Effect.gen(function* () {
           const db = yield* openRoomDatabase(state.storage);
-          yield* db.insert(roomProbe).values(row);
+          yield* db.insert(note).values(row);
           const reopened = yield* openRoomDatabase(state.storage);
-          return yield* reopened.select().from(roomProbe);
+          return yield* reopened.select().from(note);
         }),
       );
-      expect(rows.map((found) => Schema.decodeUnknownSync(PlatformProbe)(found))).toEqual([row]);
+      expect(rows.map((found) => Schema.decodeUnknownSync(StoredNote)(found))).toEqual([row]);
       expect(history(state.storage)).toEqual(before);
     });
   });
@@ -95,5 +99,64 @@ describe("room migrations", () => {
     const stub = env.BROKEN_ROOM.get(env.BROKEN_ROOM.idFromName("broken"));
     await expect(stub.fetch("https://room/")).rejects.toThrow();
     await expect(stub.fetch("https://room/")).rejects.toThrow();
+  });
+
+  it("adopts a room made by the raw-SQL store, with its rows, and drops the old bookkeeping", async () => {
+    const legacy = env.LEGACY_ROOM.get(env.LEGACY_ROOM.idFromName("legacy"));
+    const photo = Schema.decodeUnknownSync(Note)({
+      _tag: "Photo",
+      id: "note-1",
+      author: "user-alice",
+      sentAt: 1_700_000_000_000,
+      image: "pairs/pair-1/notes/n.png",
+    });
+    await runInDurableObject(legacy, async (_, state) => {
+      state.storage.sql.exec(
+        `CREATE TABLE room (
+           id INTEGER PRIMARY KEY CHECK (id = 1),
+           pair_id TEXT NOT NULL,
+           first_user TEXT NOT NULL,
+           first_presence TEXT NOT NULL,
+           second_user TEXT NOT NULL,
+           second_presence TEXT NOT NULL,
+           last_seq INTEGER NOT NULL,
+           streak_days INTEGER NOT NULL
+         );
+         CREATE TABLE note (seq INTEGER PRIMARY KEY, body TEXT NOT NULL);
+         CREATE TABLE migration (version INTEGER PRIMARY KEY);
+         INSERT INTO migration (version) VALUES (1);`,
+      );
+      state.storage.sql.exec(
+        "INSERT INTO room VALUES (1, 'pair-1', 'user-alice', 'idle', 'user-bob', 'drawing', 1, 4)",
+      );
+      state.storage.sql.exec(
+        "INSERT INTO note (seq, body) VALUES (1, ?)",
+        Schema.encodeSync(Schema.fromJsonString(Note))(photo),
+      );
+
+      const { state: loaded, notes } = await run(
+        Effect.gen(function* () {
+          const db = yield* openRoomDatabase(state.storage);
+          const store = yield* RoomStore.pipe(
+            Effect.provide(SqliteRoomStore.pipe(Layer.provide(Layer.succeed(RoomDb, db)))),
+          );
+          return { state: yield* store.load, notes: yield* store.notesAfter(0, 10) };
+        }),
+      );
+
+      expect(loaded).toMatchObject({
+        _tag: "Active",
+        pairId: "pair-1",
+        lastSeq: 1,
+        streakDays: 4,
+        members: [
+          { user: "user-alice", presence: "idle" },
+          { user: "user-bob", presence: "drawing" },
+        ],
+      });
+      expect(notes).toEqual([{ seq: 1, note: photo }]);
+      expect(userTables(state.storage).toSorted()).toEqual(["note", "room"]);
+      expect(history(state.storage)).toHaveLength(2);
+    });
   });
 });

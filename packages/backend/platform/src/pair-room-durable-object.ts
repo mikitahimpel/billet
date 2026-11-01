@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { Effect, Layer, ManagedRuntime, Schema } from "effect";
+import { Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
@@ -9,7 +9,8 @@ import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { PairRoomLive } from "./pair-room-runtime.ts";
-import { RoomStorage } from "./pair-room-sqlite-store.ts";
+import { RoomDb } from "./pair-room-sqlite-store.ts";
+import { openRoomDatabase } from "./room-database.ts";
 
 /** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
 export const ROOM_USER_HEADER = "x-billet-user";
@@ -25,12 +26,21 @@ const decodeUser = Schema.decodeUnknownOption(UserId);
  * no shutdown hook, so eviction simply drops it and the next event builds a new one.
  */
 export class PairRoom extends DurableObject {
-  private readonly runtime = ManagedRuntime.make(
-    PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomStorage, this.ctx.storage))),
-  );
+  /**
+   * Opens the database and applies pending migrations before any event is delivered. A migration
+   * that cannot apply rejects here, which resets the object, so every request retries it. The
+   * database lives in a scope that is never closed: the object has no shutdown hook, and eviction
+   * drops it.
+   */
+  private readonly runtime = this.ctx.blockConcurrencyWhile(async () => {
+    const database = await Effect.runPromise(
+      openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe())),
+    );
+    return ManagedRuntime.make(PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))));
+  });
 
-  private run<A>(program: (room: RoomService["Service"]) => Effect.Effect<A>): Promise<A> {
-    return this.runtime.runPromise(RoomService.use(program));
+  private async run<A>(program: (room: RoomService["Service"]) => Effect.Effect<A>): Promise<A> {
+    return (await this.runtime).runPromise(RoomService.use(program));
   }
 
   open(pairId: PairId, members: readonly [UserId, UserId]): Promise<RoomDecision> {

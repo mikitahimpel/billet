@@ -21,6 +21,9 @@ export class ActivatedRoom extends DurableObject {
   }
 }
 
+/** An object that never migrates, to stand in for a room made by the earlier raw-SQL store. */
+export class LegacyRoom extends DurableObject {}
+
 /** The same object with a migration that cannot apply, to pin down what a bad deploy does. */
 export class BrokenRoom extends DurableObject {
   constructor(ctx: DurableObjectState, env: never) {
