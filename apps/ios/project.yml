@@ -31,7 +31,7 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        products: [FeatureHome, Persistence, PetSceneCatalog]
+        products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, WidgetBridge]
       - package: PetSceneRive
       - package: PetSceneReality
       - target: BilletWidget

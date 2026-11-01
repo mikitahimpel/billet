@@ -47,8 +47,18 @@ struct AppShellView: View {
           onReact: { session.react(to: $0, $1) },
           detailDrawing: labs.isOn(LabExperiment.drawnReplay)
             ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil,
-          detailActions: labs.isOn(LabExperiment.framedNotes)
-            ? { AnyView(FrameNoteButton(note: $0, framed: session.frames)) } : nil
+          detailActions: {
+            let frames = labs.isOn(LabExperiment.framedNotes)
+            let wallpaper = labs.isOn(LabExperiment.wallpaperShortcut)
+            guard frames || wallpaper else { return nil }
+            return { note in
+              AnyView(
+                VStack(spacing: Spacing.small) {
+                  if frames { FrameNoteButton(note: note, framed: session.frames) }
+                  if wallpaper { WallpaperShareButton(note: note) }
+                })
+            }
+          }()
         )
         .tabEntrance(destination == .notes)
       }
