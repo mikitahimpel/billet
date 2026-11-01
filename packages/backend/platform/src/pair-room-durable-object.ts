@@ -71,8 +71,12 @@ export class PairRoom extends DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /** Answers a client's close. 1005 means the client sent no code, and cannot be sent back. */
+  /**
+   * Answers a client's close. 1006 and 1015 mean the connection is already gone, so there is
+   * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
+   */
   override webSocketClose(socket: WebSocket, code: number): void {
+    if (code === 1006 || code === 1015) return;
     socket.close(code === 1005 ? 1000 : code);
   }
 }

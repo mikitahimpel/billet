@@ -59,6 +59,8 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
 const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
   switch (command._tag) {
     case "Open":
+      if (command.members[0] === command.members[1])
+        return rejected(RoomRejection.cases.DuplicateMember.make({}));
       // Pairing commits in D1 first, so it may repeat this call. A repeat is not a conflict.
       return isSameCouple(room, command.pairId, command.members)
         ? accepted(room)

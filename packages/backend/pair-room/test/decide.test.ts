@@ -50,6 +50,13 @@ describe("decide on an active room", () => {
     expect(expectAccepted(active, repeat).state).toEqual(active);
   });
 
+  it("refuses a repeated open that names one person twice", () => {
+    const command = RoomCommand.cases.Open.make({ pairId, members: [alice, alice] });
+    expect(decide(active, command)).toEqual(
+      rejection(RoomRejection.cases.DuplicateMember.make({})),
+    );
+  });
+
   it.each([
     ["a different pair", { pairId: otherPairId, members: [alice, bob] as const }],
     ["a different member", { pairId, members: [alice, mallory] as const }],

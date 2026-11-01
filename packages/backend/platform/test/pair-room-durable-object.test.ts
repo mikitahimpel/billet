@@ -190,6 +190,20 @@ describe("PairRoom sockets", () => {
     expect(count).toBe(1);
   });
 
+  it.each([1006, 1015])("does not throw when a connection ends with %i", async (code) => {
+    const room = await openRoom();
+    const { webSocket } = await connect(room, upgrade(alice));
+    webSocket?.accept();
+
+    await runInDurableObject(room, (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      expect(() => {
+        instance.webSocketClose(socket, code);
+      }).not.toThrow();
+    });
+  });
+
   it("completes a close started by the client", async () => {
     const room = await openRoom();
     const { webSocket } = await connect(room, upgrade(alice));
