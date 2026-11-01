@@ -1,19 +1,29 @@
 import Foundation
 
-/// Short reactions to touch, as pure functions of the time since the touch.
+/// Reactions to touch and the room's idle loops, as pure functions of time.
+///
+/// Reduce Motion stills everything here except the eyes opening, which is a change of state rather
+/// than movement.
 enum NookiMotion {
   /// How long an object keeps wobbling.
   static let wobbleLength = 1.5
   /// How long Mochi stays up after a pet.
   static let petLength = 2.0
+  /// How long Mochi keeps looking at something tapped.
+  static let lookLength = 1.6
 
-  /// Tilt of a tapped object, in radians, dying away. Reduce Motion keeps objects still.
+  private static let blinkPeriod = 3.7
+  private static let blinkLength = 0.14
+  private static let twitchPeriod = 6.3
+  private static let twitchLength = 0.45
+
+  /// Tilt of a tapped object, in radians, dying away.
   static func wobble(_ elapsed: Double, reduceMotion: Bool) -> Float {
     guard !reduceMotion, (0..<wobbleLength).contains(elapsed) else { return 0 }
     return Float(0.05 * exp(-3 * elapsed) * sin(14 * elapsed))
   }
 
-  /// Mochi's reaction to a pet. Reduce Motion keeps only the opened eyes.
+  /// Mochi's reaction to a pet.
   static func pet(_ elapsed: Double, reduceMotion: Bool) -> NookiFrame {
     guard (0..<petLength).contains(elapsed) else { return NookiFrame() }
     let eyesOpen = elapsed < petLength - 0.3
@@ -23,19 +33,56 @@ enum NookiMotion {
     return NookiFrame(
       wake: Float(min(max(rise, 0), 1)),
       eyesOpen: eyesOpen,
-      hop: (0...1).contains(hop) ? Float(1 - pow(2 * hop - 1, 2)) * 0.6 : 0
+      mouth: Float(min(max(rise, 0), 1)),
+      hop: (0...1).contains(hop) ? NookiChoreography.arch(hop) * 0.6 : 0
     )
+  }
+
+  /// Height of the open eyes, from 1 open to nearly shut during a blink.
+  static func blink(_ time: Double, reduceMotion: Bool) -> Float {
+    guard !reduceMotion else { return 1 }
+    return time.truncatingRemainder(dividingBy: blinkPeriod) < blinkLength ? 0.1 : 1
+  }
+
+  /// Tilt of one ear, in radians. Each ear twitches now and then, out of step with the other.
+  static func earTwitch(_ time: Double, ear: Int, reduceMotion: Bool) -> Float {
+    guard !reduceMotion else { return 0 }
+    let phase = (time + Double(ear) * 2.1).truncatingRemainder(dividingBy: twitchPeriod)
+    guard phase < twitchLength else { return 0 }
+    return Float(0.25 * sin(phase / twitchLength * 3 * .pi) * (1 - phase / twitchLength))
+  }
+
+  /// Sideways swing of the bell, in metres, larger the more Mochi is moving.
+  static func bellSwing(_ time: Double, energy: Float, reduceMotion: Bool) -> Float {
+    guard !reduceMotion else { return 0 }
+    return Float(sin(time * 7)) * (0.0008 + 0.005 * min(energy, 1))
+  }
+
+  /// The lamp's brightness, close to 1.
+  static func flicker(_ time: Double, reduceMotion: Bool) -> Float {
+    guard !reduceMotion else { return 1 }
+    return Float(1 + 0.04 * sin(time * 9.1) + 0.025 * sin(time * 23.7 + 1))
+  }
+
+  /// The plant's lean, in radians.
+  static func sway(_ time: Double, reduceMotion: Bool) -> Float {
+    reduceMotion ? 0 : Float(0.016 * sin(time * 0.9))
+  }
+
+  /// How far the yarn has drifted from its place, in metres.
+  static func yarnDrift(_ time: Double, reduceMotion: Bool) -> Float {
+    reduceMotion ? 0 : Float(0.04 * sin(time * 0.35))
   }
 }
 
 extension NookiFrame {
   /// The stronger of two frames, so a reaction shows without disturbing the delivery underneath.
   func combined(with other: NookiFrame) -> NookiFrame {
-    NookiFrame(
-      wake: max(wake, other.wake),
-      eyesOpen: eyesOpen || other.eyesOpen,
-      note: note,
-      hop: max(hop, other.hop)
-    )
+    var combined = self
+    combined.wake = max(wake, other.wake)
+    combined.eyesOpen = eyesOpen || other.eyesOpen
+    combined.mouth = max(mouth, other.mouth)
+    combined.hop = max(hop, other.hop)
+    return combined
   }
 }

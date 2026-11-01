@@ -19,9 +19,13 @@ final class NookiDiorama {
   private let bowlFill = Entity()
   private let streakMarks = Entity()
   private let lampLight = Entity()
+  private let lanternLight = Entity()
+  private let dust = Entity()
   private var closedEyes: [Entity] = []
   private var openEyes: [Entity] = []
-  private var ears: [Entity] = []
+  private var ears: [(part: Entity, base: simd_quatf, side: Int)] = []
+  private var bell: (part: Entity, base: SIMD3<Float>)?
+  private var mouth: Entity?
   private var holders: [NookiTarget: Entity] = [:]
   private var holderOrientations: [NookiTarget: simd_quatf] = [:]
   private var wobbles: [NookiTarget: Double] = [:]
@@ -31,6 +35,9 @@ final class NookiDiorama {
   private var clock = 0.0
   private var stepStart = 0.0
   private var petStart: Double?
+  private var lookStart: Double?
+  private var lookGoal: Float = 0
+  private var lookTurn: Float = 0
   private var idleDelta = 0.0
   private var isOnScreen = true
   private var subscription: EventSubscription?
@@ -47,19 +54,24 @@ final class NookiDiorama {
 
   private static let orbitPerPoint: Float = 0.006
   private static let idleStep = 1.0 / 30
-  private static let lampIntensity: Float = 2200
+  private static let lampIntensity: Float = 2600
+  private static let lanternIntensity: Float = 500
 
-  // Mochi lies in the bed in the middle of the rug, turned towards the camera.
-  private static let mochiPosition: SIMD3<Float> = [0.05, 0.095, 0.12]
-  private static let mochiYaw: Float = 3.8
-  /// Extra turn towards the note wall when awake.
-  private static let wakeTurn: Float = 0.5
+  // Mochi lies in the bed in the middle of the rug, and hops to a spot under the wire.
+  private static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
+  private static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
+  /// Share of the walk spent dropping from the bed to the floor.
+  private static let bedDrop: Float = 0.25
+  private static let carryHeight: Float = 0.34
   private static let noteHome: SIMD3<Float> = [0.08, 0.46, -0.565]
   private static let noteStart: SIMD3<Float> = [0.75, 1.05, -0.1]
   /// How far in front of the lens an opened note sits, and how much larger it gets.
   private static let noteReadingDistance: Float = 2.4
   private static let noteReadingScale: Float = 2
-  private static let bowlPosition: SIMD3<Float> = [0.3, 0, 0.56]
+  private static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
+  private static let yarnRadius: Float = 0.07
+  private static let lookLimit: Float = 1
+  private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
 
   init() {
     root.addChild(room)
@@ -69,7 +81,7 @@ final class NookiDiorama {
     buildBowl()
     buildNote()
     buildBackstop()
-    mochi.position = Self.mochiPosition
+    mochi.position = Self.bedSpot
     room.addChild(mochi)
     aimLens()
   }
@@ -81,10 +93,18 @@ final class NookiDiorama {
     await place(
       "Item_bookcase", height: 0.72, at: [-0.46, 0, -0.1], yaw: .pi / 2, target: .bookcase)
     await place("Item_monstera", height: 0.62, at: [-0.4, 0, -0.42], yaw: 0, target: .plant)
-    await place("Item_lamp", height: 0.4, at: [0.52, 0, -0.08], yaw: 0, target: .lamp)
+    await place("Item_armchair", width: 0.5, at: [0.42, 0, -0.38], yaw: -.pi / 4)
+    await place("Item_lamp", height: 0.46, at: [0.62, 0, 0.02], yaw: 0, target: .lamp)
+    await place("Item_teatable", height: 0.2, at: [0.54, 0, 0.42], yaw: 0)
+    await place("Item_lantern", height: 0.15, at: [0.54, 0.2, 0.42], yaw: 0)
+    await place("Item_tower", height: 0.62, at: [-0.46, 0, 0.5], yaw: 0)
+    await place("Item_print", height: 0.26, at: [0.45, 0.46, -0.59], yaw: 0)
+    await place("Item_yarn", width: 0.14, at: Self.yarnPosition, yaw: 0, target: .yarn)
+    await place("Item_mouse", height: 0.07, at: [-0.2, 0, 0.56], yaw: 0.8)
     findLampParts()
     await loadMochi()
     await addLighting()
+    buildDust()
   }
 
   /// Shows `world` from the start of its step.
@@ -117,6 +137,7 @@ final class NookiDiorama {
 
   func setReduceMotion(_ reduced: Bool) {
     reduceMotion = reduced
+    dust.isEnabled = !reduced
   }
 
   /// Off screen, the room leaves the render and updates stop.
@@ -171,6 +192,7 @@ final class NookiDiorama {
   /// Runs what a tap on `target` does. The accessibility actions come in here too.
   func perform(_ target: NookiTarget) -> PetSceneEvent? {
     let touch = NookiTouch.of(target, world: world, noteIsOpen: noteIsOpen)
+    lookTowards(target)
     switch touch.reaction {
     case .wakeAndHop:
       petStart = clock
@@ -182,6 +204,23 @@ final class NookiDiorama {
       wobbles[target] = clock
     }
     return touch.event
+  }
+
+  /// Turns Mochi's whole body towards a tapped object for a moment. Its head is part of the body
+  /// mesh, so it cannot turn alone.
+  private func lookTowards(_ target: NookiTarget) {
+    guard !reduceMotion, target != .mochi, let holder = holders[target] ?? noteHolder(target) else {
+      return
+    }
+    let offset = holder.position(relativeTo: nil) - mochi.position(relativeTo: nil)
+    let facing = atan2(-offset.x, -offset.z)
+    let turn = remainder(facing - NookiChoreography.restHeading, 2 * .pi)
+    lookGoal = min(max(turn, -Self.lookLimit), Self.lookLimit)
+    lookStart = clock
+  }
+
+  private func noteHolder(_ target: NookiTarget) -> Entity? {
+    target == .note ? note : nil
   }
 
   // MARK: - Updates
@@ -203,51 +242,95 @@ final class NookiDiorama {
   /// True while something should move at full rate. A sleeping room runs at the idle step.
   private var isBusy: Bool {
     !camera.isAtRest || world.activity != .sleeping || petStart != nil || !wobbles.isEmpty
+      || lookStart != nil || lookTurn != 0
       || noteOpening != (noteIsOpen ? 1 : 0)
   }
 
   private func apply(elapsed: Double, delta: Float) {
-    var frame = NookiChoreography.frame(world, elapsed: elapsed)
+    var frame = NookiChoreography.frame(world, elapsed: elapsed, reduceMotion: reduceMotion)
     if let petStart {
       let since = clock - petStart
       frame = frame.combined(with: NookiMotion.pet(since, reduceMotion: reduceMotion))
       if since >= NookiMotion.petLength { self.petStart = nil }
     }
-    let breath = reduceMotion ? 0 : 0.018 * sin(Float(clock) * 1.6) * (1 - frame.wake)
-    mochi.scale = [
-      1 - 0.04 * frame.wake + breath * 0.5,
-      1 + 0.14 * frame.wake + breath,
-      1 - 0.04 * frame.wake + breath * 0.5,
-    ]
-    mochi.position = Self.mochiPosition + [0, 0.02 * frame.wake + 0.05 * frame.hop, 0]
-    mochi.orientation = simd_quatf(
-      angle: Self.mochiYaw + Self.wakeTurn * frame.wake, axis: [0, 1, 0])
-    for eye in closedEyes { eye.isEnabled = !frame.eyesOpen }
-    for eye in openEyes { eye.isEnabled = frame.eyesOpen }
-    for ear in ears { ear.scale = .one * (1 + 0.15 * frame.wake) }
-
-    applyWobbles()
+    applyBody(frame, delta: delta)
+    applyFeatures(frame)
+    applyHolders()
     applyLamp(delta)
     applyBowl(delta)
     applyNote(frame, elapsed: elapsed, delta: delta)
   }
 
-  private func applyWobbles() {
-    for (target, start) in wobbles {
-      let since = clock - start
-      let tilt = NookiMotion.wobble(since, reduceMotion: reduceMotion)
-      if let holder = holders[target], let base = holderOrientations[target] {
+  private func applyBody(_ frame: NookiFrame, delta: Float) {
+    if let lookStart, clock - lookStart >= NookiMotion.lookLength { self.lookStart = nil }
+    let goal = lookStart == nil ? 0 : lookGoal
+    lookTurn = Self.eased(lookTurn, to: goal, rate: 7, delta: delta, snap: reduceMotion)
+
+    let breath = reduceMotion ? 0 : 0.018 * sin(Float(clock) * 1.6) * (1 - frame.wake)
+    let upright = 0.14 * frame.wake + 0.1 * frame.stretch + breath
+    let wide = -0.04 * frame.wake - 0.05 * frame.stretch + breath * 0.5
+    mochi.scale = [1 + wide, 1 + upright, 1 + wide]
+
+    var spot = mix(Self.bedSpot, Self.wallSpot, t: frame.walk)
+    let drop = min(frame.walk / Self.bedDrop, 1)
+    spot.y = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * drop
+    mochi.position = spot + [0, 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight, 0]
+    mochi.orientation = simd_quatf(angle: frame.heading + lookTurn, axis: [0, 1, 0])
+  }
+
+  private func applyFeatures(_ frame: NookiFrame) {
+    for eye in closedEyes { eye.isEnabled = !frame.eyesOpen }
+    let blink = NookiMotion.blink(clock, reduceMotion: reduceMotion)
+    for eye in openEyes {
+      eye.isEnabled = frame.eyesOpen
+      eye.scale = [1, blink, 1]
+    }
+    for ear in ears {
+      let twitch = NookiMotion.earTwitch(clock, ear: ear.side, reduceMotion: reduceMotion)
+      ear.part.orientation = ear.base * simd_quatf(angle: twitch, axis: [1, 0, 0])
+      ear.part.scale = .one * (1 + 0.15 * frame.wake)
+    }
+    mouth?.scale = [1 + 0.25 * frame.mouth, 1 + 1.6 * frame.mouth, 1]
+    if let bell {
+      let energy = frame.stepHeight + frame.hop + frame.wake * 0.2
+      let swing = NookiMotion.bellSwing(clock, energy: energy, reduceMotion: reduceMotion)
+      bell.part.position = bell.base + [swing, 0, 0]
+    }
+  }
+
+  private func applyHolders() {
+    for (target, start) in wobbles where clock - start >= NookiMotion.wobbleLength {
+      wobbles[target] = nil
+    }
+    for (target, holder) in holders {
+      guard let base = holderOrientations[target] else { continue }
+      var tilt =
+        wobbles[target].map {
+          NookiMotion.wobble(clock - $0, reduceMotion: reduceMotion)
+        } ?? 0
+      if target == .plant { tilt += NookiMotion.sway(clock, reduceMotion: reduceMotion) }
+      if tilt != 0 || wobbles[target] != nil || target == .plant {
         holder.orientation = base * simd_quatf(angle: tilt, axis: [0, 0, 1])
       }
-      if since >= NookiMotion.wobbleLength { wobbles[target] = nil }
+    }
+    if let yarn = holders[.yarn] {
+      let drift = NookiMotion.yarnDrift(clock, reduceMotion: reduceMotion)
+      yarn.position = Self.yarnPosition + [drift, 0, 0]
+      yarn.children.first?.orientation = simd_quatf(
+        angle: -drift / Self.yarnRadius, axis: [0, 0, 1])
     }
   }
 
   private func applyLamp(_ delta: Float) {
+    let flicker = NookiMotion.flicker(clock, reduceMotion: reduceMotion)
     let goal: Float = lampIsOn ? 1 : 0
+    lampLight.components[PointLightComponent.self]?.intensity =
+      Self.lampIntensity * lampLevel * flicker
+    let lanternFlicker = NookiMotion.flicker(clock + 1.7, reduceMotion: reduceMotion)
+    lanternLight.components[PointLightComponent.self]?.intensity =
+      Self.lanternIntensity * lanternFlicker
     guard lampLevel != goal else { return }
     lampLevel = Self.eased(lampLevel, to: goal, rate: 6, delta: delta, snap: reduceMotion)
-    lampLight.components[PointLightComponent.self]?.intensity = Self.lampIntensity * lampLevel
     for part in lampParts {
       guard var material = part.model.model?.materials[part.material] as? PhysicallyBasedMaterial
       else { continue }
@@ -268,13 +351,14 @@ final class NookiDiorama {
     noteOpening = Self.eased(
       noteOpening, to: noteIsOpen ? 1 : 0, rate: 8, delta: delta, snap: reduceMotion)
     note.isEnabled = frame.note > 0
-    let hanging = mix(Self.noteStart, Self.noteHome, t: frame.note)
+    let carried = mochi.position + [0, Self.carryHeight, 0]
+    let hanging = mix(mix(Self.noteStart, carried, t: frame.note), Self.noteHome, t: frame.pinned)
     let toLens = simd_normalize(NookiCamera.target - camera.position)
     let reading = camera.position + toLens * Self.noteReadingDistance
     note.position = mix(hanging, reading, t: noteOpening)
-    let hangingScale = 0.3 + 0.7 * frame.note
+    let hangingScale = 0.3 + 0.25 * frame.note + 0.45 * frame.pinned
     note.scale = .one * (hangingScale + (Self.noteReadingScale - hangingScale) * noteOpening)
-    let swing = reduceMotion ? 0 : 0.2 * sin(Float(elapsed) * 3) * (1 - frame.note)
+    let swing = reduceMotion ? 0 : 0.2 * sin(Float(elapsed) * 3) * (1 - frame.pinned)
     note.orientation = simd_slerp(
       simd_quatf(angle: swing, axis: [0, 0, 1]), lens.orientation(relativeTo: nil), noteOpening)
   }
@@ -294,7 +378,7 @@ final class NookiDiorama {
     box([1.36, 0.86, 0.06], .plaster, at: [0.02, 0.43, -0.63])
     box([0.012, 0.09, 1.2], .walnut, at: [-0.594, 0.045, 0.05])
     box([1.2, 0.09, 0.012], .walnut, at: [0.05, 0.045, -0.594])
-    box([1.05, 0.006, 0.006], .ink, at: [0.05, 0.6, -0.59])
+    box([0.76, 0.006, 0.006], .ink, at: [-0.08, 0.6, -0.59])
     streakMarks.position = [0.2, 0.72, -0.597]
     room.addChild(streakMarks)
   }
@@ -384,6 +468,9 @@ final class NookiDiorama {
       let holder = Entity()
       holder.position = position
       holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
+      if target == .yarn {
+        Self.centreModel(model, in: holder, raisedBy: bounds.extents.y * scale / 2)
+      }
       holder.addChild(model)
       room.addChild(holder)
       if let target {
@@ -404,6 +491,15 @@ final class NookiDiorama {
     entity.components.set(
       CollisionComponent(shapes: [.generateBox(size: size).offsetBy(translation: center)]))
     entity.components.set(InputTargetComponent())
+  }
+
+  /// Moves the holder's origin up to the model's centre, so spinning the model rolls it in place.
+  private static func centreModel(_ model: Entity, in holder: Entity, raisedBy height: Float) {
+    model.position.y -= height
+    let spinner = Entity()
+    spinner.position.y = height
+    holder.addChild(spinner)
+    spinner.addChild(model)
   }
 
   private func findLampParts() {
@@ -439,7 +535,12 @@ final class NookiDiorama {
 
   private func findFeatures(in model: Entity) {
     closedEyes = ["Eye1", "Eye_1"].compactMap { model.findEntity(named: $0) }
-    ears = ["Ear1", "Ear_1", "EarInner1", "EarInner_1"].compactMap { model.findEntity(named: $0) }
+    ears = [("Ear1", 0), ("Ear_1", 1), ("EarInner1", 0), ("EarInner_1", 1)].compactMap {
+      name, side in
+      model.findEntity(named: name).map { ($0, $0.orientation, side) }
+    }
+    bell = model.findEntity(named: "Bell").map { ($0, $0.position) }
+    mouth = model.findEntity(named: "Mouth")
     openEyes = closedEyes.map { closed in
       let eye = ModelEntity(mesh: .generateSphere(radius: 0.012), materials: [Self.clay(.ink)])
       eye.position = closed.position(relativeTo: model)
@@ -465,16 +566,42 @@ final class NookiDiorama {
 
     let sun = Entity()
     sun.components.set(
-      DirectionalLightComponent(color: Tone.lamp.color, intensity: 1800))
+      DirectionalLightComponent(color: Tone.evening.color, intensity: 1100))
     sun.components.set(DirectionalLightComponent.Shadow(maximumDistance: 4, depthBias: 2))
-    sun.look(at: .zero, from: [1.2, 2.4, 1.6], relativeTo: nil)
+    sun.look(at: .zero, from: [1.8, 1.5, 0.7], relativeTo: nil)
     room.addChild(sun)
 
-    lampLight.position = [0.46, 0.5, -0.02]
+    lanternLight.position = [0.54, 0.34, 0.42]
+    lanternLight.components.set(
+      PointLightComponent(
+        color: Tone.evening.color, intensity: Self.lanternIntensity, attenuationRadius: 0.8))
+    room.addChild(lanternLight)
+
+    lampLight.position = [0.56, 0.52, 0.06]
     lampLight.components.set(
       PointLightComponent(
         color: Tone.lamp.color, intensity: Self.lampIntensity, attenuationRadius: 1.4))
     room.addChild(lampLight)
+  }
+
+  /// Slow specks in the lamplight. Few and short-lived, to keep the particle cost low.
+  private func buildDust() {
+    var emitter = ParticleEmitterComponent()
+    emitter.emitterShape = .box
+    emitter.emitterShapeSize = [0.9, 0.5, 0.9]
+    emitter.birthLocation = .volume
+    emitter.speed = 0.006
+    emitter.mainEmitter.birthRate = 5
+    emitter.mainEmitter.lifeSpan = 6
+    emitter.mainEmitter.size = 0.005
+    emitter.mainEmitter.color = .constant(.single(Tone.lamp.color))
+    emitter.mainEmitter.blendMode = .additive
+    emitter.mainEmitter.opacityCurve = .gradualFadeInOut
+    emitter.mainEmitter.isLightingEnabled = false
+    dust.position = [0.2, 0.42, 0.1]
+    dust.components.set(emitter)
+    dust.isEnabled = !reduceMotion
+    room.addChild(dust)
   }
 
   private static func visit(_ entity: Entity, _ body: (Entity) -> Void) {
@@ -508,19 +635,20 @@ final class NookiDiorama {
 }
 
 private enum Tone {
-  case honey, plaster, walnut, ink, paper, heart, lamp, ceiling, bounce
+  case honey, plaster, walnut, ink, paper, heart, lamp, evening, ceiling, bounce
 
   private var rgb: (CGFloat, CGFloat, CGFloat) {
     switch self {
     case .honey: (0.72, 0.5, 0.3)
-    case .plaster: (0.56, 0.68, 0.72)
+    case .plaster: (0.76, 0.56, 0.44)
     case .walnut: (0.36, 0.23, 0.16)
     case .ink: (0.1, 0.08, 0.08)
     case .paper: (0.98, 0.96, 0.9)
     case .heart: (0.85, 0.27, 0.27)
-    case .lamp: (1, 0.87, 0.72)
-    case .ceiling: (1, 0.93, 0.82)
-    case .bounce: (0.6, 0.47, 0.4)
+    case .lamp: (1, 0.82, 0.6)
+    case .evening: (1, 0.66, 0.42)
+    case .ceiling: (1, 0.84, 0.66)
+    case .bounce: (0.5, 0.34, 0.28)
     }
   }
 

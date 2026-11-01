@@ -17,11 +17,18 @@ let package = Package(
       ],
       resources: [
         .copy("Resources/Cat.usdz"),
+        .copy("Resources/Item_armchair.usdz"),
         .copy("Resources/Item_bookcase.usdz"),
         .copy("Resources/Item_donutbed.usdz"),
         .copy("Resources/Item_lamp.usdz"),
+        .copy("Resources/Item_lantern.usdz"),
         .copy("Resources/Item_monstera.usdz"),
+        .copy("Resources/Item_mouse.usdz"),
+        .copy("Resources/Item_print.usdz"),
         .copy("Resources/Item_rug.usdz"),
+        .copy("Resources/Item_teatable.usdz"),
+        .copy("Resources/Item_tower.usdz"),
+        .copy("Resources/Item_yarn.usdz"),
         .copy("Resources/pose-sleeping.png"),
         .copy("Resources/pose-proud.png"),
       ]
