@@ -158,6 +158,11 @@ struct HomeView: View {
           }
         }
         .overlay { catReactions }
+        .overlay {
+          if session.labs.isOn(LabExperiment.seasons) {
+            SeasonOverlay(look: Season.look(on: .now, calendar: .current))
+          }
+        }
         .overlay(alignment: .topLeading) {
           if session.labs.isOn(LabExperiment.framedNotes) {
             FramedWallView(notes: framedNotes)
