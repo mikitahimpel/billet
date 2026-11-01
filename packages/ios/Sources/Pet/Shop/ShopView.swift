@@ -165,9 +165,7 @@ public struct ShopView<Preview: View>: View {
     let isSelected = item.id == selected
     return VStack(alignment: .leading, spacing: Spacing.small) {
       ZStack {
-        Image(systemName: item.symbol)
-          .font(.system(size: 40))
-          .foregroundStyle(item.tint.color)
+        ShopItemGlyph(item: item)
           .opacity(isSelected ? 0 : 1)
       }
       .frame(maxWidth: .infinity)
@@ -258,6 +256,21 @@ public struct ShopView<Preview: View>: View {
       try? await Task.sleep(for: .seconds(0.9))
       flights.removeAll { $0.id == flight.id }
     }
+  }
+}
+
+/// The flat picture of an item, for a card with no live preview over it.
+public struct ShopItemGlyph: View {
+  private let item: ShopItem
+
+  public init(item: ShopItem) {
+    self.item = item
+  }
+
+  public var body: some View {
+    Image(systemName: item.symbol)
+      .font(.system(size: 40))
+      .foregroundStyle(item.tint.color)
   }
 }
 

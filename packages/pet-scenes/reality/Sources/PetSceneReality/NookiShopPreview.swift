@@ -13,10 +13,13 @@ struct NookiShopPreview: View {
   @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
-    RealityView { content in
-      content.camera = .virtual
-      content.add(stage.root)
-      stage.start(from: content)
+    ZStack {
+      RealityView { content in
+        content.camera = .virtual
+        content.add(stage.root)
+        stage.start(from: content)
+      }
+      if stage.presented != item.id { ShopItemGlyph(item: item) }
     }
     .task(id: item) { await stage.show(item) }
     .onChange(of: reduceMotion, initial: true) { _, reduced in stage.setSpinning(!reduced) }
@@ -28,12 +31,17 @@ struct NookiShopPreview: View {
 
 /// The preview's scene: a lit spot, a camera, and a turntable holding the shown item.
 @MainActor
+@Observable
 final class NookiPreviewStage {
   let root = Entity()
   private let turntable = Entity()
   private let models = NookiShopModels()
   private var subscription: EventSubscription?
   private var shown: ShopItem.ID?
+  private var onTable: ShopItem.ID?
+  /// The item that has reached the screen. The renderer takes seconds to start, and the card shows
+  /// the flat glyph until then.
+  private(set) var presented: ShopItem.ID?
   private var angle: Float = 0.5
   private var isSpinning = true
   private var isRunning = true
@@ -84,6 +92,7 @@ final class NookiPreviewStage {
   func setRunning(_ running: Bool) { isRunning = running }
 
   private func tick(_ delta: Float) {
+    if presented != onTable { presented = onTable }
     guard isRunning, isSpinning else { return }
     angle += delta * Self.radiansPerSecond
     turntable.orientation = simd_quatf(angle: angle, axis: [0, 1, 0])
@@ -93,20 +102,21 @@ final class NookiPreviewStage {
   func show(_ item: ShopItem) async {
     guard item.id != shown else { return }
     shown = item.id
+    onTable = nil
+    for child in Array(turntable.children) { child.removeFromParent() }
     let entity: Entity?
     if case .furniture = item.look {
       entity = await models.furniture(item)
     } else {
       entity = models.made(item)
     }
-    guard shown == item.id, !Task.isCancelled else { return }
-    for child in Array(turntable.children) { child.removeFromParent() }
-    guard let entity else { return }
+    guard shown == item.id, !Task.isCancelled, let entity else { return }
     let bounds = entity.visualBounds(relativeTo: nil)
     let longest = max(bounds.extents.x, bounds.extents.y, bounds.extents.z)
     let scale = longest > 0 ? Self.span / longest : 1
     entity.scale = .one * scale
     entity.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     turntable.addChild(entity)
+    onTable = item.id
   }
 }
