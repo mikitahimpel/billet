@@ -1,0 +1,25 @@
+{
+  "name": "billet",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "turbo run lint",
+    "format": "oxfmt .",
+    "format:check": "turbo run format:check",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "ios:test": "turbo run ios:test",
+    "ios:build": "turbo run ios:build",
+    "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'"
+  },
+  "devDependencies": {
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@10.30.3"
+}
