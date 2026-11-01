@@ -44,29 +44,14 @@ struct LatestNoteEntryView: View {
   @Environment(\.widgetFamily) private var family
   let image: CGImage?
 
-  private var caption: String { image == nil ? "No notes yet" : "New note" }
-
   var body: some View {
     switch family {
     case .accessoryRectangular:
-      HStack {
-        NoteSilhouette(image: image)
-        Text(caption)
-          .billetType(.label)
-      }
-      .widgetAccentable()
-      .containerBackground(.clear, for: .widget)
+      LockNoteRectangular(image: image)
+        .containerBackground(.clear, for: .widget)
     case .accessoryCircular:
-      VStack(spacing: 1) {
-        NoteSilhouette(image: image)
-        Text(caption)
-          .font(.custom(BilletFonts.groteskFamily, size: 9, relativeTo: .caption2))
-          .lineLimit(1)
-          .minimumScaleFactor(0.7)
-      }
-      .padding(6)
-      .widgetAccentable()
-      .containerBackground(.clear, for: .widget)
+      LockNoteCircular(image: image)
+        .containerBackground(.clear, for: .widget)
     default:
       LatestNoteView(image: image)
         .containerBackground(for: .widget) { EveningBackground() }
@@ -81,7 +66,10 @@ struct LatestNoteWidget: Widget {
     }
     .configurationDisplayName("Latest note")
     .description("Your partner's latest drawing.")
-    .supportedFamilies([.systemMedium, .accessoryRectangular, .accessoryCircular])
+    .supportedFamilies([
+      .systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryCircular,
+    ])
+    .contentMarginsDisabled()
   }
 }
 
@@ -132,5 +120,6 @@ struct PetPoseWidget: Widget {
     .configurationDisplayName("Your pet")
     .description("Your pet, asleep at home.")
     .supportedFamilies([.systemSmall, .systemMedium])
+    .contentMarginsDisabled()
   }
 }

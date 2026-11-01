@@ -27,6 +27,35 @@ public enum NoteImage {
     return context.makeImage()
   }
 
+  /// `image` cropped to the box around its ink, or unchanged if it has none.
+  public static func trimmedToInk(_ image: CGImage) -> CGImage {
+    let (width, height) = (image.width, image.height)
+    var alpha = [UInt8](repeating: 0, count: width * height)
+    let drawn = alpha.withUnsafeMutableBytes { buffer -> Bool in
+      guard
+        let context = CGContext(
+          data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+          bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(),
+          bitmapInfo: CGImageAlphaInfo.alphaOnly.rawValue)
+      else { return false }
+      context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+      return true
+    }
+    guard drawn else { return image }
+    var (left, right, top, bottom) = (width, -1, height, -1)
+    for y in 0..<height {
+      for x in 0..<width where alpha[y * width + x] > 0 {
+        left = min(left, x)
+        right = max(right, x)
+        top = min(top, y)
+        bottom = max(bottom, y)
+      }
+    }
+    guard right >= left, bottom >= top else { return image }
+    return image.cropping(
+      to: CGRect(x: left, y: top, width: right - left + 1, height: bottom - top + 1)) ?? image
+  }
+
   /// Writes `strokes` as the latest note, and reports whether it did.
   @discardableResult
   public static func saveLatest(_ strokes: [Stroke], to file: URL? = latestFile) -> Bool {

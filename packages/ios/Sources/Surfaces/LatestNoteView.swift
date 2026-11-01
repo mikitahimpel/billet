@@ -3,7 +3,8 @@ import Ink
 import SwiftUI
 import WidgetKit
 
-/// The partner's latest drawing on paper, under the evening sky, for the home-screen widget.
+/// The partner's latest drawing as large as the widget allows: warm paper filling the evening
+/// ground, concentric with the widget's own corners.
 public struct LatestNoteView: View {
   @Environment(\.widgetRenderingMode) private var renderingMode
 
@@ -18,52 +19,51 @@ public struct LatestNoteView: View {
   }
 
   public var body: some View {
-    HStack(spacing: Spacing.medium) {
-      sheet
-      VStack(alignment: .leading, spacing: Spacing.hair) {
-        Sparkle()
-          .fill(Palette.gold.color)
-          .frame(width: 14, height: 14)
-          .widgetAccentable()
-        Text(image == nil ? "No notes yet" : "Latest note")
-          .billetType(.heading)
-          .foregroundStyle(Palette.paper.color)
-          .minimumScaleFactor(0.7)
-        Text(image == nil ? "Your partner's drawings land here" : "From your partner")
-          .billetType(.caption)
-          .foregroundStyle(Palette.paperTurned.color)
-          .minimumScaleFactor(0.8)
-      }
-      Spacer(minLength: 0)
+    if let image {
+      note(image)
+    } else {
+      empty
     }
   }
 
   /// Tinted home screens flatten colour, so the paper drops away and the ink carries the shape.
-  @ViewBuilder private var sheet: some View {
+  @ViewBuilder private func note(_ image: CGImage) -> some View {
     if renderingMode == .fullColor {
-      RoundedRectangle(cornerRadius: Radius.paper)
+      ContainerRelativeShape()
         .fill(Palette.paper.color)
         .overlay {
-          if let image {
-            Image(decorative: image, scale: 1)
-              .resizable()
-              .scaledToFit()
-              .padding(Spacing.hair)
-          }
+          Image(decorative: NoteImage.trimmedToInk(image), scale: 1)
+            .resizable()
+            .scaledToFit()
+            .padding(Spacing.small)
         }
-        .aspectRatio(1, contentMode: .fit)
-        .rotationEffect(.degrees(-2))
-        .lampGlow()
-        .accessibilityLabel(image == nil ? "Empty paper" : "Your partner's drawing")
+        .padding(Spacing.small)
+        .accessibilityLabel("Your partner's drawing")
     } else {
       NoteSilhouette(image: image)
-        .aspectRatio(1, contentMode: .fit)
+        .padding(Spacing.medium)
         .widgetAccentable()
     }
   }
+
+  private var empty: some View {
+    VStack(spacing: Spacing.small) {
+      Sparkle()
+        .fill(Palette.gold.color)
+        .frame(width: Spacing.medium, height: Spacing.medium)
+        .widgetAccentable()
+      Text("No notes yet")
+        .billetType(.heading)
+        .foregroundStyle(Palette.paper.color)
+        .minimumScaleFactor(0.7)
+    }
+    .multilineTextAlignment(.center)
+    .padding(Spacing.medium)
+  }
 }
 
-/// The latest drawing in the lock screen's single tint. The ink's alpha is the shape.
+/// The latest drawing in the lock screen's single tint, cropped to its ink so it fills the space.
+/// The ink's alpha is the shape.
 public struct NoteSilhouette: View {
   private let image: CGImage?
 
@@ -73,13 +73,62 @@ public struct NoteSilhouette: View {
 
   public var body: some View {
     if let image {
-      Image(decorative: image, scale: 1)
+      Image(decorative: NoteImage.trimmedToInk(image), scale: 1)
         .renderingMode(.template)
         .resizable()
         .scaledToFit()
     } else {
       LockHouseGlyph()
+        .fill(style: FillStyle(eoFill: true))
         .aspectRatio(1, contentMode: .fit)
     }
+  }
+}
+
+/// The rectangular lock-screen widget, the largest Apple allows: the drawing fills all of it.
+public struct LockNoteRectangular: View {
+  private let image: CGImage?
+
+  public init(image: CGImage?) {
+    self.image = image
+  }
+
+  public var body: some View {
+    if image == nil {
+      HStack(spacing: Spacing.small) {
+        NoteSilhouette(image: nil)
+          .widgetAccentable()
+        Text("No notes yet")
+          .billetType(.action)
+          .lineLimit(1)
+          .minimumScaleFactor(0.8)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    } else {
+      NoteSilhouette(image: image)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .widgetAccentable()
+        .accessibilityLabel("New note from your partner")
+    }
+  }
+}
+
+/// The circular lock-screen widget: the drawing alone on the system's ring. A word at this size
+/// would be too small to read.
+public struct LockNoteCircular: View {
+  private let image: CGImage?
+
+  public init(image: CGImage?) {
+    self.image = image
+  }
+
+  public var body: some View {
+    ZStack {
+      AccessoryWidgetBackground()
+      NoteSilhouette(image: image)
+        .padding(Spacing.small)
+        .widgetAccentable()
+    }
+    .accessibilityLabel(image == nil ? "No notes yet" : "New note from your partner")
   }
 }
