@@ -292,3 +292,97 @@ private struct CatMoodArt: View {
     return CGImageSourceCreateImageAtIndex(source, 0, nil)
   }
 }
+
+/// The buttons of a widget: each runs an App Intent that queues the action for the app.
+public struct ActionButtonsView: View {
+  private let kinds: [WidgetActionKind]
+  private let snapshot: WidgetSnapshot?
+  private let pending: [WidgetAction]
+  private let surface: ActionSurface
+  private let layout: PictureLayout
+  private let now: Date
+  private let calendar: Calendar
+
+  public init(
+    kinds: [WidgetActionKind], snapshot: WidgetSnapshot?, pending: [WidgetAction],
+    surface: ActionSurface, layout: PictureLayout, now: Date, calendar: Calendar
+  ) {
+    self.kinds = kinds
+    self.snapshot = snapshot
+    self.pending = pending
+    self.surface = surface
+    self.layout = layout
+    self.now = now
+    self.calendar = calendar
+  }
+
+  public var body: some View {
+    if kinds.isEmpty {
+      Text("Buttons are off")
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .multilineTextAlignment(.center)
+        .padding(Spacing.medium)
+    } else {
+      switch layout {
+      case .small:
+        VStack(spacing: Spacing.small) { buttons }.padding(Spacing.medium)
+      case .roomy:
+        HStack(spacing: Spacing.small) { buttons }.padding(Spacing.medium)
+      case .rectangular:
+        HStack(spacing: Spacing.small) { buttons }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      case .circular:
+        ZStack {
+          AccessoryWidgetBackground()
+          buttons.padding(Spacing.hair)
+        }
+      case .inline:
+        EmptyView()
+      }
+    }
+  }
+
+  @ViewBuilder private var buttons: some View {
+    let shown = layout == .circular ? Array(kinds.prefix(1)) : kinds
+    ForEach(shown, id: \.self) { kind in
+      let state = ActionButtonState.make(
+        kind, snapshot: snapshot, pending: pending, now: now, calendar: calendar)
+      button(kind) { label(state) }
+        .buttonStyle(.plain)
+        .disabled(!state.isEnabled)
+        .accessibilityLabel(state.title)
+    }
+  }
+
+  @ViewBuilder private func label(_ state: ActionButtonState) -> some View {
+    switch layout {
+    case .small, .roomy:
+      HStack(spacing: Spacing.small) {
+        Image(systemName: state.symbol).font(IconStyle.font)
+        Text(state.title).billetType(.action).lineLimit(1).minimumScaleFactor(0.7)
+      }
+      .foregroundStyle(state.isEnabled ? Palette.ink.color : Palette.muted.color)
+      .frame(maxWidth: .infinity, minHeight: Target.minimum)
+      .background(
+        (state.isEnabled ? Palette.gold : Palette.raisedTop).color, in: .capsule)
+    case .rectangular, .circular, .inline:
+      Image(systemName: state.symbol)
+        .font(IconStyle.font)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(state.isEnabled ? 1 : 0.5)
+        .widgetAccentable()
+    }
+  }
+
+  @ViewBuilder private func button<Label: View>(
+    _ kind: WidgetActionKind, @ViewBuilder label: () -> Label
+  ) -> some View {
+    switch kind {
+    case .treat: Button(intent: GiveTreatIntent(surface: surface), label: label)
+    case .pet: Button(intent: PetCatIntent(surface: surface), label: label)
+    case .heart: Button(intent: SendHeartIntent(surface: surface), label: label)
+    case .openCanvas: Button(intent: OpenCanvasIntent(surface: surface), label: label)
+    }
+  }
+}

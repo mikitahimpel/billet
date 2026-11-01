@@ -38,6 +38,12 @@ struct AppShellView: View {
     let active: Bool
   }
 
+  /// When the app may be able to carry out what widgets queued: it is open, or the room changed.
+  private struct DrainKey: Hashable {
+    let active: Bool
+    let status: NoteDelivery.Status
+  }
+
   private var publishKey: PublishKey {
     PublishKey(
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
@@ -83,6 +89,10 @@ struct AppShellView: View {
     }
     .tint(Palette.gold.color)
     .sensoryFeedback(.selection, trigger: destination)
+    .task(id: DrainKey(active: scenePhase == .active, status: session.status)) {
+      guard scenePhase == .active, let queue = ActionQueue.appGroup() else { return }
+      if session.drain(queue) { destination = .home }
+    }
     .task(id: publishKey) {
       while !Task.isCancelled {
         publisher.publish(

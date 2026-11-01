@@ -10,13 +10,19 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
   case daysTogether
   case nudge
   case rotatePictures
+  case buttonTreat
+  case buttonPet
+  case buttonHeart
+  case lockScreenButtons
 
   public enum Group: CaseIterable, Sendable {
     case pictures
+    case buttons
 
     public var title: String {
       switch self {
       case .pictures: "Pictures"
+      case .buttons: "Buttons"
       }
     }
   }
@@ -26,6 +32,8 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .partnerDrawing, .catMood, .streak, .timeOfDay, .partnerWindow, .daysTogether, .nudge,
       .rotatePictures:
       .pictures
+    case .buttonTreat, .buttonPet, .buttonHeart, .lockScreenButtons:
+      .buttons
     }
   }
 
@@ -39,6 +47,10 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .daysTogether: "Days together"
     case .nudge: "A nudge"
     case .rotatePictures: "Rotate pictures"
+    case .buttonTreat: "Give today's treat"
+    case .buttonPet: "Pet the cat"
+    case .buttonHeart: "Send a heart"
+    case .lockScreenButtons: "Buttons on the Lock Screen"
     }
   }
 
@@ -52,6 +64,10 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .daysTogether: "How long you have been paired."
     case .nudge: "Asks for a drawing when it has been a while."
     case .rotatePictures: "Take turns through the pictures that are on."
+    case .buttonTreat: "A button on the Home Screen widget."
+    case .buttonPet: "A button on the Home Screen widget."
+    case .buttonHeart: "Answers your partner's newest note."
+    case .lockScreenButtons: "Let the buttons run from Lock Screen widgets too."
     }
   }
 
