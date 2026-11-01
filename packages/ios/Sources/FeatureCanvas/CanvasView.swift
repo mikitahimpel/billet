@@ -1,4 +1,5 @@
 import BilletKit
+import DesignSystem
 import Ink
 import SwiftUI
 import Wire
@@ -20,9 +21,14 @@ public struct CanvasView: View {
     VStack(spacing: 12) {
       HStack {
         Button("Close", action: onClose)
+          .frame(minWidth: Target.minimum, minHeight: Target.minimum)
         Spacer()
         Button("Send") { onSend(store.state.drawing) }
           .buttonStyle(.borderedProminent)
+          .controlSize(.large)
+          .tint(Palette.gold.color)
+          .foregroundStyle(Palette.ink.color)
+          .frame(minHeight: Target.minimum)
           .disabled(store.state.drawing.isEmpty)
       }
       GeometryReader { geometry in
@@ -61,12 +67,23 @@ public struct CanvasView: View {
   private var controls: some View {
     VStack(spacing: 12) {
       HStack {
-        Picker("Tool", selection: tool) {
-          ForEach(CanvasTool.allCases, id: \.self) { Text($0.title).tag($0) }
+        ForEach(CanvasTool.allCases, id: \.self) { tool in
+          Button {
+            store.send(.toolSelected(tool))
+          } label: {
+            Text(tool.title)
+              .frame(maxWidth: .infinity, minHeight: Target.minimum)
+              .background(
+                (store.state.tool == tool ? Palette.raisedTop : Palette.raised).color,
+                in: .rect(cornerRadius: Radius.control)
+              )
+              .contentShape(.rect(cornerRadius: Radius.control))
+          }
+          .buttonStyle(.plain)
+          .accessibilityAddTraits(store.state.tool == tool ? .isSelected : [])
         }
-        .pickerStyle(.segmented)
       }
-      HStack(spacing: 12) {
+      HStack(spacing: 4) {
         ForEach(CanvasColor.allCases, id: \.self) { color in
           Button {
             store.send(.colorSelected(color))
@@ -78,6 +95,8 @@ public struct CanvasView: View {
               .overlay(
                 Circle().stroke(Color.primary, lineWidth: store.state.color == color ? 3 : 0)
               )
+              .frame(width: Target.minimum, height: Target.minimum)
+              .contentShape(.circle)
           }
           .buttonStyle(.plain)
           .accessibilityLabel(color.title)
@@ -85,17 +104,16 @@ public struct CanvasView: View {
       }
       HStack {
         Button("Undo") { store.send(.undo) }
+          .frame(minWidth: Target.minimum, minHeight: Target.minimum)
           .disabled(!store.state.canUndo)
         Button("Redo") { store.send(.redo) }
+          .frame(minWidth: Target.minimum, minHeight: Target.minimum)
           .disabled(!store.state.canRedo)
         Spacer()
         Button("Clear", role: .destructive) { store.send(.cleared) }
+          .frame(minWidth: Target.minimum, minHeight: Target.minimum)
           .disabled(!store.state.canClear)
       }
     }
-  }
-
-  private var tool: Binding<CanvasTool> {
-    Binding(get: { store.state.tool }, set: { store.send(.toolSelected($0)) })
   }
 }
