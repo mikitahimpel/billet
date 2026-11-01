@@ -3,8 +3,19 @@ packages:
   - packages/*/*
   - packages/ios
 
+allowBuilds:
+  workerd: true
+
+overrides:
+  # @effect/platform-node 4.0.6 would otherwise resolve this to 4.1.x, which needs effect 4.1.
+  "@effect/platform-node-shared": 4.0.6
+
 catalog:
-  "@types/node": ^24.0.0
+  # Alchemy v2 is beta: pin exact, bump alchemy and @alchemy.run/* together (see docs/alchemy.md).
+  alchemy: 2.0.0-beta.84
+  "@alchemy.run/cloudflare": 2.0.0-beta.84
+  "@cloudflare/workers-types": 5.20261101.1
+  "@types/node": 24.19.2
   effect: 4.1.1
   oxfmt: 0.75.0
   oxlint: 1.90.0
@@ -12,3 +23,10 @@ catalog:
   typescript: 7.0.2
   # @cloudflare/vitest-pool-workers 0.23 peers on vitest ^4.1.0, so vitest stays on 4.x.
   vitest: ^4.1.0
+
+catalogs:
+  # Alchemy 2.0.0-beta.84 imports `effect/Crypto`, which effect 4.1 moved to `effect/crypto`, so the
+  # root infra tooling stays on effect 4.0.x until Alchemy supports 4.1. Only the root uses this.
+  infra:
+    effect: 4.0.6
+    "@effect/platform-node": 4.0.6

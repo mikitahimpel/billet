@@ -1,0 +1,79 @@
+name: Deploy
+
+# Deploys the Alchemy stack to Cloudflare. It is OFF until the owner switches it on, and it can
+# never run from a pull request or a push:
+#
+#   - the only trigger is a manual run (workflow_dispatch);
+#   - the job also needs the repository variable DEPLOY_ENABLED=true and a runner label list in
+#     DEPLOY_RUNNER, so a manual run does nothing while they are unset.
+#
+# The runner must have the Proton Pass CLI (`pp`) installed and logged in with access to the vaults
+# "Billet" (dev) and "Billet Release" (prod). Credentials come only from `pp run`; no secret is
+# stored in GitHub. See docs/alchemy.md#deploying for the switch-on steps.
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: Stage to deploy
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+concurrency:
+  group: deploy-${{ inputs.stage }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: vars.DEPLOY_ENABLED == 'true'
+    # A JSON label list, for example ["self-hosted","billet-deploy"]. Unset, the job cannot start.
+    runs-on: ${{ fromJSON(vars.DEPLOY_RUNNER) }}
+    # Add required reviewers to the `prod` environment in the repository settings.
+    environment: ${{ inputs.stage }}
+    timeout-minutes: 15
+    env:
+      STAGE: ${{ inputs.stage }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check
+        run: pnpm turbo run lint typecheck test format:check
+
+      # Alchemy's output goes to a file first and is printed with the workers.dev address masked:
+      # the logs of a public repository are public, and the subdomain names the account.
+      - name: Deploy
+        env:
+          PROTON_PASS_AGENT_REASON: billet deploy ${{ inputs.stage }}
+        run: |
+          set -uo pipefail
+          env_file=.env.pass
+          if [ "$STAGE" = "prod" ]; then env_file=.env.pass.release; fi
+          status=0
+          pp run --env-file "$env_file" -- pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input \
+            > "$RUNNER_TEMP/deploy.log" 2>&1 || status=$?
+          sed -E 's#https://[A-Za-z0-9.-]*workers\.dev#https://<masked>.workers.dev#g' "$RUNNER_TEMP/deploy.log"
+          exit "$status"
+
+      - name: Smoke test
+        run: |
+          set -uo pipefail
+          url=$(grep -oE 'https://[A-Za-z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1)
+          rm -f "$RUNNER_TEMP/deploy.log"
+          if [ -z "$url" ]; then echo "No Worker URL in the deploy output"; exit 1; fi
+          echo "::add-mask::$url"
+          code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$url" || true)
+          echo "Worker answered HTTP $code"
+          test "$code" = "200"
