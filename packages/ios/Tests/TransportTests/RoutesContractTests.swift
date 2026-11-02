@@ -35,6 +35,7 @@ import Testing
       "downloadImage": Route(.get, Routes.downloadImagePrefix + "*"),
       "sendNote": Routes.sendNote,
       "listNotes": Routes.listNotes,
+      "getFlags": Routes.getFlags,
     ]
     #expect(contract == mirrored)
   }
