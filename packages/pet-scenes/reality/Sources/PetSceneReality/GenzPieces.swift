@@ -23,6 +23,17 @@ struct GenzPiece: Hashable, Sendable {
     case thriftLamp
     case roundRug
     case snakePlant
+    case quiltedDaybed
+    case quiltedBed
+    case bookCrate
+    case pleatedLamp
+    case leafyPlant
+    case patternRug
+    case chairWithClothes
+    case mugs
+    case polaroids
+    case recordPlayer
+    case speaker
   }
 
   var kind: Kind
@@ -58,6 +69,17 @@ extension GenzPiece.Kind {
     case .thriftLamp: ["brass", "shade"]
     case .roundRug: ["edge", "middle"]
     case .snakePlant: ["pot", "leaf", "stripe"]
+    case .quiltedDaybed: ["frame", "quilt", "throw"]
+    case .quiltedBed: ["frame", "quilt", "throw"]
+    case .bookCrate: ["crate", "books", "more books"]
+    case .pleatedLamp: ["brass", "shade"]
+    case .leafyPlant: ["pot", "leaf", "dark leaf"]
+    case .patternRug: ["edge", "ring", "pattern"]
+    case .chairWithClothes: ["wood", "jumper", "jeans"]
+    case .mugs: ["mug", "other mug"]
+    case .polaroids: ["print", "print", "print"]
+    case .recordPlayer: ["wood", "label", "metal"]
+    case .speaker: ["wood", "grille", "cone"]
     }
   }
 
@@ -78,6 +100,17 @@ extension GenzPiece.Kind {
     case .thriftLamp: [GenzColour(0xC9A86A), GenzColour(0xF3E3C3)]
     case .roundRug: [GenzColour(0x3B4A63), GenzColour(0x4A5C7A)]
     case .snakePlant: [GenzColour(0xD9CBB3), GenzColour(0x3F7558), GenzColour(0x2D5A45)]
+    case .quiltedDaybed: [GenzColour(0xB0825A), GenzColour(0xEFE2CC), GenzColour(0xD9A441)]
+    case .quiltedBed: [GenzColour(0xB0825A), GenzColour(0xEFE2CC), GenzColour(0xD9A441)]
+    case .bookCrate: [GenzColour(0xC4935F), GenzColour(0xC2603F), GenzColour(0x8FA67E)]
+    case .pleatedLamp: [GenzColour(0xC9A86A), GenzColour(0xF6E6C8)]
+    case .leafyPlant: [GenzColour(0xC46E4A), GenzColour(0x5E8F4E), GenzColour(0x3F6E3A)]
+    case .patternRug: [GenzColour(0xD9C3A0), GenzColour(0xC27A55), GenzColour(0xEFE2CC)]
+    case .chairWithClothes: [GenzColour(0xA67B52), GenzColour(0xB75D4B), GenzColour(0x5B7290)]
+    case .mugs: [GenzColour(0xE9DCC6), GenzColour(0xC9694D)]
+    case .polaroids: [GenzColour(0xE9A07A), GenzColour(0x8DB0C9), GenzColour(0xA9C48E)]
+    case .recordPlayer: [GenzColour(0x6B4430), GenzColour(0xE24B2D), GenzColour(0xB8B2A8)]
+    case .speaker: [GenzColour(0x5C3B28), GenzColour(0x2A2421), GenzColour(0x1B1817)]
     }
   }
 
@@ -98,6 +131,17 @@ extension GenzPiece.Kind {
     case .thriftLamp: "Pleated thrift lamp"
     case .roundRug: "Round rug"
     case .snakePlant: "Snake plant"
+    case .quiltedDaybed: "Quilted daybed"
+    case .quiltedBed: "Quilted bed"
+    case .bookCrate: "Crate of books"
+    case .pleatedLamp: "Pleated lamp"
+    case .leafyPlant: "Leafy plant"
+    case .patternRug: "Patterned rug"
+    case .chairWithClothes: "Chair with clothes"
+    case .mugs: "Mugs"
+    case .polaroids: "Polaroids"
+    case .recordPlayer: "Record player"
+    case .speaker: "Speaker"
     }
   }
 
@@ -119,6 +163,17 @@ extension GenzPiece.Kind {
     case .thriftLamp: GenzRoomPoint(1, 1, 1.0)
     case .roundRug: GenzRoomPoint(2.5, 2.5, 0.03)
     case .snakePlant: GenzRoomPoint(0.5, 0.5, 1.6)
+    case .quiltedDaybed: GenzRoomPoint(6.6, 2.4, 1.34)
+    case .quiltedBed: GenzRoomPoint(4.8, 3.4, 1.18)
+    case .bookCrate: GenzRoomPoint(0.9, 0.9, 0.9)
+    case .pleatedLamp: GenzRoomPoint(1, 1, 1.1)
+    case .leafyPlant: GenzRoomPoint(1.2, 1.2, 1.9)
+    case .patternRug: GenzRoomPoint(2.8, 2.8, 0.03)
+    case .chairWithClothes: GenzRoomPoint(1.06, 1, 1.9)
+    case .mugs: GenzRoomPoint(0.6, 0.3, 0.2)
+    case .polaroids: GenzRoomPoint(1.6, 0.04, 1.1)
+    case .recordPlayer: GenzRoomPoint(1.1, 0.85, 0.3)
+    case .speaker: GenzRoomPoint(0.6, 0.56, 1)
     }
   }
 }
@@ -167,6 +222,17 @@ extension GenzKit {
     case .thriftLamp: parts = thriftLamp(piece)
     case .roundRug: parts = roundRug(piece)
     case .snakePlant: parts = snakePlant(piece)
+    case .quiltedDaybed: parts = quiltedDaybed(piece)
+    case .quiltedBed: parts = quiltedBed(piece)
+    case .bookCrate: parts = bookCrate(piece)
+    case .pleatedLamp: parts = pleatedLamp(piece)
+    case .leafyPlant: parts = leafyPlant(piece)
+    case .patternRug: parts = patternRug(piece)
+    case .chairWithClothes: parts = chairWithClothes(piece)
+    case .mugs: parts = mugs(piece)
+    case .polaroids: parts = polaroids(piece)
+    case .recordPlayer: parts = recordPlayer(piece)
+    case .speaker: parts = speaker(piece)
     }
     for part in parts { root.addChild(part) }
     return root

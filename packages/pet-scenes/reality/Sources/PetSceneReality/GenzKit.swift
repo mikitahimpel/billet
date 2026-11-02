@@ -83,7 +83,7 @@ final class GenzKit {
     }
   }
 
-  private func cached(_ key: String, make: () -> MeshResource) -> MeshResource {
+  func cached(_ key: String, make: () -> MeshResource) -> MeshResource {
     if let mesh = meshes[key] { return mesh }
     let mesh = make()
     meshes[key] = mesh
