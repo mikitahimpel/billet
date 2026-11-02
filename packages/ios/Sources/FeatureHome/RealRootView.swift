@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureInbox
 import FeatureOnboarding
 import FeaturePairing
 import SwiftUI
@@ -20,7 +21,7 @@ public struct RealRootView: View {
       case .unpaired:
         PairingFlowView(model: model.pairing) { model.paired() }
       case .paired:
-        PairedPlaceholderView()
+        RealPairedView(model: model)
       }
     }
     .preferredColorScheme(.dark)
@@ -29,14 +30,15 @@ public struct RealRootView: View {
   }
 }
 
-/// Stands in for the inbox and settings screens until they are connected.
-struct PairedPlaceholderView: View {
+/// The screens of a paired account. Settings joins the notes list once it is connected.
+struct RealPairedView: View {
+  let model: RealAppModel
+
   var body: some View {
-    ZStack {
-      EveningBackground()
-      Text("You're paired.")
-        .billetType(.title)
-        .foregroundStyle(Palette.paper.color)
+    TabView {
+      Tab("Notes", systemImage: "tray") {
+        HistoryView(model: model.history())
+      }
     }
   }
 }
