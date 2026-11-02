@@ -83,6 +83,7 @@ let testTargets: [Target] = [
   .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
   .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+  .testTarget(name: "PrivacyManifestTests"),
   .testTarget(
     name: "FeatureHomeTests",
     dependencies: [
