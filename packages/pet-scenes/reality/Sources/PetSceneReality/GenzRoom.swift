@@ -35,11 +35,11 @@ final class GenzRoomScreen {
   }
 }
 
-/// The cat model, loaded once from the room's own files and cloned into each styled room, so a
-/// replaced `Cat` model shows up here without changes.
+/// The cat models, each loaded once from the room's own files and cloned into each styled room.
+/// A cat that will not load is replaced by Mochi, so a room always has one.
 @MainActor
 final class GenzCatSource {
-  private var loading: Task<Entity?, Never>?
+  private var loading: [CatModel: Task<Entity?, Never>] = [:]
   private let load: NookiModelLoader
 
   init(load: NookiModelLoader? = nil) {
@@ -47,12 +47,24 @@ final class GenzCatSource {
     self.load = load ?? { name throws(NookiLoadError) in try await assets.model(name) }
   }
 
-  func cat() async -> Entity? {
-    if loading == nil {
-      let load = load
-      loading = Task { try? await load(NookiAssets.mochiName) }
+  /// A fresh copy of the model for `choice`, and the choice it really shows.
+  func cat(_ choice: CatChoice = .standard) async -> (Entity, CatChoice)? {
+    if choice.model != .mochi, let model = await task(choice.model).value {
+      return (model.clone(recursive: true), choice)
     }
-    return await loading?.value?.clone(recursive: true)
+    guard let mochi = await task(.mochi).value else { return nil }
+    return (mochi.clone(recursive: true), .standard)
+  }
+
+  private func task(_ model: CatModel) -> Task<Entity?, Never> {
+    if let task = loading[model] { return task }
+    let load = load
+    let task =
+      model == .mochi
+      ? Task { try? await load(NookiAssets.mochiName) }
+      : Task { await NookiAssets.compiledCat(model) }
+    loading[model] = task
+    return task
   }
 }
 
@@ -126,7 +138,13 @@ final class GenzRoom {
   private let outsideLight = Entity()
   private let fillLight = Entity()
   private let headlight = Entity()
-  private var animator: NookiCatAnimator?
+  private var rig: CatRig?
+  private var behaviour = CatBehaviour(clips: [:])
+  private var catChoice = CatChoice.standard
+  private var catModel: Entity?
+  private var catLoad: Task<Void, Never>?
+  private var gazePoint: SIMD3<Float>?
+  private var gazeUntil = 0.0
   private var building: Task<Void, Never>?
   private var subscription: EventSubscription?
   private var viewSize = CGSize(width: 393, height: 852)
@@ -295,19 +313,35 @@ final class GenzRoom {
     lens.addChild(backstop)
   }
 
+  /// Shows `choice` in place of the cat on show, once it has loaded.
+  func setCat(_ choice: CatChoice) {
+    guard choice != catChoice else { return }
+    catChoice = choice
+    guard hasCat || catLoad != nil else { return }
+    catLoad = Task { await placeCat() }
+  }
+
   private func placeCat() async {
-    guard let model = await cats.cat() else {
+    let wanted = catChoice
+    guard let (model, shown) = await cats.cat(wanted) else {
       Self.log.error("No cat for \(self.layout.style.rawValue, privacy: .public)")
       return
     }
+    guard wanted == catChoice || !hasCat else { return }
     let bounds = model.visualBounds(relativeTo: nil)
     let reach = max(bounds.extents.x, bounds.extents.z)
     guard !bounds.isEmpty, reach > 0, reach.isFinite else { return }
     let scale = layout.cat.length / reach
     model.scale = .one * scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
-    animator = NookiCatAnimator(model: model)
-    animator?.play(.sleep, blend: 0)
+    let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
+    if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
+    let action = self.rig?.current ?? .sleep
+    catModel?.removeFromParent()
+    catModel = model
+    self.rig = rig
+    behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
+    rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
     catHolder.addChild(model)
     if let receiver = ambientReceiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
     hasCat = true
@@ -520,8 +554,10 @@ final class GenzRoom {
     return nil
   }
 
+  /// A tap on the cat: its ears perk and its head tilts. Counts as a pet for the pair.
   func petCat() -> PetSceneEvent {
     petClock = clock
+    behaviour.react(.tap, at: clock)
     return .petted
   }
 
@@ -638,6 +674,7 @@ final class GenzRoom {
     switch cue {
     case .wakeUp:
       petClock = clock
+      behaviour.react(.tap, at: clock)
     case .lookAtCamera:
       look(at: camera.position, for: Self.cameraLookLength)
     }
@@ -715,15 +752,53 @@ final class GenzRoom {
   private var openingTime: Double { openedClock.map { clock - $0 } ?? 0 }
 
   private func applyCat() {
-    guard let animator else { return }
+    guard let rig else { return }
     if let petClock, clock - petClock > Self.petLength { self.petClock = nil }
-    let clip: NookiClip =
+    let mode: CatBehaviour.Mode =
       switch world.activity {
-      case .delivering: .idle
-      case .settling: .sit
-      case .sleeping: petClock == nil ? .sleep : .idle
+      case .delivering, .settling: .awake
+      case .sleeping: .free
       }
-    animator.play(clip)
+    let beat = behaviour.beat(at: clock, mode: mode)
+    rig.play(beat.action)
+    if clock > gazeUntil { gazePoint = nil }
+    rig.look(
+      at: gazePoint ?? lens.position(relativeTo: nil),
+      weight: reduceMotion ? 0 : Float(beat.lookWeight))
+  }
+
+  /// Turns the cat's head towards a finger at `point` in the view.
+  func followFinger(at point: CGPoint) {
+    let size = SIMD2(Float(viewSize.width), Float(viewSize.height))
+    guard size.x > 0, size.y > 0 else { return }
+    let ray = simd_normalize(
+      NookiFloorRay.direction(
+        under: SIMD2(Float(point.x), Float(point.y)), viewSize: size, camera: camera.position,
+        target: camera.target, verticalFieldOfView: camera.fieldOfView))
+    let head = catHolder.position(relativeTo: nil) + [0, layout.cat.length * 0.5, 0]
+    let reach = simd_dot(head - camera.position, ray)
+    gazePoint = camera.position + ray * max(reach, layout.cat.length)
+    gazeUntil = clock + 1.5
+  }
+
+  /// Whether a finger at `point` is on the cat, for telling a stroke from a turn of the room.
+  func isOverCat(_ point: CGPoint) -> Bool {
+    guard let cat = screen.cat else { return false }
+    return hypot(point.x - cat.x, point.y - cat.y) < 70
+  }
+
+  /// A stroke along the cat: eyes close and it purrs. Reports a pet like a tap does.
+  func stroke() -> PetSceneEvent? {
+    let fresh = petClock == nil
+    petClock = clock
+    behaviour.react(.pet, at: clock)
+    return fresh ? .petted : nil
+  }
+
+  /// A treat or the partner's pet: the cat reacts without telling anyone.
+  func react(_ reaction: CatReaction) {
+    petClock = clock
+    behaviour.react(reaction, at: clock)
   }
 
   /// Sets every light, glow and texture for the current moment. Each is only touched when its

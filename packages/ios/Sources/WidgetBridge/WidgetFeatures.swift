@@ -88,6 +88,17 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(style, named: Self.roomStyleFileName)
   }
 
+  public static let catFileName = "cat-choice.json"
+
+  /// The saved cat, or the standard one when nothing readable is saved.
+  public func loadCat() -> CatChoice {
+    (try? storage.readJSON(CatChoice.self, named: Self.catFileName)) ?? .standard
+  }
+
+  public func saveCat(_ cat: CatChoice) throws(PersistenceError) {
+    try storage.writeJSON(cat, named: Self.catFileName)
+  }
+
   public static let homeVariantFileName = "home-variant.json"
 
   /// The saved layout of Home, or the standard one when nothing readable is saved.
@@ -108,6 +119,8 @@ public final class WidgetFeaturesModel {
   public private(set) var features: WidgetFeatures
   /// How a scene with more than one room dresses it. Kept beside the flags, in its own file.
   public private(set) var roomStyle: RoomStyle
+  /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
+  public private(set) var cat: CatChoice
   /// How Home is laid out around the room. Kept beside the flags, in its own file.
   public private(set) var homeVariant: HomeVariant
 
@@ -119,6 +132,7 @@ public final class WidgetFeaturesModel {
     self.onChange = onChange
     features = store?.load() ?? WidgetFeatures()
     roomStyle = store?.loadRoomStyle() ?? .standard
+    cat = store?.loadCat() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
   }
 
@@ -132,6 +146,12 @@ public final class WidgetFeaturesModel {
     guard roomStyle != style else { return }
     roomStyle = style
     try? store?.saveRoomStyle(style)
+  }
+
+  public func setCat(_ choice: CatChoice) {
+    guard cat != choice else { return }
+    cat = choice
+    try? store?.saveCat(choice)
   }
 
   public func isOn(_ feature: WidgetFeature) -> Bool { features.isOn(feature) }

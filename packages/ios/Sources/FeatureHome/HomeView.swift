@@ -67,6 +67,7 @@ struct HomeView: View {
 
   var body: some View {
     home
+      .environment(\.petSceneCat, session.labs.cat)
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(

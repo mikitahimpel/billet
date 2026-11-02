@@ -8,7 +8,9 @@ public struct NookiPetScene: PetScene {
   public let id = "nooki"
   public let title = "Nooki"
   public let credit: String? =
-    "Mochi's proportions are based on \"Chill Cat\" by Shix, CC BY 4.0, adapted into a new model."
+    "Mochi's proportions are based on \"Chill Cat\" by Shix, CC BY 4.0, adapted into a new model. "
+    + "The slim cat is \"Cat\" by J-Toastie, CC BY 3.0, via Poly Pizza. "
+    + "The blocky cat is by Quaternius, CC0."
 
   private let cache = NookiRoomCache()
   private let styledRooms = GenzRoomCache()
@@ -18,6 +20,7 @@ public struct NookiPetScene: PetScene {
   public let handlesTouches = true
   public let hasShop = true
   public var roomStyles: [RoomStyle] { RoomStyle.allCases }
+  public var cats: [CatModel] { CatModel.allCases }
 
   public func makeShopPreview(item: ShopItem) -> AnyView? {
     AnyView(NookiShopPreview(item: item))

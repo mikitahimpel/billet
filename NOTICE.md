@@ -17,6 +17,21 @@ proportions from:
 
 The app shows this credit in the scene list.
 
+The slim cat, `Resources/Cats/Cat_slim.reality` in the same folder, is:
+
+- **"Cat"** by **J-Toastie**, via Poly Pizza
+- Source: <https://poly.pizza/m/DJ9rpAhrh3>
+- Licence: Creative Commons Attribution 3.0 (CC BY 3.0), <https://creativecommons.org/licenses/by/3.0/>
+- Changes: converted to USD, scaled, re-rooted to stand at the origin, clips trimmed and renamed,
+  recoloured through its palette.
+
+The blocky cat, `Resources/Cats/Cat_blocky.reality`, is "Cat" by **Quaternius**
+(<https://poly.pizza/m/qKICY6xla2>), released as Public Domain (CC0 1.0). It needs no credit; it is
+named here for the record.
+
+The other cats in `Resources/Cats` (tabby, plush, chibi, kitten, tuxedo) are new models made for
+billet in Blender.
+
 ## Project assets
 
 - `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.

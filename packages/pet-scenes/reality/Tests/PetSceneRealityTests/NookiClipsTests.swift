@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import RealityKit
 import Testing
 
@@ -67,11 +68,11 @@ import Testing
 
   @Test func theBundleLoadsTheTimeline() async throws {
     let cat = try await bundledCat()
-    let animator = try #require(NookiCatAnimator(model: cat))
+    let rig = try #require(CatRig(model: cat, clips: CatCatalog.mochiClips))
     #expect(cat.availableAnimations.contains { abs($0.definition.duration - 19.167) < 0.01 })
-    #expect(try abs(#require(animator.duration(of: .pounce)) - 1.5) < 0.01)
+    #expect(try abs(#require(rig.duration(of: .pounce)) - 1.5) < 0.01)
     for clip in NookiClip.allCases where clip.loops {
-      #expect(animator.duration(of: clip) == .infinity)
+      #expect(rig.duration(of: try #require(CatAction(rawValue: clip.rawValue))) == .infinity)
     }
   }
 
@@ -86,14 +87,16 @@ import Testing
 
   @Test func aClipPlaysAtOnceAndSwitchesWithABlend() async throws {
     let cat = try await bundledCat()
-    let animator = try #require(NookiCatAnimator(model: cat))
-    animator.play(.sleep, blend: 0)
-    #expect(animator.current == .sleep)
-    animator.play(.walk, rate: 2)
-    #expect(animator.current == .walk)
+    let rig = try #require(CatRig(model: cat, clips: CatCatalog.mochiClips))
+    rig.play(.sleep, blend: 0)
+    #expect(rig.current == .sleep)
+    rig.play(.walk, rate: 2)
+    #expect(rig.current == .walk)
+    rig.play(.stretch)
+    #expect(rig.current == .walk)
   }
 
-  @Test func aModelWithoutATimelineHasNoAnimator() {
-    #expect(NookiCatAnimator(model: Entity()) == nil)
+  @Test func aModelWithoutATimelineHasNoRig() {
+    #expect(CatRig(model: Entity(), clips: CatCatalog.mochiClips) == nil)
   }
 }
