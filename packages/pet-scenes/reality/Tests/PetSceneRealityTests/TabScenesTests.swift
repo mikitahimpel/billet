@@ -30,7 +30,8 @@ struct ShopLayoutTests {
   @Test func noTwoPlacesOverlap() {
     for (index, a) in slots.enumerated() {
       for b in slots.dropFirst(index + 1) where a.stand == b.stand && a.centre.z == b.centre.z {
-        let apart = abs(a.centre.x - b.centre.x) >= (a.box.x + b.box.x) / 2 - 0.001
+        let apart =
+          abs(a.centre.x - b.centre.x) >= (a.box.x + b.box.x) / 2 - 0.001
           || abs(a.centre.y - b.centre.y) >= (a.box.z + b.box.z) / 2 - 0.001
         #expect(apart, "\(a.item) and \(b.item)")
       }
@@ -40,7 +41,8 @@ struct ShopLayoutTests {
   @Test func shelfPlacesStayInsideTheirBayAndUnderTheShelfAbove() {
     for slot in slots where slot.stand == .shelf {
       let inBay = ShopLayout.bays.contains {
-        slot.centre.x - slot.box.x / 2 >= $0 && slot.centre.x + slot.box.x / 2 <= $0 + ShopLayout.bayWidth
+        slot.centre.x - slot.box.x / 2 >= $0
+          && slot.centre.x + slot.box.x / 2 <= $0 + ShopLayout.bayWidth
       }
       #expect(inBay, "\(slot.item)")
       #expect(slot.box.y < ShopLayout.shelfGap)
@@ -68,11 +70,15 @@ struct ShopLayoutTests {
   @Test func scaleIsTrueToLifeWithinTheBoxAndNeverTiny() {
     let box = SIMD3<Float>(1, 1, 1)
     // Small enough to show at life size.
-    #expect(ShopLayout.scale(extents: [0.4, 0.3, 0.4], box: box, unitsPerMetre: 1.7, least: 0.5) == 1.7)
+    #expect(
+      ShopLayout.scale(extents: [0.4, 0.3, 0.4], box: box, unitsPerMetre: 1.7, least: 0.5) == 1.7)
     // Too big for the box: fitted.
-    #expect(abs(ShopLayout.scale(extents: [0.2, 2, 0.2], box: box, unitsPerMetre: 1.7, least: 0.5) - 0.5) < 1e-5)
+    #expect(
+      abs(ShopLayout.scale(extents: [0.2, 2, 0.2], box: box, unitsPerMetre: 1.7, least: 0.5) - 0.5)
+        < 1e-5)
     // Tiny: grown until its longest side is `least`.
-    let mouse = ShopLayout.scale(extents: [0.05, 0.07, 0.1], box: box, unitsPerMetre: 1.7, least: 0.5)
+    let mouse = ShopLayout.scale(
+      extents: [0.05, 0.07, 0.1], box: box, unitsPerMetre: 1.7, least: 0.5)
     #expect(abs(mouse * 0.1 - 0.5) < 1e-5)
   }
 
@@ -195,7 +201,8 @@ struct DeskLayoutTests {
     for (index, a) in pins.enumerated() {
       for b in pins.dropFirst(index + 1) {
         let gap = (a.side + b.side) / 2
-        #expect(abs(a.centre.x - b.centre.x) >= gap * 0.9 || abs(a.centre.z - b.centre.z) >= gap * 0.9)
+        #expect(
+          abs(a.centre.x - b.centre.x) >= gap * 0.9 || abs(a.centre.z - b.centre.z) >= gap * 0.9)
       }
     }
   }

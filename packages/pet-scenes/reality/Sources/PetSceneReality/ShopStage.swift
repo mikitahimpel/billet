@@ -228,7 +228,8 @@ final class ShopStage: TabStage {
       kit.block(
         -wall, window.y0, window.z1, wall, window.y1 - window.y0, height - window.z1, side),
       // Its frame, a cross of glazing bars and a deep sill.
-      kit.block(-0.12, window.y0 - 0.1, window.z0 - 0.14, 0.42, window.y1 - window.y0 + 0.2, 0.14, wood),
+      kit.block(
+        -0.12, window.y0 - 0.1, window.z0 - 0.14, 0.42, window.y1 - window.y0 + 0.2, 0.14, wood),
       kit.block(-0.1, window.y0 - 0.1, window.z1, 0.14, window.y1 - window.y0 + 0.2, 0.12, wood),
       kit.block(-0.1, window.y0 - 0.1, window.z0, 0.14, 0.1, window.z1 - window.z0, wood),
       kit.block(-0.1, window.y1, window.z0, 0.14, 0.1, window.z1 - window.z0, wood),
@@ -253,8 +254,10 @@ final class ShopStage: TabStage {
     while y < ShopLayout.depth {
       let size = min(board, ShopLayout.depth - y)
       rows[index % 2].append(
-        (GenzRoomPoint(ShopLayout.width / 2, y + size / 2, -0.01).scene,
-          SIMD3(ShopLayout.width, 0.02, size - 0.03)))
+        (
+          GenzRoomPoint(ShopLayout.width / 2, y + size / 2, -0.01).scene,
+          SIMD3(ShopLayout.width, 0.02, size - 0.03)
+        ))
       y += board
       index += 1
     }
@@ -294,7 +297,8 @@ final class ShopStage: TabStage {
       room.addChild(kit.block(x + width, 0, 0, 0.1, depth, top, body))
       room.addChild(kit.block(x - 0.1, 0, top, width + 0.2, depth + 0.05, 0.1, board))
       for level in ShopLayout.shelves {
-        room.addChild(kit.block(x, 0, level - ShopLayout.board, width, depth, ShopLayout.board, board))
+        room.addChild(
+          kit.block(x, 0, level - ShopLayout.board, width, depth, ShopLayout.board, board))
       }
     }
     // The shop's mark between the bays, over the keeper's head: a gold stamp on a dark disc.
@@ -304,7 +308,8 @@ final class ShopStage: TabStage {
     mark.addChild(kit.part(kit.prism(sides: 16, radius: 0.62, top: 0.62, height: 0.06), knob))
     mark.addChild(
       kit.part(
-        kit.prism(sides: 16, radius: 0.52, top: 0.52, height: 0.04), kit.matte(GenzColour(0x4A2E22)),
+        kit.prism(sides: 16, radius: 0.52, top: 0.52, height: 0.04),
+        kit.matte(GenzColour(0x4A2E22)),
         at: [0, 0.06, 0]))
     mark.addChild(
       kit.part(kit.prism(sides: 12, radius: 0.3, top: 0.3, height: 0.04), knob, at: [0, 0.1, 0]))
@@ -317,7 +322,8 @@ final class ShopStage: TabStage {
     let width = counter.x1 - counter.x0
     let depth = counter.y1 - counter.y0
     room.addChild(
-      kit.block(counter.x0, counter.y0, 0, width, depth, top - 0.1, kit.matte(GenzColour(0x6B4632))))
+      kit.block(counter.x0, counter.y0, 0, width, depth, top - 0.1, kit.matte(GenzColour(0x6B4632)))
+    )
     room.addChild(
       kit.block(
         counter.x0 - 0.12, counter.y0 - 0.1, top - 0.1, width + 0.24, depth + 0.2, 0.1,
@@ -326,8 +332,10 @@ final class ShopStage: TabStage {
     var x = counter.x0 + 0.2
     while x < counter.x1 - 0.1 {
       slats.append(
-        (GenzRoomPoint(x, counter.y1 + 0.02, (top - 0.25) / 2 + 0.12).scene,
-          SIMD3(0.12, top - 0.45, 0.04)))
+        (
+          GenzRoomPoint(x, counter.y1 + 0.02, (top - 0.25) / 2 + 0.12).scene,
+          SIMD3(0.12, top - 0.45, 0.04)
+        ))
       x += 0.36
     }
     room.addChild(kit.part(kit.boxes("shop counter slats", slats), kit.matte(GenzColour(0x7E5238))))
@@ -337,8 +345,10 @@ final class ShopStage: TabStage {
     // The till and the bell, on the keeper's right.
     let till = kit.matte(GenzColour(0x3E5A52))
     room.addChild(kit.block(4.55, 3.3, top, 0.75, 0.6, 0.36, till))
-    room.addChild(kit.block(4.6, 3.35, top + 0.36, 0.65, 0.18, 0.3, kit.matte(GenzColour(0x2A2530))))
-    room.addChild(kit.block(4.67, 3.53, top + 0.42, 0.5, 0.01, 0.18, kit.glow(GenzColour(0xFFD08A))))
+    room.addChild(
+      kit.block(4.6, 3.35, top + 0.36, 0.65, 0.18, 0.3, kit.matte(GenzColour(0x2A2530))))
+    room.addChild(
+      kit.block(4.67, 3.53, top + 0.42, 0.5, 0.01, 0.18, kit.glow(GenzColour(0xFFD08A))))
     let gold = kit.matte(GenzColour(0xD8B25A))
     room.addChild(
       kit.part(
@@ -355,10 +365,13 @@ final class ShopStage: TabStage {
     let top = ShopLayout.tableTop
     let wood = kit.matte(GenzColour(0xB98A5E))
     let leg = kit.matte(GenzColour(0x6B4632))
-    room.addChild(kit.block(table.x0, table.y0, top - 0.08, table.x1 - table.x0, table.y1 - table.y0, 0.08, wood))
-    for (x, y) in [(table.x0 + 0.1, table.y0 + 0.1), (table.x1 - 0.2, table.y0 + 0.1),
-      (table.x0 + 0.1, table.y1 - 0.2), (table.x1 - 0.2, table.y1 - 0.2)]
-    {
+    room.addChild(
+      kit.block(
+        table.x0, table.y0, top - 0.08, table.x1 - table.x0, table.y1 - table.y0, 0.08, wood))
+    for (x, y) in [
+      (table.x0 + 0.1, table.y0 + 0.1), (table.x1 - 0.2, table.y0 + 0.1),
+      (table.x0 + 0.1, table.y1 - 0.2), (table.x1 - 0.2, table.y1 - 0.2),
+    ] {
       room.addChild(kit.block(x, y, 0, 0.1, 0.1, top - 0.08, leg))
     }
   }
@@ -367,7 +380,10 @@ final class ShopStage: TabStage {
     let shade = kit.matte(GenzColour(0x3E5A52))
     let cord = kit.matte(GenzColour(0x2A2026))
     for lamp in ShopLayout.lamps {
-      room.addChild(kit.block(lamp.x - 0.015, lamp.y - 0.015, lamp.z + 0.3, 0.03, 0.03, ShopLayout.height - lamp.z, cord))
+      room.addChild(
+        kit.block(
+          lamp.x - 0.015, lamp.y - 0.015, lamp.z + 0.3, 0.03, 0.03, ShopLayout.height - lamp.z, cord
+        ))
       room.addChild(
         kit.part(kit.prism(sides: 8, radius: 0.5, top: 0.14, height: 0.42), shade, at: lamp.scene))
       room.addChild(
@@ -376,7 +392,8 @@ final class ShopStage: TabStage {
           at: lamp.scene + [0, -0.005, 0]))
       room.addChild(
         kit.part(
-          kit.prism(sides: 8, radius: 0.12, top: 0.06, height: 0.16), kit.glow(GenzColour(0xFFF1D6)),
+          kit.prism(sides: 8, radius: 0.12, top: 0.06, height: 0.16),
+          kit.glow(GenzColour(0xFFF1D6)),
           at: lamp.scene + [0, -0.14, 0]))
     }
     // A string of warm bulbs along the top of the back wall.
@@ -489,7 +506,8 @@ final class ShopStage: TabStage {
     let scale = ShopLayout.scale(
       extents: bounds.extents, box: slot.box, unitsPerMetre: unitsPerMetre, least: least)
     content.scale = .one * scale
-    content.position = SIMD3(-bounds.center.x, -bounds.min.y + lift / scale, -bounds.center.z) * scale
+    content.position =
+      SIMD3(-bounds.center.x, -bounds.min.y + lift / scale, -bounds.center.z) * scale
     holder.addChild(content)
     if let receiver { NookiDiorama.visit(holder) { $0.components.set(receiver) } }
     TabLook.makeTappable(holder, margin: 0.12)
@@ -497,7 +515,8 @@ final class ShopStage: TabStage {
 
   /// A paint tin in a wall colour, or a little stack of boards in a floor colour, in metres.
   private func sample(_ surface: RoomSurface, _ swatch: Swatch) -> Entity {
-    let colour = GenzColour(UInt32(swatch.red) << 16 | UInt32(swatch.green) << 8 | UInt32(swatch.blue))
+    let colour = GenzColour(
+      UInt32(swatch.red) << 16 | UInt32(swatch.green) << 8 | UInt32(swatch.blue))
     let sample = Entity()
     switch surface {
     case .wall:
@@ -512,7 +531,8 @@ final class ShopStage: TabStage {
           kit.prism(sides: 10, radius: 0.095, top: 0.095, height: 0.012), kit.matte(colour),
           at: [0, 0.16, 0]))
       // A drip down the side.
-      sample.addChild(kit.part(kit.box([0.02, 0.05, 0.01]), kit.matte(colour), at: [0.02, 0.135, 0.09]))
+      sample.addChild(
+        kit.part(kit.box([0.02, 0.05, 0.01]), kit.matte(colour), at: [0.02, 0.135, 0.09]))
     case .floor:
       for index in 0..<3 {
         sample.addChild(

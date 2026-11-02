@@ -238,7 +238,8 @@ final class DeskStage: TabStage {
     room.addChild(
       kit.block(-wall, -wall, 0, width + wall * 2, wall, height, kit.matte(GenzColour(0x6E4A44))))
     room.addChild(
-      kit.block(-wall, -wall, height, width + wall * 2, wall + 0.06, 0.14,
+      kit.block(
+        -wall, -wall, height, width + wall * 2, wall + 0.06, 0.14,
         kit.matte(GenzColour(0xF0DCC0))))
     room.addChild(kit.block(0, 0, 0, width, 0.05, 1.0, kit.matte(GenzColour(0x5A3A36))))
   }
@@ -250,9 +251,11 @@ final class DeskStage: TabStage {
     let face = kit.matte(GenzColour(0x9C6A48))
     let dark = kit.matte(GenzColour(0x5A3A28))
     let knob = kit.matte(GenzColour(0xD8B25A))
-    room.addChild(kit.block(desk.x0, desk.y0, top - 0.16, desk.x1 - desk.x0, desk.y1 - desk.y0, 0.16, face))
+    room.addChild(
+      kit.block(desk.x0, desk.y0, top - 0.16, desk.x1 - desk.x0, desk.y1 - desk.y0, 0.16, face))
     // Drawers on the left, legs on the right.
-    room.addChild(kit.block(desk.x0 + 0.1, desk.y0 + 0.1, 0, 1.6, desk.y1 - desk.y0 - 0.2, top - 0.16, wood))
+    room.addChild(
+      kit.block(desk.x0 + 0.1, desk.y0 + 0.1, 0, 1.6, desk.y1 - desk.y0 - 0.2, top - 0.16, wood))
     for level in [Float(0.55), 1.4] {
       room.addChild(kit.block(desk.x0 + 0.2, desk.y1 - 0.08, level, 1.4, 0.04, 0.7, face))
       room.addChild(kit.block(desk.x0 + 0.8, desk.y1 - 0.06, level + 0.3, 0.2, 0.08, 0.08, knob))
@@ -260,7 +263,8 @@ final class DeskStage: TabStage {
     for y in [desk.y0 + 0.15, desk.y1 - 0.3] {
       room.addChild(kit.block(desk.x1 - 0.3, y, 0, 0.15, 0.15, top - 0.16, dark))
     }
-    room.addChild(kit.block(desk.x0 + 1.7, desk.y0 + 0.1, top - 0.5, desk.x1 - desk.x0 - 2.0, 0.08, 0.34, dark))
+    room.addChild(
+      kit.block(desk.x0 + 1.7, desk.y0 + 0.1, top - 0.5, desk.x1 - desk.x0 - 2.0, 0.08, 0.34, dark))
   }
 
   private func buildBoard() {
@@ -268,7 +272,8 @@ final class DeskStage: TabStage {
     let frame = kit.matte(GenzColour(0x6B4632))
     let cork = kit.matte(GenzColour(0xB98A5A))
     let rim: Float = 0.14
-    room.addChild(kit.block(b.x0, 0, b.z0, b.x1 - b.x0, DeskLayout.boardFront - 0.02, b.z1 - b.z0, cork))
+    room.addChild(
+      kit.block(b.x0, 0, b.z0, b.x1 - b.x0, DeskLayout.boardFront - 0.02, b.z1 - b.z0, cork))
     room.addChild(kit.block(b.x0 - rim, 0, b.z0 - rim, b.x1 - b.x0 + rim * 2, 0.24, rim, frame))
     room.addChild(kit.block(b.x0 - rim, 0, b.z1, b.x1 - b.x0 + rim * 2, 0.24, rim, frame))
     room.addChild(kit.block(b.x0 - rim, 0, b.z0, rim, 0.24, b.z1 - b.z0, frame))
@@ -319,17 +324,20 @@ final class DeskStage: TabStage {
     // A pencil beside it.
     let pencil = Entity()
     pencil.position = [-spec.width / 2 + 0.2, 0.06, spec.depth / 2 + 0.25]
-    pencil.orientation = simd_quatf(angle: .pi / 2 + 0.15, axis: [0, 1, 0])
+    pencil.orientation =
+      simd_quatf(angle: .pi / 2 + 0.15, axis: [0, 1, 0])
       * simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
     pencil.addChild(
-      kit.part(kit.prism(sides: 6, radius: 0.05, top: 0.05, height: 1.1), kit.matte(GenzColour(0xFFD166))))
+      kit.part(
+        kit.prism(sides: 6, radius: 0.05, top: 0.05, height: 1.1), kit.matte(GenzColour(0xFFD166))))
     pencil.addChild(
       kit.part(
         kit.prism(sides: 6, radius: 0.05, top: 0.05, height: 0.12), kit.matte(GenzColour(0xF28A8A)),
         at: [0, -0.12, 0]))
     pencil.addChild(
       kit.part(
-        kit.prism(sides: 6, radius: 0.05, top: 0.005, height: 0.18), kit.matte(GenzColour(0xE8C9A0)),
+        kit.prism(sides: 6, radius: 0.05, top: 0.005, height: 0.18),
+        kit.matte(GenzColour(0xE8C9A0)),
         at: [0, 1.1, 0]))
     holder.addChild(pencil)
     room.addChild(holder)
@@ -341,7 +349,8 @@ final class DeskStage: TabStage {
     let lamp = DeskLayout.lamp
     let metal = kit.matte(GenzColour(0x3E5A52))
     let base = lamp.base.scene
-    room.addChild(kit.part(kit.prism(sides: 10, radius: 0.36, top: 0.32, height: 0.1), metal, at: base))
+    room.addChild(
+      kit.part(kit.prism(sides: 10, radius: 0.36, top: 0.32, height: 0.1), metal, at: base))
     let elbow = GenzRoomPoint(lamp.base.x + 0.25, lamp.base.y + 0.25, lamp.shade.z + 0.7).scene
     let shadeTop = lamp.shade.scene + [0, 0.45, 0]
     for (from, to) in [(base + [0, 0.1, 0], elbow), (elbow, shadeTop)] {
@@ -352,7 +361,8 @@ final class DeskStage: TabStage {
           turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(to - from))))
     }
     room.addChild(
-      kit.part(kit.prism(sides: 8, radius: 0.42, top: 0.12, height: 0.45), metal, at: lamp.shade.scene))
+      kit.part(
+        kit.prism(sides: 8, radius: 0.42, top: 0.12, height: 0.45), metal, at: lamp.shade.scene))
     room.addChild(
       kit.part(
         kit.prism(sides: 8, radius: 0.38, top: 0.38, height: 0.01), kit.glow(Self.ledColour),
@@ -369,7 +379,8 @@ final class DeskStage: TabStage {
     let cup = GenzRoomPoint(4.95, 0.85, top)
     room.addChild(
       kit.part(
-        kit.prism(sides: 10, radius: 0.26, top: 0.29, height: 0.55), kit.matte(GenzColour(0x4F6B8A)),
+        kit.prism(sides: 10, radius: 0.26, top: 0.29, height: 0.55),
+        kit.matte(GenzColour(0x4F6B8A)),
         at: cup.scene))
     for (index, colour) in [UInt32(0xE5503A), 0xFFD166, 0x7FB2FF].enumerated() {
       let lean = Float(index - 1) * 0.22
@@ -382,12 +393,17 @@ final class DeskStage: TabStage {
     // A mug at the front right.
     let mug = GenzRoomPoint(5.2, 3.05, top).scene
     room.addChild(
-      kit.part(kit.prism(sides: 12, radius: 0.22, top: 0.22, height: 0.42), kit.matte(GenzColour(0xF0DCC0)), at: mug))
+      kit.part(
+        kit.prism(sides: 12, radius: 0.22, top: 0.22, height: 0.42),
+        kit.matte(GenzColour(0xF0DCC0)), at: mug))
     room.addChild(
       kit.part(
-        kit.prism(sides: 12, radius: 0.19, top: 0.19, height: 0.01), kit.matte(GenzColour(0x5A3A2C)),
+        kit.prism(sides: 12, radius: 0.19, top: 0.19, height: 0.01),
+        kit.matte(GenzColour(0x5A3A2C)),
         at: mug + [0, 0.39, 0]))
-    room.addChild(kit.part(kit.box([0.08, 0.22, 0.16]), kit.matte(GenzColour(0xF0DCC0)), at: mug + [0.26, 0.22, 0]))
+    room.addChild(
+      kit.part(
+        kit.box([0.08, 0.22, 0.16]), kit.matte(GenzColour(0xF0DCC0)), at: mug + [0.26, 0.22, 0]))
     // Sticky notes, books and a small succulent.
     room.addChild(kit.block(1.0, 3.0, top, 0.5, 0.45, 0.12, kit.matte(GenzColour(0xFFD166))))
     let books = kit.build(GenzPiece(.bookStack))
@@ -401,12 +417,15 @@ final class DeskStage: TabStage {
     room.addChild(stack)
     let pot = GenzRoomPoint(3.85, 0.75, top).scene
     room.addChild(
-      kit.part(kit.prism(sides: 8, radius: 0.2, top: 0.25, height: 0.3), kit.matte(GenzColour(0xB97A55)), at: pot))
+      kit.part(
+        kit.prism(sides: 8, radius: 0.2, top: 0.25, height: 0.3), kit.matte(GenzColour(0xB97A55)),
+        at: pot))
     for index in 0..<4 {
       let angle = Float(index) * .pi / 2 + 0.3
       room.addChild(
         kit.part(
-          kit.prism(sides: 5, radius: 0.1, top: 0.01, height: 0.34), kit.matte(GenzColour(0x5E8C6A)),
+          kit.prism(sides: 5, radius: 0.1, top: 0.01, height: 0.34),
+          kit.matte(GenzColour(0x5E8C6A)),
           at: pot + [0.06 * cos(angle), 0.26, 0.06 * sin(angle)],
           turn: simd_quatf(angle: 0.35, axis: [sin(angle), 0, -cos(angle)])))
     }
@@ -416,9 +435,11 @@ final class DeskStage: TabStage {
     room.addChild(
       TabLook.bulb(
         Self.lampColour, intensity: 18_000, reach: 7,
-        at: GenzRoomPoint(DeskLayout.lamp.shade.x, DeskLayout.lamp.shade.y, DeskLayout.lamp.shade.z - 0.3)))
+        at: GenzRoomPoint(
+          DeskLayout.lamp.shade.x, DeskLayout.lamp.shade.y, DeskLayout.lamp.shade.z - 0.3)))
     room.addChild(
-      TabLook.bulb(GenzColour(0xFF9A52), intensity: 9_000, reach: 10, at: GenzRoomPoint(3, 5.5, 7.5)))
+      TabLook.bulb(
+        GenzColour(0xFF9A52), intensity: 9_000, reach: 10, at: GenzRoomPoint(3, 5.5, 7.5)))
     room.addChild(
       TabLook.bulb(Self.ledColour, intensity: 5_000, reach: 5, at: GenzRoomPoint(3, 1.2, 9.6)))
   }

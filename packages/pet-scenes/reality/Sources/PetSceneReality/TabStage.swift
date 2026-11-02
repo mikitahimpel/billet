@@ -282,7 +282,9 @@ struct TabSceneView: View {
 private struct TabBackdrop: View {
   var body: some View {
     RadialGradient(
-      colors: [Color(cgColor: GenzColour(0x4A2C26).cgColor), Color(cgColor: GenzColour(0x160D12).cgColor)],
+      colors: [
+        Color(cgColor: GenzColour(0x4A2C26).cgColor), Color(cgColor: GenzColour(0x160D12).cgColor),
+      ],
       center: UnitPoint(x: 0.5, y: 0.42), startRadius: 20, endRadius: 560
     )
     .ignoresSafeArea()

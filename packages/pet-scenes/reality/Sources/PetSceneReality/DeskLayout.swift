@@ -16,8 +16,10 @@ enum DeskLayout {
   static let boardFront: Float = 0.16
 
   /// The blank paper to draw on: its middle on the desk, size across and deep, and its turn.
-  static let paper = (centre: GenzRoomPoint(2.85, 2.25, 2.6), width: Float(2.0), depth: Float(1.45),
-    yaw: Float(0.08))
+  static let paper = (
+    centre: GenzRoomPoint(2.85, 2.25, 2.6), width: Float(2.0), depth: Float(1.45),
+    yaw: Float(0.08)
+  )
   static let lamp = (base: GenzRoomPoint(0.85, 1.0, 2.6), shade: GenzRoomPoint(2.05, 1.85, 4.0))
   /// Where the cat sits when it visits, the way it faces, and its length.
   static let cat = (spot: GenzRoomPoint(4.55, 2.0, 2.6), heading: Float(0.35), length: Float(1.2))

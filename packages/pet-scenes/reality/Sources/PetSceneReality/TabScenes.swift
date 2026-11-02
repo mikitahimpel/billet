@@ -46,7 +46,8 @@ struct DeskSceneView: View {
       .accessibilityLabel(
         state.notes.isEmpty
           ? "A desk with blank paper under an empty board."
-          : "A desk with blank paper under a board of \(state.notes.count) notes.")
+          : "A desk with blank paper under a board of \(state.notes.count) notes."
+      )
       .accessibilityActions {
         Button("Draw a note") { onEvent(.paperTapped) }
         if let latest = state.notes.first {

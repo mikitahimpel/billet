@@ -10,7 +10,9 @@ import RealityKit
 @MainActor
 final class KeeperRig {
   static let folder = "Shopkeepers"
-  static let joints = ["body", "head", "eye_L", "eye_R", "ear_L", "ear_R", "arm_L", "arm_R", "tail"]
+  static let joints = [
+    "body", "head", "eye_L", "eye_R", "ear_L", "ear_R", "arm_L", "arm_R", "tail",
+  ]
 
   let entity: Entity
   private var rest: [String: (entity: Entity, transform: Transform)] = [:]
@@ -86,9 +88,10 @@ enum ShopArt {
   /// The street outside the shop window at blue hour: sky, a row of houses with a few lit
   /// windows, a street lamp. Flat shapes in the style bible's night palette.
   static func street(width: Int = 512, height: Int = 336) -> CGImage? {
-    guard let sky = TabLook.gradient(
-      [GenzColour(0x3A5A86), GenzColour(0x162846), GenzColour(0x070C18)], width: width,
-      height: height),
+    guard
+      let sky = TabLook.gradient(
+        [GenzColour(0x3A5A86), GenzColour(0x162846), GenzColour(0x070C18)], width: width,
+        height: height),
       let space = CGColorSpace(name: CGColorSpace.sRGB),
       let context = CGContext(
         data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
@@ -99,7 +102,8 @@ enum ShopArt {
     context.draw(sky, in: CGRect(x: 0, y: 0, width: w, height: h))
     var random = SplitMix(seed: 7)
     // Stars in the top half.
-    context.setFillColor(GenzColour(0xEEF2F7).cgColor.copy(alpha: 0.7) ?? GenzColour(0xEEF2F7).cgColor)
+    context.setFillColor(
+      GenzColour(0xEEF2F7).cgColor.copy(alpha: 0.7) ?? GenzColour(0xEEF2F7).cgColor)
     for _ in 0..<40 {
       let x = CGFloat(random.unit()) * w
       let y = h * 0.6 + CGFloat(random.unit()) * h * 0.4
