@@ -170,7 +170,60 @@ struct HomeView: View {
     )
   }
 
-  private var home: some View {
+  /// The chosen room style when the scene can show it and Home has room for the floating
+  /// controls; `nil` keeps the classic layout.
+  private var roomStyle: RoomStyle? {
+    let style = session.labs.roomStyle
+    guard style != .nooki, !typeSize.isAccessibilitySize, !isRenovating,
+      scene?.roomStyles.contains(style) == true
+    else { return nil }
+    return style
+  }
+
+  @ViewBuilder private var home: some View {
+    if let roomStyle, let scene {
+      styledHome(roomStyle, scene: scene)
+        .overlay { nightOverlay }
+        .overlay(alignment: .top) {
+          if !line.settles { roomStatus }
+        }
+    } else {
+      classicHome
+    }
+  }
+
+  private func styledHome(_ style: RoomStyle, scene: any PetScene) -> some View {
+    let calendar = Calendar.current
+    let today = TreatDay.key(for: .now, calendar: calendar)
+    return StyledHome(
+      style: style,
+      scene: AnyView(
+        scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .id(scene.id)
+          .environment(\.petSceneOnScreen, store.state.screen == .home)
+          .environment(\.petSceneRenovator, session.renovator)
+          .overlay { catReactions.allowsHitTesting(false) }),
+      notes: session.notes,
+      streak: session.streak(today: today, calendar: calendar),
+      treats: ShopCatalog.standard.items(in: .treats).reduce(0) { $0 + session.shop.owned($1) },
+      isFakePartner: session.isFakePartner,
+      onChooseStyle: { session.labs.setRoomStyle($0) },
+      onTreat: { giveTreat(on: today) },
+      onOpenNotes: onOpenNotes,
+      onDraw: { store.send(.canvasOpened) })
+  }
+
+  /// Uses a treat from the closet, or gives today's treat when the closet has none.
+  private func giveTreat(on day: String) {
+    let treat = ShopCatalog.standard.items(in: .treats).first { session.shop.owned($0) > 0 }
+    if let treat {
+      _ = try? session.shop.use(treat, transaction: session.shop.newTransaction())
+    } else {
+      session.giveTreat(on: day)
+    }
+  }
+
+  private var classicHome: some View {
     ZStack {
       LinearGradient(
         stops: [

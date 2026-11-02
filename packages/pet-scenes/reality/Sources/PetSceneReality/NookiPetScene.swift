@@ -11,11 +11,13 @@ public struct NookiPetScene: PetScene {
     "Mochi's proportions are based on \"Chill Cat\" by Shix, CC BY 4.0, adapted into a new model."
 
   private let cache = NookiRoomCache()
+  private let styledRooms = GenzRoomCache()
 
   public init() {}
 
   public let handlesTouches = true
   public let hasShop = true
+  public var roomStyles: [RoomStyle] { RoomStyle.allCases }
 
   public func makeShopPreview(item: ShopItem) -> AnyView? {
     AnyView(NookiShopPreview(item: item))
@@ -37,7 +39,9 @@ public struct NookiPetScene: PetScene {
     play: PetPlayState,
     onEvent: @escaping @MainActor (PetSceneEvent) -> Void
   ) -> AnyView {
-    AnyView(NookiView(world: world, play: play, cache: cache, onEvent: onEvent))
+    AnyView(
+      NookiStyledRoom(
+        world: world, play: play, cache: cache, rooms: styledRooms, onEvent: onEvent))
   }
 
   public func posePNG(_ pose: PetPose) -> Data? {
