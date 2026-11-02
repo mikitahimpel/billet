@@ -84,9 +84,7 @@ describe("report source", () => {
     expect(String(url)).toBe(
       "https://api.cloudflare.com/client/v4/accounts/acct/d1/database/db-1/query",
     );
-    expect((init?.headers as Record<string, string>)["authorization"]).toBe(
-      "Bearer token-value-123",
-    );
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer token-value-123");
   });
 
   it("pages through more rows than one page holds", async () => {
