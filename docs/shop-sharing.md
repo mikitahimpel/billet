@@ -1,7 +1,8 @@
 # Sharing the shop between partners
 
 Design only. Today the shop state (`ShopState` in `Pet/Shop`) lives on one phone, in
-`UserDefaults`. Nothing here is built, and the backend deploy is on hold.
+`UserDefaults`. Nothing here is built, and the backend deploy is on hold. Field-level contract,
+replies and the room's tables are in [play-frames.md](play-frames.md).
 
 ## What is shared
 
