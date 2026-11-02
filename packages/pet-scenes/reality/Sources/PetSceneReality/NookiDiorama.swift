@@ -38,7 +38,7 @@ final class NookiDiorama {
   private var lookGoal: Float = 0
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
-  private(set) var isOnScreen = true
+  private(set) var isOnScreen = false
   private var viewsShowing = Set<UUID>()
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
@@ -147,9 +147,14 @@ final class NookiDiorama {
   /// a cancelled load would leave a room with no lights or models and nothing to resume it. An
   /// asset that fails to load leaves a gap in the room and is logged. `onReady` follows once the
   /// room has rendered.
-  func startLoading() {
+  func startLoading(priority: TaskPriority? = nil) {
     guard loading == nil else { return }
-    loading = Task { await load() }
+    loading = Task(priority: priority) { await load() }
+  }
+
+  /// Returns once the room is built.
+  func untilLoaded() async {
+    await loading?.value
   }
 
   private func load() async {
@@ -904,7 +909,7 @@ final class NookiDiorama {
     if let ambientReceiver { body(ambientReceiver) } else { onAmbient = body }
   }
 
-  private static func ambientEnvironment() async -> EnvironmentResource? {
+  static func ambientEnvironment() async -> EnvironmentResource? {
     guard let image = ambientGradient() else { return nil }
     return try? await EnvironmentResource(equirectangular: image)
   }

@@ -75,6 +75,10 @@ public protocol PetScene {
 
   /// PNG data for a pose, or `nil` when the scene has none.
   func posePNG(_ pose: PetPose) -> Data?
+
+  /// A view the host keeps out of sight, from after the app's first frame while another scene
+  /// is showing. A scene that is slow to open does that work here, at low priority.
+  func makePreparationView() -> AnyView?
 }
 
 extension PetScene {
@@ -91,6 +95,7 @@ extension PetScene {
   ) -> AnyView {
     makeView(world: world, onEvent: onEvent)
   }
+  public func makePreparationView() -> AnyView? { nil }
 }
 
 extension PetMachine.Event {
