@@ -82,6 +82,7 @@ import simd
   @MainActor @Test func tiltStopsOffScreenAndUnderReduceMotion() async {
     let source = CountingTiltSource()
     let diorama = NookiDiorama(tiltSource: source)
+    diorama.setOnScreen(true)
     diorama.startLoading()
     await diorama.loading?.value
     #expect(source.isRunning)

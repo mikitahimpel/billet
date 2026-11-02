@@ -38,7 +38,8 @@ final class NookiDiorama {
   private var lookGoal: Float = 0
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
-  private(set) var isOnScreen = true
+  private(set) var isOnScreen = false
+  private(set) var hasRehearsed = false
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
   private(set) var mochiLoading: Task<Void, Never>?
@@ -93,6 +94,7 @@ final class NookiDiorama {
   private static let orbitPerPoint: Float = 0.006
   private static let idleStep = 1.0 / 30
   private static let framesBeforeReady = 4
+  private static let rehearsalFrames = 8
   private static let lampIntensity: Float = 2600
   private static let lanternIntensity: Float = 500
 
@@ -146,9 +148,14 @@ final class NookiDiorama {
   /// a cancelled load would leave a room with no lights or models and nothing to resume it. An
   /// asset that fails to load leaves a gap in the room and is logged. `onReady` follows once the
   /// room has rendered.
-  func startLoading() {
+  func startLoading(priority: TaskPriority? = nil) {
     guard loading == nil else { return }
-    loading = Task { await load() }
+    loading = Task(priority: priority) { await load() }
+  }
+
+  /// Returns once the room is built.
+  func untilLoaded() async {
+    await loading?.value
   }
 
   private func load() async {
@@ -182,6 +189,25 @@ final class NookiDiorama {
     isLoaded = true
     NookiTrace.mark("room usable")
     updateTiltFollowing()
+  }
+
+  /// Shows the room in `content` for a few frames with nothing moving, then calls `done`.
+  func startRehearsal(from content: RealityViewCameraContent, done: @escaping () -> Void) {
+    room.isEnabled = true
+    var frames = Self.rehearsalFrames
+    subscription?.cancel()
+    subscription = content.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
+      MainActor.assumeIsolated {
+        frames -= 1
+        guard frames == 0, let self else { return }
+        self.subscription?.cancel()
+        self.subscription = nil
+        self.room.isEnabled = self.isOnScreen
+        self.hasRehearsed = true
+        NookiTrace.mark("room rehearsed")
+        done()
+      }
+    }
   }
 
   /// How many entities the room holds so far.
@@ -244,6 +270,7 @@ final class NookiDiorama {
   /// the updates, and its own settling before `onReady`.
   func startUpdates(from content: RealityViewCameraContent) {
     subscription?.cancel()
+    hasRehearsed = true
     settlingFrames = Self.framesBeforeReady
     subscription = content.subscribe(
       to: SceneEvents.Update.self, on: nil, componentType: nil

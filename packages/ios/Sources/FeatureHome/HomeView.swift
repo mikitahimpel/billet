@@ -14,6 +14,10 @@ import WidgetBridge
 /// The main screen: the chosen pet scene, and the way into the canvas.
 struct HomeView: View {
   private static let drawButton = "draw"
+  /// Long enough for launch to have settled, so that preparing scenes cannot delay it.
+  private static let prepareDelay = Duration.seconds(1)
+  /// Above zero, because SwiftUI stops drawing a view that is fully transparent.
+  private static let hiddenOpacity = 0.01
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Namespace private var zoom
@@ -24,10 +28,13 @@ struct HomeView: View {
   @State private var petBounce = false
   @State private var showsStatus = true
   @State private var labsOpen = false
+  @State private var isPreparingScenes = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
   let scene: (any PetScene)?
+  /// The scenes not on show, which may prepare out of sight after launch.
+  let otherScenes: [any PetScene]
   let onChangeCode: () -> Void
   let onOpenNotes: () -> Void
 
@@ -52,6 +59,21 @@ struct HomeView: View {
 
   var body: some View {
     home
+      .background {
+        if isPreparingScenes {
+          ForEach(otherScenes, id: \.id) { scene in
+            scene.makePreparationView()
+          }
+          .frame(width: 1, height: 1)
+          .opacity(Self.hiddenOpacity)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+        }
+      }
+      .task {
+        try? await Task.sleep(for: Self.prepareDelay)
+        isPreparingScenes = true
+      }
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(HomeShop(shop: session.shop, renovator: session.renovator, scene: scene))

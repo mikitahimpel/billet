@@ -21,6 +21,10 @@ public struct NookiPetScene: PetScene {
     AnyView(NookiShopPreview(item: item))
   }
 
+  public func makePreparationView() -> AnyView? {
+    AnyView(NookiRehearsal(cache: cache))
+  }
+
   public func makeView(
     world: PetWorld,
     onEvent: @escaping @MainActor (PetSceneEvent) -> Void

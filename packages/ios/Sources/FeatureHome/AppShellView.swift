@@ -27,6 +27,10 @@ struct AppShellView: View {
   let onChangeCode: () -> Void
   let onLogOut: () async -> String?
 
+  private var selectedScene: (any PetScene)? {
+    scenes.first { $0.id == selectedSceneID } ?? scenes.first
+  }
+
   @Environment(\.scenePhase) private var scenePhase
   @State private var destination = Destination.home
 
@@ -68,7 +72,8 @@ struct AppShellView: View {
         HomeView(
           session: session,
           widgetFeatures: widgetFeatures,
-          scene: scenes.first { $0.id == selectedSceneID } ?? scenes.first,
+          scene: selectedScene,
+          otherScenes: scenes.filter { $0.id != selectedScene?.id },
           onChangeCode: onChangeCode,
           onOpenNotes: { destination = .notes }
         )
