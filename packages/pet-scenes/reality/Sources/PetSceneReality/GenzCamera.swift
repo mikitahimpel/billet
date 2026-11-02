@@ -46,6 +46,14 @@ struct GenzCamera: Equatable {
   }
 
   var target: SIMD3<Float> { home.target }
+
+  /// The camera at its home place, keeping only how far the view's shape stands it back: what
+  /// the window view's planes are laid out against.
+  var atHome: GenzCamera {
+    var camera = GenzCamera(home: home)
+    camera.standBack = standBack
+    return camera
+  }
   var fieldOfView: Float { home.fieldOfView }
 
   var position: SIMD3<Float> {
