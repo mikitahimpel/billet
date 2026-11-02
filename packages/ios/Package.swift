@@ -45,7 +45,7 @@ let libraryTargets: [Target] = library.map {
 }
 
 let featureTargets: [Target] = features.map { feature in
-  let extra = feature == "FeatureSettings" ? ["PetScene", "WidgetBridge"] : []
+  let extra = feature == "FeatureSettings" ? ["Pet", "PetScene", "WidgetBridge"] : []
   return .target(
     name: feature,
     dependencies: (featureDependencies + extra).map { .init(stringLiteral: $0) })

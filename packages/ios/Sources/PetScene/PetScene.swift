@@ -68,6 +68,10 @@ public protocol PetScene {
   /// True when the scene draws what the shop puts in the room and previews its items.
   var hasShop: Bool { get }
 
+  /// The room styles the scene can show, chosen through ``EnvironmentValues/petSceneRoomStyle``.
+  /// Empty for a scene with one look.
+  var roomStyles: [RoomStyle] { get }
+
   /// A live 3D preview of `item` that turns slowly, or `nil` when the scene has none. The host
   /// keeps one preview view alive and hands it a new item, so the view must swap models rather
   /// than rebuild.
@@ -86,6 +90,7 @@ extension PetScene {
   public var noteWall: PetSceneNoteWall? { nil }
   public var handlesTouches: Bool { false }
   public var hasShop: Bool { false }
+  public var roomStyles: [RoomStyle] { [] }
   public func makeShopPreview(item: ShopItem) -> AnyView? { nil }
 
   public func makeView(

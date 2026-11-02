@@ -148,6 +148,9 @@ public struct SettingsView: View {
   private func labSection(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
       SettingsHeading("Labs")
+      if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
+        RoomStylePicker(model: model)
+      }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         VStack(alignment: .leading, spacing: Spacing.small) {
           Text(group.title)

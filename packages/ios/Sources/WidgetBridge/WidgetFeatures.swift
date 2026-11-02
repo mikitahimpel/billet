@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Persistence
+import Pet
 
 /// Something the owner can switch on or off: a widget feature or a lab experiment. The raw value is
 /// the key it is stored under, so the two kinds share one file without clashing.
@@ -75,6 +76,17 @@ public struct WidgetFeaturesStore: Sendable {
   public func save(_ features: WidgetFeatures) throws(PersistenceError) {
     try storage.writeJSON(features, named: Self.fileName)
   }
+
+  public static let roomStyleFileName = "room-style.json"
+
+  /// The saved room style, or the standard one when nothing readable is saved.
+  public func loadRoomStyle() -> RoomStyle {
+    (try? storage.readJSON(RoomStyle.self, named: Self.roomStyleFileName)) ?? .standard
+  }
+
+  public func saveRoomStyle(_ style: RoomStyle) throws(PersistenceError) {
+    try storage.writeJSON(style, named: Self.roomStyleFileName)
+  }
 }
 
 /// The flags the settings screen edits, widget features and lab experiments alike. Each change is
@@ -83,6 +95,8 @@ public struct WidgetFeaturesStore: Sendable {
 @Observable
 public final class WidgetFeaturesModel {
   public private(set) var features: WidgetFeatures
+  /// How a scene with more than one room dresses it. Kept beside the flags, in its own file.
+  public private(set) var roomStyle: RoomStyle
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -91,6 +105,13 @@ public final class WidgetFeaturesModel {
     self.store = store
     self.onChange = onChange
     features = store?.load() ?? WidgetFeatures()
+    roomStyle = store?.loadRoomStyle() ?? .standard
+  }
+
+  public func setRoomStyle(_ style: RoomStyle) {
+    guard roomStyle != style else { return }
+    roomStyle = style
+    try? store?.saveRoomStyle(style)
   }
 
   public func isOn(_ feature: WidgetFeature) -> Bool { features.isOn(feature) }
