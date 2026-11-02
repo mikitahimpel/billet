@@ -24,7 +24,7 @@ func referenceDrawing() -> [Stroke] {
 @Suite struct InkEncodingTests {
   @Test func referenceDrawingFitsTheBudget() throws {
     let compact = try InkEncoder.encodeWithinBudget(referenceDrawing())
-    let size = InkEncoder.byteCount(compact)
+    let size = try InkEncoder.byteCount(compact)
     #expect(size < 3072)
     #expect(compact.strokes.count == 5)
   }
@@ -33,7 +33,62 @@ func referenceDrawing() -> [Stroke] {
     let drawing = referenceDrawing()
     let fine = try InkEncoder.encode(drawing, parameters: .init(tolerance: 0.0005))
     let coarse = try InkEncoder.encode(drawing, parameters: .init(tolerance: 0.01))
-    #expect(InkEncoder.byteCount(coarse) < InkEncoder.byteCount(fine))
+    #expect(try InkEncoder.byteCount(coarse) < InkEncoder.byteCount(fine))
+  }
+
+  @Test func referenceDrawingFitsTheBudgetAtTheDefaultTolerance() throws {
+    // Without `encodeWithinBudget` loosening anything: a regression in how well the default
+    // simplification does would show here.
+    let compact = try InkEncoder.encode(referenceDrawing())
+    #expect(try InkEncoder.byteCount(compact) <= InkEncoder.Parameters().budget)
+  }
+
+  @Test func budgetSearchKeepsTheFinestToleranceThatFits() throws {
+    let drawing = referenceDrawing()
+    let budget = try InkEncoder.byteCount(
+      InkEncoder.encode(drawing, parameters: .init(tolerance: 0.004)))
+    let fitted = try InkEncoder.encodeWithinBudget(drawing, parameters: .init(budget: budget))
+    #expect(try InkEncoder.byteCount(fitted) <= budget)
+    let finer = try InkEncoder.encode(drawing, parameters: .init(tolerance: 0.002))
+    #expect(try InkEncoder.byteCount(finer) > budget)
+  }
+
+  @Test(arguments: [0.0005, 0.002, 0.01, 0.05])
+  func simplifiedStrokesStayWithinTheToleranceOfTheOriginal(_ tolerance: Double) {
+    for stroke in referenceDrawing() {
+      let kept = InkEncoder.simplify(stroke.points, tolerance: tolerance)
+      #expect(kept.first == stroke.points.first && kept.last == stroke.points.last)
+      for point in stroke.points {
+        #expect(distance(from: point, toPolyline: kept) <= tolerance + 1e-12)
+      }
+    }
+  }
+
+  @Test func quantisingAddsAtMostHalfAStepToTheSimplificationError() throws {
+    let parameters = InkEncoder.Parameters(tolerance: 0.01)
+    let drawing = referenceDrawing()
+    let decoded = try InkDecoder.decode(
+      InkEncoder.encode(drawing, parameters: parameters), resolution: parameters.resolution)
+    let bound = parameters.tolerance + 1 / Double(parameters.resolution)
+    for (original, restored) in zip(drawing, decoded) {
+      for point in original.points {
+        #expect(distance(from: point, toPolyline: restored.points) <= bound)
+      }
+    }
+  }
+
+  private func distance(from point: Point, toPolyline line: [Point]) -> Double {
+    guard line.count > 1 else {
+      return line.first.map { hypot($0.x - point.x, $0.y - point.y) } ?? .infinity
+    }
+    return zip(line, line.dropFirst()).map { a, b in
+      let (dx, dy) = (b.x - a.x, b.y - a.y)
+      let lengthSquared = dx * dx + dy * dy
+      let t =
+        lengthSquared == 0
+        ? 0 : max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared))
+      return hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy))
+    }.min() ?? .infinity
   }
 
   @Test func overBudgetThrowsWhenNothingFits() {
@@ -84,6 +139,75 @@ func referenceDrawing() -> [Stroke] {
     #expect(throws: InkError.oddPointCount(strokeIndex: 0)) { try InkDecoder.decode(bad) }
   }
 
+  private func stroke(
+    color: String = "#000000", width: Double = 0.01, _ points: [Point]
+  ) -> [Stroke] {
+    [Stroke(color: color, width: width, points: points)]
+  }
+
+  @Test(arguments: [Double.nan, .infinity, -.infinity])
+  func nonFiniteCoordinatesAreRejected(_ value: Double) {
+    #expect(throws: InkError.nonFinite(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke([Point(x: value, y: 0.5)]))
+    }
+    #expect(throws: InkError.nonFinite(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke([Point(x: 0.5, y: value)]))
+    }
+  }
+
+  @Test(arguments: [Double.nan, .infinity])
+  func aNonFiniteWidthIsRejected(_ width: Double) {
+    #expect(throws: InkError.nonFinite(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke(width: width, [Point(x: 0.5, y: 0.5)]))
+    }
+  }
+
+  @Test func hugeOrNegativeValuesAreRejectedNotTrapped() {
+    #expect(throws: InkError.outOfRange(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke([Point(x: 1e300, y: 0.5)]))
+    }
+    #expect(throws: InkError.outOfRange(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke(width: 1e300, [Point(x: 0.5, y: 0.5)]))
+    }
+    #expect(throws: InkError.outOfRange(strokeIndex: 0)) {
+      try InkEncoder.encode(stroke(width: -0.01, [Point(x: 0.5, y: 0.5)]))
+    }
+  }
+
+  @Test func theBadStrokeIsNamedByItsIndex() {
+    let strokes = stroke([Point(x: 0.1, y: 0.1)]) + stroke([Point(x: .nan, y: 0.1)])
+    #expect(throws: InkError.nonFinite(strokeIndex: 1)) { try InkEncoder.encode(strokes) }
+  }
+
+  @Test func theEdgesOfTheAllowedRangeStillEncode() throws {
+    let edge = stroke(width: 0, [Point(x: -InkEncoder.limit, y: InkEncoder.limit)])
+    #expect(try InkEncoder.encode(edge).strokes.count == 1)
+  }
+
+  @Test(arguments: ["red", "#12345", "#1234567", "123456", "#GGGGGG", "#+12345", "# 12345", ""])
+  func theEncoderRejectsColoursThatAreNotRRGGBB(_ color: String) {
+    #expect(throws: InkError.invalidColor(color)) {
+      try InkEncoder.encode(stroke(color: color, [Point(x: 0.5, y: 0.5)]))
+    }
+  }
+
+  @Test(arguments: ["#000000", "#abcdef", "#ABCDEF", "#0aF9b1"])
+  func theEncoderAcceptsEitherCaseOfHexDigits(_ color: String) throws {
+    let compact = try InkEncoder.encode(stroke(color: color, [Point(x: 0.5, y: 0.5)]))
+    #expect(compact.strokes.first?.color == color)
+  }
+
+  @Test(arguments: ["red", "#12345", "#+12345", ""])
+  func theDecoderRejectsColoursThatAreNotRRGGBB(_ color: String) {
+    let bad = CompactStrokes(strokes: [CompactStroke(color: color, width: 1, points: [1, 2])])
+    #expect(throws: InkError.invalidColor(color)) { try InkDecoder.decode(bad) }
+  }
+
+  @Test func byteCountReportsASizeForAnyEncodableStrokes() throws {
+    let compact = try InkEncoder.encode(referenceDrawing())
+    #expect(try InkEncoder.byteCount(compact) > 0)
+  }
+
   @Test func invalidParametersAreRejected() {
     #expect(throws: InkError.invalidParameters) {
       try InkEncoder.encode([], parameters: .init(resolution: 0))
@@ -126,17 +250,18 @@ func referenceDrawing() -> [Stroke] {
 }
 
 @Suite struct StrokeRendererTests {
-  func pixels(_ strokes: [Stroke]) throws -> (alpha: (Int, Int) -> UInt8, red: (Int, Int) -> UInt8)
-  {
-    let side = 100
+  func pixels(_ strokes: [Stroke], width side: Int = 100, height: Int? = nil) throws -> (
+    alpha: (Int, Int) -> UInt8, red: (Int, Int) -> UInt8
+  ) {
+    let height = height ?? side
     let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
     let context = try #require(
       CGContext(
-        data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+        data: nil, width: side, height: height, bitsPerComponent: 8, bytesPerRow: side * 4,
         space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-    try StrokeRenderer.draw(strokes, in: context, size: CGSize(width: side, height: side))
+    try StrokeRenderer.draw(strokes, in: context, size: CGSize(width: side, height: height))
     let data = try #require(context.data).assumingMemoryBound(to: UInt8.self)
-    let buffer = Array(UnsafeBufferPointer(start: data, count: side * side * 4))
+    let buffer = Array(UnsafeBufferPointer(start: data, count: side * height * 4))
     return (
       { x, y in buffer[(y * side + x) * 4 + 3] },
       { x, y in buffer[(y * side + x) * 4] }
@@ -150,6 +275,27 @@ func referenceDrawing() -> [Stroke] {
     #expect(result.alpha(50, 25) == 255)
     #expect(result.red(50, 25) == 255)
     #expect(result.alpha(50, 75) == 0)
+  }
+
+  @Test func scalesToAnotherSquareSize() throws {
+    let line = Stroke(
+      color: "#FF0000", width: 0.1, points: [Point(x: 0.1, y: 0.25), Point(x: 0.9, y: 0.25)])
+    let result = try pixels([line], width: 200)
+    #expect(result.alpha(100, 50) == 255)
+    #expect(result.alpha(100, 150) == 0)
+    // A tenth of the width is 20 pixels thick here, so 10 pixels either side of the line.
+    #expect(result.alpha(100, 42) == 255)
+    #expect(result.alpha(100, 62) == 0)
+  }
+
+  @Test func bothAxesScaleByTheWidthOnANonSquareCanvas() throws {
+    // The contract measures y in widths too, so on 200 x 100 a y of 0.25 is pixel 50 and a y of
+    // 0.5 is the bottom edge.
+    let dot = Stroke(color: "#FF0000", width: 0.1, points: [Point(x: 0.25, y: 0.25)])
+    let result = try pixels([dot], width: 200, height: 100)
+    #expect(result.alpha(50, 50) == 255)
+    #expect(result.alpha(150, 50) == 0)
+    #expect(result.alpha(50, 5) == 0)
   }
 
   @Test func singlePointDrawsADot() throws {
