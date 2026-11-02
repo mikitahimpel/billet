@@ -4,7 +4,7 @@ import simd
 /// Mochi's game with the yarn, as plain numbers: notice, watch, crouch, wiggle, chase, pounce, sit
 /// on it proudly, then go back to bed. Nothing is counted and nothing is won.
 ///
-/// Mochi's head is part of its body, so watching the ball turns the whole cat.
+/// No clip turns the head alone, so watching the ball turns the whole cat.
 struct NookiYarnPlay: Equatable {
   enum Phase: Equatable {
     case resting
@@ -32,15 +32,19 @@ struct NookiYarnPlay: Equatable {
   private static let crouchLength = 0.5
   private static let wiggleLength = 0.8
   private static let chaseAtMost = 6.0
-  private static let pounceLength = 0.45
+  private static let pounceLength =
+    NookiClip.pounce.trim.upperBound - NookiClip.pounce.trim.lowerBound
+  /// The part of the pounce clip spent in the air, as shares of its length.
+  private static let pounceFlight: ClosedRange<Double> = 0.3...0.65
   private static let proudLength = 2.6
-  private static let chaseSpeed: Float = 0.55
-  private static let returnSpeed: Float = 0.8
+  private static let chaseSpeed: Float = 0.3
+  private static let returnSpeed: Float = 0.35
   private static let pounceReach: Float = 0.26
-  private static let wiggleSwing: Float = 0.16
   private static let hopsPerSecond = 2.6
   private static let bedRadius: Float = 0.2
   private static let turnRate: Float = 9
+  /// The way to face to show the viewer a proud cat, along the floor.
+  private static let towardsViewer = SIMD2<Float>(0.6, 0.8)
 
   let bed: SIMD3<Float>
   let floor: Float
@@ -98,10 +102,10 @@ struct NookiYarnPlay: Equatable {
         enter(.returning)
       }
     case .pouncing:
-      let share = Float(min(elapsed / Self.pounceLength, 1))
-      position = mix(pounceFrom, ball.position, t: share)
+      position = mix(pounceFrom, ball.position, t: pounceTravel)
       if elapsed >= Self.pounceLength { enter(.proud) }
     case .proud:
+      turn(towards: position + Self.towardsViewer, delta: delta)
       if elapsed >= Self.proudLength { enter(.returning) }
     case .returning:
       let home = SIMD2(bed.x, bed.z)
@@ -119,33 +123,37 @@ struct NookiYarnPlay: Equatable {
   var pose: (frame: NookiFrame, spot: SIMD3<Float>) {
     var frame = NookiFrame(wake: 1, eyesOpen: true, heading: heading)
     var height = Self.groundHeight(position, bed: bed, floor: floor)
-    let bounce = abs(sin(elapsed * Self.hopsPerSecond * .pi))
     switch phase {
     case .resting:
       frame = NookiFrame(heading: heading)
-    case .watching:
-      frame.mouth = 0.15
-    case .crouching:
-      frame.stretch = -Float(min(elapsed / Self.crouchLength, 1))
-    case .wiggling:
-      frame.stretch = -1
-      frame.heading += Self.wiggleSwing * Float(sin(elapsed * 22))
+    case .watching, .crouching, .wiggling:
+      break
     case .chasing, .returning:
-      if !stillsOnly {
+      if !stillsOnly, !NookiClip.walksWithRig {
+        let bounce = abs(sin(elapsed * Self.hopsPerSecond * .pi))
         frame.stepHeight = Float(bounce)
         frame.stretch = Float(bounce) * 2 - 1
       }
     case .pouncing:
-      let share = min(elapsed / Self.pounceLength, 1)
-      frame.stepHeight = NookiChoreography.arch(share) * 1.6
-      frame.stretch = 1 - 2 * Float(share)
-      height += Self.ballHeight * Float(share)
+      height += Self.ballHeight * pounceTravel
     case .proud:
-      frame.mouth = 0.5
-      frame.stretch = 0.5
       height += Self.ballHeight
     }
     return (frame, SIMD3(position.x, height, position.y))
+  }
+
+  /// How fast Mochi is travelling, in metres a second, for pacing its walk.
+  var travelSpeed: Float {
+    phase == .returning ? Self.returnSpeed : Self.chaseSpeed
+  }
+
+  private var pounceTravel: Float {
+    let share = elapsed / Self.pounceLength
+    let flown =
+      (share - Self.pounceFlight.lowerBound)
+      / (Self.pounceFlight.upperBound - Self.pounceFlight.lowerBound)
+    let t = Float(min(max(flown, 0), 1))
+    return t * t * (3 - 2 * t)
   }
 
   private mutating func enter(_ next: Phase) {

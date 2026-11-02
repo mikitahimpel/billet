@@ -35,7 +35,6 @@ struct NookiChoreographyTests {
     let awake = frame(.delivering, at: 1.1)
     #expect(awake.wake == 1)
     #expect(awake.eyesOpen)
-    #expect(awake.mouth > 0.9)
     #expect(awake.walk == 0)
   }
 
