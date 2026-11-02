@@ -18,6 +18,7 @@ final class DeskStage: TabStage {
   /// Whether a measuring run has been told this scene is drawing since it last came on screen.
   private var isAnnounced = false
   let screen = TabScreen()
+  let deskScreen = DeskScreen()
   var onEvent: ((DeskSceneEvent) -> Void)?
 
   private let kit: GenzKit
@@ -41,6 +42,11 @@ final class DeskStage: TabStage {
   private var lifts: [UUID: Double] = [:]
   private var holders: [UUID: Entity] = [:]
   private var beads: [GenzRoomPoint] = []
+  /// The pencil lying on the paper, which fidgets now and then as if asking to be picked up.
+  private let pencil = Entity()
+  private var pencilRest = Transform()
+  private var nextWiggle = 1.4
+  private var paperGlow: Int?
 
   private let catHolder = Entity()
   /// The cat's soft shadow, there only while the cat is.
@@ -157,6 +163,7 @@ final class DeskStage: TabStage {
     }
     lighting.step(delta)
     if view.step(Float(delta)) { updateGlows() }
+    stepPaper()
     for (id, start) in lifts {
       let age = clock - start
       let lift = age < Self.liftLength ? Float(sin(age / Self.liftLength * .pi)) : 0
@@ -195,6 +202,30 @@ final class DeskStage: TabStage {
     }
   }
 
+  /// The paper breathes a soft glow, and the pencil on it rolls and lifts a little now and then.
+  private func stepPaper() {
+    guard !reduceMotion else { return }
+    if let paperGlow, paperGlow < screen.glows.count {
+      let breath = 0.5 - 0.5 * cos(clock * 2 * .pi / 2.6)
+      screen.glows[paperGlow].strength = (0.2 + 0.22 * breath) * lighting.haloScale
+    }
+    let age = clock - nextWiggle
+    if age > Self.wiggleLength {
+      nextWiggle = clock + 2.6 + Double(abs(sin(clock * 7.3))) * 1.6
+      pencil.transform = pencilRest
+    } else if age >= 0 {
+      let share = Float(age / Self.wiggleLength)
+      let envelope = sin(share * .pi)
+      var posed = pencilRest
+      posed.translation.y += 0.07 * envelope
+      posed.rotation =
+        simd_quatf(angle: 0.12 * envelope * sin(share * .pi * 6), axis: [0, 1, 0]) * posed.rotation
+      pencil.transform = posed
+    }
+  }
+
+  private static let wiggleLength = 0.7
+
   private func petCat() {
     guard let rig else { return }
     visit.stayAWhile()
@@ -213,12 +244,16 @@ final class DeskStage: TabStage {
           strength: 0.5 * halos))
     }
     let paper = DeskLayout.paper.centre.scene
+    paperGlow = nil
     if let centre = view.project(paper) {
+      paperGlow = glows.count
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(3.4, at: paper),
-          colour: lighting.tint(GenzColour(0xFF8A3D)), strength: 0.16 * halos))
+          centre: centre, radius: view.reach(2.6, at: paper),
+          colour: lighting.tint(GenzColour(0xFFD9A0)), strength: 0.3 * halos))
     }
+    let corners = DeskLayout.paperCorners.compactMap { view.project($0.scene) }
+    deskScreen.paper = corners.count == 4 ? corners : []
     for bead in beads {
       let point = bead.scene
       guard let centre = view.project(point) else { continue }
@@ -296,6 +331,13 @@ final class DeskStage: TabStage {
     }
     room.addChild(
       kit.block(desk.x0 + 1.7, desk.y0 + 0.1, top - 0.5, desk.x1 - desk.x0 - 2.0, 0.08, 0.34, dark))
+    // Anywhere on the desk top means drawing, so the first tap never misses the paper.
+    let surface = Entity()
+    surface.name = Self.paperName
+    surface.position = GenzRoomPoint((desk.x0 + desk.x1) / 2, (desk.y0 + desk.y1) / 2, top).scene
+    room.addChild(surface)
+    NookiDiorama.makeTappable(
+      surface, size: [desk.x1 - desk.x0, 0.3, desk.y1 - desk.y0], center: [0, 0.1, 0])
   }
 
   private func buildBoard() {
@@ -352,12 +394,12 @@ final class DeskStage: TabStage {
       kit.part(
         kit.plane(width: spec.width, height: spec.depth), top, at: [0, 0.035, 0],
         turn: simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])))
-    // A pencil beside it.
-    let pencil = Entity()
-    pencil.position = [-spec.width / 2 + 0.2, 0.06, spec.depth / 2 + 0.25]
+    // A pencil lying across the lower right of the page, ready to draw with.
+    pencil.position = [spec.width * 0.08, 0.09, spec.depth * 0.3]
     pencil.orientation =
-      simd_quatf(angle: .pi / 2 + 0.15, axis: [0, 1, 0])
+      simd_quatf(angle: .pi / 2 + 0.55, axis: [0, 1, 0])
       * simd_quatf(angle: .pi / 2, axis: [1, 0, 0])
+    pencilRest = pencil.transform
     pencil.addChild(
       kit.part(
         kit.prism(sides: 6, radius: 0.05, top: 0.05, height: 1.1), kit.matte(GenzColour(0xFFD166))))
@@ -535,6 +577,28 @@ final class DeskStage: TabStage {
     }
     let shown = Set(wanted.map(\.id))
     noteMaterials = noteMaterials.filter { shown.contains($0.key) }
+    deskScreen.isEmpty = wanted.isEmpty
+    if wanted.isEmpty { pinPlaceholder() }
+  }
+
+  /// With no notes yet, a blank card pinned where the first one will go, its edge dashed.
+  private func pinPlaceholder() {
+    let large = DeskLayout.large
+    guard let image = DeskArt.placeholder(), let material = TabLook.picture(image) else { return }
+    let holder = Entity()
+    holder.name = Self.paperName
+    holder.position = GenzRoomPoint(large.centre.x, DeskLayout.boardFront, large.centre.y).scene
+    holder.orientation = simd_quatf(angle: -0.04, axis: [0, 0, 1])
+    holder.addChild(
+      kit.part(kit.box([large.side, large.side, 0.02]), material, at: [0, 0, 0.01]))
+    holder.addChild(
+      kit.part(
+        kit.prism(sides: 8, radius: 0.09, top: 0.08, height: 0.08),
+        kit.matte(GenzColour(DeskLayout.pinColours[0])), at: [0, large.side / 2 - 0.14, 0.03],
+        turn: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
+    board.addChild(holder)
+    NookiDiorama.makeTappable(
+      holder, size: [large.side, large.side, 0.3], center: [0, 0, 0.1])
   }
 
   private func material(for note: DeskNote, large: Bool) -> UnlitMaterial? {

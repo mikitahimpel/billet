@@ -368,3 +368,45 @@ struct TabLightingTests {
     stages.shopStage.setLighting(.off)
   }
 }
+
+struct DeskCuesTests {
+  @Test func theDoodleLiesOnThePapersCorners() throws {
+    let corners = [
+      CGPoint(x: 100, y: 500), CGPoint(x: 260, y: 505), CGPoint(x: 280, y: 600),
+      CGPoint(x: 90, y: 596),
+    ]
+    let transform = try #require(DeskDoodleLayer.projection(onto: corners))
+    let page = DeskDoodleLayer.page
+    let pageCorners = [
+      CGPoint.zero, CGPoint(x: page.width, y: 0), CGPoint(x: page.width, y: page.height),
+      CGPoint(x: 0, y: page.height),
+    ]
+    for (from, to) in zip(pageCorners, corners) {
+      let w = from.x * transform.m13 + from.y * transform.m23 + transform.m33
+      let x = (from.x * transform.m11 + from.y * transform.m21 + transform.m31) / w
+      let y = (from.x * transform.m12 + from.y * transform.m22 + transform.m32) / w
+      let missX: CGFloat = abs(x - to.x)
+      let missY: CGFloat = abs(y - to.y)
+      #expect(missX < 0.01)
+      #expect(missY < 0.01)
+    }
+    #expect(DeskDoodleLayer.projection(onto: []) == nil)
+  }
+
+  @Test func thePapersCornersSurroundItsMiddle() {
+    let corners = DeskLayout.paperCorners
+    let middle = DeskLayout.paper.centre
+    #expect(corners.count == 4)
+    let meanX: Float = corners.map(\.x).reduce(0, +) / 4
+    let meanY: Float = corners.map(\.y).reduce(0, +) / 4
+    #expect(abs(meanX - middle.x) < 1e-4)
+    #expect(abs(meanY - middle.y) < 1e-4)
+    // Far edge first: the first two are further from the viewer than the last two.
+    #expect(corners[0].y < corners[3].y && corners[1].y < corners[2].y)
+  }
+
+  @MainActor
+  @Test func theEmptyBoardHasAPlaceholderCard() {
+    #expect(DeskArt.placeholder() != nil)
+  }
+}

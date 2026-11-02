@@ -69,7 +69,7 @@ struct DeskSceneView: View {
 
   var body: some View {
     let stage = stages.deskStage
-    TabSceneView(stage: stage)
+    TabSceneView(stage: stage, overlay: AnyView(DeskDoodleLayer(screen: stage.deskScreen)))
       .onChange(of: state, initial: true) { _, state in
         stage.onEvent = { onEvent($0) }
         stage.show(state)
@@ -81,6 +81,7 @@ struct DeskSceneView: View {
           ? "A desk with blank paper under an empty board."
           : "A desk with blank paper under a board of \(state.notes.count) notes."
       )
+      .accessibilityHint("Tap the paper to draw a note.")
       .accessibilityActions {
         Button("Draw a note") { onEvent(.paperTapped) }
         if let latest = state.notes.first {
