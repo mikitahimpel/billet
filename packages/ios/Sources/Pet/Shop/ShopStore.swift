@@ -89,6 +89,22 @@ public final class ShopStore {
     }
   }
 
+  /// Takes a piece or a treat out of the closet to give to the partner.
+  @discardableResult
+  public func give(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
+    try change { (state: inout ShopState) throws(ShopError) in
+      try state.give(item, transaction: transaction)
+    }
+  }
+
+  /// Puts a gift from the partner into the closet.
+  @discardableResult
+  public func receive(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
+    try change { (state: inout ShopState) throws(ShopError) in
+      try state.receive(item, transaction: transaction)
+    }
+  }
+
   private func change(
     _ body: (inout ShopState) throws(ShopError) -> ShopOutcome
   ) throws(ShopError) -> ShopOutcome {
