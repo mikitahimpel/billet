@@ -1,28 +1,35 @@
 # Billet privacy policy
 
-Last updated: 1 November 2026
+Last updated: 2 November 2026
 
-Billet is a private app for two people to send each other drawings. This policy covers the current test version, distributed through TestFlight.
+Billet is a private app for two people to send each other drawings and photos. This policy covers the current test version, distributed through TestFlight.
 
 ## What the app handles
-- **Pair code:** a random code that links two devices. It is how you reach your partner, so share it only with them.
-- **Device ID:** a random ID created by the app. It isn't linked to your name.
-- **Drawings:** the notes you send to your partner.
+- **Sign in with Apple:** you sign in with Apple. We receive an identifier that is unique to our app and stored as your account. We don't receive or store your name or email address.
+- **Pairing:** an invite code, valid for 24 hours, links your account to your partner's. We keep only a one-way hash of the code, never the code itself. A pair is exactly two accounts.
+- **Devices and sessions:** a random device ID, and a session that keeps you signed in. We keep only a one-way hash of the session token.
+- **Notes:** the drawings and photos you send to your partner, with who sent them and when.
 - **Push token:** an Apple identifier used to notify your device, if you allow notifications.
 
-We don't ask for your name, email address, contacts or location. The app has no ads and no analytics.
+We don't ask for your contacts or location. The app has no ads and no analytics.
 
 ## Where it goes
-Pair codes, device IDs, push tokens and recent note IDs are stored on our backend on Cloudflare for as long as the pair exists, until you ask us to delete them. There is no automatic expiry. Cloudflare's request logs may also contain the pair code.
+Everything above is stored on our backend, which runs on Cloudflare.
 
-A drawing waits on the backend until it reaches your partner's device, with no time limit, and is then removed from the delivery queue. Up to 50 undelivered drawings are kept per device.
+- **Notes are stored.** The drawing (as strokes and as an image) or photo you send is kept in your pair's private storage so that your partner, and you, can see the history and a new device can catch up. Photos and images are kept in a private storage area reachable only by the two accounts in the pair. Notes are kept for as long as the pair exists. There is no automatic expiry.
+- **Accounts and pairing data** (account identifier, devices, hashed sessions, hashed invite codes, the link between the two partners, push tokens) are kept as long as the account exists.
+- **Abuse protection:** to limit abuse we count requests per minute against a one-way hash of the caller's network address. The address itself is not stored, and counters older than a minute are removed as new requests arrive.
+- **Logs:** our server logs record the type of request, whether it succeeded and how long it took. They don't contain note content, tokens, codes or addresses.
 
 Notifications are sent through Apple Push Notification service. Apple also provides TestFlight and may share crash reports and usage data with us, as described in its own terms.
 
-We don't sell your data or use it for advertising, and we don't use your drawings to train AI.
+We don't sell your data or use it for advertising, and we don't use your drawings or photos to train AI.
+
+## Test rooms
+Some test builds exchange notes through a temporary test room instead. A test room is identified by a short code that two devices share, keeps a random device ID per device and an optional push token, and holds up to 50 notes that have not yet reached the other device until they do. Test rooms are not linked to a Sign in with Apple account.
 
 ## Your data on your device
-The pair code and device ID are stored on your device, and the app may keep recent drawings there to show them. Deleting the app removes these from your device, but not from our backend.
+The app keeps your session, device ID and recent notes on your device to show them. Deleting the app removes these from your device, but not from our backend.
 
 ## Questions and deletion
-To ask about your data or have it deleted, email gimpelllll@gmail.com.
+You can sign out at any time, and unpairing removes the link between you and your partner. In this test version unpairing doesn't yet delete the notes that were stored, and an in-app way to delete your account doesn't exist yet. To have your account and everything stored for it deleted, or to ask about your data, email gimpelllll@gmail.com.
