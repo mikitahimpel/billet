@@ -106,6 +106,7 @@ const pairRows = async () =>
   (await env.DB.prepare("SELECT pair_id FROM pair_members").all<{ pair_id: string }>()).results;
 
 const tables = [
+  "pair_events",
   "pair_flags",
   "users",
   "devices",
@@ -889,5 +890,124 @@ describe("the couple's WebSocket", () => {
       expect(stored).not.toContain("subject-");
       expect(stored).not.toContain(owner);
     });
+  });
+});
+
+describe("metrics", () => {
+  const events = async () =>
+    (
+      await env.DB.prepare(
+        "SELECT pair_id, user_id, name, day, count, first_at, last_at FROM pair_events ORDER BY name, user_id",
+      ).all<{ pair_id: string; user_id: string; name: string; day: string; count: number }>()
+    ).results;
+
+  const report = (token: string, body: unknown) => call("/v1/events", json(body, "POST", token));
+
+  const send = async (token: string) => {
+    const response = await sendPhoto(token, await uploaded(token));
+    expect(response.status).toBe(200);
+  };
+
+  it("needs a signed-in caller", async () => {
+    expect((await call("/v1/events", json({ events: ["AppOpened"] }))).status).toBe(401);
+    expect(await events()).toEqual([]);
+  });
+
+  it("counts the funnel as it happens: invite, pairing for both, a note each", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    await claimWith(claimer, await inviteFrom(owner));
+    await send(owner);
+    await send(claimer);
+    await send(owner);
+    const rows = await events();
+    const count = (name: string) => rows.filter((row) => row.name === name).map((row) => row.count);
+    expect(count("InviteCreated")).toEqual([1]);
+    expect(count("PairClaimed")).toEqual([1, 1]);
+    expect(count("NoteSent").toSorted()).toEqual([1, 2]);
+    const pairIds = new Set(
+      rows.filter((row) => row.name !== "InviteCreated").map((row) => row.pair_id),
+    );
+    expect(pairIds.size).toBe(1);
+    expect(rows.find((row) => row.name === "InviteCreated")?.pair_id).toBe("");
+  });
+
+  it("counts a retried note once", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const key = crypto.randomUUID();
+    await sendPhoto(owner, image, key);
+    await sendPhoto(owner, image, key);
+    expect((await events()).filter((row) => row.name === "NoteSent")).toMatchObject([{ count: 1 }]);
+  });
+
+  it("takes the events the app reports, under the caller's pair", async () => {
+    const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
+    expect(
+      (await report(owner, { events: ["AppOpened", "WidgetAdded", "OpeningWatched"] })).status,
+    ).toBe(204);
+    expect((await report(owner, { events: ["AppOpened"] })).status).toBe(204);
+    const rows = (await events()).filter((row) =>
+      ["AppOpened", "WidgetAdded", "OpeningWatched"].includes(row.name),
+    );
+    expect(rows.map((row) => [row.name, row.count, row.pair_id])).toEqual([
+      ["AppOpened", 2, pairId],
+      ["OpeningWatched", 1, pairId],
+      ["WidgetAdded", 1, pairId],
+    ]);
+  });
+
+  it("refuses a name only the server may record, and keeps the table as it was", async () => {
+    const owner = await signedInAs("subject-owner");
+    const before = await events();
+    expect((await report(owner, { events: ["NoteSent"] })).status).toBe(400);
+    expect(await events()).toEqual(before);
+  });
+
+  it("stores no content: no image key, no stroke, no token, and only the fixed columns", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    await call(
+      "/v1/notes",
+      json(
+        {
+          _tag: "Drawing",
+          key: crypto.randomUUID(),
+          image,
+          compact: {
+            version: 1,
+            strokes: [{ color: "#2A1A1C", width: 3, points: [4242, 4243, 4244, 4245] }],
+          },
+        },
+        "POST",
+        owner,
+      ),
+    );
+    await report(owner, { events: ["AppOpened"], text: "a private message" });
+    const dump = JSON.stringify((await env.DB.prepare("SELECT * FROM pair_events").all()).results);
+    for (const secret of [image, "4242", "2A1A1C", owner, "private message", "subject-"]) {
+      expect(dump).not.toContain(secret);
+    }
+    const columns = (await env.DB.prepare("PRAGMA table_info(pair_events)").all<{ name: string }>())
+      .results;
+    expect(columns.map(({ name }) => name).toSorted()).toEqual([
+      "count",
+      "day",
+      "first_at",
+      "last_at",
+      "name",
+      "pair_id",
+      "user_id",
+    ]);
+  });
+
+  it("does not fail a pairing or a note when it cannot count", async () => {
+    await env.DB.prepare("ALTER TABLE pair_events RENAME TO pair_events_away").run();
+    try {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      await send(owner);
+    } finally {
+      await env.DB.prepare("ALTER TABLE pair_events_away RENAME TO pair_events").run();
+    }
   });
 });

@@ -23,6 +23,7 @@ import {
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
+import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import {
   ClaimInviteRequest,
@@ -125,6 +126,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
+  fixture("ReportEventsRequest", ReportEventsRequest, {
+    default: { events: ["AppOpened", "WidgetAdded"] },
+    none: { events: [] },
+  }),
   fixture("FlagsResponse", FlagsResponse, {
     default: {
       flags: [

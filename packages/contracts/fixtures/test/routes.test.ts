@@ -43,6 +43,10 @@ it("pins the routes that clients call", () => {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
       },
+      "reportEvents": {
+        "method": "POST",
+        "path": "/v1/events",
+      },
       "sendNote": {
         "method": "POST",
         "path": "/v1/notes",

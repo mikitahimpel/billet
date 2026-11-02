@@ -2,6 +2,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 import { NoteId, UserId, type MediaKey } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { Metrics, type MetricEvent } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
@@ -45,6 +46,7 @@ const makeRoom = () => {
 export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]>) => {
   const objects = new Map<MediaKey, Uint8Array>();
   const rooms = new Map<PairId, ReturnType<typeof makeRoom>>();
+  const recorded: Array<MetricEvent> = [];
 
   const roomOf = (pairId: PairId) => {
     const room = rooms.get(pairId) ?? makeRoom();
@@ -79,6 +81,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
 
   return {
     objects,
+    recorded,
     media,
     pairRooms,
     repository,
@@ -86,6 +89,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       Layer.succeed(PairingRepository, repository),
       Layer.succeed(MediaStore, media),
       Layer.succeed(PairRooms, pairRooms),
+      Layer.succeed(Metrics, { record: (event) => Effect.sync(() => void recorded.push(event)) }),
       SecureRandom.layerWebCrypto,
     ),
   };

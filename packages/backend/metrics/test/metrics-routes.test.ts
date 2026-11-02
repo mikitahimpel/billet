@@ -1,0 +1,147 @@
+import { Effect, Layer, Redacted, Schema } from "effect";
+import { HttpRouter } from "effect/http";
+import { afterAll, describe, expect, it } from "vitest";
+import { AuthRejected, AuthUnavailable } from "@billet/backend-auth/auth-error";
+import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
+import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
+import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
+import { DeviceId, UserId } from "@billet/contracts-domain/ids";
+import { PairId } from "@billet/contracts-domain/pair-id";
+import { maxEventsPerRequest } from "@billet/contracts-http-api/events";
+import { routes } from "@billet/contracts-http-api/routes";
+import { Metrics } from "../src/metrics.ts";
+import { MetricsRepository } from "../src/metrics-repository.ts";
+import { MetricsRoutes } from "../src/metrics-routes.ts";
+import { makeInMemoryMetricsRepository } from "./in-memory-metrics-repository.ts";
+
+describe("events route", () => {
+  const tokenOf = (name: string) => name.padEnd(43, "x");
+  const user = (name: string) => Schema.decodeSync(UserId)(tokenOf(name));
+  const principal = (token: string): Principal => ({
+    userId: Schema.decodeSync(UserId)(token),
+    deviceId: Schema.decodeSync(DeviceId)(`device-${token}`),
+    sessionHash: `hash-${token}`,
+  });
+  const FakeAuth = Layer.succeed(
+    AuthService,
+    AuthService.of({
+      issueChallenge: Effect.die("unused"),
+      signInWithApple: () => Effect.die("unused"),
+      signOut: () => Effect.die("unused"),
+      registerPushToken: () => Effect.die("unused"),
+      authenticate: (token) => {
+        const raw = Redacted.value(token);
+        if (raw.startsWith("rejected")) return Effect.fail(new AuthRejected({ reason: "fake" }));
+        if (raw.startsWith("down")) return Effect.fail(new AuthUnavailable({ reason: "fake" }));
+        return Effect.succeed(principal(raw));
+      },
+    }),
+  );
+  const pairs = makeInMemoryPairingRepository();
+  const metrics = makeInMemoryMetricsRepository();
+  const { handler, dispose } = HttpRouter.toWebHandler(
+    MetricsRoutes.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          FakeAuth,
+          Metrics.layer.pipe(Layer.provide(Layer.succeed(MetricsRepository, metrics.repository))),
+          Layer.succeed(PairingRepository, pairs.repository),
+        ),
+      ),
+    ),
+    { disableLogger: true },
+  );
+  afterAll(() => dispose());
+
+  const post = (body: unknown, token?: string) =>
+    handler(
+      new Request(`http://billet.test${routes.reportEvents.path}`, {
+        method: routes.reportEvents.method,
+        headers: {
+          "content-type": "application/json",
+          ...(token === undefined ? {} : { authorization: `Bearer ${tokenOf(token)}` }),
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  it("needs a signed-in caller", async () => {
+    expect((await post({ events: [] })).status).toBe(401);
+    expect((await post({ events: [] }, "rejected-x")).status).toBe(401);
+    expect(metrics.rows.size).toBe(0);
+  });
+
+  it("counts the events it is sent, for the caller, without a pair before pairing", async () => {
+    const response = await post({ events: ["AppOpened", "WidgetAdded"] }, "ana");
+    expect(response.status).toBe(204);
+    expect(
+      [...metrics.rows.values()].map(({ name, pairId, userId }) => [name, pairId, userId]),
+    ).toEqual([
+      ["AppOpened", "", user("ana")],
+      ["WidgetAdded", "", user("ana")],
+    ]);
+  });
+
+  it("files them under the caller's pair once paired", async () => {
+    await Effect.runPromise(
+      pairs.repository.saveInvite({
+        codeHash: "h",
+        ownerId: user("ben"),
+        createdAt: 1,
+        expiresAt: 10,
+      }),
+    );
+    await Effect.runPromise(
+      pairs.repository.claimInvite({
+        codeHash: "h",
+        claimerId: user("cal"),
+        pairId: Schema.decodeSync(PairId)("pair-1"),
+        now: 2,
+      }),
+    );
+    await post({ events: ["OpeningWatched"] }, "cal");
+    const row = [...metrics.rows.values()].find(({ name }) => name === "OpeningWatched");
+    expect(row?.pairId).toBe("pair-1");
+  });
+
+  it.each([
+    ["a name the server records itself", { events: ["NoteSent"] }],
+    ["an unknown name", { events: ["Anything"] }],
+    [
+      "too many events",
+      { events: Array.from({ length: maxEventsPerRequest + 1 }, () => "AppOpened") },
+    ],
+    ["no events field", {}],
+    ["events that are objects", { events: [{ name: "AppOpened", note: "hi" }] }],
+  ])("refuses %s", async (_, body) => {
+    const before = metrics.rows.size;
+    expect((await post(body, "ana")).status).toBe(400);
+    expect(metrics.rows.size).toBe(before);
+  });
+
+  it("ignores any other field in the body and stores none of it", async () => {
+    const response = await post({ events: ["OpeningSkipped"], text: "a love letter" }, "ana");
+    expect(response.status).toBe(204);
+    expect(JSON.stringify([...metrics.rows.values()])).not.toContain("love letter");
+  });
+
+  it("stores no field beyond the fixed ones", () => {
+    for (const row of metrics.rows.values()) {
+      expect(Object.keys(row).toSorted()).toEqual([
+        "count",
+        "day",
+        "firstAt",
+        "lastAt",
+        "name",
+        "pairId",
+        "userId",
+      ]);
+    }
+  });
+
+  it("answers 204 for an empty list without touching storage", async () => {
+    const before = metrics.rows.size;
+    expect((await post({ events: [] }, "ana")).status).toBe(204);
+    expect(metrics.rows.size).toBe(before);
+  });
+});

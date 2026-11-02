@@ -136,3 +136,24 @@ export const pairFlags = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
 );
+
+// First-party counts: how many times one person did one named thing on one UTC day, with the pair
+// they were in at the time (empty before pairing). Nothing else is stored: no note, image or
+// text, no device, address or place. The names are a closed list in `contracts-domain/metrics`.
+// Like `pair_flags`, the pair id is not a foreign key and the rows outlive the pair for analysis.
+export const pairEvents = sqliteTable(
+  "pair_events",
+  {
+    pairId: text("pair_id").notNull(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    day: text("day").notNull(),
+    count: integer("count").notNull(),
+    firstAt: integer("first_at").notNull(),
+    lastAt: integer("last_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.pairId, table.userId, table.name, table.day] }),
+    index("pair_events_day_index").on(table.day),
+  ],
+);
