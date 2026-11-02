@@ -19,15 +19,26 @@ import Wire
     #expect(outputs == [.open(attempt: 1), .startConnectTimeout(attempt: 1)])
   }
 
-  @Test func firstConnectionSendsNoResume() {
+  @Test func firstConnectionAsksForNotesFromZero() {
     let (state, outputs) = Machine.transition(
       Self.state(.connecting(failures: 0)), .opened(attempt: 1))
     #expect(state == Self.state(.connected(failures: 0)))
-    #expect(outputs == [.startStabilityTimer(attempt: 1)])
+    #expect(outputs == [.send(.resume(lastSeq: 0), attempt: 1), .startStabilityTimer(attempt: 1)])
+  }
+
+  static let note = Note.photo(
+    id: NoteId("n"), author: UserId("u"), sentAt: 0, image: MediaKey("k"))
+
+  @Test func aLiveStrokeDoesNotAdvanceLastSeq() {
+    let message = ServerMessage.stroke(seq: 9, stroke: Self.stroke)
+    let (state, outputs) = Machine.transition(
+      Self.state(.connected(failures: 0), lastSeq: 3), .received(attempt: 1, message))
+    #expect(state.lastSeq == 3)
+    #expect(outputs == [.deliver(message)])
   }
 
   @Test func sequencedMessagesAdvanceLastSeqAndAreDelivered() {
-    let message = ServerMessage.stroke(seq: 4, stroke: Self.stroke)
+    let message = ServerMessage.noteReceived(seq: 4, note: Self.note)
     let (state, outputs) = Machine.transition(
       Self.state(.connected(failures: 0)), .received(attempt: 1, message))
     #expect(state == Self.state(.connected(failures: 0), lastSeq: 4))
@@ -35,7 +46,7 @@ import Wire
   }
 
   @Test func lastSeqNeverMovesBackwards() {
-    let message = ServerMessage.stroke(seq: 2, stroke: Self.stroke)
+    let message = ServerMessage.noteReceived(seq: 2, note: Self.note)
     let (state, _) = Machine.transition(
       Self.state(.connected(failures: 0), lastSeq: 9), .received(attempt: 1, message))
     #expect(state.lastSeq == 9)
@@ -94,7 +105,7 @@ import Wire
     var outputs: [Machine.Output] = []
     let events: [Machine.Event] = [
       .connectRequested, .opened(attempt: 1),
-      .received(attempt: 1, .stroke(seq: 5, stroke: Self.stroke)), .dropped(attempt: 1),
+      .received(attempt: 1, .noteReceived(seq: 5, note: Self.note)), .dropped(attempt: 1),
       .retryElapsed(attempt: 1), .dropped(attempt: 2), .retryElapsed(attempt: 2),
       .opened(attempt: 3),
     ]

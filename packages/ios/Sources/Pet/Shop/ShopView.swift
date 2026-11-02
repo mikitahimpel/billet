@@ -35,6 +35,7 @@ public struct ShopView<Preview: View>: View {
   @State private var scrollOffset = ScrollBox()
   @State private var bought = 0
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   public init(
     store: ShopStore,
@@ -64,27 +65,45 @@ public struct ShopView<Preview: View>: View {
     .sensoryFeedback(.success, trigger: bought)
   }
 
+  /// The title, then the balance and the buttons. At large text sizes the row is too narrow for
+  /// all of them, so the title takes a line of its own.
   private var header: some View {
-    HStack(spacing: Spacing.small) {
-      Text("Shop")
-        .billetType(.title)
-        .foregroundStyle(Palette.paper.color)
-        .accessibilityAddTraits(.isHeader)
-      Spacer(minLength: Spacing.small)
-      StampPlate(balance: store.stamps)
-      IconButton("archivebox.fill", label: "Closet", action: onOpenCloset)
-        .overlay(alignment: .topTrailing) { closetBadge }
-        .symbolEffect(.bounce, value: bought)
-        .onGeometryChange(for: CGPoint.self) {
-          let frame = $0.frame(in: .named(ShopSpace.screen))
-          return CGPoint(x: frame.midX, y: frame.midY)
-        } action: {
-          closetCentre = $0
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: Spacing.small) {
+        shopTitle
+        Spacer(minLength: Spacing.small)
+        headerControls
+      }
+      VStack(alignment: .leading, spacing: Spacing.small) {
+        shopTitle
+        HStack(spacing: Spacing.small) {
+          headerControls
         }
-      IconButton("xmark", label: "Close", action: onClose)
+      }
     }
     .padding(.horizontal, Spacing.medium)
     .padding(.top, Spacing.small)
+  }
+
+  private var shopTitle: some View {
+    Text("Shop")
+      .billetType(.title)
+      .foregroundStyle(Palette.paper.color)
+      .accessibilityAddTraits(.isHeader)
+  }
+
+  @ViewBuilder private var headerControls: some View {
+    StampPlate(balance: store.stamps)
+    IconButton("archivebox.fill", label: "Closet", action: onOpenCloset)
+      .overlay(alignment: .topTrailing) { closetBadge }
+      .symbolEffect(.bounce, value: bought)
+      .onGeometryChange(for: CGPoint.self) {
+        let frame = $0.frame(in: .named(ShopSpace.screen))
+        return CGPoint(x: frame.midX, y: frame.midY)
+      } action: {
+        closetCentre = $0
+      }
+    IconButton("xmark", label: "Close", action: onClose)
   }
 
   @ViewBuilder private var closetBadge: some View {
@@ -151,7 +170,9 @@ public struct ShopView<Preview: View>: View {
           .foregroundStyle(Palette.muted.color)
       }
       LazyVGrid(
-        columns: [GridItem(.flexible(), spacing: Spacing.small), GridItem(.flexible())],
+        columns: typeSize.isAccessibilitySize
+          ? [GridItem(.flexible())]
+          : [GridItem(.flexible(), spacing: Spacing.small), GridItem(.flexible())],
         spacing: Spacing.small
       ) {
         ForEach(store.catalog.items(in: category)) { item in
@@ -193,7 +214,6 @@ public struct ShopView<Preview: View>: View {
         Text(item.detail)
           .billetType(.label)
           .foregroundStyle(Palette.muted.color)
-          .lineLimit(1)
       }
       buyButton(item)
     }
@@ -208,6 +228,7 @@ public struct ShopView<Preview: View>: View {
     .contentShape(.rect)
     .onTapGesture { select(item) }
     .accessibilityElement(children: .contain)
+    .accessibilityAction(named: "Preview \(item.name)") { select(item) }
   }
 
   @ViewBuilder private func buyButton(_ item: ShopItem) -> some View {
@@ -262,6 +283,7 @@ public struct ShopView<Preview: View>: View {
 /// The flat picture of an item, for a card with no live preview over it.
 public struct ShopItemGlyph: View {
   private let item: ShopItem
+  @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat = 40
 
   public init(item: ShopItem) {
     self.item = item
@@ -269,7 +291,7 @@ public struct ShopItemGlyph: View {
 
   public var body: some View {
     Image(systemName: item.symbol)
-      .font(.system(size: 40))
+      .font(.system(size: size))
       .foregroundStyle(item.tint.color)
   }
 }
@@ -319,6 +341,8 @@ public struct StampPlate: View {
         .font(IconStyle.font)
       Text(verbatim: "\(balance)")
         .billetType(.numeral)
+        .lineLimit(1)
+        .fixedSize()
         .contentTransition(.numericText(value: Double(balance)))
     }
     .foregroundStyle(Palette.gold.color)

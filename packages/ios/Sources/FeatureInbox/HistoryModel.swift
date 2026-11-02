@@ -40,6 +40,9 @@ public final class HistoryModel {
     }
   }
 
+  /// The `seq` of the newest note held, so a socket can ask only for what is newer.
+  public var lastSeq: Int? { state.notes.last?.seq }
+
   public var failure: HistoryFailure? {
     if case .failed(_, let failure, _) = state { failure } else { nil }
   }

@@ -13,10 +13,14 @@ public final class WebSocketClient {
 
   public var state: WebSocketMachine.State { store.state }
 
-  public init(dependencies: WebSocketDependencies) {
+  /// - Parameter lastSeq: The last note `seq` already held, so the first connection asks only for
+  ///   what is newer.
+  public init(dependencies: WebSocketDependencies, lastSeq: Int? = nil) {
     let runner = WebSocketRunner(dependencies: dependencies)
     self.runner = runner
-    let store = Store<WebSocketMachine>(initial: .initial) { output in
+    let store = Store<WebSocketMachine>(
+      initial: WebSocketMachine.State(phase: .idle, lastSeq: lastSeq, attempt: 0)
+    ) { output in
       await runner.run(output)
     }
     self.store = store

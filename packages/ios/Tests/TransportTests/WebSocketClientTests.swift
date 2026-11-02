@@ -12,8 +12,8 @@ import Wire
       dependencies: WebSocketRunnerTests.dependencies(pool: pool))
 
     client.connect()
-    let stroke = Stroke(color: "#000", width: 1, points: [Point(x: 0, y: 0)])
-    first.incoming.yield(.stroke(seq: 7, stroke: stroke))
+    let note = Note.photo(id: NoteId("n"), author: UserId("u"), sentAt: 0, image: MediaKey("k"))
+    first.incoming.yield(.noteReceived(seq: 7, note: note))
     first.incoming.finish()
 
     var sent = second.sent.makeAsyncIterator()
@@ -53,6 +53,7 @@ import Wire
     client.send(.presence(.drawing))
 
     var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 0))
     #expect(await iterator.next() == .presence(.drawing))
     client.disconnect()
   }
@@ -127,5 +128,18 @@ extension WebSocketMachine.State {
   fileprivate var isConnected: Bool {
     if case .connected = phase { return true }
     return false
+  }
+}
+
+extension WebSocketClientTests {
+  @Test func theFirstConnectionResumesAfterTheSeqAlreadyHeld() async {
+    let socket = makeFakeSocket()
+    let pool = ConnectionPool([socket.connection])
+    let client = WebSocketClient(
+      dependencies: WebSocketRunnerTests.dependencies(pool: pool), lastSeq: 12)
+    client.connect()
+    var sent = socket.sent.makeAsyncIterator()
+    #expect(await sent.next() == .resume(lastSeq: 12))
+    client.disconnect()
   }
 }
