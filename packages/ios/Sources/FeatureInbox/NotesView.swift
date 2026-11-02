@@ -154,7 +154,7 @@ private struct NoteRow: View {
   var body: some View {
     ListRow(
       note.direction.title,
-      subtitle: note.date.formatted(.dateTime.day().month().hour().minute())
+      subtitle: note.date.formatted(NoteDate.style(of: note.date))
     ) {
       NoteDrawing(note: note, side: 216)
         .frame(width: thumbnail, height: thumbnail)
@@ -199,7 +199,7 @@ struct NoteDetailView: View {
         Text(note.direction.title)
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)
-        Text(note.date, format: .dateTime.weekday(.wide).day().month().hour().minute())
+        Text(note.date, format: NoteDate.style(of: note.date).weekday(.wide))
           .billetType(.label)
           .foregroundStyle(Palette.muted.color)
           .multilineTextAlignment(.center)
@@ -232,5 +232,15 @@ extension NoteRecord.Direction {
 extension NoteRecord {
   fileprivate var accessibilityTitle: String {
     "\(direction.title) note, \(date.formatted(date: .abbreviated, time: .shortened))"
+  }
+}
+
+/// How a note's date reads. A note from another year says which.
+enum NoteDate {
+  static func style(
+    of date: Date, now: Date = .now, calendar: Calendar = .current
+  ) -> Date.FormatStyle {
+    let style = Date.FormatStyle.dateTime.day().month().hour().minute()
+    return calendar.isDate(date, equalTo: now, toGranularity: .year) ? style : style.year()
   }
 }
