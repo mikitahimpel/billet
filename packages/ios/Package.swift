@@ -40,7 +40,8 @@ let libraryTargets: [Target] = library.map {
   .target(
     name: $0.name,
     dependencies: $0.dependencies.map { .init(stringLiteral: $0) },
-    resources: $0.name == "DesignSystem" ? [.copy("Resources/Fonts")] : nil
+    resources: $0.name == "DesignSystem"
+      ? [.copy("Resources/Fonts"), .copy("Resources/Paper")] : nil
   )
 }
 
