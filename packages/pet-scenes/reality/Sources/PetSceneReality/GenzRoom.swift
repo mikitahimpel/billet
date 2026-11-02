@@ -71,6 +71,21 @@ final class GenzRoomCache {
     rooms[layout.style] = room
     return room
   }
+
+  /// Returns once no styled room is left in a RealityView's scene, or after a few seconds. A
+  /// RealityView that mounts while another still has its scene can stay empty for good, so the
+  /// next room's view mounts only after this.
+  func untilLetGo() async {
+    let deadline = ContinuousClock.now + Self.longestTeardown
+    while rooms.values.contains(where: { $0.root.scene != nil }), ContinuousClock.now < deadline {
+      try? await Task.sleep(for: Self.teardownCheck)
+    }
+    try? await Task.sleep(for: Self.settle)
+  }
+
+  private static let teardownCheck = Duration.milliseconds(50)
+  private static let settle = Duration.milliseconds(100)
+  private static let longestTeardown = Duration.seconds(5)
 }
 
 /// One styled room and everything that moves in it. Built from simple shapes in code, so it is

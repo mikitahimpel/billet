@@ -173,6 +173,20 @@ import Testing
     }
   }
 
+  @Test func roomsOutOfAnySceneLetGoAtOnce() async {
+    let rooms = GenzRoomCache()
+    _ = rooms.room(GenzLayout.sunsetLamp)
+    let start = ContinuousClock.now
+    await rooms.untilLetGo()
+    #expect(ContinuousClock.now - start < .seconds(1))
+  }
+
+  @Test func theNoteLeavesTheDiscShowingAroundIt() throws {
+    let wall = try #require(GenzLayout.sunsetLamp.discWall)
+    #expect(GenzLayout.sunsetLamp.note.width < wall.width / 2)
+    #expect(GenzLayout.windowSeat.note.width < 2)
+  }
+
   @Test func theNoteTextureKeepsThePapersShape() {
     let image = GenzTextures.note(
       drawing: nil, paper: GenzColour(0xFFFFFF), aspect: 1.1, corners: true, pixels: 100)

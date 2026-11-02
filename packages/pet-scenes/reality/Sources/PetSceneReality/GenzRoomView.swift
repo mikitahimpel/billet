@@ -13,13 +13,26 @@ struct NookiStyledRoom: View {
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @Environment(\.petSceneRoomStyle) private var style
+  /// The style on screen. It lags behind `style` while the last room's view comes down.
+  @State private var shown: RoomStyle?
 
   var body: some View {
-    if let layout = GenzLayout.of(style) {
-      GenzRoomView(layout: layout, world: world, play: play, rooms: rooms, onEvent: onEvent)
-        .id(style)
-    } else {
-      NookiView(world: world, play: play, cache: cache, onEvent: onEvent)
+    ZStack {
+      if let shown {
+        if let layout = GenzLayout.of(shown) {
+          GenzRoomView(layout: layout, world: world, play: play, rooms: rooms, onEvent: onEvent)
+            .id(shown)
+        } else {
+          NookiView(world: world, play: play, cache: cache, onEvent: onEvent)
+        }
+      }
+    }
+    .task(id: style) {
+      if let leaving = shown, leaving != style {
+        self.shown = nil
+        if GenzLayout.of(leaving) != nil { await rooms.untilLetGo() }
+      }
+      shown = style
     }
   }
 }
