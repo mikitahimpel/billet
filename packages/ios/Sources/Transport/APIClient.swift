@@ -136,3 +136,20 @@ extension APIClient {
       })
   }
 }
+
+extension APIClient {
+  /// A client whose every call fails as offline. Tests start from it and replace the calls they
+  /// care about.
+  public static let offline = APIClient(
+    authChallenge: { () async throws(TransportError) in throw .network("offline") },
+    signInWithApple: { (_) async throws(TransportError) in throw .network("offline") },
+    signOut: { () async throws(TransportError) in throw .network("offline") },
+    registerPushToken: { (_) async throws(TransportError) in throw .network("offline") },
+    createInvite: { () async throws(TransportError) in throw .network("offline") },
+    claimInvite: { (_) async throws(TransportError) in throw .network("offline") },
+    unpair: { () async throws(TransportError) in throw .network("offline") },
+    uploadImage: { (_) async throws(TransportError) in throw .network("offline") },
+    downloadImage: { (_) async throws(TransportError) in throw .network("offline") },
+    sendNote: { (_) async throws(TransportError) in throw .network("offline") },
+    listNotes: { (_) async throws(TransportError) in throw .network("offline") })
+}

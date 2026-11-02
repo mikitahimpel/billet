@@ -47,9 +47,11 @@ import Testing
   @Test func pairingIsKeptAndCleared() throws {
     let (store, _, _) = try Self.store()
     try store.save("tok", Self.record)
-    try store.setPair("p1")
+    try store.setPaired(true, "p1")
+    #expect(try store.load()?.record.isPaired == true)
     #expect(try store.load()?.record.pairID == "p1")
-    try store.setPair(nil)
+    try store.setPaired(false, nil)
+    #expect(try store.load()?.record.isPaired == false)
     #expect(try store.load()?.record.pairID == nil)
   }
 
