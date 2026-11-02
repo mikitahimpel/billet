@@ -24,7 +24,7 @@ public struct NookiPetScene: PetScene {
   }
 
   public func makePreparationView() -> AnyView? {
-    AnyView(NookiPreload(cache: cache))
+    AnyView(NookiRehearsal(cache: cache))
   }
 
   public func makeView(

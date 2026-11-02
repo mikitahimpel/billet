@@ -10,6 +10,8 @@ import Foundation
 final class NookiRoomCache {
   private var kept: NookiDiorama?
   private var memoryWarnings: (any NSObjectProtocol)?
+  private var isRehearsing = false
+  private var awaitingRehearsal: [CheckedContinuation<Void, Never>] = []
 
   nonisolated init() {}
 
@@ -20,6 +22,24 @@ final class NookiRoomCache {
     let made = NookiDiorama()
     kept = made
     return made
+  }
+
+  func beginRehearsal() {
+    isRehearsing = true
+  }
+
+  func endRehearsal() {
+    isRehearsing = false
+    let waiting = awaitingRehearsal
+    awaitingRehearsal = []
+    for continuation in waiting { continuation.resume() }
+  }
+
+  /// Returns once no rehearsal view is left. A RealityView that mounts while another is still
+  /// there can stay empty for good, so the room's own view mounts only after this.
+  func untilRehearsed() async {
+    guard isRehearsing else { return }
+    await withCheckedContinuation { awaitingRehearsal.append($0) }
   }
 
   func purgeIfOffScreen() {

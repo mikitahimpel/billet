@@ -27,6 +27,14 @@ struct AppShellView: View {
   let onChangeCode: () -> Void
   let onLogOut: () async -> String?
 
+  /// Fixed when preparing starts, so that picking a scene never takes its preparation down early.
+  @State private var preparingScenes: [any PetScene] = []
+
+  /// Long enough for launch to have settled, so that preparing scenes cannot delay it.
+  private static let prepareDelay = Duration.seconds(1)
+  /// Above zero, because SwiftUI stops drawing a view that is fully transparent.
+  private static let hiddenOpacity = 0.01
+
   private var selectedScene: (any PetScene)? {
     scenes.first { $0.id == selectedSceneID } ?? scenes.first
   }
@@ -73,7 +81,6 @@ struct AppShellView: View {
           session: session,
           widgetFeatures: widgetFeatures,
           scene: selectedScene,
-          otherScenes: scenes.filter { $0.id != selectedScene?.id },
           onChangeCode: onChangeCode,
           onOpenNotes: { destination = .notes }
         )
@@ -122,6 +129,20 @@ struct AppShellView: View {
         )
         .tabEntrance(destination == .settings)
       }
+    }
+    .background {
+      // Behind the tabs, so that switching tabs never hides a scene that is preparing.
+      ForEach(preparingScenes, id: \.id) { scene in
+        scene.makePreparationView()
+      }
+      .frame(width: 1, height: 1)
+      .opacity(Self.hiddenOpacity)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+    }
+    .task {
+      try? await Task.sleep(for: Self.prepareDelay)
+      preparingScenes = scenes.filter { $0.id != selectedScene?.id }
     }
     .tint(Palette.gold.color)
     .sensoryFeedback(.selection, trigger: destination)

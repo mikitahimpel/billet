@@ -39,4 +39,14 @@ private let view = UUID()
     room.setOnScreen(false, in: new)
     #expect(!room.isOnScreen)
   }
+
+  @Test func theRoomsOwnViewWaitsForARehearsalToEnd() async {
+    let cache = NookiRoomCache()
+    await cache.untilRehearsed()
+    cache.beginRehearsal()
+    let waiting = Task { await cache.untilRehearsed() }
+    await Task.yield()
+    cache.endRehearsal()
+    await waiting.value
+  }
 }
