@@ -228,7 +228,9 @@ struct HomeView: View {
       latestReceived
       treatPanel
       promptCards
-      labsDrawer
+      if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
+        labsDrawer
+      }
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
@@ -542,13 +544,16 @@ struct HomeView: View {
     }
   }
 
+  /// A scene with its own buttons leaves room between them for the short line only.
+  private var hasRoomControls: Bool { scene?.handlesTouches == true }
+
   private var statusPill: some View {
     HStack(spacing: Spacing.small) {
       Circle()
         .fill(statusLight.color)
         .frame(width: Spacing.small, height: Spacing.small)
         .accessibilityHidden(true)
-      Text(session.isFakePartner ? "Fake partner · \(line.text)" : line.text)
+      Text(session.isFakePartner && !hasRoomControls ? "Fake partner · \(line.text)" : line.text)
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)

@@ -143,6 +143,33 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     }
   }
 
+  /// Whether it adds a card to the Labs sheet on Home.
+  public var hasHomeCard: Bool {
+    switch self {
+    case .fakePartner: false
+    case .overnightStay: false
+    case .drawnReplay: false
+    case .catCameBack: false
+    case .todaysWord: true
+    case .sundayPost: true
+    case .framedNotes: false
+    case .sealedNote: true
+    case .twoWisps: true
+    case .wallpaperShortcut: false
+    case .porchLight: true
+    case .lampColours: true
+    case .lightsOut: true
+    case .theirSky: true
+    case .nextVisit: true
+    case .onThisDay: true
+    case .seasons: false
+    case .wrappedDelivery: true
+    case .advent: true
+    case .bedsideHouse: false
+    case .shelfBoard: false
+    }
+  }
+
   public var defaultOn: Bool {
     switch self {
     case .fakePartner: false
