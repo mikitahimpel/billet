@@ -63,6 +63,7 @@ public struct FramedWallView: View {
 public struct FrameNoteButton: View {
   private let note: NoteRecord
   private let framed: FramedNotes
+  @ScaledMetric(relativeTo: .body) private var buttonWidth: CGFloat = 260
 
   public init(note: NoteRecord, framed: FramedNotes) {
     self.note = note
@@ -78,7 +79,7 @@ public struct FrameNoteButton: View {
       ) {
         if hung { framed.takeDown(note.id) } else { framed.hang(note) }
       }
-      .frame(maxWidth: 260)
+      .frame(maxWidth: buttonWidth)
       .padding(.top, Spacing.small)
     }
   }
@@ -86,6 +87,7 @@ public struct FrameNoteButton: View {
 
 /// Saves or shares a received note as a wallpaper picture: the note on the night sky.
 public struct WallpaperShareButton: View {
+  @ScaledMetric(relativeTo: .body) private var buttonWidth: CGFloat = 260
   private let note: NoteRecord
 
   public init(note: NoteRecord) {
@@ -104,7 +106,7 @@ public struct WallpaperShareButton: View {
           ButtonLabel("Make a wallpaper", rank: .secondary, systemImage: "iphone")
         }
         .billetButton(.secondary)
-        .frame(maxWidth: 260)
+        .frame(maxWidth: buttonWidth)
       }
     #endif
   }
