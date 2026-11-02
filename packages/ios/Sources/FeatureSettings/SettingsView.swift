@@ -153,6 +153,9 @@ public struct SettingsView: View {
         RoomStylePicker(model: model)
         WindowViewPicker(model: model)
       }
+      if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
+        LightingPicker(model: model)
+      }
       if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
         CatPicker(model: model, cats: cats)
       }

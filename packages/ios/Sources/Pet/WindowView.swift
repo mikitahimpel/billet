@@ -11,6 +11,12 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   case snowyDecember
   /// A summer cul-de-sac with fireflies, a sprinkler and a trampoline.
   case summerCulDeSac
+  /// A college quad at night: a brick dorm's windows, globe lamps, students crossing.
+  case dormQuad
+  /// A New York walk-up's fire escape over a street of yellow cabs and steam.
+  case fireEscape
+  /// Los Angeles at pink dusk: tall palms, a taco truck, parrots and planes lining up to land.
+  case pinkDusk
 
   /// What a window shows before anyone chooses.
   public static let standard = WindowView.suburbNight
@@ -21,6 +27,9 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
     case .rainySuburb: "Rainy suburb"
     case .snowyDecember: "Snowy December"
     case .summerCulDeSac: "Summer cul-de-sac"
+    case .dormQuad: "College dorm quad"
+    case .fireEscape: "NYC fire escape"
+    case .pinkDusk: "LA palms at pink dusk"
     }
   }
 
@@ -32,15 +41,29 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
     case .snowyDecember:
       "Christmas lights on the gutters, chimney smoke and a house that went all out."
     case .summerCulDeSac: "Fireflies at dusk, a sprinkler, a trampoline and a hoop over the garage."
+    case .dormQuad:
+      "LED strips in the dorm windows, the clock tower and people cutting across the lawn."
+    case .fireEscape: "Pigeons on the railing, cabs below, a steam stack and the skyline behind."
+    case .pinkDusk:
+      "Palms against a pink sky, a taco truck, wild parrots and planes coming in to land."
     }
   }
 
   /// The weather the view is made for, used when the choice leaves weather to the view.
   public var weather: ViewWeather {
     switch self {
-    case .suburbNight, .summerCulDeSac: .clear
+    case .suburbNight, .summerCulDeSac, .dormQuad, .fireEscape, .pinkDusk: .clear
     case .rainySuburb: .rain
     case .snowyDecember: .snow
+    }
+  }
+
+  /// The hour the view is made for, used when neither the choice nor the room sets one.
+  public var hour: ViewHour {
+    switch self {
+    case .suburbNight, .rainySuburb, .snowyDecember, .summerCulDeSac, .dormQuad, .fireEscape:
+      .night
+    case .pinkDusk: .dusk
     }
   }
 }
@@ -116,9 +139,9 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
   /// The weather shown: the chosen one, or the view's own.
   public var shownWeather: ViewWeather { weather ?? view.weather }
 
-  /// The hour shown: the chosen one, or the room's, or night.
+  /// The hour shown: the chosen one, or the room's, or the view's own.
   public func shownHour(room: DayLight?) -> ViewHour {
-    hour ?? room.map { ViewHour($0.phase) } ?? .night
+    hour ?? room.map { ViewHour($0.phase) } ?? view.hour
   }
 
   // A view dropped from a later release decodes as the standard one, keeping the modifiers.
