@@ -25,6 +25,20 @@ final class CatRig {
   private(set) var current: CatAction?
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "CatRig")
 
+  /// How far a clip may run past the end of the compiled timeline. realitytool drops trailing
+  /// samples that do not change, so a last clip that ends by holding its base pose comes out
+  /// that much shorter than its table says (0.2 s for the made cats' reachUp).
+  nonisolated static let droppedTail: TimeInterval = 0.5
+
+  /// Whether a clip from the table is in the timeline: it starts inside it and ends no further
+  /// past it than a dropped tail. Such a clip is trimmed at the timeline's end, where the pose it
+  /// held is the one the timeline ends on.
+  nonisolated static func fits(_ range: CatClipRange, timelineDuration duration: TimeInterval)
+    -> Bool
+  {
+    range.trimStart < duration && range.trimEnd <= duration + droppedTail
+  }
+
   /// Nil for a model with no timeline to trim.
   init?(model: Entity, clips table: [CatAction: CatClipRange]) {
     guard let player = Self.firstAnimated(in: model),
@@ -34,7 +48,7 @@ final class CatRig {
     entity = model
     self.player = player
     var clips: [CatAction: AnimationResource] = [:]
-    for (action, range) in table where range.trimEnd <= timeline.duration + 0.05 {
+    for (action, range) in table where Self.fits(range, timelineDuration: timeline.duration) {
       let view = AnimationView(
         source: timeline, name: action.rawValue, repeatMode: range.loops ? .repeat : .none,
         fillMode: .forwards, trimStart: range.trimStart,
