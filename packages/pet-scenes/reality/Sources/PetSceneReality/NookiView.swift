@@ -109,6 +109,7 @@ private struct NookiStage: View {
       .onAppear {
         isAppeared = true
         connectRenovator()
+        diorama.whenAmbientIsReady { shopRoom.ambient = $0 }
       }
       .onDisappear {
         isAppeared = false

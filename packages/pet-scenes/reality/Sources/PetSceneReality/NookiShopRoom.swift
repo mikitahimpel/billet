@@ -17,6 +17,11 @@ final class NookiShopRoom {
   private var loading: [RoomLayout.Placement.ID: Task<Void, Never>] = [:]
   private var surfaces: [RoomSurface: ModelEntity] = [:]
   private var painted: [RoomSurface: ShopItem.ID] = [:]
+  /// The room's ambient light. Without it the shop's entities take only direct light and look
+  /// far darker than the same colour on the diorama.
+  var ambient: ImageBasedLightReceiverComponent? {
+    didSet { light(root) }
+  }
 
   private static let bowl: SIMD3<Float> = [0.12, 0.04, 0.6]
   private static let fall: Float = 0.5
@@ -41,6 +46,11 @@ final class NookiShopRoom {
 
   /// A piece fitted by height can be tall and narrow, so its height says little about its width.
   private static let maximumHalfWidth: Float = 0.2
+
+  private func light(_ entity: Entity) {
+    guard let ambient else { return }
+    NookiDiorama.visit(entity) { $0.components.set(ambient) }
+  }
 
   /// Brings the room in line with `layout`: new pieces appear, removed ones go, surfaces recolour.
   func apply(_ layout: RoomLayout) {
@@ -75,6 +85,7 @@ final class NookiShopRoom {
     position(holder, for: placement, item: item)
     pieces[placement.id] = holder
     root.addChild(holder)
+    light(holder)
     guard !isOnWall else { return }
     let bounds = entity.visualBounds(relativeTo: holder)
     NookiDiorama.makeTappable(holder, size: bounds.extents, center: bounds.center)
@@ -128,6 +139,7 @@ final class NookiShopRoom {
     }
     surfaces[surface] = slab
     root.addChild(slab)
+    light(slab)
   }
 
   // MARK: Treats
@@ -140,6 +152,7 @@ final class NookiShopRoom {
     let entity = NookiShopModels.treat(shape)
     entity.position = Self.bowl + [0, Self.fall, 0]
     root.addChild(entity)
+    light(entity)
     var landing = entity.transform
     landing.translation = Self.bowl
     entity.move(to: landing, relativeTo: root, duration: Self.fallDuration, timingFunction: .easeIn)

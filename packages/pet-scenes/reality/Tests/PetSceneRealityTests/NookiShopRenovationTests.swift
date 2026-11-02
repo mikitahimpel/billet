@@ -19,6 +19,18 @@ import Testing
     return entity
   }
 
+  @Test func shopPaintTakesTheRoomsAmbientLight() {
+    let room = NookiShopRoom()
+    room.apply(RoomLayout(wall: "wall-rose"))
+    let receiver = ImageBasedLightReceiverComponent(imageBasedLight: Entity())
+    room.ambient = receiver
+    room.apply(RoomLayout(wall: "wall-rose", floor: "floor-oak"))
+
+    let parts = room.root.children.flatMap(\.children)
+    #expect(parts.count == 3)
+    #expect(parts.allSatisfy { $0.components.has(ImageBasedLightReceiverComponent.self) })
+  }
+
   @Test func aShopPieceLiftsAndReportsWhereItLands() throws {
     let renovation = try make()
     let stool = piece(at: [0.2, 0, 0.2])

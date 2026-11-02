@@ -53,6 +53,8 @@ final class NookiDiorama {
   private let loadModel: NookiModelLoader
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
+  private var ambientReceiver: ImageBasedLightReceiverComponent?
+  private var onAmbient: ((ImageBasedLightReceiverComponent) -> Void)?
   private let physics = NookiPhysics()
   private var flight = NookiPlaneFlight()
   private lazy var plane = NookiPaperPlane(paper: Self.clay(.paper))
@@ -883,6 +885,11 @@ final class NookiDiorama {
 
   // MARK: - Light
 
+  /// Calls `body` with the room's ambient light once it exists, for entities kept outside the room.
+  func whenAmbientIsReady(_ body: @escaping (ImageBasedLightReceiverComponent) -> Void) {
+    if let ambientReceiver { body(ambientReceiver) } else { onAmbient = body }
+  }
+
   private func addLighting() async {
     if let image = Self.ambientGradient(),
       let environment = try? await EnvironmentResource(equirectangular: image)
@@ -893,6 +900,9 @@ final class NookiDiorama {
       room.addChild(ambient)
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
       Self.visit(room) { $0.components.set(receiver) }
+      ambientReceiver = receiver
+      onAmbient?(receiver)
+      onAmbient = nil
     }
 
     let sun = Entity()
@@ -935,7 +945,7 @@ final class NookiDiorama {
     room.addChild(dust)
   }
 
-  private static func visit(_ entity: Entity, _ body: (Entity) -> Void) {
+  static func visit(_ entity: Entity, _ body: (Entity) -> Void) {
     body(entity)
     for child in entity.children { visit(child, body) }
   }
