@@ -12,15 +12,17 @@ import Wire
         try? await Task.sleep(for: .seconds(3600))
       }
     },
-    deliver: @escaping @Sendable (ServerMessage) async -> Void = { _ in }
+    deliver: @escaping @Sendable (ServerMessage) async -> Void = { _ in },
+    open: (@Sendable () async throws(TransportError) -> WebSocketConnection)? = nil
   ) -> WebSocketDependencies {
     WebSocketDependencies(
-      open: { () async throws(TransportError) -> WebSocketConnection in
+      open: open ?? { () async throws(TransportError) -> WebSocketConnection in
         guard let connection = await pool.next() else { throw .network("no connection") }
         return connection
       },
       sleep: sleep,
-      deliver: deliver
+      deliver: deliver,
+      jitter: { 1 }
     )
   }
 
@@ -130,5 +132,105 @@ import Wire
     #expect(await runner.run(.deliver(.presence(.drawing))) == nil)
     var iterator = delivered.stream.makeAsyncIterator()
     #expect(await iterator.next() == .presence(.drawing))
+  }
+
+  @Test func closeCancelsAConnectThatIsStillOpening() async {
+    let cancelled = AsyncStream.makeStream(of: Bool.self)
+    let started = AsyncStream.makeStream(of: Void.self)
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(
+        pool: ConnectionPool([]),
+        open: { () async throws(TransportError) -> WebSocketConnection in
+          started.continuation.yield()
+          // A handshake that never answers, and only ends when it is cancelled.
+          try? await Task.sleep(for: .seconds(3600))
+          cancelled.continuation.yield(Task.isCancelled)
+          throw .network("cancelled")
+        }))
+
+    let opening = Task { await runner.run(.open(attempt: 1)) }
+    var startedIterator = started.stream.makeAsyncIterator()
+    await startedIterator.next()
+    _ = await runner.run(.close(attempt: 1))
+
+    var iterator = cancelled.stream.makeAsyncIterator()
+    #expect(await iterator.next() == true)
+    #expect(await opening.value == .dropped(attempt: 1))
+  }
+
+  @Test func closeStopsTheConnectTimeoutInsteadOfLettingItFire() async {
+    let started = AsyncStream.makeStream(of: Void.self)
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(
+        pool: ConnectionPool([]),
+        sleep: { _ in
+          started.continuation.yield()
+          try? await Task.sleep(for: .seconds(3600))
+        }))
+
+    let timer = Task { await runner.run(.startConnectTimeout(attempt: 3)) }
+    var iterator = started.stream.makeAsyncIterator()
+    await iterator.next()
+    _ = await runner.run(.close(attempt: 3))
+    #expect(await timer.value == nil)
+  }
+
+  @Test func openingCancelsTheConnectTimeout() async {
+    let socket = makeFakeSocket()
+    let started = AsyncStream.makeStream(of: Void.self)
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(
+        pool: ConnectionPool([socket.connection]),
+        sleep: { _ in
+          started.continuation.yield()
+          try? await Task.sleep(for: .seconds(3600))
+        }))
+
+    let timer = Task { await runner.run(.startConnectTimeout(attempt: 1)) }
+    var iterator = started.stream.makeAsyncIterator()
+    await iterator.next()
+    _ = await runner.run(.open(attempt: 1))
+    #expect(await timer.value == nil)
+  }
+
+  @Test func stabilityTimerReportsTheAttemptAfterTheStablePeriod() async {
+    let delays = AsyncStream.makeStream(of: Duration.self)
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(
+        pool: ConnectionPool([]),
+        sleep: { duration in _ = delays.continuation.yield(duration) }))
+
+    #expect(await runner.run(.startStabilityTimer(attempt: 6)) == .stable(attempt: 6))
+    var iterator = delays.stream.makeAsyncIterator()
+    #expect(await iterator.next() == WebSocketMachine.stableAfter)
+  }
+
+  @Test func retryDelayIsMultipliedByTheJitter() async {
+    let delays = AsyncStream.makeStream(of: Duration.self)
+    let dependencies = WebSocketDependencies(
+      open: { () async throws(TransportError) -> WebSocketConnection in throw .network("none") },
+      sleep: { duration in _ = delays.continuation.yield(duration) },
+      deliver: { _ in },
+      jitter: { 1.5 })
+    let runner = WebSocketRunner(dependencies: dependencies)
+
+    _ = await runner.run(.scheduleRetry(afterFailures: 3, attempt: 1))
+    var iterator = delays.stream.makeAsyncIterator()
+    #expect(await iterator.next() == .seconds(6))
+  }
+
+  @Test func shutdownClosesEverySocketAndEndsTheEvents() async {
+    let socket = makeFakeSocket()
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
+    _ = await runner.run(.open(attempt: 1))
+    await runner.shutdown()
+
+    var remaining = 0
+    for await _ in socket.connection.messages { remaining += 1 }
+    #expect(remaining == 0)
+    var events = 0
+    for await _ in runner.events { events += 1 }
+    #expect(events >= 1)
   }
 }

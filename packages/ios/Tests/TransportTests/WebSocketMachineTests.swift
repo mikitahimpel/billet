@@ -22,35 +22,35 @@ import Wire
   @Test func firstConnectionSendsNoResume() {
     let (state, outputs) = Machine.transition(
       Self.state(.connecting(failures: 0)), .opened(attempt: 1))
-    #expect(state == Self.state(.connected))
-    #expect(outputs.isEmpty)
+    #expect(state == Self.state(.connected(failures: 0)))
+    #expect(outputs == [.startStabilityTimer(attempt: 1)])
   }
 
   @Test func sequencedMessagesAdvanceLastSeqAndAreDelivered() {
     let message = ServerMessage.stroke(seq: 4, stroke: Self.stroke)
     let (state, outputs) = Machine.transition(
-      Self.state(.connected), .received(attempt: 1, message))
-    #expect(state == Self.state(.connected, lastSeq: 4))
+      Self.state(.connected(failures: 0)), .received(attempt: 1, message))
+    #expect(state == Self.state(.connected(failures: 0), lastSeq: 4))
     #expect(outputs == [.deliver(message)])
   }
 
   @Test func lastSeqNeverMovesBackwards() {
     let message = ServerMessage.stroke(seq: 2, stroke: Self.stroke)
     let (state, _) = Machine.transition(
-      Self.state(.connected, lastSeq: 9), .received(attempt: 1, message))
+      Self.state(.connected(failures: 0), lastSeq: 9), .received(attempt: 1, message))
     #expect(state.lastSeq == 9)
   }
 
   @Test func presenceDoesNotChangeLastSeq() {
     let (state, outputs) = Machine.transition(
-      Self.state(.connected, lastSeq: 3), .received(attempt: 1, .presence(.drawing)))
+      Self.state(.connected(failures: 0), lastSeq: 3), .received(attempt: 1, .presence(.drawing)))
     #expect(state.lastSeq == 3)
     #expect(outputs == [.deliver(.presence(.drawing))])
   }
 
   @Test func dropWhileConnectedClosesAndBacksOffKeepingLastSeq() {
     let (state, outputs) = Machine.transition(
-      Self.state(.connected, lastSeq: 7), .dropped(attempt: 1))
+      Self.state(.connected(failures: 0), lastSeq: 7), .dropped(attempt: 1))
     #expect(state == Self.state(.backingOff(failures: 1), lastSeq: 7))
     #expect(outputs == [.close(attempt: 1), .scheduleRetry(afterFailures: 1, attempt: 1)])
   }
@@ -72,8 +72,8 @@ import Wire
   @Test func reopeningResumesAfterLastSeq() {
     let (state, outputs) = Machine.transition(
       Self.state(.connecting(failures: 2), lastSeq: 7, attempt: 3), .opened(attempt: 3))
-    #expect(state == Self.state(.connected, lastSeq: 7, attempt: 3))
-    #expect(outputs == [.send(.resume(lastSeq: 7), attempt: 3)])
+    #expect(state == Self.state(.connected(failures: 2), lastSeq: 7, attempt: 3))
+    #expect(outputs == [.send(.resume(lastSeq: 7), attempt: 3), .startStabilityTimer(attempt: 3)])
   }
 
   @Test func aConnectThatNeverAnswersTimesOutAndRetries() {
@@ -101,14 +101,14 @@ import Wire
     for event in events {
       (state, outputs) = Machine.transition(state, event)
     }
-    #expect(state == Self.state(.connected, lastSeq: 5, attempt: 3))
-    #expect(outputs == [.send(.resume(lastSeq: 5), attempt: 3)])
+    #expect(state == Self.state(.connected(failures: 2), lastSeq: 5, attempt: 3))
+    #expect(outputs == [.send(.resume(lastSeq: 5), attempt: 3), .startStabilityTimer(attempt: 3)])
   }
 
   @Test(
     "Disconnecting from any live phase closes the attempt and keeps lastSeq",
     arguments: [
-      State.Phase.connecting(failures: 0), .connected, .backingOff(failures: 2),
+      State.Phase.connecting(failures: 0), .connected(failures: 0), .backingOff(failures: 2),
     ]
   )
   func disconnect(from phase: State.Phase) {
@@ -120,8 +120,8 @@ import Wire
 
   @Test func connectedSendsClientMessages() {
     let (state, outputs) = Machine.transition(
-      Self.state(.connected), .sendRequested(.presence(.drawing)))
-    #expect(state == Self.state(.connected))
+      Self.state(.connected(failures: 0)), .sendRequested(.presence(.drawing)))
+    #expect(state == Self.state(.connected(failures: 0)))
     #expect(outputs == [.send(.presence(.drawing), attempt: 1)])
   }
 
@@ -154,7 +154,7 @@ import Wire
   )
   func staleEventsAreIgnored(event: Machine.Event) {
     for phase in [
-      State.Phase.connecting(failures: 0), .connected, .backingOff(failures: 1),
+      State.Phase.connecting(failures: 0), .connected(failures: 0), .backingOff(failures: 1),
     ] {
       let state = Self.state(phase, attempt: 2)
       let (next, outputs) = Machine.transition(state, event)
@@ -183,10 +183,10 @@ import Wire
       (.connecting(failures: 0), .received(attempt: 1, .presence(.idle))),
       (.connecting(failures: 0), .retryElapsed(attempt: 1)),
       (.connecting(failures: 0), .sendRequested(.presence(.idle))),
-      (.connected, .connectRequested),
-      (.connected, .opened(attempt: 1)),
-      (.connected, .retryElapsed(attempt: 1)),
-      (.connected, .connectTimedOut(attempt: 1)),
+      (.connected(failures: 0), .connectRequested),
+      (.connected(failures: 0), .opened(attempt: 1)),
+      (.connected(failures: 0), .retryElapsed(attempt: 1)),
+      (.connected(failures: 0), .connectTimedOut(attempt: 1)),
       (.backingOff(failures: 1), .connectRequested),
       (.backingOff(failures: 1), .dropped(attempt: 1)),
       (.backingOff(failures: 1), .received(attempt: 1, .presence(.idle))),
@@ -207,5 +207,52 @@ import Wire
     #expect(Machine.retryDelay(afterFailures: 4) == .seconds(8))
     #expect(Machine.retryDelay(afterFailures: 6) == .seconds(32))
     #expect(Machine.retryDelay(afterFailures: 60) == .seconds(32))
+  }
+
+  @Test func aConnectionThatDropsAtOnceBacksOffLongerEachTime() {
+    var state = State.initial
+    var delays: [Int] = []
+    var events: [Machine.Event] = [.connectRequested]
+    var attempt = 1
+    for _ in 0..<4 {
+      events += [
+        .opened(attempt: attempt), .dropped(attempt: attempt), .retryElapsed(attempt: attempt),
+      ]
+      attempt += 1
+    }
+    for event in events {
+      let (next, outputs) = Machine.transition(state, event)
+      state = next
+      for case .scheduleRetry(let failures, _) in outputs { delays.append(failures) }
+    }
+    #expect(delays == [1, 2, 3, 4])
+  }
+
+  @Test func aConnectionThatStaysUpStartsOverFromOneSecond() {
+    var state = State.initial
+    let events: [Machine.Event] = [
+      .connectRequested, .opened(attempt: 1), .dropped(attempt: 1), .retryElapsed(attempt: 1),
+      .opened(attempt: 2), .stable(attempt: 2),
+    ]
+    for event in events { (state, _) = Machine.transition(state, event) }
+    #expect(state == Self.state(.connected(failures: 0), attempt: 2))
+    let (next, outputs) = Machine.transition(state, .dropped(attempt: 2))
+    #expect(next == Self.state(.backingOff(failures: 1), attempt: 2))
+    #expect(outputs == [.close(attempt: 2), .scheduleRetry(afterFailures: 1, attempt: 2)])
+  }
+
+  @Test func aStaleStabilityReportChangesNothing() {
+    let state = Self.state(.connected(failures: 3), attempt: 4)
+    let (next, outputs) = Machine.transition(state, .stable(attempt: 3))
+    #expect(next == state)
+    #expect(outputs.isEmpty)
+  }
+
+  @Test(arguments: [State.Phase.idle, .connecting(failures: 1), .backingOff(failures: 1)])
+  func stabilityOutsideAConnectionChangesNothing(_ phase: State.Phase) {
+    let state = Self.state(phase)
+    let (next, outputs) = Machine.transition(state, .stable(attempt: 1))
+    #expect(next == state)
+    #expect(outputs.isEmpty)
   }
 }

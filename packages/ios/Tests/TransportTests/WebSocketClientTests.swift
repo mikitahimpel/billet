@@ -18,7 +18,7 @@ import Wire
 
     var sent = second.sent.makeAsyncIterator()
     #expect(await sent.next() == .resume(lastSeq: 7))
-    #expect(client.state.phase == .connected)
+    #expect(client.state.phase == .connected(failures: 1))
     #expect(client.state.lastSeq == 7)
 
     client.disconnect()
@@ -49,7 +49,7 @@ import Wire
         pool: ConnectionPool([socket.connection])))
 
     client.connect()
-    while client.state.phase != .connected { await Task.yield() }
+    while !client.state.isConnected { await Task.yield() }
     client.send(.presence(.drawing))
 
     var iterator = socket.sent.makeAsyncIterator()
@@ -85,10 +85,26 @@ import Wire
         deliver: { _ in }))
 
     client.connect()
-    while client.state.phase != .connected { await Task.yield() }
+    while !client.state.isConnected { await Task.yield() }
     #expect(client.state.attempt == 2)
     gate.continuation.finish()
     client.disconnect()
+  }
+
+  @Test func releasingTheClientClosesItsSocket() async {
+    let socket = makeFakeSocket()
+    var client: WebSocketClient? = WebSocketClient(
+      dependencies: WebSocketRunnerTests.dependencies(
+        pool: ConnectionPool([socket.connection])))
+    client?.connect()
+    while !(client?.state.isConnected ?? false) { await Task.yield() }
+
+    client = nil
+
+    // The fake finishes its incoming stream when it is closed, so reading it then ends.
+    var remaining = 0
+    for await _ in socket.connection.messages { remaining += 1 }
+    #expect(remaining == 0)
   }
 }
 
@@ -104,5 +120,12 @@ actor OpenCounter {
   func next() -> Int {
     count += 1
     return count
+  }
+}
+
+extension WebSocketMachine.State {
+  fileprivate var isConnected: Bool {
+    if case .connected = phase { return true }
+    return false
   }
 }
