@@ -237,26 +237,29 @@ struct HomeView: View {
     }
   }
 
-  /// Every experiment card in one place that opens and closes, so the scene keeps its room.
+  /// Every experiment card in one sheet, so the scene keeps its room on Home.
   private var labsDrawer: some View {
-    VStack(spacing: Spacing.small) {
-      Button {
-        withAnimation(Motion.spring) { labsOpen.toggle() }
-      } label: {
-        ListRow(
-          "Labs", subtitle: labsOpen ? "Tap to close" : "Cards for the experiments that are on"
-        ) {
-          EmptyView()
-        } trailing: {
-          RowIcon(labsOpen ? "chevron.up" : "chevron.down")
-        }
+    Button {
+      labsOpen = true
+    } label: {
+      ListRow("Labs", subtitle: "Cards for the experiments that are on") {
+        EmptyView()
+      } trailing: {
+        RowIcon("chevron.up")
       }
-      .buttonStyle(RowButtonStyle())
-      .card()
-      .accessibilityIdentifier("labsDrawer")
-      if labsOpen {
+    }
+    .buttonStyle(RowButtonStyle())
+    .card()
+    .accessibilityIdentifier("labsDrawer")
+    .sheet(isPresented: $labsOpen) {
+      ZStack(alignment: .topTrailing) {
+        EveningBackground()
         ScrollView {
           VStack(spacing: Spacing.small) {
+            Text("Labs")
+              .billetType(.heading)
+              .foregroundStyle(Palette.paper.color)
+              .padding(.top, Spacing.medium)
             todaysWordCard
             giftCards
             adventCard
@@ -269,11 +272,15 @@ struct HomeView: View {
             nextVisitCard
             porchLightCard
           }
+          .padding(.horizontal, Spacing.medium)
+          .padding(.bottom, Spacing.large)
         }
-        .frame(maxHeight: 300)
         .scrollBounceBehavior(.basedOnSize)
-        .transition(.opacity)
+        IconButton("xmark", label: "Close Labs") { labsOpen = false }
+          .padding(Spacing.medium)
       }
+      .presentationDetents([.medium, .large])
+      .preferredColorScheme(.dark)
     }
   }
 
