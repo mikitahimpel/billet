@@ -83,6 +83,8 @@ public struct PetSceneCatAnchorKey: PreferenceKey {
 extension EnvironmentValues {
   /// The room a scene with styles should show. Scenes without styles ignore it.
   @Entry public var petSceneRoomStyle: RoomStyle = .standard
+  /// The cat a scene with more than one cat should show. Scenes with one cat ignore it.
+  @Entry public var petSceneCat: CatChoice = .standard
   /// Art that replaces some of a styled room's flat layers. `nil` keeps every native drawing.
   @Entry public var petSceneRoomArt: (any RoomLayerArt)? = nil
   /// Bumped by the host to play a styled room's opening again.

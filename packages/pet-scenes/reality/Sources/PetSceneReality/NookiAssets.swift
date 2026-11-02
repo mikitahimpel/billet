@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import Pet
 import RealityKit
 
 /// Loads the room's models from their compiled files: one for Mochi and one for all the furniture,
@@ -9,7 +10,7 @@ import RealityKit
 final class NookiAssets {
   private var room: Task<Entity?, Never>?
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiAssets")
-  static let mochiName = "Cat"
+  nonisolated static let mochiName = "Cat"
   private static let roomName = "Room"
 
   /// The named model, ready to be added to a scene.
@@ -25,6 +26,25 @@ final class NookiAssets {
     }
     piece.removeFromParent()
     return piece
+  }
+
+  /// A cat other than Mochi from its compiled file, or nil when the file is missing or will not
+  /// open, so the room can show Mochi instead.
+  static func compiledCat(_ model: CatModel) async -> Entity? {
+    let name = CatCatalog.resourceName(model)
+    guard
+      let url = Bundle.module.url(
+        forResource: name, withExtension: "reality", subdirectory: CatCatalog.folder)
+    else {
+      log.error("No file for cat \(name, privacy: .public)")
+      return nil
+    }
+    do {
+      return try await Entity(contentsOf: url)
+    } catch {
+      log.error("\(name, privacy: .public): \(String(describing: error), privacy: .public)")
+      return nil
+    }
   }
 
   private static func whole(_ name: String) async throws(NookiLoadError) -> Entity {

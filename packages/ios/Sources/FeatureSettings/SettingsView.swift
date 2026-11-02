@@ -151,6 +151,9 @@ public struct SettingsView: View {
       if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         RoomStylePicker(model: model)
       }
+      if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
+        CatPicker(model: model, cats: cats)
+      }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         VStack(alignment: .leading, spacing: Spacing.small) {
           Text(group.title)

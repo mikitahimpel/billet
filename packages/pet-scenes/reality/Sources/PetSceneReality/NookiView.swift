@@ -96,6 +96,7 @@ private struct NookiStage: View {
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.petSceneRenovator) private var renovator
   @Environment(\.petSceneDrawing) private var drawing
+  @Environment(\.petSceneCat) private var cat
   @Environment(\.scenePhase) private var scenePhase
 
   init(
@@ -140,6 +141,9 @@ private struct NookiStage: View {
       }
       .onChange(of: drawing, initial: true) { _, drawing in
         diorama.show(drawing: drawing)
+      }
+      .onChange(of: cat, initial: true) { _, cat in
+        diorama.setCat(cat)
       }
   }
 
@@ -219,6 +223,7 @@ private struct NookiStage: View {
     Task {
       try? await Task.sleep(for: .seconds(NookiShopRoom.fallDuration))
       _ = diorama.perform(.mochi)
+      diorama.reactToTreat()
     }
   }
 
@@ -243,12 +248,19 @@ private struct NookiStage: View {
         && (diorama.renovation.isPiece(entity) || diorama.renovation.isSurface(entity)))
   }
 
-  /// A swipe that starts on the yarn throws it. Any other swipe orbits.
+  /// A swipe that starts on the yarn throws it, and one that starts on the cat strokes it. Any
+  /// other swipe orbits. The cat's eyes follow the finger throughout.
   private var orbit: some Gesture {
     DragGesture(minimumDistance: 6)
       .targetedToAnyEntity()
       .onChanged { value in
+        let location = value.gestureValue.location
+        diorama.gaze(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
+          return
+        }
+        if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
+          diorama.stroke()
           return
         }
         let translation = value.gestureValue.translation
@@ -261,6 +273,8 @@ private struct NookiStage: View {
         let velocity = value.gestureValue.velocity
         lastDrag = .zero
         if isHoldingPiece(value.entity) {
+          return
+        } else if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))

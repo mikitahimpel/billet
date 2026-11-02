@@ -46,7 +46,16 @@ final class NookiDiorama {
   private(set) var mochiLoading: Task<Void, Never>?
   private(set) var isMochiMissing = false
   private var hasMochi = false
-  private(set) var animator: NookiCatAnimator?
+  /// The cat's clips, look and coat, once loaded.
+  private(set) var rig: CatRig?
+  private var behaviour = CatBehaviour(clips: [:])
+  /// The cat asked for, and the one on show (Mochi stands in for a cat that will not load).
+  private(set) var catChoice = CatChoice.standard
+  private(set) var shownCat: CatChoice?
+  private var catModel: Entity?
+  /// Where the cat looks: a point the finger is over, until a moment after it lifts.
+  private var gazePoint: SIMD3<Float>?
+  private var gazeUntil = 0.0
   private let missingMark = Entity()
   private let loadModel: NookiModelLoader
   private let loadShape: NookiModelLoader
@@ -264,7 +273,10 @@ final class NookiDiorama {
   func show(_ play: PetPlayState) {
     let petted = play.petsReceived > self.play.petsReceived
     self.play = play
-    if petted { petStart = clock }
+    if petted {
+      petStart = clock
+      behaviour.react(.pet, at: clock)
+    }
     if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
@@ -445,6 +457,7 @@ final class NookiDiorama {
     switch touch.reaction {
     case .wakeAndHop:
       petStart = clock
+      behaviour.react(.tap, at: clock)
     case .toggleLamp:
       lampIsOn.toggle()
     case .toggleNote:
@@ -571,7 +584,57 @@ final class NookiDiorama {
   private func applyClip(_ frame: NookiFrame) {
     let clip = NookiClip.choose(frame: frame, yarn: yarnPlay.phase)
     let travel = yarnPlay.isPlaying ? yarnPlay.travelSpeed : Self.walkPace
-    animator?.play(clip, rate: clip == .walk ? NookiClip.walkRate(forTravelAt: travel) : 1)
+    let cue = behaviour.cue(at: clock, mode: Self.mode(for: clip, yarn: yarnPlay.phase))
+    rig?.play(cue.action, rate: cue.action == .walk ? NookiClip.walkRate(forTravelAt: travel) : 1)
+    if clock > gazeUntil { gazePoint = nil }
+    rig?.look(
+      at: gazePoint ?? lens.position(relativeTo: nil),
+      weight: reduceMotion ? 0 : Float(cue.lookWeight))
+  }
+
+  /// How much say the room's choreography leaves the cat's own behaviour. Asleep it naps and
+  /// wakes as it likes; woken and resting it idles; anything the room is doing it plays as told.
+  static func mode(for clip: NookiClip, yarn: NookiYarnPlay.Phase) -> CatBehaviour.Mode {
+    switch (clip, yarn) {
+    case (.sleep, .resting): .free
+    case (.idle, .resting), (.sit, .resting): .awake
+    default: .fixed(CatAction(rawValue: clip.rawValue) ?? .idle)
+    }
+  }
+
+  // MARK: - The cat's attention
+
+  /// Turns the cat's head towards a finger at `point`, in a view of `size`, both in points.
+  func gaze(at point: SIMD2<Float>, in size: SIMD2<Float>) {
+    guard size.x > 0, size.y > 0 else { return }
+    let ray = simd_normalize(
+      NookiFloorRay.direction(
+        under: point, viewSize: size, camera: camera.position, target: NookiCamera.target,
+        verticalFieldOfView: Self.fieldOfView))
+    let head = mochi.position(relativeTo: nil) + [0, 0.18, 0]
+    let reach = simd_dot(head - camera.position, ray)
+    gazePoint = camera.position + ray * max(reach, 0.5)
+    gazeUntil = clock + 1.5
+  }
+
+  /// A stroke along the cat: eyes close and it purrs.
+  func stroke() {
+    behaviour.react(.pet, at: clock)
+    petStart = petStart ?? clock
+  }
+
+  /// A treat landed: it eats, then is pleased.
+  func reactToTreat() {
+    behaviour.react(.treat, at: clock)
+  }
+
+  /// Shows `choice`. A different cat is loaded in place of the one on show, without rebuilding
+  /// the room; the old one stays until the new one is ready.
+  func setCat(_ choice: CatChoice) {
+    guard choice != catChoice else { return }
+    catChoice = choice
+    guard mochiLoading != nil else { return }
+    mochiLoading = Task { await loadMochi() }
   }
 
   private func applyHolders() {
@@ -876,14 +939,29 @@ final class NookiDiorama {
 
   private func loadMochi() async {
     do {
-      let model = try await loadModel(NookiAssets.mochiName)
+      let wanted = catChoice
+      var shown = wanted
+      var loaded: Entity?
+      if wanted.model != .mochi { loaded = await NookiAssets.compiledCat(wanted.model) }
+      if loaded == nil { shown = .standard }
+      let model: Entity
+      if let loaded { model = loaded } else { model = try await loadModel(NookiAssets.mochiName) }
+      // A newer choice has its own load on the way.
+      guard wanted == catChoice || shownCat == nil else { return }
       guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil)) else {
         throw NookiLoadError.noGeometry("Cat")
       }
       model.scale = .one * Self.mochiScale
       model.position = offset
-      animator = NookiCatAnimator(model: model)
-      animator?.play(.sleep, blend: 0)
+      let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
+      if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
+      let action = self.rig?.current ?? .sleep
+      catModel?.removeFromParent()
+      catModel = model
+      self.rig = rig
+      shownCat = shown
+      behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
+      rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
       mochi.addChild(model)
       hasMochi = true
       NookiTrace.mark("Mochi placed")

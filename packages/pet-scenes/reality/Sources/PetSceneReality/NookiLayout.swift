@@ -156,15 +156,25 @@ enum NookiFloorRay {
     under point: SIMD2<Float>, viewSize: SIMD2<Float>, camera: SIMD3<Float>, target: SIMD3<Float>,
     verticalFieldOfView degrees: Float, height: Float = 0
   ) -> SIMD2<Float>? {
+    let ray = direction(
+      under: point, viewSize: viewSize, camera: camera, target: target,
+      verticalFieldOfView: degrees)
+    guard ray.y < 0 else { return nil }
+    let landing = camera + ray * ((height - camera.y) / ray.y)
+    return SIMD2(landing.x, landing.z)
+  }
+
+  /// The direction from the camera through `point`, not normalised.
+  static func direction(
+    under point: SIMD2<Float>, viewSize: SIMD2<Float>, camera: SIMD3<Float>, target: SIMD3<Float>,
+    verticalFieldOfView degrees: Float
+  ) -> SIMD3<Float> {
     let forward = simd_normalize(target - camera)
     let right = simd_normalize(simd_cross(forward, [0, 1, 0]))
     let up = simd_cross(right, forward)
     let reach = tan(degrees * .pi / 360)
     let across = (point.x / viewSize.x * 2 - 1) * reach * viewSize.x / viewSize.y
     let down = (1 - point.y / viewSize.y * 2) * reach
-    let ray = forward + right * across + up * down
-    guard ray.y < 0 else { return nil }
-    let landing = camera + ray * ((height - camera.y) / ray.y)
-    return SIMD2(landing.x, landing.z)
+    return forward + right * across + up * down
   }
 }
