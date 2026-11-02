@@ -890,7 +890,7 @@ final class NookiDiorama {
     if let ambientReceiver { body(ambientReceiver) } else { onAmbient = body }
   }
 
-  private static func ambientEnvironment() async -> EnvironmentResource? {
+  static func ambientEnvironment() async -> EnvironmentResource? {
     guard let image = ambientGradient() else { return nil }
     return try? await EnvironmentResource(equirectangular: image)
   }
