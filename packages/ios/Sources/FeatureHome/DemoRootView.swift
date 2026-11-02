@@ -56,6 +56,7 @@ public struct DemoRootView: View {
 
   public var body: some View {
     content
+      .environment(\.eveningGround, model.labs.eveningGround)
       .preferredColorScheme(.dark)
       .tint(Palette.gold.color)
       .calmAnimation(value: model.isPaired)
