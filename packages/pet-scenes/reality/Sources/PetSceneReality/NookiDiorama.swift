@@ -322,6 +322,7 @@ final class NookiDiorama {
   func show(_ play: PetPlayState) {
     let petted = play.petsReceived > self.play.petsReceived
     self.play = play
+    behaviour.follow(play.life ?? LifeDrive())
     if petted {
       petStart = clock
       behaviour.react(.pet, at: clock)
@@ -386,15 +387,22 @@ final class NookiDiorama {
   }
 
   /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
-  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) {
+  /// Returns true when this bat starts a game, rather than going on with one.
+  @discardableResult
+  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) -> Bool {
     guard moments.contains(.batsAtFinger), trip == nil, !yarnPlay.isPlaying,
       world.activity == .sleeping, clock - lastBat > Self.batGap,
       CatEdge.isNearEdge(x: Double(point.x), width: Double(size.x))
-    else { return }
+    else { return false }
+    let starts = clock - lastBat > Self.gameGap
     lastBat = clock
     followFinger(at: point, in: size)
     behaviour.react(.bat, at: clock)
+    return starts
   }
+
+  /// Bats closer together than this are one game.
+  private static var gameGap: Double { 60 }
 
   /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
   private func stepMoments() {
@@ -1273,6 +1281,7 @@ final class NookiDiorama {
       self.rig = rig
       shownCat = shown
       behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
+      behaviour.follow(play.life ?? LifeDrive())
       rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
       catHolder.addChild(model)
       hasCat = true

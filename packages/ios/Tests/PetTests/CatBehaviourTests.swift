@@ -53,6 +53,27 @@ struct CatBehaviourTests {
     #expect(woke.map { [.yawn, .stretch].contains($0.1) } == true)
   }
 
+  @Test func aSleepyLifeKeepsItAsleepInFreeMode() {
+    var cat = CatBehaviour(clips: Self.full, seed: 7)
+    cat.follow(LifeDrive(asleep: true, focus: .rested))
+    let changes = run(&cat, for: 120)
+    let awake = changes.filter { ![.sleep, .twitch].contains($0.1) }
+    #expect(awake.isEmpty)
+    // A touch still wakes it.
+    cat.react(.pet, at: 120)
+    #expect(cat.beat(at: 120, mode: .free).action == .happy)
+  }
+
+  @Test func aPlayfulLifeCrouchesToPounceAndAContentOneNever() {
+    var playful = CatBehaviour(clips: Self.full, seed: 3)
+    playful.follow(LifeDrive(focus: .playful))
+    var content = CatBehaviour(clips: Self.full, seed: 3)
+    let wanting = run(&playful, for: 600, mode: .awake).filter { $0.1 == .crouchWiggle }
+    let calm = run(&content, for: 600, mode: .awake).filter { $0.1 == .crouchWiggle }
+    #expect(!wanting.isEmpty)
+    #expect(calm.isEmpty)
+  }
+
   @Test func aWakeCueStretchesThenLooksAtTheViewerAndStaysUp() {
     var cat = CatBehaviour(clips: Self.full, seed: 7)
     cat.cue(.wakeUp, at: 0)

@@ -112,6 +112,20 @@ struct FakePartnerTests {
     #expect(seen.last == .treats([day: [FakePartnerRoom.device]]))
   }
 
+  @Test func theFakePartnersPetsCountInTheCatsLife() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 5) {
+      await delivery.life(LifeEvent(kind: .pet, by: "me", at: .now))
+    }
+    guard case .life(let events) = seen.last else {
+      Issue.record("expected a life event, got \(String(describing: seen.last))")
+      return
+    }
+    #expect(events.map(\.kind) == [.pet])
+    #expect(events.map(\.by) == [FakePartnerRoom.device])
+  }
+
   @Test func theCatNameIsEchoed() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
@@ -123,9 +137,10 @@ struct FakePartnerTests {
     var pace = Self.quick
     pace.idle = [.milliseconds(1)]
     let delivery = NoteDelivery.fakePartner(device: "me", room: FakePartnerRoom(pace: pace))
-    let seen = await collect(delivery, count: 8)
-    let kinds = seen.dropFirst(3).map { update -> String in
+    let seen = await collect(delivery, count: 13)
+    let kinds = seen.dropFirst(3).compactMap { update -> String? in
       switch update {
+      case .life(let events): events.map { "life \($0.kind.rawValue)" }.joined()
       case .note: "note"
       case .partnerPetted: "pet"
       case .treats: "treat"
@@ -135,7 +150,11 @@ struct FakePartnerTests {
       default: "other"
       }
     }
-    #expect(kinds == ["note", "pet", "treat", "sealed", "hold"])
+    #expect(
+      kinds.prefix(9) == [
+        "note", "life note", "pet", "life pet", "treat", "life feed", "sealed", "hold",
+        "life play",
+      ])
   }
 
   @Test func everyDrawingHasInkInsideTheUnitSquare() {

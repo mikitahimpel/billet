@@ -292,6 +292,7 @@ struct GenzRoomView: View {
     // A treat or a pet from the partner wakes the cat, without telling anyone.
     .onChange(of: play.treatsUsed) { room.react(.treat) }
     .onChange(of: play.petsReceived) { room.react(.pet) }
+    .onChange(of: play.life, initial: true) { _, life in room.follow(life) }
     .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
     .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
     .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
@@ -353,7 +354,7 @@ struct GenzRoomView: View {
           room.strokeMoved()
         }
         room.followFinger(at: value.location)
-        if !stroking { room.bat(at: value.location) }
+        if !stroking, let event = room.bat(at: value.location) { onEvent(event) }
         guard orbits, !stroking else { return }
         room.orbit(
           byX: Float(value.translation.width - lastDrag.width),

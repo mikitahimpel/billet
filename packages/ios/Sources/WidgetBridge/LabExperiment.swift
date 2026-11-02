@@ -34,6 +34,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case catChases
   case shopScene
   case notesDesk
+  case catLife
+  case lifeDebug
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -83,6 +85,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: .catMoments
     case .shopScene: .home
     case .notesDesk: .notes
+    case .catLife: .cat
+    case .lifeDebug: .cat
     }
   }
 
@@ -116,11 +120,17 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: "Plays on its own"
     case .shopScene: "Shop tab"
     case .notesDesk: "Notes desk"
+    case .catLife: "The cat's needs"
+    case .lifeDebug: "Life debug"
     }
   }
 
   public var detail: String {
     switch self {
+    case .catLife:
+      "The cat gets hungry, sleepy, playful and wants to be loved by you both, and lets it show. Treats feed it, petting and notes most of all make it feel loved, playing with it keeps it lively, and it sleeps at night. It never gets sick, and a few days away hurt little."
+    case .lifeDebug:
+      "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
     case .catCarriesNote:
       "When a note arrives, the cat carries it in its mouth to the wall or the glass and tapes it up."
     case .catPurrs:
@@ -211,6 +221,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: false
     case .shopScene: false
     case .notesDesk: false
+    case .catLife: false
+    case .lifeDebug: false
     }
   }
 
@@ -244,6 +256,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: false
     case .shopScene: true
     case .notesDesk: true
+    case .catLife: false
+    case .lifeDebug: false
     }
   }
 }
