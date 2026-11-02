@@ -30,6 +30,8 @@ final class DeskStage: TabStage {
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
+  private let lighting = TabLighting()
+  private var look = LightingLook.off
 
   private var notes: [DeskNote] = []
   private var pinned: [DeskNote] = []
@@ -39,6 +41,8 @@ final class DeskStage: TabStage {
   private var beads: [GenzRoomPoint] = []
 
   private let catHolder = Entity()
+  /// The cat's soft shadow, there only while the cat is.
+  private let catShadow = Entity()
   private var catChoice = CatChoice.standard
   private var shownCat: CatChoice?
   private var catLoad: Task<Void, Never>?
@@ -89,7 +93,18 @@ final class DeskStage: TabStage {
     frames.isPaused = !onScreen
   }
 
-  func setReduceMotion(_ reduced: Bool) { reduceMotion = reduced }
+  func setReduceMotion(_ reduced: Bool) {
+    reduceMotion = reduced
+    lighting.setReduceMotion(reduced)
+  }
+
+  func setLighting(_ look: LightingLook) {
+    guard look != self.look else { return }
+    self.look = look
+    guard isBuilt else { return }
+    lighting.apply(look)
+    updateGlows()
+  }
 
   func fit(to size: CGSize) {
     view.fit(to: size)
@@ -129,6 +144,7 @@ final class DeskStage: TabStage {
 
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    lighting.step(delta)
     if view.step(Float(delta)) { updateGlows() }
     for (id, start) in lifts {
       let age = clock - start
@@ -148,6 +164,7 @@ final class DeskStage: TabStage {
       catOpacity = wanted > catOpacity ? min(catOpacity + rate, 1) : max(catOpacity - rate, 0)
       catHolder.components.set(OpacityComponent(opacity: catOpacity))
       catHolder.isEnabled = catOpacity > 0
+      catShadow.isEnabled = catOpacity > 0.5
     }
     if let petUntil {
       if clock < petUntil { return }
@@ -176,27 +193,28 @@ final class DeskStage: TabStage {
 
   private func updateGlows() {
     var glows: [TabGlow] = []
+    let halos = lighting.haloScale
     let bulb = (DeskLayout.lamp.shade.scene) + [0, -0.1, 0]
     if let centre = view.project(bulb) {
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(3.2, at: bulb), colour: Self.lampColour,
-          strength: 0.5))
+          centre: centre, radius: view.reach(3.2, at: bulb), colour: lighting.tint(Self.lampColour),
+          strength: 0.5 * halos))
     }
     let paper = DeskLayout.paper.centre.scene
     if let centre = view.project(paper) {
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(3.4, at: paper), colour: GenzColour(0xFF8A3D),
-          strength: 0.16))
+          centre: centre, radius: view.reach(3.4, at: paper),
+          colour: lighting.tint(GenzColour(0xFF8A3D)), strength: 0.16 * halos))
     }
     for bead in beads {
       let point = bead.scene
       guard let centre = view.project(point) else { continue }
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(0.42, at: point), colour: Self.ledColour,
-          strength: 0.5))
+          centre: centre, radius: view.reach(0.42, at: point),
+          colour: lighting.fairyColour ?? Self.ledColour, strength: 0.5 * halos))
     }
     screen.glows = glows
   }
@@ -211,9 +229,10 @@ final class DeskStage: TabStage {
     buildLamp()
     buildThings()
     await Task.yield()
-    receiver = TabLook.light(
+    receiver = lighting.ambient(
       room, top: GenzColour(0xEAD0C0), bottom: GenzColour(0x6A4A48), exponent: 1.4)
     addLights()
+    rigLights()
     room.addChild(board)
     catHolder.name = Self.catName
     catHolder.position = DeskLayout.cat.spot.scene
@@ -223,6 +242,7 @@ final class DeskStage: TabStage {
       catHolder, size: [length * 0.8, length * 0.7, length * 0.8], center: [0, length * 0.3, 0])
     catHolder.isEnabled = false
     room.addChild(catHolder)
+    lighting.apply(look)
     isBuilt = true
     room.isEnabled = isOnScreen
     screen.isLit = true
@@ -433,15 +453,41 @@ final class DeskStage: TabStage {
 
   private func addLights() {
     room.addChild(
-      TabLook.bulb(
+      lighting.key(
         Self.lampColour, intensity: 18_000, reach: 7,
         at: GenzRoomPoint(
           DeskLayout.lamp.shade.x, DeskLayout.lamp.shade.y, DeskLayout.lamp.shade.z - 0.3)))
     room.addChild(
-      TabLook.bulb(
+      lighting.key(
         GenzColour(0xFF9A52), intensity: 9_000, reach: 10, at: GenzRoomPoint(3, 5.5, 7.5)))
     room.addChild(
-      TabLook.bulb(Self.ledColour, intensity: 5_000, reach: 5, at: GenzRoomPoint(3, 1.2, 9.6)))
+      lighting.key(Self.ledColour, intensity: 5_000, reach: 5, at: GenzRoomPoint(3, 1.2, 9.6)))
+  }
+
+  /// The preset's rig: a rim behind the cat's spot, a core light over the desk, a low sun from
+  /// the side, and soft shadows under the desk, the lamp and the cat.
+  private func rigLights() {
+    let spot = DeskLayout.cat.spot
+    lighting.rim(
+      at: GenzRoomPoint(spot.x, spot.y, spot.z + 0.5).scene,
+      from: GenzRoomPoint(spot.x + 0.8, spot.y - 1.6, spot.z + 3).scene)
+    lighting.core(at: GenzRoomPoint(3, 3.2, 4).scene)
+    lighting.sun(
+      at: GenzRoomPoint(3, 2, DeskLayout.deskTop).scene, from: GenzRoomPoint(12, 6, 7).scene)
+    let desk = DeskLayout.desk
+    lighting.shadow(
+      width: (desk.x1 - desk.x0) * 1.1, depth: (desk.y1 - desk.y0) * 1.25,
+      at: GenzRoomPoint((desk.x0 + desk.x1) / 2, (desk.y0 + desk.y1) / 2, 0.012).scene)
+    let base = DeskLayout.lamp.base
+    lighting.shadow(
+      width: 0.9, depth: 0.7, at: GenzRoomPoint(base.x, base.y, base.z + 0.012).scene)
+    catShadow.position = GenzRoomPoint(spot.x, spot.y, spot.z + 0.012).scene
+    catShadow.orientation = simd_quatf(angle: DeskLayout.cat.heading, axis: [0, 1, 0])
+    catShadow.isEnabled = false
+    room.addChild(catShadow)
+    let length = DeskLayout.cat.length
+    lighting.shadow(width: length * 0.9, depth: length * 0.6, at: .zero, in: catShadow)
+    room.addChild(lighting.root)
   }
 
   // MARK: - Notes

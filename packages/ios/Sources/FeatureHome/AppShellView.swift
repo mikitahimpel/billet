@@ -134,6 +134,7 @@ struct AppShellView: View {
           )
           .tabEntrance(destination == .shop)
           .environment(\.petSceneOnScreen, destination == .shop)
+          .environment(\.petSceneLighting, labs.lighting)
         }
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
@@ -149,6 +150,7 @@ struct AppShellView: View {
         }
         .tabEntrance(destination == .notes)
         .environment(\.petSceneOnScreen, destination == .notes)
+        .environment(\.petSceneLighting, labs.lighting)
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
         SettingsView(
