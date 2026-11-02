@@ -22,6 +22,10 @@ public enum InkEncoder {
     }
   }
 
+  /// Furthest a coordinate or width may be from zero, in unit squares. Real drawings stay inside
+  /// the square or just past its edge; anything beyond this is not a drawing.
+  public static let limit = 1_000.0
+
   /// Simplifies and quantises `strokes` with exactly the given parameters.
   public static func encode(
     _ strokes: [Stroke], parameters: Parameters = Parameters()
@@ -30,6 +34,9 @@ public enum InkEncoder {
       throw InkError.invalidParameters
     }
     let scale = Double(parameters.resolution)
+    for (index, stroke) in strokes.enumerated() {
+      try validate(stroke, index: index)
+    }
     return CompactStrokes(
       strokes: strokes.map { stroke in
         var points: [Int] = []
@@ -49,6 +56,15 @@ public enum InkEncoder {
       })
   }
 
+  private static func validate(_ stroke: Stroke, index: Int) throws(InkError) {
+    guard InkColor.isValid(stroke.color) else { throw InkError.invalidColor(stroke.color) }
+    let values = [stroke.width] + stroke.points.flatMap { [$0.x, $0.y] }
+    guard values.allSatisfy(\.isFinite) else { throw InkError.nonFinite(strokeIndex: index) }
+    guard stroke.width >= 0, values.allSatisfy({ abs($0) <= limit }) else {
+      throw InkError.outOfRange(strokeIndex: index)
+    }
+  }
+
   /// Encodes with the given tolerance, then doubles it until the result fits `budget`.
   public static func encodeWithinBudget(
     _ strokes: [Stroke], parameters: Parameters = Parameters()
@@ -58,7 +74,7 @@ public enum InkEncoder {
     var smallest = Int.max
     while attempt.tolerance <= 0.5 {
       let encoded = try encode(strokes, parameters: attempt)
-      let size = byteCount(encoded)
+      let size = try byteCount(encoded)
       if size <= parameters.budget { return encoded }
       smallest = min(smallest, size)
       attempt.tolerance *= 2
@@ -67,10 +83,14 @@ public enum InkEncoder {
   }
 
   /// The size in bytes of the JSON that goes on the wire.
-  public static func byteCount(_ compact: CompactStrokes) -> Int {
+  public static func byteCount(_ compact: CompactStrokes) throws(InkError) -> Int {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    return (try? encoder.encode(compact).count) ?? Int.max
+    do {
+      return try encoder.encode(compact).count
+    } catch {
+      throw InkError.encodingFailed
+    }
   }
 
   /// Ramer–Douglas–Peucker. Keeps the endpoints of every stroke.
