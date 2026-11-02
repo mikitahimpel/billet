@@ -24,6 +24,13 @@ import Testing
     #expect(choice.shownHour(room: .at(hour: 13)) == .dusk)
   }
 
+  @Test func aViewMadeForDuskShowsDuskUntilTheRoomOrChoiceSaysOtherwise() {
+    let choice = WindowViewChoice(view: .pinkDusk)
+    #expect(choice.shownHour(room: nil) == .dusk)
+    #expect(choice.shownHour(room: .at(hour: 13)) == .day)
+    #expect(WindowViewChoice(view: .pinkDusk, hour: .night).shownHour(room: nil) == .night)
+  }
+
   @Test(arguments: ViewHour.allCases)
   func eachHourIsLitAsItsPartOfTheDay(_ hour: ViewHour) {
     #expect(ViewHour(hour.light.phase) == hour)

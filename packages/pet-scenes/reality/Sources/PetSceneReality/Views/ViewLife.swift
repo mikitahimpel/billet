@@ -315,3 +315,169 @@ struct ViewBranch: Sendable {
     }
   }
 }
+
+/// Someone crossing a view now and then: walking, with a backpack, on a phone whose screen lights
+/// their face after dark, or rolling past on a skateboard.
+struct ViewWalker: Sendable {
+  enum Kind: Sendable {
+    case walker
+    case backpack
+    case phone
+    case skater
+  }
+
+  var rhythm: ViewRhythm
+  /// Where their feet are at the start of a left-to-right pass.
+  var from: CGPoint
+  /// Where their feet are at its end.
+  var to: CGPoint
+  var height: CGFloat = 7
+  var plane = ViewPlane.street
+  /// What each pass may be, picked by the pass.
+  var kinds: [Kind] = [.walker]
+  /// Coat colours, picked per pass and mixed into the plane's shadow.
+  var coats: [UInt32] = [0x3A5A8A, 0x8A3A4A, 0x4A6A3A, 0xC8A050]
+
+  func kind(_ pass: ViewRhythm.Pass) -> Kind {
+    kinds[Int(pass.variant * 97) % max(kinds.count, 1)]
+  }
+
+  func point(_ pass: ViewRhythm.Pass) -> CGPoint {
+    let p = CGFloat(pass.progress)
+    let share = pass.variant < 0.5 ? p : 1 - p
+    return CGPoint(x: from.x + (to.x - from.x) * share, y: from.y + (to.y - from.y) * share)
+  }
+
+  func interest(at now: Double) -> ViewInterest? {
+    guard let pass = rhythm.pass(at: now) else { return nil }
+    let point = point(pass)
+    guard point.x > -5, point.x < 105 else { return nil }
+    return ViewInterest(
+      point: CGPoint(x: point.x, y: point.y - height * 0.6), plane: plane, paw: false,
+      id: pass.index)
+  }
+
+  func draw(_ context: GraphicsContext, moment: ViewMoment) {
+    guard let pass = rhythm.pass(at: moment.now) else { return }
+    Self.figure(
+      context, at: point(pass), height: height, facing: pass.variant < 0.5 ? 1 : -1,
+      kind: kind(pass), coat: coats[Int(pass.variant * 53) % coats.count], plane: plane,
+      moment: moment, walking: true)
+  }
+
+  /// One person with their feet at `point`, walking or standing still.
+  static func figure(
+    _ context: GraphicsContext, at point: CGPoint, height: CGFloat, facing: CGFloat, kind: Kind,
+    coat coatColour: UInt32, plane: ViewPlane, moment: ViewMoment, walking: Bool
+  ) {
+    let shadow = moment.palette.colour(plane).lit(-0.35)
+    let coat = shadow.mixed(with: ViewColour(coatColour), by: moment.look.isDark ? 0.25 : 0.5)
+    let unit = height / 7
+    var person = context
+    person.translateBy(x: point.x, y: point.y)
+    person.scaleBy(x: unit * facing, y: unit)
+    let stride = walking && kind != .skater ? sin(moment.now * 6.5) * 0.5 : 0
+    switch kind {
+    case .skater:
+      person.rotate(by: .degrees(6))
+      person.fill(
+        Path(roundedRect: CGRect(x: -1.8, y: -0.6, width: 3.6, height: 0.35), cornerRadius: 0.17),
+        with: .color(shadow.color()))
+      for x in [-1.2, 1.2] as [CGFloat] {
+        person.fill(
+          Path(ellipseIn: CGRect(x: x - 0.3, y: -0.3, width: 0.6, height: 0.6)),
+          with: .color(shadow.lit(0.15).color()))
+      }
+      for x in [-0.9, 0.5] as [CGFloat] {
+        person.fill(
+          Path(CGRect(x: x, y: -2.7, width: 0.45, height: 2.1)), with: .color(shadow.color()))
+      }
+      person.translateBy(x: 0, y: -0.6)
+    case .walker, .backpack, .phone:
+      for (x, phase) in [(-0.6, stride), (0.2, -stride)] as [(CGFloat, CGFloat)] {
+        person.fill(
+          Path(CGRect(x: x + phase * 0.6, y: -2.1, width: 0.45, height: 2.1)),
+          with: .color(shadow.color()))
+      }
+    }
+    person.fill(
+      Path(roundedRect: CGRect(x: -0.9, y: -5.6, width: 1.8, height: 3.6), cornerRadius: 0.7),
+      with: .color(coat.color()))
+    person.fill(
+      Path(ellipseIn: CGRect(x: -0.6, y: -6.8, width: 1.2, height: 1.3)),
+      with: .color(shadow.color()))
+    switch kind {
+    case .backpack:
+      person.fill(
+        Path(roundedRect: CGRect(x: -1.6, y: -5.3, width: 0.9, height: 2.4), cornerRadius: 0.3),
+        with: .color(coat.lit(0.15).mixed(with: ViewColour(0xE5503A), by: 0.3).color()))
+    case .phone:
+      let screen = ViewColour(0xCFE4FF)
+      person.fill(
+        Path(CGRect(x: 0.6, y: -5.2, width: 0.35, height: 0.6)),
+        with: .color(screen.color(moment.look.isDark ? 1 : 0.5)))
+      if moment.look.isDark {
+        ViewKit.glow(person, CGPoint(x: 0.6, y: -5.6), 1.6, screen, 0.5)
+      }
+    case .walker, .skater: break
+    }
+  }
+}
+
+extension ViewKit {
+  /// A palm: a tall thin trunk that leans and bows, and a crown of drooping fronds. `sway` from
+  /// -1 to 1 bends the crown in the wind.
+  static func palm(
+    _ context: GraphicsContext, x: CGFloat, base: CGFloat, height: CGFloat, lean: CGFloat,
+    colour: ViewColour, sway: Double = 0
+  ) {
+    let top = CGPoint(x: x + lean + CGFloat(sway) * height * 0.015, y: base - height)
+    let control = CGPoint(x: x + lean * 0.2, y: base - height * 0.55)
+    let width = max(height * 0.022, 0.35)
+    var trunk = Path()
+    trunk.move(to: CGPoint(x: x - width, y: base))
+    trunk.addQuadCurve(
+      to: CGPoint(x: top.x - width * 0.6, y: top.y),
+      control: CGPoint(x: control.x - width, y: control.y))
+    trunk.addLine(to: CGPoint(x: top.x + width * 0.6, y: top.y))
+    trunk.addQuadCurve(
+      to: CGPoint(x: x + width, y: base), control: CGPoint(x: control.x + width, y: control.y))
+    trunk.closeSubpath()
+    context.fill(trunk, with: .color(colour.color()))
+    let reach = height * 0.2
+    for index in 0..<9 {
+      let angle = Double(index) / 8 * Double.pi + Double.pi + sway * 0.12
+      palmFrond(
+        context, from: top, angle: angle, length: reach * (0.8 + 0.3 * CGFloat(index % 3) / 2),
+        colour: colour.lit(index % 2 == 0 ? 0 : 0.04))
+    }
+    circle(context, top, width * 1.8, colour.lit(-0.05))
+  }
+
+  /// One frond: a curved blade that droops at its tip, widest a third of the way out.
+  static func palmFrond(
+    _ context: GraphicsContext, from: CGPoint, angle: Double, length: CGFloat, colour: ViewColour
+  ) {
+    let dx = CGFloat(cos(angle))
+    let dy = CGFloat(sin(angle))
+    let end = CGPoint(x: from.x + dx * length, y: from.y + dy * length * 0.5 + length * 0.55)
+    let control = CGPoint(
+      x: from.x + dx * length * 0.6, y: from.y + dy * length * 0.6 - length * 0.12)
+    var upper: [CGPoint] = []
+    var lower: [CGPoint] = []
+    for step in 0...10 {
+      let t = CGFloat(step) / 10
+      let u = 1 - t
+      let point = CGPoint(
+        x: u * u * from.x + 2 * u * t * control.x + t * t * end.x,
+        y: u * u * from.y + 2 * u * t * control.y + t * t * end.y)
+      let half = length * 0.09 * sin(.pi * min(1, t * 1.4)) * (1 - t * 0.5)
+      upper.append(CGPoint(x: point.x, y: point.y - half))
+      lower.append(CGPoint(x: point.x, y: point.y + half))
+    }
+    var blade = Path()
+    blade.addLines(upper + lower.reversed())
+    blade.closeSubpath()
+    context.fill(blade, with: .color(colour.color()))
+  }
+}
