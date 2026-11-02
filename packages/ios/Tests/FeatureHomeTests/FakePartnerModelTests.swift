@@ -58,6 +58,36 @@ struct FakePartnerModelTests {
     #expect(DemoRoom.saved(in: defaults)?.code == "ABCDEFGHJK")
   }
 
+  private func fakeNotes(of model: AppModel, count: Int) async throws -> [NoteRecord] {
+    let session = try #require(model.session)
+    for _ in 0..<200 where session.notes.count < count {
+      try await Task.sleep(for: .milliseconds(10))
+    }
+    return session.notes
+  }
+
+  @Test func aNewFakePartnerStartsWithALittleHistory() async throws {
+    let notes = try await fakeNotes(of: makeModel(fakeOn: true), count: 2)
+    #expect(notes.count == 2)
+  }
+
+  @Test func theFakePartnersNotesComeBackAfterARelaunch() async throws {
+    let archive = NoteArchive(storage: .directory(directory.appending(path: "fake")))
+    let first = makeModel(fakeOn: true)
+    _ = try await fakeNotes(of: first, count: 2)
+    _ = try await archive.add(NoteRecord(direction: .sent, date: .now, strokes: []))
+    let notes = try await fakeNotes(of: makeModel(fakeOn: true), count: 3)
+    #expect(notes.count == 3)
+  }
+
+  @Test func loggingOutOfTheFakePartnerDeletesItsNotes() async throws {
+    let archive = NoteArchive(storage: .directory(directory.appending(path: "fake")))
+    let model = makeModel(fakeOn: true)
+    _ = try await fakeNotes(of: model, count: 2)
+    _ = await model.logOut()
+    #expect(try await archive.notes().isEmpty)
+  }
+
   @Test func loggingOutOfTheFakePartnerOnlyLeavesIt() async throws {
     _ = DemoRoom.pair(code: "ABCDEFGHJK", in: defaults)
     let model = makeModel()
