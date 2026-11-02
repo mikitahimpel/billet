@@ -85,6 +85,7 @@ private let view = UUID()
   @MainActor @Test func tiltStopsOffScreenAndUnderReduceMotion() async {
     let source = CountingTiltSource()
     let diorama = NookiDiorama(tiltSource: source)
+    diorama.setOnScreen(true, in: view)
     diorama.startLoading()
     await diorama.loading?.value
     #expect(source.isRunning)
