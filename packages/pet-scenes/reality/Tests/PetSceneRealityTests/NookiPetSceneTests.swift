@@ -4,6 +4,7 @@ import Pet
 import PetScene
 import RealityKit
 import Testing
+import simd
 
 @testable import PetSceneReality
 
@@ -34,6 +35,14 @@ struct NookiPetSceneTests {
   @Test(arguments: ["Cat", "Room"])
   func compiledModelsOpen(name: String) async {
     #expect(await NookiAssets.compiled(name) != nil)
+  }
+
+  @Test func theBakedShellMatchesTheSizesInTheCode() async throws {
+    let assets = NookiAssets()
+    for part in NookiDiorama.shellParts {
+      let extents = try await assets.model(part.name).visualBounds(relativeTo: nil).extents
+      #expect(simd_distance(extents, part.size) < 0.0001, "\(part.name)")
+    }
   }
 
   @Test func mochiHasTheSeparateMeshesTheWakeAnimationSwaps() async throws {

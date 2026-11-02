@@ -47,6 +47,7 @@ final class NookiDiorama {
   private(set) var animator: NookiCatAnimator?
   private let missingMark = Entity()
   private let loadModel: NookiModelLoader
+  private let loadShape: NookiModelLoader
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
   private let physics = NookiPhysics()
@@ -111,13 +112,16 @@ final class NookiDiorama {
   /// Starts empty and cheap, so a view can hold one before anything heavy has run.
   init(
     loadModel: NookiModelLoader? = nil,
+    loadShape: NookiModelLoader? = nil,
     mochiDeadline: Duration = .seconds(12),
     tiltSource: any NookiTiltSource = NookiTiltSources.standard(),
     layoutStore: NookiLayoutStore = NookiLayoutStore(defaults: .standard)
   ) {
     renovation = NookiRenovation(store: layoutStore)
     let assets = NookiAssets()
-    self.loadModel = loadModel ?? { name throws(NookiLoadError) in try await assets.model(name) }
+    let bundled: NookiModelLoader = { name throws(NookiLoadError) in try await assets.model(name) }
+    self.loadModel = loadModel ?? bundled
+    self.loadShape = loadShape ?? bundled
     self.tiltSource = tiltSource
     self.mochiDeadline = mochiDeadline
     root.addChild(room)
@@ -141,11 +145,12 @@ final class NookiDiorama {
     NookiTrace.mark("load started")
     startLoadingMochi()
     let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
+    let environment = Task { await Self.ambientEnvironment() }
     await buildRoom()
     physics.buildShell(in: room)
     await buildBowl()
     await Task.yield()
-    buildNote()
+    await buildNote()
     buildBackstop()
     mochi.position = Self.bedSpot
     mochi.name = NookiTarget.mochi.rawValue
@@ -155,7 +160,7 @@ final class NookiDiorama {
     NookiTrace.mark("furniture placed")
     findLampParts()
     await Task.yield()
-    await addLighting()
+    addLighting(environment: await environment.value)
     await Task.yield()
     buildDust()
     buildStreakMarks(play.streak)
@@ -579,19 +584,37 @@ final class NookiDiorama {
 
   // MARK: - Room
 
+  /// The room's simple shapes, baked into the room's file. Sizes match the bake.
+  static let shellParts: [(name: String, size: SIMD3<Float>, position: SIMD3<Float>)] = [
+    ("shell_floor", [1.3, 0.08, 1.3], [0.05, -0.04, 0.05]),
+    ("shell_wall_left", [0.06, 0.86, 1.3], [-0.63, 0.43, 0.05]),
+    ("shell_wall_back", [1.36, 0.86, 0.06], [0.02, 0.43, -0.63]),
+    ("shell_skirting_left", [0.012, 0.09, 1.2], [-0.594, 0.045, 0.05]),
+    ("shell_skirting_back", [1.2, 0.09, 0.012], [0.05, 0.045, -0.594]),
+    ("shell_wire", [0.76, 0.006, 0.006], [-0.08, 0.6, -0.59]),
+  ]
+  private static let shellTones: [Tone] = [.honey, .plaster, .plaster, .walnut, .walnut, .ink]
+
+  /// The named baked shape in , or a plain generated one if the bake is missing it.
+  private func shape(
+    _ name: String, _ tone: Tone, otherwise generated: @autoclosure () -> MeshResource
+  ) async -> ModelEntity {
+    var mesh: MeshResource?
+    if let baked = try? await loadShape(name) {
+      Self.visit(baked) { entity in
+        if mesh == nil { mesh = entity.components[ModelComponent.self]?.mesh }
+      }
+    }
+    return ModelEntity(mesh: mesh ?? generated(), materials: [Self.clay(tone)])
+  }
+
   private func buildRoom() async {
-    let parts: [(size: SIMD3<Float>, tone: Tone, position: SIMD3<Float>)] = [
-      ([1.3, 0.08, 1.3], .honey, [0.05, -0.04, 0.05]),
-      ([0.06, 0.86, 1.3], .plaster, [-0.63, 0.43, 0.05]),
-      ([1.36, 0.86, 0.06], .plaster, [0.02, 0.43, -0.63]),
-      ([0.012, 0.09, 1.2], .walnut, [-0.594, 0.045, 0.05]),
-      ([1.2, 0.09, 0.012], .walnut, [0.05, 0.045, -0.594]),
-      ([0.76, 0.006, 0.006], .ink, [-0.08, 0.6, -0.59]),
-    ]
     var built: [ModelEntity] = []
-    for part in parts {
-      built.append(box(part.size, part.tone, at: part.position))
-      await Task.yield()
+    for (part, tone) in zip(Self.shellParts, Self.shellTones) {
+      let model = await shape(part.name, tone, otherwise: .generateBox(size: part.size))
+      model.position = part.position
+      room.addChild(model)
+      built.append(model)
     }
     for surface in built.prefix(3) {
       Self.makeTappable(
@@ -609,20 +632,17 @@ final class NookiDiorama {
   private func buildBowl() async {
     let bowl = Entity()
     bowl.position = Self.bowlPosition
-    let dish = ModelEntity(
-      mesh: .generateCylinder(height: 0.04, radius: 0.075), materials: [Self.clay(.heart)])
+    let dish = await shape(
+      "shape_dish", .heart, otherwise: .generateCylinder(height: 0.04, radius: 0.075))
     dish.position = [0, 0.02, 0]
     bowl.addChild(dish)
-    await Task.yield()
-    let treats = ModelEntity(
-      mesh: .generateSphere(radius: 0.066), materials: [Self.clay(.walnut)])
+    let treats = await shape("shape_treats", .walnut, otherwise: .generateSphere(radius: 0.066))
     treats.scale = [1, 0.5, 1]
     bowlFill.addChild(treats)
     bowlFill.position = [0, 0.04, 0]
     bowlFill.isEnabled = false
     bowl.addChild(bowlFill)
     room.addChild(bowl)
-    await Task.yield()
   }
 
   /// One mark per day of the streak, in rows of seven like a calendar scratched on the wall.
@@ -637,7 +657,7 @@ final class NookiDiorama {
     }
   }
 
-  private func buildNote() {
+  private func buildNote() async {
     note.name = NookiTarget.note.rawValue
     let sheet = ModelEntity(
       mesh: .generateBox(width: 0.22, height: 0.28, depth: 0.004),
@@ -645,8 +665,7 @@ final class NookiDiorama {
     note.addChild(sheet)
     noteSheet = sheet
     room.addChild(plane.entity)
-    let mark = ModelEntity(
-      mesh: .generateSphere(radius: 0.022), materials: [Self.clay(.heart)])
+    let mark = await shape("shape_note_mark", .heart, otherwise: .generateSphere(radius: 0.022))
     mark.position = [0, -0.02, 0.003]
     mark.scale = [1, 1, 0.1]
     note.addChild(mark)
@@ -669,15 +688,6 @@ final class NookiDiorama {
     backstop.position = [0, 0, -30]
     Self.makeTappable(backstop, size: [80, 80, 0.1], center: .zero)
     lens.addChild(backstop)
-  }
-
-  @discardableResult
-  private func box(_ size: SIMD3<Float>, _ tone: Tone, at position: SIMD3<Float>) -> ModelEntity {
-    let model = ModelEntity(
-      mesh: .generateBox(size: size, cornerRadius: 0.004), materials: [Self.clay(tone)])
-    model.position = position
-    room.addChild(model)
-    return model
   }
 
   private func place(_ item: NookiFurniture) async {
@@ -822,10 +832,13 @@ final class NookiDiorama {
 
   // MARK: - Light
 
-  private func addLighting() async {
-    if let image = Self.ambientGradient(),
-      let environment = try? await EnvironmentResource(equirectangular: image)
-    {
+  private static func ambientEnvironment() async -> EnvironmentResource? {
+    guard let image = ambientGradient() else { return nil }
+    return try? await EnvironmentResource(equirectangular: image)
+  }
+
+  private func addLighting(environment: EnvironmentResource?) {
+    if let environment {
       let ambient = Entity()
       ambient.components.set(
         ImageBasedLightComponent(source: .single(environment), intensityExponent: 0.6))
