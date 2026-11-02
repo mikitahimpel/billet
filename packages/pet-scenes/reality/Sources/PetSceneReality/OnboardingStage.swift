@@ -11,6 +11,7 @@ import RealityKit
 @MainActor
 final class OnboardingStage: TabStage {
   static let heartName = "onboarding-heart"
+  static let tagName = "onboarding-tag"
 
   let root = Entity()
   let screen = TabScreen()
@@ -33,9 +34,22 @@ final class OnboardingStage: TabStage {
   /// Seconds into the flight: it runs faster once cut short, and stops at its end.
   private var flightTime = 0.0
   private var timeline = OnboardingTimeline(reduceMotion: false)
-  private var moment = OnboardingSceneState.Moment.resting
+  private var state = OnboardingSceneState(moment: .resting)
+  private var moment: OnboardingSceneState.Moment { state.moment }
   private var hasArrived = false
   private var squeezedAt: Double?
+  private var halves = HeartHalves()
+  /// The halves of the model by side, each with the place it was made at.
+  private var halfEntities: [HeartSide: (entity: Entity, home: SIMD3<Float>)] = [:]
+  /// How much the model is scaled, to turn room units into its own.
+  private var heartScale: Float = 1
+  /// When the halves last met, for the burst of light.
+  private var burstAt: Double?
+
+  /// The little paper tag with the code, and how far it has come up.
+  private let tag = Entity()
+  private var tagCode: String?
+  private var tagShown: Float = 0
 
   /// Floats and sways; holds `beat`.
   private let heartFloat = Entity()
@@ -63,21 +77,28 @@ final class OnboardingStage: TabStage {
 
   /// Starts over at `state`: flying in when it is arriving, at rest otherwise.
   func begin(_ state: OnboardingSceneState) {
-    moment = state.moment
+    self.state = state
     hasArrived = false
     squeezedAt = nil
-    switch state.moment {
-    case .arriving: flightTime = 0
-    case .resting: flightTime = timeline.duration
+    burstAt = nil
+    flightTime = state.moment == .arriving ? 0 : timeline.duration
+    halves.settle(state.moment, mine: state.mine)
+    tagShown = state.code == nil ? 0 : 1
+    if isBuilt {
+      setTag(state.code)
+      apply(flightTime)
     }
-    if isBuilt { apply(flightTime) }
   }
 
-  /// Follows a change of `state`: resting cuts a flight short.
+  /// Follows a change of `state`: anything past arriving cuts a flight short, and the halves and
+  /// the tag move to their places from wherever they are.
   func show(_ state: OnboardingSceneState) {
-    guard state.moment != moment else { return }
-    moment = state.moment
-    if isBuilt { apply(flightTime) }
+    guard state != self.state else { return }
+    self.state = state
+    if isBuilt {
+      setTag(state.code)
+      apply(flightTime)
+    }
   }
 
   func start() {
@@ -117,9 +138,13 @@ final class OnboardingStage: TabStage {
   func endOrbit(velocityX: Float, velocityY: Float) {}
 
   func tap(_ entity: Entity) {
-    guard TabLook.named(Self.heartName, from: entity) != nil, hasArrived else { return }
-    if !reduceMotion { squeezedAt = clock }
-    onEvent?(.heartTapped)
+    guard hasArrived else { return }
+    if TabLook.named(Self.tagName, from: entity) != nil, tagShown > 0.5 {
+      onEvent?(.codeTapped)
+    } else if TabLook.named(Self.heartName, from: entity) != nil {
+      if !reduceMotion { squeezedAt = clock }
+      onEvent?(.heartTapped)
+    }
   }
 
   // MARK: - Stepping
@@ -129,9 +154,15 @@ final class OnboardingStage: TabStage {
     lighting.step(delta)
     guard isBuilt else { return }
     if flightTime < timeline.duration {
-      let rate = moment == .resting ? Self.hurry : 1
+      let rate = moment == .arriving ? 1 : Self.hurry
       flightTime = min(flightTime + delta * rate, timeline.duration)
     }
+    if halves.step(delta, towards: moment, mine: state.mine, reduceMotion: reduceMotion) {
+      burstAt = clock
+      onEvent?(.joined)
+    }
+    let wantedTag: Float = state.code == nil ? 0 : 1
+    tagShown += (wantedTag - tagShown) * Float(1 - exp(-(reduceMotion ? 6 : 4) * delta))
     apply(flightTime)
     if !hasArrived, flightTime >= timeline.duration {
       hasArrived = true
@@ -147,6 +178,8 @@ final class OnboardingStage: TabStage {
     screen.darkness = timeline.darkness(time)
     lighting.setDimmer(timeline.warmth(time))
     stepHeart(time)
+    stepHalves()
+    stepTag()
     stepFlames(time)
     updateGlows(time)
   }
@@ -168,10 +201,40 @@ final class OnboardingStage: TabStage {
     }
     if var material = heartMaterial {
       let beat = reduceMotion ? 0 : HeartMotion.beat(clock)
-      material.emissiveIntensity = (0.12 + 0.3 * glow) * (1 + 0.25 * beat)
+      material.emissiveIntensity = (0.12 + 0.3 * glow) * (1 + 0.25 * beat) + 0.9 * burst
       heartMaterial = material
       setHeartMaterial(material)
     }
+  }
+
+  /// How strong the burst of light is now, from 1 as the halves meet down to 0.
+  private var burst: Float {
+    guard let burstAt else { return 0 }
+    let age = clock - burstAt
+    guard age >= 0, age < OnboardingBurst.length else { return 0 }
+    return Float(OnboardingBurst.strength(age))
+  }
+
+  private func stepHalves() {
+    let poses = [(state.mine, halves.me), (state.mine.other, halves.partner)]
+    for (side, pose) in poses {
+      guard let half = halfEntities[side] else { continue }
+      var opacity = pose.opacity
+      if side == state.mine.other, moment == .apart(partner: .waiting), !reduceMotion {
+        opacity *= 0.85 + 0.25 * Float(sin(clock * 2.4))
+      }
+      half.entity.position = half.home + pose.offset / heartScale
+      half.entity.orientation = simd_quatf(angle: pose.tilt, axis: [0, 0, 1])
+      half.entity.components.set(OpacityComponent(opacity: min(max(opacity, 0), 1)))
+      half.entity.isEnabled = opacity > 0.01
+    }
+  }
+
+  private func stepTag() {
+    tag.isEnabled = tagShown > 0.01
+    let pop = reduceMotion ? 1 : 0.6 + 0.4 * tagShown
+    tag.scale = .one * pop
+    tag.components.set(OpacityComponent(opacity: tagShown))
   }
 
   private func stepFlames(_ time: Double) {
@@ -219,6 +282,33 @@ final class OnboardingStage: TabStage {
           centre: centre, radius: view.reach(OnboardingLayout.heartHeight * 2.1, at: point),
           colour: Self.heartColour, strength: (0.28 + 0.1 * beat) * heart * halos))
     }
+    // The partner's half, waiting: a soft glow of its own that breathes.
+    let partner = Double(halves.partner.opacity)
+    if partner > 0.01, simd_length(halves.partner.offset) > 0.3 {
+      let spot = point + halves.partner.offset
+      if let centre = view.project(spot) {
+        let breath = reduceMotion ? 1 : 0.75 + 0.35 * sin(clock * 2.4)
+        glows.append(
+          TabGlow(
+            centre: centre, radius: view.reach(OnboardingLayout.heartHeight * 1.3, at: spot),
+            colour: GenzColour(0xFFB08A), strength: 0.45 * partner * breath * halos))
+      }
+    }
+    if let burstAt, let centre = view.project(point) {
+      let age = clock - burstAt
+      if age < OnboardingBurst.length {
+        let strength = OnboardingBurst.strength(age)
+        let spread = reduceMotion ? 3.2 : OnboardingBurst.spread(age)
+        glows.append(
+          TabGlow(
+            centre: centre, radius: view.reach(Float(spread), at: point),
+            colour: GenzColour(0xFFC88A), strength: 0.9 * strength))
+        glows.append(
+          TabGlow(
+            centre: centre, radius: view.reach(1.4, at: point), colour: GenzColour(0xFFF3DC),
+            strength: strength))
+      }
+    }
     screen.glows = glows
   }
 
@@ -239,10 +329,12 @@ final class OnboardingStage: TabStage {
     heartFloat.position = OnboardingLayout.heart.scene
     room.addChild(heartFloat)
     await loadHeart()
+    buildTag()
     lighting.apply(look)
     isBuilt = true
     room.isEnabled = isOnScreen
     screen.isLit = true
+    setTag(state.code)
     apply(flightTime)
   }
 
@@ -450,6 +542,40 @@ final class OnboardingStage: TabStage {
     room.addChild(lighting.root)
   }
 
+  // MARK: - Tag
+
+  private func buildTag() {
+    let spec = OnboardingLayout.tag
+    tag.name = Self.tagName
+    tag.position = spec.foot.scene
+    tag.orientation =
+      simd_quatf(angle: spec.yaw, axis: [0, 1, 0]) * simd_quatf(angle: -spec.lean, axis: [1, 0, 0])
+    tag.isEnabled = false
+    room.addChild(tag)
+    NookiDiorama.makeTappable(
+      tag, size: [spec.width + 0.3, spec.height + 0.3, 0.3], center: [0, spec.height / 2, 0])
+  }
+
+  /// Writes `code` on the tag, or leaves the tag as it is while it fades out.
+  private func setTag(_ code: String?) {
+    guard let code, code != tagCode else { return }
+    tagCode = code
+    let spec = OnboardingLayout.tag
+    for child in Array(tag.children) { child.removeFromParent() }
+    // A card a little thicker than paper, and the face with the code on it.
+    tag.addChild(
+      kit.part(
+        kit.box([spec.width, spec.height, 0.04]), kit.matte(GenzColour(0xF3E2C8)),
+        at: [0, spec.height / 2, -0.025]))
+    let face: any RealityKit.Material =
+      OnboardingTag.image(code: code).flatMap { TabLook.picture($0, tint: GenzColour(0xF8EBDA)) }
+      ?? kit.matte(GenzColour(0xFFF6EA))
+    tag.addChild(
+      kit.part(
+        kit.plane(width: spec.width, height: spec.height), face, at: [0, spec.height / 2, 0]))
+    if let receiver { NookiDiorama.visit(tag) { $0.components.set(receiver) } }
+  }
+
   // MARK: - Heart
 
   private func loadHeart() async {
@@ -473,6 +599,12 @@ final class OnboardingStage: TabStage {
     material.emissiveIntensity = 0.12
     heartMaterial = material
     heartBeat.addChild(model)
+    heartScale = scale
+    for (side, name) in [(HeartSide.left, "heart_L"), (.right, "heart_R")] {
+      if let half = model.findEntity(named: name) {
+        halfEntities[side] = (half, half.position)
+      }
+    }
     setHeartMaterial(material)
     if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
     heartFloat.name = Self.heartName
@@ -508,6 +640,7 @@ final class OnboardingStage: TabStage {
     let mesh = MeshResource.generateSphere(radius: 0.5)
     for side: Float in [-1, 1] {
       let half = ModelEntity(mesh: mesh, materials: [SimpleMaterial()])
+      half.name = side < 0 ? "heart_L" : "heart_R"
       half.position = [side * 0.32, 0.1, 0]
       half.scale = [0.85, 1, 0.8]
       heart.addChild(half)

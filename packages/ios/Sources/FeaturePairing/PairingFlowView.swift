@@ -5,7 +5,7 @@ import SwiftUI
 /// `onPaired` once the account has a partner.
 public struct PairingFlowView: View {
   /// How often a shown invite is checked for a claim.
-  static let checkEvery = Duration.seconds(3)
+  public static let checkEvery = Duration.seconds(3)
 
   private let model: PairingModel
   private let onPaired: () -> Void
@@ -135,7 +135,7 @@ public struct PairingFlowView: View {
 
 extension PairingFailure {
   /// What the screen tells the user.
-  var message: String {
+  public var message: String {
     switch self {
     case .invalidCode:
       "That code isn't working. It may be mistyped, expired, already used or your own."
