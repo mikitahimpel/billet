@@ -13,6 +13,18 @@ public enum Note: Codable, Hashable, Sendable {
     case image
   }
 
+  /// `sentAt` is epoch milliseconds, which the contract requires to be zero or more.
+  private static func sentAt(
+    _ container: KeyedDecodingContainer<CodingKeys>
+  ) throws -> Int {
+    let value = try container.decode(Int.self, forKey: .sentAt)
+    guard value >= 0 else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .sentAt, in: container, debugDescription: "sentAt must not be negative")
+    }
+    return value
+  }
+
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     let tag = try container.decode(String.self, forKey: .tag)
@@ -21,14 +33,14 @@ public enum Note: Codable, Hashable, Sendable {
       self = .drawing(
         id: try container.decode(NoteId.self, forKey: .id),
         author: try container.decode(UserId.self, forKey: .author),
-        sentAt: try container.decode(Int.self, forKey: .sentAt),
+        sentAt: try Self.sentAt(container),
         compact: try container.decode(CompactStrokes.self, forKey: .compact),
         image: try container.decode(MediaKey.self, forKey: .image))
     case "Photo":
       self = .photo(
         id: try container.decode(NoteId.self, forKey: .id),
         author: try container.decode(UserId.self, forKey: .author),
-        sentAt: try container.decode(Int.self, forKey: .sentAt),
+        sentAt: try Self.sentAt(container),
         image: try container.decode(MediaKey.self, forKey: .image))
     default:
       throw DecodingError.dataCorruptedError(

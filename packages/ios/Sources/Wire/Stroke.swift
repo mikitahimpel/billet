@@ -1,4 +1,7 @@
 /// A full-precision stroke, used while drawing live.
+///
+/// Decoding enforces the contract's colour pattern. Building one in code does not, so the drawing
+/// code that makes strokes stays free of throws.
 public struct Stroke: Codable, Hashable, Sendable {
   public let color: String
   public let width: Double
@@ -8,5 +11,22 @@ public struct Stroke: Codable, Hashable, Sendable {
     self.color = color
     self.width = width
     self.points = points
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case color
+    case width
+    case points
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    color = try container.decode(String.self, forKey: .color)
+    guard StrokeColor.isValid(color) else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .color, in: container, debugDescription: "expected #RRGGBB, got \(color)")
+    }
+    width = try container.decode(Double.self, forKey: .width)
+    points = try container.decode([Point].self, forKey: .points)
   }
 }
