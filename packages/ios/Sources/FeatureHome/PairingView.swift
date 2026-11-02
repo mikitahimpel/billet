@@ -5,24 +5,15 @@ import WidgetBridge
 
 /// First launch: a welcome, then create a pair or enter the partner's code.
 struct PairingView: View {
-  enum Step {
+  private enum Step {
     case welcome
     case enterCode
   }
 
   let model: AppModel
-  /// Called for Back on the code screen in place of showing the welcome here, when the welcome is
-  /// shown elsewhere.
-  private let onWelcome: (() -> Void)?
 
-  @State private var step: Step
+  @State private var step = Step.welcome
   @State private var partnerCode = ""
-
-  init(model: AppModel, startsAt step: Step = .welcome, onWelcome: (() -> Void)? = nil) {
-    self.model = model
-    self.onWelcome = onWelcome
-    _step = State(initialValue: step)
-  }
 
   private var typedCode: String {
     partnerCode.filter { !$0.isWhitespace }.uppercased()
@@ -107,9 +98,7 @@ struct PairingView: View {
     case .enterCode:
       BilletButton("Join", rank: .primary) { model.join(code: typedCode) }
         .disabled(typedCode.isEmpty)
-      BilletButton("Back", rank: .secondary) {
-        if let onWelcome { onWelcome() } else { step = .welcome }
-      }
+      BilletButton("Back", rank: .secondary) { step = .welcome }
     case .creating(let session):
       if session.hasConnected {
         BilletButton("Continue", rank: .primary) { model.finishCreating() }

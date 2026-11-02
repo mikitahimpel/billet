@@ -272,41 +272,59 @@ struct GenzRoomView: View {
     .simultaneousGesture(orbit(room))
     .simultaneousGesture(pinch(room))
     .simultaneousGesture(tap(room))
-    .onChange(of: isOnScreen, initial: true) { _, onScreen in
-      room.setOnScreen(onScreen, in: viewID)
+    .modifier(GenzRoomFeeds(view: self, room: room))
+  }
+
+  /// Hands the room everything it follows from the environment and the pet. Kept apart from
+  /// the stage so each chain stays small enough to type-check.
+  fileprivate struct GenzRoomFeeds: ViewModifier {
+    let view: GenzRoomView
+    let room: GenzRoom
+
+    func body(content: Content) -> some View {
+      view.feeds(content, room: room)
     }
-    .onChange(of: world, initial: true) { _, world in room.show(world) }
-    .onChange(of: drawing, initial: true) { _, drawing in room.show(drawing: drawing) }
-    .onChange(of: reduceMotion, initial: true) { _, reduced in room.setReduceMotion(reduced) }
-    .onChange(of: openings) { room.replayOpening() }
-    .onChange(of: flyIn, initial: true) { _, flyIn in
-      room.onOpeningEnded = openingEnded
-      room.flyIn(flyIn)
-    }
-    .onChange(of: gaze) { _, gaze in room.gaze(at: gaze) }
-    .onChange(of: catCue) { _, request in
-      if let request { room.cue(request.cue) }
-    }
-    .onChange(of: dayLight, initial: true) { _, light in room.show(dayLight: light) }
-    .onChange(of: followsTilt, initial: true) { _, follows in room.setFollowsTilt(follows) }
-    .onDisappear { room.setFollowsTilt(false) }
-    // A treat or a pet from the partner wakes the cat, without telling anyone.
-    .onChange(of: play.treatsUsed) { room.react(.treat) }
-    .onChange(of: play.petsReceived) { room.react(.pet) }
-    .onChange(of: play.life, initial: true) { _, life in room.follow(life) }
-    .onChange(of: play.lifeNeeds, initial: true) { _, needs in room.showLife(needs) }
-    .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
-    .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
-    .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
-    .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
-    .onAppear { room.art = replacementArt ?? GenzNativeArt() }
-    .accessibilityElement()
-    .accessibilityLabel(
-      layout.style == .sunsetLamp ? "Bedroom lit by a sunset lamp" : "Window seat at night"
-    )
-    .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
-    .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
-    .accessibilityAction(named: "Open the note") { onEvent(.noteOpened(delivery: world.delivery)) }
+  }
+
+  fileprivate func feeds(_ content: some View, room: GenzRoom) -> some View {
+    content
+      .onChange(of: isOnScreen, initial: true) { _, onScreen in
+        room.setOnScreen(onScreen, in: viewID)
+      }
+      .onChange(of: world, initial: true) { _, world in room.show(world) }
+      .onChange(of: drawing, initial: true) { _, drawing in room.show(drawing: drawing) }
+      .onChange(of: reduceMotion, initial: true) { _, reduced in room.setReduceMotion(reduced) }
+      .onChange(of: openings) { room.replayOpening() }
+      .onChange(of: flyIn, initial: true) { _, flyIn in
+        room.onOpeningEnded = openingEnded
+        room.flyIn(flyIn)
+      }
+      .onChange(of: gaze) { _, gaze in room.gaze(at: gaze) }
+      .onChange(of: catCue) { _, request in
+        if let request { room.cue(request.cue) }
+      }
+      .onChange(of: dayLight, initial: true) { _, light in room.show(dayLight: light) }
+      .onChange(of: followsTilt, initial: true) { _, follows in room.setFollowsTilt(follows) }
+      .onDisappear { room.setFollowsTilt(false) }
+      // A treat or a pet from the partner wakes the cat, without telling anyone.
+      .onChange(of: play.treatsUsed) { room.react(.treat) }
+      .onChange(of: play.petsReceived) { room.partnerPetted() }
+      .onChange(of: play.life, initial: true) { _, life in room.follow(life) }
+      .onChange(of: play.lifeNeeds, initial: true) { _, needs in room.showLife(needs) }
+      .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+      .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
+      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
+      .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
+      .onAppear { room.art = replacementArt ?? GenzNativeArt() }
+      .accessibilityElement()
+      .accessibilityLabel(
+        layout.style == .sunsetLamp ? "Bedroom lit by a sunset lamp" : "Window seat at night"
+      )
+      .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
+      .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
+      .accessibilityAction(named: "Open the note") {
+        onEvent(.noteOpened(delivery: world.delivery))
+      }
   }
 
   /// Puts `room` in the RealityView in place of the room it held, and starts its updates.
@@ -351,9 +369,9 @@ struct GenzRoomView: View {
         let stroking = self.stroking ?? room.isOverCat(value.startLocation)
         if self.stroking == nil {
           self.stroking = stroking
-          if stroking, let event = room.stroke() { onEvent(event) }
+          if stroking { room.stroke(at: value.location).forEach(onEvent) }
         } else if stroking {
-          room.strokeMoved()
+          room.strokeMoved(to: value.location).forEach(onEvent)
         }
         room.followFinger(at: value.location)
         if !stroking, let event = room.bat(at: value.location) { onEvent(event) }
@@ -366,6 +384,7 @@ struct GenzRoomView: View {
       .onEnded { value in
         defer { stroking = nil }
         lastDrag = .zero
+        if stroking == true { room.strokeEnded() }
         guard orbits, stroking != true else { return }
         room.endOrbit(
           velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))

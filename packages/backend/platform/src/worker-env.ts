@@ -7,11 +7,6 @@ export interface WorkerEnv {
   readonly DB: D1Database;
   /** Private R2 bucket for note images. Never served without an authorisation check. */
   readonly MEDIA: R2Bucket;
-  /**
-   * Workers Analytics Engine dataset for accepted app events (no content, no ids but a pair hash).
-   * Optional so a Worker without it still serves; then events are only counted in D1.
-   */
-  readonly EVENTS?: AnalyticsEngineDataset;
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */

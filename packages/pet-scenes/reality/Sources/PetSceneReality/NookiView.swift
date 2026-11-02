@@ -307,7 +307,7 @@ private struct NookiStage: View {
           return
         }
         if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
-          diorama.stroke(at: location)
+          diorama.stroke(at: location).forEach(onEvent)
           return
         }
         guard orbits else { return }
@@ -323,6 +323,7 @@ private struct NookiStage: View {
         if isHoldingPiece(value.entity) {
           return
         } else if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
+          diorama.strokeEnded()
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))

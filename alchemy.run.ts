@@ -62,11 +62,6 @@ export default Alchemy.Stack(
     const stage = yield* Alchemy.Stage;
     const db = yield* Database;
     const media = yield* Media;
-    // Accepted app events, written by the Worker (docs/experiments.md). Analytics Engine makes a
-    // dataset on its first write, so a deploy creates nothing else. One dataset per stage.
-    const events = yield* Cloudflare.AnalyticsEngine.Dataset("Events", {
-      dataset: `billet_${stage}_events`,
-    });
 
     // Bindings must match packages/backend/platform/src/worker-env.ts. `PairRoom` is the class
     // exported by apps/api/src/worker.ts, one object per couple, SQLite-backed by default.
@@ -75,7 +70,6 @@ export default Alchemy.Stack(
       env: {
         DB: db,
         MEDIA: media,
-        EVENTS: events,
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
         ...(stage === "dev"

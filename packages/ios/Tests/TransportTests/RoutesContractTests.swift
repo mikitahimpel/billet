@@ -61,16 +61,6 @@ import Testing
     #expect(source.contains(#"bearerPrefix = "\#(Routes.bearerPrefix)""#))
   }
 
-  @Test func theClientHeadersMatchTheContract() throws {
-    let file = URL(fileURLWithPath: #filePath)
-      .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-      .deletingLastPathComponent().deletingLastPathComponent()
-      .appending(path: "packages/contracts/http-api/src/routes.ts")
-    let source = try String(contentsOf: file, encoding: .utf8)
-    #expect(source.contains(#"appVersion: "\#(Routes.appVersionHeader.lowercased())""#))
-    #expect(source.contains(#"os: "\#(Routes.osHeader.lowercased())""#))
-  }
-
   @Test func theSocketRequestIsSignedAndSecure() throws {
     let base = try #require(URL(string: "https://api.example"))
     let request = try #require(URLRequest.socket(baseURL: base, token: "t"))

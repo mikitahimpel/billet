@@ -19,12 +19,32 @@ final class CatPurr {
 
   private(set) var isPurring = false
   private(set) var hearts: [Heart] = []
+  /// How strong the purr under the finger is, from 0 to 1: the chin purrs hardest.
+  var strength = 0.5
+  /// The last one-off haptic asked for, numbered so the same one twice still plays.
+  private(set) var felt: (serial: Int, haptic: CatHaptic)?
   @ObservationIgnored private var next = 0
   @ObservationIgnored private var petting = CatPetting()
 
   /// A stroke at `clock`, with the cat at `point` on screen. Returns whether the cat should roll.
   func touch(at clock: Double, cat point: CGPoint?) -> Bool {
     apply(petting.touch(at: clock), cat: point)
+  }
+
+  /// Plays `haptic` under the finger. A purr only changes the purr's strength.
+  func feel(_ haptic: CatHaptic) {
+    if case .purr(let strength) = haptic {
+      self.strength = strength
+      return
+    }
+    felt = ((felt?.serial ?? 0) + 1, haptic)
+  }
+
+  /// A heart rising from `point`, for care that is not a stroke.
+  func heart(at point: CGPoint?) {
+    guard let point else { return }
+    next += 1
+    hearts.append(Heart(id: next, at: point, born: .now, drift: sin(Double(next) * 2.4)))
   }
 
   /// Time passed: hearts keep coming while the petting lasts, and a pause stops the purr.
@@ -45,10 +65,7 @@ final class CatPurr {
       case .purrEnded: isPurring = false
       case .rolled: rolled = true
       case .heart:
-        guard let point else { continue }
-        next += 1
-        hearts.append(
-          Heart(id: next, at: point, born: .now, drift: sin(Double(next) * 2.4)))
+        heart(at: point)
       }
     }
     return rolled
@@ -79,13 +96,64 @@ struct CatPurrOverlay: View {
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
-    .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.35), trigger: pulse)
+    .sensoryFeedback(trigger: pulse) { _, _ in .impact(flexibility: .soft, intensity: pulseLevel) }
+    .sensoryFeedback(trigger: beat) { _, _ in beatFeedback }
     .task(id: purr.isPurring) {
-      // A purr is a soft flutter, about eleven beats a second, while the finger keeps stroking.
+      // A purr rumbles in breaths: a lighter flutter breathing in, a fuller one breathing out,
+      // as strong as the spot under the finger makes it.
+      var start = ContinuousClock.now
       while purr.isPurring, !Task.isCancelled {
+        let into = (ContinuousClock.now - start) / CatPurrOverlay.breath
+        if into >= 1 { start = .now }
+        let breathingIn = into.truncatingRemainder(dividingBy: 1) < 0.45
+        pulseLevel = purr.strength * (breathingIn ? 0.5 : 0.85)
         pulse += 1
-        try? await Task.sleep(for: .milliseconds(90))
+        try? await Task.sleep(for: .milliseconds(breathingIn ? 85 : 65))
       }
+    }
+    .task(id: purr.felt?.serial) {
+      guard let haptic = purr.felt?.haptic else { return }
+      for (index, feedback) in CatPurrOverlay.pattern(haptic).enumerated() {
+        if index > 0 {
+          try? await Task.sleep(for: .milliseconds(CatPurrOverlay.patternGap(haptic)))
+        }
+        guard !Task.isCancelled else { return }
+        beatFeedback = feedback
+        beat += 1
+      }
+    }
+  }
+
+  @State private var pulseLevel = 0.4
+  @State private var beat = 0
+  @State private var beatFeedback = SensoryFeedback.impact(weight: .light)
+
+  static let breath = Duration.seconds(2)
+
+  /// The taps a one-off haptic is made of.
+  static func pattern(_ haptic: CatHaptic) -> [SensoryFeedback] {
+    switch haptic {
+    case .purr: []
+    case .nudge:
+      [.impact(flexibility: .soft, intensity: 0.45), .impact(flexibility: .soft, intensity: 0.3)]
+    case .grab:
+      [
+        .impact(flexibility: .rigid, intensity: 0.7), .impact(flexibility: .rigid, intensity: 0.5),
+        .impact(flexibility: .rigid, intensity: 0.6),
+      ]
+    case .pounce: [.impact(weight: .medium, intensity: 0.9)]
+    case .chomp: Array(repeating: .impact(flexibility: .solid, intensity: 0.35), count: 4)
+    case .lift: [.impact(weight: .light, intensity: 0.6)]
+    case .settle: [.impact(weight: .heavy, intensity: 0.45)]
+    case .trick: [.success]
+    }
+  }
+
+  static func patternGap(_ haptic: CatHaptic) -> Int {
+    switch haptic {
+    case .chomp: 380
+    case .grab: 110
+    case .purr, .nudge, .pounce, .lift, .settle, .trick: 140
     }
   }
 }

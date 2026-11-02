@@ -71,7 +71,7 @@ struct PictureEntryView: View {
         if family.isAccessory {
           Color.clear
         } else {
-          PictureBackground(entry.choice, context: entry.context).savedEveningGround()
+          PictureBackground(entry.choice, context: entry.context)
         }
       }
   }

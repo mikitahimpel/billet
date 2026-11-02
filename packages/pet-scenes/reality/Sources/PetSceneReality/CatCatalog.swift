@@ -56,9 +56,11 @@ enum CatCatalog {
     switch action {
     case .sleep, .twitch: .sleep
     case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk,
-      .rollOver, .bat:
+      .rollOver, .bat, .grab, .wave:
       .sit
-    case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch, .headbutt, .reachUp: .stand
+    case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch, .headbutt, .reachUp, .sniff,
+      .dangle:
+      .stand
     }
   }
 

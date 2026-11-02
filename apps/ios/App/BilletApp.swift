@@ -49,7 +49,7 @@ struct BilletApp: App {
             set: { id in id.map(catalog.select) }
           ))
       case .real(let baseURL):
-        RealRootView(model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes)
+        RealRootView(model: RealBackend.model(baseURL: baseURL))
       }
     }
   }
@@ -66,7 +66,7 @@ enum RealBackend {
       ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
     let accounts = AccountStore.live(tokens: tokens, storage: storage)
     let api = APIClient.live(
-      http: .urlSession(baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers),
+      http: .urlSession(baseURL: baseURL, session: .shared),
       token: { (try? accounts.load())?.token })
     return RealAppModel(api: api, accounts: accounts, baseURL: baseURL)
   }

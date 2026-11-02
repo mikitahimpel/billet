@@ -56,25 +56,3 @@ struct DeskSceneView: View {
       }
   }
 }
-
-/// The first-launch scene: a soft heart over candles on a windowsill at night.
-struct OnboardingSceneView: View {
-  let state: OnboardingSceneState
-  let stages: TabStages
-  let onEvent: @MainActor (OnboardingSceneEvent) -> Void
-
-  var body: some View {
-    let stage = stages.onboardingStage
-    TabSceneView(stage: stage)
-      .onAppear {
-        stage.onEvent = { onEvent($0) }
-        stage.begin(state)
-      }
-      .onChange(of: state) { _, state in
-        stage.onEvent = { onEvent($0) }
-        stage.show(state)
-      }
-      .accessibilityElement()
-      .accessibilityLabel("A soft red heart floating over candles on a windowsill at night.")
-  }
-}

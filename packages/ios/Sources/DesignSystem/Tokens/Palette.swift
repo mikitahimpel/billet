@@ -8,11 +8,10 @@ public enum Palette {
   public static let sky = Swatch(0x0E2E2A)
   /// The ground under the Home art, and its bottom edge.
   public static let meadow = Swatch(0x143B33)
-  /// The page every screen stands in: the middle of the standard ground, ember dusk's deep plum
-  /// (see ``EveningGround``).
-  public static let page = Swatch(0x34172C)
-  /// The deepest shade of the page, for shadows on it.
-  public static let pageDeep = Swatch(0x1A0A14)
+  /// The page, the evening green-black every screen stands in.
+  public static let page = Swatch(0x0C2422)
+  /// The foot of the page, where the evening is deepest.
+  public static let pageDeep = Swatch(0x081A18)
   /// A lamp-lit panel standing on the page.
   public static let raised = Swatch(0x402A1C)
   /// A control standing on a panel.
