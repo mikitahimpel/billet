@@ -60,8 +60,8 @@ struct LatestNoteEntryView: View {
       LockNoteCircular(image: image)
         .containerBackground(.clear, for: .widget)
     default:
-      LatestNoteView(image: image)
-        .containerBackground(for: .widget) { EveningBackground() }
+      NotePaperView(image: image)
+        .containerBackground(for: .widget) { PaperSurface() }
     }
   }
 }
