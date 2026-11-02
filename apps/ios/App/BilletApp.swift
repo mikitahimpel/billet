@@ -49,7 +49,7 @@ struct BilletApp: App {
             set: { id in id.map(catalog.select) }
           ))
       case .real(let baseURL):
-        RealRootView(model: RealBackend.model(baseURL: baseURL))
+        RealRootView(model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes)
       }
     }
   }

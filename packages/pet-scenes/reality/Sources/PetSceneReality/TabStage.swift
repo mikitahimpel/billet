@@ -40,6 +40,8 @@ final class TabScreen {
   var window: [CGPoint] = []
   /// True once the scene is built and lit, so the glow can come up with it.
   var isLit = false
+  /// How much of the view is still dark, as while a scene fades up out of the night.
+  var darkness = 0.0
 }
 
 /// The camera of a tab's scene: the styled rooms' orbit, held to a small turn so the scene stays
@@ -65,6 +67,12 @@ final class TabCamera {
     guard size.width > 0, size.height > 0 else { return }
     self.size = size
     camera.fit(to: SIMD2(Float(size.width), Float(size.height)))
+    aim()
+  }
+
+  /// Holds the camera off its place by a turn, a lift and a distance multiple, as in a flight.
+  func fly(yaw: Float, pitch: Float, distance: Float) {
+    camera.fly(yaw: yaw, pitch: pitch, distance: distance)
     aim()
   }
 
@@ -178,6 +186,7 @@ final class TabStages {
   private let rooms: GenzRoomCache
   private var shop: ShopStage?
   private var desk: DeskStage?
+  private var onboarding: OnboardingStage?
 
   nonisolated init(rooms: GenzRoomCache) {
     self.rooms = rooms
@@ -194,6 +203,13 @@ final class TabStages {
     if let desk { return desk }
     let made = DeskStage(kit: rooms.kit, cats: rooms.cats)
     desk = made
+    return made
+  }
+
+  var onboardingStage: OnboardingStage {
+    if let onboarding { return onboarding }
+    let made = OnboardingStage(kit: rooms.kit)
+    onboarding = made
     return made
   }
 }
@@ -226,6 +242,12 @@ struct TabSceneView: View {
       TabGlowLayer(screen: stage.screen)
       GlowGrade(look: look)
       GlowVignette(look: look)
+      if stage.screen.darkness > 0 {
+        Color.black.opacity(stage.screen.darkness)
+          .ignoresSafeArea()
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
     }
     .ignoresSafeArea()
     .onAppear { isAppeared = true }

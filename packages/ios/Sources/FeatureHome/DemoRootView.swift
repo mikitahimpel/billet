@@ -20,6 +20,8 @@ public struct DemoRootView: View {
   @Environment(\.scenePhase) private var scenePhase
   @State private var model: AppModel
   @State private var widgetFeatures: WidgetFeaturesModel
+  /// Where the plain pairing screens start when the cinematic welcome hands over to them.
+  @State private var pairingStart: PairingView.Step?
   private let publisher = WidgetPublisher.live()
 
   public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
@@ -63,6 +65,9 @@ public struct DemoRootView: View {
       .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
         model.fakePartnerSwitched(on: on)
       }
+      .onChange(of: model.isPaired) { _, paired in
+        if paired { pairingStart = nil }
+      }
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
           model.session?.connect()
@@ -88,8 +93,21 @@ public struct DemoRootView: View {
       }
     } else {
       switch model.stage {
+      case .unpaired
+      where pairingStart == nil && model.labs.isOn(LabExperiment.cinematicOnboarding):
+        CinematicOnboardingView(
+          scenes: scenes, lighting: model.labs.lighting,
+          memory: OnboardingMemory(defaults: DemoRoom.sharedDefaults)
+        ) {
+          WelcomeActions(
+            onCreate: { model.createPair() },
+            onEnterCode: { pairingStart = .enterCode },
+            onTryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) })
+        }
       case .unpaired, .pairing:
-        PairingView(model: model)
+        PairingView(
+          model: model, startsAt: pairingStart ?? .welcome,
+          onWelcome: pairingStart == nil ? nil : { pairingStart = nil })
       case .paired(let session):
         AppShellView(
           session: session,
