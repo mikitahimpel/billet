@@ -28,8 +28,8 @@ struct NookiRenovateControls: View {
   }
 
   private var tray: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(spacing: 8) {
+    VStack(alignment: .leading, spacing: 2) {
+      HStack(spacing: 0) {
         ForEach(NookiSwatch.allCases, id: \.self) { option in
           Button {
             paint = option
@@ -46,18 +46,16 @@ struct NookiRenovateControls: View {
           .accessibilityLabel(option.name)
           .accessibilityAddTraits(option == paint ? .isSelected : [])
         }
-      }
-      HStack {
-        Text("Tap a wall or the floor to paint. Hold furniture to move it.")
-          .font(.footnote)
-          .fixedSize(horizontal: false, vertical: true)
         Spacer(minLength: 8)
         Button("Reset", action: onReset)
           .font(.footnote.weight(.semibold))
       }
+      Text("Tap to paint. Hold furniture to move it.")
+        .font(.footnote)
+        .padding(.horizontal, 5)
     }
-    .padding(10)
-    .frame(maxWidth: 320, alignment: .leading)
+    .padding(8)
+    .frame(maxWidth: 340, alignment: .leading)
     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: Radius.plate))
   }
 }
