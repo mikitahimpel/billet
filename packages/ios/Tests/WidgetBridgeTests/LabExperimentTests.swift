@@ -17,6 +17,15 @@ import Testing
     #expect(!LabExperiment.allCases.contains { $0.hasHomeCard && features.isOn($0) })
   }
 
+  @Test func theCatsNeedsStartOnShownInTheRoomWithTheOtherWaysOff() {
+    let features = WidgetFeatures()
+    #expect(features.isOn(LabExperiment.catLife))
+    #expect(features.isOn(LabExperiment.lifeInRoom))
+    for other in [LabExperiment.lifeBubble, .lifeRings, .lifeChips, .lifeDebug] {
+      #expect(!features.isOn(other))
+    }
+  }
+
   @Test(arguments: LabExperiment.allCases)
   func everyExperimentHasWordsAndAGroup(_ experiment: LabExperiment) {
     #expect(!experiment.title.isEmpty)
