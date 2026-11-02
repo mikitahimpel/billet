@@ -35,13 +35,15 @@ struct NookiCamera: Equatable {
   private(set) var lean = SIMD2<Float>.zero
   /// How much further out than `distance` the view's shape puts the camera.
   private(set) var standBack: Float = 1
+  /// How far an opening flight still holds the camera off its place: turn, lift and distance.
+  private(set) var flight = SIMD3<Float>(0, 0, 1)
   private var isHeld = false
 
   var position: SIMD3<Float> {
-    let shownYaw = Self.leaned(yaw, by: lean.x, in: Self.yawLimits)
-    let shownPitch = Self.leaned(pitch, by: lean.y, in: Self.pitchLimits)
+    let shownYaw = Self.leaned(yaw, by: lean.x, in: Self.yawLimits) + flight.x
+    let shownPitch = Self.leaned(pitch, by: lean.y, in: Self.pitchLimits) + flight.y
     let flat = cos(shownPitch)
-    let reach = distance * standBack
+    let reach = distance * standBack * flight.z
     return Self.target + reach * [flat * sin(shownYaw), sin(shownPitch), flat * cos(shownYaw)]
   }
 
@@ -61,12 +63,21 @@ struct NookiCamera: Equatable {
     self.lean = lean
   }
 
-  /// Fits a view of `size`. The field of view is vertical, so a tall narrow view would otherwise
-  /// run the room off both sides.
-  mutating func fit(to size: SIMD2<Float>) {
-    guard size.x > 0, size.y > 0 else { return }
-    standBack = max(1, Self.fullRoomAspect * size.y / size.x)
+  /// Holds the camera off its place by an opening's turn, lift and distance multiple.
+  mutating func fly(yaw: Float, pitch: Float, distance: Float) {
+    flight = [yaw, pitch, distance]
   }
+
+  /// Fits a view of `size`. The field of view is vertical, so a tall narrow view would otherwise
+  /// run the room off both sides. A view the room `fills` comes in closer, and lets the room's
+  /// corners run past its edges.
+  mutating func fit(to size: SIMD2<Float>, fills: Bool = false) {
+    guard size.x > 0, size.y > 0 else { return }
+    standBack = max(1, Self.fullRoomAspect * size.y / size.x * (fills ? Self.fillShare : 1))
+  }
+
+  /// How much of a narrow view's stand-back a filled view keeps.
+  private static let fillShare: Float = 0.68
 
   /// Follows a drag, in radians. Stops any coasting or trip home.
   mutating func drag(yaw deltaYaw: Float, pitch deltaPitch: Float) {
@@ -138,9 +149,11 @@ struct NookiCamera: Equatable {
   private mutating func arriveHome() {
     let lean = lean
     let standBack = standBack
+    let flight = flight
     self = Self.home
     self.lean = lean
     self.standBack = standBack
+    self.flight = flight
   }
 
   private mutating func springBack(_ delta: Float) {

@@ -33,6 +33,14 @@ public final class RoomRenovator: RoomRenovating {
   /// True while a scene is open for changes, so the screen around it can step back.
   public var isRenovating = false
 
+  /// Counts up each time the host asks the scene to open for changes from its own control.
+  public private(set) var openRequests = 0
+
+  /// Asks the scene to open for changes, for a host that keeps the scene's own button hidden.
+  public func requestOpen() {
+    openRequests += 1
+  }
+
   /// Finds room for a floor piece in the scene's own plan; `nil` from it means the room is full.
   @ObservationIgnored public var openSpot: ((ShopItem) -> (x: Double, z: Double)?)?
 

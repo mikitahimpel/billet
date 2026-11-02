@@ -56,6 +56,13 @@ struct GenzRoomView: View {
   @Environment(\.petSceneDrawing) private var drawing
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneOpeningCount) private var openings
+  @Environment(\.petSceneFlyIn) private var flyIn
+  @Environment(\.petSceneGaze) private var gaze
+  @Environment(\.petSceneOrbits) private var orbits
+  @Environment(\.petSceneCatCue) private var catCue
+  @Environment(\.petSceneDayLight) private var dayLight
+  @Environment(\.petSceneFollowsTilt) private var followsTilt
+  @Environment(\.petSceneOpeningEnded) private var openingEnded
   @Environment(\.scenePhase) private var scenePhase
 
   private var behind: RoomLayerSlot {
@@ -75,6 +82,7 @@ struct GenzRoomView: View {
     ZStack {
       if let room {
         layer(behind, room: room)
+        theirSky
         stage(room)
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
         catAnchor(room)
@@ -93,6 +101,19 @@ struct GenzRoomView: View {
     }
     .task(id: world.step) {
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
+    }
+  }
+
+  /// The partner's sky over the night outside, when the room follows the time of day.
+  @ViewBuilder private var theirSky: some View {
+    if let theirs = dayLight?.theirs {
+      let sky = RoomDayLook.sky(theirs)
+      Color(red: Double(sky.colour.x), green: Double(sky.colour.y), blue: Double(sky.colour.z))
+        .opacity(theirs.phase == .night ? 0 : 0.55)
+        .blendMode(.color)
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
   }
 
@@ -141,6 +162,17 @@ struct GenzRoomView: View {
     .onChange(of: drawing, initial: true) { _, drawing in room.show(drawing: drawing) }
     .onChange(of: reduceMotion, initial: true) { _, reduced in room.setReduceMotion(reduced) }
     .onChange(of: openings) { room.replayOpening() }
+    .onChange(of: flyIn, initial: true) { _, flyIn in
+      room.onOpeningEnded = openingEnded
+      room.flyIn(flyIn)
+    }
+    .onChange(of: gaze) { _, gaze in room.gaze(at: gaze) }
+    .onChange(of: catCue) { _, request in
+      if let request { room.cue(request.cue) }
+    }
+    .onChange(of: dayLight, initial: true) { _, light in room.show(dayLight: light) }
+    .onChange(of: followsTilt, initial: true) { _, follows in room.setFollowsTilt(follows) }
+    .onDisappear { room.setFollowsTilt(false) }
     // A treat or a pet from the partner wakes the cat, without telling anyone.
     .onChange(of: play.treatsUsed) { _ = room.petCat() }
     .onChange(of: play.petsReceived) { _ = room.petCat() }
@@ -167,6 +199,7 @@ struct GenzRoomView: View {
   private func orbit(_ room: GenzRoom) -> some Gesture {
     DragGesture(minimumDistance: 6)
       .onChanged { value in
+        guard orbits else { return }
         room.orbit(
           byX: Float(value.translation.width - lastDrag.width),
           y: Float(value.translation.height - lastDrag.height))
@@ -174,6 +207,7 @@ struct GenzRoomView: View {
       }
       .onEnded { value in
         lastDrag = .zero
+        guard orbits else { return }
         room.endOrbit(
           velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
       }
