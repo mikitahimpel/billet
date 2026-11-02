@@ -27,14 +27,14 @@ enum ShopLayout {
   /// The shop window in the left wall: from `y0` to `y1` along it, `z0` to `z1` up.
   static let window = (y0: Float(1.4), y1: Float(5.4), z0: Float(1.5), z1: Float(4.4))
 
-  static let keeper = GenzRoomPoint(3.5, 2.15, 0.35)
+  static let keeper = GenzRoomPoint(3.5, 2.15, 0.2)
   /// How tall the keeper stands, ears and all, in room units.
-  static let keeperHeight: Float = 3.0
+  static let keeperHeight: Float = 3.5
   /// The two lamps over the counter.
   static let lamps = [GenzRoomPoint(2.4, 3.65, 4.55), GenzRoomPoint(4.6, 3.65, 4.55)]
 
   static let camera = GenzCamera.Home(
-    target: GenzRoomPoint(3.4, 3.2, 2.5).scene, yaw: 0.34, pitch: 0.3, distance: 21,
+    target: GenzRoomPoint(3.9, 3.2, 2.5).scene, yaw: 0.34, pitch: 0.3, distance: 24,
     fieldOfView: 40, yawLimits: 0.1...0.62, pitchLimits: 0.18...0.5)
 
   /// A place for one item: where it stands, the box it must fit in (scene axes: across, up,
