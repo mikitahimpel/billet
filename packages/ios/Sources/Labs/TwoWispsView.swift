@@ -27,7 +27,7 @@ struct WispsDrawing: View {
   }
 }
 
-/// Hold Mochi at the same moment as your partner and the two wisps meet. The hold is a button you
+/// Hold the cat at the same moment as your partner and the two wisps meet. The hold is a button you
 /// keep pressed; it lights up while the partner is holding too.
 public struct TwoWispsSection: View {
   private let hold: TogetherHold

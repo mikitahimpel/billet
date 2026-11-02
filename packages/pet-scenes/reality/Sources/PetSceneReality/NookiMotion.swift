@@ -7,9 +7,9 @@ import Foundation
 enum NookiMotion {
   /// How long an object keeps wobbling.
   static let wobbleLength = 1.5
-  /// How long Mochi stays up after a pet.
+  /// How long the cat stays up after a pet.
   static let petLength = 2.0
-  /// How long Mochi keeps looking at something tapped.
+  /// How long the cat keeps looking at something tapped.
   static let lookLength = 1.6
 
   /// Tilt of a tapped object, in radians, dying away.
@@ -18,7 +18,7 @@ enum NookiMotion {
     return Float(0.05 * exp(-3 * elapsed) * sin(14 * elapsed))
   }
 
-  /// Mochi's reaction to a pet.
+  /// The cat's reaction to a pet.
   static func pet(_ elapsed: Double, reduceMotion: Bool) -> NookiFrame {
     guard (0..<petLength).contains(elapsed) else { return NookiFrame() }
     let eyesOpen = elapsed < petLength - 0.3

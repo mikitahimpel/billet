@@ -7,12 +7,15 @@ import Testing
 @testable import PetSceneReality
 
 @Suite struct CatCatalogTests {
-  @Test func mochiKeepsItsOldTrims() throws {
-    let sleep = try #require(CatCatalog.mochiClips[.sleep])
-    #expect(sleep.trimStart == 10)
-    #expect(sleep.trimEnd == 16)
-    #expect(sleep.base == .sleep)
-    #expect(CatCatalog.mochiClips.count == NookiClip.allCases.count)
+  /// The Nooki room picks from these clips by name, and its yarn game times the pounce at 1.5 s.
+  @Test func theStandardCatHasEveryNookiClip() throws {
+    let clips = CatCatalog.clips(CatChoice.standard.model)
+    for clip in NookiClip.allCases {
+      let action = try #require(CatAction(rawValue: clip.rawValue), "\(clip)")
+      #expect(clips[action] != nil, "\(clip)")
+    }
+    #expect(try abs(#require(clips[.pounce]).duration - 1.5) < 0.01)
+    #expect(clips[.pounce]?.loops == false)
   }
 
   @Test func unknownAndEmptyClipsAreSkipped() {
@@ -27,7 +30,7 @@ import Testing
   }
 
   @Test func everyBundledCatHasItsTableAndCoats() {
-    for model in CatModel.allCases where model != .mochi {
+    for model in CatModel.allCases {
       let clips = CatCatalog.clips(model)
       guard !clips.isEmpty else { continue }
       #expect(clips[.idle] != nil, "\(model)")
@@ -64,25 +67,6 @@ import Testing
     #expect(CatCatalog.colours(.black, keepsWhiteBelly: true)?[.belly] == 0xF7F5F2)
   }
 
-  @MainActor @Test func mochiReachMatchesTheModel() async throws {
-    let mochi = try await NookiAssets().model("Cat")
-    let bounds = mochi.visualBounds(relativeTo: nil)
-    #expect(abs(max(bounds.extents.x, bounds.extents.z) - CatCatalog.mochiReach) < 0.002)
-  }
-
-  /// Fitted, no found cat stands taller than the tallest of the cats made to Mochi's size.
-  @MainActor @Test func noFittedCatTowersOverTheOthers() async throws {
-    var heights: [CatModel: Float] = [:]
-    for model in CatModel.allCases where model != .mochi && !CatCatalog.clips(model).isEmpty {
-      let cat = try #require(await NookiAssets.compiledCat(model))
-      heights[model] = cat.visualBounds(relativeTo: nil).extents.y * CatCatalog.fit(model)
-    }
-    let made = heights.filter { CatCatalog.fit($0.key) == 1 }.values.max() ?? 0
-    for (model, height) in heights {
-      #expect(height <= made * 1.05, "\(model) stands \(height) against \(made)")
-    }
-  }
-
   /// Each detailed cat swaps its whole painted texture for a coat, eyes included, keeps its own for
   /// the coat it was made with, and plays every action.
   @MainActor @Test(arguments: [CatModel.detailed, .detailedKitten, .detailedFluffy])
@@ -103,7 +87,7 @@ import Testing
   }
 
   @MainActor @Test func everyBundledCatLoadsAndRigs() async throws {
-    for model in CatModel.allCases where model != .mochi && !CatCatalog.clips(model).isEmpty {
+    for model in CatModel.allCases where !CatCatalog.clips(model).isEmpty {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
       #expect(rig.info[.sleep] != nil || rig.info[.idle] != nil)

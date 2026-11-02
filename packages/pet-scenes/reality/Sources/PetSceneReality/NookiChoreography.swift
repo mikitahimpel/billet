@@ -4,10 +4,10 @@ import PetScene
 
 /// Where the diorama should be at a moment of the current step.
 struct NookiFrame: Equatable {
-  /// How far Mochi has risen, from curled up at 0 to awake at 1.
+  /// How far the cat has risen, from curled up at 0 to awake at 1.
   var wake: Float = 0
   var eyesOpen = false
-  /// How far the note has come towards Mochi, from out of sight at 0 to carried at 1.
+  /// How far the note has come towards the cat, from out of sight at 0 to carried at 1.
   var note: Float = 0
   /// How far the carried note has gone to the wire, from 0 to hanging at 1.
   var pinned: Float = 0
@@ -19,17 +19,17 @@ struct NookiFrame: Equatable {
   var stepHeight: Float = 0
   /// Squash and stretch, from -1 squashed on landing to 1 stretched in the air.
   var stretch: Float = 0
-  /// Which way Mochi faces, as a yaw in radians.
+  /// Which way the cat faces, as a yaw in radians.
   var heading: Float = NookiChoreography.restHeading
-  /// How much of the window's light the room shows, and how far Mochi has turned to it: 0 or 1.
+  /// How much of the window's light the room shows, and how far the cat has turned to it: 0 or 1.
   /// The diorama eases towards it, so a change does not jump.
   var light: Float = 0
 }
 
 /// The animation of each step, as a pure function of time.
 ///
-/// The body's own movement comes from Mochi's clips; this says where it goes and what it is doing.
-/// The note rides above Mochi to the wall. Reduce Motion keeps Mochi in the bed and lets the note
+/// The body's own movement comes from the cat's clips; this says where it goes and what it is doing.
+/// The note rides above the cat to the wall. Reduce Motion keeps the cat in the bed and lets the note
 /// appear on the wire.
 enum NookiChoreography {
   static let pacing = PetScenePacing(delivery: .seconds(9), settling: .seconds(2.5))

@@ -3,21 +3,17 @@ import OSLog
 import Pet
 import RealityKit
 
-/// Loads the room's models from their compiled files: one for Mochi and one for all the furniture,
-/// which open in a fraction of the time USD takes. A compiled file that will not open falls back to
-/// its USD file, so the room is never lost to a build tool's output.
+/// Loads the room's models from compiled files, which open in a fraction of the time USD takes:
+/// one for all the furniture, and one for each cat. The furniture's compiled file falls back to its
+/// USD file if it will not open, so the room is never lost to a build tool's output.
 @MainActor
 final class NookiAssets {
   private var room: Task<Entity?, Never>?
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiAssets")
-  nonisolated static let mochiName = "Cat"
   private static let roomName = "Room"
 
   /// The named model, ready to be added to a scene.
   func model(_ name: String) async throws(NookiLoadError) -> Entity {
-    if name == Self.mochiName {
-      return try await Self.whole(name)
-    }
     if room == nil {
       room = Task { try? await Self.whole(Self.roomName) }
     }
@@ -28,8 +24,8 @@ final class NookiAssets {
     return piece
   }
 
-  /// A cat other than Mochi from its compiled file, or nil when the file is missing or will not
-  /// open, so the room can show Mochi instead.
+  /// A cat from its compiled file, or nil when the file is missing or will not open, so the room
+  /// can show the standard cat instead.
   static func compiledCat(_ model: CatModel) async -> Entity? {
     let name = CatCatalog.resourceName(model)
     guard
