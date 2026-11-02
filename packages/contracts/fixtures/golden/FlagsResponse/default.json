@@ -1,0 +1,12 @@
+{
+  "flags": [
+    {
+      "key": "home-direction",
+      "variant": "window-seat"
+    },
+    {
+      "key": "invite-card",
+      "variant": "control"
+    }
+  ]
+}

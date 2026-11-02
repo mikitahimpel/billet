@@ -103,6 +103,21 @@ import Testing
     expectRejected(CreateInviteResponse.self, ##"{"code":"ABCD2345EF","expiresAt":-1}"##)
   }
 
+  // MARK: flags
+
+  @Test(arguments: [
+    ##"{"flags":[{"key":"","variant":"a"}]}"##,
+    ##"{"flags":[{"key":"a","variant":""}]}"##,
+    ##"{"flags":[{"key":"a"}]}"##,
+  ])
+  func aFlagNeedsAKeyAndAVariant(_ json: String) {
+    expectRejected(FlagsResponse.self, json)
+  }
+
+  @Test func anEmptyFlagListIsAccepted() throws {
+    #expect(try decode(FlagsResponse.self, ##"{"flags":[]}"##).flags.isEmpty)
+  }
+
   // MARK: push payload
 
   @Test func aNullCompactIsRejected() {

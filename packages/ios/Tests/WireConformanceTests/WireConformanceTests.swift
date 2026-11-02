@@ -30,6 +30,7 @@ let roundTrips: [String: RoundTrip] = [
   "SendNoteRequest": codec(SendNoteRequest.self),
   "SendNoteResponse": codec(SendNoteResponse.self),
   "ListNotesResponse": codec(ListNotesResponse.self),
+  "FlagsResponse": codec(FlagsResponse.self),
   "AuthChallengeResponse": codec(AuthChallengeResponse.self),
   "SignInWithAppleRequest": codec(SignInWithAppleRequest.self),
   "SessionResponse": codec(SessionResponse.self),

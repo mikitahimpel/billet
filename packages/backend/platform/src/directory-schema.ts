@@ -121,3 +121,18 @@ export const rateLimits = sqliteTable(
     index("rate_limits_window_start_index").on(table.windowStart),
   ],
 );
+
+// The variant each pair was given in each experiment it entered. Only pairs inside an experiment
+// have a row, and a row is never updated, so changing weights or exposure later moves nobody.
+// Pairs outside it get the default and have no row. The pair id is not a foreign key: a pair has no
+// table of its own, and the rows stay for analysis after the pair ends.
+export const pairFlags = sqliteTable(
+  "pair_flags",
+  {
+    pairId: text("pair_id").notNull(),
+    experimentKey: text("experiment_key").notNull(),
+    variant: text("variant").notNull(),
+    assignedAt: integer("assigned_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
+);

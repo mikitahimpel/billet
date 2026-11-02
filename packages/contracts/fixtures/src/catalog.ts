@@ -8,6 +8,7 @@ import {
   NoteId,
   UserId,
 } from "@billet/contracts-domain/ids";
+import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
 import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -22,6 +23,7 @@ import {
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
+import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import {
   ClaimInviteRequest,
   ClaimInviteResponse,
@@ -64,6 +66,10 @@ const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
 const code = Schema.decodeUnknownSync(InviteCode)("ABCD2345EF");
+const experimentKey = Schema.decodeUnknownSync(ExperimentKey)("home-direction");
+const otherExperimentKey = Schema.decodeUnknownSync(ExperimentKey)("invite-card");
+const variantId = Schema.decodeUnknownSync(VariantId)("window-seat");
+const otherVariantId = Schema.decodeUnknownSync(VariantId)("control");
 const idempotencyKey = Schema.decodeUnknownSync(IdempotencyKey)(
   "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
 );
@@ -119,6 +125,15 @@ export const catalog: ReadonlyArray<Fixture> = [
     photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
+  fixture("FlagsResponse", FlagsResponse, {
+    default: {
+      flags: [
+        { key: experimentKey, variant: variantId },
+        { key: otherExperimentKey, variant: otherVariantId },
+      ],
+    },
+    none: { flags: [] },
+  }),
   fixture("ListNotesResponse", ListNotesResponse, {
     default: {
       notes: [
