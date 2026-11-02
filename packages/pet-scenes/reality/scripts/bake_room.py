@@ -3,8 +3,11 @@
 
 Each piece becomes a single mesh under its own name, with dense meshes decimated, low-poly ones left
 as authored, and authored normals carried across. Colours move into a small palette texture shared
-by two plain materials, because RealityKit's load time follows the material count. Glossy and glowing
-surfaces keep materials of their own.
+by two plain materials. Glossy and glowing surfaces keep materials of their own.
+
+The room's simple shapes are baked here too, so nothing is generated on the phone while the room
+loads. Their sizes must match the list in NookiDiorama, which a test checks. They carry a stand-in
+material: the app gives them their own.
 
     pip install usd-core pyfqmr numpy scipy pillow
     bake_room.py
@@ -50,6 +53,17 @@ LIFTS = {"Item_monstera": {"Cylinder": 0.006}}
 NEIGHBOURS = 12
 SAME_PLACE = 1e-4
 PLAIN_ROUGHNESS = (0.8, 1.0)
+EDGE_RADIUS = 0.004
+BOXES = {
+    "shell_floor": (1.3, 0.08, 1.3),
+    "shell_wall_left": (0.06, 0.86, 1.3),
+    "shell_wall_back": (1.36, 0.86, 0.06),
+    "shell_skirting_left": (0.012, 0.09, 1.2),
+    "shell_skirting_back": (1.2, 0.09, 0.012),
+    "shell_wire": (0.76, 0.006, 0.006),
+}
+BOWL_DISH = ("shape_dish", 0.075, 0.04)
+SPHERES = {"shape_treats": 0.066, "shape_note_mark": 0.022}
 PALETTE_BLOCK = 8
 PALETTE_COLUMNS = 8
 
@@ -253,6 +267,101 @@ def bake_piece(meshes, budget, palette):
     )
 
 
+def bevelled_box(size, radius):
+    """A box with softened edges in 44 triangles: flat faces keep their normals, and the strips
+    between them blend across, which reads as a rounded edge at this size."""
+    half = np.array(size) / 2
+    inner = np.maximum(half - radius, 0)
+    points, normals, numbers, faces = [], [], {}, []
+
+    def vertex(axis, signs):
+        key = (axis, *signs)
+        if key not in numbers:
+            position = np.array(signs) * inner
+            position[axis] = signs[axis] * half[axis]
+            normal = np.zeros(3)
+            normal[axis] = signs[axis]
+            numbers[key] = len(points)
+            points.append(position)
+            normals.append(normal)
+        return numbers[key]
+
+    def triangle(a, b, c):
+        pa, pb, pc = points[a], points[b], points[c]
+        outward = np.dot(np.cross(pb - pa, pc - pa), pa + pb + pc) > 0
+        faces.append((a, b, c) if outward else (a, c, b))
+
+    for axis in range(3):
+        following, last = (axis + 1) % 3, (axis + 2) % 3
+        for side in (-1, 1):
+            def at(first, second, face):
+                signs = [0, 0, 0]
+                signs[axis], signs[following], signs[last] = side, first, second
+                return vertex(face, tuple(signs))
+
+            triangle(at(-1, -1, axis), at(1, -1, axis), at(1, 1, axis))
+            triangle(at(-1, -1, axis), at(1, 1, axis), at(-1, 1, axis))
+            for along in (-1, 1):
+                a, b = at(along, -1, axis), at(along, 1, axis)
+                c, d = at(along, -1, following), at(along, 1, following)
+                triangle(a, b, d)
+                triangle(a, d, c)
+                if axis == 0:
+                    for end in (-1, 1):
+                        triangle(at(along, end, axis), at(along, end, following), at(along, end, last))
+    return np.array(points), np.array(normals), np.array(faces)
+
+
+def sphere(radius, around=16, down=10):
+    points, faces = [], []
+    for row in range(down + 1):
+        polar = np.pi * row / down
+        for column in range(around):
+            turn = 2 * np.pi * column / around
+            points.append((np.sin(polar) * np.cos(turn), np.cos(polar), np.sin(polar) * np.sin(turn)))
+    for row in range(down):
+        for column in range(around):
+            a = row * around + column
+            b = row * around + (column + 1) % around
+            c, d = a + around, b + around
+            faces += [(a, b, d), (a, d, c)]
+    normals = np.array(points)
+    return normals * radius, normals, np.array(faces)
+
+
+def cylinder(radius, height, around=32):
+    ring = [(np.cos(2 * np.pi * i / around), np.sin(2 * np.pi * i / around)) for i in range(around)]
+    points, normals, faces = [], [], []
+    for x, z in ring:
+        for y in (-height / 2, height / 2):
+            points.append((x * radius, y, z * radius))
+            normals.append((x, 0, z))
+    for i in range(around):
+        a, b = 2 * i, 2 * ((i + 1) % around)
+        faces += [(a, a + 1, b + 1), (a, b + 1, b)]
+    for y, up in ((-height / 2, -1), (height / 2, 1)):
+        centre = len(points)
+        points.append((0, y, 0))
+        normals.append((0, up, 0))
+        for x, z in ring:
+            points.append((x * radius, y, z * radius))
+            normals.append((0, up, 0))
+        for i in range(around):
+            a, b = centre + 1 + i, centre + 1 + (i + 1) % around
+            faces.append((centre, a, b) if up < 0 else (centre, b, a))
+    return np.array(points), np.array(normals), np.array(faces)
+
+
+def write_shape(stage, name, shape, materials):
+    points, normals, faces = shape
+    material = "plain_80"
+    surface = Surface((0.5, 0.5, 0.5), 0.8, 0.0, (0, 0, 0))
+    uvs = np.full((len(points), 2), 0.5)
+    subsets = {material: list(range(len(faces)))}
+    write_piece(stage, name, (points, normals, uvs, faces.reshape(-1), subsets, {material: surface}),
+                materials)
+
+
 def define_material(stage, name, surface):
     path = f"/Room/_materials/{name}"
     material = UsdShade.Material.Define(stage, path)
@@ -327,6 +436,12 @@ def main():
             baked = bake_piece(read_meshes(source, name), budget, palette)
             write_piece(stage, name, baked, materials)
             print(f"{name:16} {baked[-2]:7} -> {baked[-1]:6} tris, {len(baked[4])} parts")
+        for name, size in BOXES.items():
+            write_shape(stage, name, bevelled_box(size, EDGE_RADIUS), materials)
+        dish, dish_radius, dish_height = BOWL_DISH
+        write_shape(stage, dish, cylinder(dish_radius, dish_height), materials)
+        for name, radius in SPHERES.items():
+            write_shape(stage, name, sphere(radius), materials)
         palette.save(Path(folder) / "palette.png")
         stage.GetRootLayer().Save()
         UsdUtils.CreateNewUsdzPackage(Sdf.AssetPath(str(layer_path)), str(OUTPUT))
