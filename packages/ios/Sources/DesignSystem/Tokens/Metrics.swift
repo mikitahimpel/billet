@@ -47,9 +47,9 @@ public enum Glow {
   public static let edgeOpacity = 0.14
 }
 
-/// The one size and weight of every SF Symbol.
+/// The one size and weight of every SF Symbol. It scales with Dynamic Type like the text beside it.
 public enum IconStyle {
-  public static let font = Font.system(size: 17, weight: .medium)
+  public static let font = Font.system(.body, weight: .medium)
 }
 
 /// Interaction sizes.

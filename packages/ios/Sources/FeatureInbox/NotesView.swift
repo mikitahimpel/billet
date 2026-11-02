@@ -100,7 +100,7 @@ private struct NoteRow: View {
       subtitle: note.date.formatted(.dateTime.day().month().hour().minute())
     ) {
       NoteDrawing(note: note, side: 216)
-        .frame(width: thumbnail, height: thumbnail)
+        .frame(width: min(thumbnail, 120), height: min(thumbnail, 120))
     } trailing: {
       HStack(spacing: Spacing.small) {
         if let reaction { ReactionMark(reaction) }

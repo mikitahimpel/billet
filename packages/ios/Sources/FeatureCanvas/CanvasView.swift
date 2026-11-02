@@ -80,6 +80,10 @@ public struct CanvasView: View {
               .onEnded { _ in store.send(.strokeEnded) }
           )
           .accessibilityLabel("Drawing canvas")
+          .accessibilityHint(
+            "Draw with one finger. VoiceOver passes your touches straight through."
+          )
+          .accessibilityAddTraits(.allowsDirectInteraction)
           .accessibilityIdentifier("drawingCanvas")
       }
       .clipShape(.rect(cornerRadius: Radius.paper))

@@ -52,17 +52,30 @@ public struct ClosetView: View {
   }
 
   private var header: some View {
-    HStack(spacing: Spacing.small) {
-      Text("Closet")
-        .billetType(.title)
-        .foregroundStyle(Palette.paper.color)
-        .accessibilityAddTraits(.isHeader)
-      Spacer(minLength: Spacing.small)
-      IconButton("bag.fill", label: "Shop", action: onOpenShop)
-      IconButton("xmark", label: "Close", action: onClose)
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: Spacing.small) {
+        closetTitle
+        Spacer(minLength: Spacing.small)
+        IconButton("bag.fill", label: "Shop", action: onOpenShop)
+        IconButton("xmark", label: "Close", action: onClose)
+      }
+      VStack(alignment: .leading, spacing: Spacing.small) {
+        closetTitle
+        HStack(spacing: Spacing.small) {
+          IconButton("bag.fill", label: "Shop", action: onOpenShop)
+          IconButton("xmark", label: "Close", action: onClose)
+        }
+      }
     }
     .padding(.horizontal, Spacing.medium)
     .padding(.top, Spacing.small)
+  }
+
+  private var closetTitle: some View {
+    Text("Closet")
+      .billetType(.title)
+      .foregroundStyle(Palette.paper.color)
+      .accessibilityAddTraits(.isHeader)
   }
 
   private var list: some View {

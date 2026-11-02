@@ -16,6 +16,7 @@ struct HomeView: View {
   private static let drawButton = "draw"
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var typeSize
   @Namespace private var zoom
   @State private var hungImage: CGImage?
   /// What the card that opened the canvas asked for, in place of the day's usual prompt.
@@ -138,14 +139,30 @@ struct HomeView: View {
         endPoint: .bottom
       )
       .ignoresSafeArea()
-      VStack(spacing: Spacing.small) {
-        petScene
-          .frame(maxWidth: .infinity, minHeight: 160, maxHeight: .infinity)
-          .layoutPriority(-1)
-        controls
-          .padding(.horizontal, Spacing.medium)
+      if typeSize.isAccessibilitySize {
+        // Large text makes the cards taller than the screen, so they scroll under the scene
+        // instead of being squeezed over one another.
+        ScrollView {
+          VStack(spacing: Spacing.small) {
+            petScene
+              .frame(maxWidth: .infinity)
+              .frame(height: 240)
+            controls
+              .padding(.horizontal, Spacing.medium)
+          }
+          .padding(.bottom, Spacing.small)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+      } else {
+        VStack(spacing: Spacing.small) {
+          petScene
+            .frame(maxWidth: .infinity, minHeight: 160, maxHeight: .infinity)
+            .layoutPriority(-1)
+          controls
+            .padding(.horizontal, Spacing.medium)
+        }
+        .padding(.bottom, Spacing.small)
       }
-      .padding(.bottom, Spacing.small)
     }
     .overlay { nightOverlay }
     .overlay(alignment: .top) { roomStatus }
@@ -224,7 +241,6 @@ struct HomeView: View {
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
-    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
     .calmAnimation(value: catAway)

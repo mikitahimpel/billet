@@ -148,27 +148,45 @@ public struct ListRow<Leading: View, Trailing: View>: View {
     self.trailing = trailing()
   }
 
+  @Environment(\.dynamicTypeSize) private var typeSize
+
   public var body: some View {
-    HStack(spacing: Spacing.medium) {
-      leading
-      VStack(alignment: .leading, spacing: 0) {
-        Text(title)
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
-        if let subtitle {
-          Text(subtitle)
-            .billetType(.label)
-            .foregroundStyle(Palette.muted.color)
-            .contentTransition(.opacity)
+    Group {
+      if typeSize.isAccessibilitySize {
+        // At the largest text sizes a side-by-side row leaves the words a column a letter wide, so
+        // the pieces stack and the words get the whole width.
+        VStack(alignment: .leading, spacing: Spacing.small) {
+          leading
+          texts
+          trailing
+        }
+      } else {
+        HStack(spacing: Spacing.medium) {
+          leading
+          texts
+            .frame(maxWidth: .infinity, alignment: .leading)
+          trailing
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      trailing
     }
     .padding(.horizontal, Spacing.medium)
     .padding(.vertical, Spacing.small)
     .frame(maxWidth: .infinity, minHeight: Target.row, alignment: .leading)
     .contentShape(.rect)
+  }
+
+  private var texts: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(title)
+        .billetType(.body)
+        .foregroundStyle(Palette.paper.color)
+      if let subtitle {
+        Text(subtitle)
+          .billetType(.label)
+          .foregroundStyle(Palette.muted.color)
+          .contentTransition(.opacity)
+      }
+    }
   }
 }
 

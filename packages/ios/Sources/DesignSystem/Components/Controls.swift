@@ -30,6 +30,8 @@ public struct ButtonLabel: View {
       Text(title)
         .billetType(.action)
         .multilineTextAlignment(.center)
+        // At large text sizes the title wraps onto more lines instead of being cut off.
+        .fixedSize(horizontal: false, vertical: true)
     }
     .foregroundStyle(isEnabled ? rank.textColor : Palette.muted.color)
     .padding(.horizontal, Spacing.medium)
