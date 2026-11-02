@@ -104,6 +104,7 @@ public struct IconButton: View {
     Button(action: action) {
       Image(systemName: systemImage)
         .font(IconStyle.font)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .foregroundStyle(iconColor)
         .frame(width: Target.minimum, height: Target.minimum)
         .contentShape(.circle)
