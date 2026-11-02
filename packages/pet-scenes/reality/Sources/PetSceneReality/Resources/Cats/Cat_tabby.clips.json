@@ -1,4 +1,10 @@
 {
+ "bat": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 63.7333,
+  "trimStart": 62.3333
+ },
  "blink": {
   "base": "sit",
   "loops": true,
@@ -29,6 +35,12 @@
   "trimEnd": 35.8333,
   "trimStart": 32.8333
  },
+ "headbutt": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 65.8667,
+  "trimStart": 64.0667
+ },
  "idle": {
   "base": "stand",
   "loops": true,
@@ -58,6 +70,18 @@
   "loops": false,
   "trimEnd": 19.1667,
   "trimStart": 17.6667
+ },
+ "reachUp": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 68.4,
+  "trimStart": 66.2
+ },
+ "rollOver": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 62.0,
+  "trimStart": 58.0
  },
  "sit": {
   "base": "sit",
