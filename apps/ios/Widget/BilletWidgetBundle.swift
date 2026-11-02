@@ -17,6 +17,7 @@ struct BilletWidgetBundle: WidgetBundle {
   var body: some Widget {
     LatestNoteWidget()
     PetPoseWidget()
+    BedsideWidget()
   }
 }
 
