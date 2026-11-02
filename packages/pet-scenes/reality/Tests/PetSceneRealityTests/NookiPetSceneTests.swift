@@ -80,6 +80,21 @@ struct NookiPetSceneTests {
     #expect(diorama.noteShowsDrawing)
   }
 
+  @Test func theBakedLampStillHasPartsThatGlow() async throws {
+    let lamp = try await NookiFurniture.bundledModel(NookiFurniture.lampName)
+    var glowing = 0
+    func visit(_ entity: Entity) {
+      for material in entity.components[ModelComponent.self]?.materials ?? [] {
+        if let surface = material as? PhysicallyBasedMaterial, surface.emissiveIntensity > 0 {
+          glowing += 1
+        }
+      }
+      entity.children.forEach(visit)
+    }
+    visit(lamp)
+    #expect(glowing > 0)
+  }
+
   @Test func loadingTwiceBuildsOneRoom() async {
     let diorama = NookiDiorama()
     diorama.startLoading()
