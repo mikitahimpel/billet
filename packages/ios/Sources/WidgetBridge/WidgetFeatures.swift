@@ -206,10 +206,10 @@ public final class WidgetFeaturesModel {
   public private(set) var homeVariant: HomeVariant
   /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
   public private(set) var pretendHour: Int?
-  /// Who keeps the 3D shop. Kept beside the flags, in its own file.
-  public private(set) var shopkeeper: Shopkeeper
   /// How the rooms are lit. Kept beside the flags, in its own file.
   public private(set) var lighting: RoomLighting
+  /// Who keeps the 3D shop. Kept beside the flags, in its own file.
+  public private(set) var shopkeeper: Shopkeeper
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -224,20 +224,20 @@ public final class WidgetFeaturesModel {
     windowView = store?.loadWindowView() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
     pretendHour = store?.loadPretendHour()
-    shopkeeper = store?.loadShopkeeper() ?? .standard
     lighting = store?.loadLighting() ?? .standard
-  }
-
-  public func setShopkeeper(_ keeper: Shopkeeper) {
-    guard shopkeeper != keeper else { return }
-    shopkeeper = keeper
-    try? store?.saveShopkeeper(keeper)
+    shopkeeper = store?.loadShopkeeper() ?? .standard
   }
 
   public func setLighting(_ lighting: RoomLighting) {
     guard self.lighting != lighting else { return }
     self.lighting = lighting
     try? store?.saveLighting(lighting)
+  }
+
+  public func setShopkeeper(_ keeper: Shopkeeper) {
+    guard shopkeeper != keeper else { return }
+    shopkeeper = keeper
+    try? store?.saveShopkeeper(keeper)
   }
 
   public func setPretendHour(_ hour: Int?) {
