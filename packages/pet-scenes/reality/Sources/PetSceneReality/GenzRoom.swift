@@ -166,10 +166,6 @@ final class GenzRoom {
   private var texturesBeingMade = Set<String>()
   private var pendingFlyIn: PetSceneFlyIn?
   private var opening: SceneFlight?
-  /// The cat's turn away from its resting heading, eased towards `lookGoal`.
-  private var lookTurn: Float = 0
-  private var lookGoal: Float = 0
-  private var lookUntil: Double?
   private var tiltSource: (any NookiTiltSource)?
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
@@ -188,8 +184,9 @@ final class GenzRoom {
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
   private static let ambientExponent: Float = 1.6
-  private static let lookLimit: Float = 1
   private static let cameraLookLength = 2.6
+  /// How long the head stays on a finger after it last moved.
+  private static let fingerLookLength = 1.5
 
   init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource) {
     self.layout = layout
@@ -329,9 +326,8 @@ final class GenzRoom {
     }
     guard wanted == catChoice || !hasCat else { return }
     let bounds = model.visualBounds(relativeTo: nil)
-    let reach = max(bounds.extents.x, bounds.extents.z)
-    guard !bounds.isEmpty, reach > 0, reach.isFinite else { return }
-    let scale = layout.cat.length / reach
+    guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
+    let scale = layout.cat.length / CatCatalog.mochiReach * CatCatalog.fit(shown.model)
     model.scale = .one * scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
@@ -619,7 +615,6 @@ final class GenzRoom {
       aimLens()
     }
     applyCat()
-    applyLook(Float(delta))
     applyLevels()
   }
 
@@ -676,7 +671,7 @@ final class GenzRoom {
       petClock = clock
       behaviour.react(.tap, at: clock)
     case .lookAtCamera:
-      look(at: camera.position, for: Self.cameraLookLength)
+      headLook(at: camera.position, for: Self.cameraLookLength)
     }
   }
 
@@ -685,26 +680,13 @@ final class GenzRoom {
     guard let point, !reduceMotion,
       let floor = camera.point(under: point, in: viewSize, height: catHolder.position.y)
     else { return }
-    look(at: floor, for: 0.6)
+    headLook(at: floor, for: Self.fingerLookLength)
   }
 
-  private func look(at point: SIMD3<Float>, for length: Double) {
-    let offset = point - catHolder.position(relativeTo: nil)
-    let facing = atan2(-offset.x, -offset.z)
-    let turn = remainder(facing - layout.cat.heading, 2 * .pi)
-    lookGoal = min(max(turn, -Self.lookLimit), Self.lookLimit)
-    lookUntil = clock + length
-  }
-
-  private func applyLook(_ delta: Float) {
-    if let lookUntil, clock >= lookUntil {
-      self.lookUntil = nil
-      lookGoal = 0
-    }
-    guard lookTurn != lookGoal else { return }
-    let next = lookTurn + (lookGoal - lookTurn) * (1 - exp(-7 * delta))
-    lookTurn = reduceMotion || abs(lookGoal - next) < 0.005 ? lookGoal : next
-    catHolder.orientation = simd_quatf(angle: layout.cat.heading + lookTurn, axis: [0, 1, 0])
+  /// Turns the head and neck, not the body, towards `point` for `length` seconds.
+  private func headLook(at point: SIMD3<Float>, for length: Double) {
+    gazePoint = point
+    gazeUntil = clock + length
   }
 
   /// Leans the camera with the phone while `follows` is true.
@@ -764,7 +746,8 @@ final class GenzRoom {
     if clock > gazeUntil { gazePoint = nil }
     rig.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
-      weight: reduceMotion ? 0 : Float(beat.lookWeight))
+      weight: Float(
+        CatBehaviour.lookWeight(for: beat, holding: gazePoint != nil, reduceMotion: reduceMotion)))
   }
 
   /// Turns the cat's head towards a finger at `point` in the view.
@@ -777,8 +760,7 @@ final class GenzRoom {
         target: camera.target, verticalFieldOfView: camera.fieldOfView))
     let head = catHolder.position(relativeTo: nil) + [0, layout.cat.length * 0.5, 0]
     let reach = simd_dot(head - camera.position, ray)
-    gazePoint = camera.position + ray * max(reach, layout.cat.length)
-    gazeUntil = clock + 1.5
+    headLook(at: camera.position + ray * max(reach, layout.cat.length), for: Self.fingerLookLength)
   }
 
   /// Whether a finger at `point` is on the cat, for telling a stroke from a turn of the room.

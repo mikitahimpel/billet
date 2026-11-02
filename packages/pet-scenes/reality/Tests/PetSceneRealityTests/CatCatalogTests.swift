@@ -64,6 +64,25 @@ import Testing
     #expect(CatCatalog.colours(.black, keepsWhiteBelly: true)?[.belly] == 0xF7F5F2)
   }
 
+  @MainActor @Test func mochiReachMatchesTheModel() async throws {
+    let mochi = try await NookiAssets().model("Cat")
+    let bounds = mochi.visualBounds(relativeTo: nil)
+    #expect(abs(max(bounds.extents.x, bounds.extents.z) - CatCatalog.mochiReach) < 0.002)
+  }
+
+  /// Fitted, no found cat stands taller than the tallest of the cats made to Mochi's size.
+  @MainActor @Test func noFittedCatTowersOverTheOthers() async throws {
+    var heights: [CatModel: Float] = [:]
+    for model in CatModel.allCases where model != .mochi && !CatCatalog.clips(model).isEmpty {
+      let cat = try #require(await NookiAssets.compiledCat(model))
+      heights[model] = cat.visualBounds(relativeTo: nil).extents.y * CatCatalog.fit(model)
+    }
+    let made = heights.filter { CatCatalog.fit($0.key) == 1 }.values.max() ?? 0
+    for (model, height) in heights {
+      #expect(height <= made * 1.05, "\(model) stands \(height) against \(made)")
+    }
+  }
+
   @MainActor @Test func everyBundledCatLoadsAndRigs() async throws {
     for model in CatModel.allCases where model != .mochi && !CatCatalog.clips(model).isEmpty {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")

@@ -20,6 +20,8 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case knead
   case slowBlink
   case perk
+  /// Asleep, an ear flicks, the tail tip curls and a hind paw flexes.
+  case twitch
 }
 
 /// The pose a clip starts and ends in.
@@ -100,10 +102,14 @@ public struct CatBehaviour: Sendable {
 
   /// Seconds asleep before the first wake, so the first screen shows the cat stirring.
   static let firstNap = 3.0...5.0
-  static let nap = 22.0...40.0
+  /// A nap, with a twitch every few seconds; a model that cannot twitch naps for less.
+  static let nap = 10.0...16.0
+  static let stillNap = 4.0...7.0
+  /// Seconds of plain sleep between twitches.
+  static let sleepBetweenTwitches = 4.0...7.0
   static let awakeSpell = 22.0...40.0
   /// Seconds between one-shots, resting in the sitting or standing loop.
-  static let rest = 1.5...5.0
+  static let rest = 1.5...4.0
   /// How long a loop that stands in for a one-shot is held.
   static let heldLoop = 3.0...5.0
   static let petLength = 3.2
@@ -117,6 +123,8 @@ public struct CatBehaviour: Sendable {
   private var awakeUntil: Double?
   private var asleepUntil: Double?
   private var lastPlayed: [CatAction: Double] = [:]
+  /// The last move picked from the repertoire, which the next pick avoids if it can.
+  private var lastPick: CatAction?
   private var queue: [(CatAction, Double)] = []
   private var started = false
 
@@ -176,7 +184,7 @@ public struct CatBehaviour: Sendable {
     }
     if mode == .free, let asleepUntil {
       if now < asleepUntil, has(.sleep) {
-        play(.sleep, for: asleepUntil - now, at: now)
+        dream(until: asleepUntil, at: now)
         return
       }
       self.asleepUntil = nil
@@ -192,16 +200,17 @@ public struct CatBehaviour: Sendable {
     }
     if mode == .free, let awakeUntil, now >= awakeUntil, has(.sleep) {
       self.awakeUntil = nil
-      let length = random.next(in: Self.nap)
-      asleepUntil = now + length
-      play(.sleep, for: length, at: now)
+      asleepUntil = now + random.next(in: has(.twitch) ? Self.nap : Self.stillNap)
+      play(.sleep, for: random.next(in: Self.sleepBetweenTwitches), at: now)
       return
     }
     if mode == .awake, awakeUntil.map({ now >= $0 }) ?? true {
       awakeUntil = now + random.next(in: Self.awakeSpell)
     }
     // Alternate a one-shot with a rest in the base loop, so moves never run into each other.
-    let wasResting = current == resting || current == .idle || current == .sleep || current == nil
+    let wasResting =
+      current == resting || current == .idle || current == .sleep || current == .twitch
+      || current == nil
     if wasResting, let pick = choose(at: now) {
       let info = clips[pick]
       play(
@@ -209,6 +218,15 @@ public struct CatBehaviour: Sendable {
         at: now)
     } else {
       play(restingLoop(), for: random.next(in: Self.rest), at: now)
+    }
+  }
+
+  /// Asleep until `end`: plain sleep, broken by a twitch when there is room for one.
+  private mutating func dream(until end: Double, at now: Double) {
+    if current == .sleep, let twitch = clips[.twitch], end - now > twitch.duration + 1 {
+      play(.twitch, for: twitch.duration, at: now)
+    } else {
+      play(.sleep, for: min(end - now, random.next(in: Self.sleepBetweenTwitches)), at: now)
     }
   }
 
@@ -220,19 +238,26 @@ public struct CatBehaviour: Sendable {
 
   /// A weighted pick among the moves this model has and that are off cooldown.
   private mutating func choose(at now: Double) -> CatAction? {
-    let open = Self.repertoire.filter { pick in
+    let ready = Self.repertoire.filter { pick in
       guard has(pick.action), pick.action != current else { return false }
       guard let last = lastPlayed[pick.action] else { return true }
       return now - last >= pick.cooldown
     }
+    let fresh = ready.filter { $0.action != lastPick }
+    let open = fresh.isEmpty ? ready : fresh
     let total = open.reduce(0) { $0 + $1.weight }
     guard total > 0 else { return nil }
     var roll = random.next(in: 0...total)
+    var chosen = open.last?.action
     for pick in open {
       roll -= pick.weight
-      if roll <= 0 { return pick.action }
+      if roll <= 0 {
+        chosen = pick.action
+        break
+      }
     }
-    return open.last?.action
+    lastPick = chosen
+    return chosen
   }
 
   /// Mostly sitting, now and then standing about.
@@ -246,6 +271,16 @@ public struct CatBehaviour: Sendable {
 
   private func available(_ action: CatAction) -> CatAction? { has(action) ? action : nil }
 
+  /// How far the head turns this frame. While the room holds a look (a finger, the camera on
+  /// cue) the head turns in any clip but sleep; Reduce Motion keeps it still.
+  public static func lookWeight(for beat: CatBeat, holding: Bool, reduceMotion: Bool) -> Double {
+    if reduceMotion { return 0 }
+    guard holding, beat.action != .sleep else { return beat.lookWeight }
+    return max(beat.lookWeight, heldLook)
+  }
+
+  static let heldLook = 0.85
+
   /// How freely the head may follow the viewer during `action`. Clips that move the head
   /// themselves, or keep it down, get little or none.
   public static func lookWeight(_ action: CatAction) -> Double {
@@ -253,7 +288,7 @@ public struct CatBehaviour: Sendable {
     case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead: 1
     case .perk, .happy: 0.5
     case .walk, .eat: 0.3
-    case .sleep, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce: 0
+    case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce: 0
     }
   }
 }

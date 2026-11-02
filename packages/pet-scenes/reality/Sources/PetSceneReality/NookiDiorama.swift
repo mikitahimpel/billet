@@ -133,6 +133,8 @@ final class NookiDiorama {
   private static let darkAmbientShift: Float = -3
   /// How long Mochi keeps looking at the camera.
   private static let cameraLookLength = 2.6
+  /// How long the head stays on a finger after it last moved.
+  private static let fingerLookLength = 1.5
 
   // Mochi lies in the bed in the middle of the rug, and hops to a spot under the wire.
   fileprivate static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
@@ -556,8 +558,7 @@ final class NookiDiorama {
     lightsLevel = 1
     noteReveal = 1
     wakeStart = reduceMotion ? nil : clock
-    look(at: camera.position)
-    lookHold = Self.cameraLookLength
+    headLook(at: camera.position, for: Self.cameraLookLength)
   }
 
   private func stepFlight() {
@@ -584,8 +585,7 @@ final class NookiDiorama {
     case .wakeUp:
       wakeStart = clock
     case .lookAtCamera:
-      look(at: camera.position)
-      lookHold = Self.cameraLookLength
+      headLook(at: camera.position, for: Self.cameraLookLength)
     }
   }
 
@@ -596,8 +596,13 @@ final class NookiDiorama {
       under: SIMD2(Float(point.x), Float(point.y)), viewSize: size, camera: camera.position,
       target: NookiCamera.target, verticalFieldOfView: Self.fieldOfView)
     guard let floor else { return }
-    look(at: SIMD3(floor.x, 0.1, floor.y))
-    lookHold = 0.6
+    headLook(at: SIMD3(floor.x, 0.1, floor.y), for: Self.fingerLookLength)
+  }
+
+  /// Turns the head and neck, not the body, towards `point` for `length` seconds.
+  private func headLook(at point: SIMD3<Float>, for length: Double) {
+    gazePoint = point
+    gazeUntil = clock + length
   }
 
   /// Lights the room for the hour, and shows the partner's sky in the window. `nil` puts back
@@ -739,7 +744,8 @@ final class NookiDiorama {
     if clock > gazeUntil { gazePoint = nil }
     rig?.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
-      weight: reduceMotion ? 0 : Float(beat.lookWeight))
+      weight: Float(
+        CatBehaviour.lookWeight(for: beat, holding: gazePoint != nil, reduceMotion: reduceMotion)))
   }
 
   /// How much say the room's choreography leaves the cat's own behaviour. Asleep it naps and
@@ -763,8 +769,7 @@ final class NookiDiorama {
         verticalFieldOfView: Self.fieldOfView))
     let head = mochi.position(relativeTo: nil) + [0, 0.18, 0]
     let reach = simd_dot(head - camera.position, ray)
-    gazePoint = camera.position + ray * max(reach, 0.5)
-    gazeUntil = clock + 1.5
+    headLook(at: camera.position + ray * max(reach, 0.5), for: Self.fingerLookLength)
   }
 
   /// A stroke along the cat: eyes close and it purrs.
@@ -1111,10 +1116,11 @@ final class NookiDiorama {
       if let loaded { model = loaded } else { model = try await loadModel(NookiAssets.mochiName) }
       // A newer choice has its own load on the way.
       guard wanted == catChoice || shownCat == nil else { return }
-      guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil)) else {
+      let fit = CatCatalog.fit(shown.model)
+      guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil), fit: fit) else {
         throw NookiLoadError.noGeometry("Cat")
       }
-      model.scale = .one * Self.mochiScale
+      model.scale = .one * Self.mochiScale * fit
       model.position = offset
       let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
       if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
@@ -1141,11 +1147,11 @@ final class NookiDiorama {
 
   /// Where the model goes so that it sits centred on its own floor, or nil for bounds that hold
   /// nothing a viewer could see.
-  static func mochiOffset(_ bounds: BoundingBox) -> SIMD3<Float>? {
+  static func mochiOffset(_ bounds: BoundingBox, fit: Float = 1) -> SIMD3<Float>? {
     let corners = [bounds.min, bounds.max]
     guard !bounds.isEmpty, corners.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
     else { return nil }
-    return -[bounds.center.x, bounds.min.y, bounds.center.z] * mochiScale
+    return -[bounds.center.x, bounds.min.y, bounds.center.z] * mochiScale * fit
   }
 
   /// A crossed-out card on the bed, so a cat that failed to load cannot pass for an empty room.
