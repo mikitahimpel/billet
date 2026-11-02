@@ -106,6 +106,7 @@ private struct NookiStage: View {
   @Environment(\.petSceneRenovator) private var renovator
   @Environment(\.petSceneDrawing) private var drawing
   @Environment(\.petSceneCat) private var cat
+  @Environment(\.petSceneMoments) private var moments
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneGaze) private var gaze
   @Environment(\.petSceneOrbits) private var orbits
@@ -176,6 +177,44 @@ private struct NookiStage: View {
 
   /// The rendered room with its gestures, its controls and what VoiceOver offers.
   private var room: some View {
+    stage
+      .onGeometryChange(for: CGSize.self) {
+        $0.size
+      } action: { size in
+        viewSize = SIMD2(Float(size.width), Float(size.height))
+        diorama.fit(to: viewSize)
+      }
+      .simultaneousGesture(orbit)
+      .simultaneousGesture(pinch)
+      .simultaneousGesture(lift)
+      .simultaneousGesture(brush)
+      .simultaneousGesture(tap)
+      .overlay(alignment: .topLeading) {
+        if showsControls || isRenovating {
+          NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
+        }
+      }
+      .onChange(of: renovator?.openRequests) { isRenovating = true }
+      .onChange(of: isRenovating, initial: true) { _, isOn in
+        diorama.renovation.isOn = isOn
+        renovator?.isRenovating = isOn
+      }
+      .onChange(of: renovator?.placements) { isRenovating = true }
+      .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
+      .accessibilityElement()
+      .accessibilityLabel("Mochi's room")
+      .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
+      .accessibilityAction(named: "Turn the lamp on or off") { perform(.lamp) }
+      .accessibilityAction(named: "Catch the paper plane") {
+        if world.noteArrived { perform(.plane) }
+      }
+      .accessibilityAction(named: "Open the note") {
+        if world.delivery > 0 { perform(.note) }
+      }
+  }
+
+  /// The room itself, with the purr's hearts over it.
+  private var stage: some View {
     RealityView { content in
       content.camera = .virtual
       // The room outlives its view. A view that goes removes only its own holder, so it cannot
@@ -187,39 +226,9 @@ private struct NookiStage: View {
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
-    .onGeometryChange(for: CGSize.self) {
-      $0.size
-    } action: { size in
-      viewSize = SIMD2(Float(size.width), Float(size.height))
-      diorama.fit(to: viewSize)
-    }
-    .simultaneousGesture(orbit)
-    .simultaneousGesture(pinch)
-    .simultaneousGesture(lift)
-    .simultaneousGesture(brush)
-    .simultaneousGesture(tap)
-    .overlay(alignment: .topLeading) {
-      if showsControls || isRenovating {
-        NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
-      }
-    }
-    .onChange(of: renovator?.openRequests) { isRenovating = true }
-    .onChange(of: isRenovating, initial: true) { _, isOn in
-      diorama.renovation.isOn = isOn
-      renovator?.isRenovating = isOn
-    }
-    .onChange(of: renovator?.placements) { isRenovating = true }
-    .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
-    .accessibilityElement()
-    .accessibilityLabel("Mochi's room")
-    .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
-    .accessibilityAction(named: "Turn the lamp on or off") { perform(.lamp) }
-    .accessibilityAction(named: "Catch the paper plane") {
-      if world.noteArrived { perform(.plane) }
-    }
-    .accessibilityAction(named: "Open the note") {
-      if world.delivery > 0 { perform(.note) }
-    }
+    // In the same frame as the gestures, so a heart rises from under the stroking finger.
+    .overlay { CatPurrOverlay(purr: diorama.purr) }
+    .onChange(of: moments, initial: true) { _, moments in diorama.setMoments(moments) }
   }
 
   private var isOnScreen: Bool {
@@ -285,12 +294,14 @@ private struct NookiStage: View {
       .targetedToAnyEntity()
       .onChanged { value in
         let location = value.gestureValue.location
-        diorama.followFinger(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
+        let point = SIMD2(Float(location.x), Float(location.y))
+        diorama.followFinger(at: point, in: viewSize)
+        diorama.bat(at: point, in: viewSize)
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
         if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
-          diorama.stroke()
+          diorama.stroke(at: location)
           return
         }
         guard orbits else { return }

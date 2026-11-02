@@ -124,6 +124,20 @@ final class GenzRoom {
   private let room = Entity()
   private let lens = PerspectiveCamera()
   private let catHolder = Entity()
+  /// The cat moments switched on in Labs.
+  private(set) var moments: Set<CatMoment> = []
+  /// The purr and its hearts, for the view to draw.
+  let purr = CatPurr()
+  private var trip: CatTrip?
+  private var tripKind: CatTripKind?
+  private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
+  private var lastBat = -Double.infinity
+  private var greetPending = false
+  private var lastSeenSaved = -Double.infinity
+  /// The scale the cat model is shown at, for matching its walk to how fast it moves.
+  private var catScale: Float = 1
+  /// A dot of lamp light on the cat's floor, for it to chase.
+  private let lightDot = ModelEntity()
   private let note = Entity()
   private var notePaper: ModelEntity?
   private var noteTexture: TextureResource?
@@ -213,6 +227,7 @@ final class GenzRoom {
     await Task.yield()
     addLighting()
     buildBackstop()
+    buildLightDot()
     catHolder.name = Self.catName
     catHolder.position = layout.cat.spot.scene
     catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
@@ -326,6 +341,7 @@ final class GenzRoom {
     guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
     let scale = layout.cat.length / CatCatalog.mochiReach * CatCatalog.fit(shown.model)
     model.scale = .one * scale
+    catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
     if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
@@ -422,6 +438,11 @@ final class GenzRoom {
     screen.landedAt = .now
     noteClock = clock - (layout.style == .sunsetLamp ? 1.05 : 1.1)
     if reduceMotion { noteClock = clock - GenzOpening.length }
+    if moments.contains(.carriesNote), !reduceMotion, hasCat {
+      // The note is all there from the start: it rides in the cat's mouth until it is taped up.
+      noteClock = clock - GenzOpening.length
+      startDelivery()
+    }
   }
 
   func show(drawing: CGImage?) {
@@ -483,7 +504,12 @@ final class GenzRoom {
 
   func setOnScreen(_ onScreen: Bool, in view: UUID) {
     if onScreen { viewsShowing.insert(view) } else { viewsShowing.remove(view) }
+    let wasOnScreen = isOnScreen
     isOnScreen = !viewsShowing.isEmpty
+    if isOnScreen, !wasOnScreen {
+      greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
+    }
+    if !isOnScreen, wasOnScreen { CatSeen.mark() }
     room.isEnabled = isOnScreen && isBuilt
     if isOnScreen { tiltSource?.start() } else { tiltSource?.stop() }
   }
@@ -549,6 +575,7 @@ final class GenzRoom {
 
   /// A tap on the cat: its ears perk and its head tilts. Counts as a pet for the pair.
   func petCat() -> PetSceneEvent {
+    if trip != nil { return .petted }
     petClock = clock
     behaviour.react(.tap, at: clock)
     return .petted
@@ -611,6 +638,7 @@ final class GenzRoom {
       camera.step(Float(delta))
       aimLens()
     }
+    stepMoments()
     applyCat()
     applyLevels()
   }
@@ -728,13 +756,18 @@ final class GenzRoom {
   private func applyCat() {
     guard let rig else { return }
     if let petClock, clock - petClock > Self.petLength { self.petClock = nil }
-    let mode: CatBehaviour.Mode =
+    var mode: CatBehaviour.Mode =
       switch world.activity {
       case .delivering, .settling: .awake
       case .sleeping: .free
       }
+    var rate: Float = 1
+    if let pose = stepTrip() {
+      mode = .fixed(pose.action)
+      if pose.action == .walk { rate = walkRate(pose.speed) }
+    }
     let beat = behaviour.beat(at: clock, mode: mode)
-    rig.play(beat.action)
+    rig.play(beat.action, rate: rate)
     if clock > gazeUntil { gazePoint = nil }
     rig.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
@@ -775,7 +808,14 @@ final class GenzRoom {
     let fresh = petClock == nil
     petClock = clock
     behaviour.react(.pet, at: clock)
+    strokeMoved()
     return fresh ? .petted : nil
+  }
+
+  /// The finger is still stroking the cat: the purr goes on, and a long pet rolls it over.
+  func strokeMoved() {
+    guard moments.contains(.purrs), trip == nil else { return }
+    if purr.touch(at: clock, cat: screen.cat) { behaviour.react(.roll, at: clock) }
   }
 
   /// A treat or the partner's pet: the cat reacts without telling anyone.
@@ -944,5 +984,244 @@ final class GenzRoom {
       texturesBeingMade.remove(key)
       if let texture { made(texture) }
     }
+  }
+}
+
+// MARK: - Cat moments
+
+/// Why the cat is away from its place.
+enum CatTripKind: Equatable {
+  /// Carrying the note to the wall or the glass and taping it up.
+  case delivery
+  /// Running up to the camera after hours away.
+  case greeting
+  /// Chasing a dot of lamp light that jumps from `first` to `second`.
+  case chase(first: SIMD2<Float>, second: SIMD2<Float>)
+}
+
+extension GenzRoom {
+  /// Switches the cat moments to `moments`.
+  func setMoments(_ moments: Set<CatMoment>) {
+    self.moments = moments
+    if !moments.contains(.greets) { greetPending = false }
+  }
+
+  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
+  func bat(at point: CGPoint) {
+    guard moments.contains(.batsAtFinger), trip == nil, world.activity == .sleeping,
+      clock - lastBat > Self.batGap,
+      CatEdge.isNearEdge(x: Double(point.x), width: Double(viewSize.width))
+    else { return }
+    lastBat = clock
+    followFinger(at: point)
+    behaviour.react(.bat, at: clock)
+  }
+
+  private static var batGap: Double { 2.5 }
+
+  private var home: SIMD2<Float> {
+    let spot = layout.cat.spot.scene
+    return SIMD2(spot.x, spot.z)
+  }
+
+  /// The cat's walking pace and running pace, in metres a second, from its size in this room.
+  private var walkSpeed: Float { layout.cat.length * 0.9 }
+  private var runSpeed: Float { layout.cat.length * 2.2 }
+
+  /// A spot in front of the cat's place, for it to face when it is back.
+  private var homeFront: SIMD2<Float> {
+    let heading = layout.cat.heading
+    return home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length
+  }
+
+  /// The walk clip's speed for moving at `speed`, at the cat's size here.
+  func walkRate(_ speed: Float) -> Float {
+    let natural = NookiClip.walkingSpeed * catScale / NookiDiorama.mochiScale
+    return min(max(speed / max(natural, 0.001), 0.6), 3)
+  }
+
+  /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
+  func stepMoments() {
+    purr.tick(at: clock, cat: screen.cat)
+    if clock - lastSeenSaved > 30 {
+      lastSeenSaved = clock
+      CatSeen.mark()
+    }
+    let isFree =
+      trip == nil && world.activity == .sleeping && !reduceMotion && hasCat && opening == nil
+    if greetPending, isFree {
+      greetPending = false
+      startGreeting()
+      playClock.postpone(from: clock)
+    } else if moments.contains(.chases), isFree, playClock.isDue(at: clock) {
+      startChase()
+    }
+  }
+
+  func startDelivery() {
+    let paper = note.position
+    let target = SIMD2(paper.x, paper.z)
+    let under = layout.onCatSurface(
+      CatTrip.towards(
+        target, from: home, upTo: layout.cat.length * 2.4, keep: layout.cat.length * 0.45))
+    begin(
+      .delivery,
+      legs: [
+        .hold(behaviour.playable(.perk), seconds: 0.6, facing: target),
+        .walk(to: under, speed: walkSpeed),
+        .hold(behaviour.playable(.reachUp), seconds: 2.2, facing: target),
+        .walk(to: home, speed: walkSpeed),
+        .hold(behaviour.playable(.sit), seconds: 0.5, facing: homeFront),
+      ])
+  }
+
+  func startGreeting() {
+    let eye = SIMD2(camera.position.x, camera.position.z)
+    let near = layout.onCatSurface(CatTrip.towards(eye, from: home, upTo: layout.cat.length * 1.6))
+    begin(
+      .greeting,
+      legs: [
+        .hold(behaviour.playable(.perk), seconds: 0.7, facing: eye),
+        .walk(to: near, speed: runSpeed),
+        .hold(behaviour.playable(.headbutt), seconds: 1.8, facing: eye),
+        .hold(behaviour.playable(.happy), seconds: 1.4, facing: eye),
+        .walk(to: home, speed: walkSpeed),
+        .hold(behaviour.playable(.sit), seconds: 0.5, facing: homeFront),
+      ])
+    gazePoint = camera.position
+    gazeUntil = clock + 5
+  }
+
+  func startChase() {
+    // The dot lands on the cat's own floor, on the side towards the camera, so it is seen.
+    let eye = SIMD2(camera.position.x, camera.position.z)
+    let towardsEye = CatTrip.heading(from: home, to: eye)
+    func spot(_ turn: Float, _ reach: Float) -> SIMD2<Float> {
+      let heading = towardsEye + turn
+      return layout.onCatSurface(
+        home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length * reach)
+    }
+    let side: Float = Bool.random() ? 1 : -1
+    let first = spot(side * Float.random(in: 0.5...1.1), Float.random(in: 1.0...1.4))
+    let second = spot(-side * Float.random(in: 0.3...0.9), Float.random(in: 0.9...1.3))
+    let keep = layout.cat.length * 0.3
+    let pounce = behaviour.playable(.pounce)
+    let crouch = behaviour.playable(.crouchWiggle)
+    let firstLanding = CatTrip.towards(first, from: home, upTo: 10, keep: keep)
+    let secondLanding = CatTrip.towards(second, from: firstLanding, upTo: 10, keep: keep)
+    begin(
+      .chase(first: first, second: second),
+      legs: [
+        .hold(behaviour.playable(.look), seconds: 1.0, facing: first),
+        .hold(crouch, seconds: 0.9, facing: first),
+        .walk(
+          to: firstLanding, speed: simd_distance(home, firstLanding) / 1.2, action: pounce),
+        .hold(behaviour.playable(.perk), seconds: 0.6, facing: second),
+        .hold(crouch, seconds: 0.7, facing: second),
+        .walk(
+          to: secondLanding, speed: simd_distance(firstLanding, secondLanding) / 1.2,
+          action: pounce),
+        .hold(behaviour.playable(.happy), seconds: 1.2),
+        .walk(to: home, speed: walkSpeed),
+        .hold(behaviour.playable(.sit), seconds: 0.5, facing: homeFront),
+      ])
+  }
+
+  private func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
+    let heading = layout.cat.heading
+    trip = CatTrip(from: home, heading: heading, legs: legs, at: clock)
+    tripKind = kind
+  }
+
+  /// Puts the cat, the note and the light dot where the trip has them now. Returns the pose, or
+  /// nil when no trip is playing.
+  func stepTrip() -> CatTrip.Pose? {
+    guard let trip, let tripKind else { return nil }
+    let pose = trip.pose(at: clock)
+    if pose.isDone {
+      endTrip()
+      return nil
+    }
+    let height = layout.cat.spot.scene.y
+    catHolder.position = SIMD3(pose.spot.x, height, pose.spot.y)
+    catHolder.orientation = simd_quatf(angle: pose.heading, axis: [0, 1, 0])
+    let spot = layout.cat.spot
+    screen.cat =
+      camera.project(
+        catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
+      ?? camera.project(GenzRoomPoint(spot.x, spot.y, spot.z).scene, in: viewSize)
+    switch tripKind {
+    case .delivery: carryNote(pose)
+    case .chase(let first, let second): showDot(pose, first: first, second: second)
+    case .greeting: break
+    }
+    return pose
+  }
+
+  /// The note rides in the mouth, is pressed onto its place during the reach, and stays there.
+  private func carryNote(_ pose: CatTrip.Pose) {
+    let panel = layout.note.centre.scene
+    let inMouth = rig?.mouth().map { room.convert(position: $0, from: nil) } ?? panel
+    let taped: Float =
+      switch pose.leg {
+      case 0, 1: 0
+      case 2: Float(min(max((pose.progress - 0.35) / 0.3, 0), 1))
+      default: 1
+      }
+    let eased = taped * taped * (3 - 2 * taped)
+    note.position = inMouth + (panel - inMouth) * eased
+    note.scale = .one * (Self.carriedNoteScale + (1 - Self.carriedNoteScale) * eased)
+  }
+
+  private static var carriedNoteScale: Float { 0.3 }
+
+  /// The dot sits on the first spot, darts to the second as the cat lands, and fades at the end.
+  private func showDot(_ pose: CatTrip.Pose, first: SIMD2<Float>, second: SIMD2<Float>) {
+    let height = layout.cat.spot.scene.y + 0.004
+    let at: SIMD2<Float>
+    var opacity: Float = 0.9
+    switch pose.leg {
+    case 0:
+      at = first
+      opacity = 0.9 * Float(min(pose.progress * 3, 1))
+    case 1, 2: at = first
+    case 3:
+      let dart = Float(min(pose.progress * 3, 1))
+      at = first + (second - first) * dart
+    case 4, 5: at = second
+    case 6:
+      at = second
+      opacity = 0.9 * Float(1 - pose.progress)
+    default:
+      at = second
+      opacity = 0
+    }
+    lightDot.isEnabled = opacity > 0.01
+    lightDot.position = SIMD3(at.x, height, at.y)
+    lightDot.components.set(OpacityComponent(opacity: opacity))
+    gazePoint = lightDot.position(relativeTo: nil)
+    gazeUntil = clock + 0.3
+  }
+
+  private func endTrip() {
+    if tripKind == .delivery {
+      note.position = layout.note.centre.scene
+      note.scale = .one
+    }
+    lightDot.isEnabled = false
+    trip = nil
+    tripKind = nil
+    catHolder.position = layout.cat.spot.scene
+    catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
+    updateScreen()
+  }
+
+  func buildLightDot() {
+    let radius = layout.cat.length * 0.07
+    lightDot.model = ModelComponent(
+      mesh: .generateCylinder(height: 0.002, radius: radius),
+      materials: [UnlitMaterial(color: .init(red: 1, green: 0.42, blue: 0.3, alpha: 1))])
+    lightDot.isEnabled = false
+    room.addChild(lightDot)
   }
 }

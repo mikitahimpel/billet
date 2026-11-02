@@ -22,6 +22,27 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case perk
   /// Asleep, an ear flicks, the tail tip curls and a hind paw flexes.
   case twitch
+  /// From sitting, onto its back with the belly up, and up again.
+  case rollOver
+  /// From sitting, a forepaw swats at something twice.
+  case bat
+  /// Standing, the top of the head bumps forward, then a cheek rub.
+  case headbutt
+  /// Standing, it rears up and presses both forepaws on the wall.
+  case reachUp
+
+  /// The moves to play instead, in order, for a model without this clip.
+  public var standIns: [CatAction] {
+    switch self {
+    case .rollOver: [.happy, .slowBlink]
+    case .bat: [.perk, .look]
+    case .headbutt: [.happy, .perk]
+    case .reachUp: [.perk, .stretch, .idle]
+    case .idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick,
+      .happy, .stretch, .yawn, .groom, .knead, .slowBlink, .perk, .twitch:
+      []
+    }
+  }
 }
 
 /// The pose a clip starts and ends in.
@@ -52,6 +73,10 @@ public enum CatReaction: Hashable, Sendable {
   case tap
   /// A treat: it eats, then is pleased.
   case treat
+  /// A long pet: it rolls onto its back.
+  case roll
+  /// A finger at the edge of the screen: it bats at it.
+  case bat
 }
 
 /// What the room should show now.
@@ -136,6 +161,16 @@ public struct CatBehaviour: Sendable {
   /// Whether this model has a clip for `action`.
   public func has(_ action: CatAction) -> Bool { clips[action] != nil }
 
+  /// `action`, or the first stand-in this model has, or its resting loop.
+  public func playable(_ action: CatAction) -> CatAction {
+    ([action] + action.standIns).first(where: has) ?? resting
+  }
+
+  /// How long `action` lasts as this model plays it: a one-shot's length, or `held` for a loop.
+  public func length(of action: CatAction, held: Double = 1.6) -> Double {
+    clips[action].map { $0.loops ? held : $0.duration } ?? held
+  }
+
   /// Cuts in with a reaction. It plays from the next `cue`, and the cat stays awake a while after.
   public mutating func react(_ reaction: CatReaction, at now: Double) {
     queue.removeAll()
@@ -148,6 +183,12 @@ public struct CatBehaviour: Sendable {
     case .treat:
       if let eat = available(.eat) { queue.append((eat, Self.treatEating)) }
       queue.append((available(.happy) ?? resting, Self.treatPleased))
+    case .roll:
+      let roll = playable(.rollOver)
+      queue.append((roll, length(of: roll, held: 3)))
+    case .bat:
+      let bat = playable(.bat)
+      queue.append((bat, length(of: bat, held: 1.4)))
     }
     until = now
     asleepUntil = nil
@@ -320,7 +361,10 @@ public struct CatBehaviour: Sendable {
     case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead: 1
     case .perk, .happy: 0.5
     case .walk, .eat: 0.3
-    case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce: 0
+    case .bat: 0.6
+    case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce, .rollOver,
+      .headbutt, .reachUp:
+      0
     }
   }
 }
