@@ -59,6 +59,6 @@ enum RealBackend {
     let api = APIClient.live(
       http: .urlSession(baseURL: baseURL, session: .shared),
       token: { (try? accounts.load())?.token })
-    return RealAppModel(api: api, accounts: accounts)
+    return RealAppModel(api: api, accounts: accounts, baseURL: baseURL)
   }
 }
