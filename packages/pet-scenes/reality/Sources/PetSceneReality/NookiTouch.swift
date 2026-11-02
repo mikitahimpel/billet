@@ -4,7 +4,7 @@ import PetScene
 
 /// What a tap can land on. The raw value is the name of the entity that holds the collider.
 enum NookiTarget: String, CaseIterable {
-  case mochi
+  case cat
   case lamp
   case note
   case plant
@@ -30,7 +30,7 @@ struct NookiTouch: Equatable {
 
   static func of(_ target: NookiTarget, world: PetWorld, noteIsOpen: Bool) -> NookiTouch {
     switch target {
-    case .mochi:
+    case .cat:
       return NookiTouch(reaction: .wakeAndHop, event: .petted)
     case .lamp:
       return NookiTouch(reaction: .toggleLamp)

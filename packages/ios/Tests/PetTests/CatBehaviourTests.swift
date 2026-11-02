@@ -103,8 +103,8 @@ struct CatBehaviourTests {
     }
   }
 
-  /// Mochi's clips: the original set, with no twitch, yawn or groom.
-  private static let mochi = full.filter {
+  /// A smaller set, with no twitch, yawn or groom.
+  private static let fewer = full.filter {
     [.idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick, .happy]
       .contains($0.key)
   }
@@ -134,7 +134,7 @@ struct CatBehaviourTests {
   @Test func anyTwentySecondsShowsTwoSmallActions() {
     for seed in UInt64(1)...12 {
       #expect(fewestSmallActions(Self.full, seed: seed) >= 2, "seed \(seed)")
-      #expect(fewestSmallActions(Self.mochi, seed: seed) >= 2, "mochi seed \(seed)")
+      #expect(fewestSmallActions(Self.fewer, seed: seed) >= 2, "fewer clips, seed \(seed)")
     }
   }
 
@@ -213,8 +213,18 @@ struct CatBehaviourTests {
 @Suite("CatChoice")
 struct CatChoiceTests {
   @Test func coatsOnlyWhereTheModelHasThem() {
-    #expect(CatChoice(model: .mochi, coat: .black).coat == .natural)
+    #expect(CatChoice(model: .detailed, coat: .cream).coat == .natural)
     #expect(CatChoice(model: .chibi, coat: .black).coat == .black)
+  }
+
+  @Test func theDetailedGingerCatIsTheStandard() {
+    #expect(CatChoice.standard == CatChoice(model: .detailed, coat: .natural))
+  }
+
+  @Test(arguments: ["mochi", "slim", "blocky"])
+  func aSavedRemovedCatReadsAsTheStandard(model: String) throws {
+    let json = Data(#"{"model":"\#(model)","coat":"natural"}"#.utf8)
+    #expect(try JSONDecoder().decode(CatChoice.self, from: json) == .standard)
   }
 
   @Test func readsUnknownValuesAsTheStandardCat() throws {

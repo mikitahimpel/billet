@@ -5,7 +5,7 @@ import simd
 /// Everything the room's real physics does: what is solid, how the ball is made, and how tilt and
 /// a flick push it.
 ///
-/// Solid things use their own collision group, so tap targets like Mochi's stay out of the ball's
+/// Solid things use their own collision group, so tap targets like the cat's stay out of the ball's
 /// way. A solid for each open side of the room keeps the ball in.
 @MainActor final class NookiPhysics {
   static let ballRadius: Float = 0.07
@@ -115,7 +115,7 @@ import simd
     ball.components.set(motion)
   }
 
-  /// Stops the ball dead while Mochi sits on it, and lets it roll again after.
+  /// Stops the ball dead while the cat sits on it, and lets it roll again after.
   func setHeld(_ held: Bool) {
     guard held != isHeld else { return }
     if held { setVelocity(.zero) }

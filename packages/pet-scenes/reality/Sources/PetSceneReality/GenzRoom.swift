@@ -50,37 +50,30 @@ final class GenzRoomScreen {
   }
 }
 
-/// The cat models, each loaded once from the room's own files and cloned into each styled room.
-/// A cat that will not load is replaced by Mochi, so a room always has one.
+/// The cat models, each loaded once from its compiled file and cloned into each styled room. A
+/// cat that will not load is replaced by the standard cat, so a room always has one.
 @MainActor
 final class GenzCatSource {
   private var loading: [CatModel: Task<Entity?, Never>] = [:]
-  private let load: NookiModelLoader
-
-  init(load: NookiModelLoader? = nil) {
-    let assets = NookiAssets()
-    self.load = load ?? { name throws(NookiLoadError) in try await assets.model(name) }
-  }
 
   /// A fresh copy of the model for `choice`, and the choice it really shows.
   func cat(_ choice: CatChoice = .standard) async -> (Entity, CatChoice)? {
-    if choice.model != .mochi, let model = await task(choice.model).value {
+    if let model = await task(choice.model).value {
       return (model.clone(recursive: true), choice)
     }
-    guard let mochi = await task(.mochi).value else { return nil }
-    return (mochi.clone(recursive: true), .standard)
+    guard choice != .standard, let model = await task(CatChoice.standard.model).value else {
+      return nil
+    }
+    return (model.clone(recursive: true), .standard)
   }
 
   private func task(_ model: CatModel) -> Task<Entity?, Never> {
     if let task = loading[model] { return task }
-    let load = load
-    let task =
-      model == .mochi
-      ? Task { try? await load(NookiAssets.mochiName) }
-      : Task { await NookiAssets.compiledCat(model) }
+    let task = Task { await NookiAssets.compiledCat(model) }
     loading[model] = task
     return task
   }
+
 }
 
 /// The styled rooms of one scene, each kept once built, sharing meshes, materials and the cat.
@@ -353,7 +346,7 @@ final class GenzRoom {
     guard wanted == catChoice || !hasCat else { return }
     let bounds = model.visualBounds(relativeTo: nil)
     guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
-    let scale = layout.cat.length / CatCatalog.mochiReach * CatCatalog.fit(shown.model)
+    let scale = layout.cat.length / CatCatalog.reach
     model.scale = .one * scale
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
@@ -1202,7 +1195,7 @@ extension GenzRoom {
 
   /// The walk clip's speed for moving at `speed`, at the cat's size here.
   func walkRate(_ speed: Float) -> Float {
-    let natural = NookiClip.walkingSpeed * catScale / NookiDiorama.mochiScale
+    let natural = NookiClip.walkingSpeed * catScale / NookiDiorama.catScale
     return min(max(speed / max(natural, 0.001), 0.6), 3)
   }
 

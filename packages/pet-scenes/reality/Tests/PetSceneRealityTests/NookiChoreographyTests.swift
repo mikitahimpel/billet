@@ -31,7 +31,7 @@ struct NookiChoreographyTests {
     #expect(frame(.delivering, at: 0) == NookiFrame())
   }
 
-  @Test func mochiWakesWithMouthOpenBeforeSettingOff() {
+  @Test func catWakesWithMouthOpenBeforeSettingOff() {
     let awake = frame(.delivering, at: 1.1)
     #expect(awake.wake == 1)
     #expect(awake.eyesOpen)
@@ -63,7 +63,7 @@ struct NookiChoreographyTests {
     #expect(hop.pinned == 1)
   }
 
-  @Test func mochiIsBackInTheBedBeforeTheStepEnds() {
+  @Test func catIsBackInTheBedBeforeTheStepEnds() {
     let last = frame(.delivering, at: deliveryEnd)
     #expect(last.walk == 0)
     #expect(last.stepHeight == 0)

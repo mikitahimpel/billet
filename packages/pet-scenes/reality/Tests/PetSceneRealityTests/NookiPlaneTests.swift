@@ -5,16 +5,16 @@ import simd
 @testable import PetSceneReality
 
 @Suite struct NookiPlaneTests {
-  private static let mochi = SIMD3<Float>(0.05, 0.5, 0.12)
+  private static let cat = SIMD3<Float>(0.05, 0.5, 0.12)
   private static let deliveryLength = 9.0
   /// When the delivery's own timeline has the cat back in bed.
   private static let timelineEnds = 7.8
 
-  @Test func untouchedMochiCatchesItAfterAFewSeconds() {
+  @Test func untouchedCatCatchesItAfterAFewSeconds() {
     let flight = NookiPlaneFlight()
     #expect(!flight.isCaught(at: 2.3))
-    #expect(flight.isCaught(at: NookiPlaneFlight.mochiCatchesAt))
-    #expect(NookiPlaneFlight.mochiCatchesAt >= 2)
+    #expect(flight.isCaught(at: NookiPlaneFlight.catCatchesAt))
+    #expect(NookiPlaneFlight.catCatchesAt >= 2)
   }
 
   @Test func aTapCatchesItSoon() {
@@ -63,30 +63,30 @@ import simd
 
   @Test func thePlaneStartsOutsideAndEndsInTheRoom() {
     let flight = NookiPlaneFlight()
-    #expect(flight.pose(at: 0, mochi: Self.mochi).position.x > 0.7)
-    let end = flight.pose(at: NookiPlaneFlight.mochiCatchesAt, mochi: Self.mochi).position
-    #expect(simd_distance(end, Self.mochi) < 0.1)
+    #expect(flight.pose(at: 0, cat: Self.cat).position.x > 0.7)
+    let end = flight.pose(at: NookiPlaneFlight.catCatchesAt, cat: Self.cat).position
+    #expect(simd_distance(end, Self.cat) < 0.1)
   }
 
   @Test func theFlightHasNoJumps() {
     let flight = NookiPlaneFlight()
-    var last = flight.pose(at: 0, mochi: Self.mochi).position
+    var last = flight.pose(at: 0, cat: Self.cat).position
     for tick in 1..<144 {
-      let next = flight.pose(at: Double(tick) / 60, mochi: Self.mochi).position
+      let next = flight.pose(at: Double(tick) / 60, cat: Self.cat).position
       #expect(simd_distance(next, last) < 0.05)
       #expect(next.x.isFinite && next.y.isFinite && next.z.isFinite)
       last = next
     }
   }
 
-  @Test func aTappedPlaneSwoopsToMochi() {
+  @Test func aTappedPlaneSwoopsToCat() {
     var flight = NookiPlaneFlight()
     flight.tap(at: 1)
-    let end = flight.pose(at: 1 + NookiPlaneFlight.swoopLength, mochi: Self.mochi).position
-    #expect(simd_distance(end, Self.mochi) < 0.001)
+    let end = flight.pose(at: 1 + NookiPlaneFlight.swoopLength, cat: Self.cat).position
+    #expect(simd_distance(end, Self.cat) < 0.001)
   }
 
-  @Test func mochiLeapsOnlyForAPlaneNobodyTapped() {
+  @Test func catLeapsOnlyForAPlaneNobodyTapped() {
     var flight = NookiPlaneFlight()
     #expect(flight.leap(2.2) > 0)
     #expect(flight.leap(1) == 0)

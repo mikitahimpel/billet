@@ -6,24 +6,11 @@ import Testing
 @testable import PetSceneReality
 
 @Suite struct NookiClipChoiceTests {
-  @Test func eachClipSitsOnItsTrim() {
-    #expect(NookiClip.idle.trim == 0...4)
-    #expect(NookiClip.walk.trim == 4.333...5.333)
-    #expect(NookiClip.sit.trim == 5.667...9.667)
-    #expect(NookiClip.sleep.trim == 10...16)
-    #expect(NookiClip.crouchWiggle.trim == 16.333...17.333)
-    #expect(NookiClip.pounce.trim == 17.667...19.167)
-  }
-
-  @Test func onlyThePounceRunsOnce() {
-    #expect(NookiClip.allCases.filter { !$0.loops } == [.pounce])
-  }
-
-  @Test func aSleepingMochiSleeps() {
+  @Test func aSleepingCatSleeps() {
     #expect(NookiClip.choose(frame: NookiFrame(), yarn: .resting) == .sleep)
   }
 
-  @Test func anAwakeMochiIdlesAndAWalkingOneWalks() {
+  @Test func anAwakeCatIdlesAndAWalkingOneWalks() {
     let awake = NookiFrame(wake: 1, eyesOpen: true)
     #expect(NookiClip.choose(frame: awake, yarn: .resting) == .idle)
     var walking = awake
@@ -31,7 +18,7 @@ import Testing
     #expect(NookiClip.choose(frame: walking, yarn: .resting) == .walk)
   }
 
-  @Test func aSettlingMochiSitsBeforeSleeping() {
+  @Test func aSettlingCatSitsBeforeSleeping() {
     let settling = NookiFrame(wake: 0.3, eyesOpen: true)
     #expect(NookiClip.choose(frame: settling, yarn: .resting) == .sit)
   }
@@ -63,15 +50,14 @@ import Testing
 
 @MainActor @Suite struct NookiBundledRigTests {
   private func bundledCat() async throws -> Entity {
-    try await NookiAssets().model("Cat")
+    try #require(await NookiAssets.compiledCat(CatChoice.standard.model))
   }
 
   @Test func theBundleLoadsTheTimeline() async throws {
     let cat = try await bundledCat()
-    let rig = try #require(CatRig(model: cat, clips: CatCatalog.mochiClips))
-    #expect(cat.availableAnimations.contains { abs($0.definition.duration - 19.167) < 0.01 })
+    let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(CatChoice.standard.model)))
     #expect(try abs(#require(rig.duration(of: .pounce)) - 1.5) < 0.01)
-    for clip in NookiClip.allCases where clip.loops {
+    for clip in NookiClip.allCases where clip != .pounce {
       #expect(rig.duration(of: try #require(CatAction(rawValue: clip.rawValue))) == .infinity)
     }
   }
@@ -79,15 +65,16 @@ import Testing
   @Test func theOffsetStandsTheRigOnItsFloor() async throws {
     let cat = try await bundledCat()
     let bounds = cat.visualBounds(relativeTo: nil)
-    let offset = try #require(NookiDiorama.mochiOffset(bounds))
-    let standing = bounds.min.y * NookiDiorama.mochiScale + offset.y
+    let offset = try #require(NookiDiorama.catOffset(bounds))
+    let standing = bounds.min.y * NookiDiorama.catScale + offset.y
     #expect(abs(standing) < 0.001)
     #expect(bounds.extents.max() < 1)
   }
 
   @Test func aClipPlaysAtOnceAndSwitchesWithABlend() async throws {
     let cat = try await bundledCat()
-    let rig = try #require(CatRig(model: cat, clips: CatCatalog.mochiClips))
+    let withoutStretch = CatCatalog.clips(CatChoice.standard.model).filter { $0.key != .stretch }
+    let rig = try #require(CatRig(model: cat, clips: withoutStretch))
     rig.play(.sleep, blend: 0)
     #expect(rig.current == .sleep)
     rig.play(.walk, rate: 2)
@@ -97,6 +84,6 @@ import Testing
   }
 
   @Test func aModelWithoutATimelineHasNoRig() {
-    #expect(CatRig(model: Entity(), clips: CatCatalog.mochiClips) == nil)
+    #expect(CatRig(model: Entity(), clips: CatCatalog.clips(CatChoice.standard.model)) == nil)
   }
 }

@@ -16,10 +16,7 @@ import Testing
   /// Every cat has a mouth: off the floor, under the top of the cat, towards its front.
   @Test func everyCatHasAMouth() async throws {
     for model in CatModel.allCases {
-      let cat: Entity? =
-        model == .mochi
-        ? try await NookiAssets().model("Cat") : await NookiAssets.compiledCat(model)
-      guard let cat else { continue }
+      guard let cat = await NookiAssets.compiledCat(model) else { continue }
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
       let mouth = try #require(rig.mouth(), "\(model) has no head joint")
       let bounds = cat.visualBounds(relativeTo: nil)
