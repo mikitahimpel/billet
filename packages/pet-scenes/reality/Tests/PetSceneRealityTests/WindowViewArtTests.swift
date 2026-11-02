@@ -126,4 +126,11 @@ import Testing
     #expect(cat.pose(pass(0, 0.8)).0 == cat.right)
     #expect(abs(cat.pose(pass(0.999, 0.8)).0.x - cat.left.x) < 0.1)
   }
+
+  @Test func theLAViewsDuskSkyIsPinkerThanTheSharedOne() {
+    let shared = ViewPalette(hour: .dusk, weather: .clear)
+    let pink = ViewLook(view: .pinkDusk, hour: .dusk, weather: .clear).palette
+    #expect(pink.skyMiddle.red - pink.skyMiddle.blue > shared.skyMiddle.red - shared.skyMiddle.blue)
+    #expect(ViewLook(view: .suburbNight, hour: .dusk, weather: .clear).palette == shared)
+  }
 }

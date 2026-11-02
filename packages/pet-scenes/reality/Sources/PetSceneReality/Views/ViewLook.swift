@@ -21,6 +21,25 @@ struct ViewColour: Hashable, Sendable {
     self.blue = blue
   }
 
+  /// A bright saturated colour round the wheel, `hue` from 0 to 1: for LED strips and neon.
+  init(hue: Double, saturation: Double = 0.75) {
+    let h = (hue - hue.rounded(.down)) * 6
+    let x = 1 - abs(h.truncatingRemainder(dividingBy: 2) - 1)
+    let (r, g, b): (Double, Double, Double) =
+      switch Int(h) {
+      case 0: (1, x, 0)
+      case 1: (x, 1, 0)
+      case 2: (0, 1, x)
+      case 3: (0, x, 1)
+      case 4: (x, 0, 1)
+      default: (1, 0, x)
+      }
+    let floor = 1 - saturation
+    red = floor + saturation * r
+    green = floor + saturation * g
+    blue = floor + saturation * b
+  }
+
   func mixed(with other: ViewColour, by share: Double) -> ViewColour {
     let t = min(max(share, 0), 1)
     return ViewColour(
@@ -90,6 +109,46 @@ struct ViewPalette: Hashable, Sendable {
   static let tv = ViewColour(0x7FB2FF)
   static let porchRed = ViewColour(0xE5503A)
   static let snow = ViewColour(0xEEF2F7)
+
+  /// The palette of `view`: the shared one for its hour and weather, graded to the view's place.
+  init(hour: ViewHour, weather: ViewWeather, view: WindowView) {
+    self.init(hour: hour, weather: weather)
+    // Weather greys a place's own colour down.
+    let share = weather == .clear ? 1.0 : 0.4
+    switch view {
+    case .suburbNight, .rainySuburb, .snowyDecember, .summerCulDeSac, .dormQuad: break
+    case .fireEscape:
+      // City sky: sodium glow low down, few stars.
+      stars *= 0.15
+      if hour == .night || hour == .dusk {
+        horizon = horizon.mixed(with: ViewColour(0xB0705A), by: 0.45 * share)
+        skyMiddle = skyMiddle.mixed(with: ViewColour(0x4A3A52), by: 0.3 * share)
+      }
+    case .pinkDusk: gradePink(hour, share: share)
+    }
+  }
+
+  private mutating func gradePink(_ hour: ViewHour, share: Double) {
+    let grade: [UInt32]
+    switch hour {
+    case .dusk: grade = [0x3B2A6E, 0xC2629E, 0xFFA27A, 0x7A4E86, 0x4E3466, 0x34244C, 0x1E1630]
+    case .night: grade = [0x0E0C26, 0x2C2458, 0x7A4A7A, 0x30285A, 0x221C42, 0x181430, 0x0E0A1E]
+    case .day: grade = [0x5EA4DA, 0x9CCDEA, 0xFFE6C8, 0xB0B4C8, 0x8A90A8, 0x6A7088, 0x4A4E66]
+    case .morning: grade = [0x7A8CCC, 0xD8B8D8, 0xFFC8A8, 0xB8A8C0, 0x8E80A0, 0x6C6080, 0x48405C]
+    }
+    let colours = grade.map(ViewColour.init)
+    skyTop = skyTop.mixed(with: colours[0], by: share)
+    skyMiddle = skyMiddle.mixed(with: colours[1], by: share)
+    horizon = horizon.mixed(with: colours[2], by: share)
+    far = far.mixed(with: colours[3], by: share)
+    middle = middle.mixed(with: colours[4], by: share)
+    street = street.mixed(with: colours[5], by: share)
+    near = near.mixed(with: colours[6], by: share)
+    if haze == 0 {
+      hazeColour = horizon
+      haze = hour == .day ? 0.2 : 0
+    }
+  }
 
   init(hour: ViewHour, weather: ViewWeather) {
     switch hour {
@@ -188,7 +247,7 @@ struct ViewLook: Hashable, Sendable {
   var hour: ViewHour
   var weather: ViewWeather
 
-  var palette: ViewPalette { ViewPalette(hour: hour, weather: weather) }
+  var palette: ViewPalette { ViewPalette(hour: hour, weather: weather, view: view) }
   var isDark: Bool { hour == .night || hour == .dusk }
 }
 

@@ -68,6 +68,9 @@ enum ViewRecipes {
     case .rainySuburb: RainySuburb()
     case .snowyDecember: SnowyDecember()
     case .summerCulDeSac: SummerCulDeSac()
+    case .dormQuad: DormQuad()
+    case .fireEscape: FireEscape()
+    case .pinkDusk: PinkDusk()
     }
   }
 
