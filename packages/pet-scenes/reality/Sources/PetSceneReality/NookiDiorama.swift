@@ -39,6 +39,7 @@ final class NookiDiorama {
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
   private(set) var isOnScreen = false
+  private(set) var hasRehearsed = false
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
   private(set) var mochiLoading: Task<Void, Never>?
@@ -87,6 +88,7 @@ final class NookiDiorama {
   private static let orbitPerPoint: Float = 0.006
   private static let idleStep = 1.0 / 30
   private static let framesBeforeReady = 4
+  private static let rehearsalFrames = 8
   private static let lampIntensity: Float = 2600
   private static let lanternIntensity: Float = 500
 
@@ -179,6 +181,26 @@ final class NookiDiorama {
     updateTiltFollowing()
   }
 
+  /// Shows the room in `content` for a few frames with nothing moving, then calls `done`.
+  func startRehearsal(from content: RealityViewCameraContent, done: @escaping () -> Void) {
+    NookiTrace.mark("room rehearsing")
+    room.isEnabled = true
+    var frames = Self.rehearsalFrames
+    subscription?.cancel()
+    subscription = content.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
+      MainActor.assumeIsolated {
+        frames -= 1
+        guard frames == 0, let self else { return }
+        self.subscription?.cancel()
+        self.subscription = nil
+        self.room.isEnabled = self.isOnScreen
+        self.hasRehearsed = true
+        NookiTrace.mark("room rehearsed")
+        done()
+      }
+    }
+  }
+
   /// How many entities the room holds so far.
   var entityCount: Int {
     var count = 0
@@ -233,10 +255,20 @@ final class NookiDiorama {
     if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
+  /// A new entity holding the room, for one view to add to its content. A view that goes removes
+  /// what it added, so with a holder each it takes only its own, never the room another view
+  /// has taken since.
+  func makeHolder() -> Entity {
+    let holder = Entity()
+    holder.addChild(root)
+    return holder
+  }
+
   /// Takes the room's updates from `content`. A diorama outlives its view, so each new view gets
   /// the updates, and its own settling before `onReady`.
   func startUpdates(from content: RealityViewCameraContent) {
     subscription?.cancel()
+    hasRehearsed = true
     settlingFrames = Self.framesBeforeReady
     subscription = content.subscribe(
       to: SceneEvents.Update.self, on: nil, componentType: nil

@@ -55,6 +55,7 @@ struct NookiView: View {
       let missing = $isMochiMissing
       made.onMochiMissing = { missing.wrappedValue = $0 }
       isMochiMissing = made.isMochiMissing
+      await cache.untilRehearsed()
       diorama = made
       made.startLoading()
     }
@@ -100,7 +101,7 @@ private struct NookiStage: View {
   var body: some View {
     RealityView { content in
       content.camera = .virtual
-      content.add(diorama.root)
+      content.add(diorama.makeHolder())
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()

@@ -10,7 +10,8 @@ public struct HomeView: View {
   @Binding private var selectedSceneID: String?
   @State private var store: Store<HomeMachine>
   @State private var choosingScene = false
-  @State private var isPreparingScenes = false
+  /// Fixed when preparing starts, so that picking a scene never takes its preparation down early.
+  @State private var preparingScenes: [any PetScene] = []
 
   public init(
     scenes: [any PetScene],
@@ -40,19 +41,17 @@ public struct HomeView: View {
     }
     .animation(.easeInOut(duration: 0.25), value: store.state.screen)
     .background {
-      if isPreparingScenes {
-        ForEach(scenes.filter { $0.id != selectedScene?.id }, id: \.id) { scene in
-          scene.makePreparationView()
-        }
-        .frame(width: 1, height: 1)
-        .opacity(Self.hiddenOpacity)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+      ForEach(preparingScenes, id: \.id) { scene in
+        scene.makePreparationView()
       }
+      .frame(width: 1, height: 1)
+      .opacity(Self.hiddenOpacity)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
     }
     .task {
       try? await Task.sleep(for: Self.prepareDelay)
-      isPreparingScenes = true
+      preparingScenes = scenes.filter { $0.id != selectedScene?.id }
     }
     .sheet(isPresented: $choosingScene) {
       NavigationStack {

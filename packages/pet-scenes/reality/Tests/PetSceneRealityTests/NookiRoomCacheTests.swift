@@ -24,4 +24,14 @@ import Testing
     cache.purgeIfOffScreen()
     #expect(cache.diorama() === room)
   }
+
+  @Test func theRoomsOwnViewWaitsForARehearsalToEnd() async {
+    let cache = NookiRoomCache()
+    await cache.untilRehearsed()
+    cache.beginRehearsal()
+    let waiting = Task { await cache.untilRehearsed() }
+    await Task.yield()
+    cache.endRehearsal()
+    await waiting.value
+  }
 }

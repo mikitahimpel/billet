@@ -17,7 +17,7 @@ public struct NookiPetScene: PetScene {
   public let handlesTouches = true
 
   public func makePreparationView() -> AnyView? {
-    AnyView(NookiPreload(cache: cache))
+    AnyView(NookiRehearsal(cache: cache))
   }
 
   public func makeView(
