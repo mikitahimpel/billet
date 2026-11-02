@@ -134,5 +134,13 @@
   "base": "sit",
   "trimStart": 52.8333,
   "trimEnd": 54.8333
+ },
+ "twitch": {
+  "first": 1656,
+  "last": 1731,
+  "loops": false,
+  "base": "sleep",
+  "trimStart": 55.1667,
+  "trimEnd": 57.6667
  }
 }
