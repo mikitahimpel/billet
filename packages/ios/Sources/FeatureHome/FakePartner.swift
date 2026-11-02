@@ -22,6 +22,10 @@ struct FakePartnerPace: Sendable {
   var sealedFor: Duration
   /// How long the partner keeps a finger on the cat.
   var holdFor: Duration
+  /// The advent doors the partner has already filled when it arrives.
+  var adventDoors: [Int]
+  /// After a gift is wrapped, before the partner unwraps it.
+  var giftOpened: Duration
   /// After the user's lamp goes out or comes back, before the partner's follows.
   var lampFollows: Duration
   /// Between the things the partner does when nobody has done anything.
@@ -31,7 +35,7 @@ struct FakePartnerPace: Sendable {
     arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
     treatBack: .seconds(5), sealedFor: .seconds(90), holdFor: .seconds(10),
-    lampFollows: .seconds(8),
+    adventDoors: [3, 9, 15, 21], giftOpened: .seconds(6), lampFollows: .seconds(8),
     idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
 
@@ -52,6 +56,7 @@ actor FakePartnerRoom {
   private var current: UUID?
   private var idle: Task<Void, Never>?
   private var drawn = 0
+  private var gifted = 0
   private var colour = LampColour.rose
   private var lampOn = true
   private var reactions: [UUID: Reaction] = [:]
@@ -90,10 +95,15 @@ actor FakePartnerRoom {
     }
   }
 
-  /// The room confirms a name after a moment, as the real one does.
-  /// The partner's lamp follows the user's a little later.
+  /// The partner answers what the user signals: a lamp is followed, a gift is unwrapped.
   func signalled(_ signal: LabSignal) {
     switch signal {
+    case .adventDoor:
+      break
+    case .gift(let id, _):
+      after(pace.giftOpened) { $0.emit(.giftOpened(id)) }
+    case .giftOpened:
+      break
     case .lamp(let on):
       after(pace.lampFollows) {
         $0.lampOn = on
@@ -102,6 +112,7 @@ actor FakePartnerRoom {
     }
   }
 
+  /// The room confirms a name after a moment, as the real one does.
   func catNamed(_ name: String) {
     after(pace.petBack) { $0.emit(.catName(name)) }
   }
@@ -117,6 +128,10 @@ actor FakePartnerRoom {
       await sleep(pace.arrival)
       emit(.status(.partnerHere))
       emitGlow()
+      // A few doors of the advent calendar, already filled for the user.
+      for (index, number) in pace.adventDoors.enumerated() {
+        emit(.adventDoor(number, FakePartnerDrawings.drawing(number: index + 1)))
+      }
       var step = 0
       while !Task.isCancelled, !pace.idle.isEmpty {
         await sleep(pace.idle[step % pace.idle.count])
@@ -150,13 +165,14 @@ actor FakePartnerRoom {
   }
 
   private func idleMove(_ step: Int) {
-    switch step % 6 {
+    switch step % 7 {
     case 0: drawNote()
     case 1: emit(.partnerPetted)
     case 2: giveTreat()
     case 3: sealNote()
     case 4: holdCat()
-    default: changeLamp()
+    case 5: changeLamp()
+    default: sendGift()
     }
   }
 
@@ -172,6 +188,12 @@ actor FakePartnerRoom {
   private func drawNote() {
     emit(.note(FakePartnerDrawings.drawing(number: drawn), id: UUID()))
     drawn += 1
+  }
+
+  private func sendGift() {
+    let items = ["treat-milk", "furniture-yarn", "treat-cookie", "furniture-lantern"]
+    emit(.gift(id: UUID(), item: items[gifted % items.count]))
+    gifted += 1
   }
 
   private func changeLamp() {

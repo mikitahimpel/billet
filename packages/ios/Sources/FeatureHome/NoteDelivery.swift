@@ -37,6 +37,12 @@ public struct NoteDelivery: Sendable {
     /// The colour of the partner's lamp. Only the fake partner says this for now: the room has no
     /// frame for it.
     case partnerGlow(PartnerGlow)
+    /// A wrapped gift on this phone's doormat. Only the fake partner sends these for now.
+    case gift(id: UUID, item: String)
+    /// The partner unwrapped a gift this phone sent.
+    case giftOpened(UUID)
+    /// The partner drew behind advent door `number` for this phone. Only the fake partner does.
+    case adventDoor(Int, [Stroke])
   }
 
   /// This device's ID, to tell its own treats from the partner's.

@@ -77,7 +77,10 @@ struct HomeView: View {
       #if os(iOS)
         .fullScreenCover(isPresented: canvasPresented) {
           CanvasView(
-            onClose: { store.send(.canvasClosed) },
+            onClose: {
+              session.advent.drawingFor = nil
+              store.send(.canvasClosed)
+            },
             onSend: { session.send($0) }
           )
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
@@ -106,7 +109,12 @@ struct HomeView: View {
   private var canvasPresented: Binding<Bool> {
     Binding(
       get: { store.state.screen == .canvas },
-      set: { if !$0 { store.send(.canvasClosed) } }
+      set: {
+        if !$0 {
+          session.advent.drawingFor = nil
+          store.send(.canvasClosed)
+        }
+      }
     )
   }
 
@@ -193,6 +201,8 @@ struct HomeView: View {
       overnightStayNotice
       catCameBackNotice
       todaysWordCard
+      giftCards
+      adventCard
       onThisDayCard
       sundayPostCard
       sealedNoteCards
@@ -233,6 +243,23 @@ struct HomeView: View {
         store: session.lamp, catName: session.play.catName, showsColours: colours,
         showsGoodnight: goodnight
       ) { session.lampChanged(out: $0) }
+    }
+  }
+
+  @ViewBuilder private var adventCard: some View {
+    if session.labs.isOn(LabExperiment.advent) {
+      AdventSection(store: session.advent) { number in
+        session.advent.drawingFor = number
+        store.send(.canvasOpened)
+      }
+    }
+  }
+
+  @ViewBuilder private var giftCards: some View {
+    if session.labs.isOn(LabExperiment.wrappedDelivery) {
+      GiftSection(
+        gifts: session.gifts, shop: session.shop, catName: session.play.catName,
+        onWrap: { session.wrap($0) }, onUnwrap: { session.unwrapGift($0) })
     }
   }
 

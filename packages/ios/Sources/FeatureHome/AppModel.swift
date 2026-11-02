@@ -88,9 +88,16 @@ final class AppModel {
     session?.disconnect()
     timeout?.cancel()
     let room = DemoRoom(code: "fake-partner", device: "fake-me")
+    // The fake partner gets its own shop with a few things to give, so the real closet is left be.
+    let shop = ShopStore(storage: .memory())
+    for id in ["treat-fish", "treat-fish", "furniture-yarn"] {
+      if let item = shop.catalog.item(id) {
+        _ = try? shop.buy(item, transaction: shop.newTransaction())
+      }
+    }
     let fake = PairSession(
       room: room, delivery: dependencies.fakeDelivery(room), archive: archive,
-      shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now,
+      shop: shop, now: dependencies.now,
       isFakePartner: true, labs: labs)
     beforeFake = wasPairing
     stage = .paired(fake)

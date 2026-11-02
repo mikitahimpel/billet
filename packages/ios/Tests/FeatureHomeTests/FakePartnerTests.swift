@@ -13,7 +13,9 @@ struct FakePartnerTests {
     arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
     reply: .milliseconds(30),
     petBack: .milliseconds(10), treatBack: .milliseconds(10), sealedFor: .seconds(60),
-    holdFor: .milliseconds(5), lampFollows: .milliseconds(10), idle: [])
+    holdFor: .milliseconds(5), adventDoors: [], giftOpened: .milliseconds(10),
+    lampFollows: .milliseconds(10),
+    idle: [])
 
   private func collect(
     _ delivery: NoteDelivery, count: Int, after act: @Sendable () async -> Void = {}
@@ -50,6 +52,16 @@ struct FakePartnerTests {
       seen.last
         == .partnerGlow(
           PartnerGlow(colour: .rose, lampOn: true, timeZoneID: FakePartnerRoom.timeZoneID)))
+  }
+
+  @Test func aWrappedGiftIsUnwrappedAfterAMoment() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let id = UUID()
+    let seen = await collect(delivery, count: 4) {
+      await delivery.signal(.gift(id: id, item: "treat-fish"))
+    }
+    #expect(seen.last == .giftOpened(id))
   }
 
   @Test func theFakePartnerArrivesAfterConnecting() async {
@@ -119,6 +131,7 @@ struct FakePartnerTests {
       case .treats: "treat"
       case .sealedNote: "sealed"
       case .partnerHolding(let on): on ? "hold" : "let go"
+      case .gift: "gift"
       default: "other"
       }
     }

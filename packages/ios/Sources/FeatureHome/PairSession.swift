@@ -35,6 +35,10 @@ final class PairSession {
   let lamp: LampStore
   /// The day of the next visit, for the suitcase by the door.
   let visit: NextVisitStore
+  /// Wrapped gifts on and off the doormat.
+  let gifts: GiftBoxStore
+  /// The advent calendar's doors.
+  let advent: AdventStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -72,6 +76,10 @@ final class PairSession {
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    advent = AdventStore(
+      year: Calendar.current.component(.year, from: .now),
+      key: isFakePartner ? "labs.advent.fake" : "labs.advent")
+    gifts = GiftBoxStore(key: isFakePartner ? "labs.giftBox.fake" : "labs.giftBox")
     visit = NextVisitStore(key: isFakePartner ? "labs.nextVisit.fake" : "labs.nextVisit")
     lamp = LampStore(key: isFakePartner ? "labs.lampColour.fake" : "labs.lampColour")
     porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
@@ -130,6 +138,11 @@ final class PairSession {
 
   func send(_ strokes: [Stroke]) {
     let id = UUID()
+    if labs.isOn(LabExperiment.advent), let door = advent.finishDrawing(strokes) {
+      store.send(.canvasClosed)
+      Task { [delivery] in await delivery.signal(.adventDoor(number: door, strokes: strokes)) }
+      return
+    }
     if labs.isOn(LabExperiment.sealedNote), sealed.sealNext {
       sealed.sealNext = false
       let opens = SealedBox.tomorrowMorning(after: now(), calendar: .current)
@@ -164,6 +177,21 @@ final class PairSession {
   /// real room ignores.
   func lampChanged(out: Bool) {
     Task { [delivery] in await delivery.signal(.lamp(on: !out)) }
+  }
+
+  /// Wraps `item` from the closet for the partner's doormat.
+  func wrap(_ item: ShopItem) {
+    guard (try? shop.give(item, transaction: shop.newTransaction())) != nil else { return }
+    let gift = Gift(itemID: item.id, direction: .outgoing)
+    gifts.add(gift)
+    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id)) }
+  }
+
+  /// Opens a wrapped gift: the item goes into the closet.
+  func unwrapGift(_ id: UUID) {
+    guard let itemID = gifts.unwrap(id), let item = shop.catalog.item(itemID) else { return }
+    _ = try? shop.receive(item, transaction: "gift-\(id.uuidString)")
+    Task { [delivery] in await delivery.signal(.giftOpened(id: id)) }
   }
 
   /// This phone's finger went down on the cat, or came up.
@@ -243,6 +271,12 @@ final class PairSession {
       }
     case .sealedNote(let strokes, let id, let opensAt):
       sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
+    case .adventDoor(let number, let strokes):
+      advent.partnerFilled(number, strokes: strokes)
+    case .gift(let id, let item):
+      gifts.add(Gift(id: id, itemID: item, direction: .incoming))
+    case .giftOpened(let id):
+      gifts.partnerOpened(id)
     case .partnerGlow(let glow):
       lamp.partnerGlows(glow)
     case .partnerHolding(let holding):

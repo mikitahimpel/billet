@@ -23,6 +23,9 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case nextVisit
   case onThisDay
   case seasons
+  case wrappedDelivery
+  case advent
+  case bedsideHouse
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -59,6 +62,9 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .nextVisit: .home
     case .onThisDay: .notes
     case .seasons: .home
+    case .wrappedDelivery: .cat
+    case .advent: .notes
+    case .bedsideHouse: .home
     }
   }
 
@@ -81,6 +87,9 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .nextVisit: "Next visit"
     case .onThisDay: "On this day"
     case .seasons: "Seasons"
+    case .wrappedDelivery: "Wrapped delivery"
+    case .advent: "Our advent"
+    case .bedsideHouse: "Bedside house"
     }
   }
 
@@ -88,6 +97,12 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
+    case .bedsideHouse:
+      "A small widget for StandBy: the sleeping cat and the latest note on a dark ground. Add it from the widget gallery. Only an iPhone on a stand can show it."
+    case .advent:
+      "Twenty-four small doors. Draw behind some for your partner; the ones they filled open from their day in December. Before then the doors can be filled but not opened. The fake partner fills doors 3, 9, 15 and 21."
+    case .wrappedDelivery:
+      "Give a piece or a treat from the closet. It lands wrapped on the partner's doormat, they unwrap it, and the cat is already in the box. No money: an item only moves between closets. The fake partner has its own closet and sends a gift now and then."
     case .seasons:
       "The house changes with the year: an autumn branch losing its leaves, snow building on the sill, a blossom branch in spring, a low sun in summer. Nothing to do. Northern hemisphere months."
     case .onThisDay:
@@ -142,6 +157,9 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .nextVisit: true
     case .onThisDay: true
     case .seasons: true
+    case .wrappedDelivery: true
+    case .advent: true
+    case .bedsideHouse: true
     }
   }
 }
