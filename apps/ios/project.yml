@@ -53,6 +53,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: billet
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "billet saves your wallpapers and Sunday posts to Photos."
   BilletWidget:
     type: app-extension
     platform: iOS
