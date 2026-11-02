@@ -160,6 +160,12 @@ struct HomeView: View {
     }
   }
 
+  @ViewBuilder private var framedWall: some View {
+    if session.labs.isOn(LabExperiment.framedNotes) {
+      FramedWallView(notes: framedNotes)
+    }
+  }
+
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
@@ -183,11 +189,11 @@ struct HomeView: View {
           }
         }
         .overlay(alignment: .topLeading) {
-          if session.labs.isOn(LabExperiment.framedNotes) {
-            // A scene with touches has its own controls in this corner, so the frames hang below.
-            FramedWallView(notes: framedNotes)
-              .padding(.top, scene.handlesTouches ? Spacing.wide : 0)
-          }
+          if !scene.handlesTouches { framedWall }
+        }
+        .background(alignment: .topLeading) {
+          // A scene with touches keeps its controls in this corner, drawn over the frames.
+          if scene.handlesTouches { framedWall.padding(.top, Spacing.wide) }
         }
         .overlay(alignment: .bottomLeading) {
           if catAway {
