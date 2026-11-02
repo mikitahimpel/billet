@@ -38,7 +38,11 @@ extension HTTPService {
   /// The live service over `URLSession`, resolving each path against `baseURL`.
   public static func urlSession(baseURL: URL, session: URLSession) -> HTTPService {
     HTTPService { request throws(TransportError) in
-      guard let url = URL(string: request.path, relativeTo: baseURL) else {
+      // `URL(string:relativeTo:)` lets an absolute path replace the base's host, which would send
+      // whatever headers the request carries to another server. A path is a path only.
+      guard let parts = URLComponents(string: request.path), parts.scheme == nil,
+        parts.host == nil, let url = URL(string: request.path, relativeTo: baseURL)
+      else {
         throw .network("invalid path \(request.path)")
       }
       var urlRequest = URLRequest(url: url)

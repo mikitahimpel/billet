@@ -11,7 +11,12 @@ extension WebSocketConnection {
     let task = session.webSocketTask(with: request)
     task.resume()
     do {
-      try await task.ping()
+      // Cancelling the connect cancels the task, so a stuck handshake does not outlive its attempt.
+      try await withTaskCancellationHandler {
+        try await task.ping()
+      } onCancel: {
+        task.cancel(with: .goingAway, reason: nil)
+      }
     } catch {
       task.cancel(with: .goingAway, reason: nil)
       throw .network(error.localizedDescription)

@@ -11,16 +11,20 @@ import Wire
 /// A connect that never answers cannot wedge the machine: entering `connecting` starts a timeout
 /// that moves it to `backingOff` and closes the attempt, and the late result, if any, is stale.
 ///
+/// A server that accepts a connection and then drops it at once must not be retried every second
+/// for ever. `failures` therefore survives an opening and is only cleared once the connection has
+/// stayed up for ``stableAfter``, reported by the `stable` event.
+///
 /// `lastSeq` is the highest `seq` seen from the server. It survives drops, so a reconnect sends
 /// `Resume(lastSeq:)`. Before any sequenced message arrives there is nothing to resume, and the
 /// first connection sends no `Resume`. `failures` counts consecutive failed attempts and sets the
-/// back-off delay; it resets when a connection opens.
+/// back-off delay.
 public enum WebSocketMachine: Machine {
   public struct State: Equatable, Sendable {
     public enum Phase: Equatable, Sendable {
       case idle
       case connecting(failures: Int)
-      case connected
+      case connected(failures: Int)
       case backingOff(failures: Int)
     }
 
@@ -53,6 +57,8 @@ public enum WebSocketMachine: Machine {
     case received(attempt: Int, ServerMessage)
     case connectTimedOut(attempt: Int)
     case retryElapsed(attempt: Int)
+    /// The attempt's connection has stayed up for ``WebSocketMachine/stableAfter``.
+    case stable(attempt: Int)
 
     /// The attempt this event reports on, or `nil` for a request from the caller.
     var attempt: Int? {
@@ -60,7 +66,7 @@ public enum WebSocketMachine: Machine {
       case .connectRequested, .disconnectRequested, .sendRequested:
         return nil
       case .opened(let attempt), .dropped(let attempt), .received(let attempt, _),
-        .connectTimedOut(let attempt), .retryElapsed(let attempt):
+        .connectTimedOut(let attempt), .retryElapsed(let attempt), .stable(let attempt):
         return attempt
       }
     }
@@ -72,11 +78,16 @@ public enum WebSocketMachine: Machine {
     case close(attempt: Int)
     case send(ClientMessage, attempt: Int)
     case startConnectTimeout(attempt: Int)
+    /// Reports `stable` for this attempt after ``WebSocketMachine/stableAfter``, unless the attempt
+    /// ends first.
+    case startStabilityTimer(attempt: Int)
     case scheduleRetry(afterFailures: Int, attempt: Int)
     case deliver(ServerMessage)
   }
 
   public static let connectTimeout = Duration.seconds(10)
+  /// How long a connection must stay up before the failures that led to it are forgotten.
+  public static let stableAfter = Duration.seconds(30)
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     if let attempt = event.attempt, attempt != state.attempt {
@@ -91,9 +102,15 @@ public enum WebSocketMachine: Machine {
     case (.idle, .connectRequested):
       return (state.moved(to: .connecting(failures: 0), attempt: id + 1), opening(id + 1))
 
-    case (.connecting, .opened):
+    case (.connecting(let failures), .opened):
       let resume = state.lastSeq.map { [Output.send(.resume(lastSeq: $0), attempt: id)] } ?? []
-      return (state.moved(to: .connected), resume)
+      return (
+        state.moved(to: .connected(failures: failures)),
+        resume + [.startStabilityTimer(attempt: id)]
+      )
+
+    case (.connected, .stable):
+      return (state.moved(to: .connected(failures: 0)), [])
 
     case (.connecting(let failures), .dropped),
       (.connecting(let failures), .connectTimedOut):
@@ -102,10 +119,10 @@ public enum WebSocketMachine: Machine {
         [.close(attempt: id), .scheduleRetry(afterFailures: failures + 1, attempt: id)]
       )
 
-    case (.connected, .dropped):
+    case (.connected(let failures), .dropped):
       return (
-        state.moved(to: .backingOff(failures: 1)),
-        [.close(attempt: id), .scheduleRetry(afterFailures: 1, attempt: id)]
+        state.moved(to: .backingOff(failures: failures + 1)),
+        [.close(attempt: id), .scheduleRetry(afterFailures: failures + 1, attempt: id)]
       )
 
     case (.backingOff(let failures), .retryElapsed):
@@ -118,7 +135,7 @@ public enum WebSocketMachine: Machine {
 
     case (.connected, .received(_, let message)):
       return (
-        state.moved(to: .connected, lastSeq: .some(advance(state.lastSeq, past: message))),
+        state.moved(to: state.phase, lastSeq: .some(advance(state.lastSeq, past: message))),
         [.deliver(message)]
       )
 
@@ -136,6 +153,9 @@ public enum WebSocketMachine: Machine {
       (.idle, .retryElapsed),
       (.idle, .connectTimedOut),
       (.idle, .sendRequested),
+      (.idle, .stable),
+      (.connecting, .stable),
+      (.backingOff, .stable),
       (.connecting, .connectRequested),
       (.connecting, .received),
       (.connecting, .retryElapsed),

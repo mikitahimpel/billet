@@ -5,16 +5,21 @@ extension KeychainClient {
   /// The live Keychain.
   ///
   /// Items are generic passwords in the data protection keychain, readable after the first unlock
-  /// so a widget or extension can read them while the device is locked.
+  /// so a widget or extension can read them while the device is locked, and never leave this device
+  /// in a backup.
   public static let security = KeychainClient(
     add: { key, data in
       var query = baseQuery(key)
       query[kSecValueData as String] = data
-      query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+      query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
       return SecItemAdd(query as CFDictionary, nil)
     },
     update: { key, data in
-      let attributes: [String: Any] = [kSecValueData as String: data]
+      // Also moves an item stored before the accessibility was this one.
+      let attributes: [String: Any] = [
+        kSecValueData as String: data,
+        kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+      ]
       return SecItemUpdate(baseQuery(key) as CFDictionary, attributes as CFDictionary)
     },
     read: { key in
