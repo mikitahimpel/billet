@@ -158,6 +158,11 @@ public struct CatBehaviour: Sendable {
     random = SplitMix64(seed: seed)
   }
 
+  /// Whether the cat is up at `now`, rather than asleep or about to fall asleep.
+  public func isAwake(at now: Double) -> Bool {
+    asleepUntil == nil && (awakeUntil.map { now < $0 } ?? false)
+  }
+
   /// Whether this model has a clip for `action`.
   public func has(_ action: CatAction) -> Bool { clips[action] != nil }
 

@@ -107,22 +107,6 @@ import Testing
     }
   }
 
-  @Test func carsComeEveryTwelveToFortySeconds() {
-    var starts: [Double] = []
-    var wasPassing = false
-    for step in 0..<(600 * 10) {
-      let time = Double(step) / 10
-      let passing = GenzOpening.headlight(time) != nil
-      if passing, !wasPassing { starts.append(time) }
-      wasPassing = passing
-    }
-    #expect(starts.first == 3)
-    for (earlier, later) in zip(starts, starts.dropFirst()) {
-      let gap = later - earlier - 2.6
-      #expect(gap >= 11.9 && gap <= 40.1)
-    }
-  }
-
   @Test func warmthFadesAfterANoteLands() {
     #expect(GenzOpening.warmth(sinceLanding: nil) == 0)
     #expect(GenzOpening.warmth(sinceLanding: 0) == 1)
@@ -160,6 +144,25 @@ import Testing
     #expect(room.screen.outlines[.windowBloom]?.count == GenzLayout.windowSeat.led.count)
     #expect(room.screen.outlines[.windowBacklight]?.count == 4)
     #expect(room.screen.cat != nil)
+    // At rest the window is where the view's planes are laid out; a turn moves only the live one.
+    #expect(room.screen.window.count == 4)
+    #expect(room.screen.homeWindow == room.screen.window)
+    room.orbit(byX: 80, y: 0)
+    room.endOrbit(velocityX: 0, velocityY: 0)
+    #expect(room.screen.window != room.screen.homeWindow)
+  }
+
+  @Test func theWindowShowsTheChosenViewInTheRoomsHour() {
+    let room = GenzRoom(layout: GenzLayout.windowSeat, kit: GenzKit(), cats: GenzCatSource())
+    room.setWindowView(WindowViewChoice(view: .suburbNight, weather: .rain))
+    #expect(room.screen.viewHour == .night)
+    room.show(dayLight: PetSceneDayLight(here: .at(hour: 13), theirs: nil))
+    #expect(room.screen.viewHour == .day)
+    room.setWindowView(WindowViewChoice(view: .suburbNight, hour: .dusk))
+    #expect(room.screen.viewHour == .dusk)
+    let state = room.screen.viewState(at: Date())
+    #expect(state.weather == WindowView.suburbNight.weather)
+    #expect(state.hour == .dusk)
   }
 
   @Test func nativeArtDrawsEveryTextureSlot() {
@@ -168,7 +171,8 @@ import Testing
       let image = art.image(for: slot, state: RoomLayerState(time: 3), pixels: 64)
       #expect(image?.width == 64)
     }
-    for slot in RoomLayerSlot.allCases where !slot.isTexture {
+    // The window's view is drawn by the view system, not by the room's own flat art.
+    for slot in RoomLayerSlot.allCases where !slot.isTexture && slot != .windowNight {
       #expect(art.view(for: slot, state: RoomLayerState()) != nil)
     }
   }

@@ -108,6 +108,18 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(cat, named: Self.catFileName)
   }
 
+  public static let windowViewFileName = "window-view.json"
+
+  /// The saved window view with its weather and hour, or the standard one when nothing readable
+  /// is saved.
+  public func loadWindowView() -> WindowViewChoice {
+    (try? storage.readJSON(WindowViewChoice.self, named: Self.windowViewFileName)) ?? .standard
+  }
+
+  public func saveWindowView(_ choice: WindowViewChoice) throws(PersistenceError) {
+    try storage.writeJSON(choice, named: Self.windowViewFileName)
+  }
+
   public static let homeVariantFileName = "home-variant.json"
 
   /// The saved layout of Home, or the standard one when nothing readable is saved.
@@ -143,6 +155,8 @@ public final class WidgetFeaturesModel {
   public private(set) var roomStyle: RoomStyle
   /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
   public private(set) var cat: CatChoice
+  /// What the styled rooms' window looks out on. Kept beside the flags, in its own file.
+  public private(set) var windowView: WindowViewChoice
   /// How Home is laid out around the room. Kept beside the flags, in its own file.
   public private(set) var homeVariant: HomeVariant
   /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
@@ -157,6 +171,7 @@ public final class WidgetFeaturesModel {
     features = store?.load() ?? WidgetFeatures()
     roomStyle = store?.loadRoomStyle() ?? .standard
     cat = store?.loadCat() ?? .standard
+    windowView = store?.loadWindowView() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
     pretendHour = store?.loadPretendHour()
   }
@@ -178,6 +193,12 @@ public final class WidgetFeaturesModel {
     guard roomStyle != style else { return }
     roomStyle = style
     try? store?.saveRoomStyle(style)
+  }
+
+  public func setWindowView(_ choice: WindowViewChoice) {
+    guard windowView != choice else { return }
+    windowView = choice
+    try? store?.saveWindowView(choice)
   }
 
   public func setCat(_ choice: CatChoice) {

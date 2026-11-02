@@ -141,6 +141,9 @@ struct GenzRoomView: View {
   @Environment(\.petSceneDayLight) private var dayLight
   @Environment(\.petSceneFollowsTilt) private var followsTilt
   @Environment(\.petSceneOpeningEnded) private var openingEnded
+  @Environment(\.petSceneWindowView) private var windowView
+  @Environment(\.petSceneViewArt) private var viewArt
+  @State private var plates = ViewPlateCache()
   @Environment(\.scenePhase) private var scenePhase
 
   private var behind: RoomLayerSlot {
@@ -208,11 +211,21 @@ struct GenzRoomView: View {
     replacementArt?.view(for: slot, state: state) ?? GenzNativeArt().view(for: slot, state: state)
   }
 
-  /// One flat layer, redrawn every frame while the room is on screen.
+  /// One flat layer, redrawn every frame while the room is on screen. The window's view is drawn
+  /// by an artist's file for its slot or its view if there is one, else natively.
   private func layer(_ slot: RoomLayerSlot, room: GenzRoom) -> some View {
     TimelineView(.animation(paused: !isOnScreen || reduceMotion)) { context in
       let state = room.screen.state(for: slot, at: context.date)
-      art(for: slot, state: state)
+      if slot == .windowNight, replacementArt?.view(for: slot, state: state) == nil {
+        let viewState = room.screen.viewState(at: context.date)
+        if let art = viewArt?.view(viewState.view, state: viewState) {
+          art
+        } else {
+          NativeWindowView(state: viewState, plates: plates)
+        }
+      } else {
+        art(for: slot, state: state)
+      }
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
@@ -272,6 +285,7 @@ struct GenzRoomView: View {
     .onChange(of: play.treatsUsed) { room.react(.treat) }
     .onChange(of: play.petsReceived) { room.react(.pet) }
     .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+    .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
     .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
     .onAppear { room.art = replacementArt ?? GenzNativeArt() }
     .accessibilityElement()
@@ -304,6 +318,7 @@ struct GenzRoomView: View {
     room.setFollowsTilt(followsTilt)
     room.setCat(cat)
     room.setMoments(moments)
+    room.setWindowView(windowView)
     room.setOnScreen(isOnScreen, in: viewID)
   }
 
