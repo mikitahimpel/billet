@@ -7,13 +7,18 @@ public struct AccountRecord: Codable, Equatable, Sendable {
   public var deviceID: String
   /// When the server stops accepting the session token, in epoch milliseconds.
   public var expiresAt: Int
-  /// Set once an invite has been claimed or accepted.
+  /// Whether an invite has been claimed, by this account or by its partner.
+  public var isPaired: Bool
+  /// The pair's ID, known only when this account entered the code.
   public var pairID: String?
 
-  public init(userID: String, deviceID: String, expiresAt: Int, pairID: String? = nil) {
+  public init(
+    userID: String, deviceID: String, expiresAt: Int, isPaired: Bool = false, pairID: String? = nil
+  ) {
     self.userID = userID
     self.deviceID = deviceID
     self.expiresAt = expiresAt
+    self.isPaired = isPaired
     self.pairID = pairID
   }
 }
@@ -27,7 +32,7 @@ public struct AccountStore: Sendable {
   /// record) counts as signed out, so a half-written sign-in never looks signed in.
   public var load: @Sendable () throws(PersistenceError) -> (token: String, record: AccountRecord)?
   public var save: @Sendable (String, AccountRecord) throws(PersistenceError) -> Void
-  public var setPair: @Sendable (String?) throws(PersistenceError) -> Void
+  public var setPaired: @Sendable (Bool, String?) throws(PersistenceError) -> Void
   /// Forgets the token and the record, for sign-out and account deletion.
   public var clear: @Sendable () throws(PersistenceError) -> Void
 
@@ -37,12 +42,12 @@ public struct AccountStore: Sendable {
         token: String, record: AccountRecord
       )?,
     save: @escaping @Sendable (String, AccountRecord) throws(PersistenceError) -> Void,
-    setPair: @escaping @Sendable (String?) throws(PersistenceError) -> Void,
+    setPaired: @escaping @Sendable (Bool, String?) throws(PersistenceError) -> Void,
     clear: @escaping @Sendable () throws(PersistenceError) -> Void
   ) {
     self.load = load
     self.save = save
-    self.setPair = setPair
+    self.setPaired = setPaired
     self.clear = clear
   }
 
@@ -58,10 +63,11 @@ public struct AccountStore: Sendable {
         try storage.writeJSON(record, named: recordName)
         try tokens.save(token)
       },
-      setPair: { (pairID) throws(PersistenceError) in
+      setPaired: { (isPaired, pairID) throws(PersistenceError) in
         guard var record = try storage.readJSON(AccountRecord.self, named: recordName) else {
           return
         }
+        record.isPaired = isPaired
         record.pairID = pairID
         try storage.writeJSON(record, named: recordName)
       },

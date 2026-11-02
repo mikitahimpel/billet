@@ -87,6 +87,8 @@ let testTargets: [Target] = [
       "WidgetBridge",
       "Wire",
     ]),
+  .testTarget(
+    name: "FeaturePairingTests", dependencies: ["FeaturePairing", "Transport", "Wire"]),
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
   .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "Pet", "WidgetBridge"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
