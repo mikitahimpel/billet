@@ -100,7 +100,7 @@ struct GenzLayout {
           piece: GenzPiece(.posterFrame), centre: GenzRoomPoint(0.03, 0.82, 2.6), yaw: .pi / 2),
       ],
       cat: (GenzRoomPoint(4.7, 2.45, 1.02), 3.3, 1.35),
-      note: Panel(centre: GenzRoomPoint(3.1, 0.04, 3.14), width: 3.3, height: 3.63),
+      note: Panel(centre: GenzRoomPoint(3.1, 0.04, 3.14), width: 1.8, height: 1.98),
       paper: GenzColour(0xFFF3E6),
       led: [
         GenzRoomPoint(width, 0.03, ledHeight), GenzRoomPoint(0.03, 0.03, ledHeight),
@@ -174,7 +174,7 @@ struct GenzLayout {
           piece: GenzPiece(.phoneOnCharger), centre: GenzRoomPoint(5.2, 0.27, 1.3), yaw: 0.1),
       ],
       cat: (GenzRoomPoint(6.2, 0.3, 1.3), 4.0, 1.25),
-      note: Panel(centre: GenzRoomPoint(3.52, -0.13, 3.12), width: 3.15, height: 3.47),
+      note: Panel(centre: GenzRoomPoint(3.52, -0.13, 3.12), width: 1.72, height: 1.9),
       paper: GenzColour(0xF6F0E2),
       led: [
         GenzRoomPoint(window.x0 - 0.1, ledY, window.z0 + 0.02),
