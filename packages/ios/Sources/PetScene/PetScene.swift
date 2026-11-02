@@ -87,6 +87,19 @@ public protocol PetScene {
   /// A view the host keeps out of sight, from after the app's first frame while another scene
   /// is showing. A scene that is slow to open does that work here, at low priority.
   func makePreparationView() -> AnyView?
+
+  /// The shop as a 3D room with a keeper behind the counter, or `nil` when the scene has none.
+  /// `state` changes while the view stays alive. The view mounts its renderer only once
+  /// ``EnvironmentValues/petSceneOnScreen`` is true, so a host keeps it in a tab.
+  func makeShopScene(
+    state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
+  ) -> AnyView?
+
+  /// The notes as a desk with paper under a board of pinned notes, or `nil` when the scene has
+  /// none. Mounts like ``makeShopScene(state:onEvent:)``.
+  func makeDeskScene(
+    state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
+  ) -> AnyView?
 }
 
 extension PetScene {
@@ -106,6 +119,14 @@ extension PetScene {
     makeView(world: world, onEvent: onEvent)
   }
   public func makePreparationView() -> AnyView? { nil }
+
+  public func makeShopScene(
+    state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
+  ) -> AnyView? { nil }
+
+  public func makeDeskScene(
+    state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
+  ) -> AnyView? { nil }
 }
 
 extension PetMachine.Event {
