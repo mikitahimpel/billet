@@ -10,6 +10,7 @@ public struct HomeView: View {
   @Binding private var selectedSceneID: String?
   @State private var store: Store<HomeMachine>
   @State private var choosingScene = false
+  @State private var isPreparingScenes = false
 
   public init(
     scenes: [any PetScene],
@@ -38,6 +39,21 @@ public struct HomeView: View {
       }
     }
     .animation(.easeInOut(duration: 0.25), value: store.state.screen)
+    .background {
+      if isPreparingScenes {
+        ForEach(scenes.filter { $0.id != selectedScene?.id }, id: \.id) { scene in
+          scene.makePreparationView()
+        }
+        .frame(width: 1, height: 1)
+        .opacity(Self.hiddenOpacity)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+      }
+    }
+    .task {
+      try? await Task.sleep(for: Self.prepareDelay)
+      isPreparingScenes = true
+    }
     .sheet(isPresented: $choosingScene) {
       NavigationStack {
         PetScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID) {
@@ -47,6 +63,11 @@ public struct HomeView: View {
       .presentationDetents([.medium])
     }
   }
+
+  /// Long enough for launch to have settled, so that preparing scenes cannot delay it.
+  private static let prepareDelay = Duration.seconds(1)
+  /// Above zero, because SwiftUI stops drawing a view that is fully transparent.
+  private static let hiddenOpacity = 0.01
 
   private var selectedScene: (any PetScene)? {
     scenes.first { $0.id == selectedSceneID } ?? scenes.first
