@@ -79,6 +79,30 @@ import Testing
     _ = try decode(Note.self, drawing(sentAt: "1767225600000"))
   }
 
+  // MARK: idempotency key and invite expiry
+
+  @Test(arguments: ["", "not-a-uuid", "6f1c2d3e4a5b4c6d8e7f0a1b2c3d4e5f"])
+  func aKeyThatIsNotAUUIDIsRejected(_ key: String) {
+    expectRejected(SendNoteRequest.self, ##"{"_tag":"Photo","key":"\##(key)","image":"k1"}"##)
+  }
+
+  @Test func aNoteRequestNeedsItsKey() {
+    expectRejected(SendNoteRequest.self, ##"{"_tag":"Photo","image":"k1"}"##)
+  }
+
+  @Test func aUUIDKeyIsAcceptedInEitherCase() throws {
+    _ = try decode(
+      SendNoteRequest.self,
+      ##"{"_tag":"Photo","key":"6F1C2D3E-4A5B-4C6D-8E7F-0A1B2C3D4E5F","image":"k1"}"##)
+    _ = try decode(
+      SendNoteRequest.self,
+      ##"{"_tag":"Photo","key":"6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f","image":"k1"}"##)
+  }
+
+  @Test func aNegativeInviteExpiryIsRejected() {
+    expectRejected(CreateInviteResponse.self, ##"{"code":"ABCD2345EF","expiresAt":-1}"##)
+  }
+
   // MARK: push payload
 
   @Test func aNullCompactIsRejected() {

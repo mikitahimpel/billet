@@ -14,7 +14,12 @@ export const StoredRoom = Schema.Struct({
 });
 
 /** What a `note` row holds. */
-export const StoredNote = Schema.Struct({ seq: Schema.Int, body: Schema.String });
+export const StoredNote = Schema.Struct({
+  seq: Schema.Int,
+  body: Schema.String,
+  author: Schema.NullOr(Schema.String),
+  idempotencyKey: Schema.NullOr(Schema.String),
+});
 
 /** A row with every column shape a table can have, for tests that check the check. */
 export const SampleRow = Schema.Struct({ id: Schema.String, createdAt: EpochMillis });

@@ -4,7 +4,7 @@ import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
@@ -59,7 +59,7 @@ export class NotesService extends Context.Service<
       userId: UserId,
       afterSeq: number,
       limit: number,
-    ) => Effect.Effect<ReadonlyArray<Note>, NotesNotFound | NotesUnavailable>;
+    ) => Effect.Effect<ReadonlyArray<NoteEntry>, NotesNotFound | NotesUnavailable>;
   }
 >()("@billet/backend-notes/NotesService") {
   static readonly layer: Layer.Layer<
@@ -142,8 +142,11 @@ export class NotesService extends Context.Service<
 
         switch (decision._tag) {
           case "Accepted": {
-            const appended = decision.outputs.find((output) => output._tag === "NoteAppended");
-            if (appended !== undefined) return appended.entry.note;
+            for (const output of decision.outputs) {
+              if (output._tag === "NoteAppended" || output._tag === "NoteRepeated") {
+                return output.entry.note;
+              }
+            }
             return yield* Effect.fail(new NotesUnavailable({ reason: "note-not-appended" }));
           }
           case "Rejected":
@@ -155,10 +158,9 @@ export class NotesService extends Context.Service<
         userId: UserId,
         afterSeq: number,
         limit: number,
-      ): Effect.fn.Return<ReadonlyArray<Note>, NotesNotFound | NotesUnavailable> {
+      ): Effect.fn.Return<ReadonlyArray<NoteEntry>, NotesNotFound | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
-        const entries = yield* rooms.notesAfter(pairId, afterSeq, limit);
-        return entries.map(({ note }) => note);
+        return yield* rooms.notesAfter(pairId, afterSeq, limit);
       });
 
       return NotesService.of({ uploadImage, readImage, sendNote, history });

@@ -3,7 +3,7 @@ import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { maxAttempts } from "@billet/backend-pair-room/delivery-ledger";
-import { MediaKey, UserId } from "@billet/contracts-domain/ids";
+import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { PairRoom } from "../src/pair-room-durable-object.ts";
@@ -11,9 +11,17 @@ import type { PairRoom } from "../src/pair-room-durable-object.ts";
 const alice = Schema.decodeUnknownSync(UserId)("user-alice");
 const bob = Schema.decodeUnknownSync(UserId)("user-bob");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
-const photo = SendNoteRequest.cases.Photo.make({
-  image: Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png"),
-});
+let keyCount = 0;
+/** A new key each time, so repeated sends are different notes unless a test reuses a key. */
+const newKey = () =>
+  Schema.decodeSync(IdempotencyKey)(
+    `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
+  );
+const photo = () =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image: Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png"),
+  });
 
 /** A room whose lane sender follows `script`; "Delivered" once the script runs out. */
 const laneRoom = async (script: ReadonlyArray<string> = []) => {
@@ -55,7 +63,7 @@ const untilDeliveries = async (
 describe("delivery lanes", () => {
   it("hands an accepted note to its lane, and the alarm delivers it once", async () => {
     const room = await laneRoom();
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await untilDeliveries(room, (entries) => entries[0]?.status === "delivered");
     expect(await room.deliveries()).toMatchObject([{ lane: "AlertPush", status: "delivered" }]);
     expect(await alarmAt(room)).toBeNull();
@@ -67,7 +75,7 @@ describe("delivery lanes", () => {
 
   it("starts one delivery for a note however often it is handed over", async () => {
     const room = await laneRoom();
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     const [entry] = await room.deliveries();
     await runInDurableObject(room, (instance) => {
       const enqueue = (instance as unknown as { enqueueDeliveries(id: string): Promise<void> })
@@ -85,7 +93,7 @@ describe("delivery lanes", () => {
 
   it("retries after a failure, with the alarm moved to the wait", async () => {
     const room = await laneRoom(["throw", "Retry"]);
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
 
     await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
     expect(await room.deliveries()).toMatchObject([{ status: "pending", attempts: 1 }]);
@@ -108,7 +116,7 @@ describe("delivery lanes", () => {
 
   it("abandons after the attempt limit and stops the alarm", async () => {
     const room = await laneRoom(Array.from({ length: maxAttempts }, () => "Retry"));
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
     for (let i = 1; i < maxAttempts; i++) {
       await letWaitsPass(room);
@@ -126,7 +134,7 @@ describe("delivery lanes", () => {
     });
     try {
       const room = await laneRoom(["Retry"]);
-      await room.sendNote(alice, photo);
+      await room.sendNote(alice, photo());
       await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
       await letWaitsPass(room);
       await runDurableObjectAlarm(room);
@@ -151,7 +159,7 @@ describe("delivery lanes", () => {
 
   it("abandons at once when the lane says so, for example a dead token", async () => {
     const room = await laneRoom(["Abandon"]);
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await untilDeliveries(room, (entries) => entries[0]?.status === "abandoned");
     expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: 0 }]);
   });
@@ -160,7 +168,7 @@ describe("delivery lanes", () => {
     const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
     const room = PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
     await room.open(pairId, [alice, bob]);
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     expect(await room.deliveries()).toEqual([]);
     expect(await runInDurableObject(room, (_, state) => state.storage.getAlarm())).toBeNull();
   });

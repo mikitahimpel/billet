@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { MediaKey, UserId } from "@billet/contracts-domain/ids";
+import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
@@ -14,7 +14,13 @@ const bob = Schema.decodeUnknownSync(UserId)("user-bob");
 const mallory = Schema.decodeUnknownSync(UserId)("user-mallory");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
-const photo = SendNoteRequest.cases.Photo.make({ image });
+let keyCount = 0;
+/** A new key each time, so repeated sends are different notes unless a test reuses a key. */
+const newKey = () =>
+  Schema.decodeSync(IdempotencyKey)(
+    `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
+  );
+const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
 
@@ -33,7 +39,7 @@ describe("PairRoom state", () => {
   it("starts vacant and refuses notes until it is opened", async () => {
     const room = newRoom();
     expect(await room.snapshot()).toEqual({ _tag: "Vacant" });
-    expect(await room.sendNote(alice, photo)).toEqual({
+    expect(await room.sendNote(alice, photo())).toEqual({
       _tag: "Rejected",
       rejection: { _tag: "RoomNotOpen" },
     });
@@ -41,7 +47,7 @@ describe("PairRoom state", () => {
 
   it("opens, and a repeated open changes nothing", async () => {
     const room = await openRoom();
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await room.open(pairId, [bob, alice]);
     expect(await room.snapshot()).toMatchObject({ _tag: "Active", pairId, lastSeq: 1 });
   });
@@ -49,7 +55,7 @@ describe("PairRoom state", () => {
   it("assigns the id, author and time of a note on the server", async () => {
     const room = await openRoom();
     const before = Date.now();
-    await room.sendNote(bob, photo);
+    await room.sendNote(bob, photo());
     const [entry] = await room.notes(0, 10);
     expect(entry).toMatchObject({ seq: 1, note: { _tag: "Photo", author: bob, image } });
     expect(entry?.note.id).toMatch(/^[0-9a-f-]{36}$/);
@@ -62,13 +68,16 @@ describe("PairRoom state", () => {
       version: 1,
       strokes: [{ color: "#2A1A1C", width: 3, points: [10, 20, 30, 40] }],
     } as const;
-    await room.sendNote(alice, SendNoteRequest.cases.Drawing.make({ compact, image }));
+    await room.sendNote(
+      alice,
+      SendNoteRequest.cases.Drawing.make({ key: newKey(), compact, image }),
+    );
     expect((await room.notes(0, 1))[0]?.note).toMatchObject({ _tag: "Drawing", compact });
   });
 
   it("orders concurrent notes without gaps or duplicates", async () => {
     const room = await openRoom();
-    await Promise.all(Array.from({ length: 25 }, () => room.sendNote(alice, photo)));
+    await Promise.all(Array.from({ length: 25 }, () => room.sendNote(alice, photo())));
     const notes = await room.notes(0, 100);
     expect(notes.map((n) => n.seq)).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
     expect(new Set(notes.map((n) => n.note.id)).size).toBe(25);
@@ -77,14 +86,14 @@ describe("PairRoom state", () => {
 
   it("pages through notes with a cursor and a limit", async () => {
     const room = await openRoom();
-    for (let i = 0; i < 3; i += 1) await room.sendNote(alice, photo);
+    for (let i = 0; i < 3; i += 1) await room.sendNote(alice, photo());
     expect((await room.notes(1, 1)).map((n) => n.seq)).toEqual([2]);
     expect((await room.notes(3, 10)).map((n) => n.seq)).toEqual([]);
   });
 
   it("rejects a stranger's note and stores nothing", async () => {
     const room = await openRoom();
-    expect(await room.sendNote(mallory, photo)).toMatchObject({
+    expect(await room.sendNote(mallory, photo())).toMatchObject({
       _tag: "Rejected",
       rejection: { _tag: "NotAMember" },
     });
@@ -93,7 +102,7 @@ describe("PairRoom state", () => {
 
   it("keeps two rooms apart", async () => {
     const [one, two] = [await openRoom(), await openRoom()];
-    await one.sendNote(alice, photo);
+    await one.sendNote(alice, photo());
     expect(await two.snapshot()).toMatchObject({ lastSeq: 0 });
     expect(await two.notes(0, 10)).toEqual([]);
   });
@@ -102,7 +111,7 @@ describe("PairRoom state", () => {
 describe("PairRoom storage", () => {
   it("keeps notes, presence and the streak across eviction", async () => {
     const room = await openRoom();
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await room.setPresence(bob, "drawing");
     await runInDurableObject(room, (_, state) => {
       state.storage.sql.exec("UPDATE room SET streak_days = 4");
@@ -120,7 +129,7 @@ describe("PairRoom storage", () => {
       lastSeq: 1,
       streakDays: 4,
     });
-    await room.sendNote(bob, photo);
+    await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
   });
 
@@ -137,6 +146,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_init"),
       expect.stringContaining("_pair_room"),
       expect.stringContaining("_delivery"),
+      expect.stringContaining("_idempotency_key"),
     ]);
   });
 
@@ -146,7 +156,7 @@ describe("PairRoom storage", () => {
       state.storage.sql.exec("DROP TABLE note");
     });
     const outcome = await runInDurableObject(room, (instance) =>
-      instance.sendNote(alice, photo).then(
+      instance.sendNote(alice, photo()).then(
         () => "stored",
         () => "failed",
       ),
@@ -227,13 +237,13 @@ describe("PairRoom sockets", () => {
 });
 
 describe("PairRoom notes page", () => {
-  const drawing = SendNoteRequest.cases.Photo.make({ image });
+  const drawing = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
 
   it("skips a note body it cannot decode instead of failing the page", async () => {
     const room = await openRoom();
-    await room.sendNote(alice, drawing);
-    await room.sendNote(alice, drawing);
-    await room.sendNote(bob, drawing);
+    await room.sendNote(alice, drawing());
+    await room.sendNote(alice, drawing());
+    await room.sendNote(bob, drawing());
     await runInDurableObject(room, (_, state) => {
       state.storage.sql.exec("UPDATE note SET body = ? WHERE seq = 2", '{"old":"shape"}');
     });
@@ -243,7 +253,7 @@ describe("PairRoom notes page", () => {
 
   it("never returns an unbounded page", async () => {
     const room = await openRoom();
-    await room.sendNote(alice, drawing);
+    await room.sendNote(alice, drawing());
     await runInDurableObject(room, (_, state) => {
       const body = state.storage.sql.exec<{ body: string }>("SELECT body FROM note").one().body;
       for (let seq = 2; seq <= 150; seq++) {
@@ -320,14 +330,14 @@ describe("PairRoom realtime across eviction", () => {
     const a = await open(room, alice);
     const b = await open(room, bob);
     b.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await until(() => b.frames.some((f) => f._tag === "NoteReceived"));
 
     await evictDurableObject(room);
 
     a.socket.send(JSON.stringify({ _tag: "Stroke", stroke }));
     await until(() => b.frames.some((f) => f._tag === "Stroke"));
-    await room.sendNote(alice, photo);
+    await room.sendNote(alice, photo());
     await until(() => b.frames.filter((f) => f._tag === "NoteReceived").length === 2);
     expect(b.frames.filter((f) => f._tag === "NoteReceived").map((f) => f["seq"])).toEqual([1, 2]);
   });

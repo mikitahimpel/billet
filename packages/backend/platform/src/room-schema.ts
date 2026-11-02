@@ -1,4 +1,11 @@
-import { check, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  check,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // Durable Object SQLite tables, one set per `PairRoom`. `pnpm db:generate` writes the migrations.
@@ -19,11 +26,18 @@ export const room = sqliteTable(
   (table) => [check("room_single_row", sql`${table.id} = 1`)],
 );
 
-// A committed note: `body` is the `Note` as JSON.
-export const note = sqliteTable("note", {
-  seq: integer("seq").primaryKey(),
-  body: text("body").notNull(),
-});
+// A committed note: `body` is the `Note` as JSON. `author` and `idempotencyKey` let a repeated send
+// find its note; both are null on notes stored before keys existed, which no send can repeat.
+export const note = sqliteTable(
+  "note",
+  {
+    seq: integer("seq").primaryKey(),
+    body: text("body").notNull(),
+    author: text("author"),
+    idempotencyKey: text("idempotency_key"),
+  },
+  (table) => [uniqueIndex("note_author_key").on(table.author, table.idempotencyKey)],
+);
 
 // One row per note and delivery lane: how far that delivery got. The alarm works through the
 // pending ones. See `delivery-ledger.ts` in the pair-room package for the rules.
