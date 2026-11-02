@@ -132,6 +132,16 @@ extension GenzColour {
     }
     return GenzColour(channel(red) << 16 | channel(green) << 8 | channel(blue))
   }
+
+  /// The colour `amount` of the way from `start` to `end`, each channel on its own.
+  static func mix(_ start: GenzColour, _ end: GenzColour, by amount: Float) -> GenzColour {
+    func channel(_ from: Float, _ to: Float) -> UInt32 {
+      UInt32((min(max(from + (to - from) * amount, 0), 1) * 255).rounded())
+    }
+    return GenzColour(
+      channel(start.red, end.red) << 16 | channel(start.green, end.green) << 8
+        | channel(start.blue, end.blue))
+  }
 }
 
 @MainActor

@@ -106,8 +106,8 @@ struct Pacing: Equatable {
   var isShown: Bool
 }
 
-/// A styled room: its flat night behind, the 3D room, then the glow and the opening's dark over
-/// it. The cat's place on screen goes up to the host as ``PetSceneCatAnchorKey``. A new `layout`
+/// A styled room: its flat night behind, the 3D room, then the lighting preset's layers and the
+/// opening's dark over it. The cat's place on screen goes up to the host as ``PetSceneCatAnchorKey``. A new `layout`
 /// swaps its room into the same RealityView.
 struct GenzRoomView: View {
   let layout: GenzLayout
@@ -121,6 +121,7 @@ struct GenzRoomView: View {
   /// What the RealityView holds: the room shown, and nothing else.
   @State private var holder = Entity()
   @State private var size: CGSize?
+  @Environment(\.petSceneLighting) private var lighting
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   /// Whether the drag in progress began on the cat, so it strokes rather than turns the room.
@@ -161,11 +162,18 @@ struct GenzRoomView: View {
 
   var body: some View {
     let room = room
+    let look = LightingLook.of(lighting)
     ZStack {
       layer(behind, room: room)
       theirSky
+      GlowHaze(look: look)
       stage(room)
       ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      GlowLights(
+        look: look, style: layout.style, screen: room.screen,
+        isPaused: !isOnScreen || reduceMotion)
+      GlowGrade(look: look)
+      GlowVignette(look: look)
       CatPurrOverlay(purr: room.purr)
       catAnchor(room)
     }
@@ -272,6 +280,7 @@ struct GenzRoomView: View {
     .onChange(of: play.treatsUsed) { room.react(.treat) }
     .onChange(of: play.petsReceived) { room.react(.pet) }
     .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+    .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
     .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
     .onAppear { room.art = replacementArt ?? GenzNativeArt() }
     .accessibilityElement()
@@ -303,6 +312,7 @@ struct GenzRoomView: View {
     room.show(dayLight: dayLight)
     room.setFollowsTilt(followsTilt)
     room.setCat(cat)
+    room.setLighting(lighting)
     room.setMoments(moments)
     room.setOnScreen(isOnScreen, in: viewID)
   }

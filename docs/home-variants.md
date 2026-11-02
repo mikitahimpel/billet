@@ -75,3 +75,32 @@ in the app and so would step a room twice a frame while both views are kept.
 
 On the Simulator, a switch shows the room within about 0.1 s for a styled room seen for the first
 time, 0.6 s for the diorama the first time, and at once after that.
+
+## Lighting
+
+Labs → Lighting picks one look for every room: Off, Amber lantern (the default), Fairy lights,
+Golden hour, Neon night and Candle. Each is one `LightingLook` value (`PetSceneReality`) on a
+shared rig, so a new look is one more value:
+
+- key: the lamp's colour, brightness, softness and flicker;
+- fill: the ambient light's colours from above and below, and how much brighter or darker it is;
+- core: a soft light low over the rug, so the room glows from inside like a lantern;
+- rim: a spot light behind the cat;
+- fairy lights along the wall tops, with spill lights onto the walls (Window Seat only);
+- sun: a low directional light through the window, with shadows;
+- the LED strip's colour and the colour of the light from outside;
+- contact shadows: soft dark patches under floor furniture and the cat;
+- haze, halos, grade and vignette: flat SwiftUI layers over the view.
+
+RealityKit on iOS 26 has `renderingEffects.customPostProcessing`, which could give real bloom, but
+on the iOS 26.2 Simulator setting it traps inside RealityKit (`ARView.renderCallbacks.setter`), in
+both the make and update closures. So bloom is drawn in the view instead: soft radial halos over
+each light, screen-blended in a `Canvas`, placed from the room's lights projected to the screen.
+The grade multiplies a tint over everything and screen-blends a lift under the darks, so nothing is
+pure black and nothing is hard white.
+
+The diorama gets the grade and vignette only.
+
+Frame times on the Simulator, Window Seat, over 5 s windows after the opening: Off holds
+16.7 ms (95th 16.7 ms); Amber lantern averages 17.1–17.7 ms, with the 95th at 16.7 ms in most
+windows and 27 ms in the worst.

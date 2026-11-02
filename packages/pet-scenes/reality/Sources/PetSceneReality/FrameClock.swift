@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 #if canImport(UIKit)
   import QuartzCore
@@ -19,6 +20,7 @@ final class FrameClock {
 
   private var step: (@MainActor (TimeInterval) -> Void)?
   private var lastTime: TimeInterval?
+  private var stats = FrameStats()
   #if canImport(UIKit)
     private var link: CADisplayLink?
   #else
@@ -73,6 +75,7 @@ final class FrameClock {
   /// One frame at `time`, in seconds.
   func fire(at time: TimeInterval) {
     guard !isPaused, let step else { return }
+    if let lastTime { stats.add(time - lastTime, at: time) }
     let delta = lastTime.map { min(time - $0, Self.longestStep) } ?? 1 / Self.framesPerSecond
     lastTime = time
     step(max(delta, 0))
@@ -99,3 +102,37 @@ final class FrameClock {
     }
   }
 #endif
+
+/// The time between frames, logged at debug level every few seconds as the average, the slowest
+/// one in twenty and the slowest, so the cost of a change can be read from a log stream.
+struct FrameStats {
+  private var intervals: [TimeInterval] = []
+  private var started: TimeInterval?
+
+  static let every: TimeInterval = 5
+  private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiScene")
+
+  mutating func add(_ interval: TimeInterval, at time: TimeInterval) {
+    intervals.append(interval)
+    let start = started ?? time
+    started = start
+    guard time - start >= Self.every, let summary = Self.summary(intervals) else { return }
+    Self.log.debug(
+      "mark frames \(summary.average * 1000, format: .fixed(precision: 1), privacy: .public) ms average, \(summary.slowTwentieth * 1000, format: .fixed(precision: 1), privacy: .public) ms 95th, \(summary.slowest * 1000, format: .fixed(precision: 1), privacy: .public) ms slowest"
+    )
+    intervals.removeAll(keepingCapacity: true)
+    started = time
+  }
+
+  /// The average interval, the one slower than 95% of the others, and the slowest.
+  static func summary(_ intervals: [TimeInterval]) -> (
+    average: TimeInterval, slowTwentieth: TimeInterval, slowest: TimeInterval
+  )? {
+    guard !intervals.isEmpty else { return nil }
+    let sorted = intervals.sorted()
+    let index = min(Int((Double(sorted.count) * 0.95).rounded(.down)), sorted.count - 1)
+    return (
+      intervals.reduce(0, +) / Double(intervals.count), sorted[index], sorted[sorted.count - 1]
+    )
+  }
+}
