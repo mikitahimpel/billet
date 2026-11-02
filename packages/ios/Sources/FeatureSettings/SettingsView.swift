@@ -22,6 +22,7 @@ public struct SettingsView: View {
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?
   private let widgetFeatures: WidgetFeaturesModel?
+  private let isFakePartner: Bool
   private let onLogOut: () async -> String?
 
   @Environment(\.openURL) private var openURL
@@ -40,8 +41,10 @@ public struct SettingsView: View {
     scenes: [any PetScene],
     selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
+    isFakePartner: Bool = false,
     onLogOut: @escaping () async -> String?
   ) {
+    self.isFakePartner = isFakePartner
     self.code = code
     self.labs = labs
     self.partnerStatus = partnerStatus
@@ -74,10 +77,7 @@ public struct SettingsView: View {
       Button("Log out", role: .destructive) { performLogOut() }
       Button("Cancel", role: .cancel) {}
     } message: {
-      Text(
-        "This forgets the pair code and deletes the notes on this device. You and your partner "
-          + "will need a new code to pair again."
-      )
+      Text(Self.logOutWarning(isFakePartner: isFakePartner))
     }
   }
 
@@ -207,6 +207,14 @@ public struct SettingsView: View {
       .billetType(.label)
       .foregroundStyle(Palette.muted.color)
       .frame(maxWidth: .infinity)
+  }
+
+  static func logOutWarning(isFakePartner: Bool) -> String {
+    isFakePartner
+      ? "This ends the practice run and deletes its notes, the cat's name, the streak and "
+        + "anything bought in it. Nothing was shared with anyone."
+      : "This forgets the pair code and deletes the notes on this device. You and your partner "
+        + "will need a new code to pair again."
   }
 
   private func performLogOut() {
