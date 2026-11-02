@@ -83,7 +83,7 @@ public enum OvernightStayCaption {
     "\(catName ?? "The cat") is at your partner's"
   }
 
-  public static func detail(catName: String?) -> String {
-    "The cushion is still warm. \(catName ?? "The cat") comes back when they draw you one."
+  public static func detail(catName _: String?) -> String {
+    "The cushion is still warm. Back when they draw you one."
   }
 }

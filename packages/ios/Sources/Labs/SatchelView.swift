@@ -29,7 +29,7 @@ public struct CatCameBackRow: View {
   public var body: some View {
     ListRow(
       "\(catName ?? "The cat") is back",
-      subtitle: "Your partner opened the note. The satchel is empty."
+      subtitle: "Opened. The satchel is empty."
     ) {
       SatchelShape()
         .fill(Palette.wood.color)

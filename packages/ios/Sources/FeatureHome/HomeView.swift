@@ -177,8 +177,13 @@ struct HomeView: View {
             FramedWallView(notes: framedNotes)
           }
         }
-        .overlay(alignment: .bottom) {
-          if catAway { OvernightStayView().padding(.bottom, Spacing.wide) }
+        .overlay(alignment: .bottomLeading) {
+          if catAway {
+            OvernightStayView()
+              .scaleEffect(0.55, anchor: .bottomLeading)
+              .padding(.leading, Spacing.small)
+              .padding(.bottom, Spacing.small)
+          }
         }
         .overlay {
           if let hungImage, let wall = scene.noteWall {
@@ -375,6 +380,7 @@ struct HomeView: View {
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, Spacing.medium)
         .padding(.vertical, Spacing.small)
         .frame(minHeight: Target.minimum)
