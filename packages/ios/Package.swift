@@ -88,7 +88,7 @@ let testTargets: [Target] = [
     name: "FeatureHomeTests",
     dependencies: [
       "BilletKit", "Delivery", "FeatureHome", "FeatureInbox", "Ink", "Persistence", "Pet",
-      "WidgetBridge",
+      "Transport", "WidgetBridge",
       "Wire",
     ]),
   .testTarget(
