@@ -16,6 +16,8 @@ struct HomeView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Namespace private var zoom
   @State private var hungImage: CGImage?
+  /// What the card that opened the canvas asked for, in place of the day's usual prompt.
+  @State private var cardPrompt: String?
   @State private var hangCount = 0
   @State private var petBounce = false
   @State private var showsStatus = true
@@ -62,10 +64,11 @@ struct HomeView: View {
         withAnimation(Motion.spring) { showsStatus = false }
       }
       #if os(iOS)
-        .fullScreenCover(isPresented: canvasPresented) {
+        .fullScreenCover(isPresented: canvasPresented, onDismiss: clearCardPrompt) {
           CanvasView(
-            prompt: DailyPrompt.canvasPrompt(
-              features: widgetFeatures.features, day: TreatDay.key(for: .now, calendar: .current)),
+            prompt: cardPrompt
+              ?? DailyPrompt.canvasPrompt(
+                features: widgetFeatures.features, day: TreatDay.key(for: .now, calendar: .current)),
             onClose: { store.send(.canvasClosed) },
             onSend: { session.send($0) }
           )
@@ -177,14 +180,21 @@ struct HomeView: View {
   @ViewBuilder private var promptCards: some View {
     let day = TreatDay.key(for: .now, calendar: .current)
     if widgetFeatures.isOn(.questionCard) {
-      PromptCard(title: "Today's question", prompt: DailyPrompt.question(on: day)) {
-        store.send(.canvasOpened)
-      }
+      promptCard("Today's question", prompt: DailyPrompt.question(on: day))
     }
     if widgetFeatures.isOn(.doodleCard) {
-      PromptCard(title: "Doodle prompt", prompt: DailyPrompt.doodle(on: day)) {
-        store.send(.canvasOpened)
-      }
+      promptCard("Doodle prompt", prompt: DailyPrompt.doodle(on: day))
+    }
+  }
+
+  private func clearCardPrompt() {
+    cardPrompt = nil
+  }
+
+  private func promptCard(_ title: String, prompt: String) -> some View {
+    PromptCard(title: title, prompt: prompt) {
+      cardPrompt = prompt
+      store.send(.canvasOpened)
     }
   }
 
