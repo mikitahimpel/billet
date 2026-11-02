@@ -147,6 +147,7 @@ final class NookiDiorama {
   }
 
   private func load() async {
+    NookiTrace.mark("load started")
     await buildRoom()
     physics.buildShell(in: room)
     await buildBowl()
@@ -161,6 +162,7 @@ final class NookiDiorama {
     startLoadingMochi()
     let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
     for piece in furniture { await piece.value }
+    NookiTrace.mark("furniture placed")
     findLampParts()
     await Task.yield()
     await addLighting()
@@ -173,6 +175,7 @@ final class NookiDiorama {
     renovation.applyStored()
     room.isEnabled = isOnScreen
     isLoaded = true
+    NookiTrace.mark("room usable")
     updateTiltFollowing()
   }
 
@@ -238,7 +241,7 @@ final class NookiDiorama {
     ) { [weak self] event in
       let delta = event.deltaTime
       MainActor.assumeIsolated {
-        self?.tick(delta)
+        NookiTrace.frame { self?.tick(delta) }
       }
     }
   }
@@ -422,7 +425,10 @@ final class NookiDiorama {
     guard isOnScreen, isLoaded else { return }
     if settlingFrames > 0 {
       settlingFrames -= 1
-      if settlingFrames == 0 { onReady?() }
+      if settlingFrames == 0 {
+        NookiTrace.mark("room on screen")
+        onReady?()
+      }
       return
     }
     clock += delta
@@ -811,6 +817,7 @@ final class NookiDiorama {
       animator?.play(.sleep, blend: 0)
       mochi.addChild(model)
       hasMochi = true
+      NookiTrace.mark("Mochi placed")
       setMochiMissing(false)
     } catch {
       Self.log.error("\(String(describing: error), privacy: .public)")
