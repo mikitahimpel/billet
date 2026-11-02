@@ -39,6 +39,7 @@ final class NookiDiorama {
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
   private(set) var isOnScreen = true
+  private var viewsShowing = Set<UUID>()
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
   private(set) var mochiLoading: Task<Void, Never>?
@@ -262,9 +263,16 @@ final class NookiDiorama {
   }
 
   /// Off screen, the room leaves the render and updates stop.
-  func setOnScreen(_ onScreen: Bool) {
-    isOnScreen = onScreen
-    room.isEnabled = onScreen && isLoaded
+  /// Records whether `view` shows the room. A view replacing another appears before the old one
+  /// goes, so the room stays on while any view shows it.
+  func setOnScreen(_ onScreen: Bool, in view: UUID) {
+    if onScreen {
+      viewsShowing.insert(view)
+    } else {
+      viewsShowing.remove(view)
+    }
+    isOnScreen = !viewsShowing.isEmpty
+    room.isEnabled = isOnScreen && isLoaded
     updateTiltFollowing()
   }
 
@@ -366,6 +374,12 @@ final class NookiDiorama {
 
   func endZoom() {
     camera.release(yawVelocity: 0, pitchVelocity: 0, coasting: !reduceMotion)
+  }
+
+  /// Keeps the whole room in a view of `size`, in points.
+  func fit(to size: SIMD2<Float>) {
+    camera.fit(to: size)
+    aimLens()
   }
 
   private func aimLens() {

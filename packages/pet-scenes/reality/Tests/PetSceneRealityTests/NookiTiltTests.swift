@@ -1,8 +1,11 @@
+import Foundation
 import RealityKit
 import Testing
 import simd
 
 @testable import PetSceneReality
+
+private let view = UUID()
 
 @Suite struct NookiTiltTests {
   private static let held = SIMD3<Float>(0, -0.7, -0.7)
@@ -85,14 +88,14 @@ import simd
     diorama.startLoading()
     await diorama.loading?.value
     #expect(source.isRunning)
-    diorama.setOnScreen(false)
+    diorama.setOnScreen(false, in: view)
     #expect(!source.isRunning)
-    diorama.setOnScreen(true)
+    diorama.setOnScreen(true, in: view)
     #expect(source.isRunning)
     diorama.setReduceMotion(true)
     #expect(!source.isRunning)
-    diorama.setOnScreen(false)
-    diorama.setOnScreen(true)
+    diorama.setOnScreen(false, in: view)
+    diorama.setOnScreen(true, in: view)
     #expect(!source.isRunning)
     diorama.setReduceMotion(false)
     #expect(source.isRunning)
@@ -101,7 +104,7 @@ import simd
   @MainActor @Test func tiltDoesNotStartBeforeTheRoomIsThere() {
     let source = CountingTiltSource()
     let diorama = NookiDiorama(tiltSource: source)
-    diorama.setOnScreen(true)
+    diorama.setOnScreen(true, in: view)
     #expect(!source.isRunning)
   }
 }

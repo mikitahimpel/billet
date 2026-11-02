@@ -10,6 +10,25 @@ import UserNotifications
 public enum DemoPush {
   static let tokenDidChange = Notification.Name("DemoPush.tokenDidChange")
 
+  /// Registers without asking, for someone who has already said yes.
+  @MainActor
+  static func registerIfAllowed() async {
+    let settings = await UNUserNotificationCenter.current().notificationSettings()
+    guard isAllowed(settings.authorizationStatus) else { return }
+    #if os(iOS)
+      UIApplication.shared.registerForRemoteNotifications()
+    #endif
+  }
+
+  static func isAllowed(_ status: UNAuthorizationStatus) -> Bool {
+    switch status {
+    case .authorized, .provisional, .ephemeral: true
+    case .denied, .notDetermined: false
+    @unknown default: false
+    }
+  }
+
+  /// Shows the system prompt, which only ever appears once.
   @MainActor
   static func requestPermission() async {
     let center = UNUserNotificationCenter.current()

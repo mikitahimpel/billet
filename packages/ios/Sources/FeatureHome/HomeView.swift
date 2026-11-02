@@ -24,6 +24,8 @@ struct HomeView: View {
   @State private var hangCount = 0
   @State private var petBounce = false
   @State private var showsStatus = true
+  @State private var notesSent = 0
+  @State private var namingCat = false
   @State private var labsOpen = false
 
   let session: PairSession
@@ -51,12 +53,27 @@ struct HomeView: View {
 
   private var delivery: Int { store.state.pet.world.delivery }
 
+  private var isRenovating: Bool { session.renovator.isRenovating }
+
+  /// Long enough to see the note set off before the system prompt covers it.
+  private static let askAfterSending = Duration.seconds(2)
+
   var body: some View {
     home
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(HomeShop(shop: session.shop, renovator: session.renovator, scene: scene))
-      .task { await DemoPush.requestPermission() }
+      .calmAnimation(value: isRenovating)
+      #if os(iOS)
+        .toolbar(isRenovating ? .hidden : .visible, for: .tabBar)
+      #endif
+      .task { await DemoPush.registerIfAllowed() }
+      .task(id: notesSent) {
+        guard notesSent > 0 else { return }
+        try? await Task.sleep(for: Self.askAfterSending)
+        guard !Task.isCancelled else { return }
+        await DemoPush.requestPermission()
+      }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
@@ -91,7 +108,10 @@ struct HomeView: View {
               session.advent.drawingFor = nil
               store.send(.canvasClosed)
             },
-            onSend: { session.send($0) }
+            onSend: {
+              session.send($0)
+              notesSent += 1
+            }
           )
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
         }
@@ -146,9 +166,11 @@ struct HomeView: View {
           VStack(spacing: Spacing.small) {
             petScene
               .frame(maxWidth: .infinity)
-              .frame(height: 240)
-            controls
-              .padding(.horizontal, Spacing.medium)
+              .frame(height: isRenovating ? 480 : 240)
+            if !isRenovating {
+              controls
+                .padding(.horizontal, Spacing.medium)
+            }
           }
           .padding(.bottom, Spacing.small)
         }
@@ -158,8 +180,12 @@ struct HomeView: View {
           petScene
             .frame(maxWidth: .infinity, minHeight: 160, maxHeight: .infinity)
             .layoutPriority(-1)
-          controls
-            .padding(.horizontal, Spacing.medium)
+            .overlay(alignment: .bottom) { fakePartnerCaption }
+          if !isRenovating {
+            controls
+              .padding(.horizontal, Spacing.medium)
+              .transition(.opacity)
+          }
         }
         .padding(.bottom, Spacing.small)
       }
@@ -238,7 +264,7 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .transition(.opacity)
       }
-      fakePartnerNotice
+      if typeSize.isAccessibilitySize { fakePartnerNotice }
       overnightStayNotice
       catCameBackNotice
       catNaming
@@ -410,6 +436,18 @@ struct HomeView: View {
     }
   }
 
+  /// Says the partner is scripted without taking any height from the scene.
+  @ViewBuilder private var fakePartnerCaption: some View {
+    if session.isFakePartner, !isRenovating {
+      Text("Fake partner: scripted replies, on this phone only")
+        .billetType(.caption)
+        .foregroundStyle(Palette.muted.color)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, Spacing.medium)
+        .accessibilityIdentifier("fakePartnerNotice")
+    }
+  }
+
   /// Said plainly, so nobody takes the scripted replies for a person.
   @ViewBuilder private var fakePartnerNotice: some View {
     if session.isFakePartner {
@@ -470,8 +508,30 @@ struct HomeView: View {
         .accessibilityIdentifier("catNameLabel")
         .transition(.opacity)
     } else if session.hasConnected {
-      NamePanel { session.nameCat($0) }
-        .transition(.opacity)
+      Button {
+        namingCat = true
+      } label: {
+        ListRow("Name your cat", subtitle: "Whoever chooses first names it for you both") {
+          EmptyView()
+        } trailing: {
+          RowIcon("chevron.up")
+        }
+      }
+      .buttonStyle(RowButtonStyle())
+      .card()
+      .transition(.opacity)
+      .sheet(isPresented: $namingCat) {
+        ZStack {
+          EveningBackground()
+          NamePanel {
+            session.nameCat($0)
+            namingCat = false
+          }
+          .padding(.horizontal, Spacing.medium)
+        }
+        .presentationDetents([.medium])
+        .preferredColorScheme(.dark)
+      }
     }
   }
 

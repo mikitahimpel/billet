@@ -112,6 +112,7 @@ struct AppShellView: View {
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
           widgetFeatures: widgetFeatures,
+          isFakePartner: session.isFakePartner,
           onLogOut: onLogOut
         )
         .tabEntrance(destination == .settings)

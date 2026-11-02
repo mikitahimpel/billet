@@ -38,6 +38,23 @@ struct NookiCameraTests {
     }
   }
 
+  @Test func aTallNarrowViewStandsBackAndAWideOneDoesNot() {
+    var wide = NookiCamera()
+    wide.fit(to: [402, 300])
+    #expect(wide.position == NookiCamera().position)
+
+    var tall = NookiCamera()
+    tall.fit(to: [402, 804])
+    #expect(simd_distance(tall.position, NookiCamera.target) > tall.distance)
+  }
+
+  @Test func theFitOutlastsTheTripHome() {
+    var camera = NookiCamera()
+    camera.fit(to: [402, 804])
+    camera.goHome(animated: false)
+    #expect(camera.standBack > 1)
+  }
+
   @Test func dragPastALimitEasesBackToIt() {
     var camera = NookiCamera()
     camera.drag(yaw: 9, pitch: 0)

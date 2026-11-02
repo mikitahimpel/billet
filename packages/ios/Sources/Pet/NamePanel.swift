@@ -6,6 +6,7 @@ public struct NamePanel: View {
   private let onName: (String) -> Void
 
   @State private var typed = ""
+  @FocusState private var isTyping: Bool
 
   public init(onName: @escaping (String) -> Void) {
     self.onName = onName
@@ -27,6 +28,7 @@ public struct NamePanel: View {
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)
         .autocorrectionDisabled()
+        .focused($isTyping)
         .submitLabel(.done)
         .onSubmit(submit)
         .padding(.horizontal, Spacing.medium)
@@ -36,6 +38,7 @@ public struct NamePanel: View {
       BilletButton("Name the cat", rank: .primary, action: submit)
         .disabled(name == nil)
     }
+    .onAppear { isTyping = true }
   }
 
   private func submit() {

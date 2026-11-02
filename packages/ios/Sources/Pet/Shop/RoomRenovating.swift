@@ -30,6 +30,9 @@ public final class RoomRenovator: RoomRenovating {
   /// Counts up each time a piece goes into the room. A scene opens for changes on each one.
   public private(set) var placements = 0
 
+  /// True while a scene is open for changes, so the screen around it can step back.
+  public var isRenovating = false
+
   /// Finds room for a floor piece in the scene's own plan; `nil` from it means the room is full.
   @ObservationIgnored public var openSpot: ((ShopItem) -> (x: Double, z: Double)?)?
 

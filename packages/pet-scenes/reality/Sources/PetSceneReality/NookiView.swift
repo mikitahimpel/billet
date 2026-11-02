@@ -90,6 +90,7 @@ private struct NookiStage: View {
   @State private var isRenovating = false
   @State private var paint = NookiSwatch.cream
   @State private var viewSize = SIMD2<Float>(1, 1)
+  @State private var viewID = UUID()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.petSceneRenovator) private var renovator
@@ -117,9 +118,10 @@ private struct NookiStage: View {
       .onDisappear {
         isAppeared = false
         renovator?.openSpot = nil
+        renovator?.isRenovating = false
       }
       .onChange(of: isOnScreen, initial: true) { _, onScreen in
-        diorama.setOnScreen(onScreen)
+        diorama.setOnScreen(onScreen, in: viewID)
       }
       .onChange(of: play, initial: true) { _, play in
         diorama.show(play)
@@ -157,6 +159,7 @@ private struct NookiStage: View {
       $0.size
     } action: { size in
       viewSize = SIMD2(Float(size.width), Float(size.height))
+      diorama.fit(to: viewSize)
     }
     .simultaneousGesture(orbit)
     .simultaneousGesture(pinch)
@@ -166,7 +169,10 @@ private struct NookiStage: View {
     .overlay(alignment: .topLeading) {
       NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
     }
-    .onChange(of: isRenovating, initial: true) { _, isOn in diorama.renovation.isOn = isOn }
+    .onChange(of: isRenovating, initial: true) { _, isOn in
+      diorama.renovation.isOn = isOn
+      renovator?.isRenovating = isOn
+    }
     .onChange(of: renovator?.placements) { isRenovating = true }
     .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
     .accessibilityElement()

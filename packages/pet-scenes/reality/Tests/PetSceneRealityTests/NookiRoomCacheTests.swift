@@ -1,6 +1,9 @@
+import Foundation
 import Testing
 
 @testable import PetSceneReality
+
+private let view = UUID()
 
 @MainActor
 @Suite struct NookiRoomCacheTests {
@@ -12,7 +15,7 @@ import Testing
   @Test func aMemoryWarningLetsGoOfARoomOffScreen() {
     let cache = NookiRoomCache()
     let room = cache.diorama()
-    room.setOnScreen(false)
+    room.setOnScreen(false, in: view)
     cache.purgeIfOffScreen()
     #expect(cache.diorama() !== room)
   }
@@ -20,8 +23,20 @@ import Testing
   @Test func aMemoryWarningKeepsTheRoomOnScreen() {
     let cache = NookiRoomCache()
     let room = cache.diorama()
-    room.setOnScreen(true)
+    room.setOnScreen(true, in: view)
     cache.purgeIfOffScreen()
     #expect(cache.diorama() === room)
+  }
+
+  @Test func aViewThatGoesLeavesTheRoomOnForTheViewThatReplacedIt() {
+    let room = NookiDiorama()
+    let old = UUID()
+    let new = UUID()
+    room.setOnScreen(true, in: old)
+    room.setOnScreen(true, in: new)
+    room.setOnScreen(false, in: old)
+    #expect(room.isOnScreen)
+    room.setOnScreen(false, in: new)
+    #expect(!room.isOnScreen)
   }
 }

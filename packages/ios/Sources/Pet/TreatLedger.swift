@@ -3,7 +3,7 @@ import Foundation
 /// Who gave a treat on which day, and what that means for the cat and the streak.
 ///
 /// The room keeps the same table, so two phones that have both read it agree on every answer.
-public struct TreatLedger: Hashable, Sendable {
+public struct TreatLedger: Codable, Hashable, Sendable {
   /// Where the pair stands on one day's treat.
   public enum Status: Hashable, Sendable {
     case neither
