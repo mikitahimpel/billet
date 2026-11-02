@@ -2,6 +2,7 @@ import DesignSystem
 import FeatureInbox
 import FeatureOnboarding
 import FeaturePairing
+import FeatureSettings
 import SwiftUI
 
 /// The app when `BackendMode` is `real`: sign in, pair, then the paired screens.
@@ -30,7 +31,7 @@ public struct RealRootView: View {
   }
 }
 
-/// The screens of a paired account. Settings joins the notes list once it is connected.
+/// The screens of a paired account: the notes and the account settings.
 struct RealPairedView: View {
   let model: RealAppModel
 
@@ -38,6 +39,9 @@ struct RealPairedView: View {
     TabView {
       Tab("Notes", systemImage: "tray") {
         HistoryView(model: model.history())
+      }
+      Tab("Settings", systemImage: "gearshape") {
+        AccountSettingsView(model: model.account()) { model.finished($0) }
       }
     }
   }

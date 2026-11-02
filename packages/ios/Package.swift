@@ -94,6 +94,9 @@ let testTargets: [Target] = [
     name: "FeatureOnboardingTests",
     dependencies: ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   .testTarget(
+    name: "FeatureSettingsTests",
+    dependencies: ["FeatureSettings", "Persistence", "Transport", "Wire"]),
+  .testTarget(
     name: "FeaturePairingTests", dependencies: ["FeaturePairing", "Transport", "Wire"]),
   .testTarget(
     name: "FeatureInboxTests",
