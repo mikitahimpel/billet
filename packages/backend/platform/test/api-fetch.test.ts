@@ -20,6 +20,7 @@ import {
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
 import { resetDirectory } from "./directory-migrations.ts";
+import { waitFor } from "./demo-wait.ts";
 
 const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
 
@@ -590,5 +591,143 @@ describe("what the Worker logs", () => {
     expect(lines.length).toBeGreaterThan(0);
     const output = lines.join("\n");
     for (const secret of secrets) expect(output).not.toContain(secret);
+  });
+});
+
+describe("the couple's WebSocket", () => {
+  type Frame = { readonly _tag: string; readonly [key: string]: unknown };
+  const stroke = {
+    color: "#2A1A1C",
+    width: 3,
+    points: [
+      { x: 1, y: 2 },
+      { x: 3, y: 4 },
+    ],
+  };
+
+  const openSocket = async (token: string) => {
+    const response = await exports.default.fetch(
+      new Request("https://billet.test/v1/socket", {
+        headers: { upgrade: "websocket", ...bearer(token) },
+      }),
+    );
+    expect(response.status).toBe(101);
+    const ws = response.webSocket!;
+    const frames: Frame[] = [];
+    ws.addEventListener("message", (event) => {
+      frames.push(JSON.parse(event.data as string));
+    });
+    ws.accept();
+    const resume = (lastSeq: number) => {
+      ws.send(JSON.stringify({ _tag: "Resume", lastSeq }));
+    };
+    const ofTag = (tag: string) => frames.filter((f) => f._tag === tag);
+    const seqs = () => ofTag("NoteReceived").map((f) => f["seq"]);
+    return { ws, frames, resume, ofTag, seqs };
+  };
+
+  const until = (check: () => boolean, what: string) => waitFor(check, what);
+
+  it("refuses a caller without a live session, without a partner or without an upgrade", async () => {
+    const fetchSocket = (headers: Record<string, string>) =>
+      exports.default.fetch(new Request("https://billet.test/v1/socket", { headers }));
+    expect((await fetchSocket({ upgrade: "websocket" })).status).toBe(401);
+    expect((await fetchSocket({ upgrade: "websocket", ...bearer("nonsense") })).status).toBe(401);
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    expect((await fetchSocket(bearer(owner))).status).toBe(426);
+    const alone = await signedInAs("subject-alone");
+    expect((await fetchSocket({ upgrade: "websocket", ...bearer(alone) })).status).toBe(404);
+  });
+
+  it("sends stored notes on resume, then new ones as they are stored", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    await sentPhoto(owner);
+    await sentPhoto(owner);
+    const partner = await openSocket(claimer);
+    partner.resume(0);
+    await until(() => partner.seqs().length === 2, "the two stored notes");
+    await sentPhoto(owner);
+    await until(() => partner.seqs().length === 3, "the live note");
+    expect(partner.seqs()).toEqual([1, 2, 3]);
+  });
+
+  it("gives no note before the client asks to resume", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    await sentPhoto(owner);
+    const partner = await openSocket(claimer);
+    await sentPhoto(owner);
+    partner.resume(0);
+    await until(() => partner.seqs().length === 2, "both notes after resume");
+    expect(partner.seqs()).toEqual([1, 2]);
+  });
+
+  it("resumes after a dropped connection with no gap and no repeat", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    await sentPhoto(owner);
+    const first = await openSocket(claimer);
+    first.resume(0);
+    await until(() => first.seqs().length === 1, "the first note");
+    first.ws.close(1001);
+    await sentPhoto(owner);
+    await sentPhoto(owner);
+
+    const again = await openSocket(claimer);
+    again.resume(1);
+    await until(() => again.seqs().length === 2, "the two missed notes");
+    await sentPhoto(owner);
+    await until(() => again.seqs().length === 3, "the next live note");
+    expect(again.seqs()).toEqual([2, 3, 4]);
+  });
+
+  it("does not repeat a note when a resume races a new note", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    await sentPhoto(owner);
+    const partner = await openSocket(claimer);
+    partner.resume(0);
+    await Promise.all([sentPhoto(owner), sentPhoto(owner), sentPhoto(owner)]);
+    await until(() => partner.seqs().length >= 4, "all four notes");
+    expect(partner.seqs()).toEqual([1, 2, 3, 4]);
+  });
+
+  it("relays a live stroke to the partner only", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const mine = await openSocket(owner);
+    const theirs = await openSocket(claimer);
+    mine.ws.send(JSON.stringify({ _tag: "Stroke", stroke }));
+    await until(() => theirs.ofTag("Stroke").length === 1, "the stroke");
+    expect(theirs.ofTag("Stroke")[0]).toMatchObject({ stroke, seq: 0 });
+    mine.ws.send(JSON.stringify({ _tag: "Presence", state: "idle" }));
+    await until(
+      () => theirs.ofTag("Presence").length >= 1,
+      "a later frame, so the stroke echo would have arrived",
+    );
+    expect(mine.ofTag("Stroke")).toEqual([]);
+  });
+
+  it("tells the partner when someone starts drawing and when they disconnect", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const mine = await openSocket(owner);
+    mine.ws.send(JSON.stringify({ _tag: "Presence", state: "drawing" }));
+    const theirs = await openSocket(claimer);
+    await until(() => theirs.ofTag("Presence").length === 1, "the presence on connect");
+    expect(theirs.ofTag("Presence")[0]).toMatchObject({ state: "drawing" });
+
+    mine.ws.close(1000);
+    await until(() => theirs.ofTag("Presence").length === 2, "idle after disconnect");
+    expect(theirs.ofTag("Presence")[1]).toMatchObject({ state: "idle" });
+  });
+
+  it("ignores frames it cannot read and ends a connection that sends a huge one", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const mine = await openSocket(owner);
+    const closed = new Promise<number>((resolve) => {
+      mine.ws.addEventListener("close", (event) => {
+        resolve(event.code);
+      });
+    });
+    mine.ws.send("not json");
+    mine.ws.send(JSON.stringify({ _tag: "Unknown" }));
+    mine.ws.send("x".repeat(70_000));
+    expect(await closed).toBe(1009);
   });
 });
