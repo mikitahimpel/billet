@@ -103,9 +103,21 @@ import Testing
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
       #expect(rig.info[.sleep] != nil || rig.info[.idle] != nil)
+      let missing = Set(CatCatalog.clips(model).keys).subtracting(rig.info.keys)
+      #expect(missing.isEmpty, "\(model) drops \(missing.map(\.rawValue).sorted())")
       if let palette = CatCatalog.palette(model, coat: .black) {
         #expect(rig.paint(palette) > 0, "\(model) has no material a coat can repaint")
       }
     }
+  }
+
+  /// realitytool drops a timeline's unchanging tail, so the last clip may end a little past it;
+  /// a clip that starts past the end, or runs well past it, is not in the timeline.
+  @Test func aClipMayEndInTheTimelinesDroppedTail() {
+    let tail = CatClipRange(trimStart: 66.2, trimEnd: 68.4, loops: false, base: .stand)
+    #expect(CatRig.fits(tail, timelineDuration: 68.2))
+    #expect(!CatRig.fits(tail, timelineDuration: 66.0))
+    let beyond = CatClipRange(trimStart: 60.0, trimEnd: 69.0, loops: false, base: .stand)
+    #expect(!CatRig.fits(beyond, timelineDuration: 68.2))
   }
 }
