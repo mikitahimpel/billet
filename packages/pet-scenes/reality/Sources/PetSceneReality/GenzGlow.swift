@@ -1,0 +1,265 @@
+import CoreGraphics
+import Foundation
+import Pet
+import RealityKit
+
+/// The lights a lighting preset adds to a styled room: strings of fairy lights with light spilling
+/// onto the walls near them, a rim light behind the cat, a low sun through the window, and soft
+/// shadows under the furniture and the cat. Everything sits under one entity, gone when the
+/// lighting is off.
+@MainActor
+final class GenzGlow {
+  let root = Entity()
+  private let layout: GenzLayout
+  private var bulbs: [ModelEntity] = []
+  /// Where each fairy light hangs, in the room.
+  private(set) var bulbPoints: [GenzRoomPoint] = []
+  private var spills: [Entity] = []
+  private var shadows: [ModelEntity] = []
+  private let fairy = Entity()
+  private let rim = Entity()
+  private let sun = Entity()
+  private let core = Entity()
+  private(set) var look = LightingLook.off
+
+  /// The fairy lights' colour, a warm filament white.
+  static let bulbColour = GenzColour(0xFFD58A)
+  static let bulbRadius: Float = 0.06
+  static let bulbSpacing: Float = 0.34
+  /// How far a string droops between two hooks.
+  static let sag: Float = 0.28
+  /// How dark a contact shadow is made before a preset sets it.
+  static let shadowDarkness: Float = 0.5
+
+  private let kit: GenzKit
+
+  init(layout: GenzLayout, kit: GenzKit) {
+    self.layout = layout
+    self.kit = kit
+    root.name = "genz-glow"
+    root.isEnabled = false
+    root.addChild(fairy)
+    buildFairyLights(kit)
+    buildShadows()
+    buildRim()
+    buildSun()
+    buildCore()
+  }
+
+  /// The hooks each string of fairy lights hangs from, in order. Only Window Seat has them.
+  static func fairyHooks(_ style: RoomStyle) -> [[GenzRoomPoint]] {
+    switch style {
+    case .windowSeat:
+      let top: Float = 5.22
+      let back = stride(from: Float(0.25), through: 7.4, by: 1.43).map {
+        GenzRoomPoint($0, 0.08, top)
+      }
+      let side = stride(from: Float(0.3), through: 5.8, by: 1.375).map {
+        GenzRoomPoint(0.08, $0, top)
+      }
+      return [back, side]
+    case .sunsetLamp, .nooki:
+      return []
+    }
+  }
+
+  /// Points along a string hung from `hooks`, about `spacing` apart, drooping by `sag` between
+  /// each pair of hooks.
+  static func string(_ hooks: [GenzRoomPoint], spacing: Float, sag: Float) -> [GenzRoomPoint] {
+    var points: [GenzRoomPoint] = []
+    for (start, end) in zip(hooks, hooks.dropFirst()) {
+      let length = simd_distance(start.scene, end.scene)
+      let count = max(Int((length / spacing).rounded()), 1)
+      for step in 0..<count {
+        let along = Float(step) / Float(count)
+        let droop = sag * 4 * along * (1 - along)
+        points.append(
+          GenzRoomPoint(
+            start.x + (end.x - start.x) * along, start.y + (end.y - start.y) * along,
+            start.z + (end.z - start.z) * along - droop))
+      }
+    }
+    if let last = hooks.last { points.append(last) }
+    return points
+  }
+
+  /// Lights the room as `look` says.
+  func apply(_ look: LightingLook) {
+    guard look != self.look else { return }
+    self.look = look
+    root.isEnabled = look.isLit
+    guard look.isLit else { return }
+    fairy.isEnabled = look.fairy.shown
+    let bulbColour = look.fairy.colour.genz
+    for bulb in bulbs { bulb.model?.materials = [kit.glow(bulbColour)] }
+    for spill in spills {
+      spill.components[PointLightComponent.self]?.color = bulbColour.platformColour
+      spill.components[PointLightComponent.self]?.intensity = 2_600 * look.fairy.spill
+    }
+    core.components[PointLightComponent.self]?.color = look.key.colour.genz.platformColour
+    core.components[PointLightComponent.self]?.intensity = look.core
+    rim.components[SpotLightComponent.self]?.color = look.rim.colour.genz.platformColour
+    rim.components[SpotLightComponent.self]?.intensity = look.rim.intensity
+    sun.isEnabled = look.sun.intensity > 0
+    sun.components[DirectionalLightComponent.self]?.color = look.sun.colour.genz.platformColour
+    sun.components[DirectionalLightComponent.self]?.intensity = look.sun.intensity
+    shade(shadows)
+  }
+
+  private func shade(_ shadows: [ModelEntity]) {
+    for shadow in shadows {
+      shadow.isEnabled = look.shadows > 0
+      guard var material = shadow.model?.materials.first as? UnlitMaterial else { continue }
+      material.blending = .transparent(opacity: .init(floatLiteral: look.shadows))
+      shadow.model?.materials = [material]
+    }
+  }
+
+  /// Puts a soft shadow under the cat, inside `holder`, so it follows the cat about.
+  func shadeCat(in holder: Entity, length: Float) {
+    guard let shadow = Self.shadow(width: length * 0.95, depth: length * 0.6) else { return }
+    shadow.position = [0, 0.015, 0]
+    holder.addChild(shadow)
+    shadows.append(shadow)
+    shade([shadow])
+  }
+
+  private func buildFairyLights(_ kit: GenzKit) {
+    let bulbMesh = MeshResource.generateSphere(radius: Self.bulbRadius)
+    let bulbMaterial = kit.glow(Self.bulbColour)
+    let wire = kit.matte(GenzColour(0x2B2622))
+    for hooks in Self.fairyHooks(layout.style) {
+      let points = Self.string(hooks, spacing: Self.bulbSpacing, sag: Self.sag)
+      bulbPoints += points
+      for point in points {
+        let bulb = ModelEntity(mesh: bulbMesh, materials: [bulbMaterial])
+        bulb.position = point.scene + [0, -Self.bulbRadius, 0]
+        fairy.addChild(bulb)
+        bulbs.append(bulb)
+      }
+      for (from, to) in zip(points, points.dropFirst()) {
+        let start = from.scene
+        let end = to.scene
+        let length = simd_distance(start, end)
+        guard length > 0 else { continue }
+        let segment = kit.part(
+          kit.box([0.012, 0.012, length]), wire, at: (start + end) / 2,
+          turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(end - start)))
+        fairy.addChild(segment)
+      }
+      for index in stride(from: points.count / 6, to: points.count, by: max(points.count / 3, 1)) {
+        let spill = Entity()
+        spill.position = points[index].scene + [0, -0.4, 0.35]
+        spill.components.set(
+          PointLightComponent(
+            color: Self.bulbColour.platformColour, intensity: 0, attenuationRadius: 3.2))
+        fairy.addChild(spill)
+        spills.append(spill)
+      }
+    }
+  }
+
+  private func buildShadows() {
+    for placement in layout.pieces {
+      let size = placement.piece.kind.size
+      // Flat pieces lie on the floor, and pieces stood on others are shaded by what is below.
+      guard size.z > 0.1, placement.centre.z < 0.05 else { continue }
+      guard let shadow = Self.shadow(width: size.x * 1.08 + 0.5, depth: size.y * 1.08 + 0.5)
+      else { continue }
+      shadow.position = GenzRoomPoint(placement.centre.x, placement.centre.y, 0.012).scene
+      shadow.orientation = simd_quatf(angle: placement.yaw, axis: [0, 1, 0])
+      root.addChild(shadow)
+      shadows.append(shadow)
+    }
+  }
+
+  private func buildRim() {
+    let spot = layout.cat.spot
+    let length = layout.cat.length
+    let target = GenzRoomPoint(spot.x, spot.y, spot.z + length * 0.3).scene
+    rim.components.set(
+      SpotLightComponent(
+        color: GenzColour(0xFFB86A).platformColour, intensity: 0, innerAngleInDegrees: 12,
+        outerAngleInDegrees: 30, attenuationRadius: 9))
+    rim.look(
+      at: target, from: GenzRoomPoint(spot.x + 0.8, spot.y - 2.2, spot.z + 3).scene, relativeTo: nil
+    )
+    root.addChild(rim)
+  }
+
+  /// Where the light pools on the floor: the rug, or the middle of the floor without one.
+  static func pool(_ layout: GenzLayout) -> GenzRoomPoint {
+    let rug = layout.pieces.first { [.roundRug, .checkeredRug].contains($0.piece.kind) }
+    return rug?.centre ?? GenzRoomPoint(3.7, 4, 0)
+  }
+
+  /// The lantern's light: low over the rug, reaching every wall.
+  private func buildCore() {
+    let pool = Self.pool(layout)
+    core.position = GenzRoomPoint(pool.x, pool.y, 1.4).scene
+    core.components.set(PointLightComponent(color: .white, intensity: 0, attenuationRadius: 9))
+    root.addChild(core)
+  }
+
+  /// A low sun coming in through the window side of the room, casting long shadows.
+  private func buildSun() {
+    sun.components.set(DirectionalLightComponent(color: .white, intensity: 0))
+    sun.components.set(
+      DirectionalLightComponent.Shadow(maximumDistance: 16, depthBias: 2))
+    let middle = GenzRoomPoint(4, 3, 0.5).scene
+    let from: SIMD3<Float> =
+      switch layout.style {
+      case .windowSeat: GenzRoomPoint(9, -6, 2.6).scene
+      case .sunsetLamp, .nooki: GenzRoomPoint(-8, 1, 2.6).scene
+      }
+    sun.look(at: middle, from: from, relativeTo: nil)
+    sun.isEnabled = false
+    root.addChild(sun)
+  }
+
+  /// A dark patch, soft at the edges, lying flat on whatever is under it.
+  static func shadow(width: Float, depth: Float) -> ModelEntity? {
+    guard let texture = shadowTexture else { return nil }
+    var material = UnlitMaterial()
+    material.color = .init(tint: .black, texture: .init(texture))
+    material.blending = .transparent(opacity: .init(floatLiteral: shadowDarkness))
+    let patch = ModelEntity(
+      mesh: .generatePlane(width: width, depth: depth, cornerRadius: 0), materials: [material])
+    patch.name = "genz-shadow"
+    return patch
+  }
+
+  /// A round falloff from opaque in the middle to clear at the edge, shared by every shadow.
+  private static let shadowTexture: TextureResource? = {
+    guard let image = falloff(pixels: 64) else { return nil }
+    return try? TextureResource(image: image, options: .init(semantic: .color))
+  }()
+
+  /// The falloff image: alpha 1 in the middle, easing to 0 at the edge of the square.
+  static func falloff(pixels: Int) -> CGImage? {
+    guard
+      let space = CGColorSpace(name: CGColorSpace.sRGB),
+      let context = CGContext(
+        data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: 0,
+        space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+    else { return nil }
+    let steps = 8
+    var colours: [CGColor] = []
+    var locations: [CGFloat] = []
+    for step in 0...steps {
+      let along = CGFloat(step) / CGFloat(steps)
+      let alpha = pow(1 - along, 1.8)
+      colours.append(CGColor(srgbRed: 1, green: 1, blue: 1, alpha: alpha))
+      locations.append(along)
+    }
+    guard
+      let gradient = CGGradient(
+        colorsSpace: space, colors: colours as CFArray, locations: locations)
+    else { return nil }
+    let middle = CGPoint(x: CGFloat(pixels) / 2, y: CGFloat(pixels) / 2)
+    context.drawRadialGradient(
+      gradient, startCenter: middle, startRadius: 0, endCenter: middle,
+      endRadius: CGFloat(pixels) / 2, options: [])
+    return context.makeImage()
+  }
+}

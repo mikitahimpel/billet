@@ -24,6 +24,7 @@ struct NookiView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneFillsView) private var fillsView
+  @Environment(\.petSceneLighting) private var lighting
 
   /// The still is framed for a fitted room on its own ground. An opening starts from far out, and
   /// a filled view frames the room closer on the host's ground, so either fades the room in alone.
@@ -44,6 +45,8 @@ struct NookiView: View {
           .allowsHitTesting(false)
           .transition(.opacity)
       }
+      GlowGrade(look: .of(lighting))
+      GlowVignette(look: .of(lighting))
     }
     .overlay(alignment: .top) {
       if isMochiMissing {

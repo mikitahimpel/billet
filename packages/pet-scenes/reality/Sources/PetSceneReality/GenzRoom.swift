@@ -19,6 +19,8 @@ final class GenzRoomScreen {
   var landedAt: Date?
   var lampOn = true
   var outlines: [RoomLayerSlot: [CGPoint]] = [:]
+  /// Where the room's lights are in the view, for the glow drawn over them.
+  var lights = GlowSpots()
   /// Just above the cat, or `nil` before the room has been fitted.
   var cat: CGPoint?
   var parallax = CGSize.zero
@@ -182,6 +184,9 @@ final class GenzRoom {
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
   private let dayLamp = Entity()
+  private var glow: GenzGlow?
+  /// The lighting preset the room is lit with.
+  private(set) var look = LightingLook.off
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
@@ -238,6 +243,11 @@ final class GenzRoom {
     NookiDiorama.makeTappable(
       catHolder, size: [length * 0.8, length * 0.6, length * 0.8], center: [0, length * 0.3, 0])
     room.addChild(catHolder)
+    let glow = GenzGlow(layout: layout, kit: kit)
+    glow.shadeCat(in: catHolder, length: length)
+    room.addChild(glow.root)
+    self.glow = glow
+    applyLook()
     isBuilt = true
     NookiTrace.mark("styled room built")
     room.isEnabled = isOnScreen
@@ -367,10 +377,7 @@ final class GenzRoom {
 
   private func addLighting() {
     let isSunset = layout.style == .sunsetLamp
-    if let environment = Self.ambient(
-      top: isSunset ? GenzColour(0xE8D8E0) : GenzColour(0xC8D4E8),
-      bottom: isSunset ? GenzColour(0xA08890) : GenzColour(0x8090A8))
-    {
+    if let environment = Self.ambient(top: ambientColours.top, bottom: ambientColours.bottom) {
       let ambient = Entity()
       ambient.components.set(
         ImageBasedLightComponent(
@@ -407,8 +414,7 @@ final class GenzRoom {
     room.addChild(lampLight)
     outsideLight.components.set(
       DirectionalLightComponent(
-        color: (isSunset ? GenzColour(0x8FA6D8) : GenzColour(0xFFD9A0)).platformColour,
-        intensity: 0))
+        color: outsideColour.platformColour, intensity: 0))
     let middle = GenzRoomPoint(4, 3, 1).scene
     let from = isSunset ? GenzRoomPoint(-8, 3, 7).scene : GenzRoomPoint(4.5, -9, 7).scene
     outsideLight.look(at: middle, from: from, relativeTo: room)
@@ -613,6 +619,20 @@ final class GenzRoom {
     case .nooki: break
     }
     if screen.outlines != outlines { screen.outlines = outlines }
+    var lights = GlowSpots()
+    if look.isLit {
+      let middle = GenzRoomPoint(layout.cat.spot.x, layout.cat.spot.y, 2)
+      if let low = project(middle),
+        let high = project(GenzRoomPoint(middle.x, middle.y, middle.z + 1))
+      {
+        lights.pointsPerUnit = hypot(high.x - low.x, high.y - low.y)
+      }
+      lights.bulbs = look.fairy.shown ? (glow?.bulbPoints ?? []).compactMap(project) : []
+      lights.led = GlowSpots.along(layout.led, every: 0.7).compactMap(project)
+      lights.lamp = project(layout.lamp.at)
+      lights.pool = project(GenzGlow.pool(layout))
+    }
+    if screen.lights != lights { screen.lights = lights }
     if screen.window != window { screen.window = window }
     let home = camera.atHome
     let homeWindow = layout.window.compactMap { home.project($0.scene, in: viewSize) }
@@ -736,6 +756,73 @@ final class GenzRoom {
     aimLens()
   }
 
+  /// Lights the room with `lighting`: its fairy lights, sun, rim light and shadows, the lamp as
+  /// key light, the ambient fill, and the colours of the LED and the light from outside.
+  func setLighting(_ lighting: RoomLighting) {
+    let look = LightingLook.of(lighting)
+    guard look != self.look else { return }
+    self.look = look
+    applyLook()
+  }
+
+  /// How much brighter than its own the lamp shines now: the preset's boost, flickering when the
+  /// preset says so.
+  private var lampBoost: Float {
+    let flicker = look.key.flicker
+    guard flicker > 0, !reduceMotion else { return look.key.boost }
+    let wave = sin(clock * 9.1) * 0.5 + sin(clock * 23.7 + 1.3) * 0.3 + sin(clock * 3.3) * 0.2
+    return look.key.boost * (1 - flicker * Float(0.5 + 0.5 * wave))
+  }
+
+  private func applyLook() {
+    glow?.apply(look)
+    updateScreen()
+    let lamp = GenzColour.mix(layout.lampColour, look.key.colour.genz, by: look.key.warmth)
+    let soft = look.key.softness
+    switch layout.style {
+    case .sunsetLamp:
+      lampLight.components[SpotLightComponent.self]?.color = lamp.platformColour
+      lampLight.components[SpotLightComponent.self]?.innerAngleInDegrees = 18 + 8 * soft
+      lampLight.components[SpotLightComponent.self]?.outerAngleInDegrees = 46 + 14 * soft
+    case .windowSeat:
+      lampLight.components[PointLightComponent.self]?.color = lamp.platformColour
+      lampLight.components[PointLightComponent.self]?.attenuationRadius = 6 + 3 * soft
+    case .nooki: break
+    }
+    outsideLight.components[DirectionalLightComponent.self]?.color =
+      (look.outside?.genz ?? outsideColour).platformColour
+    applyFill()
+    lastLevels["lamp"] = nil
+    lastLevels["led"] = nil
+  }
+
+  /// The colour of the light from outside, before a preset changes it.
+  private var outsideColour: GenzColour {
+    layout.style == .sunsetLamp ? GenzColour(0x8FA6D8) : GenzColour(0xFFD9A0)
+  }
+
+  /// The room's own ambient light from above and below, before a preset changes it.
+  private var ambientColours: (top: GenzColour, bottom: GenzColour) {
+    layout.style == .sunsetLamp
+      ? (GenzColour(0xE8D8E0), GenzColour(0xA08890)) : (GenzColour(0xC8D4E8), GenzColour(0x8090A8))
+  }
+
+  /// Tints the ambient light towards the preset's fill.
+  private func applyFill() {
+    guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
+    let own = ambientColours
+    let fill = look.fill
+    let lit = look.isLit
+    if let environment = Self.ambient(
+      top: lit ? GenzColour.mix(own.top, fill.top.genz, by: 0.75) : own.top,
+      bottom: lit ? GenzColour.mix(own.bottom, fill.bottom.genz, by: 0.75) : own.bottom)
+    {
+      ambient.source = .single(environment)
+    }
+    ambientLight?.components.set(ambient)
+    applyDayLight()
+  }
+
   /// Lights the room for the hour here. `nil` keeps the room's own night.
   func show(dayLight: PetSceneDayLight?) {
     guard dayLight != self.dayLight else { return }
@@ -820,6 +907,7 @@ final class GenzRoom {
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
     ambient.intensityExponent =
       Self.ambientExponent + Self.ambientShift(look, phase: dayLight?.here.phase)
+      + self.look.fill.shift
     ambientLight?.components.set(ambient)
   }
 
@@ -920,9 +1008,10 @@ final class GenzRoom {
     if changed("led", led) { setLED(led) }
     let click = lampOn ? GenzOpening.lampClick(time) : 0
     let bloom = GenzOpening.discBloom(time) * (lampOn ? 1 : 0)
-    if changed("lamp", click + bloom * 10 + warmth * 100, step: 0.02) {
+    let boost = lampBoost
+    if changed("lamp", click + bloom * 10 + warmth * 100 + Double(boost) * 1_000, step: 0.02) {
       lampLight.components[SpotLightComponent.self]?.intensity =
-        Float(click) * 90_000 * Float(1 + 0.3 * warmth)
+        Float(click) * 90_000 * Float(1 + 0.3 * warmth) * boost
       fillLight.components[PointLightComponent.self]?.intensity =
         Float(bloom) * 26_000 * Float(1 + 0.4 * warmth)
       for lens in lenses {
@@ -956,9 +1045,10 @@ final class GenzRoom {
     let led = GenzOpening.windowLED(time)
     if changed("led", led, step: 0.05) { setLED(led) }
     let lamp = (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0)
-    if changed("lamp", lamp + warmth * 10, step: 0.02) {
+    let boost = lampBoost
+    if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
       lampLight.components[PointLightComponent.self]?.intensity =
-        Float(lamp) * 9_000 * Float(1 + 0.3 * warmth)
+        Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost
       for shade in shades {
         shade.model?.materials = [kit.glow(GenzColour(0xF3E3C3).shaded(Float(lamp) * 0.55 - 0.55))]
       }
@@ -981,7 +1071,7 @@ final class GenzRoom {
   }
 
   private func setLED(_ level: Double) {
-    let material = kit.glow(layout.ledColour.shaded(Float(level) * 0.9 - 0.9))
+    let material = kit.glow((look.led?.genz ?? layout.ledColour).shaded(Float(level) * 0.9 - 0.9))
     for led in leds { led.model?.materials = [material] }
   }
 

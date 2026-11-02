@@ -87,6 +87,9 @@ extension EnvironmentValues {
   @Entry public var petSceneFillsView = false
   /// Lights the room for the time of day. `nil` keeps the room's own lighting.
   @Entry public var petSceneDayLight: PetSceneDayLight? = nil
+  /// How the room is lit: its lamp, glow, haze, shadows and grading. A host that sets nothing
+  /// gets the room as it was made.
+  @Entry public var petSceneLighting = RoomLighting.off
   /// Called when the opening asked for by ``petSceneFlyIn`` is over, played out or skipped.
   @Entry public var petSceneOpeningEnded: (@MainActor () -> Void)? = nil
   /// The newest cue for the cat, from ``CatDirector``.
