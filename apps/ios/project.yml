@@ -24,8 +24,6 @@ packages:
   Billet:
     path: ../../packages/ios
   # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
-  PetSceneRive:
-    path: ../../packages/pet-scenes/rive
   PetSceneReality:
     path: ../../packages/pet-scenes/reality
 targets:
@@ -36,7 +34,6 @@ targets:
     dependencies:
       - package: Billet
         products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, Transport, WidgetBridge]
-      - package: PetSceneRive
       - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService

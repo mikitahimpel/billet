@@ -10,8 +10,9 @@ import Testing
     .directory(FileManager.default.temporaryDirectory.appending(path: UUID().uuidString))
   }
 
-  @Test func theStandardStyleIsTheRoomThereWasBefore() {
-    #expect(RoomStyle.standard == .nooki)
+  @Test func windowSeatIsTheStandardStyleAndLeads() {
+    #expect(RoomStyle.standard == .windowSeat)
+    #expect(RoomStyle.allCases.first == .windowSeat)
   }
 
   @Test func nothingSavedGivesTheStandardStyle() {

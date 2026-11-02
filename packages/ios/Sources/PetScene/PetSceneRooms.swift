@@ -81,8 +81,9 @@ public struct PetSceneCatAnchorKey: PreferenceKey {
 }
 
 extension EnvironmentValues {
-  /// The room a scene with styles should show. Scenes without styles ignore it.
-  @Entry public var petSceneRoomStyle: RoomStyle = .standard
+  /// The room a scene with styles should show. Scenes without styles ignore it. Views that set
+  /// none, such as classic Home and renovating, show the Nooki room.
+  @Entry public var petSceneRoomStyle: RoomStyle = .nooki
   /// The cat a scene with more than one cat should show. Scenes with one cat ignore it.
   @Entry public var petSceneCat: CatChoice = .standard
   /// The cat moments switched on in Labs. None until the owner turns one on.
