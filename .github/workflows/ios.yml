@@ -8,6 +8,7 @@ on:
     paths: &paths
       - apps/ios/**
       - packages/ios/**
+      - packages/pet-scenes/**
       - packages/contracts/**
       - .xcode-version
       - .swift-format

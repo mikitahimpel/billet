@@ -8,13 +8,22 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    CURRENT_PROJECT_VERSION: "6"
     GENERATE_INFOPLIST_FILE: YES
+  configs:
+    # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
+    Release:
+      DEVELOPMENT_TEAM: 2666YPBJTB
+      CODE_SIGN_STYLE: Automatic
 packages:
   Billet:
     path: ../../packages/ios
+  # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
+  PetSceneRive:
+    path: ../../packages/pet-scenes/rive
+  PetSceneReality:
+    path: ../../packages/pet-scenes/reality
 targets:
   Billet:
     type: application
@@ -22,26 +31,35 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        product: FeatureCanvas
+        products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, WidgetBridge]
+      - package: PetSceneRive
+      - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService
     entitlements:
       path: App/Billet.entitlements
       properties:
+        aps-environment: development
+        com.apple.developer.applesignin: [Default]
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_FILE: App/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: billet
+        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
   BilletWidget:
     type: app-extension
     platform: iOS
     sources: [Widget]
     dependencies:
       - package: Billet
-        product: Surfaces
+        products: [DesignSystem, Ink, Persistence, Pet, Surfaces, WidgetBridge]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:
@@ -50,11 +68,14 @@ targets:
     info:
       path: Widget/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: billet
   BilletNotificationService:
     type: app-extension
@@ -71,12 +92,15 @@ targets:
     info:
       path: NotificationService/Info.plist
       properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.usernotifications.service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
+        TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: billet
 schemes:
   Billet:

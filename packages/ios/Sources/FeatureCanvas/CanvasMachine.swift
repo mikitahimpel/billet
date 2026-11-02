@@ -15,7 +15,7 @@ public enum CanvasMachine: Machine {
 
     public init(
       tool: CanvasTool = .pen,
-      color: CanvasColor = .black,
+      color: CanvasColor = .ink,
       history: UndoMachine.State = .init(),
       inProgress: [Point]? = nil
     ) {

@@ -6,6 +6,8 @@ public enum BilletType: CaseIterable, Sendable {
   case title
   case heading
   case body
+  /// The words on a button.
+  case action
   case label
   case caption
   /// House numbers and nothing else.
@@ -16,7 +18,7 @@ public enum BilletType: CaseIterable, Sendable {
     case .display: 40
     case .title: 28
     case .heading: 21
-    case .body: 17
+    case .body, .action: 17
     case .label: 14
     case .caption: 12
     case .numeral: 19
@@ -28,7 +30,7 @@ public enum BilletType: CaseIterable, Sendable {
     case .display: 44
     case .title: 32
     case .heading: 26
-    case .body: 24
+    case .body, .action: 24
     case .label: 20
     case .caption: 16
     case .numeral: 24
@@ -40,7 +42,7 @@ public enum BilletType: CaseIterable, Sendable {
     case .display: .largeTitle
     case .title: .title
     case .heading: .title3
-    case .body: .body
+    case .body, .action: .body
     case .label: .subheadline
     case .caption: .caption
     case .numeral: .headline
@@ -51,6 +53,7 @@ public enum BilletType: CaseIterable, Sendable {
     switch self {
     case .display, .title, .heading: .heavy
     case .body: .regular
+    case .action: .semibold
     case .label, .caption: .medium
     case .numeral: .medium
     }
@@ -62,7 +65,7 @@ public enum BilletType: CaseIterable, Sendable {
     case .display: -1.2
     case .title: -0.6
     case .heading: -0.2
-    case .body, .label, .caption, .numeral: 0
+    case .body, .action, .label, .caption, .numeral: 0
     }
   }
 
@@ -70,7 +73,7 @@ public enum BilletType: CaseIterable, Sendable {
     switch self {
     case .numeral:
       .custom(BilletFonts.monoFamily, size: size, relativeTo: anchor)
-    case .display, .title, .heading, .body, .label, .caption:
+    case .display, .title, .heading, .body, .action, .label, .caption:
       .custom(BilletFonts.groteskFamily, size: size, relativeTo: anchor).weight(weight)
     }
   }

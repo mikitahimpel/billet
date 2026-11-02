@@ -33,7 +33,7 @@ public struct NoteCard<Drawing: View>: View {
   }
 
   private func pegShape(_ size: CGSize) -> some View {
-    RoundedRectangle(cornerRadius: 1.5)
+    RoundedRectangle(cornerRadius: Radius.peg)
       .fill(Palette.woodLit.color)
       .frame(width: size.width, height: size.height)
   }

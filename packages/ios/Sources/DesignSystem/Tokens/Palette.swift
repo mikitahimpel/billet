@@ -4,18 +4,24 @@
 public enum Palette {
   // MARK: Interface
 
-  /// The page, the darkest rung of the interface.
-  public static let page = Swatch(0x121010)
-  /// A tray or card standing on the page.
-  public static let raised = Swatch(0x2A1F1B)
-  /// A control standing on a tray.
-  public static let raisedTop = Swatch(0x3D2C26)
+  /// The evening sky at the top of every screen, and the top edge of the Home art.
+  public static let sky = Swatch(0x0E2E2A)
+  /// The ground under the Home art, and its bottom edge.
+  public static let meadow = Swatch(0x143B33)
+  /// The page, the evening green-black every screen stands in.
+  public static let page = Swatch(0x0C2422)
+  /// The foot of the page, where the evening is deepest.
+  public static let pageDeep = Swatch(0x081A18)
+  /// A lamp-lit panel standing on the page.
+  public static let raised = Swatch(0x402A1C)
+  /// A control standing on a panel.
+  public static let raisedTop = Swatch(0x5A3C27)
   /// Primary text, and the paper every note is drawn on.
   public static let paper = Swatch(0xFBF3E6)
   /// Secondary text on warm grounds; the shaded side of paper in the art.
   public static let paperTurned = Swatch(0xE3D2AC)
   /// Quiet text on the page and its rungs.
-  public static let muted = Swatch(0xAFA79D)
+  public static let muted = Swatch(0xC9BCA6)
   /// The one interface accent: Send, the house number, the focus ring.
   public static let gold = Swatch(0xD9A441)
   /// Text on `gold`, and the darkest ink.

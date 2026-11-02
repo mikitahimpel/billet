@@ -23,18 +23,23 @@ The board's source is [design/little-house.dc.html](design/little-house.dc.html)
 
 ## Colour
 
-Interface colour is small: the page and its two rungs, cream, a quiet grey, and gold. Gold is the
-one accent. It means Send, the house number and focus, nothing else. The clay, green, wood and light
-ramps belong to the art and don't reach interface chrome.
+Interface colour is small: an evening page, two lamp-lit rungs, cream, a quiet warm grey, and gold.
+Gold is the one accent. It means the primary action, the chosen thing, the house number and focus.
+Clay appears in chrome only for the action that can't be undone. The rest of the clay, green, wood
+and light ramps belong to the art. Every screen stands on `EveningBackground`, and every grouped
+surface is a `litPanel`.
 
 | Role | Token | Value |
 | --- | --- | --- |
-| Page | `page` | `#121010` |
-| Tray, card | `raised` | `#2A1F1B` |
-| Control on a tray | `raisedTop` | `#3D2C26` |
+| Evening sky, top of the Home art | `sky` | `#0E2E2A` |
+| Ground under the Home art | `meadow` | `#143B33` |
+| Page | `page` | `#0C2422` |
+| Foot of the page | `pageDeep` | `#081A18` |
+| Lit panel | `raised` | `#402A1C` |
+| Control on a panel | `raisedTop` | `#5A3C27` |
 | Primary text, paper | `paper` | `#FBF3E6` |
 | Secondary text on warm grounds | `paperTurned` | `#E3D2AC` |
-| Quiet text | `muted` | `#AFA79D` |
+| Quiet text | `muted` | `#C9BCA6` |
 | Accent | `gold` | `#D9A441` |
 | Text on gold, darkest ink | `ink` | `#2A1208` |
 | House plate ground | `plate` | `#1B0B07` |
@@ -88,9 +93,10 @@ kept: it's legible and the owner chose the board with it. #35 can revisit it wit
 
 ## Space and shape
 
-Spacing is `4 / 8 / 16 / 24 / 32 / 48 / 64`. Radii belong to objects: 40 for a scene panel, 18 for a
-control, 6 for a house plate, 3 for paper. Nothing else is rounded another way. The smallest target
-is 44pt.
+Spacing is `4 / 8 / 16 / 24 / 32 / 48 / 64`. Radii belong to objects: 24 for a card or scene panel, 16 for a plate standing inside a card and
+as the floor for anything nested, 10 for paper in the interface. Controls are capsules. Art inside
+a scene keeps its own smaller radii: 8 for a scene plate, 3 for scene paper, 1.5 for a peg. Nothing
+else is rounded another way. The smallest target is 44pt.
 
 ## Motion
 

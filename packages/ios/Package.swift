@@ -19,35 +19,95 @@ let library: [(name: String, dependencies: [String])] = [
   ("Transport", ["BilletKit", "Domain", "Wire"]),
   ("Persistence", ["Domain"]),
   ("Delivery", ["Domain", "Wire", "Ink", "Persistence"]),
-  ("Surfaces", ["Domain", "Ink", "DesignSystem"]),
+  ("Surfaces", ["Domain", "Ink", "DesignSystem", "Pet", "WidgetBridge"]),
+  ("Pet", ["BilletKit", "DesignSystem"]),
+  ("PetScene", ["DesignSystem", "Pet"]),
+  ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
+  // Shared by the app, the widget and the settings screen: flags, the published snapshot, the
+  // picture rules and the queue of actions taken outside the app.
+  ("WidgetBridge", ["Persistence", "Pet"]),
+  (
+    "Labs",
+    ["Domain", "Wire", "Ink", "DesignSystem", "Persistence", "Pet", "WidgetBridge", "FeatureInbox"]
+  ),
 ]
 
 let featureDependencies = [
   "BilletKit", "Domain", "Wire", "Ink", "DesignSystem", "Transport", "Persistence",
 ]
 
+let libraryTargets: [Target] = library.map {
+  .target(
+    name: $0.name,
+    dependencies: $0.dependencies.map { .init(stringLiteral: $0) },
+    resources: $0.name == "DesignSystem" ? [.copy("Resources/Fonts")] : nil
+  )
+}
+
+let featureTargets: [Target] = features.map { feature in
+  let extra = feature == "FeatureSettings" ? ["PetScene", "WidgetBridge"] : []
+  return .target(
+    name: feature,
+    dependencies: (featureDependencies + extra).map { .init(stringLiteral: $0) })
+}
+
+// Knows scenes only through the PetScene contract. No graphics engine links into this package:
+// each engine lives in its own package under packages/pet-scenes, chosen by the App target.
+let homeTarget: Target = .target(
+  name: "FeatureHome",
+  dependencies: [
+    "BilletKit",
+    "Delivery",
+    "DesignSystem",
+    "FeatureCanvas",
+    "FeatureInbox",
+    "FeatureSettings",
+    "Ink",
+    "Labs",
+    "Persistence",
+    "Pet",
+    "PetScene",
+    "WidgetBridge",
+    "Wire",
+  ]
+)
+
+let testTargets: [Target] = [
+  .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
+  .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
+  .testTarget(name: "TransportTests", dependencies: ["BilletKit", "Transport", "Wire"]),
+  .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
+  .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
+  .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
+  .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+  .testTarget(
+    name: "FeatureHomeTests",
+    dependencies: [
+      "BilletKit", "Delivery", "FeatureHome", "FeatureInbox", "Ink", "Persistence", "Pet",
+      "WidgetBridge",
+      "Wire",
+    ]),
+  .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
+  .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "Pet", "WidgetBridge"]),
+  .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
+  .testTarget(
+    name: "LabsTests",
+    dependencies: [
+      "DesignSystem", "Domain", "FeatureInbox", "Ink", "Labs", "Persistence", "Pet", "WidgetBridge",
+      "Wire",
+    ]),
+  .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
+  .testTarget(
+    name: "PetSceneCatalogTests",
+    dependencies: ["Persistence", "Pet", "PetScene", "PetSceneCatalog"]),
+]
+
+let products: [String] = library.map(\.name) + features + ["FeatureHome"]
+
 let package = Package(
   name: "Billet",
   platforms: [.iOS(.v18), .macOS(.v15)],
-  products: (library.map(\.name) + features).map { .library(name: $0, targets: [$0]) },
-  targets: library.map {
-    .target(
-      name: $0.name,
-      dependencies: $0.dependencies.map { .init(stringLiteral: $0) },
-      resources: $0.name == "DesignSystem" ? [.copy("Resources/Fonts")] : nil
-    )
-  }
-    + features.map {
-      .target(name: $0, dependencies: featureDependencies.map { .init(stringLiteral: $0) })
-    }
-    + [
-      .testTarget(name: "BilletKitTests", dependencies: ["BilletKit"]),
-      .testTarget(name: "WireConformanceTests", dependencies: ["Wire"]),
-      .testTarget(name: "TransportTests", dependencies: ["BilletKit", "Transport", "Wire"]),
-      .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
-      .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
-      .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
-      .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
-    ],
+  products: products.map { .library(name: $0, targets: [$0]) },
+  targets: libraryTargets + featureTargets + [homeTarget] + testTargets,
   swiftLanguageModes: [.v6]
 )

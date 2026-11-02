@@ -1,45 +1,39 @@
+import DesignSystem
 import SwiftUI
 
-/// A small neutral set of stroke colours. Placeholder values, not a palette decision.
+/// The inks on the tray. Each is drawn from the world's palette and reads on paper.
 public enum CanvasColor: CaseIterable, Hashable, Sendable {
-  case black
-  case gray
-  case red
-  case orange
+  case ink
+  case wood
+  case clay
+  case gold
   case green
-  case blue
+  case forest
 
-  /// The `#RRGGBB` form stored in a `Stroke`.
-  public var hex: String {
+  private var swatch: Swatch {
     switch self {
-    case .black: "#000000"
-    case .gray: "#8E8E93"
-    case .red: "#FF3B30"
-    case .orange: "#FF9500"
-    case .green: "#34C759"
-    case .blue: "#007AFF"
+    case .ink: Palette.ink
+    case .wood: Palette.wood
+    case .clay: Palette.clayLit
+    case .gold: Palette.inkGold
+    case .green: Palette.greenLit
+    case .forest: Palette.green
     }
   }
+
+  /// The `#RRGGBB` form stored in a `Stroke`.
+  public var hex: String { swatch.hex }
 
   public var title: String {
     switch self {
-    case .black: "Black"
-    case .gray: "Gray"
-    case .red: "Red"
-    case .orange: "Orange"
+    case .ink: "Ink"
+    case .wood: "Wood"
+    case .clay: "Clay"
+    case .gold: "Gold"
     case .green: "Green"
-    case .blue: "Blue"
+    case .forest: "Forest"
     }
   }
 
-  var color: Color {
-    switch self {
-    case .black: .black
-    case .gray: .gray
-    case .red: .red
-    case .orange: .orange
-    case .green: .green
-    case .blue: .blue
-    }
-  }
+  var color: Color { swatch.color }
 }
