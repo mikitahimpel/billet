@@ -177,7 +177,8 @@ struct HomeView: View {
         }
         .overlay { catReactions }
         .overlay {
-          if session.labs.isOn(LabExperiment.seasons) {
+          // A scene with touches keeps its own controls in the corners the season would fill.
+          if session.labs.isOn(LabExperiment.seasons), !scene.handlesTouches {
             SeasonOverlay(look: Season.look(on: .now, calendar: .current))
           }
         }
