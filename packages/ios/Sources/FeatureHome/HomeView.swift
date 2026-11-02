@@ -184,7 +184,9 @@ struct HomeView: View {
         }
         .overlay(alignment: .topLeading) {
           if session.labs.isOn(LabExperiment.framedNotes) {
+            // A scene with touches has its own controls in this corner, so the frames hang below.
             FramedWallView(notes: framedNotes)
+              .padding(.top, scene.handlesTouches ? Spacing.wide : 0)
           }
         }
         .overlay(alignment: .bottomLeading) {
