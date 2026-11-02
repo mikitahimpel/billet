@@ -29,8 +29,9 @@ The blocky cat, `Resources/Cats/Cat_blocky.reality`, is "Cat" by **Quaternius**
 (<https://poly.pizza/m/qKICY6xla2>), released as Public Domain (CC0 1.0). It needs no credit; it is
 named here for the record.
 
-The other cats in `Resources/Cats` (tabby, plush, chibi, kitten, tuxedo) are new models made for
-billet in Blender.
+The other cats in `Resources/Cats` (tabby, plush, detailed, chibi, kitten, tuxedo) are new models
+made for billet in Blender. The detailed tabby's fur, stripes and normal map are baked in Blender
+from billet's own model; no outside model or texture is used.
 
 ## Project assets
 

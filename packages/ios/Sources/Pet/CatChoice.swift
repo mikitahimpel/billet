@@ -8,6 +8,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   case tabby
   /// The same tabby with soft shading.
   case plush
+  /// The same tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
+  case detailed
   /// A plush toy cat: a very big head on a small body.
   case chibi
   /// A fluffy kitten with tufted cheeks, chest and tail.
@@ -24,6 +26,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .mochi: "Mochi"
     case .tabby: "Tabby"
     case .plush: "Plush tabby"
+    case .detailed: "Detailed"
     case .chibi: "Chibi"
     case .kitten: "Fluffy kitten"
     case .tuxedo: "Tuxedo"
@@ -37,6 +40,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .mochi: "The curled grey tabby."
     case .tabby: "Ginger tabby, flat facets like the furniture."
     case .plush: "The tabby, soft-shaded."
+    case .detailed: "The tabby up close: fur, eyelids, whiskers."
     case .chibi: "Big head, tiny body, huge eyes."
     case .kitten: "Tufted cheeks and a fluffy tail."
     case .tuxedo: "Black with a white bib and socks."
@@ -45,10 +49,12 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// Coats this model can wear. Models painted from a palette can swap it; the others keep theirs.
+  /// Coats this model can wear. Models painted from a palette can swap it; the detailed tabby has
+  /// one painted texture per coat; the others keep theirs.
   public var coats: [CatCoat] {
     switch self {
     case .tabby, .plush, .chibi, .kitten, .tuxedo: CatCoat.allCases
+    case .detailed: [.natural, .greyWhite]
     case .mochi, .blocky, .slim: [.natural]
     }
   }

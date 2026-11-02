@@ -14,7 +14,8 @@ struct CatClipRange: Decodable, Hashable, Sendable {
 }
 
 /// Where each cat's files are and what its clips are. Mochi keeps its original files; the others
-/// live in `Resources/Cats` as a compiled model, a clip table and, for painted cats, a palette.
+/// live in `Resources/Cats` as a compiled model, a clip table and, for painted cats, a palette or
+/// one texture per extra coat.
 enum CatCatalog {
   static let folder = "Cats"
 
@@ -80,7 +81,7 @@ enum CatCatalog {
   /// The made cats were built to Mochi's size; the found ones are tuned by eye in the room.
   static func fit(_ model: CatModel) -> Float {
     switch model {
-    case .mochi, .tabby, .plush, .chibi, .kitten, .tuxedo: 1
+    case .mochi, .tabby, .plush, .detailed, .chibi, .kitten, .tuxedo: 1
     case .blocky: 0.85
     case .slim: 0.8
     }
@@ -117,8 +118,10 @@ enum CatCatalog {
   }
 
   /// The model's palette repainted for `coat`, or nil when the coat is the one it was made with or
-  /// the model has no palette.
+  /// the model has no palette. A model painted with a full texture instead ships one texture per
+  /// coat, `Cat_<model>_<coat>.jpg`, which is returned as it is.
   static func palette(_ model: CatModel, coat: CatCoat) -> CGImage? {
+    if model == .detailed { return coatTexture(model, coat: coat) }
     guard
       let colours = colours(coat, keepsWhiteBelly: model == .tuxedo),
       let url = Bundle.module.url(
@@ -127,6 +130,17 @@ enum CatCatalog {
       let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
     else { return nil }
     return repaint(image, colours)
+  }
+
+  static func coatTexture(_ model: CatModel, coat: CatCoat) -> CGImage? {
+    guard
+      coat != .natural,
+      let url = Bundle.module.url(
+        forResource: "\(resourceName(model))_\(coat.rawValue)", withExtension: "jpg",
+        subdirectory: folder),
+      let source = CGImageSourceCreateWithURL(url as CFURL, nil)
+    else { return nil }
+    return CGImageSourceCreateImageAtIndex(source, 0, nil)
   }
 
   static func repaint(_ image: CGImage, _ colours: [Swatch: UInt32]) -> CGImage? {

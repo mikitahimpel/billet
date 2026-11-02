@@ -83,6 +83,21 @@ import Testing
     }
   }
 
+  /// The detailed tabby swaps its whole painted texture for a coat, eyes included, and keeps its
+  /// own for the coat it was made with.
+  @MainActor @Test func detailedTabbyWearsItsGreyWhiteTexture() async throws {
+    #expect(CatCatalog.palette(.detailed, coat: .natural) == nil)
+    #expect(CatCatalog.palette(.detailed, coat: .black) == nil)
+    let grey = try #require(CatCatalog.palette(.detailed, coat: .greyWhite))
+    #expect(grey.width == 1024)
+    let cat = try #require(await NookiAssets.compiledCat(.detailed))
+    let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(.detailed)))
+    #expect(rig.paint(grey) >= 2, "fur and eyes both take the coat")
+    for action in CatAction.allCases {
+      #expect(rig.info[action] != nil, "\(action)")
+    }
+  }
+
   @MainActor @Test func everyBundledCatLoadsAndRigs() async throws {
     for model in CatModel.allCases where model != .mochi && !CatCatalog.clips(model).isEmpty {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
