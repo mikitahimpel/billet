@@ -8,9 +8,10 @@ Labs switches, so they can be A/B tested against the screens they replace, and b
 | The house → Shop tab   | A Shop tab between Home and Notes: a little shop at night, the keeper behind the counter. | No Shop tab; the shop stays a sheet on Home. |
 | Notes → Notes desk     | Notes is a desk under a cork board.                                      | Notes is the list.                   |
 
-Labs → Shopkeeper (shown while the Shop tab is on) picks the keeper: **Old tabby** (default: a
-ginger cat in a cardigan and round glasses, which reads as a shopkeeper at a glance and keeps its
-face at the size it is seen), Raccoon, or Fox. Stored as `shopkeeper.json` beside the flags.
+Labs → Shopkeeper (shown while the Shop tab is on) picks the keeper: **Teddy bear** (default: a
+well-loved plush bear in fuzzy fabric, with button eyes, stitched seams, nose and mouth, a red bow
+tie and a patched belly), **Shopkeeper** (a round, friendly person in a green apron), Old tabby,
+Raccoon or Fox. Stored as `shopkeeper.json` beside the flags.
 
 ## The shop
 
@@ -19,19 +20,34 @@ face at the size it is seen), Raccoon, or Fox. Stored as `shopkeeper.json` besid
   true to life where it fits, never smaller than half a unit, a rug stood up to face you.
 - Treats sit on saucers on the counter; paints (a tin per wall colour) and floor samples (a stack
   of boards per floor) are on a low table by the window.
-- Tapping anything for sale makes it hop, the keeper glances at it, and the existing shop sheet
-  opens on that item (`ShopView(item:)`): price in stamps, Buy, the closet. The sheet stops at
-  half height, so the keeper can be seen cheering when something is bought. Bought things go to
-  the closet as before; placing one from the closet takes you to Home to put it in the room.
-- The keeper breathes, blinks, sways its tail, follows you with its head, waves when the tab
-  opens or when tapped, and cheers (arms up, two hops, happy eyes) after a purchase. Reduce Motion
-  keeps the head following and drops the bouncing.
-- The window shows a street at blue hour, drawn at runtime.
+- Buying is meant to be found in two seconds:
+  - Everything for sale carries a paper price tag with the stamp seal and its price (a tick once
+    a paint or floor is owned). Tapping a tag is the same as tapping its item.
+  - Items bob gently where they stand, out of step, and a glint passes over one now and then.
+  - When the tab opens, the keeper bows hello, then sweeps an arm to the shelves on each side
+    while a glint runs over every item it shows, then over the counter and the table.
+  - The first visit shows one short hint, "Tap anything with a price tag to buy it", until the
+    first tap or a few seconds pass.
+- Tapping an item makes it hop, and it floats forward in front of the counter, grown and slowly
+  turning, in a pool of light. A card shows its name, what it is for, and **Get for N stamps**
+  (or how many stamps are missing, or Owned). Details opens the old shop sheet on it.
+- Getting it: the keeper reaches over the counter with a parcel in craft paper and a red ribbon,
+  hands it over (the parcel flies to you and fades), then cheers. A note says it is in your
+  closet, with the way there; placing it from the closet goes to Home as before.
+- The keeper's clips are the same for every keeper: idle (breathe, blink, sway, tail, follow you
+  with its head), greet (a bow), present (arms to the shelves), wave (when tapped), hand over and
+  cheer. Reduce Motion keeps the head following and drops the bobbing, turning and hops.
+- The shop window looks out on the same view as the room's window: Labs → View, its weather and
+  hour, drawn by the same view art (`NativeWindowView`, or a `WindowViewArt` replacement),
+  following the time of day when Home does.
 
 ## The desk
 
-- Blank paper lies on the desk under an arm lamp; a pencilled heart asks for a drawing. Tapping it
-  opens the existing canvas; sending works as from Home.
+- Blank paper lies on the desk under an arm lamp, a pencil across it that fidgets now and then as
+  if asking to be picked up, in a soft breathing glow. A pencilled "draw here" (or "draw your
+  first note" on an empty board) writes itself out once with an arrow to the page. A tap anywhere
+  on the desk top opens the existing canvas straight away; sending works as from Home.
+- With no notes yet, a dashed card is pinned where the first one will go; tapping it draws too.
 - The board pins the latest note large and up to eight more small, each with a lean and a pin
   colour taken from its id, so nothing moves around as notes arrive. Tapping one lifts it and
   opens the existing note viewer (replay, reactions, frames, wallpaper as their Labs switches say).
