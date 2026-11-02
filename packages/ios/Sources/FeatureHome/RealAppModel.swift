@@ -6,8 +6,8 @@ import FeatureSettings
 import Foundation
 import Observation
 import Persistence
-import Wire
 import Transport
+import Wire
 
 /// Which screen the real client shows, from what the device has saved.
 public enum RealStage: Equatable, Sendable {
