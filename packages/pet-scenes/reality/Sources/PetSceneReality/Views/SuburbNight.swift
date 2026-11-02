@@ -38,6 +38,27 @@ struct SuburbNight: ViewRecipe {
 
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let palette = look.palette
+    // The city, far off past the hills: a cluster of towers in the haze, lit floors after dark.
+    let city = colour.mixed(with: palette.horizon, by: 0.35)
+    for (index, tower) in Self.cityTowers.enumerated() {
+      let top = 36 - tower.height
+      ViewKit.rect(
+        context, CGRect(x: tower.x, y: top, width: tower.width, height: tower.height),
+        city.lit(index % 2 == 0 ? 0.02 : -0.01))
+      guard look.isDark else { continue }
+      var y = top + 1
+      while y < 35 {
+        var x = tower.x + 0.5
+        while x < tower.x + tower.width - 0.5 {
+          if ViewRhythm.hash(Int(x * 13 + y * 101) + index * 7, seed: 15) < palette.litShare * 0.6 {
+            ViewKit.rect(
+              context, CGRect(x: x, y: y, width: 0.45, height: 0.4), ViewPalette.lamp, 0.6)
+          }
+          x += 1.1
+        }
+        y += 1.2
+      }
+    }
     ViewKit.hills(
       context, base: 37, waves: [3, 5, 2.5, 6, 3.5, 4.5, 2, 5],
       colour: colour.lit(look.isDark ? 0.05 : 0.08))
@@ -75,6 +96,11 @@ struct SuburbNight: ViewRecipe {
       context.stroke(rung, with: .color(colour.lit(-0.1).color()), lineWidth: 0.15)
     }
   }
+
+  static let cityTowers: [(x: CGFloat, width: CGFloat, height: CGFloat)] = [
+    (28, 3, 7), (31.4, 2.4, 11), (34.2, 3.4, 9), (38, 2.2, 14), (40.6, 3, 10), (44, 2.6, 12.5),
+    (47, 3.4, 8), (51, 2.4, 10.5), (54, 3, 6.5),
+  ]
 
   /// The row of houses behind the street, with their lit windows.
   static let middleHouses:
@@ -264,6 +290,25 @@ struct SuburbNight: ViewRecipe {
     from: CGPoint(x: 60.5, y: streetBase - 14.4), to: CGPoint(x: 83.5, y: streetBase - 14.4))
   static let roofCatWalk = ViewRoofCat(
     rhythm: roofCat, left: roofPath.left, ridge: roofPath.ridge, right: roofPath.right)
+  /// A cat on the picket fence across the street: there most of the time, now and then hopping
+  /// along it. Its eyes catch the cars' lights.
+  static let fenceCat = ViewRoofCat(
+    rhythm: ViewRhythm(seed: 37, slot: 120, chance: 0.8, length: 80...110),
+    left: CGPoint(x: 22.6, y: streetBase - 3.5), ridge: CGPoint(x: 31, y: streetBase - 3.5),
+    right: CGPoint(x: 37.4, y: streetBase - 3.5), plane: .street, size: 0.62)
+  static let walker = ViewWalker(
+    rhythm: ViewRhythm(seed: 41, slot: 70, chance: 0.5, length: 22...30),
+    from: CGPoint(x: -30, y: streetBase + 0.9), to: CGPoint(x: 130, y: streetBase + 0.9),
+    height: 6, kinds: [.dog, .walker, .phone, .dog])
+  static let fireflies = ViewFireflies(
+    count: 10, area: CGRect(x: 0, y: 34, width: 100, height: 13), seed: 2)
+
+  /// How brightly a passing car's lights catch the fence cat's eyes, from 0 to 1.
+  static func eyeShine(_ moment: ViewMoment) -> Double {
+    guard moment.palette.lampsOn, let pass = roadway.cars.pass(at: moment.now) else { return 0 }
+    let distance = abs(Double(roadway.carX(pass) - fenceCat.ridge.x))
+    return max(0, 1 - distance / 26)
+  }
 
   func life(_ plane: ViewPlane, _ context: GraphicsContext, moment: ViewMoment) {
     switch plane {
@@ -272,7 +317,9 @@ struct SuburbNight: ViewRecipe {
       ViewWindows.draw(Self.middleWindows, context, moment: moment)
       Self.roofCatWalk.draw(context, moment: moment)
     case .street: streetLife(context, moment: moment)
-    case .near: ViewBranch().draw(context, moment: moment)
+    case .near:
+      ViewBranch().draw(context, moment: moment)
+      ViewLeaves(count: 4, seed: 1).draw(context, moment: moment)
     }
   }
 
@@ -300,7 +347,12 @@ struct SuburbNight: ViewRecipe {
     }
     Self.fairyLights.draw(context, moment: moment)
     Self.lamp.draw(context, moment: moment)
+    Self.fenceCat.draw(context, moment: moment, eyeShine: Self.eyeShine(moment))
+    Self.walker.draw(context, moment: moment)
     Self.roadway.draw(context, moment: moment)
+    Self.fireflies.draw(context, moment: moment)
+    ViewLeaves(count: 3, area: CGRect(x: -10, y: 14, width: 120, height: 36), seed: 2)
+      .draw(context, moment: moment)
   }
 
   // MARK: - What the cat sees
@@ -310,6 +362,7 @@ struct SuburbNight: ViewRecipe {
   }
 
   func interest(at moment: ViewMoment) -> ViewInterest? {
-    Self.roadway.interest(at: moment.now) ?? Self.roofCatWalk.interest(at: moment.now)
+    Self.roadway.interest(at: moment.now) ?? Self.fenceCat.interest(at: moment.now)
+      ?? Self.walker.interest(at: moment.now) ?? Self.roofCatWalk.interest(at: moment.now)
   }
 }

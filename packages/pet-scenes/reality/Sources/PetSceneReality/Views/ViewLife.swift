@@ -208,13 +208,17 @@ struct ViewRoofCat: Sendable {
     return ViewInterest(point: pose(pass).0, plane: plane, paw: false, id: pass.index)
   }
 
-  func draw(_ context: GraphicsContext, moment: ViewMoment) {
+  /// How big the cat is drawn: small far off on a roof, bigger on a near fence.
+  var size: CGFloat = 0.42
+
+  /// `eyeShine` from 0 to 1 lights the sitting cat's eyes, as a car's lights catch them.
+  func draw(_ context: GraphicsContext, moment: ViewMoment, eyeShine: Double = 0) {
     guard let pass = rhythm.pass(at: moment.now) else { return }
     let (point, sitting, facing) = pose(pass)
     let colour = moment.palette.colour(plane).lit(-0.45).color()
     var shape = context
     shape.translateBy(x: point.x, y: point.y)
-    shape.scaleBy(x: facing * 0.42, y: 0.42)
+    shape.scaleBy(x: facing * size, y: size)
     if sitting {
       shape.fill(
         Path(ellipseIn: CGRect(x: -1.6, y: -4.2, width: 3.2, height: 4.2)), with: .color(colour))
@@ -233,6 +237,17 @@ struct ViewRoofCat: Sendable {
       tail.move(to: CGPoint(x: -1.2, y: -0.4))
       tail.addQuadCurve(to: CGPoint(x: -3.6, y: -2.2 + swish), control: CGPoint(x: -3.8, y: 0.2))
       shape.stroke(tail, with: .color(colour), lineWidth: 0.7)
+      // Eyes: a slow blink, and a green-gold shine when light catches them.
+      let blink = (moment.now / 5.3).truncatingRemainder(dividingBy: 1) > 0.97
+      if eyeShine > 0.05, !blink {
+        for side in [-0.55, 0.55] as [CGFloat] {
+          let eye = CGPoint(x: side, y: -5.3)
+          ViewKit.glow(shape, eye, 0.9, ViewColour(0xC8FF7A), 0.6 * eyeShine)
+          shape.fill(
+            Path(ellipseIn: CGRect(x: eye.x - 0.28, y: eye.y - 0.2, width: 0.56, height: 0.4)),
+            with: .color(ViewColour(0xE8FFB0).color(eyeShine)))
+        }
+      }
     } else {
       let step = sin(moment.now * 9) * 0.5
       shape.fill(
@@ -324,6 +339,8 @@ struct ViewWalker: Sendable {
     case backpack
     case phone
     case skater
+    /// Walking a small dog on a lead, the dog trotting ahead.
+    case dog
   }
 
   var rhythm: ViewRhythm
@@ -393,7 +410,7 @@ struct ViewWalker: Sendable {
           Path(CGRect(x: x, y: -2.7, width: 0.45, height: 2.1)), with: .color(shadow.color()))
       }
       person.translateBy(x: 0, y: -0.6)
-    case .walker, .backpack, .phone:
+    case .walker, .backpack, .phone, .dog:
       for (x, phase) in [(-0.6, stride), (0.2, -stride)] as [(CGFloat, CGFloat)] {
         person.fill(
           Path(CGRect(x: x + phase * 0.6, y: -2.1, width: 0.45, height: 2.1)),
@@ -419,6 +436,26 @@ struct ViewWalker: Sendable {
       if moment.look.isDark {
         ViewKit.glow(person, CGPoint(x: 0.6, y: -5.6), 1.6, screen, 0.5)
       }
+    case .dog:
+      // The dog ahead, at the end of a slack lead.
+      let trot = walking ? CGFloat(sin(moment.now * 13)) * 0.3 : 0
+      person.fill(
+        Path(ellipseIn: CGRect(x: 2.6, y: -1.9, width: 2.6, height: 1.2)),
+        with: .color(shadow.color()))
+      person.fill(
+        Path(ellipseIn: CGRect(x: 4.6, y: -2.6, width: 1.2, height: 1.1)),
+        with: .color(shadow.color()))
+      for (x, phase) in [(2.9, trot), (4.6, -trot)] as [(CGFloat, CGFloat)] {
+        person.fill(
+          Path(CGRect(x: x + phase, y: -1, width: 0.3, height: 1)), with: .color(shadow.color()))
+      }
+      person.fill(
+        Path(ellipseIn: CGRect(x: 2.2, y: -2.3, width: 0.9, height: 0.4)),
+        with: .color(shadow.color()))
+      var lead = Path()
+      lead.move(to: CGPoint(x: 0.8, y: -3.8))
+      lead.addQuadCurve(to: CGPoint(x: 4.8, y: -2.2), control: CGPoint(x: 3, y: -2))
+      person.stroke(lead, with: .color(shadow.lit(0.2).color()), lineWidth: 0.12)
     case .walker, .skater: break
     }
   }
@@ -479,5 +516,103 @@ extension ViewKit {
     blade.addLines(upper + lower.reversed())
     blade.closeSubpath()
     context.fill(blade, with: .color(colour.color()))
+  }
+}
+
+/// A fine grain tile laid over every painted plate: a little light and a little dark, seeded so
+/// it is the same every run. Made once, in code; nothing is loaded.
+enum ViewGrain {
+  static let size = 64
+
+  static let tile: CGImage? = {
+    var pixels = [UInt8](repeating: 0, count: size * size * 4)
+    for index in 0..<(size * size) {
+      // Mostly a faint darkening, now and then a fleck of light: never more than 5 %.
+      let value = ViewRhythm.hash(index, seed: 991)
+      let light = ViewRhythm.hash(index, seed: 992) > 0.8
+      let alpha = UInt8(value * (light ? 8 : 13))
+      let shade: UInt8 = light ? alpha : 0
+      pixels[index * 4] = shade
+      pixels[index * 4 + 1] = shade
+      pixels[index * 4 + 2] = shade
+      pixels[index * 4 + 3] = alpha
+    }
+    return pixels.withUnsafeMutableBytes { buffer in
+      CGContext(
+        data: buffer.baseAddress, width: size, height: size, bitsPerComponent: 8,
+        bytesPerRow: size * 4, space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)?.makeImage()
+    }
+  }()
+}
+
+/// Leaves let go by the trees, twirling down through a plane now and then: each leaf on its own
+/// clock, so they never fall together or the same way twice. None in snow.
+struct ViewLeaves: Sendable {
+  var count = 5
+  /// Where leaves start and how far they fall, in stage units.
+  var area = CGRect(x: -10, y: -6, width: 120, height: 62)
+  var seed = 0
+  var colours: [UInt32] = [0xD8843A, 0xC0503A, 0xE0B04A, 0x8A9A4A]
+
+  func draw(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.weather != .snow else { return }
+    let wind = moment.look.weather == .rain ? 1.8 : 1
+    for index in 0..<count {
+      let id = seed * 50 + index
+      let period = 11 + 9 * ViewRhythm.hash(id, seed: 961)
+      let offset = ViewRhythm.hash(id, seed: 962)
+      let cycle = moment.now / period + offset
+      let p = cycle - cycle.rounded(.down)
+      // Only part of each cycle has a leaf in the air.
+      guard p < 0.55 else { continue }
+      let fall = p / 0.55
+      let lane = ViewRhythm.hash(id &+ Int(cycle.rounded(.down)) % 997, seed: 963)
+      let x =
+        area.minX + area.width * CGFloat(lane) + CGFloat(fall * 14 * wind)
+        + CGFloat(2.4 * sin(moment.now * 1.7 + Double(index) * 3))
+      let y = area.minY + area.height * CGFloat(fall)
+      let colour = ViewColour(colours[id % colours.count]).mixed(
+        with: moment.palette.near, by: moment.look.isDark ? 0.6 : 0.25)
+      var leaf = context
+      leaf.translateBy(x: x, y: y)
+      leaf.rotate(by: .radians(moment.now * (2 + Double(index % 3)) + Double(index)))
+      leaf.scaleBy(x: 1, y: CGFloat(0.35 + 0.65 * abs(sin(moment.now * 3 + Double(index)))))
+      leaf.fill(
+        Path(ellipseIn: CGRect(x: -0.9, y: -0.4, width: 1.8, height: 0.8)),
+        with: .color(colour.color(0.9)))
+    }
+  }
+}
+
+/// Fireflies from dusk on, in clear or foggy air: each drifts its own slow path and blinks on its
+/// own clock.
+struct ViewFireflies: Sendable {
+  var count: Int
+  var area: CGRect
+  var seed = 0
+
+  func draw(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.hour == .dusk || moment.look.hour == .night, moment.look.weather != .rain,
+      moment.look.weather != .snow
+    else { return }
+    let colour = ViewColour(0xD9FF7A)
+    for index in 0..<count {
+      let id = seed * 100 + index
+      let a = ViewRhythm.hash(id, seed: 451)
+      let b = ViewRhythm.hash(id, seed: 452)
+      let t = moment.now
+      let x =
+        area.minX + area.width * CGFloat(a)
+        + CGFloat(3 * sin(t * (0.15 + 0.1 * b) + a * 9) + 1.2 * sin(t * 0.7 + b * 5))
+      let y =
+        area.minY + area.height * CGFloat(b)
+        + CGFloat(2 * cos(t * (0.12 + 0.1 * a) + b * 7) + 0.8 * sin(t * 0.9 + a * 3))
+      let blink = sin(t * (0.5 + 0.4 * a) + b * 20)
+      guard blink > 0.55 else { continue }
+      let level = (blink - 0.55) / 0.45
+      ViewKit.glow(context, CGPoint(x: x, y: y), 3, colour, 0.7 * level)
+      ViewKit.circle(context, CGPoint(x: x, y: y), 0.35, colour, level)
+    }
   }
 }

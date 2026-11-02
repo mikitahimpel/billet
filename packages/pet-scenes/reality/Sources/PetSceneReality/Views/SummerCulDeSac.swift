@@ -195,15 +195,15 @@ struct SummerCulDeSac: ViewRecipe {
       sprinkle(context, moment: moment)
       Self.lamp.draw(context, moment: moment)
       Self.roadway.draw(context, moment: moment)
-      fireflies(
-        context, moment: moment, count: 30, area: CGRect(x: -5, y: 26, width: 110, height: 22),
-        seed: 0)
+      ViewFireflies(count: 30, area: CGRect(x: -5, y: 26, width: 110, height: 22))
+        .draw(context, moment: moment)
+      ViewLeaves(count: 3, area: CGRect(x: -10, y: 10, width: 120, height: 40), seed: 4)
+        .draw(context, moment: moment)
     case .near:
       ViewBranch(anchor: CGPoint(x: -16, y: -10), scale: 1.4, side: -1, tint: ViewColour(0x3F8A4E))
         .draw(context, moment: moment)
-      fireflies(
-        context, moment: moment, count: 8, area: CGRect(x: 0, y: 30, width: 100, height: 22),
-        seed: 1)
+      ViewFireflies(count: 8, area: CGRect(x: 0, y: 30, width: 100, height: 22), seed: 1)
+        .draw(context, moment: moment)
     }
   }
 
@@ -236,33 +236,6 @@ struct SummerCulDeSac: ViewRecipe {
     if moment.lamps > 0 {
       ViewKit.glow(
         context, CGPoint(x: base.x, y: base.y - 3), 4, ViewPalette.lamp, 0.06 * moment.lamps)
-    }
-  }
-
-  /// Fireflies, from dusk on: each drifts its own slow path and blinks on its own clock.
-  private func fireflies(
-    _ context: GraphicsContext, moment: ViewMoment, count: Int, area: CGRect, seed: Int
-  ) {
-    guard moment.look.hour == .dusk || moment.look.hour == .night, moment.look.weather != .rain,
-      moment.look.weather != .snow
-    else { return }
-    let colour = ViewColour(0xD9FF7A)
-    for index in 0..<count {
-      let id = seed * 100 + index
-      let a = ViewRhythm.hash(id, seed: 451)
-      let b = ViewRhythm.hash(id, seed: 452)
-      let t = moment.now
-      let x =
-        area.minX + area.width * CGFloat(a)
-        + CGFloat(3 * sin(t * (0.15 + 0.1 * b) + a * 9) + 1.2 * sin(t * 0.7 + b * 5))
-      let y =
-        area.minY + area.height * CGFloat(b)
-        + CGFloat(2 * cos(t * (0.12 + 0.1 * a) + b * 7) + 0.8 * sin(t * 0.9 + a * 3))
-      let blink = sin(t * (0.5 + 0.4 * a) + b * 20)
-      guard blink > 0.55 else { continue }
-      let level = (blink - 0.55) / 0.45
-      ViewKit.glow(context, CGPoint(x: x, y: y), 3, colour, 0.7 * level)
-      ViewKit.circle(context, CGPoint(x: x, y: y), 0.35, colour, level)
     }
   }
 
