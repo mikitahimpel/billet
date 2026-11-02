@@ -154,6 +154,38 @@ public struct CatBehaviour: Sendable {
     awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
   }
 
+  /// Plays a moment asked for from outside the room, such as an opening. Waking stretches (or
+  /// yawns, or perks, as the model allows) and keeps the cat up a while. Looking at the viewer
+  /// rests in the base loop, where the head is free to turn, once any waking move is done.
+  public mutating func cue(_ cue: CatCue, at now: Double) {
+    started = true
+    switch cue {
+    case .wakeUp:
+      queue.removeAll()
+      let waking = available(.stretch) ?? available(.yawn) ?? available(.perk) ?? resting
+      queue.append((waking, clips[waking].map { $0.loops ? Self.heldWake : $0.duration } ?? 2))
+      until = now
+    case .lookAtCamera:
+      let isWaking =
+        queue.contains { Self.wakingMoves.contains($0.0) }
+        || (current.map(Self.wakingMoves.contains) ?? false) && now < until
+      if !isWaking {
+        queue.removeAll()
+        until = now
+      }
+      queue.append((resting, Self.viewerLook))
+    }
+    asleepUntil = nil
+    awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
+  }
+
+  /// The moves a cue to wake may play, which a cue to look waits for.
+  static let wakingMoves: Set<CatAction> = [.stretch, .yawn, .perk]
+  /// How long a looping clip that stands in for waking is held.
+  static let heldWake = 1.6
+  /// How long the cat holds the viewer's eye when cued to.
+  public static let viewerLook = 2.6
+
   /// The cue for `now`. Call it every frame; it only moves on when the current clip is done.
   public mutating func beat(at now: Double, mode: Mode) -> CatBeat {
     if case .fixed(let action) = mode {

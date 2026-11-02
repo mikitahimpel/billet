@@ -53,4 +53,21 @@ import Testing
     let reopened = WidgetFeaturesModel(store: WidgetFeaturesStore(storage: storage))
     #expect(reopened.homeVariant == .livingWindow)
   }
+
+  @Test func aPretendHourSurvivesTheStoreAndTheRealClockComesBack() throws {
+    let store = WidgetFeaturesStore(storage: storage())
+    #expect(store.loadPretendHour() == nil)
+    try store.savePretendHour(23)
+    #expect(store.loadPretendHour() == 23)
+    try store.savePretendHour(nil)
+    #expect(store.loadPretendHour() == nil)
+  }
+
+  @Test func anHourOutsideTheDayIsTheRealClock() {
+    let model = WidgetFeaturesModel(store: WidgetFeaturesStore(storage: storage()))
+    model.setPretendHour(24)
+    #expect(model.pretendHour == nil)
+    model.setPretendHour(5)
+    #expect(model.pretendHour == 5)
+  }
 }

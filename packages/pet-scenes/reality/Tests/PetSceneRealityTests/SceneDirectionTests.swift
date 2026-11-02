@@ -48,16 +48,6 @@ import simd
     #expect(filled.standBack < fitted.standBack)
   }
 
-  @MainActor
-  @Test func aPointOnTheFloorComesBackUnderItsOwnSpot() throws {
-    let camera = GenzCamera(home: GenzLayout.windowSeat.camera)
-    let size = CGSize(width: 393, height: 852)
-    let floor = SIMD3<Float>(4, 0.5, 3)
-    let spot = try #require(camera.project(floor, in: size))
-    let back = try #require(camera.point(under: spot, in: size, height: 0.5))
-    #expect(simd_distance(back, floor) < 0.01)
-  }
-
   @Test func dayIsBrighterThanNightAndTheLampFollowsTheHour() {
     let noon = RoomDayLook(DayLight.at(hour: 13))
     let night = RoomDayLook(DayLight.at(hour: 23))
@@ -71,11 +61,21 @@ import simd
       RoomDayLook.sky(DayLight.at(hour: 2)).glow < RoomDayLook.sky(DayLight.at(hour: 12)).glow)
   }
 
-  @Test func aWokenCatIsUpAndThenSettlesBack() {
-    #expect(NookiMotion.wake(1, reduceMotion: false).wake == 1)
-    #expect(NookiMotion.wake(1, reduceMotion: false).eyesOpen)
-    #expect(NookiMotion.wake(1, reduceMotion: false).hop == 0)
-    #expect(NookiMotion.wake(NookiMotion.wakeLength, reduceMotion: false) == NookiFrame())
-    #expect(NookiMotion.wake(1, reduceMotion: true).wake == 0)
+  @MainActor
+  @Test func theStyledRoomsOnlyDarkenAtNight() {
+    let morning = RoomDayLook(DayLight.at(hour: 7))
+    #expect(morning.ambientShift < 0)
+    #expect(GenzRoom.ambientShift(morning, phase: .morning) >= 0)
+    let night = RoomDayLook(DayLight.at(hour: 23))
+    #expect(GenzRoom.ambientShift(night, phase: .night) < 0)
+    #expect(GenzRoom.ambientShift(nil, phase: nil) == 0)
+  }
+
+  @MainActor
+  @Test func theDioramaNightIsDarkerThanTheSharedOne() {
+    let night = RoomDayLook(DayLight.at(hour: 23))
+    #expect(NookiDiorama.ambientShift(night, phase: .night) < night.ambientShift)
+    let noon = RoomDayLook(DayLight.at(hour: 13))
+    #expect(NookiDiorama.ambientShift(noon, phase: .day) == noon.ambientShift)
   }
 }

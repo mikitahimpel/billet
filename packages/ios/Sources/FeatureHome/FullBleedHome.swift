@@ -15,6 +15,8 @@ struct FullBleedHome<Drawer: View>: View {
   let isFakePartner: Bool
   /// The partner's time zone, when they share it.
   let theirTimeZone: TimeZone?
+  /// The hour the night-and-day variant pretends it is, or `nil` to follow the clock.
+  let pretendHour: Int?
   /// Whether the opening has already played since launch.
   let hasOpened: Bool
   let onOpened: () -> Void
@@ -133,6 +135,7 @@ struct FullBleedHome<Drawer: View>: View {
   /// The light of the hour here and where the partner is, for the night-and-day variant.
   private func dayLight(at date: Date) -> PetSceneDayLight? {
     guard variant == .nightAndDay else { return nil }
+    let date = DayLight.pretending(date, hour: pretendHour, in: .current)
     return PetSceneDayLight(
       here: DayLight.at(date, in: .current),
       theirs: theirTimeZone.map { DayLight.at(date, in: $0) })
@@ -204,16 +207,6 @@ struct FullBleedHome<Drawer: View>: View {
 
   private var controls: some View {
     VStack(spacing: 0) {
-      if isFakePartner {
-        Text("Fake partner: scripted replies, on this phone only")
-          .billetType(.caption)
-          .foregroundStyle(Palette.paper.color.opacity(0.75))
-          .padding(.horizontal, Spacing.medium)
-          .padding(.vertical, Spacing.hair)
-          .floatingGlass()
-          .padding(.top, Spacing.small)
-          .accessibilityIdentifier("fakePartnerNotice")
-      }
       Spacer(minLength: 0)
       HStack(alignment: .bottom) {
         Spacer(minLength: 0)
@@ -226,7 +219,8 @@ struct FullBleedHome<Drawer: View>: View {
     }
   }
 
-  /// Pulls up the sheet with everything that used to sit on Home.
+  /// Pulls up the sheet with everything that used to sit on Home. With a fake partner a small
+  /// amber dot sits beside it; the panel says what the dot means.
   private var handle: some View {
     Button {
       drawerOpen = true
@@ -234,6 +228,15 @@ struct FullBleedHome<Drawer: View>: View {
       Capsule()
         .fill(Palette.paper.color.opacity(0.7))
         .frame(width: 44, height: 5)
+        .overlay(alignment: .trailing) {
+          if isFakePartner {
+            Circle()
+              .fill(Palette.gold.color)
+              .frame(width: 7, height: 7)
+              .offset(x: 14)
+              .accessibilityIdentifier("fakePartnerDot")
+          }
+        }
         .frame(width: Target.minimum * 2, height: Target.minimum)
         .contentShape(Rectangle())
     }
@@ -243,7 +246,11 @@ struct FullBleedHome<Drawer: View>: View {
         if value.translation.height < -20 { drawerOpen = true }
       }
     )
-    .accessibilityLabel("More: streak, treats, shop and cards")
+    .accessibilityLabel(
+      isFakePartner
+        ? "More: streak, treats, shop and cards. Fake partner, scripted replies"
+        : "More: streak, treats, shop and cards"
+    )
     .accessibilityIdentifier("homeDrawerHandle")
   }
 

@@ -184,9 +184,6 @@ final class GenzRoom {
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
   private static let ambientExponent: Float = 1.6
-  private static let cameraLookLength = 2.6
-  /// How long the head stays on a finger after it last moved.
-  private static let fingerLookLength = 1.5
 
   init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource) {
     self.layout = layout
@@ -646,7 +643,6 @@ final class GenzRoom {
     noteClock = openedClock ?? clock
     screen.openedAt = Date.now.addingTimeInterval(-GenzOpening.length)
     lastTexture = -1
-    cue(.wakeUp)
     cue(.lookAtCamera)
   }
 
@@ -664,29 +660,17 @@ final class GenzRoom {
     onOpeningEnded?()
   }
 
-  /// Plays a cue for the cat with its own clips.
+  /// Plays a cue with the cat's own clips. Looking at the camera lets go of any finger, so the
+  /// head turns to the lens.
   func cue(_ cue: CatCue) {
-    switch cue {
-    case .wakeUp:
-      petClock = clock
-      behaviour.react(.tap, at: clock)
-    case .lookAtCamera:
-      headLook(at: camera.position, for: Self.cameraLookLength)
-    }
+    behaviour.cue(cue, at: clock)
+    if cue == .lookAtCamera { gazePoint = nil }
   }
 
-  /// Turns the cat towards the floor under a finger at `point`.
+  /// Turns the cat's head to follow a finger at `point`.
   func gaze(at point: CGPoint?) {
-    guard let point, !reduceMotion,
-      let floor = camera.point(under: point, in: viewSize, height: catHolder.position.y)
-    else { return }
-    headLook(at: floor, for: Self.fingerLookLength)
-  }
-
-  /// Turns the head and neck, not the body, towards `point` for `length` seconds.
-  private func headLook(at point: SIMD3<Float>, for length: Double) {
-    gazePoint = point
-    gazeUntil = clock + length
+    guard let point else { return }
+    followFinger(at: point)
   }
 
   /// Leans the camera with the phone while `follows` is true.
@@ -720,6 +704,13 @@ final class GenzRoom {
     applyDayLight()
   }
 
+  /// The styled rooms are made for the evening, so daylight only ever adds to their own light;
+  /// the night still darkens them.
+  static func ambientShift(_ look: RoomDayLook?, phase: DayLight.Phase?) -> Float {
+    guard let look else { return 0 }
+    return phase == .night ? look.ambientShift : max(look.ambientShift, 0) * 1.5
+  }
+
   private func applyDayLight() {
     let look = dayLight.map { RoomDayLook($0.here) }
     dayLamp.components.set(
@@ -727,7 +718,8 @@ final class GenzRoom {
         color: (look?.sunColour ?? .one).platformColour,
         intensity: look.map { $0.sunIntensity * 1.5 } ?? 0))
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
-    ambient.intensityExponent = Self.ambientExponent + (look?.ambientShift ?? 0)
+    ambient.intensityExponent =
+      Self.ambientExponent + Self.ambientShift(look, phase: dayLight?.here.phase)
     ambientLight?.components.set(ambient)
   }
 
@@ -748,6 +740,15 @@ final class GenzRoom {
       at: gazePoint ?? lens.position(relativeTo: nil),
       weight: Float(
         CatBehaviour.lookWeight(for: beat, holding: gazePoint != nil, reduceMotion: reduceMotion)))
+  }
+
+  /// How long the head stays on a finger after it last moved.
+  private static let fingerLookLength = 1.5
+
+  /// Turns the head and neck, not the body, towards `point` for `length` seconds.
+  private func headLook(at point: SIMD3<Float>, for length: Double) {
+    gazePoint = point
+    gazeUntil = clock + length
   }
 
   /// Turns the cat's head towards a finger at `point` in the view.

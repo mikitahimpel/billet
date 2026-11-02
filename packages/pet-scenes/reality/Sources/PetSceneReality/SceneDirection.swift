@@ -75,20 +75,6 @@ struct RoomDayLook: Equatable {
   }
 }
 
-extension NookiMotion {
-  /// How long the cat stays up when woken by a cue.
-  static let wakeLength = 3.6
-
-  /// The cat getting up from sleep for a while, with no hop: the clips do the stretching.
-  static func wake(_ elapsed: Double, reduceMotion: Bool) -> NookiFrame {
-    guard (0..<wakeLength).contains(elapsed) else { return NookiFrame() }
-    let eyesOpen = elapsed < wakeLength - 0.3
-    if reduceMotion { return NookiFrame(eyesOpen: eyesOpen) }
-    let rise = min(elapsed / 0.5, (wakeLength - elapsed) / 0.6)
-    return NookiFrame(wake: Float(min(max(rise, 0), 1)), eyesOpen: eyesOpen)
-  }
-}
-
 extension SIMD3<Float> {
   /// The colour these red, green and blue parts make, for a light or a material.
   var platformColour: RealityKit.Material.Color {
