@@ -11,7 +11,7 @@ import SwiftUI
 @MainActor
 final class NookiDiorama {
   let root = Entity()
-  /// Called once, when the room has rendered and a poster over it can go.
+  /// Called when the room has rendered in a view and a poster over it can go.
   var onReady: (() -> Void)?
   /// Called when Mochi is found to be missing, and again if a late load puts things right.
   var onMochiMissing: ((Bool) -> Void)?
@@ -38,7 +38,7 @@ final class NookiDiorama {
   private var lookGoal: Float = 0
   private var lookTurn: Float = 0
   private var idleDelta = 0.0
-  private var isOnScreen = true
+  private(set) var isOnScreen = true
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
   private(set) var mochiLoading: Task<Void, Never>?
@@ -228,7 +228,11 @@ final class NookiDiorama {
     if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
 
+  /// Takes the room's updates from `content`. A diorama outlives its view, so each new view gets
+  /// the updates, and its own settling before `onReady`.
   func startUpdates(from content: RealityViewCameraContent) {
+    subscription?.cancel()
+    settlingFrames = Self.framesBeforeReady
     subscription = content.subscribe(
       to: SceneEvents.Update.self, on: nil, componentType: nil
     ) { [weak self] event in

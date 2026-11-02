@@ -10,9 +10,11 @@ import SwiftUI
 struct NookiView: View {
   let world: PetWorld
   let play: PetPlayState
+  let cache: NookiRoomCache
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  /// Made once, after the first frame. A default value here would run on every parent update.
+  /// Taken from the cache after the first frame. A default value here would run on every parent
+  /// update.
   @State private var diorama: NookiDiorama?
   @State private var poster: CGImage?
   @State private var isReady = false
@@ -47,11 +49,12 @@ struct NookiView: View {
       if poster == nil { poster = await NookiPoster.load() }
       await Task.yield()
       guard diorama == nil else { return }
-      let made = NookiDiorama()
+      let made = cache.diorama()
       let ready = $isReady
       made.onReady = { ready.wrappedValue = true }
       let missing = $isMochiMissing
       made.onMochiMissing = { missing.wrappedValue = $0 }
+      isMochiMissing = made.isMochiMissing
       diorama = made
       made.startLoading()
     }
@@ -114,7 +117,7 @@ private struct NookiStage: View {
     .overlay(alignment: .topLeading) {
       NookiRenovateControls(isOpen: $isRenovating, paint: $paint) { diorama.resetRoom() }
     }
-    .onChange(of: isRenovating) { _, isOn in diorama.renovation.isOn = isOn }
+    .onChange(of: isRenovating, initial: true) { _, isOn in diorama.renovation.isOn = isOn }
     .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
     .accessibilityElement()
     .accessibilityLabel("Mochi's room")
