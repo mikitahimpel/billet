@@ -171,6 +171,16 @@ public struct ShopView<Preview: View>: View {
       .frame(maxWidth: .infinity)
       .frame(height: 120)
       .background(Palette.plate.color.opacity(0.6), in: .rect(cornerRadius: Radius.plate))
+      .overlay(alignment: .topTrailing) {
+        let owned = store.owned(item)
+        if owned > 0 {
+          Text(verbatim: "×\(owned)")
+            .billetType(.label)
+            .foregroundStyle(Palette.gold.color)
+            .padding(Spacing.small)
+            .accessibilityLabel("\(owned) in the closet")
+        }
+      }
       .onGeometryChange(for: CGRect.self) {
         $0.frame(in: .named(ShopSpace.content))
       } action: {
@@ -185,17 +195,7 @@ public struct ShopView<Preview: View>: View {
           .foregroundStyle(Palette.muted.color)
           .lineLimit(1)
       }
-      HStack {
-        buyButton(item)
-        Spacer(minLength: 0)
-        let owned = store.owned(item)
-        if owned > 0 {
-          Text(verbatim: "×\(owned)")
-            .billetType(.label)
-            .foregroundStyle(Palette.gold.color)
-            .accessibilityLabel("\(owned) in the closet")
-        }
-      }
+      buyButton(item)
     }
     .padding(Spacing.small)
     .card()
