@@ -59,6 +59,7 @@ struct GenzRoomView: View {
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneOpeningCount) private var openings
   @Environment(\.petSceneCat) private var cat
+  @Environment(\.petSceneMoments) private var moments
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneGaze) private var gaze
   @Environment(\.petSceneOrbits) private var orbits
@@ -88,6 +89,7 @@ struct GenzRoomView: View {
         theirSky
         stage(room)
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+        CatPurrOverlay(purr: room.purr)
         catAnchor(room)
       } else {
         layer(behind, room: nil)
@@ -189,6 +191,7 @@ struct GenzRoomView: View {
     .onChange(of: play.treatsUsed) { room.react(.treat) }
     .onChange(of: play.petsReceived) { room.react(.pet) }
     .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+    .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
     .onAppear { room.art = replacementArt ?? GenzNativeArt() }
     .accessibilityElement()
     .accessibilityLabel(
@@ -216,8 +219,11 @@ struct GenzRoomView: View {
         if self.stroking == nil {
           self.stroking = stroking
           if stroking, let event = room.stroke() { onEvent(event) }
+        } else if stroking {
+          room.strokeMoved()
         }
         room.followFinger(at: value.location)
+        if !stroking { room.bat(at: value.location) }
         guard orbits, !stroking else { return }
         room.orbit(
           byX: Float(value.translation.width - lastDrag.width),

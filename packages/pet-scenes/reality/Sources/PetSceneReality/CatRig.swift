@@ -18,6 +18,10 @@ final class CatRig {
   private let skinned: ModelEntity?
   private var clips: [CatAction: AnimationResource] = [:]
   private var controller: AnimationPlaybackController?
+  /// The head joint and every joint above it, from the root down, for finding the mouth.
+  private let headChain: [Int]
+  /// Where the skeleton sits in the model, so joints chained from the root land on the mesh.
+  private let skeletonPlace: simd_float4x4
   private(set) var current: CatAction?
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "CatRig")
 
@@ -41,6 +45,11 @@ final class CatRig {
     info = CatCatalog.info(table.filter { clips[$0.key] != nil })
     guard clips[.sleep] != nil || clips[.idle] != nil else { return nil }
     skinned = Self.firstSkinned(in: model)
+    let headChain = skinned.map { Self.chain(to: "head", in: $0.jointNames) } ?? []
+    self.headChain = headChain
+    skeletonPlace =
+      skinned.map { Self.skeletonPlace(of: $0, chain: headChain) }
+      ?? matrix_identity_float4x4
     if let skinned, let look = CatLookComponent(joints: skinned.jointNames) {
       CatLookSystem.registerOnce()
       skinned.components.set(look)
@@ -100,6 +109,50 @@ final class CatRig {
       if changed { node.components.set(model) }
     }
     return painted
+  }
+
+  /// Where the mouth is now, in world space: a little in front of and below the head joint, as
+  /// the clip has posed it. Nil for a model without a head joint.
+  func mouth() -> SIMD3<Float>? {
+    guard let skinned, !headChain.isEmpty else { return nil }
+    let joints = skinned.jointTransforms
+    guard headChain.allSatisfy(joints.indices.contains) else { return nil }
+    var pose = skeletonPlace
+    for index in headChain { pose = pose * joints[index].matrix }
+    let head = skinned.convert(
+      position: SIMD3(pose.columns.3.x, pose.columns.3.y, pose.columns.3.z), to: nil)
+    let forward = simd_normalize(entity.convert(direction: [0, 0, -1], to: nil))
+    let size = entity.scale(relativeTo: nil).x
+    return head + (forward * Self.mouthReach + [0, -Self.mouthDrop, 0]) * size
+  }
+
+  /// From the head joint to the mouth, in metres for a cat at its made size.
+  static let mouthReach: Float = 0.05
+  static let mouthDrop: Float = 0.02
+
+  /// The skeleton's own place in the model: the head's bind pose as the mesh has it, against the
+  /// same pose chained from the root's rest transforms. Identity when the mesh does not say.
+  private static func skeletonPlace(of model: ModelEntity, chain: [Int]) -> simd_float4x4 {
+    guard let head = chain.last,
+      let joints = model.model?.mesh.contents.skeletons.first?.joints,
+      chain.allSatisfy(joints.indices.contains)
+    else { return matrix_identity_float4x4 }
+    var rest = matrix_identity_float4x4
+    for index in chain { rest = rest * joints[index].restPoseTransform.matrix }
+    let bound = joints[head].inverseBindPoseMatrix.inverse
+    return bound * rest.inverse
+  }
+
+  /// Indices of the joint named `name` and all its ancestors, root first; empty if it has none.
+  static func chain(to name: String, in joints: [String]) -> [Int] {
+    guard
+      let target = joints.firstIndex(where: {
+        $0.split(separator: "/").last?.lowercased() == name
+      })
+    else { return [] }
+    let path = joints[target]
+    return joints.indices.filter { path.hasPrefix(joints[$0] + "/") || $0 == target }
+      .sorted { joints[$0].count < joints[$1].count }
   }
 
   private static func firstAnimated(in entity: Entity) -> Entity? {

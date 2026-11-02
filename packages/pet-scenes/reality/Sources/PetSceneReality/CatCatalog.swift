@@ -69,8 +69,10 @@ enum CatCatalog {
   static func defaultBase(_ action: CatAction) -> CatBase {
     switch action {
     case .sleep, .twitch: .sleep
-    case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk: .sit
-    case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch: .stand
+    case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk,
+      .rollOver, .bat:
+      .sit
+    case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch, .headbutt, .reachUp: .stand
     }
   }
 

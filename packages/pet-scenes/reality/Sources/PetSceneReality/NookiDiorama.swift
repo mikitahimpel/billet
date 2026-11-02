@@ -53,6 +53,17 @@ final class NookiDiorama {
   /// The cat's clips, look and coat, once loaded.
   private(set) var rig: CatRig?
   private var behaviour = CatBehaviour(clips: [:])
+  /// The cat moments switched on in Labs.
+  private(set) var moments: Set<CatMoment> = []
+  /// The purr and its hearts, for the view to draw.
+  let purr = CatPurr()
+  /// A trip away from the bed and back, while one is playing.
+  private var trip: CatTrip?
+  private var tripPose: CatTrip.Pose?
+  private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
+  private var lastBat = -Double.infinity
+  private var greetPending = false
+  private var lastSeenSaved = -Double.infinity
   /// The cat asked for, and the one on show (Mochi stands in for a cat that will not load).
   private(set) var catChoice = CatChoice.standard
   private(set) var shownCat: CatChoice?
@@ -135,6 +146,8 @@ final class NookiDiorama {
   /// Share of the walk spent dropping from the bed to the floor.
   private static let bedDrop: Float = 0.25
   private static let carryHeight: Float = 0.34
+  /// How fast the reach plays while taping, so it fits the time at the wall.
+  private static let tapingRate: Float = 1.4
   private static let noteHome: SIMD3<Float> = [0.08, 0.46, -0.565]
   private static let noteStart: SIMD3<Float> = [0.75, 1.05, -0.1]
   /// How far in front of the lens an opened note sits, and how much larger it gets.
@@ -341,10 +354,107 @@ final class NookiDiorama {
     } else {
       viewsShowing.remove(view)
     }
+    let wasOnScreen = isOnScreen
     isOnScreen = !viewsShowing.isEmpty
     room.isEnabled = isOnScreen && isLoaded
     updateTiltFollowing()
+    if isOnScreen, !wasOnScreen {
+      greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
+    }
+    if !isOnScreen, wasOnScreen { CatSeen.mark() }
   }
+
+  // MARK: - Moments
+
+  /// Switches the cat moments to `moments`.
+  func setMoments(_ moments: Set<CatMoment>) {
+    self.moments = moments
+    if !moments.contains(.greets) { greetPending = false }
+  }
+
+  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
+  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) {
+    guard moments.contains(.batsAtFinger), trip == nil, !yarnPlay.isPlaying,
+      world.activity == .sleeping, clock - lastBat > Self.batGap,
+      CatEdge.isNearEdge(x: Double(point.x), width: Double(size.x))
+    else { return }
+    lastBat = clock
+    followFinger(at: point, in: size)
+    behaviour.react(.bat, at: clock)
+  }
+
+  /// Where the cat is on screen, for the hearts.
+  private var catOnScreen: CGPoint? {
+    GenzCamera.project(
+      mochi.position(relativeTo: nil) + [0, 0.14, 0], from: camera.position,
+      towards: NookiCamera.target, fieldOfView: Self.fieldOfView,
+      in: CGSize(width: CGFloat(fittedSize.x), height: CGFloat(fittedSize.y)))
+  }
+
+  /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
+  private func stepMoments() {
+    purr.tick(at: clock, cat: catOnScreen)
+    if clock - lastSeenSaved > 30 {
+      lastSeenSaved = clock
+      CatSeen.mark()
+    }
+    let isFree =
+      trip == nil && !yarnPlay.isPlaying && world.activity == .sleeping && !noteIsOpen
+      && !reduceMotion && hasMochi && opening == nil
+    if greetPending, isFree {
+      greetPending = false
+      startGreeting()
+      playClock.postpone(from: clock)
+    } else if moments.contains(.chases), isFree, playClock.isDue(at: clock) {
+      chaseYarn()
+    }
+  }
+
+  /// Runs up from the bed towards the camera, headbutts it, and goes back.
+  private func startGreeting() {
+    let home = SIMD2(Self.bedSpot.x, Self.bedSpot.z)
+    let eye = SIMD2(camera.position.x, camera.position.z)
+    let near = CatTrip.towards(eye, from: home, upTo: Self.greetReach)
+    let rest = NookiChoreography.restHeading
+    let front = home + SIMD2(-sin(rest), -cos(rest)) * 0.3
+    trip = CatTrip(
+      from: home, heading: rest,
+      legs: [
+        .hold(behaviour.playable(.perk), seconds: 0.7, facing: eye),
+        .walk(to: near, speed: Self.runSpeed),
+        .hold(behaviour.playable(.headbutt), seconds: 1.8, facing: eye),
+        .hold(behaviour.playable(.happy), seconds: 1.4, facing: eye),
+        .walk(to: home, speed: Self.walkPace),
+        .hold(behaviour.playable(.sit), seconds: 0.6, facing: front),
+      ], at: clock)
+    headLook(at: camera.position, for: 5)
+  }
+
+  /// Sends the yarn rolling, as if the cat had knocked it: the yarn game takes it from there.
+  private func chaseYarn() {
+    let angle = Float.random(in: 0..<(2 * .pi))
+    let speed = Float.random(in: 650...900)
+    flickYarn(velocityX: cos(angle) * speed, velocityY: sin(angle) * speed)
+  }
+
+  /// A trip's spot on the floor, as a place in the room: in the bed near it, on the floor beyond.
+  private func tripSpot(_ spot: SIMD2<Float>) -> SIMD3<Float> {
+    let fromBed = simd_distance(spot, SIMD2(Self.bedSpot.x, Self.bedSpot.z))
+    let off = min(max((fromBed - 0.1) / 0.1, 0), 1)
+    let height = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * off
+    return SIMD3(spot.x, height, spot.y)
+  }
+
+  /// Whether the note rides in the cat's mouth to the wall, for this delivery.
+  private var carriesNote: Bool {
+    moments.contains(.carriesNote) && !reduceMotion && world.activity == .delivering
+  }
+
+  /// The part of the delivery spent at the wall, taping the note up.
+  private static let taping = 3.4..<5.0
+  private static let batGap = 2.5
+  private static let greetReach: Float = 0.3
+  private static let runSpeed: Float = 0.5
 
   private func updateTiltFollowing() {
     let follow = isOnScreen && isLoaded && !reduceMotion
@@ -650,6 +760,7 @@ final class NookiDiorama {
       camera.step(Float(step))
       aimLens()
     }
+    stepMoments()
     apply(elapsed: clock - stepStart, delta: Float(step))
   }
 
@@ -659,7 +770,8 @@ final class NookiDiorama {
       || yarnPlay.isPlaying
       || ballSpeed > NookiYarnPlay.noticeSpeed / 2 || world.activity != .sleeping || petStart != nil
       || !wobbles.isEmpty
-      || lookStart != nil || lookTurn != 0 || opening != nil
+      || lookStart != nil || lookTurn != 0 || opening != nil || trip != nil || purr.isPurring
+      || !purr.hearts.isEmpty || greetPending
       || noteOpening != (noteIsOpen ? 1 : 0) || light != (world.partnerHere ? 1 : 0)
   }
 
@@ -686,8 +798,28 @@ final class NookiDiorama {
       frame = body
       awaySpot = pose.spot
     }
+    tripPose = nil
+    if let trip {
+      let pose = trip.pose(at: clock)
+      if pose.isDone {
+        self.trip = nil
+      } else {
+        frame.heading = pose.heading
+        frame.wake = 1
+        frame.eyesOpen = true
+        frame.hop = 0
+        frame.stretch = 0
+        awaySpot = tripSpot(pose.spot)
+        tripPose = pose
+      }
+    }
+    let taping = carriesNote && Self.taping.contains(shownTime)
+    if taping {
+      frame.hop = 0
+      frame.heading = 2 * .pi
+    }
     applyBody(frame, awaySpot: awaySpot, delta: delta)
-    applyClip(frame)
+    applyClip(frame, taping: taping)
     applyHolders()
     applyLamp(delta)
     applyBowl(delta)
@@ -717,11 +849,21 @@ final class NookiDiorama {
       angle: frame.heading + lookTurn + Self.windowTurn * light, axis: [0, 1, 0])
   }
 
-  private func applyClip(_ frame: NookiFrame) {
+  private func applyClip(_ frame: NookiFrame, taping: Bool) {
     let clip = NookiClip.choose(frame: frame, yarn: yarnPlay.phase)
-    let travel = yarnPlay.isPlaying ? yarnPlay.travelSpeed : Self.walkPace
-    let beat = behaviour.beat(at: clock, mode: Self.mode(for: clip, yarn: yarnPlay.phase))
-    rig?.play(beat.action, rate: beat.action == .walk ? NookiClip.walkRate(forTravelAt: travel) : 1)
+    var travel = yarnPlay.isPlaying ? yarnPlay.travelSpeed : Self.walkPace
+    var mode = Self.mode(for: clip, yarn: yarnPlay.phase)
+    var rate: Float = 1
+    if let tripPose {
+      mode = .fixed(tripPose.action)
+      travel = tripPose.speed
+    } else if taping {
+      mode = .fixed(behaviour.playable(.reachUp))
+      rate = Self.tapingRate
+    }
+    let beat = behaviour.beat(at: clock, mode: mode)
+    rig?.play(
+      beat.action, rate: beat.action == .walk ? NookiClip.walkRate(forTravelAt: travel) : rate)
     if clock > gazeUntil { gazePoint = nil }
     rig?.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
@@ -766,6 +908,9 @@ final class NookiDiorama {
   func stroke() {
     behaviour.react(.pet, at: clock)
     petStart = petStart ?? clock
+    if moments.contains(.purrs), purr.touch(at: clock, cat: catOnScreen), trip == nil {
+      behaviour.react(.roll, at: clock)
+    }
   }
 
   /// A treat landed: it eats, then is pleased.
@@ -841,12 +986,15 @@ final class NookiDiorama {
     noteOpening = Self.eased(
       noteOpening, to: noteIsOpen ? 1 : 0, rate: 8, delta: delta, snap: reduceMotion)
     note.isEnabled = frame.note > 0 && noteReveal > 0.01
-    let carried = mochi.position + [0, Self.carryHeight, 0]
+    let inMouth =
+      carriesNote ? rig?.mouth().flatMap { note.parent?.convert(position: $0, from: nil) } : nil
+    let carried = inMouth ?? mochi.position + [0, Self.carryHeight, 0]
     let hanging = mix(mix(Self.noteStart, carried, t: frame.note), Self.noteHome, t: frame.pinned)
     let toLens = simd_normalize(NookiCamera.target - camera.position)
     let reading = camera.position + toLens * Self.noteReadingDistance
     note.position = mix(hanging, reading, t: noteOpening)
-    let hangingScale = 0.3 + 0.25 * frame.note + 0.45 * frame.pinned
+    let hangingScale =
+      inMouth == nil ? 0.3 + 0.25 * frame.note + 0.45 * frame.pinned : 0.22 + 0.78 * frame.pinned
     note.scale =
       .one * (hangingScale + (Self.noteReadingScale - hangingScale) * noteOpening) * noteReveal
     let swing = reduceMotion ? 0 : 0.2 * sin(Float(elapsed) * 3) * (1 - frame.pinned)

@@ -35,6 +35,15 @@ public struct WidgetFeatures: Equatable, Sendable {
     choices[flag.rawValue] ?? flag.defaultOn
   }
 
+  /// The cat moments switched on in Labs.
+  public var catMoments: Set<CatMoment> {
+    let pairs: [(LabExperiment, CatMoment)] = [
+      (.catCarriesNote, .carriesNote), (.catPurrs, .purrs), (.catBats, .batsAtFinger),
+      (.catGreets, .greets), (.catChases, .chases),
+    ]
+    return Set(pairs.filter { isOn($0.0) }.map(\.1))
+  }
+
   /// The features that are on, in declaration order.
   public var enabled: [WidgetFeature] {
     WidgetFeature.allCases.filter(isOn)

@@ -27,12 +27,18 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case advent
   case bedsideHouse
   case shelfBoard
+  case catCarriesNote
+  case catPurrs
+  case catBats
+  case catGreets
+  case catChases
 
   public enum Group: CaseIterable, Sendable {
     case demo
     case cat
     case notes
     case home
+    case catMoments
 
     public var title: String {
       switch self {
@@ -40,6 +46,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       case .cat: "The cat"
       case .notes: "Notes"
       case .home: "The house"
+      case .catMoments: "Cat moments"
       }
     }
   }
@@ -67,6 +74,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: .notes
     case .bedsideHouse: .home
     case .shelfBoard: .notes
+    case .catCarriesNote: .catMoments
+    case .catPurrs: .catMoments
+    case .catBats: .catMoments
+    case .catGreets: .catMoments
+    case .catChases: .catMoments
     }
   }
 
@@ -93,11 +105,26 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: "Our advent"
     case .bedsideHouse: "Bedside house"
     case .shelfBoard: "Shelf board"
+    case .catCarriesNote: "Carries the note"
+    case .catPurrs: "Purrs when petted"
+    case .catBats: "Bats at your finger"
+    case .catGreets: "Greets you"
+    case .catChases: "Plays on its own"
     }
   }
 
   public var detail: String {
     switch self {
+    case .catCarriesNote:
+      "When a note arrives, the cat carries it in its mouth to the wall or the glass and tapes it up."
+    case .catPurrs:
+      "Stroke the cat for a soft purr under your finger and small floating hearts. Keep going and it rolls onto its back."
+    case .catBats:
+      "Touch near the edge of the screen and the cat notices, then bats at your finger."
+    case .catGreets:
+      "Open billet after a few hours away and the cat runs up to the camera and headbutts it."
+    case .catChases:
+      "Now and then the cat chases the yarn, or a dot of light from the lamp, all by itself."
     case .shelfBoard:
       "A warm wall of shelves, reached from Notes: every note you have sent each other, the newest large and forward, and numbered places for the next days of the streak."
     case .fakePartner:
@@ -167,6 +194,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: false
     case .shelfBoard: false
+    case .catCarriesNote: false
+    case .catPurrs: false
+    case .catBats: false
+    case .catGreets: false
+    case .catChases: false
     }
   }
 
@@ -193,6 +225,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: true
     case .shelfBoard: true
+    case .catCarriesNote: false
+    case .catPurrs: false
+    case .catBats: false
+    case .catGreets: false
+    case .catChases: false
     }
   }
 }
