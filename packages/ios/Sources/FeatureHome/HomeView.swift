@@ -36,6 +36,7 @@ struct HomeView: View {
   @State private var hasOpened = false
   @State private var latestDrawing: CGImage?
   @State private var drawerOpen = false
+  @State private var ringsOpen = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -105,6 +106,12 @@ struct HomeView: View {
       .task(id: session.life.speed) { await session.life.run() }
       .onChange(of: session.shop.state.treatsUsed) { old, new in
         if new > old { session.fed() }
+      }
+      .overlay {
+        HomeLifeLayer(
+          session: session, scene: scene, ringsOpen: $ringsOpen,
+          onFeed: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
+          onPet: pet)
       }
       .overlay(alignment: .topLeading) {
         if session.labs.isOn(LabExperiment.lifeDebug) {
@@ -232,6 +239,7 @@ struct HomeView: View {
       style: style,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
@@ -252,6 +260,7 @@ struct HomeView: View {
       variant: variant,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
@@ -412,6 +421,7 @@ struct HomeView: View {
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+        .lifeRingsPress(session, open: $ringsOpen)
         .id(scene.id)
         .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
         .environment(\.petSceneRenovator, session.renovator)
@@ -781,7 +791,9 @@ struct HomeView: View {
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
       catAway: catAway,
-      life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil
+      life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil,
+      lifeNeeds: session.labs.isOn(LabExperiment.catLife)
+        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil
     )
   }
 

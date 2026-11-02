@@ -150,6 +150,10 @@ final class GenzRoom {
   private var rig: CatRig?
   private var behaviour = CatBehaviour(clips: [:])
   private var life = LifeDrive()
+  private var lifeNeeds: PetNeeds?
+  private var lifeProps: GenzLifeProps?
+  /// The lamp's extra warmth from Loved, in steps, so the light changes only now and then.
+  private var lifeWarmth: Float = 0
   private var catChoice = CatChoice.standard
   private var catModel: Entity?
   private var catLoad: Task<Void, Never>?
@@ -239,6 +243,11 @@ final class GenzRoom {
     NookiDiorama.makeTappable(
       catHolder, size: [length * 0.8, length * 0.6, length * 0.8], center: [0, length * 0.3, 0])
     room.addChild(catHolder)
+    let props = GenzLifeProps(kit: kit, catLength: length)
+    props.place(at: layout.cat.spot.scene, heading: layout.cat.heading)
+    props.show(lifeNeeds)
+    room.addChild(props.root)
+    lifeProps = props
     let glow = GenzGlow(layout: layout, kit: kit)
     glow.shadeCat(in: catHolder, length: length)
     room.addChild(glow.root)
@@ -776,7 +785,9 @@ final class GenzRoom {
   private func applyLook() {
     glow?.apply(look)
     updateScreen()
-    let lamp = GenzColour.mix(layout.lampColour, look.key.colour.genz, by: look.key.warmth)
+    let lamp = GenzColour.mix(
+      GenzColour.mix(layout.lampColour, look.key.colour.genz, by: look.key.warmth),
+      Self.lovedLamp, by: lifeWarmth)
     let soft = look.key.softness
     switch layout.style {
     case .sunsetLamp:
@@ -1187,6 +1198,19 @@ extension GenzRoom {
 
   /// Bats closer together than this are one game.
   private static var gameGap: Double { 60 }
+
+  /// Shows the needs in the room, or hides them for nil: the bowl, the yarn, the lamp's warmth.
+  func showLife(_ needs: PetNeeds?) {
+    lifeNeeds = needs
+    lifeProps?.show(needs)
+    let warmth = (GenzLifeProps.warmth(needs) * 20).rounded() / 20
+    guard warmth != lifeWarmth else { return }
+    lifeWarmth = warmth
+    if isBuilt { applyLook() }
+  }
+
+  /// The amber the lamp leans toward as the cat feels loved.
+  private static let lovedLamp = GenzColour(0xFFA860)
 
   /// Lets the cat's needs steer what it does on its own.
   func follow(_ life: LifeDrive?) {

@@ -35,6 +35,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case shopScene
   case notesDesk
   case catLife
+  case lifeInRoom
+  case lifeBubble
+  case lifeRings
+  case lifeChips
   case lifeDebug
 
   public enum Group: CaseIterable, Sendable {
@@ -86,6 +90,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .shopScene: .home
     case .notesDesk: .notes
     case .catLife: .cat
+    case .lifeInRoom: .cat
+    case .lifeBubble: .cat
+    case .lifeRings: .cat
+    case .lifeChips: .cat
     case .lifeDebug: .cat
     }
   }
@@ -121,6 +129,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .shopScene: "Shop tab"
     case .notesDesk: "Notes desk"
     case .catLife: "The cat's needs"
+    case .lifeInRoom: "Needs in the room"
+    case .lifeBubble: "Thought bubble"
+    case .lifeRings: "Need rings"
+    case .lifeChips: "Need words"
     case .lifeDebug: "Life debug"
     }
   }
@@ -129,6 +141,14 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     switch self {
     case .catLife:
       "The cat gets hungry, sleepy, playful and wants to be loved by you both, and lets it show. Treats feed it, petting and notes most of all make it feel loved, playing with it keeps it lively, and it sleeps at night. It never gets sick, and a few days away hurt little."
+    case .lifeInRoom:
+      "With the cat's needs on, the room shows them: the bowl empties, a ball of yarn comes out when it wants to play, and the lamp burns warmer the more loved it feels."
+    case .lifeBubble:
+      "With the cat's needs on, a small thought bubble floats over the cat when one need is low: a fish, a ball, a heart or a z. Tap it to answer."
+    case .lifeRings:
+      "With the cat's needs on, a long press on the cat pulls up its portrait in four soft rings, one per need, with no numbers."
+    case .lifeChips:
+      "With the cat's needs on, four small words under the room, Full, Rested, Loved and Playful, glow when the need is met and fade when it is not."
     case .lifeDebug:
       "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
     case .catCarriesNote:
@@ -222,6 +242,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .shopScene: false
     case .notesDesk: false
     case .catLife: false
+    case .lifeInRoom: false
+    case .lifeBubble: false
+    case .lifeRings: false
+    case .lifeChips: false
     case .lifeDebug: false
     }
   }
@@ -257,6 +281,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .shopScene: true
     case .notesDesk: true
     case .catLife: false
+    case .lifeInRoom: true
+    case .lifeBubble: false
+    case .lifeRings: false
+    case .lifeChips: false
     case .lifeDebug: false
     }
   }

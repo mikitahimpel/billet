@@ -24,11 +24,14 @@ public struct PetPlayState: Hashable, Sendable {
   public var catAway: Bool
   /// What the pet's needs ask of its behaviour, or nil when its life is not switched on.
   public var life: LifeDrive?
+  /// The needs for a scene to show in the room itself: the bowl, a toy, the lamp's warmth. Nil
+  /// when that variant is off.
+  public var lifeNeeds: PetNeeds?
 
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
-    catAway: Bool = false, life: LifeDrive? = nil
+    catAway: Bool = false, life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil
   ) {
     self.treat = treat
     self.streak = streak
@@ -38,5 +41,6 @@ public struct PetPlayState: Hashable, Sendable {
     self.lastTreat = lastTreat
     self.catAway = catAway
     self.life = life
+    self.lifeNeeds = lifeNeeds
   }
 }
