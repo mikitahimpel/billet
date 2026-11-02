@@ -2,9 +2,9 @@ import FeatureHome
 import Persistence
 import PetSceneCatalog
 import PetSceneReality
-import PetSceneRive
 import SwiftUI
 import Transport
+import WidgetBridge
 import WidgetKit
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
@@ -22,11 +22,20 @@ struct BilletApp: App {
   private let demoHost = Bundle.main.object(forInfoDictionaryKey: "BilletDemoHost") as? String ?? ""
   private let backend = BackendMode(info: Bundle.main.infoDictionary)
   @State private var catalog = PetSceneCatalog(
-    scenes: [LittleHousePetScene(), NookiPetScene(), RooftopPetScene()],
+    scenes: [NookiPetScene()],
     defaults: .standard,
     poses: try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     onPosesPublished: { WidgetCenter.shared.reloadAllTimelines() }
   )
+
+  init() {
+    // Before Home reads the room style.
+    if let store = WidgetFeaturesStore.appGroup() {
+      FlatSceneMigration.run(
+        defaults: .standard, choiceKey: PetSceneCatalog.choiceKey,
+        keptSceneID: NookiPetScene().id, store: store)
+    }
+  }
 
   var body: some Scene {
     WindowGroup {

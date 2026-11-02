@@ -227,13 +227,14 @@ packages/
     Pet                 World state and the delivery scenario, no graphics
     PetScene            The contract between the pet and a scene
     PetSceneCatalog     The linked scenes and the user's choice
-  pet-scenes/{rive,reality}   One SwiftPM package per graphics engine
+  pet-scenes/reality  The RealityKit scene, the only one the app ships
 ```
 
 ### Pet scenes
 
-The App target lists the scenes it ships, and removing one means not linking its package. Rive and
-RealityKit stay inside `packages/pet-scenes`; `ios:test` fails if `packages/ios` imports either.
+The App target lists the scenes it ships, and removing one means not linking its package. Graphics
+engines stay inside `packages/pet-scenes`; `ios:test` fails if `packages/ios` imports RealityKit or
+Rive.
 Scenes show `PetWorld` and report events, and `Pet` finishes a step by deadline if a scene hangs.
 The widget links no engine: the catalog copies the chosen scene's PNG poses to the App Group.
 

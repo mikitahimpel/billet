@@ -19,7 +19,7 @@ public struct ComponentGallery: View {
       }
       BilletButton("Send to Mira", rank: .primary) {}
       BilletButton("Not now", rank: .secondary) {}
-      ListRow("Scene", subtitle: "Little House") {
+      ListRow("Room", subtitle: "Window Seat") {
         EmptyView()
       } trailing: {
         EmptyView()

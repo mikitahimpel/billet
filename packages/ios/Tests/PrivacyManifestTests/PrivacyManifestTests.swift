@@ -90,7 +90,6 @@ import Testing
   @Test func theAppManifestDeclaresEveryAPIItsSourcesUse() throws {
     let used = try Self.categoriesUsed(in: [
       "apps/ios/App", "packages/ios/Sources", "packages/pet-scenes/reality/Sources",
-      "packages/pet-scenes/rive/Sources",
     ])
     let declared = Set(try Self.manifest("App").accessed.keys)
     #expect(used.subtracting(declared).isEmpty, "undeclared: \(used.subtracting(declared))")
