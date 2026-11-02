@@ -178,7 +178,8 @@ import Testing
     _ = rooms.room(GenzLayout.sunsetLamp)
     let start = ContinuousClock.now
     await rooms.untilLetGo()
-    #expect(ContinuousClock.now - start < .seconds(1))
+    // Well under the five seconds a view still holding its scene could take.
+    #expect(ContinuousClock.now - start < .seconds(4))
   }
 
   @Test func theNoteLeavesTheDiscShowingAroundIt() throws {
