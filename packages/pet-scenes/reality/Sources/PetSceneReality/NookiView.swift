@@ -144,7 +144,11 @@ private struct NookiStage: View {
   private var room: some View {
     RealityView { content in
       content.camera = .virtual
-      content.add(diorama.root)
+      // The room outlives its view. A view that goes removes only its own holder, so it cannot
+      // take the room away from the view that came after it.
+      let holder = Entity()
+      holder.addChild(diorama.root)
+      content.add(holder)
       content.add(shopRoom.root)
       diorama.startUpdates(from: content)
     }
