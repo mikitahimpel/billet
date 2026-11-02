@@ -1,3 +1,4 @@
+import FeatureInbox
 import FeatureOnboarding
 import FeaturePairing
 import Foundation
@@ -30,6 +31,7 @@ public final class RealAppModel {
   public let accounts: AccountStore
   public let signIn: SignInModel
   public private(set) var pairing: PairingModel
+  @ObservationIgnored private var cachedHistory: HistoryModel?
 
   public init(api: APIClient, accounts: AccountStore) {
     self.api = api
@@ -50,9 +52,19 @@ public final class RealAppModel {
     stage = .paired
   }
 
+  /// The history of the signed-in account, kept for as long as the account stays signed in.
+  public func history() -> HistoryModel {
+    if let cachedHistory { return cachedHistory }
+    let me = ((try? accounts.load()) ?? nil)?.record.userID ?? ""
+    let model = HistoryModel(api: api, me: me)
+    cachedHistory = model
+    return model
+  }
+
   /// Forgets the account on this phone and returns to sign-in.
   public func signedOut() {
     try? accounts.clear()
+    cachedHistory = nil
     pairing = PairingModel(api: api)
     stage = .signedOut
   }
