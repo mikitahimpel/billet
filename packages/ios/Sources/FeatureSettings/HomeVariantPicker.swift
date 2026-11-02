@@ -3,8 +3,8 @@ import Pet
 import SwiftUI
 import WidgetBridge
 
-/// How Home is laid out, one row per variant with a check on the chosen one. Saved with the Labs
-/// flags.
+/// How Home is laid out: following the pair's test, or one row per variant with a check on the
+/// chosen one. Saved with the Labs flags.
 struct HomeVariantPicker: View {
   let model: WidgetFeaturesModel
 
@@ -15,8 +15,12 @@ struct HomeVariantPicker: View {
         .foregroundStyle(Palette.muted.color)
         .padding(.horizontal, Spacing.medium)
       SettingsGroup {
+        FollowTheTestRow(
+          subtitle: "What this pair's test gives, else the standard Home.",
+          selected: model.homeVariantOverride == nil, identifier: "homeVariant-follow",
+          follow: model.followTheHomeVariantTest)
         ForEach(HomeVariant.allCases, id: \.self) { variant in
-          if variant != HomeVariant.allCases.first { ListDivider() }
+          ListDivider()
           row(variant)
         }
       }
@@ -63,7 +67,7 @@ struct HomeVariantPicker: View {
   }
 
   private func row(_ variant: HomeVariant) -> some View {
-    let selected = model.homeVariant == variant
+    let selected = model.homeVariantOverride == variant
     return Button {
       withAnimation(Motion.spring) { model.setHomeVariant(variant) }
     } label: {

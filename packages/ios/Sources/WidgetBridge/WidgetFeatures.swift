@@ -132,10 +132,16 @@ public struct WidgetFeaturesStore: Sendable {
 
   public static let windowViewFileName = "window-view.json"
 
+  /// The window view with its weather and hour chosen in Labs, or `nil` when none was or the
+  /// file cannot be read.
+  public func loadWindowViewOverride() -> WindowViewChoice? {
+    (try? storage.readJSON(WindowViewChoice.self, named: Self.windowViewFileName)) ?? nil
+  }
+
   /// The saved window view with its weather and hour, or the standard one when nothing readable
   /// is saved.
   public func loadWindowView() -> WindowViewChoice {
-    (try? storage.readJSON(WindowViewChoice.self, named: Self.windowViewFileName)) ?? .standard
+    loadWindowViewOverride() ?? .standard
   }
 
   public func saveWindowView(_ choice: WindowViewChoice) throws(PersistenceError) {
@@ -153,33 +159,63 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(ground, named: Self.eveningGroundFileName)
   }
 
+  /// Forgets the Labs choice, so the window follows the pair's flag, if one is set.
+  public func clearWindowView() throws(PersistenceError) {
+    try storage.remove(Self.windowViewFileName)
+  }
+
   public static let shopkeeperFileName = "shopkeeper.json"
+
+  /// The shopkeeper chosen in Labs, or `nil` when none was or the file cannot be read.
+  public func loadShopkeeperOverride() -> Shopkeeper? {
+    (try? storage.readJSON(Shopkeeper.self, named: Self.shopkeeperFileName)) ?? nil
+  }
 
   /// The saved shopkeeper, or the standard one when nothing readable is saved.
   public func loadShopkeeper() -> Shopkeeper {
-    (try? storage.readJSON(Shopkeeper.self, named: Self.shopkeeperFileName)) ?? .standard
+    loadShopkeeperOverride() ?? .standard
   }
 
   public func saveShopkeeper(_ keeper: Shopkeeper) throws(PersistenceError) {
     try storage.writeJSON(keeper, named: Self.shopkeeperFileName)
   }
 
+  /// Forgets the Labs choice, so the shop follows the pair's flag, if one is set.
+  public func clearShopkeeper() throws(PersistenceError) {
+    try storage.remove(Self.shopkeeperFileName)
+  }
+
   public static let homeVariantFileName = "home-variant.json"
+
+  /// The layout of Home chosen in Labs, or `nil` when none was or the file cannot be read.
+  public func loadHomeVariantOverride() -> HomeVariant? {
+    (try? storage.readJSON(HomeVariant.self, named: Self.homeVariantFileName)) ?? nil
+  }
 
   /// The saved layout of Home, or the standard one when nothing readable is saved.
   public func loadHomeVariant() -> HomeVariant {
-    (try? storage.readJSON(HomeVariant.self, named: Self.homeVariantFileName)) ?? .standard
+    loadHomeVariantOverride() ?? .standard
   }
 
   public func saveHomeVariant(_ variant: HomeVariant) throws(PersistenceError) {
     try storage.writeJSON(variant, named: Self.homeVariantFileName)
   }
 
+  /// Forgets the Labs choice, so Home follows the pair's flag, if one is set.
+  public func clearHomeVariant() throws(PersistenceError) {
+    try storage.remove(Self.homeVariantFileName)
+  }
+
   public static let lightingFileName = "room-lighting.json"
+
+  /// The lighting chosen in Labs, or `nil` when none was or the file cannot be read.
+  public func loadLightingOverride() -> RoomLighting? {
+    (try? storage.readJSON(RoomLighting.self, named: Self.lightingFileName)) ?? nil
+  }
 
   /// The saved lighting of the rooms, or the standard one when nothing readable is saved.
   public func loadLighting() -> RoomLighting {
-    (try? storage.readJSON(RoomLighting.self, named: Self.lightingFileName)) ?? .standard
+    loadLightingOverride() ?? .standard
   }
 
   public func saveLighting(_ lighting: RoomLighting) throws(PersistenceError) {
@@ -195,6 +231,11 @@ public struct WidgetFeaturesStore: Sendable {
 
   public func saveFurniture(_ furniture: RoomFurniture) throws(PersistenceError) {
     try storage.writeJSON(furniture, named: Self.furnitureFileName)
+  }
+
+  /// Forgets the Labs choice, so the rooms follow the pair's flag, if one is set.
+  public func clearLighting() throws(PersistenceError) {
+    try storage.remove(Self.lightingFileName)
   }
 
   public static let pretendHourFileName = "pretend-hour.json"
@@ -223,20 +264,20 @@ public final class WidgetFeaturesModel {
   public private(set) var remote: RemoteFlags
   /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
   public private(set) var cat: CatChoice
-  /// What the styled rooms' window looks out on. Kept beside the flags, in its own file.
-  public private(set) var windowView: WindowViewChoice
+  /// The window view chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  public private(set) var windowViewOverride: WindowViewChoice?
+  /// The layout of Home chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  public private(set) var homeVariantOverride: HomeVariant?
   /// The ground behind every screen. Kept beside the flags, in its own file.
   public private(set) var eveningGround: EveningGround
-  /// How Home is laid out around the room. Kept beside the flags, in its own file.
-  public private(set) var homeVariant: HomeVariant
   /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
   public private(set) var pretendHour: Int?
-  /// How the rooms are lit. Kept beside the flags, in its own file.
-  public private(set) var lighting: RoomLighting
+  /// The lighting chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  public private(set) var lightingOverride: RoomLighting?
+  /// The shopkeeper chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  public private(set) var shopkeeperOverride: Shopkeeper?
   /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
-  /// Who keeps the 3D shop. Kept beside the flags, in its own file.
-  public private(set) var shopkeeper: Shopkeeper
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -248,18 +289,46 @@ public final class WidgetFeaturesModel {
     roomStyleOverride = store?.loadRoomStyleOverride()
     remote = store?.loadRemoteFlags() ?? RemoteFlags()
     cat = store?.loadCat() ?? .standard
-    windowView = store?.loadWindowView() ?? .standard
+    windowViewOverride = store?.loadWindowViewOverride()
+    homeVariantOverride = store?.loadHomeVariantOverride()
     eveningGround = store?.loadEveningGround() ?? .standard
-    homeVariant = store?.loadHomeVariant() ?? .standard
     pretendHour = store?.loadPretendHour()
-    lighting = store?.loadLighting() ?? .standard
+    lightingOverride = store?.loadLightingOverride()
+    shopkeeperOverride = store?.loadShopkeeperOverride()
     furniture = store?.loadFurniture() ?? .standard
-    shopkeeper = store?.loadShopkeeper() ?? .standard
+  }
+
+  // Each Labs setting the server can also set reads the same way: the choice made in Labs on this
+  // phone, else the pair's variant if the server gave one this build has, else the standard value.
+
+  /// How the rooms are lit.
+  public var lighting: RoomLighting {
+    lightingOverride ?? remote.choice(of: Experiments.roomLighting) ?? .standard
+  }
+
+  /// What the styled rooms' window looks out on. The server sets only the view, never its weather
+  /// or hour.
+  public var windowView: WindowViewChoice {
+    windowViewOverride
+      ?? remote.choice(of: Experiments.windowView, as: WindowView.self).map {
+        WindowViewChoice(view: $0)
+      }
+      ?? .standard
+  }
+
+  /// How Home is laid out around the room.
+  public var homeVariant: HomeVariant {
+    homeVariantOverride ?? remote.choice(of: Experiments.homeLayout) ?? .standard
+  }
+
+  /// Who keeps the 3D shop.
+  public var shopkeeper: Shopkeeper {
+    shopkeeperOverride ?? remote.choice(of: Experiments.shopkeeper) ?? .standard
   }
 
   public func setLighting(_ lighting: RoomLighting) {
-    guard self.lighting != lighting else { return }
-    self.lighting = lighting
+    guard lightingOverride != lighting else { return }
+    lightingOverride = lighting
     try? store?.saveLighting(lighting)
   }
 
@@ -269,10 +338,24 @@ public final class WidgetFeaturesModel {
     try? store?.saveFurniture(furniture)
   }
 
+  /// Drops the Labs lighting, so the rooms follow the pair's flag.
+  public func followTheLightingTest() {
+    guard lightingOverride != nil else { return }
+    lightingOverride = nil
+    try? store?.clearLighting()
+  }
+
   public func setShopkeeper(_ keeper: Shopkeeper) {
-    guard shopkeeper != keeper else { return }
-    shopkeeper = keeper
+    guard shopkeeperOverride != keeper else { return }
+    shopkeeperOverride = keeper
     try? store?.saveShopkeeper(keeper)
+  }
+
+  /// Drops the Labs shopkeeper, so the shop follows the pair's flag.
+  public func followTheShopkeeperTest() {
+    guard shopkeeperOverride != nil else { return }
+    shopkeeperOverride = nil
+    try? store?.clearShopkeeper()
   }
 
   public func setPretendHour(_ hour: Int?) {
@@ -283,9 +366,16 @@ public final class WidgetFeaturesModel {
   }
 
   public func setHomeVariant(_ variant: HomeVariant) {
-    guard homeVariant != variant else { return }
-    homeVariant = variant
+    guard homeVariantOverride != variant else { return }
+    homeVariantOverride = variant
     try? store?.saveHomeVariant(variant)
+  }
+
+  /// Drops the Labs layout, so Home follows the pair's flag.
+  public func followTheHomeVariantTest() {
+    guard homeVariantOverride != nil else { return }
+    homeVariantOverride = nil
+    try? store?.clearHomeVariant()
   }
 
   /// How a scene with more than one room dresses it: the Labs choice, else the variant of the
@@ -305,8 +395,8 @@ public final class WidgetFeaturesModel {
   }
 
   public func setWindowView(_ choice: WindowViewChoice) {
-    guard windowView != choice else { return }
-    windowView = choice
+    guard windowViewOverride != choice else { return }
+    windowViewOverride = choice
     try? store?.saveWindowView(choice)
   }
 
@@ -316,6 +406,13 @@ public final class WidgetFeaturesModel {
     try? store?.saveEveningGround(ground)
     // The widgets stand on the same ground.
     onChange()
+  }
+
+  /// Drops the Labs view and its weather and hour, so the window follows the pair's flag.
+  public func followTheWindowViewTest() {
+    guard windowViewOverride != nil else { return }
+    windowViewOverride = nil
+    try? store?.clearWindowView()
   }
 
   /// Drops the Labs choice, so the room follows the pair's test.

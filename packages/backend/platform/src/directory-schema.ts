@@ -157,3 +157,46 @@ export const pairEvents = sqliteTable(
     index("pair_events_day_index").on(table.day),
   ],
 );
+
+// The live configuration of each experiment and remote flag, as the admin panel last saved it.
+// The registry in `backend-flags/experiments` defines the keys and variants; a row here only
+// changes weights, default, exposure, status, kill switch and targeting (JSON in `config`).
+// `version` goes up by one per save, so two editors cannot overwrite each other.
+export const flagConfigs = sqliteTable("flag_configs", {
+  key: text("key").primaryKey(),
+  config: text("config").notNull(),
+  version: integer("version").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+  updatedBy: text("updated_by").notNull(),
+});
+
+// Every change the admin panel made, newest last: who (the Cloudflare Access email), what, and the
+// configuration before and after. Written in the same batch as the change itself.
+export const flagChanges = sqliteTable(
+  "flag_changes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    key: text("key").notNull(),
+    at: integer("at").notNull(),
+    by: text("by").notNull(),
+    action: text("action").notNull(),
+    pairId: text("pair_id"),
+    before: text("before"),
+    after: text("after"),
+  },
+  (table) => [index("flag_changes_key_index").on(table.key, table.id)],
+);
+
+// A variant forced on one pair, for testing on the owner's own phones. It beats the pair's stored
+// assignment but never the kill switch. Not a foreign key, like `pair_flags`.
+export const pairFlagOverrides = sqliteTable(
+  "pair_flag_overrides",
+  {
+    pairId: text("pair_id").notNull(),
+    experimentKey: text("experiment_key").notNull(),
+    variant: text("variant").notNull(),
+    setAt: integer("set_at").notNull(),
+    setBy: text("set_by").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
+);

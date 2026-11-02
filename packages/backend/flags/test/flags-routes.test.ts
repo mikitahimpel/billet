@@ -14,6 +14,8 @@ import { Experiments, defineExperiments } from "../src/experiments.ts";
 import { FlagsRepository } from "../src/flags-repository.ts";
 import { FlagsRoutes } from "../src/flags-routes.ts";
 import { FlagsService } from "../src/flags-service.ts";
+import { FlagConfigRepository } from "../src/flag-config-repository.ts";
+import { makeInMemoryFlagConfigRepository } from "./in-memory-flag-config-repository.ts";
 import { makeInMemoryFlagsRepository } from "./in-memory-flags-repository.ts";
 
 describe("flags route", () => {
@@ -47,6 +49,7 @@ describe("flags route", () => {
         Layer.mergeAll(
           Layer.succeed(PairingRepository, pairs.repository),
           Layer.succeed(FlagsRepository, makeInMemoryFlagsRepository().repository),
+          Layer.succeed(FlagConfigRepository, makeInMemoryFlagConfigRepository().repository),
           Experiments.with(
             defineExperiments([
               {

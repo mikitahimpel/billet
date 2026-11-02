@@ -11,6 +11,7 @@
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
     "./event-sink-live": "./src/event-sink-live.ts",
+    "./flag-config-repository-live": "./src/flag-config-repository-live.ts",
     "./flags-repository-live": "./src/flags-repository-live.ts",
     "./metrics-repository-live": "./src/metrics-repository-live.ts",
     "./demo-room-durable-object": "./src/demo-room-durable-object.ts",

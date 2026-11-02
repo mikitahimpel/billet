@@ -13,6 +13,9 @@ import {
 import { limits } from "../src/rate-limit.ts";
 import { clientHeaders, mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { respondApi } from "../src/api-fetch.ts";
+import { FlagConfigRepositoryLive } from "../src/flag-config-repository-live.ts";
+import { FlagConfigRepository } from "@billet/backend-flags/flag-config-repository";
+import { configOf } from "@billet/backend-flags/flag-config";
 import { testExperiments } from "./test-experiments.ts";
 import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
@@ -111,6 +114,9 @@ const pairRows = async () =>
 const tables = [
   "pair_events",
   "pair_flags",
+  "flag_configs",
+  "flag_changes",
+  "pair_flag_overrides",
   "users",
   "devices",
   "sessions",
@@ -901,6 +907,40 @@ describe("the couple's WebSocket", () => {
 
     it("needs a signed-in caller", async () => {
       expect((await call("/v1/flags", { method: "GET" })).status).toBe(401);
+    });
+
+    it("follows a configuration saved without a deploy: a kill, then version targeting", async () => {
+      const { owner } = await pairOf("subject-cfg-a", "subject-cfg-b");
+      expect((await flagsFor(owner)).map(({ key }) => key)).toContain("split");
+      const save = (config: Record<string, unknown>, expectedVersion: number) =>
+        Effect.runPromise(
+          Effect.gen(function* () {
+            const repository = yield* FlagConfigRepository;
+            const split = testExperiments.find(({ key }) => key === "split");
+            if (split === undefined) throw new Error("no split");
+            return yield* repository.save({
+              key: split.key,
+              config: { ...configOf(split), ...config },
+              expectedVersion,
+              action: "edit",
+              by: "owner@example.com",
+              at: Date.now(),
+            });
+          }).pipe(Effect.provide(FlagConfigRepositoryLive(env.DB, caches.default))),
+        );
+      await save({ killed: true }, 0);
+      expect((await flagsFor(owner)).map(({ key }) => key)).not.toContain("split");
+      await save({ killed: false, targeting: { minAppVersion: "2.0" } }, 1);
+      // The pair entered before the targeting, so it keeps its variant.
+      expect((await flagsFor(owner)).map(({ key }) => key)).toContain("split");
+      const newcomer = (await pairOf("subject-cfg-c", "subject-cfg-d")).owner;
+      expect((await flagsFor(newcomer)).map(({ key }) => key)).not.toContain("split");
+      const withVersion = await call("/v1/flags", {
+        method: "GET",
+        headers: { ...bearer(newcomer), [clientHeaders.appVersion]: "2.1.0+30" },
+      });
+      const listed = Schema.decodeUnknownSync(FlagsResponse)(await withVersion.json()).flags;
+      expect(listed.map(({ key }) => key)).toContain("split");
     });
 
     it("lists no experiments for someone without a partner", async () => {

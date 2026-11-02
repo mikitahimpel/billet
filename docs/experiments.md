@@ -8,14 +8,46 @@ This page has three parts: the assignment service, the metrics, and the iOS clie
 
 ## What an experiment is
 
+Everything lives in one place, `registry` in `packages/backend/flags/src/experiments.ts`. An entry is:
+
 - A **key** (`home-direction`) that names one question and is never reused for another.
-- Two or more **variants** (`window-seat`, `sunset-lamp`), each with a whole-number weight.
-- A **default**, one of the variants: what a pair gets when it is outside the experiment, when
-  the experiment is off, and when the phone is offline and has nothing stored.
-- An **exposure**: the whole percent of pairs that enter the experiment. The others keep the
-  default and are not analysed.
-- A **kill switch** (`killed`): the server stops delivering the experiment and every client falls
-  back to its built-in default.
+- A **kind**: `experiment` (a question with one primary metric, compared variant by variant) or
+  `flag` (a Labs setting the owner rolls out remotely, delivered the same way but not compared).
+- A **description**: what it changes and, for an experiment, the primary metric.
+- Two or more **variants** (`window-seat`, `sunset-lamp`), each with a whole-number weight (0 is
+  allowed, as long as one is above 0).
+- A **default**, one of the variants: what a targeted pair outside the exposure gets.
+- An **exposure**: the whole percent of targeted pairs that enter. The others get the default and
+  are not analysed.
+- A **status**: `draft` (only pairs with an override get it, so the owner can try it first),
+  `running` (pairs enter), or `stopped` (nobody new enters; pairs already in keep their variant, so
+  a test can finish cleanly).
+- A **kill switch** (`killed`): the server stops delivering it to anyone, overrides included, and
+  every app falls back to its built-in default.
+- **Targeting**: `minAppVersion` / `maxAppVersion` (inclusive; `1.2` covers every build of 1.2;
+  a build that sent no version is left out by either bound), `ageBands` (`13-17`, `18+`), and
+  `pairIds` (an allow-list, at most 200). Each rule given must hold. A pair the rules leave out is
+  not listed at all.
+
+**Code fixes the shape, D1 holds the settings.** Key, kind and variant ids come only from the
+registry, because the app must contain every variant (see "App Store rules"). Everything else
+in an entry is only its starting configuration. The admin panel (`docs/admin.md`) saves weights,
+default, exposure, status, kill switch, targeting and description to `flag_configs` in D1, with
+a version number so two editors can't overwrite each other, and a line in `flag_changes` (who,
+from the Access identity, and before and after) in the same batch. A saved row that no longer fits
+its entry (a variant removed in code) is ignored and the registry's configuration is used.
+
+**Edge cache.** `GET /v1/flags` reads the configurations through the colo's Cache API
+(`flagConfigCacheSeconds`, 30 s). A save drops the cached copy in the colo that saved it; other
+colos see it within 30 s. So a kill reaches every app on its next flags read, at most 30 s later.
+
+**Overrides.** `pair_flag_overrides` forces one variant on one pair, for testing on the owner's
+own phones. It beats the stored assignment, status and targeting, but never the kill switch, and an
+override naming a variant the entry lacks is ignored.
+
+**Age band.** The server doesn't store an age band yet, so today a rule with `ageBands` leaves
+every pair out. It starts to work when the age gate stores the declared band
+(decisions.md, 2026-11-02).
 
 The unit is the **pair**. Both partners always get the same variant, because the assignment is a
 function of the pair id and the key, not of a phone.
@@ -37,10 +69,14 @@ Assignment runs when the invite is claimed (`PairingObserver`). If that fails, t
 `GET /v1/flags` does the same work, so nothing is lost. A pair that was already paired when an
 experiment started gets its variant on its first read.
 
-`GET /v1/flags` (signed in, never cached) answers `{ "flags": [{ "key", "variant" }] }`:
+`GET /v1/flags` (signed in, never cached for the caller) answers `{ "flags": [{ "key", "variant" }] }`.
+The shape has not changed. The request may carry `X-Billet-App-Version`, which version targeting
+reads.
 
-- Only running experiments are listed. An experiment that is off, not started or unknown to the
-  caller is absent, and the client uses its default.
+- In this order: killed → not listed; an override → its variant; a draft → not listed; a stored
+  variant → kept (a retired one becomes the default); stopped → not listed for a pair that never
+  entered; not targeted → not listed; else the hash decides, and an exposed pair is stored.
+- A killed, draft or unknown experiment is absent, and the client uses its default.
 - A caller without a partner gets an empty list: there is no pair to assign.
 - A stored variant the registry no longer lists (retired) is answered with the default, not a
   new roll.
@@ -49,20 +85,34 @@ experiment started gets its variant on its first read.
 
 ## Adding an experiment
 
-1. Build every variant into the app first, complete and reviewable (see "App Store rules").
-2. Add an entry to `registry` in `packages/backend/flags/src/experiments.ts`, with `killed:
-   true` until you want it live. `defineExperiment` throws at start-up on a bad spec (fewer than
-   two variants, default not among them, a weight that is not a whole number, exposure outside
-   0 to 100, a key that is not lowercase hyphenated words), and a test loads the registry.
-3. Choose **one primary metric** before you start, and write it next to the entry.
-4. Deploy the server with `killed: false`. No app release is needed if the build already
-   contains the variants.
-5. To stop: set `killed: true` and deploy. Clients return to their defaults on their next launch
-   (or sooner, when the app comes to the front). Leave the entry in the registry so the key is
-   never reused.
+1. Build every variant into the app first, complete and reviewable (see "App Store rules"), and add
+   it to `Experiments` in `RemoteFlags.swift`. A Swift test reads `experiments.ts` and fails until
+   both list the same key and variants.
+2. Add an entry to `registry` with `status: "draft"`. `defineExperiment` throws at start-up on a
+   bad spec (fewer than two variants, every weight 0, default not among them, a weight that is not
+   a whole number, exposure outside 0 to 100, a malformed version bound, a key that is not
+   lowercase hyphenated words), and a test loads the registry.
+3. For an experiment, choose **one primary metric** before you start and write it in the
+   description.
+4. Deploy. Then start, stop and kill it from the admin panel, without a deploy and without an App
+   Store release if the build already has the variants.
+5. Leave the entry in the registry after it ends, so the key is never reused.
 
-Today the kill switch is a one-line code change and a server deploy, which takes minutes and no
-App Store review. A switch the owner can flip without a deploy (a D1 row) is a possible follow-up.
+### Remote keys for Labs settings
+
+Each enum Labs setting the owner may want to roll out has a key. Each is a `flag` in `draft`, with
+all its weight on today's standard value, so starting one changes nothing until a weight moves:
+
+| Key | Labs setting | Variants (Swift case names in kebab-case) |
+| --- | --- | --- |
+| `home-direction` | Room style | `window-seat`, `sunset-lamp` |
+| `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
+| `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk` |
+| `home-layout` | Home | `classic`, `immersive`, `cinematic`, `living-window`, `night-and-day` |
+| `shopkeeper` | Shopkeeper | `tabby`, `raccoon`, `fox` |
+
+Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
+tester tools or not yet complete and reviewable), and `nooki` (no licence).
 
 ## On the phone
 
@@ -76,10 +126,11 @@ App Store review. A switch the owner can flip without a deploy (a D1 row) is a p
   (`FlagsRefresher`). The answer **replaces** the held copy and is saved in the App Group
   (`remote-flags.json`), so it is there at the next launch and offline. A failed request changes
   nothing. Leaving the pair or signing out forgets it: the variants belong to the pair.
-- **Which one wins.** A choice made in Labs > Room style, then the pair's variant, then what the
-  app did before the test (the standard room, Window Seat). So offline, on a first launch, with no partner, with
+- **Which one wins.** For each remote setting (room style, lighting, window view, Home layout,
+  shopkeeper): a choice made in Labs on this phone, then the pair's variant, then what the app did
+  before (the standard value). So offline, on a first launch, with no partner, with
   the experiment switched off or with a variant this build lacks, the screen is the one it always
-  was. "Follow the test" in the Labs picker removes the Labs choice. Testers and the owner use
+  was. "Follow the test", the first row of each of those Labs pickers, removes the Labs choice. Testers and the owner use
   Labs to look at any variant on purpose.
 - **What reads it.** `WidgetFeaturesModel.roomStyle` is the resolved value; screens read that and
   never the raw answer. Add a typed accessor like it for each new experiment.

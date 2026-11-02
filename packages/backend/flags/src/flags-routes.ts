@@ -1,8 +1,9 @@
 import { Effect, Layer } from "effect";
-import { HttpRouter, HttpServerResponse } from "effect/http";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures, type RouteFailure } from "@billet/backend-auth/auth-routes";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { clientInfoOf } from "@billet/contracts-http-api/client-info";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import { routes } from "@billet/contracts-http-api/routes";
 import type { FlagsUnavailable } from "./flags-error.ts";
@@ -30,13 +31,15 @@ export const FlagsRoutes = HttpRouter.use((router) =>
     const flags = yield* FlagsService;
     const principal = principalOf(yield* AuthService);
 
-    // Never cached: a switched-off experiment has to reach the next launch.
+    // Never cached for the caller: a switched-off experiment has to reach the next launch. The
+    // configurations behind it are cached at the edge for a few seconds (docs/experiments.md).
     yield* router.add(
       routes.getFlags.method,
       routes.getFlags.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
-        return yield* respondFlags(yield* flags.flagsFor(userId), {
+        const { appVersion } = clientInfoOf((yield* HttpServerRequest.HttpServerRequest).headers);
+        return yield* respondFlags(yield* flags.flagsFor(userId, { appVersion }), {
           headers: { "cache-control": "no-store" },
         });
       }).pipe(respondFlagsFailures),
