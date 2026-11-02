@@ -28,6 +28,7 @@ describe("rate limit groups", () => {
     ["/v1/pair", "pairing"],
     ["/v1/media", "media"],
     ["/v1/media/pairs/p/notes/n.png", "media"],
+    ["/v1/events", "events"],
     ["/v1/notes", undefined],
     ["/", undefined],
   ])("%s is %s", (path, group) => {

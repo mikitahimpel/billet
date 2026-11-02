@@ -101,14 +101,14 @@ struct LightingLook: Equatable, Sendable {
 
   /// The room glowing from inside like a lantern, in a dark warm haze brightest around it.
   static let amberLantern = LightingLook(
-    key: Key(colour: [1, 0.62, 0.3], warmth: 0.7, boost: 1.4, softness: 1.2, flicker: 0),
-    fill: Fill(top: [1, 0.78, 0.55], bottom: [0.75, 0.45, 0.25], shift: 0.35),
-    core: 70_000, rim: ([1, 0.72, 0.4], 30_000), fairy: (true, [1, 0.83, 0.55], 1.2),
+    key: Key(colour: [1, 0.64, 0.32], warmth: 0.75, boost: 2, softness: 1.6, flicker: 0),
+    fill: Fill(top: [1, 0.76, 0.5], bottom: [1, 0.6, 0.32], shift: 0.9),
+    core: 160_000, rim: ([1, 0.72, 0.4], 30_000), fairy: (true, [1, 0.83, 0.55], 2.2),
     sun: (.zero, 0),
-    led: [1, 0.8, 0.5], outside: [1, 0.7, 0.4], shadows: 0.55,
-    haze: Haze(centre: [0.78, 0.44, 0.2], edge: [0.13, 0.06, 0.03], cover: 1), halos: 1.2,
+    led: [1, 0.8, 0.5], outside: [1, 0.7, 0.4], shadows: 0.5,
+    haze: Haze(centre: [0.82, 0.47, 0.2], edge: [0.13, 0.06, 0.03], cover: 1), halos: 1.3,
     grade: Grade(
-      tint: [1, 0.8, 0.6], tintAmount: 0.45, lift: [0.24, 0.12, 0.05], liftAmount: 0.5),
+      tint: [1, 0.78, 0.55], tintAmount: 0.4, lift: [0.26, 0.13, 0.05], liftAmount: 0.45),
     vignette: ([0.1, 0.04, 0.01], 0.55))
 
   /// A darker room lit mostly by strings of warm fairy lights.

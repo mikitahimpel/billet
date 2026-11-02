@@ -3,9 +3,12 @@ import SwiftUI
 import simd
 
 /// The haze the room sits in: brightest right around it and falling off to the preset's edge
-/// colour, over the night behind it. A full cover replaces that night.
+/// colour, over the night behind it. A full cover replaces that night, except through the window,
+/// whose view still shows.
 struct GlowHaze: View {
   let look: LightingLook
+  /// The window's corners in the view, left clear of haze.
+  var window: [CGPoint] = []
 
   var body: some View {
     if look.haze.cover > 0 {
@@ -26,6 +29,13 @@ struct GlowHaze: View {
           ], center: UnitPoint(x: 0.5, y: 0.46), startRadiusFraction: 0, endRadiusFraction: 0.45
         )
         .blendMode(.screen)
+      }
+      .mask {
+        Canvas { canvas, size in
+          var path = Path(CGRect(origin: .zero, size: size))
+          if window.count > 2 { path.addLines(window + [window[0]]) }
+          canvas.fill(path, with: .color(.black), style: FillStyle(eoFill: true))
+        }
       }
       .ignoresSafeArea()
       .allowsHitTesting(false)

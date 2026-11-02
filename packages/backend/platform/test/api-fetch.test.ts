@@ -13,6 +13,7 @@ import { limits } from "../src/rate-limit.ts";
 import { mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
+import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import {
   ListNotesResponse,
@@ -105,6 +106,8 @@ const pairRows = async () =>
   (await env.DB.prepare("SELECT pair_id FROM pair_members").all<{ pair_id: string }>()).results;
 
 const tables = [
+  "pair_events",
+  "pair_flags",
   "users",
   "devices",
   "sessions",
@@ -801,5 +804,210 @@ describe("the couple's WebSocket", () => {
     mine.ws.send(JSON.stringify({ _tag: "Unknown" }));
     mine.ws.send("x".repeat(70_000));
     expect(await closed).toBe(1009);
+  });
+
+  describe("flags", () => {
+    const flagsFor = async (token: string) => {
+      const response = await call("/v1/flags", { method: "GET", headers: bearer(token) });
+      expect(response.status).toBe(200);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      return Schema.decodeUnknownSync(FlagsResponse)(await response.json()).flags;
+    };
+
+    const storedFlags = async () =>
+      (
+        await env.DB.prepare("SELECT pair_id, experiment_key, variant FROM pair_flags").all<{
+          pair_id: string;
+          experiment_key: string;
+          variant: string;
+        }>()
+      ).results;
+
+    it("needs a signed-in caller", async () => {
+      expect((await call("/v1/flags", { method: "GET" })).status).toBe(401);
+    });
+
+    it("lists no experiments for someone without a partner", async () => {
+      expect(await flagsFor(await signedInAs("subject-alone"))).toEqual([]);
+      expect(await storedFlags()).toEqual([]);
+    });
+
+    it("gives a pair its variants when it pairs, before anyone asks", async () => {
+      const { pairId } = await pairOf("subject-owner", "subject-claimer");
+      const stored = await storedFlags();
+      expect(stored.map(({ pair_id }) => pair_id)).toEqual([pairId, pairId]);
+      expect(stored.map(({ experiment_key }) => experiment_key).toSorted()).toEqual([
+        "skewed",
+        "split",
+      ]);
+    });
+
+    it("gives both partners the same variants, and the same on every read", async () => {
+      const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+      const [forOwner, forClaimer, again] = await Promise.all([
+        flagsFor(owner),
+        flagsFor(claimer),
+        flagsFor(owner),
+      ]);
+      expect(forOwner.map(({ key }) => key)).toEqual(["split", "skewed"]);
+      expect(forClaimer).toEqual(forOwner);
+      expect(again).toEqual(forOwner);
+      expect(await storedFlags()).toHaveLength(2);
+    });
+
+    it("never lists an experiment that is switched off, and stores nothing for it", async () => {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      expect((await flagsFor(owner)).map(({ key }) => key)).not.toContain("switched-off");
+      expect((await storedFlags()).map(({ experiment_key }) => experiment_key)).not.toContain(
+        "switched-off",
+      );
+    });
+
+    it("only ever delivers a variant the experiment lists", async () => {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      const byKey = Object.fromEntries(
+        (await flagsFor(owner)).map(({ key, variant }) => [key, variant]),
+      );
+      expect(["control", "bold"]).toContain(byKey["split"]);
+      expect(["control", "loud", "quiet"]).toContain(byKey["skewed"]);
+    });
+
+    it("answers an unpaired partner with no experiments after unpairing, and keeps the pair's rows", async () => {
+      const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
+      expect((await call("/v1/pair", { method: "DELETE", headers: bearer(owner) })).status).toBe(
+        204,
+      );
+      expect(await flagsFor(owner)).toEqual([]);
+      expect((await storedFlags()).every((row) => row.pair_id === pairId)).toBe(true);
+    });
+
+    it("stores no personal data with an assignment", async () => {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      await flagsFor(owner);
+      const stored = JSON.stringify(
+        (await env.DB.prepare("SELECT * FROM pair_flags").all()).results,
+      );
+      expect(stored).not.toContain("subject-");
+      expect(stored).not.toContain(owner);
+    });
+  });
+});
+
+describe("metrics", () => {
+  const events = async () =>
+    (
+      await env.DB.prepare(
+        "SELECT pair_id, user_id, name, day, count, first_at, last_at FROM pair_events ORDER BY name, user_id",
+      ).all<{ pair_id: string; user_id: string; name: string; day: string; count: number }>()
+    ).results;
+
+  const report = (token: string, body: unknown) => call("/v1/events", json(body, "POST", token));
+
+  const send = async (token: string) => {
+    const response = await sendPhoto(token, await uploaded(token));
+    expect(response.status).toBe(200);
+  };
+
+  it("needs a signed-in caller", async () => {
+    expect((await call("/v1/events", json({ events: ["AppOpened"] }))).status).toBe(401);
+    expect(await events()).toEqual([]);
+  });
+
+  it("counts the funnel as it happens: invite, pairing for both, a note each", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    await claimWith(claimer, await inviteFrom(owner));
+    await send(owner);
+    await send(claimer);
+    await send(owner);
+    const rows = await events();
+    const count = (name: string) => rows.filter((row) => row.name === name).map((row) => row.count);
+    expect(count("InviteCreated")).toEqual([1]);
+    expect(count("PairClaimed")).toEqual([1, 1]);
+    expect(count("NoteSent").toSorted()).toEqual([1, 2]);
+    const pairIds = new Set(
+      rows.filter((row) => row.name !== "InviteCreated").map((row) => row.pair_id),
+    );
+    expect(pairIds.size).toBe(1);
+    expect(rows.find((row) => row.name === "InviteCreated")?.pair_id).toBe("");
+  });
+
+  it("counts a retried note once", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const key = crypto.randomUUID();
+    await sendPhoto(owner, image, key);
+    await sendPhoto(owner, image, key);
+    expect((await events()).filter((row) => row.name === "NoteSent")).toMatchObject([{ count: 1 }]);
+  });
+
+  it("takes the events the app reports, under the caller's pair", async () => {
+    const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
+    expect(
+      (await report(owner, { events: ["AppOpened", "WidgetAdded", "OpeningWatched"] })).status,
+    ).toBe(204);
+    expect((await report(owner, { events: ["AppOpened"] })).status).toBe(204);
+    const rows = (await events()).filter((row) =>
+      ["AppOpened", "WidgetAdded", "OpeningWatched"].includes(row.name),
+    );
+    expect(rows.map((row) => [row.name, row.count, row.pair_id])).toEqual([
+      ["AppOpened", 2, pairId],
+      ["OpeningWatched", 1, pairId],
+      ["WidgetAdded", 1, pairId],
+    ]);
+  });
+
+  it("refuses a name only the server may record, and keeps the table as it was", async () => {
+    const owner = await signedInAs("subject-owner");
+    const before = await events();
+    expect((await report(owner, { events: ["NoteSent"] })).status).toBe(400);
+    expect(await events()).toEqual(before);
+  });
+
+  it("stores no content: no image key, no stroke, no token, and only the fixed columns", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    await call(
+      "/v1/notes",
+      json(
+        {
+          _tag: "Drawing",
+          key: crypto.randomUUID(),
+          image,
+          compact: {
+            version: 1,
+            strokes: [{ color: "#2A1A1C", width: 3, points: [4242, 4243, 4244, 4245] }],
+          },
+        },
+        "POST",
+        owner,
+      ),
+    );
+    await report(owner, { events: ["AppOpened"], text: "a private message" });
+    const dump = JSON.stringify((await env.DB.prepare("SELECT * FROM pair_events").all()).results);
+    for (const secret of [image, "4242", "2A1A1C", owner, "private message", "subject-"]) {
+      expect(dump).not.toContain(secret);
+    }
+    const columns = (await env.DB.prepare("PRAGMA table_info(pair_events)").all<{ name: string }>())
+      .results;
+    expect(columns.map(({ name }) => name).toSorted()).toEqual([
+      "count",
+      "day",
+      "first_at",
+      "last_at",
+      "name",
+      "pair_id",
+      "user_id",
+    ]);
+  });
+
+  it("does not fail a pairing or a note when it cannot count", async () => {
+    await env.DB.prepare("ALTER TABLE pair_events RENAME TO pair_events_away").run();
+    try {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      await send(owner);
+    } finally {
+      await env.DB.prepare("ALTER TABLE pair_events_away RENAME TO pair_events").run();
+    }
   });
 });

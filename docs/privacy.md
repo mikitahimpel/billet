@@ -1,6 +1,6 @@
 # Billet privacy policy
 
-Last updated: 2 November 2026
+Last updated: 3 November 2026
 
 Billet is a private app for two people to send each other drawings and photos. This policy covers the current test version, distributed through TestFlight.
 
@@ -10,14 +10,17 @@ Billet is a private app for two people to send each other drawings and photos. T
 - **Devices and sessions:** a random device ID, and a session that keeps you signed in. We keep only a one-way hash of the session token.
 - **Notes:** the drawings and photos you send to your partner, with who sent them and when.
 - **Push token:** an Apple identifier used to notify your device, if you allow notifications.
+- **Usage counts:** how many times each account did a few named things on a given day (made an invite, paired, sent a note, opened the app, added a widget, watched or skipped the opening), and when it first did each that day. This is counting only: it never includes what a note says or shows, and nothing is sent to anyone else. We use it to see whether the app is working for couples.
+- **Test variants:** to compare two versions of a screen, each pair is placed in one version. Both partners always get the same one. We keep which version each pair was given.
 
-We don't ask for your contacts or location. The app has no ads and no analytics.
+We don't ask for your contacts or location. The app has no ads, and no third-party analytics or tracking: the usage counts above are kept on our own backend only.
 
 ## Where it goes
 Everything above is stored on our backend, which runs on Cloudflare.
 
 - **Notes are stored.** The drawing (as strokes and as an image) or photo you send is kept in your pair's private storage so that your partner, and you, can see the history and a new device can catch up. Photos and images are kept in a private storage area reachable only by the two accounts in the pair. Notes are kept for as long as the pair exists. There is no automatic expiry.
 - **Accounts and pairing data** (account identifier, devices, hashed sessions, hashed invite codes, the link between the two partners, push tokens) are kept as long as the account exists.
+- **Usage counts and test variants** are kept as long as the account exists, and are not removed when you unpair.
 - **Abuse protection:** to limit abuse we count requests per minute against a one-way hash of the caller's network address. The address itself is not stored, and counters older than a minute are removed as new requests arrive.
 - **Logs:** our server logs record the type of request, whether it succeeded and how long it took. They don't contain note content, tokens, codes or addresses.
 

@@ -9,6 +9,7 @@ import {
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
+import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
 
 /** Long enough to send a code to someone who is asleep, short enough that a leaked one goes stale. */
@@ -37,13 +38,18 @@ export class PairingService extends Context.Service<
   static readonly layer: Layer.Layer<
     PairingService,
     never,
-    PairingRepository | Digest.Digest | SecureRandom.SecureRandom
+    PairingRepository | PairingObserver | Digest.Digest | SecureRandom.SecureRandom
   > = Layer.effect(
     PairingService,
     Effect.gen(function* () {
       const repository = yield* PairingRepository;
+      const observer = yield* PairingObserver;
       const digest = yield* Digest.Digest;
       const random = yield* SecureRandom.SecureRandom;
+
+      // Side effects of a committed pairing: a failure is logged and never undoes or fails it.
+      const afterwards = (effect: Effect.Effect<void>) =>
+        effect.pipe(Effect.catchCause(() => Effect.logWarning("pairing follow-up failed")));
 
       const hash = (code: InviteCode) => digest.digestHex(Digest.sha256, encoder.encode(code));
 
@@ -64,6 +70,7 @@ export class PairingService extends Context.Service<
           createdAt,
           expiresAt,
         });
+        yield* afterwards(observer.invited(ownerId));
         return { code, expiresAt };
       });
 
@@ -78,6 +85,12 @@ export class PairingService extends Context.Service<
           pairId,
           now: yield* Clock.currentTimeMillis,
         });
+        yield* afterwards(
+          repository.findMembers(pairId).pipe(
+            Effect.orDie,
+            Effect.flatMap((members) => observer.paired(pairId, members)),
+          ),
+        );
         return pairId;
       });
 

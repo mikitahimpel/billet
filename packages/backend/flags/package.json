@@ -1,0 +1,38 @@
+{
+  "name": "@billet/backend-flags",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./assignment": "./src/assignment.ts",
+    "./experiments": "./src/experiments.ts",
+    "./flags-error": "./src/flags-error.ts",
+    "./flags-repository": "./src/flags-repository.ts",
+    "./flags-routes": "./src/flags-routes.ts",
+    "./flags-service": "./src/flags-service.ts",
+    "./test/flags-repository-contract": "./test/flags-repository-contract.ts",
+    "./test/in-memory-flags-repository": "./test/in-memory-flags-repository.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

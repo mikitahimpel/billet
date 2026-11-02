@@ -121,3 +121,39 @@ export const rateLimits = sqliteTable(
     index("rate_limits_window_start_index").on(table.windowStart),
   ],
 );
+
+// The variant each pair was given in each experiment it entered. Only pairs inside an experiment
+// have a row, and a row is never updated, so changing weights or exposure later moves nobody.
+// Pairs outside it get the default and have no row. The pair id is not a foreign key: a pair has no
+// table of its own, and the rows stay for analysis after the pair ends.
+export const pairFlags = sqliteTable(
+  "pair_flags",
+  {
+    pairId: text("pair_id").notNull(),
+    experimentKey: text("experiment_key").notNull(),
+    variant: text("variant").notNull(),
+    assignedAt: integer("assigned_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
+);
+
+// First-party counts: how many times one person did one named thing on one UTC day, with the pair
+// they were in at the time (empty before pairing). Nothing else is stored: no note, image or
+// text, no device, address or place. The names are a closed list in `contracts-domain/metrics`.
+// Like `pair_flags`, the pair id is not a foreign key and the rows outlive the pair for analysis.
+export const pairEvents = sqliteTable(
+  "pair_events",
+  {
+    pairId: text("pair_id").notNull(),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    day: text("day").notNull(),
+    count: integer("count").notNull(),
+    firstAt: integer("first_at").notNull(),
+    lastAt: integer("last_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.pairId, table.userId, table.name, table.day] }),
+    index("pair_events_day_index").on(table.day),
+  ],
+);

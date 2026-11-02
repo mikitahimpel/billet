@@ -7,6 +7,7 @@ import Foundation
 import Observation
 import Persistence
 import Transport
+import WidgetBridge
 import Wire
 
 /// Which screen the real client shows, from what the device has saved.
@@ -35,17 +36,40 @@ public final class RealAppModel {
   public let accounts: AccountStore
   public private(set) var signIn: SignInModel
   public private(set) var pairing: PairingModel
+  /// The saved Labs choices and the server's test variants for this pair.
+  public let labs: WidgetFeaturesModel
+  @ObservationIgnored private let flags: FlagsRefresher
+  @ObservationIgnored private let reporter: EventReporter
+  @ObservationIgnored private let hasWidget: @MainActor () async -> Bool
   @ObservationIgnored private var cachedHistory: HistoryModel?
   @ObservationIgnored private var cachedAccount: AccountModel?
   @ObservationIgnored private var cachedLive: LiveRoom?
 
-  public init(api: APIClient, accounts: AccountStore, baseURL: URL) {
+  public init(
+    api: APIClient, accounts: AccountStore, baseURL: URL,
+    labs: WidgetFeaturesModel = WidgetFeaturesModel(store: .appGroup()),
+    eventStorage: AppGroupStorage? = try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
+    hasWidget: (@MainActor () async -> Bool)? = nil
+  ) {
     self.api = api
+    self.labs = labs
+    flags = FlagsRefresher(api: api, labs: labs)
+    reporter = EventReporter(api: api, storage: eventStorage)
+    self.hasWidget = hasWidget ?? { await WidgetPresence.isInstalled() }
     self.baseURL = baseURL
     self.accounts = accounts
     stage = RealStage((try? accounts.load()) ?? nil)
     signIn = SignInModel(api: api, accounts: accounts)
     pairing = PairingModel(api: api)
+  }
+
+  /// The app came to the front with a paired account: learn which test variants the pair is in
+  /// and count what happened. Neither can fail the screen; a failure keeps what was held.
+  public func becameActive() async {
+    reporter.appOpened()
+    await flags.refresh()
+    if await hasWidget() { reporter.widgetAdded() }
+    await reporter.flush()
   }
 
   public func signedIn() {
@@ -93,6 +117,9 @@ public final class RealAppModel {
     cachedLive = nil
     cachedHistory = nil
     cachedAccount = nil
+    // The variants belong to the pair, and what is waiting to be counted to the account.
+    flags.forget()
+    if action == .signOut { reporter.discard() }
     pairing = PairingModel(api: api)
     switch action {
     case .unpair:

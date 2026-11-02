@@ -8,6 +8,8 @@
     "./api-error": "./src/api-error.ts",
     "./auth": "./src/auth.ts",
     "./device": "./src/device.ts",
+    "./events": "./src/events.ts",
+    "./flags": "./src/flags.ts",
     "./invite": "./src/invite.ts",
     "./note": "./src/note.ts",
     "./routes": "./src/routes.ts"

@@ -151,6 +151,7 @@ public struct SettingsView: View {
       HomeVariantPicker(model: model)
       if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         RoomStylePicker(model: model)
+        WindowViewPicker(model: model)
       }
       if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         LightingPicker(model: model)

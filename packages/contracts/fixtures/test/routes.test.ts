@@ -31,6 +31,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/media/*",
       },
+      "getFlags": {
+        "method": "GET",
+        "path": "/v1/flags",
+      },
       "listNotes": {
         "method": "GET",
         "path": "/v1/notes",
@@ -38,6 +42,10 @@ it("pins the routes that clients call", () => {
       "registerPushToken": {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
+      },
+      "reportEvents": {
+        "method": "POST",
+        "path": "/v1/events",
       },
       "sendNote": {
         "method": "POST",

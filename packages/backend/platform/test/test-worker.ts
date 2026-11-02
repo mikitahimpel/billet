@@ -1,8 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { Effect } from "effect";
 import { respondApi } from "../src/api-fetch.ts";
+import type { WorkerEnv } from "../src/worker-env.ts";
 import { openRoomDatabase } from "../src/room-database.ts";
 
+import { testExperiments } from "./test-experiments.ts";
 import type { RoomMigrations } from "../src/room-database.ts";
 
 // The Worker under test: exports the object class, as apps/api/src/worker.ts does.
@@ -58,4 +60,7 @@ export class BrokenRoom extends DurableObject {
   }
 }
 
-export default { fetch: respondApi };
+export default {
+  fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) =>
+    respondApi(request, env, ctx, testExperiments),
+};
