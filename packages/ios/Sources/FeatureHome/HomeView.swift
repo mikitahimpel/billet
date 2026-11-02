@@ -24,6 +24,7 @@ struct HomeView: View {
   @State private var hangCount = 0
   @State private var petBounce = false
   @State private var showsStatus = true
+  @State private var notesSent = 0
   @State private var namingCat = false
   @State private var labsOpen = false
 
@@ -54,6 +55,9 @@ struct HomeView: View {
 
   private var isRenovating: Bool { session.renovator.isRenovating }
 
+  /// Long enough to see the note set off before the system prompt covers it.
+  private static let askAfterSending = Duration.seconds(2)
+
   var body: some View {
     home
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
@@ -63,7 +67,13 @@ struct HomeView: View {
       #if os(iOS)
         .toolbar(isRenovating ? .hidden : .visible, for: .tabBar)
       #endif
-      .task { await DemoPush.requestPermission() }
+      .task { await DemoPush.registerIfAllowed() }
+      .task(id: notesSent) {
+        guard notesSent > 0 else { return }
+        try? await Task.sleep(for: Self.askAfterSending)
+        guard !Task.isCancelled else { return }
+        await DemoPush.requestPermission()
+      }
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
@@ -98,7 +108,10 @@ struct HomeView: View {
               session.advent.drawingFor = nil
               store.send(.canvasClosed)
             },
-            onSend: { session.send($0) }
+            onSend: {
+              session.send($0)
+              notesSent += 1
+            }
           )
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
         }
