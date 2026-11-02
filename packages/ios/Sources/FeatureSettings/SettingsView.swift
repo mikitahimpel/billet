@@ -231,7 +231,7 @@ public struct SettingsView: View {
 }
 
 /// Rows sharing one card.
-private struct SettingsGroup<Rows: View>: View {
+struct SettingsGroup<Rows: View>: View {
   private let rows: Rows
 
   init(@ViewBuilder rows: () -> Rows) {
@@ -245,7 +245,7 @@ private struct SettingsGroup<Rows: View>: View {
   }
 }
 
-private struct SettingsHeading: View {
+struct SettingsHeading: View {
   private let title: String
 
   init(_ title: String) {
@@ -262,7 +262,7 @@ private struct SettingsHeading: View {
 }
 
 /// A label and its value.
-private struct SettingsRow: View {
+struct SettingsRow: View {
   private let title: String
   private let value: String
 
@@ -285,7 +285,7 @@ private struct SettingsRow: View {
   }
 }
 
-private struct SettingsLink: View {
+struct SettingsLink: View {
   private let title: String
   private let action: () -> Void
 
