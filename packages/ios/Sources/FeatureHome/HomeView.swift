@@ -21,6 +21,7 @@ struct HomeView: View {
   @State private var hangCount = 0
   @State private var petBounce = false
   @State private var showsStatus = true
+  @State private var labsOpen = false
 
   let session: PairSession
   let scene: (any PetScene)?
@@ -200,20 +201,10 @@ struct HomeView: View {
       fakePartnerNotice
       overnightStayNotice
       catCameBackNotice
-      todaysWordCard
-      giftCards
-      adventCard
-      onThisDayCard
-      sundayPostCard
-      sealedNoteCards
-      twoWispsCard
       catNaming
       latestReceived
-      lampColourCard
-      theirSkyCard
-      nextVisitCard
       treatPanel
-      porchLightCard
+      labsDrawer
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
@@ -243,6 +234,46 @@ struct HomeView: View {
         store: session.lamp, catName: session.play.catName, showsColours: colours,
         showsGoodnight: goodnight
       ) { session.lampChanged(out: $0) }
+    }
+  }
+
+  /// Every experiment card in one place that opens and closes, so the scene keeps its room.
+  private var labsDrawer: some View {
+    VStack(spacing: Spacing.small) {
+      Button {
+        withAnimation(Motion.spring) { labsOpen.toggle() }
+      } label: {
+        ListRow(
+          "Labs", subtitle: labsOpen ? "Tap to close" : "Cards for the experiments that are on"
+        ) {
+          EmptyView()
+        } trailing: {
+          RowIcon(labsOpen ? "chevron.up" : "chevron.down")
+        }
+      }
+      .buttonStyle(RowButtonStyle())
+      .card()
+      .accessibilityIdentifier("labsDrawer")
+      if labsOpen {
+        ScrollView {
+          VStack(spacing: Spacing.small) {
+            todaysWordCard
+            giftCards
+            adventCard
+            onThisDayCard
+            sundayPostCard
+            sealedNoteCards
+            twoWispsCard
+            lampColourCard
+            theirSkyCard
+            nextVisitCard
+            porchLightCard
+          }
+        }
+        .frame(maxHeight: 300)
+        .scrollBounceBehavior(.basedOnSize)
+        .transition(.opacity)
+      }
     }
   }
 

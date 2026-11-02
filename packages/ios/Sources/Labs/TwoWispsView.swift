@@ -57,12 +57,13 @@ public struct TwoWispsSection: View {
             .opacity(progress >= 1 ? 1 : 0.25)
             .offset(y: -24)
         }
-        .frame(height: 100)
+        .frame(height: 70)
         .accessibilityHidden(true)
         Text(prompt(progress: progress))
           .billetType(.label)
           .foregroundStyle(Palette.paper.color)
           .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
         holdButton
       }
       .sensoryFeedback(.success, trigger: progress >= 1) { _, together in together }
