@@ -248,6 +248,11 @@ final class PairSession {
     lived(.play)
   }
 
+  /// Puts the cat to bed, from its thought bubble.
+  func tuckIn() {
+    lived(.sleep)
+  }
+
   /// The cat ate something other than the day's treat, such as one from the closet.
   func fed() {
     lived(.feed)

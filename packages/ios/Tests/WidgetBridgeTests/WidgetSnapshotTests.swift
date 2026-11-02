@@ -100,3 +100,55 @@ import Testing
     }
   }
 }
+
+@Suite("Widget life")
+struct WidgetLifeTests {
+  private static let noon = Date(timeIntervalSince1970: 1_793_620_800)
+  private static let context = LifeContext(partners: ["a", "b"], utcOffset: 0, born: noon)
+
+  private func snapshot(_ events: [LifeEvent]) -> WidgetSnapshot {
+    WidgetSnapshot(
+      treatDay: "2026-11-02", life: WidgetLife(events: events, context: Self.context),
+      updatedAt: Self.noon)
+  }
+
+  @Test func theWidgetWorksOutTheSameStateAsThePhone() {
+    let events = [
+      LifeEvent(kind: .feed, by: "a", at: Self.noon), LifeEvent(kind: .pet, by: "b", at: Self.noon),
+    ]
+    let later = Self.noon.addingTimeInterval(3 * 3600)
+    let phone = PetLife.state(events: events, now: later, context: Self.context)
+    #expect(snapshot(events).life?.state(at: later) == phone)
+  }
+
+  @Test func moodFollowsTheNeedsWhenTheLifeIsOn() throws {
+    let calendar = Calendar(identifier: .gregorian)
+    let fresh = CatMood(snapshot: snapshot([]), now: Self.noon, calendar: calendar)
+    #expect(fresh == .happy)
+    // Alone for a day and a half: hungry first, since Full falls fastest.
+    let later = Self.noon.addingTimeInterval(36 * 3600)
+    let alone = snapshot([LifeEvent(kind: .pet, by: "a", at: Self.noon)])
+    let mood = CatMood(snapshot: alone, now: later, calendar: calendar)
+    let state = try #require(alone.life?.state(at: later))
+    if state.asleep {
+      #expect(mood == .sleepy)
+    } else {
+      #expect([.hungry, .playful, .lonely].contains(mood))
+      #expect(alone.life?.thought(at: later) != nil)
+    }
+  }
+
+  @Test func aSnapshotWithoutALifeStillDecodes() throws {
+    let old = Data(
+      #"{"treat":"fed","treatDay":"2026-11-02","streak":1,"partnerHere":false,"updatedAt":0}"#.utf8)
+    let snapshot = try JSONDecoder().decode(WidgetSnapshot.self, from: old)
+    #expect(snapshot.life == nil)
+  }
+
+  @Test func theLifeRoundTripsThroughTheAppGroupFile() throws {
+    let original = snapshot([LifeEvent(kind: .note, by: "a", at: Self.noon)])
+    let decoded = try JSONDecoder().decode(
+      WidgetSnapshot.self, from: JSONEncoder().encode(original))
+    #expect(decoded == original)
+  }
+}

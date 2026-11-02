@@ -2,6 +2,7 @@ import CoreGraphics
 import DesignSystem
 import Foundation
 import ImageIO
+import Pet
 import SwiftUI
 import WidgetBridge
 import WidgetKit
@@ -12,16 +13,19 @@ public struct PictureContext: Sendable {
   public var drawing: CGImage?
   /// Encoded still of the sleeping cat, if the app has published one.
   public var catPose: Data?
+  /// Encoded still of the cat sitting up, shown for an awake mood while its needs are on.
+  public var catAwakePose: Data?
   public var now: Date
   public var calendar: Calendar
 
   public init(
-    snapshot: WidgetSnapshot?, drawing: CGImage?, catPose: Data? = nil, now: Date,
-    calendar: Calendar
+    snapshot: WidgetSnapshot?, drawing: CGImage?, catPose: Data? = nil,
+    catAwakePose: Data? = nil, now: Date, calendar: Calendar
   ) {
     self.snapshot = snapshot
     self.drawing = drawing
     self.catPose = catPose
+    self.catAwakePose = catAwakePose
     self.now = now
     self.calendar = calendar
   }
@@ -169,7 +173,8 @@ public struct PictureView: View {
       HouseAtWindow(lit: context.partnerHere)
     case .catMood:
       CatMoodArt(
-        symbol: caption.symbol, pose: mood == .sleepy ? context.catPose : nil)
+        symbol: caption.symbol, pose: moodPose,
+        thought: context.snapshot?.life?.thought(at: context.now).map(Self.thoughtSymbol))
     case .streak, .daysTogether:
       HousePlate(caption.number ?? 0, scale: layout == .small ? 1 : 1.5)
     case .partnerDrawing:
@@ -179,6 +184,22 @@ public struct PictureView: View {
 
   private var mood: CatMood? {
     context.snapshot.map { CatMood(snapshot: $0, now: context.now, calendar: context.calendar) }
+  }
+
+  /// The still for the mood: asleep, or, while the cat's needs are on, sitting up.
+  private var moodPose: Data? {
+    if mood == .sleepy { return context.catPose }
+    return context.snapshot?.life == nil ? nil : context.catAwakePose
+  }
+
+  /// What the cat thinks of in the widget's bubble, as in the app.
+  static func thoughtSymbol(_ need: PetNeed) -> String {
+    switch need {
+    case .full: "fish.fill"
+    case .rested: "zzz"
+    case .loved: "heart.fill"
+    case .playful: "tennisball.fill"
+    }
   }
 
   private func message(_ title: String, _ detail: String) -> some View {
@@ -269,8 +290,23 @@ struct HouseAtWindow: View {
 private struct CatMoodArt: View {
   let symbol: String
   let pose: Data?
+  var thought: String?
 
   var body: some View {
+    art.overlay(alignment: .topTrailing) {
+      if let thought {
+        Image(systemName: thought)
+          .font(.system(size: 13, weight: .semibold, design: .rounded))
+          .foregroundStyle(Palette.clay.color)
+          .padding(7)
+          .background(Palette.paper.color, in: Circle())
+          .widgetAccentable()
+          .accessibilityHidden(true)
+      }
+    }
+  }
+
+  @ViewBuilder private var art: some View {
     if let image = Self.decode(pose) {
       Image(decorative: image, scale: 1)
         .resizable()

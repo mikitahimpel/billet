@@ -53,6 +53,7 @@ struct AppShellView: View {
     let latestNote: UUID?
     let noteCount: Int
     let active: Bool
+    let life: LifeLog?
   }
 
   /// When the app may be able to carry out what widgets queued: it is open, or the room changed.
@@ -65,7 +66,8 @@ struct AppShellView: View {
     PublishKey(
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
       latestNote: session.notes.first?.id,
-      noteCount: session.notes.count, active: scenePhase == .active)
+      noteCount: session.notes.count, active: scenePhase == .active,
+      life: session.labs.isOn(LabExperiment.catLife) ? session.life.log : nil)
   }
 
   private var line: ConnectionLine {
@@ -191,7 +193,8 @@ struct AppShellView: View {
       while !Task.isCancelled {
         publisher.publish(
           play: session.play, notes: session.notes,
-          partnerHere: scenePhase == .active && session.status == .partnerHere)
+          partnerHere: scenePhase == .active && session.status == .partnerHere,
+          life: session.labs.isOn(LabExperiment.catLife) ? session.life.widgetLife : nil)
         try? await Task.sleep(for: WidgetPublisher.refresh)
       }
     }

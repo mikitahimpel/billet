@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Pet
+import WidgetBridge
 
 /// The pet's life on this phone: the events it holds, kept in `defaults`, and the state worked
 /// out from them on a slow tick. The state itself is never stored.
@@ -110,6 +111,11 @@ public final class PetLifeModel {
     let by = asPartner ? (log.partner(of: me) ?? fallbackPartner ?? "partner") : me
     debugEvents.append(LifeEvent(kind: kind, by: by, at: now))
     refresh()
+  }
+
+  /// The real events and context for the widget, which works out each hour itself.
+  public var widgetLife: WidgetLife {
+    WidgetLife(events: log.all, context: context, config: config)
   }
 
   /// How long to wait between ticks: slow in real time, quick when the clock runs fast.
