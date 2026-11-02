@@ -8,12 +8,14 @@ import PetScene
 import SwiftUI
 import WidgetBridge
 
-/// The three tabs of a paired device. Drawing is opened from Home and is not a tab.
+/// The tabs of a paired device: Home, the Shop when its 3D scene is on, Notes and Settings.
+/// Drawing is opened from Home or the Notes desk and is not a tab.
 ///
 /// A native `TabView`, so iOS 26 gives it Liquid Glass and content runs on under it.
 struct AppShellView: View {
   private enum Destination: Hashable {
     case home
+    case shop
     case notes
     case settings
   }
@@ -40,6 +42,7 @@ struct AppShellView: View {
   }
 
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.dynamicTypeSize) private var typeSize
   @State private var destination = Destination.home
 
   /// Everything the widgets show that can change while the app is open.
@@ -74,6 +77,42 @@ struct AppShellView: View {
     return session.streak(today: TreatDay.key(for: .now, calendar: calendar), calendar: calendar)
   }
 
+  /// The scene the Shop tab shows, when the shop scene is on and the chosen scene has one.
+  private var shopScene: (any PetScene)? {
+    guard labs.isOn(LabExperiment.shopScene), let scene = selectedScene, scene.hasShop else {
+      return nil
+    }
+    return scene
+  }
+
+  /// The scene Notes shows as a desk, when the desk is on and the chosen scene has one. At
+  /// accessibility text sizes Notes stays the list.
+  private var deskScene: (any PetScene)? {
+    guard labs.isOn(LabExperiment.notesDesk), !typeSize.isAccessibilitySize,
+      let scene = selectedScene,
+      scene.makeDeskScene(state: DeskSceneState(notes: []), onEvent: { _ in }) != nil
+    else { return nil }
+    return scene
+  }
+
+  private var detailDrawing: ((NoteRecord) -> AnyView)? {
+    labs.isOn(LabExperiment.drawnReplay)
+      ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil
+  }
+
+  private var detailActions: ((NoteRecord) -> AnyView)? {
+    let frames = labs.isOn(LabExperiment.framedNotes)
+    let wallpaper = labs.isOn(LabExperiment.wallpaperShortcut)
+    guard frames || wallpaper else { return nil }
+    return { note in
+      AnyView(
+        VStack(spacing: Spacing.small) {
+          if frames { FrameNoteButton(note: note, framed: session.frames) }
+          if wallpaper { WallpaperShareButton(note: note) }
+        })
+    }
+  }
+
   var body: some View {
     TabView(selection: $destination) {
       Tab("Home", systemImage: "house", value: .home) {
@@ -87,34 +126,31 @@ struct AppShellView: View {
         .tabEntrance(destination == .home)
         .environment(\.petSceneOnScreen, destination == .home)
       }
+      if let shopScene {
+        Tab("Shop", systemImage: "bag", value: .shop) {
+          ShopTab(
+            shop: session.shop, renovator: session.renovator, scene: shopScene,
+            keeper: labs.shopkeeper, onShowRoom: { destination = .home }
+          )
+          .tabEntrance(destination == .shop)
+          .environment(\.petSceneOnScreen, destination == .shop)
+          .environment(\.petSceneLighting, labs.lighting)
+        }
+      }
       Tab("Notes", systemImage: "note.text", value: .notes) {
-        NotesView(
-          notes: session.notes, loadFailed: session.notesFailedToLoad,
-          reactions: session.play.reactions,
-          onReact: { session.react(to: $0, $1) },
-          detailDrawing: labs.isOn(LabExperiment.drawnReplay)
-            ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil,
-          detailActions: {
-            let frames = labs.isOn(LabExperiment.framedNotes)
-            let wallpaper = labs.isOn(LabExperiment.wallpaperShortcut)
-            guard frames || wallpaper else { return nil }
-            return { note in
-              AnyView(
-                VStack(spacing: Spacing.small) {
-                  if frames { FrameNoteButton(note: note, framed: session.frames) }
-                  if wallpaper { WallpaperShareButton(note: note) }
-                })
-            }
-          }(),
-          board: labs.isOn(LabExperiment.shelfBoard)
-            ? { board in
-              AnyView(
-                ShelfBoardView(
-                  notes: board.notes, reactions: board.reactions, streak: streak,
-                  detail: board.detail, onClose: board.close))
-            } : nil
-        )
+        Group {
+          if let deskScene {
+            DeskTab(
+              session: session, scene: deskScene, widgetFeatures: widgetFeatures,
+              detailDrawing: detailDrawing, detailActions: detailActions,
+              list: { AnyView(notesList) })
+          } else {
+            notesList
+          }
+        }
         .tabEntrance(destination == .notes)
+        .environment(\.petSceneOnScreen, destination == .notes)
+        .environment(\.petSceneLighting, labs.lighting)
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {
         SettingsView(
@@ -160,6 +196,26 @@ struct AppShellView: View {
       }
     }
     .modifier(WarmTabBarFallback())
+  }
+}
+
+extension AppShellView {
+  /// Every note in a list, the way Notes has always shown them.
+  fileprivate var notesList: some View {
+    NotesView(
+      notes: session.notes, loadFailed: session.notesFailedToLoad,
+      reactions: session.play.reactions,
+      onReact: { session.react(to: $0, $1) },
+      detailDrawing: detailDrawing,
+      detailActions: detailActions,
+      board: labs.isOn(LabExperiment.shelfBoard)
+        ? { board in
+          AnyView(
+            ShelfBoardView(
+              notes: board.notes, reactions: board.reactions, streak: streak,
+              detail: board.detail, onClose: board.close))
+        } : nil
+    )
   }
 }
 

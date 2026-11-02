@@ -25,6 +25,7 @@ public struct ShopView<Preview: View>: View {
   private let onClose: () -> Void
   private let onOpenCloset: () -> Void
   private let preview: (ShopItem) -> Preview
+  private let opensOn: ShopItem.ID?
 
   @State private var selected: ShopItem.ID?
   @State private var slots: [ShopItem.ID: CGRect] = [:]
@@ -37,8 +38,10 @@ public struct ShopView<Preview: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var typeSize
 
+  /// - Parameter item: The item to open on, selected and scrolled to. `nil` opens at the top.
   public init(
     store: ShopStore,
+    item: ShopItem.ID? = nil,
     onOpenCloset: @escaping () -> Void,
     onClose: @escaping () -> Void,
     @ViewBuilder preview: @escaping (ShopItem) -> Preview
@@ -47,7 +50,9 @@ public struct ShopView<Preview: View>: View {
     self.onOpenCloset = onOpenCloset
     self.onClose = onClose
     self.preview = preview
-    _selected = State(initialValue: store.catalog.items.first?.id)
+    let chosen = item.flatMap { store.catalog.item($0) }?.id
+    opensOn = chosen
+    _selected = State(initialValue: chosen ?? store.catalog.items.first?.id)
   }
 
   public var body: some View {
@@ -122,6 +127,14 @@ public struct ShopView<Preview: View>: View {
   }
 
   private var shelves: some View {
+    ScrollViewReader { reader in
+      scroller.onAppear {
+        if let opensOn { reader.scrollTo(opensOn, anchor: .center) }
+      }
+    }
+  }
+
+  private var scroller: some View {
     ScrollView {
       ZStack(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: Spacing.large) {
@@ -219,6 +232,7 @@ public struct ShopView<Preview: View>: View {
     }
     .padding(Spacing.small)
     .card()
+    .id(item.id)
     .overlay {
       if isSelected {
         RoundedRectangle(cornerRadius: Radius.card, style: .continuous)

@@ -13,7 +13,7 @@ public struct SundayPost: Equatable, Sendable {
   public let sent: Int
   public let received: Int
 
-  /// The page Mochi brings on or after a Sunday: the Monday-to-Sunday week that Sunday ends. On
+  /// The page the cat brings on or after a Sunday: the Monday-to-Sunday week that Sunday ends. On
   /// any other day it is the last finished week, unless `preview` asks for the week so far.
   /// Returns nil when that week had no notes.
   public static func page(

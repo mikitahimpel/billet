@@ -4,7 +4,7 @@ import simd
 
 /// A note's flight into the room, as plain numbers.
 ///
-/// The plane circles the room until a tap catches it, or Mochi leaps for it. Either way the rest of
+/// The plane circles the room until a tap catches it, or the cat leaps for it. Either way the rest of
 /// the delivery plays from the catch, and always ends inside the delivery's fixed length.
 struct NookiPlaneFlight: Equatable {
   struct Pose: Equatable {
@@ -15,15 +15,15 @@ struct NookiPlaneFlight: Equatable {
     var bank: Float
   }
 
-  /// When Mochi catches a plane nobody tapped.
-  static let mochiCatchesAt = 2.4
-  /// How long a tapped plane takes to reach Mochi.
+  /// When the cat catches a plane nobody tapped.
+  static let catCatchesAt = 2.4
+  /// How long a tapped plane takes to reach the cat.
   static let swoopLength = 0.35
 
   private static let leapLength = 0.45
-  /// Where the delivery's own timeline picks up from a catch, with the note in Mochi's care.
+  /// Where the delivery's own timeline picks up from a catch, with the note in the cat's care.
   private static let choreographyAfterCatch = 1.6
-  /// Where it waits until then, with Mochi awake and looking.
+  /// Where it waits until then, with the cat awake and looking.
   private static let choreographyWhileFlying = 1.1
   private static let path: [SIMD3<Float>] = [
     [1.5, 1.25, 0.5], [0.85, 1.05, 0.55], [0.2, 0.9, 0.55], [-0.28, 0.8, 0.15],
@@ -32,9 +32,9 @@ struct NookiPlaneFlight: Equatable {
 
   private(set) var tappedAt: Double?
 
-  /// When the plane reaches Mochi.
+  /// When the plane reaches the cat.
   var caughtAt: Double {
-    tappedAt.map { $0 + Self.swoopLength } ?? Self.mochiCatchesAt
+    tappedAt.map { $0 + Self.swoopLength } ?? Self.catCatchesAt
   }
 
   func isCaught(at elapsed: Double) -> Bool {
@@ -53,20 +53,20 @@ struct NookiPlaneFlight: Equatable {
     return Self.choreographyAfterCatch + (elapsed - caughtAt)
   }
 
-  /// Height of Mochi's leap for a plane nobody tapped, from 0 to 1.
+  /// Height of the cat's leap for a plane nobody tapped, from 0 to 1.
   func leap(_ elapsed: Double) -> Float {
     guard tappedAt == nil else { return 0 }
-    let start = Self.mochiCatchesAt - Self.leapLength
-    guard (start...Self.mochiCatchesAt).contains(elapsed) else { return 0 }
+    let start = Self.catCatchesAt - Self.leapLength
+    guard (start...Self.catCatchesAt).contains(elapsed) else { return 0 }
     return NookiChoreography.arch((elapsed - start) / Self.leapLength / 2 + 0.25)
   }
 
-  func pose(at elapsed: Double, mochi: SIMD3<Float>) -> Pose {
+  func pose(at elapsed: Double, cat: SIMD3<Float>) -> Pose {
     let flown = Self.point(tappedAt ?? elapsed)
     guard let tappedAt else { return Self.pose(at: flown, after: elapsed) }
     let share = Float(min((elapsed - tappedAt) / Self.swoopLength, 1))
-    let swoop = mix(flown, mochi, t: share * share)
-    let next = mix(flown, mochi, t: min(share + 0.1, 1))
+    let swoop = mix(flown, cat, t: share * share)
+    let next = mix(flown, cat, t: min(share + 0.1, 1))
     return Pose(
       position: swoop, heading: Self.direction(from: swoop, to: next, fallback: [0, -1, 0]),
       bank: 0)
@@ -86,9 +86,9 @@ struct NookiPlaneFlight: Equatable {
     return simd_length(gap) > 0.0001 ? simd_normalize(gap) : fallback
   }
 
-  /// A smooth curve through `path`, reaching its end when Mochi would catch the plane.
+  /// A smooth curve through `path`, reaching its end when the cat would catch the plane.
   private static func point(_ elapsed: Double) -> SIMD3<Float> {
-    let along = Float(min(max(elapsed / mochiCatchesAt, 0), 1)) * Float(path.count - 1)
+    let along = Float(min(max(elapsed / catCatchesAt, 0), 1)) * Float(path.count - 1)
     let index = min(Int(along), path.count - 2)
     let (a, b, c, d) = (
       path[max(index - 1, 0)], path[index], path[index + 1], path[min(index + 2, path.count - 1)]

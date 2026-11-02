@@ -32,6 +32,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case catBats
   case catGreets
   case catChases
+  case shopScene
+  case notesDesk
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -79,6 +81,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: .catMoments
     case .catGreets: .catMoments
     case .catChases: .catMoments
+    case .shopScene: .home
+    case .notesDesk: .notes
     }
   }
 
@@ -110,6 +114,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: "Bats at your finger"
     case .catGreets: "Greets you"
     case .catChases: "Plays on its own"
+    case .shopScene: "Shop tab"
+    case .notesDesk: "Notes desk"
     }
   }
 
@@ -125,6 +131,10 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "Open billet after a few hours away and the cat runs up to the camera and headbutts it."
     case .catChases:
       "Now and then the cat chases the yarn, or a dot of light from the lamp, all by itself."
+    case .shopScene:
+      "A Shop tab: a little 3D shop with a keeper behind the counter. Tap anything on the shelves to see it and buy it. The keeper is chosen under Shopkeeper. Off, the shop stays a sheet on Home."
+    case .notesDesk:
+      "Notes becomes a desk under a board: tap the paper to draw, tap a pinned note to open it. The list is one tap away. Off, Notes is the list."
     case .shelfBoard:
       "A warm wall of shelves, reached from Notes: every note you have sent each other, the newest large and forward, and numbered places for the next days of the streak."
     case .fakePartner:
@@ -199,6 +209,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: false
     case .catGreets: false
     case .catChases: false
+    case .shopScene: false
+    case .notesDesk: false
     }
   }
 
@@ -230,6 +242,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: false
     case .catGreets: false
     case .catChases: false
+    case .shopScene: true
+    case .notesDesk: true
     }
   }
 }

@@ -8,9 +8,9 @@ import Testing
 struct NookiTouchTests {
   private let world = PetWorld(activity: .sleeping, delivery: 3)
 
-  @Test func tappingMochiReportsThePet() {
+  @Test func tappingCatReportsThePet() {
     #expect(
-      NookiTouch.of(.mochi, world: world, noteIsOpen: false)
+      NookiTouch.of(.cat, world: world, noteIsOpen: false)
         == NookiTouch(reaction: .wakeAndHop, event: .petted))
   }
 

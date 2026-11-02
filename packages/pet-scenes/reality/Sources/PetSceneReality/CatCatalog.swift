@@ -13,20 +13,18 @@ struct CatClipRange: Decodable, Hashable, Sendable {
   var duration: Double { trimEnd - trimStart }
 }
 
-/// Where each cat's files are and what its clips are. Mochi keeps its original files; the others
-/// live in `Resources/Cats` as a compiled model, a clip table and, for painted cats, a palette or
-/// one texture per extra coat.
+/// Where each cat's files are and what its clips are. Every cat lives in `Resources/Cats` as a
+/// compiled model, a clip table and, for painted cats, a palette or one texture per extra coat.
 enum CatCatalog {
   static let folder = "Cats"
 
   /// The resource name of the model, without extension.
   static func resourceName(_ model: CatModel) -> String {
-    model == .mochi ? NookiAssets.mochiName : "Cat_\(model.rawValue)"
+    "Cat_\(model.rawValue)"
   }
 
   /// The model's clips by action. Clip names the app does not know are skipped.
   static func clips(_ model: CatModel) -> [CatAction: CatClipRange] {
-    if model == .mochi { return mochiClips }
     guard
       let url = Bundle.module.url(
         forResource: "\(resourceName(model)).clips", withExtension: "json", subdirectory: folder),
@@ -54,19 +52,6 @@ enum CatCatalog {
     }
   }
 
-  /// Mochi's table, from the trims the room has always used.
-  static let mochiClips: [CatAction: CatClipRange] = Dictionary(
-    uniqueKeysWithValues: NookiClip.allCases.compactMap { clip in
-      CatAction(rawValue: clip.rawValue).map { action in
-        (
-          action,
-          CatClipRange(
-            trimStart: clip.trim.lowerBound, trimEnd: clip.trim.upperBound, loops: clip.loops,
-            base: defaultBase(action))
-        )
-      }
-    })
-
   static func defaultBase(_ action: CatAction) -> CatBase {
     switch action {
     case .sleep, .twitch: .sleep
@@ -79,21 +64,10 @@ enum CatCatalog {
 
   // MARK: - Size
 
-  /// How much each model is scaled beside Mochi, so every cat reads the same size in a room.
-  /// The made cats were built to Mochi's size; the found ones are tuned by eye in the room.
-  static func fit(_ model: CatModel) -> Float {
-    switch model {
-    case .mochi, .tabby, .plush, .detailed, .detailedKitten, .detailedFluffy, .chibi, .kitten,
-      .tuxedo:
-      1
-    case .blocky: 0.85
-    case .slim: 0.8
-    }
-  }
-
-  /// Mochi's longest side across the floor, in its own metres. A styled room scales every cat
-  /// by its own cat length over this, so cats with long tails are not shrunk.
-  static let mochiReach: Float = 0.2998
+  /// The longest side across the floor, in a cat's own metres, of the size the made cats are
+  /// built to. A styled room scales every cat by its own cat length over this, so cats with long
+  /// tails are not shrunk.
+  static let reach: Float = 0.2998
 
   // MARK: - Coats
 

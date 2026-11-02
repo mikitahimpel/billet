@@ -35,14 +35,14 @@ import simd
     return seen
   }
 
-  @Test func aStillBallLeavesMochiAsleep() {
+  @Test func aStillBallLeavesCatAsleep() {
     var play = newPlay()
     run(&play, seconds: 5)
     #expect(play.phase == .resting)
     #expect(!play.pose.frame.eyesOpen)
   }
 
-  @Test func aMovingBallWakesASleepyMochi() {
+  @Test func aMovingBallWakesASleepyCat() {
     var play = newPlay()
     run(&play, seconds: 0.1, speed: 1)
     #expect(play.phase == .watching)
@@ -59,7 +59,7 @@ import simd
     #expect(play.position == SIMD2(Self.bed.x, Self.bed.z))
   }
 
-  @Test func watchingTurnsMochiToTheBall() {
+  @Test func watchingTurnsCatToTheBall() {
     var play = newPlay()
     run(&play, seconds: 0.5, speed: 1)
     let offset = Self.far - SIMD2(Self.bed.x, Self.bed.z)
@@ -82,7 +82,7 @@ import simd
     #expect(play.pose.spot.y >= NookiYarnPlay.ballHeight)
   }
 
-  @Test func aProudMochiTurnsToTheViewer() {
+  @Test func aProudCatTurnsToTheViewer() {
     var play = newPlay()
     run(&play, seconds: 0.1, speed: 1)
     while play.phase != .proud { run(&play, seconds: Self.step) }
@@ -91,7 +91,7 @@ import simd
     #expect(abs(remainder(play.pose.frame.heading - wanted, 2 * .pi)) < 0.05)
   }
 
-  @Test func aDeliveryCallsMochiBack() {
+  @Test func aDeliveryCallsCatBack() {
     var play = newPlay()
     run(&play, seconds: 0.1, speed: 1)
     while play.phase != .chasing { run(&play, seconds: Self.step) }

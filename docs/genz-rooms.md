@@ -144,8 +144,9 @@ Nooki room's renovation (`NookiShopModels`, `NookiShopRoom`), which loads models
 
 - No new files to load: every piece is built from a handful of shared meshes on the main actor in
   a few milliseconds, before the cat arrives.
-- The cat is loaded once per scene from the same files Nooki uses (`Cat.reality`, else `Cat.usdz`)
-  and cloned into each styled room, so a replaced cat model shows up here with no change.
+- The cat is loaded once per scene from the same compiled cat Nooki uses (the chosen
+  `Cat_<model>.reality`, else the standard Detailed cat) and cloned into each styled room, so a
+  replaced cat model shows up here with no change.
 - Textures stay small: the disc is 512 × 346, the poster 128 × 243, the note 512 wide, all drawn at
   runtime. The disc is redrawn only while it blooms or warms, the poster four times a second.
 

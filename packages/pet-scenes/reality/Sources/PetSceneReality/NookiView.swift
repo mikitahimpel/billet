@@ -20,7 +20,7 @@ struct NookiView: View {
   @State private var diorama: NookiDiorama?
   @State private var poster: CGImage?
   @State private var isReady = false
-  @State private var isMochiMissing = false
+  @State private var isCatMissing = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneFillsView) private var fillsView
@@ -49,8 +49,8 @@ struct NookiView: View {
       GlowVignette(look: .of(lighting))
     }
     .overlay(alignment: .top) {
-      if isMochiMissing {
-        Text("Mochi couldn't load")
+      if isCatMissing {
+        Text("The cat couldn't load")
           .font(.footnote)
           .padding(8)
           .background(.thinMaterial, in: Capsule())
@@ -65,9 +65,9 @@ struct NookiView: View {
       let made = cache.diorama()
       let ready = $isReady
       made.onReady = { ready.wrappedValue = true }
-      let missing = $isMochiMissing
-      made.onMochiMissing = { missing.wrappedValue = $0 }
-      isMochiMissing = made.isMochiMissing
+      let missing = $isCatMissing
+      made.onCatMissing = { missing.wrappedValue = $0 }
+      isCatMissing = made.isCatMissing
       await cache.untilRehearsed()
       diorama = made
       made.startLoading()
@@ -208,8 +208,8 @@ private struct NookiStage: View {
       .onChange(of: renovator?.placements) { isRenovating = true }
       .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
       .accessibilityElement()
-      .accessibilityLabel("Mochi's room")
-      .accessibilityAction(named: "Pet Mochi") { perform(.mochi) }
+      .accessibilityLabel("The cat's room")
+      .accessibilityAction(named: "Pet the cat") { perform(.cat) }
       .accessibilityAction(named: "Turn the lamp on or off") { perform(.lamp) }
       .accessibilityAction(named: "Catch the paper plane") {
         if world.noteArrived { perform(.plane) }
@@ -263,11 +263,11 @@ private struct NookiStage: View {
     renovator?.cleared(.floor)
   }
 
-  /// Mochi wakes and hops once the treat has landed. Only the cat reacts: nothing is sent upward.
+  /// The cat wakes and hops once the treat has landed. Only the cat reacts: nothing is sent upward.
   private func reactToTreat() {
     Task {
       try? await Task.sleep(for: .seconds(NookiShopRoom.fallDuration))
-      _ = diorama.perform(.mochi)
+      _ = diorama.perform(.cat)
       diorama.reactToTreat()
     }
   }
@@ -306,7 +306,7 @@ private struct NookiStage: View {
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
-        if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
+        if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
           diorama.stroke(at: location)
           return
         }
@@ -322,7 +322,7 @@ private struct NookiStage: View {
         lastDrag = .zero
         if isHoldingPiece(value.entity) {
           return
-        } else if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
+        } else if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))

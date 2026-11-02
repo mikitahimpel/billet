@@ -13,14 +13,14 @@ final class NookiDiorama {
   let root = Entity()
   /// Called when the room has rendered in a view and a poster over it can go.
   var onReady: (() -> Void)?
-  /// Called when Mochi is found to be missing, and again if a late load puts things right.
-  var onMochiMissing: ((Bool) -> Void)?
+  /// Called when the cat is found to be missing, and again if a late load puts things right.
+  var onCatMissing: ((Bool) -> Void)?
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
 
   private let room = Entity()
   private let lens = PerspectiveCamera()
-  private let mochi = Entity()
+  private let catHolder = Entity()
   private let note = Entity()
   private let bowlFill = Entity()
   private let streakMarks = Entity()
@@ -47,9 +47,9 @@ final class NookiDiorama {
   private(set) var hasRehearsed = false
   private var isLoaded = false
   private(set) var loading: Task<Void, Never>?
-  private(set) var mochiLoading: Task<Void, Never>?
-  private(set) var isMochiMissing = false
-  private var hasMochi = false
+  private(set) var catLoading: Task<Void, Never>?
+  private(set) var isCatMissing = false
+  private var hasCat = false
   /// The cat's clips, look and coat, once loaded.
   private(set) var rig: CatRig?
   private var behaviour = CatBehaviour(clips: [:])
@@ -67,7 +67,7 @@ final class NookiDiorama {
   private var strokePoint: CGPoint?
   private var greetPending = false
   private var lastSeenSaved = -Double.infinity
-  /// The cat asked for, and the one on show (Mochi stands in for a cat that will not load).
+  /// The cat asked for, and the one on show (the standard cat stands in for one that will not load).
   private(set) var catChoice = CatChoice.standard
   private(set) var shownCat: CatChoice?
   private var catModel: Entity?
@@ -77,6 +77,8 @@ final class NookiDiorama {
   private let missingMark = Entity()
   private let loadModel: NookiModelLoader
   private let loadShape: NookiModelLoader
+  /// Loads the cat for a choice, with the choice it really shows.
+  private let loadCatFor: (CatChoice) async throws(NookiLoadError) -> (Entity, CatChoice)
   private let tiltSource: any NookiTiltSource
   private var tilt = NookiTilt()
   private var ambientReceiver: ImageBasedLightReceiverComponent?
@@ -99,7 +101,7 @@ final class NookiDiorama {
   /// The paint a tap puts on while the room is being changed.
   var paint = NookiSwatch.cream
   private var isFollowingTilt = false
-  private let mochiDeadline: Duration
+  private let catDeadline: Duration
   private var settlingFrames = NookiDiorama.framesBeforeReady
   private let frames = FrameClock()
   private var isRehearsing = false
@@ -129,8 +131,8 @@ final class NookiDiorama {
   }
   private var fittedSize = SIMD2<Float>(393, 852)
 
-  nonisolated static let mochiScale: Float = 1.25
-  static let missingMarkName = "mochi-missing"
+  nonisolated static let catScale: Float = 1.25
+  static let missingMarkName = "cat-missing"
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiDiorama")
 
   private static let orbitPerPoint: Float = 0.006
@@ -144,7 +146,7 @@ final class NookiDiorama {
   /// How much darker than usual the ambient light is with the room's lights all the way down.
   private static let darkAmbientShift: Float = -3
 
-  // Mochi lies in the bed in the middle of the rug, and hops to a spot under the wire.
+  // The cat lies in the bed in the middle of the rug, and hops to a spot under the wire.
   fileprivate static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
   fileprivate static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
   /// Share of the walk spent dropping from the bed to the floor.
@@ -159,7 +161,7 @@ final class NookiDiorama {
   private static let noteReadingScale: Float = 2
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let lookLimit: Float = 1
-  /// How fast Mochi covers its walk to the wall, in metres a second.
+  /// How fast the cat covers its walk to the wall, in metres a second.
   private static let walkPace: Float = 0.23
   private static let fieldOfView: Float = 30
   private static let noticeDistance: Float = 0.6
@@ -173,7 +175,7 @@ final class NookiDiorama {
   init(
     loadModel: NookiModelLoader? = nil,
     loadShape: NookiModelLoader? = nil,
-    mochiDeadline: Duration = .seconds(12),
+    catDeadline: Duration = .seconds(12),
     tiltSource: any NookiTiltSource = NookiTiltSources.standard(),
     layoutStore: NookiLayoutStore = NookiLayoutStore(defaults: .standard)
   ) {
@@ -182,8 +184,18 @@ final class NookiDiorama {
     let bundled: NookiModelLoader = { name throws(NookiLoadError) in try await assets.model(name) }
     self.loadModel = loadModel ?? bundled
     self.loadShape = loadShape ?? bundled
+    if let loadModel {
+      loadCatFor = { choice throws(NookiLoadError) in (try await loadModel("Cat"), choice) }
+    } else {
+      loadCatFor = { choice throws(NookiLoadError) in
+        guard let loaded = await Self.loadCatModel(choice) else {
+          throw .unreadable(CatCatalog.resourceName(choice.model), reason: "no cat")
+        }
+        return loaded
+      }
+    }
     self.tiltSource = tiltSource
-    self.mochiDeadline = mochiDeadline
+    self.catDeadline = catDeadline
     root.addChild(room)
     room.isEnabled = false
     lens.camera.fieldOfViewInDegrees = Self.fieldOfView
@@ -208,7 +220,7 @@ final class NookiDiorama {
 
   private func load() async {
     NookiTrace.mark("load started")
-    startLoadingMochi()
+    startLoadingCat()
     let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
     let environment = Task { await Self.ambientEnvironment() }
     await buildRoom()
@@ -217,10 +229,10 @@ final class NookiDiorama {
     await Task.yield()
     await buildNote()
     buildBackstop()
-    mochi.position = Self.bedSpot
-    mochi.name = NookiTarget.mochi.rawValue
-    Self.makeTappable(mochi, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
-    room.addChild(mochi)
+    catHolder.position = Self.bedSpot
+    catHolder.name = NookiTarget.cat.rawValue
+    Self.makeTappable(catHolder, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
+    room.addChild(catHolder)
     for piece in furniture { await piece.value }
     NookiTrace.mark("furniture placed")
     findLampParts()
@@ -393,7 +405,7 @@ final class NookiDiorama {
     }
     let isFree =
       trip == nil && !yarnPlay.isPlaying && world.activity == .sleeping && !noteIsOpen
-      && !reduceMotion && hasMochi && opening == nil
+      && !reduceMotion && hasCat && opening == nil
     if greetPending, isFree {
       greetPending = false
       startGreeting()
@@ -511,7 +523,7 @@ final class NookiDiorama {
     if let floor { renovation.move(towards: floor) }
   }
 
-  /// Sets a lifted piece down. Mochi looks up and stirs if it lands close by.
+  /// Sets a lifted piece down. The cat looks up and stirs if it lands close by.
   func dropLifted() {
     guard let landed = renovation.drop() else { return }
     let bed = SIMD3(Self.bedSpot.x, 0, Self.bedSpot.z)
@@ -597,16 +609,16 @@ final class NookiDiorama {
     return touch.event
   }
 
-  /// Turns Mochi's whole body towards a tapped object for a moment. No clip turns the head alone.
+  /// Turns the cat's whole body towards a tapped object for a moment. No clip turns the head alone.
   private func lookTowards(_ target: NookiTarget) {
-    guard !reduceMotion, target != .mochi, let holder = holders[target] ?? noteHolder(target) else {
+    guard !reduceMotion, target != .cat, let holder = holders[target] ?? noteHolder(target) else {
       return
     }
     look(at: holder.position(relativeTo: nil))
   }
 
   private func look(at point: SIMD3<Float>) {
-    let offset = point - mochi.position(relativeTo: nil)
+    let offset = point - catHolder.position(relativeTo: nil)
     let facing = atan2(-offset.x, -offset.z)
     let turn = remainder(facing - NookiChoreography.restHeading, 2 * .pi)
     lookGoal = min(max(turn, -Self.lookLimit), Self.lookLimit)
@@ -829,16 +841,17 @@ final class NookiDiorama {
     if !NookiClip.walksWithRig {
       let upright = 0.1 * frame.stretch
       let wide = -0.05 * frame.stretch
-      mochi.scale = [1 + wide, 1 + upright, 1 + wide]
+      catHolder.scale = [1 + wide, 1 + upright, 1 + wide]
     }
 
     var spot = mix(Self.bedSpot, Self.wallSpot, t: frame.walk)
     let drop = min(frame.walk / Self.bedDrop, 1)
     spot.y = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * drop
     if let awaySpot { spot = awaySpot }
-    mochi.position = spot + [0, 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight, 0]
+    let lift = 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight
+    catHolder.position = spot + [0, lift, 0]
     if frame.light != light { easeLight(to: frame.light, delta: delta) }
-    mochi.orientation = simd_quatf(
+    catHolder.orientation = simd_quatf(
       angle: frame.heading + lookTurn + Self.windowTurn * light, axis: [0, 1, 0])
   }
 
@@ -892,7 +905,7 @@ final class NookiDiorama {
       NookiFloorRay.direction(
         under: point, viewSize: size, camera: camera.position, target: NookiCamera.target,
         verticalFieldOfView: Self.fieldOfView))
-    let head = mochi.position(relativeTo: nil) + [0, 0.18, 0]
+    let head = catHolder.position(relativeTo: nil) + [0, 0.18, 0]
     let reach = simd_dot(head - camera.position, ray)
     headLook(at: camera.position + ray * max(reach, 0.5), for: Self.fingerLookLength)
   }
@@ -921,8 +934,8 @@ final class NookiDiorama {
   func setCat(_ choice: CatChoice) {
     guard choice != catChoice else { return }
     catChoice = choice
-    guard mochiLoading != nil else { return }
-    mochiLoading = Task { await loadMochi() }
+    guard catLoading != nil else { return }
+    catLoading = Task { await loadCat() }
   }
 
   private func applyHolders() {
@@ -974,7 +987,7 @@ final class NookiDiorama {
     plane.entity.isEnabled = inFlight
     guard inFlight else { return }
     let pose = flight.pose(
-      at: elapsed, mochi: mochi.position + [0, Self.carryHeight, 0])
+      at: elapsed, cat: catHolder.position + [0, Self.carryHeight, 0])
     plane.show(pose)
     look(at: pose.position)
     lookStart = clock
@@ -986,7 +999,7 @@ final class NookiDiorama {
     note.isEnabled = frame.note > 0 && noteReveal > 0.01
     let inMouth =
       carriesNote ? rig?.mouth().flatMap { note.parent?.convert(position: $0, from: nil) } : nil
-    let carried = inMouth ?? mochi.position + [0, Self.carryHeight, 0]
+    let carried = inMouth ?? catHolder.position + [0, Self.carryHeight, 0]
     let hanging = mix(mix(Self.noteStart, carried, t: frame.note), Self.noteHome, t: frame.pinned)
     let toLens = simd_normalize(NookiCamera.target - camera.position)
     let reading = camera.position + toLens * Self.noteReadingDistance
@@ -1227,36 +1240,30 @@ final class NookiDiorama {
     }
   }
 
-  // MARK: - Mochi
+  // MARK: - Cat
 
-  /// Starts Mochi ahead of the furniture, on its own task so that a slow cat cannot hold up the
-  /// room. Mochi is reported missing on failure, or at the deadline if the load is still going;
+  /// Starts the cat ahead of the furniture, on its own task so that a slow cat cannot hold up the
+  /// room. The cat is reported missing on failure, or at the deadline if the load is still going;
   /// a late arrival clears that.
-  private func startLoadingMochi() {
-    mochiLoading = Task { await loadMochi() }
-    let deadline = mochiDeadline
+  private func startLoadingCat() {
+    catLoading = Task { await loadCat() }
+    let deadline = catDeadline
     Task { [weak self] in
       try? await Task.sleep(for: deadline)
-      self?.reportMochiIfAbsent()
+      self?.reportCatIfAbsent()
     }
   }
 
-  private func loadMochi() async {
+  private func loadCat() async {
     do {
       let wanted = catChoice
-      var shown = wanted
-      var loaded: Entity?
-      if wanted.model != .mochi { loaded = await NookiAssets.compiledCat(wanted.model) }
-      if loaded == nil { shown = .standard }
-      let model: Entity
-      if let loaded { model = loaded } else { model = try await loadModel(NookiAssets.mochiName) }
+      let (model, shown) = try await loadCatFor(wanted)
       // A newer choice has its own load on the way.
       guard wanted == catChoice || shownCat == nil else { return }
-      let fit = CatCatalog.fit(shown.model)
-      guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil), fit: fit) else {
+      guard let offset = Self.catOffset(model.visualBounds(relativeTo: nil)) else {
         throw NookiLoadError.noGeometry("Cat")
       }
-      model.scale = .one * Self.mochiScale * fit
+      model.scale = .one * Self.catScale
       model.position = offset
       let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
       if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
@@ -1267,39 +1274,48 @@ final class NookiDiorama {
       shownCat = shown
       behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
       rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
-      mochi.addChild(model)
-      hasMochi = true
-      NookiTrace.mark("Mochi placed")
-      setMochiMissing(false)
+      catHolder.addChild(model)
+      hasCat = true
+      NookiTrace.mark("Cat placed")
+      setCatMissing(false)
     } catch {
       Self.log.error("\(String(describing: error), privacy: .public)")
-      setMochiMissing(true)
+      setCatMissing(true)
     }
   }
 
-  private func reportMochiIfAbsent() {
-    if !hasMochi { setMochiMissing(true) }
+  private func reportCatIfAbsent() {
+    if !hasCat { setCatMissing(true) }
+  }
+
+  /// The model for `choice`, or the standard cat when that one will not load, with the choice it
+  /// really shows.
+  static func loadCatModel(_ choice: CatChoice) async -> (Entity, CatChoice)? {
+    if let model = await NookiAssets.compiledCat(choice.model) { return (model, choice) }
+    guard choice != .standard, let model = await NookiAssets.compiledCat(CatChoice.standard.model)
+    else { return nil }
+    return (model, .standard)
   }
 
   /// Where the model goes so that it sits centred on its own floor, or nil for bounds that hold
   /// nothing a viewer could see.
-  static func mochiOffset(_ bounds: BoundingBox, fit: Float = 1) -> SIMD3<Float>? {
+  static func catOffset(_ bounds: BoundingBox) -> SIMD3<Float>? {
     let corners = [bounds.min, bounds.max]
     guard !bounds.isEmpty, corners.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite })
     else { return nil }
-    return -[bounds.center.x, bounds.min.y, bounds.center.z] * mochiScale * fit
+    return -[bounds.center.x, bounds.min.y, bounds.center.z] * catScale
   }
 
   /// A crossed-out card on the bed, so a cat that failed to load cannot pass for an empty room.
-  private func setMochiMissing(_ missing: Bool) {
-    guard missing != isMochiMissing else { return }
-    isMochiMissing = missing
+  private func setCatMissing(_ missing: Bool) {
+    guard missing != isCatMissing else { return }
+    isCatMissing = missing
     missingMark.removeFromParent()
     if missing {
       if missingMark.children.isEmpty { buildMissingMark() }
-      mochi.addChild(missingMark)
+      catHolder.addChild(missingMark)
     }
-    onMochiMissing?(missing)
+    onCatMissing?(missing)
   }
 
   private func buildMissingMark() {

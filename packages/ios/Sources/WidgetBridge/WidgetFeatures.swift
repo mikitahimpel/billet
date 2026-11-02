@@ -141,6 +141,17 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(choice, named: Self.windowViewFileName)
   }
 
+  public static let shopkeeperFileName = "shopkeeper.json"
+
+  /// The saved shopkeeper, or the standard one when nothing readable is saved.
+  public func loadShopkeeper() -> Shopkeeper {
+    (try? storage.readJSON(Shopkeeper.self, named: Self.shopkeeperFileName)) ?? .standard
+  }
+
+  public func saveShopkeeper(_ keeper: Shopkeeper) throws(PersistenceError) {
+    try storage.writeJSON(keeper, named: Self.shopkeeperFileName)
+  }
+
   public static let homeVariantFileName = "home-variant.json"
 
   /// The saved layout of Home, or the standard one when nothing readable is saved.
@@ -210,6 +221,8 @@ public final class WidgetFeaturesModel {
   public private(set) var lighting: RoomLighting
   /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
+  /// Who keeps the 3D shop. Kept beside the flags, in its own file.
+  public private(set) var shopkeeper: Shopkeeper
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -226,6 +239,7 @@ public final class WidgetFeaturesModel {
     pretendHour = store?.loadPretendHour()
     lighting = store?.loadLighting() ?? .standard
     furniture = store?.loadFurniture() ?? .standard
+    shopkeeper = store?.loadShopkeeper() ?? .standard
   }
 
   public func setLighting(_ lighting: RoomLighting) {
@@ -238,6 +252,12 @@ public final class WidgetFeaturesModel {
     guard self.furniture != furniture else { return }
     self.furniture = furniture
     try? store?.saveFurniture(furniture)
+  }
+
+  public func setShopkeeper(_ keeper: Shopkeeper) {
+    guard shopkeeper != keeper else { return }
+    shopkeeper = keeper
+    try? store?.saveShopkeeper(keeper)
   }
 
   public func setPretendHour(_ hour: Int?) {

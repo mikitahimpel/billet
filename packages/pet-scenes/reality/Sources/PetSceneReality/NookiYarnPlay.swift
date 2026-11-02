@@ -1,7 +1,7 @@
 import Foundation
 import simd
 
-/// Mochi's game with the yarn, as plain numbers: notice, watch, crouch, wiggle, chase, pounce, sit
+/// The cat's game with the yarn, as plain numbers: notice, watch, crouch, wiggle, chase, pounce, sit
 /// on it proudly, then go back to bed. Nothing is counted and nothing is won.
 ///
 /// No clip turns the head alone, so watching the ball turns the whole cat.
@@ -32,8 +32,8 @@ struct NookiYarnPlay: Equatable {
   private static let crouchLength = 0.5
   private static let wiggleLength = 0.8
   private static let chaseAtMost = 6.0
-  private static let pounceLength =
-    NookiClip.pounce.trim.upperBound - NookiClip.pounce.trim.lowerBound
+  /// How long every cat's pounce clip runs, in seconds.
+  private static let pounceLength = 1.5
   /// The part of the pounce clip spent in the air, as shares of its length.
   private static let pounceFlight: ClosedRange<Double> = 0.3...0.65
   private static let proudLength = 2.6
@@ -67,11 +67,11 @@ struct NookiYarnPlay: Equatable {
   }
 
   var isPlaying: Bool { phase != .resting }
-  /// True while Mochi is on the ball, which must hold still.
+  /// True while the cat is on the ball, which must hold still.
   var holdsBall: Bool { phase == .proud }
 
   /// Moves on by `delta` seconds. `canPlay` is false while something more important is on, and
-  /// `reduceMotion` keeps Mochi in bed, awake and looking.
+  /// `reduceMotion` keeps the cat in bed, awake and looking.
   mutating func step(ball: Ball, delta: Double, canPlay: Bool, reduceMotion: Bool) {
     ballAt = ball.position
     stillsOnly = reduceMotion
@@ -119,7 +119,7 @@ struct NookiYarnPlay: Equatable {
     }
   }
 
-  /// How the phase looks: the body's frame, and where Mochi stands while away from the bed.
+  /// How the phase looks: the body's frame, and where the cat stands while away from the bed.
   var pose: (frame: NookiFrame, spot: SIMD3<Float>) {
     var frame = NookiFrame(wake: 1, eyesOpen: true, heading: heading)
     var height = Self.groundHeight(position, bed: bed, floor: floor)
@@ -142,7 +142,7 @@ struct NookiYarnPlay: Equatable {
     return (frame, SIMD3(position.x, height, position.y))
   }
 
-  /// How fast Mochi is travelling, in metres a second, for pacing its walk.
+  /// How fast the cat is travelling, in metres a second, for pacing its walk.
   var travelSpeed: Float {
     phase == .returning ? Self.returnSpeed : Self.chaseSpeed
   }

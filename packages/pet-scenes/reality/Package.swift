@@ -17,10 +17,9 @@ let package = Package(
         .product(name: "PetScene", package: "ios"),
       ],
       resources: [
-        .copy("Resources/Cat.reality"),
         .copy("Resources/Cats"),
+        .copy("Resources/Shopkeepers"),
         .copy("Resources/Room.reality"),
-        .copy("Resources/Cat.usdz"),
         .copy("Resources/Room.usdz"),
         .copy("Resources/pose-sleeping.png"),
         .copy("Resources/pose-proud.png"),
