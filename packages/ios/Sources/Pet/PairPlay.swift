@@ -16,8 +16,22 @@ public struct PairPlay: Equatable, Sendable {
   /// The name the pair gave the cat, once either of them has chosen one.
   public private(set) var catName: String?
 
-  public init(device: String) {
+  /// What outlasts a launch for a pair with no room to ask.
+  public struct Saved: Codable, Equatable, Sendable {
+    public var ledger: TreatLedger
+    public var reactions: [UUID: Reaction]
+    public var catName: String?
+  }
+
+  public var saved: Saved { Saved(ledger: ledger, reactions: reactions, catName: catName) }
+
+  public init(device: String, saved: Saved? = nil) {
     self.device = device
+    if let saved {
+      ledger = saved.ledger
+      reactions = saved.reactions
+      catName = saved.catName
+    }
   }
 
   public func status(on day: String) -> TreatLedger.Status {

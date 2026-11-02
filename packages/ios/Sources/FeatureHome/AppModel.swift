@@ -72,25 +72,37 @@ final class AppModel {
     if labs.isOn(LabExperiment.fakePartner) { enterFakePartner() }
   }
 
+  private static let fakePlayKey = "labs.play.fake"
+  private static let fakeShopKey = "labs.shop.fake"
+
   /// True while the screens show the scripted partner instead of a real room.
   var isFakePartner: Bool { beforeFake != nil }
 
   /// Follows the Labs switch for the fake partner.
   func fakePartnerSwitched(on: Bool) {
-    if on { enterFakePartner() } else { leaveFakePartner() }
+    if on {
+      enterFakePartner()
+      session?.connect()
+    } else {
+      leaveFakePartner()
+    }
   }
 
   /// Shows Home with a scripted partner. The real room stays closed, and the real notes are not
-  /// touched: the fake partner keeps its own.
+  /// touched: the fake partner keeps its own. It is left unconnected: SwiftUI can build a model
+  /// only to discard it, and a discarded session's partner would save over the kept one's play.
   private func enterFakePartner() {
     guard beforeFake == nil, let archive = dependencies.fakeArchive else { return }
     let wasPairing: Stage = stage
     session?.disconnect()
     timeout?.cancel()
     let room = DemoRoom(code: "fake-partner", device: "fake-me")
-    // The fake partner gets its own shop with a few things to give, so the real closet is left be.
-    let shop = ShopStore(storage: .memory())
-    for id in ["treat-fish", "treat-fish", "furniture-yarn"] {
+    // The fake partner gets its own shop, so the real closet is left be. A first visit starts
+    // with a few things to give.
+    let shopStorage = ShopStorage.defaults(dependencies.defaults, key: Self.fakeShopKey)
+    let isFirstVisit = shopStorage.load() == nil
+    let shop = ShopStore(storage: shopStorage)
+    for id in ["treat-fish", "treat-fish", "furniture-yarn"] where isFirstVisit {
       if let item = shop.catalog.item(id) {
         _ = try? shop.buy(item, transaction: shop.newTransaction())
       }
@@ -98,10 +110,10 @@ final class AppModel {
     let fake = PairSession(
       room: room, delivery: dependencies.fakeDelivery(room), archive: archive,
       shop: shop, now: dependencies.now,
-      isFakePartner: true, labs: labs)
+      isFakePartner: true, labs: labs,
+      playStorage: .defaults(dependencies.defaults, key: Self.fakePlayKey))
     beforeFake = wasPairing
     stage = .paired(fake)
-    fake.connect()
     let now = dependencies.now()
     Task {
       if (try? await archive.notes())?.isEmpty != false {
@@ -190,6 +202,8 @@ final class AppModel {
   func logOut() async -> String? {
     guard !isFakePartner else {
       try? await dependencies.fakeArchive?.erase()
+      dependencies.defaults.removeObject(forKey: Self.fakePlayKey)
+      dependencies.defaults.removeObject(forKey: Self.fakeShopKey)
       leaveByLabs()
       return nil
     }

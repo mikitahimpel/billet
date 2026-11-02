@@ -45,7 +45,11 @@ final class PairSession {
   private(set) var hasConnected = false
   private(set) var notes: [NoteRecord] = []
   private(set) var notesFailedToLoad = false
-  private(set) var play: PairPlay
+  private(set) var play: PairPlay {
+    didSet {
+      if let playStorage, play.saved != oldValue.saved { playStorage.save(play.saved) }
+    }
+  }
   /// Counts up each time the partner reacts to a note this device sent, and holds that reaction.
   private(set) var reactionsSeen = 0
   private(set) var lastReaction: Reaction?
@@ -62,6 +66,8 @@ final class PairSession {
   @ObservationIgnored private let delivery: NoteDelivery
   @ObservationIgnored private let archive: NoteArchive
   @ObservationIgnored private let now: @Sendable () -> Date
+  /// Set only where no room keeps the play.
+  @ObservationIgnored private let playStorage: PairPlayStorage?
   @ObservationIgnored private var connection: Task<Void, Never>?
   @ObservationIgnored private var lastSave: Task<Void, Never>?
 
@@ -73,8 +79,10 @@ final class PairSession {
     now: @escaping @Sendable () -> Date = { .now },
     trips: CatTripController = .live(),
     isFakePartner: Bool = false,
-    labs: WidgetFeaturesModel = WidgetFeaturesModel(store: nil)
+    labs: WidgetFeaturesModel = WidgetFeaturesModel(store: nil),
+    playStorage: PairPlayStorage? = nil
   ) {
+    self.playStorage = playStorage
     self.isFakePartner = isFakePartner
     self.labs = labs
     frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
@@ -93,7 +101,7 @@ final class PairSession {
     renovator = RoomRenovator(store: shop)
     self.now = now
     self.trips = trips
-    play = PairPlay(device: room.device)
+    play = PairPlay(device: room.device, saved: playStorage?.load())
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
   }
 

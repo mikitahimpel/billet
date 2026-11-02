@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// What a partner can send back to a note. The raw value is the room's name for it.
-public enum Reaction: String, CaseIterable, Hashable, Sendable {
+public enum Reaction: String, CaseIterable, Codable, Hashable, Sendable {
   case heart
   case stamp
 
