@@ -14,6 +14,7 @@ import { MediaStoreLive } from "./media-store-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
+import { withRequestLog } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
 import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
@@ -39,13 +40,20 @@ const apiRoutes = (env: WorkerEnv) =>
  * I/O that a Worker can't share between requests. Anything outside `/v1/` is the placeholder, which
  * the deploy smoke test reads.
  */
-export const respondApi = async (
+export const respondApi = (
+  request: Request,
+  env: WorkerEnv,
+  ctx: ExecutionContext,
+): Promise<Response> =>
+  new URL(request.url).pathname.startsWith("/v1/")
+    ? withRequestLog(request, () => routeApi(request, env, ctx))
+    : Promise.resolve(respondPlaceholder());
+
+const routeApi = async (
   request: Request,
   env: WorkerEnv,
   ctx: ExecutionContext,
 ): Promise<Response> => {
-  if (!new URL(request.url).pathname.startsWith("/v1/")) return respondPlaceholder();
-
   if (new URL(request.url).pathname === socketRoute.path) return respondSocket(request, env);
 
   const limited = await limitRequest(request, env.DB);

@@ -12,13 +12,16 @@ import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-st
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
+import { logEvent } from "./observability.ts";
 import {
+  deliveryHealth,
   enqueue,
   isDue,
   nextAlarmAt,
   settle,
   type DeliveryEntry,
   type DeliveryOutcome,
+  type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
 
@@ -122,6 +125,11 @@ export class PairRoom extends DurableObject {
     if (at !== undefined) await this.ctx.storage.setAlarm(at);
   }
 
+  /** How each lane is doing in this room. */
+  async deliveryHealth(): Promise<Readonly<Record<string, LaneHealth>>> {
+    return deliveryHealth(await this.deliveries());
+  }
+
   /** The delivery rows, for tests and diagnostics. */
   async deliveries(): Promise<ReadonlyArray<DeliveryEntry>> {
     return Effect.runPromise(deliveriesOf(await this.database).all);
@@ -140,7 +148,16 @@ export class PairRoom extends DurableObject {
     for (const entry of await Effect.runPromise(deliveries.all)) {
       if (!isDue(entry, now)) continue;
       const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
-      await Effect.runPromise(deliveries.save(settle(entry, outcome, Date.now())));
+      const settled = settle(entry, outcome, Date.now());
+      await Effect.runPromise(deliveries.save(settled));
+      // One line per try: summing these per lane gives the delivery success rate.
+      logEvent("log", {
+        event: "delivery",
+        lane: entry.lane,
+        outcome,
+        status: settled.status,
+        attempts: settled.attempts,
+      });
     }
     await this.scheduleAlarm();
   }

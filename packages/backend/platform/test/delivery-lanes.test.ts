@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { maxAttempts } from "@billet/backend-pair-room/delivery-ledger";
 import { MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -117,6 +117,36 @@ describe("delivery lanes", () => {
     expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: maxAttempts }]);
     expect(await alarmAt(room)).toBeNull();
     expect(await calls(room)).toBe(maxAttempts);
+  });
+
+  it("logs one line per try, and reports the lane's health", async () => {
+    const lines: Array<Record<string, unknown>> = [];
+    const spy = vi.spyOn(console, "log").mockImplementation((line: string) => {
+      lines.push(JSON.parse(line));
+    });
+    try {
+      const room = await laneRoom(["Retry"]);
+      await room.sendNote(alice, photo);
+      await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+      await letWaitsPass(room);
+      await runDurableObjectAlarm(room);
+      expect(await room.deliveryHealth()).toEqual({
+        AlertPush: { delivered: 1, abandoned: 0, pending: 0, successRate: 1 },
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    const tries = lines.filter((line) => line["event"] === "delivery");
+    expect(tries).toEqual([
+      { event: "delivery", lane: "AlertPush", outcome: "Retry", status: "pending", attempts: 1 },
+      {
+        event: "delivery",
+        lane: "AlertPush",
+        outcome: "Delivered",
+        status: "delivered",
+        attempts: 1,
+      },
+    ]);
   });
 
   it("abandons at once when the lane says so, for example a dead token", async () => {
