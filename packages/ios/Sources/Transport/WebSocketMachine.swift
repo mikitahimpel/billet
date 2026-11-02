@@ -103,10 +103,12 @@ public enum WebSocketMachine: Machine {
       return (state.moved(to: .connecting(failures: 0), attempt: id + 1), opening(id + 1))
 
     case (.connecting(let failures), .opened):
-      let resume = state.lastSeq.map { [Output.send(.resume(lastSeq: $0), attempt: id)] } ?? []
+      // The server sends no note to a socket that has not asked, so the first connection asks too,
+      // from zero when nothing has been received.
+      let resume = Output.send(.resume(lastSeq: state.lastSeq ?? 0), attempt: id)
       return (
         state.moved(to: .connected(failures: failures)),
-        resume + [.startStabilityTimer(attempt: id)]
+        [resume, .startStabilityTimer(attempt: id)]
       )
 
     case (.connected, .stable):
@@ -185,9 +187,11 @@ public enum WebSocketMachine: Machine {
 
   private static func advance(_ lastSeq: Int?, past message: ServerMessage) -> Int? {
     switch message {
-    case .stroke(let seq, _), .noteReceived(let seq, _):
+    case .noteReceived(let seq, _):
       return max(lastSeq ?? seq, seq)
-    case .presence:
+    // A live stroke carries the room's latest note `seq`, which this client may not have received
+    // yet, so counting it would let a reconnect skip notes.
+    case .stroke, .presence:
       return lastSeq
     }
   }

@@ -1,3 +1,4 @@
+import FeatureCanvas
 import FeatureInbox
 import FeatureOnboarding
 import FeaturePairing
@@ -5,6 +6,7 @@ import FeatureSettings
 import Foundation
 import Observation
 import Persistence
+import Wire
 import Transport
 
 /// Which screen the real client shows, from what the device has saved.
@@ -29,14 +31,17 @@ public enum RealStage: Equatable, Sendable {
 public final class RealAppModel {
   public private(set) var stage: RealStage
   public let api: APIClient
+  private let baseURL: URL
   public let accounts: AccountStore
   public private(set) var signIn: SignInModel
   public private(set) var pairing: PairingModel
   @ObservationIgnored private var cachedHistory: HistoryModel?
   @ObservationIgnored private var cachedAccount: AccountModel?
+  @ObservationIgnored private var cachedLive: LiveRoom?
 
-  public init(api: APIClient, accounts: AccountStore) {
+  public init(api: APIClient, accounts: AccountStore, baseURL: URL) {
     self.api = api
+    self.baseURL = baseURL
     self.accounts = accounts
     stage = RealStage((try? accounts.load()) ?? nil)
     signIn = SignInModel(api: api, accounts: accounts)
@@ -63,6 +68,17 @@ public final class RealAppModel {
     return model
   }
 
+  /// The room socket of the signed-in account, kept for as long as the account stays signed in.
+  /// `lastSeq` is the last note already held, used the first time the room is made.
+  public func live(lastSeq: Int?, onNote: @escaping (Int, Note) -> Void) -> LiveRoom {
+    if let cachedLive { return cachedLive }
+    let accounts = accounts
+    let room = LiveRoom.live(
+      baseURL: baseURL, token: { (try? accounts.load())?.token }, lastSeq: lastSeq, onNote: onNote)
+    cachedLive = room
+    return room
+  }
+
   /// The settings of the signed-in account, kept for as long as the account stays signed in.
   public func account() -> AccountModel {
     if let cachedAccount { return cachedAccount }
@@ -73,6 +89,8 @@ public final class RealAppModel {
 
   /// Settings finished `action`: unpairing goes back to pairing, signing out back to sign-in.
   public func finished(_ action: AccountAction) {
+    cachedLive?.disconnect()
+    cachedLive = nil
     cachedHistory = nil
     cachedAccount = nil
     pairing = PairingModel(api: api)

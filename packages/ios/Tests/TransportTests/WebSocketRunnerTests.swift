@@ -7,8 +7,8 @@ import Wire
   static func dependencies(
     pool: ConnectionPool,
     sleep: @escaping @Sendable (Duration) async -> Void = { duration in
-      // Connect timeouts never fire unless a test asks for one.
-      if duration == WebSocketMachine.connectTimeout {
+      // Connect timeouts and the stability timer never fire unless a test asks for one.
+      if duration == WebSocketMachine.connectTimeout || duration == WebSocketMachine.stableAfter {
         try? await Task.sleep(for: .seconds(3600))
       }
     },
