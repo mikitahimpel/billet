@@ -44,6 +44,7 @@ struct AppShellView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.dynamicTypeSize) private var typeSize
   @State private var destination = Destination.home
+  @State private var replayingOnboarding = false
 
   /// Everything the widgets show that can change while the app is open.
   private struct PublishKey: Hashable {
@@ -162,6 +163,7 @@ struct AppShellView: View {
           selectedSceneID: $selectedSceneID,
           widgetFeatures: widgetFeatures,
           isFakePartner: session.isFakePartner,
+          onReplayOnboarding: { replayingOnboarding = true },
           onLogOut: onLogOut
         )
         .tabEntrance(destination == .settings)
@@ -182,6 +184,11 @@ struct AppShellView: View {
       preparingScenes = scenes.filter { $0.id != selectedScene?.id }
     }
     .tint(Palette.gold.color)
+    #if os(iOS)
+      .fullScreenCover(isPresented: $replayingOnboarding) {
+        OnboardingReplay(scenes: scenes, lighting: labs.lighting) { replayingOnboarding = false }
+      }
+    #endif
     .sensoryFeedback(.selection, trigger: destination)
     .task(id: DrainKey(active: scenePhase == .active, status: session.status)) {
       guard scenePhase == .active, let queue = ActionQueue.appGroup() else { return }

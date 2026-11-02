@@ -28,6 +28,8 @@ final class TabLighting {
   private var shadows: [ModelEntity] = []
   private var reduceMotion = false
   private var clock = 0.0
+  /// How far the scene's lights are up, from 0 (out) to 1, as while a scene fades in.
+  private var dimmer: Float = 1
 
   init() {
     rim.components.set(
@@ -105,14 +107,22 @@ final class TabLighting {
     }
     setKeyBrightness()
     core.components[PointLightComponent.self]?.color = look.key.colour.genz.platformColour
-    core.components[PointLightComponent.self]?.intensity = lit ? look.core : 0
     rim.components[SpotLightComponent.self]?.color = look.rim.colour.genz.platformColour
-    rim.components[SpotLightComponent.self]?.intensity = lit ? look.rim.intensity : 0
+    setFillBrightness()
     sun.isEnabled = lit && look.sun.intensity > 0
     sun.components[DirectionalLightComponent.self]?.color = look.sun.colour.genz.platformColour
     sun.components[DirectionalLightComponent.self]?.intensity = look.sun.intensity
     for shadow in shadows { shade(shadow) }
     applyFill()
+  }
+
+  /// Brings the scene's lights down to `level` of their own, from 0 to 1.
+  func setDimmer(_ level: Float) {
+    let level = min(max(level, 0), 1)
+    guard level != dimmer else { return }
+    dimmer = level
+    setKeyBrightness()
+    setFillBrightness()
   }
 
   /// Steps a flickering key, as the candle preset asks.
@@ -145,10 +155,16 @@ final class TabLighting {
   }
 
   private func setKeyBrightness() {
-    let boost = boost
+    let boost = boost * dimmer
     for key in keys {
       key.light.components[PointLightComponent.self]?.intensity = key.intensity * boost
     }
+  }
+
+  private func setFillBrightness() {
+    let lit = look.isLit
+    core.components[PointLightComponent.self]?.intensity = lit ? look.core * dimmer : 0
+    rim.components[SpotLightComponent.self]?.intensity = lit ? look.rim.intensity * dimmer : 0
   }
 
   private func shade(_ shadow: ModelEntity) {

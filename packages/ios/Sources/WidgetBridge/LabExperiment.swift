@@ -34,6 +34,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case catChases
   case shopScene
   case notesDesk
+  case cinematicOnboarding
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -41,6 +42,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case notes
     case home
     case catMoments
+    case firstLaunch
 
     public var title: String {
       switch self {
@@ -49,6 +51,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       case .notes: "Notes"
       case .home: "The house"
       case .catMoments: "Cat moments"
+      case .firstLaunch: "First launch"
       }
     }
   }
@@ -83,6 +86,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: .catMoments
     case .shopScene: .home
     case .notesDesk: .notes
+    case .cinematicOnboarding: .firstLaunch
     }
   }
 
@@ -116,6 +120,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: "Plays on its own"
     case .shopScene: "Shop tab"
     case .notesDesk: "Notes desk"
+    case .cinematicOnboarding: "Cinematic onboarding"
     }
   }
 
@@ -133,6 +138,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "Now and then the cat chases the yarn, or a dot of light from the lamp, all by itself."
     case .shopScene:
       "A Shop tab: a little 3D shop with a keeper behind the counter. Tap anything on the shelves to see it and buy it. The keeper is chosen under Shopkeeper. Off, the shop stays a sheet on Home."
+    case .cinematicOnboarding:
+      "First launch flies into a windowsill of candles with a soft beating heart, and pairing happens in that scene. Off, it is the plain welcome and code screens. Replay it below without touching your pair."
     case .notesDesk:
       "Notes becomes a desk under a board: tap the paper to draw, tap a pinned note to open it. The list is one tap away. Off, Notes is the list."
     case .shelfBoard:
@@ -211,6 +218,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: false
     case .shopScene: false
     case .notesDesk: false
+    case .cinematicOnboarding: false
     }
   }
 
@@ -244,6 +252,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catChases: false
     case .shopScene: true
     case .notesDesk: true
+    case .cinematicOnboarding: true
     }
   }
 }

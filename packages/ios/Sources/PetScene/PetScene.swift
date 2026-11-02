@@ -100,6 +100,12 @@ public protocol PetScene {
   func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
   ) -> AnyView?
+
+  /// The first-launch scene, or `nil` when the scene has none. `state` changes while the view
+  /// stays alive. It mounts its renderer as soon as it is on screen.
+  func makeOnboardingScene(
+    state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
+  ) -> AnyView?
 }
 
 extension PetScene {
@@ -126,6 +132,10 @@ extension PetScene {
 
   public func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
+  ) -> AnyView? { nil }
+
+  public func makeOnboardingScene(
+    state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
   ) -> AnyView? { nil }
 }
 
