@@ -61,12 +61,15 @@ let homeTarget: Target = .target(
     "DesignSystem",
     "FeatureCanvas",
     "FeatureInbox",
+    "FeatureOnboarding",
+    "FeaturePairing",
     "FeatureSettings",
     "Ink",
     "Labs",
     "Persistence",
     "Pet",
     "PetScene",
+    "Transport",
     "WidgetBridge",
     "Wire",
   ]
@@ -87,6 +90,9 @@ let testTargets: [Target] = [
       "WidgetBridge",
       "Wire",
     ]),
+  .testTarget(
+    name: "FeatureOnboardingTests",
+    dependencies: ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   .testTarget(
     name: "FeaturePairingTests", dependencies: ["FeaturePairing", "Transport", "Wire"]),
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
