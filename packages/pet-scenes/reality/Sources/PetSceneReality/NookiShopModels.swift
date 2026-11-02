@@ -10,8 +10,9 @@ final class NookiShopModels {
   private let loadModel: NookiModelLoader
   private var prototypes: [String: Entity] = [:]
 
-  init(loadModel: @escaping NookiModelLoader = NookiFurniture.bundledModel) {
-    self.loadModel = loadModel
+  init(loadModel: NookiModelLoader? = nil) {
+    let assets = NookiAssets()
+    self.loadModel = loadModel ?? { name throws(NookiLoadError) in try await assets.model(name) }
   }
 
   /// A piece of furniture scaled to its catalog size, standing on y = 0 and centred on x and z.

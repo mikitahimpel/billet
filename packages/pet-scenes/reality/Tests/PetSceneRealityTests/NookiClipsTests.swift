@@ -62,7 +62,7 @@ import Testing
 
 @MainActor @Suite struct NookiBundledRigTests {
   private func bundledCat() async throws -> Entity {
-    try await Entity(named: "Cat", in: .module)
+    try await NookiAssets().model("Cat")
   }
 
   @Test func theBundleLoadsTheTimeline() async throws {

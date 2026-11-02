@@ -120,13 +120,14 @@ final class NookiDiorama {
 
   /// Starts empty and cheap, so a view can hold one before anything heavy has run.
   init(
-    loadModel: @escaping NookiModelLoader = NookiFurniture.bundledModel,
+    loadModel: NookiModelLoader? = nil,
     mochiDeadline: Duration = .seconds(12),
     tiltSource: any NookiTiltSource = NookiTiltSources.standard(),
     layoutStore: NookiLayoutStore = NookiLayoutStore(defaults: .standard)
   ) {
     renovation = NookiRenovation(store: layoutStore)
-    self.loadModel = loadModel
+    let assets = NookiAssets()
+    self.loadModel = loadModel ?? { name throws(NookiLoadError) in try await assets.model(name) }
     self.tiltSource = tiltSource
     self.mochiDeadline = mochiDeadline
     root.addChild(room)
@@ -148,6 +149,8 @@ final class NookiDiorama {
 
   private func load() async {
     NookiTrace.mark("load started")
+    startLoadingMochi()
+    let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
     await buildRoom()
     physics.buildShell(in: room)
     await buildBowl()
@@ -158,9 +161,6 @@ final class NookiDiorama {
     mochi.name = NookiTarget.mochi.rawValue
     Self.makeTappable(mochi, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
     room.addChild(mochi)
-    await Task.yield()
-    startLoadingMochi()
-    let furniture = NookiFurniture.items.map { item in Task { await place(item) } }
     for piece in furniture { await piece.value }
     NookiTrace.mark("furniture placed")
     findLampParts()
@@ -807,7 +807,7 @@ final class NookiDiorama {
 
   private func loadMochi() async {
     do {
-      let model = try await loadModel("Cat")
+      let model = try await loadModel(NookiAssets.mochiName)
       guard let offset = Self.mochiOffset(model.visualBounds(relativeTo: nil)) else {
         throw NookiLoadError.noGeometry("Cat")
       }
@@ -1015,14 +1015,6 @@ struct NookiFurniture: Sendable {
     let (across, along) = (abs(cos(yaw)), abs(sin(yaw)))
     return SIMD2(
       across * size.x + along * size.z, along * size.x + across * size.z) / 2 * Self.standingShare
-  }
-
-  static let bundledModel: NookiModelLoader = { name throws(NookiLoadError) in
-    do {
-      return try await Entity(named: name, in: .module)
-    } catch {
-      throw .unreadable(name, reason: String(describing: error))
-    }
   }
 
   @MainActor static let items = [

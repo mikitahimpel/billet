@@ -27,12 +27,17 @@ struct NookiPetSceneTests {
     "Item_mouse",
   ])
   func bundledModelLoads(name: String) async throws {
-    let model = try await Entity(named: name, in: .module)
+    let model = try await NookiAssets().model(name)
     #expect(!model.visualBounds(relativeTo: nil).isEmpty)
   }
 
+  @Test(arguments: ["Cat", "Room"])
+  func compiledModelsOpen(name: String) async {
+    #expect(await NookiAssets.compiled(name) != nil)
+  }
+
   @Test func mochiHasTheSeparateMeshesTheWakeAnimationSwaps() async throws {
-    let model = try await Entity(named: "Cat", in: .module)
+    let model = try await NookiAssets().model("Cat")
     for name in ["Eye1", "Eye_1", "Ear1", "Ear_1", "EarInner1", "EarInner_1", "Bell", "Mouth"] {
       #expect(model.findEntity(named: name) != nil, "missing \(name)")
     }
@@ -81,7 +86,7 @@ struct NookiPetSceneTests {
   }
 
   @Test func theBakedLampStillHasPartsThatGlow() async throws {
-    let lamp = try await NookiFurniture.bundledModel(NookiFurniture.lampName)
+    let lamp = try await NookiAssets().model(NookiFurniture.lampName)
     var glowing = 0
     func visit(_ entity: Entity) {
       for material in entity.components[ModelComponent.self]?.materials ?? [] {
@@ -170,7 +175,7 @@ struct NookiPetSceneTests {
       loadModel: { name throws(NookiLoadError) in
         if name == "Cat" {
           for await _ in gate {}
-          return try await NookiFurniture.bundledModel(name)
+          return try await NookiAssets().model(name)
         }
         return Entity()
       },
@@ -207,7 +212,7 @@ struct NookiPetSceneTests {
   }
 
   @Test func theBundledCatHasPlausibleBounds() async throws {
-    let cat = try await NookiFurniture.bundledModel("Cat")
+    let cat = try await NookiAssets().model("Cat")
     let bounds = cat.visualBounds(relativeTo: nil)
     #expect(NookiDiorama.mochiOffset(bounds) != nil)
     #expect(bounds.extents.max() > 0.1 && bounds.extents.max() < 1)
@@ -216,7 +221,7 @@ struct NookiPetSceneTests {
   private static func failing(_ failed: String) -> NookiModelLoader {
     { name throws(NookiLoadError) in
       if name == failed { throw .unreadable(name, reason: "test") }
-      return try await NookiFurniture.bundledModel(name)
+      return try await NookiAssets().model(name)
     }
   }
 
