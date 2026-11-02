@@ -95,7 +95,7 @@ import simd
   @Test func theFloorRayMatchesWhereTheBallIsDrawn() throws {
     let point = try #require(
       NookiFloorRay.floorPoint(
-        under: [184, 548], viewSize: [402, 874], camera: NookiCamera().position,
+        under: [178, 590], viewSize: [402, 874], camera: NookiCamera().position,
         target: NookiCamera.target, verticalFieldOfView: 30, height: 0.07))
     #expect(simd_distance(point, [0.36, 0.54]) < 0.1)
   }

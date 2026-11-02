@@ -11,7 +11,7 @@ struct NookiCamera: Equatable {
 
   static let yawLimits: ClosedRange<Float> = 0.12...1.45
   static let pitchLimits: ClosedRange<Float> = 0.2...1.2
-  static let distanceLimits: ClosedRange<Float> = 5.5...11
+  static let distanceLimits: ClosedRange<Float> = 4.5...11
   static let angleOvershoot: Float = 0.1
   static let distanceOvershoot: Float = 0.5
 
@@ -21,23 +21,28 @@ struct NookiCamera: Equatable {
   private static let homeRate: Float = 6
   private static let restingSpeed: Float = 0.01
   private static let closeEnough: Float = 0.001
+  /// Width over height of the narrowest view that shows the whole room from home.
+  private static let fullRoomAspect: Float = 0.72
 
   private static let home = NookiCamera()
 
   private(set) var yaw: Float = 0.675
   private(set) var pitch: Float = 0.53
-  private(set) var distance: Float = 8
+  private(set) var distance: Float = 5.8
   private(set) var yawVelocity: Float = 0
   private(set) var pitchVelocity: Float = 0
   private(set) var isReturningHome = false
   private(set) var lean = SIMD2<Float>.zero
+  /// How much further out than `distance` the view's shape puts the camera.
+  private(set) var standBack: Float = 1
   private var isHeld = false
 
   var position: SIMD3<Float> {
     let shownYaw = Self.leaned(yaw, by: lean.x, in: Self.yawLimits)
     let shownPitch = Self.leaned(pitch, by: lean.y, in: Self.pitchLimits)
     let flat = cos(shownPitch)
-    return Self.target + distance * [flat * sin(shownYaw), sin(shownPitch), flat * cos(shownYaw)]
+    let reach = distance * standBack
+    return Self.target + reach * [flat * sin(shownYaw), sin(shownPitch), flat * cos(shownYaw)]
   }
 
   /// True when nothing is moving, so the scene can drop to its idle update rate.
@@ -54,6 +59,13 @@ struct NookiCamera: Equatable {
   /// stays inside the limits, or no further out than an overshoot has taken it.
   mutating func lean(to lean: SIMD2<Float>) {
     self.lean = lean
+  }
+
+  /// Fits a view of `size`. The field of view is vertical, so a tall narrow view would otherwise
+  /// run the room off both sides.
+  mutating func fit(to size: SIMD2<Float>) {
+    guard size.x > 0, size.y > 0 else { return }
+    standBack = max(1, Self.fullRoomAspect * size.y / size.x)
   }
 
   /// Follows a drag, in radians. Stops any coasting or trip home.
@@ -125,8 +137,10 @@ struct NookiCamera: Equatable {
 
   private mutating func arriveHome() {
     let lean = lean
+    let standBack = standBack
     self = Self.home
     self.lean = lean
+    self.standBack = standBack
   }
 
   private mutating func springBack(_ delta: Float) {
