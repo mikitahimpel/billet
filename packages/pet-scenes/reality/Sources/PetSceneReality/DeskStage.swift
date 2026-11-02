@@ -512,7 +512,7 @@ final class DeskStage: TabStage {
       Self.log.error("The desk cat has no size")
       return
     }
-    let scale = DeskLayout.cat.length / CatCatalog.mochiReach * CatCatalog.fit(shown.model)
+    let scale = DeskLayout.cat.length / CatCatalog.reach
     model.scale = .one * scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
