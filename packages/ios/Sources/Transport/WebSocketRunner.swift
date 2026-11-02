@@ -3,6 +3,14 @@
 /// Events that come from the socket rather than from an output's result (`opened`, `received`,
 /// `dropped`) go through `events`, one pipe, so they reach the machine in the order they happened.
 /// Every event carries its attempt number; the machine discards the stale ones.
+///
+/// Outputs are not ordered: `Store` runs each in its own task, so a `deliver` or a `send` may
+/// overtake an earlier one. Nothing here depends on that today. A caller that needs strokes in
+/// `seq` order must sort them, and a server that needs `Resume` before anything else must not
+/// rely on this runner for it.
+///
+/// A `close` also stops what the attempt has in flight: a connect that is still opening is
+/// cancelled, and its timers are stopped.
 final class WebSocketRunner: Sendable {
   let events: AsyncStream<WebSocketMachine.Event>
   private let continuation: AsyncStream<WebSocketMachine.Event>.Continuation
@@ -16,12 +24,23 @@ final class WebSocketRunner: Sendable {
     self.dependencies = dependencies
   }
 
+  /// Closes every socket and stops all work in flight. The client calls it when it goes away.
+  func shutdown() async {
+    for connection in await slot.releaseAll() {
+      await connection.close()
+    }
+    continuation.finish()
+  }
+
   func run(_ output: WebSocketMachine.Output) async -> WebSocketMachine.Event? {
     switch output {
     case .open(let attempt):
+      let opening = Task { [dependencies] in try await dependencies.open() }
+      await slot.track(opening: opening, for: attempt)
       do {
-        let connection = try await dependencies.open()
+        let connection = try await opening.value
         await slot.install(connection, for: attempt)
+        await slot.cancelTimer(for: attempt)
         continuation.yield(.opened(attempt: attempt))
         let reader = Task { [continuation] in
           for await message in connection.messages {
@@ -51,11 +70,16 @@ final class WebSocketRunner: Sendable {
       }
 
     case .startConnectTimeout(let attempt):
-      await dependencies.sleep(WebSocketMachine.connectTimeout)
-      return .connectTimedOut(attempt: attempt)
+      return await timer(
+        .connectTimedOut(attempt: attempt), after: WebSocketMachine.connectTimeout, for: attempt)
+
+    case .startStabilityTimer(let attempt):
+      return await timer(
+        .stable(attempt: attempt), after: WebSocketMachine.stableAfter, for: attempt)
 
     case .scheduleRetry(let failures, let attempt):
-      await dependencies.sleep(WebSocketMachine.retryDelay(afterFailures: failures))
+      let delay = WebSocketMachine.retryDelay(afterFailures: failures) * dependencies.jitter()
+      await dependencies.sleep(delay)
       return .retryElapsed(attempt: attempt)
 
     case .deliver(let message):
@@ -63,9 +87,19 @@ final class WebSocketRunner: Sendable {
       return nil
     }
   }
+
+  /// Sleeps, then reports `event`, unless the attempt ended and stopped the timer first.
+  private func timer(
+    _ event: WebSocketMachine.Event, after delay: Duration, for attempt: Int
+  ) async -> WebSocketMachine.Event? {
+    let sleeping = Task { [dependencies] in await dependencies.sleep(delay) }
+    await slot.track(timer: sleeping, for: attempt)
+    await sleeping.value
+    return sleeping.isCancelled ? nil : event
+  }
 }
 
-/// The open sockets and their readers, by attempt number.
+/// The open sockets, their readers and the work still in flight, by attempt number.
 actor ConnectionSlot {
   private struct Entry {
     var connection: WebSocketConnection
@@ -73,8 +107,25 @@ actor ConnectionSlot {
   }
 
   private var entries: [Int: Entry] = [:]
+  private var openings: [Int: Task<WebSocketConnection, any Error>] = [:]
+  private var timers: [Int: Task<Void, Never>] = [:]
+
+  func track(opening: Task<WebSocketConnection, any Error>, for attempt: Int) {
+    openings[attempt] = opening
+  }
+
+  /// Replaces the attempt's timer, stopping the one before it.
+  func track(timer: Task<Void, Never>, for attempt: Int) {
+    timers[attempt]?.cancel()
+    timers[attempt] = timer
+  }
+
+  func cancelTimer(for attempt: Int) {
+    timers.removeValue(forKey: attempt)?.cancel()
+  }
 
   func install(_ connection: WebSocketConnection, for attempt: Int) {
+    openings.removeValue(forKey: attempt)
     entries[attempt] = Entry(connection: connection, reader: nil)
   }
 
@@ -90,10 +141,25 @@ actor ConnectionSlot {
     entries[attempt]?.connection
   }
 
-  /// Forgets the attempt's socket and stops reading it. The caller closes it.
+  /// Forgets the attempt's socket and stops reading it, cancels a connect still in flight and
+  /// stops its timers. The caller closes the socket.
   func release(_ attempt: Int) -> WebSocketConnection? {
+    openings.removeValue(forKey: attempt)?.cancel()
+    timers.removeValue(forKey: attempt)?.cancel()
     guard let entry = entries.removeValue(forKey: attempt) else { return nil }
     entry.reader?.cancel()
     return entry.connection
+  }
+
+  /// Everything above for every attempt. The caller closes the sockets.
+  func releaseAll() -> [WebSocketConnection] {
+    for opening in openings.values { opening.cancel() }
+    for timer in timers.values { timer.cancel() }
+    for entry in entries.values { entry.reader?.cancel() }
+    let connections = entries.values.map(\.connection)
+    openings = [:]
+    timers = [:]
+    entries = [:]
+    return connections
   }
 }

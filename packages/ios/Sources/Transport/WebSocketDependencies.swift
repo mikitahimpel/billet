@@ -1,3 +1,4 @@
+import Foundation
 import Wire
 
 /// One open socket. `messages` ends when the socket drops or closes.
@@ -23,14 +24,18 @@ public struct WebSocketDependencies: Sendable {
   public var sleep: @Sendable (Duration) async -> Void
   /// Receives each server message while connected.
   public var deliver: @Sendable (ServerMessage) async -> Void
+  /// The factor each back-off delay is multiplied by, so that many clients do not retry in step.
+  public var jitter: @Sendable () -> Double
 
   public init(
     open: @escaping @Sendable () async throws(TransportError) -> WebSocketConnection,
     sleep: @escaping @Sendable (Duration) async -> Void,
-    deliver: @escaping @Sendable (ServerMessage) async -> Void
+    deliver: @escaping @Sendable (ServerMessage) async -> Void,
+    jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) }
   ) {
     self.open = open
     self.sleep = sleep
     self.deliver = deliver
+    self.jitter = jitter
   }
 }

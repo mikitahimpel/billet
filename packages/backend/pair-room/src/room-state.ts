@@ -8,6 +8,15 @@ import { PresenceState } from "@billet/contracts-realtime/client-message";
 export const Member = Schema.Struct({ user: UserId, presence: PresenceState });
 export type Member = typeof Member.Type;
 
+const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+
+/** Two different people: a room cannot be built around one user twice. */
+const Couple = Schema.Tuple([Member, Member]).check(
+  Schema.makeFilter(([first, second]) =>
+    first.user === second.user ? "a room needs two different members" : true,
+  ),
+);
+
 /**
  * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
  * in the store and `lastSeq` is the only part of them that a decision needs.
@@ -19,9 +28,9 @@ export const RoomState = Schema.TaggedUnion({
   Vacant: {},
   Active: {
     pairId: PairId,
-    members: Schema.Tuple([Member, Member]),
-    lastSeq: Schema.Int,
-    streakDays: Schema.Int,
+    members: Couple,
+    lastSeq: Count,
+    streakDays: Count,
   },
 });
 export type RoomState = typeof RoomState.Type;

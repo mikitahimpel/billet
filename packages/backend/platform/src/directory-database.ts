@@ -14,3 +14,20 @@ export const openDirectoryDatabase = (db: D1Database) =>
   }).pipe(Effect.orDie);
 
 export type DirectoryDatabase = Effect.Success<ReturnType<typeof openDirectoryDatabase>>;
+
+interface Compilable {
+  readonly toSQL: () => { readonly sql: string; readonly params: ReadonlyArray<unknown> };
+}
+
+/**
+ * Runs the statements as one D1 batch, which is a transaction: D1 has no interactive ones, so
+ * `db.transaction` can't be used and a later statement can't depend on JavaScript reading an
+ * earlier result. Returns each statement's rows.
+ */
+export const atomically = (db: DirectoryDatabase, statements: ReadonlyArray<Compilable>) =>
+  db.$client.batch(
+    statements.map((statement) => {
+      const { sql, params } = statement.toSQL();
+      return db.$client.unsafe(sql, params);
+    }),
+  );

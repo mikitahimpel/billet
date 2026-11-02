@@ -1,4 +1,4 @@
-import { Effect, Layer, Schema } from "effect";
+import { Clock, Effect, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { NoteId } from "@billet/contracts-domain/ids";
@@ -127,6 +127,33 @@ describe("RoomService", () => {
     );
     expect(memory.notes.map((n) => n.seq)).toEqual(Array.from({ length: 25 }, (_, i) => i + 1));
     expect(new Set(memory.notes.map((n) => n.note.id)).size).toBe(25);
+  });
+
+  it("takes sentAt in the order of seq, even when commands interleave", async () => {
+    const { memory, layer } = memoryStore();
+    await runWith(
+      layer,
+      Effect.gen(function* () {
+        const room = yield* RoomService;
+        yield* room.dispatch(open);
+        // Every read of the clock returns a later time, so a note stamped outside the lock
+        // could get an earlier time than a note committed before it.
+        const real = yield* Clock.Clock;
+        let tick = 0;
+        yield* Effect.all(
+          Array.from({ length: 25 }, () => room.sendNote(alice, photo)),
+          { concurrency: "unbounded" },
+        ).pipe(
+          Effect.provideService(Clock.Clock, {
+            ...real,
+            currentTimeMillis: Effect.sync(() => (tick += 1)),
+            currentTimeMillisUnsafe: () => (tick += 1),
+          }),
+        );
+      }),
+    );
+    const sentAt = memory.notes.map((n) => n.note.sentAt);
+    expect(sentAt).toEqual([...sentAt].sort((a, b) => a - b));
   });
 
   it("lets a failed commit surface as a defect, with nothing stored", async () => {

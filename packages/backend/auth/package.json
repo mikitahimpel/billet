@@ -1,0 +1,36 @@
+{
+  "name": "@billet/backend-auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./apple-identity-verifier": "./src/apple-identity-verifier.ts",
+    "./auth-error": "./src/auth-error.ts",
+    "./auth-repository": "./src/auth-repository.ts",
+    "./auth-routes": "./src/auth-routes.ts",
+    "./auth-service": "./src/auth-service.ts",
+    "./identity-verifier": "./src/identity-verifier.ts",
+    "./test/auth-repository-contract": "./test/auth-repository-contract.ts",
+    "./test/in-memory-auth-repository": "./test/in-memory-auth-repository.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

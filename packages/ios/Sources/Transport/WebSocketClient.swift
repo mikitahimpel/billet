@@ -2,15 +2,20 @@ import BilletKit
 import Wire
 
 /// Runs ``WebSocketMachine`` against the given services.
+///
+/// Releasing the client closes its socket and stops its work, so `disconnect()` first is not
+/// required, though it is how the machine is told to stop in an orderly way.
 @MainActor
 public final class WebSocketClient {
   private let store: Store<WebSocketMachine>
   private let pump: Task<Void, Never>
+  private let runner: WebSocketRunner
 
   public var state: WebSocketMachine.State { store.state }
 
   public init(dependencies: WebSocketDependencies) {
     let runner = WebSocketRunner(dependencies: dependencies)
+    self.runner = runner
     let store = Store<WebSocketMachine>(initial: .initial) { output in
       await runner.run(output)
     }
@@ -24,6 +29,8 @@ public final class WebSocketClient {
 
   deinit {
     pump.cancel()
+    let runner = runner
+    Task { await runner.shutdown() }
   }
 
   public func connect() {

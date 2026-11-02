@@ -9,6 +9,7 @@ public enum InkDecoder {
     let scale = Double(resolution)
     var strokes: [Stroke] = []
     for (index, stroke) in compact.strokes.enumerated() {
+      guard InkColor.isValid(stroke.color) else { throw InkError.invalidColor(stroke.color) }
       guard stroke.points.count.isMultiple(of: 2) else {
         throw InkError.oddPointCount(strokeIndex: index)
       }

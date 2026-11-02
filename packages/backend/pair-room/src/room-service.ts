@@ -44,7 +44,7 @@ export class RoomService extends Context.Service<RoomService>()(
       // between load and commit. Without this lock two commands could decide from the same state.
       const lock = yield* Semaphore.make(1);
 
-      const dispatch = (command: RoomCommand): Effect.Effect<RoomDecision> =>
+      const decideAndCommit = (command: RoomCommand): Effect.Effect<RoomDecision> =>
         Effect.gen(function* () {
           const decision = decide(yield* store.load, command);
           switch (decision._tag) {
@@ -54,17 +54,20 @@ export class RoomService extends Context.Service<RoomService>()(
             case "Rejected":
               return decision;
           }
-        }).pipe(lock.withPermits(1));
+        });
 
+      const dispatch = (command: RoomCommand) => decideAndCommit(command).pipe(lock.withPermits(1));
+
+      // The id and the time are taken inside the lock, so `sentAt` follows the order of `seq`.
       const sendNote = (author: UserId, request: SendNoteRequest) =>
         Effect.gen(function* () {
           const id = yield* noteIds.next;
           const sentAt = yield* Clock.currentTimeMillis;
-          return yield* dispatch({
+          return yield* decideAndCommit({
             _tag: "SendNote",
             note: stamped(request, { id, author, sentAt }),
           });
-        });
+        }).pipe(lock.withPermits(1));
 
       return { dispatch, sendNote, state: store.load, notesAfter: store.notesAfter };
     }),

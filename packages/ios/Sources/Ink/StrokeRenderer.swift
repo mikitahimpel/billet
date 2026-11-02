@@ -30,7 +30,7 @@ public enum StrokeRenderer {
 
   /// Parses `#RRGGBB`.
   static func parse(_ hex: String) throws(InkError) -> CGColor {
-    guard hex.utf8.count == 7, hex.hasPrefix("#"), let value = UInt32(hex.dropFirst(), radix: 16)
+    guard InkColor.isValid(hex), let value = UInt32(hex.dropFirst(), radix: 16)
     else { throw InkError.invalidColor(hex) }
     let channel = { (shift: UInt32) in CGFloat((value >> shift) & 0xFF) / 255 }
     return CGColor(srgbRed: channel(16), green: channel(8), blue: channel(0), alpha: 1)

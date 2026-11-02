@@ -7,8 +7,23 @@ import Observation
 /// main actor.
 ///
 /// Outputs run concurrently, so their results arrive in completion order. Machines must treat a
-/// late result as a legal event in every state. A result that arrives after the store has been
-/// released is dropped.
+/// late result as a legal event in every state.
+///
+/// The store does not match a result to the output that produced it. A machine whose outputs can
+/// overlap, such as two fetches for the same screen, carries a request ID in its state, puts it in
+/// the output, and has the result bring it back; `GreetingMachine` shows the pattern, and
+/// `WebSocketMachine` does the same with its attempt number. A result with an old ID changes
+/// nothing.
+///
+/// The store does not cancel a running output, and that is a decision, not an omission. An output
+/// is a call into a service, and a service that must be stoppable owns that: it takes the
+/// cancellation of the task it runs in, or its own timeout, and reports the outcome as a result
+/// the machine handles. A machine therefore models "stop waiting" as an event, such as a timeout
+/// output that comes back as a result, and uses the request ID to drop whatever answers later.
+/// Cancelling from the store would make every output cancellable without any of them being
+/// written to cope, and would hide a hung call instead of bounding it.
+///
+/// A result that arrives after the store has been released is dropped.
 @MainActor
 @Observable
 public final class Store<M: Machine> {

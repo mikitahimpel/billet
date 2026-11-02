@@ -128,10 +128,16 @@ describe("PairRoom storage", () => {
     const room = await openRoom();
     await evictDurableObject(room);
     await room.snapshot();
-    const versions = await runInDurableObject(room, (_, state) =>
-      state.storage.sql.exec<{ version: number }>("SELECT version FROM migration").toArray(),
+    const names = await runInDurableObject(room, (_, state) =>
+      state.storage.sql
+        .exec<{ name: string }>("SELECT name FROM __drizzle_migrations ORDER BY name")
+        .toArray(),
     );
-    expect(versions).toEqual([{ version: 1 }]);
+    expect(names.map(({ name }) => name)).toEqual([
+      expect.stringContaining("_init"),
+      expect.stringContaining("_pair_room"),
+      expect.stringContaining("_delivery"),
+    ]);
   });
 
   it("rolls the state back if appending the note fails", async () => {
@@ -217,5 +223,131 @@ describe("PairRoom sockets", () => {
     webSocket?.close(1000, "done");
 
     expect(await closed).toBe(1000);
+  });
+});
+
+describe("PairRoom notes page", () => {
+  const drawing = SendNoteRequest.cases.Photo.make({ image });
+
+  it("skips a note body it cannot decode instead of failing the page", async () => {
+    const room = await openRoom();
+    await room.sendNote(alice, drawing);
+    await room.sendNote(alice, drawing);
+    await room.sendNote(bob, drawing);
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("UPDATE note SET body = ? WHERE seq = 2", '{"old":"shape"}');
+    });
+    const page = await room.notes(0, 10);
+    expect(page.map((entry) => entry.seq)).toEqual([1, 3]);
+  });
+
+  it("never returns an unbounded page", async () => {
+    const room = await openRoom();
+    await room.sendNote(alice, drawing);
+    await runInDurableObject(room, (_, state) => {
+      const body = state.storage.sql.exec<{ body: string }>("SELECT body FROM note").one().body;
+      for (let seq = 2; seq <= 150; seq++) {
+        state.storage.sql.exec("INSERT INTO note (seq, body) VALUES (?, ?)", seq, body);
+      }
+    });
+    expect(await room.notes(0, -1)).toEqual([]);
+    expect(await room.notes(0, 0)).toEqual([]);
+    expect(await room.notes(0, 1_000_000)).toHaveLength(100);
+  });
+});
+
+describe("PairRoom close handling", () => {
+  it("answers a close that carries no code", async () => {
+    const room = await openRoom();
+    const { webSocket } = await connect(room, upgrade(alice));
+    webSocket?.accept();
+    const closed = new Promise<number>((resolve) => {
+      webSocket?.addEventListener("close", (event) => {
+        resolve(event.code);
+      });
+    });
+
+    webSocket?.close();
+
+    expect(await closed).toBe(1000);
+  });
+
+  it.each([0, 999, 1004, 5000, 65535])("does not throw on the invalid code %i", async (code) => {
+    const room = await openRoom();
+    const { webSocket } = await connect(room, upgrade(alice));
+    webSocket?.accept();
+    const closed = new Promise<number>((resolve) => {
+      webSocket?.addEventListener("close", (event) => {
+        resolve(event.code);
+      });
+    });
+
+    await runInDurableObject(room, (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      expect(() => {
+        instance.webSocketClose(socket, code);
+      }).not.toThrow();
+    });
+
+    expect(await closed).toBe(1002);
+  });
+});
+
+describe("PairRoom realtime across eviction", () => {
+  const stroke = { color: "#2A1A1C", width: 3, points: [{ x: 1, y: 2 }] };
+
+  const open = async (room: DurableObjectStub<PairRoom>, user: string) => {
+    const { webSocket } = await connect(room, upgrade(user));
+    const frames: Array<{ _tag: string; [key: string]: unknown }> = [];
+    webSocket?.addEventListener("message", (event) => {
+      frames.push(JSON.parse(event.data as string));
+    });
+    webSocket?.accept();
+    return { socket: webSocket!, frames };
+  };
+
+  const until = async (check: () => boolean) => {
+    const end = Date.now() + 4000;
+    while (!check()) {
+      if (Date.now() > end) throw new Error("Never saw the expected frame");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  };
+
+  it("keeps relaying, and keeps each socket's place in the notes, after the object is evicted", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    b.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await room.sendNote(alice, photo);
+    await until(() => b.frames.some((f) => f._tag === "NoteReceived"));
+
+    await evictDurableObject(room);
+
+    a.socket.send(JSON.stringify({ _tag: "Stroke", stroke }));
+    await until(() => b.frames.some((f) => f._tag === "Stroke"));
+    await room.sendNote(alice, photo);
+    await until(() => b.frames.filter((f) => f._tag === "NoteReceived").length === 2);
+    expect(b.frames.filter((f) => f._tag === "NoteReceived").map((f) => f["seq"])).toEqual([1, 2]);
+  });
+
+  it("tells the partner the user stopped drawing when their last socket drops", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    a.socket.send(JSON.stringify({ _tag: "Presence", state: "drawing" }));
+    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "drawing"));
+
+    // A phone that drops reaches the handler with 1006, the code that returns early.
+    await runInDurableObject(room, async (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      await instance.webSocketClose(socket, 1006);
+    });
+    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "idle"));
+    expect(await room.snapshot()).toMatchObject({
+      members: [{ user: alice, presence: "idle" }, { user: bob }],
+    });
   });
 });

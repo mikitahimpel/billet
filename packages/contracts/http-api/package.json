@@ -5,9 +5,12 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./api-error": "./src/api-error.ts",
+    "./auth": "./src/auth.ts",
+    "./device": "./src/device.ts",
     "./invite": "./src/invite.ts",
     "./note": "./src/note.ts",
-    "./api-error": "./src/api-error.ts"
+    "./routes": "./src/routes.ts"
   },
   "scripts": {
     "lint": "oxlint .",

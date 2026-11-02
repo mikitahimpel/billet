@@ -51,7 +51,7 @@ func distinctColors(in image: CGImage) -> Int {
   return seen.count
 }
 
-func sampleNote() -> some View {
+@MainActor func sampleNote() -> some View {
   SceneCanvas(SampleDrawing.art)
 }
 
