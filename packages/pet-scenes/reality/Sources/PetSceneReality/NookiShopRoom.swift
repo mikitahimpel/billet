@@ -45,7 +45,7 @@ final class NookiShopRoom {
   }
 
   /// A piece fitted by height can be tall and narrow, so its height says little about its width.
-  private static let maximumHalfWidth: Float = 0.2
+  private static let maximumHalfWidth: Float = 0.12
 
   private func light(_ entity: Entity) {
     guard let ambient else { return }
