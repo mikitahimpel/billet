@@ -4,9 +4,10 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures } from "@billet/backend-auth/auth-routes";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
+import { clientInfoOf } from "@billet/contracts-http-api/client-info";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { routes } from "@billet/contracts-http-api/routes";
-import { clientInfoOf, EventSink, pairHashOf, PairVariants, variantsLabel } from "./analytics.ts";
+import { EventSink, pairHashOf, PairVariants, variantsLabel } from "./analytics.ts";
 import { Metrics } from "./metrics.ts";
 
 /**

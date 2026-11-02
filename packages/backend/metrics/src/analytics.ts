@@ -2,10 +2,6 @@ import { Context, Effect, Layer } from "effect";
 import { Digest } from "effect/crypto";
 import type { MetricEventName } from "@billet/contracts-domain/metrics";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import { clientHeaders } from "@billet/contracts-http-api/routes";
-
-/** What `AnalyticsPoint` says when the app sent no build or system, or something malformed. */
-export const unknownClient = "unknown";
 
 /**
  * One accepted event as it goes to Workers Analytics Engine. This is the whole of it: no user id,
@@ -46,24 +42,6 @@ export const variantsLabel = (
     .map(({ key, variant }) => `${key}=${variant}`)
     .toSorted()
     .join(",");
-
-const appVersionPattern = /^\d{1,4}(\.\d{1,4}){0,3}(\+\d{1,8})?$/;
-const osPattern = /^(iOS|iPadOS|macOS) \d{1,3}(\.\d{1,3}){0,2}$/;
-
-/**
- * The build and system the app named in its headers. Anything that is not exactly the documented
- * shape is `unknown`, so a header cannot smuggle free text into the dataset.
- */
-export const clientInfoOf = (
-  headers: Readonly<Record<string, string | undefined>>,
-): { readonly appVersion: string; readonly os: string } => {
-  const appVersion = headers[clientHeaders.appVersion]?.trim() ?? "";
-  const os = headers[clientHeaders.os]?.trim() ?? "";
-  return {
-    appVersion: appVersionPattern.test(appVersion) ? appVersion : unknownClient,
-    os: osPattern.test(os) ? os : unknownClient,
-  };
-};
 
 /**
  * Where accepted events are written besides the D1 counts. Writing never fails and never blocks the
