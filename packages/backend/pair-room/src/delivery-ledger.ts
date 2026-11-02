@@ -65,6 +65,31 @@ export const settle = (
   }
 };
 
+export interface LaneHealth {
+  readonly delivered: number;
+  readonly abandoned: number;
+  readonly pending: number;
+  /** Delivered over finished (delivered + abandoned); nothing until one has finished. */
+  readonly successRate: number | undefined;
+}
+
+/** How each lane is doing, from the entries of one room. */
+export const deliveryHealth = (
+  entries: ReadonlyArray<DeliveryEntry>,
+): Readonly<Record<string, LaneHealth>> => {
+  const counts: Record<string, { delivered: number; abandoned: number; pending: number }> = {};
+  for (const { lane, status } of entries) {
+    const bucket = (counts[lane] ??= { delivered: 0, abandoned: 0, pending: 0 });
+    bucket[status] += 1;
+  }
+  return Object.fromEntries(
+    Object.entries(counts).map(([lane, c]) => {
+      const finished = c.delivered + c.abandoned;
+      return [lane, { ...c, successRate: finished === 0 ? undefined : c.delivered / finished }];
+    }),
+  );
+};
+
 /** When the alarm should next fire, or nothing when no entry is pending. */
 export const nextAlarmAt = (entries: ReadonlyArray<DeliveryEntry>): number | undefined => {
   const times = entries.filter((e) => e.status === "pending").map((e) => e.nextAttemptAt);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   backoffMillis,
+  deliveryHealth,
   enqueue,
   isDue,
   maxAttempts,
@@ -76,5 +77,25 @@ describe("nextAlarmAt", () => {
       nextAlarmAt([settle(fresh, "Delivered", 0), settle(later, "Abandon", 0)]),
     ).toBeUndefined();
     expect(nextAlarmAt([])).toBeUndefined();
+  });
+});
+
+describe("deliveryHealth", () => {
+  it("counts each lane and rates only finished deliveries", () => {
+    const one = (lane: string, outcome: "Delivered" | "Abandon" | "Retry", id: string) =>
+      settle(enqueue(undefined, id, lane, 0), outcome, 0);
+    expect(
+      deliveryHealth([
+        one("AlertPush", "Delivered", "a"),
+        one("AlertPush", "Delivered", "b"),
+        one("AlertPush", "Abandon", "c"),
+        one("AlertPush", "Retry", "d"),
+        one("WidgetPush", "Retry", "e"),
+      ]),
+    ).toEqual({
+      AlertPush: { delivered: 2, abandoned: 1, pending: 1, successRate: 2 / 3 },
+      WidgetPush: { delivered: 0, abandoned: 0, pending: 1, successRate: undefined },
+    });
+    expect(deliveryHealth([])).toEqual({});
   });
 });
