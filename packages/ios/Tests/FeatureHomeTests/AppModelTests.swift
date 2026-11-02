@@ -2,6 +2,7 @@ import Delivery
 import DesignSystem
 import FeatureInbox
 import Foundation
+import Observation
 import Persistence
 import Pet
 import Testing
@@ -11,16 +12,32 @@ import Wire
 @testable import FeatureHome
 
 /// A room connection the test drives by hand.
+///
+/// The session reads updates through an `AsyncStream(unfolding:)`, which asks for the next update
+/// only after it has finished applying the previous one. `emit` returns on that ask, so it
+/// returns when the session has handled the update, with no pause to guess at. `waitFor` waits
+/// for what the session does in reply (the calls it makes on the room) by being woken each time
+/// one is recorded.
 @MainActor
 private final class FakeRoom {
-  private(set) var continuation: AsyncStream<NoteDelivery.Update>.Continuation?
-  private(set) var closed = 0
+  private(set) var closed = 0 { didSet { changed() } }
   private(set) var opened = 0
-  private(set) var delivered: [[Stroke]] = []
-  private(set) var deliveredIDs: [UUID] = []
-  private(set) var names: [String] = []
-  private(set) var plays: [PlayKind] = []
-  private(set) var reacted: [(UUID, Reaction)] = []
+  private(set) var delivered: [[Stroke]] = [] { didSet { changed() } }
+  private(set) var deliveredIDs: [UUID] = [] { didSet { changed() } }
+  private(set) var names: [String] = [] { didSet { changed() } }
+  private(set) var plays: [PlayKind] = [] { didSet { changed() } }
+  private(set) var reacted: [(UUID, Reaction)] = [] { didSet { changed() } }
+
+  /// The connection the session holds now, by the number `updates` gave it.
+  private var current: Int?
+  private var queue: [NoteDelivery.Update] = []
+  private var parked: CheckedContinuation<NoteDelivery.Update?, Never>?
+  /// An update has been handed over and the session has not asked for the next one yet.
+  private var inFlight = false
+  private var appliedWaiters: [CheckedContinuation<Void, Never>] = []
+  private var checks:
+    [UUID: (predicate: () -> Bool, continuation: CheckedContinuation<Void, Never>)] =
+      [:]
 
   var delivery: NoteDelivery {
     NoteDelivery(
@@ -34,20 +51,133 @@ private final class FakeRoom {
       nameCat: { name in await MainActor.run { self.names.append(name) } },
       react: { note, reaction in await MainActor.run { self.reacted.append((note, reaction)) } },
       updates: {
-        AsyncStream { continuation in
-          MainActor.assumeIsolated {
-            self.opened += 1
-            self.continuation = continuation
-          }
-          continuation.onTermination = { _ in Task { @MainActor in self.closed += 1 } }
-        }
+        let id = MainActor.assumeIsolated { self.attach() }
+        return AsyncStream(
+          unfolding: { await self.next(for: id) },
+          onCancel: { Task { @MainActor in self.cancelled(id) } })
       })
   }
 
+  private func attach() -> Int {
+    opened += 1
+    current = opened
+    queue = []
+    return opened
+  }
+
+  private func next(for id: Int) async -> NoteDelivery.Update? {
+    guard current == id else { return nil }
+    if inFlight {
+      inFlight = false
+      resumeApplied()
+    }
+    if !queue.isEmpty {
+      inFlight = true
+      return queue.removeFirst()
+    }
+    return await withCheckedContinuation { parked = $0 }
+  }
+
+  private func cancelled(_ id: Int) {
+    if current == id {
+      current = nil
+      queue = []
+      inFlight = false
+      parked?.resume(returning: nil)
+      parked = nil
+      resumeApplied()
+    }
+    closed += 1
+  }
+
+  private func resumeApplied() {
+    let waiters = appliedWaiters
+    appliedWaiters = []
+    for waiter in waiters { waiter.resume() }
+  }
+
+  /// Sends `update` to the session and returns once the session has applied it. Nothing happens
+  /// when no connection is open.
   func emit(_ update: NoteDelivery.Update) async {
-    continuation?.yield(update)
-    // Long enough for the session's task to run on a loaded machine.
-    try? await Task.sleep(for: .milliseconds(250))
+    guard current != nil else { return }
+    if let parked {
+      self.parked = nil
+      inFlight = true
+      parked.resume(returning: update)
+    } else {
+      queue.append(update)
+    }
+    await withCheckedContinuation { continuation in
+      appliedWaiters.append(continuation)
+      Task { @MainActor in
+        try? await Task.sleep(for: Self.hangLimit)
+        if !appliedWaiters.isEmpty {
+          Issue.record("the session did not finish applying \(update)")
+          resumeApplied()
+        }
+      }
+    }
+  }
+
+  /// Only so a broken test fails instead of hanging; a passing test never waits this long.
+  private static let hangLimit = Duration.seconds(20)
+
+  private func changed() {
+    for (id, check) in checks where check.predicate() {
+      checks[id] = nil
+      check.continuation.resume()
+    }
+  }
+
+  /// Returns once `predicate` holds, checking each time the room records something.
+  func waitFor(_ what: String, _ predicate: @escaping () -> Bool) async {
+    guard !predicate() else { return }
+    let id = UUID()
+    await withCheckedContinuation { continuation in
+      checks[id] = (predicate, continuation)
+      Task { @MainActor in
+        try? await Task.sleep(for: Self.hangLimit)
+        if let check = checks.removeValue(forKey: id) {
+          Issue.record("timed out waiting for \(what)")
+          check.continuation.resume()
+        }
+      }
+    }
+  }
+}
+
+/// Returns once `condition`, which reads observable state, holds; woken by each change to it.
+@MainActor
+private func waitUntil(_ what: String, _ condition: @escaping @MainActor () -> Bool) async {
+  final class Once: @unchecked Sendable {
+    private let lock = NSLock()
+    private var done = false
+    func run(_ body: () -> Void) {
+      let first = lock.withLock {
+        defer { done = true }
+        return !done
+      }
+      if first { body() }
+    }
+  }
+  let limit = ContinuousClock.now.advanced(by: .seconds(20))
+  while !condition() {
+    guard ContinuousClock.now < limit else {
+      Issue.record("timed out waiting for \(what)")
+      return
+    }
+    await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+      let once = Once()
+      withObservationTracking {
+        _ = condition()
+      } onChange: {
+        once.run { continuation.resume() }
+      }
+      Task {
+        try? await Task.sleep(until: limit)
+        once.run { continuation.resume() }
+      }
+    }
   }
 }
 
@@ -146,7 +276,7 @@ struct AppModelTests {
     #expect(session.play.catName == "Mochi")
     await room.emit(.catName("Biscuit"))
     #expect(session.play.catName == "Biscuit")
-    try await Task.sleep(for: .milliseconds(50))
+    await room.waitFor("the name") { room.names.count == 1 }
     #expect(room.names == ["Mochi"])
   }
 
@@ -157,7 +287,7 @@ struct AppModelTests {
     let received = try #require(session.notes.first)
     #expect(received.id == id)
     session.react(to: received, .heart)
-    try await Task.sleep(for: .milliseconds(50))
+    await room.waitFor("the reaction") { room.reacted.count == 1 }
     #expect(room.reacted.map(\.0) == [id])
     #expect(room.reacted.map(\.1) == [.heart])
     #expect(session.play.reactions[id] == .heart)
@@ -177,7 +307,9 @@ struct AppModelTests {
     #expect(session.perform(action(.pet), now: .now) == .done)
     #expect(session.perform(action(.treat), now: .now) == .done)
     #expect(session.perform(action(.heart, note: id), now: .now) == .done)
-    try await Task.sleep(for: .milliseconds(50))
+    await room.waitFor("the plays and the reaction") {
+      room.plays.count == 2 && room.reacted.count == 1
+    }
     #expect(Set(room.plays) == [.pet, .treat])
     #expect(room.plays.count == 2)
     #expect(room.reacted.map(\.0) == [id])
@@ -192,11 +324,17 @@ struct AppModelTests {
     #expect(session.perform(action(.pet), now: .now) == .keep)
     #expect(session.perform(action(.treat), now: .now) == .keep)
     #expect(session.perform(action(.heart, note: UUID()), now: .now) == .keep)
-    try await Task.sleep(for: .milliseconds(50))
-    #expect(room.plays.isEmpty)
     #expect(session.play.petsGiven == 0)
     #expect(session.perform(action(.openCanvas), now: .now) == .done)
     #expect(session.store.state.screen == .canvas)
+
+    // Once the room answers, the same action goes through, and only that one reaches the room:
+    // the three refused above were never sent.
+    await room.emit(.status(.partnerHere))
+    #expect(session.perform(action(.pet), now: .now) == .done)
+    await room.waitFor("the pet") { room.plays.count == 1 }
+    #expect(room.plays == [.pet])
+    #expect(room.reacted.isEmpty)
   }
 
   @Test func staleOrRepeatedWidgetActionsAreDropped() async throws {
@@ -224,15 +362,20 @@ struct AppModelTests {
     session.send(strokes)
     let sent = try #require(session.notes.first)
     session.react(to: sent, .heart)
-    try await Task.sleep(for: .milliseconds(50))
-    #expect(room.reacted.isEmpty)
     #expect(session.play.reactions.isEmpty)
+
+    // A reaction to a received note goes out, and it is the only one that does.
+    let received = UUID()
+    await room.emit(.note(strokes, id: received))
+    session.react(to: try #require(session.notes.first { $0.id == received }), .heart)
+    await room.waitFor("the reaction") { room.reacted.count == 1 }
+    #expect(room.reacted.map(\.0) == [received])
   }
 
   @Test func theSentNoteKeepsTheIDTheRoomWasGiven() async throws {
     let (_, session) = try await paired()
     session.send(strokes)
-    try await Task.sleep(for: .milliseconds(50))
+    await room.waitFor("the note") { room.deliveredIDs.count == 1 }
     #expect(room.deliveredIDs == [try #require(session.notes.first).id])
   }
 
@@ -274,9 +417,7 @@ struct AppModelTests {
   @Test func anUnreachableRoomGivesUp() async throws {
     let model = makeModel(timeout: .milliseconds(10))
     model.join(code: code)
-    while model.failure == nil {
-      try await Task.sleep(for: .milliseconds(5))
-    }
+    await waitUntil("the pairing to give up") { model.failure != nil }
     #expect(model.failure == .unreachable)
     #expect(isUnpaired(model))
     #expect(DemoRoom.saved(in: defaults) == nil)
@@ -354,16 +495,15 @@ struct AppModelTests {
     let (model, _) = try await paired()
     #expect(room.closed == 0)
     _ = await model.logOut()
-    try await Task.sleep(for: .milliseconds(30))
+    await room.waitFor("the socket to close") { room.closed == 1 }
     #expect(room.closed == 1)
   }
 
   @Test func aNoteAfterLogOutIsNotKept() async throws {
     let (model, session) = try await paired()
-    let continuation = room.continuation
     _ = await model.logOut()
-    continuation?.yield(.note(strokes, id: UUID()))
-    try await Task.sleep(for: .milliseconds(30))
+    await room.emit(.note(strokes, id: UUID()))
+    await room.waitFor("the socket to close") { room.closed == 1 }
     await session.savesFinished()
     #expect(session.notes.isEmpty)
     #expect(try AppGroupStorage.directory(directory).read(NoteArchive.fileName) == nil)
