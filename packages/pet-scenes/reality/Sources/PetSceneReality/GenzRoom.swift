@@ -146,6 +146,19 @@ final class GenzRoom {
   private var lastLevels: [String: Double] = [:]
   private var tapTimer = NookiTapTimer()
   private var texturesBeingMade = Set<String>()
+  private var pendingFlyIn: PetSceneFlyIn?
+  private var opening: SceneFlight?
+  /// The cat's turn away from its resting heading, eased towards `lookGoal`.
+  private var lookTurn: Float = 0
+  private var lookGoal: Float = 0
+  private var lookUntil: Double?
+  private var tiltSource: (any NookiTiltSource)?
+  private var tilt = NookiTilt()
+  private var ambientLight: Entity?
+  private let dayLamp = Entity()
+  /// Called when an opening asked for through ``flyIn(_:)`` is over.
+  var onOpeningEnded: (() -> Void)?
+  private var dayLight: PetSceneDayLight?
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "GenzRoom")
   private static let orbitPerPoint: Float = 0.004
@@ -156,6 +169,9 @@ final class GenzRoom {
   private static let posterStep = 0.25
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
+  private static let ambientExponent: Float = 1.6
+  private static let lookLimit: Float = 1
+  private static let cameraLookLength = 2.6
 
   init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource) {
     self.layout = layout
@@ -309,8 +325,10 @@ final class GenzRoom {
     {
       let ambient = Entity()
       ambient.components.set(
-        ImageBasedLightComponent(source: .single(environment), intensityExponent: 1.6))
+        ImageBasedLightComponent(
+          source: .single(environment), intensityExponent: Self.ambientExponent))
       room.addChild(ambient)
+      ambientLight = ambient
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
       NookiDiorama.visit(room) { $0.components.set(receiver) }
       ambientReceiver = receiver
@@ -347,6 +365,10 @@ final class GenzRoom {
     let from = isSunset ? GenzRoomPoint(-8, 3, 7).scene : GenzRoomPoint(4.5, -9, 7).scene
     outsideLight.look(at: middle, from: from, relativeTo: room)
     room.addChild(outsideLight)
+    dayLamp.components.set(DirectionalLightComponent(color: .white, intensity: 0))
+    dayLamp.look(at: middle, from: from + [0, 4, 0], relativeTo: room)
+    room.addChild(dayLamp)
+    applyDayLight()
   }
 
   private static func ambient(top: GenzColour, bottom: GenzColour) -> EnvironmentResource? {
@@ -436,6 +458,7 @@ final class GenzRoom {
     if onScreen { viewsShowing.insert(view) } else { viewsShowing.remove(view) }
     isOnScreen = !viewsShowing.isEmpty
     room.isEnabled = isOnScreen && isBuilt
+    if isOnScreen { tiltSource?.start() } else { tiltSource?.stop() }
   }
 
   func startUpdates(from content: RealityViewCameraContent) {
@@ -549,12 +572,144 @@ final class GenzRoom {
       if settlingFrames == 0, openedClock == nil { startOpening() }
       return
     }
+    if let pendingFlyIn {
+      self.pendingFlyIn = nil
+      startFlight(pendingFlyIn)
+    }
+    stepFlight()
+    stepTilt(Float(delta))
     if !camera.isAtRest {
       camera.step(Float(delta))
       aimLens()
     }
     applyCat()
+    applyLook(Float(delta))
     applyLevels()
+  }
+
+  // MARK: - Direction
+
+  /// Plays the opening the host asks for: the camera flies in over the room's own opening, and
+  /// the cat wakes and looks up on cue. A skip, or Reduce Motion, goes straight to the end.
+  func flyIn(_ request: PetSceneFlyIn?) {
+    guard let request else { return }
+    if let opening, opening.id == request.id {
+      if request.isSkipped { skipFlight() }
+      return
+    }
+    if pendingFlyIn?.id == request.id, !request.isSkipped { return }
+    pendingFlyIn = request
+  }
+
+  private func startFlight(_ request: PetSceneFlyIn) {
+    let atEnd = reduceMotion || request.isSkipped
+    opening = SceneFlight(id: request.id, clock: clock, atEnd: atEnd)
+    startOpening()
+    if atEnd { skipFlight() }
+    stepFlight()
+  }
+
+  private func skipFlight() {
+    opening?.skip(at: clock)
+    openedClock = clock - GenzOpening.length
+    noteClock = openedClock ?? clock
+    screen.openedAt = Date.now.addingTimeInterval(-GenzOpening.length)
+    lastTexture = -1
+    cue(.wakeUp)
+    cue(.lookAtCamera)
+  }
+
+  private func stepFlight() {
+    guard var opening else { return }
+    let offset = FlyInTimeline.offset(at: opening.time(at: clock))
+    camera.fly(yaw: offset.yaw, pitch: offset.pitch, distance: offset.distance)
+    aimLens()
+    for cue in opening.dueCues(at: clock) { self.cue(cue) }
+    guard opening.isOver(at: clock) else {
+      self.opening = opening
+      return
+    }
+    self.opening = nil
+    onOpeningEnded?()
+  }
+
+  /// Plays a cue for the cat with its own clips.
+  func cue(_ cue: CatCue) {
+    switch cue {
+    case .wakeUp:
+      petClock = clock
+    case .lookAtCamera:
+      look(at: camera.position, for: Self.cameraLookLength)
+    }
+  }
+
+  /// Turns the cat towards the floor under a finger at `point`.
+  func gaze(at point: CGPoint?) {
+    guard let point, !reduceMotion,
+      let floor = camera.point(under: point, in: viewSize, height: catHolder.position.y)
+    else { return }
+    look(at: floor, for: 0.6)
+  }
+
+  private func look(at point: SIMD3<Float>, for length: Double) {
+    let offset = point - catHolder.position(relativeTo: nil)
+    let facing = atan2(-offset.x, -offset.z)
+    let turn = remainder(facing - layout.cat.heading, 2 * .pi)
+    lookGoal = min(max(turn, -Self.lookLimit), Self.lookLimit)
+    lookUntil = clock + length
+  }
+
+  private func applyLook(_ delta: Float) {
+    if let lookUntil, clock >= lookUntil {
+      self.lookUntil = nil
+      lookGoal = 0
+    }
+    guard lookTurn != lookGoal else { return }
+    let next = lookTurn + (lookGoal - lookTurn) * (1 - exp(-7 * delta))
+    lookTurn = reduceMotion || abs(lookGoal - next) < 0.005 ? lookGoal : next
+    catHolder.orientation = simd_quatf(angle: layout.cat.heading + lookTurn, axis: [0, 1, 0])
+  }
+
+  /// Leans the camera with the phone while `follows` is true.
+  func setFollowsTilt(_ follows: Bool) {
+    if follows, tiltSource == nil {
+      let source = NookiTiltSources.standard()
+      source.start()
+      tiltSource = source
+    } else if !follows, let source = tiltSource {
+      source.stop()
+      tiltSource = nil
+    }
+  }
+
+  private func stepTilt(_ delta: Float) {
+    if let gravity = tiltSource?.gravity, !reduceMotion {
+      tilt.update(gravity: gravity, delta: delta)
+    } else {
+      tilt.settle(delta: delta)
+    }
+    guard tilt.lean != camera.lean else { return }
+    camera.lean(to: tilt.lean)
+    aimLens()
+  }
+
+  /// Lights the room for the hour here. `nil` keeps the room's own night.
+  func show(dayLight: PetSceneDayLight?) {
+    guard dayLight != self.dayLight else { return }
+    self.dayLight = dayLight
+    if let here = dayLight?.here, here.lampOn != lampOn { toggleLamp() }
+    applyDayLight()
+  }
+
+  private func applyDayLight() {
+    let look = dayLight.map { RoomDayLook($0.here) }
+    dayLamp.components.set(
+      DirectionalLightComponent(
+        color: (look?.sunColour ?? .one).platformColour,
+        intensity: look.map { $0.sunIntensity * 1.5 } ?? 0))
+    guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
+    ambient.intensityExponent = Self.ambientExponent + (look?.ambientShift ?? 0)
+    ambientLight?.components.set(ambient)
   }
 
   private var openingTime: Double { openedClock.map { clock - $0 } ?? 0 }

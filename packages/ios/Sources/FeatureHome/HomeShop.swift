@@ -7,7 +7,7 @@ import SwiftUI
 ///
 /// Neither screen is built until it is opened, so a scene without a shop pays nothing.
 struct HomeShop: ViewModifier {
-  private enum Sheet: Identifiable {
+  enum Sheet: Identifiable {
     case shop
     case closet
 
@@ -17,15 +17,16 @@ struct HomeShop: ViewModifier {
   let shop: ShopStore
   let renovator: RoomRenovator
   let scene: (any PetScene)?
-
-  @State private var sheet: Sheet?
+  /// False when Home opens the shop and the closet from somewhere else.
+  var showsButtons = true
+  @Binding var sheet: Sheet?
 
   private var isAvailable: Bool { scene?.hasShop ?? false }
 
   func body(content: Content) -> some View {
     content
       .overlay(alignment: .topTrailing) {
-        if isAvailable {
+        if isAvailable, showsButtons {
           GlassGroup {
             HStack(spacing: Spacing.small) {
               IconButton("archivebox.fill", label: "Closet") { sheet = .closet }
