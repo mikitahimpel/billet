@@ -1,6 +1,6 @@
 import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
+import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
@@ -39,7 +39,14 @@ const run = <A, E>(
 
 const failed = (error: unknown) => Exit.fail(error);
 
-const photo = (image: MediaKey) => SendNoteRequest.cases.Photo.make({ image });
+let keyCount = 0;
+/** A new key each time, so repeated sends are different notes unless a test reuses a key. */
+const newKey = () =>
+  Schema.decodeSync(IdempotencyKey)(
+    `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
+  );
+
+const photo = (image: MediaKey) => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
 
 /** Fills up with one-digit points, four bytes a pair, then makes up the rest in the width's digits. */
 const compactOfSize = (size: number): CompactStrokes => {
@@ -121,6 +128,24 @@ describe("readImage", () => {
 });
 
 describe("sendNote", () => {
+  it("returns the first note for a key sent again, and stores it once", async () => {
+    const { layer } = world();
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const image = yield* notes.uploadImage(ana, png);
+        const request = photo(image);
+        const first = yield* notes.sendNote(ana, request);
+        const again = yield* notes.sendNote(ana, request);
+        return { first, again, history: yield* notes.history(ana, 0, 10) };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      expect(outcome.value.again).toEqual(outcome.value.first);
+      expect(outcome.value.history).toEqual([{ seq: 1, note: outcome.value.first }]);
+    }
+  });
+
   const sendTwice = (notes: NotesService["Service"]) =>
     Effect.gen(function* () {
       const image = yield* notes.uploadImage(ana, png);
@@ -135,7 +160,10 @@ describe("sendNote", () => {
     expect(Exit.isSuccess(exit)).toBe(true);
     if (Exit.isSuccess(exit)) {
       const { first, second, history } = exit.value;
-      expect(history).toEqual([first, second]);
+      expect(history).toEqual([
+        { seq: 1, note: first },
+        { seq: 2, note: second },
+      ]);
       expect([first.author, second.author]).toEqual([ana, ben]);
     }
   });
@@ -162,16 +190,18 @@ describe("sendNote", () => {
     const { layer } = world();
     const send = (size: number) =>
       run(layer, (notes) =>
-        notes
-          .uploadImage(ana, png)
-          .pipe(
-            Effect.flatMap((image) =>
-              notes.sendNote(
-                ana,
-                SendNoteRequest.cases.Drawing.make({ image, compact: compactOfSize(size) }),
-              ),
+        notes.uploadImage(ana, png).pipe(
+          Effect.flatMap((image) =>
+            notes.sendNote(
+              ana,
+              SendNoteRequest.cases.Drawing.make({
+                key: newKey(),
+                image,
+                compact: compactOfSize(size),
+              }),
             ),
           ),
+        ),
       );
     expect(JSON.stringify(compactOfSize(compactBudget))).toHaveLength(compactBudget);
     expect(Exit.isSuccess(await send(compactBudget))).toBe(true);

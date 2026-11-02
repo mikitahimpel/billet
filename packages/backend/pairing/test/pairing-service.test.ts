@@ -44,6 +44,25 @@ describe("PairingService", () => {
     expect(new Set(codes.map(({ code }) => code)).size).toBe(50);
   });
 
+  it("reports the expiry it enforces: the moment the code stops working", async () => {
+    const claimAt = (offset: number) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* PairingService;
+          yield* TestClock.adjust(Duration.seconds(10));
+          const { code, expiresAt } = yield* service.createInvite(ana);
+          // The clock reads ten seconds, so the invite was made at 10_000 ms.
+          const untilExpiry = expiresAt - 10_000;
+          yield* TestClock.adjust(Duration.millis(untilExpiry + offset));
+          return { expiresAt, claimed: yield* service.claimInvite(ben, code).pipe(Effect.exit) };
+        }).pipe(Effect.provide(setup().layer), Effect.provide(TestClock.layer())),
+      );
+    const before = await claimAt(-1);
+    expect(before.expiresAt).toBe(10_000 + Duration.toMillis(inviteLifetime));
+    expect(before.claimed._tag).toBe("Success");
+    expect((await claimAt(0)).claimed._tag).toBe("Failure");
+  });
+
   it("pairs two users with a code, under one new pair id", async () => {
     const { memory, run } = setup();
     const { code } = await run((service) => service.createInvite(ana));

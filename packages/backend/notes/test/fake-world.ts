@@ -7,7 +7,7 @@ import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-m
 import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
-import { RoomStore } from "@billet/backend-pair-room/room-store";
+import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import { MediaStore } from "../src/media-store.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 
@@ -19,13 +19,19 @@ const makeRoom = () => {
   let state: RoomState = { _tag: "Vacant" };
   const notes: Array<SequencedNote> = [];
   let nextNote = 0;
+  const keys = new Map<string, SequencedNote>();
   const store = Layer.succeed(RoomStore, {
     load: Effect.sync(() => state),
-    commit: (room: ActiveRoom, appended: ReadonlyArray<SequencedNote>) =>
+    commit: (room: ActiveRoom, appended: ReadonlyArray<AppendedNote>) =>
       Effect.sync(() => {
         state = room;
-        notes.push(...appended);
+        for (const { entry, key } of appended) {
+          notes.push(entry);
+          keys.set(`${entry.note.author}/${key}`, entry);
+        }
       }),
+    noteByKey: (author, key) =>
+      Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
   });

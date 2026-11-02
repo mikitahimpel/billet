@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { IdempotencyKey } from "@billet/contracts-domain/ids";
 import { describe, expect, it } from "vitest";
 import { decide, isMember } from "../src/decide.ts";
 import { RoomCommand } from "../src/room-command.ts";
@@ -6,8 +7,9 @@ import { RoomDecision, RoomOutput, RoomRejection } from "../src/room-decision.ts
 import { RoomState, type ActiveRoom } from "../src/room-state.ts";
 import { active, alice, bob, mallory, otherPairId, pairId, photoFrom, vacant } from "./samples.ts";
 
+const key = Schema.decodeUnknownSync(IdempotencyKey)("6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f");
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
-const send = (author = alice) => RoomCommand.cases.SendNote.make({ note: photoFrom(author) });
+const send = (author = alice) => RoomCommand.cases.SendNote.make({ note: photoFrom(author), key });
 const setPresence = (user = alice, state: "idle" | "drawing" = "drawing") =>
   RoomCommand.cases.SetPresence.make({ user, state });
 
@@ -70,10 +72,10 @@ describe("decide on an active room", () => {
     const first = expectAccepted(active, send(alice));
     const second = expectAccepted(first.state, send(bob));
     expect(first.outputs).toEqual([
-      RoomOutput.cases.NoteAppended.make({ entry: { seq: 1, note: photoFrom(alice) } }),
+      RoomOutput.cases.NoteAppended.make({ entry: { seq: 1, note: photoFrom(alice) }, key }),
     ]);
     expect(second.outputs).toEqual([
-      RoomOutput.cases.NoteAppended.make({ entry: { seq: 2, note: photoFrom(bob) } }),
+      RoomOutput.cases.NoteAppended.make({ entry: { seq: 2, note: photoFrom(bob) }, key }),
     ]);
     expect(second.state.lastSeq).toBe(2);
   });
@@ -145,6 +147,10 @@ describe("tagged unions", () => {
   const outputs: Record<RoomOutput["_tag"], RoomOutput> = {
     RoomOpened: RoomOutput.cases.RoomOpened.make({ pairId }),
     NoteAppended: RoomOutput.cases.NoteAppended.make({
+      entry: { seq: 1, note: photoFrom(alice) },
+      key,
+    }),
+    NoteRepeated: RoomOutput.cases.NoteRepeated.make({
       entry: { seq: 1, note: photoFrom(alice) },
     }),
     PresenceChanged: RoomOutput.cases.PresenceChanged.make({ user: alice, state: "drawing" }),

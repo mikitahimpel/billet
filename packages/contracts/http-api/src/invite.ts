@@ -1,8 +1,9 @@
 import { Schema } from "effect";
-import { InviteCode } from "@billet/contracts-domain/ids";
+import { EpochMillis, InviteCode } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 
-export const CreateInviteResponse = Schema.Struct({ code: InviteCode });
+/** `expiresAt` is when the server stops accepting `code`. */
+export const CreateInviteResponse = Schema.Struct({ code: InviteCode, expiresAt: EpochMillis });
 export type CreateInviteResponse = typeof CreateInviteResponse.Type;
 
 export const ClaimInviteRequest = Schema.Struct({ code: InviteCode });
