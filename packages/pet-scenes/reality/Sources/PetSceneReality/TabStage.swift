@@ -15,6 +15,8 @@ protocol TabStage: AnyObject {
   func start()
   func setOnScreen(_ onScreen: Bool)
   func setReduceMotion(_ reduced: Bool)
+  /// Lights the scene with a lighting preset, through the same rig as the styled rooms.
+  func setLighting(_ look: LightingLook)
   func fit(to size: CGSize)
   func orbit(byX deltaX: Float, y deltaY: Float)
   func endOrbit(velocityX: Float, velocityY: Float)
@@ -34,6 +36,8 @@ struct TabGlow: Hashable {
 @Observable
 final class TabScreen {
   var glows: [TabGlow] = []
+  /// The corners of a window in the view, which the preset's haze leaves clear.
+  var window: [CGPoint] = []
   /// True once the scene is built and lit, so the glow can come up with it.
   var isLit = false
 }
@@ -109,22 +113,6 @@ enum TabLook {
   static func ambient(top: GenzColour, bottom: GenzColour) -> EnvironmentResource? {
     guard let image = gradient([bottom, top], width: 64, height: 32) else { return nil }
     return try? EnvironmentResource(equirectangular: image)
-  }
-
-  /// Lights everything under `root` with an ambient from `top` and `bottom`, and returns the
-  /// component that lets anything added later take the same light.
-  @discardableResult
-  static func light(_ root: Entity, top: GenzColour, bottom: GenzColour, exponent: Float)
-    -> ImageBasedLightReceiverComponent?
-  {
-    guard let environment = ambient(top: top, bottom: bottom) else { return nil }
-    let ambient = Entity()
-    ambient.components.set(
-      ImageBasedLightComponent(source: .single(environment), intensityExponent: exponent))
-    root.addChild(ambient)
-    let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
-    NookiDiorama.visit(root) { $0.components.set(receiver) }
-    return receiver
   }
 
   /// A point light.
@@ -220,6 +208,7 @@ struct TabSceneView: View {
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.petSceneLighting) private var lighting
   @State private var isMounted = false
   @State private var isAppeared = false
   @State private var lastDrag = CGSize.zero
@@ -229,10 +218,14 @@ struct TabSceneView: View {
   }
 
   var body: some View {
+    let look = LightingLook.of(lighting)
     ZStack {
       TabBackdrop()
+      GlowHaze(look: look, window: stage.screen.window)
       if isMounted { reality }
       TabGlowLayer(screen: stage.screen)
+      GlowGrade(look: look)
+      GlowVignette(look: look)
     }
     .ignoresSafeArea()
     .onAppear { isAppeared = true }
@@ -242,6 +235,7 @@ struct TabSceneView: View {
       stage.setOnScreen(onScreen)
     }
     .onChange(of: reduceMotion, initial: true) { _, reduced in stage.setReduceMotion(reduced) }
+    .onChange(of: lighting, initial: true) { _, lighting in stage.setLighting(.of(lighting)) }
   }
 
   private var reality: some View {

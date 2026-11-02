@@ -31,6 +31,8 @@ final class ShopStage: TabStage {
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
+  private let lighting = TabLighting()
+  private var look = LightingLook.off
 
   private var items: [ShopItem] = []
   private var stocked: [ShopItem.ID] = []
@@ -92,7 +94,18 @@ final class ShopStage: TabStage {
     frames.isPaused = !onScreen
   }
 
-  func setReduceMotion(_ reduced: Bool) { reduceMotion = reduced }
+  func setReduceMotion(_ reduced: Bool) {
+    reduceMotion = reduced
+    lighting.setReduceMotion(reduced)
+  }
+
+  func setLighting(_ look: LightingLook) {
+    guard look != self.look else { return }
+    self.look = look
+    guard isBuilt else { return }
+    lighting.apply(look)
+    updateGlows()
+  }
 
   func fit(to size: CGSize) {
     view.fit(to: size)
@@ -131,6 +144,7 @@ final class ShopStage: TabStage {
 
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    lighting.step(delta)
     if view.step(Float(delta)) { updateGlows() }
     if let waveAt, clock >= waveAt, rig != nil {
       self.waveAt = nil
@@ -150,13 +164,14 @@ final class ShopStage: TabStage {
 
   private func updateGlows() {
     var glows: [TabGlow] = []
+    let halos = lighting.haloScale
     for lamp in ShopLayout.lamps {
       let bulb = GenzRoomPoint(lamp.x, lamp.y, lamp.z - 0.2).scene
       guard let centre = view.project(bulb) else { continue }
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(3.4, at: bulb), colour: Self.lampColour,
-          strength: 0.42))
+          centre: centre, radius: view.reach(3.4, at: bulb), colour: lighting.tint(Self.lampColour),
+          strength: 0.42 * halos))
     }
     let counter = GenzRoomPoint(
       ShopLayout.keeper.x, ShopLayout.counter.y0, ShopLayout.counterTop + 0.6
@@ -164,18 +179,24 @@ final class ShopStage: TabStage {
     if let centre = view.project(counter) {
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(5, at: counter), colour: GenzColour(0xFF8A3D),
-          strength: 0.16))
+          centre: centre, radius: view.reach(5, at: counter),
+          colour: lighting.tint(GenzColour(0xFF8A3D)), strength: 0.16 * halos))
     }
     for bead in beads {
       let point = bead.scene
       guard let centre = view.project(point) else { continue }
       glows.append(
         TabGlow(
-          centre: centre, radius: view.reach(0.45, at: point), colour: Self.ledColour,
-          strength: 0.5))
+          centre: centre, radius: view.reach(0.45, at: point),
+          colour: lighting.fairyColour ?? Self.ledColour, strength: 0.5 * halos))
     }
     screen.glows = glows
+    let window = ShopLayout.window
+    let corners = [
+      GenzRoomPoint(0, window.y0, window.z0), GenzRoomPoint(0, window.y1, window.z0),
+      GenzRoomPoint(0, window.y1, window.z1), GenzRoomPoint(0, window.y0, window.z1),
+    ].compactMap { view.project($0.scene) }
+    screen.window = corners.count == 4 ? corners : []
   }
 
   // MARK: - Building
@@ -188,13 +209,15 @@ final class ShopStage: TabStage {
     buildLamps()
     buildDecor()
     await Task.yield()
-    receiver = TabLook.light(
+    receiver = lighting.ambient(
       room, top: GenzColour(0xF0D2B4), bottom: GenzColour(0x7A4C3C), exponent: 1.5)
     addLights()
+    rigLights()
     room.addChild(stock)
     keeperHolder.name = Self.keeperName
     keeperHolder.position = ShopLayout.keeper.scene
     room.addChild(keeperHolder)
+    lighting.apply(look)
     isBuilt = true
     room.isEnabled = isOnScreen
     screen.isLit = true
@@ -433,15 +456,15 @@ final class ShopStage: TabStage {
   private func addLights() {
     for lamp in ShopLayout.lamps {
       room.addChild(
-        TabLook.bulb(
+        lighting.key(
           Self.lampColour, intensity: 16_000, reach: 7,
           at: GenzRoomPoint(lamp.x, lamp.y, lamp.z - 0.3)))
     }
     room.addChild(
-      TabLook.bulb(
+      lighting.key(
         GenzColour(0xFF9A52), intensity: 12_000, reach: 11, at: GenzRoomPoint(4.2, 6.4, 3.6)))
     room.addChild(
-      TabLook.bulb(
+      lighting.key(
         GenzColour(0xFFD9A8), intensity: 7_000, reach: 6, at: GenzRoomPoint(3.5, 1.4, 4.9)))
     let moon = Entity()
     moon.components.set(
@@ -449,6 +472,35 @@ final class ShopStage: TabStage {
     moon.look(
       at: GenzRoomPoint(4, 3, 1).scene, from: GenzRoomPoint(-8, 3.4, 6).scene, relativeTo: room)
     room.addChild(moon)
+  }
+
+  /// The preset's rig: a rim behind the keeper, a core light over the counter, a low sun through
+  /// the shop window, and soft shadows under the counter, the shelves, the table and the keeper.
+  private func rigLights() {
+    let keeper = ShopLayout.keeper
+    lighting.rim(
+      at: GenzRoomPoint(keeper.x, keeper.y, keeper.z + ShopLayout.keeperHeight * 0.6).scene,
+      from: GenzRoomPoint(keeper.x + 0.8, keeper.y - 1.9, keeper.z + 4.6).scene)
+    lighting.core(at: GenzRoomPoint(3.5, 4.2, 2.4).scene)
+    lighting.sun(
+      at: GenzRoomPoint(3.5, 3.5, 0.5).scene, from: GenzRoomPoint(-8, 3.4, 3.2).scene)
+    let counter = ShopLayout.counter
+    lighting.shadow(
+      width: (counter.x1 - counter.x0) * 1.15, depth: (counter.y1 - counter.y0) * 1.5,
+      at: GenzRoomPoint((counter.x0 + counter.x1) / 2, (counter.y0 + counter.y1) / 2, 0.012)
+        .scene)
+    for bay in ShopLayout.bays {
+      lighting.shadow(
+        width: ShopLayout.bayWidth * 1.15, depth: ShopLayout.shelfDepth * 1.8,
+        at: GenzRoomPoint(bay + ShopLayout.bayWidth / 2, ShopLayout.shelfDepth / 2, 0.012).scene)
+    }
+    let table = ShopLayout.table
+    lighting.shadow(
+      width: (table.x1 - table.x0) * 1.2, depth: (table.y1 - table.y0) * 1.3,
+      at: GenzRoomPoint((table.x0 + table.x1) / 2, (table.y0 + table.y1) / 2, 0.012).scene)
+    lighting.shadow(
+      width: 1.6, depth: 1.2, at: GenzRoomPoint(keeper.x, keeper.y, keeper.z + 0.012).scene)
+    room.addChild(lighting.root)
   }
 
   // MARK: - Stock

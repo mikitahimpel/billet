@@ -265,3 +265,63 @@ struct TabStagesTests {
     #expect(scene.makeDeskScene(state: DeskSceneState(notes: []), onEvent: { _ in }) != nil)
   }
 }
+
+@MainActor
+struct TabLightingTests {
+  private func intensity(_ light: Entity) -> Float? {
+    light.components[PointLightComponent.self]?.intensity
+  }
+
+  @Test func offKeepsTheScenesOwnLight() {
+    let lighting = TabLighting()
+    let lamp = lighting.key(GenzColour(0xFFC36B), intensity: 16_000, reach: 7, at: .init(1, 1, 1))
+    lighting.shadow(width: 1, depth: 1, at: .zero)
+    lighting.apply(.off)
+    #expect(intensity(lamp) == 16_000)
+    #expect(lighting.haloScale == 1)
+    #expect(lighting.fairyColour == nil)
+    #expect(lighting.tint(GenzColour(0xFFC36B)) == GenzColour(0xFFC36B))
+    let shadows = lighting.root.children.filter { $0.name == "genz-shadow" }
+    #expect(shadows.count == 1)
+    #expect(shadows.allSatisfy { !$0.isEnabled })
+  }
+
+  @Test(arguments: RoomLighting.allCases.filter { $0 != .off })
+  func aPresetLightsTheSceneThroughTheRig(_ preset: RoomLighting) {
+    let look = LightingLook.of(preset)
+    let lighting = TabLighting()
+    let lamp = lighting.key(GenzColour(0xFFC36B), intensity: 10_000, reach: 7, at: .init(1, 1, 1))
+    lighting.shadow(width: 1, depth: 1, at: .zero)
+    lighting.apply(look)
+    #expect(intensity(lamp) == 10_000 * look.key.boost || look.key.flicker > 0)
+    let shadow = lighting.root.children.first { $0.name == "genz-shadow" }
+    #expect(shadow?.isEnabled == (look.shadows > 0))
+    #expect(lighting.fairyColour != nil || !look.fairy.shown)
+    if look.halos > 0 { #expect(lighting.haloScale > 0.55) }
+    // Back to off, the lamp is its own again.
+    lighting.apply(.off)
+    #expect(intensity(lamp) == 10_000)
+  }
+
+  @Test func theCandleFlickersButNotWithMotionReduced() {
+    let lighting = TabLighting()
+    let lamp = lighting.key(GenzColour(0xFFC36B), intensity: 10_000, reach: 7, at: .init(1, 1, 1))
+    lighting.apply(.candle)
+    var seen = Set<Float>()
+    for _ in 0..<30 {
+      lighting.step(1 / 30)
+      seen.insert(intensity(lamp) ?? 0)
+    }
+    #expect(seen.count > 1)
+    lighting.setReduceMotion(true)
+    lighting.step(1 / 30)
+    #expect(intensity(lamp) == 10_000 * LightingLook.candle.key.boost)
+  }
+
+  @Test func theStagesTakeAPresetBeforeAndAfterTheyAreBuilt() {
+    let stages = TabStages(rooms: GenzRoomCache())
+    stages.shopStage.setLighting(.amberLantern)
+    stages.deskStage.setLighting(.neonNight)
+    stages.shopStage.setLighting(.off)
+  }
+}
