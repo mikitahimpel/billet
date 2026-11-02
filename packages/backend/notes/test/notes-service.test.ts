@@ -245,6 +245,60 @@ describe("sendNote", () => {
   });
 });
 
+describe("metrics", () => {
+  const sendOnce = (
+    notes: NotesService["Service"],
+    author: typeof ana,
+    request?: SendNoteRequest,
+  ) =>
+    notes
+      .uploadImage(author, png)
+      .pipe(Effect.flatMap((image) => notes.sendNote(author, request ?? photo(image))));
+
+  it("counts a stored note once, for its author and pair, with a name and no content", async () => {
+    const { layer, recorded } = world();
+    await run(layer, (notes) => sendOnce(notes, ana));
+    expect(recorded).toEqual([{ userId: ana, pairId: pairA, name: "NoteSent" }]);
+  });
+
+  it("counts nothing for a note that was refused", async () => {
+    const { layer, recorded } = world();
+    await run(layer, (notes) =>
+      notes.sendNote(
+        ana,
+        photo(Schema.decodeSync(MediaKey)(`${mediaPrefix(pairA)}notes/ghost.png`)),
+      ),
+    );
+    expect(recorded).toEqual([]);
+  });
+
+  it("counts a send repeated under one key once", async () => {
+    const { layer, recorded } = world();
+    await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const image = yield* notes.uploadImage(ana, png);
+        const request = photo(image);
+        yield* notes.sendNote(ana, request);
+        yield* notes.sendNote(ana, request);
+        yield* notes.sendNote(ana, request);
+      }),
+    );
+    expect(recorded).toHaveLength(1);
+  });
+
+  it("counts each partner's notes under their own name", async () => {
+    const { layer, recorded } = world();
+    await run(layer, (notes) =>
+      Effect.gen(function* () {
+        yield* sendOnce(notes, ana);
+        yield* sendOnce(notes, ben);
+        yield* sendOnce(notes, ana);
+      }),
+    );
+    expect(recorded.map(({ userId }) => userId)).toEqual([ana, ben, ana]);
+  });
+});
+
 describe("history", () => {
   it("is empty for a couple who haven't sent anything", async () => {
     const { layer } = world();

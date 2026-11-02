@@ -1,0 +1,41 @@
+{
+  "name": "@billet/backend-metrics",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./funnel": "./src/funnel.ts",
+    "./metrics": "./src/metrics.ts",
+    "./metrics-error": "./src/metrics-error.ts",
+    "./metrics-repository": "./src/metrics-repository.ts",
+    "./metrics-routes": "./src/metrics-routes.ts",
+    "./report-cli": "./src/report-cli.ts",
+    "./report-format": "./src/report-format.ts",
+    "./report-source": "./src/report-source.ts",
+    "./test/in-memory-metrics-repository": "./test/in-memory-metrics-repository.ts",
+    "./test/metrics-repository-contract": "./test/metrics-repository-contract.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "metrics:report": "node bin/report.ts"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

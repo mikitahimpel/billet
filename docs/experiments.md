@@ -4,8 +4,8 @@ How billet runs A/B tests on real couples. The decision behind it is in the prod
 (2026-11-02, "Audience, core, and testing"): the core (the scene with the cat, plus notes) is
 fixed in every variant, and experiments change how it looks and behaves, never whether it exists.
 
-This page is written in three parts as the pieces land: the assignment service (here), the
-metrics, and the iOS client.
+This page is written in three parts as the pieces land: the assignment service, the metrics
+(below), and the iOS client.
 
 ## What an experiment is
 
@@ -64,6 +64,57 @@ experiment started gets its variant on its first read.
 
 Today the kill switch is a one-line code change and a server deploy, which takes minutes and no
 App Store review. A switch the owner can flip without a deploy (a D1 row) is a possible follow-up.
+
+## Metrics
+
+First-party only: counts kept on our own backend, no third-party SDK, nothing sent anywhere else.
+
+**What is recorded.** One row per person, event name and UTC day in `pair_events` (D1): the pair
+(empty before pairing), the person, the name, the day, how many times, and the first and last
+moment. Nothing else: no note, image, stroke, text, device, address or place. The names are a closed
+list in `packages/contracts/domain/src/metrics.ts`:
+
+| Name | Who records it | When |
+| --- | --- | --- |
+| `InviteCreated` | server | an invite code was made |
+| `PairClaimed` | server | pairing succeeded, once for each partner |
+| `NoteSent` | server | a note was stored (a retried send counts once) |
+| `AppOpened` | app, `POST /v1/events` | the app came to the front, at most once per launch |
+| `WidgetAdded` | app | this phone has a billet widget; reported once |
+| `OpeningWatched`, `OpeningSkipped` | app | how the opening ended |
+
+The app can report only its four names, and at most 20 per request. A name the server records
+itself is refused with 400. Counting never fails a request: if the database is down, the event is
+lost and a fixed line is logged. Adding a name means adding it to the list, to the table above and
+to `docs/privacy.md`, because it is a privacy decision.
+
+Because the rows carry a user and a pair id they are personal data, even without content. The App
+Store privacy label has to declare usage data (product interaction) used for analytics and linked
+to the user; "no third parties" keeps the label short, not empty. Rows are removed with the account
+once account deletion (#21) exists.
+
+**The funnel** (`pnpm metrics:report`, the owner only): invites made, how many inviters ended up in a
+pair, pairs formed, widget added by both partners, a first note each way, time to the first note,
+both partners active on day 1, 7 and 30, notes per pair per day, how many watched the opening, and
+per experiment variant the north star below. Days are UTC days, counted from the day the pair formed.
+
+**North star (proposed):** the share of pairs where **both** partners sent a note on day 7 (day 0 is
+the day they paired). It measures what the product is for: a couple that is still writing to each
+other a week later. Only pairs that have reached day 7 are counted, so a young pair is not a failure.
+"Active" has a looser version too (a note sent or the app opened), shown next to it.
+
+**Reading it.** The command needs a Cloudflare API token that can only read D1, so a leak can read
+counts and change nothing, and the script sends `SELECT` statements and nothing else (a test checks
+this). Run it through Proton Pass and never type the token:
+
+```sh
+PROTON_PASS_AGENT_REASON="billet metrics report" pp run --env-file .env.pass -- \
+  env BILLET_D1_DATABASE_ID=<the stage's D1 database id> pnpm metrics:report
+```
+
+The report prints a 95% interval next to every share, and under each experiment says plainly when
+there are too few pairs to pick a winner (fewer than 100 in a variant that has reached day 7).
+There is no endpoint: nothing on the internet serves these numbers.
 
 ## App Store rules
 

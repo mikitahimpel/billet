@@ -14,6 +14,7 @@
     "alchemy": "alchemy",
     "typecheck:root": "tsc --noEmit -p tsconfig.json",
     "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
+    "metrics:report": "pnpm --filter @billet/backend-metrics metrics:report",
     "db:generate": "pnpm --filter @billet/backend-platform db:generate"
   },
   "devDependencies": {

@@ -7,7 +7,6 @@
   "exports": {
     "./assignment": "./src/assignment.ts",
     "./experiments": "./src/experiments.ts",
-    "./flags-pairing-observer": "./src/flags-pairing-observer.ts",
     "./flags-error": "./src/flags-error.ts",
     "./flags-repository": "./src/flags-repository.ts",
     "./flags-routes": "./src/flags-routes.ts",

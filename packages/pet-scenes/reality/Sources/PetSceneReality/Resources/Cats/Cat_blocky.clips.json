@@ -1,57 +1,57 @@
 {
-  "blink": {
-    "loops": true,
-    "trimEnd": 27.6,
-    "trimStart": 25.6
-  },
-  "crouchWiggle": {
-    "loops": true,
-    "trimEnd": 20.0,
-    "trimStart": 19.0
-  },
-  "eat": {
-    "loops": true,
-    "trimEnd": 25.2667,
-    "trimStart": 21.9333
-  },
-  "happy": {
-    "loops": true,
-    "trimEnd": 35.8667,
-    "trimStart": 34.6
-  },
-  "idle": {
-    "loops": true,
-    "trimEnd": 6.6667,
-    "trimStart": 0.0
-  },
-  "look": {
-    "loops": true,
-    "trimEnd": 31.9333,
-    "trimStart": 27.9333
-  },
-  "pounce": {
-    "loops": false,
-    "trimEnd": 21.6,
-    "trimStart": 20.3333
-  },
-  "sit": {
-    "loops": true,
-    "trimEnd": 12.3333,
-    "trimStart": 8.3333
-  },
-  "sleep": {
-    "loops": true,
-    "trimEnd": 18.6667,
-    "trimStart": 12.6667
-  },
-  "tailFlick": {
-    "loops": true,
-    "trimEnd": 34.2667,
-    "trimStart": 32.2667
-  },
-  "walk": {
-    "loops": true,
-    "trimEnd": 8.0,
-    "trimStart": 7.0
-  }
+ "blink": {
+  "loops": true,
+  "trimEnd": 27.6,
+  "trimStart": 25.6
+ },
+ "crouchWiggle": {
+  "loops": true,
+  "trimEnd": 20.0,
+  "trimStart": 19.0
+ },
+ "eat": {
+  "loops": true,
+  "trimEnd": 25.2667,
+  "trimStart": 21.9333
+ },
+ "happy": {
+  "loops": true,
+  "trimEnd": 35.8667,
+  "trimStart": 34.6
+ },
+ "idle": {
+  "loops": true,
+  "trimEnd": 6.6667,
+  "trimStart": 0.0
+ },
+ "look": {
+  "loops": true,
+  "trimEnd": 31.9333,
+  "trimStart": 27.9333
+ },
+ "pounce": {
+  "loops": false,
+  "trimEnd": 21.6,
+  "trimStart": 20.3333
+ },
+ "sit": {
+  "loops": true,
+  "trimEnd": 12.3333,
+  "trimStart": 8.3333
+ },
+ "sleep": {
+  "loops": true,
+  "trimEnd": 18.6667,
+  "trimStart": 12.6667
+ },
+ "tailFlick": {
+  "loops": true,
+  "trimEnd": 34.2667,
+  "trimStart": 32.2667
+ },
+ "walk": {
+  "loops": true,
+  "trimEnd": 8.0,
+  "trimStart": 7.0
+ }
 }
