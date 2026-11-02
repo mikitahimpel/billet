@@ -117,14 +117,13 @@ import Testing
   }
 
   @Test func theRoofCatClimbsSitsAtTheRidgeAndLeaves() {
-    let path = SuburbNight.roofPath
+    let cat = SuburbNight.roofCatWalk
     let pass = { (progress: Double, variant: Double) in
       ViewRhythm.Pass(index: 0, progress: progress, variant: variant, length: 50)
     }
-    #expect(SuburbNight.roofCatPose(pass(0, 0.2)).0 == path.left)
-    #expect(SuburbNight.roofCatPose(pass(0.5, 0.2)) == (path.ridge, true, 1))
-    #expect(SuburbNight.roofCatPose(pass(0, 0.8)).0 == path.right)
-    let leaving = SuburbNight.roofCatPose(pass(0.999, 0.8)).0
-    #expect(abs(leaving.x - path.left.x) < 0.1)
+    #expect(cat.pose(pass(0, 0.2)).0 == cat.left)
+    #expect(cat.pose(pass(0.5, 0.2)) == (cat.ridge, true, 1))
+    #expect(cat.pose(pass(0, 0.8)).0 == cat.right)
+    #expect(abs(cat.pose(pass(0.999, 0.8)).0.x - cat.left.x) < 0.1)
   }
 }

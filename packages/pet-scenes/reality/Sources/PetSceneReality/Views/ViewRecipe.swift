@@ -65,6 +65,9 @@ enum ViewRecipes {
   static func recipe(for view: WindowView) -> any ViewRecipe {
     switch view {
     case .suburbNight: SuburbNight()
+    case .rainySuburb: RainySuburb()
+    case .snowyDecember: SnowyDecember()
+    case .summerCulDeSac: SummerCulDeSac()
     }
   }
 
