@@ -57,6 +57,11 @@ struct AppShellView: View {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
+  private var streak: Int {
+    let calendar = Calendar.current
+    return session.streak(today: TreatDay.key(for: .now, calendar: calendar), calendar: calendar)
+  }
+
   var body: some View {
     TabView(selection: $destination) {
       Tab("Home", systemImage: "house", value: .home) {
@@ -87,7 +92,14 @@ struct AppShellView: View {
                   if wallpaper { WallpaperShareButton(note: note) }
                 })
             }
-          }()
+          }(),
+          board: labs.isOn(LabExperiment.shelfBoard)
+            ? { board in
+              AnyView(
+                ShelfBoardView(
+                  notes: board.notes, reactions: board.reactions, streak: streak,
+                  detail: board.detail, onClose: board.close))
+            } : nil
         )
         .tabEntrance(destination == .notes)
       }
