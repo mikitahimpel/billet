@@ -111,12 +111,21 @@ struct GenzRoomView: View {
   @ViewBuilder private var theirSky: some View {
     if let theirs = dayLight?.theirs {
       let sky = RoomDayLook.sky(theirs)
-      Color(red: Double(sky.colour.x), green: Double(sky.colour.y), blue: Double(sky.colour.z))
-        .opacity(theirs.phase == .night ? 0 : 0.55)
-        .blendMode(.color)
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+      // A lit sky glows down from the top of the night behind the room. Tinting the whole
+      // backdrop instead only reads as brown on its dark colours.
+      let colour = Color(
+        red: Double(sky.colour.x), green: Double(sky.colour.y), blue: Double(sky.colour.z))
+      LinearGradient(
+        stops: [
+          .init(color: colour.opacity(Double(sky.glow) * 0.6), location: 0),
+          .init(color: colour.opacity(0), location: 0.45),
+        ], startPoint: .top, endPoint: .bottom
+      )
+      .opacity(theirs.phase == .night ? 0 : 1)
+      .blendMode(.screen)
+      .ignoresSafeArea()
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
     }
   }
 

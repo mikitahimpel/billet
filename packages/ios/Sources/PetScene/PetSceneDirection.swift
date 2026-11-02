@@ -21,15 +21,15 @@ public enum FlyInTimeline {
   /// The camera's flight from far out to its usual place.
   public static let flight = 0.0...2.2
   /// The room's lights going from dark to full.
-  public static let lightsUp = 0.3...1.7
-  /// When the cat wakes and stretches.
-  public static let wake = 1.5
-  /// When the cat turns to look at the camera.
-  public static let look = 2.3
-  /// The latest note growing in, after the cat has looked.
-  public static let noteReveal = 2.7...3.3
+  public static let lightsUp = 0.2...1.1
+  /// When the cat wakes, as the lights come up. Its stretch runs about three seconds.
+  public static let wake = 0.9
+  /// When the cat is asked to look at the camera. A cat still stretching looks once it is done.
+  public static let look = 3.0
+  /// The latest note growing in, once the cat has looked up.
+  public static let noteReveal = 3.9...4.5
   /// When the whole opening is over.
-  public static let length = 3.4
+  public static let length = 4.6
 
   /// How the camera stands off its usual place at `time`: extra turn and lift in radians, and
   /// distance as a multiple of the usual one. All return to zero, zero and one by the flight's end.

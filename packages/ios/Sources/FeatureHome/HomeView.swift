@@ -260,6 +260,7 @@ struct HomeView: View {
       director: director,
       isFakePartner: session.isFakePartner,
       theirTimeZone: session.lamp.theirs?.timeZoneID.flatMap(TimeZone.init(identifier:)),
+      pretendHour: session.labs.pretendHour,
       hasOpened: hasOpened,
       onOpened: { hasOpened = true },
       onTreat: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
@@ -278,6 +279,7 @@ struct HomeView: View {
     let today = TreatDay.key(for: .now, calendar: calendar)
     let streak = session.streak(today: today, calendar: calendar)
     return VStack(spacing: Spacing.small) {
+      fakePartnerCaption
       HStack(spacing: Spacing.small) {
         Label("\(streak) \(streak == 1 ? "day" : "days")", systemImage: "flame.fill")
           .billetType(.action)
@@ -327,8 +329,9 @@ struct HomeView: View {
   /// The sky of the hour here, from the same colours as the partner's sky card.
   private var skyBackdrop: some View {
     TimelineView(.everyMinute) { context in
-      let colours = TheirSky.at(hour: Calendar.current.component(.hour, from: context.date))
-        .colours
+      let date = DayLight.pretending(
+        context.date, hour: session.labs.pretendHour, in: .current)
+      let colours = TheirSky.at(hour: Calendar.current.component(.hour, from: date)).colours
       LinearGradient(
         colors: [colours.top.color, colours.bottom.color], startPoint: .top, endPoint: .bottom
       )

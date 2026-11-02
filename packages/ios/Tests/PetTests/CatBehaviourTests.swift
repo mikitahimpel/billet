@@ -48,6 +48,38 @@ struct CatBehaviourTests {
     #expect(woke.map { [.yawn, .stretch].contains($0.1) } == true)
   }
 
+  @Test func aWakeCueStretchesThenLooksAtTheViewerAndStaysUp() {
+    var cat = CatBehaviour(clips: Self.full, seed: 7)
+    cat.cue(.wakeUp, at: 0)
+    _ = cat.beat(at: 0, mode: .free)
+    cat.cue(.lookAtCamera, at: 0.8)
+    let changes = run(&cat, from: 0, for: 6)
+    #expect(changes.first?.1 == .stretch)
+    // The look waits for the stretch, then rests where the head may turn.
+    let look = changes.first { $0.0 > 0 && $0.1 != .stretch }
+    #expect(look?.1 == .sit)
+    #expect(abs((look?.0 ?? 0) - 1.5) < 0.05)
+    #expect(CatBehaviour.lookWeight(.sit) == 1)
+    #expect(!run(&cat, from: 6, for: 15).contains { $0.1 == .sleep })
+  }
+
+  @Test func aWakeCueFallsBackForModelsWithoutAStretch() {
+    var clips = Self.full
+    clips[.stretch] = nil
+    clips[.yawn] = nil
+    var cat = CatBehaviour(clips: clips, seed: 2)
+    cat.cue(.wakeUp, at: 0)
+    #expect(cat.beat(at: 0, mode: .free).action == .perk)
+  }
+
+  @Test func aLookCueOnItsOwnCutsInAtOnce() {
+    var cat = CatBehaviour(clips: Self.full, seed: 4)
+    _ = run(&cat, for: 1)
+    cat.cue(.lookAtCamera, at: 1)
+    #expect(cat.beat(at: 1, mode: .free).action == .sit)
+    #expect(cat.beat(at: 1 + CatBehaviour.viewerLook - 0.1, mode: .free).action == .sit)
+  }
+
   @Test func awakeSpellMixesManyMovesWithoutRepeatingOneShots() {
     var cat = CatBehaviour(clips: Self.full, seed: 3)
     let changes = run(&cat, for: 40, mode: .awake)

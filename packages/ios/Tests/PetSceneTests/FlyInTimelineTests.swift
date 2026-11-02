@@ -26,9 +26,11 @@ import Testing
 
   @Test func theOpeningHappensInOrder() {
     #expect(FlyInTimeline.lights(at: 0) == 0)
-    #expect(FlyInTimeline.lights(at: FlyInTimeline.wake) > 0.9)
+    #expect(FlyInTimeline.lights(at: FlyInTimeline.wake) > 0.8)
     #expect(FlyInTimeline.wake < FlyInTimeline.look)
     #expect(FlyInTimeline.note(at: FlyInTimeline.look) == 0)
+    // A three-second stretch from the wake is over by the time the note starts to grow in.
+    #expect(FlyInTimeline.wake + 3 <= FlyInTimeline.noteReveal.lowerBound)
     #expect(FlyInTimeline.note(at: FlyInTimeline.length) == 1)
   }
 }

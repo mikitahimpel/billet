@@ -12,6 +12,20 @@ import Testing
     #expect(DayLight.at(hour: hour).phase == phase)
   }
 
+  @Test func pretendingAnHourMovesEveryZoneTogether() throws {
+    let berlin = try #require(TimeZone(identifier: "Europe/Berlin"))
+    let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+    let noon = try #require(ISO8601DateFormatter().date(from: "2026-11-02T11:30:00Z"))
+    let night = DayLight.pretending(noon, hour: 23, in: berlin)
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = berlin
+    #expect(calendar.component(.hour, from: night) == 23)
+    #expect(calendar.component(.minute, from: night) == 30)
+    #expect(DayLight.at(night, in: berlin).phase == .night)
+    #expect(DayLight.at(night, in: tokyo).phase == .morning)
+    #expect(DayLight.pretending(noon, hour: nil, in: berlin) == noon)
+  }
+
   @Test func theSunPeaksAroundNoonAndIsGoneAtNight() {
     #expect(DayLight.at(hour: 2).sun == 0)
     #expect(DayLight.at(hour: 23).sun == 0)
