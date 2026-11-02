@@ -148,6 +148,7 @@ public struct SettingsView: View {
   private func labSection(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
       SettingsHeading("Labs")
+      EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         RoomStylePicker(model: model)

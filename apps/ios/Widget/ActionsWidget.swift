@@ -47,7 +47,7 @@ struct ActionsEntryView: View {
       layout: family.pictureLayout, now: entry.date, calendar: .current
     )
     .containerBackground(for: .widget) {
-      if family.isAccessory { Color.clear } else { EveningBackground() }
+      if family.isAccessory { Color.clear } else { EveningBackground().savedEveningGround() }
     }
   }
 }
