@@ -226,7 +226,8 @@ private struct NookiStage: View {
       diorama.startUpdates(from: content)
     }
     .ignoresSafeArea()
-    .overlay { CatPurrOverlay(purr: diorama.purr).ignoresSafeArea() }
+    // In the same frame as the gestures, so a heart rises from under the stroking finger.
+    .overlay { CatPurrOverlay(purr: diorama.purr) }
     .onChange(of: moments, initial: true) { _, moments in diorama.setMoments(moments) }
   }
 
@@ -300,7 +301,7 @@ private struct NookiStage: View {
           return
         }
         if value.entity.name == NookiTarget.mochi.rawValue, !isRenovating {
-          diorama.stroke()
+          diorama.stroke(at: location)
           return
         }
         guard orbits else { return }

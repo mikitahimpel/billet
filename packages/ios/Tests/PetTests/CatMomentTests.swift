@@ -74,6 +74,20 @@ struct CatPettingTests {
     #expect(!petting.isPurring)
   }
 
+  @Test func theRollComesWithATouchEvenWhenFramesTickInBetween() {
+    var petting = CatPetting()
+    var rolledOnTouch = false
+    var t = 0.0
+    while t < 4 {
+      #expect(!petting.tick(at: t).contains(.rolled))
+      if Int((t * 60).rounded()) % 12 == 0, petting.touch(at: t).contains(.rolled) {
+        rolledOnTouch = true
+      }
+      t += 1.0 / 60
+    }
+    #expect(rolledOnTouch)
+  }
+
   @Test func aLongPetRollsOnceThenWaits() {
     var petting = CatPetting()
     let first = stroke(&petting, from: 0, for: 4)

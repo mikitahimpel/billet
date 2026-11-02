@@ -38,28 +38,31 @@ public struct CatPetting: Sendable {
       lastHeart = now
       events += [.purrStarted, .heart]
     }
-    events += due(at: now)
+    events += due(at: now, canRoll: true)
     return events
   }
 
   /// Time passed with no new touch: hearts keep coming while the petting lasts, and a pause ends it.
+  /// Only a touch rolls the cat, so the roll reaches whoever is stroking.
   public mutating func tick(at now: Double) -> [Event] {
     guard started != nil else { return [] }
     if now - lastTouch > Self.pause {
       started = nil
       return [.purrEnded]
     }
-    return due(at: now)
+    return due(at: now, canRoll: false)
   }
 
-  private mutating func due(at now: Double) -> [Event] {
+  private mutating func due(at now: Double, canRoll: Bool) -> [Event] {
     guard let started else { return [] }
     var events: [Event] = []
     if now - lastHeart >= Self.heartEvery {
       lastHeart = now
       events.append(.heart)
     }
-    if !rolledThisTime, now - started >= Self.rollAfter, now - lastRoll >= Self.rollCooldown {
+    if canRoll, !rolledThisTime, now - started >= Self.rollAfter,
+      now - lastRoll >= Self.rollCooldown
+    {
       rolledThisTime = true
       lastRoll = now
       events.append(.rolled)

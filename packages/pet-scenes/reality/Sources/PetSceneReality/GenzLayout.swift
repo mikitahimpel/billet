@@ -227,3 +227,34 @@ struct GenzLayout {
     return parts
   }
 }
+
+extension GenzLayout {
+  /// The top of the piece the cat lives on, as its footprint on the floor plane (scene x and z),
+  /// or nil when the cat is on the floor. Trips keep to it, so the cat never walks out over the
+  /// floor at the height of the bed.
+  var catSurface: (min: SIMD2<Float>, max: SIMD2<Float>)? {
+    let spot = cat.spot
+    guard spot.z > 0.1 else { return nil }
+    for placement in pieces {
+      let size = placement.piece.kind.size
+      let turned = abs(sin(placement.yaw)) > 0.5
+      let half = SIMD2(turned ? size.y : size.x, turned ? size.x : size.y) / 2
+      let centre = SIMD2(placement.centre.x, placement.centre.y)
+      let offset = SIMD2(spot.x, spot.y) - centre
+      guard abs(offset.x) <= half.x, abs(offset.y) <= half.y, size.z > spot.z * 0.5 else {
+        continue
+      }
+      return (centre - half, centre + half)
+    }
+    return nil
+  }
+
+  /// `point` moved onto the cat's surface, a little in from its edges.
+  func onCatSurface(_ point: SIMD2<Float>) -> SIMD2<Float> {
+    guard let surface = catSurface else { return point }
+    let margin = SIMD2<Float>(repeating: cat.length * 0.35)
+    let low = surface.min + margin
+    let high = simd_max(surface.max - margin, low)
+    return simd_clamp(point, low, high)
+  }
+}

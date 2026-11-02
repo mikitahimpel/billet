@@ -1061,8 +1061,9 @@ extension GenzRoom {
   func startDelivery() {
     let paper = note.position
     let target = SIMD2(paper.x, paper.z)
-    let under = CatTrip.towards(
-      target, from: home, upTo: layout.cat.length * 2.4, keep: layout.cat.length * 0.45)
+    let under = layout.onCatSurface(
+      CatTrip.towards(
+        target, from: home, upTo: layout.cat.length * 2.4, keep: layout.cat.length * 0.45))
     begin(
       .delivery,
       legs: [
@@ -1076,7 +1077,7 @@ extension GenzRoom {
 
   func startGreeting() {
     let eye = SIMD2(camera.position.x, camera.position.z)
-    let near = CatTrip.towards(eye, from: home, upTo: layout.cat.length * 1.6)
+    let near = layout.onCatSurface(CatTrip.towards(eye, from: home, upTo: layout.cat.length * 1.6))
     begin(
       .greeting,
       legs: [
@@ -1097,7 +1098,8 @@ extension GenzRoom {
     let towardsEye = CatTrip.heading(from: home, to: eye)
     func spot(_ turn: Float, _ reach: Float) -> SIMD2<Float> {
       let heading = towardsEye + turn
-      return home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length * reach
+      return layout.onCatSurface(
+        home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length * reach)
     }
     let side: Float = Bool.random() ? 1 : -1
     let first = spot(side * Float.random(in: 0.5...1.1), Float.random(in: 1.0...1.4))

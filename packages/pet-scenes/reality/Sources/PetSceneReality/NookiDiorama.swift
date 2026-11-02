@@ -62,6 +62,9 @@ final class NookiDiorama {
   private var tripPose: CatTrip.Pose?
   private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
   private var lastBat = -Double.infinity
+  private var rollingUntil = -Double.infinity
+  /// Where the finger last stroked the cat, in the view's points, for the hearts.
+  private var strokePoint: CGPoint?
   private var greetPending = false
   private var lastSeenSaved = -Double.infinity
   /// The cat asked for, and the one on show (Mochi stands in for a cat that will not load).
@@ -383,17 +386,9 @@ final class NookiDiorama {
     behaviour.react(.bat, at: clock)
   }
 
-  /// Where the cat is on screen, for the hearts.
-  private var catOnScreen: CGPoint? {
-    GenzCamera.project(
-      mochi.position(relativeTo: nil) + [0, 0.14, 0], from: camera.position,
-      towards: NookiCamera.target, fieldOfView: Self.fieldOfView,
-      in: CGSize(width: CGFloat(fittedSize.x), height: CGFloat(fittedSize.y)))
-  }
-
   /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
   private func stepMoments() {
-    purr.tick(at: clock, cat: catOnScreen)
+    purr.tick(at: clock, cat: strokePoint)
     if clock - lastSeenSaved > 30 {
       lastSeenSaved = clock
       CatSeen.mark()
@@ -453,7 +448,7 @@ final class NookiDiorama {
   /// The part of the delivery spent at the wall, taping the note up.
   private static let taping = 3.4..<5.0
   private static let batGap = 2.5
-  private static let greetReach: Float = 0.3
+  private static let greetReach: Float = 0.45
   private static let runSpeed: Float = 0.5
 
   private func updateTiltFollowing() {
@@ -904,12 +899,17 @@ final class NookiDiorama {
     headLook(at: camera.position + ray * max(reach, 0.5), for: Self.fingerLookLength)
   }
 
-  /// A stroke along the cat: eyes close and it purrs.
-  func stroke() {
-    behaviour.react(.pet, at: clock)
+  /// A stroke along the cat at `point` on screen: eyes close and it purrs, with hearts rising
+  /// from under the finger. A long pet rolls it onto its back, and
+  /// strokes during the roll leave it rolling rather than starting the pet over.
+  func stroke(at point: CGPoint) {
     petStart = petStart ?? clock
-    if moments.contains(.purrs), purr.touch(at: clock, cat: catOnScreen), trip == nil {
+    strokePoint = point
+    if moments.contains(.purrs), purr.touch(at: clock, cat: point), trip == nil {
       behaviour.react(.roll, at: clock)
+      rollingUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
+    } else if clock >= rollingUntil {
+      behaviour.react(.pet, at: clock)
     }
   }
 
