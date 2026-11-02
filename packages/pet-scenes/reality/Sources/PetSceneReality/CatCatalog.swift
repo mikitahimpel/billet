@@ -83,7 +83,9 @@ enum CatCatalog {
   /// The made cats were built to Mochi's size; the found ones are tuned by eye in the room.
   static func fit(_ model: CatModel) -> Float {
     switch model {
-    case .mochi, .tabby, .plush, .detailed, .chibi, .kitten, .tuxedo: 1
+    case .mochi, .tabby, .plush, .detailed, .detailedKitten, .detailedFluffy, .chibi, .kitten,
+      .tuxedo:
+      1
     case .blocky: 0.85
     case .slim: 0.8
     }
@@ -123,7 +125,7 @@ enum CatCatalog {
   /// the model has no palette. A model painted with a full texture instead ships one texture per
   /// coat, `Cat_<model>_<coat>.jpg`, which is returned as it is.
   static func palette(_ model: CatModel, coat: CatCoat) -> CGImage? {
-    if model == .detailed { return coatTexture(model, coat: coat) }
+    if model.paintsCoatTextures { return coatTexture(model, coat: coat) }
     guard
       let colours = colours(coat, keepsWhiteBelly: model == .tuxedo),
       let url = Bundle.module.url(

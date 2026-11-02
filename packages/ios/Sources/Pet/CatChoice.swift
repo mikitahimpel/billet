@@ -10,6 +10,10 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   case plush
   /// The same tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
   case detailed
+  /// The detailed tabby as a kitten: a bigger head, big blue eyes, stubby legs, fluffier fur.
+  case detailedKitten
+  /// The detailed tabby long-haired: a mane, britches, a plume tail and lynx tips on the ears.
+  case detailedFluffy
   /// A plush toy cat: a very big head on a small body.
   case chibi
   /// A fluffy kitten with tufted cheeks, chest and tail.
@@ -27,6 +31,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .tabby: "Tabby"
     case .plush: "Plush tabby"
     case .detailed: "Detailed"
+    case .detailedKitten: "Detailed kitten"
+    case .detailedFluffy: "Detailed fluffy"
     case .chibi: "Chibi"
     case .kitten: "Fluffy kitten"
     case .tuxedo: "Tuxedo"
@@ -41,6 +47,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .tabby: "Ginger tabby, flat facets like the furniture."
     case .plush: "The tabby, soft-shaded."
     case .detailed: "The tabby up close: fur, eyelids, whiskers."
+    case .detailedKitten: "Big head, big blue eyes, stubby legs."
+    case .detailedFluffy: "Long-haired, with a mane and a plume tail."
     case .chibi: "Big head, tiny body, huge eyes."
     case .kitten: "Tufted cheeks and a fluffy tail."
     case .tuxedo: "Black with a white bib and socks."
@@ -49,12 +57,20 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// Coats this model can wear. Models painted from a palette can swap it; the detailed tabby has
+  /// Whether each coat is a whole painted texture, `Cat_<model>_<coat>.jpg`, not a palette.
+  public var paintsCoatTextures: Bool {
+    switch self {
+    case .detailed, .detailedKitten, .detailedFluffy: true
+    case .mochi, .tabby, .plush, .chibi, .kitten, .tuxedo, .blocky, .slim: false
+    }
+  }
+
+  /// Coats this model can wear. Models painted from a palette can swap it; the detailed cats have
   /// one painted texture per coat; the others keep theirs.
   public var coats: [CatCoat] {
     switch self {
     case .tabby, .plush, .chibi, .kitten, .tuxedo: CatCoat.allCases
-    case .detailed: [.natural, .greyWhite]
+    case .detailed, .detailedKitten, .detailedFluffy: [.natural, .greyWhite, .black]
     case .mochi, .blocky, .slim: [.natural]
     }
   }
