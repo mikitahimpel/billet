@@ -21,10 +21,14 @@ struct NookiShopRoomTests {
     for _ in 0..<20 { await Task.yield() }
   }
 
-  @Test func everyFurnitureModelIsInTheBundle() {
+  @Test func everyFurniturePieceLoadsAtItsCatalogSize() async throws {
+    let models = NookiShopModels()
     for item in catalog.items(in: .furniture) {
-      guard case .furniture(let name, _, _, _) = item.look else { continue }
-      #expect(Bundle.module.url(forResource: name, withExtension: "usdz") != nil, "\(name)")
+      guard case .furniture(_, let fit, let size, _) = item.look else { continue }
+      let piece = try #require(await models.furniture(item), "\(item.id)")
+      let extents = piece.visualBounds(relativeTo: nil).extents
+      let measure = fit == .width ? max(extents.x, extents.z) : extents.y
+      #expect(abs(measure - Float(size)) < 0.001, "\(item.id)")
     }
   }
 

@@ -4,6 +4,7 @@ import Pet
 import PetScene
 import RealityKit
 import Testing
+import simd
 
 @testable import PetSceneReality
 
@@ -27,12 +28,25 @@ struct NookiPetSceneTests {
     "Item_mouse",
   ])
   func bundledModelLoads(name: String) async throws {
-    let model = try await Entity(named: name, in: .module)
+    let model = try await NookiAssets().model(name)
     #expect(!model.visualBounds(relativeTo: nil).isEmpty)
   }
 
+  @Test(arguments: ["Cat", "Room"])
+  func compiledModelsOpen(name: String) async {
+    #expect(await NookiAssets.compiled(name) != nil)
+  }
+
+  @Test func theBakedShellMatchesTheSizesInTheCode() async throws {
+    let assets = NookiAssets()
+    for part in NookiDiorama.shellParts {
+      let extents = try await assets.model(part.name).visualBounds(relativeTo: nil).extents
+      #expect(simd_distance(extents, part.size) < 0.0001, "\(part.name)")
+    }
+  }
+
   @Test func mochiHasTheSeparateMeshesTheWakeAnimationSwaps() async throws {
-    let model = try await Entity(named: "Cat", in: .module)
+    let model = try await NookiAssets().model("Cat")
     for name in ["Eye1", "Eye_1", "Ear1", "Ear_1", "EarInner1", "EarInner_1", "Bell", "Mouth"] {
       #expect(model.findEntity(named: name) != nil, "missing \(name)")
     }
@@ -78,6 +92,21 @@ struct NookiPetSceneTests {
       try await Task.sleep(for: .milliseconds(10))
     }
     #expect(diorama.noteShowsDrawing)
+  }
+
+  @Test func theBakedLampStillHasPartsThatGlow() async throws {
+    let lamp = try await NookiAssets().model(NookiFurniture.lampName)
+    var glowing = 0
+    func visit(_ entity: Entity) {
+      for material in entity.components[ModelComponent.self]?.materials ?? [] {
+        if let surface = material as? PhysicallyBasedMaterial, surface.emissiveIntensity > 0 {
+          glowing += 1
+        }
+      }
+      entity.children.forEach(visit)
+    }
+    visit(lamp)
+    #expect(glowing > 0)
   }
 
   @Test func loadingTwiceBuildsOneRoom() async {
@@ -155,7 +184,7 @@ struct NookiPetSceneTests {
       loadModel: { name throws(NookiLoadError) in
         if name == "Cat" {
           for await _ in gate {}
-          return try await NookiFurniture.bundledModel(name)
+          return try await NookiAssets().model(name)
         }
         return Entity()
       },
@@ -192,7 +221,7 @@ struct NookiPetSceneTests {
   }
 
   @Test func theBundledCatHasPlausibleBounds() async throws {
-    let cat = try await NookiFurniture.bundledModel("Cat")
+    let cat = try await NookiAssets().model("Cat")
     let bounds = cat.visualBounds(relativeTo: nil)
     #expect(NookiDiorama.mochiOffset(bounds) != nil)
     #expect(bounds.extents.max() > 0.1 && bounds.extents.max() < 1)
@@ -201,7 +230,7 @@ struct NookiPetSceneTests {
   private static func failing(_ failed: String) -> NookiModelLoader {
     { name throws(NookiLoadError) in
       if name == failed { throw .unreadable(name, reason: "test") }
-      return try await NookiFurniture.bundledModel(name)
+      return try await NookiAssets().model(name)
     }
   }
 

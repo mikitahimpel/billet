@@ -104,18 +104,22 @@ final class AppModel {
     fake.connect()
     let now = dependencies.now()
     Task {
-      try? await archive.erase()
-      // A little history, so the experiments that look back have something to find.
-      for (component, drawing) in [(Calendar.Component.year, 0), (.month, 3)] {
-        guard let then = Calendar.current.date(byAdding: component, value: -1, to: now) else {
-          continue
-        }
-        _ = try? await archive.add(
-          NoteRecord(
-            direction: .received, date: then, strokes: FakePartnerDrawings.drawing(number: drawing))
-        )
+      if (try? await archive.notes())?.isEmpty != false {
+        await Self.addFakeHistory(to: archive, now: now)
       }
       await fake.loadNotes()
+    }
+  }
+
+  /// A little history, so the experiments that look back have something to find.
+  private static func addFakeHistory(to archive: NoteArchive, now: Date) async {
+    for (component, drawing) in [(Calendar.Component.year, 0), (.month, 3)] {
+      guard let then = Calendar.current.date(byAdding: component, value: -1, to: now) else {
+        continue
+      }
+      _ = try? await archive.add(
+        NoteRecord(
+          direction: .received, date: then, strokes: FakePartnerDrawings.drawing(number: drawing)))
     }
   }
 
@@ -185,6 +189,7 @@ final class AppModel {
   /// case the device stays paired and reconnects.
   func logOut() async -> String? {
     guard !isFakePartner else {
+      try? await dependencies.fakeArchive?.erase()
       leaveByLabs()
       return nil
     }

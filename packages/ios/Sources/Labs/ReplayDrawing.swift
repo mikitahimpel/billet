@@ -44,6 +44,7 @@ struct StrokesCanvas: View {
 public struct ReplayDrawing: View {
   private let normalized: [Stroke]
 
+  @ScaledMetric(relativeTo: .body) private var buttonWidth: CGFloat = 220
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var started = Date.now
 
@@ -65,7 +66,7 @@ public struct ReplayDrawing: View {
       }
       if !reduceMotion {
         BilletButton("Watch again", rank: .secondary) { started = .now }
-          .frame(maxWidth: 220)
+          .frame(maxWidth: buttonWidth)
       }
     }
     .accessibilityElement(children: .contain)

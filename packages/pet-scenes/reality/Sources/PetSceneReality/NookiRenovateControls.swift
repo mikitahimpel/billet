@@ -14,6 +14,7 @@ struct NookiRenovateControls: View {
         isOpen.toggle()
       } label: {
         Image(systemName: isOpen ? "checkmark" : "paintbrush.pointed")
+          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
           .frame(width: 44, height: 44)
           .background(.thinMaterial, in: Circle())
       }

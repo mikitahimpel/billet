@@ -177,6 +177,12 @@ struct HomeView: View {
     }
   }
 
+  @ViewBuilder private var framedWall: some View {
+    if session.labs.isOn(LabExperiment.framedNotes) {
+      FramedWallView(notes: framedNotes)
+    }
+  }
+
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
@@ -200,9 +206,11 @@ struct HomeView: View {
           }
         }
         .overlay(alignment: .topLeading) {
-          if session.labs.isOn(LabExperiment.framedNotes) {
-            FramedWallView(notes: framedNotes)
-          }
+          if !scene.handlesTouches { framedWall }
+        }
+        .background(alignment: .topLeading) {
+          // A scene with touches keeps its controls in this corner, drawn over the frames.
+          if scene.handlesTouches { framedWall.padding(.top, Spacing.wide) }
         }
         .overlay(alignment: .bottomLeading) {
           if catAway {
@@ -237,7 +245,9 @@ struct HomeView: View {
       latestReceived
       treatPanel
       promptCards
-      labsDrawer
+      if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
+        labsDrawer
+      }
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
@@ -550,13 +560,16 @@ struct HomeView: View {
     }
   }
 
+  /// A scene with its own buttons leaves room between them for the short line only.
+  private var hasRoomControls: Bool { scene?.handlesTouches == true }
+
   private var statusPill: some View {
     HStack(spacing: Spacing.small) {
       Circle()
         .fill(statusLight.color)
         .frame(width: Spacing.small, height: Spacing.small)
         .accessibilityHidden(true)
-      Text(session.isFakePartner ? "Fake partner · \(line.text)" : line.text)
+      Text(session.isFakePartner && !hasRoomControls ? "Fake partner · \(line.text)" : line.text)
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)

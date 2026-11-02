@@ -26,6 +26,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case wrappedDelivery
   case advent
   case bedsideHouse
+  case shelfBoard
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -65,6 +66,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wrappedDelivery: .cat
     case .advent: .notes
     case .bedsideHouse: .home
+    case .shelfBoard: .notes
     }
   }
 
@@ -90,11 +92,14 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wrappedDelivery: "Wrapped delivery"
     case .advent: "Our advent"
     case .bedsideHouse: "Bedside house"
+    case .shelfBoard: "Shelf board"
     }
   }
 
   public var detail: String {
     switch self {
+    case .shelfBoard:
+      "A warm wall of shelves, reached from Notes: every note you have sent each other, the newest large and forward, and numbered places for the next days of the streak."
     case .fakePartner:
       "A scripted partner on this phone sends notes, treats and hearts. Nothing is sent to anyone."
     case .bedsideHouse:
@@ -138,6 +143,33 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     }
   }
 
+  /// Whether it adds a card to the Labs sheet on Home.
+  public var hasHomeCard: Bool {
+    switch self {
+    case .fakePartner: false
+    case .overnightStay: false
+    case .drawnReplay: false
+    case .catCameBack: false
+    case .todaysWord: true
+    case .sundayPost: true
+    case .framedNotes: false
+    case .sealedNote: true
+    case .twoWisps: true
+    case .wallpaperShortcut: false
+    case .porchLight: true
+    case .lampColours: true
+    case .lightsOut: true
+    case .theirSky: true
+    case .nextVisit: true
+    case .onThisDay: true
+    case .seasons: false
+    case .wrappedDelivery: true
+    case .advent: true
+    case .bedsideHouse: false
+    case .shelfBoard: false
+    }
+  }
+
   public var defaultOn: Bool {
     switch self {
     case .fakePartner: false
@@ -160,6 +192,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wrappedDelivery: true
     case .advent: true
     case .bedsideHouse: true
+    case .shelfBoard: true
     }
   }
 }

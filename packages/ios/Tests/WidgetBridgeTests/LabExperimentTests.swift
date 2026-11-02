@@ -9,6 +9,14 @@ import Testing
     .directory(FileManager.default.temporaryDirectory.appending(path: UUID().uuidString))
   }
 
+  @Test func withTheHomeCardsOffNoExperimentAddsACard() {
+    var features = WidgetFeatures()
+    for experiment in LabExperiment.allCases where experiment.hasHomeCard {
+      features.set(experiment, on: false)
+    }
+    #expect(!LabExperiment.allCases.contains { $0.hasHomeCard && features.isOn($0) })
+  }
+
   @Test(arguments: LabExperiment.allCases)
   func everyExperimentHasWordsAndAGroup(_ experiment: LabExperiment) {
     #expect(!experiment.title.isEmpty)
