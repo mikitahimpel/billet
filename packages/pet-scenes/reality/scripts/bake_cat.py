@@ -9,6 +9,8 @@ Every other cat comes from assets-source/cats/<model>/, holding Cat.usdz and cli
 compiled to Resources/Cats/Cat_<model>.reality beside its clip table. A cat painted from a palette
 also ships the palette as Cat_<model>_palette.png, which the app repaints for each coat. A palette
 is a grid of flat swatches, so it is never resized: a resize would blur one swatch into the next.
+A cat painted with a full texture instead keeps one texture per extra coat beside its source as
+Cat_<model>_<coat>.jpg, shipped as it is.
 
 Pass model names to bake only those, or `mochi`. Needs macOS for sips and realitytool.
 """
@@ -32,8 +34,10 @@ CATS = RESOURCES / "Cats"
 SHOWN = {"mochi_color.png": 768, "mochi_normal.png": 512}
 STAND_IN = {"mochi_color.png": 256, "mochi_normal.png": 256}
 
-# A compiled cat over this many bytes is a sign something came in unreduced.
+# A compiled cat over this many bytes is a sign something came in unreduced. The detailed tabby
+# carries a 1024 px albedo and a normal map, so it is allowed a little more.
 LARGEST_CAT = 2_500_000
+LARGEST = {"detailed": 3_000_000}
 
 
 def package(sizes: dict[str, int], work: Path, output: Path) -> None:
@@ -101,10 +105,15 @@ def bake_cat(model: str, work: Path) -> None:
     palette = palette_in(usdz)
     if palette is not None:
         (CATS / f"{name}_palette.png").write_bytes(palette)
+    coats = sorted(source.glob(f"{name}_*.jpg"))
+    for coat in coats:
+        shutil.copy(coat, CATS / coat.name)
     size = output.stat().st_size
-    print(f"{model}: {size / 1e6:.2f} MB{', palette' if palette else ''}")
-    if size > LARGEST_CAT:
-        raise SystemExit(f"{model}: {size} bytes is over {LARGEST_CAT}")
+    extras = (", palette" if palette else "") + "".join(f", {c.stem.removeprefix(name + '_')}" for c in coats)
+    print(f"{model}: {size / 1e6:.2f} MB{extras}")
+    largest = LARGEST.get(model, LARGEST_CAT)
+    if size > largest:
+        raise SystemExit(f"{model}: {size} bytes is over {largest}")
 
 
 def main() -> None:
