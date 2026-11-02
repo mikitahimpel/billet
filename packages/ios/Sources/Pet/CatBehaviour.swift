@@ -123,7 +123,28 @@ public struct CatBehaviour: Sendable {
     Pick(action: .knead, weight: 2, cooldown: 28),
     Pick(action: .perk, weight: 1, cooldown: 18),
     Pick(action: .stretch, weight: 1.5, cooldown: 40),
+    Pick(action: .crouchWiggle, weight: 1, cooldown: 20),
   ]
+
+  /// How much more often a move comes while the pet's life is focused on `need`. The crouch before
+  /// a pounce only comes when it wants to play.
+  static func boost(_ action: CatAction, for need: PetNeed?) -> Double {
+    switch (need, action) {
+    case (.rested, .yawn): 4
+    case (.rested, .stretch): 2
+    case (.rested, .perk): 0.3
+    case (.playful, .perk): 3
+    case (.playful, .tailFlick): 3
+    case (.playful, .crouchWiggle): 2
+    case (.full, .look): 3
+    case (.full, .perk): 2
+    case (.loved, .slowBlink): 3
+    case (.loved, .knead): 2
+    case (.loved, .look): 2
+    case (_, .crouchWiggle): 0
+    default: 1
+    }
+  }
 
   /// Seconds asleep before the first wake, so the first screen shows the cat stirring.
   static let firstNap = 3.0...5.0
@@ -152,6 +173,7 @@ public struct CatBehaviour: Sendable {
   private var lastPick: CatAction?
   private var queue: [(CatAction, Double)] = []
   private var started = false
+  private var drive = LifeDrive()
 
   public init(clips: [CatAction: CatClipInfo], seed: UInt64 = 1) {
     self.clips = clips
@@ -198,6 +220,12 @@ public struct CatBehaviour: Sendable {
     until = now
     asleepUntil = nil
     awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
+  }
+
+  /// Follows the pet's life: asleep, it naps on in free mode and wakes only to touch; with a need
+  /// in focus, the moves that show it come more often and its awake spells shorten when tired.
+  public mutating func follow(_ drive: LifeDrive) {
+    self.drive = drive
   }
 
   /// Plays a moment asked for from outside the room, such as an opening. Waking stretches (or
@@ -260,13 +288,17 @@ public struct CatBehaviour: Sendable {
       play(action, for: length, at: now)
       return
     }
+    if mode == .free, drive.asleep, has(.sleep), awakeUntil.map({ now >= $0 }) ?? true {
+      awakeUntil = nil
+      asleepUntil = max(asleepUntil ?? now, now + Self.nap.lowerBound)
+    }
     if mode == .free, let asleepUntil {
       if now < asleepUntil, has(.sleep) {
         dream(until: asleepUntil, at: now)
         return
       }
       self.asleepUntil = nil
-      awakeUntil = now + random.next(in: Self.awakeSpell)
+      awakeUntil = now + random.next(in: Self.awakeSpell) * awakeShare
       if let waking = available(.yawn) ?? available(.stretch), let info = clips[waking], !info.loops
       {
         play(waking, for: info.duration, at: now)
@@ -274,7 +306,7 @@ public struct CatBehaviour: Sendable {
       }
     }
     if mode == .free, asleepUntil == nil, awakeUntil == nil {
-      awakeUntil = now + random.next(in: Self.awakeSpell)
+      awakeUntil = now + random.next(in: Self.awakeSpell) * awakeShare
     }
     if mode == .free, let awakeUntil, now >= awakeUntil, has(.sleep) {
       self.awakeUntil = nil
@@ -322,7 +354,11 @@ public struct CatBehaviour: Sendable {
       return now - last >= pick.cooldown
     }
     let fresh = ready.filter { $0.action != lastPick }
-    let open = fresh.isEmpty ? ready : fresh
+    let open = (fresh.isEmpty ? ready : fresh).map {
+      Pick(
+        action: $0.action, weight: $0.weight * Self.boost($0.action, for: drive.focus),
+        cooldown: $0.cooldown)
+    }.filter { $0.weight > 0 }
     let total = open.reduce(0) { $0 + $1.weight }
     guard total > 0 else { return nil }
     var roll = random.next(in: 0...total)
@@ -346,6 +382,9 @@ public struct CatBehaviour: Sendable {
   }
 
   private var resting: CatAction { has(.sit) ? .sit : .idle }
+
+  /// A tired pet stays up for less.
+  private var awakeShare: Double { drive.focus == .rested ? 0.5 : 1 }
 
   private func available(_ action: CatAction) -> CatAction? { has(action) ? action : nil }
 

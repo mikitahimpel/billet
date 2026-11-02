@@ -302,7 +302,7 @@ private struct NookiStage: View {
         let location = value.gestureValue.location
         let point = SIMD2(Float(location.x), Float(location.y))
         diorama.followFinger(at: point, in: viewSize)
-        diorama.bat(at: point, in: viewSize)
+        if diorama.bat(at: point, in: viewSize) { onEvent(.played) }
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }

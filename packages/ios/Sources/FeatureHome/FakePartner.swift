@@ -89,9 +89,13 @@ actor FakePartnerRoom {
   func played(_ kind: PlayKind) {
     switch kind {
     case .pet:
-      after(pace.petBack) { $0.emit(.partnerPetted) }
+      after(pace.petBack) { $0.petCat() }
     case .treat:
       after(pace.treatBack) { $0.giveTreat() }
+    case .play:
+      after(pace.petBack) { $0.playWithCat() }
+    case .feed, .sleep:
+      break
     }
   }
 
@@ -167,10 +171,12 @@ actor FakePartnerRoom {
   private func idleMove(_ step: Int) {
     switch step % 7 {
     case 0: drawNote()
-    case 1: emit(.partnerPetted)
+    case 1: petCat()
     case 2: giveTreat()
     case 3: sealNote()
-    case 4: holdCat()
+    case 4:
+      holdCat()
+      playWithCat()
     case 5: changeLamp()
     default: sendGift()
     }
@@ -186,8 +192,24 @@ actor FakePartnerRoom {
   }
 
   private func drawNote() {
-    emit(.note(FakePartnerDrawings.drawing(number: drawn), id: UUID()))
+    let id = UUID()
+    emit(.note(FakePartnerDrawings.drawing(number: drawn), id: id))
+    lived(.note, id: id)
     drawn += 1
+  }
+
+  private func petCat() {
+    emit(.partnerPetted)
+    lived(.pet)
+  }
+
+  private func playWithCat() {
+    lived(.play)
+  }
+
+  /// Its part of the cat's life, which counts like a real partner's.
+  private func lived(_ kind: LifeEvent.Kind, id: UUID = UUID()) {
+    emit(.life([LifeEvent(id: id, kind: kind, by: Self.device, at: now())]))
   }
 
   private func sendGift() {
@@ -220,6 +242,7 @@ actor FakePartnerRoom {
   private func giveTreat() {
     let day = TreatDay.key(for: now(), calendar: .current)
     emit(.treats([day: [Self.device]]))
+    lived(.feed)
   }
 }
 
@@ -231,6 +254,9 @@ extension NoteDelivery {
       device: device,
       deliver: { _, id in await room.noteSent(id) },
       play: { kind, _ in await room.played(kind) },
+      life: { event in
+        if let kind = event.kind.playKind { await room.played(kind) }
+      },
       nameCat: { await room.catNamed($0) },
       react: { _, _ in },
       signal: { await room.signalled($0) },

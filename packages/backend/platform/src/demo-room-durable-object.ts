@@ -1,11 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   MAX_QUEUED_PETS,
+  isTime,
   keepFirstName,
   parsePlay,
+  recordLife,
+  type LifeEvent,
   recordReaction,
   recordTreat,
-  type PlayFrame,
   type QueuedPet,
   type Reactions,
   type TreatDays,
@@ -36,7 +38,7 @@ interface QueuedNote {
 
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-const petFrame = (pet: PlayFrame & { readonly from: string }) => ({
+const petFrame = (pet: QueuedPet) => ({
   type: "play",
   id: pet.id,
   kind: pet.kind,
@@ -133,6 +135,13 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         partner === undefined
           ? undefined
           : await this.deliverOrQueue({ id, ink, from: sender, to: partner });
+      const at = frame["at"];
+      await this.recordLife({
+        id: id.toLowerCase(),
+        kind: "note",
+        by: sender,
+        at: isTime(at) ? at : new Date().toISOString(),
+      });
       socket.send(JSON.stringify({ type: "ack", id }));
       // The ack means "stored"; it must not wait on APNs, which is external and can stall.
       if (queued !== undefined) this.ctx.waitUntil(this.alertPartner(queued));
@@ -151,7 +160,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   }
 
   /**
-   * A pet is relayed to the partner, or kept (newest few) until they connect. A treat is recorded
+   * A pet is relayed to the partner, or kept (newest few) until they connect, and joins the cat's
+   * life with feeding, play and bedtime, which go to both sockets. A treat is recorded
    * once per device per day, and the whole ledger goes to both sockets so phones agree. The cat's
    * name is the first one given. A reaction is accepted only from the receiver of that note, and
    * the whole table goes to both sockets.
@@ -186,13 +196,32 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
           );
           await this.broadcastReactions();
         }
-      } else {
+      } else if (play.kind === "pet") {
         const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
         const partner = devices.find((d) => d !== sender);
-        if (partner !== undefined) await this.relayPet({ ...play, from: sender, to: partner });
+        if (partner !== undefined) {
+          await this.relayPet({ ...play, kind: "pet", from: sender, to: partner });
+        }
+        await this.recordLife({ id: play.id.toLowerCase(), kind: "pet", by: sender, at: play.at });
+      } else {
+        await this.recordLife({
+          id: play.id.toLowerCase(),
+          kind: play.kind,
+          by: sender,
+          at: play.at,
+        });
       }
     }
     socket.send(JSON.stringify({ type: "ack", id: play.id }));
+  }
+
+  /** Keeps `event` in the cat's life and sends it to both sockets, so both phones fold it. */
+  private async recordLife(event: LifeEvent): Promise<void> {
+    const log = (await this.ctx.storage.get<readonly LifeEvent[]>("life")) ?? [];
+    const next = recordLife(log, event);
+    if (next === log) return;
+    await this.ctx.storage.put("life", next);
+    this.broadcast({ type: "life", events: [event] });
   }
 
   private async relayPet(pet: QueuedPet): Promise<void> {
@@ -214,6 +243,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     if (Object.keys(reactions).length > 0) {
       socket.send(JSON.stringify({ type: "reactions", reactions }));
     }
+    const life = (await this.ctx.storage.get<readonly LifeEvent[]>("life")) ?? [];
+    if (life.length > 0) socket.send(JSON.stringify({ type: "life", events: life }));
     const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
     const mine = queue.filter((p) => p.to === device);
     if (mine.length === 0) return;

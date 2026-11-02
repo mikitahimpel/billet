@@ -19,6 +19,8 @@ public struct NoteDelivery: Sendable {
     case note([Stroke], id: UUID)
     /// The partner petted the cat.
     case partnerPetted
+    /// Events of the cat's life, from the room's log or carried by another frame.
+    case life([LifeEvent])
     /// The room's table of treats: day to the devices that gave one.
     case treats([String: Set<String>])
     /// The name the room holds for the cat.
@@ -51,6 +53,9 @@ public struct NoteDelivery: Sendable {
   public var deliver: @Sendable ([Stroke], UUID) async -> Void
   /// Tells the partner's phone about a pet or a treat. `at` is an ISO time in the sender's calendar.
   public var play: @Sendable (PlayKind, _ at: String) async -> Void
+  /// Tells the room about an event of the cat's life that this phone made. A note's event is
+  /// carried by the note, so only the other kinds come through here.
+  public var life: @Sendable (LifeEvent) async -> Void
   /// Names the cat. The room keeps the first name from either partner.
   public var nameCat: @Sendable (String) async -> Void
   /// Sends a reaction to a note the partner sent.
@@ -66,6 +71,7 @@ public struct NoteDelivery: Sendable {
     device: String = "",
     deliver: @escaping @Sendable ([Stroke], UUID) async -> Void,
     play: @escaping @Sendable (PlayKind, String) async -> Void = { _, _ in },
+    life: @escaping @Sendable (LifeEvent) async -> Void = { _ in },
     nameCat: @escaping @Sendable (String) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
     signal: @escaping @Sendable (LabSignal) async -> Void = { _ in },
@@ -74,6 +80,7 @@ public struct NoteDelivery: Sendable {
   ) {
     self.device = device
     self.play = play
+    self.life = life
     self.nameCat = nameCat
     self.react = react
     self.signal = signal
@@ -89,6 +96,7 @@ public struct NoteDelivery: Sendable {
       device: device,
       deliver: { await socket.send($0, id: $1) },
       play: { await socket.play($0, at: $1) },
+      life: { await socket.life($0) },
       nameCat: { await socket.nameCat($0) },
       react: { await socket.react(to: $0, $1) },
       updates: {

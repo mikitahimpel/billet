@@ -4,13 +4,16 @@ import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
 import { waitFor } from "./demo-wait.ts";
 import {
+  MAX_LIFE_EVENTS,
   MAX_REACTIONS,
   dayOf,
   keepFirstName,
   parseName,
   parsePlay,
+  recordLife,
   recordReaction,
   recordTreat,
+  type LifeEvent,
 } from "../src/demo-play.ts";
 
 const { DEMO_ROOM } = env as unknown as { DEMO_ROOM: DurableObjectNamespace<DemoRoom> };
@@ -81,6 +84,13 @@ describe("play frame parsing", () => {
     expect(parsePlay({ id: uuid(1), kind: "treat", at })?.kind).toBe("treat");
   });
 
+  it("accepts the life plays: feeding, a game and bedtime", () => {
+    const at = "2026-11-01T23:30:00+01:00";
+    for (const kind of ["feed", "play", "sleep"]) {
+      expect(parsePlay({ id: uuid(1), kind, at })).toEqual({ id: uuid(1), kind, at });
+    }
+  });
+
   it("rejects an unknown kind, a bad id, or a time without an offset", () => {
     const at = "2026-11-01T10:00:00Z";
     expect(parsePlay({ id: uuid(1), kind: "coin", at })).toBeUndefined();
@@ -114,6 +124,25 @@ describe("treat ledger", () => {
     }
     expect(Object.keys(days)).toHaveLength(90);
     expect(days).not.toHaveProperty("2026-01-01");
+  });
+});
+
+describe("life log", () => {
+  const event = (n: number, at: string): LifeEvent => ({ id: uuid(n), kind: "pet", by: alice, at });
+
+  it("keeps events in time order and ignores a repeated id", () => {
+    const log = recordLife([event(1, "2026-11-01T10:00:00Z")], event(2, "2026-11-01T09:00:00Z"));
+    expect(log.map((e) => e.id)).toEqual([uuid(2), uuid(1)]);
+    expect(recordLife(log, event(1, "2026-11-01T11:00:00Z"))).toBe(log);
+  });
+
+  it("drops the oldest past the cap", () => {
+    let log: readonly LifeEvent[] = [];
+    for (let n = 0; n < MAX_LIFE_EVENTS + 5; n++) {
+      log = recordLife(log, event(n, new Date(Date.UTC(2026, 10, 1, 0, n)).toISOString()));
+    }
+    expect(log).toHaveLength(MAX_LIFE_EVENTS);
+    expect(log[0]?.id).toBe(uuid(5));
   });
 });
 
@@ -191,6 +220,32 @@ describe("demo room play", () => {
     expect(ofType(back.frames, "treats")).toEqual([
       { type: "treats", days: { "2026-11-01": [alice], "2026-11-02": [bob] } },
     ]);
+  });
+
+  it("shares the cat's life with both phones and replays it on connect", async () => {
+    const code = "KATSYNC234";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    await a.sendAcked(play(uuid(12), "pet", "2026-11-01T10:00:00+01:00"), uuid(12));
+    await b.sendAcked(play(uuid(13), "feed", "2026-11-01T10:05:00+01:00"), uuid(13));
+    await a.sendAcked(
+      JSON.stringify({ type: "note", id: uuid(14), ink: "x", at: "2026-11-01T10:06:00+01:00" }),
+      uuid(14),
+    );
+    await a.sendAcked(play(uuid(15), "treat", "2026-11-01T10:07:00+01:00"), uuid(15));
+    const expected = [
+      { id: uuid(12), kind: "pet", by: alice, at: "2026-11-01T10:00:00+01:00" },
+      { id: uuid(13), kind: "feed", by: bob, at: "2026-11-01T10:05:00+01:00" },
+      { id: uuid(14), kind: "note", by: alice, at: "2026-11-01T10:06:00+01:00" },
+    ];
+    const events = (frames: Frame[]) => ofType(frames, "life").flatMap((f) => f["events"]);
+    await b.waitFor((f) => events(f).length === 3, "three life events on B");
+    await a.waitFor((f) => events(f).length === 3, "three life events on A");
+    expect(events(a.frames)).toEqual(expected);
+    expect(events(b.frames)).toEqual(expected);
+    await leave(a, b);
+    const back = await connect(code, alice);
+    expect(ofType(back.frames, "life")).toEqual([{ type: "life", events: expected }]);
   });
 
   it("drops a malformed play frame without an ack", async () => {

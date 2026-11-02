@@ -15,6 +15,8 @@ actor LiveDelivery {
     var type = "note"
     let id: String
     let ink: String
+    /// When it was sent, which the cat's life counts it at.
+    var at: String?
   }
 
   private struct PushToken: Encodable, Sendable {
@@ -41,7 +43,27 @@ actor LiveDelivery {
     let days: [String: [String]]?
     let name: String?
     let reactions: [String: String]?
+    let from: String?
+    let at: String?
+    let events: [LifeFrameEvent]?
   }
+
+  private struct LifeFrameEvent: Decodable {
+    let id: String
+    let kind: String
+    let by: String
+    let at: String
+
+    var event: LifeEvent? {
+      guard let uuid = UUID(uuidString: id), let kind = LifeEvent.Kind(rawValue: kind),
+        let date = LiveDelivery.date(at)
+      else { return nil }
+      return LifeEvent(id: uuid, kind: kind, by: by, at: date)
+    }
+  }
+
+  /// The most life frames kept for a room that has not acked them, as an older room never does.
+  private static let longestLifeOutbox = 50
 
   private static let refusedStatusCodes: Set<Int> = [400, 403]
   private static let longestBackoff = 15
@@ -50,6 +72,8 @@ actor LiveDelivery {
   private var outbox: [Outgoing] = []
   /// Plays that wait for the server's ack: treats and the cat's name.
   private var treatOutbox: [OutgoingPlay] = []
+  /// Life events that wait for the server's ack, sent again after a reconnect.
+  private var lifeOutbox: [OutgoingPlay] = []
   private var receivedIDs: Set<String> = []
   private var openSocket: URLSessionWebSocketTask?
 
@@ -59,7 +83,9 @@ actor LiveDelivery {
 
   func send(_ strokes: [Stroke], id: UUID) async {
     guard let ink = try? NoteInk.encode(strokes) else { return }
-    let note = Outgoing(id: id.uuidString.lowercased(), ink: ink)
+    let note = Outgoing(
+      id: id.uuidString.lowercased(), ink: ink,
+      at: TreatDay.timestamp(for: .now, calendar: .current))
     outbox.append(note)
     if let openSocket {
       await Self.write(note, to: openSocket)
@@ -80,8 +106,23 @@ actor LiveDelivery {
     switch kind {
     case .pet:
       if let openSocket { await Self.write(frame, to: openSocket) }
-    case .treat:
+    case .treat, .feed, .play, .sleep:
       treatOutbox.append(frame)
+      if let openSocket { await Self.write(frame, to: openSocket) }
+    }
+  }
+
+  /// A pet is sent like any other: once, now. Feeding, a game and bedtime wait for the ack.
+  func life(_ event: LifeEvent) async {
+    guard let kind = event.kind.playKind else { return }
+    let frame = OutgoingPlay(
+      id: event.id.uuidString.lowercased(), kind: kind.rawValue,
+      at: TreatDay.timestamp(for: event.at, calendar: .current))
+    switch kind {
+    case .pet:
+      if let openSocket { await Self.write(frame, to: openSocket) }
+    case .treat, .feed, .play, .sleep:
+      lifeOutbox = Array((lifeOutbox + [frame]).suffix(Self.longestLifeOutbox))
       if let openSocket { await Self.write(frame, to: openSocket) }
     }
   }
@@ -165,17 +206,24 @@ actor LiveDelivery {
         for note in outbox {
           await Self.write(note, to: task)
         }
-        for treat in treatOutbox {
+        for treat in treatOutbox + lifeOutbox {
           await Self.write(treat, to: task)
         }
       }
     case "ack":
       outbox.removeAll { $0.id == frame.id }
       treatOutbox.removeAll { $0.id == frame.id }
+      lifeOutbox.removeAll { $0.id == frame.id }
     case "play":
       guard frame.kind == PlayKind.pet.rawValue, let id = frame.id, receivedIDs.insert(id).inserted
       else { return }
       updates.yield(.partnerPetted)
+      if let uuid = UUID(uuidString: id) {
+        let at = frame.at.flatMap(Self.date) ?? .now
+        updates.yield(.life([LifeEvent(id: uuid, kind: .pet, by: frame.from ?? "", at: at)]))
+      }
+    case "life":
+      updates.yield(.life((frame.events ?? []).compactMap(\.event)))
     case "treats":
       updates.yield(.treats((frame.days ?? [:]).mapValues(Set.init)))
     case "reactions":
@@ -195,9 +243,19 @@ actor LiveDelivery {
       NoteImage.saveLatest(strokes)
       WidgetCenter.shared.reloadAllTimelines()
       updates.yield(.note(strokes, id: noteID))
+      updates.yield(.life([LifeEvent(id: noteID, kind: .note, by: frame.from ?? "", at: .now)]))
     default:
       break
     }
+  }
+
+  /// A room time, with or without fractions of a second.
+  static func date(_ text: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    if let date = formatter.date(from: text) { return date }
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter.date(from: text)
   }
 
   /// A failed write surfaces as a failed receive, which reconnects and resends.

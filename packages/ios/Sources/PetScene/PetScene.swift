@@ -10,6 +10,8 @@ public enum PetSceneEvent: Hashable, Sendable {
   /// The user petted the pet in the scene. Same meaning as a pet given from any other control, so
   /// the host tells the partner the same way.
   case petted
+  /// The user played with the pet in the scene, such as by moving a finger it batted at.
+  case played
   /// The user opened the hanging note of `delivery`.
   case noteOpened(delivery: Int)
 }
@@ -137,7 +139,7 @@ extension PetMachine.Event {
       self = .deliveryFinished(delivery: delivery)
     case .settled(let delivery):
       self = .settled(delivery: delivery)
-    case .petted, .noteOpened:
+    case .petted, .played, .noteOpened:
       return nil
     }
   }
