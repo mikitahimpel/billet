@@ -29,6 +29,10 @@ struct GenzCamera: Equatable {
   private(set) var isReturningHome = false
   /// How much further out the view's shape puts the camera, so a narrow view still shows the room.
   private(set) var standBack: Float = 1
+  /// How far an opening flight still holds the camera off its place: turn, lift and distance.
+  private(set) var flight = SIMD3<Float>(0, 0, 1)
+  /// The phone's lean, added to the turn and lift, in radians.
+  private(set) var lean = SIMD2<Float>.zero
   private var isHeld = false
 
   private static let friction: Float = 4
@@ -45,9 +49,38 @@ struct GenzCamera: Equatable {
   var fieldOfView: Float { home.fieldOfView }
 
   var position: SIMD3<Float> {
-    let reach = home.distance * zoom * standBack
-    let flat = cos(pitch)
-    return home.target + reach * SIMD3(flat * sin(yaw), sin(pitch), flat * cos(yaw))
+    let reach = home.distance * zoom * standBack * flight.z
+    let shownYaw = yaw + flight.x + lean.x
+    let shownPitch = pitch + flight.y + lean.y
+    let flat = cos(shownPitch)
+    return home.target + reach * SIMD3(flat * sin(shownYaw), sin(shownPitch), flat * cos(shownYaw))
+  }
+
+  /// Holds the camera off its place by an opening's turn, lift and distance multiple.
+  mutating func fly(yaw: Float, pitch: Float, distance: Float) {
+    flight = [yaw, pitch, distance]
+  }
+
+  mutating func lean(to lean: SIMD2<Float>) {
+    self.lean = lean
+  }
+
+  /// Where the line of sight through `point` of a view of `size` meets the level `height`, or
+  /// `nil` when it never comes down to it.
+  func point(under point: CGPoint, in size: CGSize, height: Float) -> SIMD3<Float>? {
+    guard size.width > 0, size.height > 0 else { return nil }
+    let eye = position
+    let forward = simd_normalize(home.target - eye)
+    let right = simd_normalize(simd_cross(forward, [0, 1, 0]))
+    let up = simd_cross(right, forward)
+    let halfHeight = tan(home.fieldOfView * .pi / 360)
+    let aspect = Float(size.width / size.height)
+    let x = Float(point.x / size.width) * 2 - 1
+    let y = 1 - Float(point.y / size.height) * 2
+    let ray = forward + right * (x * halfHeight * aspect) + up * (y * halfHeight)
+    guard abs(ray.y) > 0.0001 else { return nil }
+    let distance = (height - eye.y) / ray.y
+    return distance > 0 ? eye + ray * distance : nil
   }
 
   var isAtRest: Bool {

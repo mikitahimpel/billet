@@ -98,6 +98,17 @@ public struct WidgetFeaturesStore: Sendable {
   public func saveCat(_ cat: CatChoice) throws(PersistenceError) {
     try storage.writeJSON(cat, named: Self.catFileName)
   }
+
+  public static let homeVariantFileName = "home-variant.json"
+
+  /// The saved layout of Home, or the standard one when nothing readable is saved.
+  public func loadHomeVariant() -> HomeVariant {
+    (try? storage.readJSON(HomeVariant.self, named: Self.homeVariantFileName)) ?? .standard
+  }
+
+  public func saveHomeVariant(_ variant: HomeVariant) throws(PersistenceError) {
+    try storage.writeJSON(variant, named: Self.homeVariantFileName)
+  }
 }
 
 /// The flags the settings screen edits, widget features and lab experiments alike. Each change is
@@ -110,6 +121,8 @@ public final class WidgetFeaturesModel {
   public private(set) var roomStyle: RoomStyle
   /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
   public private(set) var cat: CatChoice
+  /// How Home is laid out around the room. Kept beside the flags, in its own file.
+  public private(set) var homeVariant: HomeVariant
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -120,6 +133,13 @@ public final class WidgetFeaturesModel {
     features = store?.load() ?? WidgetFeatures()
     roomStyle = store?.loadRoomStyle() ?? .standard
     cat = store?.loadCat() ?? .standard
+    homeVariant = store?.loadHomeVariant() ?? .standard
+  }
+
+  public func setHomeVariant(_ variant: HomeVariant) {
+    guard homeVariant != variant else { return }
+    homeVariant = variant
+    try? store?.saveHomeVariant(variant)
   }
 
   public func setRoomStyle(_ style: RoomStyle) {

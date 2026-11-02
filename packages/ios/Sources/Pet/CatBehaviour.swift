@@ -53,7 +53,7 @@ public enum CatReaction: Hashable, Sendable {
 }
 
 /// What the room should show now.
-public struct CatCue: Hashable, Sendable {
+public struct CatBeat: Hashable, Sendable {
   public var action: CatAction
   /// How much the head may turn to look at the viewer, from 0 to 1.
   public var lookWeight: Double
@@ -67,7 +67,7 @@ public struct CatCue: Hashable, Sendable {
 /// Chooses the cat's clips over time so it seems to live on its own: it naps, wakes for a while,
 /// yawns, grooms, looks at you, kneads and settles again. Weighted picks with cooldowns keep it
 /// from repeating, and reactions to touch cut in. Pure and deterministic for a given seed; the
-/// room calls `cue(at:mode:)` each frame, which costs a few comparisons unless the cue changes.
+/// room calls `beat(at:mode:)` each frame, which costs a few comparisons unless the beat changes.
 public struct CatBehaviour: Sendable {
   /// How much say the room gives the cat.
   public enum Mode: Hashable, Sendable {
@@ -147,11 +147,11 @@ public struct CatBehaviour: Sendable {
   }
 
   /// The cue for `now`. Call it every frame; it only moves on when the current clip is done.
-  public mutating func cue(at now: Double, mode: Mode) -> CatCue {
+  public mutating func beat(at now: Double, mode: Mode) -> CatBeat {
     if case .fixed(let action) = mode {
       current = action
       until = now
-      return CatCue(action: action, lookWeight: Self.lookWeight(action))
+      return CatBeat(action: action, lookWeight: Self.lookWeight(action))
     }
     if !started {
       started = true
@@ -165,7 +165,7 @@ public struct CatBehaviour: Sendable {
       advance(at: now, mode: mode)
     }
     let action = current ?? resting
-    return CatCue(action: action, lookWeight: Self.lookWeight(action))
+    return CatBeat(action: action, lookWeight: Self.lookWeight(action))
   }
 
   private mutating func advance(at now: Double, mode: Mode) {

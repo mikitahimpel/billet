@@ -31,7 +31,7 @@ struct CatBehaviourTests {
     var changes: [(Double, CatAction)] = []
     var t = start
     while t < start + seconds {
-      let action = behaviour.cue(at: t, mode: mode).action
+      let action = behaviour.beat(at: t, mode: mode).action
       if changes.last?.1 != action { changes.append((t, action)) }
       t += 1.0 / 30
     }
@@ -76,26 +76,26 @@ struct CatBehaviourTests {
   @Test func petCutsInWithHappyThenCarriesOn() {
     var cat = CatBehaviour(clips: Self.full, seed: 5)
     _ = run(&cat, for: 2)
-    #expect(cat.cue(at: 2, mode: .free).action == .sleep)
+    #expect(cat.beat(at: 2, mode: .free).action == .sleep)
     cat.react(.pet, at: 2.1)
-    #expect(cat.cue(at: 2.1, mode: .free).action == .happy)
-    #expect(cat.cue(at: 4, mode: .free).action == .happy)
-    #expect(cat.cue(at: 5.5, mode: .free).action != .happy)
+    #expect(cat.beat(at: 2.1, mode: .free).action == .happy)
+    #expect(cat.beat(at: 4, mode: .free).action == .happy)
+    #expect(cat.beat(at: 5.5, mode: .free).action != .happy)
   }
 
   @Test func tapPerksAndTreatEatsThenIsPleased() {
     var cat = CatBehaviour(clips: Self.full, seed: 5)
     cat.react(.tap, at: 0)
-    #expect(cat.cue(at: 0, mode: .free).action == .perk)
+    #expect(cat.beat(at: 0, mode: .free).action == .perk)
     cat.react(.treat, at: 1)
-    #expect(cat.cue(at: 1, mode: .free).action == .eat)
-    #expect(cat.cue(at: 5.1, mode: .free).action == .happy)
+    #expect(cat.beat(at: 1, mode: .free).action == .eat)
+    #expect(cat.beat(at: 5.1, mode: .free).action == .happy)
   }
 
   @Test func fixedModePassesThrough() {
     var cat = CatBehaviour(clips: Self.full)
-    #expect(cat.cue(at: 0, mode: .fixed(.walk)) == CatCue(action: .walk, lookWeight: 0.3))
-    #expect(cat.cue(at: 1, mode: .fixed(.pounce)).action == .pounce)
+    #expect(cat.beat(at: 0, mode: .fixed(.walk)) == CatBeat(action: .walk, lookWeight: 0.3))
+    #expect(cat.beat(at: 1, mode: .fixed(.pounce)).action == .pounce)
   }
 
   @Test func neverCuesAClipTheModelLacks() {
@@ -104,9 +104,9 @@ struct CatBehaviourTests {
     let changes = run(&cat, for: 120)
     #expect(changes.allSatisfy { basic[$0.1] != nil })
     cat.react(.pet, at: 121)
-    #expect(basic[cat.cue(at: 121, mode: .free).action] != nil)
+    #expect(basic[cat.beat(at: 121, mode: .free).action] != nil)
     cat.react(.treat, at: 122)
-    #expect(basic[cat.cue(at: 122, mode: .free).action] != nil)
+    #expect(basic[cat.beat(at: 122, mode: .free).action] != nil)
   }
 
   @Test func sameSeedSameDay() {

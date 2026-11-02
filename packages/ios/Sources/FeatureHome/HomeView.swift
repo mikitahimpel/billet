@@ -27,6 +27,13 @@ struct HomeView: View {
   @State private var notesSent = 0
   @State private var namingCat = false
   @State private var labsOpen = false
+  @State private var shopSheet: HomeShop.Sheet?
+  /// Where cues for the cat go. An idle scheduler can send through the same director.
+  @State private var director = CatDirector()
+  /// Whether the cinematic opening has played since launch. Home stays alive across tabs.
+  @State private var hasOpened = false
+  @State private var latestDrawing: CGImage?
+  @State private var drawerOpen = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -63,7 +70,14 @@ struct HomeView: View {
       .environment(\.petSceneCat, session.labs.cat)
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
-      .modifier(HomeShop(shop: session.shop, renovator: session.renovator, scene: scene))
+      .modifier(
+        HomeShop(
+          shop: session.shop, renovator: session.renovator, scene: scene,
+          showsButtons: !variant.isFullBleed, sheet: $shopSheet)
+      )
+      .task(id: latestReceivedNote?.id) {
+        latestDrawing = latestReceivedNote.flatMap { NoteImage.cgImage(of: $0.strokes) }
+      }
       .calmAnimation(value: isRenovating)
       #if os(iOS)
         .toolbar(isRenovating ? .hidden : .visible, for: .tabBar)
@@ -159,8 +173,31 @@ struct HomeView: View {
     return style
   }
 
+  /// How Home is laid out. Large text and renovating keep the classic layout, which has room for
+  /// both.
+  private var variant: HomeVariant {
+    guard scene != nil, !typeSize.isAccessibilitySize, !isRenovating else { return .classic }
+    return session.labs.homeVariant
+  }
+
+  /// The chosen room style when the scene can show it, else the scene's own room.
+  private var sceneRoomStyle: RoomStyle {
+    let style = session.labs.roomStyle
+    return scene?.roomStyles.contains(style) == true ? style : .standard
+  }
+
+  private var latestReceivedNote: NoteRecord? {
+    session.notes.first { $0.direction == .received }
+  }
+
   @ViewBuilder private var home: some View {
-    if let roomStyle, let scene {
+    if variant.isFullBleed, let scene {
+      fullBleedHome(scene)
+        .overlay { nightOverlay }
+        .overlay(alignment: .top) {
+          if !line.settles { roomStatus }
+        }
+    } else if let roomStyle, let scene {
       styledHome(roomStyle, scene: scene)
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
@@ -192,6 +229,79 @@ struct HomeView: View {
       onDraw: { store.send(.canvasOpened) })
   }
 
+  private func fullBleedHome(_ scene: any PetScene) -> some View {
+    let style = sceneRoomStyle
+    return FullBleedHome(
+      variant: variant,
+      scene: AnyView(
+        scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .id(scene.id)
+          .environment(\.petSceneOnScreen, store.state.screen == .home)
+          .environment(\.petSceneRenovator, session.renovator)
+          .environment(\.petSceneRoomStyle, style)
+          .environment(\.petSceneDrawing, style == .nooki ? hungImage : latestDrawing)
+          .overlay {
+            if !scene.handlesTouches { petTapTarget }
+          }
+          .overlay {
+            if let hungImage, let wall = scene.noteWall {
+              HungNote(drawing: hungImage, wall: wall)
+                .id(hangCount)
+            }
+          }
+          .overlay { catReactions.allowsHitTesting(false) }
+          .background {
+            // The styled rooms draw their own night; the diorama floats in Home's evening, or
+            // under the sky of the hour when Home follows the time of day.
+            if style == .nooki {
+              if variant == .nightAndDay { skyBackdrop } else { homeBackdrop }
+            }
+          }),
+      director: director,
+      isFakePartner: session.isFakePartner,
+      theirTimeZone: session.lamp.theirs?.timeZoneID.flatMap(TimeZone.init(identifier:)),
+      hasOpened: hasOpened,
+      onOpened: { hasOpened = true },
+      onTreat: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
+      onDraw: { store.send(.canvasOpened) },
+      drawerOpen: $drawerOpen
+    ) {
+      drawer(scene)
+    }
+    .onChange(of: store.state.screen) { drawerOpen = false }
+  }
+
+  /// Everything the full-bleed Home keeps off the room: the streak, the shop and the closet, the
+  /// room's own controls, and the cards that classic Home shows under it.
+  private func drawer(_ scene: any PetScene) -> some View {
+    let calendar = Calendar.current
+    let today = TreatDay.key(for: .now, calendar: calendar)
+    let streak = session.streak(today: today, calendar: calendar)
+    return VStack(spacing: Spacing.small) {
+      HStack(spacing: Spacing.small) {
+        Label("\(streak) \(streak == 1 ? "day" : "days")", systemImage: "flame.fill")
+          .billetType(.action)
+          .foregroundStyle(Palette.paper.color)
+          .accessibilityIdentifier("drawerStreak")
+        Spacer(minLength: 0)
+        if scene.hasShop {
+          IconButton("paintbrush.pointed", label: "Change the room") {
+            drawerOpen = false
+            session.renovator.requestOpen()
+          }
+          IconButton("archivebox.fill", label: "Closet") { openShop(.closet) }
+          IconButton("bag.fill", label: "Shop") { openShop(.shop) }
+        }
+      }
+      controls(showsDraw: false)
+    }
+  }
+
+  private func openShop(_ sheet: HomeShop.Sheet) {
+    drawerOpen = false
+    shopSheet = sheet
+  }
+
   /// Uses a treat from the closet, or gives today's treat when the closet has none.
   private func giveTreat(on day: String) {
     let treat = ShopCatalog.standard.items(in: .treats).first { session.shop.owned($0) > 0 }
@@ -202,17 +312,33 @@ struct HomeView: View {
     }
   }
 
-  private var classicHome: some View {
-    ZStack {
+  private var homeBackdrop: some View {
+    LinearGradient(
+      stops: [
+        .init(color: Palette.sky.color, location: 0.2),
+        .init(color: Palette.meadow.color, location: 0.75),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+    .ignoresSafeArea()
+  }
+
+  /// The sky of the hour here, from the same colours as the partner's sky card.
+  private var skyBackdrop: some View {
+    TimelineView(.everyMinute) { context in
+      let colours = TheirSky.at(hour: Calendar.current.component(.hour, from: context.date))
+        .colours
       LinearGradient(
-        stops: [
-          .init(color: Palette.sky.color, location: 0.2),
-          .init(color: Palette.meadow.color, location: 0.75),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
+        colors: [colours.top.color, colours.bottom.color], startPoint: .top, endPoint: .bottom
       )
       .ignoresSafeArea()
+    }
+  }
+
+  private var classicHome: some View {
+    ZStack {
+      homeBackdrop
       if typeSize.isAccessibilitySize {
         // Large text makes the cards taller than the screen, so they scroll under the scene
         // instead of being squeezed over one another.
@@ -309,7 +435,9 @@ struct HomeView: View {
     }
   }
 
-  private var controls: some View {
+  private var controls: some View { controls(showsDraw: true) }
+
+  private func controls(showsDraw: Bool) -> some View {
     VStack(spacing: Spacing.small) {
       if session.notes.isEmpty, !session.notesFailedToLoad {
         Text("The wall is empty. Draw the first note.")
@@ -328,8 +456,10 @@ struct HomeView: View {
       if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
         labsDrawer
       }
-      BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
-        .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
+      if showsDraw {
+        BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
+          .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
+      }
     }
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)

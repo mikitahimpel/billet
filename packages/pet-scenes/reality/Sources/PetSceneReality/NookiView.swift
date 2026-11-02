@@ -20,13 +20,22 @@ struct NookiView: View {
   @State private var isReady = false
   @State private var isMochiMissing = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.petSceneFlyIn) private var flyIn
+  @Environment(\.petSceneFillsView) private var fillsView
+
+  /// The still is framed for a fitted room on its own ground. An opening starts from far out, and
+  /// a filled view frames the room closer on the host's ground, so either fades the room in alone.
+  private var skipsPoster: Bool { fillsView || (flyIn.map { !$0.isSkipped } ?? false) }
 
   var body: some View {
     ZStack {
       if let diorama {
         NookiStage(diorama: diorama, world: world, play: play, onEvent: onEvent)
+          // With no still, nothing shows until the room has rendered, rather than its parts.
+          // Fully transparent, the view would stop drawing and the room would never report ready.
+          .opacity(isReady || !skipsPoster ? 1 : 0.001)
       }
-      if !isReady, let poster {
+      if !isReady, !skipsPoster, let poster {
         Image(decorative: poster, scale: 1)
           .resizable()
           .scaledToFit()
@@ -97,6 +106,14 @@ private struct NookiStage: View {
   @Environment(\.petSceneRenovator) private var renovator
   @Environment(\.petSceneDrawing) private var drawing
   @Environment(\.petSceneCat) private var cat
+  @Environment(\.petSceneFlyIn) private var flyIn
+  @Environment(\.petSceneGaze) private var gaze
+  @Environment(\.petSceneOrbits) private var orbits
+  @Environment(\.petSceneCatCue) private var catCue
+  @Environment(\.petSceneDayLight) private var dayLight
+  @Environment(\.petSceneFillsView) private var fillsView
+  @Environment(\.petSceneShowsControls) private var showsControls
+  @Environment(\.petSceneOpeningEnded) private var openingEnded
   @Environment(\.scenePhase) private var scenePhase
 
   init(
@@ -145,6 +162,16 @@ private struct NookiStage: View {
       .onChange(of: cat, initial: true) { _, cat in
         diorama.setCat(cat)
       }
+      .onChange(of: flyIn, initial: true) { _, flyIn in
+        diorama.onOpeningEnded = openingEnded
+        diorama.flyIn(flyIn)
+      }
+      .onChange(of: gaze) { _, gaze in diorama.gaze(at: gaze, in: viewSize) }
+      .onChange(of: catCue) { _, request in
+        if let request { diorama.cue(request.cue) }
+      }
+      .onChange(of: dayLight, initial: true) { _, light in diorama.show(dayLight: light) }
+      .onChange(of: fillsView, initial: true) { _, fills in diorama.fillsView = fills }
   }
 
   /// The rendered room with its gestures, its controls and what VoiceOver offers.
@@ -172,8 +199,11 @@ private struct NookiStage: View {
     .simultaneousGesture(brush)
     .simultaneousGesture(tap)
     .overlay(alignment: .topLeading) {
-      NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
+      if showsControls || isRenovating {
+        NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
+      }
     }
+    .onChange(of: renovator?.openRequests) { isRenovating = true }
     .onChange(of: isRenovating, initial: true) { _, isOn in
       diorama.renovation.isOn = isOn
       renovator?.isRenovating = isOn
@@ -255,7 +285,7 @@ private struct NookiStage: View {
       .targetedToAnyEntity()
       .onChanged { value in
         let location = value.gestureValue.location
-        diorama.gaze(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
+        diorama.followFinger(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
@@ -263,6 +293,7 @@ private struct NookiStage: View {
           diorama.stroke()
           return
         }
+        guard orbits else { return }
         let translation = value.gestureValue.translation
         diorama.orbit(
           byX: Float(translation.width - lastDrag.width),
@@ -278,7 +309,7 @@ private struct NookiStage: View {
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
-        } else {
+        } else if orbits {
           diorama.endOrbit(velocityX: Float(velocity.width), velocityY: Float(velocity.height))
         }
       }
