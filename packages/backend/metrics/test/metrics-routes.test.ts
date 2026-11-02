@@ -1,4 +1,5 @@
 import { Effect, Layer, Redacted, Schema } from "effect";
+import { Digest } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthRejected, AuthUnavailable } from "@billet/backend-auth/auth-error";
@@ -8,7 +9,8 @@ import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-m
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { maxEventsPerRequest } from "@billet/contracts-http-api/events";
-import { routes } from "@billet/contracts-http-api/routes";
+import { clientHeaders, routes } from "@billet/contracts-http-api/routes";
+import { type AnalyticsPoint, EventSink, pairHashOf, PairVariants } from "../src/analytics.ts";
 import { Metrics } from "../src/metrics.ts";
 import { MetricsRepository } from "../src/metrics-repository.ts";
 import { MetricsRoutes } from "../src/metrics-routes.ts";
@@ -39,6 +41,21 @@ describe("events route", () => {
   );
   const pairs = makeInMemoryPairingRepository();
   const metrics = makeInMemoryMetricsRepository();
+  const points: Array<AnalyticsPoint> = [];
+  const RecordingSink = Layer.succeed(EventSink, {
+    write: (point) => Effect.sync(() => void points.push(point)),
+  });
+  const FixedVariants = Layer.succeed(PairVariants, {
+    of: (pairId) =>
+      Effect.succeed(
+        pairId === "pair-1"
+          ? [
+              { key: "home-direction", variant: "sunset-lamp" },
+              { key: "glow", variant: "strong" },
+            ]
+          : [],
+      ),
+  });
   const { handler, dispose } = HttpRouter.toWebHandler(
     MetricsRoutes.pipe(
       Layer.provide(
@@ -46,6 +63,9 @@ describe("events route", () => {
           FakeAuth,
           Metrics.layer.pipe(Layer.provide(Layer.succeed(MetricsRepository, metrics.repository))),
           Layer.succeed(PairingRepository, pairs.repository),
+          RecordingSink,
+          FixedVariants,
+          Digest.layerWebCrypto,
         ),
       ),
     ),
@@ -53,13 +73,14 @@ describe("events route", () => {
   );
   afterAll(() => dispose());
 
-  const post = (body: unknown, token?: string) =>
+  const post = (body: unknown, token?: string, extra: Record<string, string> = {}) =>
     handler(
       new Request(`http://billet.test${routes.reportEvents.path}`, {
         method: routes.reportEvents.method,
         headers: {
           "content-type": "application/json",
           ...(token === undefined ? {} : { authorization: `Bearer ${tokenOf(token)}` }),
+          ...extra,
         },
         body: JSON.stringify(body),
       }),
@@ -143,5 +164,81 @@ describe("events route", () => {
     const before = metrics.rows.size;
     expect((await post({ events: [] }, "ana")).status).toBe(204);
     expect(metrics.rows.size).toBe(before);
+  });
+
+  describe("Analytics Engine", () => {
+    const pairHash = () =>
+      Effect.runPromise(
+        pairHashOf(Schema.decodeSync(PairId)("pair-1")).pipe(Effect.provide(Digest.layerWebCrypto)),
+      );
+
+    it("writes each accepted event with the pair hashed, its variants, build and system", async () => {
+      points.length = 0;
+      const hash = await pairHash();
+      const response = await post({ events: ["AppOpened", "WidgetAdded"] }, "cal", {
+        [clientHeaders.appVersion]: "1.2.0+14",
+        [clientHeaders.os]: "iOS 26.1",
+      });
+      expect(response.status).toBe(204);
+      expect(points).toEqual([
+        {
+          name: "AppOpened",
+          pairHash: hash,
+          variants: "glow=strong,home-direction=sunset-lamp",
+          appVersion: "1.2.0+14",
+          os: "iOS 26.1",
+        },
+        {
+          name: "WidgetAdded",
+          pairHash: hash,
+          variants: "glow=strong,home-direction=sunset-lamp",
+          appVersion: "1.2.0+14",
+          os: "iOS 26.1",
+        },
+      ]);
+      expect(hash).toMatch(/^[0-9a-f]{16}$/);
+      expect(JSON.stringify(points)).not.toContain("pair-1");
+      expect(JSON.stringify(points)).not.toContain(tokenOf("cal"));
+    });
+
+    it("writes an unpaired caller with an empty pair and no variants", async () => {
+      points.length = 0;
+      await post({ events: ["AppOpened"] }, "ana");
+      expect(points).toEqual([
+        { name: "AppOpened", pairHash: "", variants: "", appVersion: "unknown", os: "unknown" },
+      ]);
+    });
+
+    it.each([
+      ["free text", "my name is Ana"],
+      ["an email", "ana@example.com"],
+      ["an over-long version", "1.2.3.4.5"],
+    ])("reads %s in the build headers as unknown", async (_, value) => {
+      points.length = 0;
+      await post({ events: ["AppOpened"] }, "ana", {
+        [clientHeaders.appVersion]: value,
+        [clientHeaders.os]: value,
+      });
+      expect(points[0]).toMatchObject({ appVersion: "unknown", os: "unknown" });
+    });
+
+    it("writes nothing for a refused request", async () => {
+      points.length = 0;
+      await post({ events: ["NoteSent"] }, "ana");
+      await post({ events: ["AppOpened"] });
+      expect(points).toEqual([]);
+    });
+
+    it("holds only the documented fields", () => {
+      for (const point of points) {
+        expect(Object.keys(point).toSorted()).toEqual([
+          "appVersion",
+          "name",
+          "os",
+          "pairHash",
+          "variants",
+        ]);
+      }
+    });
   });
 });
