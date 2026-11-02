@@ -18,16 +18,26 @@ public struct HTTPService: Sendable {
   public func perform<Response: Decodable & Sendable>(
     _ request: HTTPRequest, as type: Response.Type
   ) async throws(TransportError) -> Response {
-    let response = try await send(request)
-    let decoder = JSONDecoder()
-    if (200..<300).contains(response.status) {
-      do {
-        return try decoder.decode(Response.self, from: response.body)
-      } catch {
-        throw .decoding
-      }
+    let body = try await performRaw(request)
+    do {
+      return try JSONDecoder().decode(Response.self, from: body)
+    } catch {
+      throw .decoding
     }
-    if let apiError = try? decoder.decode(ApiError.self, from: response.body) {
+  }
+
+  /// Sends `request` and ignores a successful body, for the routes that answer 204.
+  public func performEmpty(_ request: HTTPRequest) async throws(TransportError) {
+    _ = try await performRaw(request)
+  }
+
+  /// Sends `request` and returns a successful body as it came, for the routes that answer bytes.
+  public func performRaw(_ request: HTTPRequest) async throws(TransportError) -> Data {
+    let response = try await send(request)
+    if (200..<300).contains(response.status) {
+      return response.body
+    }
+    if let apiError = try? JSONDecoder().decode(ApiError.self, from: response.body) {
       throw .api(apiError)
     }
     throw .status(response.status)
