@@ -5,6 +5,7 @@ import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
+import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
@@ -65,13 +66,14 @@ export class NotesService extends Context.Service<
   static readonly layer: Layer.Layer<
     NotesService,
     never,
-    PairingRepository | MediaStore | PairRooms | SecureRandom.SecureRandom
+    PairingRepository | MediaStore | PairRooms | Metrics | SecureRandom.SecureRandom
   > = Layer.effect(
     NotesService,
     Effect.gen(function* () {
       const pairing = yield* PairingRepository;
       const media = yield* MediaStore;
       const rooms = yield* PairRooms;
+      const metrics = yield* Metrics;
       const random = yield* SecureRandom.SecureRandom;
 
       const pairOf = (userId: UserId) =>
@@ -143,9 +145,12 @@ export class NotesService extends Context.Service<
         switch (decision._tag) {
           case "Accepted": {
             for (const output of decision.outputs) {
-              if (output._tag === "NoteAppended" || output._tag === "NoteRepeated") {
+              // A repeated send is the same note: it is counted once, when it was stored.
+              if (output._tag === "NoteAppended") {
+                yield* metrics.record({ userId, pairId, name: "NoteSent" });
                 return output.entry.note;
               }
+              if (output._tag === "NoteRepeated") return output.entry.note;
             }
             return yield* Effect.fail(new NotesUnavailable({ reason: "note-not-appended" }));
           }

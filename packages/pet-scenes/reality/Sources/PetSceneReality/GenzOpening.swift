@@ -83,20 +83,6 @@ enum GenzOpening {
 
   // MARK: Afterwards
 
-  /// A headlight sliding across the room, from 0 to 1 while it passes and `nil` between cars.
-  /// Cars come every 12 to 40 seconds, the same each night for a given `seed`.
-  static func headlight(_ time: Double, seed: UInt64 = 7) -> Double? {
-    var start = 3.0
-    var state = seed
-    while start <= time {
-      let pass = 2.6
-      if time < start + pass { return (time - start) / pass }
-      state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-      start += pass + 12 + Double(state >> 40) / Double(1 << 24) * 28
-    }
-    return nil
-  }
-
   /// How warm a room is after a note lands, from 1 just after down to 0 over a few seconds.
   static func warmth(sinceLanding time: Double?) -> Double {
     guard let time, time >= 0 else { return 0 }

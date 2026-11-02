@@ -118,6 +118,20 @@ import Testing
     #expect(try decode(FlagsResponse.self, ##"{"flags":[]}"##).flags.isEmpty)
   }
 
+  // MARK: reported events
+
+  @Test(arguments: ["NoteSent", "PairClaimed", "InviteCreated", "Anything", ""])
+  func anEventTheServerRecordsItselfOrDoesNotKnowIsRejected(_ name: String) {
+    expectRejected(ReportEventsRequest.self, ##"{"events":["\##(name)"]}"##)
+  }
+
+  @Test func moreEventsThanOneRequestHoldsAreRejected() throws {
+    let many = Array(repeating: ##""AppOpened""##, count: ReportEventsRequest.maxEvents + 1)
+    expectRejected(ReportEventsRequest.self, ##"{"events":[\##(many.joined(separator: ","))]}"##)
+    let enough = Array(repeating: ##""AppOpened""##, count: ReportEventsRequest.maxEvents)
+    _ = try decode(ReportEventsRequest.self, ##"{"events":[\##(enough.joined(separator: ","))]}"##)
+  }
+
   // MARK: push payload
 
   @Test func aNullCompactIsRejected() {

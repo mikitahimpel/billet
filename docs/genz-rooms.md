@@ -57,13 +57,47 @@ never in the widget, Surfaces or the notification extension.
 | `sunset-poster.riv`      | `sunsetPoster`    | texture         | 100 × 190              | `time`                                 | The sun with its bar turns once every 24 s. |
 | `sunset-bloom.riv`       | `sunsetBloom`     | view, over      | full screen, follows the LED outline | `outline` (3 points), `time`, `lampOn` | Steps on in three over 0.5 s from 0.1 s, then shimmers 100–70% over 5 s. Screen blend. |
 | `sunset-dim.riv`         | `sunsetDim`       | view, over      | full screen            | `time`, `lampOn`                       | 82% dark until the click at 0.35 s, gone by 1.45 s. Optional: a lamp-click flash. |
-| `window-night.riv`       | `windowNight`     | view, behind    | 393 × 852, fitted to width | `time`, `parallaxX`, `parallaxY`   | Street lamp stutters on (0.3–1.4 s), neighbour's window goes dark for 8 s in every 20, slow cloud drift, stars. Sky, water tower, power lines, roofs, trees. |
+| `window-night.riv`       | `windowNight`     | view, behind    | 393 × 852, fitted to width | `time`, `parallaxX`, `parallaxY`   | Replaces every window view at once. To replace one view, see "Window views" below. |
 | `window-bloom.riv`       | `windowBloom`     | view, over      | full screen, follows the window-frame LED outline (4 points) | `outline`, `time`, `lampOn` | Warms up from 1.6 s over 1.2 s. Screen blend. |
 | `window-backlight.riv`   | `windowBacklight` | view, over      | full screen, follows the note's four corners | `outline`, `time`        | Street light through the paper from 1.2 s, following the street lamp's flicker. Screen blend. |
 | `window-dim.riv`         | `windowDim`       | view, over      | full screen            | `time`                                 | 75% dark to clear over 1.6 s from 0.2 s. |
 
 The same timings are the functions in `GenzOpening.swift`; a Rive file that keeps them stays in
 step with the 3D lights.
+
+## Window views
+
+What Window Seat's glass looks out on is a view, chosen in **Settings → Labs → View** with its
+weather (clear, rain, snow, fog) and hour (morning, day, dusk, night). "As made" leaves the weather
+to the view and the hour to the room: night, or the hour of the day when Home follows it. The
+choice is `window-view.json` next to the Labs flags. Art rules are in the style bible
+(`~/.billet-manager/product/art/style-bible.md`), and every view's provenance is logged in
+`~/.billet-manager/product/art/provenance.md`.
+
+| View          | What it is |
+| ------------- | ---------- |
+| `suburbNight` | US suburb at night: water tower, power lines, roofs, the houses across the street, the street lamp. |
+
+How a view is made (`packages/pet-scenes/reality/Sources/PetSceneReality/Views/`):
+
+- **Stage.** Art is laid out in stage units against the window: the opening is 100 wide and 58
+  tall, its top left corner at the origin. The sill hides the glass below about 52, so a street
+  stays above that line. The note is taped over the middle, so hero shapes stand to its sides.
+- **Planes.** A `ViewRecipe` paints four planes: far, middle, street, near. Each still plane is
+  painted once per look (view, hour, weather) into a bitmap. When the camera turns, each plane
+  follows a share of the window's movement on screen (0.2 far up to 0.85 near): that is the
+  parallax. The shared sky (gradient, stars, the moon in its phase, clouds, a plane's lights) sits
+  behind, and the air (rain, snow) and the glass (sheen, the lamp's reflection, drops, frost) in
+  front.
+- **Life.** Moving things are drawn every frame from the wall clock. `ViewRhythm` places at most
+  one pass of an event in each slot at a hashed time, so gaps, directions and colours never loop.
+- **The cat.** A recipe names what moves (`interest`): the cat turns its head to it, and paws at a
+  drop running down the glass beside it when it is up. The room's 3D headlight sweep follows the
+  view's cars (`headlight`).
+- **Rive.** `WindowViewArt` (in `PetScene`, environment `petSceneViewArt`) returns a view for a
+  `WindowView` and a `WindowViewState` (view, weather, hour, opening time, wall clock, the window
+  outline now and at the camera's home, lamp on), or `nil` to keep the native one. A Rive file for
+  one view plugs in there; a `RoomLayerArt` for `windowNight` still replaces all of them.
 
 ## New 3D pieces
 

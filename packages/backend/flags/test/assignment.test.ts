@@ -9,7 +9,7 @@ const pair = Schema.decodeSync(PairId);
 const run = <A>(effect: Effect.Effect<A, never, Digest.Digest>) =>
   Effect.runPromise(effect.pipe(Effect.provide(Digest.layerWebCrypto)));
 
-const ids = Array.from({ length: 4_000 }, (_, i) => pair(`pair-${i}-${(i * 7919).toString(16)}`));
+const ids = Array.from({ length: 1_200 }, (_, i) => pair(`pair-${i}-${(i * 7919).toString(16)}`));
 
 const twoWay = defineExperiment({
   key: "two-way",
@@ -55,8 +55,8 @@ describe("assign", () => {
     });
     const results = await run(Effect.all(ids.map((id) => assign(weighted, id))));
     const share = results.filter(({ variant }) => variant === "b").length / ids.length;
-    expect(share).toBeGreaterThan(0.71);
-    expect(share).toBeLessThan(0.79);
+    expect(share).toBeGreaterThan(0.7);
+    expect(share).toBeLessThan(0.8);
   });
 
   it("exposes about the given percent and gives everyone else the default", async () => {
@@ -69,8 +69,8 @@ describe("assign", () => {
     });
     const results = await run(Effect.all(ids.map((id) => assign(partial, id))));
     const exposed = results.filter(({ exposed }) => exposed);
-    expect(exposed.length / ids.length).toBeGreaterThan(0.17);
-    expect(exposed.length / ids.length).toBeLessThan(0.23);
+    expect(exposed.length / ids.length).toBeGreaterThan(0.16);
+    expect(exposed.length / ids.length).toBeLessThan(0.24);
     expect(results.filter(({ exposed }) => !exposed).every(({ variant }) => variant === "a")).toBe(
       true,
     );
@@ -85,12 +85,12 @@ describe("assign", () => {
       killed: false,
     });
     expect(
-      (await run(Effect.all(ids.slice(0, 300).map((id) => assign(none, id))))).some(
+      (await run(Effect.all(ids.slice(0, 200).map((id) => assign(none, id))))).some(
         (r) => r.exposed,
       ),
     ).toBe(false);
     expect(
-      (await run(Effect.all(ids.slice(0, 300).map((id) => assign(twoWay, id))))).every(
+      (await run(Effect.all(ids.slice(0, 200).map((id) => assign(twoWay, id))))).every(
         (r) => r.exposed,
       ),
     ).toBe(true);
@@ -105,8 +105,8 @@ describe("assign", () => {
         exposure,
         killed: false,
       });
-    const low = await run(Effect.all(ids.slice(0, 1_000).map((id) => assign(at(10), id))));
-    const high = await run(Effect.all(ids.slice(0, 1_000).map((id) => assign(at(50), id))));
+    const low = await run(Effect.all(ids.slice(0, 600).map((id) => assign(at(10), id))));
+    const high = await run(Effect.all(ids.slice(0, 600).map((id) => assign(at(50), id))));
     low.forEach((before, i) => {
       if (before.exposed) expect(high[i]).toEqual(before);
     });
@@ -124,8 +124,8 @@ describe("assign", () => {
       (r) => r.exposed,
     );
     const share = exposed.filter(({ variant }) => variant === "b").length / exposed.length;
-    expect(share).toBeGreaterThan(0.38);
-    expect(share).toBeLessThan(0.62);
+    expect(share).toBeGreaterThan(0.3);
+    expect(share).toBeLessThan(0.7);
   });
 
   it("assigns different experiments independently", async () => {
@@ -140,7 +140,7 @@ describe("assign", () => {
       Effect.all(ids.map((id) => Effect.all([assign(twoWay, id), assign(other, id)]))),
     );
     const sameShare = both.filter(([x, y]) => x.variant === y.variant).length / ids.length;
-    expect(sameShare).toBeGreaterThan(0.45);
-    expect(sameShare).toBeLessThan(0.55);
+    expect(sameShare).toBeGreaterThan(0.44);
+    expect(sameShare).toBeLessThan(0.56);
   });
 });

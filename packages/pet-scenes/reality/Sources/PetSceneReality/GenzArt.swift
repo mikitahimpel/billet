@@ -19,7 +19,6 @@ struct GenzNativeArt: RoomLayerArt {
       AnyView(
         Color(red: 0.027, green: 0.024, blue: 0.043)
           .opacity(GenzOpening.sunsetDim(state.time) + (state.lampOn ? 0 : 0.35)))
-    case .windowNight: AnyView(GenzNightLayer(state: state))
     case .windowBloom:
       AnyView(
         GenzBloomLayer(
@@ -29,7 +28,7 @@ struct GenzNativeArt: RoomLayerArt {
     case .windowDim:
       AnyView(
         Color(red: 0.012, green: 0.024, blue: 0.047).opacity(GenzOpening.windowDim(state.time)))
-    case .sunsetDisc, .sunsetPoster: nil
+    case .sunsetDisc, .sunsetPoster, .windowNight: nil
     }
   }
 
@@ -57,11 +56,6 @@ enum GenzArtMotion {
     return phase < 0.41 || phase > 0.7
   }
 
-  /// The neighbour's window: on for the first 60% of a twenty-second cycle.
-  static func neighbourOn(_ time: Double) -> Bool {
-    guard time > 4 else { return true }
-    return (time - 4).truncatingRemainder(dividingBy: 20) < 12
-  }
 }
 
 /// Bounds of an outline, or `nil` when it is empty.
@@ -133,131 +127,6 @@ private struct GenzCityLayer: View {
       }
     }
     .allowsHitTesting(false)
-  }
-}
-
-/// Window Seat's whole night, behind the room and above it: sky, stars, the water tower, power
-/// lines, two roofs with the neighbour's window, trees and the street lamp. Drawn on the mockup's
-/// 393 by 852 board, fitted to the view's width, sliding at 0.25 of the camera's turn.
-private struct GenzNightLayer: View {
-  let state: RoomLayerState
-
-  var body: some View {
-    Canvas { context, size in
-      context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(hex: 0x0C1320)))
-      let scale = size.width / 393
-      context.translateBy(
-        x: state.parallax.width * 0.25 - 12 * scale, y: state.parallax.height * 0.25)
-      context.scaleBy(x: scale * 1.06, y: scale * 1.06)
-      draw(in: &context, height: size.height / scale)
-    }
-    .allowsHitTesting(false)
-  }
-
-  private func draw(in context: inout GraphicsContext, height: CGFloat) {
-    let time = state.time
-    context.fill(
-      Path(CGRect(x: 0, y: 0, width: 393, height: 600)),
-      with: .linearGradient(
-        Gradient(stops: [
-          .init(color: Color(hex: 0x070C18), location: 0),
-          .init(color: Color(hex: 0x162846), location: 0.45),
-          .init(color: Color(hex: 0x3A5A86), location: 0.72),
-          .init(color: Color(hex: 0x0C1320), location: 1),
-        ]), startPoint: .zero, endPoint: CGPoint(x: 0, y: 600)))
-    let stars: [(Double, Double)] = [
-      (30, 70), (120, 40), (210, 84), (300, 52), (360, 110), (80, 150), (250, 130),
-    ]
-    for (index, star) in stars.enumerated() {
-      let r = index % 3 == 0 ? 1.3 : 0.9
-      context.fill(
-        Path(ellipseIn: CGRect(x: star.0 - r, y: star.1 - r, width: 2 * r, height: 2 * r)),
-        with: .color(Color(hex: 0xEEF2F7, opacity: index % 2 == 0 ? 0.85 : 0.5)))
-    }
-    let drift = (time * 2).truncatingRemainder(dividingBy: 520) - 80
-    for (x, y, w) in [(drift, 96.0, 120.0), (drift + 260, 150, 90)] {
-      let wrapped = x.truncatingRemainder(dividingBy: 520) - 60
-      context.fill(
-        Path(ellipseIn: CGRect(x: wrapped, y: y, width: w, height: w * 0.18)),
-        with: .color(Color(hex: 0x2A3F62, opacity: 0.35)))
-    }
-    var hill = Path()
-    hill.move(to: CGPoint(x: 0, y: 470))
-    hill.addLine(to: CGPoint(x: 0, y: 300))
-    hill.addQuadCurve(to: CGPoint(x: 70, y: 296), control: CGPoint(x: 40, y: 290))
-    hill.addLine(to: CGPoint(x: 70, y: 470))
-    context.fill(hill, with: .color(Color(hex: 0x0A1322)))
-    let tower = Color(hex: 0x0B1424)
-    context.fill(Path(CGRect(x: 78, y: 200, width: 3, height: 80)), with: .color(tower))
-    context.fill(Path(CGRect(x: 104, y: 200, width: 3, height: 80)), with: .color(tower))
-    context.fill(
-      Path(roundedRect: CGRect(x: 84, y: 176, width: 20, height: 30), cornerRadius: 3),
-      with: .color(tower))
-    var tank = Path()
-    tank.move(to: CGPoint(x: 80, y: 176))
-    tank.addLine(to: CGPoint(x: 94, y: 164))
-    tank.addLine(to: CGPoint(x: 108, y: 176))
-    context.fill(tank, with: .color(tower))
-    for (offset, width) in [(0.0, 1.2), (12, 1)] {
-      var line = Path()
-      line.move(to: CGPoint(x: -10, y: 214 + offset))
-      line.addQuadCurve(
-        to: CGPoint(x: 250, y: 210 + offset), control: CGPoint(x: 120, y: 236 + offset))
-      line.addQuadCurve(
-        to: CGPoint(x: 420, y: 222 + offset), control: CGPoint(x: 335, y: 198 + offset))
-      context.stroke(line, with: .color(Color(hex: 0x0A1220)), lineWidth: width)
-    }
-    context.fill(
-      roof(left: 120, right: 196, base: 330, eave: 286, ridge: 258),
-      with: .color(Color(hex: 0x0E1A2E)))
-    context.fill(
-      roof(left: 190, right: 254, base: 330, eave: 296, ridge: 272),
-      with: .color(Color(hex: 0x0B1628)))
-    if GenzArtMotion.neighbourOn(time) {
-      context.fill(
-        Path(CGRect(x: 212, y: 300, width: 14, height: 12)), with: .color(Color(hex: 0xFFC36B)))
-    }
-    let tree = Color(hex: 0x0A1424)
-    context.fill(Path(ellipseIn: CGRect(x: 250, y: 274, width: 52, height: 52)), with: .color(tree))
-    context.fill(Path(ellipseIn: CGRect(x: 280, y: 272, width: 40, height: 40)), with: .color(tree))
-    let lamp = GenzOpening.streetLamp(time)
-    if lamp > 0 {
-      var cone = Path()
-      cone.move(to: CGPoint(x: 318, y: 236))
-      cone.addLine(to: CGPoint(x: 268, y: 380))
-      cone.addLine(to: CGPoint(x: 392, y: 380))
-      cone.addLine(to: CGPoint(x: 344, y: 236))
-      context.fill(
-        cone,
-        with: .linearGradient(
-          Gradient(colors: [Color(hex: 0xFFC36B, opacity: 0.45 * lamp), .clear]),
-          startPoint: CGPoint(x: 330, y: 236), endPoint: CGPoint(x: 330, y: 380)))
-      context.fill(
-        Path(ellipseIn: CGRect(x: 309, y: 210, width: 44, height: 44)),
-        with: .radialGradient(
-          Gradient(colors: [Color(hex: 0xFFC36B, opacity: 0.55 * lamp), .clear]),
-          center: CGPoint(x: 331, y: 232), startRadius: 0, endRadius: 22))
-    }
-    context.fill(
-      Path(roundedRect: CGRect(x: 324, y: 226, width: 16, height: 6), cornerRadius: 3),
-      with: .color(Color(hex: lamp > 0.5 ? 0xFFE2B0 : 0x3A4660)))
-    context.fill(
-      Path(CGRect(x: 334, y: 232, width: 3, height: 150)), with: .color(Color(hex: 0x0A1220)))
-    context.fill(
-      Path(CGRect(x: 0, y: 330, width: 393, height: max(270, height - 330))),
-      with: .color(Color(hex: 0x0A111D)))
-  }
-
-  private func roof(left: Double, right: Double, base: Double, eave: Double, ridge: Double) -> Path
-  {
-    var path = Path()
-    path.move(to: CGPoint(x: left, y: base))
-    path.addLine(to: CGPoint(x: left, y: eave))
-    path.addLine(to: CGPoint(x: (left + right) / 2, y: ridge))
-    path.addLine(to: CGPoint(x: right, y: eave))
-    path.addLine(to: CGPoint(x: right, y: base))
-    path.closeSubpath()
-    return path
   }
 }
 

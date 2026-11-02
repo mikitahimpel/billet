@@ -5,9 +5,10 @@ import { socketRoute } from "@billet/contracts-realtime/socket-route";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
-import { FlagsPairingObserver } from "@billet/backend-flags/flags-pairing-observer";
 import { FlagsRoutes } from "@billet/backend-flags/flags-routes";
 import { FlagsService } from "@billet/backend-flags/flags-service";
+import { Metrics } from "@billet/backend-metrics/metrics";
+import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { NotesRoutes } from "@billet/backend-notes/notes-routes";
 import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
@@ -16,6 +17,8 @@ import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
+import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
+import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
@@ -25,13 +28,13 @@ import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
-  Layer.mergeAll(AuthRoutes, PairingRoutes, NotesRoutes, FlagsRoutes).pipe(
+  Layer.mergeAll(AuthRoutes, PairingRoutes, NotesRoutes, FlagsRoutes, MetricsRoutes).pipe(
     Layer.provide(
       Layer.mergeAll(
         AuthService.layer,
-        // A new pair gets its experiment variants as part of pairing.
+        // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
         PairingService.layer.pipe(
-          Layer.provide(FlagsPairingObserver.pipe(Layer.provide(FlagsService.layer))),
+          Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
         ),
         NotesService.layer,
         FlagsService.layer,
@@ -42,6 +45,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
         AuthRepositoryLive(env.DB),
         PairingRepositoryLive(env.DB),
         FlagsRepositoryLive(env.DB),
+        Metrics.layer.pipe(Layer.provide(MetricsRepositoryLive(env.DB))),
         Experiments.with(experiments),
         MediaStoreLive(env.MEDIA),
         PairRoomsLive(env.PAIR_ROOM),

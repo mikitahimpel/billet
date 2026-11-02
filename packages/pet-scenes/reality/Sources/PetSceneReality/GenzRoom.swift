@@ -22,6 +22,12 @@ final class GenzRoomScreen {
   /// Just above the cat, or `nil` before the room has been fitted.
   var cat: CGPoint?
   var parallax = CGSize.zero
+  /// The window's opening as the camera sees it now, and as it sees it from its home place.
+  var window: [CGPoint] = []
+  var homeWindow: [CGPoint] = []
+  /// What the window looks out on, and the hour it is lit for.
+  var windowView = WindowViewChoice.standard
+  var viewHour = ViewHour.night
 
   func time(at date: Date) -> Double {
     openedAt.map { date.timeIntervalSince($0) } ?? 0
@@ -32,6 +38,13 @@ final class GenzRoomScreen {
       time: time(at: date), parallax: parallax, outline: outlines[slot] ?? [],
       warmth: GenzOpening.warmth(sinceLanding: landedAt.map { date.timeIntervalSince($0) }),
       lampOn: lampOn)
+  }
+
+  func viewState(at date: Date) -> WindowViewState {
+    WindowViewState(
+      view: windowView.view, weather: windowView.shownWeather, hour: viewHour,
+      time: time(at: date), now: date.timeIntervalSinceReferenceDate, window: window,
+      home: homeWindow, lampOn: lampOn)
   }
 }
 
@@ -165,6 +178,11 @@ final class GenzRoom {
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
+  private var viewRecipe: any ViewRecipe = ViewRecipes.recipe(for: .standard)
+  /// The last thing outside the cat pawed at, so each drop is pawed at once.
+  private var pawedAt: Int64?
+  /// Whether the cat's gaze is on something outside rather than a finger.
+  private var watchingView = false
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "GenzRoom")
   private static let orbitPerPoint: Float = 0.004
@@ -588,6 +606,10 @@ final class GenzRoom {
     case .nooki: break
     }
     if screen.outlines != outlines { screen.outlines = outlines }
+    if screen.window != window { screen.window = window }
+    let home = camera.atHome
+    let homeWindow = layout.window.compactMap { home.project($0.scene, in: viewSize) }
+    if screen.homeWindow != homeWindow { screen.homeWindow = homeWindow }
     let spot = layout.cat.spot
     let cat = project(GenzRoomPoint(spot.x, spot.y, spot.z + layout.cat.length * 0.55))
     if screen.cat != cat { screen.cat = cat }
@@ -621,6 +643,7 @@ final class GenzRoom {
       aimLens()
     }
     stepMoments()
+    stepView()
     applyCat()
     applyLevels()
   }
@@ -712,6 +735,66 @@ final class GenzRoom {
     self.dayLight = dayLight
     if let here = dayLight?.here, here.lampOn != lampOn { toggleLamp() }
     applyDayLight()
+    applyViewHour()
+  }
+
+  // MARK: - The view outside
+
+  /// Shows `choice` through the window: its view, weather and hour.
+  func setWindowView(_ choice: WindowViewChoice) {
+    guard choice != screen.windowView else { return }
+    screen.windowView = choice
+    viewRecipe = ViewRecipes.recipe(for: choice.view)
+    applyViewHour()
+  }
+
+  private func applyViewHour() {
+    let hour = screen.windowView.shownHour(room: dayLight?.here)
+    if screen.viewHour != hour { screen.viewHour = hour }
+  }
+
+  /// The cat follows what moves outside with its head, and paws at a drop running down the glass
+  /// beside it when it is up. A finger on the screen comes first.
+  private func stepView() {
+    guard layout.style == .windowSeat, trip == nil, !reduceMotion else { return }
+    let look = ViewLook(
+      view: screen.windowView.view, hour: screen.viewHour, weather: screen.windowView.shownWeather)
+    let moment = ViewMoment(
+      look: look, now: Date().timeIntervalSinceReferenceDate, time: openingTime)
+    guard moment.time > GenzOpening.length, let interest = ViewRecipes.interest(at: moment) else {
+      watchingView = false
+      return
+    }
+    let fingerHasGaze = gazePoint != nil && clock <= gazeUntil && !watchingView
+    guard !fingerHasGaze else { return }
+    headLook(at: outsidePoint(interest), for: 0.3)
+    watchingView = true
+    if interest.paw, interest.id != pawedAt, behaviour.isAwake(at: clock) {
+      pawedAt = interest.id
+      behaviour.react(.bat, at: clock)
+    }
+  }
+
+  /// Where a thing outside is in the scene: on the window's plane, pushed out beyond the glass by
+  /// how far back its plane is.
+  private func outsidePoint(_ interest: ViewInterest) -> SIMD3<Float> {
+    let xs = layout.window.map(\.x)
+    let zs = layout.window.map(\.z)
+    let (x0, x1) = (xs.min() ?? 0, xs.max() ?? 1)
+    let (z0, z1) = (zs.min() ?? 0, zs.max() ?? 1)
+    let glass = layout.window.first?.y ?? 0
+    let depth: Float =
+      switch interest.plane {
+      case nil: 0.05
+      case .near: 2
+      case .street: 9
+      case .middle: 18
+      case .far: 40
+      }
+    let x = x0 + Float(interest.point.x / 100) * (x1 - x0)
+    let z = z1 - Float(interest.point.y / ViewStage.windowHeight) * (z1 - z0)
+    let point = GenzRoomPoint(x, glass - depth, z)
+    return room.convert(position: point.scene, to: nil)
   }
 
   /// The styled rooms are made for the evening, so daylight only ever adds to their own light;
@@ -777,6 +860,7 @@ final class GenzRoom {
     let head = catHolder.position(relativeTo: nil) + [0, layout.cat.length * 0.5, 0]
     let reach = simd_dot(head - camera.position, ray)
     headLook(at: camera.position + ray * max(reach, layout.cat.length), for: Self.fingerLookLength)
+    watchingView = false
   }
 
   /// Whether a finger at `point` is on the cat, for telling a stroke from a turn of the room.
@@ -874,7 +958,10 @@ final class GenzRoom {
     }
     let lit = GenzOpening.windowNote(clock - noteClock) * (0.85 + 0.15 * street)
     if changed("note", lit, step: 0.02) { setNote(opacity: 1, tint: 0.4 + 0.6 * lit) }
-    let pass = GenzOpening.headlight(time)
+    let car =
+      time > GenzOpening.length
+      ? viewRecipe.headlight(at: Date().timeIntervalSinceReferenceDate) : nil
+    let pass = car.map { $0.leftToRight ? $0.progress : 1 - $0.progress }
     if changed("headlight", pass ?? -1, step: 0.004) {
       let progress = Float(pass ?? 0)
       let x = -6 + 20 * progress
