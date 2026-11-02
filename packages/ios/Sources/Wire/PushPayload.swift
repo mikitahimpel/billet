@@ -16,7 +16,17 @@ public enum PushPayload: Codable, Hashable, Sendable {
     let tag = try container.decode(String.self, forKey: .tag)
     let noteId = try container.decode(NoteId.self, forKey: .noteId)
     let author = try container.decode(UserId.self, forKey: .author)
-    let compact = try container.decodeIfPresent(CompactStrokes.self, forKey: .compact)
+    // The schema's `optionalKey` means absent, never null.
+    let compact: CompactStrokes?
+    if container.contains(.compact) {
+      guard try !container.decodeNil(forKey: .compact) else {
+        throw DecodingError.dataCorruptedError(
+          forKey: .compact, in: container, debugDescription: "compact must be absent, not null")
+      }
+      compact = try container.decode(CompactStrokes.self, forKey: .compact)
+    } else {
+      compact = nil
+    }
     switch tag {
     case "Widget": self = .widget(noteId: noteId, author: author, compact: compact)
     case "Alert": self = .alert(noteId: noteId, author: author, compact: compact)
