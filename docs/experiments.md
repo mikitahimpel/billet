@@ -4,8 +4,7 @@ How billet runs A/B tests on real couples. The decision behind it is in the prod
 (2026-11-02, "Audience, core, and testing"): the core (the scene with the cat, plus notes) is
 fixed in every variant, and experiments change how it looks and behaves, never whether it exists.
 
-This page is written in three parts as the pieces land: the assignment service, the metrics
-(below), and the iOS client.
+This page has three parts: the assignment service, the metrics, and the iOS client.
 
 ## What an experiment is
 
@@ -64,6 +63,35 @@ experiment started gets its variant on its first read.
 
 Today the kill switch is a one-line code change and a server deploy, which takes minutes and no
 App Store review. A switch the owner can flip without a deploy (a D1 row) is a possible follow-up.
+
+## On the phone
+
+`packages/ios`, module `WidgetBridge` and `FeatureHome`.
+
+- **What the build contains.** `Experiments` (in `RemoteFlags.swift`) lists each experiment's key and
+  the variants this build can show. The server can name only those: any other variant is ignored,
+  as if the server had said nothing. This is what keeps remote assignment inside the App Store
+  rules below.
+- **Getting the answer.** When a paired account comes to the front, the app calls `GET /v1/flags`
+  (`FlagsRefresher`). The answer **replaces** the held copy and is saved in the App Group
+  (`remote-flags.json`), so it is there at the next launch and offline. A failed request changes
+  nothing. Leaving the pair or signing out forgets it: the variants belong to the pair.
+- **Which one wins.** A choice made in Labs > Room style, then the pair's variant, then what the
+  app did before the test (the standard room). So offline, on a first launch, with no partner, with
+  the experiment switched off or with a variant this build lacks, the screen is the one it always
+  was. "Follow the test" in the Labs picker removes the Labs choice. Testers and the owner use
+  Labs to look at any variant on purpose.
+- **What reads it.** `WidgetFeaturesModel.roomStyle` is the resolved value; screens read that and
+  never the raw answer. Add a typed accessor like it for each new experiment.
+- **Counting.** `EventReporter` queues the app's events (`AppOpened` once per launch, `WidgetAdded`
+  once, found with `WidgetCenter`) in a small file of names, sends them to `POST /v1/events`
+  (at most 20 at a time), and keeps whatever could not be sent for the next time. `OpeningWatched`
+  and `OpeningSkipped` are accepted by the server but have no producer yet: the opening lives in the
+  demo client, which has no account, and the real client has none to report.
+
+To add an experiment on the phone: build all its variants, add it to `Experiments`, add a typed
+accessor that maps each variant to what the screen shows and falls back to today's behaviour, test
+the mapping (every variant has a screen; an unknown one has none), then add the server entry.
 
 ## Metrics
 
@@ -128,8 +156,10 @@ before submission. What they mean for flags:
 - **Never remote-enable code the review has not seen.** Assignment only picks between variants
   that are already in the reviewed build. The server cannot add a variant: a variant id the
   client does not know is treated as the default.
-- **Labs and the fake partner do not ship in App Store builds.** They are compiled out, not
-  hidden. (The client part of this lands with the iOS change.)
+- **Labs and the fake partner do not ship in App Store builds.** They are to be compiled out, not
+  hidden. This is **not done yet**: the demo client and Labs are still linked into every build, and
+  removing them is the release check in issue #99. Until then, a release build must not be
+  uploaded with an experiment running that depends on them.
 - Describe the variants in the review notes when an experiment is running.
 
 ## What small numbers can and cannot tell you

@@ -77,6 +77,36 @@ import Wire
     #expect(server.requests.map(\.path) == ["/v1/notes", "/v1/notes?after=7"])
   }
 
+  @Test func flagsAreReadWithTheTokenAndDecoded() async throws {
+    let server = Server(body: #"{"flags":[{"key":"home-direction","variant":"window-seat"}]}"#)
+    let response = try await Self.client(server).flags()
+    #expect(response.flags == [FlagAssignment(key: "home-direction", variant: "window-seat")])
+    let request = try #require(server.requests.first)
+    #expect(request.method == .get)
+    #expect(request.path == "/v1/flags")
+    #expect(request.headers["Authorization"] == "Bearer tok")
+  }
+
+  @Test func flagsWithoutATokenNeverLeaveTheDevice() async {
+    let server = Server()
+    await #expect(throws: TransportError.api(.unauthorized)) {
+      _ = try await Self.client(server, token: nil).flags()
+    }
+    #expect(server.requests.isEmpty)
+  }
+
+  @Test func eventsGoUpAsNamesAndNothingElse() async throws {
+    let server = Server(status: 204, body: "")
+    try await Self.client(server).reportEvents([.appOpened, .widgetAdded])
+    let request = try #require(server.requests.first)
+    #expect(request.method == .post)
+    #expect(request.path == "/v1/events")
+    #expect(request.headers["Authorization"] == "Bearer tok")
+    #expect(
+      request.body.map { String(decoding: $0, as: UTF8.self) }
+        == #"{"events":["AppOpened","WidgetAdded"]}"#)
+  }
+
   @Test func imagesGoUpAsPNGAndComeBackAsBytes() async throws {
     let up = Server(body: #"{"image":"couples/p1/a.png"}"#)
     _ = try await Self.client(up).uploadImage(Data([1, 2, 3]))

@@ -55,6 +55,7 @@ struct RealPairedView: View {
     .task(id: scenePhase == .active) {
       let history = model.history()
       if scenePhase == .active {
+        Task { await model.becameActive() }
         history.refresh()
         await history.settled()
         let live = model.live(lastSeq: history.lastSeq) { _, _ in history.refresh() }

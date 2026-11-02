@@ -20,6 +20,11 @@ public struct APIClient: Sendable {
   public var sendNote: @Sendable (SendNoteRequest) async throws(TransportError) -> SendNoteResponse
   /// One page of history after `seq`, oldest first.
   public var listNotes: @Sendable (_ after: Int?) async throws(TransportError) -> ListNotesResponse
+  /// The test variants the server has given this pair. Empty without a partner.
+  public var flags: @Sendable () async throws(TransportError) -> FlagsResponse
+  /// Counts a few named things the app did. Names only; the server stamps the time.
+  public var reportEvents:
+    @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -42,7 +47,10 @@ public struct APIClient: Sendable {
       SendNoteResponse,
     listNotes:
       @escaping @Sendable (_ after: Int?) async throws(TransportError) ->
-      ListNotesResponse
+      ListNotesResponse,
+    flags: @escaping @Sendable () async throws(TransportError) -> FlagsResponse,
+    reportEvents:
+      @escaping @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
   ) {
     self.authChallenge = authChallenge
     self.signInWithApple = signInWithApple
@@ -55,6 +63,8 @@ public struct APIClient: Sendable {
     self.downloadImage = downloadImage
     self.sendNote = sendNote
     self.listNotes = listNotes
+    self.flags = flags
+    self.reportEvents = reportEvents
   }
 }
 
@@ -133,6 +143,15 @@ extension APIClient {
         if let after { route = Route(route.method, route.path + "?after=\(after)") }
         return try await http.perform(
           try await request(route, signed: true), as: ListNotesResponse.self)
+      },
+      flags: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getFlags, signed: true), as: FlagsResponse.self)
+      },
+      reportEvents: { (events) async throws(TransportError) in
+        try await http.performEmpty(
+          try await json(
+            Routes.reportEvents, signed: true, body: ReportEventsRequest(events: events)))
       })
   }
 }
@@ -151,5 +170,7 @@ extension APIClient {
     uploadImage: { (_) async throws(TransportError) in throw .network("offline") },
     downloadImage: { (_) async throws(TransportError) in throw .network("offline") },
     sendNote: { (_) async throws(TransportError) in throw .network("offline") },
-    listNotes: { (_) async throws(TransportError) in throw .network("offline") })
+    listNotes: { (_) async throws(TransportError) in throw .network("offline") },
+    flags: { () async throws(TransportError) in throw .network("offline") },
+    reportEvents: { (_) async throws(TransportError) in throw .network("offline") })
 }

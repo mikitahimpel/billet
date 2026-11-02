@@ -88,13 +88,34 @@ public struct WidgetFeaturesStore: Sendable {
 
   public static let roomStyleFileName = "room-style.json"
 
+  /// The room style chosen in Labs, or `nil` when none was or the file cannot be read.
+  public func loadRoomStyleOverride() -> RoomStyle? {
+    (try? storage.readJSON(RoomStyle.self, named: Self.roomStyleFileName)) ?? nil
+  }
+
   /// The saved room style, or the standard one when nothing readable is saved.
   public func loadRoomStyle() -> RoomStyle {
-    (try? storage.readJSON(RoomStyle.self, named: Self.roomStyleFileName)) ?? .standard
+    loadRoomStyleOverride() ?? .standard
   }
 
   public func saveRoomStyle(_ style: RoomStyle) throws(PersistenceError) {
     try storage.writeJSON(style, named: Self.roomStyleFileName)
+  }
+
+  /// Forgets the Labs choice, so the room follows the pair's test, if one is running.
+  public func clearRoomStyle() throws(PersistenceError) {
+    try storage.remove(Self.roomStyleFileName)
+  }
+
+  public static let remoteFlagsFileName = "remote-flags.json"
+
+  /// The variants the server last gave this pair, or none when nothing readable is saved.
+  public func loadRemoteFlags() -> RemoteFlags {
+    (try? storage.readJSON(RemoteFlags.self, named: Self.remoteFlagsFileName)) ?? RemoteFlags()
+  }
+
+  public func saveRemoteFlags(_ flags: RemoteFlags) throws(PersistenceError) {
+    try storage.writeJSON(flags, named: Self.remoteFlagsFileName)
   }
 
   public static let catFileName = "cat-choice.json"
@@ -151,8 +172,10 @@ public struct WidgetFeaturesStore: Sendable {
 @Observable
 public final class WidgetFeaturesModel {
   public private(set) var features: WidgetFeatures
-  /// How a scene with more than one room dresses it. Kept beside the flags, in its own file.
-  public private(set) var roomStyle: RoomStyle
+  /// The room style chosen in Labs, or `nil` to follow the pair's test. Kept beside the flags.
+  public private(set) var roomStyleOverride: RoomStyle?
+  /// What the server last said about the tests this pair is in. A Labs choice beats it.
+  public private(set) var remote: RemoteFlags
   /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
   public private(set) var cat: CatChoice
   /// What the styled rooms' window looks out on. Kept beside the flags, in its own file.
@@ -169,7 +192,8 @@ public final class WidgetFeaturesModel {
     self.store = store
     self.onChange = onChange
     features = store?.load() ?? WidgetFeatures()
-    roomStyle = store?.loadRoomStyle() ?? .standard
+    roomStyleOverride = store?.loadRoomStyleOverride()
+    remote = store?.loadRemoteFlags() ?? RemoteFlags()
     cat = store?.loadCat() ?? .standard
     windowView = store?.loadWindowView() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
@@ -189,9 +213,19 @@ public final class WidgetFeaturesModel {
     try? store?.saveHomeVariant(variant)
   }
 
+  /// How a scene with more than one room dresses it: the Labs choice, else the variant of the
+  /// pair's `home-direction` test if one is running and this build has it, else the standard room.
+  /// Offline, with nothing saved, or with the test switched off, this is what the app always did.
+  public var roomStyle: RoomStyle {
+    roomStyleOverride
+      ?? remote.variant(of: Experiments.homeDirection).flatMap(
+        RoomStyle.init(homeDirectionVariant:))
+      ?? .standard
+  }
+
   public func setRoomStyle(_ style: RoomStyle) {
-    guard roomStyle != style else { return }
-    roomStyle = style
+    guard roomStyleOverride != style else { return }
+    roomStyleOverride = style
     try? store?.saveRoomStyle(style)
   }
 
@@ -199,6 +233,21 @@ public final class WidgetFeaturesModel {
     guard windowView != choice else { return }
     windowView = choice
     try? store?.saveWindowView(choice)
+  }
+
+  /// Drops the Labs choice, so the room follows the pair's test.
+  public func followTheTest() {
+    guard roomStyleOverride != nil else { return }
+    roomStyleOverride = nil
+    try? store?.clearRoomStyle()
+  }
+
+  /// Takes the server's latest answer in place of the one held, and keeps it for next time.
+  public func setRemote(_ flags: RemoteFlags) {
+    guard remote != flags else { return }
+    remote = flags
+    try? store?.saveRemoteFlags(flags)
+    onChange()
   }
 
   public func setCat(_ choice: CatChoice) {
