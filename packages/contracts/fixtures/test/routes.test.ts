@@ -31,6 +31,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/media/*",
       },
+      "getFlags": {
+        "method": "GET",
+        "path": "/v1/flags",
+      },
       "listNotes": {
         "method": "GET",
         "path": "/v1/notes",

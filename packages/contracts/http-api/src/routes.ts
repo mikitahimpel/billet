@@ -24,6 +24,8 @@ export const routes = {
   uploadImage: route("POST", "/v1/media"),
   /** A media key has slashes in it, so it is the rest of the path: see `mediaPath`. */
   downloadImage: route("GET", "/v1/media/*"),
+  /** The experiment variants the caller's pair has been given. */
+  getFlags: route("GET", "/v1/flags"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
 } as const satisfies Record<string, Route>;

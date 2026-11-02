@@ -66,6 +66,7 @@ export const resetDirectory = async () => {
   await applyDirectoryMigrations();
   await env.DB.batch(
     [
+      "pair_flags",
       "pair_members",
       "invites",
       "push_tokens",

@@ -6,6 +6,7 @@ import { AuthRejected, AuthUnavailable } from "@billet/backend-auth/auth-error";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
+import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
 import { PairingRoutes } from "../src/pairing-routes.ts";
 import { PairingService } from "../src/pairing-service.ts";
@@ -43,6 +44,7 @@ const setup = (repository: PairingRepository["Service"]) =>
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PairingRepository, repository),
+          PairingObserver.silent,
           Digest.layerWebCrypto,
           SecureRandom.layerWebCrypto,
         ),
