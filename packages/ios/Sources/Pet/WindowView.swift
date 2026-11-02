@@ -5,6 +5,12 @@ import Foundation
 public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   /// A US suburb at night: roofs, power lines, a water tower, the street lamp.
   case suburbNight
+  /// The suburb in the rain: a corner store's window, a bus shelter, puddles, lightning.
+  case rainySuburb
+  /// A snowy December street with Christmas lights on the houses.
+  case snowyDecember
+  /// A summer cul-de-sac with fireflies, a sprinkler and a trampoline.
+  case summerCulDeSac
 
   /// What a window shows before anyone chooses.
   public static let standard = WindowView.suburbNight
@@ -12,19 +18,29 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   public var title: String {
     switch self {
     case .suburbNight: "Suburb at night"
+    case .rainySuburb: "Rainy suburb"
+    case .snowyDecember: "Snowy December"
+    case .summerCulDeSac: "Summer cul-de-sac"
     }
   }
 
   public var detail: String {
     switch self {
     case .suburbNight: "Power lines, a water tower, a street lamp and the neighbours' windows."
+    case .rainySuburb:
+      "Rain on the glass, a corner store's window, puddles and now and then lightning."
+    case .snowyDecember:
+      "Christmas lights on the gutters, chimney smoke and a house that went all out."
+    case .summerCulDeSac: "Fireflies at dusk, a sprinkler, a trampoline and a hoop over the garage."
     }
   }
 
   /// The weather the view is made for, used when the choice leaves weather to the view.
   public var weather: ViewWeather {
     switch self {
-    case .suburbNight: .clear
+    case .suburbNight, .summerCulDeSac: .clear
+    case .rainySuburb: .rain
+    case .snowyDecember: .snow
     }
   }
 }
