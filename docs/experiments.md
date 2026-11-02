@@ -77,7 +77,7 @@ App Store review. A switch the owner can flip without a deploy (a D1 row) is a p
   (`remote-flags.json`), so it is there at the next launch and offline. A failed request changes
   nothing. Leaving the pair or signing out forgets it: the variants belong to the pair.
 - **Which one wins.** A choice made in Labs > Room style, then the pair's variant, then what the
-  app did before the test (the standard room). So offline, on a first launch, with no partner, with
+  app did before the test (the standard room, Window Seat). So offline, on a first launch, with no partner, with
   the experiment switched off or with a variant this build lacks, the screen is the one it always
   was. "Follow the test" in the Labs picker removes the Labs choice. Testers and the owner use
   Labs to look at any variant on purpose.
