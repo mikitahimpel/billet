@@ -158,6 +158,42 @@ struct KeeperMotionTests {
     #expect(shut)
   }
 
+  @Test func aWelcomeBowsThenShowsBothSidesOfTheShop() {
+    var motion = KeeperMotion(seed: 7)
+    motion.welcome()
+    var bowed = false
+    var left: Float = 0
+    var right: Float = 0
+    var turns: Set<Int> = []
+    for _ in 0..<Int((KeeperMotion.greetLength + KeeperMotion.presentLength) * 60) + 30 {
+      let pose = motion.step(1 / 60, viewer: ahead)
+      bowed = bowed || pose.bow > 0.2
+      left = max(left, pose.leftArm)
+      right = max(right, pose.rightArm)
+      if abs(pose.headYaw) > 0.3 { turns.insert(pose.headYaw > 0 ? 1 : -1) }
+    }
+    #expect(bowed)
+    #expect(left > 1.2 && right > 1.2)
+    #expect(turns == [1, -1])
+    #expect(!motion.isBusy)
+  }
+
+  @Test func aHandOverReachesForwardThenCheers() {
+    var motion = KeeperMotion(seed: 8)
+    motion.handOver()
+    var reach: Float = 0
+    var progress: [Double] = []
+    for _ in 0..<Int(KeeperMotion.handOverLength * 60) {
+      reach = max(reach, motion.step(1 / 60, viewer: ahead).reach)
+      progress.append(motion.handOverProgress ?? -1)
+    }
+    #expect(reach > 1)
+    #expect(progress == progress.sorted())
+    _ = motion.step(1 / 60, viewer: ahead)
+    #expect(motion.gesture?.kind == .cheer)
+    #expect(motion.handOverProgress == nil)
+  }
+
   @Test func aimPointsTheFaceAtTheOffset() {
     let right = KeeperMotion.aim(at: [1, 0, 1])
     #expect(abs(right.x - .pi / 4) < 1e-5)
@@ -255,8 +291,15 @@ struct TabStagesTests {
     #expect(rig.head != nil)
   }
 
-  @Test func theStreetOutsideTheShopIsDrawn() {
-    #expect(ShopArt.street() != nil)
+  @Test func theShopWindowLooksOutOnTheRoomsView() {
+    let stage = TabStages(rooms: GenzRoomCache()).shopStage
+    stage.fit(to: CGSize(width: 393, height: 852))
+    let choice = WindowViewChoice(view: .standard, hour: .dusk)
+    let state = stage.windowState(choice: choice, dayLight: nil, at: .now)
+    #expect(state.view == choice.view)
+    #expect(state.hour == .dusk)
+    #expect(state.window.count == 4)
+    #expect(state.home.count == 4)
   }
 
   @Test func theNookiSceneHasBothTabScenes() {

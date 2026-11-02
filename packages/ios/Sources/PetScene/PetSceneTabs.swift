@@ -6,19 +6,28 @@ import Pet
 public struct ShopSceneState: Equatable, Sendable {
   public var items: [ShopItem]
   public var keeper: Shopkeeper
-  /// Goes up by one for each thing bought, so the keeper can react to it.
+  /// Goes up by one for each thing bought, so the keeper can hand it over.
   public var purchases: Int
+  /// The item brought forward to look at and buy, if any.
+  public var focused: ShopItem.ID?
+  /// Items that are owned and can only be owned once, whose tags say so instead of a price.
+  public var owned: Set<ShopItem.ID>
 
-  public init(items: [ShopItem], keeper: Shopkeeper = .standard, purchases: Int = 0) {
+  public init(
+    items: [ShopItem], keeper: Shopkeeper = .standard, purchases: Int = 0,
+    focused: ShopItem.ID? = nil, owned: Set<ShopItem.ID> = []
+  ) {
     self.items = items
     self.keeper = keeper
     self.purchases = purchases
+    self.focused = focused
+    self.owned = owned
   }
 }
 
 /// What the shop scene reports to its host.
 public enum ShopSceneEvent: Hashable, Sendable {
-  /// An item on a shelf, the counter or the paint table was tapped.
+  /// An item on a shelf, the counter or the paint table, or its price tag, was tapped.
   case picked(ShopItem.ID)
 }
 
