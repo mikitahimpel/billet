@@ -9,14 +9,14 @@ import Testing
     .defaults(UserDefaults(suiteName: suite) ?? .standard, key: "play")
   }
 
-  @Test func playSurvivesASaveAndLoad() throws {
+  @Test func playSurvivesASaveAndLoad() {
     var play = PairPlay(device: "me")
     play.named("Mochi")
     _ = play.treatGiven(on: "2026-11-02")
     let note = UUID()
     play.reactionGiven(to: note, .heart)
     storage.save(play.saved)
-    let loaded = PairPlay(device: "me", saved: try #require(storage.load()))
+    let loaded = PairPlay(device: "me", saved: storage.load())
     #expect(loaded.saved == play.saved)
   }
 
