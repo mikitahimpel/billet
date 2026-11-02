@@ -83,21 +83,6 @@ final class GenzRoomCache {
     rooms[layout.style] = room
     return room
   }
-
-  /// Returns once no styled room is left in a RealityView's scene, or after a few seconds. A
-  /// RealityView that mounts while another still has its scene can stay empty for good, so the
-  /// next room's view mounts only after this.
-  func untilLetGo() async {
-    let deadline = ContinuousClock.now + Self.longestTeardown
-    while rooms.values.contains(where: { $0.root.scene != nil }), ContinuousClock.now < deadline {
-      try? await Task.sleep(for: Self.teardownCheck)
-    }
-    try? await Task.sleep(for: Self.settle)
-  }
-
-  private static let teardownCheck = Duration.milliseconds(50)
-  private static let settle = Duration.milliseconds(100)
-  private static let longestTeardown = Duration.seconds(5)
 }
 
 /// One styled room and everything that moves in it. Built from simple shapes in code, so it is
@@ -160,7 +145,7 @@ final class GenzRoom {
   private var gazePoint: SIMD3<Float>?
   private var gazeUntil = 0.0
   private var building: Task<Void, Never>?
-  private var subscription: EventSubscription?
+  private let frames = FrameClock()
   private var viewSize = CGSize(width: 393, height: 852)
   private var clock = 0.0
   private var openedClock: Double?
@@ -236,6 +221,7 @@ final class GenzRoom {
       catHolder, size: [length * 0.8, length * 0.6, length * 0.8], center: [0, length * 0.3, 0])
     room.addChild(catHolder)
     isBuilt = true
+    NookiTrace.mark("styled room built")
     room.isEnabled = isOnScreen
     applyLevels()
     updateScreen()
@@ -354,6 +340,7 @@ final class GenzRoom {
     catHolder.addChild(model)
     if let receiver = ambientReceiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
     hasCat = true
+    NookiTrace.mark("styled cat placed")
   }
 
   // MARK: - Light
@@ -505,23 +492,22 @@ final class GenzRoom {
   func setOnScreen(_ onScreen: Bool, in view: UUID) {
     if onScreen { viewsShowing.insert(view) } else { viewsShowing.remove(view) }
     let wasOnScreen = isOnScreen
+    if !isOnScreen, !viewsShowing.isEmpty { NookiTrace.mark("styled room shown") }
     isOnScreen = !viewsShowing.isEmpty
     if isOnScreen, !wasOnScreen {
       greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
     }
     if !isOnScreen, wasOnScreen { CatSeen.mark() }
     room.isEnabled = isOnScreen && isBuilt
+    frames.isPaused = !isOnScreen
     if isOnScreen { tiltSource?.start() } else { tiltSource?.stop() }
   }
 
-  func startUpdates(from content: RealityViewCameraContent) {
-    subscription?.cancel()
+  /// Starts stepping the room, after a few frames' settling, for a view that has just added it.
+  func startUpdates() {
     settlingFrames = 4
-    subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) {
-      [weak self] event in
-      let delta = event.deltaTime
-      MainActor.assumeIsolated { self?.tick(delta) }
-    }
+    frames.isPaused = !isOnScreen
+    frames.run { [weak self] delta in self?.tick(delta) }
   }
 
   func fit(to size: CGSize) {
@@ -625,7 +611,10 @@ final class GenzRoom {
     clock += delta
     if settlingFrames > 0 {
       settlingFrames -= 1
-      if settlingFrames == 0, openedClock == nil { startOpening() }
+      if settlingFrames == 0 {
+        NookiTrace.mark("styled room on screen")
+        if openedClock == nil { startOpening() }
+      }
       return
     }
     if let pendingFlyIn {

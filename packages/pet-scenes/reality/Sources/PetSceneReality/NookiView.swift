@@ -11,6 +11,8 @@ struct NookiView: View {
   let world: PetWorld
   let play: PetPlayState
   let cache: NookiRoomCache
+  /// Whether this is the room on screen. Only that room paces the pet's steps.
+  var isShown = true
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   /// Taken from the cache after the first frame. A default value here would run on every parent
@@ -67,7 +69,8 @@ struct NookiView: View {
       diorama = made
       made.startLoading()
     }
-    .task(id: world.step) {
+    .task(id: Pacing(step: world.step, isShown: isShown)) {
+      guard isShown else { return }
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
   }
@@ -223,7 +226,7 @@ private struct NookiStage: View {
       holder.addChild(diorama.root)
       content.add(holder)
       content.add(shopRoom.root)
-      diorama.startUpdates(from: content)
+      diorama.startUpdates()
     }
     .ignoresSafeArea()
     // In the same frame as the gestures, so a heart rises from under the stroking finger.

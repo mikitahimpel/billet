@@ -16,6 +16,8 @@ struct HomeView: View {
   private static let drawButton = "draw"
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  /// False while the shell shows another tab, so the room pauses and a new room waits to mount.
+  @Environment(\.petSceneOnScreen) private var tabShown
   @Environment(\.dynamicTypeSize) private var typeSize
   @Namespace private var zoom
   @State private var hungImage: CGImage?
@@ -217,7 +219,7 @@ struct HomeView: View {
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
           .id(scene.id)
-          .environment(\.petSceneOnScreen, store.state.screen == .home)
+          .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
           .overlay { catReactions.allowsHitTesting(false) }),
       notes: session.notes,
@@ -237,7 +239,7 @@ struct HomeView: View {
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
           .id(scene.id)
-          .environment(\.petSceneOnScreen, store.state.screen == .home)
+          .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
           .environment(\.petSceneRoomStyle, style)
           .environment(\.petSceneDrawing, style == .nooki ? hungImage : latestDrawing)
@@ -397,7 +399,7 @@ struct HomeView: View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
         .id(scene.id)
-        .environment(\.petSceneOnScreen, store.state.screen == .home)
+        .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
         .environment(\.petSceneRenovator, session.renovator)
         .environment(\.petSceneDrawing, hungImage)
         .transition(.opacity)

@@ -62,4 +62,16 @@ head through the rig, not the body.
 
 - The Simulator has no motion sensor, so tilt in Living window is only seen on a device.
 - The opening waits for the room to load, so on a cold start it begins about 3 s after launch.
-- Switching between the two styled rooms can take over 10 s on the Simulator.
+
+## Switching rooms
+
+The diorama has one RealityView and the two styled rooms share another. Each is made the first
+time its room is shown and then kept, hidden while the other is on screen, so a switch back is
+instant. Sunset Lamp and Window Seat take turns in the same RealityView: a RealityView made while
+another one exists only draws its first frame, so a second styled room in a view of its own stayed
+dark (lamp off, no note, cat asleep, camera stuck mid-flight) or empty. Rooms step from the
+display (`FrameClock`) rather than from RealityKit's update events, which come from every scene
+in the app and so would step a room twice a frame while both views are kept.
+
+On the Simulator, a switch shows the room within about 0.1 s for a styled room seen for the first
+time, 0.6 s for the diorama the first time, and at once after that.

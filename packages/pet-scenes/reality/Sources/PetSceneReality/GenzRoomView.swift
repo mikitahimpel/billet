@@ -5,6 +5,14 @@ import RealityKit
 import SwiftUI
 
 /// Shows the room style the host asks for: one of the styled rooms, or the Nooki diorama.
+///
+/// The diorama has its own view and the styled rooms share one, each mounted the first time it
+/// is needed and then kept, hidden while the other is shown. A styled room switched to another
+/// is swapped inside the same RealityView. A RealityView made while another is mounted only
+/// draws its first frame and then redraws for touches, so a second styled room in a view of its
+/// own stayed dark, its lamp off, note missing and cat asleep, or showed nothing at all. A hidden
+/// view is fully transparent, so it draws nothing, and its room is told it is off screen, so it
+/// stops updating.
 struct NookiStyledRoom: View {
   let world: PetWorld
   let play: PetPlayState
@@ -13,40 +21,106 @@ struct NookiStyledRoom: View {
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @Environment(\.petSceneRoomStyle) private var style
-  /// The style on screen. It lags behind `style` while the last room's view comes down.
-  @State private var shown: RoomStyle?
+  @Environment(\.petSceneOnScreen) private var hostShowsScene
+  @State private var roomSwitch = RoomSwitch()
+
+  private struct Wanted: Equatable {
+    var style: RoomStyle
+    var canMount: Bool
+  }
 
   var body: some View {
     ZStack {
-      if let shown {
-        if let layout = GenzLayout.of(shown) {
-          GenzRoomView(layout: layout, world: world, play: play, rooms: rooms, onEvent: onEvent)
-            .id(shown)
-        } else {
-          NookiView(world: world, play: play, cache: cache, onEvent: onEvent)
-        }
+      ForEach(roomSwitch.mounted, id: \.self) { stage in
+        let isShown = stage == roomSwitch.shown.map(RoomStage.init)
+        view(for: stage, isShown: isShown)
+          .opacity(isShown ? 1 : 0)
+          .allowsHitTesting(isShown)
+          .accessibilityHidden(!isShown)
+          .environment(\.petSceneOnScreen, hostShowsScene && isShown)
       }
     }
-    .task(id: style) {
-      if let leaving = shown, leaving != style {
-        self.shown = nil
-        if GenzLayout.of(leaving) != nil { await rooms.untilLetGo() }
+    .task(id: Wanted(style: style, canMount: hostShowsScene)) {
+      var next = roomSwitch
+      next.show(style, hostShowsScene: hostShowsScene)
+      if roomSwitch.shown != nil, next.shown != roomSwitch.shown {
+        NookiTrace.mark("room switch asked")
       }
-      shown = style
+      roomSwitch = next
+    }
+  }
+
+  @ViewBuilder private func view(for stage: RoomStage, isShown: Bool) -> some View {
+    switch stage {
+    case .diorama:
+      NookiView(world: world, play: play, cache: cache, isShown: isShown, onEvent: onEvent)
+    case .styled:
+      if let layout = roomSwitch.styled.flatMap(GenzLayout.of) {
+        GenzRoomView(
+          layout: layout, world: world, play: play, rooms: rooms, isShown: isShown,
+          onEvent: onEvent)
+      }
     }
   }
 }
 
+/// The views a room is shown in: the diorama's own, or the one all styled rooms share.
+enum RoomStage: Hashable {
+  case diorama
+  case styled
+
+  init(_ style: RoomStyle) {
+    switch style {
+    case .nooki: self = .diorama
+    case .sunsetLamp, .windowSeat: self = .styled
+    }
+  }
+}
+
+/// Which views are mounted, which room is shown, and which styled room the shared view holds.
+struct RoomSwitch: Equatable {
+  /// The mounted views, in the order they were first needed.
+  var mounted: [RoomStage] = []
+  var shown: RoomStyle?
+  /// The styled room in the shared view: the one shown last.
+  var styled: RoomStyle?
+
+  /// Shows `style`, mounting its view if it has none. A RealityView that mounts while the host
+  /// keeps the scene off screen, as a tab out of sight does, never draws, so a view needed for
+  /// the first time waits until the host shows the scene. A mounted view shows it straight away.
+  mutating func show(_ style: RoomStyle, hostShowsScene: Bool) {
+    guard shown != style else { return }
+    let stage = RoomStage(style)
+    if !mounted.contains(stage) {
+      guard hostShowsScene else { return }
+      mounted.append(stage)
+    }
+    shown = style
+    if stage == .styled { styled = style }
+  }
+}
+
+/// What restarts the pet's pacing in a room: a new step, or the room coming on screen.
+struct Pacing: Equatable {
+  var step: PetWorld.Step
+  var isShown: Bool
+}
+
 /// A styled room: its flat night behind, the 3D room, then the glow and the opening's dark over
-/// it. The cat's place on screen goes up to the host as ``PetSceneCatAnchorKey``.
+/// it. The cat's place on screen goes up to the host as ``PetSceneCatAnchorKey``. A new `layout`
+/// swaps its room into the same RealityView.
 struct GenzRoomView: View {
   let layout: GenzLayout
   let world: PetWorld
   let play: PetPlayState
   let rooms: GenzRoomCache
+  /// Whether this is the room on screen. Only that room paces the pet's steps.
+  let isShown: Bool
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
-  @State private var room: GenzRoom?
+  /// What the RealityView holds: the room shown, and nothing else.
+  @State private var holder = Entity()
+  @State private var size: CGSize?
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
   /// Whether the drag in progress began on the cat, so it strokes rather than turns the room.
@@ -82,29 +156,28 @@ struct GenzRoomView: View {
     isAppeared && hostShowsScene && scenePhase == .active
   }
 
+  /// The room for `layout`. The cache makes each room once, so this is the same room every time.
+  private var room: GenzRoom { rooms.room(layout) }
+
   var body: some View {
+    let room = room
     ZStack {
-      if let room {
-        layer(behind, room: room)
-        theirSky
-        stage(room)
-        ForEach(over, id: \.self) { slot in layer(slot, room: room) }
-        CatPurrOverlay(purr: room.purr)
-        catAnchor(room)
-      } else {
-        layer(behind, room: nil)
-      }
+      layer(behind, room: room)
+      theirSky
+      stage(room)
+      ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      CatPurrOverlay(purr: room.purr)
+      catAnchor(room)
     }
     .ignoresSafeArea()
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
-    .task {
-      guard room == nil else { return }
-      let made = rooms.room(layout)
-      made.startBuilding()
-      room = made
+    .task(id: layout.style) {
+      NookiTrace.mark("styled room mounted")
+      room.startBuilding()
     }
-    .task(id: world.step) {
+    .task(id: Pacing(step: world.step, isShown: isShown)) {
+      guard isShown else { return }
       await NookiChoreography.pacing.play(world, onEvent: onEvent)
     }
   }
@@ -136,9 +209,9 @@ struct GenzRoomView: View {
   }
 
   /// One flat layer, redrawn every frame while the room is on screen.
-  private func layer(_ slot: RoomLayerSlot, room: GenzRoom?) -> some View {
+  private func layer(_ slot: RoomLayerSlot, room: GenzRoom) -> some View {
     TimelineView(.animation(paused: !isOnScreen || reduceMotion)) { context in
-      let state = room?.screen.state(for: slot, at: context.date) ?? RoomLayerState()
+      let state = room.screen.state(for: slot, at: context.date)
       art(for: slot, state: state)
     }
     .allowsHitTesting(false)
@@ -156,15 +229,23 @@ struct GenzRoomView: View {
   private func stage(_ room: GenzRoom) -> some View {
     RealityView { content in
       content.camera = .virtual
-      let holder = Entity()
-      holder.addChild(room.root)
       content.add(holder)
-      room.startUpdates(from: content)
+      hold(room)
+    } update: { _ in
+      hold(room)
     }
     .onGeometryChange(for: CGSize.self) {
       $0.size
     } action: {
+      size = $0
       room.fit(to: $0)
+    }
+    .onChange(of: layout.style) { old, _ in
+      if let left = GenzLayout.of(old).map(rooms.room) {
+        left.setOnScreen(false, in: viewID)
+        left.setFollowsTilt(false)
+      }
+      set(up: room)
     }
     .simultaneousGesture(orbit(room))
     .simultaneousGesture(pinch(room))
@@ -200,6 +281,30 @@ struct GenzRoomView: View {
     .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
     .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
     .accessibilityAction(named: "Open the note") { onEvent(.noteOpened(delivery: world.delivery)) }
+  }
+
+  /// Puts `room` in the RealityView in place of the room it held, and starts its updates.
+  private func hold(_ room: GenzRoom) {
+    guard room.root.parent !== holder else { return }
+    for child in holder.children where child !== room.root { child.removeFromParent() }
+    holder.addChild(room.root)
+    room.startUpdates()
+  }
+
+  /// Gives a room swapped in everything the view has given the room before it.
+  private func set(up room: GenzRoom) {
+    room.art = replacementArt ?? GenzNativeArt()
+    if let size { room.fit(to: size) }
+    room.setReduceMotion(reduceMotion)
+    room.show(world)
+    room.show(drawing: drawing)
+    room.onOpeningEnded = openingEnded
+    room.flyIn(flyIn)
+    room.show(dayLight: dayLight)
+    room.setFollowsTilt(followsTilt)
+    room.setCat(cat)
+    room.setMoments(moments)
+    room.setOnScreen(isOnScreen, in: viewID)
   }
 
   private func tap(_ room: GenzRoom) -> some Gesture {

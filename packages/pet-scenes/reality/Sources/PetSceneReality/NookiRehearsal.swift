@@ -20,7 +20,7 @@ struct NookiRehearsal: View {
           let holder = diorama.makeHolder()
           content.add(holder)
           shown.holder = holder
-          diorama.startRehearsal(from: content) { finish() }
+          diorama.startRehearsal { finish() }
         }
       }
     }

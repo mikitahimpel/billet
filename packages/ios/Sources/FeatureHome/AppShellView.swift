@@ -85,6 +85,7 @@ struct AppShellView: View {
           onOpenNotes: { destination = .notes }
         )
         .tabEntrance(destination == .home)
+        .environment(\.petSceneOnScreen, destination == .home)
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
         NotesView(

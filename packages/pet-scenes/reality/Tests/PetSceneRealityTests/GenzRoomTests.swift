@@ -173,13 +173,39 @@ import Testing
     }
   }
 
-  @Test func roomsOutOfAnySceneLetGoAtOnce() async {
-    let rooms = GenzRoomCache()
-    _ = rooms.room(GenzLayout.sunsetLamp)
-    let start = ContinuousClock.now
-    await rooms.untilLetGo()
-    // Well under the five seconds a view still holding its scene could take.
-    #expect(ContinuousClock.now - start < .seconds(4))
+  @Test func aRoomSeenBeforeIsShownAtOnceAndKeepsItsView() {
+    var rooms = RoomSwitch()
+    rooms.show(.nooki, hostShowsScene: true)
+    rooms.show(.windowSeat, hostShowsScene: true)
+    rooms.show(.nooki, hostShowsScene: false)
+    #expect(rooms == RoomSwitch(mounted: [.diorama, .styled], shown: .nooki, styled: .windowSeat))
+  }
+
+  @Test func aNewViewWaitsForTheSceneToBeShown() {
+    var rooms = RoomSwitch(mounted: [.diorama], shown: .nooki)
+    rooms.show(.sunsetLamp, hostShowsScene: false)
+    #expect(rooms == RoomSwitch(mounted: [.diorama], shown: .nooki))
+    rooms.show(.sunsetLamp, hostShowsScene: true)
+    #expect(
+      rooms == RoomSwitch(mounted: [.diorama, .styled], shown: .sunsetLamp, styled: .sunsetLamp))
+  }
+
+  /// A second RealityView only draws its first frame, so the styled rooms take turns in one.
+  @Test func theStyledRoomsShareOneView() {
+    var rooms = RoomSwitch()
+    rooms.show(.windowSeat, hostShowsScene: true)
+    rooms.show(.sunsetLamp, hostShowsScene: false)
+    #expect(rooms == RoomSwitch(mounted: [.styled], shown: .sunsetLamp, styled: .sunsetLamp))
+    rooms.show(.nooki, hostShowsScene: true)
+    rooms.show(.windowSeat, hostShowsScene: true)
+    #expect(rooms.mounted == [.styled, .diorama])
+    #expect(rooms.styled == .windowSeat)
+  }
+
+  @Test func eachRoomStyleHasItsView() {
+    #expect(RoomStage(.nooki) == .diorama)
+    #expect(RoomStage(.sunsetLamp) == .styled)
+    #expect(RoomStage(.windowSeat) == .styled)
   }
 
   @Test func theNoteLeavesTheDiscShowingAroundIt() throws {
