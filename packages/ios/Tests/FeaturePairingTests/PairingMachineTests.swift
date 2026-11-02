@@ -57,7 +57,7 @@ import Wire
 
   @Test func invalidAndAlreadyPairedReadDifferently() {
     #expect(
-      PairingFlowView.message(for: .invalidCode) != PairingFlowView.message(for: .alreadyPaired))
+      PairingFailure.invalidCode.message != PairingFailure.alreadyPaired.message)
   }
 
   @Test func aStaleResultChangesNothing() {
