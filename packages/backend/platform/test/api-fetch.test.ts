@@ -153,8 +153,8 @@ const uploaded = async (token: string) => {
 const readImage = (key: string, token: string) =>
   call(`/v1/media/${key}`, { method: "GET", headers: bearer(token) });
 
-const sendPhoto = (token: string, image: string) =>
-  call("/v1/notes", json({ _tag: "Photo", image }, "POST", token));
+const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID()) =>
+  call("/v1/notes", json({ _tag: "Photo", key, image }, "POST", token));
 
 const sentPhoto = async (token: string) => {
   const response = await sendPhoto(token, await uploaded(token));
@@ -162,11 +162,14 @@ const sentPhoto = async (token: string) => {
   return Schema.decodeUnknownSync(SendNoteResponse)(await response.json()).note;
 };
 
-const historyFor = async (token: string, query = "") => {
+const entriesFor = async (token: string, query = "") => {
   const response = await call(`/v1/notes${query}`, { method: "GET", headers: bearer(token) });
   expect(response.status).toBe(200);
   return Schema.decodeUnknownSync(ListNotesResponse)(await response.json()).notes;
 };
+
+const historyFor = async (token: string, query = "") =>
+  (await entriesFor(token, query)).map(({ note }) => note);
 
 const imageSizeInBytes = Number(imageSizeLimit);
 
@@ -435,6 +438,73 @@ describe("notes", () => {
     expect(await historyFor(owner, "?after=4")).toEqual([]);
   });
 
+  it("numbers each entry, so a client pages with only the response", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const sent = [
+      await sentPhoto(owner),
+      await sentPhoto(claimer),
+      await sentPhoto(owner),
+      await sentPhoto(owner),
+      await sentPhoto(claimer),
+    ];
+    const seen: Array<{ seq: number; id: string }> = [];
+    let after = 0;
+    for (;;) {
+      const page = await entriesFor(owner, `?after=${after}&limit=2`);
+      if (page.length === 0) break;
+      seen.push(...page.map(({ seq, note }) => ({ seq, id: note.id })));
+      after = page[page.length - 1]?.seq ?? after;
+    }
+    expect(seen).toEqual(sent.map(({ id }, index) => ({ seq: index + 1, id })));
+  });
+
+  it("stores one note for a key sent again, and answers with the first", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const key = crypto.randomUUID();
+    const read = async (response: Response) => {
+      expect(response.status).toBe(200);
+      return Schema.decodeUnknownSync(SendNoteResponse)(await response.json()).note;
+    };
+    const first = await read(await sendPhoto(owner, image, key));
+    const again = await read(await sendPhoto(owner, image, key));
+    expect(again).toEqual(first);
+    expect(await historyFor(claimer)).toEqual([first]);
+    // The partner may use the same key for a note of their own.
+    const theirs = await read(await sendPhoto(claimer, await uploaded(claimer), key));
+    expect(theirs.id).not.toBe(first.id);
+    expect(await historyFor(owner)).toEqual([first, theirs]);
+  });
+
+  it("stores one note when a key is sent twice at once", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const key = crypto.randomUUID();
+    const responses = await Promise.all([
+      sendPhoto(owner, image, key),
+      sendPhoto(owner, image, key),
+      sendPhoto(owner, image, key),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200, 200]);
+    expect(await historyFor(owner)).toHaveLength(1);
+  });
+
+  it.each(["", "not-a-uuid", "6f1c2d3e4a5b4c6d8e7f0a1b2c3d4e5f"])(
+    "refuses the key %j",
+    async (key) => {
+      const { owner } = await pairOf("subject-owner", "subject-claimer");
+      const response = await sendPhoto(owner, await uploaded(owner), key);
+      expect(response.status).toBe(400);
+    },
+  );
+
+  it("refuses a note with no key", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const response = await call("/v1/notes", json({ _tag: "Photo", image }, "POST", owner));
+    expect(response.status).toBe(400);
+  });
+
   it.each(["?limit=-1", "?limit=0", "?limit=101", "?limit=two", "?after=-1", "?after=1.5"])(
     "refuses the query %s",
     async (query) => {
@@ -480,6 +550,7 @@ describe("notes", () => {
         json(
           {
             _tag: "Drawing",
+            key: crypto.randomUUID(),
             image,
             compact: { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points }] },
           },
@@ -563,6 +634,7 @@ describe("what the Worker logs", () => {
         json(
           {
             _tag: "Drawing",
+            key: crypto.randomUUID(),
             image,
             compact: { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points: marker }] },
           },

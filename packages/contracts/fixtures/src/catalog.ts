@@ -1,6 +1,13 @@
 import { Schema } from "effect";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
-import { DeviceId, InviteCode, MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import {
+  DeviceId,
+  IdempotencyKey,
+  InviteCode,
+  MediaKey,
+  NoteId,
+  UserId,
+} from "@billet/contracts-domain/ids";
 import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -57,6 +64,9 @@ const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
 const code = Schema.decodeUnknownSync(InviteCode)("ABCD2345EF");
+const idempotencyKey = Schema.decodeUnknownSync(IdempotencyKey)(
+  "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+);
 
 const deviceId = Schema.decodeUnknownSync(DeviceId)("device-1");
 // Sample shapes only: none of these was ever a real credential.
@@ -98,16 +108,25 @@ export const catalog: ReadonlyArray<Fixture> = [
     "alert-push": DeliveryLane.cases.AlertPush.make({}),
     "timeline-refresh": DeliveryLane.cases.TimelineRefresh.make({}),
   }),
-  fixture("CreateInviteResponse", CreateInviteResponse, { default: { code } }),
+  fixture("CreateInviteResponse", CreateInviteResponse, {
+    default: { code, expiresAt: 1_700_086_400_000 },
+  }),
   fixture("ClaimInviteRequest", ClaimInviteRequest, { default: { code } }),
   fixture("ClaimInviteResponse", ClaimInviteResponse, { default: { pairId } }),
   fixture("UploadImageResponse", UploadImageResponse, { default: { image } }),
   fixture("SendNoteRequest", SendNoteRequest, {
-    drawing: SendNoteRequest.cases.Drawing.make({ compact, image }),
-    photo: SendNoteRequest.cases.Photo.make({ image }),
+    drawing: SendNoteRequest.cases.Drawing.make({ key: idempotencyKey, compact, image }),
+    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
-  fixture("ListNotesResponse", ListNotesResponse, { default: { notes: [drawing, photo] } }),
+  fixture("ListNotesResponse", ListNotesResponse, {
+    default: {
+      notes: [
+        { seq: 1, note: drawing },
+        { seq: 2, note: photo },
+      ],
+    },
+  }),
   fixture("AuthChallengeResponse", AuthChallengeResponse, {
     default: { nonce, expiresAt: 1_700_000_300_000 },
   }),

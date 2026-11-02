@@ -53,47 +53,55 @@ import Wire
     #expect(request.body.map { String(decoding: $0, as: UTF8.self) } == #"{"code":"abc"}"#)
   }
 
-  @Test(arguments: ["https://evil.example/x", "//evil.example/x", "ftp://evil.example"])
-  func aPathCannotReplaceTheBaseHost(_ path: String) async throws {
-    RecordingProtocol.hosts.withLock { $0 = [] }
+  /// A service whose requests `RecordingProtocol` records, and the token that marks them.
+  ///
+  /// The protocol's log is shared by every test in the process, so each test finds its own
+  /// requests by the token in their `Authorization` header instead of resetting the log.
+  static func recordingService() throws -> (service: HTTPService, token: String) {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [RecordingProtocol.self]
     let service = HTTPService.urlSession(
       baseURL: try #require(URL(string: "https://api.example")),
       session: URLSession(configuration: configuration))
+    return (service, UUID().uuidString)
+  }
 
+  @Test(arguments: ["https://evil.example/x", "//evil.example/x", "ftp://evil.example"])
+  func aPathCannotReplaceTheBaseHost(_ path: String) async throws {
+    let (service, token) = try Self.recordingService()
     let request = HTTPRequest(
-      method: .get, path: path, headers: ["Authorization": "secret"], body: nil)
+      method: .get, path: path, headers: ["Authorization": token], body: nil)
     await #expect(throws: TransportError.network("invalid path \(path)")) {
       try await service.perform(request, as: ClaimInviteResponse.self)
     }
-    #expect(RecordingProtocol.hosts.withLock { $0 }.isEmpty)
+    #expect(RecordingProtocol.hosts(sentWith: token).isEmpty)
   }
 
   @Test func aPlainPathGoesToTheBaseHost() async throws {
-    RecordingProtocol.hosts.withLock { $0 = [] }
-    let configuration = URLSessionConfiguration.ephemeral
-    configuration.protocolClasses = [RecordingProtocol.self]
-    let service = HTTPService.urlSession(
-      baseURL: try #require(URL(string: "https://api.example")),
-      session: URLSession(configuration: configuration))
-
+    let (service, token) = try Self.recordingService()
     _ = try? await service.perform(
-      HTTPRequest(method: .get, path: "v1/x", headers: [:], body: nil), as: ClaimInviteResponse.self
-    )
-    #expect(RecordingProtocol.hosts.withLock { $0 } == ["api.example"])
+      HTTPRequest(method: .get, path: "v1/x", headers: ["Authorization": token], body: nil),
+      as: ClaimInviteResponse.self)
+    #expect(RecordingProtocol.hosts(sentWith: token) == ["api.example"])
   }
 }
 
-/// Records the host of each request it is asked to load, and answers with an empty 200.
+/// Records the host and `Authorization` value of each request it is asked to load, and answers
+/// with an empty 200.
 final class RecordingProtocol: URLProtocol, @unchecked Sendable {
-  static let hosts = LockedValue<[String]>([])
+  private static let log = LockedValue<[(host: String, token: String)]>([])
+
+  /// The hosts of the requests that carried `token`.
+  static func hosts(sentWith token: String) -> [String] {
+    log.withLock { entries in entries.filter { $0.token == token }.map(\.host) }
+  }
 
   override class func canInit(with request: URLRequest) -> Bool { true }
   override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
   override func startLoading() {
-    Self.hosts.withLock { $0.append(request.url?.host ?? "") }
+    let token = request.value(forHTTPHeaderField: "Authorization") ?? ""
+    Self.log.withLock { $0.append((host: request.url?.host ?? "", token: token)) }
     let response = HTTPURLResponse(
       url: request.url ?? URL(fileURLWithPath: "/"), statusCode: 200, httpVersion: nil,
       headerFields: nil)

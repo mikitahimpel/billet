@@ -61,12 +61,15 @@ let homeTarget: Target = .target(
     "DesignSystem",
     "FeatureCanvas",
     "FeatureInbox",
+    "FeatureOnboarding",
+    "FeaturePairing",
     "FeatureSettings",
     "Ink",
     "Labs",
     "Persistence",
     "Pet",
     "PetScene",
+    "Transport",
     "WidgetBridge",
     "Wire",
   ]
@@ -80,6 +83,7 @@ let testTargets: [Target] = [
   .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", "Wire"]),
   .testTarget(name: "FeatureCanvasTests", dependencies: ["FeatureCanvas", "Wire"]),
   .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
+  .testTarget(name: "PrivacyManifestTests"),
   .testTarget(
     name: "FeatureHomeTests",
     dependencies: [
@@ -87,7 +91,17 @@ let testTargets: [Target] = [
       "WidgetBridge",
       "Wire",
     ]),
-  .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
+  .testTarget(
+    name: "FeatureOnboardingTests",
+    dependencies: ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
+  .testTarget(
+    name: "FeatureSettingsTests",
+    dependencies: ["FeatureSettings", "Persistence", "Transport", "Wire"]),
+  .testTarget(
+    name: "FeaturePairingTests", dependencies: ["FeaturePairing", "Transport", "Wire"]),
+  .testTarget(
+    name: "FeatureInboxTests",
+    dependencies: ["FeatureInbox", "Persistence", "Transport", "Wire"]),
   .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "Pet", "WidgetBridge"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
   .testTarget(

@@ -4,6 +4,10 @@
 <dict>
 	<key>BilletDemoHost</key>
 	<string>$(BILLET_DEMO_HOST)</string>
+	<key>BilletBackend</key>
+	<string>$(BILLET_BACKEND)</string>
+	<key>BilletAPIBaseURL</key>
+	<string>$(BILLET_API_BASE_URL)</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>

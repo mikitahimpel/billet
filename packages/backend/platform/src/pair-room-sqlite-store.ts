@@ -1,12 +1,13 @@
-import { asc, gt } from "drizzle-orm";
+import { and, asc, eq, gt } from "drizzle-orm";
 import { Context, Effect, Layer, Option, Schema } from "effect";
+import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
 import {
   RoomState,
   type ActiveRoom,
   type SequencedNote,
 } from "@billet/backend-pair-room/room-state";
-import { RoomStore } from "@billet/backend-pair-room/room-store";
+import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
 import { note, room } from "./room-schema.ts";
 
@@ -74,7 +75,7 @@ export const SqliteRoomStore = Layer.effect(
           Effect.map(([row]) => roomFrom(row)),
           Effect.orDie,
         ),
-      commit: (state: ActiveRoom, notes: ReadonlyArray<SequencedNote>) =>
+      commit: (state: ActiveRoom, notes: ReadonlyArray<AppendedNote>) =>
         db
           .transaction((tx) =>
             Effect.gen(function* () {
@@ -83,12 +84,29 @@ export const SqliteRoomStore = Layer.effect(
                 .insert(room)
                 .values(values)
                 .onConflictDoUpdate({ target: room.id, set: values });
-              for (const entry of notes) {
-                yield* tx.insert(note).values({ seq: entry.seq, body: encodeNote(entry.note) });
+              for (const { entry, key } of notes) {
+                yield* tx.insert(note).values({
+                  seq: entry.seq,
+                  body: encodeNote(entry.note),
+                  author: entry.note.author,
+                  idempotencyKey: key,
+                });
               }
             }),
           )
           .pipe(Effect.orDie),
+      noteByKey: (author: UserId, key: IdempotencyKey) =>
+        db
+          .select()
+          .from(note)
+          .where(and(eq(note.author, author), eq(note.idempotencyKey, key)))
+          .pipe(
+            Effect.map(([row]) => {
+              const decoded = row === undefined ? Option.none() : decodeNoteOption(row.body);
+              return Option.map(decoded, (stored) => ({ seq: row?.seq ?? 0, note: stored }));
+            }),
+            Effect.orDie,
+          ),
       notesAfter: (afterSeq: number, limit: number) =>
         Effect.gen(function* () {
           const rows = yield* db

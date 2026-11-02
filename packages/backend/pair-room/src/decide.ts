@@ -66,13 +66,13 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         ? accepted(room)
         : rejected(RoomRejection.cases.RoomAlreadyOpen.make({}));
     case "SendNote": {
-      const { note } = command;
+      const { note, key } = command;
       if (!isMember(room, note.author)) {
         return rejected(RoomRejection.cases.NotAMember.make({ user: note.author }));
       }
       const seq = room.lastSeq + 1;
       return accepted({ ...room, lastSeq: seq }, [
-        RoomOutput.cases.NoteAppended.make({ entry: { seq, note } }),
+        RoomOutput.cases.NoteAppended.make({ entry: { seq, note }, key }),
       ]);
     }
     case "SetPresence": {

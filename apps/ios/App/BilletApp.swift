@@ -4,6 +4,7 @@ import PetSceneCatalog
 import PetSceneReality
 import PetSceneRive
 import SwiftUI
+import Transport
 import WidgetKit
 
 final class AppDelegate: NSObject, UIApplicationDelegate {
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 struct BilletApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
   private let demoHost = Bundle.main.object(forInfoDictionaryKey: "BilletDemoHost") as? String ?? ""
+  private let backend = BackendMode(info: Bundle.main.infoDictionary)
   @State private var catalog = PetSceneCatalog(
     scenes: [LittleHousePetScene(), NookiPetScene(), RooftopPetScene()],
     defaults: .standard,
@@ -28,13 +30,35 @@ struct BilletApp: App {
 
   var body: some Scene {
     WindowGroup {
-      DemoRootView(
-        host: demoHost,
-        scenes: catalog.scenes,
-        selectedSceneID: Binding(
-          get: { catalog.selectedID },
-          set: { id in id.map(catalog.select) }
-        ))
+      switch backend {
+      case .demo:
+        DemoRootView(
+          host: demoHost,
+          scenes: catalog.scenes,
+          selectedSceneID: Binding(
+            get: { catalog.selectedID },
+            set: { id in id.map(catalog.select) }
+          ))
+      case .real(let baseURL):
+        RealRootView(model: RealBackend.model(baseURL: baseURL))
+      }
     }
+  }
+}
+
+/// The real client's services, built only when the build asks for the real backend.
+@MainActor
+enum RealBackend {
+  static func model(baseURL: URL) -> RealAppModel {
+    let tokens = SessionTokenStore.keychain(
+      client: .security, service: "com.mikitahimpel.billet", accessGroup: nil)
+    let storage =
+      (try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier))
+      ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
+    let accounts = AccountStore.live(tokens: tokens, storage: storage)
+    let api = APIClient.live(
+      http: .urlSession(baseURL: baseURL, session: .shared),
+      token: { (try? accounts.load())?.token })
+    return RealAppModel(api: api, accounts: accounts)
   }
 }

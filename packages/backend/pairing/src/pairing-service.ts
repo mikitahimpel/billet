@@ -57,13 +57,14 @@ export class PairingService extends Context.Service<
       ): Effect.fn.Return<CreateInviteResponse, AlreadyPaired | PairingUnavailable> {
         const code = yield* newCode;
         const createdAt = yield* Clock.currentTimeMillis;
+        const expiresAt = createdAt + Duration.toMillis(inviteLifetime);
         yield* repository.saveInvite({
           codeHash: yield* hash(code),
           ownerId,
           createdAt,
-          expiresAt: createdAt + Duration.toMillis(inviteLifetime),
+          expiresAt,
         });
-        return { code };
+        return { code, expiresAt };
       });
 
       const claimInvite = Effect.fnUntraced(function* (

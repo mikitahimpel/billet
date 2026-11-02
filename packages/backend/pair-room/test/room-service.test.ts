@@ -1,13 +1,13 @@
-import { Clock, Effect, Layer, Schema } from "effect";
+import { Clock, Effect, Layer, Option, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
-import { NoteId } from "@billet/contracts-domain/ids";
+import { IdempotencyKey, NoteId } from "@billet/contracts-domain/ids";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { NoteIdSource } from "../src/note-id-source.ts";
 import { RoomCommand } from "../src/room-command.ts";
 import { RoomService } from "../src/room-service.ts";
 import type { ActiveRoom, RoomState, SequencedNote } from "../src/room-state.ts";
-import { RoomStore } from "../src/room-store.ts";
+import { RoomStore, type AppendedNote } from "../src/room-store.ts";
 import { active, alice, bob, image, mallory, pairId, vacant } from "./samples.ts";
 
 /** An in-memory store. `load` yields after reading, so a fiber gives way before it commits. */
@@ -15,16 +15,22 @@ const memoryStore = (options?: { readonly failCommit?: boolean }) => {
   const memory = {
     state: vacant as RoomState,
     notes: [] as Array<SequencedNote>,
+    keys: new Map<string, SequencedNote>(),
   };
   const layer = Layer.succeed(RoomStore, {
     load: Effect.sync(() => memory.state).pipe(Effect.tap(() => Effect.yieldNow)),
-    commit: (room: ActiveRoom, notes: ReadonlyArray<SequencedNote>) =>
+    commit: (room: ActiveRoom, notes: ReadonlyArray<AppendedNote>) =>
       Effect.suspend(() => {
         if (options?.failCommit === true) return Effect.die("storage is down");
         memory.state = room;
-        memory.notes.push(...notes);
+        for (const { entry, key } of notes) {
+          memory.notes.push(entry);
+          memory.keys.set(`${entry.note.author}/${key}`, entry);
+        }
         return Effect.void;
       }),
+    noteByKey: (author, key) =>
+      Effect.sync(() => Option.fromNullishOr(memory.keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => memory.notes.filter((n) => n.seq > afterSeq).slice(0, limit)),
   });
@@ -49,7 +55,13 @@ const runWith = <A, E>(
   );
 
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
-const photo = SendNoteRequest.cases.Photo.make({ image });
+let keyCount = 0;
+/** A new key each time, so repeated sends are different notes unless a test reuses a key. */
+const newKey = () =>
+  Schema.decodeSync(IdempotencyKey)(
+    `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
+  );
+const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
 
 describe("RoomService", () => {
   it("opens a room and commits its state", async () => {
@@ -69,7 +81,7 @@ describe("RoomService", () => {
         const room = yield* RoomService;
         yield* room.dispatch(open);
         yield* TestClock.setTime(1_700_000_000_000);
-        return yield* room.sendNote(alice, photo);
+        return yield* room.sendNote(alice, photo());
       }).pipe(Effect.provide(TestClock.layer())),
     );
     const note = {
@@ -91,7 +103,10 @@ describe("RoomService", () => {
       Effect.gen(function* () {
         const room = yield* RoomService;
         yield* room.dispatch(open);
-        yield* room.sendNote(bob, SendNoteRequest.cases.Drawing.make({ compact, image }));
+        yield* room.sendNote(
+          bob,
+          SendNoteRequest.cases.Drawing.make({ key: newKey(), compact, image }),
+        );
       }),
     );
     expect(memory.notes[0]?.note).toMatchObject({ _tag: "Drawing", compact, author: bob });
@@ -104,7 +119,7 @@ describe("RoomService", () => {
       Effect.gen(function* () {
         const room = yield* RoomService;
         yield* room.dispatch(open);
-        return yield* room.sendNote(mallory, photo);
+        return yield* room.sendNote(mallory, photo());
       }),
     );
     expect(decision).toMatchObject({ _tag: "Rejected", rejection: { _tag: "NotAMember" } });
@@ -120,7 +135,7 @@ describe("RoomService", () => {
         const room = yield* RoomService;
         yield* room.dispatch(open);
         yield* Effect.all(
-          Array.from({ length: 25 }, () => room.sendNote(alice, photo)),
+          Array.from({ length: 25 }, () => room.sendNote(alice, photo())),
           { concurrency: "unbounded" },
         );
       }),
@@ -141,7 +156,7 @@ describe("RoomService", () => {
         const real = yield* Clock.Clock;
         let tick = 0;
         yield* Effect.all(
-          Array.from({ length: 25 }, () => room.sendNote(alice, photo)),
+          Array.from({ length: 25 }, () => room.sendNote(alice, photo())),
           { concurrency: "unbounded" },
         ).pipe(
           Effect.provideService(Clock.Clock, {
@@ -174,12 +189,54 @@ describe("RoomService", () => {
       Effect.gen(function* () {
         const room = yield* RoomService;
         yield* room.dispatch(open);
-        yield* room.sendNote(alice, photo);
-        yield* room.sendNote(bob, photo);
-        yield* room.sendNote(alice, photo);
+        yield* room.sendNote(alice, photo());
+        yield* room.sendNote(bob, photo());
+        yield* room.sendNote(alice, photo());
         return yield* room.notesAfter(1, 1);
       }),
     );
     expect(notes.map((n) => n.seq)).toEqual([2]);
+  });
+
+  it("answers a key it already holds with the first note, and stores nothing more", async () => {
+    const { memory, layer } = memoryStore();
+    const outcome = await runWith(
+      layer,
+      Effect.gen(function* () {
+        const room = yield* RoomService;
+        yield* room.dispatch(open);
+        const request = photo();
+        const first = yield* room.sendNote(alice, request);
+        const again = yield* room.sendNote(alice, request);
+        const partner = yield* room.sendNote(bob, request);
+        return { first, again, partner };
+      }),
+    );
+    expect(outcome.again._tag).toBe("Accepted");
+    if (outcome.first._tag !== "Accepted" || outcome.again._tag !== "Accepted") return;
+    expect(outcome.again.outputs.map((output) => output._tag)).toEqual(["NoteRepeated"]);
+    expect(outcome.again.state).toEqual(outcome.first.state);
+    // The partner's note under the same key is a different note.
+    expect(memory.notes.map(({ seq, note }) => [seq, note.author])).toEqual([
+      [1, alice],
+      [2, bob],
+    ]);
+  });
+
+  it("stores one note when the same key arrives many times at once", async () => {
+    const { memory, layer } = memoryStore();
+    await runWith(
+      layer,
+      Effect.gen(function* () {
+        const room = yield* RoomService;
+        yield* room.dispatch(open);
+        const request = photo();
+        yield* Effect.all(
+          Array.from({ length: 25 }, () => room.sendNote(alice, request)),
+          { concurrency: "unbounded" },
+        );
+      }),
+    );
+    expect(memory.notes).toHaveLength(1);
   });
 });

@@ -114,8 +114,8 @@ export const NotesRoutes = HttpRouter.use((router) =>
       }).pipe(respondNotesFailures),
     );
 
-    // `after` is the last `seq` the client holds. Sequences have no gaps, so the next page starts
-    // at `after` plus the number of notes returned.
+    // `after` is the last `seq` the client holds. Each entry carries its `seq`, so the next page
+    // starts after the last one.
     yield* router.add(
       routes.listNotes.method,
       routes.listNotes.path,

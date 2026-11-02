@@ -39,7 +39,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(3);
+      expect(history(state.storage)).toHaveLength(4);
     });
   });
 
@@ -62,7 +62,7 @@ describe("room migrations", () => {
   it("re-apply as a no-op and keep the data", async () => {
     await runInDurableObject(room("again"), async (_, state) => {
       const before = history(state.storage);
-      const row = { seq: 1, body: "{}" };
+      const row = { seq: 1, body: "{}", author: null, idempotencyKey: null };
       const rows = await run(
         Effect.gen(function* () {
           const db = yield* openRoomDatabase(state.storage);
@@ -156,7 +156,7 @@ describe("room migrations", () => {
       });
       expect(notes).toEqual([{ seq: 1, note: photo }]);
       expect(userTables(state.storage).toSorted()).toEqual(["delivery", "note", "room"]);
-      expect(history(state.storage)).toHaveLength(3);
+      expect(history(state.storage)).toHaveLength(4);
     });
   });
 });

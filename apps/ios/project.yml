@@ -11,6 +11,10 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "6"
     GENERATE_INFOPLIST_FILE: YES
+    # "demo" (the demo room and fake partner) or "real" (the backend at BILLET_API_BASE_URL).
+    # Demo is the default; pass BILLET_BACKEND=real BILLET_API_BASE_URL=https://... to xcodebuild.
+    BILLET_BACKEND: demo
+    BILLET_API_BASE_URL: ""
   configs:
     # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
     Release:
@@ -31,7 +35,7 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, WidgetBridge]
+        products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, Transport, WidgetBridge]
       - package: PetSceneRive
       - package: PetSceneReality
       - target: BilletWidget

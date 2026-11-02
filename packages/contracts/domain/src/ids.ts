@@ -22,6 +22,15 @@ export const InviteCode = Schema.String.check(Schema.isPattern(/^[2-9A-HJ-NP-Z]{
 );
 export type InviteCode = typeof InviteCode.Type;
 
+/**
+ * A UUID the client makes once per note and repeats on every retry of the same send. The room
+ * remembers it with the note, for as long as it keeps the note.
+ */
+export const IdempotencyKey = Schema.String.check(
+  Schema.isPattern(/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/),
+).pipe(Schema.brand("IdempotencyKey"));
+export type IdempotencyKey = typeof IdempotencyKey.Type;
+
 /** Key of a note image in the private R2 bucket. */
 export const MediaKey = nonEmpty.pipe(Schema.brand("MediaKey"));
 export type MediaKey = typeof MediaKey.Type;
