@@ -89,6 +89,12 @@
   "trimEnd": 32.5,
   "trimStart": 30.5
  },
+ "twitch": {
+  "base": "sleep",
+  "loops": false,
+  "trimEnd": 57.6667,
+  "trimStart": 55.1667
+ },
  "walk": {
   "base": "stand",
   "loops": true,

@@ -68,11 +68,27 @@ enum CatCatalog {
 
   static func defaultBase(_ action: CatAction) -> CatBase {
     switch action {
-    case .sleep: .sleep
+    case .sleep, .twitch: .sleep
     case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk: .sit
     case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch: .stand
     }
   }
+
+  // MARK: - Size
+
+  /// How much each model is scaled beside Mochi, so every cat reads the same size in a room.
+  /// The made cats were built to Mochi's size; the found ones are tuned by eye in the room.
+  static func fit(_ model: CatModel) -> Float {
+    switch model {
+    case .mochi, .tabby, .plush, .chibi, .kitten, .tuxedo: 1
+    case .blocky: 0.85
+    case .slim: 0.8
+    }
+  }
+
+  /// Mochi's longest side across the floor, in its own metres. A styled room scales every cat
+  /// by its own cat length over this, so cats with long tails are not shrunk.
+  static let mochiReach: Float = 0.2998
 
   // MARK: - Coats
 

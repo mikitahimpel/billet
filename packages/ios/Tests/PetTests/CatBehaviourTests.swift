@@ -13,6 +13,7 @@ struct CatBehaviourTests {
       case .idle, .walk, .crouchWiggle, .eat:
         clips[action] = CatClipInfo(duration: 4, loops: true, base: .stand)
       case .sleep: clips[action] = CatClipInfo(duration: 6, loops: true, base: .sleep)
+      case .twitch: clips[action] = CatClipInfo(duration: 2.5, loops: false, base: .sleep)
       case .sit, .blink, .look, .tailFlick, .happy, .knead:
         clips[action] = CatClipInfo(duration: 4, loops: true, base: .sit)
       case .pounce, .stretch: clips[action] = CatClipInfo(duration: 1.5, loops: false, base: .stand)
@@ -96,6 +97,57 @@ struct CatBehaviourTests {
       let grooms = run(&cat, for: 120, mode: .awake).filter { $0.1 == .groom }.map(\.0)
       for (a, b) in zip(grooms, grooms.dropFirst()) { #expect(b - a >= 24) }
     }
+  }
+
+  /// Mochi's clips: the original set, with no twitch, yawn or groom.
+  private static let mochi = full.filter {
+    [.idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick, .happy]
+      .contains($0.key)
+  }
+
+  /// Clips the room plays on its own; the rest are the small actions people notice.
+  private static let plain: Set<CatAction> = [.idle, .sit, .sleep, .walk]
+
+  /// The fewest different small actions seen in any 20 s on Home over ten minutes.
+  private func fewestSmallActions(_ clips: [CatAction: CatClipInfo], seed: UInt64) -> Int {
+    var cat = CatBehaviour(clips: clips, seed: seed)
+    let step = 1.0 / 10
+    var playing: [(Double, CatAction)] = []
+    var t = 0.0
+    while t < 600 {
+      playing.append((t, cat.beat(at: t, mode: .free).action))
+      t += step
+    }
+    let window = Int(20 / step)
+    var fewest = Int.max
+    for start in stride(from: 0, through: playing.count - window, by: 10) {
+      let seen = Set(playing[start..<start + window].map(\.1).filter { !Self.plain.contains($0) })
+      fewest = min(fewest, seen.count)
+    }
+    return fewest
+  }
+
+  @Test func anyTwentySecondsShowsTwoSmallActions() {
+    for seed in UInt64(1)...12 {
+      #expect(fewestSmallActions(Self.full, seed: seed) >= 2, "seed \(seed)")
+      #expect(fewestSmallActions(Self.mochi, seed: seed) >= 2, "mochi seed \(seed)")
+    }
+  }
+
+  @Test func napsTwitch() {
+    var cat = CatBehaviour(clips: Self.full, seed: 4)
+    let changes = run(&cat, for: 120)
+    #expect(changes.contains { $0.1 == .twitch })
+  }
+
+  @Test func aHeldLookTurnsTheHeadInAnyClipButSleep() {
+    let groom = CatBeat(action: .groom, lookWeight: 0)
+    #expect(CatBehaviour.lookWeight(for: groom, holding: true, reduceMotion: false) == 0.85)
+    #expect(CatBehaviour.lookWeight(for: groom, holding: false, reduceMotion: false) == 0)
+    let sleep = CatBeat(action: .sleep, lookWeight: 0)
+    #expect(CatBehaviour.lookWeight(for: sleep, holding: true, reduceMotion: false) == 0)
+    let sit = CatBeat(action: .sit, lookWeight: 1)
+    #expect(CatBehaviour.lookWeight(for: sit, holding: true, reduceMotion: true) == 0)
   }
 
   @Test func napsAgainAfterAnAwakeSpell() {
