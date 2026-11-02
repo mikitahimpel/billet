@@ -23,6 +23,7 @@ struct BilletWidgetBundle: WidgetBundle {
     CatTripActivity()
     LatestNoteWidget()
     PetPoseWidget()
+    BedsideWidget()
   }
 }
 

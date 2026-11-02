@@ -26,6 +26,10 @@ let library: [(name: String, dependencies: [String])] = [
   // Shared by the app, the widget and the settings screen: flags, the published snapshot, the
   // picture rules and the queue of actions taken outside the app.
   ("WidgetBridge", ["Persistence", "Pet"]),
+  (
+    "Labs",
+    ["Domain", "Wire", "Ink", "DesignSystem", "Persistence", "Pet", "WidgetBridge", "FeatureInbox"]
+  ),
 ]
 
 let featureDependencies = [
@@ -59,6 +63,7 @@ let homeTarget: Target = .target(
     "FeatureInbox",
     "FeatureSettings",
     "Ink",
+    "Labs",
     "Persistence",
     "Pet",
     "PetScene",
@@ -85,6 +90,12 @@ let testTargets: [Target] = [
   .testTarget(name: "FeatureInboxTests", dependencies: ["FeatureInbox", "Persistence", "Wire"]),
   .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "Pet", "WidgetBridge"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
+  .testTarget(
+    name: "LabsTests",
+    dependencies: [
+      "DesignSystem", "Domain", "FeatureInbox", "Ink", "Labs", "Persistence", "Pet", "WidgetBridge",
+      "Wire",
+    ]),
   .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
   .testTarget(
     name: "PetSceneCatalogTests",

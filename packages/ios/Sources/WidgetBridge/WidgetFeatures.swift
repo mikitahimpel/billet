@@ -2,21 +2,36 @@ import Foundation
 import Observation
 import Persistence
 
-/// Which widget features are on. Anything never switched follows its default, so a feature added
-/// later does not silently turn off for someone who already has stored choices.
+/// Something the owner can switch on or off: a widget feature or a lab experiment. The raw value is
+/// the key it is stored under, so the two kinds share one file without clashing.
+public protocol FeatureFlag: RawRepresentable, CaseIterable, Sendable where RawValue == String {
+  /// Whether the flag is on until the owner turns it off.
+  var defaultOn: Bool { get }
+}
+
+extension WidgetFeature: FeatureFlag {}
+
+/// Which features are on. Anything never switched follows its default, so a feature added later
+/// does not silently turn off for someone who already has stored choices.
 public struct WidgetFeatures: Equatable, Sendable {
-  private var choices: [WidgetFeature: Bool]
+  private var choices: [String: Bool]
 
   public init(choices: [WidgetFeature: Bool] = [:]) {
-    self.choices = choices
+    self.choices = Dictionary(uniqueKeysWithValues: choices.map { ($0.key.rawValue, $0.value) })
   }
 
-  public func isOn(_ feature: WidgetFeature) -> Bool {
-    choices[feature] ?? feature.defaultOn
+  public func isOn(_ feature: WidgetFeature) -> Bool { value(of: feature) }
+
+  public func isOn(_ experiment: LabExperiment) -> Bool { value(of: experiment) }
+
+  public mutating func set(_ feature: WidgetFeature, on: Bool) { choices[feature.rawValue] = on }
+
+  public mutating func set(_ experiment: LabExperiment, on: Bool) {
+    choices[experiment.rawValue] = on
   }
 
-  public mutating func set(_ feature: WidgetFeature, on: Bool) {
-    choices[feature] = on
+  private func value<Flag: FeatureFlag>(of flag: Flag) -> Bool {
+    choices[flag.rawValue] ?? flag.defaultOn
   }
 
   /// The features that are on, in declaration order.
@@ -27,18 +42,12 @@ public struct WidgetFeatures: Equatable, Sendable {
 
 extension WidgetFeatures: Codable {
   public init(from decoder: any Decoder) throws {
-    let stored = try decoder.singleValueContainer().decode([String: Bool].self)
-    var choices: [WidgetFeature: Bool] = [:]
-    for (key, value) in stored {
-      if let feature = WidgetFeature(rawValue: key) { choices[feature] = value }
-    }
-    self.choices = choices
+    choices = try decoder.singleValueContainer().decode([String: Bool].self)
   }
 
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.singleValueContainer()
-    try container.encode(
-      Dictionary(uniqueKeysWithValues: choices.map { ($0.key.rawValue, $0.value) }))
+    try container.encode(choices)
   }
 }
 
@@ -68,8 +77,8 @@ public struct WidgetFeaturesStore: Sendable {
   }
 }
 
-/// The flags the settings screen edits. Each change is saved, then `onChange` lets the widgets
-/// redraw.
+/// The flags the settings screen edits, widget features and lab experiments alike. Each change is
+/// saved, then `onChange` lets the widgets redraw.
 @MainActor
 @Observable
 public final class WidgetFeaturesModel {
@@ -84,13 +93,23 @@ public final class WidgetFeaturesModel {
     features = store?.load() ?? WidgetFeatures()
   }
 
-  public func isOn(_ feature: WidgetFeature) -> Bool {
-    features.isOn(feature)
-  }
+  public func isOn(_ feature: WidgetFeature) -> Bool { features.isOn(feature) }
+
+  public func isOn(_ experiment: LabExperiment) -> Bool { features.isOn(experiment) }
 
   public func set(_ feature: WidgetFeature, on: Bool) {
     guard features.isOn(feature) != on else { return }
     features.set(feature, on: on)
+    changed()
+  }
+
+  public func set(_ experiment: LabExperiment, on: Bool) {
+    guard features.isOn(experiment) != on else { return }
+    features.set(experiment, on: on)
+    changed()
+  }
+
+  private func changed() {
     try? store?.save(features)
     onChange()
   }

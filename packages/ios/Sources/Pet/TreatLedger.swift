@@ -60,6 +60,23 @@ public struct TreatLedger: Hashable, Sendable {
     return count
   }
 
+  /// As ``streak(today:calendar:)``, except that a day in `paused` does not end the run. It adds
+  /// nothing to the count either: it only lets the run reach back past it.
+  public func streak(today: String, calendar: Calendar, paused: Set<String>) -> Int {
+    var count = 0
+    var day: String? = today
+    if !isShared(today) { day = TreatDay.previous(today, calendar: calendar) }
+    while let current = day {
+      if isShared(current) {
+        count += 1
+      } else if !paused.contains(current) {
+        break
+      }
+      day = TreatDay.previous(current, calendar: calendar)
+    }
+    return count
+  }
+
   private func isShared(_ day: String) -> Bool {
     (days[day] ?? []).count >= 2
   }

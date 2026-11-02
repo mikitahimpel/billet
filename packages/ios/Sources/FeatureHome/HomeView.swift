@@ -2,8 +2,10 @@ import BilletKit
 import CoreGraphics
 import DesignSystem
 import FeatureCanvas
+import FeatureInbox
 import Foundation
 import Ink
+import Labs
 import Pet
 import PetScene
 import SwiftUI
@@ -21,6 +23,7 @@ struct HomeView: View {
   @State private var hangCount = 0
   @State private var petBounce = false
   @State private var showsStatus = true
+  @State private var labsOpen = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -34,6 +37,17 @@ struct HomeView: View {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
+  /// The cat is with the partner: the last note on this device is one it sent.
+  private var catAway: Bool {
+    session.labs.isOn(LabExperiment.overnightStay)
+      && OvernightStay.place(after: session.notes).isAway
+  }
+
+  /// The notes in frames, in the order they were hung.
+  private var framedNotes: [NoteRecord] {
+    session.frames.wall.hung.compactMap { id in session.notes.first { $0.id == id } }
+  }
+
   private var delivery: Int { store.state.pet.world.delivery }
 
   var body: some View {
@@ -45,7 +59,10 @@ struct HomeView: View {
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
-      .task(id: session.play.ledger) { await keepStreakCurrent() }
+      .task(id: StreakInputs(ledger: session.play.ledger, porch: session.porch.light)) {
+        await keepStreakCurrent()
+      }
+      .task { await keepSealedNotesCurrent() }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
@@ -69,7 +86,10 @@ struct HomeView: View {
             prompt: cardPrompt
               ?? DailyPrompt.canvasPrompt(
                 features: widgetFeatures.features, day: TreatDay.key(for: .now, calendar: .current)),
-            onClose: { store.send(.canvasClosed) },
+            onClose: {
+              session.advent.drawingFor = nil
+              store.send(.canvasClosed)
+            },
             onSend: { session.send($0) }
           )
           .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
@@ -82,15 +102,28 @@ struct HomeView: View {
     while !Task.isCancelled {
       let calendar = Calendar.current
       let today = TreatDay.key(for: .now, calendar: calendar)
-      store.send(.pet(.streakChanged(session.play.streak(today: today, calendar: calendar))))
+      store.send(.pet(.streakChanged(session.streak(today: today, calendar: calendar))))
       try? await Task.sleep(for: .seconds(60))
+    }
+  }
+
+  /// Opens sealed notes as their time comes while Home is up.
+  private func keepSealedNotesCurrent() async {
+    while !Task.isCancelled {
+      session.openSealedNotes()
+      try? await Task.sleep(for: .seconds(5))
     }
   }
 
   private var canvasPresented: Binding<Bool> {
     Binding(
       get: { store.state.screen == .canvas },
-      set: { if !$0 { store.send(.canvasClosed) } }
+      set: {
+        if !$0 {
+          session.advent.drawingFor = nil
+          store.send(.canvasClosed)
+        }
+      }
     )
   }
 
@@ -114,7 +147,17 @@ struct HomeView: View {
       }
       .padding(.bottom, Spacing.small)
     }
+    .overlay { nightOverlay }
     .overlay(alignment: .top) { roomStatus }
+  }
+
+  /// Dark over the scene while both lamps are out.
+  @ViewBuilder private var nightOverlay: some View {
+    if session.labs.isOn(LabExperiment.lightsOut) {
+      TimelineView(.everyMinute) { context in
+        NightOverlay(night: session.lamp.night(at: context.date))
+      }
+    }
   }
 
   @ViewBuilder private var petScene: some View {
@@ -134,6 +177,24 @@ struct HomeView: View {
         }
         .overlay { catReactions }
         .overlay {
+          if session.labs.isOn(LabExperiment.seasons) {
+            SeasonOverlay(look: Season.look(on: .now, calendar: .current))
+          }
+        }
+        .overlay(alignment: .topLeading) {
+          if session.labs.isOn(LabExperiment.framedNotes) {
+            FramedWallView(notes: framedNotes)
+          }
+        }
+        .overlay(alignment: .bottomLeading) {
+          if catAway {
+            OvernightStayView()
+              .scaleEffect(0.55, anchor: .bottomLeading)
+              .padding(.leading, Spacing.small)
+              .padding(.bottom, Spacing.small)
+          }
+        }
+        .overlay {
           if let hungImage, let wall = scene.noteWall {
             HungNote(drawing: hungImage, wall: wall)
               .id(hangCount)
@@ -151,16 +212,191 @@ struct HomeView: View {
           .multilineTextAlignment(.center)
           .transition(.opacity)
       }
+      fakePartnerNotice
+      overnightStayNotice
+      catCameBackNotice
       catNaming
       latestReceived
       treatPanel
       promptCards
+      labsDrawer
       BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
         .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
     }
     .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
+    .calmAnimation(value: catAway)
+  }
+
+  /// A TimelineView lets the satchel go away on its own once its twelve hours are up.
+  @ViewBuilder private var catCameBackNotice: some View {
+    if session.labs.isOn(LabExperiment.catCameBack) {
+      TimelineView(.everyMinute) { context in
+        if session.catReturn.isBack(now: context.date) {
+          CatCameBackRow(catName: session.play.catName)
+            .transition(.opacity)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private var lampColourCard: some View {
+    let colours = session.labs.isOn(LabExperiment.lampColours)
+    let goodnight = session.labs.isOn(LabExperiment.lightsOut)
+    if colours || goodnight {
+      LampColourSection(
+        store: session.lamp, catName: session.play.catName, showsColours: colours,
+        showsGoodnight: goodnight
+      ) { session.lampChanged(out: $0) }
+    }
+  }
+
+  /// Every experiment card in one sheet, so the scene keeps its room on Home.
+  private var labsDrawer: some View {
+    Button {
+      labsOpen = true
+    } label: {
+      ListRow("Labs", subtitle: "Cards for the experiments that are on") {
+        EmptyView()
+      } trailing: {
+        RowIcon("chevron.up")
+      }
+    }
+    .buttonStyle(RowButtonStyle())
+    .card()
+    .accessibilityIdentifier("labsDrawer")
+    .sheet(isPresented: $labsOpen) {
+      ZStack(alignment: .topTrailing) {
+        EveningBackground()
+        ScrollView {
+          VStack(spacing: Spacing.small) {
+            Text("Labs")
+              .billetType(.heading)
+              .foregroundStyle(Palette.paper.color)
+              .padding(.top, Spacing.medium)
+            todaysWordCard
+            giftCards
+            adventCard
+            onThisDayCard
+            sundayPostCard
+            sealedNoteCards
+            twoWispsCard
+            lampColourCard
+            theirSkyCard
+            nextVisitCard
+            porchLightCard
+          }
+          .padding(.horizontal, Spacing.medium)
+          .padding(.bottom, Spacing.large)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        IconButton("xmark", label: "Close Labs") { labsOpen = false }
+          .padding(Spacing.medium)
+      }
+      .presentationDetents([.medium, .large])
+      .preferredColorScheme(.dark)
+    }
+  }
+
+  @ViewBuilder private var adventCard: some View {
+    if session.labs.isOn(LabExperiment.advent) {
+      AdventSection(store: session.advent) { number in
+        session.advent.drawingFor = number
+        store.send(.canvasOpened)
+      }
+    }
+  }
+
+  @ViewBuilder private var giftCards: some View {
+    if session.labs.isOn(LabExperiment.wrappedDelivery) {
+      GiftSection(
+        gifts: session.gifts, shop: session.shop, catName: session.play.catName,
+        onWrap: { session.wrap($0) }, onUnwrap: { session.unwrapGift($0) })
+    }
+  }
+
+  @ViewBuilder private var onThisDayCard: some View {
+    if session.labs.isOn(LabExperiment.onThisDay) {
+      OnThisDaySection(notes: session.notes, catName: session.play.catName)
+    }
+  }
+
+  @ViewBuilder private var nextVisitCard: some View {
+    if session.labs.isOn(LabExperiment.nextVisit) {
+      NextVisitSection(store: session.visit)
+    }
+  }
+
+  @ViewBuilder private var theirSkyCard: some View {
+    if session.labs.isOn(LabExperiment.theirSky) {
+      TheirSkySection(store: session.lamp)
+    }
+  }
+
+  @ViewBuilder private var porchLightCard: some View {
+    if session.labs.isOn(LabExperiment.porchLight) {
+      PorchLightSection(store: session.porch)
+    }
+  }
+
+  @ViewBuilder private var twoWispsCard: some View {
+    if session.labs.isOn(LabExperiment.twoWisps) {
+      TwoWispsSection(hold: session.hold, catName: session.play.catName) {
+        session.holdChanged($0)
+      }
+    }
+  }
+
+  @ViewBuilder private var sealedNoteCards: some View {
+    if session.labs.isOn(LabExperiment.sealedNote) {
+      SealedNoteSection(store: session.sealed, catName: session.play.catName)
+    }
+  }
+
+  @ViewBuilder private var sundayPostCard: some View {
+    if session.labs.isOn(LabExperiment.sundayPost) {
+      SundayPostSection(notes: session.notes, catName: session.play.catName)
+    }
+  }
+
+  @ViewBuilder private var todaysWordCard: some View {
+    if session.labs.isOn(LabExperiment.todaysWord) {
+      TodaysWordSection(notes: session.notes) { store.send(.canvasOpened) }
+    }
+  }
+
+  @ViewBuilder private var overnightStayNotice: some View {
+    if catAway {
+      let name = session.play.catName
+      ListRow(
+        OvernightStayCaption.title(catName: name),
+        subtitle: OvernightStayCaption.detail(catName: name)
+      ) {
+        EmptyView()
+      } trailing: {
+        EmptyView()
+      }
+      .card()
+      .transition(.opacity)
+      .accessibilityIdentifier("overnightStayNotice")
+    }
+  }
+
+  /// Said plainly, so nobody takes the scripted replies for a person.
+  @ViewBuilder private var fakePartnerNotice: some View {
+    if session.isFakePartner {
+      Text("Fake partner: the replies are scripted and stay on this phone.")
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, Spacing.medium)
+        .padding(.vertical, Spacing.small)
+        .frame(minHeight: Target.minimum)
+        .card()
+        .accessibilityIdentifier("fakePartnerNotice")
+    }
   }
 
   /// A way to answer the newest note the partner sent.
@@ -247,11 +483,12 @@ struct HomeView: View {
     let day = TreatDay.key(for: today, calendar: calendar)
     return PetPlayState(
       treat: PetPlayState.Treat(session.play.status(on: day)),
-      streak: session.play.streak(today: day, calendar: calendar),
+      streak: session.streak(today: day, calendar: calendar),
       petsReceived: session.play.petsReceived,
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
-      lastTreat: session.shop.state.lastTreat
+      lastTreat: session.shop.state.lastTreat,
+      catAway: catAway
     )
   }
 
@@ -274,7 +511,7 @@ struct HomeView: View {
       let day = TreatDay.key(for: context.date, calendar: calendar)
       TreatPanel(
         status: session.play.status(on: day),
-        streak: session.play.streak(today: day, calendar: calendar),
+        streak: session.streak(today: day, calendar: calendar),
         onGive: { session.giveTreat(on: day) }
       )
     }
@@ -302,7 +539,7 @@ struct HomeView: View {
         .fill(statusLight.color)
         .frame(width: Spacing.small, height: Spacing.small)
         .accessibilityHidden(true)
-      Text(line.text)
+      Text(session.isFakePartner ? "Fake partner · \(line.text)" : line.text)
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)
@@ -357,4 +594,10 @@ extension PetPlayState.Treat {
     case .fed: self = .fed
     }
   }
+}
+
+/// What the streak is worked out from, so it is worked out again when either changes.
+private struct StreakInputs: Equatable {
+  let ledger: TreatLedger
+  let porch: PorchLight?
 }

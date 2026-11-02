@@ -28,13 +28,14 @@ public struct DemoRootView: View {
     _selectedSceneID = selectedSceneID
     // Without the bundled faces SwiftUI falls back to the system font, which still reads fine.
     try? BilletFonts.register()
-    _widgetFeatures = State(
-      initialValue: WidgetFeaturesModel(store: .appGroup()) {
-        WidgetCenter.shared.reloadAllTimelines()
-        #if os(iOS)
-          ControlCenter.shared.reloadAllControls()
-        #endif
-      })
+    // Widget features and lab experiments share one file, so they share the one model that saves it.
+    let features = WidgetFeaturesModel(store: .appGroup()) {
+      WidgetCenter.shared.reloadAllTimelines()
+      #if os(iOS)
+        ControlCenter.shared.reloadAllControls()
+      #endif
+    }
+    _widgetFeatures = State(initialValue: features)
     _model = State(
       initialValue: AppModel(
         dependencies: AppModel.Dependencies(
@@ -47,7 +48,9 @@ public struct DemoRootView: View {
             WidgetSnapshotStore.appGroup()?.remove()
             WidgetCenter.shared.reloadAllTimelines()
           },
-          pairingTimeout: Self.pairingTimeout
+          pairingTimeout: Self.pairingTimeout,
+          labs: features,
+          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
   }
 
@@ -56,6 +59,9 @@ public struct DemoRootView: View {
       .preferredColorScheme(.dark)
       .tint(Palette.gold.color)
       .calmAnimation(value: model.isPaired)
+      .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
+        model.fakePartnerSwitched(on: on)
+      }
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
           model.session?.connect()
@@ -66,12 +72,18 @@ public struct DemoRootView: View {
   }
 
   @ViewBuilder private var content: some View {
-    if host.isEmpty {
+    if host.isEmpty, !model.isFakePartner {
       ZStack {
         EveningBackground()
-        Text("This build has no demo host.")
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
+        VStack(spacing: Spacing.medium) {
+          Text("This build has no demo host.")
+            .billetType(.body)
+            .foregroundStyle(Palette.paper.color)
+          BilletButton("Try alone with a fake partner", rank: .secondary) {
+            model.labs.set(LabExperiment.fakePartner, on: true)
+          }
+        }
+        .padding(.horizontal, Spacing.medium)
       }
     } else {
       switch model.stage {
@@ -84,11 +96,16 @@ public struct DemoRootView: View {
           selectedSceneID: $selectedSceneID,
           widgetFeatures: widgetFeatures,
           publisher: publisher,
+          labs: model.labs,
           onChangeCode: { model.changeCode() },
           onLogOut: { await model.logOut() }
         )
       }
     }
+  }
+
+  private static var fakeNotesDirectory: URL {
+    URL.applicationSupportDirectory.appending(path: "FakePartnerNotes", directoryHint: .isDirectory)
   }
 
   private static var notesDirectory: URL {

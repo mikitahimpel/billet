@@ -106,6 +106,28 @@ public struct ShopState: Codable, Hashable, Sendable {
     return .applied
   }
 
+  /// Takes `item` out of the closet to give it away. Only a piece or a treat can be given: a
+  /// material is painted on, not wrapped.
+  public mutating func give(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome
+  {
+    guard !applied.contains(transaction) else { return .duplicate }
+    guard !item.ownsAtMostOne else { throw .wrongKind }
+    try closet.take(item.id)
+    applied.insert(transaction)
+    return .applied
+  }
+
+  /// Puts a gifted `item` into the closet, without a price.
+  public mutating func receive(_ item: ShopItem, transaction: String) throws(ShopError)
+    -> ShopOutcome
+  {
+    guard !applied.contains(transaction) else { return .duplicate }
+    guard !item.ownsAtMostOne else { throw .wrongKind }
+    closet.add(item.id)
+    applied.insert(transaction)
+    return .applied
+  }
+
   /// Whether the pair has `item`, in the closet or, for a material, painted on a surface.
   public func owns(_ item: ShopItem) -> Bool {
     closet.count(of: item.id) > 0 || layout.wall == item.id || layout.floor == item.id

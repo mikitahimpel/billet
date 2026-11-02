@@ -3,6 +3,7 @@ import Delivery
 import DesignSystem
 import FeatureInbox
 import Foundation
+import Labs
 import Observation
 import Persistence
 import Pet
@@ -21,6 +22,24 @@ final class PairSession {
   let shop: ShopStore
   let renovator: RoomRenovator
   let trips: CatTripController
+  /// True when the partner is the scripted one from Labs.
+  let isFakePartner: Bool
+  /// The lab switches. Each experiment checks its own.
+  let labs: WidgetFeaturesModel
+  /// The notes hung in frames, for the "framed notes" experiment.
+  let frames: FramedNotes
+  /// Notes held back until a set time, for the "sealed note" experiment.
+  let sealed: SealedBoxStore
+  /// The porch light, for the experiment that lets the streak wait.
+  let porch: PorchLightStore
+  /// The lamp colours, for the experiment that shares how today feels.
+  let lamp: LampStore
+  /// The day of the next visit, for the suitcase by the door.
+  let visit: NextVisitStore
+  /// Wrapped gifts on and off the doormat.
+  let gifts: GiftBoxStore
+  /// The advent calendar's doors.
+  let advent: AdventStore
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -30,6 +49,10 @@ final class PairSession {
   /// Counts up each time the partner reacts to a note this device sent, and holds that reaction.
   private(set) var reactionsSeen = 0
   private(set) var lastReaction: Reaction?
+  /// The cat's trip with the last note this device sent, for the "cat came back" experiment.
+  private(set) var catReturn = CatReturn()
+  /// Both fingers on the cat, for the "two wisps" experiment.
+  private(set) var hold = TogetherHold()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
 
@@ -48,8 +71,21 @@ final class PairSession {
     archive: NoteArchive,
     shop: ShopStore,
     now: @escaping @Sendable () -> Date = { .now },
-    trips: CatTripController = .live()
+    trips: CatTripController = .live(),
+    isFakePartner: Bool = false,
+    labs: WidgetFeaturesModel = WidgetFeaturesModel(store: nil)
   ) {
+    self.isFakePartner = isFakePartner
+    self.labs = labs
+    frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
+    advent = AdventStore(
+      year: Calendar.current.component(.year, from: .now),
+      key: isFakePartner ? "labs.advent.fake" : "labs.advent")
+    gifts = GiftBoxStore(key: isFakePartner ? "labs.giftBox.fake" : "labs.giftBox")
+    visit = NextVisitStore(key: isFakePartner ? "labs.nextVisit.fake" : "labs.nextVisit")
+    lamp = LampStore(key: isFakePartner ? "labs.lampColour.fake" : "labs.lampColour")
+    porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
+    sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
     self.room = room
     self.delivery = delivery
     self.archive = archive
@@ -92,6 +128,7 @@ final class PairSession {
       notes = (notes.filter { !storedIDs.contains($0.id) } + stored)
         .sorted { $0.date > $1.date }
       notesFailedToLoad = false
+      frames.prune(keeping: notes)
     } catch {
       notesFailedToLoad = true
     }
@@ -104,7 +141,70 @@ final class PairSession {
 
   func send(_ strokes: [Stroke]) {
     let id = UUID()
+    if labs.isOn(LabExperiment.advent), let door = advent.finishDrawing(strokes) {
+      store.send(.canvasClosed)
+      Task { [delivery] in await delivery.signal(.adventDoor(number: door, strokes: strokes)) }
+      return
+    }
+    if labs.isOn(LabExperiment.sealedNote), sealed.sealNext {
+      sealed.sealNext = false
+      let opens = SealedBox.tomorrowMorning(after: now(), calendar: .current)
+      sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opens, direction: .outgoing))
+      store.send(.canvasClosed)
+      return
+    }
+    dispatch(strokes, id: id)
+  }
+
+  /// Opens the sealed notes whose time has come: this phone's go to the partner, the partner's
+  /// are carried in by the cat.
+  func openSealedNotes() {
+    for note in sealed.release(at: now()) {
+      switch note.direction {
+      case .outgoing: dispatch(note.strokes, id: note.id)
+      case .incoming:
+        store.send(.noteReceived(note.strokes))
+        keep(note.strokes, .received, id: note.id)
+      }
+    }
+  }
+
+  /// The shared streak on `day`, counting through the nights the porch light covers.
+  func streak(today day: String, calendar: Calendar) -> Int {
+    let paused =
+      labs.isOn(LabExperiment.porchLight) ? porch.covered(now: now(), calendar: calendar) : []
+    return play.ledger.streak(today: day, calendar: calendar, paused: paused)
+  }
+
+  /// This phone's lamp went out or came back on. The partner is told through `signal`, which the
+  /// real room ignores.
+  func lampChanged(out: Bool) {
+    Task { [delivery] in await delivery.signal(.lamp(on: !out)) }
+  }
+
+  /// Wraps `item` from the closet for the partner's doormat.
+  func wrap(_ item: ShopItem) {
+    guard (try? shop.give(item, transaction: shop.newTransaction())) != nil else { return }
+    let gift = Gift(itemID: item.id, direction: .outgoing)
+    gifts.add(gift)
+    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id)) }
+  }
+
+  /// Opens a wrapped gift: the item goes into the closet.
+  func unwrapGift(_ id: UUID) {
+    guard let itemID = gifts.unwrap(id), let item = shop.catalog.item(itemID) else { return }
+    _ = try? shop.receive(item, transaction: "gift-\(id.uuidString)")
+    Task { [delivery] in await delivery.signal(.giftOpened(id: id)) }
+  }
+
+  /// This phone's finger went down on the cat, or came up.
+  func holdChanged(_ holding: Bool) {
+    hold.iHold(holding, at: now())
+  }
+
+  private func dispatch(_ strokes: [Stroke], id: UUID) {
     store.send(.drawingSent(strokes, id: id))
+    catReturn.sent(id)
     keep(strokes, .sent, id: id)
   }
 
@@ -236,6 +336,20 @@ final class PairSession {
         lastReaction = reaction
         reactionsSeen += 1
       }
+    case .sealedNote(let strokes, let id, let opensAt):
+      sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
+    case .adventDoor(let number, let strokes):
+      advent.partnerFilled(number, strokes: strokes)
+    case .gift(let id, let item):
+      gifts.add(Gift(id: id, itemID: item, direction: .incoming))
+    case .giftOpened(let id):
+      gifts.partnerOpened(id)
+    case .partnerGlow(let glow):
+      lamp.partnerGlows(glow)
+    case .partnerHolding(let holding):
+      hold.partnerHolds(holding, at: now())
+    case .noteOpened(let id):
+      catReturn.opened(id, at: now())
     case .partnerPetted:
       play.petReceived()
     case .treats(let days):

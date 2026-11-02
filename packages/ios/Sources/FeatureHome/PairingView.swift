@@ -1,6 +1,7 @@
 import Delivery
 import DesignSystem
 import SwiftUI
+import WidgetBridge
 
 /// First launch: a welcome, then create a pair or enter the partner's code.
 struct PairingView: View {
@@ -91,6 +92,9 @@ struct PairingView: View {
     case .welcome:
       BilletButton("Create pair", rank: .primary) { model.createPair() }
       BilletButton("Enter code", rank: .secondary) { step = .enterCode }
+      BilletButton("Try alone with a fake partner", rank: .secondary) {
+        model.labs.set(LabExperiment.fakePartner, on: true)
+      }
     case .enterCode:
       BilletButton("Join", rank: .primary) { model.join(code: typedCode) }
         .disabled(typedCode.isEmpty)

@@ -31,7 +31,7 @@ targets:
     sources: [App]
     dependencies:
       - package: Billet
-        products: [FeatureHome, Persistence, PetSceneCatalog, WidgetBridge]
+        products: [FeatureHome, Ink, Labs, Persistence, PetSceneCatalog, WidgetBridge]
       - package: PetSceneRive
       - package: PetSceneReality
       - target: BilletWidget
@@ -59,7 +59,7 @@ targets:
     sources: [Widget]
     dependencies:
       - package: Billet
-        products: [DesignSystem, Persistence, Pet, Surfaces, WidgetBridge]
+        products: [DesignSystem, Ink, Persistence, Pet, Surfaces, WidgetBridge]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:

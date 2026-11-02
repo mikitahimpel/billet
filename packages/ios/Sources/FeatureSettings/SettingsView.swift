@@ -15,7 +15,8 @@ public struct SettingsView: View {
     string: "https://github.com/mikitahimpel/billet/blob/main/docs/privacy.md")
   private static let feedback = URL(string: "mailto:gimpelllll@gmail.com?subject=billet%20feedback")
 
-  private let code: String
+  private let code: String?
+  private let labs: WidgetFeaturesModel?
   private let partnerStatus: String
   private let catName: String?
   private let scenes: [any PetScene]
@@ -32,7 +33,8 @@ public struct SettingsView: View {
 
   /// - Parameter onLogOut: Logs out and returns a message to show if that failed.
   public init(
-    code: String,
+    code: String?,
+    labs: WidgetFeaturesModel? = nil,
     partnerStatus: String,
     catName: String? = nil,
     scenes: [any PetScene],
@@ -41,6 +43,7 @@ public struct SettingsView: View {
     onLogOut: @escaping () async -> String?
   ) {
     self.code = code
+    self.labs = labs
     self.partnerStatus = partnerStatus
     self.catName = catName
     self.scenes = scenes
@@ -58,6 +61,9 @@ public struct SettingsView: View {
       notificationSection
       if let widgetFeatures {
         widgetSection(widgetFeatures)
+      }
+      if let labs {
+        labSection(labs)
       }
       links
       logOut
@@ -83,7 +89,9 @@ public struct SettingsView: View {
         ListDivider()
         SettingsRow("Cat", value: catName ?? "Not named yet")
       }
-      PairCodeCard(code: code)
+      if let code {
+        PairCodeCard(code: code)
+      }
     }
   }
 
@@ -129,6 +137,31 @@ public struct SettingsView: View {
                 feature.title, subtitle: feature.detail,
                 isOn: Binding(
                   get: { model.isOn(feature) }, set: { model.set(feature, on: $0) }))
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /// One switch per experiment, grouped by what it is for.
+  private func labSection(_ model: WidgetFeaturesModel) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.medium) {
+      SettingsHeading("Labs")
+      ForEach(LabExperiment.Group.allCases, id: \.self) { group in
+        VStack(alignment: .leading, spacing: Spacing.small) {
+          Text(group.title)
+            .billetType(.caption)
+            .foregroundStyle(Palette.muted.color)
+            .padding(.horizontal, Spacing.medium)
+          SettingsGroup {
+            let experiments = LabExperiment.allCases.filter { $0.group == group }
+            ForEach(experiments, id: \.self) { experiment in
+              if experiment != experiments.first { ListDivider() }
+              ToggleRow(
+                experiment.title, subtitle: experiment.detail,
+                isOn: Binding(
+                  get: { model.isOn(experiment) }, set: { model.set(experiment, on: $0) }))
             }
           }
         }

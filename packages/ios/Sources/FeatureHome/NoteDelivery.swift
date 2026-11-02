@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import Labs
 import Pet
 import Wire
 
@@ -24,6 +25,24 @@ public struct NoteDelivery: Sendable {
     case catName(String)
     /// The room's table of reactions: note to the reaction its receiver sent.
     case reactions([UUID: Reaction])
+    /// The partner opened a note this device sent. Only the fake partner says this for now: the
+    /// room has no frame for it.
+    case noteOpened(UUID)
+    /// A note from the partner that stays closed until `opensAt`. Only the fake partner sends
+    /// these for now: the room has no frame for them.
+    case sealedNote([Stroke], id: UUID, opensAt: Date)
+    /// The partner put a finger on the cat, or lifted it. Only the fake partner says this for
+    /// now: the room has no realtime frame for it.
+    case partnerHolding(Bool)
+    /// The colour of the partner's lamp. Only the fake partner says this for now: the room has no
+    /// frame for it.
+    case partnerGlow(PartnerGlow)
+    /// A wrapped gift on this phone's doormat. Only the fake partner sends these for now.
+    case gift(id: UUID, item: String)
+    /// The partner unwrapped a gift this phone sent.
+    case giftOpened(UUID)
+    /// The partner drew behind advent door `number` for this phone. Only the fake partner does.
+    case adventDoor(Int, [Stroke])
   }
 
   /// This device's ID, to tell its own treats from the partner's.
@@ -36,6 +55,9 @@ public struct NoteDelivery: Sendable {
   public var nameCat: @Sendable (String) async -> Void
   /// Sends a reaction to a note the partner sent.
   public var react: @Sendable (_ note: UUID, Reaction) async -> Void
+  /// Tells the partner something an experiment needs and the room has no frame for. Left as it is,
+  /// it sends nothing.
+  public var signal: @Sendable (LabSignal) async -> Void
   /// Holds the connection open for as long as the stream is being read.
   public var updates: @Sendable () -> AsyncStream<Update>
   public var pushTokenChanged: @Sendable () async -> Void
@@ -46,6 +68,7 @@ public struct NoteDelivery: Sendable {
     play: @escaping @Sendable (PlayKind, String) async -> Void = { _, _ in },
     nameCat: @escaping @Sendable (String) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
+    signal: @escaping @Sendable (LabSignal) async -> Void = { _ in },
     updates: @escaping @Sendable () -> AsyncStream<Update> = { AsyncStream { $0.finish() } },
     pushTokenChanged: @escaping @Sendable () async -> Void = {}
   ) {
@@ -53,6 +76,7 @@ public struct NoteDelivery: Sendable {
     self.play = play
     self.nameCat = nameCat
     self.react = react
+    self.signal = signal
     self.deliver = deliver
     self.updates = updates
     self.pushTokenChanged = pushTokenChanged
