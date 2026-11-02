@@ -108,9 +108,6 @@ final class NookiDiorama {
   private var shownLightsLevel: Float = 1
   /// How far the note has grown in, from hidden at 0. Only an opening lowers it.
   private var noteReveal: Float = 1
-  private var wakeStart: Double?
-  /// How long the current look lasts, when it is not the usual glance.
-  private var lookHold: Double?
   private var dayLight: PetSceneDayLight?
   var fillsView = false {
     didSet { if fillsView != oldValue { fit(to: fittedSize) } }
@@ -131,8 +128,6 @@ final class NookiDiorama {
   private static let ambientExponent: Float = 0.6
   /// How much darker than usual the ambient light is with the room's lights all the way down.
   private static let darkAmbientShift: Float = -3
-  /// How long Mochi keeps looking at the camera.
-  private static let cameraLookLength = 2.6
 
   // Mochi lies in the bed in the middle of the rug, and hops to a spot under the wire.
   fileprivate static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
@@ -555,9 +550,7 @@ final class NookiDiorama {
   private func settleFlight() {
     lightsLevel = 1
     noteReveal = 1
-    wakeStart = reduceMotion ? nil : clock
-    look(at: camera.position)
-    lookHold = Self.cameraLookLength
+    cue(.lookAtCamera)
   }
 
   private func stepFlight() {
@@ -578,26 +571,17 @@ final class NookiDiorama {
     onOpeningEnded?()
   }
 
-  /// Plays a cue for the cat with its own clips.
+  /// Plays a cue with the cat's own clips. Looking at the camera lets go of any finger, so the
+  /// head turns to the lens.
   func cue(_ cue: CatCue) {
-    switch cue {
-    case .wakeUp:
-      wakeStart = clock
-    case .lookAtCamera:
-      look(at: camera.position)
-      lookHold = Self.cameraLookLength
-    }
+    behaviour.cue(cue, at: clock)
+    if cue == .lookAtCamera { gazePoint = nil }
   }
 
-  /// Turns Mochi towards the floor under a finger at `point`, in a view of `size` points.
+  /// Turns the cat's head to follow a finger at `point`, in a view of `size` points.
   func gaze(at point: CGPoint?, in size: SIMD2<Float>) {
-    guard let point, !reduceMotion else { return }
-    let floor = NookiFloorRay.floorPoint(
-      under: SIMD2(Float(point.x), Float(point.y)), viewSize: size, camera: camera.position,
-      target: NookiCamera.target, verticalFieldOfView: Self.fieldOfView)
-    guard let floor else { return }
-    look(at: SIMD3(floor.x, 0.1, floor.y))
-    lookHold = 0.6
+    guard let point else { return }
+    followFinger(at: SIMD2(Float(point.x), Float(point.y)), in: size)
   }
 
   /// Lights the room for the hour, and shows the partner's sky in the window. `nil` puts back
@@ -618,9 +602,17 @@ final class NookiDiorama {
     windowPane?.model?.materials = [windowGlass]
   }
 
+  /// The diorama has a lamp and a lantern of its own, so its night goes darker than the shared
+  /// look and leaves them to light the room.
+  static func ambientShift(_ look: RoomDayLook, phase: DayLight.Phase) -> Float {
+    phase == .night ? look.ambientShift + nightDarkening : look.ambientShift
+  }
+
+  private static let nightDarkening: Float = -1
+
   private func applyAmbient() {
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
-    let day = dayLight.map { RoomDayLook($0.here).ambientShift } ?? 0
+    let day = dayLight.map { Self.ambientShift(RoomDayLook($0.here), phase: $0.here.phase) } ?? 0
     let exponent = Self.ambientExponent + day + Self.darkAmbientShift * (1 - lightsLevel)
     guard ambient.intensityExponent != exponent else { return }
     ambient.intensityExponent = exponent
@@ -667,7 +659,7 @@ final class NookiDiorama {
       || yarnPlay.isPlaying
       || ballSpeed > NookiYarnPlay.noticeSpeed / 2 || world.activity != .sleeping || petStart != nil
       || !wobbles.isEmpty
-      || lookStart != nil || lookTurn != 0 || opening != nil || wakeStart != nil
+      || lookStart != nil || lookTurn != 0 || opening != nil
       || noteOpening != (noteIsOpen ? 1 : 0) || light != (world.partnerHere ? 1 : 0)
   }
 
@@ -684,11 +676,6 @@ final class NookiDiorama {
       let since = clock - petStart
       frame = frame.combined(with: NookiMotion.pet(since, reduceMotion: reduceMotion))
       if since >= NookiMotion.petLength { self.petStart = nil }
-    }
-    if let wakeStart {
-      let since = clock - wakeStart
-      frame = frame.combined(with: NookiMotion.wake(since, reduceMotion: reduceMotion))
-      if since >= NookiMotion.wakeLength { self.wakeStart = nil }
     }
     var awaySpot: SIMD3<Float>?
     if yarnPlay.isPlaying {
@@ -708,9 +695,8 @@ final class NookiDiorama {
   }
 
   private func applyBody(_ frame: NookiFrame, awaySpot: SIMD3<Float>?, delta: Float) {
-    if let lookStart, clock - lookStart >= lookHold ?? NookiMotion.lookLength {
+    if let lookStart, clock - lookStart >= NookiMotion.lookLength {
       self.lookStart = nil
-      lookHold = nil
     }
     let goal = lookStart == nil ? 0 : lookGoal
     lookTurn = Self.eased(lookTurn, to: goal, rate: 7, delta: delta, snap: reduceMotion)

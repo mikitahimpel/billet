@@ -65,24 +65,6 @@ struct GenzCamera: Equatable {
     self.lean = lean
   }
 
-  /// Where the line of sight through `point` of a view of `size` meets the level `height`, or
-  /// `nil` when it never comes down to it.
-  func point(under point: CGPoint, in size: CGSize, height: Float) -> SIMD3<Float>? {
-    guard size.width > 0, size.height > 0 else { return nil }
-    let eye = position
-    let forward = simd_normalize(home.target - eye)
-    let right = simd_normalize(simd_cross(forward, [0, 1, 0]))
-    let up = simd_cross(right, forward)
-    let halfHeight = tan(home.fieldOfView * .pi / 360)
-    let aspect = Float(size.width / size.height)
-    let x = Float(point.x / size.width) * 2 - 1
-    let y = 1 - Float(point.y / size.height) * 2
-    let ray = forward + right * (x * halfHeight * aspect) + up * (y * halfHeight)
-    guard abs(ray.y) > 0.0001 else { return nil }
-    let distance = (height - eye.y) / ray.y
-    return distance > 0 ? eye + ray * distance : nil
-  }
-
   var isAtRest: Bool {
     !isHeld && !isReturningHome && yawVelocity == 0 && pitchVelocity == 0
   }

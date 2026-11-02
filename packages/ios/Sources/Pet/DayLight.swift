@@ -48,6 +48,17 @@ public struct DayLight: Hashable, Sendable {
       lampOn: phase == .night || phase == .goldenHour)
   }
 
+  /// `date` moved by whole hours so that in `zone` it reads `hour`, minutes kept, or `date` as
+  /// it is when `hour` is `nil`. Moving the date rather than the hour keeps every other time zone
+  /// in step, so the partner's sky moves with it.
+  public static func pretending(_ date: Date, hour: Int?, in zone: TimeZone) -> Date {
+    guard let hour else { return date }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    let now = calendar.component(.hour, from: date)
+    return date.addingTimeInterval(Double(hour - now) * 3600)
+  }
+
   /// The light at `date` in `zone`.
   public static func at(_ date: Date, in zone: TimeZone) -> DayLight {
     var calendar = Calendar(identifier: .gregorian)

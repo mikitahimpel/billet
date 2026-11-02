@@ -26,21 +26,40 @@ Home falls back to Classic at accessibility type sizes and while the room is bei
   both `NookiDiorama` and `GenzRoom`.
 - `FeatureHome/FullBleedHome.swift`: the full-bleed layout, gestures, opening and panel.
 
+## Fake partner
+
+With the fake partner, the full-bleed variants keep the room clear: a small amber dot sits beside
+the handle, and the pulled-up panel says what it means ("Fake partner: scripted replies, on this
+phone only"). Classic keeps its caption.
+
+## Trying the hours
+
+With Night and day chosen, Labs → Home shows **Pretend hour** (the clock, 07:00, 13:00, 19:00,
+23:00). It moves the date by whole hours (`DayLight.pretending`), so the partner's sky moves with
+it. Saved as `pretend-hour.json` beside the variant.
+
+The diorama goes darker at night than the shared look, so its lamp and lantern light the room.
+The styled rooms are made for the evening, so daylight only adds to their own light. The
+partner's lit sky glows down from the top of the backdrop.
+
 ## Hooks for the cat
 
-The cat's own animation is not built here. Two moments are cues, sent by whatever schedules the
-cat and played by the scene with the cat's clips:
+Two moments are cues, sent by whatever schedules the cat and played with the cat's clips through
+`CatBehaviour.cue(_:at:)`, so every model in Labs → Cat plays them with what it has:
 
-- `CatCue.wakeUp`: opens its eyes and gets up for a few seconds.
-- `CatCue.lookAtCamera`: turns to face the camera.
+- `CatCue.wakeUp`: stretches (or yawns, or perks) and stays up a while.
+- `CatCue.lookAtCamera`: rests where the head may turn and holds the viewer's eye for
+  `CatBehaviour.viewerLook` seconds; a cat still waking looks once it is done. Any finger the head
+  was following is let go.
 
 `HomeView` owns a `CatDirector`; anything with access to it calls `director.send(.wakeUp)`, and
 the newest request reaches the scene as `petSceneCatCue`. The opening sends the same cues on its
-own timeline (`FlyInTimeline.wake`, `FlyInTimeline.look`).
+own timeline: wake at `FlyInTimeline.wake` (0.9 s), look at `FlyInTimeline.look` (3 s), so a
+three-second stretch is done before the note grows in at 3.9 s. Living window's finger turns the
+head through the rig, not the body.
 
 ## Limits
 
 - The Simulator has no motion sensor, so tilt in Living window is only seen on a device.
-- The Nooki cat turns its whole body to look: no clip turns the head alone.
-- Night and day follows the real clock; the night look is only seen at night or in tests.
 - The opening waits for the room to load, so on a cold start it begins about 3 s after launch.
+- Switching between the two styled rooms can take over 10 s on the Simulator.

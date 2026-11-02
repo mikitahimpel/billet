@@ -109,6 +109,19 @@ public struct WidgetFeaturesStore: Sendable {
   public func saveHomeVariant(_ variant: HomeVariant) throws(PersistenceError) {
     try storage.writeJSON(variant, named: Self.homeVariantFileName)
   }
+
+  public static let pretendHourFileName = "pretend-hour.json"
+
+  /// The hour Home pretends it is, for trying the light of the day, or `nil` for the real clock.
+  public func loadPretendHour() -> Int? {
+    // The real clock is saved as -1, which no hour matches.
+    let hour = (try? storage.readJSON(Int.self, named: Self.pretendHourFileName)) ?? nil
+    return hour.flatMap { (0..<24).contains($0) ? $0 : nil }
+  }
+
+  public func savePretendHour(_ hour: Int?) throws(PersistenceError) {
+    try storage.writeJSON(hour ?? -1, named: Self.pretendHourFileName)
+  }
 }
 
 /// The flags the settings screen edits, widget features and lab experiments alike. Each change is
@@ -123,6 +136,8 @@ public final class WidgetFeaturesModel {
   public private(set) var cat: CatChoice
   /// How Home is laid out around the room. Kept beside the flags, in its own file.
   public private(set) var homeVariant: HomeVariant
+  /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
+  public private(set) var pretendHour: Int?
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -134,6 +149,14 @@ public final class WidgetFeaturesModel {
     roomStyle = store?.loadRoomStyle() ?? .standard
     cat = store?.loadCat() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
+    pretendHour = store?.loadPretendHour()
+  }
+
+  public func setPretendHour(_ hour: Int?) {
+    let hour = hour.flatMap { (0..<24).contains($0) ? $0 : nil }
+    guard pretendHour != hour else { return }
+    pretendHour = hour
+    try? store?.savePretendHour(hour)
   }
 
   public func setHomeVariant(_ variant: HomeVariant) {
