@@ -83,18 +83,22 @@ import Testing
     }
   }
 
-  /// The detailed tabby swaps its whole painted texture for a coat, eyes included, and keeps its
-  /// own for the coat it was made with.
-  @MainActor @Test func detailedTabbyWearsItsGreyWhiteTexture() async throws {
-    #expect(CatCatalog.palette(.detailed, coat: .natural) == nil)
-    #expect(CatCatalog.palette(.detailed, coat: .black) == nil)
-    let grey = try #require(CatCatalog.palette(.detailed, coat: .greyWhite))
-    #expect(grey.width == 1024)
-    let cat = try #require(await NookiAssets.compiledCat(.detailed))
-    let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(.detailed)))
-    #expect(rig.paint(grey) >= 2, "fur and eyes both take the coat")
+  /// Each detailed cat swaps its whole painted texture for a coat, eyes included, keeps its own for
+  /// the coat it was made with, and plays every action.
+  @MainActor @Test(arguments: [CatModel.detailed, .detailedKitten, .detailedFluffy])
+  func detailedCatsWearTheirCoatTextures(model: CatModel) async throws {
+    #expect(model.paintsCoatTextures)
+    #expect(CatCatalog.palette(model, coat: .natural) == nil)
+    #expect(CatCatalog.palette(model, coat: .cream) == nil)
+    let cat = try #require(await NookiAssets.compiledCat(model))
+    let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)))
+    for coat in model.coats where coat != .natural {
+      let texture = try #require(CatCatalog.palette(model, coat: coat), "\(model) \(coat)")
+      #expect(texture.width == 1024)
+      #expect(rig.paint(texture) >= 2, "\(model) \(coat): fur and eyes both take the coat")
+    }
     for action in CatAction.allCases {
-      #expect(rig.info[action] != nil, "\(action)")
+      #expect(rig.info[action] != nil, "\(model) \(action)")
     }
   }
 

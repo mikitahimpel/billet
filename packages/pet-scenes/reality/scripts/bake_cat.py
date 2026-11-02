@@ -34,10 +34,11 @@ CATS = RESOURCES / "Cats"
 SHOWN = {"mochi_color.png": 768, "mochi_normal.png": 512}
 STAND_IN = {"mochi_color.png": 256, "mochi_normal.png": 256}
 
-# A compiled cat over this many bytes is a sign something came in unreduced. The detailed tabby
-# carries a 1024 px albedo and a normal map, so it is allowed a little more.
+# A compiled cat over this many bytes is a sign something came in unreduced. The detailed cats
+# carry a 1024 px albedo and a normal map, and the kitten and fluffy one fur cards too, so they
+# are allowed more.
 LARGEST_CAT = 2_500_000
-LARGEST = {"detailed": 3_000_000}
+LARGEST = {"detailed": 3_000_000, "detailedKitten": 3_400_000, "detailedFluffy": 3_600_000}
 
 
 def package(sizes: dict[str, int], work: Path, output: Path) -> None:
