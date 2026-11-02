@@ -54,14 +54,26 @@ struct GenzLayout {
   var lamp: (at: GenzRoomPoint, aim: GenzRoomPoint)
   var lampColour: GenzColour
   var shell: @MainActor (GenzKit) -> [Entity]
+  /// The set of furniture in the room.
+  var furniture = RoomFurniture.original
 
-  static func of(_ style: RoomStyle) -> GenzLayout? {
+  /// What tells one room from another: its style and its furniture.
+  struct Key: Hashable {
+    var style: RoomStyle
+    var furniture: RoomFurniture
+  }
+
+  var key: Key { Key(style: style, furniture: furniture) }
+
+  static func of(_ style: RoomStyle, furniture: RoomFurniture = .original) -> GenzLayout? {
     switch style {
     case .nooki: nil
-    case .sunsetLamp: sunsetLamp
-    case .windowSeat: windowSeat
+    case .sunsetLamp: sunsetLamp.furnished(furniture)
+    case .windowSeat: windowSeat.furnished(furniture)
     }
   }
+
+  static func of(_ key: Key) -> GenzLayout? { of(key.style, furniture: key.furniture) }
 
   // MARK: - Sunset Lamp
 

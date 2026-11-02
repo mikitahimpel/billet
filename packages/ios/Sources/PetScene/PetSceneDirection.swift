@@ -90,6 +90,8 @@ extension EnvironmentValues {
   /// How the room is lit: its lamp, glow, haze, shadows and grading. A host that sets nothing
   /// gets the room as it was made.
   @Entry public var petSceneLighting = RoomLighting.off
+  /// Which furniture fills the styled rooms. A host that sets nothing gets the first pieces.
+  @Entry public var petSceneFurniture = RoomFurniture.original
   /// Called when the opening asked for by ``petSceneFlyIn`` is over, played out or skipped.
   @Entry public var petSceneOpeningEnded: (@MainActor () -> Void)? = nil
   /// The newest cue for the cat, from ``CatDirector``.

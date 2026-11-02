@@ -163,6 +163,17 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(lighting, named: Self.lightingFileName)
   }
 
+  public static let furnitureFileName = "room-furniture.json"
+
+  /// The saved furniture of the styled rooms, or the standard set when nothing readable is saved.
+  public func loadFurniture() -> RoomFurniture {
+    (try? storage.readJSON(RoomFurniture.self, named: Self.furnitureFileName)) ?? .standard
+  }
+
+  public func saveFurniture(_ furniture: RoomFurniture) throws(PersistenceError) {
+    try storage.writeJSON(furniture, named: Self.furnitureFileName)
+  }
+
   public static let pretendHourFileName = "pretend-hour.json"
 
   /// The hour Home pretends it is, for trying the light of the day, or `nil` for the real clock.
@@ -197,6 +208,8 @@ public final class WidgetFeaturesModel {
   public private(set) var pretendHour: Int?
   /// How the rooms are lit. Kept beside the flags, in its own file.
   public private(set) var lighting: RoomLighting
+  /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
+  public private(set) var furniture: RoomFurniture
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -212,12 +225,19 @@ public final class WidgetFeaturesModel {
     homeVariant = store?.loadHomeVariant() ?? .standard
     pretendHour = store?.loadPretendHour()
     lighting = store?.loadLighting() ?? .standard
+    furniture = store?.loadFurniture() ?? .standard
   }
 
   public func setLighting(_ lighting: RoomLighting) {
     guard self.lighting != lighting else { return }
     self.lighting = lighting
     try? store?.saveLighting(lighting)
+  }
+
+  public func setFurniture(_ furniture: RoomFurniture) {
+    guard self.furniture != furniture else { return }
+    self.furniture = furniture
+    try? store?.saveFurniture(furniture)
   }
 
   public func setPretendHour(_ hour: Int?) {

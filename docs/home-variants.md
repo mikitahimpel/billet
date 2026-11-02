@@ -104,3 +104,17 @@ The diorama gets the grade and vignette only.
 Frame times on the Simulator, Window Seat, over 5 s windows after the opening: Off holds
 16.7 ms (95th 16.7 ms); Amber lantern averages 17.1–17.7 ms, with the 95th at 16.7 ms in most
 windows and 27 ms in the worst.
+
+## Furniture
+
+Labs → Furniture picks the pieces in the styled rooms: Original (the first block pieces), Cosy
+nook (the default) and Retro den. A furnished set swaps in richer low-poly pieces built in code
+(`GenzRichPieces.swift`): a quilted daybed or bed under a knitted throw, a crate of books, a
+pleated lamp with a lit bulb, a leafy plant, a patterned rug, a chair with clothes, mugs, and
+polaroids taped to the glass. Retro den adds a record player and a speaker. Each set is the same
+kinds of piece in its own colours (`GenzFurnitureSets.swift`), placed to suit each room. The cat
+keeps its place in every set.
+
+Each room and set is its own room in the cache (`GenzLayout.Key`), built the first time it is
+shown. The pieces are not sold in the shop yet, because the shop sells the diorama's models.
+Where each model came from is logged in `~/.billet-manager/product/art/provenance.md`.
