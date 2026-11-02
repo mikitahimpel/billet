@@ -293,3 +293,61 @@ describe("PairRoom close handling", () => {
     expect(await closed).toBe(1002);
   });
 });
+
+describe("PairRoom realtime across eviction", () => {
+  const stroke = { color: "#2A1A1C", width: 3, points: [{ x: 1, y: 2 }] };
+
+  const open = async (room: DurableObjectStub<PairRoom>, user: string) => {
+    const { webSocket } = await connect(room, upgrade(user));
+    const frames: Array<{ _tag: string; [key: string]: unknown }> = [];
+    webSocket?.addEventListener("message", (event) => {
+      frames.push(JSON.parse(event.data as string));
+    });
+    webSocket?.accept();
+    return { socket: webSocket!, frames };
+  };
+
+  const until = async (check: () => boolean) => {
+    const end = Date.now() + 4000;
+    while (!check()) {
+      if (Date.now() > end) throw new Error("Never saw the expected frame");
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  };
+
+  it("keeps relaying, and keeps each socket's place in the notes, after the object is evicted", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    b.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await room.sendNote(alice, photo);
+    await until(() => b.frames.some((f) => f._tag === "NoteReceived"));
+
+    await evictDurableObject(room);
+
+    a.socket.send(JSON.stringify({ _tag: "Stroke", stroke }));
+    await until(() => b.frames.some((f) => f._tag === "Stroke"));
+    await room.sendNote(alice, photo);
+    await until(() => b.frames.filter((f) => f._tag === "NoteReceived").length === 2);
+    expect(b.frames.filter((f) => f._tag === "NoteReceived").map((f) => f["seq"])).toEqual([1, 2]);
+  });
+
+  it("tells the partner the user stopped drawing when their last socket drops", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    a.socket.send(JSON.stringify({ _tag: "Presence", state: "drawing" }));
+    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "drawing"));
+
+    // A phone that drops reaches the handler with 1006, the code that returns early.
+    await runInDurableObject(room, async (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      await instance.webSocketClose(socket, 1006);
+    });
+    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "idle"));
+    expect(await room.snapshot()).toMatchObject({
+      members: [{ user: alice, presence: "idle" }, { user: bob }],
+    });
+  });
+});
