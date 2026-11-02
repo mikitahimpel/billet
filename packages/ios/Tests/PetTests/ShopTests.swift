@@ -51,7 +51,7 @@ struct ShopTests {
 
   @Test func boughtItemGoesToTheCloset() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "t1")
+    _ = try shop.buy(armchair, transaction: "t1")
     #expect(shop.closet.count(of: armchair.id) == 1)
     #expect(shop.wallet.balance == 100 - armchair.price)
   }
@@ -66,33 +66,33 @@ struct ShopTests {
 
   @Test func aDuplicateBuyIsIgnoredEvenWhenItCouldNoLongerBePaid() throws {
     var shop = state(stamps: armchair.price)
-    try shop.buy(armchair, transaction: "t1")
+    _ = try shop.buy(armchair, transaction: "t1")
     #expect(try shop.buy(armchair, transaction: "t1") == .duplicate)
   }
 
   @Test func aMaterialIsBoughtOnce() throws {
     var shop = state()
-    try shop.buy(roseWall, transaction: "t1")
+    _ = try shop.buy(roseWall, transaction: "t1")
     #expect(throws: ShopError.alreadyOwned) { try shop.buy(roseWall, transaction: "t2") }
     #expect(shop.wallet.balance == 100 - roseWall.price)
   }
 
   @Test func furnitureCanBeBoughtAgain() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "t1")
-    try shop.buy(armchair, transaction: "t2")
+    _ = try shop.buy(armchair, transaction: "t1")
+    _ = try shop.buy(armchair, transaction: "t2")
     #expect(shop.closet.count(of: armchair.id) == 2)
   }
 
   @Test func aConsumableIsUsedUp() throws {
     var shop = state()
-    try shop.buy(fish, transaction: "b1")
-    try shop.buy(fish, transaction: "b2")
+    _ = try shop.buy(fish, transaction: "b1")
+    _ = try shop.buy(fish, transaction: "b2")
     #expect(try shop.use(fish, transaction: "u1") == .applied)
     #expect(shop.closet.count(of: fish.id) == 1)
     #expect(shop.treatsUsed == 1)
     #expect(shop.lastTreat == fish.id)
-    try shop.use(fish, transaction: "u2")
+    _ = try shop.use(fish, transaction: "u2")
     #expect(shop.closet.isEmpty)
     #expect(throws: ShopError.notInCloset) { try shop.use(fish, transaction: "u3") }
     #expect(shop.treatsUsed == 2)
@@ -100,24 +100,24 @@ struct ShopTests {
 
   @Test func aTreatUsedTwiceUnderOneIDIsUsedOnce() throws {
     var shop = state()
-    try shop.buy(fish, transaction: "b1")
-    try shop.buy(fish, transaction: "b2")
-    try shop.use(fish, transaction: "u1")
+    _ = try shop.buy(fish, transaction: "b1")
+    _ = try shop.buy(fish, transaction: "b2")
+    _ = try shop.use(fish, transaction: "u1")
     #expect(try shop.use(fish, transaction: "u1") == .duplicate)
     #expect(shop.closet.count(of: fish.id) == 1)
   }
 
   @Test func furnitureCannotBeUsedAndTreatsCannotBePlaced() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "b1")
-    try shop.buy(fish, transaction: "b2")
+    _ = try shop.buy(armchair, transaction: "b1")
+    _ = try shop.buy(fish, transaction: "b2")
     #expect(throws: ShopError.wrongKind) { try shop.use(armchair, transaction: "u1") }
     #expect(throws: ShopError.wrongKind) { try shop.place(fish, transaction: "p1") }
   }
 
   @Test func placedFurnitureLeavesTheCloset() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "b1")
+    _ = try shop.buy(armchair, transaction: "b1")
     #expect(try shop.place(armchair, transaction: "p1") == .applied)
     #expect(shop.closet.count(of: armchair.id) == 0)
     #expect(shop.layout.placements.map(\.item) == [armchair.id])
@@ -131,8 +131,8 @@ struct ShopTests {
 
   @Test func removedFurnitureReturnsToTheCloset() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "b1")
-    try shop.place(armchair, transaction: "p1")
+    _ = try shop.buy(armchair, transaction: "b1")
+    _ = try shop.place(armchair, transaction: "p1")
     let placed = try #require(shop.layout.placements.first)
     #expect(try shop.remove(placement: placed.id, transaction: "r1") == .applied)
     #expect(shop.closet.count(of: armchair.id) == 1)
@@ -146,39 +146,39 @@ struct ShopTests {
 
   @Test func everyCopyIsAccountedForAfterPlacingAndRemoving() throws {
     var shop = state()
-    try shop.buy(armchair, transaction: "b1")
-    try shop.buy(armchair, transaction: "b2")
-    try shop.place(armchair, transaction: "p1")
-    try shop.place(armchair, transaction: "p2")
+    _ = try shop.buy(armchair, transaction: "b1")
+    _ = try shop.buy(armchair, transaction: "b2")
+    _ = try shop.place(armchair, transaction: "p1")
+    _ = try shop.place(armchair, transaction: "p2")
     #expect(shop.closet.count(of: armchair.id) == 0)
     #expect(shop.layout.placements.count == 2)
-    try shop.remove(placement: "placed-p1", transaction: "r1")
+    _ = try shop.remove(placement: "placed-p1", transaction: "r1")
     #expect(shop.closet.count(of: armchair.id) + shop.layout.placements.count == 2)
   }
 
   @Test func piecesTakeDifferentSpotsAndTheRoomFills() throws {
     var shop = state(stamps: 1000)
     for index in 0..<RoomLayout.floorSpots.count {
-      try shop.buy(armchair, transaction: "b\(index)")
-      try shop.place(armchair, transaction: "p\(index)")
+      _ = try shop.buy(armchair, transaction: "b\(index)")
+      _ = try shop.place(armchair, transaction: "p\(index)")
     }
     let spots = Set(shop.layout.placements.map { "\($0.x),\($0.z)" })
     #expect(spots.count == RoomLayout.floorSpots.count)
-    try shop.buy(armchair, transaction: "bx")
+    _ = try shop.buy(armchair, transaction: "bx")
     #expect(throws: ShopError.roomIsFull) { try shop.place(armchair, transaction: "px") }
     #expect(shop.closet.count(of: armchair.id) == 1)
   }
 
   @Test func aMaterialIsPaintedAndStaysOwned() throws {
     var shop = state()
-    try shop.buy(roseWall, transaction: "b1")
+    _ = try shop.buy(roseWall, transaction: "b1")
     #expect(try shop.paint(roseWall, transaction: "c1") == .applied)
     #expect(shop.layout.wall == roseWall.id)
     #expect(shop.layout.floor == nil)
     #expect(shop.closet.count(of: roseWall.id) == 1)
     let sage = item("wall-sage")
-    try shop.buy(sage, transaction: "b2")
-    try shop.paint(sage, transaction: "c2")
+    _ = try shop.buy(sage, transaction: "b2")
+    _ = try shop.paint(sage, transaction: "c2")
     #expect(shop.layout.wall == sage.id)
   }
 
@@ -193,7 +193,7 @@ struct ShopTests {
   @Test func balanceIsTheSumOfLedgerEntries() throws {
     var shop = state(stamps: 50)
     #expect(shop.credit(25, as: .purchase, id: "purchase:a") == .applied)
-    try shop.buy(fish, transaction: "b1")
+    _ = try shop.buy(fish, transaction: "b1")
     let entries = shop.wallet.entries
     #expect(entries.map(\.source) == [.grant, .purchase, .spend])
     #expect(entries.map(\.amount) == [50, 25, -fish.price])
