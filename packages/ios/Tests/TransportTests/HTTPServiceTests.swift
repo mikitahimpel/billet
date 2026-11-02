@@ -57,12 +57,14 @@ import Wire
   ///
   /// The protocol's log is shared by every test in the process, so each test finds its own
   /// requests by the token in their `Authorization` header instead of resetting the log.
-  static func recordingService() throws -> (service: HTTPService, token: String) {
+  static func recordingService(headers: [String: String] = [:]) throws -> (
+    service: HTTPService, token: String
+  ) {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [RecordingProtocol.self]
     let service = HTTPService.urlSession(
       baseURL: try #require(URL(string: "https://api.example")),
-      session: URLSession(configuration: configuration))
+      session: URLSession(configuration: configuration), headers: headers)
     return (service, UUID().uuidString)
   }
 
@@ -84,16 +86,31 @@ import Wire
       as: ClaimInviteResponse.self)
     #expect(RecordingProtocol.hosts(sentWith: token) == ["api.example"])
   }
+
+  @Test func everyRequestCarriesTheClientHeaders() async throws {
+    let (service, token) = try Self.recordingService(headers: [
+      Routes.appVersionHeader: "1.0+12", Routes.osHeader: "iOS 26.1",
+    ])
+    _ = try? await service.perform(
+      HTTPRequest(method: .get, path: "v1/flags", headers: ["Authorization": token], body: nil),
+      as: ClaimInviteResponse.self)
+    #expect(RecordingProtocol.appVersions(sentWith: token) == ["1.0+12"])
+  }
 }
 
 /// Records the host and `Authorization` value of each request it is asked to load, and answers
 /// with an empty 200.
 final class RecordingProtocol: URLProtocol, @unchecked Sendable {
-  private static let log = LockedValue<[(host: String, token: String)]>([])
+  private static let log = LockedValue<[(host: String, token: String, appVersion: String)]>([])
 
   /// The hosts of the requests that carried `token`.
   static func hosts(sentWith token: String) -> [String] {
     log.withLock { entries in entries.filter { $0.token == token }.map(\.host) }
+  }
+
+  /// The app version header of the requests that carried `token`.
+  static func appVersions(sentWith token: String) -> [String] {
+    log.withLock { entries in entries.filter { $0.token == token }.map(\.appVersion) }
   }
 
   override class func canInit(with request: URLRequest) -> Bool { true }
@@ -101,7 +118,10 @@ final class RecordingProtocol: URLProtocol, @unchecked Sendable {
 
   override func startLoading() {
     let token = request.value(forHTTPHeaderField: "Authorization") ?? ""
-    Self.log.withLock { $0.append((host: request.url?.host ?? "", token: token)) }
+    let appVersion = request.value(forHTTPHeaderField: Routes.appVersionHeader) ?? ""
+    Self.log.withLock {
+      $0.append((host: request.url?.host ?? "", token: token, appVersion: appVersion))
+    }
     let response = HTTPURLResponse(
       url: request.url ?? URL(fileURLWithPath: "/"), statusCode: 200, httpVersion: nil,
       headerFields: nil)

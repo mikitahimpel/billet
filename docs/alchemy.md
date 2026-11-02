@@ -26,8 +26,12 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 | `Database` | `Cloudflare.D1.Database`, the cross-couple directory | `DB` |
 | `Media` | `Cloudflare.R2.Bucket`, private: no public access, no custom domain | `MEDIA` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
+| `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `billet_<stage>_events` | `EVENTS` |
 | `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts` | |
 
+- `Events` is only a binding: Analytics Engine creates the dataset on the first write, so there is
+  nothing to provision and nothing to destroy. The row layout is in
+  [experiments.md](experiments.md#analytics-engine).
 - `Api` is an async Worker: a plain module that exports `fetch` and the `PairRoom` class. The Worker
   code never imports `alchemy` or `@alchemy.run/*` (see [Drizzle](#drizzle)).
 - `apps/api` is the composition root only. The Durable Object class, `respondApi` and the
