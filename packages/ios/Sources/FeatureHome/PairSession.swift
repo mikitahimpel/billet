@@ -40,6 +40,8 @@ final class PairSession {
   let gifts: GiftBoxStore
   /// The advent calendar's doors.
   let advent: AdventStore
+  /// The cat's needs, worked out from what both partners did.
+  let life: PetLifeModel
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -94,6 +96,9 @@ final class PairSession {
     lamp = LampStore(key: isFakePartner ? "labs.lampColour.fake" : "labs.lampColour")
     porch = PorchLightStore(key: isFakePartner ? "labs.porchLight.fake" : "labs.porchLight")
     sealed = SealedBoxStore(key: isFakePartner ? "labs.sealedBox.fake" : "labs.sealedBox")
+    life = PetLifeModel(
+      me: room.device, fallbackPartner: isFakePartner ? FakePartnerRoom.device : nil,
+      key: isFakePartner ? "life.events.fake" : "life.events", clock: now)
     self.room = room
     self.delivery = delivery
     self.archive = archive
@@ -102,6 +107,11 @@ final class PairSession {
     self.now = now
     self.trips = trips
     play = PairPlay(device: room.device, saved: playStorage?.load())
+    let porch = porch
+    life.frozen = { [labs] in
+      guard labs.isOn(LabExperiment.porchLight), let light = porch.light else { return [] }
+      return [DateInterval(start: light.from, end: light.ends(calendar: .current))]
+    }
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
   }
 
@@ -188,6 +198,7 @@ final class PairSession {
   /// real room ignores.
   func lampChanged(out: Bool) {
     Task { [delivery] in await delivery.signal(.lamp(on: !out)) }
+    if out { lived(.sleep) }
   }
 
   /// Wraps `item` from the closet for the partner's doormat.
@@ -211,6 +222,8 @@ final class PairSession {
   }
 
   private func dispatch(_ strokes: [Stroke], id: UUID) {
+    // The note carries its own event to the room, under the note's ID.
+    life.record(.note, id: id)
     store.send(.drawingSent(strokes, id: id))
     catReturn.sent(id)
     keep(strokes, .sent, id: id)
@@ -227,8 +240,23 @@ final class PairSession {
   /// Pets the cat here and tells the partner's phone.
   func pet() {
     play.petGiven()
-    let at = TreatDay.timestamp(for: now(), calendar: .current)
-    Task { [delivery] in await delivery.play(.pet, at) }
+    lived(.pet)
+  }
+
+  /// A game with the cat: it batted at a finger or chased something the user moved.
+  func played() {
+    lived(.play)
+  }
+
+  /// The cat ate something other than the day's treat, such as one from the closet.
+  func fed() {
+    lived(.feed)
+  }
+
+  /// Keeps an event of this phone's and tells the room.
+  private func lived(_ kind: LifeEvent.Kind) {
+    let event = life.record(kind)
+    Task { [delivery] in await delivery.life(event) }
   }
 
   /// Names the cat here at once and tells the room. If the partner named it first, the room's
@@ -307,6 +335,7 @@ final class PairSession {
     applyTreat { _ = $0.treatGiven(on: day) }
     let at = TreatDay.timestamp(for: now(), calendar: .current)
     Task { [delivery] in await delivery.play(.treat, at) }
+    fed()
   }
 
   /// Changes the play state, and drops the treat on the cat when that made today's treat shared.
@@ -360,6 +389,8 @@ final class PairSession {
       catReturn.opened(id, at: now())
     case .partnerPetted:
       play.petReceived()
+    case .life(let events):
+      life.receive(events)
     case .treats(let days):
       applyTreat { $0.treatsReceived(days) }
     case .catName(let name):

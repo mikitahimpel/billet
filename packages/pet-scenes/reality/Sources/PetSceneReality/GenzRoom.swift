@@ -81,14 +81,14 @@ final class GenzCatSource {
 final class GenzRoomCache {
   let kit = GenzKit()
   private(set) lazy var cats = GenzCatSource()
-  private var rooms: [RoomStyle: GenzRoom] = [:]
+  private var rooms: [GenzLayout.Key: GenzRoom] = [:]
 
   nonisolated init() {}
 
   func room(_ layout: GenzLayout) -> GenzRoom {
-    if let room = rooms[layout.style] { return room }
+    if let room = rooms[layout.key] { return room }
     let room = GenzRoom(layout: layout, kit: kit, cats: cats)
-    rooms[layout.style] = room
+    rooms[layout.key] = room
     return room
   }
 }
@@ -102,6 +102,8 @@ final class GenzRoom {
   static let lampName = "genz-lamp"
   static let lensName = "genz-lens"
   static let bulbName = "genz-bulb"
+  /// The bulb seen under a shade, which keeps its own glow when the shade's changes.
+  static let bulbGlassName = "genz-bulb-glass"
   static let posterName = "genz-poster"
 
   let layout: GenzLayout
@@ -147,6 +149,7 @@ final class GenzRoom {
   private let headlight = Entity()
   private var rig: CatRig?
   private var behaviour = CatBehaviour(clips: [:])
+  private var life = LifeDrive()
   private var catChoice = CatChoice.standard
   private var catModel: Entity?
   private var catLoad: Task<Void, Never>?
@@ -259,7 +262,7 @@ final class GenzRoom {
     holder.addChild(piece)
     room.addChild(holder)
     switch placement.piece.kind {
-    case .sunsetLamp, .thriftLamp:
+    case .sunsetLamp, .thriftLamp, .pleatedLamp:
       holder.name = Self.lampName
       NookiDiorama.makeTappable(
         holder, size: [size.x + 0.3, size.z + 0.3, size.y + 0.3], center: [0, size.z / 2, 0])
@@ -270,8 +273,10 @@ final class GenzRoom {
       switch entity.name {
       case Self.lensName: lenses.append(model)
       case Self.posterName: posterModel = model
+      case Self.bulbGlassName: break
       default:
-        if placement.piece.kind == .thriftLamp, model.model?.materials.first is UnlitMaterial {
+        let isShaded = [.thriftLamp, .pleatedLamp].contains(placement.piece.kind)
+        if isShaded, model.model?.materials.first is UnlitMaterial {
           shades.append(model)
         }
       }
@@ -357,6 +362,7 @@ final class GenzRoom {
     catModel = model
     self.rig = rig
     behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
+    behaviour.follow(life)
     rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
     catHolder.addChild(model)
     if let receiver = ambientReceiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
@@ -1165,15 +1171,27 @@ extension GenzRoom {
     if !moments.contains(.greets) { greetPending = false }
   }
 
-  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
-  func bat(at point: CGPoint) {
+  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it, which
+  /// counts as a game.
+  func bat(at point: CGPoint) -> PetSceneEvent? {
     guard moments.contains(.batsAtFinger), trip == nil, world.activity == .sleeping,
       clock - lastBat > Self.batGap,
       CatEdge.isNearEdge(x: Double(point.x), width: Double(viewSize.width))
-    else { return }
+    else { return nil }
+    let played = clock - lastBat > Self.gameGap
     lastBat = clock
     followFinger(at: point)
     behaviour.react(.bat, at: clock)
+    return played ? .played : nil
+  }
+
+  /// Bats closer together than this are one game.
+  private static var gameGap: Double { 60 }
+
+  /// Lets the cat's needs steer what it does on its own.
+  func follow(_ life: LifeDrive?) {
+    self.life = life ?? LifeDrive()
+    behaviour.follow(self.life)
   }
 
   private static var batGap: Double { 2.5 }
