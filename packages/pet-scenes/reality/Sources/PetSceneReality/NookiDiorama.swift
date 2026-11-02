@@ -101,7 +101,8 @@ final class NookiDiorama {
   private var isFollowingTilt = false
   private let mochiDeadline: Duration
   private var settlingFrames = NookiDiorama.framesBeforeReady
-  private var subscription: EventSubscription?
+  private let frames = FrameClock()
+  private var isRehearsing = false
   private var camera = NookiCamera()
   private var tapTimer = NookiTapTimer()
   private var reduceMotion = false
@@ -239,22 +240,21 @@ final class NookiDiorama {
   }
 
   /// Shows the room in `content` for a few frames with nothing moving, then calls `done`.
-  func startRehearsal(from content: RealityViewCameraContent, done: @escaping () -> Void) {
+  func startRehearsal(done: @escaping () -> Void) {
     NookiTrace.mark("room rehearsing")
     room.isEnabled = true
-    var frames = Self.rehearsalFrames
-    subscription?.cancel()
-    subscription = content.subscribe(to: SceneEvents.Update.self) { [weak self] _ in
-      MainActor.assumeIsolated {
-        frames -= 1
-        guard frames == 0, let self else { return }
-        self.subscription?.cancel()
-        self.subscription = nil
-        self.room.isEnabled = self.isOnScreen
-        self.hasRehearsed = true
-        NookiTrace.mark("room rehearsed")
-        done()
-      }
+    var count = Self.rehearsalFrames
+    isRehearsing = true
+    frames.isPaused = false
+    frames.run { [weak self] _ in
+      count -= 1
+      guard count == 0, let self else { return }
+      self.frames.stop()
+      self.isRehearsing = false
+      self.room.isEnabled = self.isOnScreen
+      self.hasRehearsed = true
+      NookiTrace.mark("room rehearsed")
+      done()
     }
   }
 
@@ -326,19 +326,15 @@ final class NookiDiorama {
     return holder
   }
 
-  /// Takes the room's updates from `content`. A diorama outlives its view, so each new view gets
-  /// the updates, and its own settling before `onReady`.
-  func startUpdates(from content: RealityViewCameraContent) {
-    subscription?.cancel()
+  /// Starts stepping the room for a view that has just added it. A diorama outlives its view, so
+  /// each new view starts the steps again, with its own settling before `onReady`.
+  func startUpdates() {
     hasRehearsed = true
+    isRehearsing = false
     settlingFrames = Self.framesBeforeReady
-    subscription = content.subscribe(
-      to: SceneEvents.Update.self, on: nil, componentType: nil
-    ) { [weak self] event in
-      let delta = event.deltaTime
-      MainActor.assumeIsolated {
-        NookiTrace.frame { self?.tick(delta) }
-      }
+    frames.isPaused = !isOnScreen
+    frames.run { [weak self] delta in
+      NookiTrace.frame { self?.tick(delta) }
     }
   }
 
@@ -358,8 +354,10 @@ final class NookiDiorama {
       viewsShowing.remove(view)
     }
     let wasOnScreen = isOnScreen
+    if !isOnScreen, !viewsShowing.isEmpty { NookiTrace.mark("room shown") }
     isOnScreen = !viewsShowing.isEmpty
     room.isEnabled = isOnScreen && isLoaded
+    if !isRehearsing { frames.isPaused = !isOnScreen }
     updateTiltFollowing()
     if isOnScreen, !wasOnScreen {
       greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
