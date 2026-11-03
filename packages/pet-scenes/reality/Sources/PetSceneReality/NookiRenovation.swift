@@ -3,16 +3,14 @@ import Pet
 import RealityKit
 import simd
 
-/// Applies the room's layout to its entities: repainting surfaces, and lifting, moving and setting
-/// down furniture. The rules are in ``NookiFloorPlan``; this keeps the room in step with them and
-/// saves each change.
+/// Applies the room's layout to its entities: repainting surfaces, and picking up, moving, turning
+/// and setting down furniture. Where pieces may stand is ``DecorPlan``'s to say, through a
+/// ``DecorSession``; this keeps the room in step with it and saves each change.
 @MainActor final class NookiRenovation {
-  private static let liftHeight: Float = 0.08
-  private static let liftRate: Float = 14
   private static let paintLength: Float = 0.6
-  private static let landingLength: Float = 0.6
   /// New pieces go as near here as there is room: the open floor in front of the bed.
-  private static let openFloor = SIMD2<Float>(-0.1, 0.4)
+  static let openFloor = SIMD2<Float>(-0.1, 0.4)
+  private static let placementPrefix = "placement:"
 
   private struct Fade {
     var surfaces: [ModelEntity]
@@ -22,8 +20,10 @@ import simd
   }
 
   private let store: NookiLayoutStore
-  private var plan = NookiFloorPlan()
-  private var holders: [String: Entity] = [:]
+  let decor = DecorSession(
+    plan: DecorPlan(
+      minimum: NookiFloorPlan.floorMin, maximum: NookiFloorPlan.floorMax, grid: 0.05),
+    liftHeight: 0.08)
   private var walls: [ModelEntity] = []
   private var floor: ModelEntity?
   private var wallBase = SIMD3<Float>.zero
@@ -31,25 +31,28 @@ import simd
   private var wallShown = SIMD3<Float>.zero
   private var floorShown = SIMD3<Float>.zero
   private var fades: [Fade] = []
-  private var landings: [String: Float] = [:]
-  private var lifted: String?
-  private var liftedAt: Float = 0
 
   private(set) var layout: NookiLayout
-  var isOn = false
+  var isOn: Bool {
+    get { decor.isOn }
+    set { decor.isOn = newValue }
+  }
   /// Told when a surface takes one of the free paints.
   var onPainted: ((RoomSurface) -> Void)?
-  /// Told where a piece from the shop was set down.
-  var onPlacementMoved: ((RoomLayout.Placement.ID, SIMD3<Float>) -> Void)?
+  /// Told where a piece from the shop was set down, and how it is turned.
+  var onPlacementMoved: ((RoomLayout.Placement.ID, DecorBox) -> Void)?
 
   init(store: NookiLayoutStore) {
     self.store = store
     layout = store.load()
+    decor.buildMarker()
+    decor.onMoved = { [weak self] name, piece, box in self?.moved(name, piece: piece, to: box) }
   }
 
-  var isLifting: Bool { lifted != nil }
+  /// True while a piece is picked up.
+  var isLifting: Bool { decor.selected != nil }
   /// True while something is fading, rising or settling.
-  var isMoving: Bool { lifted != nil || !fades.isEmpty || !landings.isEmpty }
+  var isMoving: Bool { decor.isMoving || !fades.isEmpty }
 
   // MARK: - Setting up
 
@@ -65,53 +68,80 @@ import simd
   }
 
   func addFixed(centre: SIMD2<Float>, half: SIMD2<Float>) {
-    plan.fixed.append(NookiFloorPlan.Area(centre: centre, half: half))
+    decor.addFixed("fixed \(decor.plan.fixed.count)", DecorBox(centre: centre, half: half))
   }
 
-  /// Registers a movable piece standing at its original spot.
-  func register(_ name: String, holder: Entity, half: SIMD2<Float>) {
-    holders[name] = holder
-    plan.homes[name] = NookiFloorPlan.Area(
-      centre: SIMD2(holder.position.x, holder.position.z), half: half)
+  /// Registers a movable piece standing at its original spot. `half` is its footprint before it
+  /// is turned.
+  func register(_ name: String, holder: Entity, half: SIMD2<Float>, isFlat: Bool = false) {
+    decor.register(name, holder: holder, half: half, isFlat: isFlat)
   }
 
   /// Makes a piece from the shop movable. The shop's layout holds where it stands.
   func register(placement id: RoomLayout.Placement.ID, holder: Entity, half: SIMD2<Float>) {
-    register(Self.name(of: id), holder: holder, half: half)
+    decor.register(Self.name(of: id), holder: holder, half: half, placement: id)
   }
 
   func unregister(placement id: RoomLayout.Placement.ID) {
+    decor.unregister(Self.name(of: id))
+  }
+
+  /// Moves a piece from the shop to where the shop's layout now says, so the plan knows.
+  func shopMoved(placement id: RoomLayout.Placement.ID, x: Float, z: Float, yaw: Float) {
     let name = Self.name(of: id)
-    if lifted == name { lifted = nil }
-    holders[name] = nil
-    plan.homes[name] = nil
-    landings[name] = nil
+    guard let half = decor.plan.pieces[name]?.half else { return }
+    decor.place(name, at: DecorBox(centre: [x, z], half: half, yaw: yaw))
   }
 
   /// Where a new piece of `half` extent can stand, or nil if the floor is full.
   func openSpot(half: SIMD2<Float>) -> SIMD2<Float>? {
-    plan.openCell(half: half, near: Self.openFloor, in: layout).map(NookiFloorPlan.centre)
+    decor.plan.openSpot(half: half, near: Self.openFloor)
   }
 
-  private static let placementPrefix = "placement:"
-
-  private static func name(of id: RoomLayout.Placement.ID) -> String {
+  static func name(of id: RoomLayout.Placement.ID) -> String {
     placementPrefix + id
   }
 
   /// Makes `entity` travel with the piece `name`.
   func attach(_ entity: Entity, to name: String) {
-    guard let holder = holders[name] else { return }
+    guard let holder = decor.pieces[name]?.holder else { return }
     entity.setParent(holder, preservingWorldTransform: true)
   }
 
   /// Shows the stored layout at once. Call this when the room has finished loading.
   func applyStored() {
-    for name in holders.keys { standInPlace(name) }
+    for (name, piece) in decor.pieces where piece.placement == nil {
+      decor.place(name, at: stored(name, home: piece.home))
+    }
     wallShown = layout.wall?.rgb ?? wallBase
     floorShown = layout.floor?.rgb ?? floorBase
     for wall in walls { Self.tint(wall, wallShown) }
     if let floor { Self.tint(floor, floorShown) }
+  }
+
+  /// Where the stored layout puts `name`: its own spot, the grid cell an older layout kept, or home.
+  private func stored(_ name: String, home: DecorBox) -> DecorBox {
+    var box = home
+    if let spot = layout.spots?[name] {
+      box.centre = [spot.x, spot.z]
+      box.yaw = spot.yaw
+    } else if let cell = layout.pieces[name] {
+      box.centre = NookiFloorPlan.centre(of: cell)
+    }
+    return box
+  }
+
+  private func moved(_ name: String, piece: DecorSession.Piece, to box: DecorBox) {
+    if let id = piece.placement {
+      onPlacementMoved?(id, box)
+      return
+    }
+    layout.pieces[name] = nil
+    var spots = layout.spots ?? [:]
+    spots[name] =
+      box == piece.home ? nil : NookiLayout.Spot(x: box.centre.x, z: box.centre.y, yaw: box.yaw)
+    layout.spots = spots.isEmpty ? nil : spots
+    store.save(layout)
   }
 
   // MARK: - Painting
@@ -155,95 +185,25 @@ import simd
   }
 
   func isPiece(_ entity: Entity) -> Bool {
-    holders.values.contains { $0 === entity }
-  }
-
-  /// Picks up the piece `entity` belongs to. Returns whether there was one.
-  func lift(_ entity: Entity) -> Bool {
-    guard isOn, lifted == nil, let name = holders.first(where: { $0.value === entity })?.key else {
-      return false
-    }
-    lifted = name
-    liftedAt = 0
-    landings[name] = nil
-    return true
-  }
-
-  /// Follows the finger to the nearest free cell. A taken cell leaves the piece where it was.
-  func move(towards point: SIMD2<Float>) {
-    guard let lifted,
-      let cell = plan.cell(for: lifted, nearest: point, in: layout)
-    else { return }
-    layout.pieces[lifted] = cell
-    standInPlace(lifted)
-  }
-
-  /// Sets the piece down, and says where.
-  func drop() -> SIMD3<Float>? {
-    guard let lifted, let holder = holders[lifted] else { return nil }
-    self.lifted = nil
-    if lifted.hasPrefix(Self.placementPrefix) { settle(lifted, at: holder.position) }
-    store.save(layout)
-    landings[lifted] = 0
-    return holder.position
-  }
-
-  /// A shop piece has no original spot to return to: where it lands becomes its home.
-  private func settle(_ name: String, at position: SIMD3<Float>) {
-    plan.homes[name]?.centre = SIMD2(position.x, position.z)
-    layout.pieces[name] = nil
-    onPlacementMoved?(String(name.dropFirst(Self.placementPrefix.count)), position)
+    decor.piece(containing: entity) != nil
   }
 
   /// Puts everything back as it first was.
   func reset(reduceMotion: Bool) {
-    lifted = nil
+    _ = decor.resetAll()
     layout = NookiLayout()
     store.save(layout)
-    for name in holders.keys {
-      standInPlace(name)
-      landings[name] = 0
-    }
     fade(walls, from: wallShown, to: wallBase, reduceMotion: reduceMotion)
     wallShown = wallBase
     if let floor { fade([floor], from: floorShown, to: floorBase, reduceMotion: reduceMotion) }
     floorShown = floorBase
   }
 
-  private func standInPlace(_ name: String) {
-    guard let holder = holders[name], let area = plan.area(of: name, in: layout) else { return }
-    holder.position.x = area.centre.x
-    holder.position.z = area.centre.y
-  }
-
   // MARK: - Updates
 
   func step(_ delta: Float, reduceMotion: Bool) {
-    stepLift(delta, reduceMotion: reduceMotion)
-    stepLandings(delta, reduceMotion: reduceMotion)
+    decor.step(delta, reduceMotion: reduceMotion)
     stepFades(delta)
-  }
-
-  private func stepLift(_ delta: Float, reduceMotion: Bool) {
-    guard let lifted, let holder = holders[lifted] else { return }
-    let goal = reduceMotion ? 0 : Self.liftHeight
-    liftedAt += (goal - liftedAt) * (1 - exp(-Self.liftRate * delta))
-    holder.position.y = liftedAt
-  }
-
-  private func stepLandings(_ delta: Float, reduceMotion: Bool) {
-    for (name, elapsed) in landings {
-      guard let holder = holders[name] else { continue }
-      let next = elapsed + delta
-      let done = reduceMotion || next >= Self.landingLength
-      holder.position.y = done ? 0 : Self.bounce(next)
-      landings[name] = done ? nil : next
-    }
-  }
-
-  /// Height of a piece settling after it lands: a small hop that dies away.
-  static func bounce(_ elapsed: Float) -> Float {
-    0.03 * exp(-6 * elapsed) * abs(cos(elapsed * 9))
   }
 
   private func stepFades(_ delta: Float) {

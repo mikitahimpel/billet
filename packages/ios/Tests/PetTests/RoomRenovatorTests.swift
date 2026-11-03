@@ -101,4 +101,36 @@ import Testing
     #expect(shop.state.layout.wall == nil)
     #expect(shop.state.owns(paint))
   }
+
+  // MARK: - Decorating in place
+
+  @Test func aPieceFromTheClosetStandsWhereItIsPutAndTurned() throws {
+    let renovator = RoomRenovator(store: shop)
+    let item = try floorPiece()
+    let id = try renovator.place(item, at: (x: 0.2, z: 0.1), yaw: 1.5)
+    let placed = try #require(renovator.placement(id))
+    #expect(placed.x == 0.2 && placed.z == 0.1 && placed.yaw == 1.5)
+    #expect(renovator.owned(item) == 0)
+    #expect(!renovator.closetFurniture.contains(item))
+  }
+
+  @Test func putAwayGoesBackToTheCloset() throws {
+    let renovator = RoomRenovator(store: shop)
+    let item = try floorPiece()
+    let id = try renovator.place(item, at: (x: 0, z: 0))
+    try renovator.putAway(id)
+    #expect(renovator.placement(id) == nil)
+    #expect(renovator.owned(item) == 1)
+    #expect(renovator.closetFurniture.contains(item))
+  }
+
+  @Test func aMoveKeepsTheTurnUnlessGivenANewOne() throws {
+    let renovator = RoomRenovator(store: shop)
+    let id = try renovator.place(floorPiece(), at: (x: 0, z: 0), yaw: 0.5)
+    renovator.moved(placement: id, x: 0.3, z: -0.2)
+    #expect(renovator.placement(id)?.yaw == 0.5)
+    renovator.moved(placement: id, x: 0.3, z: -0.2, yaw: -1)
+    let placed = try #require(renovator.placement(id))
+    #expect(placed.x == 0.3 && placed.z == -0.2 && placed.yaw == -1)
+  }
 }

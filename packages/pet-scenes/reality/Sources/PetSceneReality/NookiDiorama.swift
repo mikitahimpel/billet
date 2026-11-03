@@ -533,24 +533,18 @@ final class NookiDiorama: CatPlayStage {
     renovation.paint(entity, paint, reduceMotion: reduceMotion)
   }
 
-  /// Lifts the piece under a finger, if there is one.
-  func lift(_ entity: Entity) -> Bool {
-    renovation.lift(entity)
-  }
-
-  /// Follows a finger at `point`, for a view of `size`, both in points.
-  func moveLifted(to point: SIMD2<Float>, in size: SIMD2<Float>) {
-    let floor = NookiFloorRay.floorPoint(
+  /// The floor point under a finger at `point`, for a view of `size`, both in points.
+  func floorPoint(under point: SIMD2<Float>, in size: SIMD2<Float>) -> SIMD2<Float>? {
+    NookiFloorRay.floorPoint(
       under: point, viewSize: size, camera: camera.position, target: NookiCamera.target,
       verticalFieldOfView: Self.fieldOfView)
-    if let floor { renovation.move(towards: floor) }
   }
 
-  /// Sets a lifted piece down. The cat looks up and stirs if it lands close by.
-  func dropLifted() {
-    guard let landed = renovation.drop() else { return }
+  /// A piece was set down at `box`. The cat looks up and stirs if it lands close by.
+  func noticePiece(at box: DecorBox) {
+    let landed = SIMD3(box.centre.x, 0, box.centre.y)
     let bed = SIMD3(Self.bedSpot.x, 0, Self.bedSpot.z)
-    guard simd_distance(SIMD3(landed.x, 0, landed.z), bed) < Self.noticeDistance else { return }
+    guard simd_distance(landed, bed) < Self.noticeDistance else { return }
     look(at: landed)
     petStart = clock
   }
@@ -1162,6 +1156,7 @@ final class NookiDiorama: CatPlayStage {
     renovation.setSurfaces(
       walls: [built[1], built[2]], floor: built[0], wall: Tone.plaster.rgbVector,
       ground: Tone.honey.rgbVector)
+    room.addChild(renovation.decor.marker)
     renovation.addFixed(centre: [Self.bedSpot.x, Self.bedSpot.z], half: [0.28, 0.28])
     renovation.addFixed(centre: [Self.bowlPosition.x, Self.bowlPosition.z], half: [0.1, 0.1])
     streakMarks.position = [0.2, 0.72, -0.597]
@@ -1285,7 +1280,7 @@ final class NookiDiorama: CatPlayStage {
       if item.name == NookiFurniture.lanternName { lantern = holder }
       if item.isSolid {
         physics.addSolid(to: holder, size: size)
-        renovation.register(item.name, holder: holder, half: item.footprint(size))
+        renovation.register(item.name, holder: holder, half: item.unturnedFootprint(size))
         Self.makeTappable(holder, size: size, center: [0, size.y / 2, 0])
       }
       if let target {
@@ -1571,6 +1566,11 @@ struct NookiFurniture: Sendable {
   static let tableName = "Item_teatable"
   static let lampName = "Item_lamp"
   private static let standingShare: Float = 0.8
+
+  /// Half the floor this piece takes up before it is turned, for a model of `size`.
+  func unturnedFootprint(_ size: SIMD3<Float>) -> SIMD2<Float> {
+    SIMD2(size.x, size.z) / 2 * Self.standingShare
+  }
 
   /// Half the floor this piece takes up, for a model of `size`.
   func footprint(_ size: SIMD3<Float>) -> SIMD2<Float> {

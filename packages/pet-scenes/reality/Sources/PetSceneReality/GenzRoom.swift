@@ -82,12 +82,20 @@ final class GenzRoomCache {
   let kit = GenzKit()
   private(set) lazy var cats = GenzCatSource()
   private var rooms: [GenzLayout.Key: GenzRoom] = [:]
+  /// The defaults suite each room keeps the places its furniture was moved to in; the app's own
+  /// when nil.
+  private let suite: String?
 
-  nonisolated init() {}
+  nonisolated init(suite: String? = nil) {
+    self.suite = suite
+  }
 
   func room(_ layout: GenzLayout) -> GenzRoom {
     if let room = rooms[layout.key] { return room }
-    let room = GenzRoom(layout: layout, kit: kit, cats: cats)
+    let room = GenzRoom(
+      layout: layout, kit: kit, cats: cats,
+      spots: GenzSpotStore(
+        defaults: suite.flatMap(UserDefaults.init(suiteName:)) ?? .standard, key: layout.key))
     rooms[layout.key] = room
     return room
   }
@@ -158,7 +166,7 @@ final class GenzRoom: CatPlayStage {
   private var shades: [ModelEntity] = []
   /// Candle flames, which flicker.
   private var flames: [ModelEntity] = []
-  private let lampLight = Entity()
+  let lampLight = Entity()
   private let outsideLight = Entity()
   private let fillLight = Entity()
   private let headlight = Entity()
@@ -224,10 +232,20 @@ final class GenzRoom: CatPlayStage {
   private static let parallaxPoints: CGFloat = 60
   private static let ambientExponent: Float = 1.6
 
-  init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource) {
+  /// The furniture on the floor, which can be picked up and moved while the room is decorated.
+  let decor: DecorSession
+  let spots: GenzSpotStore
+  /// The bulb the lamp light shines from, which moves with the lamp's table.
+  var lampBulb: Entity?
+
+  init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource, spots: GenzSpotStore) {
     self.layout = layout
     self.kit = kit
     self.cats = cats
+    self.spots = spots
+    decor = DecorSession(
+      plan: DecorPlan(minimum: .zero, maximum: layout.floor, grid: 0.25),
+      liftHeight: 0.45, markerHeight: 0.05, markerMargin: 0.12)
     camera = GenzCamera(home: layout.camera)
     lens.camera.fieldOfViewInDegrees = layout.camera.fieldOfView
     root.addChild(room)
@@ -246,7 +264,8 @@ final class GenzRoom: CatPlayStage {
   private func build() async {
     await kit.makeTextures()
     for part in layout.shell(kit) { room.addChild(part) }
-    for placement in layout.pieces { place(placement) }
+    let holders = layout.pieces.map(place)
+    arrangeDecor(holders)
     buildLED()
     buildDisc()
     buildNote()
@@ -282,7 +301,7 @@ final class GenzRoom: CatPlayStage {
     await placeCat()
   }
 
-  private func place(_ placement: GenzLayout.Placement) {
+  private func place(_ placement: GenzLayout.Placement) -> Entity {
     let piece = kit.build(placement.piece)
     let size = placement.piece.kind.size
     piece.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
@@ -314,7 +333,9 @@ final class GenzRoom: CatPlayStage {
     }
     if let bulb = piece.findEntity(named: Self.bulbName) {
       lampLight.position = bulb.position(relativeTo: room)
+      lampBulb = bulb
     }
+    return holder
   }
 
   private func buildLED() {
@@ -715,6 +736,7 @@ final class GenzRoom: CatPlayStage {
     stepMoments()
     stepView()
     stepFlames()
+    stepDecor(Float(delta))
     applyCat()
     applyLevels()
   }

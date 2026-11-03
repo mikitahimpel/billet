@@ -139,7 +139,7 @@ import Testing
   }
 
   @Test func layersWithAnOutlineGetOneFromTheRoom() {
-    let room = GenzRoom(layout: GenzLayout.windowSeat, kit: GenzKit(), cats: GenzCatSource())
+    let room = GenzRoomCache(suite: "genz-room-\(UUID())").room(GenzLayout.windowSeat)
     room.fit(to: size)
     #expect(room.screen.outlines[.windowBloom]?.count == GenzLayout.windowSeat.led.count)
     #expect(room.screen.outlines[.windowBacklight]?.count == 4)
@@ -153,7 +153,7 @@ import Testing
   }
 
   @Test func theWindowShowsTheChosenViewInTheRoomsHour() {
-    let room = GenzRoom(layout: GenzLayout.windowSeat, kit: GenzKit(), cats: GenzCatSource())
+    let room = GenzRoomCache(suite: "genz-room-\(UUID())").room(GenzLayout.windowSeat)
     room.setWindowView(WindowViewChoice(view: .suburbNight, weather: .rain))
     #expect(room.screen.viewHour == .night)
     room.show(dayLight: PetSceneDayLight(here: .at(hour: 13), theirs: nil))

@@ -35,25 +35,22 @@ import Testing
     let renovation = try make()
     let stool = piece(at: [0.2, 0, 0.2])
     renovation.register(placement: "stool", holder: stool, half: [0.1, 0.1])
-    var landed: (id: String, position: SIMD3<Float>)?
+    var landed: (id: String, box: DecorBox)?
     renovation.onPlacementMoved = { landed = ($0, $1) }
 
-    #expect(renovation.lift(stool))
-    renovation.move(towards: [-0.3, 0.3])
-    _ = renovation.drop()
+    #expect(renovation.carry(stool, to: [-0.3, 0.3]))
 
     #expect(landed?.id == "stool")
-    #expect(abs((landed?.position.x ?? 0) - -0.3) < 0.001)
-    #expect(abs((landed?.position.z ?? 0) - 0.3) < 0.001)
+    #expect(abs((landed?.box.centre.x ?? 0) - -0.3) < 0.001)
+    #expect(abs((landed?.box.centre.y ?? 0) - 0.3) < 0.001)
   }
 
   @Test func aShopPieceKeepsItsNewSpotThroughAReset() throws {
     let renovation = try make()
     let stool = piece(at: [0.2, 0, 0.2])
     renovation.register(placement: "stool", holder: stool, half: [0.1, 0.1])
-    _ = renovation.lift(stool)
-    renovation.move(towards: [-0.3, 0.3])
-    _ = renovation.drop()
+    renovation.carry(stool, to: [-0.3, 0.3])
+    renovation.settle()
 
     renovation.reset(reduceMotion: true)
 
@@ -67,11 +64,9 @@ import Testing
     renovation.register("chair", holder: chair, half: [0.1, 0.1])
     var reported = false
     renovation.onPlacementMoved = { _, _ in reported = true }
-    _ = renovation.lift(chair)
-    renovation.move(towards: [-0.2, 0.2])
-    _ = renovation.drop()
+    renovation.carry(chair, to: [-0.2, 0.2])
     #expect(!reported)
-    #expect(renovation.layout.pieces["chair"] != nil)
+    #expect(renovation.layout.spots?["chair"] != nil)
   }
 
   @Test func furnitureCannotBeMovedOntoAShopPiece() throws {
@@ -80,9 +75,8 @@ import Testing
     let chair = piece(at: [-0.3, 0, -0.3])
     renovation.register(placement: "stool", holder: stool, half: [0.15, 0.15])
     renovation.register("chair", holder: chair, half: [0.15, 0.15])
-    _ = renovation.lift(chair)
-    renovation.move(towards: [0.2, 0.2])
-    #expect(renovation.layout.pieces["chair"] == nil)
+    renovation.carry(chair, to: [0.2, 0.2])
+    #expect(renovation.layout.spots?["chair"] == nil)
   }
 
   @Test func aPieceThatLeftNoLongerTakesUpTheFloor() throws {
@@ -92,9 +86,8 @@ import Testing
     renovation.register(placement: "stool", holder: stool, half: [0.15, 0.15])
     renovation.register("chair", holder: chair, half: [0.15, 0.15])
     renovation.unregister(placement: "stool")
-    _ = renovation.lift(chair)
-    renovation.move(towards: [0.2, 0.2])
-    #expect(renovation.layout.pieces["chair"] != nil)
+    renovation.carry(chair, to: [0.2, 0.2])
+    #expect(renovation.layout.spots?["chair"] != nil)
   }
 
   @Test func aNewPieceAvoidsWhatIsAlreadyThere() throws {

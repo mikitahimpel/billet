@@ -80,7 +80,7 @@ struct HomeView: View {
       .modifier(
         HomeShop(
           shop: session.shop, renovator: session.renovator, scene: scene,
-          showsButtons: !variant.isFullBleed, sheet: $shopSheet)
+          showsButtons: !variant.isFullBleed && !isRenovating, sheet: $shopSheet)
       )
       .task(id: latestReceivedNote?.id) {
         latestDrawing = latestReceivedNote.flatMap { NoteImage.cgImage(of: $0.strokes) }
@@ -191,16 +191,16 @@ struct HomeView: View {
   /// controls; `nil` keeps the classic layout.
   private var roomStyle: RoomStyle? {
     let style = session.labs.roomStyle
-    guard style != .nooki, !typeSize.isAccessibilitySize, !isRenovating,
+    guard style != .nooki, !typeSize.isAccessibilitySize,
       scene?.roomStyles.contains(style) == true
     else { return nil }
     return style
   }
 
-  /// How Home is laid out. Large text and renovating keep the classic layout, which has room for
-  /// both.
+  /// How Home is laid out. Large text keeps the classic layout. Decorating keeps whichever
+  /// layout is showing, so the room is arranged where it is.
   private var variant: HomeVariant {
-    guard scene != nil, !typeSize.isAccessibilitySize, !isRenovating else { return .classic }
+    guard scene != nil, !typeSize.isAccessibilitySize else { return .classic }
     return session.labs.homeVariant
   }
 
@@ -219,13 +219,13 @@ struct HomeView: View {
       fullBleedHome(scene)
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
-          if !line.settles { roomStatus }
+          if !line.settles, !isRenovating { roomStatus }
         }
     } else if let roomStyle, let scene {
       styledHome(roomStyle, scene: scene)
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
-          if !line.settles { roomStatus }
+          if !line.settles, !isRenovating { roomStatus }
         }
     } else {
       classicHome
@@ -251,7 +251,9 @@ struct HomeView: View {
       onChooseStyle: { session.labs.setRoomStyle($0) },
       onTreat: { giveTreat(on: today) },
       onOpenNotes: onOpenNotes,
-      onDraw: { store.send(.canvasOpened) })
+      onDraw: { store.send(.canvasOpened) },
+      isDecorating: isRenovating,
+      onDecorate: { session.renovator.requestOpen() })
   }
 
   private func fullBleedHome(_ scene: any PetScene) -> some View {
@@ -291,6 +293,8 @@ struct HomeView: View {
       onOpened: { hasOpened = true },
       onTreat: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
       onDraw: { store.send(.canvasOpened) },
+      isDecorating: isRenovating,
+      onDecorate: { session.renovator.requestOpen() },
       drawerOpen: $drawerOpen
     ) {
       drawer(scene)

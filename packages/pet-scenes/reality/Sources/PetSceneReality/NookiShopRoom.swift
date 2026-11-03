@@ -66,6 +66,9 @@ final class NookiShopRoom {
     for placement in layout.placements {
       if let piece = pieces[placement.id] {
         position(piece, for: placement)
+        renovation?.shopMoved(
+          placement: placement.id, x: Float(placement.x), z: Float(placement.z),
+          yaw: Float(placement.yaw))
       } else if loading[placement.id] == nil {
         loading[placement.id] = Task { await add(placement) }
       }

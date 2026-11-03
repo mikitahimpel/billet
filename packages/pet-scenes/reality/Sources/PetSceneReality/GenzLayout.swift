@@ -54,6 +54,8 @@ struct GenzLayout {
   var lamp: (at: GenzRoomPoint, aim: GenzRoomPoint)
   var lampColour: GenzColour
   var shell: @MainActor (GenzKit) -> [Entity]
+  /// The floor's width (x) and depth (y), from the back wall's left end.
+  var floor: SIMD2<Float>
   /// The set of furniture in the room.
   var furniture = RoomFurniture.original
 
@@ -127,7 +129,8 @@ struct GenzLayout {
         centre: GenzRoomPoint(width / 2, 0.012, height / 2), width: width, height: height),
       lamp: (GenzRoomPoint(0.68, 0.62, 1.62), Sunset.disc),
       lampColour: GenzColour(0xFF9A52),
-      shell: sunsetShell)
+      shell: sunsetShell,
+      floor: [width, depth])
   }()
 
   private static func sunsetShell(_ kit: GenzKit) -> [Entity] {
@@ -202,7 +205,8 @@ struct GenzLayout {
       discWall: nil,
       lamp: (GenzRoomPoint(2.15, 3.27, 1.6), GenzRoomPoint(2.15, 3.27, 0)),
       lampColour: GenzColour(0xFFC36B),
-      shell: windowShell)
+      shell: windowShell,
+      floor: [Seat.width, Seat.depth])
   }()
 
   private static func windowShell(_ kit: GenzKit) -> [Entity] {

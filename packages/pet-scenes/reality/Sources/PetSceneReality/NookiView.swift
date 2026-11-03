@@ -127,6 +127,8 @@ private struct NookiStage: View {
   @State private var isAppeared = false
   @State private var isRenovating = false
   @State private var paint = NookiSwatch.cream
+  @State private var decorStatus = DecorStatus()
+  @State private var lastTwist: Double?
   @State private var viewSize = SIMD2<Float>(1, 1)
   @State private var viewID = UUID()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -162,6 +164,8 @@ private struct NookiStage: View {
         diorama.report = onEvent
         isAppeared = true
         connectRenovator()
+        let decor = diorama.renovation.decor
+        decor.onChange = { decorStatus = DecorStatus(decor) }
         diorama.whenAmbientIsReady { shopRoom.ambient = $0 }
       }
       .onDisappear {
@@ -206,31 +210,7 @@ private struct NookiStage: View {
 
   /// The rendered room with its gestures, its controls and what VoiceOver offers.
   private var room: some View {
-    stage
-      .onGeometryChange(for: CGSize.self) {
-        $0.size
-      } action: { size in
-        viewSize = SIMD2(Float(size.width), Float(size.height))
-        diorama.fit(to: viewSize)
-      }
-      .simultaneousGesture(orbit)
-      .simultaneousGesture(pinch)
-      .simultaneousGesture(lift)
-      .simultaneousGesture(brush)
-      .simultaneousGesture(tap)
-      .simultaneousGesture(holdCat)
-      .overlay(alignment: .topLeading) {
-        if showsControls || isRenovating {
-          NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
-        }
-      }
-      .onChange(of: renovator?.openRequests) { isRenovating = true }
-      .onChange(of: isRenovating, initial: true) { _, isOn in
-        diorama.renovation.isOn = isOn
-        renovator?.isRenovating = isOn
-      }
-      .onChange(of: renovator?.placements) { isRenovating = true }
-      .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
+    decorated
       .accessibilityElement()
       .accessibilityLabel("The cat's room")
       .accessibilityAction(named: "Pet the cat") { perform(.cat) }
@@ -241,6 +221,68 @@ private struct NookiStage: View {
       .accessibilityAction(named: "Open the note") {
         if world.delivery > 0 { perform(.note) }
       }
+  }
+
+  /// The room with the controls for decorating it, opened from here, the closet or the shop.
+  private var decorated: some View {
+    touchable
+      .overlay { decorControls }
+      .overlay(alignment: .topLeading) { decorButton }
+      .onChange(of: renovator?.openRequests) { isRenovating = true }
+      .onChange(of: renovator?.placements) { isRenovating = true }
+      .onChange(of: isRenovating, initial: true) { _, isOn in
+        diorama.renovation.isOn = isOn
+        renovator?.isRenovating = isOn
+      }
+      .onChange(of: paint, initial: true) { _, paint in diorama.paint = paint }
+  }
+
+  /// The room with the gestures that move the view and the pieces in it.
+  private var touchable: some View {
+    stage
+      .onGeometryChange(for: CGSize.self) {
+        $0.size
+      } action: { size in
+        viewSize = SIMD2(Float(size.width), Float(size.height))
+        diorama.fit(to: viewSize)
+      }
+      .simultaneousGesture(orbit)
+      .simultaneousGesture(pinch)
+      .simultaneousGesture(lift)
+      .simultaneousGesture(hold)
+      .simultaneousGesture(twist)
+      .simultaneousGesture(tap)
+      .simultaneousGesture(holdCat)
+  }
+
+  /// While the room is decorated: undo and done, the piece's tools, the closet and the paints.
+  @ViewBuilder private var decorControls: some View {
+    if isRenovating {
+      DecorControls(
+        status: decorStatus, closet: renovator?.closetFurniture ?? [],
+        owned: { item in renovator?.owned(item) ?? 0 }, paint: $paint, onReset: resetRoom,
+        onUndo: { touch.undo() }, onDone: { isRenovating = false },
+        onRotate: { diorama.renovation.decor.rotateStep() }, onPutAway: { touch.putAway() },
+        onAdd: { item in add(item) })
+    }
+  }
+
+  /// The way into decorating where the room shows its own controls.
+  @ViewBuilder private var decorButton: some View {
+    if showsControls, !isRenovating {
+      Button {
+        isRenovating = true
+      } label: {
+        Image(systemName: "sofa")
+          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+          .frame(width: 44, height: 44)
+          .background(.thinMaterial, in: Circle())
+      }
+      .buttonStyle(.plain)
+      .padding(12)
+      .accessibilityLabel("Decorate the room")
+      .accessibilityIdentifier("decorOpen")
+    }
   }
 
   /// The room itself, with the purr's hearts over it.
@@ -271,8 +313,10 @@ private struct NookiStage: View {
     guard let renovator else { return }
     let renovation = diorama.renovation
     renovation.onPainted = { renovator.cleared($0) }
-    renovation.onPlacementMoved = { id, position in
-      renovator.moved(placement: id, x: Double(position.x), z: Double(position.z))
+    renovation.onPlacementMoved = { id, box in
+      renovator.moved(
+        placement: id, x: Double(box.centre.x), z: Double(box.centre.y), yaw: Double(box.yaw))
+      diorama.noticePiece(at: box)
     }
     renovator.openSpot = { item in
       renovation.openSpot(half: NookiShopRoom.footprint(of: item)).map {
@@ -305,6 +349,14 @@ private struct NookiStage: View {
     SpatialTapGesture()
       .targetedToAnyEntity()
       .onEnded { value in
+        if isRenovating {
+          if diorama.renovation.isSurface(value.entity) {
+            diorama.paintSurface(value.entity)
+          } else {
+            touch.tap(value.entity)
+          }
+          return
+        }
         let time = ProcessInfo.processInfo.systemUptime
         if !isRenovating {
           let target = diorama.tapTarget(at: value.location)
@@ -336,12 +388,28 @@ private struct NookiStage: View {
       }
   }
 
-  /// While the room is open a swipe from a piece or a surface belongs to it, so the view stays
-  /// still while the hold that lifts a piece is deciding, and while paint goes on.
+  /// What a finger and the controls do to the room's pieces.
+  private var touch: DecorTouch {
+    let size = viewSize
+    return DecorTouch(
+      session: diorama.renovation.decor, renovator: renovator,
+      floor: { [diorama] point in
+        diorama.floorPoint(under: SIMD2(Float(point.x), Float(point.y)), in: size)
+      },
+      name: { NookiRenovation.name(of: $0) })
+  }
+
+  /// Takes `item` from the closet into the open floor, picked up so it can be moved at once.
+  private func add(_ item: ShopItem) {
+    _ = touch.add(item, half: NookiShopRoom.footprint(of: item), near: NookiRenovation.openFloor)
+  }
+
+  /// A swipe that moves or turns a piece belongs to it, so the view stays still. While the room is
+  /// open, any swipe from a piece moves it.
   private func isHoldingPiece(_ entity: Entity) -> Bool {
-    diorama.renovation.isLifting
-      || (isRenovating
-        && (diorama.renovation.isPiece(entity) || diorama.renovation.isSurface(entity)))
+    let decor = diorama.renovation.decor
+    return decor.isDragging || decor.isTurning
+      || (isRenovating && decor.piece(containing: entity) != nil)
   }
 
   /// A swipe that starts on the yarn throws it, and one that starts on the cat strokes it. Any
@@ -408,30 +476,55 @@ private struct NookiStage: View {
       }
   }
 
-  /// While the room is open, a touch on a wall or the floor paints it, whether a tap or a stroke.
-  private var brush: some Gesture {
+  /// While the room is open for changes, a finger on a piece picks it up, and the piece follows
+  /// it until let go.
+  private var lift: some Gesture {
     DragGesture(minimumDistance: 0)
       .targetedToAnyEntity()
       .onChanged { value in
-        guard isRenovating, !diorama.renovation.isLifting else { return }
-        diorama.paintSurface(value.entity)
+        let drag = value.gestureValue
+        let held = drag.time.timeIntervalSince(holdStart(value.entity, at: drag.time))
+        let moved = hypot(drag.translation.width, drag.translation.height)
+        let decor = diorama.renovation.decor
+        guard decor.isDragging || (isRenovating && (moved > 3 || held > 0.25)) else { return }
+        touch.drag(
+          value.entity, from: drag.startLocation, to: drag.location, enter: { isRenovating = true })
+      }
+      .onEnded { _ in
+        holdBegan = nil
+        touch.endDrag()
       }
   }
 
-  /// Holding a piece while the room is open lifts it, and it follows the finger until let go.
-  private var lift: some Gesture {
-    LongPressGesture(minimumDuration: 0.3, maximumDistance: 24)
-      .sequenced(before: DragGesture(minimumDistance: 0))
+  @State private var holdBegan: Date?
+
+  private func holdStart(_ entity: Entity, at time: Date) -> Date {
+    if let holdBegan { return holdBegan }
+    holdBegan = time
+    return time
+  }
+
+  /// Holding a piece still opens the room for decorating and picks the piece up.
+  private var hold: some Gesture {
+    LongPressGesture(minimumDuration: 0.45)
       .targetedToAnyEntity()
-      .onChanged { value in
-        guard isRenovating, case .second(true, let drag) = value.gestureValue else { return }
-        if !diorama.renovation.isLifting, !diorama.lift(value.entity) { return }
-        if let drag {
-          diorama.moveLifted(
-            to: SIMD2(Float(drag.location.x), Float(drag.location.y)), in: viewSize)
-        }
+      .onEnded { value in
+        let decor = diorama.renovation.decor
+        guard !isRenovating, decor.piece(containing: value.entity) != nil else { return }
+        isRenovating = true
+        decor.isOn = true
+        decor.select(value.entity)
       }
-      .onEnded { _ in diorama.dropLifted() }
+  }
+
+  /// Two fingers turn the piece picked up.
+  private var twist: some Gesture {
+    RotateGesture()
+      .onChanged { value in
+        guard isRenovating else { return }
+        touch.twist(by: value.rotation.radians)
+      }
+      .onEnded { _ in touch.endTwist() }
   }
 
   /// A finger held still on the cat picks it up; it hangs under the finger until let go.
@@ -466,6 +559,7 @@ private struct NookiStage: View {
   private var pinch: some Gesture {
     MagnifyGesture()
       .onChanged { value in
+        guard diorama.renovation.decor.selected == nil else { return }
         diorama.zoom(by: Float(value.magnification / lastPinch))
         lastPinch = value.magnification
       }

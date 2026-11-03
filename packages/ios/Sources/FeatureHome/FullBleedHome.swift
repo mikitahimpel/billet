@@ -22,6 +22,10 @@ struct FullBleedHome<Drawer: View>: View {
   let onOpened: () -> Void
   let onTreat: () -> Void
   let onDraw: () -> Void
+  /// Whether the room is being decorated, which hides everything over it but its own controls.
+  var isDecorating = false
+  /// Opens the room for decorating in place.
+  var onDecorate: (() -> Void)?
   /// Whether the panel with everything else is pulled up. Home closes it when something covers it.
   @Binding var drawerOpen: Bool
   @ViewBuilder let drawer: () -> Drawer
@@ -57,13 +61,14 @@ struct FullBleedHome<Drawer: View>: View {
           .accessibilityLabel("Skip the opening")
       }
       controls
-        .opacity(showsControls ? 1 : 0)
-        .allowsHitTesting(showsControls)
+        .opacity(showsControls && !isDecorating ? 1 : 0)
+        .allowsHitTesting(showsControls && !isDecorating)
         .calmAnimation(value: controlsShown)
         .calmAnimation(value: isOpening)
       if drawerOpen { panel }
     }
     .calmAnimation(value: drawerOpen)
+    .calmAnimation(value: isDecorating)
     .task { await openIfDue() }
     .task(id: lastTouch) { await showControlsWhenQuiet() }
   }
@@ -155,10 +160,11 @@ struct FullBleedHome<Drawer: View>: View {
       }
   }
 
-  /// Holding the room gives the cat a treat.
+  /// Holding the room gives the cat a treat. While decorating, holding picks up a piece instead.
   private var holdForTreat: some Gesture {
     LongPressGesture(minimumDuration: 0.6)
       .onEnded { _ in
+        guard !isDecorating else { return }
         onTreat()
         touched()
       }
@@ -215,6 +221,7 @@ struct FullBleedHome<Drawer: View>: View {
         Spacer(minLength: 0)
       }
       .overlay(alignment: .bottomTrailing) { pen }
+      .overlay(alignment: .bottomLeading) { decorate }
       .padding(.horizontal, Spacing.medium)
       .padding(.bottom, Spacing.small)
     }
@@ -253,6 +260,24 @@ struct FullBleedHome<Drawer: View>: View {
         : "More: streak, treats, shop and cards"
     )
     .accessibilityIdentifier("homeDrawerHandle")
+  }
+
+  /// Opens the room for moving its furniture, right where it is.
+  @ViewBuilder private var decorate: some View {
+    if let onDecorate {
+      Button(action: onDecorate) {
+        Image(systemName: "sofa.fill")
+          .font(.title3.weight(.semibold))
+          .foregroundStyle(Palette.paper.color)
+          .frame(width: 48, height: 48)
+          .background(.ultraThinMaterial, in: Circle())
+          .shadow(color: .black.opacity(0.25), radius: 10, y: 3)
+          .frame(width: 60, height: 60)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Decorate the room")
+      .accessibilityIdentifier("homeDecorateButton")
+    }
   }
 
   private var pen: some View {
