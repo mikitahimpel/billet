@@ -10,7 +10,9 @@
     "./admin-data": "./src/admin-data.ts",
     "./admin-overview": "./src/admin-overview.ts",
     "./admin-routes": "./src/admin-routes.ts",
-    "./test/access-tokens": "./test/access-tokens.ts"
+    "./app-status-store": "./src/app-status-store.ts",
+    "./test/access-tokens": "./test/access-tokens.ts",
+    "./test/in-memory-app-status-store": "./test/in-memory-app-status-store.ts"
   },
   "scripts": {
     "lint": "oxlint .",

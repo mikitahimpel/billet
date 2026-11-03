@@ -37,6 +37,10 @@ export const Database = Effect.gen(function* () {
 // Worker and its authorisation checks.
 export const Media = Cloudflare.R2.Bucket("Media");
 
+// The service status (maintenance, minimum build, notice), apart from D1 so it can be switched on
+// and served while the database is down. The admin panel writes it (docs/maintenance.md).
+export const Status = Cloudflare.KV.Namespace("Status");
+
 // A deployed stage (`dev` or `prod`) keeps its state in D1, so it survives CI runners and
 // checkouts. `alchemy dev` keeps it in the gitignored `.alchemy/` folder.
 const state = Layer.unwrap(
@@ -62,6 +66,7 @@ export default Alchemy.Stack(
     const stage = yield* Alchemy.Stage;
     const db = yield* Database;
     const media = yield* Media;
+    const status = yield* Status;
     // Accepted app events, written by the Worker (docs/experiments.md). Analytics Engine makes a
     // dataset on its first write, so a deploy creates nothing else. One dataset per stage.
     const events = yield* Cloudflare.AnalyticsEngine.Dataset("Events", {
@@ -75,6 +80,7 @@ export default Alchemy.Stack(
       env: {
         DB: db,
         MEDIA: media,
+        STATUS: status,
         EVENTS: events,
         // The Cloudflare Access application in front of /admin (docs/admin.md). Not secret, but
         // kept out of the public repo: they come from the deploy's environment. Empty keeps the

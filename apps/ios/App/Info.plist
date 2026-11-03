@@ -8,6 +8,8 @@
 	<string>$(BILLET_BACKEND)</string>
 	<key>BilletAPIBaseURL</key>
 	<string>$(BILLET_API_BASE_URL)</string>
+	<key>BilletUpdateURL</key>
+	<string>$(BILLET_UPDATE_URL)</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>

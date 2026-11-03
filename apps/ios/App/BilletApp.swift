@@ -22,6 +22,10 @@ struct BilletApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
   private let demoHost = Bundle.main.object(forInfoDictionaryKey: "BilletDemoHost") as? String ?? ""
   private let backend = BackendMode(info: Bundle.main.infoDictionary)
+  private let updateLink = UpdateLink(info: Bundle.main.infoDictionary)
+  /// The demo Worker's maintenance, minimum build and notice. Unused by the real client, which
+  /// asks its own backend.
+  @State private var demoStatus: ServiceStatusModel
   @State private var catalog = PetSceneCatalog(
     scenes: [NookiPetScene()],
     defaults: .standard,
@@ -31,6 +35,15 @@ struct BilletApp: App {
 
   init() {
     ScenePerf.start()
+    let client = ClientInfo.current()
+    _demoStatus = State(
+      initialValue: ServiceStatusModel(
+        appVersion: client.appVersion,
+        fetch: ServiceStatusModel.demoBaseURL(host: demoHost).map {
+          ServiceStatusModel.fetch(baseURL: $0, headers: client.headers)
+        },
+        memory: .defaults(.standard),
+        strings: ServiceStatusModel.strings(in: .main)))
     // Before Home reads the room style.
     if let store = WidgetFeaturesStore.appGroup() {
       FlatSceneMigration.run(
@@ -49,9 +62,13 @@ struct BilletApp: App {
           selectedSceneID: Binding(
             get: { catalog.selectedID },
             set: { id in id.map(catalog.select) }
-          ))
+          ),
+          serviceStatus: demoStatus,
+          updateLink: updateLink)
       case .real(let baseURL):
-        RealRootView(model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes)
+        RealRootView(
+          model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes,
+          updateLink: updateLink)
       }
     }
   }
@@ -67,9 +84,18 @@ enum RealBackend {
       (try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier))
       ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
     let accounts = AccountStore.live(tokens: tokens, storage: storage)
+    let client = ClientInfo.current()
+    let http = HTTPService.urlSession(baseURL: baseURL, session: .shared, headers: client.headers)
+    let serviceStatus = ServiceStatusModel(
+      appVersion: client.appVersion,
+      fetch: ServiceStatusModel.fetch(baseURL: baseURL, headers: client.headers),
+      memory: .defaults(.standard),
+      strings: ServiceStatusModel.strings(in: .main))
+    // Any request that meets the maintenance 503 tells the status at once.
     let api = APIClient.live(
-      http: .urlSession(baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers),
+      http: http.reportingMaintenance { status in await serviceStatus.received(status) },
       token: { (try? accounts.load())?.token })
-    return RealAppModel(api: api, accounts: accounts, baseURL: baseURL)
+    return RealAppModel(
+      api: api, accounts: accounts, baseURL: baseURL, serviceStatus: serviceStatus)
   }
 }

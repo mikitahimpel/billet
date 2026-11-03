@@ -26,6 +26,7 @@ export default defineConfig({
               compatibilityFlags: ["nodejs_compat"],
               d1Databases: ["DB"],
               r2Buckets: ["MEDIA"],
+              kvNamespaces: ["STATUS"],
               durableObjects: {
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },

@@ -17,9 +17,11 @@ import { FlagsService } from "@billet/backend-flags/flags-service";
 import { pairHashOf } from "@billet/backend-metrics/analytics";
 import { buildReport } from "@billet/backend-metrics/funnel";
 import { utcDay } from "@billet/backend-metrics/metrics";
+import { AppStatus } from "@billet/contracts-http-api/status";
 import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
 import { buildOverview } from "./admin-overview.ts";
+import { AppStatusStore } from "./app-status-store.ts";
 
 /** Who is using the panel, as Cloudflare Access verified them. Every change is logged under it. */
 export class CurrentAdmin extends Context.Service<CurrentAdmin, AdminIdentity>()(
@@ -37,6 +39,8 @@ export const adminApi = {
   history: "/admin/api/history",
   pair: "/admin/api/pairs/:pairId",
   pairOverride: "/admin/api/pairs/:pairId/overrides/:key",
+  status: "/admin/api/status",
+  statusHistory: "/admin/api/status/history",
 } as const;
 
 /** The read-only API for agents' service tokens, under `/admin/api/agent`. GET only. */
@@ -47,6 +51,8 @@ export const agentApi = {
   flags: "/admin/api/agent/flags",
   flagHistory: "/admin/api/agent/flag-history",
   pair: "/admin/api/agent/pairs/:pairId",
+  status: "/admin/api/agent/status",
+  statusHistory: "/admin/api/agent/status-history",
 } as const;
 
 // Absent values go out as `null`, so the page never has to tell `undefined` from a missing field.
@@ -73,6 +79,7 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
           : "";
       switch (tag) {
         case "FlagConfigConflict":
+        case "AppStatusConflict":
           return fail(409, "conflict", { current: (error as { current: number }).current });
         case "SchemaError":
         case "HttpServerError":
@@ -90,6 +97,12 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
 class NotFound extends Data.TaggedError("NotFound")<{}> {}
 
 const SaveBody = Schema.Struct({ config: FlagConfig, expectedVersion: Schema.Int });
+const StatusBody = Schema.Struct({ status: AppStatus, expectedVersion: Schema.Int });
+const StatusHistoryQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
+  ),
+});
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
 const KeyParams = Schema.Struct({ key: ExperimentKey });
@@ -137,6 +150,7 @@ const readHandlers = Effect.gen(function* () {
   const registry = yield* Experiments;
   const data = yield* AdminData;
   const digest = yield* Digest.Digest;
+  const appStatus = yield* AppStatusStore;
 
   const items = Effect.gen(function* () {
     const stored = new Map((yield* configs.all).map((row) => [row.key, row]));
@@ -222,7 +236,29 @@ const readHandlers = Effect.gen(function* () {
     });
   }).pipe(guarded);
 
-  return { flags, configs, items, entryOf, overview, flagList, experiments, history, pair };
+  const status = Effect.gen(function* () {
+    return respondJson(yield* appStatus.current);
+  }).pipe(guarded);
+
+  const statusHistory = Effect.gen(function* () {
+    const { limit } = yield* HttpServerRequest.schemaSearchParams(StatusHistoryQuery);
+    return respondJson({ changes: yield* appStatus.history(limit ?? 50) });
+  }).pipe(guarded);
+
+  return {
+    flags,
+    configs,
+    appStatus,
+    items,
+    entryOf,
+    overview,
+    flagList,
+    experiments,
+    history,
+    pair,
+    status,
+    statusHistory,
+  };
 });
 
 /**
@@ -231,7 +267,7 @@ const readHandlers = Effect.gen(function* () {
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const { flags, configs, entryOf, ...reads } = yield* readHandlers;
+    const { flags, configs, appStatus, entryOf, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
 
     const save = (
@@ -267,6 +303,25 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.experiments, reads.experiments);
     yield* router.add("GET", adminApi.history, reads.history);
     yield* router.add("GET", adminApi.pair, reads.pair);
+    yield* router.add("GET", adminApi.status, reads.status);
+    yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
+
+    // Maintenance, the minimum build and the notice. Saved whole, with the version read, so two
+    // tabs can't overwrite each other unseen; every save is kept in the history with the email.
+    yield* router.add(
+      "PUT",
+      adminApi.status,
+      Effect.gen(function* () {
+        const body = yield* HttpServerRequest.schemaBodyJson(StatusBody);
+        const saved = yield* appStatus.save({
+          status: body.status,
+          expectedVersion: body.expectedVersion,
+          by: admin.email,
+          at: yield* Clock.currentTimeMillis,
+        });
+        return respondJson(saved);
+      }).pipe(guarded),
+    );
 
     yield* router.add(
       "PUT",
@@ -346,5 +401,7 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.flags, reads.flagList);
     yield* router.add("GET", agentApi.flagHistory, reads.history);
     yield* router.add("GET", agentApi.pair, reads.pair);
+    yield* router.add("GET", agentApi.status, reads.status);
+    yield* router.add("GET", agentApi.statusHistory, reads.statusHistory);
   }),
 ).pipe(Layer.orDie);

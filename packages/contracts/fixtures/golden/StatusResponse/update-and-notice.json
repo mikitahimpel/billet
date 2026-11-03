@@ -1,0 +1,12 @@
+{
+  "status": {
+    "maintenance": {
+      "active": false
+    },
+    "minVersion": "1.2.0+14",
+    "notice": {
+      "key": "notice.slow-notes",
+      "text": "Notes may be slow tonight."
+    }
+  }
+}

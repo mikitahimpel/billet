@@ -13,8 +13,9 @@ public struct HTTPService: Sendable {
 
   /// Sends `request` and decodes a successful body as `Response`.
   ///
-  /// A non-2xx answer becomes ``TransportError/api(_:)`` when the body is a contract `ApiError`,
-  /// and ``TransportError/status(_:)`` otherwise.
+  /// A non-2xx answer becomes ``TransportError/maintenance(_:)`` when it is the maintenance 503,
+  /// ``TransportError/api(_:)`` when the body is a contract `ApiError`, and
+  /// ``TransportError/status(_:)`` otherwise.
   public func perform<Response: Decodable & Sendable>(
     _ request: HTTPRequest, as type: Response.Type
   ) async throws(TransportError) -> Response {
@@ -37,10 +38,36 @@ public struct HTTPService: Sendable {
     if (200..<300).contains(response.status) {
       return response.body
     }
+    if let status = response.maintenance {
+      throw .maintenance(status)
+    }
     if let apiError = try? JSONDecoder().decode(ApiError.self, from: response.body) {
       throw .api(apiError)
     }
     throw .status(response.status)
+  }
+}
+
+extension HTTPService {
+  /// This service, telling `report` the status each maintenance 503 carries before the caller
+  /// sees the failure, so one place learns of maintenance whichever request met it.
+  public func reportingMaintenance(
+    to report: @escaping @Sendable (AppStatus) async -> Void
+  ) -> HTTPService {
+    let send = send
+    return HTTPService { (request: HTTPRequest) async throws(TransportError) -> HTTPResponse in
+      let response = try await send(request)
+      if let status = response.maintenance { await report(status) }
+      return response
+    }
+  }
+}
+
+extension HTTPResponse {
+  /// The status a maintenance 503 carries, or `nil` for any other answer.
+  public var maintenance: AppStatus? {
+    guard status == 503 else { return nil }
+    return (try? JSONDecoder().decode(MaintenanceResponse.self, from: body))?.status
   }
 }
 

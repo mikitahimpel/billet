@@ -46,6 +46,8 @@ struct AppShellView: View {
   }
 
   @Environment(\.scenePhase) private var scenePhase
+  /// False while something covers the whole shell, such as the maintenance screen.
+  @Environment(\.petSceneOnScreen) private var shellShown
   @Environment(\.dynamicTypeSize) private var typeSize
   @State private var destination = Destination.home
   @State private var replayingOnboarding = false
@@ -136,7 +138,7 @@ struct AppShellView: View {
           onOpenNotes: { destination = .notes }
         )
         .tabEntrance(destination == .home)
-        .environment(\.petSceneOnScreen, destination == .home)
+        .environment(\.petSceneOnScreen, shellShown && destination == .home)
       }
       if let shopScene {
         Tab("Shop", systemImage: "bag", value: .shop) {
@@ -145,7 +147,7 @@ struct AppShellView: View {
             keeper: labs.shopkeeper, onShowRoom: { destination = .home }
           )
           .tabEntrance(destination == .shop)
-          .environment(\.petSceneOnScreen, destination == .shop)
+          .environment(\.petSceneOnScreen, shellShown && destination == .shop)
           .environment(\.petSceneLighting, labs.lighting)
           .environment(\.petSceneWindowView, labs.windowView)
           .modifier(ShopDayLight(followsDay: labs.homeVariant == .nightAndDay))
@@ -163,7 +165,7 @@ struct AppShellView: View {
           }
         }
         .tabEntrance(destination == .notes)
-        .environment(\.petSceneOnScreen, destination == .notes)
+        .environment(\.petSceneOnScreen, shellShown && destination == .notes)
         .environment(\.petSceneLighting, labs.lighting)
       }
       Tab("Settings", systemImage: "gearshape", value: .settings) {

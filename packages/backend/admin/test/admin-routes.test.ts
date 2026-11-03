@@ -15,6 +15,8 @@ import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-m
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
 import { adminApi, AdminRoutes, CurrentAdmin } from "../src/admin-routes.ts";
+import { AppStatusStore } from "../src/app-status-store.ts";
+import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
 
 const experiments = defineExperiments([
   {
@@ -43,6 +45,7 @@ const events: Array<EventRow> = [];
 const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
+let appStatus = makeInMemoryAppStatusStore();
 
 const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
@@ -74,6 +77,11 @@ const handlerFor = (email: string) =>
                       ? { members: 2, pairedAt: 1_000 }
                       : { members: 0, pairedAt: null },
                   ),
+              }),
+              Layer.succeed(AppStatusStore, {
+                current: Effect.suspend(() => appStatus.store.current),
+                history: (limit) => appStatus.store.history(limit),
+                save: (input) => appStatus.store.save(input),
               }),
               Experiments.with(experiments),
               Digest.layerWebCrypto,
@@ -107,6 +115,7 @@ const pair = Schema.decodeSync(PairId);
 beforeEach(() => {
   configs = makeInMemoryFlagConfigRepository();
   assignments = makeInMemoryFlagsRepository();
+  appStatus = makeInMemoryAppStatusStore();
   events.length = 0;
 });
 
@@ -308,5 +317,57 @@ describe("the admin API", () => {
       expect(response.status).toBe(400);
       expect(configs.overrides.size).toBe(0);
     });
+  });
+});
+
+describe("the maintenance section", () => {
+  const maintenance = {
+    maintenance: {
+      active: true,
+      message: { key: "maintenance.default", text: "Back soon." },
+      until: "2026-11-03T22:30:00Z",
+    },
+    minVersion: "1.2.0+14",
+    notice: { key: "notice.slow-notes", text: "Notes may be slow tonight." },
+  };
+
+  it("starts normal and never set", async () => {
+    expect(await call(adminApi.status)).toEqual({
+      status: 200,
+      body: {
+        status: { maintenance: { active: false } },
+        version: 0,
+        updatedAt: null,
+        updatedBy: null,
+      },
+    });
+  });
+
+  it("saves the status whole, with the email, and keeps it in the history", async () => {
+    const saved = await call(adminApi.status, "PUT", { status: maintenance, expectedVersion: 0 });
+    expect(saved.status).toBe(200);
+    expect(saved.body).toMatchObject({
+      status: maintenance,
+      version: 1,
+      updatedBy: "owner@example.com",
+    });
+    const history = await call(adminApi.statusHistory);
+    expect(history.body.changes).toEqual([
+      expect.objectContaining({ version: 1, by: "owner@example.com", status: maintenance }),
+    ]);
+  });
+
+  it("refuses a save from a stale version with 409", async () => {
+    await call(adminApi.status, "PUT", { status: maintenance, expectedVersion: 0 });
+    const stale = await call(adminApi.status, "PUT", { status: maintenance, expectedVersion: 0 });
+    expect(stale).toEqual({ status: 409, body: { error: "conflict", current: 1 } });
+  });
+
+  it.each([
+    ["an until without a zone", { maintenance: { active: true, until: "22:30" } }],
+    ["a free-text minVersion", { maintenance: { active: false }, minVersion: "newest" }],
+    ["an empty message", { maintenance: { active: true, message: { key: "m", text: "" } } }],
+  ])("refuses %s with 400", async (_, status) => {
+    expect((await call(adminApi.status, "PUT", { status, expectedVersion: 0 })).status).toBe(400);
   });
 });

@@ -94,7 +94,7 @@ extension DeliveryHealth {
         return true
       } catch {
         switch error {
-        case .api(.notFound), .api(.unauthorized), .api(.invalidRequest): return true
+        case .api(.notFound), .api(.unauthorized), .api(.invalidRequest), .maintenance: return true
         case .api(.unavailable), .api(.invalidInvite), .api(.alreadyPaired), .network, .status,
           .encoding, .decoding:
           return false

@@ -11,6 +11,13 @@ describe("the generated assets", () => {
     expect(adminJs).toBe(js);
   });
 
+  it("route every section in the nav", () => {
+    const routes = [...adminHtml.matchAll(/data-route="([a-z]+)"/g)].map(([, name]) => name);
+    expect(routes).toContain("maintenance");
+    const table = adminJs.slice(adminJs.indexOf("const ROUTES = {"));
+    for (const name of routes) expect(table).toMatch(new RegExp(`\\n\\s+${name}: render`));
+  });
+
   it("need nothing the Content Security Policy forbids", () => {
     expect(adminHtml).not.toMatch(/<script(?![^>]*\ssrc=)/);
     expect(adminHtml).not.toMatch(/<style|\sstyle=|\son[a-z]+=/i);
