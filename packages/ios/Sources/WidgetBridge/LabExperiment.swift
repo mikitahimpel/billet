@@ -4,7 +4,8 @@ import Foundation
 /// stored under, beside the widget features.
 ///
 /// An experiment that cannot get in the way of drawing, sending and reading notes starts on. The
-/// ones that stand in for the partner, or change what the cat does, start off.
+/// ones that stand in for the partner, or change what the cat does, start off, except the cat's
+/// needs, which the owner wants on, shown in the room.
 public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag {
   case fakePartner
   case overnightStay
@@ -289,7 +290,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .shopScene: true
     case .notesDesk: true
     case .cinematicOnboarding: true
-    case .catLife: false
+    case .catLife: true
     case .lifeInRoom: true
     case .lifeBubble: false
     case .lifeRings: false
