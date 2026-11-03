@@ -47,11 +47,13 @@ import Testing
     }
   }
 
-  @Test func theFlightIsRememberedOnThisPhone() throws {
-    let defaults = try #require(UserDefaults(suiteName: "onboarding-\(UUID().uuidString)"))
-    let memory = OnboardingMemory(defaults: defaults)
+  @MainActor
+  @Test func theFlightIsRememberedOnlyForThisLaunch() {
+    let memory = OnboardingMemory()
     #expect(!memory.introSeen)
     memory.rememberIntro()
-    #expect(OnboardingMemory(defaults: defaults).introSeen)
+    #expect(memory.introSeen)
+    // A new run of the app starts with a fresh memory and flies in again.
+    #expect(!OnboardingMemory().introSeen)
   }
 }

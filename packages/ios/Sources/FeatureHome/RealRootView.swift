@@ -35,7 +35,7 @@ public struct RealRootView: View {
       switch model.stage {
       case .signedOut where isCinematic:
         CinematicOnboardingView(
-          scenes: scenes, lighting: lighting, memory: OnboardingMemory(defaults: .standard)
+          scenes: scenes, lighting: lighting, memory: OnboardingMemory.thisLaunch
         ) {
           SignInControls(model: model.signIn) { model.signedIn() }
         }

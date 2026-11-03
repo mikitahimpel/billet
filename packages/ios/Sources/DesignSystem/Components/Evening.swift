@@ -343,6 +343,7 @@ public struct LoadingLine: View {
       Text(text)
         .billetType(.body)
         .foregroundStyle(Palette.paper.color)
+        .fixedSize(horizontal: false, vertical: true)
     }
     .frame(minHeight: Target.minimum)
     .accessibilityElement(children: .combine)
