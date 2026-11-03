@@ -85,6 +85,7 @@ import Testing
   @Test func theCinematicsHaveNoSwitch() {
     let keys = LabExperiment.allCases.map(\.rawValue)
     #expect(!keys.contains("cinematicOnboarding"))
+    #expect(WidgetFeatures.retiredKeys.contains("cinematicOnboarding"))
     #expect(!keys.contains { $0.lowercased().contains("cinematic") })
   }
 }

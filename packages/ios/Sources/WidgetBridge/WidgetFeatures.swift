@@ -48,7 +48,7 @@ extension WidgetFeatures: Codable {
   /// and the next save leaves it out.
   public static let retiredKeys: Set<String> = [
     "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
-    "catChases",
+    "catChases", "cinematicOnboarding",
   ]
 
   public init(from decoder: any Decoder) throws {
