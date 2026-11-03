@@ -14,6 +14,8 @@ extension GenzLayout {
     }
     var layout = self
     layout.furniture = furniture
+    // The furnished sets put the cat on a piece of their own.
+    layout.catTop = nil
     switch style {
     case .windowSeat:
       layout.pieces = Self.windowSeatPieces(palette, furniture: furniture)
