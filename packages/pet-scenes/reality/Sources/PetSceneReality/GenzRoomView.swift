@@ -68,7 +68,7 @@ struct GenzRoomView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.petSceneDrawing) private var drawing
-  @Environment(\.petSceneNoteUnread) private var noteUnread
+  @Environment(\.petSceneNoteUnread) fileprivate var noteUnread
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneCat) private var cat
   @Environment(\.petSceneFlyIn) private var flyIn
@@ -275,14 +275,26 @@ struct GenzRoomView: View {
       .onAppear {
         room.report = onEvent
       }
-      .accessibilityElement()
-      .accessibilityLabel("Window seat at night")
-      .accessibilityValue(noteUnread ? "A new note is on the window" : "")
-      .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
-      .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
-      .accessibilityAction(named: "Open the note") {
-        onEvent(.noteOpened(delivery: world.delivery))
-      }
+      .modifier(GenzRoomAccessibility(view: self, room: room))
+  }
+
+  /// What VoiceOver hears of the room and can do in it. Kept apart from the feeds so each chain
+  /// stays small enough to type-check.
+  fileprivate struct GenzRoomAccessibility: ViewModifier {
+    let view: GenzRoomView
+    let room: GenzRoom
+
+    func body(content: Content) -> some View {
+      content
+        .accessibilityElement()
+        .accessibilityLabel("Window seat at night")
+        .accessibilityValue(view.noteUnread ? "A new note is on the window" : "")
+        .accessibilityAction(named: "Pet the cat") { view.onEvent(room.petCat()) }
+        .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
+        .accessibilityAction(named: "Open the note") {
+          view.onEvent(.noteOpened(delivery: view.world.delivery))
+        }
+    }
   }
 
   /// Puts `room` in the RealityView in place of the room it held, and starts its updates.
