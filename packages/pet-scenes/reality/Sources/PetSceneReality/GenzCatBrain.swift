@@ -75,16 +75,23 @@ extension GenzRoom {
   /// The affordance kind of a piece, or nil for one the cat has no use for.
   static func affordanceKind(_ kind: GenzPiece.Kind) -> RoomAffordance.Kind? {
     switch kind {
-    case .daybed, .quiltedDaybed, .catBed, .idolCatBed: .bed
+    case .daybed, .quiltedDaybed, .catBed: .bed
     case .milkCrate, .bookCrate: .box
     case .bookshelf, .wallShelves: .shelf
-    case .cardigan, .idolThrow, .idolBooks, .idolBeanBag: .soft
-    case .mugs, .phoneOnCharger, .candles, .idolMugs, .idolCactus: .smallItem
-    case .roundRug, .patternRug, .idolRug: .rug
+    case .cardigan: .soft
+    case .mugs, .phoneOnCharger, .candles: .smallItem
+    case .roundRug, .patternRug: .rug
     case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,
-      .speaker, .windowBench, .sideTable, .knitPouf, .stringLights, .idolFloorLamp, .idolMonstera,
-      .idolRecordPlayer, .idolStringLights:
+      .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
+      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
+      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
+      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
+      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
+      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      kind.idol?.affordance
     }
   }
 

@@ -36,9 +36,12 @@ import Testing
     for gone in [GenzPiece.Kind.patternRug, .leafyPlant, .catBed, .knitPouf, .mugs, .cardigan] {
       #expect(!kinds.contains(gone), "\(gone)")
     }
-    let shown = Set(IdolProp.allCases.map(\.kind)).intersection(kinds)
-    // All but the record player, which only the retro set has.
-    #expect(shown.count == IdolProp.allCases.count - 1)
+    // The pilot's props, all but the record player, which only the retro set has.
+    let pilot: Set<GenzPiece.Kind> = [
+      .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolMugs,
+      .idolStringLights, .idolRug, .idolCatBed,
+    ]
+    #expect(pilot.isSubset(of: kinds))
     let retro = GenzLayout.of(.retroDen, idolProps: true)
     #expect(retro.pieces.contains { $0.piece.kind == .idolRecordPlayer })
     #expect(retro.pieces.contains { $0.piece.kind == .idolBeanBag })
@@ -63,5 +66,24 @@ import Testing
     for prop in IdolProp.allCases {
       #expect(kit.build(GenzPiece(prop.kind)).children.isEmpty)
     }
+  }
+
+  @Test func aShopItemFindsItsKind() {
+    for prop in IdolProp.allCases {
+      #expect(GenzPiece.Kind(shopItem: "furniture-idol-\(prop.rawValue)") == prop.kind)
+    }
+    #expect(GenzPiece.Kind(shopItem: "furniture-armchair") == nil)
+    #expect(GenzPiece.Kind(shopItem: "furniture-idol-nothing") == nil)
+  }
+
+  @Test func hungThingsGoOnAWallAndOthersStandSomewhere() {
+    for prop in IdolProp.allCases {
+      #expect(!prop.surfaces.isEmpty, "\(prop)")
+      if prop.surfaces.contains(.wall) { #expect(prop.surfaces == [.wall], "\(prop)") }
+      #expect(prop.metres.x > 0 && prop.metres.y > 0 && prop.metres.z > 0, "\(prop)")
+    }
+    #expect(IdolProp.clock.surfaces == [.wall])
+    #expect(IdolProp.teaSet.surfaces.contains(.top))
+    #expect(IdolProp.beanbag.surfaces == [.floor])
   }
 }

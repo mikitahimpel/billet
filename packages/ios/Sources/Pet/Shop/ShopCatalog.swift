@@ -127,17 +127,43 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
   /// Made from a FLUX.2 picture by Idol, remeshed and baked onto one shared texture. Model names
   /// start with `Idol_`, and the models live in their own file beside the room's.
   static let idolProps: [ShopItem] = [
-    idol("beanbag", "Bean bag", 26, .width, 0.45),
-    idol("floorlamp", "Standing lamp", 24, .height, 0.62),
-    idol("throwblanket", "Knitted throw", 14, .width, 0.22),
-    idol("monstera", "Potted monstera", 18, .height, 0.5),
-    idol("cactus", "Little cactus", 8, .height, 0.1),
-    idol("books", "Pile of books", 10, .width, 0.15),
-    idol("recordplayer", "Record player", 28, .width, 0.22),
+    idol("beanbag", "Bean bag", 26, .width, 0.4),
+    idol("floorlamp", "Standing lamp", 24, .height, 0.75),
+    idol("throwblanket", "Knitted throw", 14, .width, 0.25),
+    idol("monstera", "Potted monstera", 18, .height, 0.55),
+    idol("cactus", "Little cactus", 8, .height, 0.09),
+    idol("books", "Pile of books", 10, .width, 0.14),
+    idol("recordplayer", "Record player", 28, .width, 0.21),
     idol("mugs", "Two mugs", 8, .width, 0.11),
     idol("stringlights", "Coil of fairy lights", 12, .width, 0.18),
     idol("rug", "Woven rug", 20, .width, 0.6),
-    idol("catbed", "Plush cat bed", 22, .width, 0.4),
+    idol("catbed", "Plush cat bed", 22, .width, 0.25),
+    idol("desk", "Writing desk", 34, .width, 0.5),
+    idol("armchair", "Round armchair", 32, .width, 0.4),
+    idol("floorcushion-terracotta", "Terracotta floor cushion", 12, .width, 0.3),
+    idol("floorcushion-sage", "Sage floor cushion", 12, .width, 0.3),
+    idol("wallshelf", "Wall shelf", 16, .width, 0.3, mount: .wall),
+    idol("frame-cat", "Sleeping cat print", 12, .height, 0.2, mount: .wall),
+    idol("frame-landscape", "Sunset hills painting", 12, .width, 0.225, mount: .wall),
+    idol("poster-moon", "Moon poster", 10, .height, 0.3, mount: .wall),
+    idol("poster-plants", "Botanical poster", 10, .height, 0.3, mount: .wall),
+    idol("clock", "Wall clock", 14, .width, 0.16, mount: .wall),
+    idol("mirror", "Arched mirror", 26, .height, 0.8),
+    idol("fishtank", "Fish tank", 36, .height, 0.35),
+    idol("cattree", "Cat tree", 38, .height, 0.55),
+    idol("scratchpost", "Scratching post", 16, .height, 0.3),
+    idol("fiddlefig", "Fiddle leaf fig", 22, .height, 0.75),
+    idol("pothos", "Trailing pothos", 12, .height, 0.175),
+    idol("succulents", "Succulent trio", 10, .width, 0.15),
+    idol("guitar", "Acoustic guitar", 30, .height, 0.5),
+    idol("teaset", "Tea set", 14, .width, 0.18),
+    idol("radio", "Wooden radio", 18, .width, 0.16),
+    idol("globe", "Desk globe", 16, .height, 0.18),
+    idol("lavalamp", "Lava lamp", 18, .height, 0.2),
+    idol("neonheart", "Neon heart", 24, .width, 0.225, mount: .wall),
+    idol("beanbag-sage", "Sage bean bag", 26, .width, 0.4),
+    idol("beanbag-terracotta", "Terracotta bean bag", 26, .width, 0.4),
+    idol("yarnbasket", "Basket of yarn", 12, .width, 0.2),
   ]
 
   private static let treats: [ShopItem] = [
@@ -153,11 +179,12 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
   }
 
   private static func idol(
-    _ id: String, _ name: String, _ price: Int, _ fit: ShopItem.Fit, _ size: Double
+    _ id: String, _ name: String, _ price: Int, _ fit: ShopItem.Fit, _ size: Double,
+    mount: ShopItem.Mount = .floor
   ) -> ShopItem {
     ShopItem(
       id: "furniture-idol-\(id)", name: name, price: price,
-      look: .furniture(model: "Idol_\(id)", fit: fit, size: size, mount: .floor))
+      look: .furniture(model: "Idol_\(id)", fit: fit, size: size, mount: mount))
   }
 
   private static func piece(
