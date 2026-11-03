@@ -1390,11 +1390,424 @@
     ];
   }
 
+  const MESSAGE_KEY_PATTERN = "^[a-z0-9]+(?:[.\\-][a-z0-9]+){0,7}$";
+  const NORMAL_STATUS = { maintenance: { active: false } };
+  const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  /** A UTC instant as the value of a `datetime-local` input, in the browser's zone. */
+  function toLocalInput(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  }
+
+  /** A `datetime-local` value, read in the browser's zone, as `YYYY-MM-DDTHH:MM:SSZ`. */
+  function fromLocalInput(value) {
+    if (!value) return undefined;
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return undefined;
+    return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+
+  const fmtInstant = (iso) => (iso ? fmtWhen(Date.parse(iso)) : "—");
+  const clip = (text, n = 60) => (text.length > n ? `${text.slice(0, n - 1)}…` : text);
+  const sameMessage = (a, b) => (a?.key ?? null) === (b?.key ?? null) && a?.text === b?.text;
+
+  /** What one saved status changed against the one before it, or the whole state without one. */
+  function statusSummary(status, prev) {
+    const m = status.maintenance;
+    const pm = prev?.maintenance;
+    const parts = [];
+    if (!prev || m.active !== pm.active)
+      parts.push(m.active ? "Maintenance on" : "Maintenance off");
+    if (prev ? m.until !== pm.until : m.until)
+      parts.push(m.until ? `until ${fmtInstant(m.until)}` : "until cleared");
+    if (prev ? !sameMessage(m.message, pm.message) : m.message)
+      parts.push(m.message ? `message “${clip(m.message.text)}”` : "message removed");
+    if (prev ? status.minVersion !== prev.minVersion : status.minVersion)
+      parts.push(status.minVersion ? `min version ${status.minVersion}` : "min version removed");
+    if (prev ? !sameMessage(status.notice, prev.notice) : status.notice)
+      parts.push(status.notice ? `notice “${clip(status.notice.text)}”` : "notice removed");
+    return parts.length ? parts.join(" · ") : "Saved with no changes";
+  }
+
+  let statusNotice = "";
+
+  async function renderMaintenance() {
+    const [current, { changes }] = await Promise.all([
+      api("/status"),
+      api("/status/history?limit=50"),
+    ]);
+    const st = current.status;
+    const m = st.maintenance;
+    const head = pageHead(
+      "Maintenance",
+      "What every app is told: maintenance, the oldest build allowed to run, and a notice.",
+      h("span", {
+        class: `chip ${m.active ? "alert" : "running"}`,
+        text: m.active ? "MAINTENANCE ON" : "Normal",
+      }),
+    );
+
+    const notice = statusNotice
+      ? h("div", { class: "form-msg section-msg", role: "alert", text: statusNotice })
+      : null;
+    statusNotice = "";
+
+    const glance = h(
+      "section",
+      { class: `card glance${m.active ? " on" : ""}`, "aria-labelledby": "glance-title" },
+      h("h2", { class: "card-title", id: "glance-title", text: "Now" }),
+      h(
+        "dl",
+        { class: "facts" },
+        h(
+          "div",
+          null,
+          h("dt", { text: "Maintenance" }),
+          h("dd", { class: m.active ? "on" : null, text: m.active ? "On" : "Off" }),
+          m.message && h("dd", { class: "text", text: m.message.text }),
+        ),
+        h("div", null, h("dt", { text: "Until" }), h("dd", { text: fmtInstant(m.until) })),
+        h(
+          "div",
+          null,
+          h("dt", { text: "Minimum version" }),
+          h("dd", { text: st.minVersion || "None" }),
+        ),
+        h(
+          "div",
+          null,
+          h("dt", { text: "Notice" }),
+          h("dd", { class: st.notice ? "text" : null, text: st.notice ? st.notice.text : "None" }),
+        ),
+      ),
+      h("p", {
+        class: "card-sub glance-foot",
+        text: current.version
+          ? `v${current.version} · changed by ${current.updatedBy || "unknown"} · ${fmtWhen(current.updatedAt)}`
+          : "Never set: apps get the normal status.",
+      }),
+    );
+
+    const active = h("input", { type: "checkbox", role: "switch", checked: m.active });
+    const keyInput = (value) =>
+      h("input", {
+        type: "text",
+        class: "mono",
+        pattern: MESSAGE_KEY_PATTERN,
+        maxlength: "80",
+        value,
+        autocomplete: "off",
+        spellcheck: "false",
+      });
+    const textInput = (value) => h("textarea", { rows: "2", maxlength: "280", text: value });
+
+    const msgKey = keyInput(m.message?.key || "maintenance.default");
+    const msgText = textInput(m.message?.text || "");
+    const untilStart = m.until ? toLocalInput(m.until) : "";
+    const until = h("input", {
+      type: "datetime-local",
+      max: "9999-12-31T23:59",
+      value: untilStart,
+    });
+    const untilHint = h("p", { class: "hint" });
+    const showUntil = () => {
+      const iso = fromLocalInput(until.value);
+      if (!iso) {
+        untilHint.textContent = `Blank means no time is shown. Your time zone: ${localZone}.`;
+        return;
+      }
+      const past = Date.parse(iso) < Date.now() ? " This is in the past." : "";
+      untilHint.textContent = `${fmtWhen(Date.parse(iso))} your time (${localZone}) · sent as ${iso}.${past}`;
+    };
+    until.addEventListener("input", showUntil);
+    showUntil();
+    const clearUntil = h("button", {
+      type: "button",
+      class: "btn quiet",
+      text: "Clear",
+      "aria-label": "Clear until",
+      onclick: () => {
+        until.value = "";
+        showUntil();
+        until.focus();
+      },
+    });
+
+    const minV = h("input", {
+      type: "text",
+      pattern: VERSION_PATTERN,
+      placeholder: "e.g. 1.2 or 1.2.0+14",
+      value: st.minVersion || "",
+      autocomplete: "off",
+      spellcheck: "false",
+    });
+
+    const noticeKey = keyInput(st.notice?.key || "notice.default");
+    const noticeText = textInput(st.notice?.text || "");
+    const noticeHint = h("p", { class: "hint" });
+    const removeNotice = h("button", {
+      type: "button",
+      class: "btn quiet",
+      text: "Remove notice",
+      onclick: () => {
+        noticeText.value = "";
+        noticeKey.value = "notice.default";
+        showNotice();
+        noticeText.focus();
+      },
+    });
+    const showNotice = () => {
+      const empty = !noticeText.value.trim();
+      removeNotice.disabled = empty;
+      noticeHint.textContent = empty
+        ? st.notice
+          ? "No notice: saving removes the current one."
+          : "No notice. Write one to show it."
+        : "A soft line apps show until it's dismissed. Up to 280 characters.";
+    };
+    noticeText.addEventListener("input", showNotice);
+    showNotice();
+
+    const readStatus = () => {
+      const maintenance = { active: active.checked };
+      const mt = msgText.value.trim();
+      if (mt) maintenance.message = { key: msgKey.value.trim(), text: mt };
+      const iso = until.value === untilStart ? m.until : fromLocalInput(until.value);
+      if (iso) maintenance.until = iso;
+      const status = { maintenance };
+      if (minV.value.trim()) status.minVersion = minV.value.trim();
+      const nt = noticeText.value.trim();
+      if (nt) status.notice = { key: noticeKey.value.trim(), text: nt };
+      return status;
+    };
+
+    const msg = h("div", { class: "form-msg", role: "alert", tabindex: "-1" });
+    const save = h("button", { type: "submit", class: "btn primary", text: "Save" });
+    const discard = h("button", {
+      type: "button",
+      class: "btn quiet",
+      text: "Discard edits",
+      onclick: () => route(),
+    });
+    const confirmSlot = h("div");
+
+    const closeConfirm = (refocus) => {
+      if (!confirmSlot.firstChild) return;
+      confirmSlot.replaceChildren();
+      save.hidden = false;
+      discard.hidden = false;
+      if (refocus) save.focus();
+    };
+
+    async function send(status) {
+      save.disabled = true;
+      try {
+        await api("/status", {
+          method: "PUT",
+          body: { status, expectedVersion: current.version },
+        });
+        toast(status.maintenance.active ? "Saved. Maintenance is on." : "Saved.");
+        route();
+      } catch (err) {
+        save.disabled = false;
+        closeConfirm(false);
+        if (err.status === 409) {
+          statusNotice = `Someone else changed the status while you were editing (now v${err.body?.current ?? "?"}). This is the latest; check it and make your change again.`;
+          toast("Someone else changed the status. Showing the latest.", "warn");
+          route();
+          return;
+        }
+        msg.textContent =
+          err.status === 400
+            ? err.body?.message || "The server rejected this status."
+            : errorText(err);
+        msg.focus();
+      }
+    }
+
+    const askConfirm = (status) => {
+      const title = h("h3", {
+        class: "card-title",
+        id: "turn-on-title",
+        tabindex: "-1",
+        text: "Turn maintenance on for everyone?",
+      });
+      const box = h(
+        "div",
+        {
+          class: "confirm-box",
+          role: "group",
+          "aria-labelledby": "turn-on-title",
+          "aria-describedby": "turn-on-body",
+          onkeydown: (e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              closeConfirm(true);
+            }
+          },
+        },
+        title,
+        h("p", {
+          id: "turn-on-body",
+          text: "Every write is refused for all users until you turn it off: no notes, no pairing, no settings. Apps show the maintenance screen within about a minute.",
+        }),
+        h(
+          "div",
+          { class: "actions" },
+          h("button", {
+            type: "button",
+            class: "btn danger",
+            text: "Turn maintenance on",
+            onclick: () => send(status),
+          }),
+          h("button", {
+            type: "button",
+            class: "btn",
+            text: "Go back",
+            onclick: () => closeConfirm(true),
+          }),
+        ),
+      );
+      save.hidden = true;
+      discard.hidden = true;
+      confirmSlot.replaceChildren(box);
+      title.focus();
+    };
+
+    const form = h(
+      "form",
+      {
+        class: "card",
+        novalidate: true,
+        "aria-label": "Edit the status",
+        oninput: () => closeConfirm(false),
+        onsubmit: (e) => {
+          e.preventDefault();
+          msg.replaceChildren();
+          msgKey.required = Boolean(msgText.value.trim());
+          noticeKey.required = Boolean(noticeText.value.trim());
+          if (!form.reportValidity()) return;
+          const status = readStatus();
+          if (status.maintenance.active && !m.active) askConfirm(status);
+          else send(status);
+        },
+      },
+      h(
+        "fieldset",
+        null,
+        h("legend", { text: "Maintenance" }),
+        h(
+          "label",
+          { class: "check" },
+          active,
+          "Maintenance on: every write is refused for everyone",
+        ),
+        field("Message key", msgKey, "Names a string the app may carry."),
+        field("Message text", msgText, "Shown when the app has no such string. Blank sends none."),
+        field("Until (your time)", h("div", { class: "inline" }, until, clearUntil), null, until),
+        untilHint,
+      ),
+      h(
+        "fieldset",
+        null,
+        h("legend", { text: "Minimum version" }),
+        field(
+          "Oldest build that may run",
+          minV,
+          "Like 1.2 or 1.2.0+14. Older apps show “Update billet” and nothing else. Blank means no minimum.",
+        ),
+      ),
+      h(
+        "fieldset",
+        null,
+        h("legend", { text: "Notice" }),
+        field("Notice key", noticeKey),
+        field("Notice text", noticeText),
+        h("div", { class: "inline" }, removeNotice, noticeHint),
+      ),
+      msg,
+      confirmSlot,
+      h(
+        "div",
+        { class: "form-foot" },
+        save,
+        discard,
+        h("p", { class: "hint", text: "Changes reach apps within about a minute (KV cache)." }),
+      ),
+    );
+    until.setAttribute("aria-describedby", "until-hint");
+    untilHint.id = "until-hint";
+    noticeText.setAttribute("aria-describedby", "notice-hint");
+    noticeHint.id = "notice-hint";
+
+    const prevOf = (i) =>
+      changes[i + 1]?.status ?? (changes[i].version === 1 ? NORMAL_STATUS : null);
+    const history = changes.length
+      ? h(
+          "div",
+          { class: "table-wrap" },
+          h(
+            "table",
+            { class: "stacked" },
+            h("caption", { class: "sr-only", text: "Status changes, newest first" }),
+            h(
+              "thead",
+              null,
+              h(
+                "tr",
+                null,
+                ["When", "Version", "Who", "Change"].map((t) => h("th", { scope: "col", text: t })),
+              ),
+            ),
+            h(
+              "tbody",
+              null,
+              changes.map((c, i) =>
+                h(
+                  "tr",
+                  null,
+                  h(
+                    "td",
+                    { class: "lead-cell when", "data-label": "When" },
+                    h("time", { datetime: new Date(c.at).toISOString(), text: fmtWhen(c.at) }),
+                  ),
+                  h("td", { "data-label": "Version", text: `v${c.version}` }),
+                  h("td", { class: "who", "data-label": "Who", text: c.by }),
+                  h("td", {
+                    class: "change",
+                    "data-label": "Change",
+                    text: statusSummary(c.status, prevOf(i)),
+                  }),
+                ),
+              ),
+            ),
+          ),
+        )
+      : h("p", { class: "card-sub", text: "No changes recorded yet." });
+
+    return [
+      head,
+      notice,
+      glance,
+      h("section", { class: "section", "aria-label": "Edit" }, form),
+      h(
+        "section",
+        { class: "section" },
+        h("h2", { class: "section-title", text: "History" }),
+        h("div", { class: "card" }, history),
+      ),
+    ];
+  }
+
   const ROUTES = {
     overview: renderOverview,
     experiments: renderExperiments,
     flags: renderFlags,
     pairs: renderPairs,
+    maintenance: renderMaintenance,
   };
   let renderSeq = 0;
   let firstRender = true;

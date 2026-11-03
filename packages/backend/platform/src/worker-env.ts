@@ -23,6 +23,11 @@ export interface WorkerEnv {
   readonly ACCESS_AUD?: string;
   /** The AUD tag of the Access application for agents' service tokens (`/admin/api/agent`). */
   readonly ACCESS_AGENT_AUD?: string;
+  /**
+   * The service status (maintenance, minimum build, notice), kept apart from D1 so it works while
+   * the database is down. Absent: the normal status, and the admin panel can't change it.
+   */
+  readonly STATUS?: KVNamespace;
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;

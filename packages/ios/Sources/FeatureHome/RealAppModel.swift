@@ -38,6 +38,8 @@ public final class RealAppModel {
   public private(set) var pairing: PairingModel
   /// The saved Labs choices and the server's test variants for this pair.
   public let labs: WidgetFeaturesModel
+  /// Maintenance, the oldest build that may run, and the service's notice.
+  public let serviceStatus: ServiceStatusModel
   @ObservationIgnored private let flags: FlagsRefresher
   @ObservationIgnored private let reporter: EventReporter
   @ObservationIgnored private let hasWidget: @MainActor () async -> Bool
@@ -49,10 +51,16 @@ public final class RealAppModel {
     api: APIClient, accounts: AccountStore, baseURL: URL,
     labs: WidgetFeaturesModel = WidgetFeaturesModel(store: .appGroup()),
     eventStorage: AppGroupStorage? = try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
-    hasWidget: (@MainActor () async -> Bool)? = nil
+    hasWidget: (@MainActor () async -> Bool)? = nil,
+    serviceStatus: ServiceStatusModel? = nil
   ) {
     self.api = api
     self.labs = labs
+    self.serviceStatus =
+      serviceStatus
+      ?? ServiceStatusModel(
+        appVersion: nil,
+        fetch: { () async throws(TransportError) -> AppStatus in try await api.status().status })
     flags = FlagsRefresher(api: api, labs: labs)
     reporter = EventReporter(api: api, storage: eventStorage)
     self.hasWidget = hasWidget ?? { await WidgetPresence.isInstalled() }
@@ -67,8 +75,19 @@ public final class RealAppModel {
   /// and count what happened. Neither can fail the screen; a failure keeps what was held.
   public func becameActive() async {
     reporter.appOpened()
-    await flags.refresh()
+    if let status = await flags.refresh() { serviceStatus.received(status) }
     if await hasWidget() { reporter.widgetAdded() }
+    await reporter.flush()
+  }
+
+  /// Maintenance is over: the room reconnects now instead of waiting out its back-off, and the
+  /// events that could not be counted during it are sent.
+  public func maintenanceEnded() async {
+    if let cachedLive, !cachedLive.isOnline {
+      cachedLive.disconnect()
+      cachedLive.connect()
+    }
+    cachedHistory?.refresh()
     await reporter.flush()
   }
 

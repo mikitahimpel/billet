@@ -8,6 +8,7 @@ import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import { routes } from "@billet/contracts-http-api/routes";
 import type { FlagsUnavailable } from "./flags-error.ts";
 import { FlagsService } from "./flags-service.ts";
+import { ServiceStatus } from "./service-status.ts";
 
 const respondError = HttpServerResponse.schemaJson(ApiError);
 const respondFlags = HttpServerResponse.schemaJson(FlagsResponse);
@@ -25,11 +26,12 @@ const respondFlagsFailures = <R>(
     respondFailures,
   );
 
-/** The flags route of the API. Needs `AuthService` and `FlagsService`. */
+/** The flags route of the API. Needs `AuthService`, `FlagsService` and `ServiceStatus`. */
 export const FlagsRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const flags = yield* FlagsService;
     const principal = principalOf(yield* AuthService);
+    const { current: status } = yield* ServiceStatus;
 
     // Never cached for the caller: a switched-off experiment has to reach the next launch. The
     // configurations behind it are cached at the edge for a few seconds (docs/experiments.md).
@@ -39,9 +41,11 @@ export const FlagsRoutes = HttpRouter.use((router) =>
       Effect.gen(function* () {
         const { userId } = yield* principal;
         const { appVersion } = clientInfoOf((yield* HttpServerRequest.HttpServerRequest).headers);
-        return yield* respondFlags(yield* flags.flagsFor(userId, { appVersion }), {
-          headers: { "cache-control": "no-store" },
-        });
+        const answer = yield* flags.flagsFor(userId, { appVersion });
+        return yield* respondFlags(
+          { ...answer, status },
+          { headers: { "cache-control": "no-store" } },
+        );
       }).pipe(respondFlagsFailures),
     );
   }),

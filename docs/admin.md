@@ -10,6 +10,7 @@ served by the `Api` Worker under `/admin` and protected by Cloudflare Access (Ze
 | Overview | DAU and WAU (people who opened the app or sent a note), pairs created per day, pair completion (inviters who ended up in a pair), notes per pair per day, D1/D7/D30 retention (both partners active), the funnel installed → signed in → paired → first note → second day | nothing |
 | Experiments | each `experiment` with its status, exposure and variants, and per variant: pairs, the north star (both sent a note on day 7) with a 95% Wilson interval, median time to first note, and the small-numbers caution | start, stop, kill, unkill |
 | Flags | every registry entry (experiments and remote flags), its live configuration and version, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
+| Maintenance | maintenance on or off, its message and "back around" time, the minimum build, the notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it; works while D1 is down |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
@@ -95,6 +96,8 @@ a Cloudflare Access **service token**. They can't change anything.
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
 | `pairs/<pair id>` | Pairs: one pair by id only, at the panel's detail |
+| `status` | Maintenance: the current service status, version, who set it |
+| `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |
 
 - The Worker serves these only to a token whose `common_name` is set and whose audience is the
   agent application's AUD. Only `GET`; every write route, the page and the panel's own API answer

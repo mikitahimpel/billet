@@ -35,10 +35,14 @@ public struct FlagAssignment: Codable, Hashable, Sendable {
 
 /// Every running experiment and the variant the pair is in. One that is not listed is off, and the
 /// client uses its built-in default. A client replaces its stored copy with this list, never merges.
+///
+/// `status` is the service's status, the same as `GET /v1/status` answers, when the server sends it.
 public struct FlagsResponse: Codable, Hashable, Sendable {
   public let flags: [FlagAssignment]
+  public let status: AppStatus?
 
-  public init(flags: [FlagAssignment]) {
+  public init(flags: [FlagAssignment], status: AppStatus? = nil) {
     self.flags = flags
+    self.status = status
   }
 }

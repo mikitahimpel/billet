@@ -15,6 +15,9 @@ settings:
     # Demo is the default; pass BILLET_BACKEND=real BILLET_API_BASE_URL=https://... to xcodebuild.
     BILLET_BACKEND: demo
     BILLET_API_BASE_URL: ""
+    # Where "Update billet" sends a build the service no longer accepts: an App Store or https
+    # link. Empty opens the TestFlight app.
+    BILLET_UPDATE_URL: ""
   configs:
     # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
     Release:
