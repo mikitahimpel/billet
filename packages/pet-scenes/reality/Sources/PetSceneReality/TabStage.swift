@@ -203,9 +203,15 @@ final class TabStages {
   private var desk: DeskStage?
   private var onboarding: OnboardingStage?
   private var adoption: AdoptionStage?
+  private var rehearsed: Set<ObjectIdentifier> = []
 
   nonisolated init(rooms: GenzRoomCache) {
     self.rooms = rooms
+  }
+
+  /// True the first time it is asked for `stage`, which ``TabRehearsal`` then draws; once a launch.
+  func claimRehearsal(of stage: any TabStage) -> Bool {
+    rehearsed.insert(ObjectIdentifier(stage)).inserted
   }
 
   var shopStage: ShopStage {
@@ -255,6 +261,11 @@ struct TabSceneView: View {
   @State private var isMounted = false
   @State private var isAppeared = false
   @State private var track = GestureTrack()
+  /// Set a moment after the RealityView mounts, as its first frame takes that long to come.
+  @State private var isDrawing = false
+
+  /// Whatever is laid over the scene waits for it to be lit and drawn.
+  private var showsLayers: Bool { stage.screen.isLit && isDrawing }
 
   private var isOnScreen: Bool {
     isAppeared && hostShowsScene && scenePhase == .active
@@ -264,10 +275,10 @@ struct TabSceneView: View {
     let look = LightingLook.of(lighting)
     ZStack {
       TabBackdrop()
-      if stage.screen.isLit, let behind { behind }
+      if showsLayers, let behind { behind.transition(.opacity) }
       GlowHaze(look: look, window: stage.screen.window)
       if isMounted { reality }
-      TabGlowLayer(screen: stage.screen)
+      TabGlowLayer(screen: stage.screen).opacity(isDrawing ? 1 : 0)
       GlowGrade(look: look)
       GlowVignette(look: look)
       if stage.screen.darkness > 0 {
@@ -276,8 +287,9 @@ struct TabSceneView: View {
           .allowsHitTesting(false)
           .accessibilityHidden(true)
       }
-      if stage.screen.isLit, let overlay { overlay }
+      if showsLayers, let overlay { overlay.transition(.opacity) }
     }
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: showsLayers)
     .ignoresSafeArea()
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
@@ -289,12 +301,18 @@ struct TabSceneView: View {
     .onChange(of: lighting, initial: true) { _, lighting in stage.setLighting(.of(lighting)) }
   }
 
+  private static let firstFrame = Duration.milliseconds(450)
+
   private var reality: some View {
     let stage = stage
     return RealityView { content in
       content.camera = .virtual
       content.add(stage.root)
       stage.start()
+    }
+    .task {
+      try? await Task.sleep(for: Self.firstFrame)
+      isDrawing = true
     }
     .onGeometryChange(for: CGSize.self) {
       $0.size

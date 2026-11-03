@@ -34,6 +34,10 @@ struct AppShellView: View {
 
   /// Long enough for launch to have settled, so that preparing scenes cannot delay it.
   private static let prepareDelay = Duration.seconds(1)
+  /// Set once Home has shown for a while, after its room's opening, so that drawing the shop and
+  /// the desk out of sight never shares the first frames with it.
+  @State private var rehearsesTabs = false
+  private static let rehearseDelay = Duration.seconds(6)
   /// Above zero, because SwiftUI stops drawing a view that is fully transparent.
   private static let hiddenOpacity = 0.01
 
@@ -175,8 +179,21 @@ struct AppShellView: View {
     }
     .background {
       // Behind the tabs, so that switching tabs never hides a scene that is preparing.
-      ForEach(preparingScenes, id: \.id) { scene in
-        scene.makePreparationView()
+      Group {
+        ForEach(preparingScenes, id: \.id) { scene in
+          scene.makePreparationView()
+        }
+        if rehearsesTabs, destination == .home, let scene = selectedScene {
+          scene.makeTabRehearsal(
+            shop: shopScene == nil
+              ? nil
+              : ShopSceneState(
+                items: session.shop.catalog.items, keeper: labs.shopkeeper, purchases: 0,
+                focused: nil, owned: []),
+            desk: deskScene != nil
+          )
+          .environment(\.petSceneLighting, labs.lighting)
+        }
       }
       .frame(width: 1, height: 1)
       .opacity(Self.hiddenOpacity)
@@ -186,6 +203,11 @@ struct AppShellView: View {
     .task {
       try? await Task.sleep(for: Self.prepareDelay)
       preparingScenes = scenes.filter { $0.id != selectedScene?.id }
+    }
+    .task(id: destination == .home) {
+      guard destination == .home, !rehearsesTabs else { return }
+      try? await Task.sleep(for: Self.rehearseDelay)
+      if !Task.isCancelled { rehearsesTabs = true }
     }
     .task { if ScenePerf.isOn { drivePerf() } }
     .tint(Palette.gold.color)

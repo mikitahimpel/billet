@@ -9,7 +9,7 @@ import RealityKit
 /// the notes pinned (the latest large), and now and then the cat, sitting by the paper or asleep
 /// on the desk. Built from the styled rooms' shared meshes; only the cat loads from a file.
 @MainActor
-final class DeskStage: TabStage {
+final class DeskStage: RehearsedStage {
   static let notePrefix = "desk-note:"
   static let paperName = "desk-paper"
   static let catName = "desk-cat"
@@ -30,6 +30,7 @@ final class DeskStage: TabStage {
   private var building: Task<Void, Never>?
   private(set) var isBuilt = false
   private var isOnScreen = false
+  private var isRehearsing = false
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
@@ -98,8 +99,14 @@ final class DeskStage: TabStage {
   func setOnScreen(_ onScreen: Bool) {
     if !onScreen { isAnnounced = false }
     isOnScreen = onScreen
-    room.isEnabled = onScreen && isBuilt
+    room.isEnabled = (onScreen || isRehearsing) && isBuilt
     frames.isPaused = !onScreen
+  }
+
+  func setRehearsing(_ rehearsing: Bool) {
+    isRehearsing = rehearsing
+    if rehearsing, building == nil { building = Task { await build() } }
+    room.isEnabled = (isOnScreen || rehearsing) && isBuilt
   }
 
   func setReduceMotion(_ reduced: Bool) {
@@ -290,7 +297,7 @@ final class DeskStage: TabStage {
     room.addChild(catHolder)
     lighting.apply(look)
     isBuilt = true
-    room.isEnabled = isOnScreen
+    room.isEnabled = isOnScreen || isRehearsing
     screen.isLit = true
     updateGlows()
     pin()
