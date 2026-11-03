@@ -520,10 +520,11 @@ final class AdoptionStage: TabStage {
       Self.log.error("An adoption cat has no size")
       return
     }
-    let scale = AdoptionLayout.catLength / CatCatalog.reach
+    let scale = AdoptionLayout.catLength / choice.model.anatomy.length
     model.scale = .one * scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
-    let rig = CatRig(model: model, clips: CatCatalog.clips(choice.model))
+    let rig = CatRig(
+      model: model, clips: CatCatalog.clips(choice.model), anatomy: choice.model.anatomy)
     if let palette = CatCatalog.palette(choice.model, coat: choice.coat) { rig?.paint(palette) }
     guard let seat = holders[index].children.first(where: { $0.name == Self.seatName }) else {
       return

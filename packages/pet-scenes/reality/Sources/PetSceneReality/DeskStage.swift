@@ -624,10 +624,11 @@ final class DeskStage: TabStage {
       Self.log.error("The desk cat has no size")
       return
     }
-    let scale = DeskLayout.cat.length / CatCatalog.reach
+    let scale = DeskLayout.cat.length / shown.model.anatomy.length
     model.scale = .one * scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
-    let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
+    let rig = CatRig(
+      model: model, clips: CatCatalog.clips(shown.model), anatomy: shown.model.anatomy)
     if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
     for child in Array(catHolder.children) { child.removeFromParent() }
     catHolder.addChild(model)

@@ -14,6 +14,8 @@ final class CatRig {
 
   let entity: Entity
   let info: [CatAction: CatClipInfo]
+  /// The body this rig moves, for where its mouth is.
+  let anatomy: PetAnatomy
   private let player: Entity
   private let skinned: ModelEntity?
   private var clips: [CatAction: AnimationResource] = [:]
@@ -40,12 +42,16 @@ final class CatRig {
   }
 
   /// Nil for a model with no timeline to trim.
-  init?(model: Entity, clips table: [CatAction: CatClipRange]) {
+  init?(
+    model: Entity, clips table: [CatAction: CatClipRange],
+    anatomy: PetAnatomy = CatChoice.standard.model.anatomy
+  ) {
     guard let player = Self.firstAnimated(in: model),
       let timeline = player.availableAnimations.map(\.definition)
         .max(by: { $0.duration < $1.duration })
     else { return nil }
     entity = model
+    self.anatomy = anatomy
     self.player = player
     var clips: [CatAction: AnimationResource] = [:]
     for (action, range) in table where Self.fits(range, timelineDuration: timeline.duration) {
@@ -137,12 +143,8 @@ final class CatRig {
       position: SIMD3(pose.columns.3.x, pose.columns.3.y, pose.columns.3.z), to: nil)
     let forward = simd_normalize(entity.convert(direction: [0, 0, -1], to: nil))
     let size = entity.scale(relativeTo: nil).x
-    return head + (forward * Self.mouthReach + [0, -Self.mouthDrop, 0]) * size
+    return head + (forward * anatomy.mouth.x + [0, -anatomy.mouth.y, 0]) * size
   }
-
-  /// From the head joint to the mouth, in metres for a cat at its made size.
-  static let mouthReach: Float = 0.05
-  static let mouthDrop: Float = 0.02
 
   /// The skeleton's own place in the model: the head's bind pose as the mesh has it, against the
   /// same pose chained from the root's rest transforms. Identity when the mesh does not say.

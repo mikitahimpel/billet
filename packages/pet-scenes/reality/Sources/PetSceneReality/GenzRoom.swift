@@ -422,11 +422,12 @@ final class GenzRoom: CatPlayStage {
     guard wanted == catChoice || !hasCat else { return }
     let bounds = model.visualBounds(relativeTo: nil)
     guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
-    let scale = layout.cat.length / CatCatalog.reach
+    let anatomy = shown.model.anatomy
+    let scale = layout.cat.length / anatomy.length
     model.scale = .one * scale
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
-    let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
+    let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
     if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
     let action = self.rig?.current ?? .sleep
     catModel?.removeFromParent()
@@ -1076,7 +1077,7 @@ final class GenzRoom: CatPlayStage {
   func catBody() -> CatBodyOnScreen? {
     CatBodyOnScreen.of(
       base: catHolder.position, heading: bodyHeading, length: layout.cat.length,
-      isOnBack: hands.isOnBack(at: clock)
+      isOnBack: hands.isOnBack(at: clock), anatomy: rig?.anatomy ?? .madeCat
     ) { camera.project($0, in: viewSize) }
   }
 

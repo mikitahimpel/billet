@@ -77,17 +77,21 @@ final class CatHands {
 }
 
 extension CatBodyOnScreen {
-  /// The cat standing or sitting at `base` facing `heading`, `length` long, as `project` draws it.
+  /// The pet standing or sitting at `base` facing `heading`, `length` long, shaped as `anatomy`
+  /// says, as `project` draws it.
   @MainActor
   static func of(
     base: SIMD3<Float>, heading: Float, length: Float, isOnBack: Bool,
+    anatomy: PetAnatomy = CatChoice.standard.model.anatomy,
     project: (SIMD3<Float>) -> CGPoint?
   ) -> CatBodyOnScreen? {
     let forward = SIMD3<Float>(-sin(heading), 0, -cos(heading))
     let up = SIMD3<Float>(0, 1, 0)
     guard
-      let head = project(base + forward * length * 0.36 + up * length * 0.42),
-      let tail = project(base - forward * length * 0.3 + up * length * 0.28),
+      let head = project(
+        base + forward * length * anatomy.head.x + up * length * anatomy.head.y),
+      let tail = project(
+        base - forward * length * anatomy.tail.x + up * length * anatomy.tail.y),
       let middle = project(base + up * length * 0.3),
       let top = project(base + up * length * 0.62)
     else { return nil }

@@ -999,7 +999,7 @@ final class NookiDiorama: CatPlayStage {
       }()
     return CatBodyOnScreen.of(
       base: catHolder.position(relativeTo: nil), heading: atan2(-forward.x, -forward.z),
-      length: length, isOnBack: hands.isOnBack(at: clock)
+      length: length, isOnBack: hands.isOnBack(at: clock), anatomy: rig?.anatomy ?? .madeCat
     ) {
       GenzCamera.project(
         $0, from: camera.position, towards: NookiCamera.target, fieldOfView: Self.fieldOfView,
@@ -1347,9 +1347,12 @@ final class NookiDiorama: CatPlayStage {
       guard let offset = Self.catOffset(model.visualBounds(relativeTo: nil)) else {
         throw NookiLoadError.noGeometry("Cat")
       }
-      model.scale = .one * Self.catScale
-      model.position = offset
-      let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model))
+      // Every cat comes out as long as the standard one: Nooki's furniture is sized to it.
+      let anatomy = shown.model.anatomy
+      let fit = CatChoice.standard.model.anatomy.length / anatomy.length
+      model.scale = .one * Self.catScale * fit
+      model.position = offset * fit
+      let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
       if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
       let action = self.rig?.current ?? .sleep
       catModel?.removeFromParent()

@@ -28,9 +28,14 @@ CATS = RESOURCES / "Cats"
 
 # A compiled cat over this many bytes is a sign something came in unreduced. The detailed cats
 # carry a 1024 px albedo and a normal map, and the kitten and fluffy one fur cards too, so they
-# are allowed more.
+# are allowed more; the hero ships four more clips than the others.
 LARGEST_CAT = 2_500_000
-LARGEST = {"detailed": 3_000_000, "detailedKitten": 3_400_000, "detailedFluffy": 3_600_000}
+LARGEST = {
+    "detailed": 3_000_000,
+    "detailedKitten": 3_400_000,
+    "detailedFluffy": 3_600_000,
+    "hero": 3_200_000,
+}
 
 
 def compile_reality(assets: Path, output: Path) -> None:

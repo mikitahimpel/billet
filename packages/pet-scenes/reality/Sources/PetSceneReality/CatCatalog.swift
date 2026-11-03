@@ -64,13 +64,6 @@ enum CatCatalog {
     }
   }
 
-  // MARK: - Size
-
-  /// The longest side across the floor, in a cat's own metres, of the size the made cats are
-  /// built to. A styled room scales every cat by its own cat length over this, so cats with long
-  /// tails are not shrunk.
-  static let reach: Float = 0.2998
-
   // MARK: - Coats
 
   /// The palette grid every painted cat shares: 4 by 4 swatches, in this order from the top left.
