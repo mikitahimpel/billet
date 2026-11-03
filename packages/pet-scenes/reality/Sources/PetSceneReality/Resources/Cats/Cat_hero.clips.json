@@ -11,6 +11,12 @@
   "trimEnd": 25.8333,
   "trimStart": 23.8333
  },
+ "carry": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 105.4,
+  "trimStart": 104.4
+ },
  "crouchWiggle": {
   "base": "stand",
   "loops": true,
@@ -77,6 +83,18 @@
   "trimEnd": 4.0,
   "trimStart": 0.0
  },
+ "jumpDown": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 115.8333,
+  "trimStart": 114.6333
+ },
+ "jumpUp": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 114.3,
+  "trimStart": 113.0
+ },
  "knead": {
   "base": "sit",
   "loops": true,
@@ -108,6 +126,12 @@
   "trimEnd": 30.1667,
   "trimStart": 26.1667
  },
+ "lookUp": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 112.6667,
+  "trimStart": 108.6667
+ },
  "perk": {
   "base": "sit",
   "loops": false,
@@ -131,6 +155,12 @@
   "loops": false,
   "trimEnd": 62.0,
   "trimStart": 58.0
+ },
+ "rubSide": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 108.3333,
+  "trimStart": 105.7333
  },
  "run": {
   "base": "stand",
