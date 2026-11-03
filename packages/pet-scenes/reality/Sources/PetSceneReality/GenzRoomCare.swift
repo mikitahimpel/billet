@@ -229,7 +229,9 @@ extension GenzRoom {
     toys.liftedAt = nil
     let eye = SIMD2(camera.position.x, camera.position.z)
     perch = (layout.onCatSurface(spot), CatTrip.heading(from: spot, to: eye))
+    let height = catHolder.position.y
     catHolder.position = homeScene
+    if height > homeScene.y { dropped = (height, clock) }
     if let response = hands.play.handle(.placed, at: clock) { _ = show(response) }
     behaviour.perform(.knead, for: 2.4, at: clock)
     updateScreen()

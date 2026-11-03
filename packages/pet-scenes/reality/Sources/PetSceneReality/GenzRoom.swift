@@ -184,6 +184,8 @@ final class GenzRoom: CatPlayStage {
   var lifeProps: GenzLifeProps?
   /// Where the cat was put down or called to, in place of its own spot, until it is sent back.
   var perch: (spot: SIMD2<Float>, heading: Float)?
+  /// A cat just put down: the height it was let go from, and when.
+  var dropped: (height: Float, clock: Double)?
   /// The lamp's extra warmth from Loved, in steps, so the light changes only now and then.
   private var lifeWarmth: Float = 0
   private var catChoice = CatChoice.standard
@@ -295,6 +297,7 @@ final class GenzRoom: CatPlayStage {
     catHolder.name = Self.catName
     catHolder.position = layout.cat.spot.scene
     catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
+    bodyHeading = layout.cat.heading
     let length = layout.cat.length
     NookiDiorama.makeTappable(
       catHolder, size: [length * 0.8, length * 0.6, length * 0.8], center: [0, length * 0.3, 0])
@@ -1032,21 +1035,23 @@ final class GenzRoom: CatPlayStage {
       case .sleeping: .free
       }
     var rate: Float = 1
-    bodyHeading = homeHeading
+    var headingGoal = homeHeading
     stepToys()
     if let pose = stepHeld() {
       mode = .fixed(pose.action)
-      bodyHeading = pose.heading
+      headingGoal = pose.heading
     } else if let pose = stepPursuit() {
       mode = .fixed(pose.action)
-      bodyHeading = pose.heading
+      headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
     } else if let pose = stepTrip() {
       mode = .fixed(pose.action)
-      bodyHeading = pose.heading
+      headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
     }
     let step = Float(min(clock - lastCatClock, 0.1))
+    bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
+    if toys.liftedAt == nil { settleDrop() }
     hands.stepLean(step, reduceMotion: reduceMotion)
     lastCatClock = clock
     catHolder.orientation =
@@ -1395,6 +1400,34 @@ extension GenzRoom {
 
   /// The cat's resting place as a point in the room.
   var homeScene: SIMD3<Float> { SIMD3(home.x, layout.cat.spot.scene.y, home.y) }
+
+  /// How quickly the cat's body turns to a new heading: most of the way in a fifth of a second,
+  /// so a lift, a drop or a call turns it rather than snapping it round.
+  static let turnRate: Float = 14
+
+  /// `heading` moved towards `goal` the short way round, for `step` seconds.
+  static func turn(_ heading: Float, towards goal: Float, step: Float) -> Float {
+    var difference = (goal - heading).truncatingRemainder(dividingBy: 2 * .pi)
+    if difference > .pi { difference -= 2 * .pi }
+    if difference < -.pi { difference += 2 * .pi }
+    return heading + difference * (1 - exp(-turnRate * step))
+  }
+
+  /// How long a cat put down takes to come down onto the seat.
+  static let dropLength: Float = 0.25
+
+  /// Brings a cat just put down from where it hung to the seat, easing in as it lands.
+  func settleDrop() {
+    guard let dropped else { return }
+    let into = Float(clock - dropped.clock) / Self.dropLength
+    guard into < 1 else {
+      self.dropped = nil
+      catHolder.position.y = homeScene.y
+      return
+    }
+    let fall = into * into
+    catHolder.position.y = dropped.height + (homeScene.y - dropped.height) * fall
+  }
 
   /// The cat's walking pace and running pace, in metres a second, from its size in this room.
   var walkSpeed: Float { layout.cat.length * 0.9 }
