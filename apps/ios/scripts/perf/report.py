@@ -61,18 +61,19 @@ def collect(run_dir):
 
     launches = sorted(run_dir.glob("launch-*.log"))
     fulls = sorted(run_dir.glob("full-*.log"))
-    for log in launches + fulls:
+    costs = sorted(run_dir.glob("cost-*.log"))
+    for log in launches + fulls + costs:
         run = parse(log)
         if not run["done"]:
             add("failed runs", 1)
             continue
-        kind = "launch" if log.name.startswith("launch") else "full"
+        kind = log.name.split("-")[0]
         if kind == "launch":
             add("launch: process start to first frame (ms)", run["marks"].get("first_frame"))
             add("launch: process start to Home room drawing (ms)", first_room(run["marks"]))
             add("launch: memory peak (MB)", run["memory"])
         else:
-            add("full: memory peak (MB)", run["memory"])
+            add(f"{kind}: memory peak (MB)", run["memory"])
         for phase, values in run["phases"].items():
             if kind == "launch" and phase != "idle":
                 continue
@@ -91,6 +92,29 @@ def collect(run_dir):
     if size.exists():
         add("app (Simulator build, KB)", number(size.read_text().strip()))
     return metrics
+
+
+def breakdown(metrics):
+    """What each part a cost run switched off was worth: frame time with it and without it."""
+    rows = []
+    parts = []
+    for name in metrics:
+        if name.startswith("cost.cost.") and name.endswith(".on.orbit: p50"):
+            parts.append(name[len("cost.cost."):-len(".on.orbit: p50")])
+    for part in parts:
+        for motion in ("still", "orbit"):
+            for key in ("p50", "p95", "fps"):
+                on = metrics.get(f"cost.cost.{part}.on.{motion}: {key}")
+                off = metrics.get(f"cost.cost.{part}.off.{motion}: {key}")
+                if on and off:
+                    a, b = statistics.median(on), statistics.median(off)
+                    rows.append(f"| {part} | {motion} {key} | {show(on)} | {show(off)} | {a - b:+.2f} |")
+    if rows:
+        print("\n## What each part costs\n")
+        print("Each part off and back on, back to back in one launch. A positive difference in")
+        print("p50/p95 (ms) is what the part costs per frame; a negative one in fps is what it takes away.\n")
+        print("| Part | Metric | With it | Without it | Difference |\n|---|---|---|---|---|")
+        print("\n".join(rows))
 
 
 def show(samples):
@@ -129,6 +153,8 @@ def main(args):
             print(f"| {name} | {cells[0]} | {cells[1]} | {ratio} |")
         else:
             print(f"| {name} | {' | '.join(cells)} |")
+    if len(runs) == 1:
+        breakdown(collected[0])
 
 
 if __name__ == "__main__":
