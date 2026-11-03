@@ -37,7 +37,6 @@ public final class RealAppModel {
   /// The anonymous account's key in the iCloud Keychain.
   public let keys: AccountKeyStore
   @ObservationIgnored private let reauthorize: AppleReauthorizer
-  public private(set) var signIn: SignInModel
   /// Opens or restores the account from the iCloud key, with no question asked.
   public private(set) var anonymous: AnonymousSignInModel
   /// Whether the account can also be recovered with Sign in with Apple; `nil` until the server
@@ -45,6 +44,11 @@ public final class RealAppModel {
   public private(set) var linked: Bool?
   /// The partner left and the user hasn't been told yet. The pair has already ended.
   public private(set) var partnerLeft: PartnerLeft?
+  /// Links this account to Sign in with Apple, from "Us" or the save-your-cat card.
+  public private(set) var link: SignInModel
+  /// When the save-your-cat card was last closed, and since when the app has been used.
+  public private(set) var savePrompt: SaveAccountPrompt?
+  @ObservationIgnored private let savePromptStore: SaveAccountPromptStore?
   public private(set) var pairing: PairingModel
   /// The saved Labs choices and the server's test variants for this pair.
   public let labs: WidgetFeaturesModel
@@ -82,10 +86,26 @@ public final class RealAppModel {
     self.keys = keys
     self.reauthorize = reauthorize
     stage = RealStage((try? accounts.load()) ?? nil)
-    signIn = SignInModel(api: api, accounts: accounts)
     anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
+    link = SignInModel(api: api, accounts: accounts, purpose: .link)
     pairing = PairingModel(api: api)
     noticeStorage = eventStorage
+    savePromptStore = eventStorage.map(SaveAccountPromptStore.storage)
+    savePrompt = savePromptStore?.load(.now)
+  }
+
+  /// Whether Home offers to save the cat and notes with Sign in with Apple: only once the server
+  /// has said the account isn't linked, and after a week or a few notes.
+  public func offersSaveAccount(notesSent: Int, now: Date = .now) -> Bool {
+    guard let linked, let savePrompt else { return false }
+    return savePrompt.isOffered(linked: linked, notesSent: notesSent, now: now)
+  }
+
+  /// The card was closed; it stays away for a while.
+  public func dismissSaveAccount(now: Date = .now) {
+    guard let dismissed = savePrompt?.dismissed(at: now) else { return }
+    savePrompt = dismissed
+    savePromptStore?.save(dismissed)
   }
 
   /// The app came to the front with a paired account: learn which test variants the pair is in
@@ -132,6 +152,7 @@ public final class RealAppModel {
   /// The account is now linked to an Apple ID.
   public func linkedApple() {
     linked = true
+    link = SignInModel(api: api, accounts: accounts, purpose: .link)
   }
 
   public func signedIn() {
@@ -189,7 +210,7 @@ public final class RealAppModel {
     case .unpair:
       stage = .unpaired
     case .signOut, .deleteAccount:
-      signIn = SignInModel(api: api, accounts: accounts)
+      link = SignInModel(api: api, accounts: accounts, purpose: .link)
       anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
       linked = nil
       stage = .signedOut

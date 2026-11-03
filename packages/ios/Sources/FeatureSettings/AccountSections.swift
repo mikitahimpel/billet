@@ -1,9 +1,9 @@
 import DesignSystem
 import SwiftUI
 
-/// Settings of a signed-in account: the delivery check, unpair and sign out. `onFinished` is called
-/// with what finished so the app can move to the screen that follows.
-public struct AccountSettingsView: View {
+/// The signed-in account's part of "Us": the delivery check, unpair and delete. `onFinished` is
+/// called with what finished so the app can move to the screen that follows.
+public struct AccountSections: View {
   private let model: AccountModel
   private let onFinished: (AccountAction) -> Void
 
@@ -13,12 +13,10 @@ public struct AccountSettingsView: View {
   }
 
   public var body: some View {
-    ScreenScaffold("Settings") {
-      VStack(alignment: .leading, spacing: Spacing.large) {
-        healthSection
-        accountSection
-        failure
-      }
+    VStack(alignment: .leading, spacing: Spacing.large) {
+      healthSection
+      accountSection
+      failure
     }
     .task { await model.checkHealth() }
     .onChange(of: model.state) { _, state in
@@ -57,11 +55,9 @@ public struct AccountSettingsView: View {
 
   private var accountSection: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
-      SettingsHeading("Account")
+      SettingsHeading("Pair")
       SettingsGroup {
         SettingsLink("Unpair") { model.request(.unpair) }
-        ListDivider()
-        SettingsLink("Sign out") { model.request(.signOut) }
         ListDivider()
         SettingsLink("Delete account") { model.request(.deleteAccount) }
           .accessibilityIdentifier("deleteAccount")

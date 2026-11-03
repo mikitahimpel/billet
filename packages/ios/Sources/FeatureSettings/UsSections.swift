@@ -1,5 +1,12 @@
 import DesignSystem
+import Foundation
+import StoreKit
 import SwiftUI
+import UserNotifications
+
+#if canImport(UIKit)
+  import UIKit
+#endif
 
 /// Two small overlapping portraits, me in front and my partner behind: the way into "Us" from the
 /// top-left of Home. Warm paper on the evening scene, no chrome, so it sits in the room rather than
@@ -12,7 +19,11 @@ public struct PairAvatars: View {
   /// - Parameters:
   ///   - me: A letter or emoji for me.
   ///   - partner: The same for my partner; `nil` while unpaired, shown as an empty seat.
-  public init(me: String, partner: String?, size: CGFloat = 30) {
+  /// The two halves until there are pictures: the sun for me, the moon for my partner.
+  public static let me = "☀︎"
+  public static let partner = "☾"
+
+  public init(me: String = Self.me, partner: String? = Self.partner, size: CGFloat = 30) {
     self.me = me
     self.partner = partner
     self.size = size
@@ -153,5 +164,95 @@ public struct AccountSavedSection<LinkControls: View>: View {
       }
     }
     .accessibilityIdentifier("accountSaved")
+  }
+}
+
+/// Whether notes can reach this phone, and the way to the system's switches.
+public struct NotificationsSection: View {
+  @Environment(\.openURL) private var openURL
+  @Environment(\.scenePhase) private var scenePhase
+  @State private var status: String?
+
+  public init() {}
+
+  public var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      SettingsHeading("Notifications")
+      SettingsGroup {
+        SettingsRow("Status", value: status ?? "Checking…")
+        ListDivider()
+        SettingsLink("Open iOS Settings") {
+          #if canImport(UIKit)
+            if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+              openURL(url)
+            }
+          #endif
+        }
+      }
+    }
+    .task(id: scenePhase) { status = await Self.status() }
+  }
+
+  private static func status() async -> String {
+    switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+    case .authorized: "On"
+    case .provisional: "Quiet"
+    case .ephemeral: "On for now"
+    case .denied: "Off"
+    case .notDetermined: "Not set up"
+    @unknown default: "Unknown"
+    }
+  }
+}
+
+/// The privacy policy, feedback and the version.
+public struct AboutSection: View {
+  private static let privacyPolicy = URL(
+    string: "https://github.com/mikitahimpel/billet/blob/main/docs/privacy.md")
+  private static let feedback = URL(string: "mailto:gimpelllll@gmail.com?subject=billet%20feedback")
+
+  @Environment(\.openURL) private var openURL
+
+  public init() {}
+
+  public var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      SettingsHeading("About")
+      SettingsGroup {
+        SettingsLink("Privacy Policy") {
+          if let url = Self.privacyPolicy { openURL(url) }
+        }
+        ListDivider()
+        SettingsLink("Send feedback") {
+          if let url = Self.feedback { openURL(url) }
+        }
+      }
+      Text(Self.version)
+        .billetType(.label)
+        .foregroundStyle(Palette.muted.color)
+        .frame(maxWidth: .infinity)
+        .padding(.top, Spacing.small)
+    }
+  }
+
+  private static var version: String {
+    let info = Bundle.main.infoDictionary
+    let marketing = info?["CFBundleShortVersionString"] as? String ?? "?"
+    let build = info?["CFBundleVersion"] as? String ?? "?"
+    return "Version \(marketing) (build \(build))"
+  }
+}
+
+/// Where this build came from: Labs show only in builds for testing, a debug build or TestFlight.
+public enum BuildChannel {
+  public static func isForTesting() async -> Bool {
+    #if DEBUG
+      return true
+    #else
+      guard let transaction = try? await AppTransaction.shared else { return false }
+      switch transaction {
+      case .verified(let app), .unverified(let app, _): return app.environment != .production
+      }
+    #endif
   }
 }

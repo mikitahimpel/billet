@@ -82,4 +82,37 @@ import Wire
     #expect(model.linked == true)
     #expect(model.partnerLeft == nil)
   }
+
+  @Test func theSaveCardWaitsForTheServerThenForAFewNotes() async {
+    let model = Self.model(
+      account: AccountResponse(userId: UserId("u"), linked: false), saved: Saved(),
+      storage: Self.storage())
+    // Before the server has said, the phone doesn't know whether the account is linked.
+    #expect(!model.offersSaveAccount(notesSent: 10))
+    await model.refreshAccount()
+    #expect(!model.offersSaveAccount(notesSent: 1))
+    #expect(model.offersSaveAccount(notesSent: 5))
+    #expect(model.offersSaveAccount(notesSent: 0, now: .now.addingTimeInterval(8 * 24 * 3600.0)))
+  }
+
+  @Test func aClosedSaveCardStaysClosedAcrossLaunches() async {
+    let storage = Self.storage()
+    let account = AccountResponse(userId: UserId("u"), linked: false)
+    let model = Self.model(account: account, saved: Saved(), storage: storage)
+    await model.refreshAccount()
+    model.dismissSaveAccount()
+    #expect(!model.offersSaveAccount(notesSent: 5))
+
+    let later = Self.model(account: account, saved: Saved(), storage: storage)
+    await later.refreshAccount()
+    #expect(!later.offersSaveAccount(notesSent: 5))
+  }
+
+  @Test func aLinkedAccountIsNeverAskedToSave() async {
+    let model = Self.model(
+      account: AccountResponse(userId: UserId("u"), linked: true), saved: Saved(),
+      storage: Self.storage())
+    await model.refreshAccount()
+    #expect(!model.offersSaveAccount(notesSent: 50))
+  }
 }

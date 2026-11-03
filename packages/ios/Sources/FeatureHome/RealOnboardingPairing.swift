@@ -10,6 +10,8 @@ struct RealOnboardingPairing: View {
   let model: PairingModel
   let scenes: [any PetScene]
   let lighting: RoomLighting
+  /// Why the account isn't made yet, shown over the pairing's own failure.
+  var signInFailure: String?
   let onPaired: () -> Void
 
   @State private var onboarding = OnboardingPairing()
@@ -48,7 +50,8 @@ struct RealOnboardingPairing: View {
   }
 
   private var failure: String? {
-    if case .choosing(let failure?, _) = model.state { failure.message } else { nil }
+    if let signInFailure { return signInFailure }
+    return if case .choosing(let failure?, _) = model.state { failure.message } else { nil }
   }
 
   /// Where the invite is, as the scene follows it.

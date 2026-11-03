@@ -3,53 +3,56 @@ import Foundation
 import Pet
 import PetScene
 import SwiftUI
-import UserNotifications
 import WidgetBridge
 
-#if canImport(UIKit)
-  import UIKit
-#endif
-
-/// Partner and pair status, the pet scene, notifications, links, app version, and log out.
-public struct SettingsView: View {
-  private static let privacyPolicy = URL(
-    string: "https://github.com/mikitahimpel/billet/blob/main/docs/privacy.md")
-  private static let feedback = URL(string: "mailto:gimpelllll@gmail.com?subject=billet%20feedback")
-
+/// "Us", opened from the two avatars on Home: the two of us and the cat, its character, where the
+/// account is saved, notifications and widgets, the pair, and about. Labs come last, and only in
+/// builds for testing.
+public struct UsView<Account: View>: View {
   private let code: String?
   private let labs: WidgetFeaturesModel?
   private let partnerStatus: String
   private let catName: String?
   /// A few habits the cat has learned, in plain words.
   private let habits: [String]
+  private let streak: Int
+  private let daysTogether: Int?
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?
   private let widgetFeatures: WidgetFeaturesModel?
   private let isFakePartner: Bool
-  private let onLogOut: () async -> String?
+  private let onRenameCat: ((String) -> Void)?
+  private let onUnpair: () async -> String?
   /// Plays the first launch again without touching the pair, or `nil` where it cannot.
   private let onReplayOnboarding: (() -> Void)?
+  private let account: Account
 
-  @Environment(\.openURL) private var openURL
-  @Environment(\.scenePhase) private var scenePhase
-  @State private var notifications: String?
-  @State private var confirmingLogOut = false
-  @State private var loggingOut = false
-  @State private var logOutError: String?
+  @State private var showsLabs = false
+  @State private var confirmingUnpair = false
+  @State private var unpairing = false
+  @State private var unpairError: String?
+  @State private var renaming = false
+  @State private var newName = ""
 
-  /// - Parameter onLogOut: Logs out and returns a message to show if that failed.
+  /// - Parameters:
+  ///   - account: Where the account is saved; empty where there is no account, as in the demo.
+  ///   - onUnpair: Unpairs and returns a message to show if that failed.
   public init(
     code: String?,
     labs: WidgetFeaturesModel? = nil,
     partnerStatus: String,
     catName: String? = nil,
     habits: [String] = [],
+    streak: Int = 0,
+    daysTogether: Int? = nil,
     scenes: [any PetScene],
     selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
     isFakePartner: Bool = false,
+    onRenameCat: ((String) -> Void)? = nil,
     onReplayOnboarding: (() -> Void)? = nil,
-    onLogOut: @escaping () async -> String?
+    onUnpair: @escaping () async -> String?,
+    @ViewBuilder account: () -> Account
   ) {
     self.isFakePartner = isFakePartner
     self.onReplayOnboarding = onReplayOnboarding
@@ -58,36 +61,62 @@ public struct SettingsView: View {
     self.partnerStatus = partnerStatus
     self.catName = catName
     self.habits = habits
+    self.streak = streak
+    self.daysTogether = daysTogether
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
     self.widgetFeatures = widgetFeatures
-    self.onLogOut = onLogOut
+    self.onRenameCat = onRenameCat
+    self.onUnpair = onUnpair
+    self.account = account()
   }
 
   public var body: some View {
-    ScreenScaffold("Settings") {
-      pair
-      if scenes.count > 1 {
-        sceneSection
-      }
-      notificationSection
+    ScreenScaffold("Us") {
+      UsHeader(
+        me: PairAvatars.me, partner: PairAvatars.partner, catName: catName,
+        daysTogether: daysTogether, streak: streak)
+      CatCharacterSection(catName: catName, card: characterCard)
+      account
+      NotificationsSection()
       if let widgetFeatures {
         widgetSection(widgetFeatures)
       }
-      if let labs {
+      pair
+      AboutSection()
+      if showsLabs, let labs {
         labSection(labs)
       }
-      links
-      logOut
-      version
     }
-    .task(id: scenePhase) { notifications = await Self.notificationStatus() }
-    .alert("Log out of billet?", isPresented: $confirmingLogOut) {
-      Button("Log out", role: .destructive) { performLogOut() }
+    .task { showsLabs = await BuildChannel.isForTesting() }
+    .alert("Unpair from your partner?", isPresented: $confirmingUnpair) {
+      Button("Unpair", role: .destructive) { performUnpair() }
       Button("Cancel", role: .cancel) {}
     } message: {
-      Text(Self.logOutWarning(isFakePartner: isFakePartner))
+      Text(Self.unpairWarning(isFakePartner: isFakePartner))
     }
+    .alert("Rename the cat", isPresented: $renaming) {
+      TextField("Name", text: $newName)
+      Button("Rename") { onRenameCat?(newName) }
+      Button("Cancel", role: .cancel) {}
+    }
+  }
+
+  /// What the cat's brain knows of its character, once it knows anything.
+  private var characterCard: AnyView? {
+    let temperament = labs?.temperamentRecord?.temperament
+    guard temperament != nil || !habits.isEmpty else { return nil }
+    return AnyView(
+      SettingsGroup {
+        if let temperament {
+          SettingsRow(temperament.title, value: temperament.line)
+            .accessibilityIdentifier("settings.character")
+        }
+        ForEach(habits, id: \.self) { habit in
+          if temperament != nil || habit != habits.first { ListDivider() }
+          SettingsRow(habit, value: "")
+        }
+      })
   }
 
   private var pair: some View {
@@ -95,17 +124,24 @@ public struct SettingsView: View {
       SettingsHeading("Pair")
       SettingsGroup {
         SettingsRow("Partner", value: partnerStatus)
+        if onRenameCat != nil {
+          ListDivider()
+          SettingsLink("Rename \(catName ?? "the cat")") {
+            newName = catName ?? ""
+            renaming = true
+          }
+          .accessibilityIdentifier("us.renameCat")
+        }
         ListDivider()
-        SettingsRow("Cat", value: catName ?? "Not named yet")
-        if let temperament = labs?.temperamentRecord?.temperament {
-          ListDivider()
-          SettingsRow("Character", value: "\(temperament.title). \(temperament.line)")
-            .accessibilityIdentifier("settings.character")
-        }
-        ForEach(habits, id: \.self) { habit in
-          ListDivider()
-          SettingsRow(habit, value: "")
-        }
+        SettingsLink(unpairing ? "Unpairing…" : "Unpair") { confirmingUnpair = true }
+          .disabled(unpairing)
+          .accessibilityIdentifier("us.unpair")
+      }
+      if let unpairError {
+        Text(unpairError)
+          .billetType(.label)
+          .foregroundStyle(Palette.paper.color)
+          .padding(.horizontal, Spacing.medium)
       }
       if let code {
         PairCodeCard(code: code)
@@ -117,23 +153,6 @@ public struct SettingsView: View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       SettingsHeading("Scene")
       PetScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID)
-    }
-  }
-
-  private var notificationSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.small) {
-      SettingsHeading("Notifications")
-      SettingsGroup {
-        SettingsRow("Status", value: notifications ?? "Checking…")
-        ListDivider()
-        SettingsLink("Open iOS Settings") {
-          #if canImport(UIKit)
-            if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
-              openURL(url)
-            }
-          #endif
-        }
-      }
     }
   }
 
@@ -162,10 +181,13 @@ public struct SettingsView: View {
     }
   }
 
-  /// One switch per experiment, grouped by what it is for.
+  /// The scene, then one switch per experiment, grouped by what it is for.
   private func labSection(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
       SettingsHeading("Labs")
+      if scenes.count > 1 {
+        sceneSection
+      }
       EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: \.hasRoom) {
@@ -208,47 +230,7 @@ public struct SettingsView: View {
     }
   }
 
-  private var links: some View {
-    VStack(alignment: .leading, spacing: Spacing.small) {
-      SettingsHeading("About")
-      SettingsGroup {
-        SettingsLink("Privacy Policy") {
-          if let url = Self.privacyPolicy { openURL(url) }
-        }
-        ListDivider()
-        SettingsLink("Send feedback") {
-          if let url = Self.feedback { openURL(url) }
-        }
-      }
-    }
-  }
-
-  private var logOut: some View {
-    VStack(alignment: .leading, spacing: Spacing.small) {
-      BilletButton(loggingOut ? "Logging out…" : "Log out", rank: .secondary) {
-        confirmingLogOut = true
-      }
-      .disabled(loggingOut)
-      if let logOutError {
-        Text(logOutError)
-          .billetType(.label)
-          .foregroundStyle(Palette.paper.color)
-          .padding(.horizontal, Spacing.medium)
-      }
-    }
-  }
-
-  private var version: some View {
-    let info = Bundle.main.infoDictionary
-    let marketing = info?["CFBundleShortVersionString"] as? String ?? "?"
-    let build = info?["CFBundleVersion"] as? String ?? "?"
-    return Text("Version \(marketing) (build \(build))")
-      .billetType(.label)
-      .foregroundStyle(Palette.muted.color)
-      .frame(maxWidth: .infinity)
-  }
-
-  static func logOutWarning(isFakePartner: Bool) -> String {
+  static func unpairWarning(isFakePartner: Bool) -> String {
     isFakePartner
       ? "This ends the practice run and deletes its notes, the cat's name, the streak and "
         + "anything bought in it. Nothing was shared with anyone."
@@ -256,24 +238,40 @@ public struct SettingsView: View {
         + "will need a new code to pair again."
   }
 
-  private func performLogOut() {
-    loggingOut = true
-    logOutError = nil
+  private func performUnpair() {
+    unpairing = true
+    unpairError = nil
     Task {
-      logOutError = await onLogOut()
-      loggingOut = false
+      unpairError = await onUnpair()
+      unpairing = false
     }
   }
+}
 
-  private static func notificationStatus() async -> String {
-    switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
-    case .authorized: "On"
-    case .provisional: "Quiet"
-    case .ephemeral: "On for now"
-    case .denied: "Off"
-    case .notDetermined: "Not set up"
-    @unknown default: "Unknown"
-    }
+extension UsView where Account == EmptyView {
+  /// "Us" with no account, as in the demo.
+  public init(
+    code: String?,
+    labs: WidgetFeaturesModel? = nil,
+    partnerStatus: String,
+    catName: String? = nil,
+    habits: [String] = [],
+    streak: Int = 0,
+    daysTogether: Int? = nil,
+    scenes: [any PetScene],
+    selectedSceneID: Binding<String?>,
+    widgetFeatures: WidgetFeaturesModel? = nil,
+    isFakePartner: Bool = false,
+    onRenameCat: ((String) -> Void)? = nil,
+    onReplayOnboarding: (() -> Void)? = nil,
+    onUnpair: @escaping () async -> String?
+  ) {
+    self.init(
+      code: code, labs: labs, partnerStatus: partnerStatus, catName: catName, habits: habits,
+      streak: streak, daysTogether: daysTogether, scenes: scenes,
+      selectedSceneID: selectedSceneID, widgetFeatures: widgetFeatures,
+      isFakePartner: isFakePartner, onRenameCat: onRenameCat,
+      onReplayOnboarding: onReplayOnboarding, onUnpair: onUnpair, account: { EmptyView() })
   }
 }
 
