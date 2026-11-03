@@ -133,6 +133,12 @@ import Testing
         #expect(rig.info[action]?.loops == false, "\(model) \(action)")
       }
       #expect(rig.info[.startle]?.base == .stand, "\(model)")
+      #expect(rig.info[.carry]?.loops == true, "\(model)")
+      #expect(rig.info[.lookUp]?.loops == true && rig.info[.lookUp]?.base == .sit, "\(model)")
+      for action in [CatAction.rubSide, .jumpUp, .jumpDown] {
+        #expect(rig.info[action]?.base == .stand, "\(model) \(action)")
+        #expect(rig.info[action]?.loops == false, "\(model) \(action)")
+      }
     }
   }
 

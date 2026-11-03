@@ -56,6 +56,17 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case startle
   /// Sitting, ears forward, the head tilts over to one side and then a little to the other.
   case headTilt
+  /// The walk with a toy in the mouth, head up and tail proud. Travels like the walk.
+  case carry
+  /// Standing, leans into something on its left, cheek first, then shoulder and flank.
+  case rubSide
+  /// Sitting, watching something high up with the head well back. A loop.
+  case lookUp
+  /// Gathers, springs up and forward, lands. Airborne from `CatClipInfo.jumpAir`'s start to its
+  /// end, as shares of the clip; the room carries the cat along the arc in between.
+  case jumpUp
+  /// Gathers, springs, reaches down with the forepaws and lands. Airborne as `jumpUp`.
+  case jumpDown
 
   /// The moves to play instead, in order, for a model without this clip.
   public var standIns: [CatAction] {
@@ -74,6 +85,10 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
     case .groomFlank, .groomTail: [.groom]
     case .lickLips: [.happy]
     case .startle, .headTilt: [.perk]
+    case .carry: [.walk]
+    case .rubSide: [.headbutt, .happy]
+    case .lookUp: [.look, .sit]
+    case .jumpUp, .jumpDown: [.pounce]
     case .idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick,
       .happy, .stretch, .yawn, .groom, .knead, .slowBlink, .perk, .twitch:
       []
@@ -97,6 +112,9 @@ public struct CatClipInfo: Hashable, Sendable {
   public var base: CatBase
   /// The pose the clip ends in: its base, except for a clip that goes from one base to another.
   public var ends: CatBase
+
+  /// For a jump, the share of the clip at which the paws leave the ground and at which they land.
+  public static let jumpAir: ClosedRange<Double> = 0.3...0.62
 
   public init(duration: Double, loops: Bool, base: CatBase, ends: CatBase? = nil) {
     self.duration = duration
@@ -456,12 +474,14 @@ public struct CatBehaviour: Sendable {
     switch action {
     case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead, .loaf: 1
     case .perk, .happy, .lickLips: 0.5
-    case .walk, .eat, .run: 0.3
+    case .lookUp: 0.2
+    case .walk, .eat, .run, .carry: 0.3
     case .bat, .wave: 0.6
     case .sniff: 0.4
     case .grab, .dangle: 0
     case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce, .rollOver,
-      .headbutt, .reachUp, .lieDown, .groomFlank, .groomTail, .startle, .headTilt:
+      .headbutt, .reachUp, .lieDown, .groomFlank, .groomTail, .startle, .headTilt, .rubSide,
+      .jumpUp, .jumpDown:
       0
     }
   }
