@@ -12,6 +12,8 @@ final class GenzKit {
   private var meshes: [String: MeshResource] = [:]
   private var materials: [GenzColour: PhysicallyBasedMaterial] = [:]
   private var glows: [GlowKey: UnlitMaterial] = [:]
+  /// Pieces' plain parts joined into one mesh per material, by piece and material.
+  var mergedMeshes: [String: MeshResource] = [:]
   /// The grain textures, once ``makeTextures()`` has made them.
   var textures: [GenzTexture: (colour: TextureResource, normal: TextureResource?)] = [:]
 

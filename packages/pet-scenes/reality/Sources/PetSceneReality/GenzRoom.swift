@@ -324,6 +324,7 @@ final class GenzRoom: CatPlayStage {
     holder: Entity, piece: Entity
   ) {
     let piece = kit.build(placement.piece)
+    kit.merge(piece, key: "\(placement.piece)")
     let size = placement.piece.kind.size
     piece.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
     let holder = Entity()
