@@ -1,0 +1,169 @@
+name: TestFlight
+
+# Archives the app, checks the archive and uploads it to TestFlight. Started by hand only
+# (`gh workflow run testflight.yml --ref main`); no pull request event can start it, so a fork
+# never reaches the secrets. The secrets live in the `testflight` environment, which waits for
+# the repository owner's approval. See docs/testflight-ci.md.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: testflight
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ARCHIVE: ${{ runner.temp }}/Billet.xcarchive
+    steps:
+      - name: Check the secrets are set
+        env:
+          ASC_P8: ${{ secrets.ASC_P8 }}
+          DEMO_HOST: ${{ secrets.DEMO_HOST }}
+        run: |
+          missing=""
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_P8 DEMO_HOST; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets in the testflight environment:$missing. See docs/testflight-ci.md."
+            exit 1
+          fi
+          echo "::add-mask::$DEMO_HOST"
+
+      # Full history, so the checks can tell the demo host was never committed.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Select Xcode from .xcode-version
+        run: |
+          version="$(tr -d '[:space:]' < .xcode-version)"
+          app="/Applications/Xcode_${version}.app"
+          if [ ! -d "$app" ]; then
+            echo "::error::$app is not installed on this runner (.xcode-version is $version)"
+            ls -d /Applications/Xcode_*.app
+            exit 1
+          fi
+          sudo xcode-select -s "$app"
+          xcodebuild -version | head -n 1 | grep -qx "Xcode ${version}"
+
+      # Pinned release, verified by checksum, so project generation cannot drift.
+      - name: Install XcodeGen
+        env:
+          XCODEGEN_VERSION: 2.46.0
+          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      # The key is written for this run only and removed by the last step, whatever happens.
+      # The secret may hold the .p8 as it is or base64-encoded.
+      - name: Write the App Store Connect key
+        env:
+          ASC_P8: ${{ secrets.ASC_P8 }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/asc"
+          key="$RUNNER_TEMP/asc/AuthKey_${ASC_KEY_ID}.p8"
+          if printf '%s' "$ASC_P8" | grep -q -- '-----BEGIN PRIVATE KEY-----'; then
+            printf '%s\n' "$ASC_P8" > "$key"
+          else
+            printf '%s' "$ASC_P8" | base64 -D > "$key"
+          fi
+          chmod 600 "$key"
+          openssl pkey -in "$key" -noout || { echo "::error::ASC_P8 is not a readable private key"; exit 1; }
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      # A keychain for this run, for the development certificate Xcode makes to sign the archive.
+      # Distribution signing happens in the cloud at export; no private key leaves Apple.
+      - name: Make a keychain for this run
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+          echo "::add-mask::$password"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -d user -s "$keychain"
+          echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+
+      # One above every build App Store Connect has, and never below 16: the local archives went
+      # up to 15.
+      - name: Pick the build number
+        id: build
+        run: |
+          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor 16)"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "Build number: $number"
+
+      - name: Archive
+        env:
+          BILLET_DEMO_HOST: ${{ secrets.DEMO_HOST }}
+          BUILD_NUMBER: ${{ steps.build.outputs.number }}
+        run: |
+          (cd apps/ios && xcodegen generate --quiet)
+          set +e
+          xcodebuild archive \
+            -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" > "$RUNNER_TEMP/archive.log" 2>&1
+          status=$?
+          set -e
+          grep -E 'error:|\*\* ARCHIVE (SUCCEEDED|FAILED)|No signing certificate|requires a provisioning profile' \
+            "$RUNNER_TEMP/archive.log" | sort -u | cut -c1-300 | head -40
+          exit $status
+
+      - name: Check the archive
+        env:
+          DEMO_HOST: ${{ secrets.DEMO_HOST }}
+        run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
+
+      - name: Upload to TestFlight
+        run: |
+          set +e
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE" -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist apps/ios/ExportOptions-external.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" > "$RUNNER_TEMP/export.log" 2>&1
+          status=$?
+          set -e
+          grep -E 'error:|\*\* EXPORT (SUCCEEDED|FAILED)|Upload succeeded|Uploaded' \
+            "$RUNNER_TEMP/export.log" | sort -u | cut -c1-300 | head -40
+          exit $status
+
+      - name: Processing state
+        run: |
+          line="$(python3 -I apps/ios/scripts/testflight/asc.py state \
+            --build "${{ steps.build.outputs.number }}" --wait 900)"
+          echo "$line"
+          echo "$line" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the key and the keychain
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/asc"
+          if [ -n "${KEYCHAIN:-}" ]; then
+            security delete-keychain "$KEYCHAIN" || true
+            security default-keychain -d user -s login.keychain-db || true
+          fi
