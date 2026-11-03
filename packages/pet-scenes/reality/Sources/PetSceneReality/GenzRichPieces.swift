@@ -50,28 +50,6 @@ extension GenzKit {
     return parts
   }
 
-  /// A low bed with pillows, a quilted duvet and a knitted throw across its foot.
-  func quiltedBed(_ piece: GenzPiece) -> [Entity] {
-    let frame = matte(piece.slot(0))
-    var parts: [Entity] = []
-    for x: Float in [0.1, 4.54] {
-      for y: Float in [0.1, 3.14] { parts.append(block(x, y, 0, 0.16, 0.16, 0.16, frame)) }
-    }
-    parts.append(pad(0, 0, 0.16, 4.8, 3.4, 0.28, radius: 0.06, frame))
-    parts.append(block(0, -0.05, 0.16, 4.8, 0.14, 1.05, frame))
-    parts.append(pad(0.1, 0.1, 0.44, 4.6, 3.24, 0.38, radius: 0.14, matte(piece.slot(1))))
-    for x: Float in [0.35, 2.55] {
-      parts.append(
-        pad(x, 0.2, 0.8, 1.9, 0.8, 0.3, radius: 0.13, matte(piece.slot(1).shaded(0.35))))
-    }
-    let duvet = piece.slot(1).shaded(-0.06)
-    parts.append(pad(0.05, 1.15, 0.8, 4.7, 2.25, 0.16, radius: 0.07, matte(duvet)))
-    parts += quilting("bed", x: 0.25, y: 1.25, w: 4.3, d: 1.0, z: 0.96, colour: duvet)
-    parts += knittedThrow(
-      "bed", x: 0.35, y: 2.3, w: 4.1, depth: 1.08, top: 0.96, drop: 0.6, colour: piece.slot(2))
-    return parts
-  }
-
   /// Raised squares with a button at each corner, sewn into a cover.
   private func quilting(
     _ name: String, x: Float, y: Float, w: Float, d: Float, z: Float, colour: GenzColour
@@ -303,35 +281,6 @@ extension GenzKit {
         (centre + [cos(angle) * 1.45, 0.0025, sin(angle) * 1.45], [0.03, 0.005, 0.03]))
     }
     parts.append(part(boxes("rug fringe", fringe), matte(piece.slot(0).shaded(0.25))))
-    return parts
-  }
-
-  /// A wooden chair with a jumper hung over its back and jeans folded on the seat.
-  func chairWithClothes(_ piece: GenzPiece) -> [Entity] {
-    let wood = matte(piece.slot(0))
-    let jumper = matte(piece.slot(1))
-    let jumperFold = matte(piece.slot(1).shaded(-0.15))
-    var parts: [Entity] = []
-    for x: Float in [0.05, 0.93] {
-      for y: Float in [0.05, 0.88] { parts.append(block(x, y, 0, 0.08, 0.08, 0.82, wood)) }
-      parts.append(block(x, 0.05, 0.82, 0.08, 0.08, 1.05, wood))
-    }
-    parts.append(pad(0, 0, 0.82, 1.06, 1.0, 0.1, radius: 0.03, wood))
-    for z: Float in [1.25, 1.5] { parts.append(block(0.05, 0.06, z, 0.96, 0.05, 0.1, wood)) }
-    parts.append(pad(0, 0.02, 1.8, 1.06, 0.12, 0.1, radius: 0.03, wood))
-    parts.append(pad(0.06, -0.08, 1.82, 0.94, 0.28, 0.16, radius: 0.07, jumper))
-    parts.append(pad(0.08, 0.14, 1.2, 0.9, 0.08, 0.64, radius: 0.035, jumper))
-    parts.append(pad(0.3, 0.2, 1.24, 0.06, 0.04, 0.55, radius: 0.015, jumperFold))
-    parts.append(pad(0.66, 0.2, 1.3, 0.06, 0.04, 0.48, radius: 0.015, jumperFold))
-    parts.append(pad(0.1, -0.16, 1.35, 0.86, 0.08, 0.5, radius: 0.035, jumperFold))
-    let sleeve = part(
-      roundBox([0.16, 0.75, 0.14], radius: 0.06), jumper,
-      at: GenzRoomPoint(1.06, 0.22, 1.5).scene, turn: simd_quatf(angle: 0.18, axis: [0, 0, 1]))
-    parts.append(sleeve)
-    let jeans = matte(piece.slot(2))
-    parts.append(pad(0.15, 0.3, 0.92, 0.7, 0.55, 0.1, radius: 0.04, jeans))
-    parts.append(
-      pad(0.15, 0.3, 1.02, 0.7, 0.5, 0.06, radius: 0.025, matte(piece.slot(2).shaded(0.12))))
     return parts
   }
 

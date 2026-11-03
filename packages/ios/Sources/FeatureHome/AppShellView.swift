@@ -246,7 +246,6 @@ struct AppShellView: View {
       default: destination.wrappedValue = .home
       }
     }
-    ScenePerf.host.setRoom = { labs.setRoomStyle($0) }
     ScenePerf.host.setLighting = { labs.setLighting($0) }
   }
 }

@@ -291,7 +291,7 @@ final class DeskStage: RehearsedStage {
     catHolder.position = DeskLayout.cat.spot.scene
     catHolder.orientation = simd_quatf(angle: DeskLayout.cat.heading, axis: [0, 1, 0])
     let length = DeskLayout.cat.length
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       catHolder, size: [length * 0.8, length * 0.7, length * 0.8], center: [0, length * 0.3, 0])
     catHolder.isEnabled = false
     room.addChild(catHolder)
@@ -343,7 +343,7 @@ final class DeskStage: RehearsedStage {
     surface.name = Self.paperName
     surface.position = GenzRoomPoint((desk.x0 + desk.x1) / 2, (desk.y0 + desk.y1) / 2, top).scene
     room.addChild(surface)
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       surface, size: [desk.x1 - desk.x0, 0.3, desk.y1 - desk.y0], center: [0, 0.1, 0])
   }
 
@@ -412,7 +412,7 @@ final class DeskStage: RehearsedStage {
         at: [0, 1.1, 0]))
     holder.addChild(pencil)
     room.addChild(holder)
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       holder, size: [spec.width + 0.4, 0.4, spec.depth + 0.6], center: [0, 0.1, 0.1])
   }
 
@@ -571,7 +571,7 @@ final class DeskStage: RehearsedStage {
       holder.addChild(sheet)
       board.addChild(holder)
       holders[note.id] = holder
-      NookiDiorama.makeTappable(holder, size: [spot.side, spot.side, 0.3], center: [0, 0, 0.1])
+      SceneParts.makeTappable(holder, size: [spot.side, spot.side, 0.3], center: [0, 0, 0.1])
     }
     let shown = Set(wanted.map(\.id))
     noteMaterials = noteMaterials.filter { shown.contains($0.key) }
@@ -595,7 +595,7 @@ final class DeskStage: RehearsedStage {
         kit.matte(GenzColour(DeskLayout.pinColours[0])), at: [0, large.side / 2 - 0.14, 0.03],
         turn: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
     board.addChild(holder)
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       holder, size: [large.side, large.side, 0.3], center: [0, 0, 0.1])
   }
 
@@ -639,7 +639,7 @@ final class DeskStage: RehearsedStage {
     if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
     for child in Array(catHolder.children) { child.removeFromParent() }
     catHolder.addChild(model)
-    if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(model) { $0.components.set(receiver) } }
     rig?.play(.sit, blend: 0)
     self.rig = rig
   }

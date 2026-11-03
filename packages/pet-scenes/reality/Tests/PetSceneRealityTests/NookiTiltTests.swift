@@ -5,8 +5,6 @@ import simd
 
 @testable import PetSceneReality
 
-private let view = UUID()
-
 @Suite struct NookiTiltTests {
   private static let held = SIMD3<Float>(0, -0.7, -0.7)
   private static let step: Float = 1.0 / 60
@@ -81,38 +79,4 @@ private let view = UUID()
     source.stop()
     #expect(source.gravity == nil)
   }
-
-  @MainActor @Test func tiltStopsOffScreenAndUnderReduceMotion() async {
-    let source = CountingTiltSource()
-    let diorama = NookiDiorama(tiltSource: source)
-    diorama.setOnScreen(true, in: view)
-    diorama.startLoading()
-    await diorama.loading?.value
-    #expect(source.isRunning)
-    diorama.setOnScreen(false, in: view)
-    #expect(!source.isRunning)
-    diorama.setOnScreen(true, in: view)
-    #expect(source.isRunning)
-    diorama.setReduceMotion(true)
-    #expect(!source.isRunning)
-    diorama.setOnScreen(false, in: view)
-    diorama.setOnScreen(true, in: view)
-    #expect(!source.isRunning)
-    diorama.setReduceMotion(false)
-    #expect(source.isRunning)
-  }
-
-  @MainActor @Test func tiltDoesNotStartBeforeTheRoomIsThere() {
-    let source = CountingTiltSource()
-    let diorama = NookiDiorama(tiltSource: source)
-    diorama.setOnScreen(true, in: view)
-    #expect(!source.isRunning)
-  }
-}
-
-@MainActor private final class CountingTiltSource: NookiTiltSource {
-  var gravity: SIMD3<Float>?
-  var isRunning = false
-  func start() { isRunning = true }
-  func stop() { isRunning = false }
 }

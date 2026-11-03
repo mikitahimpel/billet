@@ -514,7 +514,7 @@ final class AdoptionStage: TabStage {
       let holder = Entity()
       holder.name = Self.catPrefix + String(index)
       let length = AdoptionLayout.catLength
-      NookiDiorama.makeTappable(
+      SceneParts.makeTappable(
         holder, size: [length * 0.8, length * 0.9, length * 0.8], center: [0, length * 0.4, 0])
       let seat = Entity()
       seat.name = Self.seatName
@@ -563,7 +563,7 @@ final class AdoptionStage: TabStage {
       seat.components.set(OpacityComponent(opacity: 0))
       fades[index] = clock
     }
-    if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(model) { $0.components.set(receiver) } }
     rig?.play(.sit, blend: 0)
     rigs[index] = rig
   }

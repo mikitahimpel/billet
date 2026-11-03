@@ -41,16 +41,14 @@ import Testing
     #expect(!purr.isPurring)
   }
 
-  /// The styled rooms' cats live on a bed, so a run towards the camera stops at its edge.
-  @Test func tripsInTheStyledRoomsStayOnTheBed() throws {
-    for style in [RoomStyle.sunsetLamp, .windowSeat] {
-      let layout = try #require(GenzLayout.of(style))
-      let surface = try #require(layout.catSurface, "\(style) has no surface under the cat")
-      let home = SIMD2(layout.cat.spot.x, layout.cat.spot.y)
-      #expect(all(home .>= surface.min) && all(home .<= surface.max), "\(style)")
-      let far = layout.onCatSurface(home + SIMD2(20, 20))
-      #expect(all(far .> surface.min) && all(far .< surface.max), "\(style) ran off to \(far)")
-    }
+  /// The room's cat lives on the seat, so a run towards the camera stops at its edge.
+  @Test func tripsInTheRoomStayOnTheSeat() throws {
+    let layout = GenzLayout.of(.original)
+    let surface = try #require(layout.catSurface, "no surface under the cat")
+    let home = SIMD2(layout.cat.spot.x, layout.cat.spot.y)
+    #expect(all(home .>= surface.min) && all(home .<= surface.max))
+    let far = layout.onCatSurface(home + SIMD2(20, 20))
+    #expect(all(far .> surface.min) && all(far .< surface.max), "ran off to \(far)")
   }
 
   /// Moving to turn the room, the finger is never batted at; held still, it is.

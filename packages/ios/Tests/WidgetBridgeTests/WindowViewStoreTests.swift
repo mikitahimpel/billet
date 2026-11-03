@@ -33,11 +33,4 @@ import Testing
     // The widgets show nothing of the view, so they are not asked to redraw.
     #expect(changes == 0)
   }
-
-  @Test func theViewLeavesTheRoomStyleAlone() throws {
-    let store = WidgetFeaturesStore(storage: storage())
-    try store.saveRoomStyle(.windowSeat)
-    try store.saveWindowView(WindowViewChoice(view: .suburbNight, weather: .snow))
-    #expect(store.loadRoomStyle() == .windowSeat)
-  }
 }

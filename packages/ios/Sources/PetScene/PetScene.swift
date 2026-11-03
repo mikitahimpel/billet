@@ -80,9 +80,8 @@ public protocol PetScene {
   /// True when the scene draws what the shop puts in the room and previews its items.
   var hasShop: Bool { get }
 
-  /// The room styles the scene can show, chosen through ``EnvironmentValues/petSceneRoomStyle``.
-  /// Empty for a scene with one look.
-  var roomStyles: [RoomStyle] { get }
+  /// True when the scene shows a furnished room, which Labs can light, furnish and give a view.
+  var hasRoom: Bool { get }
 
   /// The cats the scene can show, chosen through ``EnvironmentValues/petSceneCat``. Empty for a
   /// scene with one cat.
@@ -143,7 +142,7 @@ extension PetScene {
   public var noteWall: PetSceneNoteWall? { nil }
   public var handlesTouches: Bool { false }
   public var hasShop: Bool { false }
-  public var roomStyles: [RoomStyle] { [] }
+  public var hasRoom: Bool { false }
   public var cats: [CatModel] { [] }
   public func makeShopPreview(item: ShopItem) -> AnyView? { nil }
 

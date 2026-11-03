@@ -16,20 +16,10 @@ import Testing
   }
 
   private func flags(_ variant: String) -> RemoteFlags {
-    RemoteFlags(assignments: [Experiments.homeDirection.key: variant])
+    RemoteFlags(assignments: [Experiments.roomLighting.key: variant])
   }
 
   // MARK: what the build contains
-
-  @Test(arguments: Experiments.homeDirection.variants.sorted())
-  func everyVariantOfHomeDirectionHasARoomToShow(_ variant: String) {
-    #expect(RoomStyle(homeDirectionVariant: variant) != nil)
-  }
-
-  @Test func aVariantThisBuildDoesNotHaveHasNoRoom() {
-    #expect(RoomStyle(homeDirectionVariant: "attic") == nil)
-    #expect(RoomStyle(homeDirectionVariant: "") == nil)
-  }
 
   @Test func experimentKeysAreUnique() {
     #expect(Set(Experiments.all.map(\.key)).count == Experiments.all.count)
@@ -38,17 +28,17 @@ import Testing
   // MARK: reading the server's answer
 
   @Test func aVariantTheBuildHasIsReturned() {
-    #expect(flags("window-seat").variant(of: Experiments.homeDirection) == "window-seat")
+    #expect(flags("fairy-lights").variant(of: Experiments.roomLighting) == "fairy-lights")
   }
 
   @Test func aVariantTheBuildDoesNotHaveIsIgnored() {
-    #expect(flags("attic").variant(of: Experiments.homeDirection) == nil)
+    #expect(flags("disco").variant(of: Experiments.roomLighting) == nil)
   }
 
   @Test func anExperimentNotListedHasNoVariant() {
-    #expect(RemoteFlags().variant(of: Experiments.homeDirection) == nil)
+    #expect(RemoteFlags().variant(of: Experiments.roomLighting) == nil)
     #expect(
-      RemoteFlags(assignments: ["other": "window-seat"]).variant(of: Experiments.homeDirection)
+      RemoteFlags(assignments: ["other": "fairy-lights"]).variant(of: Experiments.roomLighting)
         == nil)
   }
 
@@ -60,66 +50,66 @@ import Testing
     #expect(count == RemoteFlags.limit)
   }
 
-  // MARK: what the room shows
+  // MARK: how the room is lit
 
-  @Test func withNoAnswerTheRoomIsWhatItAlwaysWas() {
-    #expect(model().0.roomStyle == .standard)
+  @Test func withNoAnswerTheLightIsWhatItAlwaysWas() {
+    #expect(model().0.lighting == .standard)
   }
 
-  @Test func theServersVariantChoosesTheRoom() {
+  @Test func theServersVariantChoosesTheLight() {
     let (model, _) = model()
-    model.setRemote(flags("sunset-lamp"))
-    #expect(model.roomStyle == .sunsetLamp)
-    model.setRemote(flags("window-seat"))
-    #expect(model.roomStyle == .windowSeat)
+    model.setRemote(flags("golden-hour"))
+    #expect(model.lighting == .goldenHour)
+    model.setRemote(flags("fairy-lights"))
+    #expect(model.lighting == .fairyLights)
   }
 
   @Test func aLabsChoiceBeatsTheServer() {
     let (model, _) = model()
-    model.setRemote(flags("sunset-lamp"))
-    model.setRoomStyle(.nooki)
-    #expect(model.roomStyle == .nooki)
-    #expect(model.roomStyleOverride == .nooki)
+    model.setRemote(flags("golden-hour"))
+    model.setLighting(.candle)
+    #expect(model.lighting == .candle)
+    #expect(model.lightingOverride == .candle)
   }
 
   @Test func followingTheTestReturnsToTheServersVariant() {
     let (model, _) = model()
-    model.setRemote(flags("window-seat"))
-    model.setRoomStyle(.sunsetLamp)
-    model.followTheTest()
-    #expect(model.roomStyleOverride == nil)
-    #expect(model.roomStyle == .windowSeat)
+    model.setRemote(flags("fairy-lights"))
+    model.setLighting(.goldenHour)
+    model.followTheLightingTest()
+    #expect(model.lightingOverride == nil)
+    #expect(model.lighting == .fairyLights)
   }
 
-  @Test func aVariantTheBuildDoesNotHaveLeavesTheRoomAlone() {
+  @Test func aVariantTheBuildDoesNotHaveLeavesTheLightAlone() {
     let (model, _) = model()
-    model.setRemote(flags("attic"))
-    #expect(model.roomStyle == .standard)
+    model.setRemote(flags("disco"))
+    #expect(model.lighting == .standard)
   }
 
   @Test func anAnswerReplacesTheLastOneSoSwitchingATestOffTakesEffect() {
     let (model, _) = model()
-    model.setRemote(flags("sunset-lamp"))
+    model.setRemote(flags("golden-hour"))
     model.setRemote(RemoteFlags())
     #expect(model.remote.isEmpty)
-    #expect(model.roomStyle == .standard)
+    #expect(model.lighting == .standard)
   }
 
   // MARK: offline and storage
 
   @Test func theLastAnswerSurvivesARestartForOfflineUse() {
     let (first, storage) = model()
-    first.setRemote(flags("window-seat"))
+    first.setRemote(flags("fairy-lights"))
     let (second, _) = model(storage)
-    #expect(second.roomStyle == .windowSeat)
+    #expect(second.lighting == .fairyLights)
   }
 
   @Test func theLabsChoiceSurvivesARestartAndSoDoesFollowing() {
     let (first, storage) = model()
-    first.setRoomStyle(.sunsetLamp)
-    #expect(model(storage).0.roomStyleOverride == .sunsetLamp)
-    first.followTheTest()
-    #expect(model(storage).0.roomStyleOverride == nil)
+    first.setLighting(.goldenHour)
+    #expect(model(storage).0.lightingOverride == .goldenHour)
+    first.followTheLightingTest()
+    #expect(model(storage).0.lightingOverride == nil)
   }
 
   @Test func anUnreadableFileGivesNoFlagsRatherThanACrash() throws {
@@ -132,14 +122,14 @@ import Testing
 
   @Test func noStoreStillWorksInMemory() {
     let model = WidgetFeaturesModel(store: nil)
-    model.setRemote(flags("window-seat"))
-    #expect(model.roomStyle == .windowSeat)
+    model.setRemote(flags("fairy-lights"))
+    #expect(model.lighting == .fairyLights)
   }
 
   @Test func theAnswerLeavesTheLabsFlagsAlone() throws {
     let (model, storage) = model()
     model.set(LabExperiment.lifeBubble, on: true)
-    model.setRemote(flags("window-seat"))
+    model.setRemote(flags("fairy-lights"))
     #expect(WidgetFeaturesStore(storage: storage).load().isOn(LabExperiment.lifeBubble))
   }
 
@@ -147,8 +137,8 @@ import Testing
     var told = 0
     let model = WidgetFeaturesModel(
       store: WidgetFeaturesStore(storage: storage()), onChange: { told += 1 })
-    model.setRemote(flags("window-seat"))
-    model.setRemote(flags("window-seat"))
+    model.setRemote(flags("fairy-lights"))
+    model.setRemote(flags("fairy-lights"))
     #expect(told == 1)
   }
 }

@@ -15,7 +15,7 @@
       let folder = URL(
         fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_DECOR_SHOTS"]))
       try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-      let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+      let layout = GenzLayout.of(.cosyNook)
       let room = GenzRoomCache(suite: "genz-decor-shots-\(UUID())").room(layout)
       room.startBuilding()
       let deadline = Date.now.addingTimeInterval(60)
@@ -61,7 +61,7 @@
       let folder = URL(
         fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_DECOR_SHOTS"]))
       try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-      let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+      let layout = GenzLayout.of(.cosyNook)
       let room = GenzRoomCache(suite: "genz-decor-shots-\(UUID())").room(layout)
       room.startBuilding()
       let deadline = Date.now.addingTimeInterval(60)

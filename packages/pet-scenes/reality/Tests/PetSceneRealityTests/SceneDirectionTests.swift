@@ -29,25 +29,6 @@ import simd
     #expect(flight.dueCues(at: 4).isEmpty)
   }
 
-  @Test func theFlightHoldsTheNookiCameraFurtherOut() {
-    var camera = NookiCamera()
-    let home = camera.position
-    camera.fly(yaw: 0.5, pitch: 0.2, distance: 2)
-    #expect(
-      simd_length(camera.position - NookiCamera.target)
-        > simd_length(home - NookiCamera.target) * 1.9)
-    camera.fly(yaw: 0, pitch: 0, distance: 1)
-    #expect(simd_distance(camera.position, home) < 0.0001)
-  }
-
-  @Test func aFilledViewBringsTheNookiCameraCloser() {
-    var fitted = NookiCamera()
-    fitted.fit(to: [393, 852])
-    var filled = NookiCamera()
-    filled.fit(to: [393, 852], fills: true)
-    #expect(filled.standBack < fitted.standBack)
-  }
-
   @Test func dayIsBrighterThanNightAndTheLampFollowsTheHour() {
     let noon = RoomDayLook(DayLight.at(hour: 13))
     let night = RoomDayLook(DayLight.at(hour: 23))
@@ -71,11 +52,4 @@ import simd
     #expect(GenzRoom.ambientShift(nil, phase: nil) == 0)
   }
 
-  @MainActor
-  @Test func theDioramaNightIsDarkerThanTheSharedOne() {
-    let night = RoomDayLook(DayLight.at(hour: 23))
-    #expect(NookiDiorama.ambientShift(night, phase: .night) < night.ambientShift)
-    let noon = RoomDayLook(DayLight.at(hour: 13))
-    #expect(NookiDiorama.ambientShift(noon, phase: .day) == noon.ambientShift)
-  }
 }

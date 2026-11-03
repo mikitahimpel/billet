@@ -137,7 +137,7 @@ final class CatRig {
     guard let texture = try? TextureResource(image: palette, options: .init(semantic: .color))
     else { return 0 }
     var painted = 0
-    NookiDiorama.visit(entity) { node in
+    SceneParts.visit(entity) { node in
       guard var model = node.components[ModelComponent.self] else { return }
       var changed = false
       model.materials = model.materials.map { material in

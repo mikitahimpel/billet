@@ -7,8 +7,8 @@ import Testing
 
 @MainActor
 @Suite struct GenzCatBrainTests {
-  private func built(_ style: RoomStyle, _ furniture: RoomFurniture) async throws -> GenzRoom {
-    let layout = try #require(GenzLayout.of(style, furniture: furniture))
+  private func built(_ furniture: RoomFurniture) async throws -> GenzRoom {
+    let layout = GenzLayout.of(furniture)
     let room = GenzRoom(
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "brain-\(UUID())")!, key: layout.key))
@@ -20,7 +20,7 @@ import Testing
   }
 
   @Test func theWindowSeatOffersWhatItHas() async throws {
-    let room = try await built(.windowSeat, .cosyNook)
+    let room = try await built(.cosyNook)
     let found = RoomAffordances(room.affordances().map(\.affordance))
     // On the seat: the window, the cardigan, the mugs and the phone, the bowl and the toys.
     for kind in [RoomAffordance.Kind.window, .soft, .smallItem, .bowl, .toy] {
@@ -34,26 +34,18 @@ import Testing
     try GenzCatObstacleTests.theBrainsTargetsAreClear(in: room)
   }
 
-  @Test func theSunsetLampsBedIsWhereTheCatLies() async throws {
-    let room = try await built(.sunsetLamp, .cosyNook)
-    let places = room.affordances()
-    let bed = try #require(places.first { $0.affordance.kind == .bed })
-    #expect(bed.affordance.reachable)
-    #expect(bed.spot == room.home)
-  }
-
   @Test func everyPieceKindIsSorted() {
     // Each kind is either something the cat uses or deliberately nothing, so a new piece is
     // decided on rather than forgotten.
     let used = GenzPiece.Kind.allCases.filter { GenzRoom.affordanceKind($0) != nil }
-    #expect(used.count >= 15)
+    #expect(used.count >= 13)
     #expect(GenzRoom.affordanceKind(.cardigan) == .soft)
     #expect(GenzRoom.affordanceKind(.mugs) == .smallItem)
     #expect(GenzRoom.affordanceKind(.windowBench) == nil)
   }
 
   @Test func aFrameWaitsForTheCatToLoad() async throws {
-    let room = try await built(.windowSeat, .cosyNook)
+    let room = try await built(.cosyNook)
     let frame = CatBrainFrame(
       stack: CatBrainStack(vitality: .awake, step: .watchWindow), action: .sit,
       target: .affordance(.window), gaze: .window, pace: 0, stepStart: 0, stepEnd: 30)

@@ -635,7 +635,7 @@ final class OnboardingStage: TabStage {
       simd_quatf(angle: spec.yaw, axis: [0, 1, 0]) * simd_quatf(angle: -spec.lean, axis: [1, 0, 0])
     tag.isEnabled = false
     room.addChild(tag)
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       tag, size: [spec.width + 0.3, spec.height + 0.3, 0.3], center: [0, spec.height / 2, 0])
   }
 
@@ -656,7 +656,7 @@ final class OnboardingStage: TabStage {
     tag.addChild(
       kit.part(
         kit.plane(width: spec.width, height: spec.height), face, at: [0, spec.height / 2, 0]))
-    if let receiver { NookiDiorama.visit(tag) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(tag) { $0.components.set(receiver) } }
   }
 
   // MARK: - Heart
@@ -689,15 +689,15 @@ final class OnboardingStage: TabStage {
       }
     }
     setHeartMaterial(material)
-    if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(model) { $0.components.set(receiver) } }
     heartFloat.name = Self.heartName
     let reach = OnboardingLayout.heartHeight
-    NookiDiorama.makeTappable(heartFloat, size: [reach * 1.4, reach * 1.2, reach], center: .zero)
+    SceneParts.makeTappable(heartFloat, size: [reach * 1.4, reach * 1.2, reach], center: .zero)
   }
 
   private func setHeartMaterial(_ material: PhysicallyBasedMaterial) {
     if heartModels.isEmpty {
-      NookiDiorama.visit(heartBeat) { entity in
+      SceneParts.visit(heartBeat) { entity in
         if let model = entity as? ModelEntity, model.model?.materials.isEmpty == false {
           heartModels.append(model)
         }

@@ -8,7 +8,7 @@ import Testing
 @MainActor
 @Suite struct GenzShadowTests {
   private func builtRoom() async throws -> GenzRoom {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let layout = GenzLayout.of(.cosyNook)
     let room = GenzRoomCache(suite: "genz-shadow-\(UUID())").room(layout)
     room.startBuilding()
     let deadline = Date.now.addingTimeInterval(60)

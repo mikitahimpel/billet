@@ -13,19 +13,19 @@ import WidgetBridge
 
 /// The main screen: the chosen pet scene, and the way into the canvas.
 struct HomeView: View {
-  private static let drawButton = "draw"
-
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   /// False while the shell shows another tab, so the room pauses and a new room waits to mount.
   @Environment(\.petSceneOnScreen) private var tabShown
   @Environment(\.dynamicTypeSize) private var typeSize
-  @Namespace private var zoom
   @State private var hungImage: CGImage?
   /// What the card that opened the canvas asked for, in place of the day's usual prompt.
   @State private var cardPrompt: String?
   @State private var hangCount = 0
   @State private var petBounce = false
-  @State private var showsStatus = true
+  @State private var showsStatus = false
+  /// The line the status pill shows. It lags ``line`` while a dropped connection waits out its
+  /// patience, and keeps its text while the pill fades.
+  @State private var shownLine: ConnectionLine?
   @State private var notesSent = 0
   @State private var namingCat = false
   @State private var labsOpen = false
@@ -143,13 +143,7 @@ struct HomeView: View {
         hangCount += 1
         await session.trips.noteHung()
       }
-      .task(id: line) {
-        withAnimation(Motion.spring) { showsStatus = true }
-        guard line.settles else { return }
-        try? await Task.sleep(for: .seconds(4))
-        guard !Task.isCancelled else { return }
-        withAnimation(Motion.spring) { showsStatus = false }
-      }
+      .task(id: line) { await followConnection() }
       #if os(iOS)
         .fullScreenCover(isPresented: canvasPresented, onDismiss: clearCardPrompt) {
           CanvasView(
@@ -165,7 +159,6 @@ struct HomeView: View {
               notesSent += 1
             }
           )
-          .navigationTransition(.zoom(sourceID: Self.drawButton, in: zoom))
         }
       #endif
   }
@@ -200,27 +193,11 @@ struct HomeView: View {
     )
   }
 
-  /// The chosen room style when the scene can show it and Home has room for the floating
-  /// controls; `nil` keeps the classic layout.
-  private var roomStyle: RoomStyle? {
-    let style = session.labs.roomStyle
-    guard style != .nooki, !typeSize.isAccessibilitySize,
-      scene?.roomStyles.contains(style) == true
-    else { return nil }
-    return style
-  }
-
   /// How Home is laid out. Large text keeps the classic layout. Decorating keeps whichever
   /// layout is showing, so the room is arranged where it is.
   private var variant: HomeVariant {
     guard scene != nil, !typeSize.isAccessibilitySize else { return .classic }
     return session.labs.homeVariant
-  }
-
-  /// The chosen room style when the scene can show it, else the scene's own room.
-  private var sceneRoomStyle: RoomStyle {
-    let style = session.labs.roomStyle
-    return scene?.roomStyles.contains(style) == true ? style : .standard
   }
 
   private var latestReceivedNote: NoteRecord? {
@@ -232,24 +209,23 @@ struct HomeView: View {
       fullBleedHome(scene)
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
-          if !line.settles, !isRenovating { roomStatus }
+          if !isRenovating { roomStatus(problemsOnly: true) }
         }
-    } else if let roomStyle, let scene {
-      styledHome(roomStyle, scene: scene)
+    } else if let scene, !typeSize.isAccessibilitySize {
+      styledHome(scene)
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
-          if !line.settles, !isRenovating { roomStatus }
+          if !isRenovating { roomStatus(problemsOnly: true) }
         }
     } else {
       classicHome
     }
   }
 
-  private func styledHome(_ style: RoomStyle, scene: any PetScene) -> some View {
+  private func styledHome(_ scene: any PetScene) -> some View {
     let calendar = Calendar.current
     let today = TreatDay.key(for: .now, calendar: calendar)
     return StyledHome(
-      style: style,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
           .lifeRingsPress(session, open: $ringsOpen)
@@ -260,12 +236,8 @@ struct HomeView: View {
           .modifier(LaunchGlide(isPlaying: $launchPlaying))),
       notes: session.notes,
       streak: session.streak(today: today, calendar: calendar),
-      treats: ShopCatalog.standard.items(in: .treats).reduce(0) { $0 + session.shop.owned($1) },
       isFakePartner: session.isFakePartner,
-      onChooseStyle: { session.labs.setRoomStyle($0) },
-      onTreat: { giveTreat(on: today) },
       onOpenNotes: onOpenNotes,
-      onDraw: { store.send(.canvasOpened) },
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
@@ -308,8 +280,7 @@ struct HomeView: View {
   }
 
   private func fullBleedHome(_ scene: any PetScene) -> some View {
-    let style = sceneRoomStyle
-    return FullBleedHome(
+    FullBleedHome(
       variant: variant,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
@@ -317,8 +288,7 @@ struct HomeView: View {
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
-          .environment(\.petSceneRoomStyle, style)
-          .environment(\.petSceneDrawing, style == .nooki ? hungImage : latestDrawing)
+          .environment(\.petSceneDrawing, latestDrawing)
           .overlay {
             if !scene.handlesTouches { petTapTarget }
           }
@@ -329,21 +299,13 @@ struct HomeView: View {
             }
           }
           .overlay { catReactions.allowsHitTesting(false) }
-          .modifier(LaunchGlide(isPlaying: $launchPlaying))
-          .background {
-            // The styled rooms draw their own night; the diorama floats in Home's evening, or
-            // under the sky of the hour when Home follows the time of day.
-            if style == .nooki {
-              if variant == .nightAndDay { skyBackdrop } else { homeBackdrop }
-            }
-          }),
+          .modifier(LaunchGlide(isPlaying: $launchPlaying))),
       director: director,
       isFakePartner: session.isFakePartner,
       theirTimeZone: session.lamp.theirs?.timeZoneID.flatMap(TimeZone.init(identifier:)),
       pretendHour: session.labs.pretendHour,
       isOpening: launchPlaying,
       onTreat: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
-      onDraw: { store.send(.canvasOpened) },
       isDecorating: isRenovating,
       onDecorate: { session.renovator.requestOpen() },
       drawerOpen: $drawerOpen
@@ -368,15 +330,10 @@ struct HomeView: View {
           .accessibilityIdentifier("drawerStreak")
         Spacer(minLength: 0)
         if scene.hasShop {
-          IconButton("paintbrush.pointed", label: "Change the room") {
-            drawerOpen = false
-            session.renovator.requestOpen()
-          }
           IconButton("archivebox.fill", label: "Closet") { openShop(.closet) }
-          IconButton("bag.fill", label: "Shop") { openShop(.shop) }
         }
       }
-      controls(showsDraw: false)
+      controls
     }
   }
 
@@ -405,19 +362,6 @@ struct HomeView: View {
       endPoint: .bottom
     )
     .ignoresSafeArea()
-  }
-
-  /// The sky of the hour here, from the same colours as the partner's sky card.
-  private var skyBackdrop: some View {
-    TimelineView(.everyMinute) { context in
-      let date = DayLight.pretending(
-        context.date, hour: session.labs.pretendHour, in: .current)
-      let colours = TheirSky.at(hour: Calendar.current.component(.hour, from: date)).colours
-      LinearGradient(
-        colors: [colours.top.color, colours.bottom.color], startPoint: .top, endPoint: .bottom
-      )
-      .ignoresSafeArea()
-    }
   }
 
   private var classicHome: some View {
@@ -455,7 +399,7 @@ struct HomeView: View {
       }
     }
     .overlay { nightOverlay }
-    .overlay(alignment: .top) { roomStatus }
+    .overlay(alignment: .top) { roomStatus(problemsOnly: false) }
   }
 
   /// Dark over the scene while both lamps are out.
@@ -520,12 +464,10 @@ struct HomeView: View {
     }
   }
 
-  private var controls: some View { controls(showsDraw: true) }
-
-  private func controls(showsDraw: Bool) -> some View {
+  private var controls: some View {
     VStack(spacing: Spacing.small) {
       if session.notes.isEmpty, !session.notesFailedToLoad {
-        Text("The wall is empty. Draw the first note.")
+        Text("No notes yet. Draw one from the Notes tab.")
           .billetType(.label)
           .foregroundStyle(Palette.paperTurned.color)
           .multilineTextAlignment(.center)
@@ -540,10 +482,6 @@ struct HomeView: View {
       promptCards
       if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
         labsDrawer
-      }
-      if showsDraw {
-        BilletButton("Draw a note", rank: .primary) { store.send(.canvasOpened) }
-          .matchedTransitionSourceIfAvailable(id: Self.drawButton, in: zoom)
       }
     }
     .calmAnimation(value: session.notes.isEmpty)
@@ -882,16 +820,41 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var roomStatus: some View {
-    if showsStatus {
+  /// Shows `shownLine` once it is due, and fades it out when it has been read or the connection is
+  /// back. A dropped connection is only named after ``ConnectionLine/patience``.
+  private func followConnection() async {
+    let alreadyWaiting = showsStatus && shownLine?.waitsBeforeShowing == true
+    if line.waitsBeforeShowing, !alreadyWaiting {
+      if shownLine?.settles == true { withAnimation(Motion.spring) { showsStatus = false } }
+      try? await Task.sleep(for: ConnectionLine.patience)
+      guard !Task.isCancelled else { return }
+    }
+    withAnimation(Motion.spring) {
+      shownLine = line
+      showsStatus = true
+    }
+    guard line.settles else { return }
+    try? await Task.sleep(for: .seconds(4))
+    guard !Task.isCancelled else { return }
+    withAnimation(Motion.spring) { showsStatus = false }
+  }
+
+  /// How far below the top of the safe area the status pill sits: under the row of buttons and
+  /// the streak chip that every Home layout keeps there, never over it.
+  static let statusTop = Spacing.small + Target.minimum + Spacing.small
+
+  /// The connection's pill under the header. `problemsOnly` keeps a steady line off a room that
+  /// fills the screen, so there the pill only names a problem and fades once it is fixed.
+  @ViewBuilder private func roomStatus(problemsOnly: Bool) -> some View {
+    if showsStatus, let shown = shownLine, !(problemsOnly && shown.settles) {
       VStack(spacing: Spacing.small) {
-        statusPill
-        if line == .refused {
+        statusPill(shown)
+        if shown == .refused {
           BilletButton("Change code", rank: .secondary, action: onChangeCode)
             .frame(maxWidth: 200)
         }
       }
-      .padding(.top, Spacing.small)
+      .padding(.top, Self.statusTop)
       .padding(.horizontal, Spacing.medium)
       .dynamicTypeSize(...DynamicTypeSize.accessibility2)
       .transition(.opacity)
@@ -901,19 +864,19 @@ struct HomeView: View {
   /// A scene with its own buttons leaves room between them for the short line only.
   private var hasRoomControls: Bool { scene?.handlesTouches == true }
 
-  private var statusPill: some View {
+  private func statusPill(_ shown: ConnectionLine) -> some View {
     HStack(spacing: Spacing.small) {
       Circle()
-        .fill(statusLight.color)
+        .fill(Self.statusLight(shown).color)
         .frame(width: Spacing.small, height: Spacing.small)
         .accessibilityHidden(true)
-      Text(session.isFakePartner && !hasRoomControls ? "Fake partner · \(line.text)" : line.text)
+      Text(session.isFakePartner && !hasRoomControls ? "Fake partner · \(shown.text)" : shown.text)
         .billetType(.label)
         .foregroundStyle(Palette.paper.color)
         .multilineTextAlignment(.center)
         .contentTransition(.opacity)
     }
-    .calmAnimation(value: line)
+    .calmAnimation(value: shown)
     .padding(.horizontal, Spacing.medium)
     .frame(minHeight: Target.minimum)
     .floatingGlass()
@@ -921,7 +884,7 @@ struct HomeView: View {
     .accessibilityIdentifier("connectionStatus")
   }
 
-  private var statusLight: Swatch {
+  private static func statusLight(_ line: ConnectionLine) -> Swatch {
     switch line {
     case .partnerHere: Palette.gold
     case .partnerAway: Palette.muted
@@ -938,18 +901,6 @@ extension ConnectionLine {
     case .partnerHere, .partnerAway: true
     case .connecting, .reconnecting, .refused: false
     }
-  }
-}
-
-extension View {
-  fileprivate func matchedTransitionSourceIfAvailable(
-    id: String, in namespace: Namespace.ID
-  ) -> some View {
-    #if os(iOS)
-      matchedTransitionSource(id: id, in: namespace)
-    #else
-      self
-    #endif
   }
 }
 

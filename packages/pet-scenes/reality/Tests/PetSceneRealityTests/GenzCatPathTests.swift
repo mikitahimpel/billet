@@ -6,9 +6,7 @@ import Testing
 @MainActor
 @Suite struct GenzCatPathTests {
   private static var layouts: [GenzLayout] {
-    [RoomStyle.windowSeat, .sunsetLamp].flatMap { style in
-      RoomFurniture.allCases.compactMap { GenzLayout.of(style, furniture: $0) }
-    }
+    RoomFurniture.allCases.map(GenzLayout.of)
   }
 
   @Test func theCatsPlaceIsClearOfWhatStandsOnItsTop() {
@@ -32,7 +30,7 @@ import Testing
   }
 
   @Test func aWalkAlongTheSeatStopsShortOfTheCardigan() throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let layout = GenzLayout.of(.cosyNook)
     let cardigan = try #require(layout.pieces.first { $0.piece.kind == .cardigan })
     // In front of the pillows, along the seat.
     let home = SIMD2(layout.cat.spot.x, 1.1)
@@ -54,7 +52,7 @@ import Testing
   }
 
   @Test func thePlantOnTheDaybedIsInTheWayButThePhoneIsNot() throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .original))
+    let layout = GenzLayout.of(.original)
     let plant = try #require(layout.pieces.first { $0.piece.kind == .snakePlant })
     let phone = try #require(layout.pieces.first { $0.piece.kind == .phoneOnCharger })
     #expect(layout.catClutter.contains { $0.contains([plant.centre.x, plant.centre.y]) })

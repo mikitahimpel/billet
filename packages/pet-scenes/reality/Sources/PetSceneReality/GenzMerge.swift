@@ -15,7 +15,7 @@ extension GenzKit {
   func merge(_ piece: Entity, key: String) {
     var groups: [MatteKey: [ModelEntity]] = [:]
     var order: [MatteKey] = []
-    NookiDiorama.visit(piece) { entity in
+    SceneParts.visit(piece) { entity in
       guard entity !== piece, let model = entity as? ModelEntity, entity.name.isEmpty,
         !entity.components.has(CollisionComponent.self),
         !entity.components.has(InputTargetComponent.self),

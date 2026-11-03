@@ -61,7 +61,7 @@ import Testing
   @Test func everyRemoteSettingIsListed() {
     let keys = Set(Experiments.all.map(\.key))
     #expect(
-      keys == ["home-direction", "room-lighting", "window-view", "home-layout", "shopkeeper"])
+      keys == ["room-lighting", "window-view", "home-layout", "shopkeeper"])
   }
 
   @Test func aChoiceTheServerGaveIsRead() {

@@ -5,9 +5,8 @@ Each piece becomes a single mesh under its own name, with dense meshes decimated
 as authored, and authored normals carried across. Colours move into a small palette texture shared
 by two plain materials. Glossy and glowing surfaces keep materials of their own.
 
-The room's simple shapes are baked here too, so nothing is generated on the phone while the room
-loads. Their sizes must match the list in NookiDiorama, which a test checks. They carry a stand-in
-material: the app gives them their own.
+The old diorama's simple shapes are baked here too, with a stand-in material. The app no longer
+draws them; only the shop's `Item_*` furniture is read from the file.
 
     pip install usd-core pyfqmr numpy scipy pillow
     bake_room.py
