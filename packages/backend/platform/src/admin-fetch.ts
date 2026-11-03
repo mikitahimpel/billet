@@ -9,10 +9,16 @@ import {
   AccessVerifier,
   accessVerifierLayer,
   denyAll,
+  type AccessIdentity,
   type AdminIdentity,
 } from "@billet/backend-admin/access";
 import { adminCss, adminHtml, adminJs } from "@billet/backend-admin/admin-assets";
-import { AdminRoutes, CurrentAdmin } from "@billet/backend-admin/admin-routes";
+import {
+  AdminRoutes,
+  agentApiPrefix,
+  AgentRoutes,
+  CurrentAdmin,
+} from "@billet/backend-admin/admin-routes";
 import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { AdminDataLive } from "./admin-data-live.ts";
@@ -87,8 +93,8 @@ export const verifyAccess = async (
   request: Request,
   env: WorkerEnv,
   accessKeys?: Layer.Layer<Jwks.Jwks>,
-): Promise<AdminIdentity | undefined> => {
-  const config = accessConfigOf(env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
+): Promise<AccessIdentity | undefined> => {
+  const config = accessConfigOf(env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD, env.ACCESS_AGENT_AUD);
   const verifier =
     config === undefined
       ? denyAll
@@ -125,28 +131,50 @@ const isSameOriginWrite = (request: Request) => {
 const asset = (body: string, type: string) =>
   withSecurity(new Response(body, { headers: { "content-type": `${type}; charset=utf-8` } }));
 
+const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
+  Layer.mergeAll(
+    PairingRepositoryLive(env.DB),
+    FlagsRepositoryLive(env.DB),
+    FlagConfigRepositoryLive(env.DB, caches.default),
+    AdminDataLive(env.DB),
+    Experiments.with(experiments),
+    Digest.layerWebCrypto,
+  );
+
 const adminLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, admin: AdminIdentity) =>
   AdminRoutes.pipe(
     Layer.provide(
       Layer.mergeAll(FlagsService.layer, Layer.succeed(CurrentAdmin, admin)).pipe(
-        Layer.provideMerge(
-          Layer.mergeAll(
-            PairingRepositoryLive(env.DB),
-            FlagsRepositoryLive(env.DB),
-            FlagConfigRepositoryLive(env.DB, caches.default),
-            AdminDataLive(env.DB),
-            Experiments.with(experiments),
-            Digest.layerWebCrypto,
-          ),
-        ),
+        Layer.provideMerge(dataLayer(env, experiments)),
       ),
     ),
   );
+
+const agentLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
+  AgentRoutes.pipe(
+    Layer.provide(FlagsService.layer.pipe(Layer.provideMerge(dataLayer(env, experiments)))),
+  );
+
+const route = async (
+  layer: Layer.Layer<never, never, HttpRouter.HttpRouter>,
+  request: Request,
+  ctx: ExecutionContext,
+) => {
+  const { handler, dispose } = HttpRouter.toWebHandler(layer, { disableLogger: true });
+  try {
+    return withSecurity(await handler(request));
+  } finally {
+    ctx.waitUntil(dispose());
+  }
+};
 
 /**
  * Everything under `/admin`: the page, its script and style, and the JSON API. The Access check
  * runs first, before any routing, and a request that fails it gets the same bare 403 whatever the
  * path, so nothing about the panel is visible without a valid Access token.
+ *
+ * A service token (an agent) may only GET `/admin/api/agent/...`; anything else it sends, every
+ * write included, is the same 403. Each agent read is logged with the token's `common_name`.
  */
 export const respondAdmin = async (
   request: Request,
@@ -154,11 +182,19 @@ export const respondAdmin = async (
   ctx: ExecutionContext,
   options: AdminOptions,
 ): Promise<Response> => {
-  const admin = await verifyAccess(request, env, options.accessKeys);
-  if (admin === undefined) return forbidden();
-  if (!isSameOriginWrite(request)) return forbidden();
-
+  const identity = await verifyAccess(request, env, options.accessKeys);
+  if (identity === undefined) return forbidden();
   const { pathname } = new URL(request.url);
+
+  if (identity.kind === "agent") {
+    if (request.method !== "GET" || !pathname.startsWith(agentApiPrefix)) return forbidden();
+    console.info(
+      JSON.stringify({ message: "admin agent read", commonName: identity.commonName, pathname }),
+    );
+    return route(agentLayer(env, options.experiments), request, ctx);
+  }
+
+  if (!isSameOriginWrite(request)) return forbidden();
   if (request.method === "GET") {
     if (pathname === "/admin" || pathname === "/admin/") return asset(adminHtml, "text/html");
     if (pathname === "/admin/app.css") return asset(adminCss, "text/css");
@@ -167,16 +203,5 @@ export const respondAdmin = async (
   if (!pathname.startsWith("/admin/api/")) {
     return withSecurity(new Response("Not found", { status: 404 }));
   }
-
-  const { handler, dispose } = HttpRouter.toWebHandler(
-    adminLayer(env, options.experiments, admin),
-    {
-      disableLogger: true,
-    },
-  );
-  try {
-    return withSecurity(await handler(request));
-  } finally {
-    ctx.waitUntil(dispose());
-  }
+  return route(adminLayer(env, options.experiments, { email: identity.email }), request, ctx);
 };

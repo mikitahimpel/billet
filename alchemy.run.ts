@@ -81,6 +81,9 @@ export default Alchemy.Stack(
         // panel closed to everyone.
         ACCESS_TEAM_DOMAIN: Config.String("ACCESS_TEAM_DOMAIN").pipe(Config.withDefault("")),
         ACCESS_AUD: Config.String("ACCESS_AUD").pipe(Config.withDefault("")),
+        // The Access application that lets agents' service tokens read /admin/api/agent. Empty
+        // keeps the agent routes closed.
+        ACCESS_AGENT_AUD: Config.String("ACCESS_AGENT_AUD").pipe(Config.withDefault("")),
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
         ...(stage === "dev"

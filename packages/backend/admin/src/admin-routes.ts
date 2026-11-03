@@ -39,6 +39,16 @@ export const adminApi = {
   pairOverride: "/admin/api/pairs/:pairId/overrides/:key",
 } as const;
 
+/** The read-only API for agents' service tokens, under `/admin/api/agent`. GET only. */
+export const agentApiPrefix = "/admin/api/agent/";
+export const agentApi = {
+  overview: "/admin/api/agent/overview",
+  experiments: "/admin/api/agent/experiments",
+  flags: "/admin/api/agent/flags",
+  flagHistory: "/admin/api/agent/flag-history",
+  pair: "/admin/api/agent/pairs/:pairId",
+} as const;
+
 // Absent values go out as `null`, so the page never has to tell `undefined` from a missing field.
 const respondJson = (body: unknown, status = 200) =>
   HttpServerResponse.text(
@@ -117,31 +127,112 @@ const transitions: Record<
 };
 
 /**
- * The admin JSON API. Needs `CurrentAdmin`, which only the Access check provides: these routes are
- * never reachable without it (see `admin-fetch` in the platform package).
+ * The answers both the panel and the agents read, built on the same services so an agent sees
+ * exactly what the panel shows. Needs no identity: who may call them is decided by the routes.
+ */
+const readHandlers = Effect.gen(function* () {
+  const flags = yield* FlagsService;
+  const configs = yield* FlagConfigRepository;
+  const assignments = yield* FlagsRepository;
+  const registry = yield* Experiments;
+  const data = yield* AdminData;
+  const digest = yield* Digest.Digest;
+
+  const items = Effect.gen(function* () {
+    const stored = new Map((yield* configs.all).map((row) => [row.key, row]));
+    const current = yield* flags.current;
+    return registry.map((entry, index) =>
+      itemOf(entry, current[index] ?? entry, stored.get(entry.key)),
+    );
+  });
+
+  const entryOf = (key: ExperimentKey) => {
+    const entry = registry.find((candidate) => candidate.key === key);
+    return entry === undefined ? Effect.fail(new NotFound()) : Effect.succeed(entry);
+  };
+
+  const overview = Effect.gen(function* () {
+    const [events, rows, users] = yield* Effect.all([
+      data.events,
+      data.assignments,
+      data.userCount,
+    ]);
+    return respondJson(buildOverview(events, rows, users, utcDay(yield* Clock.currentTimeMillis)));
+  }).pipe(guarded);
+
+  const flagList = Effect.gen(function* () {
+    return respondJson({ items: yield* items });
+  }).pipe(guarded);
+
+  const experiments = Effect.gen(function* () {
+    const [list, events, rows] = yield* Effect.all([items, data.events, data.assignments]);
+    const report = buildReport(events, rows, utcDay(yield* Clock.currentTimeMillis));
+    const results = new Map(report.experiments.map((experiment) => [experiment.key, experiment]));
+    return respondJson({
+      items: list.map((item) => {
+        const result = results.get(item.key);
+        return {
+          ...item,
+          results:
+            result === undefined ? null : { variants: result.variants, caution: result.caution },
+        };
+      }),
+    });
+  }).pipe(guarded);
+
+  const history = Effect.gen(function* () {
+    const { key, limit } = yield* HttpServerRequest.schemaSearchParams(HistoryQuery);
+    return respondJson({ changes: yield* configs.history(key, limit ?? 100) });
+  }).pipe(guarded);
+
+  const pair = Effect.gen(function* () {
+    const { pairId } = yield* HttpRouter.schemaPathParams(PairParams);
+    const [found, stored, overrides, events] = yield* Effect.all([
+      data.pair(pairId),
+      assignments.find(pairId),
+      configs.overridesOf(pairId),
+      data.events,
+    ]);
+    const own = events.filter((row) => row.pairId === pairId);
+    if (found.members === 0 && stored.length === 0 && own.length === 0) {
+      return yield* new NotFound();
+    }
+    const counts = new Map<string, number>();
+    for (const row of own) counts.set(row.name, (counts.get(row.name) ?? 0) + row.count);
+    // The panel does not know the pair's build, so version targeting is judged as unknown.
+    const decisions = yield* flags.explain(pairId, "unknown");
+    return respondJson({
+      pairId,
+      pairHash: yield* pairHashOf(pairId).pipe(Effect.provideService(Digest.Digest, digest)),
+      members: found.members,
+      pairedAt: found.pairedAt,
+      assignments: stored.map(({ experimentKey, variant, assignedAt }) => ({
+        key: experimentKey,
+        variant,
+        assignedAt,
+      })),
+      overrides: overrides.map(({ experimentKey, variant, setAt, setBy }) => ({
+        key: experimentKey,
+        variant,
+        setAt,
+        setBy,
+      })),
+      decisions,
+      events: [...counts].map(([name, count]) => ({ name, count })),
+    });
+  }).pipe(guarded);
+
+  return { flags, configs, items, entryOf, overview, flagList, experiments, history, pair };
+});
+
+/**
+ * The admin JSON API. Needs `CurrentAdmin`, which only the Access check provides for a person:
+ * these routes are never reachable without it (see `admin-fetch` in the platform package).
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const flags = yield* FlagsService;
-    const configs = yield* FlagConfigRepository;
-    const assignments = yield* FlagsRepository;
-    const registry = yield* Experiments;
-    const data = yield* AdminData;
-    const digest = yield* Digest.Digest;
+    const { flags, configs, entryOf, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
-
-    const items = Effect.gen(function* () {
-      const stored = new Map((yield* configs.all).map((row) => [row.key, row]));
-      const current = yield* flags.current;
-      return registry.map((entry, index) =>
-        itemOf(entry, current[index] ?? entry, stored.get(entry.key)),
-      );
-    });
-
-    const entryOf = (key: ExperimentKey) => {
-      const entry = registry.find((candidate) => candidate.key === key);
-      return entry === undefined ? Effect.fail(new NotFound()) : Effect.succeed(entry);
-    };
 
     const save = (
       key: ExperimentKey,
@@ -171,29 +262,11 @@ export const AdminRoutes = HttpRouter.use((router) =>
       adminApi.me,
       Effect.sync(() => respondJson({ email: admin.email })),
     );
-
-    yield* router.add(
-      "GET",
-      adminApi.overview,
-      Effect.gen(function* () {
-        const [events, rows, users] = yield* Effect.all([
-          data.events,
-          data.assignments,
-          data.userCount,
-        ]);
-        return respondJson(
-          buildOverview(events, rows, users, utcDay(yield* Clock.currentTimeMillis)),
-        );
-      }).pipe(guarded),
-    );
-
-    yield* router.add(
-      "GET",
-      adminApi.flags,
-      Effect.gen(function* () {
-        return respondJson({ items: yield* items });
-      }).pipe(guarded),
-    );
+    yield* router.add("GET", adminApi.overview, reads.overview);
+    yield* router.add("GET", adminApi.flags, reads.flagList);
+    yield* router.add("GET", adminApi.experiments, reads.experiments);
+    yield* router.add("GET", adminApi.history, reads.history);
+    yield* router.add("GET", adminApi.pair, reads.pair);
 
     yield* router.add(
       "PUT",
@@ -206,30 +279,6 @@ export const AdminRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
-      "GET",
-      adminApi.experiments,
-      Effect.gen(function* () {
-        const [list, events, rows] = yield* Effect.all([items, data.events, data.assignments]);
-        const report = buildReport(events, rows, utcDay(yield* Clock.currentTimeMillis));
-        const results = new Map(
-          report.experiments.map((experiment) => [experiment.key, experiment]),
-        );
-        return respondJson({
-          items: list.map((item) => {
-            const result = results.get(item.key);
-            return {
-              ...item,
-              results:
-                result === undefined
-                  ? null
-                  : { variants: result.variants, caution: result.caution },
-            };
-          }),
-        });
-      }).pipe(guarded),
-    );
-
-    yield* router.add(
       "POST",
       adminApi.experimentAction,
       Effect.gen(function* () {
@@ -238,56 +287,6 @@ export const AdminRoutes = HttpRouter.use((router) =>
         const current = (yield* flags.current).find((experiment) => experiment.key === key);
         if (current === undefined) return yield* new NotFound();
         return yield* save(key, transitions[action](configOf(current)), expectedVersion, action);
-      }).pipe(guarded),
-    );
-
-    yield* router.add(
-      "GET",
-      adminApi.history,
-      Effect.gen(function* () {
-        const { key, limit } = yield* HttpServerRequest.schemaSearchParams(HistoryQuery);
-        return respondJson({ changes: yield* configs.history(key, limit ?? 100) });
-      }).pipe(guarded),
-    );
-
-    yield* router.add(
-      "GET",
-      adminApi.pair,
-      Effect.gen(function* () {
-        const { pairId } = yield* HttpRouter.schemaPathParams(PairParams);
-        const [pair, stored, overrides, events] = yield* Effect.all([
-          data.pair(pairId),
-          assignments.find(pairId),
-          configs.overridesOf(pairId),
-          data.events,
-        ]);
-        const own = events.filter((row) => row.pairId === pairId);
-        if (pair.members === 0 && stored.length === 0 && own.length === 0) {
-          return yield* new NotFound();
-        }
-        const counts = new Map<string, number>();
-        for (const row of own) counts.set(row.name, (counts.get(row.name) ?? 0) + row.count);
-        // The panel does not know the pair's build, so version targeting is judged as unknown.
-        const decisions = yield* flags.explain(pairId, "unknown");
-        return respondJson({
-          pairId,
-          pairHash: yield* pairHashOf(pairId).pipe(Effect.provideService(Digest.Digest, digest)),
-          members: pair.members,
-          pairedAt: pair.pairedAt,
-          assignments: stored.map(({ experimentKey, variant, assignedAt }) => ({
-            key: experimentKey,
-            variant,
-            assignedAt,
-          })),
-          overrides: overrides.map(({ experimentKey, variant, setAt, setBy }) => ({
-            key: experimentKey,
-            variant,
-            setAt,
-            setBy,
-          })),
-          decisions,
-          events: [...counts].map(([name, count]) => ({ name, count })),
-        });
       }).pipe(guarded),
     );
 
@@ -332,5 +331,20 @@ export const AdminRoutes = HttpRouter.use((router) =>
         return HttpServerResponse.empty({ status: 204 });
       }).pipe(guarded),
     );
+  }),
+).pipe(Layer.orDie);
+
+/**
+ * The read-only API for agents: the panel's reads, GET only, no identity and no route that
+ * changes anything. `admin-fetch` serves it only to a service token, after the Access check.
+ */
+export const AgentRoutes = HttpRouter.use((router) =>
+  Effect.gen(function* () {
+    const reads = yield* readHandlers;
+    yield* router.add("GET", agentApi.overview, reads.overview);
+    yield* router.add("GET", agentApi.experiments, reads.experiments);
+    yield* router.add("GET", agentApi.flags, reads.flagList);
+    yield* router.add("GET", agentApi.flagHistory, reads.history);
+    yield* router.add("GET", agentApi.pair, reads.pair);
   }),
 ).pipe(Layer.orDie);
