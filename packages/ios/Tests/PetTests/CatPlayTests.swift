@@ -70,6 +70,62 @@ struct CatTouchRouterTests {
     #expect(CatTouchRouter.route(.drag, on: .bowl) == .camera)
   }
 
+  private func quick(_ x: Double, _ y: Double, axis: SIMD2<Double>? = nil) -> CatDragStart {
+    CatDragStart(rested: 0.05, movement: [x, y], axis: axis)
+  }
+
+  @Test func aQuickSidewaysSwipeTurnsTheRoomWhateverItStartsOn() {
+    let targets: [CatTouchTarget] = [
+      .cat, .toy(.ball), .toy(.yarn), .toy(.wand), .toy(.laser), .treats, .bowl, .floor, .nothing,
+    ]
+    for target in targets {
+      #expect(CatTouchRouter.routeDrag(on: target, start: quick(40, 8)) == .camera)
+      #expect(CatTouchRouter.routeDrag(on: target, start: quick(-30, -10)) == .camera)
+    }
+    // Even along a cat lying across the screen: a quick stroke needs to rest first.
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: quick(40, 0, axis: [1, 0])) == .camera)
+  }
+
+  @Test func restingFirstGivesTheDragToWhatIsUnderTheFinger() {
+    let rested = CatDragStart(rested: 0.2, movement: [40, 0], axis: [0, 1])
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: rested) == .stroke)
+    #expect(CatTouchRouter.routeDrag(on: .toy(.ball), start: rested) == .fling(.ball))
+    #expect(CatTouchRouter.routeDrag(on: .toy(.wand), start: rested) == .carry(.wand))
+    #expect(CatTouchRouter.routeDrag(on: .treats, start: rested) == .offerTreat)
+    // Resting decides at once, before the finger has gone far.
+    let barely = CatDragStart(rested: 0.2, movement: [3, 0])
+    #expect(CatTouchRouter.routeDrag(on: .toy(.laser), start: barely) == .carry(.laser))
+  }
+
+  @Test func aQuickDragAlongWhatAThingDoesIsThatThings() {
+    #expect(CatTouchRouter.routeDrag(on: .toy(.ball), start: quick(4, -40)) == .fling(.ball))
+    #expect(CatTouchRouter.routeDrag(on: .toy(.yarn), start: quick(-10, 30)) == .fling(.yarn))
+    #expect(CatTouchRouter.routeDrag(on: .toy(.wand), start: quick(20, 30)) == .carry(.wand))
+    #expect(CatTouchRouter.routeDrag(on: .treats, start: quick(0, 25)) == .offerTreat)
+    // A cat lying down the screen is stroked down it, and turned across it.
+    let down: SIMD2<Double> = [0.2, 1]
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: quick(5, 30, axis: down)) == .stroke)
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: quick(-3, -25, axis: down)) == .stroke)
+    // A cat lying diagonally, stroked across its body.
+    #expect(
+      CatTouchRouter.routeDrag(on: .cat, start: quick(-20, 25, axis: [1, 1])) == .camera)
+  }
+
+  @Test func aQuickDragIsReadOnlyOnceItHasGoneFarEnough() {
+    #expect(CatTouchRouter.routeDrag(on: .toy(.ball), start: quick(2, -6)) == nil)
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: quick(8, 0)) == nil)
+    // Away from the cat and its things the room turns from the start.
+    #expect(CatTouchRouter.routeDrag(on: .nothing, start: quick(2, 0)) == .camera)
+    #expect(CatTouchRouter.routeDrag(on: .floor, start: quick(0, 3)) == .camera)
+  }
+
+  @Test func holdingTheCatTakesEveryDrag() {
+    let rested = CatDragStart(rested: 1, movement: [0, 30])
+    #expect(CatTouchRouter.routeDrag(on: .cat, start: rested, isHoldingCat: true) == .ignore)
+    #expect(
+      CatTouchRouter.routeDrag(on: .nothing, start: quick(40, 0), isHoldingCat: true) == .ignore)
+  }
+
   @Test func holdingTheCatTakesEveryOtherTouch() {
     let gestures: [CatTouchGesture] = [.tap, .doubleTap, .drag, .longPress]
     let targets: [CatTouchTarget] = [

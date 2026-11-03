@@ -125,6 +125,34 @@ extension GenzRoom {
   /// How close a finger must come to a toy on screen to take it, in points.
   static var toyReach: CGFloat { 44 }
 
+  /// What a drag's first point is on itself: the cat's body, or a toy's or the treat jar's shape
+  /// as drawn. A drag gets no reach around them, unlike a tap, so a swipe beside a toy turns the
+  /// room.
+  func dragTarget(at point: CGPoint) -> CatTouchTarget {
+    if isOverCat(point) { return .cat }
+    for toy in CatToy.allCases where isOnShape(toys.entities[toy], point) { return .toy(toy) }
+    if isOnShape(toys.treatJar, point) { return .treats }
+    return .nothing
+  }
+
+  /// Whether `point` falls within `entity`'s bounds as drawn on screen.
+  func isOnShape(_ entity: Entity?, _ point: CGPoint) -> Bool {
+    guard let entity, entity.isEnabledInHierarchy else { return false }
+    let box = entity.visualBounds(relativeTo: room)
+    guard !box.isEmpty else { return false }
+    var low = CGPoint(x: CGFloat.infinity, y: .infinity)
+    var high = CGPoint(x: -CGFloat.infinity, y: -.infinity)
+    for corner in 0..<8 {
+      let at = SIMD3(
+        corner & 1 == 0 ? box.min.x : box.max.x, corner & 2 == 0 ? box.min.y : box.max.y,
+        corner & 4 == 0 ? box.min.z : box.max.z)
+      guard let shown = camera.project(at, in: viewSize) else { return false }
+      low = CGPoint(x: min(low.x, shown.x), y: min(low.y, shown.y))
+      high = CGPoint(x: max(high.x, shown.x), y: max(high.y, shown.y))
+    }
+    return (low.x...high.x).contains(point.x) && (low.y...high.y).contains(point.y)
+  }
+
   /// Where `toy` is on the floor now.
   func toyPlace(_ toy: CatToy) -> SIMD2<Float>? {
     if toys.held == toy, let at = toys.heldAt { return at }
