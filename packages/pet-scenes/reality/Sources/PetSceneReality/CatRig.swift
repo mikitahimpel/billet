@@ -74,6 +74,10 @@ final class CatRig {
       CatLookSystem.registerOnce()
       skinned.components.set(look)
     }
+    if let skinned, let reflex = CatReflexComponent(joints: skinned.jointNames) {
+      CatReflexSystem.registerOnce()
+      skinned.components.set(reflex)
+    }
   }
 
   /// Moves to `action` at `rate`. Asking again for the action already playing only changes the
@@ -108,6 +112,23 @@ final class CatRig {
     look.weightGoal = weight
     skinned.components.set(look)
   }
+
+  /// Lays small movements over the playing clip: how shut the eyes are, how far the right ear
+  /// flicks and the tail tip swings (each 0 to 1, eased in the reflex system, so plain on and off
+  /// is fine), where the breath is from 0 to 1, and how strong all of it is. Call every frame.
+  func reflex(blink: Float, earTwitch: Float, tailFlick: Float, breath: Float, strength: Float = 1)
+  {
+    guard let skinned, var reflex = skinned.components[CatReflexComponent.self] else { return }
+    reflex.blinkGoal = blink
+    reflex.earGoal = earTwitch
+    reflex.flickGoal = tailFlick
+    reflex.breath = breath
+    reflex.strength = strength
+    skinned.components.set(reflex)
+  }
+
+  /// Whether this cat's skeleton has the joints the reflexes move.
+  var hasReflexes: Bool { skinned?.components[CatReflexComponent.self] != nil }
 
   /// Puts `palette` on every surface painted from the model's palette, and says how many
   /// materials took it.
@@ -176,7 +197,7 @@ final class CatRig {
     return entity.children.lazy.compactMap(firstAnimated).first
   }
 
-  private static func firstSkinned(in entity: Entity) -> ModelEntity? {
+  static func firstSkinned(in entity: Entity) -> ModelEntity? {
     if let model = entity as? ModelEntity, !model.jointNames.isEmpty { return model }
     return entity.children.lazy.compactMap(firstSkinned).first
   }
