@@ -168,7 +168,8 @@ struct GenzRoomView: View {
       steady: isNative ? slot.steadyInterval : RoomLayerSchedule.busy,
       isPaused: !isOnScreen || reduceMotion)
     return TimelineView(schedule) { context in
-      let state = room.screen.state(for: slot, at: context.date)
+      let state = room.screen.state(
+        for: slot, at: context.date, followsCamera: !isNative || slot.nativeFollowsCamera)
       if slot == .windowNight, replacementArt?.view(for: slot, state: state) == nil {
         let viewState = room.screen.viewState(at: context.date)
         if let art = viewArt?.view(viewState.view, state: viewState) {
