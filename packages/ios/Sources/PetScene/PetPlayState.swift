@@ -33,12 +33,14 @@ public struct PetPlayState: Hashable, Sendable {
   /// How many times faster than real time the brain's clock runs, for a scene that should jump
   /// rather than walk.
   public var brainSpeed: Double
+  /// Where the room's light switch stands, the same in both partners' rooms.
+  public var light: RoomLight
 
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
     catAway: Bool = false, life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
-    brain: CatBrainFrame? = nil, brainSpeed: Double = 1
+    brain: CatBrainFrame? = nil, brainSpeed: Double = 1, light: RoomLight = .standard
   ) {
     self.treat = treat
     self.streak = streak
@@ -51,5 +53,6 @@ public struct PetPlayState: Hashable, Sendable {
     self.lifeNeeds = lifeNeeds
     self.brain = brain
     self.brainSpeed = brainSpeed
+    self.light = light
   }
 }

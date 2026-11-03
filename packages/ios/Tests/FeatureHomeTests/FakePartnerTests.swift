@@ -133,6 +133,13 @@ struct FakePartnerTests {
     #expect(seen.last == .catName("Mochi"))
   }
 
+  @Test func theLightSwitchIsEchoedLikeTheRoomDoes() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 4) { await delivery.switchLight(.cosy) }
+    #expect(seen.last == .roomLight(.cosy))
+  }
+
   @Test func idleMovesCycleThroughNotesPetsAndTreats() async {
     var pace = Self.quick
     pace.idle = [.milliseconds(1)]

@@ -172,3 +172,97 @@ extension LightingLook.RGB {
     return GenzColour(channel(x) << 16 | channel(y) << 8 | channel(z))
   }
 }
+
+// MARK: - The light switch
+
+extension LightingLook {
+  /// What the room shows with its switch at `light`, over the lighting preset `preset`: the preset
+  /// itself when on, the lamp low and the fairy lights when cosy, and only the moon when off.
+  static func switched(_ preset: LightingLook, to light: RoomLight) -> LightingLook {
+    switch light {
+    case .on: preset
+    case .cosy: .cosy
+    case .off: .moonlight
+    }
+  }
+
+  /// The lamp turned low and the fairy lights, the strip dark: warm pools in a dim room.
+  static let cosy = LightingLook(
+    key: Key(colour: [1, 0.6, 0.3], warmth: 0.85, boost: 0.45, softness: 0.9, flicker: 0),
+    fill: Fill(top: [0.62, 0.48, 0.4], bottom: [0.36, 0.24, 0.2], shift: -0.9),
+    core: 6_000, rim: ([1, 0.72, 0.45], 12_000), fairy: (true, [1, 0.82, 0.52], 2.8),
+    sun: (.zero, 0),
+    led: [0.14, 0.09, 0.06], outside: [0.6, 0.6, 0.75], shadows: 0.55,
+    haze: Haze(centre: [0.36, 0.18, 0.09], edge: [0.04, 0.02, 0.02], cover: 0.7), halos: 1.5,
+    grade: Grade(
+      tint: [1, 0.84, 0.66], tintAmount: 0.3, lift: [0.07, 0.035, 0.02], liftAmount: 0.35),
+    vignette: ([0.02, 0.01, 0.01], 0.65))
+
+  /// Every light in the room out: cool moonlight through the window, a blue rim on the cat so it
+  /// still reads, and a dark cool grade.
+  static let moonlight = LightingLook(
+    key: Key(colour: [0.6, 0.7, 1], warmth: 0, boost: 0, softness: 0, flicker: 0),
+    fill: Fill(top: [0.36, 0.46, 0.72], bottom: [0.14, 0.17, 0.3], shift: -1.7),
+    core: 0, rim: ([0.58, 0.68, 1], 9_000), fairy: (false, .zero, 0), sun: (.zero, 0),
+    led: [0.04, 0.05, 0.08], outside: [0.55, 0.66, 1], shadows: 0.3,
+    haze: Haze(centre: [0.08, 0.1, 0.2], edge: [0.01, 0.015, 0.04], cover: 0.8), halos: 0.25,
+    grade: Grade(
+      tint: [0.7, 0.8, 1], tintAmount: 0.45, lift: [0.02, 0.03, 0.07], liftAmount: 0.35),
+    vignette: ([0, 0, 0.02], 0.72))
+
+  /// A bulb on a string with no current through it.
+  static let unlitBulb: RGB = [0.16, 0.13, 0.11]
+
+  /// The look `amount` of the way from `from` to `to`. Colours that go into materials move in
+  /// tenths, so a fade makes a handful of materials rather than one a frame; lights and the flat
+  /// layers move smoothly. `ownLED` and `ownOutside` stand in for a look that keeps the room's
+  /// own colour.
+  static func mix(
+    _ from: LightingLook, _ to: LightingLook, by amount: Float, ownLED: RGB, ownOutside: RGB
+  ) -> LightingLook {
+    let t = Swift.min(Swift.max(amount, 0), 1)
+    if t >= 1 { return to }
+    if t <= 0 { return from }
+    let step = (t * 10).rounded() / 10
+    func mix(_ a: RGB, _ b: RGB) -> RGB { RGB.mix(a, b, by: t) }
+    func mix(_ a: Float, _ b: Float) -> Float { a + (b - a) * t }
+    let fromBulb = from.fairy.shown ? from.fairy.colour : unlitBulb
+    let toBulb = to.fairy.shown ? to.fairy.colour : unlitBulb
+    return LightingLook(
+      key: Key(
+        colour: mix(from.key.colour, to.key.colour), warmth: mix(from.key.warmth, to.key.warmth),
+        boost: mix(from.key.boost, to.key.boost),
+        softness: mix(from.key.softness, to.key.softness),
+        flicker: mix(from.key.flicker, to.key.flicker)),
+      fill: Fill(
+        top: mix(from.fill.top, to.fill.top), bottom: mix(from.fill.bottom, to.fill.bottom),
+        shift: mix(from.fill.shift, to.fill.shift)),
+      core: mix(from.core, to.core),
+      rim: (mix(from.rim.colour, to.rim.colour), mix(from.rim.intensity, to.rim.intensity)),
+      fairy: (
+        from.fairy.shown || to.fairy.shown, RGB.mix(fromBulb, toBulb, by: step),
+        mix(from.fairy.shown ? from.fairy.spill : 0, to.fairy.shown ? to.fairy.spill : 0)
+      ),
+      sun: (mix(from.sun.colour, to.sun.colour), mix(from.sun.intensity, to.sun.intensity)),
+      led: RGB.mix(from.led ?? ownLED, to.led ?? ownLED, by: step),
+      outside: mix(from.outside ?? ownOutside, to.outside ?? ownOutside),
+      shadows: mix(from.shadows, to.shadows),
+      haze: Haze(
+        centre: mix(from.haze.centre, to.haze.centre), edge: mix(from.haze.edge, to.haze.edge),
+        cover: mix(from.haze.cover, to.haze.cover)),
+      halos: mix(from.halos, to.halos),
+      grade: Grade(
+        tint: mix(from.grade.tint, to.grade.tint),
+        tintAmount: mix(from.grade.tintAmount, to.grade.tintAmount),
+        lift: mix(from.grade.lift, to.grade.lift),
+        liftAmount: mix(from.grade.liftAmount, to.grade.liftAmount)),
+      vignette: (
+        mix(from.vignette.colour, to.vignette.colour),
+        mix(from.vignette.amount, to.vignette.amount)
+      ))
+  }
+}
+
+extension GenzColour {
+  var rgb: LightingLook.RGB { [red, green, blue] }
+}

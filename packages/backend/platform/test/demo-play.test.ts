@@ -101,6 +101,20 @@ describe("play frame parsing", () => {
     }
   });
 
+  it("accepts a press of the light switch at on, cosy or off, and nothing else", () => {
+    const at = "2026-11-04T22:15:00+01:00";
+    for (const light of ["on", "cosy", "off"]) {
+      expect(parsePlay({ id: uuid(1), kind: "light", at, light })).toEqual({
+        id: uuid(1),
+        kind: "light",
+        at,
+        light,
+      });
+    }
+    expect(parsePlay({ id: uuid(1), kind: "light", at, light: "dim" })).toBeUndefined();
+    expect(parsePlay({ id: uuid(1), kind: "light", at })).toBeUndefined();
+  });
+
   it("rejects an unknown kind, a bad id, or a time without an offset", () => {
     const at = "2026-11-01T10:00:00Z";
     expect(parsePlay({ id: uuid(1), kind: "coin", at })).toBeUndefined();
@@ -508,6 +522,20 @@ describe("choosing the cat together", () => {
       { type: "adopt", id: uuid(32), move: "pick", cat: "ginger" },
       { type: "adopt", id: uuid(34), move: "adopt", cat: "ginger" },
     ]);
+  });
+
+  it("keeps the last press of the light switch from either phone and replays it", async () => {
+    const a = await connect("PAWSDARK56", alice);
+    const b = await connect("PAWSDARK56", bob);
+    const press = (id: string, light: string) =>
+      JSON.stringify({ type: "play", id, kind: "light", at, light });
+    await a.sendAcked(press(uuid(51), "cosy"), uuid(51));
+    await b.waitFor((f) => ofType(f, "light").some((x) => x["light"] === "cosy"), "the press");
+    await b.sendAcked(press(uuid(52), "off"), uuid(52));
+    await a.waitFor((f) => ofType(f, "light").some((x) => x["light"] === "off"), "the press");
+    await leave(b, a);
+    const later = await connect("PAWSDARK56", alice);
+    expect(ofType(later.frames, "light").at(-1)).toEqual({ type: "light", light: "off" });
   });
 
   it("renames the cat over its first name, the last one winning", async () => {

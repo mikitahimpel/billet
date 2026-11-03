@@ -56,6 +56,42 @@ struct CatBehaviourTests {
     #expect(woke.map { [.yawn, .stretch].contains($0.1) } == true)
   }
 
+  @Test func lightsOutMakesItYawnAndFallAsleep() {
+    var cat = CatBehaviour(clips: Self.full, seed: 7)
+    _ = run(&cat, for: 40)
+    cat.react(.tap, at: 40)
+    _ = run(&cat, from: 40, for: 3)
+    cat.lightsOut(at: 43)
+    let changes = run(&cat, from: 43, for: 10)
+    #expect(changes.first?.1 == .yawn)
+    #expect(changes.contains { $0.1 == .sleep })
+    #expect(!cat.isAwake(at: 53))
+  }
+
+  @Test func inTheDarkItNapsLongerThanInTheLight() {
+    var lit = CatBehaviour(clips: Self.full, seed: 3)
+    var dark = CatBehaviour(clips: Self.full, seed: 3)
+    dark.lightsOut(at: 0)
+    func asleep(_ cat: inout CatBehaviour) -> Double {
+      run(&cat, for: 240).reduce(into: (0.0, nil as (Double, CatAction)?)) { total, change in
+        if let last = total.1, [.sleep, .twitch].contains(last.1) { total.0 += change.0 - last.0 }
+        total.1 = change
+      }.0
+    }
+    #expect(asleep(&dark) > asleep(&lit))
+  }
+
+  @Test func lightsBackOnWakeItWithABlinkAndAStretch() {
+    var cat = CatBehaviour(clips: Self.full, seed: 7)
+    cat.lightsOut(at: 0)
+    _ = run(&cat, for: 12)
+    #expect(!cat.isAwake(at: 12))
+    cat.lightsOn(at: 12)
+    let changes = run(&cat, from: 12, for: 4)
+    #expect(Array(changes.map(\.1).prefix(2)) == [.slowBlink, .stretch])
+    #expect(cat.isAwake(at: 16))
+  }
+
   @Test func aSleepyLifeKeepsItAsleepInFreeMode() {
     var cat = CatBehaviour(clips: Self.full, seed: 7)
     cat.follow(LifeDrive(asleep: true, focus: .rested))
