@@ -6,8 +6,10 @@
 #   PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags
 #
 # Routes: overview, experiments, flags, flag-history[?key=<key>&limit=<1-500>], pairs/<pair id>.
-# Needs BILLET_ADMIN_HOST, CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in the environment
-# (`.env.pass.agents` resolves them). The credentials go to curl on stdin, never on its command line.
+# Needs CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in the environment (`.env.pass.agents`
+# resolves them); the credentials go to curl on stdin, never on its command line. The API host is
+# BILLET_ADMIN_HOST, from the environment or else from a local file that is never committed:
+# $BILLET_ADMIN_ENV_FILE, by default ~/.config/billet/admin.env, with a line BILLET_ADMIN_HOST=<host>.
 set -eu
 
 usage() {
@@ -28,11 +30,18 @@ case "$route" in
   *) usage ;;
 esac
 
+if [ -z "${BILLET_ADMIN_HOST:-}" ]; then
+  env_file=${BILLET_ADMIN_ENV_FILE:-$HOME/.config/billet/admin.env}
+  if [ -f "$env_file" ]; then
+    BILLET_ADMIN_HOST=$(sed -n 's/^BILLET_ADMIN_HOST=//p' "$env_file" | tail -n 1 | tr -d "\"' ")
+  fi
+fi
+
 for name in BILLET_ADMIN_HOST CF_ACCESS_CLIENT_ID CF_ACCESS_CLIENT_SECRET; do
   eval "value=\${$name:-}"
   case "$value" in
     "" | pass://*)
-      echo "admin-read.sh: $name is not set; run through pp run --env-file .env.pass.agents" >&2
+      echo "admin-read.sh: $name is not set (see the top of this script)" >&2
       exit 2
       ;;
   esac
