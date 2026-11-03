@@ -62,11 +62,13 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var amplitude: Double
   /// How far it keeps from a finger, from 0 (right up to it) to 1 (well back).
   public var personalSpace: Double
+  /// The tricks care has taught it.
+  public var tricks: Set<CatLearnedTrick>
 
   public init(
     stack: CatBrainStack, action: CatAction, target: CatTarget, gaze: CatGaze, pace: Double,
     stepStart: Double, stepEnd: Double, eager: Bool = false, tempo: Double = 1,
-    amplitude: Double = 1, personalSpace: Double = 0.3
+    amplitude: Double = 1, personalSpace: Double = 0.3, tricks: Set<CatLearnedTrick> = []
   ) {
     self.stack = stack
     self.action = action
@@ -79,6 +81,7 @@ public struct CatBrainFrame: Hashable, Sendable {
     self.tempo = tempo
     self.amplitude = amplitude
     self.personalSpace = personalSpace
+    self.tricks = tricks
   }
 
   /// The still picture a surface without a scene shows for this frame.
@@ -103,6 +106,8 @@ public struct CatBrain: Sendable {
   public private(set) var personality: CatPersonality
   /// Where it likes to rest, from yesterday and today.
   public private(set) var memory: CatMemory
+  /// What it has learned from how the two of you treat it, as of today's start.
+  public private(set) var upbringing: CatUpbringing
   public private(set) var room: RoomAffordances
   public private(set) var weather: ViewWeather
 
@@ -154,6 +159,7 @@ public struct CatBrain: Sendable {
     nature = personality ?? Self.nature(seed: seed, temperament: temperament)
     self.personality = day?.personality ?? nature
     memory = day?.memory ?? CatMemory()
+    upbringing = day?.upbringing ?? .none
     self.room = room
     self.weather = weather
     self.utcOffset = utcOffset
@@ -202,7 +208,8 @@ public struct CatBrain: Sendable {
       gaze: interaction.map { _ in CatGaze.camera } ?? activity.gaze,
       pace: CatStatechart.pace(activity.step), stepStart: activity.start, stepEnd: activity.end,
       eager: eager, tempo: temperament?.tempo ?? 1, amplitude: temperament?.amplitude ?? 1,
-      personalSpace: temperament?.personalSpace ?? 0.3)
+      personalSpace: upbringing.personalSpace(from: temperament?.personalSpace ?? 0.3),
+      tricks: upbringing.tricks)
   }
 
   /// Whether the cat is in the mood to bat at a finger: awake, not napping or eating, and keen
@@ -217,6 +224,8 @@ public struct CatBrain: Sendable {
   }
 
   static let eagerAbove = 0.4
+  /// Below this Full, a cat whose mealtime it is goes to wait by the bowl.
+  static let waitsBelow = 0.85
 
   static func clip(_ interaction: CatInteraction, asleep: Bool) -> CatAction {
     switch interaction {
@@ -282,6 +291,7 @@ public struct CatBrain: Sendable {
           utcOffset: utcOffset, config: config)
         personality = day.personality
         memory = day.memory
+        upbringing = day.upbringing
         life = sampler.sample(at: time)
         startDay(at: time, record: true)
         continue
@@ -365,6 +375,11 @@ public struct CatBrain: Sendable {
       if let spot = spot { memory.petted(at: spot) }
       interrupt(with: .petted(.back), for: config.petEcho, at: t)
     case .feed:
+      if activity.step == .waitByBowl {
+        // The meal it waited for: it goes on to eat once the bowl is full.
+        finishGroup(at: t)
+        enter(script: [.walkToBowl, .eat, .lickLips], at: t, cause: .event)
+      }
       interrupt(with: .fed, for: config.feedEcho, at: t)
     case .play:
       echo = nil
@@ -379,6 +394,13 @@ public struct CatBrain: Sendable {
       if activity.step != .curl {
         enterRest(at: t, cause: .event)
       }
+    case .shoo:
+      // Off the desk or the cardigan with a start; elsewhere a shoo means nothing to it.
+      guard activity.step.group == .mischief else { return }
+      echo = nil
+      history = nil
+      finishGroup(at: t)
+      enter(script: [.startle], at: t, cause: .event)
     }
   }
 
@@ -544,6 +566,8 @@ public struct CatBrain: Sendable {
   private func chooseScript(_ group: CatActivityGroup, at t: Double) -> [CatActivityStep] {
     let p = personality
     let away = awayHours(at: t) > CatBrainConfig.missingAfterHours
+    // A cat shooed off enough keeps off the desk and the cardigan.
+    let stayOn = 1 - 0.9 * upbringing.stayingOff
     let candidates: [([CatActivityStep], Double)] =
       switch group {
       case .idle:
@@ -561,7 +585,11 @@ public struct CatBrain: Sendable {
           ([.groomPaw], 1), ([.groomPaw, .groomFlank], 1), ([.groomFlank, .groomTail], 0.7),
           ([.groomPaw, .groomFlank, .groomTail], 0.4 + p.lazy),
         ]
-      case .eat: [([.walkToBowl, .eat, .lickLips], 1)]
+      case .eat:
+        [
+          ([.walkToBowl, .eat, .lickLips], 1),
+          ([.walkToBowl, .waitByBowl], isMealtime(at: t) ? 4 : 0),
+        ]
       case .play:
         [
           ([.stalk, .pounce], 1), ([.stalk, .pounce, .chase], 0.4 + p.bold),
@@ -573,14 +601,14 @@ public struct CatBrain: Sendable {
         [
           ([.seekYou, .rub], 0.6 + p.cuddly), ([.slowBlink], 0.8),
           ([.seekYou, .slowBlink], 0.4 + p.vocal),
-          ([.bringToy], room.reachable(.toy) ? 0.3 + p.playful * 0.5 : 0),
+          ([.bringToy], room.reachable(.toy) ? 0.3 + p.playful * 0.5 + upbringing.playfulness : 0),
           ([.waitByDoor], away ? 1.2 : 0),
         ]
       case .mischief:
         [
           ([.pushItem], room.reachable(.smallItem) ? 0.5 + p.bold : 0),
-          ([.sitInCardigan], room.reachable(.soft) ? 0.6 + p.cuddly : 0),
-          ([.sitOnDesk], room.reachable(.desk) ? 0.6 + p.bold : 0),
+          ([.sitInCardigan], room.reachable(.soft) ? (0.6 + p.cuddly) * stayOn : 0),
+          ([.sitOnDesk], room.reachable(.desk) ? (0.6 + p.bold) * stayOn : 0),
         ]
       case .rest: [([.findNapSpot, .curl, .wake], 1)]
       case .react: [([.curiousTilt], 1)]
@@ -674,7 +702,13 @@ public struct CatBrain: Sendable {
       temperament: temperament,
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
-      spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0)
+      spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0,
+      upbringing: upbringing, mealtime: isMealtime(at: t))
+  }
+
+  /// Whether it is the hour the pair feeds it and it has not eaten yet.
+  func isMealtime(at t: Double) -> Bool {
+    upbringing.isMealtime(at: t, utcOffset: utcOffset) && life.needs[.full] < Self.waitsBelow
   }
 
   /// How long a piece counts as new after it appears, in seconds.

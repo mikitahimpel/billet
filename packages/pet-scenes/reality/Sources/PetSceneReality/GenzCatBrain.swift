@@ -10,9 +10,9 @@ struct CatBrainBody {
   /// How many times faster than real time the brain's clock runs. Above 1 the body jumps to each
   /// place instead of walking there, so a fast day reads as a time-lapse.
   var speed = 1.0
-  /// Where the current frame sends the cat, and how high it sits there.
+  /// Where the current frame sends the cat, and the way there round what stands on its top.
   var goal: SIMD2<Float>?
-  var lift: Float = 0
+  var route: [SIMD2<Float>] = []
   /// The room clock when the cat got to `goal`, or nil while it is on its way.
   var arrived: Double?
   /// The step and its start the goal was worked out for, and the step before it.
@@ -44,6 +44,7 @@ extension GenzRoom {
     guard frame != brainBody.frame else { return }
     let before = brainBody.frame
     brainBody.frame = frame
+    hands.play.learned = frame?.tricks ?? []
     // Play chose a chase: the cat goes after the lamp's dot of light once it is free. Any other
     // step lets a chase that never started go.
     let step = frame?.stack.step
@@ -107,7 +108,8 @@ extension GenzRoom {
         GenzAffordance(
           affordance: RoomAffordance(
             id: "window", kind: .window,
-            reachable: simd_distance(near, middle) < layout.cat.length * 1.5),
+            // In front of the pillows along the glass, it still looks out over them.
+            reachable: simd_distance(near, middle) < layout.cat.length * 2.2),
           spot: near, height: catHeight))
     }
     if let bowl = lifeProps?.bowl.position(relativeTo: room) {
@@ -179,17 +181,22 @@ extension GenzRoom {
       brainBody.cameFrom = brainBody.goalFor?.0
       brainBody.goalFor = key
       refreshPlaces()
-      let (goal, lift) = resolve(frame.target)
-      brainBody.goal = goal
-      brainBody.lift = lift
+      let goal = resolve(frame.target)
+      brainBody.route = layout.catRoute(from: catSpot, to: goal)
+      // Somewhere it cannot get to without going through something: as near as it gets.
+      brainBody.goal = brainBody.route.last ?? catSpot
       brainBody.arrived = nil
     }
     let at = catSpot
     let goal = brainBody.goal ?? at
-    let height = layout.cat.spot.scene.y + brainBody.lift
-    let gap = goal - at
+    let near = layout.cat.length * 0.04
+    while brainBody.route.count > 1, simd_distance(at, brainBody.route[0]) < near {
+      brainBody.route.removeFirst()
+    }
+    let waypoint = brainBody.route.first ?? goal
+    let gap = waypoint - at
     let distance = simd_length(gap)
-    if distance > layout.cat.length * 0.04, frame.stack.interaction == nil {
+    if simd_distance(at, goal) > near, frame.stack.interaction == nil {
       // A gallop at the run clip's own speed keeps its paws planted; without one, a fast walk.
       // A lively temperament moves quicker, and its clip plays quicker to keep the paws planted.
       let gallops = frame.pace > 0.5 && behaviour.has(.run)
@@ -198,8 +205,10 @@ extension GenzRoom {
           ? galloping : frame.pace > 0.5 ? runSpeed : frame.pace > 0 ? walkSpeed * 1.4 : walkSpeed)
         * Float(frame.tempo)
       let next =
-        brainBody.speed > 1 || reduceMotion
+        brainBody.speed > 1 || reduceMotion || distance < 1e-5
         ? goal : at + gap / distance * min(speed * step, distance)
+      // Up onto the cardigan where it lies, down off it after.
+      let height = layout.cat.spot.scene.y + layout.catStandHeight(at: next)
       catHolder.position = SIMD3(
         next.x,
         catHolder.position.y + (height - catHolder.position.y)
@@ -208,15 +217,19 @@ extension GenzRoom {
       screen.cat = camera.project(
         catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
       return CatTrip.Pose(
-        spot: next, heading: CatTrip.heading(from: at, to: goal), action: gallops ? .run : .walk,
+        spot: next, heading: CatTrip.heading(from: at, to: distance < 1e-5 ? goal : waypoint),
+        action: gallops ? .run : .walk,
         speed: speed,
         leg: 0, progress: 0, isDone: false)
     }
+    let up = layout.catStandHeight(at: at)
+    // Turned, if it must be, so its body keeps off the pillows beside it.
+    let heading = layout.catHeading(at: at, want: headingFor(frame) ?? bodyHeading, height: up)
     if brainBody.arrived == nil {
       brainBody.arrived = clock
-      catHolder.position.y = height
+      catHolder.position.y = layout.cat.spot.scene.y + up
       // Trips, games and calls start from here and come back here.
-      perch = (at, headingFor(frame) ?? bodyHeading)
+      perch = (at, heading)
       updateScreen()
     }
     let since = clock - (brainBody.arrived ?? clock)
@@ -238,7 +251,7 @@ extension GenzRoom {
         }
         ?? cycled(frame.action, since: since) : behaviour.playable(frame.action)
     return CatTrip.Pose(
-      spot: at, heading: headingFor(frame) ?? bodyHeading, action: action, speed: 0, leg: 0,
+      spot: at, heading: heading, action: action, speed: 0, leg: 0,
       progress: 0, isDone: false)
   }
 
@@ -343,41 +356,39 @@ extension GenzRoom {
       ?? brainBody.places.first { $0.affordance.kind == kind }
   }
 
-  /// Where on its top the cat goes for `target`, and how far above the top it sits there.
-  private func resolve(_ target: CatTarget) -> (SIMD2<Float>, Float) {
+  /// Where on its top the cat goes for `target`: clear of the pillows and what stands there, or
+  /// up on the cardigan.
+  func resolve(_ target: CatTarget) -> SIMD2<Float> {
     switch target {
-    case .stay: return (catSpot, brainBody.lift)
+    case .stay: return catSpot
     case .home:
-      return (layout.onCatSurface(SIMD2(layout.cat.spot.scene.x, layout.cat.spot.scene.z)), 0)
+      return layout.onCatSurface(SIMD2(layout.cat.spot.scene.x, layout.cat.spot.scene.z))
     case .camera:
       let eye = SIMD2(camera.position.x, camera.position.z)
-      return (
-        layout.onCatSurface(CatTrip.towards(eye, from: catSpot, upTo: layout.cat.length * 1.2)), 0
-      )
+      return layout.onCatSurface(
+        CatTrip.towards(eye, from: catSpot, upTo: layout.cat.length * 1.2))
     case .roam(let a, let b):
       guard let surface = layout.catSurface else {
         let reach = layout.cat.length * 1.5
-        return (layout.onCatSurface(home + SIMD2(Float(a - 0.5), Float(b - 0.5)) * reach * 2), 0)
+        return layout.onCatSurface(home + SIMD2(Float(a - 0.5), Float(b - 0.5)) * reach * 2)
       }
-      let point = surface.min + (surface.max - surface.min) * SIMD2(Float(a), Float(b))
-      return (layout.onCatSurface(point), 0)
+      return layout.onCatSurface(
+        surface.min + (surface.max - surface.min) * SIMD2(Float(a), Float(b)))
     case .affordance(let kind):
-      guard let found = place(kind) else { return (catSpot, 0) }
+      guard let found = place(kind) else { return catSpot }
       switch kind {
       case .soft where found.affordance.reachable:
-        // Into the cardigan itself, sunk into it a little.
-        let surface = layout.catSurface
-        let spot = surface.map { simd_clamp(found.spot, $0.min, $0.max) } ?? found.spot
-        return (spot, layout.cat.length * 0.08)
+        // Up on the cardigan, as near its middle as keeps off the pillows.
+        let tops = layout.catObstacles.filter(\.sitOnTop)
+        return tops.min {
+          simd_distance($0.box.centre, found.spot) < simd_distance($1.box.centre, found.spot)
+        }.map(layout.catSpotOnTop) ?? layout.onCatSurface(found.spot)
       case .smallItem, .bowl, .toy:
         // Beside it, facing it.
-        return (
-          layout.onCatSurface(
-            CatTrip.towards(found.spot, from: catSpot, upTo: 10, keep: layout.cat.length * 0.42)),
-          0
-        )
+        return layout.onCatSurface(
+          CatTrip.towards(found.spot, from: catSpot, upTo: 10, keep: layout.cat.length * 0.42))
       default:
-        return (layout.onCatSurface(found.spot), 0)
+        return layout.onCatSurface(found.spot)
       }
     }
   }

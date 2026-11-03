@@ -14,6 +14,8 @@ public struct LifeEvent: Codable, Hashable, Identifiable, Sendable {
     case note
     /// The pet was put to bed, or curled up.
     case sleep
+    /// `by` shooed the cat off where it sat, the desk or the cardigan.
+    case shoo
   }
 
   /// The ID of the room frame that carried it, so the same event from two paths counts once.

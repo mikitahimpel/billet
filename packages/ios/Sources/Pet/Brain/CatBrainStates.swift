@@ -34,6 +34,8 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   case findNapSpot, knead, curl, wake
   case groomPaw, groomFlank, groomTail
   case walkToBowl, eat, lickLips
+  /// Mealtime as the pair keeps it: the cat sits by the bowl and looks at you.
+  case waitByBowl
   case stalk, pounce, chase, batObject, zoomies
   case watchWindow, watchPartnerWindow
   case seekYou, rub, slowBlink, bringToy, waitByDoor
@@ -48,7 +50,7 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
     case .wander, .sniffObject, .inspectFurniture: .explore
     case .findNapSpot, .knead, .curl, .wake: .rest
     case .groomPaw, .groomFlank, .groomTail: .groom
-    case .walkToBowl, .eat, .lickLips: .eat
+    case .walkToBowl, .eat, .lickLips, .waitByBowl: .eat
     case .stalk, .pounce, .chase, .batObject, .zoomies: .play
     case .watchWindow, .watchPartnerWindow: .watch
     case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor: .social
@@ -65,7 +67,8 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
       true
     case .sit, .loaf, .lookAround, .sniffObject, .knead, .curl, .wake, .groomPaw, .groomFlank,
       .groomTail, .eat, .lickLips, .stalk, .pounce, .batObject, .watchWindow,
-      .watchPartnerWindow, .rub, .slowBlink, .waitByDoor, .pushItem, .sitInCardigan, .sitOnDesk,
+      .watchPartnerWindow, .rub, .slowBlink, .waitByDoor, .waitByBowl, .pushItem, .sitInCardigan,
+      .sitOnDesk,
       .startle, .curiousTilt, .carryNote:
       false
     }

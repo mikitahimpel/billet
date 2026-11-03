@@ -262,6 +262,11 @@ final class PairSession {
     lived(.play)
   }
 
+  /// Shoos the cat off the desk or the cardigan; enough of these and it stays off.
+  func shooed() {
+    lived(.shoo)
+  }
+
   /// Puts the cat to bed, from its thought bubble.
   func tuckIn() {
     lived(.sleep)

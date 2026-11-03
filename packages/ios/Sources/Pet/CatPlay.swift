@@ -25,6 +25,8 @@ public enum CatTrick: String, CaseIterable, Hashable, Sendable {
   case sit
   case wave
   case spin
+  /// A paw raised to meet your finger. Only a cat that has learned it does it.
+  case highFive
 }
 
 /// What a person did to the cat or near it, as the room tells the play machine.
@@ -188,6 +190,8 @@ public struct CatPlay: Sendable {
   private var lastFull: [Kind: Double] = [:]
   private var lastNeed: [CatCare: Double] = [:]
   private var nextTrick = 0
+  /// The tricks care has taught the cat: it comes whenever called, and gives a high-five.
+  public var learned: Set<CatLearnedTrick> = []
   private var random: SplitMix64
 
   public init(seed: UInt64 = 1) { random = SplitMix64(seed: seed) }
@@ -275,7 +279,7 @@ public struct CatPlay: Sendable {
       if isCooling(.call, at: now) { return nil }
       lastFull[.call] = now
       let keenness = interest(.call, at: now)
-      if keenness < Self.keen {
+      if keenness < Self.keen, !learned.contains(.comesWhenCalled) {
         return CatPlayResponse(reaction: .ignore, haptic: .nudge, interest: keenness)
       }
       use(.call, at: now)
@@ -288,7 +292,12 @@ public struct CatPlay: Sendable {
         return CatPlayResponse(reaction: .ignore, haptic: .nudge, interest: keenness)
       }
       use(.trick, at: now)
-      let trick = CatTrick.allCases[nextTrick % CatTrick.allCases.count]
+      // A cat that knows the high-five gives it every other time.
+      let known = CatTrick.allCases.filter { $0 != .highFive }
+      let trick =
+        !learned.contains(.highFive)
+        ? known[nextTrick % known.count]
+        : nextTrick % 2 == 1 ? CatTrick.highFive : known[(nextTrick / 2) % known.count]
       nextTrick += 1
       return CatPlayResponse(
         reaction: .trick(trick), haptic: .trick, need: need(.play, at: now), interest: keenness)

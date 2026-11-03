@@ -90,9 +90,9 @@ describe("play frame parsing", () => {
     expect(parsePlay({ id: uuid(1), kind: "treat", at })?.kind).toBe("treat");
   });
 
-  it("accepts the life plays: feeding, a game and bedtime", () => {
+  it("accepts the life plays: feeding, a game, bedtime and a shoo", () => {
     const at = "2026-11-01T23:30:00+01:00";
-    for (const kind of ["feed", "play", "sleep"]) {
+    for (const kind of ["feed", "play", "sleep", "shoo"]) {
       expect(parsePlay({ id: uuid(1), kind, at })).toEqual({
         id: uuid(1),
         kind,

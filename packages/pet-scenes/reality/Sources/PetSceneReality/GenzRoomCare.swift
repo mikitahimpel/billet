@@ -292,8 +292,13 @@ extension GenzRoom {
     return show(response)
   }
 
-  /// A double tap on the cat asks for a trick: it sits up, waves, or spins round.
+  /// A double tap on the cat asks for a trick: it sits up, waves, spins round, or gives a
+  /// high-five once it has learned one. On the desk or the cardigan it is a shoo instead.
   func askTrick() -> [PetSceneEvent] {
+    if let step = brainBody.frame?.stack.step, CatUpbringing.shooable.contains(step) {
+      behaviour.perform(.perk, at: clock)
+      return [.shooed]
+    }
     guard isFreeToPlay, let response = hands.play.handle(.trickAsked, at: clock) else { return [] }
     switch response.reaction {
     case .trick(let trick):
@@ -312,6 +317,12 @@ extension GenzRoom {
           .hold(behaviour.playable(.sit), seconds: 0.4, facing: eye),
           .hold(behaviour.playable(.wave), seconds: 1.6, facing: eye),
           .hold(behaviour.playable(.happy), seconds: 0.8, facing: eye),
+        ]
+      case .highFive:
+        legs = [
+          .hold(behaviour.playable(.sit), seconds: 0.3, facing: eye),
+          .hold(behaviour.playable(.reachUp), seconds: 1.2, facing: eye),
+          .hold(behaviour.playable(.happy), seconds: 0.9, facing: eye),
         ]
       case .spin:
         let facing = CatTrip.heading(from: from, to: eye)

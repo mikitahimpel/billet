@@ -113,7 +113,7 @@ actor LiveDelivery {
     switch kind {
     case .pet:
       if let openSocket { await Self.write(frame, to: openSocket) }
-    case .treat, .feed, .play, .sleep:
+    case .treat, .feed, .play, .sleep, .shoo:
       treatOutbox.append(frame)
       if let openSocket { await Self.write(frame, to: openSocket) }
     }
@@ -128,7 +128,7 @@ actor LiveDelivery {
     switch kind {
     case .pet:
       if let openSocket { await Self.write(frame, to: openSocket) }
-    case .treat, .feed, .play, .sleep:
+    case .treat, .feed, .play, .sleep, .shoo:
       lifeOutbox = Array((lifeOutbox + [frame]).suffix(Self.longestLifeOutbox))
       if let openSocket { await Self.write(frame, to: openSocket) }
     }

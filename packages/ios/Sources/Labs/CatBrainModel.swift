@@ -17,6 +17,8 @@ public final class CatBrainModel {
   /// The personality it was born with, before experience moved it.
   public private(set) var nature = CatPersonality.even
   public private(set) var memory = CatMemory()
+  /// What it has learned from how the two of you treat it.
+  public private(set) var upbringing = CatUpbringing.none
   /// Who did something for the cat last, and how long the one seen least is away, in hours.
   public private(set) var lastBy: String?
   public private(set) var awayHours = 0.0
@@ -102,6 +104,7 @@ public final class CatBrainModel {
     personality = runner.brain.personality
     nature = runner.brain.nature
     memory = runner.brain.memory
+    upbringing = runner.brain.upbringing
     lastBy = runner.brain.lastBy
     awayHours = runner.brain.awayHours(at: runner.brain.time)
   }

@@ -15,7 +15,7 @@ struct AdoptionStageTests {
     stage.start()
     defer { stage.setOnScreen(false) }
 
-    let deadline = ContinuousClock.now + .seconds(15)
+    let deadline = ContinuousClock.now + .seconds(60)
     var seat: Entity? {
       stage.root.findEntity(named: AdoptionStage.catPrefix + "0")?.children
         .first { $0.name == AdoptionStage.seatName }

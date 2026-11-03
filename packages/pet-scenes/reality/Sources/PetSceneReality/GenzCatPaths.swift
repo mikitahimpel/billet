@@ -3,19 +3,17 @@ import simd
 
 extension GenzLayout {
   /// What stands on the top the cat lives on and the cat goes round, such as a cardigan or mugs
-  /// on the window seat: each footprint widened by most of half the cat's length, so the cat's
-  /// head stops short of it too. Flat things, such as a phone, are walked over.
+  /// on the window seat, each footprint widened by most of half the cat's length so its head
+  /// stops short of it too; and the soft parts of the top itself, such as pillows, widened by a
+  /// little more than half the body's width, so the cat stops beside them with its side to them.
+  /// Flat things, such as a phone or a throw spread over a bed, are walked over.
   var catClutter: [DecorBox] {
-    guard let surface = catSurface else { return [] }
     let widen = cat.length * 0.45
-    return pieces.compactMap { placement in
-      let size = placement.piece.kind.size
-      let centre = SIMD2(placement.centre.x, placement.centre.y)
-      guard abs(placement.centre.z - cat.spot.z) < 0.15, size.z >= 0.1,
-        centre == simd_clamp(centre, surface.min, surface.max)
-      else { return nil }
-      return DecorBox(
-        centre: centre, half: [size.x / 2 + widen, size.y / 2 + widen], yaw: placement.yaw)
+    let beside = cat.length * (GenzCatBody.radius + 0.03)
+    return catObstacles.map { obstacle in
+      DecorBox(
+        centre: obstacle.box.centre, half: obstacle.box.half + (obstacle.builtIn ? beside : widen),
+        yaw: obstacle.box.yaw)
     }
   }
 
@@ -50,11 +48,21 @@ extension GenzLayout {
   }
 
   /// How far along the straight line from `start` to `end` the cat gets before something on its
-  /// top is in the way. A cat already among clutter goes where it was going.
+  /// top is in the way of its body or its head. A cat set down among clutter walks on while its
+  /// body keeps out of things, and stays put when it is already in one.
   func catReach(from start: SIMD2<Float>, to end: SIMD2<Float>) -> SIMD2<Float> {
     let clutter = catClutter
-    let isBlocked = { (point: SIMD2<Float>) in clutter.contains { $0.contains(point) } }
-    guard !clutter.isEmpty, !isBlocked(start) else { return end }
+    guard !clutter.isEmpty else { return end }
+    let obstacles = catObstacles
+    let heading = CatTrip.heading(from: start, to: end)
+    let bodyClear = { (point: SIMD2<Float>) in
+      catBodyIsClear(at: point, heading: heading, obstacles: obstacles)
+    }
+    let among = clutter.contains { $0.contains(start) }
+    let isBlocked = { (point: SIMD2<Float>) in
+      !bodyClear(point) || !among && clutter.contains { $0.contains(point) }
+    }
+    guard !isBlocked(start) else { return start }
     let distance = simd_distance(start, end)
     let steps = max(Int(distance / 0.05), 1)
     var reached = start

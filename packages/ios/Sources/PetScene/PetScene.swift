@@ -12,6 +12,8 @@ public enum PetSceneEvent: Hashable, Sendable {
   case petted
   /// The user played with the pet in the scene, such as by moving a finger it batted at.
   case played
+  /// The user shooed the cat off the desk or the cardigan, so it learns to stay off.
+  case shooed
   /// The user fed the pet in the scene, from its bowl or a treat held out. Scenes space these
   /// out to one a meal.
   case fed
@@ -184,7 +186,7 @@ extension PetMachine.Event {
       self = .deliveryFinished(delivery: delivery)
     case .settled(let delivery):
       self = .settled(delivery: delivery)
-    case .petted, .played, .fed, .noteOpened, .affordances, .touching:
+    case .petted, .played, .shooed, .fed, .noteOpened, .affordances, .touching:
       return nil
     }
   }
