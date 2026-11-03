@@ -127,6 +127,10 @@ final class GenzRoom: CatPlayStage {
   let purr = CatPurr()
   /// The hands on the cat: petting, play and the cooldowns that keep it from feeling spammy.
   let hands = CatHands()
+  /// The toys on the cat's floor, and the game going on with one.
+  let toys = RoomToys()
+  /// Where the room reports what happens outside a touch, such as a game the cat won.
+  var report: (@MainActor (PetSceneEvent) -> Void)?
   /// Where the body faces this frame, before the lean into a hand.
   var bodyHeading: Float = 0
   private var lastCatClock = 0.0
@@ -139,7 +143,7 @@ final class GenzRoom: CatPlayStage {
   /// The scale the cat model is shown at, for matching its walk to how fast it moves.
   private var catScale: Float = 1
   /// A dot of lamp light on the cat's floor, for it to chase.
-  private let lightDot = ModelEntity()
+  let lightDot = ModelEntity()
   private let note = Entity()
   private var notePaper: ModelEntity?
   private var noteTexture: TextureResource?
@@ -160,7 +164,9 @@ final class GenzRoom: CatPlayStage {
   var behaviour = CatBehaviour(clips: [:])
   private var life = LifeDrive()
   private var lifeNeeds: PetNeeds?
-  private var lifeProps: GenzLifeProps?
+  var lifeProps: GenzLifeProps?
+  /// Where the cat was put down or called to, in place of its own spot, until it is sent back.
+  var perch: (spot: SIMD2<Float>, heading: Float)?
   /// The lamp's extra warmth from Loved, in steps, so the light changes only now and then.
   private var lifeWarmth: Float = 0
   private var catChoice = CatChoice.standard
@@ -246,6 +252,8 @@ final class GenzRoom: CatPlayStage {
     addLighting()
     buildBackstop()
     buildLightDot()
+    buildToys()
+    buildCareProps()
     catHolder.name = Self.catName
     catHolder.position = layout.cat.spot.scene
     catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
@@ -255,6 +263,7 @@ final class GenzRoom: CatPlayStage {
     room.addChild(catHolder)
     let props = GenzLifeProps(kit: kit, catLength: length)
     props.place(at: layout.cat.spot.scene, heading: layout.cat.heading)
+    props.roomHasYarn = true
     props.show(lifeNeeds)
     room.addChild(props.root)
     lifeProps = props
@@ -622,7 +631,7 @@ final class GenzRoom: CatPlayStage {
   }
 
   /// Projects what the flat layers follow, and where the cat is, into the view.
-  private func updateScreen() {
+  func updateScreen() {
     let project = { (point: GenzRoomPoint) in self.camera.project(point.scene, in: self.viewSize) }
     let led = layout.led.compactMap(project)
     let window = layout.window.compactMap(project)
@@ -656,8 +665,7 @@ final class GenzRoom: CatPlayStage {
     let home = camera.atHome
     let homeWindow = layout.window.compactMap { home.project($0.scene, in: viewSize) }
     if screen.homeWindow != homeWindow { screen.homeWindow = homeWindow }
-    let spot = layout.cat.spot
-    let cat = project(GenzRoomPoint(spot.x, spot.y, spot.z + layout.cat.length * 0.55))
+    let cat = camera.project(catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
     if screen.cat != cat { screen.cat = cat }
     let parallax = CGSize(
       width: -CGFloat(camera.turn) * Self.parallaxPoints,
@@ -956,8 +964,16 @@ final class GenzRoom: CatPlayStage {
       case .sleeping: .free
       }
     var rate: Float = 1
-    bodyHeading = layout.cat.heading
-    if let pose = stepTrip() {
+    bodyHeading = homeHeading
+    stepToys()
+    if let pose = stepHeld() {
+      mode = .fixed(pose.action)
+      bodyHeading = pose.heading
+    } else if let pose = stepPursuit() {
+      mode = .fixed(pose.action)
+      bodyHeading = pose.heading
+      if pose.action == .walk { rate = walkRate(pose.speed) }
+    } else if let pose = stepTrip() {
       mode = .fixed(pose.action)
       bodyHeading = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
@@ -1230,6 +1246,8 @@ enum CatTripKind: Equatable {
   case greeting
   /// Chasing a dot of lamp light that jumps from `first` to `second`.
   case chase(first: SIMD2<Float>, second: SIMD2<Float>)
+  /// Away from its place after a game, a call or being carried, on its way back.
+  case wander
 }
 
 extension GenzRoom {
@@ -1242,7 +1260,8 @@ extension GenzRoom {
   /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it, which
   /// counts as a game.
   func bat(at point: CGPoint) -> PetSceneEvent? {
-    guard moments.contains(.batsAtFinger), trip == nil, world.activity == .sleeping,
+    guard moments.contains(.batsAtFinger), trip == nil, toys.pursuit == nil,
+      world.activity == .sleeping,
       clock - lastBat > Self.batGap,
       CatEdge.isNearEdge(x: Double(point.x), width: Double(viewSize.width))
     else { return nil }
@@ -1278,9 +1297,16 @@ extension GenzRoom {
   private static var batGap: Double { 2.5 }
 
   var home: SIMD2<Float> {
+    if let perch { return perch.spot }
     let spot = layout.cat.spot.scene
     return SIMD2(spot.x, spot.z)
   }
+
+  /// The way the cat faces at rest, at its own spot or where it was put.
+  var homeHeading: Float { perch?.heading ?? layout.cat.heading }
+
+  /// The cat's resting place as a point in the room.
+  var homeScene: SIMD3<Float> { SIMD3(home.x, layout.cat.spot.scene.y, home.y) }
 
   /// The cat's walking pace and running pace, in metres a second, from its size in this room.
   var walkSpeed: Float { layout.cat.length * 0.9 }
@@ -1288,7 +1314,7 @@ extension GenzRoom {
 
   /// A spot in front of the cat's place, for it to face when it is back.
   var homeFront: SIMD2<Float> {
-    let heading = layout.cat.heading
+    let heading = homeHeading
     return home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length
   }
 
@@ -1306,7 +1332,8 @@ extension GenzRoom {
       CatSeen.mark()
     }
     let isFree =
-      trip == nil && world.activity == .sleeping && !reduceMotion && hasCat && opening == nil
+      trip == nil && toys.pursuit == nil && world.activity == .sleeping && !reduceMotion && hasCat
+      && opening == nil
     if greetPending, isFree {
       greetPending = false
       startGreeting()
@@ -1386,7 +1413,7 @@ extension GenzRoom {
   }
 
   func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
-    let heading = layout.cat.heading
+    let heading = homeHeading
     trip = CatTrip(from: home, heading: heading, legs: legs, at: clock)
     tripKind = kind
   }
@@ -1411,7 +1438,7 @@ extension GenzRoom {
     switch tripKind {
     case .delivery: carryNote(pose)
     case .chase(let first, let second): showDot(pose, first: first, second: second)
-    case .greeting: break
+    case .greeting, .wander: break
     }
     return pose
   }
@@ -1469,8 +1496,8 @@ extension GenzRoom {
     lightDot.isEnabled = false
     trip = nil
     tripKind = nil
-    catHolder.position = layout.cat.spot.scene
-    catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
+    catHolder.position = homeScene
+    catHolder.orientation = simd_quatf(angle: homeHeading, axis: [0, 1, 0])
     updateScreen()
   }
 

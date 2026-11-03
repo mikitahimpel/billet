@@ -93,6 +93,22 @@ enum NookiPoster {
   }
 }
 
+/// What a drag in Nooki does, decided where it starts: plays with a toy Nooki adds, brings a
+/// treat out of the bowl, or is the room's own drag.
+enum NookiDrag: Equatable {
+  case decided(CatToy?)
+  /// A treat taken from the bowl.
+  case treat
+
+  static func of(_ target: CatTouchTarget) -> NookiDrag {
+    switch target {
+    case .bowl: .treat
+    case .toy(let toy) where NookiDiorama.addedToys.contains(toy): .decided(toy)
+    case .cat, .toy, .treats, .floor, .scenery, .nothing: .decided(nil)
+    }
+  }
+}
+
 private struct NookiStage: View {
   let diorama: NookiDiorama
   let world: PetWorld
@@ -101,6 +117,12 @@ private struct NookiStage: View {
 
   @State private var shopRoom: NookiShopRoom
   @State private var lastDrag = CGSize.zero
+  /// Whether the drag in progress began on one of the toys Nooki adds, once that is known.
+  @State private var toyDrag: NookiDrag?
+  @State private var lastTap: CatTap?
+  @State private var holding: CatHold?
+  @State private var holdTimer: Task<Void, Never>?
+
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
   @State private var isRenovating = false
@@ -137,6 +159,7 @@ private struct NookiStage: View {
   var body: some View {
     room
       .onAppear {
+        diorama.report = onEvent
         isAppeared = true
         connectRenovator()
         diorama.whenAmbientIsReady { shopRoom.ambient = $0 }
@@ -195,6 +218,7 @@ private struct NookiStage: View {
       .simultaneousGesture(lift)
       .simultaneousGesture(brush)
       .simultaneousGesture(tap)
+      .simultaneousGesture(holdCat)
       .overlay(alignment: .topLeading) {
         if showsControls || isRenovating {
           NookiRenovateControls(isOpen: $isRenovating, paint: $paint, onReset: resetRoom)
@@ -234,6 +258,7 @@ private struct NookiStage: View {
     .ignoresSafeArea()
     // In the same frame as the gestures, so a heart rises from under the stroking finger.
     .overlay { CatPurrOverlay(purr: diorama.purr) }
+    .overlay { PartnerTouchOverlay(trigger: play.petsReceived) { diorama.catPointOnScreen } }
     .onChange(of: moments, initial: true) { _, moments in diorama.setMoments(moments) }
   }
 
@@ -281,6 +306,32 @@ private struct NookiStage: View {
       .targetedToAnyEntity()
       .onEnded { value in
         let time = ProcessInfo.processInfo.systemUptime
+        if !isRenovating {
+          let target = diorama.tapTarget(at: value.location)
+          let isDouble =
+            lastTap.map { $0.isPartner(of: target, at: value.location, time) } ?? false
+          lastTap = isDouble ? nil : CatTap(target: target, location: value.location, time: time)
+          let route = CatTouchRouter.route(
+            isDouble ? .doubleTap : .tap, on: target, isHoldingCat: diorama.isHoldingCat)
+          switch route {
+          case .trick:
+            diorama.tapTimer = NookiTapTimer()
+            diorama.askTrick().forEach(onEvent)
+            return
+          case .call:
+            diorama.tapTimer = NookiTapTimer()
+            diorama.callCat(to: value.location).forEach(onEvent)
+            return
+          case .fillBowl:
+            diorama.fillBowl().forEach(onEvent)
+            return
+          case .fling(let toy) where NookiDiorama.addedToys.contains(toy):
+            diorama.nudge(toy)
+            return
+          case .pat, .camera, .scenery, .ignore, .fling, .stroke, .lift, .carry, .offerTreat:
+            break
+          }
+        }
         if let event = diorama.tap(value.entity, at: time) { onEvent(event) }
       }
   }
@@ -300,6 +351,20 @@ private struct NookiStage: View {
       .targetedToAnyEntity()
       .onChanged { value in
         let location = value.gestureValue.location
+        if diorama.isHoldingCat { return }
+        if toyDrag == nil {
+          let start = value.gestureValue.startLocation
+          toyDrag = isRenovating ? .decided(nil) : NookiDrag.of(diorama.tapTarget(at: start))
+        }
+        if toyDrag == .treat {
+          diorama.offerTreat(at: location).forEach(onEvent)
+          return
+        }
+        if case .decided(let toy?) = toyDrag {
+          diorama.followFinger(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
+          diorama.carry(toy, to: location)
+          return
+        }
         let point = SIMD2(Float(location.x), Float(location.y))
         diorama.followFinger(at: point, in: viewSize)
         if diorama.bat(at: point, in: viewSize) { onEvent(.played) }
@@ -320,6 +385,16 @@ private struct NookiStage: View {
       .onEnded { value in
         let velocity = value.gestureValue.velocity
         lastDrag = .zero
+        defer { toyDrag = nil }
+        if toyDrag == .treat {
+          diorama.endTreat()
+          return
+        }
+        if diorama.isHoldingCat { return }
+        if case .decided(let toy?) = toyDrag {
+          diorama.release(toy, velocity: velocity, at: value.gestureValue.location)
+          return
+        }
         if isHoldingPiece(value.entity) {
           return
         } else if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
@@ -357,6 +432,35 @@ private struct NookiStage: View {
         }
       }
       .onEnded { _ in diorama.dropLifted() }
+  }
+
+  /// A finger held still on the cat picks it up; it hangs under the finger until let go.
+  private var holdCat: some Gesture {
+    DragGesture(minimumDistance: 0)
+      .onChanged { value in
+        if holding == nil {
+          holding = .pressing
+          guard !isRenovating, diorama.tapTarget(at: value.startLocation) == .cat else {
+            holding = .elsewhere
+            return
+          }
+          holdTimer = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled, holding == .pressing, diorama.liftCat() else { return }
+            holding = .lifted
+          }
+        }
+        if holding == .pressing, hypot(value.translation.width, value.translation.height) > 5 {
+          holdTimer?.cancel()
+          holding = .elsewhere
+        }
+        if holding == .lifted { diorama.moveLifted(to: value.location) }
+      }
+      .onEnded { _ in
+        holdTimer?.cancel()
+        if holding == .lifted { diorama.dropCat() }
+        holding = nil
+      }
   }
 
   private var pinch: some Gesture {

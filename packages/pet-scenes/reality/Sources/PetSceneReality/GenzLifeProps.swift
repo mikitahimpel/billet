@@ -3,13 +3,20 @@ import RealityKit
 import simd
 
 /// The cat's needs as things in the room: a bowl beside its place whose food sinks as Full
-/// falls, and a ball of yarn that comes out when it wants to play. Hidden while the variant is off.
+/// falls, and a ball of yarn that comes out when it wants to play. The bowl is always there to be
+/// filled with a tap; the yarn shows only while the variant is on and the room has no toy yarn.
 @MainActor
 final class GenzLifeProps {
   let root = Entity()
   private let food: ModelEntity
   private let yarn: ModelEntity
   private let foodHeight: Float
+  let bowl: Entity
+  private var needs: PetNeeds?
+  /// How full a meal the person put down has left the bowl, overriding the needs while it lasts.
+  private var meal: Float?
+  /// Whether the room has a yarn of its own to play with, so this one stays away.
+  var roomHasYarn = false
 
   /// When Playful is below this, the yarn lies out, waiting.
   static let yarnBelow = 0.5
@@ -29,13 +36,15 @@ final class GenzLifeProps {
       mesh: .generateSphere(radius: length * 0.09),
       materials: [kit.matte(GenzColour(0xD06A43))])
     let bowlHolder = Entity()
+    bowlHolder.name = "genz-bowl"
     bowlHolder.position = [length * 0.75, 0, length * 0.25]
     bowlHolder.addChild(bowl)
     bowlHolder.addChild(food)
     yarn.position = [-length * 0.7, length * 0.09, length * 0.45]
     root.addChild(bowlHolder)
     root.addChild(yarn)
-    root.isEnabled = false
+    self.bowl = bowlHolder
+    apply()
   }
 
   /// Places the props around the cat's spot, turned with it.
@@ -45,15 +54,22 @@ final class GenzLifeProps {
   }
 
   func show(_ needs: PetNeeds?) {
-    guard let needs else {
-      root.isEnabled = false
-      return
-    }
-    root.isEnabled = true
-    let fill = Float(max(0.04, min(1, (needs.full - 0.2) / 0.8)))
-    food.scale = [1, fill, 1]
-    food.position.y = foodHeight * fill / 2 + 0.002
-    yarn.isEnabled = needs.playful < Self.yarnBelow
+    self.needs = needs
+    apply()
+  }
+
+  /// Shows a meal put down as `level` of a full bowl, or nil to go back to showing the needs.
+  func show(meal level: Float?) {
+    meal = level
+    apply()
+  }
+
+  private func apply() {
+    let fromNeeds = needs.map { Float(max(0.04, min(1, ($0.full - 0.2) / 0.8))) }
+    let fill = meal ?? fromNeeds ?? 0.04
+    food.scale = [1, max(fill, 0.04), 1]
+    food.position.y = foodHeight * max(fill, 0.04) / 2 + 0.002
+    yarn.isEnabled = !roomHasYarn && (needs.map { $0.playful < Self.yarnBelow } ?? false)
   }
 
   /// How much warmer the lamp burns for how loved the cat feels: none at the floor, a little
