@@ -13,7 +13,9 @@ import { NotesRoutes } from "@billet/backend-notes/notes-routes";
 import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
+import { EventSinkLive } from "./event-sink-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
+import { PairVariantsLive } from "./pair-variants-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
@@ -38,6 +40,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
         ),
         NotesService.layer,
         FlagsService.layer,
+        PairVariantsLive,
       ),
     ),
     Layer.provide(
@@ -47,6 +50,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
         FlagsRepositoryLive(env.DB),
         Metrics.layer.pipe(Layer.provide(MetricsRepositoryLive(env.DB))),
         Experiments.with(experiments),
+        EventSinkLive(env.EVENTS),
         MediaStoreLive(env.MEDIA),
         PairRoomsLive(env.PAIR_ROOM),
         AppleIdentityLive,

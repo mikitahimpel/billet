@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./analytics": "./src/analytics.ts",
     "./funnel": "./src/funnel.ts",
     "./metrics": "./src/metrics.ts",
     "./metrics-error": "./src/metrics-error.ts",

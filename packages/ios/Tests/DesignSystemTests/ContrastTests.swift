@@ -85,6 +85,18 @@ let markPairs: [Pair] = [
   mark("tool icon on tray", Palette.paper, on: Palette.raised),
 ]
 
+/// Every ground a screen can stand on, at its top, middle and foot.
+let groundPairs: [Pair] = EveningGround.allCases.flatMap { ground in
+  [("top", ground.top), ("middle", ground.middle), ("foot", ground.foot)].flatMap { place, swatch in
+    [
+      text("cream on \(ground.rawValue) \(place)", Palette.paper, on: swatch),
+      text("turned cream on \(ground.rawValue) \(place)", Palette.paperTurned, on: swatch),
+      text("muted on \(ground.rawValue) \(place)", Palette.muted, on: swatch),
+      mark("gold on \(ground.rawValue) \(place)", Palette.gold, on: swatch),
+    ]
+  } + [rung("\(ground.rawValue) page to raised", Palette.raised, on: ground.middle)]
+}
+
 let rungPairs: [Pair] = [
   rung("page to raised", Palette.raised, on: Palette.page),
   rung("raised to raised top", Palette.raisedTop, on: Palette.raised),
@@ -108,13 +120,17 @@ let rungPairs: [Pair] = [
     #expect(ContrastFloor.rung.rawValue == 1.15)
   }
 
-  @Test(arguments: textPairs + markPairs + rungPairs)
+  @Test(arguments: textPairs + markPairs + rungPairs + groundPairs)
   func pairClearsItsFloor(_ pair: Pair) {
     let ratio = Contrast.ratio(pair.foreground, pair.background)
     #expect(
       ratio >= pair.floor.rawValue,
       "\(pair.name) is \(ratio):1 against a floor of \(pair.floor.rawValue)"
     )
+  }
+
+  @Test func thePageIsTheStandardGroundsMiddle() {
+    #expect(Palette.page == EveningGround.standard.middle)
   }
 
   @Test func rawGoldFailsOnPaperWhichIsWhyInkGoldExists() {

@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import Observation
 import Persistence
@@ -141,6 +142,17 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(choice, named: Self.windowViewFileName)
   }
 
+  public static let eveningGroundFileName = "evening-ground.json"
+
+  /// The saved ground behind every screen, or the standard one when nothing readable is saved.
+  public func loadEveningGround() -> EveningGround {
+    (try? storage.readJSON(EveningGround.self, named: Self.eveningGroundFileName)) ?? .standard
+  }
+
+  public func saveEveningGround(_ ground: EveningGround) throws(PersistenceError) {
+    try storage.writeJSON(ground, named: Self.eveningGroundFileName)
+  }
+
   public static let shopkeeperFileName = "shopkeeper.json"
 
   /// The saved shopkeeper, or the standard one when nothing readable is saved.
@@ -213,6 +225,8 @@ public final class WidgetFeaturesModel {
   public private(set) var cat: CatChoice
   /// What the styled rooms' window looks out on. Kept beside the flags, in its own file.
   public private(set) var windowView: WindowViewChoice
+  /// The ground behind every screen. Kept beside the flags, in its own file.
+  public private(set) var eveningGround: EveningGround
   /// How Home is laid out around the room. Kept beside the flags, in its own file.
   public private(set) var homeVariant: HomeVariant
   /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
@@ -235,6 +249,7 @@ public final class WidgetFeaturesModel {
     remote = store?.loadRemoteFlags() ?? RemoteFlags()
     cat = store?.loadCat() ?? .standard
     windowView = store?.loadWindowView() ?? .standard
+    eveningGround = store?.loadEveningGround() ?? .standard
     homeVariant = store?.loadHomeVariant() ?? .standard
     pretendHour = store?.loadPretendHour()
     lighting = store?.loadLighting() ?? .standard
@@ -293,6 +308,14 @@ public final class WidgetFeaturesModel {
     guard windowView != choice else { return }
     windowView = choice
     try? store?.saveWindowView(choice)
+  }
+
+  public func setEveningGround(_ ground: EveningGround) {
+    guard eveningGround != ground else { return }
+    eveningGround = ground
+    try? store?.saveEveningGround(ground)
+    // The widgets stand on the same ground.
+    onChange()
   }
 
   /// Drops the Labs choice, so the room follows the pair's test.

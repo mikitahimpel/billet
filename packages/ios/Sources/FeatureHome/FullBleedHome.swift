@@ -33,6 +33,7 @@ struct FullBleedHome<Drawer: View>: View {
   @State private var lastTouch = Date.distantPast
   @State private var controlsShown = true
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.eveningGround) private var eveningGround
 
   /// The cinematic variant keeps its controls back from the first frame until its opening is over.
   private var showsControls: Bool {
@@ -103,7 +104,7 @@ struct FullBleedHome<Drawer: View>: View {
       .fixedSize(horizontal: false, vertical: true)
       .background {
         UnevenRoundedRectangle(topLeadingRadius: Radius.card, topTrailingRadius: Radius.card)
-          .fill(Palette.page.color)
+          .fill(eveningGround.middle.color)
           .ignoresSafeArea(edges: .bottom)
       }
       .offset(y: drawerDrag)
