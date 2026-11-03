@@ -54,6 +54,44 @@
     }
   }
 
+  extension GenzDecorShots {
+    /// The pouf held over the pattern rug, its marker under it.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_DECOR_SHOTS"] != nil))
+    func markerOverTheRug() async throws {
+      let folder = URL(
+        fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_DECOR_SHOTS"]))
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+      let room = GenzRoomCache(suite: "genz-decor-shots-\(UUID())").room(layout)
+      room.startBuilding()
+      let deadline = Date.now.addingTimeInterval(60)
+      while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+      try #require(room.isBuilt)
+      room.setLighting(.amberLantern)
+      room.room.isEnabled = true
+      let index = try #require(layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+      let name = GenzRoom.decorName(layout.pieces[index], index: index)
+      let holder = try #require(room.decor.pieces[name]?.holder)
+      room.decor.isOn = true
+      room.decor.select(holder)
+      room.decor.beginDrag(at: [3.0, 3.35])
+      room.decor.drag(to: [4.3, 3.75])
+      for _ in 0..<60 { room.stepDecor(1.0 / 60) }
+
+      let renderer = try RealityRenderer()
+      renderer.entities.append(room.root)
+      let lens = PerspectiveCamera()
+      lens.camera.fieldOfViewInDegrees = 30
+      renderer.entities.append(lens)
+      renderer.activeCamera = lens
+      lens.look(
+        at: GenzRoomPoint(4.3, 3.75, 0.1).scene, from: GenzRoomPoint(6.0, 8.0, 2.2).scene,
+        relativeTo: nil)
+      let image = try await GenzRenderShots.render(renderer, width: 786, height: 1704)
+      try GenzRenderShots.write(image, to: folder.appendingPathComponent("marker-over-rug.png"))
+    }
+  }
+
   extension SIMD3 where Scalar == Float {
     /// This scene point in the room's terms.
     fileprivate var room: GenzRoomPoint { GenzRoomPoint(x, z, y) }
