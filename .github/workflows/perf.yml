@@ -45,8 +45,14 @@ on:
   pull_request:
     types: [labeled, synchronize, reopened]
 
+# A pull request event that runs nothing (no `perf` label, or another label added) still starts
+# this workflow, only to skip its jobs: it goes in a group of its own, so it cannot push a waiting
+# perf run out of the queue.
 concurrency:
-  group: ios-perf
+  group: >-
+    ${{ github.event_name == 'pull_request' && !(contains(github.event.pull_request.labels.*.name, 'perf')
+    && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    && format('ios-perf-skip-{0}', github.run_id) || 'ios-perf' }}
   cancel-in-progress: false
 
 permissions:
