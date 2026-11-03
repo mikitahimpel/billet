@@ -153,3 +153,54 @@ layers are drawn by SwiftUI, so they are not in these renders.
 Each room and set is its own room in the cache (`GenzLayout.Key`), built the first time it is
 shown. The pieces are not sold in the shop yet, because the shop sells the diorama's models.
 Where each model came from is logged in `~/.billet-manager/product/art/provenance.md`.
+
+## Decorate
+
+Decorating happens on Home, in the room as it is shown, in every layout and room style.
+
+**Getting in:**
+- the sofa button beside the pen, or in the styled rooms' header;
+- holding a piece of furniture for about half a second, which also picks it up;
+- "Change the room" in the drawer;
+- placing an item from the shop.
+
+While decorating, Home's chrome and the tab bar step aside. Holding the room no longer gives a
+treat.
+
+**Moving pieces:**
+- Drag a piece to move it over the floor. It snaps to a grid: 5 cm in Nooki, a quarter unit in
+  the styled rooms.
+- Twist with two fingers, or tap Turn, to rotate it in 15° steps. Turn tries a quarter turn, then
+  the nearest turn that fits.
+- A piece keeps inside the room: pushed into a wall, it slides along it.
+- It never overlaps another piece or something fixed. The marker under it is cream where it fits
+  and coral where it doesn't.
+- Letting go somewhere that doesn't fit sends it back.
+- Rugs lie under everything.
+
+**Undo, the closet and Reset:**
+- Undo steps back through moves, turns, pieces added and pieces put away.
+- The tray at the foot lists furniture waiting in the closet. Tapping one stands it at the
+  nearest open spot, picked up.
+- Put away sends a closet piece back to the closet.
+- Reset puts the room's own furniture back where it started.
+
+**In the styled rooms:**
+- Every piece standing on the floor can be moved. What stands on a piece rides with it, such as
+  the record player on its crate.
+- Two pieces stay put, because the cat's walks and the lamp's glow are laid out around them:
+  - the piece the cat lives on (the window seat or the bed);
+  - the table under the lamp.
+- Places are kept per room and furniture set (`genz.spots.<style>.<furniture>` in the app's
+  defaults).
+
+**Code:**
+- `DecorPlan.swift` is the placement model: grid and turn snapping, bounds, turned-rectangle
+  collision, open spots and undo history. `DecorPlanTests` cover it.
+- `DecorSession` moves pieces in one room.
+- `DecorTouch` maps fingers and the controls onto it.
+- `DecorControls` is the SwiftUI overlay.
+
+**Sync:** shop placements are stored in the shop state, as before. The room's own furniture is
+stored on the device. Neither is sent to the partner yet; there was no partner sync of the room
+before this either.

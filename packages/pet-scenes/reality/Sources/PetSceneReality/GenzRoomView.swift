@@ -149,6 +149,10 @@ struct GenzRoomView: View {
   @Environment(\.petSceneWindowView) private var windowView
   @Environment(\.petSceneViewArt) private var viewArt
   @State private var plates = ViewPlateCache()
+  @Environment(\.petSceneRenovator) private var renovator
+  @State private var isDecorating = false
+  @State private var decorStatus = DecorStatus()
+  @State private var holdBegan: Date?
   @Environment(\.scenePhase) private var scenePhase
 
   private var behind: RoomLayerSlot {
@@ -186,6 +190,8 @@ struct GenzRoomView: View {
       catAnchor(room)
     }
     .ignoresSafeArea()
+    .overlay { decorControls(room) }
+    .modifier(GenzDecorFeeds(view: self, room: room))
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
     .task(id: layout.key) {
@@ -275,6 +281,9 @@ struct GenzRoomView: View {
     }
     .simultaneousGesture(orbit(room))
     .simultaneousGesture(pinch(room))
+    .simultaneousGesture(movePiece(room))
+    .simultaneousGesture(pickUp(room))
+    .simultaneousGesture(twist(room))
     .simultaneousGesture(tap(room))
     .simultaneousGesture(lift(room))
     .modifier(GenzRoomFeeds(view: self, room: room))
@@ -362,6 +371,94 @@ struct GenzRoomView: View {
     room.setOnScreen(isOnScreen, in: viewID)
   }
 
+  // MARK: - Decorating
+
+  /// Keeps decorating in step with the closet and the shop, and the controls with the room.
+  fileprivate struct GenzDecorFeeds: ViewModifier {
+    let view: GenzRoomView
+    let room: GenzRoom
+
+    func body(content: Content) -> some View {
+      view.decorFeeds(content, room: room)
+    }
+  }
+
+  fileprivate func decorFeeds(_ content: some View, room: GenzRoom) -> some View {
+    content
+      .onAppear {
+        let decor = room.decor
+        decor.onChange = { decorStatus = DecorStatus(decor) }
+      }
+      .onDisappear { renovator?.isRenovating = false }
+      .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
+      .onChange(of: isDecorating, initial: true) { _, isOn in
+        room.decor.isOn = isOn
+        renovator?.isRenovating = isOn
+      }
+      .onChange(of: layout.key) { isDecorating = false }
+  }
+
+  @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
+    if isDecorating {
+      DecorControls(
+        status: decorStatus, closet: [], owned: { _ in 0 }, paint: nil,
+        onReset: { room.resetDecor() }, onUndo: { touch(room).undo() },
+        onDone: { isDecorating = false }, onRotate: { room.decor.rotateStep() },
+        onPutAway: { touch(room).putAway() }, onAdd: { _ in })
+    }
+  }
+
+  private func touch(_ room: GenzRoom) -> DecorTouch {
+    DecorTouch(
+      session: room.decor, renovator: nil, floor: { [room] point in room.floorPoint(under: point) })
+  }
+
+  /// While decorating, a finger on a piece picks it up, and the piece follows it until let go.
+  private func movePiece(_ room: GenzRoom) -> some Gesture {
+    DragGesture(minimumDistance: 0)
+      .targetedToAnyEntity()
+      .onChanged { value in
+        let drag = value.gestureValue
+        let began = holdBegan ?? drag.time
+        if holdBegan == nil { holdBegan = drag.time }
+        let held = drag.time.timeIntervalSince(began)
+        let moved = hypot(drag.translation.width, drag.translation.height)
+        let decor = room.decor
+        let picksUp =
+          decor.isDragging || (isDecorating && (moved > 3 || held > 0.25))
+        guard picksUp else { return }
+        touch(room).drag(
+          value.entity, from: drag.startLocation, to: drag.location,
+          enter: { isDecorating = true })
+      }
+      .onEnded { _ in
+        holdBegan = nil
+        touch(room).endDrag()
+      }
+  }
+
+  /// Holding a piece still opens the room for decorating and picks the piece up.
+  private func pickUp(_ room: GenzRoom) -> some Gesture {
+    LongPressGesture(minimumDuration: 0.45)
+      .targetedToAnyEntity()
+      .onEnded { value in
+        guard !isDecorating, room.decor.piece(containing: value.entity) != nil else { return }
+        isDecorating = true
+        room.decor.isOn = true
+        room.decor.select(value.entity)
+      }
+  }
+
+  /// Two fingers turn the piece picked up.
+  private func twist(_ room: GenzRoom) -> some Gesture {
+    RotateGesture()
+      .onChanged { value in
+        guard isDecorating else { return }
+        touch(room).twist(by: value.rotation.radians)
+      }
+      .onEnded { _ in touch(room).endTwist() }
+  }
+
   /// A tap on the cat pats it and one on the bowl fills it. Two quick taps on the cat ask for a
   /// trick and on the floor call the cat there; two anywhere else send the camera home, as the
   /// room's own taps do.
@@ -369,6 +466,10 @@ struct GenzRoomView: View {
     SpatialTapGesture()
       .targetedToAnyEntity()
       .onEnded { value in
+        if isDecorating {
+          touch(room).tap(value.entity)
+          return
+        }
         let target = room.tapTarget(at: value.location)
         let now = ProcessInfo.processInfo.systemUptime
         let isDouble = lastTap.map { $0.isPartner(of: target, at: value.location, now) } ?? false
@@ -400,7 +501,7 @@ struct GenzRoomView: View {
       .onChanged { value in
         if holding == nil {
           holding = .pressing
-          guard room.isOverCat(value.startLocation) else {
+          guard !isDecorating, room.isOverCat(value.startLocation) else {
             holding = .elsewhere
             return
           }
@@ -429,10 +530,12 @@ struct GenzRoomView: View {
   private func orbit(_ room: GenzRoom) -> some Gesture {
     DragGesture(minimumDistance: 6)
       .onChanged { value in
-        let route =
+        var route =
           dragRoute
           ?? CatTouchRouter.route(
             .drag, on: room.tapTarget(at: value.startLocation), isHoldingCat: room.isHoldingCat)
+        // A drag that moves or turns a piece is the piece's, to its end.
+        if room.decor.isDragging || room.decor.isTurning { route = .ignore }
         let isFirst = dragRoute == nil
         dragRoute = route
         room.followFinger(at: value.location)
@@ -479,6 +582,7 @@ struct GenzRoomView: View {
   private func pinch(_ room: GenzRoom) -> some Gesture {
     MagnifyGesture()
       .onChanged { value in
+        guard room.decor.selected == nil else { return }
         room.zoom(by: Float(value.magnification / lastPinch))
         lastPinch = value.magnification
       }

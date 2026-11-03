@@ -22,6 +22,10 @@ struct StyledHome: View {
   let onTreat: () -> Void
   let onOpenNotes: () -> Void
   let onDraw: () -> Void
+  /// Whether the room is being decorated, which hides everything over it but its own controls.
+  var isDecorating = false
+  /// Opens the room for moving its furniture, right where it is.
+  var onDecorate: (() -> Void)?
 
   @State private var latestDrawing: CGImage?
   @State private var openings = 0
@@ -41,18 +45,22 @@ struct StyledHome: View {
         .ignoresSafeArea()
         .overlayPreferenceValue(PetSceneCatAnchorKey.self) { anchor in
           GeometryReader { proxy in
-            if let anchor {
+            if let anchor, !isDecorating {
               treatChip
                 .position(Self.chipPosition(near: proxy[anchor], in: proxy.size))
             }
           }
         }
-      VStack(spacing: 0) {
-        header
-        Spacer(minLength: 0)
-        bottom
+      if !isDecorating {
+        VStack(spacing: 0) {
+          header
+          Spacer(minLength: 0)
+          bottom
+        }
+        .transition(.opacity)
       }
     }
+    .calmAnimation(value: isDecorating)
     .task(id: latestReceived?.id) {
       guard let note = latestReceived else {
         latestDrawing = nil
@@ -79,6 +87,10 @@ struct StyledHome: View {
     HStack(spacing: Spacing.small) {
       IconButton("paintbrush.pointed.fill", label: "Room style") { choosingStyle = true }
       streakChip
+      if let onDecorate {
+        IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
+          .accessibilityIdentifier("styledDecorateButton")
+      }
       Spacer(minLength: 0)
     }
     .padding(.top, Spacing.small)

@@ -151,45 +151,62 @@ import simd
     #expect(!renovation.isPiece(Entity()))
   }
 
-  @Test func nothingLiftsWhileTheRoomIsClosed() throws {
+  @Test func closingTheRoomPutsDownWhatWasPickedUp() throws {
     let (renovation, chair, _, _) = try make()
+    #expect(renovation.decor.select(chair))
     renovation.isOn = false
-    #expect(!renovation.lift(chair))
+    #expect(renovation.decor.selected == nil)
   }
 
-  @Test func aDragSnapsThePieceAndADropSavesIt() throws {
+  @Test func aDragSnapsThePieceAndLettingGoSavesIt() throws {
     let (renovation, chair, _, store) = try make()
-    #expect(renovation.lift(chair))
-    renovation.move(towards: [0.03, -0.42])
-    #expect(simd_distance(chair.position, [0, chair.position.y, -0.4]) < 0.0001)
-    #expect(store.load().pieces.isEmpty)
-    #expect(renovation.drop() != nil)
-    #expect(store.load().pieces["chair"] == .init(column: 0, row: -4))
+    #expect(renovation.carry(chair, to: [0.03, -0.42]))
+    renovation.settle()
+    #expect(simd_distance(chair.position, [0.05, chair.position.y, -0.4]) < 0.0001)
+    let spot = try #require(store.load().spots?["chair"])
+    #expect(abs(spot.x - 0.05) < 0.0001 && abs(spot.z - -0.4) < 0.0001)
   }
 
-  @Test func aTakenCellLeavesThePieceWhereItWas() throws {
-    let (renovation, chair, _, _) = try make()
-    _ = renovation.lift(chair)
-    renovation.move(towards: [0.5, 0.4])
+  @Test func aTakenSpotSendsThePieceBack() throws {
+    let (renovation, chair, _, store) = try make()
+    renovation.carry(chair, to: [0.5, 0.4])
+    renovation.settle()
     #expect(simd_distance(chair.position, [0.4, chair.position.y, -0.4]) < 0.0001)
+    #expect(store.load().spots == nil)
   }
 
-  @Test func aLiftedPieceRisesAndSettlesBackToTheFloor() throws {
+  @Test func aPickedUpPieceRisesAndSettlesBackToTheFloor() throws {
     let (renovation, chair, _, _) = try make()
-    _ = renovation.lift(chair)
+    renovation.decor.select(chair)
     for _ in 0..<30 { renovation.step(1.0 / 60, reduceMotion: false) }
     #expect(chair.position.y > 0.05)
-    _ = renovation.drop()
-    for _ in 0..<60 { renovation.step(1.0 / 60, reduceMotion: false) }
-    #expect(chair.position.y == 0)
+    renovation.decor.deselect()
+    renovation.settle()
+    #expect(abs(chair.position.y) < 0.0001)
     #expect(!renovation.isMoving)
+  }
+
+  @Test func aTurnIsSavedWithThePlace() throws {
+    let (renovation, chair, _, store) = try make()
+    renovation.decor.select(chair)
+    renovation.decor.rotateStep()
+    let spot = try #require(store.load().spots?["chair"])
+    #expect(abs(abs(spot.yaw) - .pi / 2) < 0.0001)
+  }
+
+  @Test func undoPutsThePieceBack() throws {
+    let (renovation, chair, _, store) = try make()
+    renovation.carry(chair, to: [0, -0.4])
+    #expect(renovation.decor.history.canUndo)
+    _ = renovation.decor.undo()
+    renovation.settle()
+    #expect(simd_distance(chair.position, [0.4, chair.position.y, -0.4]) < 0.0001)
+    #expect(store.load().spots == nil)
   }
 
   @Test func resetPutsEverythingBack() throws {
     let (renovation, chair, _, store) = try make()
-    _ = renovation.lift(chair)
-    renovation.move(towards: [0, -0.4])
-    _ = renovation.drop()
+    renovation.carry(chair, to: [0, -0.4])
     renovation.reset(reduceMotion: true)
     #expect(simd_distance(chair.position, [0.4, chair.position.y, -0.4]) < 0.0001)
     #expect(store.load() == NookiLayout())
@@ -205,10 +222,5 @@ import simd
     renovation.register("chair", holder: chair, half: [0.1, 0.1])
     renovation.applyStored()
     #expect(simd_distance(chair.position, [0.1, 0, -0.3]) < 0.0001)
-  }
-
-  @Test func aBounceDiesAway() {
-    #expect(NookiRenovation.bounce(0) > NookiRenovation.bounce(0.7))
-    #expect(NookiRenovation.bounce(2) < 0.0001)
   }
 }

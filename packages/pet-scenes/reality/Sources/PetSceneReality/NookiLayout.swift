@@ -46,10 +46,19 @@ struct NookiLayout: Codable, Equatable, Sendable {
     var row: Int
   }
 
+  /// Where a moved piece stands on the floor, and how it is turned.
+  struct Spot: Codable, Hashable, Sendable {
+    var x: Float
+    var z: Float
+    var yaw: Float
+  }
+
   var wall: NookiSwatch?
   var floor: NookiSwatch?
-  /// Where each moved piece stands, by model name.
+  /// Where each piece moved by an older version stands, by model name, on its grid.
   var pieces: [String: Cell] = [:]
+  /// Where each moved piece stands, by model name. Newer than ``pieces``, which it overrides.
+  var spots: [String: Spot]?
 }
 
 /// Where furniture may stand. Pieces snap to a grid, stay in the room and never overlap each other
