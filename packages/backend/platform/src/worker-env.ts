@@ -21,6 +21,8 @@ export interface WorkerEnv {
    */
   readonly ACCESS_TEAM_DOMAIN?: string;
   readonly ACCESS_AUD?: string;
+  /** The AUD tag of the Access application for agents' service tokens (`/admin/api/agent`). */
+  readonly ACCESS_AGENT_AUD?: string;
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
