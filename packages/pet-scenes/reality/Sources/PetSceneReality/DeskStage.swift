@@ -15,6 +15,8 @@ final class DeskStage: TabStage {
   static let catName = "desk-cat"
 
   let root = Entity()
+  /// Whether a measuring run has been told this scene is drawing since it last came on screen.
+  private var isAnnounced = false
   let screen = TabScreen()
   var onEvent: ((DeskSceneEvent) -> Void)?
 
@@ -88,6 +90,7 @@ final class DeskStage: TabStage {
   }
 
   func setOnScreen(_ onScreen: Bool) {
+    if !onScreen { isAnnounced = false }
     isOnScreen = onScreen
     room.isEnabled = onScreen && isBuilt
     frames.isPaused = !onScreen
@@ -144,6 +147,14 @@ final class DeskStage: TabStage {
 
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    if ScenePerf.isOn, isBuilt, !isAnnounced {
+      isAnnounced = true
+      ScenePerf.shown(
+        ScenePerf.Scene(
+          name: "notes", orbit: { [weak self] in self?.orbit(byX: $0, y: $1) }, zoom: { _ in },
+          release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
+          census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
+    }
     lighting.step(delta)
     if view.step(Float(delta)) { updateGlows() }
     for (id, start) in lifts {

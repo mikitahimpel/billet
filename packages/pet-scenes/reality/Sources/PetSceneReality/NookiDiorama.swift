@@ -11,6 +11,8 @@ import SwiftUI
 @MainActor
 final class NookiDiorama: CatPlayStage {
   let root = Entity()
+  /// Whether a measuring run has been told this room is drawing since it last came on screen.
+  private var isAnnounced = false
   /// Called when the room has rendered in a view and a poster over it can go.
   var onReady: (() -> Void)?
   /// Called when the cat is found to be missing, and again if a late load puts things right.
@@ -381,6 +383,7 @@ final class NookiDiorama: CatPlayStage {
       greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
     }
     if !isOnScreen, wasOnScreen { CatSeen.mark() }
+    if !isOnScreen { isAnnounced = false }
   }
 
   // MARK: - Moments
@@ -760,6 +763,16 @@ final class NookiDiorama: CatPlayStage {
         onReady?()
       }
       return
+    }
+    if ScenePerf.isOn, !isAnnounced {
+      isAnnounced = true
+      ScenePerf.shown(
+        ScenePerf.Scene(
+          name: "nooki room",
+          orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
+          zoom: { [weak self] in self?.zoom(by: $0) },
+          release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
+          census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
     }
     clock += delta
     idleDelta += delta

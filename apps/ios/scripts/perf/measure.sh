@@ -1,0 +1,138 @@
+#!/bin/zsh
+# Measures the scenes on a Release build in the Simulator, the same way every time.
+#
+#   apps/ios/scripts/perf/measure.sh <label> [--build] [--launches N] [--full N] [--sweep]
+#
+# --build       generate the project and build Release for the Simulator first
+# --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
+#               dropped, so N+1 are run)
+# --full N      runs of `-perf.script full`: orbit, zoom, rooms, lighting, tabs (default 3)
+# --sweep       one `-perf.script sweep` run, saving a screenshot at each held pose
+#
+# Logs and a summary go to $PERF_OUT/<label> (default ~/.billet-manager/pet-concept/perf/runs).
+# It refuses to start while another Simulator is booted, a build runs, swap is over 15 GB or the
+# disk has under 4 GB free, and it shuts its Simulator down when it ends.
+set -euo pipefail
+
+label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep]}
+shift
+build=0 launches=7 fulls=3 sweep=0
+while (($#)); do
+  case $1 in
+    --build) build=1 ;;
+    --launches) launches=$2; shift ;;
+    --full) fulls=$2; shift ;;
+    --sweep) sweep=1 ;;
+    *) echo "unknown option $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+here=${0:A:h}
+app_dir=${here:h:h}
+repo=${app_dir:h:h}
+derived=${PERF_DERIVED:-$repo/build-perf}
+out=${PERF_OUT:-$HOME/.billet-manager/pet-concept/perf/runs}/$label
+device_name=${PERF_DEVICE:-billet-perf}
+bundle=com.mikitahimpel.billet
+group=group.com.mikitahimpel.billet
+mkdir -p $out
+
+gate() {
+  local booted
+  booted=$(xcrun simctl list devices booted | grep Booted | grep -v "$device_name (" || true)
+  if [[ -n $booted ]]; then echo "another Simulator is booted: $booted" >&2; return 1; fi
+  local swap free_gb
+  swap=$(sysctl -n vm.swapusage | awk '{gsub("M","",$6); print int($6)}')
+  if ((swap > 15360)); then echo "swap at ${swap} MB" >&2; return 1; fi
+  free_gb=$(df -g / | awk 'NR==2 {print $4}')
+  if ((free_gb < 4)); then echo "only ${free_gb} GB free" >&2; return 1; fi
+}
+
+if ((build)); then
+  if pgrep -fl 'xcodebuild ' | grep -v AgentDeviceRunner | grep -qv 'zsh'; then
+    echo "another xcodebuild is running" >&2
+    exit 1
+  fi
+  (cd $app_dir && xcodegen generate -q)
+  xcodebuild build -project $app_dir/Billet.xcodeproj -scheme Billet -configuration Release \
+    -destination 'generic/platform=iOS Simulator' -derivedDataPath $derived \
+    CODE_SIGNING_ALLOWED=NO -quiet > $out/build.log 2>&1
+fi
+app=$derived/Build/Products/Release-iphonesimulator/Billet.app
+[[ -d $app ]] || { echo "no app at $app; pass --build" >&2; exit 1; }
+
+# A build without signing has no entitlements, so no App Group: sign it ad hoc with just that.
+entitlements=$out/entitlements.plist
+cat > $entitlements <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>com.apple.security.application-groups</key><array><string>$group</string></array>
+</dict></plist>
+PLIST
+for appex in $app/PlugIns/*.appex(N); do
+  codesign -f -s - --entitlements $entitlements $appex > /dev/null 2>&1
+done
+codesign -f -s - --entitlements $entitlements $app > /dev/null 2>&1
+
+gate
+udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
+if [[ -z $udid ]]; then
+  udid=$(xcrun simctl create $device_name com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
+fi
+trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true' EXIT
+xcrun simctl bootstatus $udid -b > /dev/null
+xcrun simctl uninstall $udid $bundle > /dev/null 2>&1 || true
+xcrun simctl install $udid $app
+
+# The App Group exists once the app has run. Then: paired with the pretend partner, Shop and the
+# Notes desk on, the standard room.
+xcrun simctl launch $udid $bundle > /dev/null
+python3 -c 'import time; time.sleep(3)'
+xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
+containers=
+for dir in $HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Containers/Shared/AppGroup/*(N); do
+  if plutil -p $dir/.com.apple.mobile_container_manager.metadata.plist 2> /dev/null | grep -q "\"$group\""; then
+    containers=$dir
+  fi
+done
+[[ -n $containers ]] || { echo "no App Group container for $group" >&2; exit 1; }
+print -r -- '{"fakePartner":true,"shopScene":true,"notesDesk":true}' > $containers/widget-features.json
+print -r -- '"windowSeat"' > $containers/room-style.json
+print -r -- '"amberLantern"' > $containers/room-lighting.json
+print -r -- '"cosyNook"' > $containers/room-furniture.json
+
+# One run of the app with a script. Prints screenshots when the run asks for them.
+run() {
+  local name=$1 script=$2 log=$out/$1.log
+  xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
+  python3 -c 'import time; time.sleep(1.5)'
+  xcrun simctl launch --console-pty $udid $bundle -perf.script $script > $log 2>&1 &
+  local pid=$! waited=0
+  while ! grep -q '^PERF done' $log 2>/dev/null; do
+    if grep -q '^PERF shot' $log 2>/dev/null; then
+      grep '^PERF shot' $log | while read -r _ _ shot; do
+        [[ -f $out/shots/$shot.png ]] && continue
+        mkdir -p $out/shots
+        xcrun simctl io $udid screenshot $out/shots/$shot.png > /dev/null 2>&1 || true
+      done
+    fi
+    python3 -c 'import time; time.sleep(0.2)'
+    waited=$((waited + 1))
+    if ((waited > 900)); then echo "PERF error timeout" >> $log; break; fi
+  done
+  kill $pid 2> /dev/null || true
+  wait $pid 2> /dev/null || true
+}
+
+uptime > $out/load.txt
+run warmup launch
+for i in $(seq 1 $launches); do run launch-$i launch; done
+for i in $(seq 1 $fulls); do run full-$i full; done
+((sweep)) && run sweep sweep
+uptime >> $out/load.txt
+
+du -sk $app | awk '{print $1}' > $out/app-kb.txt
+python3 -I $here/report.py $out > $out/summary.md
+cat $out/summary.md

@@ -185,6 +185,7 @@ struct AppShellView: View {
       try? await Task.sleep(for: Self.prepareDelay)
       preparingScenes = scenes.filter { $0.id != selectedScene?.id }
     }
+    .task { if ScenePerf.isOn { drivePerf() } }
     .tint(Palette.gold.color)
     #if os(iOS)
       .fullScreenCover(isPresented: $replayingOnboarding) {
@@ -206,6 +207,22 @@ struct AppShellView: View {
       }
     }
     .modifier(WarmTabBarFallback())
+  }
+
+  /// Lets a measuring run switch tabs, rooms and lighting.
+  private func drivePerf() {
+    let destination = $destination
+    let labs = labs
+    ScenePerf.host.selectTab = { name in
+      switch name {
+      case "shop": destination.wrappedValue = .shop
+      case "notes": destination.wrappedValue = .notes
+      case "settings": destination.wrappedValue = .settings
+      default: destination.wrappedValue = .home
+      }
+    }
+    ScenePerf.host.setRoom = { labs.setRoomStyle($0) }
+    ScenePerf.host.setLighting = { labs.setLighting($0) }
   }
 }
 
