@@ -36,15 +36,6 @@ public struct WidgetFeatures: Equatable, Sendable {
     choices[flag.rawValue] ?? flag.defaultOn
   }
 
-  /// The cat moments switched on in Labs.
-  public var catMoments: Set<CatMoment> {
-    let pairs: [(LabExperiment, CatMoment)] = [
-      (.catCarriesNote, .carriesNote), (.catPurrs, .purrs), (.catBats, .batsAtFinger),
-      (.catGreets, .greets), (.catChases, .chases),
-    ]
-    return Set(pairs.filter { isOn($0.0) }.map(\.1))
-  }
-
   /// The features that are on, in declaration order.
   public var enabled: [WidgetFeature] {
     WidgetFeature.allCases.filter(isOn)
@@ -52,8 +43,17 @@ public struct WidgetFeatures: Equatable, Sendable {
 }
 
 extension WidgetFeatures: Codable {
+  /// Keys of switches that are gone, because what they switched is always on now. A stored
+  /// choice under one is dropped on reading, so it never comes back to life if a key is reused,
+  /// and the next save leaves it out.
+  public static let retiredKeys: Set<String> = [
+    "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
+    "catChases",
+  ]
+
   public init(from decoder: any Decoder) throws {
     choices = try decoder.singleValueContainer().decode([String: Bool].self)
+      .filter { !Self.retiredKeys.contains($0.key) }
   }
 
   public func encode(to encoder: any Encoder) throws {

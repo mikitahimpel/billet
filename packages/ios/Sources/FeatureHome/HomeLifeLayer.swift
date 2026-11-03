@@ -18,18 +18,17 @@ struct HomeLifeLayer: View {
   let onPet: () -> Void
 
   private var labs: WidgetFeaturesModel { session.labs }
-  private var isOn: Bool { labs.isOn(LabExperiment.catLife) }
 
   var body: some View {
     ZStack {
-      if isOn, labs.isOn(LabExperiment.lifeBubble),
+      if labs.isOn(LabExperiment.lifeBubble),
         let need = LifeThought.need(session.life.drive)
       {
         LifeBubble(need: need) { answer(need) }
           .offset(x: 64, y: -150)
           .id(need)
       }
-      if isOn, labs.isOn(LabExperiment.lifeChips) {
+      if labs.isOn(LabExperiment.lifeChips) {
         VStack {
           Spacer()
           LifeChips(needs: session.life.state.needs)
@@ -76,8 +75,7 @@ extension View {
   func lifeRingsPress(_ session: PairSession, open: Binding<Bool>) -> some View {
     simultaneousGesture(
       LongPressGesture(minimumDuration: 0.6).onEnded { _ in
-        guard session.labs.isOn(LabExperiment.catLife), session.labs.isOn(LabExperiment.lifeRings)
-        else { return }
+        guard session.labs.isOn(LabExperiment.lifeRings) else { return }
         open.wrappedValue = true
       })
   }

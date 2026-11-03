@@ -5,9 +5,9 @@ import PetScene
 import RealityKit
 
 /// The first-launch scene: a deep windowsill at night with candles at both ends, fairy lights
-/// along the top of the window, and a soft glossy heart floating over a cushion in the middle,
+/// down the sides of the window, and a soft glossy heart floating over a cushion in the middle,
 /// beating gently. The camera glides in out of the dark while the lights come on. Built from the
-/// styled rooms' shared meshes and materials; only the heart loads from a file.
+/// styled rooms' materials and smooth lathed and rounded meshes; only the heart loads from a file.
 @MainActor
 final class OnboardingStage: TabStage {
   static let heartName = "onboarding-heart"
@@ -391,33 +391,41 @@ final class OnboardingStage: TabStage {
     for star in OnboardingLayout.stars {
       room.addChild(
         kit.part(
-          kit.box([star.size, star.size, 0.01]), kit.glow(GenzColour(0xFFF4DA)),
+          LowPoly.sphere(radius: star.size / 2, segments: 8), kit.glow(GenzColour(0xFFF4DA)),
           at: GenzRoomPoint(star.x, -0.42, star.z).scene))
     }
+    // A round moon, flattened against the glass.
     let moon = OnboardingLayout.moon
-    room.addChild(
-      kit.part(
-        kit.prism(sides: 16, radius: moon.radius, top: moon.radius, height: 0.02),
-        kit.glow(GenzColour(0xFFEFC8)), at: GenzRoomPoint(moon.x, -0.42, moon.z).scene,
-        turn: simd_quatf(angle: .pi / 2, axis: [1, 0, 0])))
-    // The frame and the cross of its bars.
+    let disc = kit.part(
+      LowPoly.sphere(radius: moon.radius, segments: 48), kit.glow(GenzColour(0xFFEFC8)),
+      at: GenzRoomPoint(moon.x, -0.42, moon.z).scene)
+    disc.scale = [1, 1, 0.1]
+    room.addChild(disc)
+    // The frame and the cross of its bars, their edges softly rounded.
     let frame = kit.matte(GenzColour(0xF0DCC0))
     let bar: Float = 0.2
-    room.addChild(
-      kit.block(window.x0 - bar, -0.1, window.z1, window.x1 - window.x0 + bar * 2, 0.3, bar, frame))
-    room.addChild(
-      kit.block(
-        window.x0 - bar, -0.1, window.z0 - bar, window.x1 - window.x0 + bar * 2, 0.3, bar, frame))
-    room.addChild(
-      kit.block(window.x0 - bar, -0.1, window.z0, bar, 0.3, window.z1 - window.z0, frame))
-    room.addChild(kit.block(window.x1, -0.1, window.z0, bar, 0.3, window.z1 - window.z0, frame))
+    let span = window.x1 - window.x0
+    let rise = window.z1 - window.z0
+    room.addChild(soft(window.x0 - bar, -0.1, window.z1, span + bar * 2, 0.3, bar, frame))
+    room.addChild(soft(window.x0 - bar, -0.1, window.z0 - bar, span + bar * 2, 0.3, bar, frame))
+    room.addChild(soft(window.x0 - bar, -0.1, window.z0 - bar, bar, 0.3, rise + bar * 2, frame))
+    room.addChild(soft(window.x1, -0.1, window.z0 - bar, bar, 0.3, rise + bar * 2, frame))
     let middle = (window.x0 + window.x1) / 2
+    room.addChild(soft(middle - 0.06, -0.3, window.z0, 0.12, 0.1, rise, frame, radius: 0.04))
     room.addChild(
-      kit.block(middle - 0.06, -0.3, window.z0, 0.12, 0.1, window.z1 - window.z0, frame))
-    room.addChild(
-      kit.block(
-        window.x0, -0.3, (window.z0 + window.z1) / 2 - 0.06, window.x1 - window.x0, 0.1, 0.12,
-        frame))
+      soft(
+        window.x0, -0.3, (window.z0 + window.z1) / 2 - 0.06, span, 0.1, 0.12, frame, radius: 0.04))
+  }
+
+  /// A box like ``GenzKit/block(_:_:_:_:_:_:_:)`` with its edges rounded, so it catches the light
+  /// along them instead of meeting it at a hard corner.
+  private func soft(
+    _ x: Float, _ y: Float, _ z: Float, _ w: Float, _ d: Float, _ h: Float,
+    _ material: any RealityKit.Material, radius: Float = 0.07
+  ) -> ModelEntity {
+    kit.part(
+      LowPoly.roundedBox([w, h, d], radius: radius),
+      material, at: GenzRoomPoint(x + w / 2, y + d / 2, z + h / 2).scene)
   }
 
   private func buildSill() {
@@ -425,7 +433,9 @@ final class OnboardingStage: TabStage {
     let top = OnboardingLayout.sillTop
     let wood = kit.matte(GenzColour(0x9A6644))
     room.addChild(
-      kit.block(sill.x0, sill.y0, top - 0.28, sill.x1 - sill.x0, sill.y1 - sill.y0, 0.28, wood))
+      soft(
+        sill.x0, sill.y0 - 0.1, top - 0.28, sill.x1 - sill.x0, sill.y1 - sill.y0 + 0.1, 0.28, wood,
+        radius: 0.1))
     room.addChild(
       kit.block(
         sill.x0 + 0.15, sill.y0, 0, sill.x1 - sill.x0 - 0.3, sill.y1 - sill.y0 - 0.25, top - 0.28,
@@ -436,26 +446,29 @@ final class OnboardingStage: TabStage {
     let cushion = OnboardingLayout.cushion
     room.addChild(
       kit.part(
-        kit.prism(sides: 18, radius: 0.85, top: 0.7, height: 0.26),
+        LowPoly.lathe(
+          "cushion",
+          profile: [
+            [0, 0], [0.74, 0], [0.84, 0.04], [0.87, 0.13], [0.82, 0.22], [0.7, 0.27], [0, 0.28],
+          ], segments: 48),
         kit.matte(GenzColour(0xE6A2A0)), at: cushion.scene + [0, 0.03, 0]))
     room.addChild(
       kit.part(
-        kit.prism(sides: 18, radius: 0.7, top: 0.55, height: 0.08),
-        kit.matte(GenzColour(0xF1BDB6)), at: cushion.scene + [0, 0.29, 0]))
+        LowPoly.lathe(
+          "cushion top",
+          profile: [[0, 0], [0.62, 0], [0.68, 0.04], [0.6, 0.09], [0.3, 0.11], [0, 0.11]],
+          segments: 48),
+        kit.matte(GenzColour(0xF1BDB6)), at: cushion.scene + [0, 0.25, 0]))
     // A small stack of books at the back, and a sprig in a glass jar.
-    let books = kit.build(GenzPiece(.bookStack))
-    let size = GenzPiece.Kind.bookStack.size
-    let stack = Entity()
-    stack.position = GenzRoomPoint(5.0, 2.2, top).scene
-    stack.orientation = simd_quatf(angle: -0.4, axis: [0, 1, 0])
-    stack.scale = .one * 1.3
-    books.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
-    stack.addChild(books)
-    room.addChild(stack)
+    room.addChild(books(at: GenzRoomPoint(5.0, 2.2, top)))
     let jar = GenzRoomPoint(0.75, 0.55, top).scene
     room.addChild(
       kit.part(
-        kit.prism(sides: 10, radius: 0.22, top: 0.2, height: 0.5),
+        LowPoly.lathe(
+          "jar",
+          profile: [
+            [0, 0], [0.19, 0], [0.22, 0.04], [0.22, 0.38], [0.17, 0.46], [0.18, 0.5], [0, 0.5],
+          ], segments: 32),
         kit.glow(GenzColour(0xB9D4CC), opacity: 0.45), at: jar))
     for index in 0..<3 {
       let lean = Float(index - 1) * 0.28
@@ -466,10 +479,40 @@ final class OnboardingStage: TabStage {
           turn: simd_quatf(angle: lean, axis: [0, 0, 1])))
       room.addChild(
         kit.part(
-          kit.prism(sides: 6, radius: 0.09, top: 0.04, height: 0.12),
+          LowPoly.sphere(radius: 0.08, segments: 12),
           kit.matte(GenzColour(index == 1 ? 0xF4C6C0 : 0xFFE3B0)),
-          at: jar + [Float(index - 1) * 0.07 - sin(lean) * 0.45, 1.18, 0]))
+          at: jar + [Float(index - 1) * 0.07 - sin(lean) * 0.45, 1.22, 0]))
     }
+  }
+
+  /// Three books lying in a loose stack, each a soft-cornered cover around a block of pages.
+  private func books(at spot: GenzRoomPoint) -> Entity {
+    let stack = Entity()
+    stack.position = spot.scene
+    stack.orientation = simd_quatf(angle: -0.4, axis: [0, 1, 0])
+    let pages = kit.matte(GenzColour(0xF4EAD6))
+    let books: [(size: SIMD3<Float>, colour: UInt32, turn: Float)] = [
+      ([0.95, 0.13, 0.7], 0x4F6B8A, 0), ([0.85, 0.11, 0.62], 0xB5654F, 0.12),
+      ([0.76, 0.1, 0.55], 0xD8C7A6, -0.08),
+    ]
+    var height: Float = 0
+    for book in books {
+      let entity = Entity()
+      entity.position = [0, height + book.size.y / 2, 0]
+      entity.orientation = simd_quatf(angle: book.turn, axis: [0, 1, 0])
+      entity.addChild(
+        kit.part(
+          LowPoly.roundedBox(book.size, radius: 0.035), kit.matte(GenzColour(book.colour))))
+      // The pages show along the three open sides.
+      entity.addChild(
+        kit.part(
+          LowPoly.roundedBox(
+            [book.size.x - 0.06, book.size.y - 0.06, book.size.z - 0.02], radius: 0.02),
+          pages, at: [0.04, 0, 0]))
+      stack.addChild(entity)
+      height += book.size.y
+    }
+    return stack
   }
 
   private func buildCandles() {
@@ -477,27 +520,38 @@ final class OnboardingStage: TabStage {
     let wick = kit.matte(GenzColour(0x3A2A24))
     for candle in OnboardingLayout.candles {
       let base = candle.spot.scene
+      let (r, h) = (candle.radius, candle.height)
+      // A soft shoulder at the top, dipping into a little melted pool round the wick.
       room.addChild(
         kit.part(
-          kit.prism(
-            sides: 12, radius: candle.radius, top: candle.radius * 0.97, height: candle.height),
+          LowPoly.lathe(
+            "candle \(r) \(h)",
+            profile: [
+              [0, 0], [r - 0.02, 0], [r, 0.03], [r * 0.98, h - 0.07], [r * 0.93, h - 0.01],
+              [r * 0.8, h], [r * 0.5, h - 0.03], [0, h - 0.04],
+            ]),
           wax, at: base))
-      // A little melted pool at the top.
       room.addChild(
         kit.part(
-          kit.prism(sides: 12, radius: candle.radius * 0.8, top: candle.radius * 0.8, height: 0.01),
-          kit.matte(GenzColour(0xFFF4E2)), at: base + [0, candle.height, 0]))
-      room.addChild(
-        kit.part(kit.box([0.03, 0.12, 0.03]), wick, at: base + [0, candle.height + 0.06, 0]))
+          LowPoly.cylinder(height: 0.14, radius: 0.016, segments: 8), wick,
+          at: base + [0, h + 0.03, 0]))
       let flame = Entity()
-      flame.position = base + [0, candle.height + 0.08, 0]
+      flame.position = base + [0, h + 0.06, 0]
       flame.addChild(
         kit.part(
-          kit.prism(sides: 8, radius: 0.09, top: 0.0, height: 0.36),
+          LowPoly.lathe(
+            "flame",
+            profile: [
+              [0, 0], [0.06, 0.03], [0.09, 0.11], [0.07, 0.22], [0.03, 0.31], [0, 0.36],
+            ],
+            segments: 16),
           kit.glow(Self.flameColour)))
       flame.addChild(
         kit.part(
-          kit.prism(sides: 8, radius: 0.05, top: 0.0, height: 0.2),
+          LowPoly.lathe(
+            "flame core",
+            profile: [[0, 0], [0.04, 0.03], [0.05, 0.08], [0.03, 0.15], [0, 0.2]],
+            segments: 12),
           kit.glow(GenzColour(0xFFF6E0)), at: [0, 0.02, 0.02]))
       flame.isEnabled = false
       room.addChild(flame)
@@ -511,18 +565,25 @@ final class OnboardingStage: TabStage {
     for (index, bead) in beads.enumerated() {
       room.addChild(
         kit.part(
-          kit.prism(sides: 6, radius: 0.07, top: 0.05, height: 0.13), materials[index % 2],
-          at: bead.scene))
+          LowPoly.lathe(
+            "bulb",
+            profile: [
+              [0, 0], [0.04, 0.01], [0.075, 0.06], [0.06, 0.12], [0.03, 0.14], [0, 0.14],
+            ],
+            segments: 12),
+          materials[index % 2], at: bead.scene))
     }
-    // The wire between them.
+    // The wire between them, along each strand.
     let wire = kit.matte(GenzColour(0x2E2420))
-    for (from, to) in zip(beads, beads.dropFirst()) {
-      let a = from.scene
-      let b = to.scene
-      room.addChild(
-        kit.part(
-          kit.box([0.02, 0.02, simd_distance(a, b)]), wire, at: (a + b) / 2,
-          turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(b - a))))
+    for strand in OnboardingLayout.strands {
+      for (from, to) in zip(strand, strand.dropFirst()) {
+        let a = from.scene
+        let b = to.scene
+        room.addChild(
+          kit.part(
+            kit.box([0.02, 0.02, simd_distance(a, b)]), wire, at: (a + b) / 2,
+            turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(b - a))))
+      }
     }
   }
 
@@ -541,7 +602,7 @@ final class OnboardingStage: TabStage {
         at: GenzRoomPoint(heart.x, heart.y + 1.6, heart.z - 0.6)))
     room.addChild(
       lighting.key(
-        Self.beadColour, intensity: 4_000, reach: 5, at: GenzRoomPoint(3, 1.0, 8.4)))
+        Self.beadColour, intensity: 4_000, reach: 5, at: GenzRoomPoint(3, 1.0, 6.4)))
   }
 
   /// The preset's rig: a rim behind the heart, a core light over the sill, and soft shadows under

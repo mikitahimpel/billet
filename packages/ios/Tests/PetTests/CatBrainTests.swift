@@ -99,12 +99,39 @@ struct CatBrainTests {
     #expect(Self.share(both, waiting) == 0)
   }
 
-  @Test func eachNoteGetsALook() {
+  @Test func eachNoteIsCarriedToTheWall() {
     let brain = Self.fold(Self.onlyNotes, to: 24)
-    let tilts = brain.transitions.filter {
-      $0.to.step == .curiousTilt && $0.from.step != .curiousTilt && $0.at >= Self.at(0)
+    let carried = brain.transitions.filter {
+      $0.to.step == .carryNote && $0.from.step != .carryNote && $0.at >= Self.at(0)
     }
-    #expect(tilts.count == 8)
+    #expect(carried.count == 8)
+  }
+
+  @Test func onlyAnAwakeCatInTheMoodBatsAtAFinger() {
+    let playful = CatPersonality(lazy: 0.15, playful: 0.85)
+    let lazy = CatPersonality(lazy: 0.85, playful: 0.15)
+    func eagerShare(_ personality: CatPersonality) -> Double {
+      var runner = CatBrainRunner(
+        events: Self.bothActive, now: Self.at(7), context: Self.context, seed: 5,
+        personality: personality, room: Self.room)
+      var eager = 0
+      var asleepAndEager = 0
+      var count = 0
+      var t = Self.at(7)
+      while t < Self.at(31) {
+        runner.advance(to: t)
+        let frame = runner.frame
+        if frame.eager { eager += 1 }
+        if frame.eager, frame.stack.vitality != .awake || frame.stack.group == .rest {
+          asleepAndEager += 1
+        }
+        count += 1
+        t += 60
+      }
+      #expect(asleepAndEager == 0)
+      return Double(eager) / Double(count)
+    }
+    #expect(eagerShare(playful) > eagerShare(lazy) + 0.1)
   }
 
   @Test func everyGameIsPlayedAndTiresTheCat() {

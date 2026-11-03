@@ -7,11 +7,11 @@ Writes assets-source/heart/Heart.usdz. bake_heart.sh compiles it.
     heart_L    the left half, from the viewer's side
     heart_R    the right half
 
-Each half is a sphere shaped into a soft teardrop, round at its crown and tapering to a rounded
-tip, leant out from upright about the tip. The two tips meet at the bottom and the crowns overlap
-a little in the middle, so together they read as one puffy heart, and apart each is a whole soft
-piece with no cut face. The halves share the heart's origin, so moving a half apart is a plain
-offset. Materials are set in the app; the file carries only shape and smooth normals.
+The heart is one classic puffy heart, two round lobes over a single point, cut straight down its
+middle. So each half has one lobe, a flat inner face and half of the point, and the two together
+are exactly the whole heart. The halves share the heart's origin, so moving a half apart is a
+plain offset. Materials are set in the app; the file carries only shape and normals: smooth on
+the outside, flat on the cut.
 """
 
 from __future__ import annotations
@@ -27,42 +27,79 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "assets-source", "heart")
 
-# Rings and segments of the sphere each half is shaped from.
-RINGS = 40
-SEGMENTS = 56
+# Rings and segments of the sphere the heart is shaped from.
+RINGS = 48
+SEGMENTS = 64
 # The heart's height in metres once made, tip to the top of the lobes.
 HEIGHT = 0.2
-# How far each half leans out from upright, and how deep it is against its width.
-LEAN = math.radians(27)
-DEPTH = 0.95
+# How deep it is: larger is thinner front to back.
+THINNESS = 2.0
+# How deep the dip between the lobes is: larger makes rounder, more separate lobes.
+CLEFT = 3.2
 
 
-def lobe_width(z: float) -> float:
-    """The half's width at height `z` from -1 (its tip) to 1 (its crown): round at the crown,
-    tapering softly to a rounded tip."""
-    ring = math.sqrt(max(0.0, 1 - z * z))
-    swell = 0.14 + 0.86 * ((z + 1) / 2) ** 0.8
-    return ring * swell
+def inside(x: float, y: float, z: float) -> float:
+    """Below zero inside the heart: Taubin's heart surface, x across, y deep, z up, with the cube
+    root taken so its gradient does not vanish on the surface."""
+    lobes = CLEFT * x * x + 0.1 * y * y
+    return x * x + THINNESS * y * y + z * z - 1 - z * lobes ** (1 / 3)
+
+
+def reach(direction: Vector) -> float:
+    """How far the surface is from the middle along `direction`: the first way out."""
+    step = 0.01
+    r = 0.0
+    while inside(*(direction * (r + step))) < 0 and r < 3:
+        r += step
+    low, high = r, r + step
+    for _ in range(30):
+        middle = (low + high) / 2
+        if inside(*(direction * middle)) < 0:
+            low = middle
+        else:
+            high = middle
+    return (low + high) / 2
+
+
+def surface_normal(point: Vector) -> Vector:
+    """The way out of the heart at `point`, from the surface's gradient, so the two halves'
+    shading runs on across the cut without a line."""
+    h = 1e-4
+    gradient = Vector(
+        [
+            inside(*(point + Vector(axis) * h)) - inside(*(point - Vector(axis) * h))
+            for axis in ((1, 0, 0), (0, 1, 0), (0, 0, 1))
+        ])
+    return gradient.normalized() if gradient.length > 0 else point.normalized()
+
+
+def heart_mesh() -> bmesh.types.BMesh:
+    mesh = bmesh.new()
+    bmesh.ops.create_uvsphere(mesh, u_segments=SEGMENTS, v_segments=RINGS, radius=1)
+    for vertex in mesh.verts:
+        direction = vertex.co.normalized()
+        vertex.co = direction * reach(direction)
+    return mesh
 
 
 def half_mesh(left: bool) -> bmesh.types.BMesh:
-    mesh = bmesh.new()
-    bmesh.ops.create_uvsphere(mesh, u_segments=SEGMENTS, v_segments=RINGS, radius=1)
-    lean = LEAN if left else -LEAN
-    for vertex in mesh.verts:
-        x, y, z = vertex.co
-        width = lobe_width(z)
-        ring = math.sqrt(max(1e-9, 1 - z * z))
-        x, y = x / ring * width * 0.8, y / ring * width * 0.8 * DEPTH
-        # Stand it on its tip at the origin, then lean it out about the tip.
-        z = z + 1
-        x, z = x * math.cos(lean) - z * math.sin(lean), x * math.sin(lean) + z * math.cos(lean)
-        # A little into the middle above the tip, so the lobes overlap there and read as one
-        # heart while together; the tips stay where they meet.
-        x += (0.1 if left else -0.1) * min(z, 0.6) / 0.6
-        vertex.co = Vector((x, y, z))
-    bmesh.ops.smooth_vert(
-        mesh, verts=mesh.verts, factor=0.3, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    """One half of the heart, cut at x = 0 and closed with a flat face."""
+    mesh = heart_mesh()
+    geometry = mesh.verts[:] + mesh.edges[:] + mesh.faces[:]
+    cut = bmesh.ops.bisect_plane(
+        mesh, geom=geometry, dist=1e-6, plane_co=(0, 0, 0), plane_no=(1, 0, 0),
+        clear_outer=left, clear_inner=not left)
+    for face in mesh.faces:
+        face.smooth = True
+    rim = [e for e in cut["geom_cut"] if isinstance(e, bmesh.types.BMEdge)]
+    # The cut face gets its own vertices, so its flat normal does not bend the outside's.
+    bmesh.ops.split_edges(mesh, edges=rim)
+    loose = [e for e in mesh.edges if e.is_boundary]
+    filled = bmesh.ops.triangle_fill(mesh, use_beauty=True, use_dissolve=False, edges=loose)
+    for face in filled["geom"]:
+        if isinstance(face, bmesh.types.BMFace):
+            face.smooth = False
+    bmesh.ops.recalc_face_normals(mesh, faces=mesh.faces)
     return mesh
 
 
@@ -71,8 +108,14 @@ def half(left: bool, name: str) -> bpy.types.Object:
     data = bpy.data.meshes.new(name)
     mesh.to_mesh(data)
     mesh.free()
+    # Smooth on the outside by the surface itself, flat on the cut, facing the other half.
+    cut = Vector((1, 0, 0)) if left else Vector((-1, 0, 0))
+    normals = []
     for polygon in data.polygons:
-        polygon.use_smooth = True
+        for index in polygon.loop_indices:
+            point = data.vertices[data.loops[index].vertex_index].co
+            normals.append(surface_normal(point) if polygon.use_smooth else cut)
+    data.normals_split_custom_set(normals)
     obj = bpy.data.objects.new(name, data)
     material = bpy.data.materials.new(f"{name}_mat")
     material.use_nodes = True

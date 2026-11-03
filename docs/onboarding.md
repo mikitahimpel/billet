@@ -2,8 +2,9 @@
 
 With Labs → First launch → **Cinematic onboarding** on (the default), the first launch is a
 3D scene: the camera glides in out of the dark over a windowsill at night, the candles light one
-by one, fairy lights run along the window, and a soft glossy heart floats over a cushion, beating
-gently. The title settles in partway; the buttons come once the camera is at its place. A tap
+by one, fairy lights run down both sides of the window, and a soft glossy heart floats over a
+cushion, beating gently. The title and its explanation sit on a dark scrim at the top of the
+screen, so they stay readable (AA contrast, checked in a test) over the lit window. The title settles in partway; the buttons come once the camera is at its place. A tap
 anywhere cuts the flight short. Until the pair is made it plays on every launch (once per
 launch: moving on to the next step does not fly in again); once paired it never shows, except
 through Labs → Replay onboarding. With
@@ -13,9 +14,13 @@ Off, the app shows the plain welcome and code screens it always did.
 
 ## Pairing in the scene
 
-Once the camera lands, the welcome offers **Invite your person** and **I have a code**.
+Once the camera lands, the welcome offers **Invite your person** and **I have a code**. Every
+step after the welcome has a glass back chevron in the top-left corner (it cancels an invite or a
+join under way); there is no Back or Cancel button at the bottom. The code is typed in the app's
+own face with figures of one width.
 
-- **Invite your person:** the heart opens into two halves. This phone's half stays in front, and
+- **Invite your person:** the heart opens into two halves: it is one heart cut straight down its
+  middle, so each half has one round lobe, a flat inner face and half of the point. This phone's half stays in front, and
   the other floats on its side, faint, glowing softly and breathing: it waits for the partner. The
   code is printed on a paper tag leaning on the cushion (a tap copies it), and Invite your person
   opens the share sheet with the same code. When the partner joins, their half flies to this one,
@@ -80,4 +85,6 @@ The real backend skips this step for now and keeps the standard cat; it has no f
   scene), `OnboardingIntro` (its state), `OnboardingPairing` (the pairing steps) and
   `OnboardingPairingView`, `RealOnboardingPairing`, `OnboardingReplay`.
 - The heart: `scripts/make_heart.py` in Blender (background mode), compiled by
-  `scripts/bake_heart.sh`. 144 KB.
+  `scripts/bake_heart.sh`. 111 KB.
+- The sill's round things (moon, candles, flames, cushion, jar, bulbs) are lathed and its boxes
+  (frame, sill, books) rounded with smooth normals, by `LowPoly.lathe` and `LowPoly.roundedBox`.

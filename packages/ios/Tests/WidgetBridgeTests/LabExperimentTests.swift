@@ -17,12 +17,24 @@ import Testing
     #expect(!LabExperiment.allCases.contains { $0.hasHomeCard && features.isOn($0) })
   }
 
-  @Test func theCatsNeedsStartOnShownInTheRoomWithTheOtherWaysOff() {
+  @Test func theWaysOfShowingTheNeedsStartOff() {
     let features = WidgetFeatures()
-    #expect(features.isOn(LabExperiment.catLife))
-    #expect(features.isOn(LabExperiment.lifeInRoom))
-    for other in [LabExperiment.lifeBubble, .lifeRings, .lifeChips, .lifeDebug] {
+    for other in [LabExperiment.lifeBubble, .lifeRings, .lifeChips, .lifeDebug, .brainDebug] {
       #expect(!features.isOn(other))
+    }
+  }
+
+  /// The switches for what is always on now are gone, and a choice stored under one is dropped
+  /// when read, so it is not saved again.
+  @Test func aRetiredSwitchIsForgotten() throws {
+    let stored = Data(#"{"catBrain":false,"catPurrs":true,"lifeBubble":true}"#.utf8)
+    let features = try JSONDecoder().decode(WidgetFeatures.self, from: stored)
+    #expect(features.isOn(LabExperiment.lifeBubble))
+    let saved = try JSONEncoder().encode(features)
+    let keys = try JSONDecoder().decode([String: Bool].self, from: saved).keys
+    #expect(Set(keys) == ["lifeBubble"])
+    for key in WidgetFeatures.retiredKeys {
+      #expect(LabExperiment(rawValue: key) == nil, "\(key) is still a switch")
     }
   }
 
