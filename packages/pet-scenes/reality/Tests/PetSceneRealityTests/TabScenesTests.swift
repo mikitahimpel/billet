@@ -321,6 +321,28 @@ struct TabStagesTests {
     #expect(state.home.count == 4)
   }
 
+  @Test func eachStageIsRehearsedOnceALaunch() {
+    let stages = TabStages(rooms: GenzRoomCache())
+    #expect(stages.claimRehearsal(of: stages.shopStage))
+    #expect(!stages.claimRehearsal(of: stages.shopStage))
+    #expect(stages.claimRehearsal(of: stages.deskStage))
+  }
+
+  @Test func aRehearsalBuildsTheStageWithoutItsTab() async {
+    let stages = TabStages(rooms: GenzRoomCache())
+    let rehearsed: [any RehearsedStage] = [stages.shopStage, stages.deskStage]
+    for stage in rehearsed {
+      stage.setRehearsing(true)
+      let deadline = ContinuousClock.now + .seconds(10)
+      while !stage.isBuilt, ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(20))
+      }
+      #expect(stage.isBuilt)
+      #expect(stage.root.scene == nil)
+      stage.setRehearsing(false)
+    }
+  }
+
   @Test func theNookiSceneHasBothTabScenes() {
     let scene = NookiPetScene()
     #expect(scene.makeShopScene(state: ShopSceneState(items: []), onEvent: { _ in }) != nil)

@@ -48,6 +48,10 @@ public struct NookiPetScene: PetScene {
         world: world, play: play, cache: cache, rooms: styledRooms, onEvent: onEvent))
   }
 
+  public func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView? {
+    AnyView(TabRehearsal(stages: tabs, shop: shop, desk: desk))
+  }
+
   public func makeShopScene(
     state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
   ) -> AnyView? {

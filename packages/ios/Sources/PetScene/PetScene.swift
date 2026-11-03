@@ -93,6 +93,12 @@ public protocol PetScene {
   /// is showing. A scene that is slow to open does that work here, at low priority.
   func makePreparationView() -> AnyView?
 
+  /// A view the host keeps out of sight while Home shows, after Home's room has settled, which
+  /// draws the shop, stocked as `shop`, and the desk once so that opening their tab does not wait
+  /// on the renderer. The host takes it down when another tab is chosen. `nil` when the scene has
+  /// none.
+  func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView?
+
   /// The shop as a 3D room with a keeper behind the counter, or `nil` when the scene has none.
   /// `state` changes while the view stays alive. The view mounts its renderer only once
   /// ``EnvironmentValues/petSceneOnScreen`` is true, so a host keeps it in a tab.
@@ -136,6 +142,7 @@ extension PetScene {
     makeView(world: world, onEvent: onEvent)
   }
   public func makePreparationView() -> AnyView? { nil }
+  public func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView? { nil }
 
   public func makeShopScene(
     state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
