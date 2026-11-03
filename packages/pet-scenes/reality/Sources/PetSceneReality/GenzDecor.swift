@@ -92,6 +92,7 @@ extension GenzRoom {
   func stepDecor(_ delta: Float) {
     guard decor.isMoving else { return }
     decor.step(delta, reduceMotion: reduceMotion)
+    glow?.groundShadows()
     if let lampBulb { lampLight.position = lampBulb.position(relativeTo: room) }
   }
 

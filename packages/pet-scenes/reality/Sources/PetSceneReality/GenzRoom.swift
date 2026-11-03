@@ -210,7 +210,7 @@ final class GenzRoom: CatPlayStage {
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
   private let dayLamp = Entity()
-  private var glow: GenzGlow?
+  private(set) var glow: GenzGlow?
   /// The lighting preset the room is lit with.
   private(set) var look = LightingLook.off
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
@@ -299,6 +299,7 @@ final class GenzRoom: CatPlayStage {
     lifeProps = props
     let glow = GenzGlow(layout: layout, kit: kit)
     glow.shadeCat(in: catHolder, length: length)
+    glow.follow(holders)
     room.addChild(glow.root)
     self.glow = glow
     applyLook()
