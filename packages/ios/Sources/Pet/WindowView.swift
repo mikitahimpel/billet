@@ -171,7 +171,7 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
   /// for the weather and hour shown. Elsewhere the flat view stays.
   public var inDepth: Bool
 
-  public static let standard = WindowViewChoice(view: .standard)
+  public static let standard = WindowViewChoice(view: .standard, inDepth: true)
 
   public init(
     view: WindowView, weather: ViewWeather? = nil, hour: ViewHour? = nil, inDepth: Bool = false
