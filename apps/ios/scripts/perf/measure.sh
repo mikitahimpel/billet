@@ -1,13 +1,20 @@
 #!/bin/zsh
 # Measures the scenes on a Release build in the Simulator, the same way every time.
 #
-#   apps/ios/scripts/perf/measure.sh <label> [--build] [--launches N] [--full N] [--sweep]
+#   apps/ios/scripts/perf/measure.sh <label> [--build] [--build-only] [--launches N] [--full N]
+#                                    [--sweep]
 #
 # --build       generate the project and build Release for the Simulator first
 # --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
 #               dropped, so N+1 are run)
 # --full N      runs of `-perf.script full`: orbit, zoom, rooms, lighting, tabs (default 3)
 # --sweep       one `-perf.script sweep` run, saving a screenshot at each held pose
+# --build-only  build, then stop
+#
+# Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
+# only fair comparison on a shared Mac:
+#   PERF_DERIVED=<a>/build-perf measure.sh base --launches 3 --full 1   # then the same for new,
+#   and again, then report.py <out>/base <out>/new
 #
 # Logs and a summary go to $PERF_OUT/<label> (default ~/.billet-manager/pet-concept/perf/runs).
 # It refuses to start while another Simulator is booted, a build runs, swap is over 15 GB or the
@@ -16,10 +23,11 @@ set -euo pipefail
 
 label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep]}
 shift
-build=0 launches=7 fulls=3 sweep=0
+build=0 build_only=0 launches=7 fulls=3 sweep=0
 while (($#)); do
   case $1 in
     --build) build=1 ;;
+    --build-only) build=1 build_only=1 ;;
     --launches) launches=$2; shift ;;
     --full) fulls=$2; shift ;;
     --sweep) sweep=1 ;;
@@ -61,6 +69,8 @@ if ((build)); then
 fi
 app=$derived/Build/Products/Release-iphonesimulator/Billet.app
 [[ -d $app ]] || { echo "no app at $app; pass --build" >&2; exit 1; }
+((build_only)) && exit 0
+stamp=$(date +%H%M%S)
 
 # A build without signing has no entitlements, so no App Group: sign it ad hoc with just that.
 entitlements=$out/entitlements.plist
@@ -105,7 +115,8 @@ print -r -- '"cosyNook"' > $containers/room-furniture.json
 
 # One run of the app with a script. Prints screenshots when the run asks for them.
 run() {
-  local name=$1 script=$2 log=$out/$1.log
+  local name=$1 script=$2 log=$out/$1-$stamp.log
+  rm -rf $containers/perf-shots
   xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
   python3 -c 'import time; time.sleep(1.5)'
   xcrun simctl launch --console-pty $udid $bundle -perf.script $script > $log 2>&1 &
@@ -117,6 +128,7 @@ run() {
         mkdir -p $out/shots
         perl -e 'alarm 20; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
           > /dev/null 2>&1 || true
+        mkdir -p $containers/perf-shots && touch $containers/perf-shots/$shot
       done
     fi
     python3 -c 'import time; time.sleep(0.2)'
@@ -127,10 +139,10 @@ run() {
   wait $pid 2> /dev/null || true
 }
 
-uptime > $out/load.txt
+uptime >> $out/load.txt
 run warmup launch
-for i in $(seq 1 $launches); do run launch-$i launch; done
-for i in $(seq 1 $fulls); do run full-$i full; done
+for ((i = 1; i <= launches; i++)); do run launch-$i launch; done
+for ((i = 1; i <= fulls; i++)); do run full-$i full; done
 ((sweep)) && run sweep sweep
 uptime >> $out/load.txt
 

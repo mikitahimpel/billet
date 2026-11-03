@@ -134,7 +134,10 @@ struct GlowLights: View {
 
   var body: some View {
     if look.halos > 0 {
-      TimelineView(.animation(paused: isPaused)) { context in
+      TimelineView(
+        RoomLayerSchedule(
+          busyUntil: screen.busyUntil, steady: steadyInterval, isPaused: isPaused)
+      ) { context in
         let state = screen.state(for: .windowBloom, at: context.date)
         let lights = screen.lights
         let amount = Double(look.halos)
@@ -181,6 +184,14 @@ struct GlowLights: View {
       .allowsHitTesting(false)
       .accessibilityHidden(true)
     }
+  }
+
+  /// How often the halos change once the room has opened: a flame flickers fast, fairy lights
+  /// twinkle slowly, and otherwise they hold still.
+  private var steadyInterval: TimeInterval? {
+    if look.key.flicker > 0 { return 1 / 30 }
+    if look.fairy.shown, !screen.lights.bulbs.isEmpty { return 1 / 15 }
+    return nil
   }
 
   /// How bright a flickering flame is at `time`, from 1 down by up to `amount`.

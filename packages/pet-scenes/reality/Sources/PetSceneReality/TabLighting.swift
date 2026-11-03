@@ -119,7 +119,7 @@ final class TabLighting {
     setFillBrightness()
     sun.isEnabled = lit && look.sun.intensity > 0
     sun.components[DirectionalLightComponent.self]?.color = look.sun.colour.genz.platformColour
-    sun.components[DirectionalLightComponent.self]?.intensity = look.sun.intensity
+    sun.setLight(intensity: look.sun.intensity)
     for shadow in shadows { shade(shadow) }
     applyFill()
   }
@@ -166,14 +166,14 @@ final class TabLighting {
   private func setKeyBrightness() {
     let boost = boost * dimmer
     for key in keys {
-      key.light.components[PointLightComponent.self]?.intensity = key.intensity * boost
+      key.light.setLight(intensity: key.intensity * boost)
     }
   }
 
   private func setFillBrightness() {
     let lit = look.isLit
-    core.components[PointLightComponent.self]?.intensity = lit ? look.core * coreShare * dimmer : 0
-    rim.components[SpotLightComponent.self]?.intensity = lit ? look.rim.intensity * dimmer : 0
+    core.setLight(intensity: lit ? look.core * coreShare * dimmer : 0)
+    rim.setLight(intensity: lit ? look.rim.intensity * dimmer : 0)
   }
 
   private func shade(_ shadow: ModelEntity) {

@@ -99,15 +99,15 @@ final class GenzGlow {
     for bulb in bulbs { bulb.model?.materials = [kit.glow(bulbColour)] }
     for spill in spills {
       spill.components[PointLightComponent.self]?.color = bulbColour.platformColour
-      spill.components[PointLightComponent.self]?.intensity = 2_600 * look.fairy.spill
+      spill.setLight(intensity: 2_600 * look.fairy.spill)
     }
     core.components[PointLightComponent.self]?.color = look.key.colour.genz.platformColour
-    core.components[PointLightComponent.self]?.intensity = look.core
+    core.setLight(intensity: look.core)
     rim.components[SpotLightComponent.self]?.color = look.rim.colour.genz.platformColour
-    rim.components[SpotLightComponent.self]?.intensity = look.rim.intensity
+    rim.setLight(intensity: look.rim.intensity)
     sun.isEnabled = look.sun.intensity > 0
     sun.components[DirectionalLightComponent.self]?.color = look.sun.colour.genz.platformColour
-    sun.components[DirectionalLightComponent.self]?.intensity = look.sun.intensity
+    sun.setLight(intensity: look.sun.intensity)
   }
 
   private func shade(_ shadows: [ModelEntity]) {

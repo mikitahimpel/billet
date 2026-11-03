@@ -254,7 +254,7 @@ struct TabSceneView: View {
   @Environment(\.petSceneLighting) private var lighting
   @State private var isMounted = false
   @State private var isAppeared = false
-  @State private var lastDrag = CGSize.zero
+  @State private var track = GestureTrack()
 
   private var isOnScreen: Bool {
     isAppeared && hostShowsScene && scenePhase == .active
@@ -310,12 +310,12 @@ struct TabSceneView: View {
       DragGesture(minimumDistance: 8)
         .onChanged { value in
           stage.orbit(
-            byX: Float(value.translation.width - lastDrag.width),
-            y: Float(value.translation.height - lastDrag.height))
-          lastDrag = value.translation
+            byX: Float(value.translation.width - track.drag.width),
+            y: Float(value.translation.height - track.drag.height))
+          track.drag = value.translation
         }
         .onEnded { value in
-          lastDrag = .zero
+          track.drag = .zero
           stage.endOrbit(
             velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
         }
