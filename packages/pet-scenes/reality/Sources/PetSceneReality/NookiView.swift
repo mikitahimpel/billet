@@ -302,12 +302,12 @@ private struct NookiStage: View {
         let location = value.gestureValue.location
         let point = SIMD2(Float(location.x), Float(location.y))
         diorama.followFinger(at: point, in: viewSize)
-        diorama.bat(at: point, in: viewSize)
+        if diorama.bat(at: point, in: viewSize) { onEvent(.played) }
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
         if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
-          diorama.stroke(at: location)
+          diorama.stroke(at: location).forEach(onEvent)
           return
         }
         guard orbits else { return }
@@ -323,6 +323,7 @@ private struct NookiStage: View {
         if isHoldingPiece(value.entity) {
           return
         } else if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {
+          diorama.strokeEnded()
           return
         } else if value.entity.name == NookiTarget.yarn.rawValue {
           diorama.flickYarn(velocityX: Float(velocity.width), velocityY: Float(velocity.height))

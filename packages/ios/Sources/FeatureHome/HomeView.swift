@@ -36,6 +36,7 @@ struct HomeView: View {
   @State private var hasOpened = false
   @State private var latestDrawing: CGImage?
   @State private var drawerOpen = false
+  @State private var ringsOpen = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -102,6 +103,23 @@ struct HomeView: View {
         await keepStreakCurrent()
       }
       .task { await keepSealedNotesCurrent() }
+      .task(id: session.life.speed) { await session.life.run() }
+      .onChange(of: session.shop.state.treatsUsed) { old, new in
+        if new > old { session.fed() }
+      }
+      .overlay {
+        HomeLifeLayer(
+          session: session, scene: scene, ringsOpen: $ringsOpen,
+          onFeed: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
+          onPet: pet)
+      }
+      .overlay(alignment: .topLeading) {
+        if session.labs.isOn(LabExperiment.lifeDebug) {
+          LifeDebugOverlay(model: session.life)
+            .padding(.top, Spacing.wide * 2)
+            .padding(.leading, Spacing.medium)
+        }
+      }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }
         hungImage = nil
@@ -221,6 +239,7 @@ struct HomeView: View {
       style: style,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
@@ -241,6 +260,7 @@ struct HomeView: View {
       variant: variant,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
           .environment(\.petSceneRenovator, session.renovator)
@@ -401,6 +421,7 @@ struct HomeView: View {
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+        .lifeRingsPress(session, open: $ringsOpen)
         .id(scene.id)
         .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
         .environment(\.petSceneRenovator, session.renovator)
@@ -751,6 +772,8 @@ struct HomeView: View {
     }
     switch event {
     case .petted: pet()
+    case .played: session.played()
+    case .fed: session.fed()
     case .noteOpened: onOpenNotes()
     case .deliveryFinished, .settled: break
     }
@@ -768,7 +791,10 @@ struct HomeView: View {
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
-      catAway: catAway
+      catAway: catAway,
+      life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil,
+      lifeNeeds: session.labs.isOn(LabExperiment.catLife)
+        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil
     )
   }
 

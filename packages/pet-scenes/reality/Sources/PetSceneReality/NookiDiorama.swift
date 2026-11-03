@@ -9,7 +9,7 @@ import SwiftUI
 /// The room and everything that moves in it. Metres, with the floor's top at y = 0 and the two
 /// walls along x = -0.6 and z = -0.6.
 @MainActor
-final class NookiDiorama {
+final class NookiDiorama: CatPlayStage {
   let root = Entity()
   /// Called when the room has rendered in a view and a poster over it can go.
   var onReady: (() -> Void)?
@@ -35,7 +35,7 @@ final class NookiDiorama {
   private var lampParts: [(model: ModelEntity, material: Int, glow: Float)] = []
   private var world = PetWorld()
   private var play = PetPlayState()
-  private var clock = 0.0
+  private(set) var clock = 0.0
   private var stepStart = 0.0
   private var petStart: Double?
   private var lookStart: Double?
@@ -52,7 +52,11 @@ final class NookiDiorama {
   private var hasCat = false
   /// The cat's clips, look and coat, once loaded.
   private(set) var rig: CatRig?
-  private var behaviour = CatBehaviour(clips: [:])
+  var behaviour = CatBehaviour(clips: [:])
+  /// The hands on the cat: petting, play and their cooldowns.
+  let hands = CatHands()
+  /// The cat's length in the room, measured once it is placed.
+  private var catLength: Float?
   /// The cat moments switched on in Labs.
   private(set) var moments: Set<CatMoment> = []
   /// The purr and its hearts, for the view to draw.
@@ -322,9 +326,11 @@ final class NookiDiorama {
   func show(_ play: PetPlayState) {
     let petted = play.petsReceived > self.play.petsReceived
     self.play = play
+    behaviour.follow(play.life ?? LifeDrive())
     if petted {
       petStart = clock
       behaviour.react(.pet, at: clock)
+      if let response = hands.play.handle(.partnerPetted, at: clock) { _ = show(response) }
     }
     if isLoaded, play.streak != streakMarks.children.count { buildStreakMarks(play.streak) }
   }
@@ -386,15 +392,22 @@ final class NookiDiorama {
   }
 
   /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
-  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) {
+  /// Returns true when this bat starts a game, rather than going on with one.
+  @discardableResult
+  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) -> Bool {
     guard moments.contains(.batsAtFinger), trip == nil, !yarnPlay.isPlaying,
       world.activity == .sleeping, clock - lastBat > Self.batGap,
       CatEdge.isNearEdge(x: Double(point.x), width: Double(size.x))
-    else { return }
+    else { return false }
+    let starts = clock - lastBat > Self.gameGap
     lastBat = clock
     followFinger(at: point, in: size)
     behaviour.react(.bat, at: clock)
+    return starts
   }
+
+  /// Bats closer together than this are one game.
+  private static var gameGap: Double { 60 }
 
   /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
   private func stepMoments() {
@@ -851,8 +864,10 @@ final class NookiDiorama {
     let lift = 0.02 * frame.wake + 0.05 * frame.hop + 0.07 * frame.stepHeight
     catHolder.position = spot + [0, lift, 0]
     if frame.light != light { easeLight(to: frame.light, delta: delta) }
-    catHolder.orientation = simd_quatf(
-      angle: frame.heading + lookTurn + Self.windowTurn * light, axis: [0, 1, 0])
+    hands.stepLean(delta, reduceMotion: reduceMotion)
+    catHolder.orientation =
+      simd_quatf(angle: frame.heading + lookTurn + Self.windowTurn * light, axis: [0, 1, 0])
+      * simd_quatf(angle: hands.lean, axis: [0, 0, 1])
   }
 
   private func applyClip(_ frame: NookiFrame, taping: Bool) {
@@ -910,17 +925,46 @@ final class NookiDiorama {
     headLook(at: camera.position + ray * max(reach, 0.5), for: Self.fingerLookLength)
   }
 
-  /// A stroke along the cat at `point` on screen: eyes close and it purrs, with hearts rising
-  /// from under the finger. A long pet rolls it onto its back, and
-  /// strokes during the roll leave it rolling rather than starting the pet over.
-  func stroke(at point: CGPoint) {
+  /// A stroke along the cat at `point` on screen: it leans into the hand and purrs, with hearts
+  /// rising from under the finger, as the spot and the way of the fur deserve. A long pet rolls
+  /// it onto its back, where a belly rub may get grabbed.
+  func stroke(at point: CGPoint) -> [PetSceneEvent] {
+    let fresh = petStart == nil
     petStart = petStart ?? clock
     strokePoint = point
     if moments.contains(.purrs), purr.touch(at: clock, cat: point), trip == nil {
       behaviour.react(.roll, at: clock)
       rollingUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
-    } else if clock >= rollingUntil {
-      behaviour.react(.pet, at: clock)
+      hands.onBackUntil = rollingUntil
+    }
+    var events: [PetSceneEvent] = fresh ? [.petted] : []
+    if let body = catBody(), let response = hands.stroke(to: point, on: body, at: clock) {
+      events += show(response)
+    }
+    return events
+  }
+
+  func strokeEnded() { hands.endStroke() }
+
+  /// The cat as drawn now, for finding where a finger is on it.
+  func catBody() -> CatBodyOnScreen? {
+    let size = CGSize(width: CGFloat(fittedSize.x), height: CGFloat(fittedSize.y))
+    let forward = catHolder.orientation(relativeTo: nil).act([0, 0, -1])
+    let length =
+      catLength
+      ?? {
+        let bounds = catHolder.visualBounds(relativeTo: nil)
+        let length = bounds.isEmpty ? 0.3 : max(bounds.extents.x, bounds.extents.z)
+        catLength = length
+        return length
+      }()
+    return CatBodyOnScreen.of(
+      base: catHolder.position(relativeTo: nil), heading: atan2(-forward.x, -forward.z),
+      length: length, isOnBack: hands.isOnBack(at: clock)
+    ) {
+      GenzCamera.project(
+        $0, from: camera.position, towards: NookiCamera.target, fieldOfView: Self.fieldOfView,
+        in: size)
     }
   }
 
@@ -1273,8 +1317,10 @@ final class NookiDiorama {
       self.rig = rig
       shownCat = shown
       behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
+      behaviour.follow(play.life ?? LifeDrive())
       rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
       catHolder.addChild(model)
+      catLength = nil
       hasCat = true
       NookiTrace.mark("Cat placed")
       setCatMissing(false)

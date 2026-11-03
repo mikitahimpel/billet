@@ -115,6 +115,36 @@ enum ViewWindows {
       ViewKit.litWindow(
         context, window, level: level,
         flicker: window.isTV ? flicker(moment.now, id: window.id) : 1)
+      if level > 0.5, window.rect.width > 2 { passer(window, context, moment: moment) }
     }
+  }
+
+  /// Someone crossing the lit room now and then: head and shoulders sliding past the glass.
+  private static func passer(
+    _ window: ViewLitWindow, _ context: GraphicsContext, moment: ViewMoment
+  ) {
+    let rhythm = ViewRhythm(
+      seed: UInt64(window.id) &* 131 &+ 17, slot: 37, chance: 0.35, length: 2.4...4)
+    guard let pass = rhythm.pass(at: moment.now) else { return }
+    let rect = window.rect
+    let p = CGFloat(pass.progress)
+    let x =
+      pass.variant < 0.5
+      ? rect.minX - 1 + (rect.width + 2) * p : rect.maxX + 1 - (rect.width + 2) * p
+    let unit = rect.height / 4.6
+    var person = context
+    person.clip(to: Path(rect))
+    let shade = ViewColour(0x2A1A10).color(0.7)
+    person.fill(
+      Path(
+        ellipseIn: CGRect(
+          x: x - 0.7 * unit, y: rect.maxY - 3.2 * unit, width: 1.4 * unit, height: 1.5 * unit)),
+      with: .color(shade))
+    person.fill(
+      Path(
+        roundedRect: CGRect(
+          x: x - 1.4 * unit, y: rect.maxY - 1.8 * unit, width: 2.8 * unit, height: 2 * unit),
+        cornerRadius: 0.8 * unit),
+      with: .color(shade))
   }
 }

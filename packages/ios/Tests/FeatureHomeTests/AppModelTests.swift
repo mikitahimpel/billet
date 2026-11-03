@@ -26,6 +26,8 @@ private final class FakeRoom {
   private(set) var deliveredIDs: [UUID] = [] { didSet { changed() } }
   private(set) var names: [String] = [] { didSet { changed() } }
   private(set) var plays: [PlayKind] = [] { didSet { changed() } }
+  /// The life events sent, of every kind.
+  private(set) var lived: [LifeEvent.Kind] = [] { didSet { changed() } }
   private(set) var reacted: [(UUID, Reaction)] = [] { didSet { changed() } }
 
   /// The connection the session holds now, by the number `updates` gave it.
@@ -48,6 +50,12 @@ private final class FakeRoom {
         }
       },
       play: { kind, _ in await MainActor.run { self.plays.append(kind) } },
+      life: { event in
+        await MainActor.run {
+          self.lived.append(event.kind)
+          if let kind = event.kind.playKind, kind == .pet { self.plays.append(kind) }
+        }
+      },
       nameCat: { name in await MainActor.run { self.names.append(name) } },
       react: { note, reaction in await MainActor.run { self.reacted.append((note, reaction)) } },
       updates: {
@@ -312,6 +320,11 @@ struct AppModelTests {
     }
     #expect(Set(room.plays) == [.pet, .treat])
     #expect(room.plays.count == 2)
+    // The pet and the treat are both part of the cat's life too.
+    await room.waitFor("the life events") { room.lived.count == 2 }
+    #expect(Set(room.lived) == [.pet, .feed])
+    let mine = session.life.log.all.filter { $0.by == session.room.device }.suffix(2)
+    #expect(Set(mine.map(\.kind)) == [.pet, .feed])
     #expect(room.reacted.map(\.0) == [id])
     #expect(session.play.petsGiven == 1)
   }

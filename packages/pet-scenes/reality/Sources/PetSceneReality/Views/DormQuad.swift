@@ -264,6 +264,8 @@ struct DormQuad: ViewRecipe {
       frisbee(context, moment: moment)
       squirrel(context, moment: moment)
       for walker in Self.walkers { walker.draw(context, moment: moment) }
+      ViewLeaves(count: 4, area: CGRect(x: -10, y: 8, width: 120, height: 42), seed: 5)
+        .draw(context, moment: moment)
     case .near: break
     }
   }

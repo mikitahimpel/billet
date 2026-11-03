@@ -18,6 +18,7 @@ struct CatBehaviourTests {
       case .bat: clips[action] = CatClipInfo(duration: 1.4, loops: false, base: .sit)
       case .headbutt: clips[action] = CatClipInfo(duration: 1.8, loops: false, base: .stand)
       case .reachUp: clips[action] = CatClipInfo(duration: 2.2, loops: false, base: .stand)
+      case .grab, .sniff, .wave, .dangle: continue
       case .sit, .blink, .look, .tailFlick, .happy, .knead:
         clips[action] = CatClipInfo(duration: 4, loops: true, base: .sit)
       case .pounce, .stretch: clips[action] = CatClipInfo(duration: 1.5, loops: false, base: .stand)
@@ -51,6 +52,27 @@ struct CatBehaviourTests {
     #expect(woke != nil)
     #expect((woke?.0 ?? 99) <= 5.1)
     #expect(woke.map { [.yawn, .stretch].contains($0.1) } == true)
+  }
+
+  @Test func aSleepyLifeKeepsItAsleepInFreeMode() {
+    var cat = CatBehaviour(clips: Self.full, seed: 7)
+    cat.follow(LifeDrive(asleep: true, focus: .rested))
+    let changes = run(&cat, for: 120)
+    let awake = changes.filter { ![.sleep, .twitch].contains($0.1) }
+    #expect(awake.isEmpty)
+    // A touch still wakes it.
+    cat.react(.pet, at: 120)
+    #expect(cat.beat(at: 120, mode: .free).action == .happy)
+  }
+
+  @Test func aPlayfulLifeCrouchesToPounceAndAContentOneNever() {
+    var playful = CatBehaviour(clips: Self.full, seed: 3)
+    playful.follow(LifeDrive(focus: .playful))
+    var content = CatBehaviour(clips: Self.full, seed: 3)
+    let wanting = run(&playful, for: 600, mode: .awake).filter { $0.1 == .crouchWiggle }
+    let calm = run(&content, for: 600, mode: .awake).filter { $0.1 == .crouchWiggle }
+    #expect(!wanting.isEmpty)
+    #expect(calm.isEmpty)
   }
 
   @Test func aWakeCueStretchesThenLooksAtTheViewerAndStaysUp() {
