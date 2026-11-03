@@ -35,6 +35,20 @@ The scripts live outside the repo, in `~/.billet-manager/pet-concept/splat/scrip
    DEFLATE-compressed, about 2.2 MB for 131k splats against 7.3 MB as raw floats; see
    `SplatCloud`.
 
+## Cats from illustrations (Ilya's cat)
+
+Idol's splats are much cleaner from a clean illustration than from a render of our model. Ilya's
+cat comes from his own illustration, with his permission (FLUX.2-klein-4B on the Mac makes such
+pictures too: `gen_refs.py`). The picture must stand square, head and body facing the same way, to
+match the skeleton's standing bind pose: a sitting splat tears when it is unposed onto it. In the app
+the cat still sits through the sit clip.
+
+Marching cubes leaves slivers and seams that open into white cracks once the mesh bends, so
+`remesh_bake.py` rebuilds the surface in Blender: a 2.5 mm voxel remesh (closed, even triangles),
+decimated to 9k, new UVs with wide margins, the colour baked from the first mesh with a 24 px
+bleed. The weights then move across from the template and are smoothed (`IDOL_SMOOTH=20`). Every
+clip holds up from the front, side and back (`pose_sheet.py`).
+
 ## How a splat cat runs
 
 `NookiAssets.compiledCat` loads the Idol mesh as for any cat, and `SplatCat.dress` adds the splat
