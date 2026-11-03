@@ -175,6 +175,9 @@ final class GenzRoom: CatPlayStage {
   private let fillLight = Entity()
   private let headlight = Entity()
   var rig: CatRig?
+  /// The cat's soft shadow, and the footprint it is easing towards, as fractions of its length.
+  var catShadow: ModelEntity?
+  var catShadowShape = GenzRoom.catShadowFootprint(.sleep)
   var behaviour = CatBehaviour(clips: [:])
   private var life = LifeDrive()
   private var lifeNeeds: PetNeeds?
@@ -301,7 +304,7 @@ final class GenzRoom: CatPlayStage {
     room.addChild(props.root)
     lifeProps = props
     let glow = GenzGlow(layout: layout, kit: kit)
-    glow.shadeCat(in: catHolder, length: length)
+    catShadow = glow.shadeCat(in: catHolder, length: length)
     glow.follow(holders)
     room.addChild(glow.root)
     self.glow = glow
@@ -1039,13 +1042,15 @@ final class GenzRoom: CatPlayStage {
       bodyHeading = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
     }
-    hands.stepLean(Float(min(clock - lastCatClock, 0.1)), reduceMotion: reduceMotion)
+    let step = Float(min(clock - lastCatClock, 0.1))
+    hands.stepLean(step, reduceMotion: reduceMotion)
     lastCatClock = clock
     catHolder.orientation =
       simd_quatf(angle: bodyHeading, axis: [0, 1, 0])
       * simd_quatf(angle: hands.lean, axis: [0, 0, 1])
     let beat = behaviour.beat(at: clock, mode: mode)
     rig.play(beat.action, rate: rate)
+    fitCatShadow(step)
     if clock > gazeUntil { gazePoint = nil }
     rig.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
@@ -1378,6 +1383,35 @@ extension GenzRoom {
     let heading = homeHeading
     return home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length
   }
+
+  /// The patch the cat's shadow covers in each base pose, across and along its body, as fractions
+  /// of its length: long and narrow standing, rounder sitting, a round patch curled up asleep.
+  static func catShadowFootprint(_ base: CatBase) -> SIMD2<Float> {
+    switch base {
+    case .stand: [0.42, 0.92]
+    case .sit: [0.5, 0.62]
+    case .sleep: [0.64, 0.64]
+    }
+  }
+
+  /// Keeps the cat's shadow flat on the seat under the cat, whatever the cat does above it: level
+  /// when the cat leans, on the seat and smaller when the cat is lifted, and shaped like its pose.
+  func fitCatShadow(_ step: Float) {
+    guard let catShadow, let parent = catHolder.parent else { return }
+    let base = rig?.current.flatMap { rig?.info[$0]?.base } ?? .sleep
+    catShadowShape += (Self.catShadowFootprint(base) - catShadowShape) * min(step * 5, 1)
+    let length = layout.cat.length
+    let ground = layout.cat.spot.scene.y
+    let height = max(catHolder.position.y - ground, 0)
+    let shrink = 1 - 0.45 * min(height / length, 1)
+    catShadow.setPosition(
+      [catHolder.position.x, ground + Self.catShadowHeight, catHolder.position.z],
+      relativeTo: parent)
+    catShadow.setOrientation(simd_quatf(angle: bodyHeading, axis: [0, 1, 0]), relativeTo: parent)
+    catShadow.scale = [catShadowShape.x * shrink, 1, catShadowShape.y * shrink]
+  }
+
+  static let catShadowHeight: Float = 0.015
 
   /// The walk clip's speed for moving at `speed`, at the cat's size here.
   func walkRate(_ speed: Float) -> Float {

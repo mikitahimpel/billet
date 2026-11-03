@@ -75,5 +75,61 @@
       let image = try await GenzRenderShots.render(renderer, width: 786, height: 1704)
       try GenzRenderShots.write(image, to: folder.appendingPathComponent("first-seat.png"))
     }
+
+    /// The cat standing, then lifted and leaning, with its shadow as it was (a fixed patch inside
+    /// the cat's holder) and as the room now fits it (`fitCatShadow`).
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_CAT_SHOTS"] != nil))
+    func theCatsShadow() async throws {
+      let folder = URL(
+        fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_CAT_SHOTS"]))
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+      let room = GenzRoomCache(suite: "genz-cat-shadow-\(UUID())").room(layout)
+      room.startBuilding()
+      let deadline = Date.now.addingTimeInterval(60)
+      while !(room.isBuilt && room.hasCat), Date.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      try #require(room.hasCat)
+      room.setLighting(.amberLantern)
+      room.room.isEnabled = true
+      let shadow = try #require(room.catShadow)
+      let ground = room.layout.cat.spot.scene
+      let length = layout.cat.length
+      let heading: Float = 0.5
+
+      let renderer = try RealityRenderer()
+      renderer.entities.append(room.root)
+      let lens = PerspectiveCamera()
+      lens.camera.fieldOfViewInDegrees = 30
+      renderer.entities.append(lens)
+      renderer.activeCamera = lens
+      lens.look(
+        at: ground + [0, length * 0.4, 0], from: ground + [length * 2.2, length * 2.4, length * 3.2],
+        relativeTo: nil)
+
+      for (name, action, lift, lean) in [
+        ("standing", CatAction.idle, Float(0), Float(0)), ("lifted", .dangle, 0.55, 0.13),
+      ] {
+        room.rig?.play(action, blend: 0)
+        room.catHolder.position = ground + [0, length * lift, 0]
+        room.catHolder.orientation =
+          simd_quatf(angle: heading, axis: [0, 1, 0]) * simd_quatf(angle: lean, axis: [0, 0, 1])
+        room.bodyHeading = heading
+        for fitted in [false, true] {
+          if fitted {
+            room.catShadowShape = GenzRoom.catShadowFootprint(room.rig?.info[action]?.base ?? .stand)
+            room.fitCatShadow(0)
+          } else {
+            shadow.transform = Transform(
+              scale: [0.95, 1, 0.6], rotation: simd_quatf(), translation: [0, 0.015, 0])
+          }
+          try await Task.sleep(for: .milliseconds(300))
+          let image = try await GenzRenderShots.render(renderer, width: 700, height: 700)
+          let file = "cat-shadow-\(name)-\(fitted ? "after" : "before").png"
+          try GenzRenderShots.write(image, to: folder.appendingPathComponent(file))
+        }
+      }
+    }
   }
 #endif
