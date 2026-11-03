@@ -1,0 +1,153 @@
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import { env, exports } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import { accessJwtHeader } from "@billet/backend-admin/access";
+import {
+  signAccess,
+  teamKeys,
+  testAccess,
+  unsignedAccess,
+} from "@billet/backend-admin/test/access-tokens";
+import { respondAdmin } from "../src/admin-fetch.ts";
+import type { WorkerEnv } from "../src/worker-env.ts";
+import { resetDirectory } from "./directory-migrations.ts";
+import { testExperiments } from "./test-experiments.ts";
+
+const origin = "https://api.billet.test";
+const configured: WorkerEnv = {
+  ...env,
+  ACCESS_TEAM_DOMAIN: testAccess.teamDomain,
+  ACCESS_AUD: testAccess.audience,
+};
+
+const admin = async (
+  path: string,
+  init: RequestInit & { token?: string | null } = {},
+  workerEnv: WorkerEnv = configured,
+) => {
+  const { token, ...rest } = init;
+  const headers = new Headers(rest.headers);
+  if (token !== null) headers.set(accessJwtHeader, token ?? (await signAccess()));
+  const ctx = createExecutionContext();
+  const response = await respondAdmin(
+    new Request(`${origin}${path}`, { ...rest, headers }),
+    workerEnv,
+    ctx,
+    {
+      experiments: testExperiments,
+      accessKeys: teamKeys,
+    },
+  );
+  await waitOnExecutionContext(ctx);
+  return response;
+};
+
+beforeEach(resetDirectory);
+
+describe("the admin panel behind Cloudflare Access", () => {
+  const paths = ["/admin", "/admin/app.js", "/admin/api/me", "/admin/api/flags", "/admin/nothing"];
+
+  it.each(paths)("refuses %s without an Access token with a bare 403", async (path) => {
+    const response = await admin(path, { token: null });
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
+  });
+
+  it.each([
+    ["expired", { exp: Math.floor(Date.now() / 1000) - 60 }],
+    ["for another audience", { aud: ["b".repeat(64)] }],
+    ["from another team", { iss: "https://other.cloudflareaccess.com" }],
+  ])("refuses a token that is %s with 403", async (_, overrides) => {
+    const response = await admin("/admin/api/me", { token: await signAccess(overrides) });
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses an unsigned token", async () => {
+    expect((await admin("/admin/api/me", { token: unsignedAccess() })).status).toBe(403);
+  });
+
+  it("fails closed when the Worker has no Access configuration, even with a valid token", async () => {
+    expect((await admin("/admin/api/me", {}, env as WorkerEnv)).status).toBe(403);
+    expect(
+      (await admin("/admin/api/me", {}, { ...configured, ACCESS_AUD: "not-an-aud" })).status,
+    ).toBe(403);
+  });
+
+  it("is refused through the real Worker too, which has no Access configuration in tests", async () => {
+    const response = await exports.default.fetch(
+      new Request(`${origin}/admin/api/me`, {
+        headers: { [accessJwtHeader]: await signAccess() },
+      }),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("serves the page, script and style with a strict policy to a valid token", async () => {
+    const page = await admin("/admin");
+    expect(page.status).toBe(200);
+    expect(page.headers.get("content-type")).toContain("text/html");
+    expect(page.headers.get("content-security-policy")).toContain("default-src 'none'");
+    expect(page.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(page.headers.get("cache-control")).toBe("no-store");
+    expect(await page.text()).toContain("/admin/app.js");
+    expect((await admin("/admin/app.js")).headers.get("content-type")).toContain("javascript");
+    expect((await admin("/admin/app.css")).headers.get("content-type")).toContain("text/css");
+  });
+
+  it("answers the API as the Access identity", async () => {
+    const response = await admin("/admin/api/me", {
+      token: await signAccess({ email: "o@example.com" }),
+    });
+    expect(await response.json()).toEqual({ email: "o@example.com" });
+  });
+
+  it("refuses a write from another site, and takes one from the panel's own origin", async () => {
+    const flags = (await (await admin("/admin/api/flags")).json()) as {
+      items: Array<{ key: string; config: unknown; version: number }>;
+    };
+    const split = flags.items.find(({ key }) => key === "split");
+    const body = JSON.stringify({ config: split?.config, expectedVersion: 0 });
+    const write = (headers: Record<string, string>) =>
+      admin("/admin/api/flags/split", {
+        method: "PUT",
+        body,
+        headers: { "content-type": "application/json", ...headers },
+      });
+    expect((await write({})).status).toBe(403);
+    expect((await write({ origin: "https://evil.example" })).status).toBe(403);
+    expect((await write({ origin, "sec-fetch-site": "cross-site" })).status).toBe(403);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM flag_configs").first("n")).toBe(0);
+    const saved = await write({ origin, "sec-fetch-site": "same-origin" });
+    expect(saved.status).toBe(200);
+    const change = await env.DB.prepare("SELECT key, by, action FROM flag_changes").first();
+    expect(change).toEqual({ key: "split", by: "owner@example.com", action: "edit" });
+  });
+
+  it("kills an experiment so the app stops getting it on its next read", async () => {
+    const items = (await (await admin("/admin/api/experiments")).json()) as {
+      items: Array<{ key: string; version: number }>;
+    };
+    expect(items.items.map(({ key }) => key)).toContain("split");
+    const killed = await admin("/admin/api/experiments/split/kill", {
+      method: "POST",
+      body: JSON.stringify({ expectedVersion: 0 }),
+      headers: { "content-type": "application/json", origin },
+    });
+    expect(killed.status).toBe(200);
+    const row = await env.DB.prepare("SELECT config FROM flag_configs WHERE key = 'split'").first<{
+      config: string;
+    }>();
+    expect(JSON.parse(row?.config ?? "{}").killed).toBe(true);
+  });
+
+  it("answers 404 for a pair it has never seen, looked up by id only", async () => {
+    expect((await admin("/admin/api/pairs/no-such-pair")).status).toBe(404);
+  });
+
+  it("reads the overview from D1 without exposing an Apple subject", async () => {
+    const response = await admin("/admin/api/overview");
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { totals: { users: number } };
+    expect(body.totals.users).toBe(0);
+  });
+});

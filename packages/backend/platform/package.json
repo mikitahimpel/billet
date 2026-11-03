@@ -5,6 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./admin-data-live": "./src/admin-data-live.ts",
+    "./admin-fetch": "./src/admin-fetch.ts",
     "./api-fetch": "./src/api-fetch.ts",
     "./apple-identity-live": "./src/apple-identity-live.ts",
     "./auth-repository-live": "./src/auth-repository-live.ts",
@@ -34,6 +36,7 @@
     "db:generate": "drizzle-kit generate --dialect sqlite --schema ./src/directory-schema.ts --out ./migrations/directory && drizzle-kit generate --dialect sqlite --driver durable-sqlite --schema ./src/room-schema.ts --out ./migrations/room"
   },
   "dependencies": {
+    "@billet/backend-admin": "workspace:*",
     "@billet/backend-auth": "workspace:*",
     "@billet/backend-flags": "workspace:*",
     "@billet/backend-metrics": "workspace:*",

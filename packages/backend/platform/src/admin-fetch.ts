@@ -1,0 +1,182 @@
+import { Effect, Layer } from "effect";
+import { Digest, SecureRandom, Signature } from "effect/crypto";
+import { FetchHttpClient, HttpRouter } from "effect/http";
+import { Jwks } from "effect/jose";
+import {
+  accessCertsUrl,
+  accessConfigOf,
+  accessJwtHeader,
+  AccessVerifier,
+  accessVerifierLayer,
+  denyAll,
+  type AdminIdentity,
+} from "@billet/backend-admin/access";
+import { adminCss, adminHtml, adminJs } from "@billet/backend-admin/admin-assets";
+import { AdminRoutes, CurrentAdmin } from "@billet/backend-admin/admin-routes";
+import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
+import { FlagsService } from "@billet/backend-flags/flags-service";
+import { AdminDataLive } from "./admin-data-live.ts";
+import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
+import { FlagsRepositoryLive } from "./flags-repository-live.ts";
+import { PairingRepositoryLive } from "./pairing-repository-live.ts";
+import type { WorkerEnv } from "./worker-env.ts";
+
+/** Whether a path belongs to the admin panel. Everything under it is behind the Access check. */
+export const isAdminPath = (pathname: string) =>
+  pathname === "/admin" || pathname.startsWith("/admin/");
+
+const contentSecurityPolicy = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "connect-src 'self'",
+  "img-src 'self' data:",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const securityHeaders = {
+  "content-security-policy": contentSecurityPolicy,
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "cross-origin-opener-policy": "same-origin",
+  "cross-origin-resource-policy": "same-origin",
+  "cache-control": "no-store",
+  "x-robots-tag": "noindex",
+};
+
+const withSecurity = (response: Response): Response => {
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  return new Response(response.body, { status: response.status, headers });
+};
+
+const forbidden = () =>
+  withSecurity(
+    new Response("Forbidden", { status: 403, headers: { "content-type": "text/plain" } }),
+  );
+
+// The team's keys, fetched like Apple's (see apple-identity-live.ts): no redirects, and only a
+// successful answer is cached by Cloudflare, for 10 minutes.
+const remoteKeys = (url: string): Layer.Layer<Jwks.Jwks> =>
+  Jwks.layerRemote({ url }).pipe(
+    Layer.orDie,
+    Layer.provide(
+      FetchHttpClient.layer.pipe(
+        Layer.provide(
+          Layer.succeed(FetchHttpClient.RequestInit, {
+            redirect: "manual",
+            cf: { cacheEverything: true, cacheTtlByStatus: { "200-299": 600, "300-599": 0 } },
+          }),
+        ),
+      ),
+    ),
+  );
+
+const signature = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
+
+/** Options for tests: the experiments, and the Access keys in place of the team's. */
+export interface AdminOptions {
+  readonly experiments: ReadonlyArray<Experiment>;
+  readonly accessKeys?: Layer.Layer<Jwks.Jwks>;
+}
+
+/** Fails closed: no configuration, no header, or any doubt about the token is `undefined`. */
+export const verifyAccess = async (
+  request: Request,
+  env: WorkerEnv,
+  accessKeys?: Layer.Layer<Jwks.Jwks>,
+): Promise<AdminIdentity | undefined> => {
+  const config = accessConfigOf(env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD);
+  const verifier =
+    config === undefined
+      ? denyAll
+      : accessVerifierLayer(config).pipe(
+          Layer.provide(
+            Layer.mergeAll(accessKeys ?? remoteKeys(accessCertsUrl(config)), signature),
+          ),
+        );
+  const token = request.headers.get(accessJwtHeader);
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const access = yield* AccessVerifier;
+      return yield* access.verify(token);
+    }).pipe(
+      Effect.provide(verifier),
+      Effect.tapError(({ reason }) => Effect.logWarning("admin access denied", reason)),
+      Effect.orElseSucceed(() => undefined),
+      Effect.catchCause(() => Effect.succeed(undefined)),
+    ),
+  );
+};
+
+/**
+ * A browser sends `Origin` on every cross-site write; a write from another site must not ride the
+ * Access cookie. Same-origin writes from the page carry the panel's own origin.
+ */
+const isSameOriginWrite = (request: Request) => {
+  if (request.method === "GET" || request.method === "HEAD") return true;
+  const origin = request.headers.get("origin");
+  const site = request.headers.get("sec-fetch-site");
+  return origin === new URL(request.url).origin && (site === null || site === "same-origin");
+};
+
+const asset = (body: string, type: string) =>
+  withSecurity(new Response(body, { headers: { "content-type": `${type}; charset=utf-8` } }));
+
+const adminLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, admin: AdminIdentity) =>
+  AdminRoutes.pipe(
+    Layer.provide(
+      Layer.mergeAll(FlagsService.layer, Layer.succeed(CurrentAdmin, admin)).pipe(
+        Layer.provideMerge(
+          Layer.mergeAll(
+            PairingRepositoryLive(env.DB),
+            FlagsRepositoryLive(env.DB),
+            FlagConfigRepositoryLive(env.DB, caches.default),
+            AdminDataLive(env.DB),
+            Experiments.with(experiments),
+            Digest.layerWebCrypto,
+          ),
+        ),
+      ),
+    ),
+  );
+
+/**
+ * Everything under `/admin`: the page, its script and style, and the JSON API. The Access check
+ * runs first, before any routing, and a request that fails it gets the same bare 403 whatever the
+ * path, so nothing about the panel is visible without a valid Access token.
+ */
+export const respondAdmin = async (
+  request: Request,
+  env: WorkerEnv,
+  ctx: ExecutionContext,
+  options: AdminOptions,
+): Promise<Response> => {
+  const admin = await verifyAccess(request, env, options.accessKeys);
+  if (admin === undefined) return forbidden();
+  if (!isSameOriginWrite(request)) return forbidden();
+
+  const { pathname } = new URL(request.url);
+  if (request.method === "GET") {
+    if (pathname === "/admin" || pathname === "/admin/") return asset(adminHtml, "text/html");
+    if (pathname === "/admin/app.css") return asset(adminCss, "text/css");
+    if (pathname === "/admin/app.js") return asset(adminJs, "text/javascript");
+  }
+  if (!pathname.startsWith("/admin/api/")) {
+    return withSecurity(new Response("Not found", { status: 404 }));
+  }
+
+  const { handler, dispose } = HttpRouter.toWebHandler(
+    adminLayer(env, options.experiments, admin),
+    {
+      disableLogger: true,
+    },
+  );
+  try {
+    return withSecurity(await handler(request));
+  } finally {
+    ctx.waitUntil(dispose());
+  }
+};

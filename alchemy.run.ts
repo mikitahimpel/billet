@@ -76,6 +76,11 @@ export default Alchemy.Stack(
         DB: db,
         MEDIA: media,
         EVENTS: events,
+        // The Cloudflare Access application in front of /admin (docs/admin.md). Not secret, but
+        // kept out of the public repo: they come from the deploy's environment. Empty keeps the
+        // panel closed to everyone.
+        ACCESS_TEAM_DOMAIN: Config.String("ACCESS_TEAM_DOMAIN").pipe(Config.withDefault("")),
+        ACCESS_AUD: Config.String("ACCESS_AUD").pipe(Config.withDefault("")),
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
         ...(stage === "dev"
