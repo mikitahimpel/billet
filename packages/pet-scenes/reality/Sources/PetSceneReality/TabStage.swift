@@ -179,7 +179,7 @@ enum TabLook {
   static func makeTappable(_ entity: Entity, margin: Float = 0.1) {
     let bounds = entity.visualBounds(relativeTo: entity)
     guard !bounds.isEmpty else { return }
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       entity, size: bounds.extents + SIMD3(repeating: margin * 2), center: bounds.center)
   }
 

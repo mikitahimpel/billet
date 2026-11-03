@@ -62,7 +62,7 @@ extension GenzRoom {
       }
       let size = placement.piece.kind.size
       let flat = Self.isFlat(placement.piece.kind)
-      NookiDiorama.makeTappable(
+      SceneParts.makeTappable(
         holders[index], size: [size.x, max(size.z, 0.2), size.y],
         center: [0, max(size.z, 0.2) / 2, 0])
       decor.register(name, holder: holders[index], half: box.half, isFlat: flat)

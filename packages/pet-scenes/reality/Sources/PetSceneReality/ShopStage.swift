@@ -780,7 +780,7 @@ final class ShopStage: RehearsedStage {
       kit.part(
         kit.box([0.2, 0.08, 0.1]), ribbon, at: [0.08, 0.21, 0],
         turn: simd_quatf(angle: -0.5, axis: [0, 0, 1])))
-    if let receiver { NookiDiorama.visit(parcel) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(parcel) { $0.components.set(receiver) } }
     parcel.isEnabled = false
     room.addChild(parcel)
   }
@@ -848,7 +848,7 @@ final class ShopStage: RehearsedStage {
     content.position =
       SIMD3(-bounds.center.x, -bounds.min.y + lift / scale, -bounds.center.z) * scale
     holder.addChild(content)
-    if let receiver { NookiDiorama.visit(holder) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(holder) { $0.components.set(receiver) } }
     TabLook.makeTappable(holder, margin: 0.12)
   }
 
@@ -907,7 +907,7 @@ final class ShopStage: RehearsedStage {
     model.position = SIMD3(-bounds.center.x, -bounds.min.y, -bounds.center.z) * scale
     for child in Array(keeperHolder.children) { child.removeFromParent() }
     keeperHolder.addChild(model)
-    if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
+    if let receiver { SceneParts.visit(model) { $0.components.set(receiver) } }
     TabLook.makeTappable(keeperHolder, margin: 0)
     rig = KeeperRig(model: model)
     shownKeeper = keeper

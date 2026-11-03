@@ -314,7 +314,7 @@ final class GenzRoom: CatPlayStage {
     catHolder.orientation = simd_quatf(angle: layout.cat.heading, axis: [0, 1, 0])
     bodyHeading = layout.cat.heading
     let length = layout.cat.length
-    NookiDiorama.makeTappable(
+    SceneParts.makeTappable(
       catHolder, size: [length * 0.8, length * 0.6, length * 0.8], center: [0, length * 0.3, 0])
     room.addChild(catHolder)
     let props = GenzLifeProps(kit: kit, catLength: length)
@@ -360,11 +360,11 @@ final class GenzRoom: CatPlayStage {
     switch placement.piece.kind {
     case .sunsetLamp, .thriftLamp, .pleatedLamp:
       holder.name = Self.lampName
-      NookiDiorama.makeTappable(
+      SceneParts.makeTappable(
         holder, size: [size.x + 0.3, size.z + 0.3, size.y + 0.3], center: [0, size.z / 2, 0])
     default: break
     }
-    NookiDiorama.visit(piece) { entity in
+    SceneParts.visit(piece) { entity in
       guard let model = entity as? ModelEntity else { return }
       switch entity.name {
       case Self.lensName: lenses.append(model)
@@ -419,7 +419,7 @@ final class GenzRoom: CatPlayStage {
     notePaper = paper
     note.position = panel.centre.scene
     note.orientation = simd_quatf(angle: panel.yaw, axis: [0, 1, 0])
-    NookiDiorama.makeTappable(note, size: [panel.width, panel.height, 0.2], center: .zero)
+    SceneParts.makeTappable(note, size: [panel.width, panel.height, 0.2], center: .zero)
     room.addChild(note)
     refreshNoteTexture()
   }
@@ -429,7 +429,7 @@ final class GenzRoom: CatPlayStage {
   private func buildBackstop() {
     let backstop = Entity()
     backstop.position = [0, 0, -120]
-    NookiDiorama.makeTappable(backstop, size: [400, 400, 0.1], center: .zero)
+    SceneParts.makeTappable(backstop, size: [400, 400, 0.1], center: .zero)
     lens.addChild(backstop)
   }
 
@@ -465,7 +465,7 @@ final class GenzRoom: CatPlayStage {
     behaviour.follow(life)
     rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
     catHolder.addChild(model)
-    if let receiver = ambientReceiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
+    if let receiver = ambientReceiver { SceneParts.visit(model) { $0.components.set(receiver) } }
     hasCat = true
     NookiTrace.mark("styled cat placed")
   }
@@ -484,7 +484,7 @@ final class GenzRoom: CatPlayStage {
       room.addChild(ambient)
       ambientLight = ambient
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
-      NookiDiorama.visit(room) { $0.components.set(receiver) }
+      SceneParts.visit(room) { $0.components.set(receiver) }
       ambientReceiver = receiver
     }
     let lamp = layout.lamp
@@ -1512,7 +1512,7 @@ extension GenzRoom {
 
   /// The walk clip's speed for moving at `speed`, at the cat's size here.
   func walkRate(_ speed: Float) -> Float {
-    let natural = NookiClip.walkingSpeed * catScale / NookiDiorama.catScale
+    let natural = NookiClip.walkingSpeed * catScale / NookiClip.referenceScale
     return min(max(speed / max(natural, 0.001), 0.6), 3)
   }
 

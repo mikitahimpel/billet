@@ -129,7 +129,7 @@ final class NookiPreviewStage {
     made.activeCamera = lens
     made.lighting.intensityExponent = Self.ambientExponent
     Task { [weak made] in
-      if let ambient = await NookiDiorama.ambientEnvironment() { made?.lighting.resource = ambient }
+      if let ambient = await SceneParts.ambientEnvironment() { made?.lighting.resource = ambient }
     }
     made.cameraSettings.colorBackground = .color(CGColor(gray: 0, alpha: 0))
     renderer = made

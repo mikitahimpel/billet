@@ -71,11 +71,4 @@ import simd
     #expect(GenzRoom.ambientShift(nil, phase: nil) == 0)
   }
 
-  @MainActor
-  @Test func theDioramaNightIsDarkerThanTheSharedOne() {
-    let night = RoomDayLook(DayLight.at(hour: 23))
-    #expect(NookiDiorama.ambientShift(night, phase: .night) < night.ambientShift)
-    let noon = RoomDayLook(DayLight.at(hour: 13))
-    #expect(NookiDiorama.ambientShift(noon, phase: .day) == noon.ambientShift)
-  }
 }

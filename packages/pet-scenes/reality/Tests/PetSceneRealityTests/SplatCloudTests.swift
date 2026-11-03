@@ -108,7 +108,7 @@ import simd
       #expect(model.mesh.splatBody == nil, "\(model)")
       let cat = try #require(await NookiAssets.compiledCat(model.mesh))
       var skinned: ModelEntity?
-      NookiDiorama.visit(cat) { node in
+      SceneParts.visit(cat) { node in
         if skinned == nil, let m = node as? ModelEntity, !m.jointNames.isEmpty { skinned = m }
       }
       let joints = try #require(skinned?.jointNames, "\(model)")

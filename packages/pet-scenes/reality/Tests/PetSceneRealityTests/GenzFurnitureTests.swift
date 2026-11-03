@@ -120,7 +120,7 @@ import Testing
     let kit = GenzKit()
     var triangles = 0
     for placement in layout.pieces {
-      NookiDiorama.visit(kit.build(placement.piece)) { entity in
+      SceneParts.visit(kit.build(placement.piece)) { entity in
         guard let mesh = (entity as? ModelEntity)?.model?.mesh else { return }
         for model in mesh.contents.models {
           for part in model.parts { triangles += (part.triangleIndices?.count ?? 0) / 3 }
@@ -134,7 +134,7 @@ import Testing
   @Test func everyCandleIsLit() {
     let candles = GenzKit().build(GenzPiece(.candles))
     var flames = 0
-    NookiDiorama.visit(candles) { if $0.name == GenzRoom.flameName { flames += 1 } }
+    SceneParts.visit(candles) { if $0.name == GenzRoom.flameName { flames += 1 } }
     #expect(flames == 3)
   }
 }

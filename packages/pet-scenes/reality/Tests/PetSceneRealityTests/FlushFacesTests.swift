@@ -76,8 +76,6 @@ import Testing
     #expect(GenzRoom.farClip / GenzRoom.nearClip <= 1000)
     #expect(TabCamera.nearClip >= 0.1)
     #expect(TabCamera.farClip / TabCamera.nearClip <= 1000)
-    #expect(NookiDiorama.nearClip < NookiDiorama.noteReadingDistance / 4)
-    #expect(NookiDiorama.farClip / NookiDiorama.nearClip <= 1000)
   }
 
   /// The check itself: a print flush with its frame is found, one standing proud of it is not.

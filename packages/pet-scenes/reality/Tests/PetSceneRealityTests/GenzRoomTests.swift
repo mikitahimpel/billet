@@ -68,7 +68,7 @@ import Testing
     let shell = try #require(room.root.findEntity(named: GenzRoom.shellName))
     var keys: [MatteKey] = []
     var models = 0
-    NookiDiorama.visit(shell) { entity in
+    SceneParts.visit(shell) { entity in
       guard let model = entity as? ModelEntity else { return }
       models += 1
       if let material = model.model?.materials.first as? PhysicallyBasedMaterial,

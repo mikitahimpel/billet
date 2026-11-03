@@ -28,7 +28,7 @@ import Testing
     let bed = try #require(layout.pieces.first { $0.piece.kind == .daybed })
     let (holder, _) = GenzRoom.placed(bed, kit: GenzKit())
     let sillUnderside = GenzLayout.Seat.window.z0 - 0.12
-    NookiDiorama.visit(holder) { entity in
+    SceneParts.visit(holder) { entity in
       guard let model = entity as? ModelEntity else { return }
       let bounds = model.visualBounds(relativeTo: nil)
       guard bounds.max.y > sillUnderside + 0.001 else { return }
