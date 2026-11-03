@@ -4,7 +4,7 @@ import PetScene
 import SwiftUI
 
 /// Pairing with the real backend inside the first-launch scene, on the same ``PairingModel`` as
-/// ``PairingFlowView``: a made invite is checked for a claim every few seconds while it is shown.
+/// ``PairingModel``: a made invite is checked for a claim every few seconds while it is shown.
 /// Calls `onPaired` once the joined moment has been shown.
 struct RealOnboardingPairing: View {
   let model: PairingModel
@@ -36,7 +36,7 @@ struct RealOnboardingPairing: View {
     .task(id: isWaiting) {
       guard isWaiting else { return }
       while !Task.isCancelled {
-        try? await Task.sleep(for: PairingFlowView.checkEvery)
+        try? await Task.sleep(for: PairingModel.checkEvery)
         guard !Task.isCancelled else { return }
         model.tick()
       }

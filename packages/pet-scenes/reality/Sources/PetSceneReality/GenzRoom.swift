@@ -230,6 +230,9 @@ final class GenzRoom: CatPlayStage {
   private(set) var glow: GenzGlow?
   /// The lighting preset the room is lit with.
   private(set) var look = LightingLook.off
+  /// Called when an opening asked for through ``flyIn(_:)`` starts, once the room is built and on
+  /// screen.
+  var onOpeningStarted: (() -> Void)?
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
@@ -816,6 +819,7 @@ final class GenzRoom: CatPlayStage {
   private func startFlight(_ request: PetSceneFlyIn) {
     let atEnd = reduceMotion || request.isSkipped
     opening = SceneFlight(id: request.id, clock: clock, atEnd: atEnd)
+    onOpeningStarted?()
     startOpening()
     if atEnd { skipFlight() }
     stepFlight()

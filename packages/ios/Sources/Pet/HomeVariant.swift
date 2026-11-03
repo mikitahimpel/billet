@@ -7,7 +7,8 @@ public enum HomeVariant: String, CaseIterable, Codable, Hashable, Sendable {
   case classic
   /// The room edge to edge, one pen to draw, everything else in a sheet pulled up from the bottom.
   case immersive
-  /// As immersive, opened by the camera flying into the room once per launch.
+  /// As immersive. It once added the camera flying into the room; every Home does that now on a
+  /// cold launch, so it stays only so a stored or remote choice of it still reads.
   case cinematic
   /// As immersive, with a room that answers the phone's tilt and the finger, and controls that
   /// wait until the room is left alone.
@@ -32,7 +33,7 @@ public enum HomeVariant: String, CaseIterable, Codable, Hashable, Sendable {
     switch self {
     case .classic: "The room, its cards and the Draw button."
     case .immersive: "Only the room and a pen. Pull up for the rest."
-    case .cinematic: "The camera flies in, the lights come up, the cat wakes."
+    case .cinematic: "As immersive. Every Home now glides into the room on a cold launch."
     case .livingWindow: "Tilt the phone, the cat watches your finger, hold for a treat."
     case .nightAndDay: "Lit for the hour here. Their sky is in the window."
     }

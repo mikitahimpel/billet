@@ -99,24 +99,8 @@ public struct DemoRootView: View {
       }
     } else {
       switch model.stage {
-      case _ where !onboarding.isFinished && model.labs.isOn(LabExperiment.cinematicOnboarding):
-        OnboardingPairingView(
-          scenes: scenes, lighting: model.labs.lighting,
-          memory: OnboardingMemory.thisLaunch, pairing: onboarding,
-          failure: model.failure?.message,
-          actions: OnboardingPairingActions(
-            create: { model.createPair() },
-            join: { model.join(code: $0) },
-            cancel: { model.cancelPairing() },
-            goIn: { model.finishCreating() },
-            tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
-          send: { event in
-            let wasJoined = if case .joined = onboarding.step { true } else { false }
-            onboarding.send(event)
-            guard onboarding.isFinished else { return }
-            if wasJoined { startChoosing() }
-            model.finishCreating()
-          })
+      case _ where !onboarding.isFinished:
+        onboardingPairing
       case .paired(let session) where adoption != nil:
         if let adoption {
           AdoptionView(
@@ -135,7 +119,7 @@ public struct DemoRootView: View {
           .transition(.opacity)
         }
       case .unpaired, .pairing:
-        PairingView(model: model)
+        onboardingPairing
       case .paired(let session):
         AppShellView(
           session: session,
@@ -149,6 +133,28 @@ public struct DemoRootView: View {
         )
       }
     }
+  }
+
+  /// Pairing in the first-launch scene. It is also what shows if the pairing is ever left
+  /// unfinished after the scene's own steps are over.
+  private var onboardingPairing: some View {
+    OnboardingPairingView(
+      scenes: scenes, lighting: model.labs.lighting,
+      memory: OnboardingMemory.thisLaunch, pairing: onboarding,
+      failure: model.failure?.message,
+      actions: OnboardingPairingActions(
+        create: { model.createPair() },
+        join: { model.join(code: $0) },
+        cancel: { model.cancelPairing() },
+        goIn: { model.finishCreating() },
+        tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
+      send: { event in
+        let wasJoined = if case .joined = onboarding.step { true } else { false }
+        onboarding.send(event)
+        guard onboarding.isFinished else { return }
+        if wasJoined { startChoosing() }
+        model.finishCreating()
+      })
   }
 
   private func startChoosing() {
