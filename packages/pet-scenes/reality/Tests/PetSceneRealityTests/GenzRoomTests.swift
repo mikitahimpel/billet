@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import Pet
 import PetScene
+import RealityKit
 import Testing
 
 @testable import PetSceneReality
@@ -51,6 +52,32 @@ import Testing
       let point = try #require(camera.project(corner.scene, in: size))
       #expect(bounds.insetBy(dx: -40, dy: 0).contains(point))
     }
+  }
+
+  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
+  func theShellIsOneModelPerColour(_ style: RoomStyle) async throws {
+    let layout = try #require(GenzLayout.of(style))
+    let room = GenzRoom(
+      layout: layout, kit: GenzKit(), cats: GenzCatSource(),
+      spots: GenzSpotStore(defaults: UserDefaults(suiteName: "shell-\(UUID())")!, key: layout.key))
+    room.startBuilding()
+    let deadline = Date.now.addingTimeInterval(60)
+    while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+    try #require(room.isBuilt)
+    let shell = try #require(room.root.findEntity(named: GenzRoom.shellName))
+    var keys: [MatteKey] = []
+    var models = 0
+    NookiDiorama.visit(shell) { entity in
+      guard let model = entity as? ModelEntity else { return }
+      models += 1
+      if let material = model.model?.materials.first as? PhysicallyBasedMaterial,
+        let key = MatteKey(material)
+      {
+        keys.append(key)
+      }
+    }
+    #expect(Set(keys).count == keys.count)
+    #expect(models < layout.shell(GenzKit()).count)
   }
 
   @Test func dragAndPinchGiveALittleAtTheLimitsThenEaseBack() {
