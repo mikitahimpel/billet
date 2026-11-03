@@ -89,6 +89,29 @@ trait axes bold–shy, energetic–lazy, cuddly–independent, curious–cautiou
 - **Seen.** Settings → Pair → Character, and the Brain debug card (type, tempo, amplitude, space,
   and each score's `k` factor).
 
+## Upbringing
+
+Habits the cat learns from how the two of you treat it, on top of its temperament, which never
+changes. At each day start, `CatUpbringing.learned` reads the last six days of events, each
+weighted by `e^(−age/2.5 days)`. Every counter is `1 − e^(−count/scale)`, so it stays between 0 and
+1 and fades when the care behind it stops. Both phones fold the same events, so both raise the same
+cat; the only new thing synced is the `shoo` life kind.
+
+| Counter | From | Does |
+|---|---|---|
+| affection | pets (scale 14) | Social ×(1 + 0.6a), comes closer to a finger, seeks you round the hour pets usually come |
+| playfulness | games (scale 8) | Play ×(1 + 0.5p), brings toys more |
+| aloofness | the longest stretch with no care past a day, warmed by `e^(−cares since/4)` | Social ×(1 − 0.6l), Idle more, keeps further back |
+| staying off | shoos (scale 3) | Mischief ×(1 − 0.5s), the desk and cardigan scripts ×(1 − 0.9s) |
+| mealtime | meals within an hour of the same hour on 3+ days | ±20 min of it, still hungry: Eat ×3 and `walkToBowl → waitByBowl` |
+
+- **Tricks.** Comes when called: affection ≥ 0.5 and aloofness < 0.5; then a call is never
+  ignored. High-five: playfulness ≥ 0.5 and affection ≥ 0.3; then every other trick is a raised paw.
+- **Shoo.** A double tap on the cat while it sits on the desk or the cardigan is a shoo, not a
+  trick. It sends a `shoo` life event, and the cat startles off.
+- **Seen.** Settings shows up to three habits in plain words ("Loves morning pets", "Waits for
+  dinner at 8"), and Brain debug shows the raw counters and each score's `u` factor.
+
 ## Memory
 
 - **Favourite spots**: seconds curled up or kneading at each kind of spot, with a minute for each

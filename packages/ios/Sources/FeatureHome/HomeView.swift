@@ -829,6 +829,7 @@ struct HomeView: View {
     case .petted: pet()
     case .played: session.played()
     case .fed: session.fed()
+    case .shooed: session.shooed()
     case .noteOpened: onOpenNotes()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
     case .touching(let interaction): session.brain.setLive(interaction)

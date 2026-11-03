@@ -21,7 +21,7 @@ public enum CatStatechart {
         [.groomPaw], [.groomPaw, .groomFlank], [.groomFlank, .groomTail],
         [.groomPaw, .groomFlank, .groomTail],
       ]
-    case .eat: [[.walkToBowl, .eat, .lickLips]]
+    case .eat: [[.walkToBowl, .eat, .lickLips], [.walkToBowl, .waitByBowl]]
     case .play:
       [
         [.stalk, .pounce], [.stalk, .pounce, .chase], [.batObject], [.zoomies], [.chase, .pounce],
@@ -124,6 +124,7 @@ public enum CatStatechart {
     case .slowBlink: 2...3
     case .bringToy: 3...5
     case .waitByDoor: 15...30
+    case .waitByBowl: 20...40
     case .pushItem: 3...5
     case .sitInCardigan: 15...40
     case .sitOnDesk: 10...25
@@ -150,7 +151,7 @@ public enum CatStatechart {
   public static func clip(_ step: CatActivityStep) -> CatAction {
     switch step {
     case .loaf: .loaf
-    case .sit, .lookAround, .findNapSpot, .watchWindow, .waitByDoor, .sitInCardigan,
+    case .sit, .lookAround, .findNapSpot, .watchWindow, .waitByDoor, .waitByBowl, .sitInCardigan,
       .sitOnDesk:
       .sit
     case .wander, .walkToBowl, .bringToy, .inspectFurniture, .sniffObject: .sniff
@@ -197,7 +198,7 @@ public enum CatStatechart {
     case .sniffObject: return room.reachable(.smallItem) ? .affordance(.smallItem) : roam
     case .inspectFurniture: return inspecting.map(CatTarget.affordance) ?? roam
     case .findNapSpot, .knead, .curl, .wake: return napSpot.map(CatTarget.affordance) ?? .home
-    case .walkToBowl, .eat, .lickLips: return spot(.bowl)
+    case .walkToBowl, .eat, .lickLips, .waitByBowl: return spot(.bowl)
     case .watchWindow, .watchPartnerWindow: return spot(.window)
     case .seekYou, .rub, .slowBlink: return .camera
     case .bringToy: return spot(.toy)
@@ -217,7 +218,7 @@ public enum CatStatechart {
     case .lookAround: .around((roll - 0.5) * 2.2)
     case .watchWindow, .watchPartnerWindow: .window
     case .waitByDoor: .window
-    case .seekYou, .rub, .slowBlink, .bringToy, .curiousTilt, .sit: .camera
+    case .seekYou, .rub, .slowBlink, .bringToy, .curiousTilt, .sit, .waitByBowl: .camera
     case .sniffObject, .pushItem: .affordance(.smallItem)
     case .stalk, .pounce, .batObject: .affordance(.toy)
     case .loaf, .wander, .inspectFurniture, .findNapSpot, .knead, .curl, .wake, .groomPaw,

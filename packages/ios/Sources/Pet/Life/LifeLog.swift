@@ -33,4 +33,30 @@ public struct LifeLog: Codable, Hashable, Sendable {
   }
 
   public var all: [LifeEvent] { events.values.sorted(by: LifeEvent.precedes) }
+
+  private enum CodingKeys: String, CodingKey { case events, born }
+
+  /// Reads a saved log, leaving out any event this build cannot read, such as one of a kind a
+  /// newer build added, so one such event never costs the whole log.
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let saved = try container.decodeIfPresent([UUID: Lenient].self, forKey: .events) ?? [:]
+    events = saved.compactMapValues(\.event)
+    born = try container.decodeIfPresent(Date.self, forKey: .born)
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(events, forKey: .events)
+    try container.encodeIfPresent(born, forKey: .born)
+  }
+
+  /// An event, or nil where it cannot be read.
+  private struct Lenient: Decodable {
+    let event: LifeEvent?
+
+    init(from decoder: any Decoder) throws {
+      event = try? LifeEvent(from: decoder)
+    }
+  }
 }

@@ -417,6 +417,7 @@ final class NookiDiorama: CatPlayStage {
     guard frame != brain else { return }
     let before = brain
     brain = frame
+    hands.play.learned = frame?.tricks ?? []
     let step = frame?.stack.step
     let isNew = step != before?.stack.step || frame?.stepStart != before?.stepStart
     if isNew { chaseWanted = step == .chase || step == .zoomies }

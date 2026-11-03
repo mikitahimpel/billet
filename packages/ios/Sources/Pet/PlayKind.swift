@@ -9,6 +9,8 @@ public enum PlayKind: String, Hashable, Sendable {
   case play
   /// The cat was put to bed.
   case sleep
+  /// The cat was shooed off the desk or the cardigan.
+  case shoo
 
   /// The life event a frame of this kind is, or nil for the day's treat, which feeds the cat
   /// through a separate `feed` frame so the room's streak and the life stay apart.
@@ -19,6 +21,7 @@ public enum PlayKind: String, Hashable, Sendable {
     case .feed: .feed
     case .play: .play
     case .sleep: .sleep
+    case .shoo: .shoo
     }
   }
 }
@@ -31,6 +34,7 @@ extension LifeEvent.Kind {
     case .pet: .pet
     case .play: .play
     case .sleep: .sleep
+    case .shoo: .shoo
     case .note: nil
     }
   }

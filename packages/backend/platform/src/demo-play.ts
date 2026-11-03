@@ -1,5 +1,6 @@
-// Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with
-// and putting the cat to bed, naming the cat, reacting to a note, and choosing the cat together.
+// Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
+// shooing and putting the cat to bed, naming the cat, reacting to a note, and choosing the cat
+// together.
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -7,8 +8,11 @@ export const MAX_REACTIONS = 200;
 export const MAX_NAME_LENGTH = 24;
 export const MAX_LIFE_EVENTS = 400;
 
-/** Plays that only the cat's life counts, with nothing but who did it and when. */
-export type LifePlayKind = "feed" | "play" | "sleep";
+/**
+ * Plays that only the cat's life counts, with nothing but who did it and when. A shoo sends the
+ * cat off where it sat, so it learns to stay off.
+ */
+export type LifePlayKind = "feed" | "play" | "sleep" | "shoo";
 export type PlayKind = "pet" | "treat" | LifePlayKind | "name" | "rename" | "react" | "adopt";
 export type Reaction = "heart" | "stamp";
 
@@ -22,7 +26,7 @@ export interface PlayFrame {
 /** One event of the cat's life, as both phones fold it. The ID is the frame's that carried it. */
 export interface LifeEvent {
   readonly id: string;
-  readonly kind: "feed" | "pet" | "play" | "note" | "sleep";
+  readonly kind: "feed" | "pet" | "play" | "note" | "sleep" | "shoo";
   readonly by: string;
   readonly at: string;
 }
@@ -108,6 +112,7 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "feed":
     case "play":
     case "sleep":
+    case "shoo":
       return { id, kind, at };
     case "name":
     case "rename": {
