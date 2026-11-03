@@ -12,5 +12,7 @@
 	<string>automatic</string>
 	<key>teamID</key>
 	<string>2666YPBJTB</string>
+	<key>uploadSymbols</key>
+	<true/>
 </dict>
 </plist>
