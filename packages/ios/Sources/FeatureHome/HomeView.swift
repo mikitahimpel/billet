@@ -41,6 +41,8 @@ struct HomeView: View {
   @State private var ringsOpen = false
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
+  /// The newest partner's note opened from Home, so the room stops marking it as new.
+  @AppStorage("home.openedNote") private var openedNoteID = ""
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -204,6 +206,17 @@ struct HomeView: View {
     session.notes.first { $0.direction == .received }
   }
 
+  private var isNoteUnread: Bool {
+    guard let note = latestReceivedNote else { return false }
+    return note.id.uuidString != openedNoteID
+  }
+
+  /// Opens the notes from the note in the room, which counts the newest as read.
+  private func openLatestNote() {
+    if let note = latestReceivedNote { openedNoteID = note.id.uuidString }
+    onOpenNotes()
+  }
+
   @ViewBuilder private var home: some View {
     if variant.isFullBleed, let scene {
       fullBleedHome(scene)
@@ -237,7 +250,8 @@ struct HomeView: View {
       notes: session.notes,
       streak: session.streak(today: today, calendar: calendar),
       isFakePartner: session.isFakePartner,
-      onOpenNotes: onOpenNotes,
+      isNoteUnread: isNoteUnread,
+      onOpenNotes: openLatestNote,
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
@@ -768,7 +782,7 @@ struct HomeView: View {
     case .played: session.played()
     case .fed: session.fed()
     case .shooed: session.shooed()
-    case .noteOpened: onOpenNotes()
+    case .noteOpened: openLatestNote()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
     case .touching(let interaction): session.brain.setLive(interaction)
     case .deliveryFinished, .settled: break

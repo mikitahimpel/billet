@@ -68,6 +68,7 @@ struct GenzRoomView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.petSceneDrawing) private var drawing
+  @Environment(\.petSceneNoteUnread) private var noteUnread
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneCat) private var cat
   @Environment(\.petSceneFlyIn) private var flyIn
@@ -106,6 +107,13 @@ struct GenzRoomView: View {
       RoomHaze(look: look, screen: room.screen)
       stage(room)
       ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      if noteUnread, !isDecorating {
+        NoteBeacon(
+          outline: room.screen.outlines[.windowBacklight] ?? [],
+          isPaused: !isOnScreen || reduceMotion
+        )
+        .transition(.opacity)
+      }
       GlowLights(
         look: look, screen: room.screen,
         isPaused: !isOnScreen || reduceMotion)
@@ -261,6 +269,7 @@ struct GenzRoomView: View {
       }
       .accessibilityElement()
       .accessibilityLabel("Window seat at night")
+      .accessibilityValue(noteUnread ? "A new note is on the window" : "")
       .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
       .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
       .accessibilityAction(named: "Open the note") {

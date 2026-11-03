@@ -4,16 +4,29 @@ import Testing
 @testable import FeatureHome
 
 @MainActor @Suite struct StyledHomeTests {
-  @Test func theCaptionSaysWhoTheNoteIsFromAndWhen() {
-    let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    let caption = StyledHome.caption(for: now.addingTimeInterval(-300), now: now)
-    #expect(caption.hasPrefix("A note from your partner · "))
-    #expect(caption.contains("5"))
+  @Test func theNoteHomeOpensOnIsNotAnArrival() {
+    var arrivals = NoteArrivals()
+    #expect(!arrivals.update(UUID()))
   }
 
-  @Test func aNoteFromAClockThatRunsFastReadsAsNow() {
-    let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
-    let ahead = StyledHome.caption(for: now.addingTimeInterval(120), now: now)
-    #expect(ahead == StyledHome.caption(for: now, now: now))
+  @Test func aNewerNoteIsAnArrivalOnce() {
+    var arrivals = NoteArrivals()
+    let first = UUID()
+    let next = UUID()
+    _ = arrivals.update(first)
+    #expect(arrivals.update(next))
+    #expect(!arrivals.update(next))
+  }
+
+  @Test func theFirstNoteAfterNoneIsAnArrival() {
+    var arrivals = NoteArrivals()
+    _ = arrivals.update(nil)
+    #expect(arrivals.update(UUID()))
+  }
+
+  @Test func losingTheNoteIsNotAnArrival() {
+    var arrivals = NoteArrivals()
+    _ = arrivals.update(UUID())
+    #expect(!arrivals.update(nil))
   }
 }
