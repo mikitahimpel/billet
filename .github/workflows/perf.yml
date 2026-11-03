@@ -10,6 +10,11 @@ name: iOS perf
 #
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
+#
+# Mac runners are few and pull request checks come first: across the whole repository only one perf
+# run goes at a time, its jobs one after another on a single runner, each with a time limit. A run
+# started while another goes waits (only the newest waiting run is kept). Start runs when the
+# checks queue is quiet, and cancel one that is in the way: gh run cancel <id>.
 on:
   workflow_dispatch:
     inputs:
@@ -37,8 +42,8 @@ on:
     types: [labeled, synchronize, reopened]
 
 concurrency:
-  group: perf-${{ github.event.pull_request.number || github.ref }}-${{ inputs.head }}-${{ inputs.base }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ios-perf
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -58,7 +63,7 @@ jobs:
       || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
       && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
     runs-on: macos-26
-    timeout-minutes: 150
+    timeout-minutes: 90
     env:
       ROUNDS: ${{ inputs.rounds || '3' }}
       LAUNCHES: ${{ inputs.launches || '2' }}
@@ -132,14 +137,18 @@ jobs:
           if-no-files-found: warn
 
   shots:
+    # After the A/B, whether it ran or not, so the run holds one runner at a time.
+    needs: ab
     if: >-
+      !cancelled() && (
       (github.event_name == 'workflow_dispatch' && inputs.jobs != 'ab')
       || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
-      && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+      && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
     runs-on: macos-26
-    timeout-minutes: 90
+    timeout-minutes: 50
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         include:
           - size: se
