@@ -97,7 +97,7 @@ struct ViewPalette: Hashable, Sendable {
   var litShare: Double
   /// Whether street lamps, porch lights and headlights are on.
   var lampsOn: Bool
-  /// From 0 to 1, how many stars show.
+  /// How many stars show: 1 is the usual night sky, more for a sky far from any town.
   var stars: Double
   /// Fog or haze over the far planes, from 0 to 1.
   var haze: Double
@@ -125,7 +125,29 @@ struct ViewPalette: Hashable, Sendable {
         skyMiddle = skyMiddle.mixed(with: ViewColour(0x4A3A52), by: 0.3 * share)
       }
     case .pinkDusk: gradePink(hour, share: share)
+    case .sunsetBeach: SunsetBeach.grade(&self, hour: hour, share: share)
+    case .forestCabin: ForestCabin.grade(&self, hour: hour, share: share)
+    case .moonlitPeaks: MoonlitPeaks.grade(&self, hour: hour, share: share)
+    case .neonStreet: NeonStreet.grade(&self, hour: hour, share: share)
+    case .rooftopsDusk: RooftopsDusk.grade(&self, hour: hour, share: share)
+    case .autumnPark: AutumnPark.grade(&self, hour: hour, share: share)
+    case .mistyLake: MistyLake.grade(&self, hour: hour, share: share)
+    case .desertStars: DesertStars.grade(&self, hour: hour, share: share)
     }
+  }
+
+  /// Mixes the sky and the planes towards a view's own colours, `share` of the way: the sky's top,
+  /// middle and horizon, then the far, middle, street and near planes.
+  mutating func grade(_ colours: [UInt32], share: Double) {
+    guard colours.count == 7 else { return }
+    let colours = colours.map(ViewColour.init)
+    skyTop = skyTop.mixed(with: colours[0], by: share)
+    skyMiddle = skyMiddle.mixed(with: colours[1], by: share)
+    horizon = horizon.mixed(with: colours[2], by: share)
+    far = far.mixed(with: colours[3], by: share)
+    middle = middle.mixed(with: colours[4], by: share)
+    street = street.mixed(with: colours[5], by: share)
+    near = near.mixed(with: colours[6], by: share)
   }
 
   private mutating func gradePink(_ hour: ViewHour, share: Double) {
@@ -136,14 +158,7 @@ struct ViewPalette: Hashable, Sendable {
     case .day: grade = [0x5EA4DA, 0x9CCDEA, 0xFFE6C8, 0xB0B4C8, 0x8A90A8, 0x6A7088, 0x4A4E66]
     case .morning: grade = [0x7A8CCC, 0xD8B8D8, 0xFFC8A8, 0xB8A8C0, 0x8E80A0, 0x6C6080, 0x48405C]
     }
-    let colours = grade.map(ViewColour.init)
-    skyTop = skyTop.mixed(with: colours[0], by: share)
-    skyMiddle = skyMiddle.mixed(with: colours[1], by: share)
-    horizon = horizon.mixed(with: colours[2], by: share)
-    far = far.mixed(with: colours[3], by: share)
-    middle = middle.mixed(with: colours[4], by: share)
-    street = street.mixed(with: colours[5], by: share)
-    near = near.mixed(with: colours[6], by: share)
+    self.grade(grade, share: share)
     if haze == 0 {
       hazeColour = horizon
       haze = hour == .day ? 0.2 : 0
