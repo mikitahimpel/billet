@@ -6,8 +6,15 @@ import Wire
 /// ``live(http:token:)`` builds the requests from ``Routes`` and signs them with the session token.
 public struct APIClient: Sendable {
   public var authChallenge: @Sendable () async throws(TransportError) -> AuthChallengeResponse
+  /// Signs in with the account key, opening the account the first time the key is seen.
+  public var signInAnonymously:
+    @Sendable (SignInAnonymouslyRequest) async throws(TransportError) -> SessionResponse
   public var signInWithApple:
     @Sendable (SignInWithAppleRequest) async throws(TransportError) -> SessionResponse
+  /// Links the signed-in account to an Apple ID. `.api(.appleIdInUse)` if another account has it.
+  public var linkApple:
+    @Sendable (SignInWithAppleRequest) async throws(TransportError) -> AccountResponse
+  public var account: @Sendable () async throws(TransportError) -> AccountResponse
   public var signOut: @Sendable () async throws(TransportError) -> Void
   public var registerPushToken:
     @Sendable (RegisterPushTokenRequest) async throws(TransportError) -> Void
@@ -53,10 +60,22 @@ public struct APIClient: Sendable {
     flags: @escaping @Sendable () async throws(TransportError) -> FlagsResponse,
     status: @escaping @Sendable () async throws(TransportError) -> StatusResponse,
     reportEvents:
-      @escaping @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
+      @escaping @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void,
+    signInAnonymously:
+      @escaping @Sendable (SignInAnonymouslyRequest) async throws(TransportError) ->
+      SessionResponse = { (_) async throws(TransportError) in throw .network("offline") },
+    linkApple:
+      @escaping @Sendable (SignInWithAppleRequest) async throws(TransportError) ->
+      AccountResponse = { (_) async throws(TransportError) in throw .network("offline") },
+    account: @escaping @Sendable () async throws(TransportError) -> AccountResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    }
   ) {
     self.authChallenge = authChallenge
+    self.signInAnonymously = signInAnonymously
     self.signInWithApple = signInWithApple
+    self.linkApple = linkApple
+    self.account = account
     self.signOut = signOut
     self.registerPushToken = registerPushToken
     self.createInvite = createInvite
@@ -160,6 +179,20 @@ extension APIClient {
         try await http.performEmpty(
           try await json(
             Routes.reportEvents, signed: true, body: ReportEventsRequest(events: events)))
+      },
+      signInAnonymously: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.authAnonymous, signed: false, body: body),
+          as: SessionResponse.self)
+      },
+      linkApple: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.authAppleLink, signed: true, body: body),
+          as: AccountResponse.self)
+      },
+      account: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getAccount, signed: true), as: AccountResponse.self)
       })
   }
 }
