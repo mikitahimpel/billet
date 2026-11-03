@@ -1,5 +1,6 @@
 import { Effect, Layer, Option, Redacted } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
+import { AccountNotices } from "@billet/backend-auth/account-notices";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { authorizationHeader, bearerPrefix } from "@billet/contracts-http-api/routes";
@@ -29,6 +30,8 @@ const whoIsAsking = (env: WorkerEnv, token: Redacted.Redacted<string>) =>
           Layer.mergeAll(
             AuthRepositoryLive(env.DB),
             BetterAuthEngineLive(env.DB),
+            // A socket only needs to know who is asking.
+            AccountNotices.none,
             AppleIdentityLive,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,

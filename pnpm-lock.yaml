@@ -142,6 +142,49 @@ importers:
 
   apps/ios: {}
 
+  packages/backend/account:
+    dependencies:
+      '@billet/backend-auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@billet/backend-notes':
+        specifier: workspace:*
+        version: link:../notes
+      '@billet/backend-pair-room':
+        specifier: workspace:*
+        version: link:../pair-room
+      '@billet/backend-pairing':
+        specifier: workspace:*
+        version: link:../pairing
+      '@billet/contracts-domain':
+        specifier: workspace:*
+        version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
+    devDependencies:
+      '@billet/config-typescript':
+        specifier: workspace:*
+        version: link:../../config/typescript
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 5.20261101.1
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.75.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.90.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/backend/admin:
     dependencies:
       '@billet/backend-flags':
@@ -400,6 +443,9 @@ importers:
       '@better-auth/kysely-adapter':
         specifier: 'catalog:'
         version: 1.7.15(@better-auth/core@1.7.15(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.4(zod@4.6.7))(jose@6.2.15)(kysely@0.29.8)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(kysely@0.29.8)
+      '@billet/backend-account':
+        specifier: workspace:*
+        version: link:../account
       '@billet/backend-admin':
         specifier: workspace:*
         version: link:../admin

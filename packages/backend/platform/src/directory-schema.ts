@@ -117,6 +117,16 @@ export const accountKeys = sqliteTable(
   (table) => [index("account_keys_user_id_index").on(table.userId)],
 );
 
+// What a user should be told about the end of their pair: a row per user, written when their
+// partner deletes their account. The app shows it while the user is unpaired.
+export const partnerNotices = sqliteTable("partner_notices", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  at: integer("at").notNull(),
+});
+
 export const devices = sqliteTable(
   "devices",
   {

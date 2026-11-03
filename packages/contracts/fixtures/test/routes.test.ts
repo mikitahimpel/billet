@@ -35,6 +35,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/invites",
       },
+      "deleteAccount": {
+        "method": "DELETE",
+        "path": "/v1/account",
+      },
       "downloadImage": {
         "method": "GET",
         "path": "/v1/media/*",

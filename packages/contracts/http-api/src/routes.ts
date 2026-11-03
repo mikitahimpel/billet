@@ -23,6 +23,8 @@ export const routes = {
   authAppleLink: route("POST", "/v1/auth/apple/link"),
   authSignOut: route("POST", "/v1/auth/sign-out"),
   getAccount: route("GET", "/v1/account"),
+  /** Deletes the caller's account and everything it owns, and ends their pair. */
+  deleteAccount: route("DELETE", "/v1/account"),
   registerPushToken: route("PUT", "/v1/devices/current/push-token"),
   createInvite: route("POST", "/v1/invites"),
   claimInvite: route("POST", "/v1/invites/claim"),

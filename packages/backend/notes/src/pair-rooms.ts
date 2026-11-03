@@ -25,5 +25,13 @@ export class PairRooms extends Context.Service<
       afterSeq: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
+    /**
+     * Deletes every note `user` sent in the room and returns them, and closes the room's sockets:
+     * the pair is ending. Safe to repeat.
+     */
+    readonly forgetMember: (
+      pairId: PairId,
+      user: UserId,
+    ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
   }
 >()("@billet/backend-notes/PairRooms") {}

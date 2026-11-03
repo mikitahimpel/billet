@@ -75,6 +75,7 @@ export const resetDirectory = async () => {
       "flag_changes",
       "pair_flag_overrides",
       "pair_members",
+      "partner_notices",
       "invites",
       "push_tokens",
       "auth_session",

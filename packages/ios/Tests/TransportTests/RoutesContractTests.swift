@@ -29,6 +29,7 @@ import Testing
       "authApple": Routes.authApple,
       "authAppleLink": Routes.authAppleLink,
       "getAccount": Routes.getAccount,
+      "deleteAccount": Routes.deleteAccount,
       "authSignOut": Routes.authSignOut,
       "registerPushToken": Routes.registerPushToken,
       "createInvite": Routes.createInvite,

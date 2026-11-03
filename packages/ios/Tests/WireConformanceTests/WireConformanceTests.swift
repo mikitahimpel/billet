@@ -38,6 +38,7 @@ let roundTrips: [String: RoundTrip] = [
   "SignInWithAppleRequest": codec(SignInWithAppleRequest.self),
   "SignInAnonymouslyRequest": codec(SignInAnonymouslyRequest.self),
   "AccountResponse": codec(AccountResponse.self),
+  "DeleteAccountRequest": codec(DeleteAccountRequest.self),
   "SessionResponse": codec(SessionResponse.self),
   "RegisterPushTokenRequest": codec(RegisterPushTokenRequest.self),
   "ApiError": codec(ApiError.self),
