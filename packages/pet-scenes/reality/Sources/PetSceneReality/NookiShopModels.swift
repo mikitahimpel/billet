@@ -74,11 +74,11 @@ final class NookiShopModels {
     let corner = Entity()
     corner.addChild(
       part(
-        .generateBox(size: [0.5, 0.36, 0.03], cornerRadius: 0.004), wallColour,
+        .generateBox(size: [0.5, 0.36, 0.03]), wallColour,
         at: [0, 0.2, -0.235]))
     corner.addChild(
       part(
-        .generateBox(size: [0.5, 0.03, 0.5], cornerRadius: 0.004), floorColour, at: [0, 0.015, 0]))
+        .generateBox(size: [0.5, 0.03, 0.5]), floorColour, at: [0, 0.015, 0]))
     corner.position.y = -0.1
     return corner
   }
@@ -88,27 +88,29 @@ final class NookiShopModels {
     let treat = Entity()
     switch shape {
     case .fish:
-      let body = part(.generateSphere(radius: 0.06), Palette.woodLit, at: [0, 0.04, 0])
+      let body = part(
+        LowPoly.sphere(radius: 0.06, segments: 14), Palette.woodLit, at: [0, 0.04, 0])
       body.scale = [1.7, 0.7, 0.45]
       let tail = part(
-        .generateBox(size: [0.07, 0.07, 0.012], cornerRadius: 0.004), Palette.woodLit,
+        .generateBox(size: [0.07, 0.07, 0.012]), Palette.woodLit,
         at: [0.12, 0.04, 0])
       tail.orientation = simd_quatf(angle: .pi / 4, axis: [0, 0, 1])
-      let eye = part(.generateSphere(radius: 0.008), Palette.ink, at: [-0.09, 0.055, 0.025])
+      let eye = part(
+        LowPoly.sphere(radius: 0.008, segments: 8), Palette.ink, at: [-0.09, 0.055, 0.025])
       treat.addChild(body)
       treat.addChild(tail)
       treat.addChild(eye)
     case .cookie:
       treat.addChild(
-        part(.generateCylinder(height: 0.025, radius: 0.07), Palette.wood, at: [0, 0.0125, 0]))
+        part(LowPoly.cylinder(height: 0.025, radius: 0.07), Palette.wood, at: [0, 0.0125, 0]))
       for spot in [SIMD3<Float>(-0.03, 0.03, 0.02), [0.03, 0.03, -0.02], [0.0, 0.03, -0.04]] {
-        treat.addChild(part(.generateSphere(radius: 0.011), Palette.woodDeep, at: spot))
+        treat.addChild(part(LowPoly.sphere(radius: 0.011, segments: 8), Palette.woodDeep, at: spot))
       }
     case .milk:
       treat.addChild(
-        part(.generateCylinder(height: 0.02, radius: 0.08), Palette.clayLit, at: [0, 0.01, 0]))
+        part(LowPoly.cylinder(height: 0.02, radius: 0.08), Palette.clayLit, at: [0, 0.01, 0]))
       treat.addChild(
-        part(.generateCylinder(height: 0.006, radius: 0.066), Palette.paper, at: [0, 0.022, 0]))
+        part(LowPoly.cylinder(height: 0.006, radius: 0.066), Palette.paper, at: [0, 0.022, 0]))
     }
     return treat
   }
