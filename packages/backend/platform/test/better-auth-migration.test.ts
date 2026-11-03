@@ -30,6 +30,14 @@ const call = (path: string, token: string, init: RequestInit = {}) =>
 
 let migratedSessions = "";
 
+// The Worker's modules load on its first request, which on a cold runner takes seconds. The
+// placeholder outside /v1/ loads them without touching D1, so the tests below time only the API.
+const warmUpTimeout = 60_000;
+
+beforeAll(async () => {
+  expect((await exports.default.fetch(new Request("https://billet.test/"))).status).toBe(200);
+}, warmUpTimeout);
+
 beforeAll(async () => {
   await applyDirectoryMigrations(migration);
   const applied = await env.DB.prepare("SELECT name FROM __alchemy_migrations").all<{
