@@ -9,8 +9,9 @@ import Pet
 /// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
 ///
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches rooms, lighting and tabs, then idles and orbits again once settled. `-perf.script sweep` holds each camera
-/// pose and lighting preset still and asks for a screenshot of it. Every result is one line on
+/// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled.
+/// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
+/// of it. Every result is one line on
 /// standard error that starts with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
 @MainActor
 public enum ScenePerf {
