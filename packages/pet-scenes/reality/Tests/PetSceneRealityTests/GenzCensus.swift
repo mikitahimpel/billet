@@ -27,7 +27,9 @@
           }
           let total = rows.reduce(Tally()) { $0 + $1.1 }
           lines.append("## \(furniture): \(total)")
-          let grouped = Dictionary(grouping: rows, by: \.0).mapValues { $0.reduce(Tally()) { $0 + $1.1 } }
+          let grouped = Dictionary(grouping: rows, by: \.0).mapValues {
+            $0.reduce(Tally()) { $0 + $1.1 }
+          }
           for (name, tally) in grouped.sorted(by: { $0.value.triangles > $1.value.triangles }) {
             lines.append("  \(name): \(tally)")
           }

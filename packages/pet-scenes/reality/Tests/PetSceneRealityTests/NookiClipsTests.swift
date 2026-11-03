@@ -39,7 +39,6 @@ import Testing
     }
   }
 
-
   @Test func aClipPlaysAtOnceAndSwitchesWithABlend() async throws {
     let cat = try await bundledCat()
     let withoutStretch = CatCatalog.clips(CatChoice.standard.model).filter { $0.key != .stretch }

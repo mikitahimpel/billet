@@ -61,8 +61,8 @@ extension GenzRoom {
     case .cardigan: .soft
     case .mugs, .phoneOnCharger, .candles: .smallItem
     case .roundRug, .patternRug: .rug
-    case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer, .speaker,
-      .windowBench, .sideTable, .knitPouf, .stringLights:
+    case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,
+      .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil
     }
   }
