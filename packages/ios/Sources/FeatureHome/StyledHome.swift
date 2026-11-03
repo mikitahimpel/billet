@@ -10,7 +10,9 @@ import SwiftUI
 /// Home for a styled room: the room fills the screen and the controls float over it. The streak
 /// and a switch of room style sit top left, the treat chip follows the cat, and the latest note's
 /// caption and the Draw button sit at the bottom. The closet and the shop come from ``HomeShop``.
+/// Tapping the streak opens its flame, zooming out of the chip.
 struct StyledHome: View {
+  private static let streakSource = "streak"
   let style: RoomStyle
   /// The scene's view, with the host's environment already set.
   let scene: AnyView
@@ -26,10 +28,17 @@ struct StyledHome: View {
   var isDecorating = false
   /// Opens the room for moving its furniture, right where it is.
   var onDecorate: (() -> Void)?
+  /// Opens the streak's flame, or `nil` when the chip only shows the count.
+  var flame: StreakFlameHost?
 
   @State private var latestDrawing: CGImage?
   @State private var openings = 0
   @State private var choosingStyle = false
+  /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
+  /// zooms closed.
+  @State private var flameState: FlameSceneState?
+  @State private var isFlameOpen = false
+  @Namespace private var zoom
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var latestReceived: NoteRecord? {
@@ -74,6 +83,14 @@ struct StyledHome: View {
       }
       Button("Play the opening again") { openings += 1 }
     }
+    #if os(iOS)
+      .fullScreenCover(isPresented: $isFlameOpen) {
+        if let flame, let flameState {
+          flame.view(flameState) { isFlameOpen = false }
+            .navigationTransition(.zoom(sourceID: Self.streakSource, in: zoom))
+        }
+      }
+    #endif
   }
 
   /// Below and to the right of the cat's head, kept inside the view.
@@ -97,7 +114,30 @@ struct StyledHome: View {
     .padding(.horizontal, Spacing.medium)
   }
 
-  private var streakChip: some View {
+  @ViewBuilder private var streakChip: some View {
+    if let flame {
+      Button {
+        flameState = flame.open()
+        isFlameOpen = true
+      } label: {
+        streakLabel.contentShape(.capsule)
+      }
+      .buttonStyle(RowButtonStyle())
+      .floatingGlass()
+      .accessibilityLabel("Streak: \(streak) \(streak == 1 ? "day" : "days")")
+      .accessibilityHint("Opens your shared flame")
+      .accessibilityIdentifier("styledStreak")
+      .streakSource(id: Self.streakSource, in: zoom)
+    } else {
+      streakLabel
+        .floatingGlass()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Streak: \(streak) \(streak == 1 ? "day" : "days")")
+        .accessibilityIdentifier("styledStreak")
+    }
+  }
+
+  private var streakLabel: some View {
     HStack(spacing: Spacing.small) {
       Image(systemName: "flame.fill")
         .font(IconStyle.font)
@@ -114,10 +154,6 @@ struct StyledHome: View {
     .padding(.leading, Spacing.medium - Spacing.hair)
     .padding(.trailing, Spacing.medium)
     .frame(minHeight: Target.minimum)
-    .floatingGlass()
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel("Streak: \(streak) \(streak == 1 ? "day" : "days")")
-    .accessibilityIdentifier("styledStreak")
   }
 
   private var treatChip: some View {
@@ -213,5 +249,16 @@ struct StyledHome: View {
       }
       .frame(minHeight: Target.minimum)
     }
+  }
+}
+
+extension View {
+  /// Where the flame zooms out of, on iOS.
+  fileprivate func streakSource(id: String, in namespace: Namespace.ID) -> some View {
+    #if os(iOS)
+      matchedTransitionSource(id: id, in: namespace)
+    #else
+      self
+    #endif
   }
 }

@@ -128,6 +128,12 @@ public protocol PetScene {
   func makeAdoptionScene(
     state: AdoptionSceneState, onEvent: @escaping @MainActor (AdoptionSceneEvent) -> Void
   ) -> AnyView?
+
+  /// The pair's streak as a flame on a windowsill at night, or `nil` when the scene has none.
+  /// Mounts like ``makeOnboardingScene(state:onEvent:)``, and pauses once it leaves the screen.
+  func makeFlameScene(
+    state: FlameSceneState, onEvent: @escaping @MainActor (FlameSceneEvent) -> Void
+  ) -> AnyView?
 }
 
 extension PetScene {
@@ -163,6 +169,10 @@ extension PetScene {
 
   public func makeAdoptionScene(
     state: AdoptionSceneState, onEvent: @escaping @MainActor (AdoptionSceneEvent) -> Void
+  ) -> AnyView? { nil }
+
+  public func makeFlameScene(
+    state: FlameSceneState, onEvent: @escaping @MainActor (FlameSceneEvent) -> Void
   ) -> AnyView? { nil }
 }
 
