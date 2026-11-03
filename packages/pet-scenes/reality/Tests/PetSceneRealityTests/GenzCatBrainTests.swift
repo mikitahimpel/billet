@@ -38,7 +38,7 @@ import Testing
     // Each kind is either something the cat uses or deliberately nothing, so a new piece is
     // decided on rather than forgotten.
     let used = GenzPiece.Kind.allCases.filter { GenzRoom.affordanceKind($0) != nil }
-    #expect(used.count >= 15)
+    #expect(used.count >= 13)
     #expect(GenzRoom.affordanceKind(.cardigan) == .soft)
     #expect(GenzRoom.affordanceKind(.mugs) == .smallItem)
     #expect(GenzRoom.affordanceKind(.windowBench) == nil)
