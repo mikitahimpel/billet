@@ -29,6 +29,11 @@ import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import {
+  type AppStatus,
+  MaintenanceResponse,
+  StatusResponse,
+} from "@billet/contracts-http-api/status";
+import {
   ClaimInviteRequest,
   ClaimInviteResponse,
   CreateInviteResponse,
@@ -108,6 +113,15 @@ const drawing = Note.cases.Drawing.make({
 });
 const photo = Note.cases.Photo.make({ id: noteId, author: bob, sentAt: 1_700_000_001_000, image });
 
+const maintenanceStatus: AppStatus = {
+  maintenance: {
+    active: true,
+    message: { key: "maintenance.default", text: "billet is resting for a little while." },
+    until: "2026-11-03T22:30:00Z",
+  },
+  minVersion: "1.0",
+};
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -134,7 +148,25 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },
   }),
+  fixture("StatusResponse", StatusResponse, {
+    normal: { status: { maintenance: { active: false } } },
+    maintenance: { status: maintenanceStatus },
+    "update-and-notice": {
+      status: {
+        maintenance: { active: false },
+        minVersion: "1.2.0+14",
+        notice: { key: "notice.slow-notes", text: "Notes may be slow tonight." },
+      },
+    },
+  }),
+  fixture("MaintenanceResponse", MaintenanceResponse, {
+    default: { error: "maintenance", status: maintenanceStatus },
+  }),
   fixture("FlagsResponse", FlagsResponse, {
+    "with-status": {
+      flags: [{ key: experimentKey, variant: variantId }],
+      status: maintenanceStatus,
+    },
     default: {
       flags: [
         { key: experimentKey, variant: variantId },

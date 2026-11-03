@@ -28,6 +28,7 @@ public enum Routes {
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
   public static let getFlags = Route(.get, "/v1/flags")
+  public static let getStatus = Route(.get, "/v1/status")
   public static let reportEvents = Route(.post, "/v1/events")
 
   /// `GET /v1/media/*`: the media key is the rest of the path.

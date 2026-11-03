@@ -13,7 +13,8 @@
     "./flags": "./src/flags.ts",
     "./invite": "./src/invite.ts",
     "./note": "./src/note.ts",
-    "./routes": "./src/routes.ts"
+    "./routes": "./src/routes.ts",
+    "./status": "./src/status.ts"
   },
   "scripts": {
     "lint": "oxlint .",

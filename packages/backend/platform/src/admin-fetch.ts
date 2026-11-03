@@ -22,6 +22,7 @@ import {
 import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { AdminDataLive } from "./admin-data-live.ts";
+import { AppStatusStoreLive } from "./app-status-live.ts";
 import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
@@ -138,6 +139,7 @@ const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
     FlagConfigRepositoryLive(env.DB, caches.default),
     AdminDataLive(env.DB),
     Experiments.with(experiments),
+    AppStatusStoreLive(env.STATUS),
     Digest.layerWebCrypto,
   );
 
