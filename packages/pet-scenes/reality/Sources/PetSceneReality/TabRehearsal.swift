@@ -53,10 +53,14 @@ struct TabRehearsal: View {
         // The stock, the keeper and the cat load after the room; their first draws belong here
         // too.
         try? await Task.sleep(for: Self.loads)
-        copy = stage.root.clone(recursive: true)
+        let made = stage.root.clone(recursive: true)
+        copy?.removeFromParent()
+        copy = made
         stage.setRehearsing(false)
         try? await Task.sleep(for: Self.drawn)
       }
+      // SwiftUI can keep the view a while after it leaves; the copy goes now.
+      copy?.removeFromParent()
       copy = nil
     }
   }
