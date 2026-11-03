@@ -122,7 +122,8 @@ struct CatTouchRouterTests {
   @Test func holdingTheCatTakesEveryDrag() {
     let rested = CatDragStart(rested: 1, movement: [0, 30])
     #expect(CatTouchRouter.routeDrag(on: .cat, start: rested, isHoldingCat: true) == .ignore)
-    #expect(CatTouchRouter.routeDrag(on: .nothing, start: quick(40, 0), isHoldingCat: true) == .ignore)
+    #expect(
+      CatTouchRouter.routeDrag(on: .nothing, start: quick(40, 0), isHoldingCat: true) == .ignore)
   }
 
   @Test func holdingTheCatTakesEveryOtherTouch() {
