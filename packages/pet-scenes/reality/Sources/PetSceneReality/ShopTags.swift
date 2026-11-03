@@ -6,7 +6,8 @@ import SwiftUI
 struct ShopTag: Hashable, Identifiable {
   var id: ShopItem.ID
   var centre: CGPoint
-  var price: Int
+  /// The price in stamps, or a range for a group of things sold together.
+  var price: String
   /// Owned, and only ever owned once, so the tag shows a tick instead of a price.
   var owned: Bool
 }
@@ -70,7 +71,7 @@ private struct ShopTagChip: View {
         .font(.system(size: 9, weight: .bold))
         .foregroundStyle(tag.owned ? Self.ink : Self.seal)
       if !tag.owned {
-        Text(verbatim: "\(tag.price)")
+        Text(verbatim: tag.price)
           .font(.system(size: 12, weight: .heavy, design: .rounded))
           .monospacedDigit()
           .foregroundStyle(Self.ink)

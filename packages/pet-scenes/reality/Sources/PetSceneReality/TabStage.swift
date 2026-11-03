@@ -257,7 +257,7 @@ struct TabSceneView: View {
     let look = LightingLook.of(lighting)
     ZStack {
       TabBackdrop()
-      if let behind { behind }
+      if stage.screen.isLit, let behind { behind }
       GlowHaze(look: look, window: stage.screen.window)
       if isMounted { reality }
       TabGlowLayer(screen: stage.screen)
@@ -269,7 +269,7 @@ struct TabSceneView: View {
           .allowsHitTesting(false)
           .accessibilityHidden(true)
       }
-      if let overlay { overlay }
+      if stage.screen.isLit, let overlay { overlay }
     }
     .ignoresSafeArea()
     .onAppear { isAppeared = true }

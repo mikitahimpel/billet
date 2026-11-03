@@ -79,7 +79,7 @@ final class ShopStage: TabStage {
   private static let glintLength = 0.7
   private static let forwardLength: Float = 0.45
   /// Where an item floats when it is brought forward: in front of the counter, at eye height.
-  static let front = GenzRoomPoint(3.85, 6.1, 3.15)
+  static let front = GenzRoomPoint(3.3, 6.1, 2.3)
   /// How big an item is brought forward, across its longest side, in room units.
   static let frontSize: Float = 1.7
   private static let lampColour = GenzColour(0xFFC36B)
@@ -243,9 +243,11 @@ final class ShopStage: TabStage {
       }
       holder.scale = .one * size
       let wobble: Float = reduceMotion ? 0 : 0.06 * Float(sin(clock * 1.3 + phase))
-      holder.orientation = simd_quatf(angle: wobble * (1 - ease) + spin * ease, axis: [0, 1, 0])
+      // Brought forward it swings slowly from side to side, so a flat thing never shows its back.
+      let swing = 0.55 * sin(spin)
+      holder.orientation = simd_quatf(angle: wobble * (1 - ease) + swing * ease, axis: [0, 1, 0])
     }
-    if focused != nil, !reduceMotion { spin += Float(delta) * 0.7 }
+    if focused != nil, !reduceMotion { spin += Float(delta) * 0.9 }
     if moving { updateGlows() }
   }
 
@@ -339,14 +341,33 @@ final class ShopStage: TabStage {
   /// Puts each item's tag at the front edge of its place, in the view's points.
   private func updateTags() {
     var tags: [ShopTag] = []
-    for item in items {
+    // The paints and boards on the table stand too close for a tag each: one sign for them all.
+    let table = items.filter { slots[$0.id]?.stand == .table }
+    if let first = table.first {
+      let edges = table.compactMap { slots[$0.id] }.map {
+        GenzRoomPoint($0.centre.x, $0.centre.y + $0.box.z / 2 + 0.05, $0.centre.z - 0.08)
+      }
+      let middle = GenzRoomPoint(
+        edges.map(\.x).reduce(0, +) / Float(edges.count), ShopLayout.table.y1 + 0.05,
+        ShopLayout.tableTop - 0.08)
+      if let centre = view.project(middle.scene) {
+        let prices = table.map(\.price)
+        let low = prices.min() ?? first.price
+        let high = prices.max() ?? first.price
+        tags.append(
+          ShopTag(
+            id: first.id, centre: CGPoint(x: centre.x, y: centre.y + 8),
+            price: low == high ? "\(low)" : "\(low)–\(high)", owned: false))
+      }
+    }
+    for item in items where slots[item.id]?.stand != .table {
       guard let slot = slots[item.id] else { continue }
       let edge = GenzRoomPoint(
         slot.centre.x, slot.centre.y + slot.box.z / 2 + 0.05, slot.centre.z - 0.08)
       guard let centre = view.project(edge.scene) else { continue }
       tags.append(
         ShopTag(
-          id: item.id, centre: CGPoint(x: centre.x, y: centre.y + 8), price: item.price,
+          id: item.id, centre: CGPoint(x: centre.x, y: centre.y + 8), price: "\(item.price)",
           owned: owned.contains(item.id)))
     }
     tags = Self.spread(tags, width: view.size.width)

@@ -417,8 +417,9 @@ struct ShopTagTests {
     let tags =
       [3, 4, 5].map {
         ShopTag(
-          id: "t\($0)", centre: CGPoint(x: 100 + CGFloat($0) * 6, y: 400), price: $0, owned: false)
-      } + [ShopTag(id: "edge", centre: CGPoint(x: 2, y: 300), price: 9, owned: false)]
+          id: "t\($0)", centre: CGPoint(x: 100 + CGFloat($0) * 6, y: 400), price: "\($0)",
+          owned: false)
+      } + [ShopTag(id: "edge", centre: CGPoint(x: 2, y: 300), price: "9", owned: false)]
     let spread = ShopStage.spread(tags, width: 393)
     #expect(spread.count == tags.count)
     for (index, a) in spread.enumerated() {
