@@ -110,7 +110,7 @@ import simd
   }
 
   @Test func theCardiganIsLainOnTopOf() throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let layout = GenzLayout.of(.cosyNook)
     let cardigan = try #require(layout.catObstacles.first { $0.sitOnTop })
     let spot = layout.catSpotOnTop(of: cardigan)
     #expect(cardigan.box.contains(spot))
