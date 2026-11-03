@@ -7,8 +7,8 @@ import Testing
 
 @MainActor
 @Suite struct GenzCatBrainTests {
-  private func built(_ style: RoomStyle, _ furniture: RoomFurniture) async throws -> GenzRoom {
-    let layout = try #require(GenzLayout.of(style, furniture: furniture))
+  private func built(_ furniture: RoomFurniture) async throws -> GenzRoom {
+    let layout = GenzLayout.of(furniture)
     let room = GenzRoom(
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "brain-\(UUID())")!, key: layout.key))
@@ -20,7 +20,7 @@ import Testing
   }
 
   @Test func theWindowSeatOffersWhatItHas() async throws {
-    let room = try await built(.windowSeat, .cosyNook)
+    let room = try await built(.cosyNook)
     let found = RoomAffordances(room.affordances().map(\.affordance))
     // On the seat: the window, the cardigan, the mugs and the phone, the bowl and the toys.
     for kind in [RoomAffordance.Kind.window, .soft, .smallItem, .bowl, .toy] {
@@ -32,14 +32,6 @@ import Testing
     #expect(!found.has(.door))
     // Wherever it sends the cat there, its body keeps out of the pillows.
     try GenzCatObstacleTests.theBrainsTargetsAreClear(in: room)
-  }
-
-  @Test func theSunsetLampsBedIsWhereTheCatLies() async throws {
-    let room = try await built(.sunsetLamp, .cosyNook)
-    let places = room.affordances()
-    let bed = try #require(places.first { $0.affordance.kind == .bed })
-    #expect(bed.affordance.reachable)
-    #expect(bed.spot == room.home)
   }
 
   @Test func everyPieceKindIsSorted() {

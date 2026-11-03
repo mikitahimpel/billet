@@ -10,11 +10,11 @@ This page has three parts: the assignment service, the metrics, and the iOS clie
 
 Everything lives in one place, `registry` in `packages/backend/flags/src/experiments.ts`. An entry is:
 
-- A **key** (`home-direction`) that names one question and is never reused for another.
+- A **key** (`room-lighting`) that names one question and is never reused for another.
 - A **kind**: `experiment` (a question with one primary metric, compared variant by variant) or
   `flag` (a Labs setting the owner rolls out remotely, delivered the same way but not compared).
 - A **description**: what it changes and, for an experiment, the primary metric.
-- Two or more **variants** (`window-seat`, `sunset-lamp`), each with a whole-number weight (0 is
+- Two or more **variants** (`amber-lantern`, `fairy-lights`), each with a whole-number weight (0 is
   allowed, as long as one is above 0).
 - A **default**, one of the variants: what a targeted pair outside the exposure gets.
 - An **exposure**: the whole percent of targeted pairs that enter. The others get the default and
@@ -105,14 +105,14 @@ all its weight on today's standard value, so starting one changes nothing until 
 
 | Key | Labs setting | Variants (Swift case names in kebab-case) |
 | --- | --- | --- |
-| `home-direction` | Room style | `window-seat`, `sunset-lamp` |
 | `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
 | `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk` |
 | `home-layout` | Home | `classic`, `immersive`, `cinematic`, `living-window`, `night-and-day` |
 | `shopkeeper` | Shopkeeper | `teddy`, `human` |
 
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
-tester tools or not yet complete and reviewable), and `nooki` (no licence).
+tester tools or not yet complete and reviewable). The app no longer reads `home-direction`: there
+is one room, so the key stays in the registry only so old answers still parse.
 
 ## On the phone
 
@@ -126,13 +126,13 @@ tester tools or not yet complete and reviewable), and `nooki` (no licence).
   (`FlagsRefresher`). The answer **replaces** the held copy and is saved in the App Group
   (`remote-flags.json`), so it is there at the next launch and offline. A failed request changes
   nothing. Leaving the pair or signing out forgets it: the variants belong to the pair.
-- **Which one wins.** For each remote setting (room style, lighting, window view, Home layout,
+- **Which one wins.** For each remote setting (lighting, window view, Home layout,
   shopkeeper): a choice made in Labs on this phone, then the pair's variant, then what the app did
   before (the standard value). So offline, on a first launch, with no partner, with
   the experiment switched off or with a variant this build lacks, the screen is the one it always
   was. "Follow the test", the first row of each of those Labs pickers, removes the Labs choice. Testers and the owner use
   Labs to look at any variant on purpose.
-- **What reads it.** `WidgetFeaturesModel.roomStyle` is the resolved value; screens read that and
+- **What reads it.** `WidgetFeaturesModel.lighting` is the resolved value; screens read that and
   never the raw answer. Add a typed accessor like it for each new experiment.
 - **Build and system.** Every request carries `X-Billet-App-Version` and `X-Billet-OS`
   (`ClientInfo` in `Transport`), so events and flags can be read by version.

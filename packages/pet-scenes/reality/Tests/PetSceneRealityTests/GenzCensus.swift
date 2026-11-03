@@ -13,9 +13,9 @@
     @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_CENSUS"] != nil))
     func census() async throws {
       var lines: [String] = []
-      for style in [RoomStyle.windowSeat, .sunsetLamp] {
+      do {
         for furniture in RoomFurniture.allCases {
-          guard let layout = GenzLayout.of(style, furniture: furniture) else { continue }
+          let layout = GenzLayout.of(furniture)
           let room = GenzRoomCache(suite: "genz-census-\(UUID())").room(layout)
           room.startBuilding()
           let deadline = Date.now.addingTimeInterval(60)
@@ -26,7 +26,7 @@
             rows.append((Self.label(child), Tally(child)))
           }
           let total = rows.reduce(Tally()) { $0 + $1.1 }
-          lines.append("## \(style) / \(furniture): \(total)")
+          lines.append("## \(furniture): \(total)")
           let grouped = Dictionary(grouping: rows, by: \.0).mapValues { $0.reduce(Tally()) { $0 + $1.1 } }
           for (name, tally) in grouped.sorted(by: { $0.value.triangles > $1.value.triangles }) {
             lines.append("  \(name): \(tally)")
@@ -41,8 +41,8 @@
     @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_CENSUS_LIGHTS"] != nil))
     func lightsPerPreset() async throws {
       var lines: [String] = []
-      for style in [RoomStyle.windowSeat, .sunsetLamp] {
-        let layout = try #require(GenzLayout.of(style, furniture: .cosyNook))
+      do {
+        let layout = GenzLayout.of(.cosyNook)
         let room = GenzRoomCache(suite: "genz-census-\(UUID())").room(layout)
         room.startBuilding()
         let deadline = Date.now.addingTimeInterval(60)
@@ -53,7 +53,7 @@
           room.setLighting(preset)
           var on: [String] = []
           Self.lights(in: room.root, path: "", into: &on)
-          lines.append("\(style) \(preset): \(on.count) on: \(on.joined(separator: ", "))")
+          lines.append("\(preset): \(on.count) on: \(on.joined(separator: ", "))")
         }
       }
       let url = URL(

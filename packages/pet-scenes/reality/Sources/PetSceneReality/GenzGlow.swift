@@ -53,21 +53,16 @@ final class GenzGlow {
     buildCore()
   }
 
-  /// The hooks each string of fairy lights hangs from, in order. Only Window Seat has them.
-  static func fairyHooks(_ style: RoomStyle) -> [[GenzRoomPoint]] {
-    switch style {
-    case .windowSeat:
-      let top: Float = 5.22
-      let back = stride(from: Float(0.25), through: 7.4, by: 1.43).map {
-        GenzRoomPoint($0, 0.08, top)
-      }
-      let side = stride(from: Float(0.3), through: 5.8, by: 1.375).map {
-        GenzRoomPoint(0.08, $0, top)
-      }
-      return [back, side]
-    case .sunsetLamp, .nooki:
-      return []
+  /// The hooks each string of fairy lights hangs from, in order.
+  static var fairyHooks: [[GenzRoomPoint]] {
+    let top: Float = 5.22
+    let back = stride(from: Float(0.25), through: 7.4, by: 1.43).map {
+      GenzRoomPoint($0, 0.08, top)
     }
+    let side = stride(from: Float(0.3), through: 5.8, by: 1.375).map {
+      GenzRoomPoint(0.08, $0, top)
+    }
+    return [back, side]
   }
 
   /// Points along a string hung from `hooks`, about `spacing` apart, drooping by `sag` between
@@ -142,7 +137,7 @@ final class GenzGlow {
     let bulbMesh = LowPoly.sphere(radius: Self.bulbRadius)
     let bulbMaterial = kit.glow(Self.bulbColour)
     let wire = kit.matte(GenzColour(0x2B2622))
-    for (number, hooks) in Self.fairyHooks(layout.style).enumerated() {
+    for (number, hooks) in Self.fairyHooks.enumerated() {
       let points = Self.string(hooks, spacing: Self.bulbSpacing, sag: Self.sag)
       bulbPoints += points
       let strand = Entity()
@@ -165,7 +160,7 @@ final class GenzGlow {
           turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(end - start)))
         strand.addChild(segment)
       }
-      kit.merge(strand, key: "fairy wire \(layout.style) \(number)")
+      kit.merge(strand, key: "fairy wire \(number)")
       if let mesh = GenzKit.joined(lamps, in: strand) {
         let joined = ModelEntity(mesh: mesh, materials: [bulbMaterial])
         strand.addChild(joined)
@@ -242,7 +237,7 @@ final class GenzGlow {
 
   /// Where the light pools on the floor: the rug, or the middle of the floor without one.
   static func pool(_ layout: GenzLayout) -> GenzRoomPoint {
-    let rug = layout.pieces.first { [.roundRug, .checkeredRug].contains($0.piece.kind) }
+    let rug = layout.pieces.first { $0.piece.kind == .roundRug }
     return rug?.centre ?? GenzRoomPoint(3.7, 4, 0)
   }
 
@@ -260,11 +255,7 @@ final class GenzGlow {
     sun.components.set(
       DirectionalLightComponent.Shadow(maximumDistance: 16, depthBias: 2))
     let middle = GenzRoomPoint(4, 3, 0.5).scene
-    let from: SIMD3<Float> =
-      switch layout.style {
-      case .windowSeat: GenzRoomPoint(9, -6, 2.6).scene
-      case .sunsetLamp, .nooki: GenzRoomPoint(-8, 1, 2.6).scene
-      }
+    let from = GenzRoomPoint(9, -6, 2.6).scene
     sun.look(at: middle, from: from, relativeTo: nil)
     sun.isEnabled = false
     root.addChild(sun)

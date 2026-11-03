@@ -8,15 +8,7 @@ import RealityKit
 /// along its length and `y` out towards the viewer, as in ``GenzRoomPoint``.
 struct GenzPiece: Hashable, Sendable {
   enum Kind: String, CaseIterable, Sendable {
-    case platformBed
-    case cubeNightstand
-    case sunsetLamp
-    case checkeredRug
     case phoneOnCharger
-    case sneakers
-    case hoodiePile
-    case monstera
-    case posterFrame
     case daybed
     case milkCrate
     case bookStack
@@ -24,12 +16,10 @@ struct GenzPiece: Hashable, Sendable {
     case roundRug
     case snakePlant
     case quiltedDaybed
-    case quiltedBed
     case bookCrate
     case pleatedLamp
     case leafyPlant
     case patternRug
-    case chairWithClothes
     case mugs
     case polaroids
     case recordPlayer
@@ -63,15 +53,7 @@ extension GenzPiece.Kind {
   /// What each colour slot paints.
   var slotNames: [String] {
     switch self {
-    case .platformBed: ["frame", "linen", "duvet"]
-    case .cubeNightstand: ["body", "top"]
-    case .sunsetLamp: ["body", "stem", "lens"]
-    case .checkeredRug: ["light", "dark"]
     case .phoneOnCharger: ["case", "screen", "cable"]
-    case .sneakers: ["upper", "sole"]
-    case .hoodiePile: ["hoodie", "tee"]
-    case .monstera: ["pot", "leaf", "vein"]
-    case .posterFrame: ["frame", "print"]
     case .daybed: ["frame", "linen", "throw"]
     case .milkCrate: ["crate", "inside"]
     case .bookStack: ["lower", "upper"]
@@ -79,12 +61,10 @@ extension GenzPiece.Kind {
     case .roundRug: ["edge", "middle"]
     case .snakePlant: ["pot", "leaf", "stripe"]
     case .quiltedDaybed: ["frame", "quilt", "throw"]
-    case .quiltedBed: ["frame", "quilt", "throw"]
     case .bookCrate: ["crate", "books", "more books"]
     case .pleatedLamp: ["brass", "shade"]
     case .leafyPlant: ["pot", "leaf", "dark leaf"]
     case .patternRug: ["edge", "ring", "pattern"]
-    case .chairWithClothes: ["wood", "jumper", "jeans"]
     case .mugs: ["mug", "other mug"]
     case .polaroids: ["print", "print", "print"]
     case .recordPlayer: ["wood", "label", "metal"]
@@ -103,15 +83,7 @@ extension GenzPiece.Kind {
 
   var standardSlots: [GenzColour] {
     switch self {
-    case .platformBed: [GenzColour(0x6B4C3B), GenzColour(0xDDD2C6), GenzColour(0x6F8C7A)]
-    case .cubeNightstand: [GenzColour(0x5A4038), GenzColour(0x6A4C42)]
-    case .sunsetLamp: [GenzColour(0x2A2530), GenzColour(0x3A3340), GenzColour(0xFFB066)]
-    case .checkeredRug: [GenzColour(0xB9A893), GenzColour(0x5E7768)]
     case .phoneOnCharger: [GenzColour(0x0B0A0E), GenzColour(0x9FB7D9), GenzColour(0xEDE3D8)]
-    case .sneakers: [GenzColour(0xF4F0EA), GenzColour(0xD9D0C4)]
-    case .hoodiePile: [GenzColour(0x55405A), GenzColour(0x86A493)]
-    case .monstera: [GenzColour(0xB97A55), GenzColour(0x3D7052), GenzColour(0x2F5A43)]
-    case .posterFrame: [GenzColour(0x1C1622), GenzColour(0x2F4A42)]
     case .daybed: [GenzColour(0x323848), GenzColour(0xAEB6C4), GenzColour(0xB4553F)]
     case .milkCrate: [GenzColour(0x7A3B30), GenzColour(0x5C2B23)]
     case .bookStack: [GenzColour(0xD8C7A6), GenzColour(0x4F6B8A)]
@@ -119,12 +91,10 @@ extension GenzPiece.Kind {
     case .roundRug: [GenzColour(0x3B4A63), GenzColour(0x4A5C7A)]
     case .snakePlant: [GenzColour(0xD9CBB3), GenzColour(0x3F7558), GenzColour(0x2D5A45)]
     case .quiltedDaybed: [GenzColour(0xB0825A), GenzColour(0xEFE2CC), GenzColour(0xD9A441)]
-    case .quiltedBed: [GenzColour(0xB0825A), GenzColour(0xEFE2CC), GenzColour(0xD9A441)]
     case .bookCrate: [GenzColour(0xC4935F), GenzColour(0xC2603F), GenzColour(0x8FA67E)]
     case .pleatedLamp: [GenzColour(0xC9A86A), GenzColour(0xF6E6C8)]
     case .leafyPlant: [GenzColour(0xC46E4A), GenzColour(0x5E8F4E), GenzColour(0x3F6E3A)]
     case .patternRug: [GenzColour(0xD9C3A0), GenzColour(0xC27A55), GenzColour(0xEFE2CC)]
-    case .chairWithClothes: [GenzColour(0xA67B52), GenzColour(0xB75D4B), GenzColour(0x5B7290)]
     case .mugs: [GenzColour(0xE9DCC6), GenzColour(0xC9694D)]
     case .polaroids: [GenzColour(0xE9A07A), GenzColour(0x8DB0C9), GenzColour(0xA9C48E)]
     case .recordPlayer: [GenzColour(0x6B4430), GenzColour(0xE24B2D), GenzColour(0xB8B2A8)]
@@ -143,15 +113,7 @@ extension GenzPiece.Kind {
 
   var title: String {
     switch self {
-    case .platformBed: "Low platform bed"
-    case .cubeNightstand: "Cube nightstand"
-    case .sunsetLamp: "Sunset lamp"
-    case .checkeredRug: "Checkered rug"
     case .phoneOnCharger: "Phone on charger"
-    case .sneakers: "Sneakers"
-    case .hoodiePile: "Hoodie pile"
-    case .monstera: "Big monstera"
-    case .posterFrame: "Poster frame"
     case .daybed: "Daybed"
     case .milkCrate: "Milk crate"
     case .bookStack: "Book stack"
@@ -159,12 +121,10 @@ extension GenzPiece.Kind {
     case .roundRug: "Round rug"
     case .snakePlant: "Snake plant"
     case .quiltedDaybed: "Quilted daybed"
-    case .quiltedBed: "Quilted bed"
     case .bookCrate: "Crate of books"
     case .pleatedLamp: "Pleated lamp"
     case .leafyPlant: "Leafy plant"
     case .patternRug: "Patterned rug"
-    case .chairWithClothes: "Chair with clothes"
     case .mugs: "Mugs"
     case .polaroids: "Polaroids"
     case .recordPlayer: "Record player"
@@ -184,15 +144,7 @@ extension GenzPiece.Kind {
   /// Its footprint and height in room units, for fitting it into the shop's metres.
   var size: GenzRoomPoint {
     switch self {
-    case .platformBed: GenzRoomPoint(4.8, 3.4, 1.18)
-    case .cubeNightstand: GenzRoomPoint(1, 1, 1.02)
-    case .sunsetLamp: GenzRoomPoint(0.52, 0.52, 0.76)
-    case .checkeredRug: GenzRoomPoint(4, 3.5, 0.03)
     case .phoneOnCharger: GenzRoomPoint(0.34, 0.2, 0.03)
-    case .sneakers: GenzRoomPoint(0.85, 0.8, 0.26)
-    case .hoodiePile: GenzRoomPoint(1.4, 1.4, 0.35)
-    case .monstera: GenzRoomPoint(2.4, 2.4, 3.4)
-    case .posterFrame: GenzRoomPoint(1.05, 0.04, 1.9)
     case .daybed: GenzRoomPoint(6.6, 2.4, 1.34)
     case .milkCrate: GenzRoomPoint(0.9, 0.9, 0.75)
     case .bookStack: GenzRoomPoint(0.7, 0.55, 0.22)
@@ -200,12 +152,10 @@ extension GenzPiece.Kind {
     case .roundRug: GenzRoomPoint(2.5, 2.5, 0.03)
     case .snakePlant: GenzRoomPoint(0.5, 0.5, 1.6)
     case .quiltedDaybed: GenzRoomPoint(6.6, 2.4, 1.34)
-    case .quiltedBed: GenzRoomPoint(4.8, 3.4, 1.18)
     case .bookCrate: GenzRoomPoint(0.9, 0.9, 0.9)
     case .pleatedLamp: GenzRoomPoint(1, 1, 1.1)
     case .leafyPlant: GenzRoomPoint(1.2, 1.2, 1.9)
     case .patternRug: GenzRoomPoint(2.8, 2.8, 0.03)
-    case .chairWithClothes: GenzRoomPoint(1.06, 1, 1.9)
     case .mugs: GenzRoomPoint(0.6, 0.3, 0.2)
     case .polaroids: GenzRoomPoint(1.6, 0.04, 1.1)
     case .recordPlayer: GenzRoomPoint(1.1, 0.85, 0.3)
@@ -252,15 +202,7 @@ extension GenzKit {
     root.name = "genz-\(piece.kind.rawValue)"
     let parts: [Entity]
     switch piece.kind {
-    case .platformBed: parts = platformBed(piece)
-    case .cubeNightstand: parts = cubeNightstand(piece)
-    case .sunsetLamp: parts = sunsetLamp(piece)
-    case .checkeredRug: parts = checkeredRug(piece)
     case .phoneOnCharger: parts = phone(piece)
-    case .sneakers: parts = sneakers(piece)
-    case .hoodiePile: parts = hoodiePile(piece)
-    case .monstera: parts = monstera(piece)
-    case .posterFrame: parts = posterFrame(piece)
     case .daybed: parts = daybed(piece)
     case .milkCrate: parts = milkCrate(piece)
     case .bookStack: parts = bookStack(piece)
@@ -268,12 +210,10 @@ extension GenzKit {
     case .roundRug: parts = roundRug(piece)
     case .snakePlant: parts = snakePlant(piece)
     case .quiltedDaybed: parts = quiltedDaybed(piece)
-    case .quiltedBed: parts = quiltedBed(piece)
     case .bookCrate: parts = bookCrate(piece)
     case .pleatedLamp: parts = pleatedLamp(piece)
     case .leafyPlant: parts = leafyPlant(piece)
     case .patternRug: parts = patternRug(piece)
-    case .chairWithClothes: parts = chairWithClothes(piece)
     case .mugs: parts = mugs(piece)
     case .polaroids: parts = polaroids(piece)
     case .recordPlayer: parts = recordPlayer(piece)
@@ -292,132 +232,12 @@ extension GenzKit {
     return root
   }
 
-  private func platformBed(_ piece: GenzPiece) -> [Entity] {
-    let frame = matte(piece.slot(0))
-    let linen = matte(piece.slot(1))
-    let duvet = matte(piece.slot(2))
-    return [
-      block(0, 0, 0, 4.8, 3.4, 0.5, frame),
-      block(0.1, 0.08, 0.5, 4.6, 3.24, 0.38, linen),
-      block(0.3, 0.2, 0.88, 1.6, 0.85, 0.3, matte(piece.slot(1).shaded(0.3))),
-      block(2.1, 0.2, 0.88, 1.6, 0.85, 0.3, linen),
-      block(0.05, 1.25, 0.55, 4.7, 0.4, 0.55, matte(piece.slot(2).shaded(0.18))),
-      block(0.05, 1.65, 0.55, 4.7, 1.85, 0.47, duvet),
-      block(0.05, 3.48, 0.2, 4.7, 0.05, 0.75, duvet),
-    ]
-  }
-
-  private func cubeNightstand(_ piece: GenzPiece) -> [Entity] {
-    [
-      block(0, 0, 0, 1, 1, 0.96, matte(piece.slot(0))),
-      block(0, 0, 0.96, 1, 1, 0.06, matte(piece.slot(1))),
-      block(0.12, 0.98, 0.2, 0.76, 0.03, 0.04, matte(piece.slot(1))),
-    ]
-  }
-
-  /// The lens sits on top and faces the wall behind, along -y.
-  private func sunsetLamp(_ piece: GenzPiece) -> [Entity] {
-    let body = matte(piece.slot(0))
-    let towardsWall = simd_quatf(angle: -.pi / 2, axis: [1, 0, 0])
-    let head = part(
-      prism(sides: 8, radius: 0.22, top: 0.24, height: 0.34), body, at: [0.26, 0.6, 0.43],
-      turn: towardsWall)
-    let lens = part(
-      prism(sides: 8, radius: 0.17, top: 0.17, height: 0.02), glow(piece.slot(2)),
-      at: [0.26, 0.6, 0.09], turn: towardsWall)
-    lens.name = GenzRoom.lensName
-    return [
-      part(prism(sides: 8, radius: 0.22, top: 0.2, height: 0.1), body, at: [0.26, 0, 0.26]),
-      part(
-        prism(sides: 6, radius: 0.06, top: 0.06, height: 0.3), matte(piece.slot(1)),
-        at: [0.26, 0.1, 0.26]),
-      part(box([0.16, 0.12, 0.16]), matte(piece.slot(1)), at: [0.26, 0.44, 0.26]),
-      head, lens,
-    ]
-  }
-
-  private func checkeredRug(_ piece: GenzPiece) -> [Entity] {
-    var light: [(centre: SIMD3<Float>, size: SIMD3<Float>)] = []
-    var dark: [(centre: SIMD3<Float>, size: SIMD3<Float>)] = []
-    for column in 0..<8 {
-      for row in 0..<7 {
-        let tile = (
-          centre: GenzRoomPoint(Float(column) * 0.5 + 0.25, Float(row) * 0.5 + 0.25, 0.015).scene,
-          size: SIMD3<Float>(0.5, 0.03, 0.5)
-        )
-        if (column + row) % 2 == 0 { dark.append(tile) } else { light.append(tile) }
-      }
-    }
-    return [
-      part(boxes("checker light", light), matte(piece.slot(0))),
-      part(boxes("checker dark", dark), matte(piece.slot(1))),
-    ]
-  }
-
   private func phone(_ piece: GenzPiece) -> [Entity] {
     [
       block(0, 0, 0, 0.34, 0.2, 0.025, matte(piece.slot(0))),
       block(0.02, 0.02, 0.025, 0.3, 0.16, 0.006, glow(piece.slot(1))),
       block(0.15, 0.2, 0.004, 0.03, 0.5, 0.02, matte(piece.slot(2))),
     ]
-  }
-
-  private func sneakers(_ piece: GenzPiece) -> [Entity] {
-    let upper = matte(piece.slot(0))
-    let sole = matte(piece.slot(1))
-    var parts: [Entity] = []
-    for (x, y) in [(Float(0), Float(0)), (0.1, 0.5)] {
-      parts.append(block(x, y, 0, 0.75, 0.3, 0.06, sole))
-      parts.append(block(x, y, 0.06, 0.75, 0.3, 0.07, upper))
-      parts.append(block(x + 0.05, y + 0.03, 0.13, 0.42, 0.24, 0.13, upper))
-    }
-    return parts
-  }
-
-  private func hoodiePile(_ piece: GenzPiece) -> [Entity] {
-    [
-      part(
-        prism(sides: 7, radius: 0.7, top: 0.55, height: 0.25), matte(piece.slot(0)),
-        at: GenzRoomPoint(0.7, 0.7, 0).scene),
-      part(
-        prism(sides: 6, radius: 0.45, top: 0.3, height: 0.22), matte(piece.slot(1)),
-        at: GenzRoomPoint(0.95, 0.9, 0.12).scene),
-    ]
-  }
-
-  private func monstera(_ piece: GenzPiece) -> [Entity] {
-    let leaf = matte(piece.slot(1))
-    let vein = matte(piece.slot(2))
-    let centre = GenzRoomPoint(1.2, 1.2, 0)
-    var parts: [Entity] = [
-      part(
-        prism(sides: 8, radius: 0.5, top: 0.58, height: 0.8), matte(piece.slot(0)),
-        at: centre.scene)
-    ]
-    let shape = slab(
-      "monstera leaf", outline: [[0, 0], [0.42, 0.8], [0, 1.45], [-0.42, 0.8]], depth: 0.03)
-    let stems: [(turn: Float, lean: Float, length: Float)] = [
-      (0.2, 0.5, 1.3), (1.4, 0.35, 1.5), (2.6, 0.55, 1.35), (3.7, 0.4, 1.45),
-      (4.8, 0.6, 1.2), (5.7, 0.3, 1.55),
-    ]
-    for (index, stem) in stems.enumerated() {
-      let turn = simd_quatf(angle: stem.turn, axis: [0, 1, 0])
-      let lean = simd_quatf(angle: stem.lean, axis: [1, 0, 0])
-      let model = part(
-        shape, index.isMultiple(of: 2) ? leaf : vein, at: centre.scene + [0, 0.8, 0],
-        turn: turn * lean)
-      model.scale = .one * stem.length / 1.45
-      parts.append(model)
-    }
-    return parts
-  }
-
-  /// The print is a separate part named for the poster texture.
-  private func posterFrame(_ piece: GenzPiece) -> [Entity] {
-    // The print stands a little proud of the frame, so their faces never share a plane.
-    let print = block(0.05, 0, 0.05, 0.95, 0.04, 1.8, matte(piece.slot(1)))
-    print.name = GenzRoom.posterName
-    return [block(0, 0.01, 0, 1.05, 0.02, 1.9, matte(piece.slot(0))), print]
   }
 
   private func daybed(_ piece: GenzPiece) -> [Entity] {

@@ -11,27 +11,21 @@ import Testing
 @Suite struct GenzRoomTests {
   private let size = CGSize(width: 393, height: 852)
 
-  @Test func nookiOffersEveryRoomStyle() {
-    #expect(NookiPetScene().roomStyles == RoomStyle.allCases)
-  }
-
-  @Test func onlyTheStyledRoomsHaveALayout() {
-    #expect(GenzLayout.of(.nooki) == nil)
-    #expect(GenzLayout.of(.sunsetLamp)?.style == .sunsetLamp)
-    #expect(GenzLayout.of(.windowSeat)?.style == .windowSeat)
-  }
-
-  @Test func theCameraTargetLandsInTheMiddleOfTheView() throws {
-    for style in [RoomStyle.sunsetLamp, .windowSeat] {
-      let camera = GenzCamera(home: try #require(GenzLayout.of(style)).camera)
-      let point = try #require(camera.project(camera.target, in: size))
-      #expect(abs(point.x - size.width / 2) < 0.5)
-      #expect(abs(point.y - size.height / 2) < 0.5)
+  @Test func everyFurnitureSetIsWindowSeatFurnished() {
+    for furniture in RoomFurniture.allCases {
+      #expect(GenzLayout.of(furniture).furniture == furniture)
     }
   }
 
+  @Test func theCameraTargetLandsInTheMiddleOfTheView() throws {
+    let camera = GenzCamera(home: GenzLayout.of(.original).camera)
+    let point = try #require(camera.project(camera.target, in: size))
+    #expect(abs(point.x - size.width / 2) < 0.5)
+    #expect(abs(point.y - size.height / 2) < 0.5)
+  }
+
   @Test func projectionKeepsLeftLeftAndUpUp() throws {
-    let camera = GenzCamera(home: GenzLayout.sunsetLamp.camera)
+    let camera = GenzCamera(home: GenzLayout.windowSeat.camera)
     let target = camera.target
     let up = try #require(camera.project(target + [0, 1, 0], in: size))
     #expect(up.y < size.height / 2)
@@ -41,9 +35,8 @@ import Testing
     #expect(camera.project(camera.position - (target - camera.position), in: size) == nil)
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
-  func theCatAndTheNoteAreOnScreenFromHome(_ style: RoomStyle) throws {
-    let layout = try #require(GenzLayout.of(style))
+  @Test func theCatAndTheNoteAreOnScreenFromHome() throws {
+    let layout = GenzLayout.of(.original)
     let camera = GenzCamera(home: layout.camera)
     let bounds = CGRect(origin: .zero, size: size)
     let cat = try #require(camera.project(layout.cat.spot.scene, in: size))
@@ -54,9 +47,8 @@ import Testing
     }
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
-  func theShellIsOneModelPerColour(_ style: RoomStyle) async throws {
-    let layout = try #require(GenzLayout.of(style))
+  @Test func theShellIsOneModelPerColour() async throws {
+    let layout = GenzLayout.of(.original)
     let kit = GenzKit()
     let room = GenzRoom(
       layout: layout, kit: kit, cats: GenzCatSource(),
@@ -133,22 +125,15 @@ import Testing
   }
 
   @Test func goingHomeAnimatedArrives() {
-    var camera = GenzCamera(home: GenzLayout.sunsetLamp.camera)
+    var camera = GenzCamera(home: GenzLayout.windowSeat.camera)
     camera.drag(yaw: 0.3, pitch: 0.1)
     camera.goHome(animated: true)
     for _ in 0..<300 { camera.step(1.0 / 60) }
     #expect(camera.isAtRest)
-    #expect(camera.yaw == GenzLayout.sunsetLamp.camera.yaw)
+    #expect(camera.yaw == GenzLayout.windowSeat.camera.yaw)
   }
 
   @Test func theOpeningStartsDarkAndEndsLit() {
-    #expect(GenzOpening.sunsetDim(0) > 0.8)
-    #expect(GenzOpening.sunsetDim(GenzOpening.length) == 0)
-    #expect(GenzOpening.lampClick(0.3) == 0)
-    #expect(GenzOpening.lampClick(GenzOpening.length) == 1)
-    #expect(GenzOpening.discBloom(0.4) == 0)
-    #expect(GenzOpening.discBloom(GenzOpening.length) == 1)
-    #expect(GenzOpening.sunsetNote(GenzOpening.length) == 1)
     #expect(GenzOpening.windowDim(0) == 0.75)
     #expect(GenzOpening.windowDim(GenzOpening.length) == 0)
     #expect(GenzOpening.streetLamp(0) == 0)
@@ -160,18 +145,6 @@ import Testing
     let samples = stride(from: 0.3, through: 1.0, by: 0.02).map(GenzOpening.streetLamp)
     #expect(samples.contains(1))
     #expect(samples.contains { $0 > 0 && $0 < 0.5 })
-  }
-
-  @Test func theLEDStepsOnInThrees() {
-    let levels = Set(stride(from: 0.0, through: 1.0, by: 0.01).map(GenzOpening.sunsetLED))
-    #expect(levels == [0, 1.0 / 3, 2.0 / 3, 1])
-  }
-
-  @Test func theDiscBreathesBetweenItsBounds() {
-    for time in stride(from: 0.0, through: 40, by: 0.25) {
-      let breath = GenzOpening.discBreath(time)
-      #expect(breath >= 0.86 - 1e-9 && breath <= 1)
-    }
   }
 
   @Test func warmthFadesAfterANoteLands() {
@@ -200,9 +173,9 @@ import Testing
   }
 
   @Test func aRecolourChangesThePieceColours() {
-    let piece = GenzPiece(.platformBed, slots: [GenzColour(0x111111)])
+    let piece = GenzPiece(.daybed, slots: [GenzColour(0x111111)])
     #expect(piece.slot(0) == GenzColour(0x111111))
-    #expect(piece.slot(2) == GenzPiece.Kind.platformBed.standardSlots[2])
+    #expect(piece.slot(2) == GenzPiece.Kind.daybed.standardSlots[2])
   }
 
   @Test func layersWithAnOutlineGetOneFromTheRoom() {
@@ -232,56 +205,15 @@ import Testing
     #expect(state.hour == .dusk)
   }
 
-  @Test func nativeArtDrawsEveryTextureSlot() {
+  @Test func nativeArtDrawsEveryLayerButTheView() {
     let art = GenzNativeArt()
-    for slot in RoomLayerSlot.allCases where slot.isTexture {
-      let image = art.image(for: slot, state: RoomLayerState(time: 3), pixels: 64)
-      #expect(image?.width == 64)
-    }
     // The window's view is drawn by the view system, not by the room's own flat art.
-    for slot in RoomLayerSlot.allCases where !slot.isTexture && slot != .windowNight {
+    for slot in RoomLayerSlot.allCases where slot != .windowNight {
       #expect(art.view(for: slot, state: RoomLayerState()) != nil)
     }
   }
 
-  @Test func aRoomSeenBeforeIsShownAtOnceAndKeepsItsView() {
-    var rooms = RoomSwitch()
-    rooms.show(.nooki, hostShowsScene: true)
-    rooms.show(.windowSeat, hostShowsScene: true)
-    rooms.show(.nooki, hostShowsScene: false)
-    #expect(rooms == RoomSwitch(mounted: [.diorama, .styled], shown: .nooki, styled: .windowSeat))
-  }
-
-  @Test func aNewViewWaitsForTheSceneToBeShown() {
-    var rooms = RoomSwitch(mounted: [.diorama], shown: .nooki)
-    rooms.show(.sunsetLamp, hostShowsScene: false)
-    #expect(rooms == RoomSwitch(mounted: [.diorama], shown: .nooki))
-    rooms.show(.sunsetLamp, hostShowsScene: true)
-    #expect(
-      rooms == RoomSwitch(mounted: [.diorama, .styled], shown: .sunsetLamp, styled: .sunsetLamp))
-  }
-
-  /// A second RealityView only draws its first frame, so the styled rooms take turns in one.
-  @Test func theStyledRoomsShareOneView() {
-    var rooms = RoomSwitch()
-    rooms.show(.windowSeat, hostShowsScene: true)
-    rooms.show(.sunsetLamp, hostShowsScene: false)
-    #expect(rooms == RoomSwitch(mounted: [.styled], shown: .sunsetLamp, styled: .sunsetLamp))
-    rooms.show(.nooki, hostShowsScene: true)
-    rooms.show(.windowSeat, hostShowsScene: true)
-    #expect(rooms.mounted == [.styled, .diorama])
-    #expect(rooms.styled == .windowSeat)
-  }
-
-  @Test func eachRoomStyleHasItsView() {
-    #expect(RoomStage(.nooki) == .diorama)
-    #expect(RoomStage(.sunsetLamp) == .styled)
-    #expect(RoomStage(.windowSeat) == .styled)
-  }
-
-  @Test func theNoteLeavesTheDiscShowingAroundIt() throws {
-    let wall = try #require(GenzLayout.sunsetLamp.discWall)
-    #expect(GenzLayout.sunsetLamp.note.width < wall.width / 2)
+  @Test func theNoteIsSmallerThanThePane() {
     #expect(GenzLayout.windowSeat.note.width < 2)
   }
 

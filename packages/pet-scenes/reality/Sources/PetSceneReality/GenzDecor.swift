@@ -2,19 +2,19 @@ import CoreGraphics
 import Foundation
 import RealityKit
 
-/// Where the furniture of one styled room and set was moved to, by piece.
+/// Where the furniture of one set was moved to in the room, by piece.
 struct GenzSpotStore {
   let defaults: UserDefaults
   let key: GenzLayout.Key
 
-  private var storageKey: String { "genz.spots.\(key.style.rawValue).\(key.furniture.rawValue)" }
+  private var storageKey: String { "genz.spots.windowSeat.\(key.rawValue)" }
 
-  func load() -> [String: NookiLayout.Spot] {
+  func load() -> [String: NookiSpot] {
     defaults.data(forKey: storageKey)
-      .flatMap { try? JSONDecoder().decode([String: NookiLayout.Spot].self, from: $0) } ?? [:]
+      .flatMap { try? JSONDecoder().decode([String: NookiSpot].self, from: $0) } ?? [:]
   }
 
-  func save(_ spots: [String: NookiLayout.Spot]) {
+  func save(_ spots: [String: NookiSpot]) {
     if spots.isEmpty {
       defaults.removeObject(forKey: storageKey)
     } else {
@@ -44,7 +44,7 @@ extension GenzRoom {
     for (rider, base) in bases {
       holders[rider].setParent(holders[base], preservingWorldTransform: true)
     }
-    let lampKinds: Set<GenzPiece.Kind> = [.sunsetLamp, .thriftLamp, .pleatedLamp]
+    let lampKinds: Set<GenzPiece.Kind> = [.thriftLamp, .pleatedLamp]
     let lampTables = Set(
       bases.filter { lampKinds.contains(placements[$0.key].piece.kind) }.map(\.value))
     let catSpot = SIMD2(layout.cat.spot.x, layout.cat.spot.y)
@@ -99,7 +99,7 @@ extension GenzRoom {
   private func remember(_ name: String, piece: DecorSession.Piece, at box: DecorBox) {
     var stored = spots.load()
     stored[name] =
-      box == piece.home ? nil : NookiLayout.Spot(x: box.centre.x, z: box.centre.y, yaw: box.yaw)
+      box == piece.home ? nil : NookiSpot(x: box.centre.x, z: box.centre.y, yaw: box.yaw)
     spots.save(stored)
     pieceMoved(name)
   }
@@ -109,7 +109,7 @@ extension GenzRoom {
   }
 
   static func isFlat(_ kind: GenzPiece.Kind) -> Bool {
-    [.patternRug, .roundRug, .checkeredRug].contains(kind)
+    [.patternRug, .roundRug].contains(kind)
   }
 
   /// The piece's footprint on the floor, turned with it.

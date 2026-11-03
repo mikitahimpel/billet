@@ -28,9 +28,9 @@ import Testing
     return eyes
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat], RoomFurniture.allCases)
-  func aStyledRoomHasNoFlushFaces(_ style: RoomStyle, _ furniture: RoomFurniture) async throws {
-    let layout = try #require(GenzLayout.of(style, furniture: furniture))
+  @Test(arguments: RoomFurniture.allCases)
+  func theRoomHasNoFlushFaces(_ furniture: RoomFurniture) async throws {
+    let layout = GenzLayout.of(furniture)
     let room = GenzRoom(
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "flush-\(UUID())")!, key: layout.key))

@@ -110,11 +110,9 @@ final class GenzRoom: CatPlayStage {
   /// The walls, floor, sill and trim, joined into one model per colour.
   static let shellName = "genz-shell"
   static let lampName = "genz-lamp"
-  static let lensName = "genz-lens"
   static let bulbName = "genz-bulb"
   /// The bulb seen under a shade, which keeps its own glow when the shade's changes.
   static let bulbGlassName = "genz-bulb-glass"
-  static let posterName = "genz-poster"
   /// A candle's flame, which flickers.
   static let flameName = "genz-flame"
   static let lightDotName = "genz-light-dot"
@@ -125,7 +123,6 @@ final class GenzRoom: CatPlayStage {
   let layout: GenzLayout
   let root = Entity()
   let screen = GenzRoomScreen()
-  var art: any RoomLayerArt = GenzNativeArt()
   private(set) var camera: GenzCamera
   private(set) var isBuilt = false
   private(set) var hasCat = false
@@ -164,18 +161,12 @@ final class GenzRoom: CatPlayStage {
   private let note = Entity()
   private var notePaper: ModelEntity?
   private var noteTexture: TextureResource?
-  private var discModel: ModelEntity?
-  private var discTexture: TextureResource?
-  private var posterModel: ModelEntity?
-  private var posterTexture: TextureResource?
   private var leds: [ModelEntity] = []
-  private var lenses: [ModelEntity] = []
   private var shades: [ModelEntity] = []
   /// Candle flames, which flicker.
   private var flames: [ModelEntity] = []
   let lampLight = Entity()
   private let outsideLight = Entity()
-  private let fillLight = Entity()
   private let headlight = Entity()
   var rig: CatRig?
   /// The cat's soft shadow, and the footprint it is easing towards, as fractions of its length.
@@ -215,7 +206,6 @@ final class GenzRoom: CatPlayStage {
   private var settlingFrames = 4
   private var isOnScreen = false
   private var viewsShowing = Set<UUID>()
-  private var lastTexture = -1.0
   private var lastLevels: [String: Double] = [:]
   var tapTimer = NookiTapTimer()
   private var texturesBeingMade = Set<String>()
@@ -225,8 +215,6 @@ final class GenzRoom: CatPlayStage {
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
   private let dayLamp = Entity()
-  /// The look the sunset disc's texture holds now.
-  private var drawnDisc: DiscLook?
   private(set) var glow: GenzGlow?
   /// The lighting preset the room is lit with.
   private(set) var look = LightingLook.off
@@ -246,15 +234,10 @@ final class GenzRoom: CatPlayStage {
   private static let orbitPerPoint: Float = 0.004
   /// The lens's clip planes. The camera never comes within a few units of the room, and stands
   /// at most about a hundred off in the opening at full zoom out, so a near plane this far out
-  /// keeps the depth fine enough that the rug, poster and note never shimmer against what they
+  /// keeps the depth fine enough that the rug, shelves and note never shimmer against what they
   /// rest on. The default near plane of a centimetre left too little depth twenty units out.
   static let nearClip: Float = 0.5
   static let farClip: Float = 300
-  private static let discPixels = 512
-  private static let posterPixels = 128
-  private static let textureStep = 1.0 / 15
-  /// The poster's sun turns slowly, so a few updates a second are enough.
-  private static let posterStep = 0.25
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
   private static let ambientExponent: Float = 1.6
@@ -295,13 +278,12 @@ final class GenzRoom: CatPlayStage {
     let shell = Entity()
     shell.name = Self.shellName
     for part in layout.shell(kit) { shell.addChild(part) }
-    kit.merge(shell, key: "shell \(layout.style)")
+    kit.merge(shell, key: "shell")
     room.addChild(shell)
     let holders = layout.pieces.map(place)
     pieceHolders = holders
     arrangeDecor(holders)
     buildLED()
-    buildDisc()
     buildNote()
     await Task.yield()
     addLighting()
@@ -358,7 +340,7 @@ final class GenzRoom: CatPlayStage {
     let size = placement.piece.kind.size
     room.addChild(holder)
     switch placement.piece.kind {
-    case .sunsetLamp, .thriftLamp, .pleatedLamp:
+    case .thriftLamp, .pleatedLamp:
       holder.name = Self.lampName
       SceneParts.makeTappable(
         holder, size: [size.x + 0.3, size.z + 0.3, size.y + 0.3], center: [0, size.z / 2, 0])
@@ -367,8 +349,6 @@ final class GenzRoom: CatPlayStage {
     SceneParts.visit(piece) { entity in
       guard let model = entity as? ModelEntity else { return }
       switch entity.name {
-      case Self.lensName: lenses.append(model)
-      case Self.posterName: posterModel = model
       case Self.bulbGlassName: break
       case Self.flameName: flames.append(model)
       default:
@@ -399,15 +379,6 @@ final class GenzRoom: CatPlayStage {
       leds.append(model)
       room.addChild(model)
     }
-  }
-
-  private func buildDisc() {
-    guard let wall = layout.discWall else { return }
-    let model = kit.part(
-      kit.plane(width: wall.width, height: wall.height), kit.glow(GenzColour(0xFF8A3D), opacity: 0),
-      at: wall.centre.scene)
-    discModel = model
-    room.addChild(model)
   }
 
   private func buildNote() {
@@ -444,7 +415,7 @@ final class GenzRoom: CatPlayStage {
   private func placeCat() async {
     let wanted = catChoice
     guard let (model, shown) = await cats.cat(wanted) else {
-      Self.log.error("No cat for \(self.layout.style.rawValue, privacy: .public)")
+      Self.log.error("No cat for \(String(describing: wanted), privacy: .public)")
       return
     }
     guard wanted == catChoice || !hasCat else { return }
@@ -475,7 +446,6 @@ final class GenzRoom: CatPlayStage {
   private var ambientReceiver: ImageBasedLightReceiverComponent?
 
   private func addLighting() {
-    let isSunset = layout.style == .sunsetLamp
     if let environment = Self.ambient(top: ambientColours.top, bottom: ambientColours.bottom) {
       let ambient = Entity()
       ambient.components.set(
@@ -488,34 +458,21 @@ final class GenzRoom: CatPlayStage {
       ambientReceiver = receiver
     }
     let lamp = layout.lamp
-    if isSunset {
-      lampLight.components.set(
-        SpotLightComponent(
-          color: layout.lampColour.platformColour, intensity: 0, innerAngleInDegrees: 18,
-          outerAngleInDegrees: 46, attenuationRadius: 14))
-      lampLight.look(at: lamp.aim.scene, from: lamp.at.scene, relativeTo: room)
-      fillLight.position = GenzRoomPoint(3.4, 2.4, 2.6).scene
-      fillLight.components.set(
-        PointLightComponent(
-          color: GenzColour(0xFF7A45).platformColour, intensity: 0, attenuationRadius: 9))
-      room.addChild(fillLight)
-    } else {
-      if lampLight.position == .zero { lampLight.position = lamp.at.scene }
-      lampLight.components.set(
-        PointLightComponent(
-          color: layout.lampColour.platformColour, intensity: 0, attenuationRadius: 6))
-      headlight.components.set(
-        SpotLightComponent(
-          color: GenzColour(0xFFF4DD).platformColour, intensity: 0, innerAngleInDegrees: 10,
-          outerAngleInDegrees: 28, attenuationRadius: 20))
-      room.addChild(headlight)
-    }
+    if lampLight.position == .zero { lampLight.position = lamp.at.scene }
+    lampLight.components.set(
+      PointLightComponent(
+        color: layout.lampColour.platformColour, intensity: 0, attenuationRadius: 6))
+    headlight.components.set(
+      SpotLightComponent(
+        color: GenzColour(0xFFF4DD).platformColour, intensity: 0, innerAngleInDegrees: 10,
+        outerAngleInDegrees: 28, attenuationRadius: 20))
+    room.addChild(headlight)
     room.addChild(lampLight)
     outsideLight.components.set(
       DirectionalLightComponent(
         color: outsideColour.platformColour, intensity: 0))
     let middle = GenzRoomPoint(4, 3, 1).scene
-    let from = isSunset ? GenzRoomPoint(-8, 3, 7).scene : GenzRoomPoint(4.5, -9, 7).scene
+    let from = GenzRoomPoint(4.5, -9, 7).scene
     outsideLight.look(at: middle, from: from, relativeTo: room)
     room.addChild(outsideLight)
     dayLamp.components.set(DirectionalLightComponent(color: .white, intensity: 0))
@@ -546,7 +503,7 @@ final class GenzRoom: CatPlayStage {
     guard arrived else { return }
     landedClock = clock
     screen.landedAt = .now
-    noteClock = clock - (layout.style == .sunsetLamp ? 1.05 : 1.1)
+    noteClock = clock - 1.1
     if reduceMotion { noteClock = clock - GenzOpening.length }
     if !reduceMotion, hasCat {
       // The note is all there from the start: it rides in the cat's mouth until it is taped up.
@@ -565,7 +522,7 @@ final class GenzRoom: CatPlayStage {
     let panel = layout.note
     return GenzTextures.note(
       drawing: shownDrawing, paper: layout.paper, aspect: CGFloat(panel.height / panel.width),
-      corners: layout.style == .windowSeat)
+      corners: true)
   }
 
   private func refreshNoteTexture() {
@@ -596,18 +553,11 @@ final class GenzRoom: CatPlayStage {
     }
   }
 
-  /// Plays the opening again, from the dark.
-  func replayOpening() {
-    guard openedClock != nil else { return }
-    startOpening()
-  }
-
   private func startOpening() {
     let skip = reduceMotion ? GenzOpening.length : 0
     openedClock = clock - skip
     noteClock = clock - skip
     screen.openedAt = Date.now.addingTimeInterval(-skip)
-    lastTexture = -1
   }
 
   // MARK: - Screen
@@ -694,7 +644,6 @@ final class GenzRoom: CatPlayStage {
   func toggleLamp() {
     lampOn.toggle()
     screen.lampOn = lampOn
-    lastTexture = -1
   }
 
   /// Tells a measuring run that this room is drawing, and how to drive it.
@@ -702,7 +651,7 @@ final class GenzRoom: CatPlayStage {
     isAnnounced = true
     ScenePerf.shown(
       ScenePerf.Scene(
-        name: "\(layout.style.rawValue) room",
+        name: "windowSeat room",
         orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
         zoom: { [weak self] in self?.zoom(by: $0) },
         release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
@@ -721,15 +670,8 @@ final class GenzRoom: CatPlayStage {
     let window = layout.window.compactMap(project)
     let note = layout.note.corners.compactMap(project)
     var outlines: [RoomLayerSlot: [CGPoint]] = [:]
-    switch layout.style {
-    case .sunsetLamp:
-      outlines[.sunsetBloom] = led
-      outlines[.sunsetCity] = window
-    case .windowSeat:
-      outlines[.windowBloom] = led
-      outlines[.windowBacklight] = note
-    case .nooki: break
-    }
+    outlines[.windowBloom] = led
+    outlines[.windowBacklight] = note
     if screen.outlines != outlines { screen.outlines = outlines }
     var lights = GlowSpots()
     if look.isLit {
@@ -830,7 +772,6 @@ final class GenzRoom: CatPlayStage {
     openedClock = clock - GenzOpening.length
     noteClock = openedClock ?? clock
     screen.openedAt = Date.now.addingTimeInterval(-GenzOpening.length)
-    lastTexture = -1
     cue(.lookAtCamera)
   }
 
@@ -909,16 +850,8 @@ final class GenzRoom: CatPlayStage {
       GenzColour.mix(layout.lampColour, look.key.colour.genz, by: look.key.warmth),
       Self.lovedLamp, by: lifeWarmth)
     let soft = look.key.softness
-    switch layout.style {
-    case .sunsetLamp:
-      lampLight.components[SpotLightComponent.self]?.color = lamp.platformColour
-      lampLight.components[SpotLightComponent.self]?.innerAngleInDegrees = 18 + 8 * soft
-      lampLight.components[SpotLightComponent.self]?.outerAngleInDegrees = 46 + 14 * soft
-    case .windowSeat:
-      lampLight.components[PointLightComponent.self]?.color = lamp.platformColour
-      lampLight.components[PointLightComponent.self]?.attenuationRadius = 6 + 3 * soft
-    case .nooki: break
-    }
+    lampLight.components[PointLightComponent.self]?.color = lamp.platformColour
+    lampLight.components[PointLightComponent.self]?.attenuationRadius = 6 + 3 * soft
     outsideLight.components[DirectionalLightComponent.self]?.color =
       (look.outside?.genz ?? outsideColour).platformColour
     applyFill()
@@ -927,15 +860,10 @@ final class GenzRoom: CatPlayStage {
   }
 
   /// The colour of the light from outside, before a preset changes it.
-  private var outsideColour: GenzColour {
-    layout.style == .sunsetLamp ? GenzColour(0x8FA6D8) : GenzColour(0xFFD9A0)
-  }
+  private let outsideColour = GenzColour(0xFFD9A0)
 
   /// The room's own ambient light from above and below, before a preset changes it.
-  private var ambientColours: (top: GenzColour, bottom: GenzColour) {
-    layout.style == .sunsetLamp
-      ? (GenzColour(0xE8D8E0), GenzColour(0xA08890)) : (GenzColour(0xC8D4E8), GenzColour(0x8090A8))
-  }
+  private let ambientColours = (top: GenzColour(0xC8D4E8), bottom: GenzColour(0x8090A8))
 
   /// Tints the ambient light towards the preset's fill.
   private func applyFill() {
@@ -981,7 +909,7 @@ final class GenzRoom: CatPlayStage {
   /// The cat follows what moves outside with its head, and paws at a drop running down the glass
   /// beside it when it is up. A finger on the screen comes first.
   private func stepView() {
-    guard layout.style == .windowSeat, trip == nil, !reduceMotion else { return }
+    guard trip == nil, !reduceMotion else { return }
     let look = ViewLook(
       view: screen.windowView.view, hour: screen.viewHour, weather: screen.windowView.shownWeather)
     let moment = ViewMoment(
@@ -1179,52 +1107,13 @@ final class GenzRoom: CatPlayStage {
   private func applyLevels() {
     let time = openingTime
     let warmth = GenzOpening.warmth(sinceLanding: landedClock.map { clock - $0 })
-    switch layout.style {
-    case .sunsetLamp: applySunset(time, warmth: warmth)
-    case .windowSeat: applyWindow(time, warmth: warmth)
-    case .nooki: break
-    }
+    applyWindow(time, warmth: warmth)
   }
 
   private func changed(_ key: String, _ value: Double, step: Double = 0.01) -> Bool {
     if let last = lastLevels[key], abs(last - value) < step { return false }
     lastLevels[key] = value
     return true
-  }
-
-  private func applySunset(_ time: Double, warmth: Double) {
-    let led = GenzOpening.sunsetLED(time)
-    if changed("led", led) { setLED(led) }
-    let click = lampOn ? GenzOpening.lampClick(time) : 0
-    let bloom = GenzOpening.discBloom(time) * (lampOn ? 1 : 0)
-    let boost = lampBoost
-    if changed("lamp", click + bloom * 10 + warmth * 100 + Double(boost) * 1_000, step: 0.02) {
-      lampLight.setLight(intensity: Float(click) * 90_000 * Float(1 + 0.3 * warmth) * boost)
-      fillLight.setLight(intensity: Float(bloom) * 26_000 * Float(1 + 0.4 * warmth))
-    }
-    // The lens follows the switch alone: a candle's flicker moves the light, not its material.
-    if changed("lens", click, step: 0.02) {
-      for lens in lenses {
-        lens.model?.materials = [kit.glow(GenzColour(0xFFB066).shaded(Float(click) - 1))]
-      }
-    }
-    let moon = GenzOpening.eased(time, from: 0.2, length: 1)
-    if changed("moon", moon) {
-      outsideLight.setLight(intensity: Float(moon) * 420)
-    }
-    let breath = GenzOpening.discBreath(time) * (0.92 + 0.08 * warmth)
-    if changed("breath", breath, step: 0.02) { setDiscOpacity(breath) }
-    let note = GenzOpening.sunsetNote(clock - noteClock)
-    if changed("note", note) {
-      setNote(opacity: note, tint: 1)
-      self.note.orientation = simd_quatf(
-        angle: Float(-4 * (1 - note)) * .pi / 180, axis: [0, 0, 1])
-    }
-    let isChanging = time < 1.8 || warmth > 0
-    let wait = isChanging ? Self.textureStep : Self.posterStep
-    if lastTexture < 0 || clock - lastTexture >= wait {
-      refreshTextures(time: time, warmth: warmth)
-    }
   }
 
   private func applyWindow(_ time: Double, warmth: Double) {
@@ -1239,7 +1128,7 @@ final class GenzRoom: CatPlayStage {
     if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
       lampLight.setLight(intensity: Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost)
     }
-    // The shade follows the switch alone, as the sunset lamp's lens does.
+    // The shade follows the switch alone: a candle's flicker moves the light, not its material.
     if changed("shade", lamp, step: 0.02) {
       for shade in shades {
         shade.model?.materials = [kit.glow(GenzColour(0xF3E3C3).shaded(Float(lamp) * 0.55 - 0.55))]
@@ -1268,13 +1157,6 @@ final class GenzRoom: CatPlayStage {
     for led in leds { led.model?.materials = [material] }
   }
 
-  private func setDiscOpacity(_ opacity: Double) {
-    guard var material = discModel?.model?.materials.first as? UnlitMaterial, discTexture != nil
-    else { return }
-    material.blending = .transparent(opacity: .init(floatLiteral: Float(opacity)))
-    discModel?.model?.materials = [material]
-  }
-
   private func setNote(opacity: Double, tint: Double) {
     guard let notePaper else { return }
     // A clear paper still hides what is behind it, so it leaves the scene until it starts to show.
@@ -1295,68 +1177,6 @@ final class GenzRoom: CatPlayStage {
       material.blending = .transparent(opacity: .init(floatLiteral: Float(opacity)))
     }
     notePaper.model?.materials = [material]
-  }
-
-  private func refreshTextures(time: Double, warmth: Double) {
-    lastTexture = clock
-    var state = RoomLayerState(time: time, warmth: warmth, lampOn: lampOn)
-    // The native disc only changes with its bloom, the lamp and the warmth, so once it has
-    // bloomed it is drawn again only when one of those changes.
-    let disc = DiscLook(
-      bloom: (GenzOpening.discBloom(time) * 100).rounded(), warmth: (warmth * 100).rounded(),
-      lampOn: lampOn)
-    let discIsDrawn = art is GenzNativeArt && discTexture != nil && disc == drawnDisc
-    if discModel != nil, !discIsDrawn,
-      let image = art.image(for: .sunsetDisc, state: state, pixels: Self.discPixels)
-    {
-      if discTexture != nil { drawnDisc = disc }
-      updateTexture(image, current: discTexture, key: "disc") { texture in
-        self.discTexture = texture
-        var material = UnlitMaterial()
-        material.color = .init(tint: .white, texture: .init(texture))
-        material.blending = .transparent(opacity: 1.0)
-        self.discModel?.model?.materials = [material]
-        self.lastLevels["breath"] = nil
-      }
-    }
-    state.outline = []
-    if posterModel != nil,
-      let image = art.image(for: .sunsetPoster, state: state, pixels: Self.posterPixels)
-    {
-      updateTexture(image, current: posterTexture, key: "poster") { texture in
-        self.posterTexture = texture
-        var material = PhysicallyBasedMaterial()
-        material.baseColor = .init(tint: .white, texture: .init(texture))
-        material.roughness = 0.9
-        self.posterModel?.model?.materials = [material]
-        if let receiver = self.ambientReceiver { self.posterModel?.components.set(receiver) }
-      }
-    }
-  }
-
-  /// What the native sunset disc was last drawn with.
-  private struct DiscLook: Equatable {
-    var bloom: Double
-    var warmth: Double
-    var lampOn: Bool
-  }
-
-  /// Draws `image` into the texture, or makes the texture first. Only one is ever made per `key`.
-  private func updateTexture(
-    _ image: CGImage, current: TextureResource?, key: String,
-    made: @escaping (TextureResource) -> Void
-  ) {
-    if let current {
-      try? current.replace(withImage: image, options: .init(semantic: .color))
-      return
-    }
-    guard !texturesBeingMade.contains(key) else { return }
-    texturesBeingMade.insert(key)
-    Task {
-      let texture = try? await TextureResource(image: image, options: .init(semantic: .color))
-      texturesBeingMade.remove(key)
-      if let texture { made(texture) }
-    }
   }
 }
 
@@ -1508,7 +1328,7 @@ extension GenzRoom {
   static let catShadowHeight: Float = 0.015
 
   /// The run clip's own travel speed at the cat's size here.
-  var galloping: Float { NookiClip.runningSpeed * catScale / NookiDiorama.catScale }
+  var galloping: Float { NookiClip.runningSpeed * catScale / NookiClip.referenceScale }
 
   /// The walk clip's speed for moving at `speed`, at the cat's size here.
   func walkRate(_ speed: Float) -> Float {
