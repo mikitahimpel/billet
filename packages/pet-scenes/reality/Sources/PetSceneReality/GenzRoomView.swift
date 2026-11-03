@@ -182,6 +182,7 @@ struct GenzRoomView: View {
       GlowGrade(look: look)
       GlowVignette(look: look)
       CatPurrOverlay(purr: room.purr)
+      PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       catAnchor(room)
     }
     .ignoresSafeArea()

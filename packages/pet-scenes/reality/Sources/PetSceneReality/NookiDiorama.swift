@@ -115,7 +115,7 @@ final class NookiDiorama: CatPlayStage {
   private let frames = FrameClock()
   private var isRehearsing = false
   var camera = NookiCamera()
-  private var tapTimer = NookiTapTimer()
+  var tapTimer = NookiTapTimer()
   var reduceMotion = false
   private var lampIsOn = true
   private var lampLevel: Float = 1
@@ -239,6 +239,7 @@ final class NookiDiorama: CatPlayStage {
     await buildNote()
     buildBackstop()
     buildToys()
+    buildTreat()
     catHolder.position = Self.bedSpot
     catHolder.name = NookiTarget.cat.rawValue
     Self.makeTappable(catHolder, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
@@ -824,7 +825,15 @@ final class NookiDiorama: CatPlayStage {
       awaySpot = pose.spot
     }
     tripPose = nil
-    if let pose = stepPursuit() {
+    if let (pose, held) = stepHeld() {
+      frame.heading = pose.heading
+      frame.wake = 1
+      frame.eyesOpen = true
+      frame.hop = 0
+      frame.stretch = 0
+      awaySpot = held
+      tripPose = pose
+    } else if let pose = stepPursuit() {
       frame.heading = pose.heading
       frame.wake = 1
       frame.eyesOpen = true
@@ -1034,7 +1043,7 @@ final class NookiDiorama: CatPlayStage {
   }
 
   private func applyBowl(_ delta: Float) {
-    let goal = play.treat.bowlFill
+    let goal = max(toys.meal ?? 0, play.treat.bowlFill)
     guard bowlLevel != goal else { return }
     bowlLevel = Self.eased(bowlLevel, to: goal, rate: 3, delta: delta, snap: reduceMotion)
     bowlFill.isEnabled = bowlLevel > 0

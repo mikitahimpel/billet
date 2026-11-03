@@ -29,7 +29,7 @@ extension NookiDiorama {
   /// The cat's length in the diorama's metres, for sizing toys and games.
   static let catReach: Float = 0.3
   /// The toys Nooki adds. Its own yarn keeps its physics and its own game.
-  static let addedToys: [CatToy] = [.wand, .laser, .ball]
+  nonisolated static let addedToys: [CatToy] = [.wand, .laser, .ball]
 
   func floorPoint(_ spot: SIMD2<Float>, lift: Float = 0) -> SIMD3<Float> {
     SIMD3(spot.x, lift, spot.y)
@@ -59,7 +59,9 @@ extension NookiDiorama {
 
   // MARK: - Touch
 
-  private var screenSize: CGSize { CGSize(width: CGFloat(fittedSize.x), height: CGFloat(fittedSize.y)) }
+  private var screenSize: CGSize {
+    CGSize(width: CGFloat(fittedSize.x), height: CGFloat(fittedSize.y))
+  }
 
   private func project(_ point: SIMD3<Float>) -> CGPoint? {
     GenzCamera.project(
@@ -170,6 +172,7 @@ extension NookiDiorama {
 
   var isPlayingWithToys: Bool {
     toys.pursuit != nil || toys.held != nil || toys.rolling.values.contains { $0.speed > 0 }
+      || toys.liftedAt != nil || toys.mealStart != nil || toys.treatAt != nil
   }
 
   func stepToys(_ delta: Double) {
@@ -199,6 +202,7 @@ extension NookiDiorama {
       toys.rolling[toy] = rolling
     }
     stepWand(delta)
+    stepMeal()
     let laserOn = toys.held == .laser && toys.heldAt != nil
     laserDot.isEnabled = laserOn
     if laserOn, let at = toys.heldAt { laserDot.position = floorPoint(at, lift: 0.003) }
@@ -258,7 +262,7 @@ extension NookiDiorama {
         toys.rolling[toy]?.velocity = away * Self.catReach * 0.8
       }
       if let response = hands.play.handle(.toyCaught(toy), at: clock) {
-        show(response).forEach { report?($0) }
+        for event in show(response) { report?(event) }
       }
     case .dropped(let at):
       toys.rolling[toy]?.position = at

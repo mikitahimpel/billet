@@ -20,13 +20,16 @@ extension GenzRoom {
       ])
     let lid = ModelEntity(
       mesh: .generateCylinder(height: length * 0.03, radius: length * 0.08),
-      materials: [SimpleMaterial(color: .init(red: 0.9, green: 0.45, blue: 0.4, alpha: 1), isMetallic: false)])
+      materials: [
+        SimpleMaterial(color: .init(red: 0.9, green: 0.45, blue: 0.4, alpha: 1), isMetallic: false)
+      ])
     lid.position.y = length * 0.115
     jar.addChild(lid)
     for index in 0..<4 {
       let bit = Self.treatModel(length: length * 0.8)
       bit.position = [
-        Float(index % 2) * length * 0.04 - length * 0.02, -length * 0.06 + Float(index / 2) * length * 0.04,
+        Float(index % 2) * length * 0.04 - length * 0.02,
+        -length * 0.06 + Float(index / 2) * length * 0.04,
         0,
       ]
       jar.addChild(bit)
@@ -49,7 +52,8 @@ extension GenzRoom {
     let body = ModelEntity(mesh: .generateSphere(radius: length * 0.035), materials: [colour])
     body.scale = [1.6, 0.7, 0.9]
     let tail = ModelEntity(
-      mesh: .generateBox(size: [length * 0.03, length * 0.035, length * 0.008]), materials: [colour])
+      mesh: .generateBox(size: [length * 0.03, length * 0.035, length * 0.008]), materials: [colour]
+    )
     tail.position = [-length * 0.06, 0, 0]
     tail.orientation = simd_quatf(angle: .pi / 4, axis: [0, 0, 1])
     let treat = Entity()
@@ -150,7 +154,8 @@ extension GenzRoom {
     if !toys.treatTaken {
       treat.isEnabled = true
       treat.position = floorPoint(spot, lift: length * 0.32)
-      treat.orientation = simd_quatf(angle: Float(clock * 2).truncatingRemainder(dividingBy: 6.3) * 0.2, axis: [0, 1, 0])
+      treat.orientation = simd_quatf(
+        angle: Float(clock * 2).truncatingRemainder(dividingBy: 6.3) * 0.2, axis: [0, 1, 0])
       headLook(at: treat.position(relativeTo: nil), for: 0.6)
     }
     guard !toys.treatTaken, isFreeToPlay, simd_distance(spot, nose) < length * 0.75,

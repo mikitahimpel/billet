@@ -34,6 +34,8 @@ final class RoomToys {
   /// The meal in the bowl: from when, and how long the cat eats it.
   var mealStart: Double?
   var mealLength = 0.0
+  /// How full the bowl is from a meal put down, where a room keeps no bowl of its own.
+  var meal: Float?
 }
 
 extension GenzRoom {
@@ -326,7 +328,7 @@ extension GenzRoom {
         toys.rolling[toy]?.velocity = away * layout.cat.length * 0.8
       }
       if let response = hands.play.handle(.toyCaught(toy), at: clock) {
-        show(response).forEach { report?($0) }
+        for event in show(response) { report?(event) }
       }
     case .dropped(let at):
       toys.rolling[toy]?.position = at
