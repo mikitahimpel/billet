@@ -52,8 +52,18 @@ public struct WidgetFeatures: Equatable, Sendable {
 }
 
 extension WidgetFeatures: Codable {
+  /// The key of the cat-mood picture, which is gone. A saved choice of it is dropped, and when it
+  /// was the only picture on, the pictures go back to their defaults rather than all off.
+  static let retiredCatMood = "catMood"
+
   public init(from decoder: any Decoder) throws {
-    choices = try decoder.singleValueContainer().decode([String: Bool].self)
+    var saved = try decoder.singleValueContainer().decode([String: Bool].self)
+    let catMoodWasOn = saved.removeValue(forKey: Self.retiredCatMood) == true
+    choices = saved
+    let pictures = PictureMode.allCases.map(\.feature)
+    if catMoodWasOn, !pictures.contains(where: isOn) {
+      for feature in pictures { choices[feature.rawValue] = nil }
+    }
   }
 
   public func encode(to encoder: any Encoder) throws {

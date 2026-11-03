@@ -281,6 +281,84 @@ describe("demo room play", () => {
   });
 });
 
+const playsURL = (code: string, device: string) =>
+  `https://host/demo/rooms/${code}/plays?device=${device}`;
+const postPlays = (code: string, device: string, body: unknown) =>
+  routeDemo(
+    new Request(playsURL(code, device), { method: "POST", body: JSON.stringify(body) }),
+    DEMO_ROOM,
+  )!;
+const playBody = (id: string, kind: string, when: string) => ({ type: "play", id, kind, at: when });
+
+describe("demo room plays posted by a widget", () => {
+  it("relays a posted pet to the partner and keeps it in the cat's life", async () => {
+    const code = "WPETRAYS23";
+    const a = await connect(code, alice);
+    const b = await connect(code, bob);
+    const response = await postPlays(code, alice, [
+      playBody(uuid(20), "pet", "2026-11-01T10:00:00+01:00"),
+    ]);
+    expect(response.status).toBe(204);
+    await b.waitFor((f) => ofType(f, "play").length === 1, "the pet on the partner");
+    expect(ofType(b.frames, "play")).toEqual([
+      { type: "play", id: uuid(20), kind: "pet", at: "2026-11-01T10:00:00+01:00", from: alice },
+    ]);
+    await a.waitFor((f) => ofType(f, "life").length === 1, "the pet in A's life");
+  });
+
+  it("leaves the sender's queued notes and pets for its app", async () => {
+    const code = "WKEEPQ2345";
+    const a = await connect(code, alice);
+    const first = await connect(code, bob);
+    await leave(first, a);
+    await a.sendAcked(play(uuid(21), "pet", "2026-11-01T10:00:00+01:00"), uuid(21));
+    const posted = await postPlays(code, bob, [
+      playBody(uuid(22), "treat", "2026-11-01T11:00:00+01:00"),
+      playBody(uuid(23), "feed", "2026-11-01T11:00:00+01:00"),
+    ]);
+    expect(posted.status).toBe(204);
+    const back = await connect(code, bob);
+    expect(ofType(back.frames, "play")).toEqual([
+      { type: "play", id: uuid(21), kind: "pet", at: "2026-11-01T10:00:00+01:00", from: alice },
+    ]);
+    expect(ofType(back.frames, "treats")).toEqual([
+      { type: "treats", days: { "2026-11-01": [bob] } },
+    ]);
+    const kinds = ofType(back.frames, "life").flatMap((f) =>
+      (f["events"] as Frame[]).map((e) => e["kind"]),
+    );
+    expect(kinds).toEqual(["pet", "feed"]);
+  });
+
+  it("refuses a device that is not in the room", async () => {
+    const code = "WSTRANGE23";
+    await connect(code, alice);
+    const response = await postPlays(code, bob, [
+      playBody(uuid(24), "pet", "2026-11-01T10:00:00+01:00"),
+    ]);
+    expect(response.status).toBe(404);
+  });
+
+  it("refuses other kinds, too many plays, a bad frame and a GET", async () => {
+    const code = "WBADPAST23";
+    await connect(code, alice);
+    const when = "2026-11-01T10:00:00+01:00";
+    const pet = playBody(uuid(25), "pet", when);
+    const refused = [
+      [{ ...playBody(uuid(26), "rename", when), name: "Mochi" }],
+      [pet, pet, pet],
+      [],
+      [{ ...pet, at: "yesterday" }],
+      { plays: [pet] },
+    ];
+    for (const body of refused) {
+      expect((await postPlays(code, alice, body)).status).toBe(400);
+    }
+    const get = await routeDemo(new Request(playsURL(code, alice)), DEMO_ROOM)!;
+    expect(get.status).toBe(400);
+  });
+});
+
 const at = "2026-11-01T10:00:00+01:00";
 const nameFrame = (id: string, name: unknown) =>
   JSON.stringify({ type: "play", id, kind: "name", at, name });

@@ -29,6 +29,7 @@ public struct DemoRootView: View {
 
   public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
     self.host = host
+    DemoRoom.saveHost(host)
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
     // Without the bundled faces SwiftUI falls back to the system font, which still reads fine.
