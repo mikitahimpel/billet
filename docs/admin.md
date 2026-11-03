@@ -35,18 +35,23 @@ The Worker does not trust that alone: `packages/backend/platform/src/admin-fetch
 - RS256 signature against the team's keys (`https://<team>.cloudflareaccess.com/cdn-cgi/access/certs`,
   cached by Cloudflare for 10 minutes);
 - issuer is the configured team domain, audience contains the configured AUD tag;
-- not expired, not before `nbf`, and carries an email (service tokens are refused).
+- not expired, not before `nbf`;
+- a person (a token with an email) must carry the panel's AUD. A service token (a `common_name`,
+  no email) must carry the agent application's AUD (`ACCESS_AGENT_AUD`), and may only `GET`
+  `/admin/api/agent/...` ([Agent API](#agent-api)).
 
 Anything else gets the same bare `403 Forbidden`, whatever the path, including a request with no
-header, an expired or forged token, the wrong audience, and a Worker with no or malformed
-`ACCESS_TEAM_DOMAIN` / `ACCESS_AUD` (it fails closed). Writes must also come from the panel's own
+header, an expired or forged token, the wrong audience, a service token anywhere outside the agent
+reads or sending any write, and a Worker with no or malformed `ACCESS_TEAM_DOMAIN` / `ACCESS_AUD`
+(it fails closed; without a valid `ACCESS_AGENT_AUD` only the agent API is closed). Writes must also come from the panel's own
 origin (`Origin` and `Sec-Fetch-Site`), so another site cannot use the Access cookie. Every page and
 answer has `Cache-Control: no-store` and a strict Content Security Policy (no inline script, no
 third-party anything). Each change is stored with the Access email in `flag_changes`.
 
 Tests: `packages/backend/admin/test/access.test.ts` (missing, expired, not yet valid, wrong
-audience or team, no email, unknown key, unsigned) and `packages/backend/platform/test/admin-fetch.test.ts`
-(the same through the Worker, fail-closed configuration, cross-site writes).
+audience or team, no identity, service tokens for the wrong audience, unknown key, unsigned) and
+`packages/backend/platform/test/admin-fetch.test.ts` (the same through the Worker, fail-closed
+configuration, cross-site writes, and every write and panel route refused to a service token).
 
 ## Owner steps (once)
 
@@ -62,7 +67,7 @@ Nothing here has been done in the Cloudflare account. The steps for the owner:
    - Login method: One-time PIN is enough.
 3. **Copy two values.** The application's **AUD tag** (Applications → billet admin → Overview,
    64 hex digits) and the **team domain** (Settings → Custom pages: `<team>.cloudflareaccess.com`).
-4. **Store them in Proton Pass**, vault `Billet`, item `cloudflare-access`, fields `team_domain`
+4. **Store them in Proton Pass**, vault `Billet`, item `Cloudflare Access`, fields `team_domain`
    and `aud`. `.env.pass` already refers to them (`ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`); the deploy
    passes them to the Worker. Not secrets, but kept out of this public repo.
 5. **Analytics read token** (for Analytics Engine SQL, not needed by the panel): My Profile → API
@@ -77,6 +82,53 @@ Nothing here has been done in the Cloudflare account. The steps for the owner:
 Go to `https://<api host>/admin`, sign in with the one-time PIN sent to the owner's email, and the
 Overview loads. If it says 403 after signing in, the Worker's `ACCESS_AUD` or `ACCESS_TEAM_DOMAIN`
 does not match the application (step 3).
+
+## Agent API
+
+Agents (Claude Code sessions working on billet) read the same data the panel shows, as JSON, with
+a Cloudflare Access **service token**. They can't change anything.
+
+| Route (`GET /admin/api/agent/...`) | Same as the panel's |
+| --- | --- |
+| `overview` | Overview |
+| `experiments` | Experiments, with per-variant results |
+| `flags` | Flags: configuration, version, who changed it last |
+| `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
+| `pairs/<pair id>` | Pairs: one pair by id only, at the panel's detail |
+
+- The Worker serves these only to a token whose `common_name` is set and whose audience is the
+  agent application's AUD. Only `GET`; every write route, the page and the panel's own API answer
+  `403` to a service token. Changes stay with the owner's email.
+- Each read is logged (Workers logs) as `admin agent read` with the token's `common_name` (its
+  client id, not the secret) and the path.
+- `scripts/admin-read.sh <route>` sends the `CF-Access-Client-Id` / `CF-Access-Client-Secret`
+  headers and prints the JSON. The credentials come from `.env.pass.agents`; the API host from a
+  local file that is never committed (`~/.config/billet/admin.env`, a line
+  `BILLET_ADMIN_HOST=<host>`, or `BILLET_ADMIN_HOST` in the environment):
+
+```sh
+PROTON_PASS_AGENT_REASON="read experiment results" pp run --env-file .env.pass.agents -- \
+  scripts/admin-read.sh experiments
+```
+
+### Owner steps for the agent API (once)
+
+Agents never create credentials; the owner does.
+
+1. **Create the service token.** Zero Trust → Access → Service credentials → Service Tokens →
+   Create Service Token, name `billet-agents`, duration as you like (a year is fine; renew it
+   before it ends). Copy the Client ID and the Client Secret: the secret is shown only once.
+2. **Store it in Proton Pass**, vault `Billet`, item `cloudflare-agents`, fields `client_id` and
+   `client_secret`.
+3. **Create the agents' Access application.** Zero Trust → Access → Applications → Add →
+   Self-hosted: name `billet admin agents`, hostname the API host, path `admin/api/agent`. Policy:
+   name `agents`, action **Service Auth**, Include → Service Token → `billet-agents`. Nothing else.
+   Access uses the most specific path, so this application, not `billet admin`, guards the agent
+   routes, and a browser login can't reach them.
+4. **Copy its AUD tag** into item `Cloudflare Access`, field `agent_aud`. It is optional:
+   `.env.pass.agent-access` passes it to the Worker as `ACCESS_AGENT_AUD`, and a deploy adds that
+   file (`--env-file .env.pass --env-file .env.pass.agent-access`) only once the field exists.
+   Without it the agent API stays closed.
 
 ## Querying Analytics Engine
 

@@ -1,10 +1,12 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { accessJwtHeader } from "@billet/backend-admin/access";
 import {
   signAccess,
+  signAgent,
   teamKeys,
+  testAgent,
   testAccess,
   unsignedAccess,
 } from "@billet/backend-admin/test/access-tokens";
@@ -18,6 +20,7 @@ const configured: WorkerEnv = {
   ...env,
   ACCESS_TEAM_DOMAIN: testAccess.teamDomain,
   ACCESS_AUD: testAccess.audience,
+  ACCESS_AGENT_AUD: testAccess.agentAudience,
 };
 
 const admin = async (
@@ -149,5 +152,99 @@ describe("the admin panel behind Cloudflare Access", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as { totals: { users: number } };
     expect(body.totals.users).toBe(0);
+  });
+});
+
+describe("the read-only agent API", () => {
+  const reads = [
+    "/admin/api/agent/overview",
+    "/admin/api/agent/experiments",
+    "/admin/api/agent/flags",
+    "/admin/api/agent/flag-history",
+  ];
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each(reads)("answers %s to a service token as JSON", async (path) => {
+    const response = await admin(path, { token: await signAgent() });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    await response.json();
+  });
+
+  it("answers the same flags the panel shows", async () => {
+    const agent = await (
+      await admin("/admin/api/agent/flags", { token: await signAgent() })
+    ).json();
+    expect(agent).toEqual(await (await admin("/admin/api/flags")).json());
+  });
+
+  it("looks a pair up by id only, like the panel", async () => {
+    const response = await admin("/admin/api/agent/pairs/no-such-pair", {
+      token: await signAgent(),
+    });
+    expect(response.status).toBe(404);
+  });
+
+  it("logs each read with the token's common_name", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await admin("/admin/api/agent/flags", { token: await signAgent() });
+    expect(info).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(info.mock.calls[0]?.[0]))).toEqual({
+      message: "admin agent read",
+      commonName: testAgent,
+      pathname: "/admin/api/agent/flags",
+    });
+  });
+
+  it.each([
+    ["PUT", "/admin/api/flags/split"],
+    ["POST", "/admin/api/experiments/split/kill"],
+    ["PUT", "/admin/api/pairs/p1/overrides/split"],
+    ["DELETE", "/admin/api/pairs/p1/overrides/split"],
+    ["POST", "/admin/api/agent/flags"],
+    ["PUT", "/admin/api/agent/flags"],
+    ["DELETE", "/admin/api/agent/flags"],
+  ])(
+    "refuses a service token's %s %s with 403, even from the panel's origin",
+    async (method, path) => {
+      const response = await admin(path, {
+        method,
+        token: await signAgent(),
+        body: JSON.stringify({ expectedVersion: 0, variant: "a" }),
+        headers: { "content-type": "application/json", origin, "sec-fetch-site": "same-origin" },
+      });
+      expect(response.status).toBe(403);
+      expect(await response.text()).toBe("Forbidden");
+      expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM flag_changes").first("n")).toBe(0);
+    },
+  );
+
+  it.each(["/admin", "/admin/app.js", "/admin/api/me", "/admin/api/flags", "/admin/api/overview"])(
+    "refuses a service token outside the agent API: GET %s",
+    async (path) => {
+      expect((await admin(path, { token: await signAgent() })).status).toBe(403);
+    },
+  );
+
+  it("refuses a service token when the Worker has no agent AUD", async () => {
+    const response = await admin(
+      "/admin/api/agent/flags",
+      { token: await signAgent() },
+      { ...configured, ACCESS_AGENT_AUD: "" },
+    );
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses a service token for the panel's audience", async () => {
+    const response = await admin("/admin/api/agent/flags", {
+      token: await signAgent({ aud: [testAccess.audience] }),
+    });
+    expect(response.status).toBe(403);
+  });
+
+  it("refuses the agent API without a token", async () => {
+    expect((await admin("/admin/api/agent/flags", { token: null })).status).toBe(403);
   });
 });

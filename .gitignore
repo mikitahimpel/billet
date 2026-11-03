@@ -15,4 +15,6 @@ xcuserdata
 .env.*
 !.env.pass
 !.env.pass.release
+!.env.pass.agents
+!.env.pass.agent-access
 !.env.example
