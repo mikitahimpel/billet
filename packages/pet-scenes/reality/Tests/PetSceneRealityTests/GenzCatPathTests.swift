@@ -34,11 +34,17 @@ import Testing
   @Test func aWalkAlongTheSeatStopsShortOfTheCardigan() throws {
     let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
     let cardigan = try #require(layout.pieces.first { $0.piece.kind == .cardigan })
-    let home = SIMD2(layout.cat.spot.x, layout.cat.spot.y)
+    // In front of the pillows, along the seat.
+    let home = SIMD2(layout.cat.spot.x, 1.1)
     let reach = layout.catReach(from: home, to: [0.9, home.y])
     let cardiganEnd = cardigan.centre.x + cardigan.piece.kind.size.x / 2
     #expect(reach.x > cardiganEnd + layout.cat.length * 0.4)
     #expect(reach.x < home.x)
+    // Along the pillows, it does not walk into the first one.
+    let pillowEnd = try #require(
+      layout.catObstacles.filter(\.builtIn).map(\.box).map { $0.centre.x + $0.half.x }.max())
+    let alongPillows = SIMD2(layout.cat.spot.x, layout.cat.spot.y)
+    #expect(layout.catReach(from: alongPillows, to: [0.9, alongPillows.y]).x > pillowEnd)
     let legs = [CatTrip.Leg.walk(to: [0.9, home.y], speed: 1)].clear(of: layout, from: home)
     guard case .walk(let to, _, _) = legs.first else {
       Issue.record("the walk is kept")

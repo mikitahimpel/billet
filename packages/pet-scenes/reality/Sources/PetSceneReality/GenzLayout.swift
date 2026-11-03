@@ -284,12 +284,34 @@ extension GenzLayout {
   }
 
   /// `point` moved onto the cat's surface, a little in from its edges and clear of what stands
-  /// on it.
+  /// on it, somewhere the cat's body fits: not in a corner between pillows too small for it.
   func onCatSurface(_ point: SIMD2<Float>) -> SIMD2<Float> {
     guard let surface = catSurface else { return point }
     let margin = SIMD2<Float>(repeating: cat.length * 0.35)
     let low = surface.min + margin
     let high = simd_max(surface.max - margin, low)
-    return clearOfClutter(simd_clamp(point, low, high), within: low, high)
+    let spot = clearOfClutter(simd_clamp(point, low, high), within: low, high)
+    let obstacles = catObstacles
+    func fits(_ at: SIMD2<Float>) -> Bool {
+      catClearHeading(at: at, want: 0, obstacles: obstacles) != nil
+    }
+    guard !obstacles.isEmpty, !fits(spot) else { return spot }
+    // Out from it a ring of 8 cm at a time, the nearest fit in the first ring with one.
+    let step: Float = 0.08
+    let rings = Int((simd_length(high - low) / step).rounded(.up))
+    for ring in 1...max(rings, 1) {
+      var best: SIMD2<Float>?
+      for i in -ring...ring {
+        for j in -ring...ring where abs(i) == ring || abs(j) == ring {
+          let at = spot + SIMD2(Float(i), Float(j)) * step
+          guard at == simd_clamp(at, low, high),
+            best.map({ simd_distance(at, spot) < simd_distance($0, spot) }) ?? true, fits(at)
+          else { continue }
+          best = at
+        }
+      }
+      if let best { return best }
+    }
+    return spot
   }
 }

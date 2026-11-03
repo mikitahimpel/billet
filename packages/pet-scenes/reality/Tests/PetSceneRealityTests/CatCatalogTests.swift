@@ -90,6 +90,8 @@ import Testing
   @MainActor @Test func everyBundledCatLoadsAndRigs() async throws {
     for model in CatModel.allCases where !CatCatalog.clips(model).isEmpty {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
+      // Measured before the rig poses it: no cat is wider than the body the rooms keep clear.
+      try GenzCatObstacleTests.theBodyFits(model, cat)
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
       #expect(rig.info[.sleep] != nil || rig.info[.idle] != nil)
       let missing = Set(CatCatalog.clips(model).keys).subtracting(rig.info.keys)
@@ -121,6 +123,8 @@ import Testing
   @MainActor @Test func theDetailedCatsHaveTheBrainsClips() async throws {
     for model in [CatModel.detailed, .detailedKitten, .detailedFluffy, .hero] {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
+      // Measured before the rig poses it: no cat is wider than the body the rooms keep clear.
+      try GenzCatObstacleTests.theBodyFits(model, cat)
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
       #expect(rig.info[.loaf]?.base == .loaf, "\(model)")
       #expect(rig.info[.loaf]?.loops == true, "\(model)")
