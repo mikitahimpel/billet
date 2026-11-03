@@ -116,8 +116,9 @@ import Testing
   }
 
   /// The detailed cats loaf in a base of their own, gallop in a loop, and lie down from standing
-  /// into the sleeping curl, so the next clip after lying down is the sleep.
-  @MainActor @Test func theDetailedCatsLoafRunAndLieDown() async throws {
+  /// into the sleeping curl, so the next clip after lying down is the sleep. Grooming, licking
+  /// lips, startling and tilting the head are one-shots in their bases.
+  @MainActor @Test func theDetailedCatsHaveTheBrainsClips() async throws {
     for model in [CatModel.detailed, .detailedKitten, .detailedFluffy, .hero] {
       let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
       let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
@@ -127,6 +128,11 @@ import Testing
       #expect(rig.info[.run]?.base == .stand, "\(model)")
       let lie = try #require(rig.info[.lieDown], "\(model)")
       #expect(lie.base == .stand && lie.ends == .sleep && !lie.loops, "\(model)")
+      for action in [CatAction.groomFlank, .groomTail, .lickLips, .headTilt] {
+        #expect(rig.info[action]?.base == .sit, "\(model) \(action)")
+        #expect(rig.info[action]?.loops == false, "\(model) \(action)")
+      }
+      #expect(rig.info[.startle]?.base == .stand, "\(model)")
     }
   }
 
