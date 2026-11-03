@@ -1,14 +1,15 @@
 # Shop tab and Notes desk
 
-Two 3D scenes in the same low-poly, warm-glow style as Window Seat, each filling a tab. Both are
-Labs switches, so they can be A/B tested against the screens they replace, and both start on.
+Two 3D scenes in the same low-poly, warm-glow style as Window Seat, each filling a tab. The Shop tab
+is always there (between Home and Notes: a little shop at night, the keeper behind the counter), for
+every scene that has a shop. The desk is a Labs switch, so it can be A/B tested against the list, and
+starts on.
 
 | Switch (Labs)          | On                                                                      | Off                                  |
 | ---------------------- | ----------------------------------------------------------------------- | ------------------------------------ |
-| The house → Shop tab   | A Shop tab between Home and Notes: a little shop at night, the keeper behind the counter. | No Shop tab; the shop stays a sheet on Home. |
 | Notes → Notes desk     | Notes is a desk under a cork board.                                      | Notes is the list.                   |
 
-Labs → Shopkeeper (shown while the Shop tab is on) picks the keeper: **Teddy bear** (default: a
+Labs → Shopkeeper picks the keeper: **Teddy bear** (default: a
 well-loved plush bear in fuzzy fabric, with button eyes, stitched seams, nose and mouth, a red bow
 tie and a patched belly), **Shopkeeper** (a round, friendly person in a green apron), Old tabby,
 Raccoon or Fox. Stored as `shopkeeper.json` beside the flags.

@@ -40,10 +40,9 @@ import Testing
     #expect(changes == 0)
   }
 
-  @Test func theTabScenesAreLabsSwitchesThatStartOn() {
-    #expect(LabExperiment.shopScene.defaultOn)
+  @Test func theNotesDeskIsALabsSwitchThatStartsOn() {
     #expect(LabExperiment.notesDesk.defaultOn)
-    #expect(!LabExperiment.shopScene.hasHomeCard)
+    #expect(!LabExperiment.allCases.map(\.rawValue).contains("shopScene"))
     #expect(LabExperiment.notesDesk.group == .notes)
   }
 }
