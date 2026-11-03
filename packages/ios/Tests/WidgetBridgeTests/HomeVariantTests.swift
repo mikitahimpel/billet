@@ -42,13 +42,13 @@ import Testing
     #expect(store.loadHomeVariant() == .standard)
   }
 
-  @Test func theModelSavesTheVariantWithoutTouchingTheFlagsOrTheRoom() {
+  @Test func theModelSavesTheVariantWithoutTouchingTheFlagsOrTheLight() {
     let storage = storage()
     var changes = 0
     let model = WidgetFeaturesModel(store: WidgetFeaturesStore(storage: storage)) { changes += 1 }
     model.setHomeVariant(.livingWindow)
     #expect(model.homeVariant == .livingWindow)
-    #expect(model.roomStyle == .standard)
+    #expect(model.lighting == .standard)
     #expect(changes == 0)
     let reopened = WidgetFeaturesModel(store: WidgetFeaturesStore(storage: storage))
     #expect(reopened.homeVariant == .livingWindow)

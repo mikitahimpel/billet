@@ -50,10 +50,6 @@ extension HomeVariant: RemoteChoice {}
 extension Shopkeeper: RemoteChoice {}
 
 public enum Experiments {
-  /// Which room Home shows: a night bedroom with a sunset lamp, or a daybed under a window.
-  public static let homeDirection = Experiment(
-    key: "home-direction", variants: ["window-seat", "sunset-lamp"])
-
   /// How the rooms are lit (Labs > Lighting).
   public static let roomLighting = Experiment(key: "room-lighting", choices: RoomLighting.self)
 
@@ -67,20 +63,8 @@ public enum Experiments {
   public static let shopkeeper = Experiment(key: "shopkeeper", choices: Shopkeeper.self)
 
   public static let all: [Experiment] = [
-    homeDirection, roomLighting, windowView, homeLayout, shopkeeper,
+    roomLighting, windowView, homeLayout, shopkeeper,
   ]
-}
-
-extension RoomStyle {
-  /// The room style a `home-direction` variant stands for, or `nil` for a variant this build does
-  /// not have.
-  public init?(homeDirectionVariant variant: String) {
-    switch variant {
-    case "window-seat": self = .windowSeat
-    case "sunset-lamp": self = .sunsetLamp
-    default: return nil
-    }
-  }
 }
 
 /// The variants the server last gave this pair, kept for the next launch and for offline.

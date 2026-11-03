@@ -58,9 +58,7 @@ extension RoomLayerSlot {
     switch self {
     // The view outside: cars, planes, weather and its own small life.
     case .windowNight: 1 / 30
-    // City windows switch on a nine second cycle, and the LED bloom shimmers over ten seconds.
-    case .sunsetCity, .sunsetBloom: 1 / 10
-    case .sunsetDisc, .sunsetPoster, .sunsetDim, .windowBloom, .windowBacklight, .windowDim: nil
+    case .windowBloom, .windowBacklight, .windowDim: nil
     }
   }
 }

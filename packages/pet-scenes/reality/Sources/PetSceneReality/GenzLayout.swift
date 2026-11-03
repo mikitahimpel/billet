@@ -3,9 +3,8 @@ import Pet
 import PetScene
 import RealityKit
 
-/// Where everything stands in one styled room, in room units (``GenzRoomPoint``). The numbers
-/// follow the mockups in `docs/genz-rooms.md`, so the room and its drawing can be checked side by
-/// side.
+/// Where everything stands in the room, in room units (``GenzRoomPoint``). The numbers follow the
+/// mockups in `docs/genz-rooms.md`, so the room and its drawing can be checked side by side.
 @MainActor
 struct GenzLayout {
   struct Placement {
@@ -35,7 +34,6 @@ struct GenzLayout {
     }
   }
 
-  var style: RoomStyle
   var camera: GenzCamera.Home
   var pieces: [Placement]
   /// Where the cat sits, the way it faces and how long it is from nose to tail.
@@ -48,8 +46,6 @@ struct GenzLayout {
   var ledColour: GenzColour
   /// The hole the outside is seen through.
   var window: [GenzRoomPoint]
-  /// The wall the sunset disc is projected on, or `nil` for a room without one.
-  var discWall: Panel?
   /// Where the lamp's light starts, and the point it is aimed at.
   var lamp: (at: GenzRoomPoint, aim: GenzRoomPoint)
   var lampColour: GenzColour
@@ -62,23 +58,15 @@ struct GenzLayout {
   /// The set of furniture in the room.
   var furniture = RoomFurniture.original
 
-  /// What tells one room from another: its style and its furniture.
-  struct Key: Hashable {
-    var style: RoomStyle
-    var furniture: RoomFurniture
+  /// What tells one room from another: its furniture.
+  typealias Key = RoomFurniture
+
+  var key: Key { furniture }
+
+  /// The room furnished with `furniture`.
+  static func of(_ furniture: RoomFurniture) -> GenzLayout {
+    windowSeat.furnished(furniture)
   }
-
-  var key: Key { Key(style: style, furniture: furniture) }
-
-  static func of(_ style: RoomStyle, furniture: RoomFurniture = .original) -> GenzLayout? {
-    switch style {
-    case .nooki: nil
-    case .sunsetLamp: sunsetLamp.furnished(furniture)
-    case .windowSeat: windowSeat.furnished(furniture)
-    }
-  }
-
-  static func of(_ key: Key) -> GenzLayout? { of(key.style, furniture: key.furniture) }
 
   /// How thick a window's sill is. The wall under the window stops at the sill's underside, so
   /// the two never show a top in the same plane.
@@ -86,91 +74,6 @@ struct GenzLayout {
   /// two never share a plane.
   private static let sillInset: Float = 0.02
   private static let windowSill: Float = 0.12
-
-  // MARK: - Sunset Lamp
-
-  private enum Sunset {
-    static let width: Float = 8
-    static let depth: Float = 9
-    static let height: Float = 5.4
-    static let wall: Float = 0.35
-    static let window = (y0: Float(1.7), y1: Float(4.1), z0: Float(2.0), z1: Float(4.3))
-    static let disc = GenzRoomPoint(3.1, 0, 3.05)
-    static let lampCentre = GenzRoomPoint(0.68, 0.5, 1.02)
-  }
-
-  static let sunsetLamp: GenzLayout = {
-    let (width, depth, height, wall, window) = (
-      Sunset.width, Sunset.depth, Sunset.height, Sunset.wall, Sunset.window
-    )
-    let lampYaw = atan2(Sunset.lampCentre.x - Sunset.disc.x, Sunset.lampCentre.y - Sunset.disc.y)
-    let ledHeight = height - 0.14
-    return GenzLayout(
-      style: .sunsetLamp,
-      camera: GenzCamera.Home(
-        target: GenzRoomPoint(3.0, 3.6, 1.0).scene, yaw: 0.6, pitch: 0.44, distance: 20,
-        fieldOfView: 40, yawLimits: -0.2...1.6, pitchLimits: 0.22...0.85),
-      pieces: [
-        Placement(piece: GenzPiece(.checkeredRug), centre: GenzRoomPoint(3.9, 5.75, 0)),
-        Placement(piece: GenzPiece(.cubeNightstand), centre: GenzRoomPoint(0.58, 0.58, 0)),
-        Placement(
-          piece: GenzPiece(.phoneOnCharger), centre: GenzRoomPoint(0.37, 0.75, 1.02), yaw: 0.3),
-        Placement(piece: GenzPiece(.sunsetLamp), centre: Sunset.lampCentre, yaw: lampYaw),
-        Placement(piece: GenzPiece(.platformBed), centre: GenzRoomPoint(3.6, 1.7, 0)),
-        Placement(piece: GenzPiece(.sneakers), centre: GenzRoomPoint(2.95, 5.4, 0.03), yaw: -0.25),
-        Placement(piece: GenzPiece(.hoodiePile), centre: GenzRoomPoint(1.3, 4.6, 0)),
-        Placement(piece: GenzPiece(.monstera), centre: GenzRoomPoint(1.1, 6.6, 0)),
-        Placement(
-          piece: GenzPiece(.posterFrame), centre: GenzRoomPoint(0.03, 0.82, 2.6), yaw: .pi / 2),
-      ],
-      cat: (GenzRoomPoint(4.7, 2.45, 1.02), 3.3, 1.35),
-      note: Panel(centre: GenzRoomPoint(3.1, 0.04, 3.14), width: 1.8, height: 1.98),
-      paper: GenzColour(0xFFF3E6),
-      led: [
-        GenzRoomPoint(width, 0.03, ledHeight), GenzRoomPoint(0.03, 0.03, ledHeight),
-        GenzRoomPoint(0.03, depth, ledHeight),
-      ],
-      ledColour: GenzColour(0xFFD9C8),
-      window: [
-        GenzRoomPoint(-wall, window.y0, window.z1), GenzRoomPoint(-wall, window.y1, window.z1),
-        GenzRoomPoint(-wall, window.y1, window.z0), GenzRoomPoint(-wall, window.y0, window.z0),
-      ],
-      discWall: Panel(
-        centre: GenzRoomPoint(width / 2, 0.02, height / 2), width: width, height: height),
-      lamp: (GenzRoomPoint(0.68, 0.62, 1.62), Sunset.disc),
-      lampColour: GenzColour(0xFF9A52),
-      shell: sunsetShell,
-      floor: [width, depth])
-  }()
-
-  private static func sunsetShell(_ kit: GenzKit) -> [Entity] {
-    let (width, depth, height, wall, window) = (
-      Sunset.width, Sunset.depth, Sunset.height, Sunset.wall, Sunset.window
-    )
-    let side = kit.matte(GenzColour(0x251E2C))
-    let back = kit.matte(GenzColour(0x2E2433))
-    let cut = kit.matte(GenzColour(0x4A3B4F))
-    let opening = window.y1 - window.y0
-    let sill = windowSill
-    return [
-      kit.block(
-        -wall, -wall, -wall, width + wall, depth + wall, wall, kit.matte(GenzColour(0x3A2C2C))),
-      kit.block(-wall, -wall, 0, width + wall, wall, height, back),
-      kit.block(-wall, 0, 0, wall, window.y0, height, side),
-      kit.block(-wall, window.y1, 0, wall, depth - window.y1, height, side),
-      kit.block(-wall, window.y0, 0, wall, opening, window.z0 - sill, side),
-      kit.block(-wall, window.y0, window.z1, wall, opening, height - window.z1, side),
-      kit.block(
-        -wall * 0.6, (window.y0 + window.y1) / 2 - 0.05, window.z0, 0.08, 0.1,
-        window.z1 - window.z0, cut),
-      kit.block(
-        -wall + sillInset, window.y0 - 0.1, window.z0 - sill, wall - sillInset + 0.3,
-        opening + 0.2, sill,
-        kit.matte(GenzColour(0x5A4A58))),
-      kit.block(-wall, -wall, height, width + wall, wall, 0.03, cut),
-      kit.block(-wall, 0, height, wall, depth, 0.03, cut),
-    ]
-  }
 
   // MARK: - Window Seat
 
@@ -188,7 +91,6 @@ struct GenzLayout {
     let (wall, window) = (Seat.wall, Seat.window)
     let ledY: Float = 0.03
     return GenzLayout(
-      style: .windowSeat,
       camera: GenzCamera.Home(
         target: GenzRoomPoint(4.3, 2.4, 1.9).scene, yaw: 0.34, pitch: 0.42, distance: 19.5,
         fieldOfView: 40, yawLimits: -0.3...1.6, pitchLimits: 0.18...0.8),
@@ -216,7 +118,6 @@ struct GenzLayout {
         GenzRoomPoint(window.x0, -wall, window.z1), GenzRoomPoint(window.x1, -wall, window.z1),
         GenzRoomPoint(window.x1, -wall, window.z0), GenzRoomPoint(window.x0, -wall, window.z0),
       ],
-      discWall: nil,
       lamp: (GenzRoomPoint(2.15, 3.27, 1.6), GenzRoomPoint(2.15, 3.27, 0)),
       lampColour: GenzColour(0xFFC36B),
       shell: windowShell,

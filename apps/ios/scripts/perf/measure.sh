@@ -7,7 +7,7 @@
 # --build       generate the project and build Release for the Simulator first
 # --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
 #               dropped, so N+1 are run)
-# --full N      runs of `-perf.script full`: orbit, zoom, rooms, lighting, tabs (default 3)
+# --full N      runs of `-perf.script full`: orbit, zoom, lighting, tabs (default 3)
 # --sweep       one `-perf.script sweep` run, saving a screenshot at each held pose
 # --build-only  build, then stop
 #

@@ -466,6 +466,15 @@ struct AppModelTests {
     #expect(ConnectionLine(status: .connecting, hasConnected: false) == .connecting)
   }
 
+  @Test func aDropWaitsBeforeItIsNamedAndSaysSo() {
+    #expect(ConnectionLine.reconnecting.text == "Reconnecting…")
+    #expect(ConnectionLine.reconnecting.waitsBeforeShowing)
+    #expect(ConnectionLine.connecting.waitsBeforeShowing)
+    #expect(!ConnectionLine.refused.waitsBeforeShowing)
+    #expect(!ConnectionLine.partnerHere.waitsBeforeShowing)
+    #expect(ConnectionLine.patience == .seconds(3))
+  }
+
   @Test func loadingStoredNotesKeepsOnesThatJustArrived() async throws {
     let old = NoteRecord(
       direction: .received, date: Date(timeIntervalSince1970: 1), strokes: strokes)

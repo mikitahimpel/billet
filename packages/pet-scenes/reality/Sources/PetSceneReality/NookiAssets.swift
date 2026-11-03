@@ -67,3 +67,10 @@ final class NookiAssets {
     }
   }
 }
+
+typealias NookiModelLoader = @MainActor @Sendable (String) async throws(NookiLoadError) -> Entity
+
+enum NookiLoadError: Error, Equatable {
+  case unreadable(String, reason: String)
+  case noGeometry(String)
+}

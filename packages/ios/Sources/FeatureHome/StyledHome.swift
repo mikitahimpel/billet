@@ -7,23 +7,18 @@ import Pet
 import PetScene
 import SwiftUI
 
-/// Home for a styled room: the room fills the screen and the controls float over it. The streak
-/// and a switch of room style sit top left, the treat chip follows the cat, and the latest note's
-/// caption and the Draw button sit at the bottom. The closet and the shop come from ``HomeShop``.
-/// Tapping the streak opens its flame, zooming out of the chip.
+/// Home for the room: the room fills the screen and the controls float over it. The streak sits
+/// top left and the latest note's caption at the bottom. Treats are given in the room itself, and
+/// notes are drawn from the Notes tab. The closet comes from ``HomeShop``. Tapping the streak opens
+/// its flame, zooming out of the chip.
 struct StyledHome: View {
   private static let streakSource = "streak"
-  let style: RoomStyle
   /// The scene's view, with the host's environment already set.
   let scene: AnyView
   let notes: [NoteRecord]
   let streak: Int
-  let treats: Int
   let isFakePartner: Bool
-  let onChooseStyle: (RoomStyle) -> Void
-  let onTreat: () -> Void
   let onOpenNotes: () -> Void
-  let onDraw: () -> Void
   /// Whether the room is being decorated, which hides everything over it but its own controls.
   var isDecorating = false
   /// Whether the launch's glide into the room is playing, which keeps the controls back.
@@ -34,14 +29,11 @@ struct StyledHome: View {
   var flame: StreakFlameHost?
 
   @State private var latestDrawing: CGImage?
-  @State private var openings = 0
-  @State private var choosingStyle = false
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
   /// zooms closed.
   @State private var flameState: FlameSceneState?
   @State private var isFlameOpen = false
   @Namespace private var zoom
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private var latestReceived: NoteRecord? {
     notes.first { $0.direction == .received }
@@ -50,18 +42,8 @@ struct StyledHome: View {
   var body: some View {
     ZStack {
       scene
-        .environment(\.petSceneRoomStyle, style)
         .environment(\.petSceneDrawing, latestDrawing)
-        .environment(\.petSceneOpeningCount, openings)
         .ignoresSafeArea()
-        .overlayPreferenceValue(PetSceneCatAnchorKey.self) { anchor in
-          GeometryReader { proxy in
-            if let anchor, !isDecorating {
-              treatChip
-                .position(Self.chipPosition(near: proxy[anchor], in: proxy.size))
-            }
-          }
-        }
       if !isDecorating, !isOpening {
         VStack(spacing: 0) {
           header
@@ -80,12 +62,6 @@ struct StyledHome: View {
       }
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
-    .confirmationDialog("Room style", isPresented: $choosingStyle, titleVisibility: .visible) {
-      ForEach(RoomStyle.allCases, id: \.self) { option in
-        Button(option == style ? "\(option.title) ✓" : option.title) { onChooseStyle(option) }
-      }
-      Button("Play the opening again") { openings += 1 }
-    }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
         flame.view(flameState) { isFlameOpen = false }
@@ -93,16 +69,8 @@ struct StyledHome: View {
     }
   }
 
-  /// Below and to the right of the cat's head, kept inside the view.
-  static func chipPosition(near cat: CGPoint, in size: CGSize) -> CGPoint {
-    let x = min(max(cat.x + 44, 40), size.width - 40)
-    let y = min(max(cat.y + 64, 120), size.height - 220)
-    return CGPoint(x: x, y: y)
-  }
-
   private var header: some View {
     HStack(spacing: Spacing.small) {
-      IconButton("paintbrush.pointed.fill", label: "Room style") { choosingStyle = true }
       streakChip
       if let onDecorate {
         IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
@@ -156,30 +124,6 @@ struct StyledHome: View {
     .frame(minHeight: Target.minimum)
   }
 
-  private var treatChip: some View {
-    Button(action: onTreat) {
-      HStack(spacing: Spacing.hair) {
-        Image(systemName: "fish.fill")
-          .font(IconStyle.font)
-          .foregroundStyle(Palette.gold.color)
-        if treats > 0 {
-          Text(verbatim: "\(treats)")
-            .billetType(.action)
-            .foregroundStyle(Palette.paper.color)
-        }
-      }
-      .padding(.horizontal, Spacing.medium - Spacing.hair)
-      .frame(minWidth: Target.minimum, minHeight: Target.minimum)
-      .contentShape(.capsule)
-    }
-    .buttonStyle(RowButtonStyle())
-    .floatingGlass()
-    .accessibilityLabel(
-      treats > 0 ? "Give the cat a treat, \(treats) left" : "Give today's treat"
-    )
-    .accessibilityIdentifier("styledTreat")
-  }
-
   private var bottom: some View {
     VStack(spacing: Spacing.medium) {
       if isFakePartner {
@@ -192,8 +136,6 @@ struct StyledHome: View {
       Button(action: onOpenNotes) { caption }
         .buttonStyle(RowButtonStyle())
         .accessibilityIdentifier("styledCaption")
-      BilletButton(
-        "Draw for your partner", rank: .primary, systemImage: "pencil.tip", action: onDraw)
     }
     .padding(.horizontal, Spacing.medium)
     .padding(.top, Spacing.page)
@@ -202,8 +144,8 @@ struct StyledHome: View {
       LinearGradient(
         stops: [
           .init(color: .clear, location: 0),
-          .init(color: Self.ground(style).opacity(0.92), location: 0.45),
-          .init(color: Self.ground(style), location: 1),
+          .init(color: Self.ground.opacity(0.92), location: 0.45),
+          .init(color: Self.ground, location: 1),
         ], startPoint: .top, endPoint: .bottom
       )
       .ignoresSafeArea(edges: .bottom)
@@ -212,43 +154,38 @@ struct StyledHome: View {
   }
 
   /// The room's own night colour, which the bottom fades into.
-  static func ground(_ style: RoomStyle) -> Color {
-    switch style {
-    case .sunsetLamp: Color(red: 0.078, green: 0.071, blue: 0.102)
-    case .windowSeat: Color(red: 0.047, green: 0.075, blue: 0.125)
-    case .nooki: Color(red: 0.047, green: 0.141, blue: 0.133)
-    }
-  }
+  static let ground = Color(red: 0.047, green: 0.075, blue: 0.125)
 
-  @ViewBuilder private var caption: some View {
-    let time = latestReceived.map { $0.date.formatted(date: .omitted, time: .shortened) }
-    switch style {
-    case .windowSeat:
-      VStack(alignment: .leading, spacing: Spacing.hair) {
-        Text(time == nil ? "Nothing on the window yet" : "Your partner taped this to your window")
+  private var caption: some View {
+    VStack(alignment: .leading, spacing: Spacing.hair) {
+      if let note = latestReceived {
+        TimelineView(.everyMinute) { context in
+          Text(Self.caption(for: note.date, now: context.date))
+            .billetType(.heading)
+            .foregroundStyle(Palette.paper.color)
+        }
+        Text("Tap the note to open it")
+          .billetType(.label)
+          .foregroundStyle(Palette.muted.color)
+      } else {
+        Text("No notes yet")
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)
-        Text(time.map { "\($0) · tap the note to open it" } ?? "Draw the first note")
+        Text("Draw one from the Notes tab")
           .billetType(.label)
           .foregroundStyle(Palette.muted.color)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    case .sunsetLamp, .nooki:
-      HStack(spacing: Spacing.small) {
-        Circle()
-          .fill(Palette.greenBright.color)
-          .frame(width: Spacing.small, height: Spacing.small)
-          .accessibilityHidden(true)
-        Text(time.map { "Your partner taped this up, \($0)" } ?? "Nothing taped up yet")
-          .billetType(.label)
-          .foregroundStyle(Palette.paper.color)
-        Spacer(minLength: Spacing.small)
-        Text(time == nil ? "Draw the first" : "Tap the note")
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
-      }
-      .frame(minHeight: Target.minimum)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  /// "A note from your partner · 5 minutes ago". A date a little ahead of `now`, from a clock
+  /// that runs fast, reads as now.
+  static func caption(for date: Date, now: Date) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.dateTimeStyle = .named
+    let when = formatter.localizedString(for: min(date, now), relativeTo: now)
+    return "A note from your partner · \(when)"
   }
 }
 

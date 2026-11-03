@@ -15,10 +15,8 @@ import simd
 @Suite struct GenzCatObstacleTests {
   /// Every room the cat lives on a piece of furniture in.
   private var layouts: [(String, GenzLayout)] {
-    [RoomStyle.windowSeat, .sunsetLamp].flatMap { style in
-      RoomFurniture.allCases.compactMap { furniture in
-        GenzLayout.of(style, furniture: furniture).map { ("\(style) \(furniture)", $0) }
-      }
+    RoomFurniture.allCases.map { furniture in
+      ("windowSeat \(furniture)", GenzLayout.of(furniture))
     }
   }
 
@@ -59,12 +57,6 @@ import simd
     let bench = try #require(byName["windowSeat cosyNook"])
     #expect(bench.catObstacles.filter(\.builtIn).count == 5)
     #expect(bench.catObstacles.filter(\.sitOnTop).count == 1)
-    // The beds' pillows, round which the cat goes rather than through.
-    for name in ["sunsetLamp original", "sunsetLamp cosyNook", "sunsetLamp retroDen"] {
-      let bed = try #require(byName[name], "\(name)")
-      #expect(bed.catObstacles.filter(\.builtIn).count >= 2, "\(name)")
-      #expect(bed.catClutter.count == bed.catObstacles.count, "\(name)")
-    }
   }
 
   @Test func everySpotTheBrainPicksIsClear() async {
@@ -118,7 +110,7 @@ import simd
   }
 
   @Test func theCardiganIsLainOnTopOf() throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let layout = GenzLayout.of(.cosyNook)
     let cardigan = try #require(layout.catObstacles.first { $0.sitOnTop })
     let spot = layout.catSpotOnTop(of: cardigan)
     #expect(cardigan.box.contains(spot))

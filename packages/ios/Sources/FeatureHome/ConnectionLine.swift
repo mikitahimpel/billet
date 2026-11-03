@@ -15,10 +15,22 @@ enum ConnectionLine: Hashable, Sendable {
     }
   }
 
+  /// How long Home waits on a connection that is not there yet before saying so, so a short drop
+  /// never flashes a line on screen.
+  static let patience: Duration = .seconds(3)
+
+  /// Whether Home holds the line back for ``patience`` before showing it.
+  var waitsBeforeShowing: Bool {
+    switch self {
+    case .connecting, .reconnecting: true
+    case .partnerAway, .partnerHere, .refused: false
+    }
+  }
+
   var text: String {
     switch self {
     case .connecting: "Connecting…"
-    case .reconnecting: "Connection lost. Reconnecting…"
+    case .reconnecting: "Reconnecting…"
     case .partnerAway: "Partner away"
     case .partnerHere: "Partner here"
     case .refused: "This room is full"

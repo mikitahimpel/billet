@@ -70,18 +70,16 @@ struct LightingLookTests {
     #expect(abs(lowest - 4.7) < 0.01)
   }
 
-  @Test func onlyWindowSeatHangsFairyLights() {
-    #expect(!GenzGlow.fairyHooks(.windowSeat).isEmpty)
-    #expect(GenzGlow.fairyHooks(.sunsetLamp).isEmpty)
-    #expect(GenzGlow.fairyHooks(.nooki).isEmpty)
+  @Test func theRoomHangsTwoFairyStrings() {
+    #expect(GenzGlow.fairyHooks.count == 2)
   }
 
   @Test func eachFairyStringIsTwoModelsAndOneLightWithEveryBulbInIt() throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let layout = GenzLayout.of(.cosyNook)
     let glow = GenzGlow(layout: layout, kit: GenzKit())
     let fairy = try #require(glow.root.children.first)
     let strands = Array(fairy.children.filter { !$0.children.isEmpty })
-    #expect(strands.count == GenzGlow.fairyHooks(.windowSeat).count)
+    #expect(strands.count == GenzGlow.fairyHooks.count)
     for strand in strands {
       #expect(strand.children.filter { $0.components.has(ModelComponent.self) }.count == 2)
     }

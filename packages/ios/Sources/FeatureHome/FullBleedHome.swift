@@ -4,9 +4,9 @@ import Pet
 import PetScene
 import SwiftUI
 
-/// Home with the room edge to edge, under the status bar and behind the tab bar. A pen draws, a
-/// handle at the foot pulls up everything else, and each variant adds its own way of meeting the
-/// room: an opening, a room that answers touch and tilt, or the light of the hour.
+/// Home with the room edge to edge, under the status bar and behind the tab bar. A handle at the
+/// foot pulls up everything else, and each variant adds its own way of meeting the room: an
+/// opening, a room that answers touch and tilt, or the light of the hour.
 struct FullBleedHome<Drawer: View>: View {
   let variant: HomeVariant
   /// The scene's view, with the host's environment already set.
@@ -20,7 +20,6 @@ struct FullBleedHome<Drawer: View>: View {
   /// Whether the launch's glide into the room is playing, which keeps the controls back.
   let isOpening: Bool
   let onTreat: () -> Void
-  let onDraw: () -> Void
   /// Whether the room is being decorated, which hides everything over it but its own controls.
   var isDecorating = false
   /// Opens the room for decorating in place.
@@ -186,7 +185,6 @@ struct FullBleedHome<Drawer: View>: View {
         handle
         Spacer(minLength: 0)
       }
-      .overlay(alignment: .bottomTrailing) { pen }
       .overlay(alignment: .bottomLeading) { decorate }
       .padding(.horizontal, Spacing.medium)
       .padding(.bottom, Spacing.small)
@@ -222,8 +220,8 @@ struct FullBleedHome<Drawer: View>: View {
     )
     .accessibilityLabel(
       isFakePartner
-        ? "More: streak, treats, shop and cards. Fake partner, scripted replies"
-        : "More: streak, treats, shop and cards"
+        ? "More: streak, treats, closet and cards. Fake partner, scripted replies"
+        : "More: streak, treats, closet and cards"
     )
     .accessibilityIdentifier("homeDrawerHandle")
   }
@@ -244,19 +242,5 @@ struct FullBleedHome<Drawer: View>: View {
       .accessibilityLabel("Decorate the room")
       .accessibilityIdentifier("homeDecorateButton")
     }
-  }
-
-  private var pen: some View {
-    Button(action: onDraw) {
-      Image(systemName: "pencil.tip")
-        .font(.title2.weight(.semibold))
-        .foregroundStyle(Palette.ink.color)
-        .frame(width: 60, height: 60)
-        .background(Palette.gold.color, in: Circle())
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel("Draw a note")
-    .accessibilityIdentifier("homeDrawButton")
   }
 }

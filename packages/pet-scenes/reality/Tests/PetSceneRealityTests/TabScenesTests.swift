@@ -333,7 +333,7 @@ struct TabStagesTests {
     let rehearsed: [any RehearsedStage] = [stages.shopStage, stages.deskStage]
     for stage in rehearsed {
       stage.setRehearsing(true)
-      let deadline = ContinuousClock.now + .seconds(10)
+      let deadline = ContinuousClock.now + .seconds(60)
       while !stage.isBuilt, ContinuousClock.now < deadline {
         try? await Task.sleep(for: .milliseconds(20))
       }

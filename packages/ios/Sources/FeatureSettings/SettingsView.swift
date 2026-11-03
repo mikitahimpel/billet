@@ -168,11 +168,8 @@ public struct SettingsView: View {
       SettingsHeading("Labs")
       EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
-      if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
-        RoomStylePicker(model: model)
+      if scenes.contains(where: \.hasRoom) {
         WindowViewPicker(model: model)
-      }
-      if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         LightingPicker(model: model)
         FurniturePicker(model: model)
       }

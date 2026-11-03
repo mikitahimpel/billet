@@ -3,7 +3,7 @@ import PetScene
 import SwiftUI
 import WidgetBridge
 
-/// The chosen scene with its cat asleep and nothing to touch, dressed in the room, cat and light
+/// The chosen scene with its cat asleep and nothing to touch, dressed in the furniture, cat and light
 /// chosen in Labs, the way Home dresses it.
 struct SleepingRoom: View {
   let scene: any PetScene
@@ -15,7 +15,6 @@ struct SleepingRoom: View {
       .environment(\.petSceneWindowView, labs.windowView)
       .environment(\.petSceneLighting, labs.lighting)
       .environment(\.petSceneFurniture, labs.furniture)
-      .environment(\.petSceneRoomStyle, labs.roomStyle)
       .environment(\.petSceneShowsControls, false)
   }
 }
