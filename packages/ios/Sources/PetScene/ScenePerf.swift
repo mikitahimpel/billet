@@ -9,7 +9,7 @@ import Pet
 /// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
 ///
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches rooms, lighting and tabs. `-perf.script sweep` holds each camera
+/// also orbits, zooms, switches rooms, lighting and tabs, then idles and orbits again once settled. `-perf.script sweep` holds each camera
 /// pose and lighting preset still and asks for a screenshot of it. Every result is one line on
 /// standard error that starts with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
 @MainActor
@@ -106,11 +106,7 @@ public enum ScenePerf {
   }
 
   private static func full() async {
-    await record("orbit", seconds: 6) { frame in
-      let side: Float = (frame / 90) % 2 == 0 ? 7 : -7
-      scene?.orbit(side, frame % 180 < 90 ? 0.6 : -0.6)
-    }
-    scene?.release()
+    await orbit("orbit")
     await pause(1.5)
     await record("zoom", seconds: 6) { frame in
       scene?.zoom((frame / 60) % 2 == 0 ? 1.012 : 1 / 1.012)
@@ -131,6 +127,19 @@ public enum ScenePerf {
       }
       if tab != "home" { census() }
     }
+    // Home again, long after launch and the switches, when nothing started earlier still runs:
+    // what the room costs for good.
+    await pause(20)
+    await record("settled", seconds: 5)
+    await orbit("settled.orbit")
+  }
+
+  private static func orbit(_ name: String) async {
+    await record(name, seconds: 6) { frame in
+      let side: Float = (frame / 90) % 2 == 0 ? 7 : -7
+      scene?.orbit(side, frame % 180 < 90 ? 0.6 : -0.6)
+    }
+    scene?.release()
   }
 
   /// Each room under each lighting preset, at the camera's extremes, held still for a screenshot.

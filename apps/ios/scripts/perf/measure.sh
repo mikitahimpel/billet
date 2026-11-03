@@ -14,11 +14,12 @@
 # Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
 # only fair comparison on a shared Mac:
 #   PERF_DERIVED=<a>/build-perf measure.sh base --launches 3 --full 1   # then the same for new,
-#   and again, then report.py <out>/base <out>/new
+#   and again, then report.py <out>/base <out>/new. ab.sh does exactly this.
 #
 # Logs and a summary go to $PERF_OUT/<label> (default ~/.billet-manager/pet-concept/perf/runs).
-# It refuses to start while another Simulator is booted, a build runs, swap is over 15 GB or the
-# disk has under 4 GB free, and it shuts its Simulator down when it ends.
+# Runs take the measuring lock (lock.sh), so agents queue instead of colliding. It then waits while
+# another Simulator is booted, swap is over 15 GB or the disk has under 4 GB free, refuses to build
+# while another build runs, and shuts its Simulator down when it ends.
 set -euo pipefail
 
 label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep]}
@@ -86,12 +87,20 @@ for appex in $app/PlugIns/*.appex(N); do
 done
 codesign -f -s - --entitlements $entitlements $app > /dev/null 2>&1
 
-gate
+source $here/lock.sh
+perf_lock_take $label
+trap 'perf_lock_give' EXIT
+# Someone not using the lock may still have a Simulator up: wait for it rather than give up.
+if ! gate 2> /dev/null; then
+  gate || true
+  echo "waiting for the gates" >&2
+  until gate 2> /dev/null; do sleep 20; done
+fi
 udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
 if [[ -z $udid ]]; then
   udid=$(xcrun simctl create $device_name com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
 fi
-trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true' EXIT
+trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true; perf_lock_give' EXIT
 xcrun simctl bootstatus $udid -b > /dev/null
 xcrun simctl uninstall $udid $bundle > /dev/null 2>&1 || true
 xcrun simctl install $udid $app
