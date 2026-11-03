@@ -9,6 +9,8 @@ import simd
 
 /// The cat never walks, sits or lies inside a pillow, cushion, folded throw or the cardigan: each
 /// is something to go round, or, for the cardigan, to get up on and lie on top of.
+/// The walks and spots take a few seconds on the main actor, so they yield it as they go to the
+/// stages other tests are loading on it.
 @MainActor
 @Suite struct GenzCatObstacleTests {
   /// Every room the cat lives on a piece of furniture in.
@@ -64,9 +66,10 @@ import simd
     }
   }
 
-  @Test func everySpotTheBrainPicksIsClear() {
+  @Test func everySpotTheBrainPicksIsClear() async {
     for (name, layout) in layouts {
       for spot in spots(layout) {
+        await Task.yield()
         let height = layout.catStandHeight(at: spot)
         // Whichever way the brain wants it to face, it stands so its body is clear.
         for want in stride(from: Float(-3), through: 3, by: 1) {
@@ -78,13 +81,14 @@ import simd
     }
   }
 
-  @Test func everyWalkGoesRound() {
+  @Test func everyWalkGoesRound() async {
     for (name, layout) in layouts {
       let spots = spots(layout)
       var stuck = 0
       // From home to every spot, and on from each spot to the next, as a day of roaming does.
       let trips = spots.map { (spots[0], $0) } + zip(spots, spots.dropFirst()).map { ($0, $1) }
       for (start, goal) in trips {
+        await Task.yield()
         let route = layout.catRoute(from: start, to: goal)
         // A step of a few centimetres that would turn its nose into a pillow, it does not take.
         if route.last != goal, simd_distance(start, goal) > layout.cat.length * 0.5 { stuck += 1 }
