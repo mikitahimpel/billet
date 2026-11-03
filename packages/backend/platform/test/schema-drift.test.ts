@@ -1,8 +1,8 @@
 import {
+  StoredAccountKey,
   StoredChallenge,
   StoredDevice,
   StoredPushToken,
-  StoredSession,
   StoredUser,
 } from "@billet/backend-auth/auth-repository";
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
@@ -12,7 +12,12 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
 import {
+  accountKeys,
+  authAccounts,
   authChallenges,
+  authSessions,
+  authUsers,
+  authVerifications,
   devices,
   flagChanges,
   flagConfigs,
@@ -23,9 +28,14 @@ import {
   pairMembers,
   pushTokens,
   rateLimits,
-  sessions,
   users,
 } from "../src/directory-schema.ts";
+import {
+  AuthAccountRow,
+  AuthSessionRow,
+  AuthUserRow,
+  AuthVerificationRow,
+} from "../src/better-auth-rows.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
 import {
   FlagChangeRow,
@@ -42,7 +52,12 @@ import { getTableName, tablesOf } from "./table-columns.ts";
 // tagged unions, so neither can generate the other. Every exported table needs its domain type here: the test below
 // fails on one that is missing.
 const checked = [
+  ["account_keys", accountKeys, StoredAccountKey],
+  ["auth_account", authAccounts, AuthAccountRow],
   ["auth_challenges", authChallenges, StoredChallenge],
+  ["auth_session", authSessions, AuthSessionRow],
+  ["auth_user", authUsers, AuthUserRow],
+  ["auth_verification", authVerifications, AuthVerificationRow],
   ["devices", devices, StoredDevice],
   ["flag_changes", flagChanges, FlagChangeRow],
   ["flag_configs", flagConfigs, FlagConfigRow],
@@ -56,7 +71,6 @@ const checked = [
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["room", room, StoredRoom],
-  ["sessions", sessions, StoredSession],
   ["users", users, StoredUser],
 ] as const;
 

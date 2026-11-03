@@ -10,14 +10,111 @@ import {
 // D1 tables. `Drizzle.Schema` in the root alchemy.run.ts generates migrations from this file, so it
 // imports nothing but drizzle-orm: drizzle-kit loads it in Node, outside the Worker.
 
-export const users = sqliteTable(
-  "users",
+// Everything else points at this table. `auth_user` holds the same ids for Better Auth, which owns
+// sign-in, and a hook in better-auth-engine.ts writes the row here when it opens a user.
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  createdAt: integer("created_at").notNull(),
+});
+
+// Better Auth's own tables (better-auth-engine.ts names each column). It writes dates as ISO text
+// and booleans as 0 or 1, unlike the epoch milliseconds everywhere else. No email is real: an
+// anonymous user's is made up, and an Apple user's is built from their subject, never Apple's.
+export const authUsers = sqliteTable(
+  "auth_user",
   {
     id: text("id").primaryKey(),
-    appleSubject: text("apple_subject").notNull(),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    emailVerified: integer("email_verified").notNull(),
+    image: text("image"),
+    isAnonymous: integer("is_anonymous"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [uniqueIndex("auth_user_email_unique").on(table.email)],
+);
+
+// `token` is SHA-256 of the session token, which is never stored (hashed-session-tokens.ts). Each
+// session has its own device, and push tokens hang off the device.
+export const authSessions = sqliteTable(
+  "auth_session",
+  {
+    id: text("id").primaryKey(),
+    token: text("token").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    deviceId: text("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    expiresAt: text("expires_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("auth_session_token_unique").on(table.token),
+    uniqueIndex("auth_session_device_id_unique").on(table.deviceId),
+    index("auth_session_user_id_index").on(table.userId),
+    index("auth_session_expires_at_index").on(table.expiresAt),
+  ],
+);
+
+// Linked identities: `provider_id` is `apple` and `account_id` the Apple subject. One Apple ID
+// belongs to one user, which the unique index makes a database rule. No Apple token is kept.
+export const authAccounts = sqliteTable(
+  "auth_account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUsers.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: text("access_token_expires_at"),
+    refreshTokenExpiresAt: text("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("auth_account_provider_account_unique").on(table.providerId, table.accountId),
+    index("auth_account_user_id_index").on(table.userId),
+  ],
+);
+
+// Better Auth's one-time values. None of the flows in use writes here today; it must exist.
+export const authVerifications = sqliteTable(
+  "auth_verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: text("expires_at").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [index("auth_verification_identifier_index").on(table.identifier)],
+);
+
+// `key_hash` is SHA-256 of the account key, which is never stored. The key is the anonymous
+// account: the app keeps it in the iCloud Keychain and signs in with it on every phone.
+export const accountKeys = sqliteTable(
+  "account_keys",
+  {
+    keyHash: text("key_hash").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     createdAt: integer("created_at").notNull(),
   },
-  (table) => [uniqueIndex("users_apple_subject_unique").on(table.appleSubject)],
+  (table) => [index("account_keys_user_id_index").on(table.userId)],
 );
 
 export const devices = sqliteTable(
@@ -30,24 +127,6 @@ export const devices = sqliteTable(
     createdAt: integer("created_at").notNull(),
   },
   (table) => [index("devices_user_id_index").on(table.userId)],
-);
-
-// `token_hash` is SHA-256 of the session token, which is never stored. A device has one session and
-// the session reaches its user through the device, so the two can't disagree.
-export const sessions = sqliteTable(
-  "sessions",
-  {
-    tokenHash: text("token_hash").primaryKey(),
-    deviceId: text("device_id")
-      .notNull()
-      .references(() => devices.id, { onDelete: "cascade" }),
-    createdAt: integer("created_at").notNull(),
-    expiresAt: integer("expires_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("sessions_device_id_unique").on(table.deviceId),
-    index("sessions_expires_at_index").on(table.expiresAt),
-  ],
 );
 
 // `nonce_hash` is SHA-256 of the nonce, which is never stored.

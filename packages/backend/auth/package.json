@@ -6,12 +6,14 @@
   "sideEffects": false,
   "exports": {
     "./apple-identity-verifier": "./src/apple-identity-verifier.ts",
+    "./auth-engine": "./src/auth-engine.ts",
     "./auth-error": "./src/auth-error.ts",
     "./auth-repository": "./src/auth-repository.ts",
     "./auth-routes": "./src/auth-routes.ts",
     "./auth-service": "./src/auth-service.ts",
     "./identity-verifier": "./src/identity-verifier.ts",
     "./test/auth-repository-contract": "./test/auth-repository-contract.ts",
+    "./test/in-memory-auth-engine": "./test/in-memory-auth-engine.ts",
     "./test/in-memory-auth-repository": "./test/in-memory-auth-repository.ts"
   },
   "scripts": {

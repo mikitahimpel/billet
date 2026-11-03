@@ -1,12 +1,6 @@
 import { Effect, Option } from "effect";
-import type { DeviceId, EpochMillis } from "@billet/contracts-domain/ids";
-import type {
-  AuthRepository,
-  NewSession,
-  PushTokenRecord,
-  SessionRecord,
-  TokenHash,
-} from "../src/auth-repository.ts";
+import type { DeviceId, EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import type { AuthRepository, PushTokenRecord, TokenHash } from "../src/auth-repository.ts";
 
 export interface InMemoryAuthRepository {
   readonly repository: AuthRepository["Service"];
@@ -17,9 +11,7 @@ export interface InMemoryAuthRepository {
 /** The test double for `AuthRepository`. Single-threaded, so each method is trivially atomic. */
 export const makeInMemoryAuthRepository = (): InMemoryAuthRepository => {
   const challenges = new Map<TokenHash, EpochMillis>();
-  const users = new Map<string, NewSession["candidateUserId"]>();
-  const devices = new Map<DeviceId, NewSession["candidateUserId"]>();
-  const sessions = new Map<TokenHash, SessionRecord>();
+  const accountKeys = new Map<TokenHash, UserId>();
   const pushTokens = new Map<DeviceId, ReadonlyArray<PushTokenRecord>>();
 
   const repository: AuthRepository["Service"] = {
@@ -33,36 +25,12 @@ export const makeInMemoryAuthRepository = (): InMemoryAuthRepository => {
         challenges.delete(nonceHash);
         return expiresAt !== undefined && expiresAt > now;
       }),
-    createSession: (session) =>
+    findAccountKey: (keyHash) => Effect.sync(() => Option.fromNullishOr(accountKeys.get(keyHash))),
+    saveAccountKey: (keyHash, userId) =>
       Effect.sync(() => {
-        const userId = users.get(session.appleSubject) ?? session.candidateUserId;
-        users.set(session.appleSubject, userId);
-        devices.set(session.deviceId, userId);
-        sessions.set(session.sessionHash, {
-          userId,
-          deviceId: session.deviceId,
-          expiresAt: session.expiresAt,
-        });
-        return userId;
-      }),
-    findSession: (sessionHash, now) =>
-      Effect.sync(() =>
-        Option.fromNullishOr(sessions.get(sessionHash)).pipe(
-          Option.filter((session) => session.expiresAt > now),
-        ),
-      ),
-    extendSession: (sessionHash, expiresAt) =>
-      Effect.sync(() => {
-        const session = sessions.get(sessionHash);
-        if (session !== undefined) sessions.set(sessionHash, { ...session, expiresAt });
-      }),
-    revokeSession: (sessionHash) =>
-      Effect.sync(() => {
-        const session = sessions.get(sessionHash);
-        if (session === undefined) return;
-        sessions.delete(sessionHash);
-        devices.delete(session.deviceId);
-        pushTokens.delete(session.deviceId);
+        if (accountKeys.has(keyHash)) return false;
+        accountKeys.set(keyHash, userId);
+        return true;
       }),
     savePushToken: (deviceId, record) =>
       Effect.sync(() => {
@@ -81,21 +49,13 @@ export const makeInMemoryAuthRepository = (): InMemoryAuthRepository => {
         for (const [hash, expiresAt] of challenges) {
           if (expiresAt <= now) challenges.delete(hash);
         }
-        for (const [hash, session] of sessions) {
-          if (session.expiresAt > now) continue;
-          sessions.delete(hash);
-          devices.delete(session.deviceId);
-          pushTokens.delete(session.deviceId);
-        }
       }),
   };
 
   const dump = Effect.sync(() =>
     JSON.stringify({
       challenges: [...challenges],
-      users: [...users],
-      devices: [...devices],
-      sessions: [...sessions],
+      accountKeys: [...accountKeys],
       pushTokens: [...pushTokens],
     }),
   );

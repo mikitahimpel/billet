@@ -19,7 +19,7 @@ const history = async () =>
 
 describe("directory migrations", () => {
   it("apply from empty and re-apply as a no-op", async () => {
-    const row = { id: "a", appleSubject: "subject-a", createdAt: 1 };
+    const row = { id: "a", createdAt: 1 };
 
     await applyDirectoryMigrations();
     const applied = await history();

@@ -12,19 +12,19 @@
     "./apple-identity-live": "./src/apple-identity-live.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./auth-repository-live": "./src/auth-repository-live.ts",
+    "./demo-room-durable-object": "./src/demo-room-durable-object.ts",
+    "./demo-route": "./src/demo-route.ts",
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
     "./event-sink-live": "./src/event-sink-live.ts",
     "./flag-config-repository-live": "./src/flag-config-repository-live.ts",
     "./flags-repository-live": "./src/flags-repository-live.ts",
-    "./metrics-repository-live": "./src/metrics-repository-live.ts",
-    "./demo-room-durable-object": "./src/demo-room-durable-object.ts",
-    "./demo-route": "./src/demo-route.ts",
     "./media-store-live": "./src/media-store-live.ts",
+    "./metrics-repository-live": "./src/metrics-repository-live.ts",
+    "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./pair-rooms-live": "./src/pair-rooms-live.ts",
     "./pair-variants-live": "./src/pair-variants-live.ts",
     "./pairing-repository-live": "./src/pairing-repository-live.ts",
-    "./pair-room-durable-object": "./src/pair-room-durable-object.ts",
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
     "./room-database": "./src/room-database.ts",
     "./room-schema": "./src/room-schema.ts",
@@ -38,6 +38,7 @@
     "db:generate": "drizzle-kit generate --dialect sqlite --schema ./src/directory-schema.ts --out ./migrations/directory && drizzle-kit generate --dialect sqlite --driver durable-sqlite --schema ./src/room-schema.ts --out ./migrations/room"
   },
   "dependencies": {
+    "@better-auth/kysely-adapter": "catalog:",
     "@billet/backend-admin": "workspace:*",
     "@billet/backend-auth": "workspace:*",
     "@billet/backend-flags": "workspace:*",
@@ -50,8 +51,10 @@
     "@billet/contracts-realtime": "workspace:*",
     "@effect/sql-d1": "catalog:",
     "@effect/sql-sqlite-do": "catalog:",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "kysely": "catalog:"
   },
   "devDependencies": {
     "@alchemy.run/sql": "catalog:",

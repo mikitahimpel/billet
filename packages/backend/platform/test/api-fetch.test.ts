@@ -119,7 +119,11 @@ const tables = [
   "pair_flag_overrides",
   "users",
   "devices",
-  "sessions",
+  "auth_user",
+  "auth_session",
+  "auth_account",
+  "auth_verification",
+  "account_keys",
   "auth_challenges",
   "push_tokens",
   "invites",
@@ -220,8 +224,102 @@ describe("the Api Worker", () => {
     expect(stored).not.toContain(session.sessionToken);
     expect(stored).not.toContain(nonce);
 
-    const rows = await env.DB.prepare("SELECT token_hash FROM sessions").all();
-    expect(rows.results).toEqual([{ token_hash: await sha256Hex(session.sessionToken) }]);
+    const rows = await env.DB.prepare("SELECT token FROM auth_session").all();
+    expect(rows.results).toEqual([{ token: await sha256Hex(session.sessionToken) }]);
+  });
+
+  it("opens an anonymous account from a key, and the key brings it back", async () => {
+    const accountKey = "k".repeat(43);
+    const open = async () => {
+      const response = await call("/v1/auth/anonymous", json({ accountKey }));
+      expect(response.status).toBe(200);
+      return Schema.decodeUnknownSync(SessionResponse)(await response.json());
+    };
+    const first = await open();
+    const second = await open();
+    expect(second.userId).toBe(first.userId);
+    expect(second.deviceId).not.toBe(first.deviceId);
+
+    const stored = await everythingStored();
+    expect(stored).not.toContain(accountKey);
+    expect(stored).not.toContain(first.sessionToken);
+    expect(stored).not.toContain(second.sessionToken);
+    const account = await call("/v1/account", {
+      method: "GET",
+      headers: { authorization: `Bearer ${first.sessionToken}` },
+    });
+    expect(await account.json()).toEqual({ userId: first.userId, linked: false });
+  });
+
+  it("links an anonymous account to Apple, keeping the user, and Apple restores it", async () => {
+    const anonymous = Schema.decodeUnknownSync(SessionResponse)(
+      await (await call("/v1/auth/anonymous", json({ accountKey: "a".repeat(43) }))).json(),
+    );
+    const owner = await signedInAs("subject-owner");
+    expect((await claimWith(anonymous.sessionToken, await inviteFrom(owner))).status).toBe(200);
+
+    const { nonce } = await challenge();
+    const linked = await call(
+      "/v1/auth/apple/link",
+      json(
+        { identityToken: await identityToken(nonce, { sub: "subject-linked" }) },
+        "POST",
+        anonymous.sessionToken,
+      ),
+    );
+    expect(linked.status).toBe(200);
+    expect(await linked.json()).toEqual({ userId: anonymous.userId, linked: true });
+
+    // A new phone with neither the key nor the session: Sign in with Apple finds the same user,
+    // still in the same pair.
+    const restored = Schema.decodeUnknownSync(SessionResponse)(
+      await (await signIn({ sub: "subject-linked" })).response.json(),
+    );
+    expect(restored.userId).toBe(anonymous.userId);
+    expect((await pairRows()).length).toBe(2);
+    expect(
+      (await env.DB.prepare("SELECT id_token, access_token FROM auth_account").all()).results,
+    ).toEqual([
+      { id_token: null, access_token: null },
+      { id_token: null, access_token: null },
+    ]);
+  });
+
+  it("refuses to link an Apple ID that another account has", async () => {
+    await signedInAs("subject-taken");
+    const anonymous = Schema.decodeUnknownSync(SessionResponse)(
+      await (await call("/v1/auth/anonymous", json({ accountKey: "b".repeat(43) }))).json(),
+    );
+    const { nonce } = await challenge();
+    const response = await call(
+      "/v1/auth/apple/link",
+      json(
+        { identityToken: await identityToken(nonce, { sub: "subject-taken" }) },
+        "POST",
+        anonymous.sessionToken,
+      ),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ _tag: "AppleIdInUse" });
+  });
+
+  it("forgets a signed-out device and its push tokens", async () => {
+    const { session } = await signedIn();
+    const register = await call(
+      "/v1/devices/current/push-token",
+      json(
+        { kind: "alert", environment: "production", token: "aa".repeat(32) },
+        "PUT",
+        session.sessionToken,
+      ),
+    );
+    expect(register.status).toBe(204);
+    await call("/v1/auth/sign-out", {
+      headers: { authorization: `Bearer ${session.sessionToken}` },
+    });
+    expect(await env.DB.prepare("SELECT * FROM push_tokens").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT * FROM devices").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT * FROM auth_session").first()).toBeNull();
   });
 
   it("registers a device's push token and replaces it", async () => {
@@ -313,7 +411,7 @@ describe("the Api Worker", () => {
   ])("refuses an %s token and stores no session", async (_, overrides) => {
     const { response } = await signIn(overrides);
     expect(response.status).toBe(401);
-    expect(await env.DB.prepare("SELECT * FROM sessions").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT * FROM auth_session").first()).toBeNull();
   });
 
   it("refuses a tampered token and leaves its nonce live", async () => {
@@ -340,13 +438,21 @@ describe("the Api Worker", () => {
     appleFetch.mockRejectedValue(new Error("offline"));
     const { response } = await signIn();
     expect(response.status).toBe(503);
-    expect(await env.DB.prepare("SELECT * FROM sessions").first()).toBeNull();
+    expect(await env.DB.prepare("SELECT * FROM auth_session").first()).toBeNull();
   });
 
   it("serves concurrent sign-ins while no keys are loaded, each on its own fetch", async () => {
     const results = await Promise.all(Array.from({ length: 5 }, () => signIn()));
     expect(results.map(({ response }) => response.status)).toEqual([200, 200, 200, 200, 200]);
     expect(appleFetch).toHaveBeenCalledTimes(5);
+    // One Apple ID, so one user, however the first sign-ins raced.
+    const sessions = await Promise.all(
+      results.map(async ({ response }) =>
+        Schema.decodeUnknownSync(SessionResponse)(await response.json()),
+      ),
+    );
+    expect(new Set(sessions.map(({ userId }) => userId)).size).toBe(1);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM auth_account").first("n")).toBe(1);
   });
 });
 
