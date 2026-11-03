@@ -1,16 +1,27 @@
 # First launch
 
-With Labs → First launch → **Cinematic onboarding** on (the default), the first launch is a
-3D scene: the camera glides in out of the dark over a windowsill at night, the candles light one
-by one, fairy lights run down both sides of the window, and a soft glossy heart floats over a
-cushion, beating gently. The title and its explanation sit on a dark scrim at the top of the
-screen, so they stay readable (AA contrast, checked in a test) over the lit window. The title settles in partway; the buttons come once the camera is at its place. A tap
-anywhere cuts the flight short. Until the pair is made it plays on every launch (once per
-launch: moving on to the next step does not fly in again); once paired it never shows, except
-through Labs → Replay onboarding. With
-Reduce Motion the scene fades up at its place instead of flying.
+Every cold launch opens on a cinematic; there is no switch for it.
 
-Off, the app shows the plain welcome and code screens it always did.
+- **Before the pair is made**, it is the first-launch scene: the camera glides in out of the dark
+  over a windowsill at night, the candles light one by one, fairy lights run down both sides of
+  the window, and a soft glossy heart floats over a cushion, beating gently. The title and its
+  explanation sit on a dark scrim at the top of the screen, so they stay readable (AA contrast,
+  checked in a test) over the lit window. The title settles in partway; the buttons come once the
+  camera is at its place. A tap anywhere cuts the flight short. It flies in
+  once per launch: moving on to the next step does not fly in again. Signing in (real backend)
+  and pairing happen in this scene; without a 3D scene they happen over the evening background
+  with the same words and controls. Labs → First launch → Replay onboarding plays it again, as a
+  debug button, without touching the pair.
+- **Once paired**, it is a short glide into the room (`LaunchCinematic`, `LaunchGlide`). From
+  Home's first frame a warm dark covers the room while it loads; once the room is built and on
+  screen it starts its opening and the cover fades: the camera glides in from a little way out
+  over 1.8 s, the lights come up, and the cat looks up at the camera (`FlyInTimeline`, 1.9 s in
+  all). Home's controls wait until it is over. A tap skips to the end. Coming back from the
+  background is not a launch and never plays it, and a launch that opened on the heart's scene
+  does not glide into the room after it. The real backend's paired screens have no room, so
+  there is nothing to glide into there.
+- **Reduce Motion:** nothing flies. The heart's scene fades up at its place, and the cover
+  cross-fades to the room at its place.
 
 ## Pairing in the scene
 
@@ -36,15 +47,14 @@ the real backend it follows `PairingModel`, which keeps checking a shown invite 
 holds the joined moment on screen after the pairing itself has finished.
 
 - **Demo backend:** the welcome also holds Try alone. Real backend: before pairing, the scene
-  holds Sign in with Apple, unchanged (`SignInControls` wraps the same model as
-  `OnboardingView`).
+  holds Sign in with Apple, unchanged (`SignInControls`, on `SignInModel`).
 - **Replay:** Labs → First launch → Replay onboarding plays it over everything, without touching
   the pair, with a scripted partner: a made code is joined after about 4 s, and any well-formed typed
   code is joined at once.
 
 ## Choosing the cat together
 
-Once the pair is made in the scene (behind the same flag, demo backend), both phones open a cosy
+Once the pair is made in the scene (demo backend), both phones open a cosy
 corner with five cats on cushions: the ginger tabby, the grey and white cat and the black cat (all
 the Detailed cat with a coat), the kitten and the fluffy one.
 

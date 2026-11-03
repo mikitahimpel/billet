@@ -17,6 +17,8 @@ final class NookiDiorama: CatPlayStage {
   var onReady: (() -> Void)?
   /// Called when the cat is found to be missing, and again if a late load puts things right.
   var onCatMissing: ((Bool) -> Void)?
+  /// Called when an opening asked for through ``flyIn(_:)`` starts, once the diorama is built.
+  var onOpeningStarted: (() -> Void)?
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
 
@@ -697,6 +699,7 @@ final class NookiDiorama: CatPlayStage {
 
   private func startFlight(_ request: PetSceneFlyIn) {
     opening = SceneFlight(id: request.id, clock: clock, atEnd: reduceMotion || request.isSkipped)
+    onOpeningStarted?()
     if reduceMotion || request.isSkipped {
       settleFlight()
     } else {

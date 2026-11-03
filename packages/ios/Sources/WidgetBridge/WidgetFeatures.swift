@@ -48,7 +48,7 @@ extension WidgetFeatures: Codable {
   /// and the next save leaves it out.
   public static let retiredKeys: Set<String> = [
     "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
-    "catChases", retiredCatMood,
+    "catChases", "cinematicOnboarding", retiredCatMood,
   ]
 
   /// The key of the cat-mood picture, which is gone. When it was the only picture on, the
