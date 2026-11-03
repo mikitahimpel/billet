@@ -5,20 +5,24 @@
 #
 #   PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags
 #
-# Routes: overview, experiments, flags, flag-history[?key=<key>&limit=<1-500>], pairs/<pair id>.
+# Routes: overview, experiments, flags, flag-history[?key=<key>&limit=<1-500>], pairs/<pair id>,
+# status, status-history[?limit=<1-200>].
 # Needs BILLET_ADMIN_HOST, CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in the environment
 # (`.env.pass.agents` resolves them). The credentials go to curl on stdin, never on its command line.
 set -eu
 
 usage() {
-  echo "usage: admin-read.sh overview|experiments|flags|flag-history[?query]|pairs/<pair id>" >&2
+  echo "usage: admin-read.sh overview|experiments|flags|flag-history[?query]|status|status-history[?query]|pairs/<pair id>" >&2
   exit 2
 }
 
 [ $# -eq 1 ] || usage
 route=$1
 case "$route" in
-  overview | experiments | flags) ;;
+  overview | experiments | flags | status) ;;
+  status-history | status-history\?*)
+    printf '%s' "$route" | grep -Eq '^status-history(\?limit=[0-9]{1,3})?$' || usage
+    ;;
   flag-history | flag-history\?*)
     printf '%s' "$route" | grep -Eq '^flag-history(\?[A-Za-z0-9_=&.-]*)?$' || usage
     ;;
