@@ -396,8 +396,9 @@ final class DecorSession {
     else { return nil }
     let side = CGFloat(pixels)
     context.setFillColor(gray: 0, alpha: 1)
-    context.fill(CGRect(x: 0, y: 0, width: side, height: side))
-    let ring = CGRect(x: 0, y: 0, width: side, height: side).insetBy(dx: side * 0.15, dy: side * 0.15)
+    let square = CGRect(x: 0, y: 0, width: side, height: side)
+    let ring = square.insetBy(dx: side * 0.15, dy: side * 0.15)
+    context.fill(square)
     let path = CGPath(
       roundedRect: ring, cornerWidth: ring.width * 0.24, cornerHeight: ring.height * 0.24,
       transform: nil)
