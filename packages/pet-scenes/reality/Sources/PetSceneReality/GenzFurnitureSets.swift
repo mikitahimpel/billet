@@ -17,7 +17,12 @@ extension GenzLayout {
     switch style {
     case .windowSeat:
       layout.pieces = Self.windowSeatPieces(palette, furniture: furniture)
-      layout.lamp = (GenzRoomPoint(2.15, 3.27, 1.74), GenzRoomPoint(2.15, 3.27, 0))
+      // Turned a little further round, so the bookshelf corner beside the seat is in view.
+      layout.camera.yaw = 0.5
+      layout.lamp = (
+        GenzRoomPoint(Self.seatTableLamp.x, Self.seatTableLamp.y, Self.seatTableLamp.z + 0.62),
+        GenzRoomPoint(Self.seatTableLamp.x, Self.seatTableLamp.y, 0)
+      )
     case .sunsetLamp:
       layout.pieces = Self.sunsetPieces(palette, furniture: furniture)
       layout.lamp = (GenzRoomPoint(0.68, 0.62, 1.5), lamp.aim)
@@ -26,37 +31,52 @@ extension GenzLayout {
     return layout
   }
 
+  /// Where the Window Seat's lamp stands: on the side table, by the seat's end.
+  private static let seatTableLamp = GenzRoomPoint(1.08, 2.3, 0.92)
+
+  /// A built-in seat under the window, the cat's place, with a bookshelf and wall shelves on the
+  /// side wall under string lights, a side table with the lamp, and a pouf and a cat bed on the
+  /// rug.
   private static func windowSeatPieces(
     _ palette: GenzFurniturePalette, furniture: RoomFurniture
   ) -> [Placement] {
+    let wall = Float.pi / 2
+    let lamp = seatTableLamp
     var pieces = [
-      Placement(piece: palette.piece(.patternRug), centre: GenzRoomPoint(4.9, 4.3, 0)),
-      Placement(piece: palette.piece(.quiltedDaybed), centre: GenzRoomPoint(3.8, 1.22, 0)),
-      Placement(piece: palette.piece(.bookCrate), centre: GenzRoomPoint(2.15, 3.35, 0)),
-      Placement(piece: palette.piece(.bookStack), centre: GenzRoomPoint(2.15, 3.28, 0.9)),
-      Placement(piece: palette.piece(.pleatedLamp), centre: GenzRoomPoint(2.15, 3.27, 1.12)),
-      Placement(piece: palette.piece(.snakePlant), centre: GenzRoomPoint(1.2, 0.28, 1.3)),
+      Placement(piece: palette.piece(.patternRug), centre: GenzRoomPoint(4.3, 3.75, 0)),
+      Placement(piece: palette.piece(.windowBench), centre: GenzRoomPoint(3.8, 0.8, 0)),
+      Placement(piece: palette.piece(.bookshelf), centre: GenzRoomPoint(0.3, 0.86, 0), yaw: wall),
+      Placement(piece: palette.piece(.sideTable), centre: GenzRoomPoint(1.12, 2.4, 0)),
+      Placement(piece: palette.piece(.pleatedLamp), centre: lamp),
       Placement(
-        piece: palette.piece(.phoneOnCharger), centre: GenzRoomPoint(5.2, 0.27, 1.3), yaw: 0.1),
-      Placement(piece: palette.piece(.mugs), centre: GenzRoomPoint(2.5, 0.3, 1.3), yaw: 0.2),
-      // Taped to the inside of the glass, beside the note.
-      Placement(piece: palette.piece(.polaroids), centre: GenzRoomPoint(5.55, -0.11, 2.3)),
+        piece: palette.piece(.candles), centre: GenzRoomPoint(1.32, 2.68, 0.92), yaw: 0.4),
+      Placement(
+        piece: palette.piece(.wallShelves), centre: GenzRoomPoint(0.16, 4.4, 2.2), yaw: wall),
+      Placement(
+        piece: palette.piece(.stringLights), centre: GenzRoomPoint(0.04, 3.0, 4.35), yaw: wall),
+      Placement(
+        piece: palette.piece(.polaroids), centre: GenzRoomPoint(0.03, 2.75, 2.15), yaw: wall),
+      Placement(
+        piece: palette.piece(.cardigan), centre: GenzRoomPoint(3.75, 1.0, 1.3), yaw: 0.1),
+      Placement(
+        piece: palette.piece(.phoneOnCharger), centre: GenzRoomPoint(5.0, 0.95, 1.3), yaw: .pi + 0.2
+      ),
+      Placement(piece: palette.piece(.mugs), centre: GenzRoomPoint(2.55, 1.2, 1.3), yaw: 0.2),
+      Placement(piece: palette.piece(.snakePlant), centre: GenzRoomPoint(0.42, 4.15, 0)),
+      Placement(piece: palette.piece(.leafyPlant), centre: GenzRoomPoint(6.85, 2.35, 0)),
+      Placement(piece: palette.piece(.catBed), centre: GenzRoomPoint(5.9, 4.35, 0), yaw: -0.3),
     ]
     switch furniture {
     case .original, .cosyNook:
-      pieces += [
-        Placement(piece: palette.piece(.leafyPlant), centre: GenzRoomPoint(1.3, 4.9, 0)),
-        Placement(
-          piece: palette.piece(.chairWithClothes), centre: GenzRoomPoint(6.7, 4.5, 0), yaw: -0.9),
-      ]
+      pieces.append(
+        Placement(piece: palette.piece(.knitPouf), centre: GenzRoomPoint(3.0, 3.35, 0)))
     case .retroDen:
       pieces += [
-        Placement(piece: palette.piece(.leafyPlant), centre: GenzRoomPoint(2.85, 5.2, 0)),
-        Placement(piece: palette.piece(.bookCrate), centre: GenzRoomPoint(1.3, 4.9, 0)),
+        Placement(piece: palette.piece(.bookCrate), centre: GenzRoomPoint(2.75, 4.7, 0)),
         Placement(
-          piece: palette.piece(.recordPlayer), centre: GenzRoomPoint(1.3, 4.9, 0.9), yaw: 0.3),
+          piece: palette.piece(.recordPlayer), centre: GenzRoomPoint(2.75, 4.7, 0.9), yaw: 0.3),
         Placement(
-          piece: palette.piece(.speaker), centre: GenzRoomPoint(6.9, 4.6, 0), yaw: -1.1),
+          piece: palette.piece(.speaker), centre: GenzRoomPoint(6.9, 4.4, 0), yaw: -1.1),
       ]
     }
     return pieces
@@ -124,5 +144,12 @@ struct GenzFurniturePalette {
     .mugs: [GenzColour(0xD39B3A), GenzColour(0x2F7F7A)],
     .polaroids: [GenzColour(0xE24B2D), GenzColour(0xD39B3A), GenzColour(0x2F7F7A)],
     .snakePlant: [GenzColour(0x2F2A28), GenzColour(0x3F7558), GenzColour(0x2D5A45)],
+    .windowBench: [GenzColour(0x5C3B28), GenzColour(0xD39B3A), GenzColour(0x2F7F7A)],
+    .bookshelf: [GenzColour(0x5C3B28), GenzColour(0xC2492F), GenzColour(0x2F6E6A)],
+    .sideTable: [GenzColour(0x5C3B28), GenzColour(0xD39B3A)],
+    .wallShelves: [GenzColour(0x5C3B28), GenzColour(0x2F7F7A), GenzColour(0xD39B3A)],
+    .cardigan: [GenzColour(0x2F7F7A), GenzColour(0xD39B3A)],
+    .catBed: [GenzColour(0xE8D9BE), GenzColour(0xC2492F)],
+    .candles: [GenzColour(0xF3E8D6), GenzColour(0x2F7F7A)],
   ])
 }
