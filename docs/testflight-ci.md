@@ -8,6 +8,7 @@ owner's approval before it can read any secret.
 
 ```sh
 gh workflow run testflight.yml --ref main
+gh workflow run testflight.yml --ref main -f build=17   # a particular build number
 gh run watch "$(gh run list --workflow testflight.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
 
@@ -24,7 +25,8 @@ is still working on it, which can take up to half an hour after the run ends.
 2. Writes the App Store Connect key to a file only the runner user can read (mode 0600). The last
    step deletes it, along with the run's keychain, even when an earlier step failed.
 3. Picks the build number: one above the highest build App Store Connect has for the app, and at
-   least 16, since the local archives went up to 15. The version
+   least 16, since the local archives went up to 15. A number given with `-f build=N` is used
+   instead, and the run stops if App Store Connect already has that build or a later one. The version
    stays 0.1.0 (`MARKETING_VERSION` in `apps/ios/project.yml`).
 4. Generates the project with XcodeGen and archives Release with automatic signing:
    `xcodebuild archive -allowProvisioningUpdates -authenticationKeyPath … -authenticationKeyID … -authenticationKeyIssuerID …`.

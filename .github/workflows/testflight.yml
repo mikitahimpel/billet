@@ -6,6 +6,11 @@ name: TestFlight
 # the repository owner's approval. See docs/testflight-ci.md.
 on:
   workflow_dispatch:
+    inputs:
+      build:
+        description: Build number to upload as (empty picks the next one)
+        required: false
+        default: ""
 
 concurrency:
   group: testflight
@@ -102,11 +107,25 @@ jobs:
           echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
       # One above every build App Store Connect has, and never below 16: the local archives went
-      # up to 15.
+      # up to 15. A number asked for at dispatch is used as long as it is above them all.
       - name: Pick the build number
         id: build
+        env:
+          ASKED: ${{ inputs.build }}
         run: |
-          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor 16)"
+          floor=16
+          if [ -n "$ASKED" ]; then
+            if ! printf '%s' "$ASKED" | grep -qE '^[1-9][0-9]{0,5}$'; then
+              echo "::error::The build input must be a whole number, not '$ASKED'"
+              exit 1
+            fi
+            floor="$ASKED"
+          fi
+          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor "$floor")"
+          if [ -n "$ASKED" ] && [ "$number" != "$ASKED" ]; then
+            echo "::error::Build $ASKED is not above every build App Store Connect has; the next free one is $number"
+            exit 1
+          fi
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
