@@ -31,7 +31,7 @@ Notifications are sent through Apple Push Notification service. Apple also provi
 We don't sell your data or use it for advertising, and we don't use your drawings or photos to train AI.
 
 ## Test rooms
-Some test builds exchange notes through a temporary test room instead. A test room is identified by a short code that two devices share, keeps a random device ID per device and an optional push token, and holds up to 50 notes that have not yet reached the other device until they do. Test rooms are not linked to a Sign in with Apple account.
+Some test builds exchange notes through a temporary test room instead. A test room is identified by a short code that two devices share, keeps a random device ID per device and an optional push token, and holds up to 50 notes that have not yet reached the other device until they do. Test rooms are not linked to a Sign in with Apple account. A test room also keeps the drawing of the day: each partner's drawing of the day's prompt, for the last 60 days, and the time zone offset each phone last wrote its time in, so the evening reminder comes in your evening and never during quiet hours (22:00 to 08:00). Your partner's drawing of a day is only sent to you once you have drawn yours.
 
 ## Your data on your device
 The app keeps your session, device ID and recent notes on your device to show them. Deleting the app removes these from your device, but not from our backend.

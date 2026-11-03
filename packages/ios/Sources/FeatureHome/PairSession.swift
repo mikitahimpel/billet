@@ -63,6 +63,15 @@ final class PairSession {
   private(set) var hold = TogetherHold()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
+  /// The drawing of the day: the room's prompts, both drawings as far as the room shows them, and
+  /// the reveals already played here.
+  private(set) var daily = DailyBoard() {
+    didSet {
+      guard daily != oldValue else { return }
+      let board = daily
+      Task { [dailyArchive] in await dailyArchive.save(board) }
+    }
+  }
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
@@ -80,6 +89,7 @@ final class PairSession {
 
   @ObservationIgnored private let delivery: NoteDelivery
   @ObservationIgnored private let archive: NoteArchive
+  @ObservationIgnored private let dailyArchive: DailyArchive
   @ObservationIgnored private let now: @Sendable () -> Date
   /// Set only where no room keeps the play.
   @ObservationIgnored private let playStorage: PairPlayStorage?
@@ -116,6 +126,7 @@ final class PairSession {
     self.room = room
     self.delivery = delivery
     self.archive = archive
+    dailyArchive = DailyArchive(storage: archive.storage)
     self.shop = shop
     renovator = RoomRenovator(store: shop)
     self.now = now
@@ -153,6 +164,12 @@ final class PairSession {
   }
 
   func loadNotes() async {
+    let board = await dailyArchive.load()
+    // The room may have spoken while this loaded; what it said wins over the file.
+    var merged = board
+    for entry in daily.entries.values { merged.received(entry) }
+    if !daily.prompts.isEmpty { merged.promptsReceived(daily.prompts) }
+    daily = merged
     do {
       let stored = try await archive.notes()
       // A note can arrive while this loads, and its save may not have landed yet.
@@ -205,7 +222,8 @@ final class PairSession {
   func streak(today day: String, calendar: Calendar) -> Int {
     let paused =
       labs.isOn(LabExperiment.porchLight) ? porch.covered(now: now(), calendar: calendar) : []
-    return play.ledger.streak(today: day, calendar: calendar, paused: paused)
+    return play.ledger.streak(
+      today: day, calendar: calendar, paused: paused, alsoShared: daily.sharedDays)
   }
 
   /// This phone's lamp went out or came back on. The partner is told through `signal`, which the
@@ -241,6 +259,32 @@ final class PairSession {
     store.send(.drawingSent(strokes, id: id))
     catReturn.sent(id)
     keep(strokes, .sent, id: id)
+  }
+
+  /// Today's prompt of the drawing of the day, once the room has sent it.
+  func dailyPrompt(now: Date = .now, calendar: Calendar = .current) -> DailyPromptText? {
+    daily.prompt(on: TreatDay.key(for: now, calendar: calendar))
+  }
+
+  /// True once this phone has drawn today's prompt.
+  func hasDrawnDaily(now: Date = .now, calendar: Calendar = .current) -> Bool {
+    daily.hasDrawn(on: TreatDay.key(for: now, calendar: calendar))
+  }
+
+  /// Sends this phone's drawing of today's prompt. It shows here at once; the partner's comes back
+  /// from the room only now that this one is drawn.
+  func drawDaily(_ strokes: [Stroke]) {
+    let today = TreatDay.key(for: now(), calendar: .current)
+    guard !daily.hasDrawn(on: today), daily.prompt(on: today) != nil else { return }
+    daily.drew(strokes, on: today)
+    let at = TreatDay.timestamp(for: now(), calendar: .current)
+    Task { [delivery] in await delivery.drawDaily(strokes, at) }
+    store.send(.canvasClosed)
+  }
+
+  /// The reveal of `day` has played here.
+  func dailyRevealShown(_ day: String) {
+    daily.revealShown(day)
   }
 
   /// Reacts to a note the partner sent, here at once and then in the room. A note this device
@@ -432,6 +476,10 @@ final class PairSession {
       applyTreat { $0.treatsReceived(days) }
     case .catName(let name):
       play.named(name)
+    case .dailyPrompts(let prompts):
+      daily.promptsReceived(prompts)
+    case .daily(let entry):
+      daily.received(entry)
     case .partnerAdoption(let move):
       if let onAdoption {
         onAdoption(move)

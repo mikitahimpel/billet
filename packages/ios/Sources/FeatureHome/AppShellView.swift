@@ -61,6 +61,7 @@ struct AppShellView: View {
     let noteCount: Int
     let active: Bool
     let life: LifeLog?
+    let daily: Set<String>
   }
 
   /// When the app may be able to carry out what widgets queued: it is open, or the room changed.
@@ -74,7 +75,7 @@ struct AppShellView: View {
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
       latestNote: session.notes.first?.id,
       noteCount: session.notes.count, active: scenePhase == .active,
-      life: session.life.log)
+      life: session.life.log, daily: session.daily.sharedDays)
   }
 
   private var line: ConnectionLine {
@@ -227,7 +228,7 @@ struct AppShellView: View {
         publisher.publish(
           play: session.play, notes: session.notes,
           partnerHere: scenePhase == .active && session.status == .partnerHere,
-          life: session.life.widgetLife)
+          life: session.life.widgetLife, dailyShared: session.daily.sharedDays)
         try? await Task.sleep(for: WidgetPublisher.refresh)
       }
     }
@@ -265,7 +266,8 @@ extension AppShellView {
             ShelfBoardView(
               notes: board.notes, reactions: board.reactions, streak: streak,
               detail: board.detail, onClose: board.close))
-        } : nil
+        } : nil,
+      daily: session.daily.archive
     )
   }
 }

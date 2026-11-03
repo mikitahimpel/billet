@@ -1,6 +1,8 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
-// shooing and putting the cat to bed, naming the cat, reacting to a note, and choosing the cat
-// together.
+// shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
+// together, and the drawing of the day.
+
+import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -13,7 +15,15 @@ export const MAX_LIFE_EVENTS = 400;
  * cat off where it sat, so it learns to stay off.
  */
 export type LifePlayKind = "feed" | "play" | "sleep" | "shoo";
-export type PlayKind = "pet" | "treat" | LifePlayKind | "name" | "rename" | "react" | "adopt";
+export type PlayKind =
+  | "pet"
+  | "treat"
+  | LifePlayKind
+  | "name"
+  | "rename"
+  | "react"
+  | "adopt"
+  | "daily";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -71,7 +81,21 @@ export type AdoptFrame = {
   readonly at: string;
 } & AdoptMove;
 
-export type AnyPlayFrame = PlayFrame | NameFrame | RenameFrame | ReactFrame | AdoptFrame;
+/** This device's drawing of the day's prompt. The day is the one `at` was written on. */
+export interface DailyFrame {
+  readonly id: string;
+  readonly kind: "daily";
+  readonly at: string;
+  readonly ink: string;
+}
+
+export type AnyPlayFrame =
+  | PlayFrame
+  | NameFrame
+  | RenameFrame
+  | ReactFrame
+  | AdoptFrame
+  | DailyFrame;
 
 /** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
@@ -121,6 +145,13 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     }
     case "adopt":
       return parseAdopt(id, at, frame);
+    case "daily": {
+      const { ink } = frame;
+      if (typeof ink !== "string" || ink.length === 0 || ink.length > MAX_DAILY_INK) {
+        return undefined;
+      }
+      return { id, kind, at, ink };
+    }
     case "react": {
       const { note, reaction } = frame;
       if (typeof note !== "string" || !UUID.test(note)) return undefined;

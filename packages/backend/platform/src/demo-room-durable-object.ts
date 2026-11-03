@@ -13,12 +13,32 @@ import {
   type QueuedPet,
   type Reactions,
   type TreatDays,
+  dayOf,
+  type DailyFrame,
 } from "./demo-play.ts";
-import { sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
+import { sendAlert, sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
+import {
+  MAX_CLOCK_SKEW_MS,
+  addDays,
+  dailyView,
+  droppedDays,
+  dueReminders,
+  nextReminderAt,
+  offsetOf,
+  promptFor,
+  promptsFrame,
+  recordDaily,
+  reminderText,
+  type DailyDays,
+  type DailyDrawing,
+  type Reminded,
+} from "./daily-drawing.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
 export const DEVICE_HEADER = "x-demo-device";
+/** How many recent days of the drawing of the day a connecting phone is sent again. */
+export const DAILY_REPLAY_DAYS = 7;
 export const CODE_HEADER = "x-demo-code";
 
 const CLOSE_TOO_BIG = 1009;
@@ -59,6 +79,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   /** APNs transport; tests replace it with a stub. */
   protected apnsFetch: ApnsFetch = (url, init) => fetch(url, init);
 
+  /** The room's clock; tests replace it. */
+  protected clock(): number {
+    return Date.now();
+  }
+
   protected apnsCredentials(): Promise<ApnsCredentials | undefined> {
     const { APNS_KEY: key, APNS_KEY_ID: keyId } = this.env;
     return Promise.resolve(key === undefined || keyId === undefined ? undefined : { key, keyId });
@@ -86,6 +111,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     this.ctx.acceptWebSocket(server, [id]);
     await this.replay(server, id);
     await this.replayPlay(server, id);
+    await this.replayDaily(server, id);
     this.announcePresence();
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -141,6 +167,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
           ? undefined
           : await this.deliverOrQueue({ id, ink, from: sender, to: partner });
       const at = frame["at"];
+      if (isTime(at)) await this.recordOffset(sender, at);
       await this.recordLife({
         id: id.toLowerCase(),
         kind: "note",
@@ -180,6 +207,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   ): Promise<void> {
     const play = parsePlay(frame);
     if (play === undefined) return;
+    await this.recordOffset(sender, play.at);
     const seen = (await this.ctx.storage.get<string[]>("seen")) ?? [];
     if (!seen.includes(play.id)) {
       await this.ctx.storage.put("seen", [...seen, play.id].slice(-200));
@@ -195,6 +223,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       } else if (play.kind === "rename") {
         await this.ctx.storage.put("catName", play.name);
         this.broadcast({ type: "name", name: play.name });
+      } else if (play.kind === "daily") {
+        await this.recordDailyDrawing(sender, play);
       } else if (play.kind === "adopt") {
         await this.relayAdopt(sender, play);
       } else if (play.kind === "react") {
@@ -235,6 +265,135 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       }
     }
     socket.send(JSON.stringify({ type: "ack", id: play.id }));
+  }
+
+  /** The pair's prompts are its own: seeded by the room's code, or its id before it has one. */
+  private async pairKey(): Promise<string> {
+    return (await this.ctx.storage.get<string>("code")) ?? this.ctx.id.toString();
+  }
+
+  private async dailyDrawings(day: string): Promise<Record<string, DailyDrawing>> {
+    const days = (await this.ctx.storage.get<DailyDays>("dailyDays")) ?? {};
+    const drew = days[day] ?? [];
+    const stored = await this.ctx.storage.get<DailyDrawing>(drew.map((d) => `daily:${day}:${d}`));
+    return Object.fromEntries(
+      drew.flatMap((device) => {
+        const drawing = stored.get(`daily:${day}:${device}`);
+        return drawing === undefined ? [] : [[device, drawing]];
+      }),
+    );
+  }
+
+  /**
+   * Keeps the sender's drawing of the day `at` was written on, once: a second drawing of the same
+   * day changes nothing, so nobody can look at the partner's and draw again. Each phone is then
+   * sent its own view, which holds the partner's drawing only once that phone has drawn too.
+   */
+  private async recordDailyDrawing(sender: string, play: DailyFrame): Promise<void> {
+    if (Math.abs(Date.parse(play.at) - this.clock()) > MAX_CLOCK_SKEW_MS) return;
+    const day = dayOf(play.at);
+    const days = (await this.ctx.storage.get<DailyDays>("dailyDays")) ?? {};
+    const next = recordDaily(days, sender, day);
+    if (next !== days) {
+      await this.ctx.storage.put(`daily:${day}:${sender}`, {
+        id: play.id.toLowerCase(),
+        ink: play.ink,
+        at: play.at,
+      } satisfies DailyDrawing);
+      const dropped = droppedDays(days, next).flatMap((d) =>
+        (days[d] ?? []).map((device) => `daily:${d}:${device}`),
+      );
+      if (dropped.length > 0) await this.ctx.storage.delete(dropped);
+      await this.ctx.storage.put("dailyDays", next);
+    }
+    await this.sendDailyViews(day);
+    await this.scheduleReminder();
+  }
+
+  /** Sends each connected phone what it may see of `day`. */
+  private async sendDailyViews(day: string): Promise<void> {
+    const pair = await this.pairKey();
+    const drawings = await this.dailyDrawings(day);
+    for (const socket of this.ctx.getWebSockets()) {
+      const [device] = this.ctx.getTags(socket);
+      if (device === undefined) continue;
+      socket.send(JSON.stringify(dailyView(pair, day, device, drawings)));
+    }
+  }
+
+  /** The prompts for the days a phone may be living, then its view of each recent drawn day. */
+  private async replayDaily(socket: WebSocket, device: string): Promise<void> {
+    const pair = await this.pairKey();
+    const now = this.clock();
+    socket.send(JSON.stringify(promptsFrame(pair, now)));
+    const days = (await this.ctx.storage.get<DailyDays>("dailyDays")) ?? {};
+    const oldest = addDays(new Date(now).toISOString().slice(0, 10), -DAILY_REPLAY_DAYS);
+    for (const day of Object.keys(days).sort()) {
+      if (day < oldest) continue;
+      socket.send(JSON.stringify(dailyView(pair, day, device, await this.dailyDrawings(day))));
+    }
+  }
+
+  /** Keeps the UTC offset a phone last wrote its time in, which says when its evening is. */
+  private async recordOffset(device: string, at: string): Promise<void> {
+    const offset = offsetOf(at);
+    if (offset === undefined) return;
+    const offsets = (await this.ctx.storage.get<Record<string, number>>("offsets")) ?? {};
+    if (offsets[device] === offset) return;
+    await this.ctx.storage.put("offsets", { ...offsets, [device]: offset });
+    await this.scheduleReminder();
+  }
+
+  private async reminderInputs() {
+    return {
+      devices: (await this.ctx.storage.get<string[]>("devices")) ?? [],
+      offsets: (await this.ctx.storage.get<Record<string, number>>("offsets")) ?? {},
+      reminded: (await this.ctx.storage.get<Reminded>("dailyReminded")) ?? {},
+      days: (await this.ctx.storage.get<DailyDays>("dailyDays")) ?? {},
+    };
+  }
+
+  /** Sets the alarm for the next evening reminder, or clears it when none can fall due. */
+  private async scheduleReminder(): Promise<void> {
+    const at = nextReminderAt(this.clock(), await this.reminderInputs());
+    if (at === undefined) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    const current = await this.ctx.storage.getAlarm();
+    if (current !== at) await this.ctx.storage.setAlarm(at);
+  }
+
+  /**
+   * The evening reminder for the drawing of the day: once a day at most, to a phone that has not
+   * drawn its day, in its evening and never in quiet hours. A phone with no push token is still
+   * counted as reminded, so a token that arrives later does not bring a late-night push.
+   */
+  override async alarm(): Promise<void> {
+    const now = this.clock();
+    const inputs = await this.reminderInputs();
+    const due = dueReminders(now, inputs);
+    if (due.length > 0) {
+      const reminded = { ...inputs.reminded };
+      for (const { device, day } of due) reminded[device] = day;
+      await this.ctx.storage.put("dailyReminded", reminded);
+      const credentials = await this.apnsCredentials();
+      const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
+      const catName = await this.ctx.storage.get<string>("catName");
+      const pair = await this.pairKey();
+      for (const { device, day, partnerDrew } of due) {
+        const token = tokens[device];
+        if (credentials === undefined || token === undefined) continue;
+        const body = reminderText(catName, promptFor(pair, day), partnerDrew);
+        await sendAlert(
+          credentials,
+          token,
+          { aps: { alert: { body } }, daily: day },
+          this.apnsFetch,
+        );
+      }
+    }
+    await this.scheduleReminder();
   }
 
   /** Keeps `event` in the cat's life and sends it to both sockets, so both phones fold it. */

@@ -78,6 +78,11 @@ struct StreakFlameCover: View {
           .billetType(.caption)
           .foregroundStyle(Palette.muted.color)
       }
+      Text(FlameCopy.rule)
+        .billetType(.caption)
+        .foregroundStyle(Palette.muted.color)
+        .padding(.top, Spacing.hair)
+        .accessibilityIdentifier("flameRule")
     }
     .multilineTextAlignment(.center)
     .frame(maxWidth: .infinity)
@@ -99,19 +104,24 @@ struct StreakFlameCover: View {
 enum FlameCopy {
   /// Under a resting ember: what lights it again, never what was missed.
   static let ember = "It keeps warm. Your next day together lights it again."
+  /// What makes a day count, said once under the flame.
+  static let rule =
+    "A day counts when you both give the cat its treat, or both draw the day's drawing."
 }
 
-/// Today's additions to the flame: a note either way, or a treat given.
+/// Today's additions to the flame: a note either way, a treat given, or the day's drawing.
 enum FlameToday {
   static func contributions(
-    notes: [NoteRecord], treat: TreatLedger.Status, now: Date, calendar: Calendar
+    notes: [NoteRecord], treat: TreatLedger.Status, daily: DailyEntry? = nil, now: Date,
+    calendar: Calendar
   ) -> FlameContributions {
     let today = notes.filter { calendar.isDate($0.date, inSameDayAs: now) }
     let treatMine = treat == .fed || treat == .waitingOnPartner
     let treatTheirs = treat == .fed || treat == .waitingOnMe
     return FlameContributions(
-      mine: treatMine || today.contains { $0.direction == .sent },
-      theirs: treatTheirs || today.contains { $0.direction == .received })
+      mine: treatMine || daily?.mine != nil || today.contains { $0.direction == .sent },
+      theirs: treatTheirs || daily?.theirsDrawn == true
+        || today.contains { $0.direction == .received })
   }
 }
 

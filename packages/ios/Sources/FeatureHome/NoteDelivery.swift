@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureInbox
 import Foundation
 import Labs
 import Pet
@@ -47,6 +48,10 @@ public struct NoteDelivery: Sendable {
     case adventDoor(Int, [Stroke])
     /// The partner's move while the pair chooses its cat.
     case partnerAdoption(AdoptionMove)
+    /// The room's prompts of the drawing of the day, for each day a phone may be living now.
+    case dailyPrompts([String: DailyPromptText])
+    /// What the room lets this phone see of one day of the drawing of the day.
+    case daily(DailyEntry)
   }
 
   /// This device's ID, to tell its own treats from the partner's.
@@ -66,6 +71,9 @@ public struct NoteDelivery: Sendable {
   public var adopt: @Sendable (AdoptionMove) async -> Void
   /// Sends a reaction to a note the partner sent.
   public var react: @Sendable (_ note: UUID, Reaction) async -> Void
+  /// Sends this phone's drawing of the day. `at` is an ISO time in the sender's calendar, whose
+  /// day is the one drawn.
+  public var drawDaily: @Sendable ([Stroke], _ at: String) async -> Void
   /// Tells the partner something an experiment needs and the room has no frame for. Left as it is,
   /// it sends nothing.
   public var signal: @Sendable (LabSignal) async -> Void
@@ -82,6 +90,7 @@ public struct NoteDelivery: Sendable {
     renameCat: @escaping @Sendable (String) async -> Void = { _ in },
     adopt: @escaping @Sendable (AdoptionMove) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
+    drawDaily: @escaping @Sendable ([Stroke], String) async -> Void = { _, _ in },
     signal: @escaping @Sendable (LabSignal) async -> Void = { _ in },
     updates: @escaping @Sendable () -> AsyncStream<Update> = { AsyncStream { $0.finish() } },
     pushTokenChanged: @escaping @Sendable () async -> Void = {}
@@ -93,6 +102,7 @@ public struct NoteDelivery: Sendable {
     self.renameCat = renameCat
     self.adopt = adopt
     self.react = react
+    self.drawDaily = drawDaily
     self.signal = signal
     self.deliver = deliver
     self.updates = updates
@@ -111,6 +121,7 @@ public struct NoteDelivery: Sendable {
       renameCat: { await socket.renameCat($0) },
       adopt: { await socket.adopt($0) },
       react: { await socket.react(to: $0, $1) },
+      drawDaily: { await socket.drawDaily($0, at: $1) },
       updates: {
         AsyncStream { continuation in
           let connection = Task {

@@ -11,7 +11,16 @@ public struct NotesView: View {
   private let detailDrawing: ((NoteRecord) -> AnyView)?
   private let detailActions: ((NoteRecord) -> AnyView)?
   private let board: ((NoteBoard) -> AnyView)?
+  private let daily: [DailyEntry]?
 
+  /// Which notes the list shows.
+  enum Filter: Hashable {
+    case all
+    /// The drawing of the day, one row a day.
+    case daily
+  }
+
+  @State private var filter = Filter.all
   @Namespace private var zoom
   @State private var opened: NoteRecord?
   @State private var boardOpen = false
@@ -22,6 +31,7 @@ public struct NotesView: View {
   ///   - detailDrawing: Shows a note's drawing in the full-screen view instead of the still one.
   ///   - detailActions: Extra controls shown under a note in the full-screen view.
   ///   - board: Another way to see the notes, reached from the top of the list.
+  ///   - daily: The drawing of the day's archive, behind a "Daily" filter. `nil` shows no filter.
   public init(
     notes: [NoteRecord],
     loadFailed: Bool = false,
@@ -29,8 +39,10 @@ public struct NotesView: View {
     onReact: ((NoteRecord, Reaction) -> Void)? = nil,
     detailDrawing: ((NoteRecord) -> AnyView)? = nil,
     detailActions: ((NoteRecord) -> AnyView)? = nil,
-    board: ((NoteBoard) -> AnyView)? = nil
+    board: ((NoteBoard) -> AnyView)? = nil,
+    daily: [DailyEntry]? = nil
   ) {
+    self.daily = daily
     self.detailDrawing = detailDrawing
     self.detailActions = detailActions
     self.board = board
@@ -42,29 +54,16 @@ public struct NotesView: View {
 
   public var body: some View {
     ScreenScaffold("Notes") {
-      if board != nil { boardRow }
-      if notes.isEmpty {
-        EmptyWire(
-          title: loadFailed ? "Notes couldn't be loaded" : "No notes yet",
-          message: loadFailed
-            ? "Your saved notes couldn't be read on this device."
-            : "Notes you send and receive will hang here."
-        )
-        .transition(.opacity)
+      if daily != nil { filterPicker }
+      if filter == .daily, let daily {
+        DailyArchiveList(entries: daily)
+          .transition(.opacity)
       } else {
-        LazyVStack(spacing: 0) {
-          ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
-            if index > 0 {
-              ListDivider()
-            }
-            row(note)
-          }
-        }
-        .card()
-        .transition(.opacity)
+        noteList
       }
     }
     .calmAnimation(value: notes.count)
+    .calmAnimation(value: filter)
     #if os(iOS)
       .fullScreenCover(item: $opened) { note in
         detail(of: note) { opened = nil }
@@ -79,6 +78,39 @@ public struct NotesView: View {
         }
       }
     #endif
+  }
+
+  private var filterPicker: some View {
+    Picker("Show", selection: $filter) {
+      Text("All").tag(Filter.all)
+      Text("Daily").tag(Filter.daily)
+    }
+    .pickerStyle(.segmented)
+    .accessibilityIdentifier("notesFilter")
+  }
+
+  @ViewBuilder private var noteList: some View {
+    if board != nil { boardRow }
+    if notes.isEmpty {
+      EmptyWire(
+        title: loadFailed ? "Notes couldn't be loaded" : "No notes yet",
+        message: loadFailed
+          ? "Your saved notes couldn't be read on this device."
+          : "Notes you send and receive will hang here."
+      )
+      .transition(.opacity)
+    } else {
+      LazyVStack(spacing: 0) {
+        ForEach(Array(notes.enumerated()), id: \.element.id) { index, note in
+          if index > 0 {
+            ListDivider()
+          }
+          row(note)
+        }
+      }
+      .card()
+      .transition(.opacity)
+    }
   }
 
   private func detail(of note: NoteRecord, close: @escaping () -> Void) -> some View {

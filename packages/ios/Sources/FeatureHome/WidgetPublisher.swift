@@ -23,14 +23,15 @@ struct WidgetPublisher: Sendable {
   /// front, because the room connection closes then and the app can no longer vouch for it.
   static func snapshot(
     play: PairPlay, notes: [NoteRecord], partnerHere: Bool, previous: WidgetSnapshot?,
-    now: Date, calendar: Calendar, life: WidgetLife? = nil
+    now: Date, calendar: Calendar, life: WidgetLife? = nil, dailyShared: Set<String> = []
   ) -> WidgetSnapshot {
     let day = TreatDay.key(for: now, calendar: calendar)
     return WidgetSnapshot(
       catName: play.catName,
       treat: WidgetSnapshot.Treat(play.status(on: day)),
       treatDay: day,
-      streak: play.streak(today: day, calendar: calendar),
+      streak: play.ledger.streak(
+        today: day, calendar: calendar, paused: [], alsoShared: dailyShared),
       partnerHere: partnerHere,
       pairedSince: [previous?.pairedSince, notes.map(\.date).min()].compactMap { $0 }.min() ?? now,
       lastSentAt: notes.first { $0.direction == .sent }?.date,
@@ -42,13 +43,13 @@ struct WidgetPublisher: Sendable {
 
   func publish(
     play: PairPlay, notes: [NoteRecord], partnerHere: Bool, now: Date = .now,
-    calendar: Calendar = .current, life: WidgetLife? = nil
+    calendar: Calendar = .current, life: WidgetLife? = nil, dailyShared: Set<String> = []
   ) {
     guard let store else { return }
     let previous = store.load()
     let next = Self.snapshot(
       play: play, notes: notes, partnerHere: partnerHere, previous: previous, now: now,
-      calendar: calendar, life: life)
+      calendar: calendar, life: life, dailyShared: dailyShared)
     try? store.save(next)
     var changed = next
     changed.updatedAt = previous?.updatedAt ?? next.updatedAt
