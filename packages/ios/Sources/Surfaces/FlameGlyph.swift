@@ -39,7 +39,8 @@ public struct FlameGlyph: View {
       }
       context.fill(
         Self.tongue(
-          foot: CGPoint(x: foot.x - wide * 0.12, y: foot.y), height: tall, width: wide, lean: -0.12),
+          foot: CGPoint(x: foot.x - wide * 0.12, y: foot.y), height: tall, width: wide,
+          lean: -0.12),
         with: .color(Self.honey.opacity(0.92)))
       context.fill(
         Self.tongue(

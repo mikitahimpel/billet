@@ -83,14 +83,11 @@ struct StyledHome: View {
       }
       Button("Play the opening again") { openings += 1 }
     }
-    #if os(iOS)
-      .fullScreenCover(isPresented: $isFlameOpen) {
-        if let flame, let flameState {
-          flame.view(flameState) { isFlameOpen = false }
-            .navigationTransition(.zoom(sourceID: Self.streakSource, in: zoom))
-        }
+    .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
+      if let flame, let flameState {
+        flame.view(flameState) { isFlameOpen = false }
       }
-    #endif
+    }
   }
 
   /// Below and to the right of the cat's head, kept inside the view.
@@ -253,6 +250,20 @@ struct StyledHome: View {
 }
 
 extension View {
+  /// The flame over everything, zooming out of `source`, on iOS.
+  fileprivate func flameCover<Content: View>(
+    isPresented: Binding<Bool>, source: String, in namespace: Namespace.ID,
+    @ViewBuilder content: @escaping () -> Content
+  ) -> some View {
+    #if os(iOS)
+      fullScreenCover(isPresented: isPresented) {
+        content().navigationTransition(.zoom(sourceID: source, in: namespace))
+      }
+    #else
+      self
+    #endif
+  }
+
   /// Where the flame zooms out of, on iOS.
   fileprivate func streakSource(id: String, in namespace: Namespace.ID) -> some View {
     #if os(iOS)

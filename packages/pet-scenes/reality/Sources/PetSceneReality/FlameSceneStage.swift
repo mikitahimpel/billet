@@ -565,7 +565,8 @@ final class FlameSceneStage {
       kit.part(kit.prism(sides: 12, radius: 0.24, top: 0.23, height: 0.78), wax, at: [0, 0.16, 0]))
     candle.addChild(
       kit.part(
-        kit.prism(sides: 12, radius: 0.19, top: 0.19, height: 0.01), kit.matte(GenzColour(0xFFF4E2)),
+        kit.prism(sides: 12, radius: 0.19, top: 0.19, height: 0.01),
+        kit.matte(GenzColour(0xFFF4E2)),
         at: [0, 0.94, 0]))
     candle.addChild(kit.part(kit.box([0.03, 0.1, 0.03]), wick, at: [0, 0.98, 0]))
     holders[.candle] = candle
@@ -612,7 +613,8 @@ final class FlameSceneStage {
       let log = kit.part(
         kit.prism(sides: 7, radius: 0.12, top: 0.1, height: 1.35), bark[index % 2],
         at: [0, 0.5 + Float(index) * 0.05, 0],
-        turn: simd_quatf(angle: turn, axis: [0, 1, 0]) * simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))
+        turn: simd_quatf(angle: turn, axis: [0, 1, 0])
+          * simd_quatf(angle: .pi / 2, axis: [1, 0, 0]))
       // The prism stands on its end; lying down, it is moved back by half its length.
       log.position += simd_quatf(angle: turn, axis: [0, 1, 0]).act([0, 0, -0.67])
       hearth.addChild(log)
