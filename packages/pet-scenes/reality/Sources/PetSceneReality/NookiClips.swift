@@ -16,8 +16,14 @@ enum NookiClip: String, CaseIterable, Sendable {
   /// rig keeps everything else.
   static let walksWithRig = true
 
+  /// How fast a planted paw moves back in the walk clip at normal rate, in the model's metres a
+  /// second. Every made cat walks one 0.083 m stride a second with each paw down for 62% of it, so
+  /// a planted paw covers the stride in 0.62 s; measured off the hero and the detailed cat it is
+  /// 0.125 to 0.128. Travel at this speed keeps paws still on the floor.
+  static let pawSpeed: Float = 0.126
+
   /// How fast the walk clip's feet travel at normal rate, in metres a second in the room.
-  static let walkingSpeed: Float = 0.083 * NookiDiorama.catScale
+  static let walkingSpeed: Float = pawSpeed * NookiDiorama.catScale
 
   private static let fastestWalk: Float = 3
 

@@ -46,6 +46,12 @@ import Testing
     #expect(NookiClip.walkRate(forTravelAt: 0) == 1)
     #expect(NookiClip.walkRate(forTravelAt: 5) == 3)
   }
+
+  @Test func walkingAtTheClipsOwnSpeedKeepsPlantedPawsStill() {
+    // One 0.083 m stride a second, each paw down for 62% of it: the stance is quicker than the
+    // stride, and travel has to match the stance or the paws skate.
+    #expect(abs(NookiClip.pawSpeed - 0.083 / 0.62) < 0.01)
+  }
 }
 
 @MainActor @Suite struct NookiBundledRigTests {
