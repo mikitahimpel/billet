@@ -72,7 +72,6 @@ struct HomeView: View {
     home
       .environment(\.petSceneCat, session.labs.cat)
       .environment(\.petSceneWindowView, session.labs.windowView)
-      .environment(\.petSceneMoments, session.labs.features.catMoments)
       .environment(\.petSceneLighting, session.labs.lighting)
       .environment(\.petSceneFurniture, session.labs.furniture)
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
@@ -104,8 +103,7 @@ struct HomeView: View {
       }
       .task { await keepSealedNotesCurrent() }
       .task(id: session.life.speed) { await session.life.run() }
-      .task(id: BrainInputs(on: session.labs.isOn(LabExperiment.catBrain), cat: session.labs.cat)) {
-        guard session.labs.isOn(LabExperiment.catBrain) else { return }
+      .task(id: session.labs.cat) {
         session.brain.setSeed(CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat))
         await session.brain.run()
       }
@@ -123,8 +121,7 @@ struct HomeView: View {
           if session.labs.isOn(LabExperiment.lifeDebug) {
             LifeDebugOverlay(model: session.life)
           }
-          if session.labs.isOn(LabExperiment.catBrain), session.labs.isOn(LabExperiment.brainDebug)
-          {
+          if session.labs.isOn(LabExperiment.brainDebug) {
             BrainDebugOverlay(brain: session.brain, life: session.life)
           }
         }
@@ -809,10 +806,9 @@ struct HomeView: View {
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
       catAway: catAway,
-      life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil,
-      lifeNeeds: session.labs.isOn(LabExperiment.catLife)
-        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil,
-      brain: session.labs.isOn(LabExperiment.catBrain) ? session.brain.frame : nil,
+      life: session.life.drive,
+      lifeNeeds: session.life.state.needs,
+      brain: session.brain.frame,
       brainSpeed: session.life.speed
     )
   }
@@ -928,10 +924,4 @@ extension PetPlayState.Treat {
 private struct StreakInputs: Equatable {
   let ledger: TreatLedger
   let porch: PorchLight?
-}
-
-/// What the brain's run restarts on: the switch, and the adopted cat its seed comes from.
-private struct BrainInputs: Hashable {
-  var on: Bool
-  var cat: CatChoice
 }

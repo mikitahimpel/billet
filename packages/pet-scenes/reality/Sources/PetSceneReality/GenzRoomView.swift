@@ -140,7 +140,6 @@ struct GenzRoomView: View {
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneOpeningCount) private var openings
   @Environment(\.petSceneCat) private var cat
-  @Environment(\.petSceneMoments) private var moments
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneGaze) private var gaze
   @Environment(\.petSceneOrbits) private var orbits
@@ -332,7 +331,6 @@ struct GenzRoomView: View {
       .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
       .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
       .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
-      .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
       .onAppear {
         room.art = replacementArt ?? GenzNativeArt()
         room.report = onEvent
@@ -370,7 +368,6 @@ struct GenzRoomView: View {
     room.setFollowsTilt(followsTilt)
     room.setCat(cat)
     room.setLighting(lighting)
-    room.setMoments(moments)
     room.setWindowView(windowView)
     room.setOnScreen(isOnScreen, in: viewID)
   }
@@ -556,7 +553,7 @@ struct GenzRoomView: View {
         case .offerTreat:
           room.offerTreat(at: value.location).forEach(onEvent)
         case .camera:
-          if let event = room.bat(at: value.location) { onEvent(event) }
+          room.fingerAt(value.location)
           guard orbits else { return }
           room.orbit(
             byX: Float(value.translation.width - track.drag.width),
@@ -578,6 +575,7 @@ struct GenzRoomView: View {
         case .carry(let toy), .fling(let toy):
           room.release(toy, velocity: value.velocity, at: value.location)
         case .camera:
+          room.fingerLifted()
           guard orbits else { return }
           room.endOrbit(
             velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))

@@ -86,8 +86,6 @@ extension EnvironmentValues {
   @Entry public var petSceneRoomStyle: RoomStyle = .nooki
   /// The cat a scene with more than one cat should show. Scenes with one cat ignore it.
   @Entry public var petSceneCat: CatChoice = .standard
-  /// The cat moments switched on in Labs. None until the owner turns one on.
-  @Entry public var petSceneMoments: Set<CatMoment> = []
   /// Art that replaces some of a styled room's flat layers. `nil` keeps every native drawing.
   @Entry public var petSceneRoomArt: (any RoomLayerArt)? = nil
   /// Bumped by the host to play a styled room's opening again.

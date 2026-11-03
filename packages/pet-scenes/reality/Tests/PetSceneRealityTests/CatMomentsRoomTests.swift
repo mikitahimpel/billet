@@ -53,7 +53,15 @@ import Testing
     }
   }
 
-  @Test func theLabsSwitchesNameEveryMoment() {
-    #expect(CatMoment.allCases.count == 5)
+  /// Moving to turn the room, the finger is never batted at; held still, it is.
+  @Test func aFingerTurningTheRoomIsNeverBatted() {
+    var rest = CatFingerRest()
+    var t = 0.0
+    for x in stride(from: 10.0, through: 60, by: 5) {
+      rest.moved(toX: x, y: 400, at: t)
+      #expect(rest.resting(at: t) == nil)
+      t += 1 / 60
+    }
+    #expect(rest.resting(at: t + CatFingerRest.dwell) != nil)
   }
 }

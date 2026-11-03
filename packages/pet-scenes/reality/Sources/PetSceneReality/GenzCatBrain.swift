@@ -42,7 +42,13 @@ extension GenzRoom {
   func followBrain(_ frame: CatBrainFrame?, speed: Double) {
     brainBody.speed = speed
     guard frame != brainBody.frame else { return }
+    let before = brainBody.frame
     brainBody.frame = frame
+    // Play chose a chase: the cat goes after the lamp's dot of light once it is free. Any other
+    // step lets a chase that never started go.
+    let step = frame?.stack.step
+    let isNew = step != before?.stack.step || frame?.stepStart != before?.stepStart
+    if isNew { chaseWanted = step == .chase || step == .zoomies }
   }
 
   /// The affordance kind of a piece, or nil for one the cat has no use for.
@@ -143,10 +149,15 @@ extension GenzRoom {
     if let pursuit = toys.pursuit { return .toy(pursuit.toy) }
     if toys.mealStart != nil { return .fed }
     if petClock != nil { return .petted(hands.isOnBack(at: clock) ? .belly : .back) }
+    if tripKind == .greeting, trip != nil { return .greeting }
+    if clock - lastBat < Self.battingFor { return .batting }
     if tripKind == .wander, perch != nil, trip != nil { return .called }
     if gazePoint != nil, clock <= gazeUntil, !watchingView { return .followFinger }
     return nil
   }
+
+  /// How long a bat shows as the brain's Batting interaction, in seconds.
+  static let battingFor = 1.2
 
   /// Tells the host when this phone's touch changes, for the brain's interaction region.
   func reportTouch() {

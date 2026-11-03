@@ -55,10 +55,12 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var pace: Double
   public var stepStart: Double
   public var stepEnd: Double
+  /// Whether it would bat at a finger resting near the edge of the screen.
+  public var eager: Bool
 
   public init(
     stack: CatBrainStack, action: CatAction, target: CatTarget, gaze: CatGaze, pace: Double,
-    stepStart: Double, stepEnd: Double
+    stepStart: Double, stepEnd: Double, eager: Bool = false
   ) {
     self.stack = stack
     self.action = action
@@ -67,6 +69,7 @@ public struct CatBrainFrame: Hashable, Sendable {
     self.pace = pace
     self.stepStart = stepStart
     self.stepEnd = stepEnd
+    self.eager = eager
   }
 
   /// The still picture a surface without a scene shows for this frame.
@@ -178,8 +181,22 @@ public struct CatBrain: Sendable {
     return CatBrainFrame(
       stack: stack, action: action, target: interaction == nil ? activity.target : .stay,
       gaze: interaction.map { _ in CatGaze.camera } ?? activity.gaze,
-      pace: CatStatechart.pace(activity.step), stepStart: activity.start, stepEnd: activity.end)
+      pace: CatStatechart.pace(activity.step), stepStart: activity.start, stepEnd: activity.end,
+      eager: eager)
   }
+
+  /// Whether the cat is in the mood to bat at a finger: awake, not napping or eating, and keen
+  /// to play by its nature and by how long since its last game. A playful cat nearly always is;
+  /// an even one once its Playful need has dropped below about half; a lazy one rarely.
+  public var eager: Bool {
+    guard vitality == .awake, activity.step.group != .rest, activity.step.group != .eat else {
+      return false
+    }
+    let want = NeedFocus.urgency(life.needs[.playful])
+    return 0.5 * want + 0.5 * personality.playful >= Self.eagerAbove
+  }
+
+  static let eagerAbove = 0.4
 
   static func clip(_ interaction: CatInteraction, asleep: Bool) -> CatAction {
     switch interaction {
@@ -189,6 +206,8 @@ public struct CatBrain: Sendable {
     case .called: .walk
     case .fed: .eat
     case .followFinger: .sit
+    case .greeting: .headbutt
+    case .batting: .bat
     }
   }
 
@@ -319,7 +338,7 @@ public struct CatBrain: Sendable {
       countRest(at: t)
       echo = nil
       history = nil
-      enter(script: curled ? [.wake, .curiousTilt] : [.curiousTilt], at: t, cause: .event)
+      enter(script: curled ? [.wake, .carryNote] : [.carryNote], at: t, cause: .event)
       if vitality == .asleep { moveVitality(to: .drowsy, at: t) }
     case .pet:
       if let spot = spot { memory.petted(at: spot) }
