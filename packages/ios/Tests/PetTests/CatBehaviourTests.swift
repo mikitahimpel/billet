@@ -18,7 +18,9 @@ struct CatBehaviourTests {
       case .bat: clips[action] = CatClipInfo(duration: 1.4, loops: false, base: .sit)
       case .headbutt: clips[action] = CatClipInfo(duration: 1.8, loops: false, base: .stand)
       case .reachUp: clips[action] = CatClipInfo(duration: 2.2, loops: false, base: .stand)
-      case .grab, .sniff, .wave, .dangle, .loaf, .run, .lieDown: continue
+      case .grab, .sniff, .wave, .dangle, .loaf, .run, .lieDown, .groomFlank, .groomTail,
+        .lickLips, .startle, .headTilt:
+        continue
       case .sit, .blink, .look, .tailFlick, .happy, .knead:
         clips[action] = CatClipInfo(duration: 4, loops: true, base: .sit)
       case .pounce, .stretch: clips[action] = CatClipInfo(duration: 1.5, loops: false, base: .stand)
