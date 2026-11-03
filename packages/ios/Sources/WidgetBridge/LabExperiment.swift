@@ -29,7 +29,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case bedsideHouse
   case shelfBoard
   case notesDesk
-  case cinematicOnboarding
   case lifeBubble
   case lifeRings
   case lifeChips
@@ -78,7 +77,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .bedsideHouse: .home
     case .shelfBoard: .notes
     case .notesDesk: .notes
-    case .cinematicOnboarding: .firstLaunch
     case .lifeBubble: .cat
     case .lifeRings: .cat
     case .lifeChips: .cat
@@ -111,7 +109,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .bedsideHouse: "Bedside house"
     case .shelfBoard: "Shelf board"
     case .notesDesk: "Notes desk"
-    case .cinematicOnboarding: "Cinematic onboarding"
     case .lifeBubble: "Thought bubble"
     case .lifeRings: "Need rings"
     case .lifeChips: "Need words"
@@ -132,8 +129,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
     case .brainDebug:
       "A card on Home shows what the brain is doing and why: its state, the five best scores, the last ten moves, its traits and favourite spot, and a faster clock."
-    case .cinematicOnboarding:
-      "First launch flies into a windowsill of candles with a soft beating heart, and pairing happens in that scene. Off, it is the plain welcome and code screens. Replay it below without touching your pair."
     case .notesDesk:
       "Notes becomes a desk under a board: tap the paper to draw, tap a pinned note to open it. The list is one tap away. Off, Notes is the list."
     case .shelfBoard:
@@ -206,7 +201,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .bedsideHouse: false
     case .shelfBoard: false
     case .notesDesk: false
-    case .cinematicOnboarding: false
     case .lifeBubble: false
     case .lifeRings: false
     case .lifeChips: false
@@ -239,7 +233,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .bedsideHouse: true
     case .shelfBoard: true
     case .notesDesk: true
-    case .cinematicOnboarding: true
     case .lifeBubble: false
     case .lifeRings: false
     case .lifeChips: false

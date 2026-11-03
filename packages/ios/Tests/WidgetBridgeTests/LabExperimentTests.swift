@@ -81,4 +81,10 @@ import Testing
     #expect(reloaded.isOn(LabExperiment.fakePartner))
     #expect(!reloaded.isOn(WidgetFeature.streak))
   }
+
+  @Test func theCinematicsHaveNoSwitch() {
+    let keys = LabExperiment.allCases.map(\.rawValue)
+    #expect(!keys.contains("cinematicOnboarding"))
+    #expect(!keys.contains { $0.lowercased().contains("cinematic") })
+  }
 }

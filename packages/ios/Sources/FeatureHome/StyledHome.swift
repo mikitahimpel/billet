@@ -26,6 +26,8 @@ struct StyledHome: View {
   let onDraw: () -> Void
   /// Whether the room is being decorated, which hides everything over it but its own controls.
   var isDecorating = false
+  /// Whether the launch's glide into the room is playing, which keeps the controls back.
+  var isOpening = false
   /// Opens the room for moving its furniture, right where it is.
   var onDecorate: (() -> Void)?
   /// Opens the streak's flame, or `nil` when the chip only shows the count.
@@ -60,7 +62,7 @@ struct StyledHome: View {
             }
           }
         }
-      if !isDecorating {
+      if !isDecorating, !isOpening {
         VStack(spacing: 0) {
           header
           Spacer(minLength: 0)
@@ -70,6 +72,7 @@ struct StyledHome: View {
       }
     }
     .calmAnimation(value: isDecorating)
+    .calmAnimation(value: isOpening)
     .task(id: latestReceived?.id) {
       guard let note = latestReceived else {
         latestDrawing = nil

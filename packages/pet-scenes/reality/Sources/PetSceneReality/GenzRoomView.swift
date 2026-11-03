@@ -147,6 +147,7 @@ struct GenzRoomView: View {
   @Environment(\.petSceneDayLight) private var dayLight
   @Environment(\.petSceneFollowsTilt) private var followsTilt
   @Environment(\.petSceneOpeningEnded) private var openingEnded
+  @Environment(\.petSceneOpeningStarted) private var openingStarted
   @Environment(\.petSceneWindowView) private var windowView
   @Environment(\.petSceneViewArt) private var viewArt
   @State private var plates = ViewPlateCache()
@@ -311,6 +312,7 @@ struct GenzRoomView: View {
       .onChange(of: openings) { room.replayOpening() }
       .onChange(of: flyIn, initial: true) { _, flyIn in
         room.onOpeningEnded = openingEnded
+        room.onOpeningStarted = openingStarted
         room.flyIn(flyIn)
       }
       .onChange(of: gaze) { _, gaze in room.gaze(at: gaze) }
@@ -363,6 +365,7 @@ struct GenzRoomView: View {
     room.show(world)
     room.show(drawing: drawing)
     room.onOpeningEnded = openingEnded
+    room.onOpeningStarted = openingStarted
     room.flyIn(flyIn)
     room.show(dayLight: dayLight)
     room.setFollowsTilt(followsTilt)

@@ -8,7 +8,7 @@ Classic is the default. Every variant works with Nooki, Sunset Lamp and Window S
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Classic      | Home as it was: the header chips, the room card and the cards below it.                                                                                                                             |
 | Immersive    | The room fills the screen, under the status bar and behind the tab bar. One gold pen draws; a handle at the foot pulls up a panel with the streak, renovate, closet, shop and every card. |
-| Cinematic    | Immersive, plus an opening once per launch: the camera flies in, the lights come up, the cat wakes and looks at the camera, then the note grows in. A tap skips it; Reduce Motion shows its end. |
+| Cinematic    | As Immersive. Every Home now glides into the room on a cold launch (see [onboarding](onboarding.md)); it is kept so a stored or remote choice of it still reads. |
 | Living window| Immersive, plus a room that answers touch: a finger on the room is watched by the cat, holding it gives a treat, and the camera leans with the phone. Controls fade in after 3 s untouched.   |
 | Night and day| Immersive, lit by the local hour (morning, day, golden hour, night with the lamp on). When the partner shares a time zone, the window (Nooki) or the sky behind the room shows their hour. |
 

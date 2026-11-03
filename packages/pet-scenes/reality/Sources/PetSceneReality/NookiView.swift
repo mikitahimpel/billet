@@ -143,6 +143,7 @@ private struct NookiStage: View {
   @Environment(\.petSceneFillsView) private var fillsView
   @Environment(\.petSceneShowsControls) private var showsControls
   @Environment(\.petSceneOpeningEnded) private var openingEnded
+  @Environment(\.petSceneOpeningStarted) private var openingStarted
   @Environment(\.scenePhase) private var scenePhase
 
   init(
@@ -196,6 +197,7 @@ private struct NookiStage: View {
       }
       .onChange(of: flyIn, initial: true) { _, flyIn in
         diorama.onOpeningEnded = openingEnded
+        diorama.onOpeningStarted = openingStarted
         diorama.flyIn(flyIn)
       }
       .onChange(of: gaze) { _, gaze in diorama.gaze(at: gaze, in: viewSize) }

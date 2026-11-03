@@ -16,26 +16,25 @@ public struct PetSceneFlyIn: Hashable, Sendable {
 }
 
 /// When each part of the opening happens, in seconds from its start, and where the camera is on
-/// the way. Scenes and hosts read the same numbers, so they stay in step.
+/// the way. Scenes and hosts read the same numbers, so they stay in step. It is short, a glide of
+/// under two seconds, because it plays on every cold launch.
 public enum FlyInTimeline {
-  /// The camera's flight from far out to its usual place.
-  public static let flight = 0.0...2.2
+  /// The camera's glide from a little way out to its usual place.
+  public static let flight = 0.0...1.8
   /// The room's lights going from dark to full.
-  public static let lightsUp = 0.2...1.1
-  /// When the cat wakes, as the lights come up. Its stretch runs about three seconds.
-  public static let wake = 0.9
-  /// When the cat is asked to look at the camera. A cat still stretching looks once it is done.
-  public static let look = 3.0
+  public static let lightsUp = 0.0...0.9
+  /// When the cat is asked to look up at the camera, to greet whoever opened the app.
+  public static let look = 1.0
   /// The latest note growing in, once the cat has looked up.
-  public static let noteReveal = 3.9...4.5
+  public static let noteReveal = 1.3...1.8
   /// When the whole opening is over.
-  public static let length = 4.6
+  public static let length = 1.9
 
   /// How the camera stands off its usual place at `time`: extra turn and lift in radians, and
   /// distance as a multiple of the usual one. All return to zero, zero and one by the flight's end.
   public static func offset(at time: Double) -> (yaw: Float, pitch: Float, distance: Float) {
     let left = Float(1 - eased(progress(time, in: flight)))
-    return (yaw: 0.55 * left, pitch: 0.2 * left, distance: 1 + 1.4 * left)
+    return (yaw: 0.3 * left, pitch: 0.12 * left, distance: 1 + 0.8 * left)
   }
 
   /// From 0 to 1, how far the lights have come up at `time`.
@@ -92,6 +91,9 @@ extension EnvironmentValues {
   @Entry public var petSceneLighting = RoomLighting.off
   /// Which furniture fills the styled rooms. A host that sets nothing gets the first pieces.
   @Entry public var petSceneFurniture = RoomFurniture.original
+  /// Called when the opening asked for by ``petSceneFlyIn`` starts, which is once the room is
+  /// built and on screen: a host covering the room while it loads can uncover it then.
+  @Entry public var petSceneOpeningStarted: (@MainActor () -> Void)? = nil
   /// Called when the opening asked for by ``petSceneFlyIn`` is over, played out or skipped.
   @Entry public var petSceneOpeningEnded: (@MainActor () -> Void)? = nil
   /// The newest cue for the cat, from ``CatDirector``.
