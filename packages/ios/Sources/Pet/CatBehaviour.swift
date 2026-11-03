@@ -30,6 +30,14 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case headbutt
   /// Standing, it rears up and presses both forepaws on the wall.
   case reachUp
+  /// On its back under a hand, it hugs the hand with its forepaws and bunny-kicks.
+  case grab
+  /// Standing, nose forward, it sniffs at something held out.
+  case sniff
+  /// Sitting, one forepaw lifts and waves.
+  case wave
+  /// Held up under the forelegs, the hind legs and tail hang loose.
+  case dangle
 
   /// The moves to play instead, in order, for a model without this clip.
   public var standIns: [CatAction] {
@@ -38,6 +46,10 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
     case .bat: [.perk, .look]
     case .headbutt: [.happy, .perk]
     case .reachUp: [.perk, .stretch, .idle]
+    case .grab: [.bat, .rollOver]
+    case .sniff: [.look, .perk]
+    case .wave: [.bat, .perk]
+    case .dangle: [.stretch, .idle]
     case .idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick,
       .happy, .stretch, .yawn, .groom, .knead, .slowBlink, .perk, .twitch:
       []
@@ -217,6 +229,17 @@ public struct CatBehaviour: Sendable {
       let bat = playable(.bat)
       queue.append((bat, length(of: bat, held: 1.4)))
     }
+    until = now
+    asleepUntil = nil
+    awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
+  }
+
+  /// Plays `action` next, or its nearest stand-in, for `seconds` (a one-shot's own length when
+  /// nil), then goes on as before. For moves the room asks for that are not a ``CatReaction``.
+  public mutating func perform(_ action: CatAction, for seconds: Double? = nil, at now: Double) {
+    queue.removeAll()
+    let shown = playable(action)
+    queue.append((shown, seconds ?? length(of: shown)))
     until = now
     asleepUntil = nil
     awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
@@ -405,7 +428,9 @@ public struct CatBehaviour: Sendable {
     case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead: 1
     case .perk, .happy: 0.5
     case .walk, .eat: 0.3
-    case .bat: 0.6
+    case .bat, .wave: 0.6
+    case .sniff: 0.4
+    case .grab, .dangle: 0
     case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce, .rollOver,
       .headbutt, .reachUp:
       0

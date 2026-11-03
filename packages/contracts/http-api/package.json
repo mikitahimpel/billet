@@ -7,7 +7,6 @@
   "exports": {
     "./api-error": "./src/api-error.ts",
     "./auth": "./src/auth.ts",
-    "./client-info": "./src/client-info.ts",
     "./device": "./src/device.ts",
     "./events": "./src/events.ts",
     "./flags": "./src/flags.ts",

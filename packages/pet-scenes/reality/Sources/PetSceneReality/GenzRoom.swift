@@ -96,7 +96,7 @@ final class GenzRoomCache {
 /// One styled room and everything that moves in it. Built from simple shapes in code, so it is
 /// ready a moment after it is asked for; only the cat loads from a file.
 @MainActor
-final class GenzRoom {
+final class GenzRoom: CatPlayStage {
   static let catName = "genz-cat"
   static let noteName = "genz-note"
   static let lampName = "genz-lamp"
@@ -116,16 +116,21 @@ final class GenzRoom {
 
   private let kit: GenzKit
   private let cats: GenzCatSource
-  private let room = Entity()
+  let room = Entity()
   private let lens = PerspectiveCamera()
-  private let catHolder = Entity()
+  let catHolder = Entity()
   /// The cat moments switched on in Labs.
   private(set) var moments: Set<CatMoment> = []
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
-  private var trip: CatTrip?
-  private var tripKind: CatTripKind?
-  private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
+  /// The hands on the cat: petting, play and the cooldowns that keep it from feeling spammy.
+  let hands = CatHands()
+  /// Where the body faces this frame, before the lean into a hand.
+  var bodyHeading: Float = 0
+  private var lastCatClock = 0.0
+  var trip: CatTrip?
+  var tripKind: CatTripKind?
+  var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
   private var lastBat = -Double.infinity
   private var greetPending = false
   private var lastSeenSaved = -Double.infinity
@@ -147,8 +152,8 @@ final class GenzRoom {
   private let outsideLight = Entity()
   private let fillLight = Entity()
   private let headlight = Entity()
-  private var rig: CatRig?
-  private var behaviour = CatBehaviour(clips: [:])
+  var rig: CatRig?
+  var behaviour = CatBehaviour(clips: [:])
   private var life = LifeDrive()
   private var lifeNeeds: PetNeeds?
   private var lifeProps: GenzLifeProps?
@@ -157,29 +162,29 @@ final class GenzRoom {
   private var catChoice = CatChoice.standard
   private var catModel: Entity?
   private var catLoad: Task<Void, Never>?
-  private var gazePoint: SIMD3<Float>?
-  private var gazeUntil = 0.0
+  var gazePoint: SIMD3<Float>?
+  var gazeUntil = 0.0
   private var building: Task<Void, Never>?
   private let frames = FrameClock()
-  private var viewSize = CGSize(width: 393, height: 852)
-  private var clock = 0.0
+  var viewSize = CGSize(width: 393, height: 852)
+  var clock = 0.0
   private var openedClock: Double?
   private var noteClock = 0.0
   private var landedClock: Double?
-  private var petClock: Double?
+  var petClock: Double?
   private var lampOn = true
-  private var reduceMotion = false
-  private var world = PetWorld()
+  var reduceMotion = false
+  var world = PetWorld()
   private var shownDrawing: CGImage?
   private var settlingFrames = 4
   private var isOnScreen = false
   private var viewsShowing = Set<UUID>()
   private var lastTexture = -1.0
   private var lastLevels: [String: Double] = [:]
-  private var tapTimer = NookiTapTimer()
+  var tapTimer = NookiTapTimer()
   private var texturesBeingMade = Set<String>()
   private var pendingFlyIn: PetSceneFlyIn?
-  private var opening: SceneFlight?
+  var opening: SceneFlight?
   private var tiltSource: (any NookiTiltSource)?
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
@@ -932,10 +937,17 @@ final class GenzRoom {
       case .sleeping: .free
       }
     var rate: Float = 1
+    bodyHeading = layout.cat.heading
     if let pose = stepTrip() {
       mode = .fixed(pose.action)
+      bodyHeading = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
     }
+    hands.stepLean(Float(min(clock - lastCatClock, 0.1)), reduceMotion: reduceMotion)
+    lastCatClock = clock
+    catHolder.orientation =
+      simd_quatf(angle: bodyHeading, axis: [0, 1, 0])
+      * simd_quatf(angle: hands.lean, axis: [0, 0, 1])
     let beat = behaviour.beat(at: clock, mode: mode)
     rig.play(beat.action, rate: rate)
     if clock > gazeUntil { gazePoint = nil }
@@ -949,7 +961,7 @@ final class GenzRoom {
   private static let fingerLookLength = 1.5
 
   /// Turns the head and neck, not the body, towards `point` for `length` seconds.
-  private func headLook(at point: SIMD3<Float>, for length: Double) {
+  func headLook(at point: SIMD3<Float>, for length: Double) {
     gazePoint = point
     gazeUntil = clock + length
   }
@@ -968,31 +980,57 @@ final class GenzRoom {
     watchingView = false
   }
 
+  /// The cat as drawn now, for finding where a finger is on it.
+  func catBody() -> CatBodyOnScreen? {
+    CatBodyOnScreen.of(
+      base: catHolder.position, heading: bodyHeading, length: layout.cat.length,
+      isOnBack: hands.isOnBack(at: clock)
+    ) { camera.project($0, in: viewSize) }
+  }
+
   /// Whether a finger at `point` is on the cat, for telling a stroke from a turn of the room.
   func isOverCat(_ point: CGPoint) -> Bool {
+    if let body = catBody() { return body.contains(SIMD2(Double(point.x), Double(point.y))) }
     guard let cat = screen.cat else { return false }
     return hypot(point.x - cat.x, point.y - cat.y) < 70
   }
 
-  /// A stroke along the cat: eyes close and it purrs. Reports a pet like a tap does.
-  func stroke() -> PetSceneEvent? {
+  /// A stroke starting at `point` on the cat. Reports a pet like a tap does.
+  func stroke(at point: CGPoint) -> [PetSceneEvent] {
     let fresh = petClock == nil
     petClock = clock
     behaviour.react(.pet, at: clock)
-    strokeMoved()
-    return fresh ? .petted : nil
+    hands.beginStroke(at: point)
+    let events = strokeMoved(to: point)
+    return fresh ? [.petted] + events : events
   }
 
-  /// The finger is still stroking the cat: the purr goes on, and a long pet rolls it over.
-  func strokeMoved() {
-    guard moments.contains(.purrs), trip == nil else { return }
-    if purr.touch(at: clock, cat: screen.cat) { behaviour.react(.roll, at: clock) }
+  /// The finger strokes on: the cat leans into it, purrs as the spot deserves, and rolls over
+  /// after a long pet. A rub on its belly may get grabbed.
+  func strokeMoved(to point: CGPoint) -> [PetSceneEvent] {
+    guard trip == nil else { return [] }
+    petClock = clock
+    if moments.contains(.purrs), purr.touch(at: clock, cat: point) {
+      behaviour.react(.roll, at: clock)
+      hands.onBackUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
+    }
+    guard let body = catBody(), let response = hands.stroke(to: point, on: body, at: clock)
+    else { return [] }
+    return show(response)
   }
+
+  func strokeEnded() { hands.endStroke() }
 
   /// A treat or the partner's pet: the cat reacts without telling anyone.
   func react(_ reaction: CatReaction) {
     petClock = clock
     behaviour.react(reaction, at: clock)
+  }
+
+  /// The partner petted the cat on their phone: a heart over it, and it perks up.
+  func partnerPetted() {
+    react(.pet)
+    if let response = hands.play.handle(.partnerPetted, at: clock) { _ = show(response) }
   }
 
   /// Sets every light, glow and texture for the current moment. Each is only touched when its
@@ -1220,17 +1258,17 @@ extension GenzRoom {
 
   private static var batGap: Double { 2.5 }
 
-  private var home: SIMD2<Float> {
+  var home: SIMD2<Float> {
     let spot = layout.cat.spot.scene
     return SIMD2(spot.x, spot.z)
   }
 
   /// The cat's walking pace and running pace, in metres a second, from its size in this room.
-  private var walkSpeed: Float { layout.cat.length * 0.9 }
-  private var runSpeed: Float { layout.cat.length * 2.2 }
+  var walkSpeed: Float { layout.cat.length * 0.9 }
+  var runSpeed: Float { layout.cat.length * 2.2 }
 
   /// A spot in front of the cat's place, for it to face when it is back.
-  private var homeFront: SIMD2<Float> {
+  var homeFront: SIMD2<Float> {
     let heading = layout.cat.heading
     return home + SIMD2(-sin(heading), -cos(heading)) * layout.cat.length
   }
@@ -1328,7 +1366,7 @@ extension GenzRoom {
       ])
   }
 
-  private func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
+  func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
     let heading = layout.cat.heading
     trip = CatTrip(from: home, heading: heading, legs: legs, at: clock)
     tripKind = kind
@@ -1404,7 +1442,7 @@ extension GenzRoom {
     gazeUntil = clock + 0.3
   }
 
-  private func endTrip() {
+  func endTrip() {
     if tripKind == .delivery {
       note.position = layout.note.centre.scene
       note.scale = .one

@@ -773,6 +773,7 @@ struct HomeView: View {
     switch event {
     case .petted: pet()
     case .played: session.played()
+    case .fed: session.fed()
     case .noteOpened: onOpenNotes()
     case .deliveryFinished, .settled: break
     }

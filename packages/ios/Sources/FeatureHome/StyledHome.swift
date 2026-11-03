@@ -168,7 +168,7 @@ struct StyledHome: View {
     switch style {
     case .sunsetLamp: Color(red: 0.078, green: 0.071, blue: 0.102)
     case .windowSeat: Color(red: 0.047, green: 0.075, blue: 0.125)
-    case .nooki: Color(red: 0.047, green: 0.141, blue: 0.133)
+    case .nooki: Palette.page.color
     }
   }
 

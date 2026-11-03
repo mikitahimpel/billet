@@ -5,7 +5,6 @@ import Pet
 import Surfaces
 import SwiftUI
 import UIKit
-import WidgetBridge
 import WidgetKit
 
 @main
@@ -123,18 +122,11 @@ struct PetPoseWidget: Widget {
             .foregroundStyle(Palette.paper.color)
         }
       }
-      .containerBackground(for: .widget) { EveningBackground().savedEveningGround() }
+      .containerBackground(for: .widget) { EveningBackground() }
     }
     .configurationDisplayName("Your pet")
     .description("Your pet, asleep at home.")
     .supportedFamilies([.systemSmall, .systemMedium])
     .contentMarginsDisabled()
-  }
-}
-
-extension View {
-  /// The ground chosen in Labs, read from the shared container, so the widgets match the app.
-  func savedEveningGround() -> some View {
-    environment(\.eveningGround, WidgetFeaturesStore.appGroup()?.loadEveningGround() ?? .standard)
   }
 }

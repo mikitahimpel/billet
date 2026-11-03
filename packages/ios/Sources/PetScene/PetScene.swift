@@ -12,6 +12,9 @@ public enum PetSceneEvent: Hashable, Sendable {
   case petted
   /// The user played with the pet in the scene, such as by moving a finger it batted at.
   case played
+  /// The user fed the pet in the scene, from its bowl or a treat held out. Scenes space these
+  /// out to one a meal.
+  case fed
   /// The user opened the hanging note of `delivery`.
   case noteOpened(delivery: Int)
 }
@@ -102,12 +105,6 @@ public protocol PetScene {
   func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
   ) -> AnyView?
-
-  /// The first-launch scene, or `nil` when the scene has none. `state` changes while the view
-  /// stays alive. It mounts its renderer as soon as it is on screen.
-  func makeOnboardingScene(
-    state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
-  ) -> AnyView?
 }
 
 extension PetScene {
@@ -135,10 +132,6 @@ extension PetScene {
   public func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
   ) -> AnyView? { nil }
-
-  public func makeOnboardingScene(
-    state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
-  ) -> AnyView? { nil }
 }
 
 extension PetMachine.Event {
@@ -149,7 +142,7 @@ extension PetMachine.Event {
       self = .deliveryFinished(delivery: delivery)
     case .settled(let delivery):
       self = .settled(delivery: delivery)
-    case .petted, .played, .noteOpened:
+    case .petted, .played, .fed, .noteOpened:
       return nil
     }
   }

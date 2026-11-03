@@ -81,7 +81,8 @@ import Testing
       #expect(texture.width == 1024)
       #expect(rig.paint(texture) >= 2, "\(model) \(coat): fur and eyes both take the coat")
     }
-    for action in CatAction.allCases {
+    // A move with stand-ins is one a cat may lack; every other move each made cat has.
+    for action in CatAction.allCases where action.standIns.isEmpty {
       #expect(rig.info[action] != nil, "\(model) \(action)")
     }
   }

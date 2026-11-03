@@ -19,7 +19,6 @@ let package = Package(
       resources: [
         .copy("Resources/Cats"),
         .copy("Resources/Shopkeepers"),
-        .copy("Resources/Heart.reality"),
         .copy("Resources/Room.reality"),
         .copy("Resources/Room.usdz"),
         .copy("Resources/pose-sleeping.png"),

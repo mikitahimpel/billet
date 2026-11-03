@@ -24,8 +24,6 @@ public struct SettingsView: View {
   private let widgetFeatures: WidgetFeaturesModel?
   private let isFakePartner: Bool
   private let onLogOut: () async -> String?
-  /// Plays the first launch again without touching the pair, or `nil` where it cannot.
-  private let onReplayOnboarding: (() -> Void)?
 
   @Environment(\.openURL) private var openURL
   @Environment(\.scenePhase) private var scenePhase
@@ -44,11 +42,9 @@ public struct SettingsView: View {
     selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
     isFakePartner: Bool = false,
-    onReplayOnboarding: (() -> Void)? = nil,
     onLogOut: @escaping () async -> String?
   ) {
     self.isFakePartner = isFakePartner
-    self.onReplayOnboarding = onReplayOnboarding
     self.code = code
     self.labs = labs
     self.partnerStatus = partnerStatus
@@ -152,7 +148,6 @@ public struct SettingsView: View {
   private func labSection(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
       SettingsHeading("Labs")
-      EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: { !$0.roomStyles.isEmpty }) {
         RoomStylePicker(model: model)
@@ -182,10 +177,6 @@ public struct SettingsView: View {
                 experiment.title, subtitle: experiment.detail,
                 isOn: Binding(
                   get: { model.isOn(experiment) }, set: { model.set(experiment, on: $0) }))
-            }
-            if group == .firstLaunch, let onReplayOnboarding {
-              ListDivider()
-              SettingsLink("Replay onboarding", action: onReplayOnboarding)
             }
           }
         }

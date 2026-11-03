@@ -40,11 +40,6 @@ public enum Routes {
   /// The header every route but the two sign-in ones is called with, and its value's prefix.
   public static let authorizationHeader = "Authorization"
   public static let bearerPrefix = "Bearer "
-
-  /// What the app says about its own build on every request, `clientHeaders` in `routes.ts`.
-  /// See ``ClientInfo``.
-  public static let appVersionHeader = "X-Billet-App-Version"
-  public static let osHeader = "X-Billet-OS"
 }
 
 extension URLRequest {
