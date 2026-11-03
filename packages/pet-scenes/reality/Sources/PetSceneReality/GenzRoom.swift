@@ -1165,6 +1165,9 @@ final class GenzRoom: CatPlayStage {
     if changed("lamp", click + bloom * 10 + warmth * 100 + Double(boost) * 1_000, step: 0.02) {
       lampLight.setLight(intensity: Float(click) * 90_000 * Float(1 + 0.3 * warmth) * boost)
       fillLight.setLight(intensity: Float(bloom) * 26_000 * Float(1 + 0.4 * warmth))
+    }
+    // The lens follows the switch alone: a candle's flicker moves the light, not its material.
+    if changed("lens", click, step: 0.02) {
       for lens in lenses {
         lens.model?.materials = [kit.glow(GenzColour(0xFFB066).shaded(Float(click) - 1))]
       }
@@ -1199,6 +1202,9 @@ final class GenzRoom: CatPlayStage {
     let boost = lampBoost
     if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
       lampLight.setLight(intensity: Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost)
+    }
+    // The shade follows the switch alone, as the sunset lamp's lens does.
+    if changed("shade", lamp, step: 0.02) {
       for shade in shades {
         shade.model?.materials = [kit.glow(GenzColour(0xF3E3C3).shaded(Float(lamp) * 0.55 - 0.55))]
       }
