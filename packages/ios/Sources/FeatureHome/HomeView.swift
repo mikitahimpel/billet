@@ -254,8 +254,7 @@ struct HomeView: View {
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
           .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
-          .environment(
-            \.petSceneOnScreen, tabShown && store.state.screen == .home && !flameShowing)
+          .environment(\.petSceneOnScreen, roomShows)
           .environment(\.petSceneRenovator, session.renovator)
           .overlay { catReactions.allowsHitTesting(false) }),
       notes: session.notes,
@@ -269,6 +268,11 @@ struct HomeView: View {
       isDecorating: isRenovating,
       onDecorate: { session.renovator.requestOpen() },
       flame: flameHost(scene: scene))
+  }
+
+  /// Whether Home's room is in sight: its tab shows, nothing covers it and the flame is closed.
+  private var roomShows: Bool {
+    tabShown && store.state.screen == .home && !flameShowing
   }
 
   /// Opens the streak's flame over Home: works out today's flame, remembers the visit on this
