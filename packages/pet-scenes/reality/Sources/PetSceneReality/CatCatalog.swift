@@ -9,6 +9,8 @@ struct CatClipRange: Decodable, Hashable, Sendable {
   var trimEnd: Double
   var loops: Bool
   var base: CatBase?
+  /// The pose it ends in, when that is not its base.
+  var ends: CatBase?
 
   var duration: Double { trimEnd - trimStart }
 }
@@ -48,18 +50,19 @@ enum CatCatalog {
   /// What the scheduler needs to know about each clip.
   static func info(_ clips: [CatAction: CatClipRange]) -> [CatAction: CatClipInfo] {
     clips.mapValues {
-      CatClipInfo(duration: $0.duration, loops: $0.loops, base: $0.base ?? .stand)
+      CatClipInfo(duration: $0.duration, loops: $0.loops, base: $0.base ?? .stand, ends: $0.ends)
     }
   }
 
   static func defaultBase(_ action: CatAction) -> CatBase {
     switch action {
     case .sleep, .twitch: .sleep
+    case .loaf: .loaf
     case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk,
       .rollOver, .bat, .grab, .wave:
       .sit
     case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch, .headbutt, .reachUp, .sniff,
-      .dangle:
+      .dangle, .run, .lieDown:
       .stand
     }
   }

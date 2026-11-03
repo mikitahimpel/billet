@@ -115,6 +115,33 @@ import Testing
     }
   }
 
+  /// The detailed cats loaf in a base of their own, gallop in a loop, and lie down from standing
+  /// into the sleeping curl, so the next clip after lying down is the sleep.
+  @MainActor @Test func theDetailedCatsLoafRunAndLieDown() async throws {
+    for model in [CatModel.detailed, .detailedKitten, .detailedFluffy, .hero] {
+      let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
+      let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)), "\(model)")
+      #expect(rig.info[.loaf]?.base == .loaf, "\(model)")
+      #expect(rig.info[.loaf]?.loops == true, "\(model)")
+      #expect(rig.info[.run]?.loops == true, "\(model)")
+      #expect(rig.info[.run]?.base == .stand, "\(model)")
+      let lie = try #require(rig.info[.lieDown], "\(model)")
+      #expect(lie.base == .stand && lie.ends == .sleep && !lie.loops, "\(model)")
+    }
+  }
+
+  @Test func aClipEndsInItsBaseUnlessItSaysOtherwise() throws {
+    let json = Data(
+      """
+      {"lieDown": {"trimStart": 0, "trimEnd": 3.2, "loops": false, "base": "stand", "ends": "sleep"},
+       "loaf": {"trimStart": 4, "trimEnd": 10, "loops": true, "base": "loaf"}}
+      """.utf8)
+    let table = try JSONDecoder().decode([String: CatClipRange].self, from: json)
+    let info = CatCatalog.info(CatCatalog.decoded(table))
+    #expect(info[.lieDown]?.ends == .sleep)
+    #expect(info[.loaf]?.ends == .loaf)
+  }
+
   /// A rig hangs a carried note at its own anatomy's mouth: further out for a bigger head.
   @MainActor @Test func theMouthFollowsTheAnatomy() async throws {
     let cat = try #require(await NookiAssets.compiledCat(.hero))
