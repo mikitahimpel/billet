@@ -69,7 +69,7 @@ import Testing
 
   /// Each detailed cat swaps its whole painted texture for a coat, eyes included, keeps its own for
   /// the coat it was made with, and plays every action.
-  @MainActor @Test(arguments: [CatModel.detailed, .detailedKitten, .detailedFluffy])
+  @MainActor @Test(arguments: [CatModel.detailed, .detailedKitten, .detailedFluffy, .hero])
   func detailedCatsWearTheirCoatTextures(model: CatModel) async throws {
     #expect(model.paintsCoatTextures)
     #expect(CatCatalog.palette(model, coat: .natural) == nil)
@@ -98,6 +98,33 @@ import Testing
         #expect(rig.paint(palette) > 0, "\(model) has no material a coat can repaint")
       }
     }
+  }
+
+  /// The hero plays its own clip for every action the rooms ask for: lifting (dangle), treats
+  /// (sniff), the wave trick and a grabbed hand no longer fall back to stand-ins.
+  @MainActor @Test func theHeroHasEveryActionWithoutStandIns() async throws {
+    let cat = try #require(await NookiAssets.compiledCat(.hero))
+    let rig = try #require(
+      CatRig(model: cat, clips: CatCatalog.clips(.hero), anatomy: CatModel.hero.anatomy))
+    for action in CatAction.allCases {
+      #expect(rig.info[action] != nil, "\(action)")
+    }
+    #expect(rig.info[.dangle]?.loops == true)
+    for action in [CatAction.sniff, .wave, .grab] {
+      #expect(rig.info[action]?.loops == false, "\(action)")
+    }
+  }
+
+  /// A rig hangs a carried note at its own anatomy's mouth: further out for a bigger head.
+  @MainActor @Test func theMouthFollowsTheAnatomy() async throws {
+    let cat = try #require(await NookiAssets.compiledCat(.hero))
+    let clips = CatCatalog.clips(.hero)
+    let made = try #require(CatRig(model: cat, clips: clips, anatomy: .madeCat))
+    let hero = try #require(CatRig(model: cat, clips: clips, anatomy: CatModel.hero.anatomy))
+    let near = try #require(made.mouth())
+    let far = try #require(hero.mouth())
+    #expect(far.z < near.z)
+    #expect(far.y < near.y)
   }
 
   /// realitytool drops a timeline's unchanging tail, so the last clip may end a little past it;

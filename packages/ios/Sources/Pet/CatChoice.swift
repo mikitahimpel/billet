@@ -9,6 +9,9 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   case detailedKitten
   /// The detailed tabby long-haired: a mane, britches, a plume tail and lynx tips on the ears.
   case detailedFluffy
+  /// The hero: a stylised, chunky ginger tabby with a big round head, big glossy eyes and plush
+  /// fur, made to read at room size and to move well. In Labs until it wins a side-by-side.
+  case hero
   /// A ginger tabby with flat facets, to match the low-poly furniture.
   case tabby
   /// The same tabby with soft shading.
@@ -27,6 +30,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .detailed: "Detailed"
     case .detailedKitten: "Detailed kitten"
     case .detailedFluffy: "Detailed fluffy"
+    case .hero: "Hero"
     case .chibi: "Chibi"
     case .kitten: "Fluffy kitten"
     case .tuxedo: "Tuxedo"
@@ -40,6 +44,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .detailed: "The tabby up close: fur, eyelids, whiskers."
     case .detailedKitten: "Big head, big blue eyes, stubby legs."
     case .detailedFluffy: "Long-haired, with a mane and a plume tail."
+    case .hero: "Chunky and plush, big glossy eyes, 26 clips."
     case .chibi: "Big head, tiny body, huge eyes."
     case .kitten: "Tufted cheeks and a fluffy tail."
     case .tuxedo: "Black with a white bib and socks."
@@ -49,7 +54,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// Whether each coat is a whole painted texture, `Cat_<model>_<coat>.jpg`, not a palette.
   public var paintsCoatTextures: Bool {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy: true
+    case .detailed, .detailedKitten, .detailedFluffy, .hero: true
     case .tabby, .plush, .chibi, .kitten, .tuxedo: false
     }
   }
@@ -59,7 +64,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   public var coats: [CatCoat] {
     switch self {
     case .tabby, .plush, .chibi, .kitten, .tuxedo: CatCoat.allCases
-    case .detailed, .detailedKitten, .detailedFluffy: [.natural, .greyWhite, .black]
+    case .detailed, .detailedKitten, .detailedFluffy, .hero: [.natural, .greyWhite, .black]
     }
   }
 }
