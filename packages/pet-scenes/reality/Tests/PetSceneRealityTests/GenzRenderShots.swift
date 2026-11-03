@@ -87,15 +87,9 @@
       await kit.loadIdolProps()
       let root = Entity()
       for part in layout.shell(kit) { root.addChild(part) }
+      // Placed and joined as the room does it, so the census counts what the app draws.
       for placement in layout.pieces {
-        let piece = kit.build(placement.piece)
-        let size = placement.piece.kind.size
-        piece.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
-        let holder = Entity()
-        holder.position = placement.centre.scene
-        holder.orientation = simd_quatf(angle: placement.yaw, axis: [0, 1, 0])
-        holder.addChild(piece)
-        root.addChild(holder)
+        root.addChild(GenzRoom.placed(placement, kit: kit).holder)
       }
       let lamp = Entity()
       lamp.position = layout.lamp.at.scene
