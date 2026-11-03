@@ -74,8 +74,7 @@ public struct NoteCatView: View {
   }
 
   public var body: some View {
-    switch (family, cat) {
-    case (.systemMedium, .some(let cat)):
+    if let cat, family == .systemMedium {
       HStack(spacing: 0) {
         VStack(spacing: 0) {
           NotePaperView(image: image)
@@ -85,7 +84,7 @@ public struct NoteCatView: View {
           .frame(width: 104)
           .padding([.vertical, .trailing], Spacing.medium)
       }
-    case (.systemLarge, .some(let cat)), (.systemExtraLarge, .some(let cat)):
+    } else if let cat, family == .systemLarge || family == .systemExtraLarge {
       VStack(spacing: 0) {
         NotePaperView(image: image)
         HStack(alignment: .bottom, spacing: Spacing.small) {
@@ -94,7 +93,7 @@ public struct NoteCatView: View {
         }
         .padding([.horizontal, .bottom], Spacing.medium)
       }
-    default:
+    } else {
       NotePaperView(image: image)
     }
   }
