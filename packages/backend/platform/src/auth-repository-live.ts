@@ -1,4 +1,4 @@
-import { and, eq, lt, lte, ne, notInArray } from "drizzle-orm";
+import { and, eq, inArray, lt, lte, ne, notInArray } from "drizzle-orm";
 import { Effect, Layer, Option, Schema } from "effect";
 import { AuthUnavailable } from "@billet/backend-auth/auth-error";
 import { AuthRepository, PushTokenRecord } from "@billet/backend-auth/auth-repository";
@@ -95,13 +95,24 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
           .pipe(Effect.flatMap(decodePushTokens)),
       ),
 
-    deleteExpired: (now) =>
-      guarded(
+    deleteExpired: (now) => {
+      // Better Auth's dates are ISO text, which sorts in time order.
+      const nowIso = new Date(now).toISOString();
+      return guarded(
         atomically(db, [
           db.delete(authChallenges).where(lte(authChallenges.expiresAt, now)),
-          // Better Auth's dates are ISO text, which sorts in time order.
-          db.delete(authSessions).where(lte(authSessions.expiresAt, new Date(now).toISOString())),
-          // Its push tokens and anything else of the device's go with it.
+          // An expired session goes with its device, which takes the push tokens with it.
+          db
+            .delete(devices)
+            .where(
+              inArray(
+                devices.id,
+                db
+                  .select({ id: authSessions.deviceId })
+                  .from(authSessions)
+                  .where(lte(authSessions.expiresAt, nowIso)),
+              ),
+            ),
           db
             .delete(devices)
             .where(
@@ -111,7 +122,8 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
               ),
             ),
         ]),
-      ).pipe(Effect.asVoid),
+      ).pipe(Effect.asVoid);
+    },
   });
 
 /** `AuthRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */

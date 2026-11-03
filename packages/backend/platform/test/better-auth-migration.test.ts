@@ -28,6 +28,8 @@ const call = (path: string, token: string, init: RequestInit = {}) =>
     }),
   );
 
+let migratedSessions = "";
+
 beforeAll(async () => {
   await applyDirectoryMigrations(migration);
   const applied = await env.DB.prepare("SELECT name FROM __alchemy_migrations").all<{
@@ -75,6 +77,10 @@ beforeAll(async () => {
   ]);
 
   await applyDirectoryMigrations();
+  // Before any request: the first use of a session slides its expiry.
+  migratedSessions = JSON.stringify(
+    (await env.DB.prepare("SELECT token, expires_at FROM auth_session").all()).results,
+  );
 });
 
 describe("the move to Better Auth", () => {
@@ -120,9 +126,7 @@ describe("the move to Better Auth", () => {
   });
 
   it("keeps the expiry and only the hash of each session", async () => {
-    const stored = JSON.stringify(
-      (await env.DB.prepare("SELECT token, expires_at FROM auth_session").all()).results,
-    );
+    const stored = migratedSessions;
     for (const person of [alice, bob]) {
       expect(stored).not.toContain(person.token);
       expect(stored).toContain(await sha256Hex(person.token));
