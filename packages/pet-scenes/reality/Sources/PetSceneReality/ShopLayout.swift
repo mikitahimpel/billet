@@ -34,7 +34,7 @@ enum ShopLayout {
   static let lamps = [GenzRoomPoint(2.4, 3.65, 4.55), GenzRoomPoint(4.6, 3.65, 4.55)]
 
   static let camera = GenzCamera.Home(
-    target: GenzRoomPoint(3.9, 3.2, 2.5).scene, yaw: 0.34, pitch: 0.3, distance: 24,
+    target: GenzRoomPoint(3.75, 3.2, 2.5).scene, yaw: 0.34, pitch: 0.3, distance: 24,
     fieldOfView: 40, yawLimits: 0.1...0.62, pitchLimits: 0.18...0.5)
 
   /// A place for one item: where it stands, the box it must fit in (scene axes: across, up,

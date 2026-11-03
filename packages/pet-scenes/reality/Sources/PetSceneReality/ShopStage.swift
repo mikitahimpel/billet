@@ -34,7 +34,7 @@ final class ShopStage: TabStage {
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
-  private let lighting = TabLighting()
+  private let lighting = TabLighting(coreShare: 0.3, boostLimit: 1.3, haloLimit: 1.1)
   private var look = LightingLook.off
 
   private var items: [ShopItem] = []
@@ -79,7 +79,7 @@ final class ShopStage: TabStage {
   private static let glintLength = 0.7
   private static let forwardLength: Float = 0.45
   /// Where an item floats when it is brought forward: in front of the counter, at eye height.
-  static let front = GenzRoomPoint(3.75, 5.3, 2.75)
+  static let front = GenzRoomPoint(3.85, 6.1, 3.15)
   /// How big an item is brought forward, across its longest side, in room units.
   static let frontSize: Float = 1.7
   private static let lampColour = GenzColour(0xFFC36B)
@@ -349,7 +349,25 @@ final class ShopStage: TabStage {
           id: item.id, centre: CGPoint(x: centre.x, y: centre.y + 8), price: item.price,
           owned: owned.contains(item.id)))
     }
+    tags = Self.spread(tags, width: view.size.width)
     if tags != shopScreen.tags { shopScreen.tags = tags }
+  }
+
+  /// Tags moved apart where items stand close, each stepping down under the one it would cover,
+  /// and kept inside the view.
+  static func spread(_ tags: [ShopTag], width: CGFloat) -> [ShopTag] {
+    let (across, down): (CGFloat, CGFloat) = (40, 21)
+    var placed: [ShopTag] = []
+    for var tag in tags.sorted(by: { ($0.centre.y, $0.centre.x) < ($1.centre.y, $1.centre.x) }) {
+      tag.centre.x = min(max(tag.centre.x, across / 2 + 4), width - across / 2 - 4)
+      while placed.contains(where: {
+        abs($0.centre.x - tag.centre.x) < across && abs($0.centre.y - tag.centre.y) < down
+      }) {
+        tag.centre.y += down
+      }
+      placed.append(tag)
+    }
+    return placed
   }
 
   private func updateGlows() {
@@ -361,7 +379,7 @@ final class ShopStage: TabStage {
       glows.append(
         TabGlow(
           centre: centre, radius: view.reach(3.4, at: bulb), colour: lighting.tint(Self.lampColour),
-          strength: 0.42 * halos))
+          strength: 0.32 * halos))
     }
     let counter = GenzRoomPoint(
       ShopLayout.keeper.x, ShopLayout.counter.y0, ShopLayout.counterTop + 0.6

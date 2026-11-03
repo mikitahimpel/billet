@@ -17,12 +17,12 @@ enum DeskLayout {
 
   /// The blank paper to draw on: its middle on the desk, size across and deep, and its turn.
   static let paper = (
-    centre: GenzRoomPoint(2.75, 2.2, 2.6), width: Float(2.4), depth: Float(1.7),
+    centre: GenzRoomPoint(2.85, 2.25, 2.6), width: Float(2.8), depth: Float(1.95),
     yaw: Float(0.06)
   )
   static let lamp = (base: GenzRoomPoint(0.85, 1.0, 2.6), shade: GenzRoomPoint(2.05, 1.85, 4.0))
   /// Where the cat sits when it visits, the way it faces, and its length.
-  static let cat = (spot: GenzRoomPoint(4.75, 2.0, 2.6), heading: Float(0.35), length: Float(1.2))
+  static let cat = (spot: GenzRoomPoint(4.95, 1.95, 2.6), heading: Float(0.35), length: Float(1.2))
 
   /// The paper's corners on the desk, far left first and round to near left, as the view sees
   /// a page: its top edge is the one away from you.
@@ -40,7 +40,7 @@ enum DeskLayout {
   }
 
   static let camera = GenzCamera.Home(
-    target: GenzRoomPoint(3.0, 2.0, 5.4).scene, yaw: 0.1, pitch: 0.34, distance: 19,
+    target: GenzRoomPoint(3.0, 2.0, 5.1).scene, yaw: 0.1, pitch: 0.34, distance: 18,
     fieldOfView: 40, yawLimits: -0.12...0.32, pitchLimits: 0.2...0.55)
 
   /// The latest note, pinned large in the top left of the board.

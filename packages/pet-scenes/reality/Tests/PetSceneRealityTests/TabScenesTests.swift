@@ -410,3 +410,23 @@ struct DeskCuesTests {
     #expect(DeskArt.placeholder() != nil)
   }
 }
+
+@MainActor
+struct ShopTagTests {
+  @Test func closeTagsStepApartAndStayInTheView() {
+    let tags =
+      [3, 4, 5].map {
+        ShopTag(
+          id: "t\($0)", centre: CGPoint(x: 100 + CGFloat($0) * 6, y: 400), price: $0, owned: false)
+      } + [ShopTag(id: "edge", centre: CGPoint(x: 2, y: 300), price: 9, owned: false)]
+    let spread = ShopStage.spread(tags, width: 393)
+    #expect(spread.count == tags.count)
+    for (index, a) in spread.enumerated() {
+      for b in spread.dropFirst(index + 1) {
+        let apart = abs(a.centre.x - b.centre.x) >= 40 || abs(a.centre.y - b.centre.y) >= 21
+        #expect(apart, "\(a.id) and \(b.id)")
+      }
+    }
+    #expect(spread.allSatisfy { $0.centre.x >= 24 && $0.centre.x <= 369 })
+  }
+}

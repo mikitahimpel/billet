@@ -36,6 +36,7 @@ struct ShopTab: View {
   @State private var showsHint = false
   @AppStorage("shop.hintSeen") private var hintSeen = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.petSceneOnScreen) private var onScreen
 
   private var owned: Set<ShopItem.ID> {
     Set(shop.catalog.items.filter { $0.ownsAtMostOne && shop.owned($0) > 0 }.map(\.id))
@@ -80,12 +81,17 @@ struct ShopTab: View {
       sheet = nil
       onShowRoom()
     }
-    .task {
-      guard !hintSeen else { return }
-      try? await Task.sleep(for: .seconds(1.6))
-      guard !hintSeen else { return }
+    .task(id: onScreen) {
+      guard onScreen, !hintSeen else { return }
+      try? await Task.sleep(for: .seconds(1.2))
+      guard !Task.isCancelled, !hintSeen else { return }
       withAnimation(reduceMotion ? nil : Motion.spring) { showsHint = true }
       try? await Task.sleep(for: .seconds(6))
+      // Leaving the tab early keeps the hint for next time; it is only seen once it has shown.
+      guard !Task.isCancelled else {
+        showsHint = false
+        return
+      }
       dismissHint()
     }
     .sheet(item: $sheet) { sheet in

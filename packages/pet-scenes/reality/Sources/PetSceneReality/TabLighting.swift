@@ -30,8 +30,16 @@ final class TabLighting {
   private var clock = 0.0
   /// How far the scene's lights are up, from 0 (out) to 1, as while a scene fades in.
   private var dimmer: Float = 1
+  /// How much of a preset's core light, key boost and halos a small scene takes: a whole room's
+  /// worth floods a close shop or desk.
+  private let coreShare: Float
+  private let boostLimit: Float
+  private let haloLimit: Double
 
-  init() {
+  init(coreShare: Float = 1, boostLimit: Float = .infinity, haloLimit: Double = .infinity) {
+    self.coreShare = coreShare
+    self.boostLimit = boostLimit
+    self.haloLimit = haloLimit
     rim.components.set(
       SpotLightComponent(
         color: GenzColour(0xFFB86A).platformColour, intensity: 0, innerAngleInDegrees: 12,
@@ -133,7 +141,7 @@ final class TabLighting {
 
   /// How strongly the scene's halos show under this preset, where 1 is the scene's own.
   var haloScale: Double {
-    look.isLit ? 0.55 + Double(look.halos) * 0.9 : 1
+    look.isLit ? min(0.55 + Double(look.halos) * 0.9, haloLimit) : 1
   }
 
   /// A lamp's halo colour under this preset, moved towards the key as its light is.
@@ -149,9 +157,10 @@ final class TabLighting {
   private var boost: Float {
     guard look.isLit else { return 1 }
     let flicker = look.key.flicker
-    guard flicker > 0, !reduceMotion else { return look.key.boost }
+    let steady = min(look.key.boost, boostLimit)
+    guard flicker > 0, !reduceMotion else { return steady }
     let wave = sin(clock * 9.1) * 0.5 + sin(clock * 23.7 + 1.3) * 0.3 + sin(clock * 3.3) * 0.2
-    return look.key.boost * (1 - flicker * Float(0.5 + 0.5 * wave))
+    return steady * (1 - flicker * Float(0.5 + 0.5 * wave))
   }
 
   private func setKeyBrightness() {
@@ -163,7 +172,7 @@ final class TabLighting {
 
   private func setFillBrightness() {
     let lit = look.isLit
-    core.components[PointLightComponent.self]?.intensity = lit ? look.core * dimmer : 0
+    core.components[PointLightComponent.self]?.intensity = lit ? look.core * coreShare * dimmer : 0
     rim.components[SpotLightComponent.self]?.intensity = lit ? look.rim.intensity * dimmer : 0
   }
 

@@ -33,7 +33,7 @@ final class DeskStage: TabStage {
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
-  private let lighting = TabLighting()
+  private let lighting = TabLighting(coreShare: 0.3, boostLimit: 1.3, haloLimit: 1.1)
   private var look = LightingLook.off
 
   private var notes: [DeskNote] = []
