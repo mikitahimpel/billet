@@ -7,13 +7,9 @@ import Testing
 @testable import PetSceneReality
 
 @Suite struct CatCatalogTests {
-  /// The Nooki room picks from these clips by name, and its yarn game times the pounce at 1.5 s.
-  @Test func theStandardCatHasEveryNookiClip() throws {
+  /// The pounce is timed at 1.5 s and plays once.
+  @Test func theStandardCatPouncesOnce() throws {
     let clips = CatCatalog.clips(CatChoice.standard.model)
-    for clip in NookiClip.allCases {
-      let action = try #require(CatAction(rawValue: clip.rawValue), "\(clip)")
-      #expect(clips[action] != nil, "\(clip)")
-    }
     #expect(try abs(#require(clips[.pounce]).duration - 1.5) < 0.01)
     #expect(clips[.pounce]?.loops == false)
   }

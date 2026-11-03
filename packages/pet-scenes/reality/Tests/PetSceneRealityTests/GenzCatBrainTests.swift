@@ -45,7 +45,7 @@ import Testing
   }
 
   @Test func aFrameWaitsForTheCatToLoad() async throws {
-    let room = try await built(.windowSeat, .cosyNook)
+    let room = try await built(.cosyNook)
     let frame = CatBrainFrame(
       stack: CatBrainStack(vitality: .awake, step: .watchWindow), action: .sit,
       target: .affordance(.window), gaze: .window, pace: 0, stepStart: 0, stepEnd: 30)
