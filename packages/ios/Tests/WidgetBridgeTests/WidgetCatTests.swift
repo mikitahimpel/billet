@@ -27,7 +27,7 @@ import Testing
   }
 
   @Test(arguments: [
-    (WidgetSnapshot.Treat.neither, 12, WidgetCat.Pose.waiting, CatCare.treat),
+    (WidgetSnapshot.Treat.neither, 12, WidgetCat.Pose.waiting, WidgetCare.treat),
     (.waitingOnMe, 12, .waiting, .treat),
     (.waitingOnPartner, 12, .sitting, .pet),
     (.fed, 12, .sitting, .pet),
@@ -35,7 +35,7 @@ import Testing
     (.neither, 3, .sleeping, .treat),
   ])
   func withoutNeedsTheTreatAndTheHourDecide(
-    _ treat: WidgetSnapshot.Treat, _ hour: Int, _ pose: WidgetCat.Pose, _ care: CatCare
+    _ treat: WidgetSnapshot.Treat, _ hour: Int, _ pose: WidgetCat.Pose, _ care: WidgetCare
   ) {
     let cat = WidgetCat(
       snapshot: snapshot(treat, at: date(hour)), now: date(hour), calendar: calendar)
@@ -71,13 +71,13 @@ import Testing
   }
 
   @Test func aTreatIsTheDaysTreatWhileItIsMineToGiveAndFoodEitherWay() {
-    #expect(CatCare.pet.plays(treat: .neither) == [.pet])
-    #expect(CatCare.treat.plays(treat: .neither) == [.treat, .feed])
-    #expect(CatCare.treat.plays(treat: .waitingOnMe) == [.treat, .feed])
-    #expect(CatCare.treat.plays(treat: .waitingOnPartner) == [.feed])
-    #expect(CatCare.treat.plays(treat: .fed) == [.feed])
-    #expect(CatCare.pet.action == .pet)
-    #expect(CatCare.treat.action == .treat)
+    #expect(WidgetCare.pet.plays(treat: .neither) == [.pet])
+    #expect(WidgetCare.treat.plays(treat: .neither) == [.treat, .feed])
+    #expect(WidgetCare.treat.plays(treat: .waitingOnMe) == [.treat, .feed])
+    #expect(WidgetCare.treat.plays(treat: .waitingOnPartner) == [.feed])
+    #expect(WidgetCare.treat.plays(treat: .fed) == [.feed])
+    #expect(WidgetCare.pet.action == .pet)
+    #expect(WidgetCare.treat.action == .treat)
   }
 
   @Test func theButtonRestsTenMinutesAfterACare() {

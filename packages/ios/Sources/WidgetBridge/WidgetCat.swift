@@ -15,7 +15,7 @@ public struct WidgetCat: Equatable, Sendable {
 
   public var pose: Pose
   /// What the button offers.
-  public var care: CatCare
+  public var care: WidgetCare
   /// The need in the cat's bubble, while its needs are on and one is low.
   public var thought: PetNeed?
 
@@ -46,7 +46,7 @@ public struct WidgetCat: Equatable, Sendable {
 }
 
 /// What the widget's one button does for the cat.
-public enum CatCare: String, Codable, CaseIterable, Sendable {
+public enum WidgetCare: String, Codable, CaseIterable, Sendable {
   case pet
   case treat
 
@@ -82,10 +82,10 @@ public enum CatCare: String, Codable, CaseIterable, Sendable {
 
 /// When this phone last cared for the cat from a widget, kept so the button cannot be spammed.
 public struct CatCareRecord: Codable, Equatable, Sendable {
-  public var care: CatCare
+  public var care: WidgetCare
   public var at: Date
 
-  public init(care: CatCare, at: Date) {
+  public init(care: WidgetCare, at: Date) {
     self.care = care
     self.at = at
   }
@@ -113,7 +113,7 @@ public enum CatCareRequest {
 
   public static func decide(
     snapshot: WidgetSnapshot?, last: CatCareRecord?, now: Date, calendar: Calendar
-  ) -> Result<CatCare, Refusal> {
+  ) -> Result<WidgetCare, Refusal> {
     guard let snapshot else { return .failure(.notPaired) }
     if let until = cooling(last: last, now: now) { return .failure(.tooSoon(until: until)) }
     return .success(WidgetCat(snapshot: snapshot, now: now, calendar: calendar).care)
@@ -170,10 +170,10 @@ public struct PartnerCare: Codable, Hashable, Sendable {
   /// How long the line stays on the widget.
   public static let lifetime: TimeInterval = 12 * 60 * 60
 
-  public var care: CatCare
+  public var care: WidgetCare
   public var at: Date
 
-  public init(care: CatCare, at: Date) {
+  public init(care: WidgetCare, at: Date) {
     self.care = care
     self.at = at
   }

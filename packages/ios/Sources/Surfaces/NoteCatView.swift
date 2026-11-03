@@ -17,7 +17,7 @@ public struct NoteCat: Sendable {
   /// When the button works again, while it rests after the last care.
   public var coolingUntil: Date?
   /// The care that started the rest, for the button's label while it rests.
-  public var lastCare: CatCare?
+  public var lastCare: WidgetCare?
   public var partnerCare: PartnerCare?
   public var now: Date
 
