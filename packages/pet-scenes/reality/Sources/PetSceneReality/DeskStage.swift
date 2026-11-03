@@ -373,22 +373,13 @@ final class DeskStage: TabStage {
     holder.name = Self.paperName
     holder.position = spec.centre.scene
     holder.orientation = simd_quatf(angle: spec.yaw, axis: [0, 1, 0])
-    // A few sheets, the top one blank with a pencilled heart asking for a drawing.
+    // A few sheets, the top one blank, waiting for a drawing.
     let under = kit.matte(GenzColour(0xEADCC8))
     holder.addChild(
       kit.part(
         kit.box([spec.width, 0.02, spec.depth]), under, at: [0.06, 0.01, -0.04],
         turn: simd_quatf(angle: -0.07, axis: [0, 1, 0])))
-    let top: any RealityKit.Material
-    if let blank = GenzTextures.note(
-      drawing: nil, paper: GenzColour(0xFFF7EC), aspect: CGFloat(spec.depth / spec.width),
-      corners: false),
-      let picture = TabLook.picture(blank, tint: GenzColour(0xF6E6D2))
-    {
-      top = picture
-    } else {
-      top = kit.matte(GenzColour(0xFFF7EC))
-    }
+    let top = kit.matte(GenzColour(0xFFF9F0))
     // A plane faces +z; laid flat it faces up, its top edge away from the viewer.
     holder.addChild(
       kit.part(

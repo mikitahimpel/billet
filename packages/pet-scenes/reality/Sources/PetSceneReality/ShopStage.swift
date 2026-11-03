@@ -77,6 +77,7 @@ final class ShopStage: TabStage {
   private static let pickDelay = Duration.milliseconds(180)
   private static let hopLength = 0.32
   private static let glintLength = 0.7
+  private static let parcelSize: Float = 1.7
   private static let forwardLength: Float = 0.45
   /// Where an item floats when it is brought forward: in front of the counter, at eye height.
   static let front = GenzRoomPoint(3.3, 6.1, 2.3)
@@ -270,15 +271,21 @@ final class ShopStage: TabStage {
       phase: (clock - glint.at) / Self.glintLength)
   }
 
-  /// The parcel stays in the keeper's paws while it hands it over, then flies to you and fades.
+  /// The parcel appears in the keeper's paws over the front of the counter while it hands it
+  /// over, then flies to you and fades.
   private func stepParcel() {
     if let progress = motion.handOverProgress, progress < 0.7, let rig,
       let paws = rig.paws(relativeTo: room)
     {
       parcel.isEnabled = true
       let grow = Float(min(progress / 0.2, 1))
-      parcel.position = paws + [0, 0.12, 0.2]
-      parcel.scale = .one * grow
+      // Held out over the counter, just clear of its top, between the paws.
+      let over = GenzRoomPoint(
+        ShopLayout.keeper.x, ShopLayout.counter.y0 + 0.45,
+        ShopLayout.counterTop + 0.36 * Self.parcelSize / 2 + 0.05
+      ).scene
+      parcel.position = SIMD3(paws.x, max(paws.y, over.y), over.z)
+      parcel.scale = .one * Self.parcelSize * grow
       parcel.components.set(OpacityComponent(opacity: 1))
       parcelFlight = (parcel.position, clock)
       return
@@ -295,7 +302,7 @@ final class ShopStage: TabStage {
     }
     let camera = view.position - [0, 2, 0]
     parcel.position = flight.from + (camera - flight.from) * (age * age * 0.45)
-    parcel.scale = .one * (1 + age * 0.6)
+    parcel.scale = .one * Self.parcelSize * (1 + age * 0.6)
     parcel.components.set(OpacityComponent(opacity: 1 - age))
   }
 
@@ -749,11 +756,12 @@ final class ShopStage: TabStage {
 
   /// A little parcel in craft paper tied with a red ribbon, which the keeper hands over.
   private func buildParcel() {
-    let paper = kit.matte(GenzColour(0xC89A6A))
-    let ribbon = kit.matte(GenzColour(0xE5503A))
+    let paper = kit.matte(GenzColour(0xF2DDB8))
+    let ribbon = kit.matte(GenzColour(0xD8392B))
     parcel.addChild(kit.part(kit.box([0.5, 0.36, 0.4]), paper))
     parcel.addChild(kit.part(kit.box([0.08, 0.37, 0.41]), ribbon))
     parcel.addChild(kit.part(kit.box([0.51, 0.37, 0.08]), ribbon))
+    parcel.scale = .one * Self.parcelSize
     parcel.addChild(
       kit.part(
         kit.box([0.2, 0.08, 0.1]), ribbon, at: [-0.08, 0.21, 0],
