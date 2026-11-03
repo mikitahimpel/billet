@@ -30,20 +30,25 @@ PERF_DERIVED=$derived $here/measure.sh $label --launches 0 --full 0 --sweep
 udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
 [[ -n $udid ]] || { echo "no device $device_name" >&2; exit 1; }
 trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true; perf_lock_give' EXIT
+# Erased, so the App Group's lab switches (the sweep's fake partner) are gone too: unpaired and
+# with nothing set, the app opens on the first-launch scene.
+xcrun simctl shutdown $udid > /dev/null 2>&1 || true
+xcrun simctl erase $udid
 xcrun simctl bootstatus $udid -b > /dev/null
 xcrun simctl status_bar $udid override --time 9:41 --batteryState charged --batteryLevel 100 \
   > /dev/null 2>&1 || true
-xcrun simctl uninstall $udid $bundle > /dev/null 2>&1 || true
 xcrun simctl install $udid $app
 
-# Unpaired and with no lab switches set, the app opens on the first-launch scene.
 mkdir -p $out/shots
 xcrun simctl launch $udid $bundle > /dev/null
 started=$(date +%s)
+# Named by when each was asked for; on a busy runner a shot can land a little later.
 for at in 2 5 9 14 20; do
   while (($(date +%s) - started < at)); do python3 -c 'import time; time.sleep(0.2)'; done
-  perl -e 'alarm 20; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/onboarding-${at}s.png \
-    > /dev/null 2>&1 || echo "no onboarding shot at ${at}s" >&2
+  for try in 1 2; do
+    perl -e 'alarm 40; exec @ARGV' xcrun simctl io $udid screenshot \
+      $out/shots/onboarding-${at}s.png > /dev/null 2>&1 && break
+  done || echo "no onboarding shot at ${at}s" >&2
 done
 xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
 ls $out/shots | wc -l | awk '{print $1 " shots in '"$out"'/shots"}'

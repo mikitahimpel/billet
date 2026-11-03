@@ -137,8 +137,11 @@ run() {
       grep '^PERF shot' $log | tr -d '\r' | while read -r _ _ shot; do
         [[ -f $out/shots/$shot.png ]] && continue
         mkdir -p $out/shots
-        perl -e 'alarm 20; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
-          > /dev/null 2>&1 || true
+        # Twice at most: a busy runner's first try can hang until the alarm.
+        for try in 1 2; do
+          perl -e 'alarm 40; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
+            > /dev/null 2>&1 && break
+        done || true
         mkdir -p $containers/perf-shots && touch $containers/perf-shots/$shot
       done
     fi
