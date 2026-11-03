@@ -23,7 +23,11 @@ import simd
   let decor = DecorSession(
     plan: DecorPlan(
       minimum: NookiFloorPlan.floorMin, maximum: NookiFloorPlan.floorMax, grid: 0.05),
-    liftHeight: 0.08)
+    liftHeight: 0.08, markerHeight: NookiRenovation.markerHeight)
+  /// How high the decorate marker floats: over the rug (29 mm), so it shows on it rather than
+  /// hiding under it.
+  static let markerHeight: Float = 0.035
+
   private var walls: [ModelEntity] = []
   private var floor: ModelEntity?
   private var wallBase = SIMD3<Float>.zero

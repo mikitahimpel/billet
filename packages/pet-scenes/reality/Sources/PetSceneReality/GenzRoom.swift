@@ -116,6 +116,9 @@ final class GenzRoom: CatPlayStage {
   /// A candle's flame, which flickers.
   static let flameName = "genz-flame"
   static let lightDotName = "genz-light-dot"
+  /// How high the decorate marker floats: over the tallest rug (the pattern rug's dots, 56 mm),
+  /// so it never shares a plane with one or hides under it.
+  static let markerHeight: Float = 0.08
 
   let layout: GenzLayout
   let root = Entity()
@@ -252,7 +255,7 @@ final class GenzRoom: CatPlayStage {
     self.spots = spots
     decor = DecorSession(
       plan: DecorPlan(minimum: .zero, maximum: layout.floor, grid: 0.25),
-      liftHeight: 0.45, markerHeight: 0.05, markerMargin: 0.12)
+      liftHeight: 0.45, markerHeight: Self.markerHeight, markerMargin: 0.12)
     camera = GenzCamera(home: layout.camera)
     lens.camera.fieldOfViewInDegrees = layout.camera.fieldOfView
     lens.camera.near = Self.nearClip
