@@ -4,7 +4,9 @@ import { accessConfigOf, AccessVerifier, accessVerifierLayer, denyAll } from "..
 import {
   cryptoLayer,
   signAccess,
+  signAgent,
   strangerKey,
+  testAgent,
   teamKeys,
   testAccess,
   unsignedAccess,
@@ -28,7 +30,52 @@ const denied = async (token: string | null) => {
 describe("the Access check", () => {
   it("lets in a valid token for the team and audience, as its email", async () => {
     const result = await verify(await signAccess({ email: "Owner@Example.com" }));
-    expect(result).toMatchObject({ _tag: "Success", success: { email: "owner@example.com" } });
+    expect(result).toMatchObject({
+      _tag: "Success",
+      success: { kind: "person", email: "owner@example.com" },
+    });
+  });
+
+  it("lets in a service token for the agent audience, as its common_name", async () => {
+    const result = await verify(await signAgent());
+    expect(result).toMatchObject({
+      _tag: "Success",
+      success: { kind: "agent", commonName: testAgent },
+    });
+  });
+
+  it("refuses a service token when no agent audience is configured", async () => {
+    const result = await verify(
+      await signAgent(),
+      accessVerifierLayer({ ...testAccess, agentAudience: undefined }),
+    );
+    expect(result._tag).toBe("Failure");
+  });
+
+  it.each([
+    ["a service token for the panel's audience", () => signAgent({ aud: ["a".repeat(64)] })],
+    ["a person for the agent audience only", () => signAccess({ aud: ["c".repeat(64)] })],
+    [
+      "a service token that is expired",
+      () => signAgent({ exp: Math.floor(Date.now() / 1000) - 120 }),
+    ],
+    [
+      "a service token from another team",
+      () => signAgent({ iss: "https://x.cloudflareaccess.com" }),
+    ],
+    ["a service token with an empty common_name", () => signAgent({ common_name: "" })],
+    ["a token with neither email nor common_name", () => signAgent({ common_name: undefined })],
+  ])("refuses %s", async (_, token) => {
+    await denied(await token());
+  });
+
+  it("refuses a service token signed by a key the team never published", async () => {
+    await denied(
+      await signAccess(
+        { email: undefined, common_name: testAgent, aud: ["c".repeat(64)] },
+        strangerKey,
+      ),
+    );
   });
 
   it("refuses a missing token", async () => {
@@ -49,7 +96,6 @@ describe("the Access check", () => {
     ["no audience", { aud: undefined }],
     ["another team", { iss: "https://someone-else.cloudflareaccess.com" }],
     ["no expiry", { exp: undefined }],
-    ["no email (a service token)", { email: undefined, common_name: "ci" }],
     ["an empty email", { email: "" }],
   ])("refuses %s", async (_, overrides) => {
     await denied(await signAccess(overrides));
@@ -82,6 +128,16 @@ describe("accessConfigOf", () => {
       teamDomain: "billet.cloudflareaccess.com",
       audience: "a".repeat(64),
     });
+  });
+
+  it("reads an agent AUD tag, and drops a malformed one without closing the panel", () => {
+    const team = "billet.cloudflareaccess.com";
+    expect(accessConfigOf(team, "a".repeat(64), " " + "C".repeat(64))?.agentAudience).toBe(
+      "c".repeat(64),
+    );
+    const config = accessConfigOf(team, "a".repeat(64), "not-hex");
+    expect(config?.audience).toBe("a".repeat(64));
+    expect(config?.agentAudience).toBeUndefined();
   });
 
   it.each([

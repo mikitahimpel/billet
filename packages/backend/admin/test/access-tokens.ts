@@ -3,11 +3,15 @@ import { SecureRandom, Signature } from "effect/crypto";
 import { Jwk, Jwks, Jws } from "effect/jose";
 import type { AccessConfig } from "../src/access.ts";
 
-/** A made-up Access application, for tests only. */
-export const testAccess: AccessConfig = {
+/** A made-up Access application, for tests only, with a made-up one for agents. */
+export const testAccess = {
   teamDomain: "billet-test.cloudflareaccess.com",
   audience: "a".repeat(64),
-};
+  agentAudience: "c".repeat(64),
+} satisfies AccessConfig;
+
+/** A made-up service token's `common_name`, as Access sets it (the token's client id). */
+export const testAgent = "0123456789abcdef.access";
 
 export const cryptoLayer = Signature.layerWebCrypto.pipe(
   Layer.provide(SecureRandom.layerWebCrypto),
@@ -59,6 +63,18 @@ export const signAccess = (
       key.privateKey,
     ).pipe(Effect.map(Redacted.value), Effect.provide(cryptoLayer)),
   );
+
+/** Claims as Access issues them for a service token: a `common_name`, no email, an empty `sub`. */
+const agentOverrides = (overrides: Record<string, unknown>) => ({
+  aud: [testAccess.agentAudience],
+  email: undefined,
+  common_name: testAgent,
+  sub: "",
+  ...overrides,
+});
+
+export const signAgent = (overrides: Record<string, unknown> = {}): Promise<string> =>
+  signAccess(agentOverrides(overrides));
 
 const base64Url = (text: string) =>
   btoa(text).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
