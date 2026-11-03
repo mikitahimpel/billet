@@ -29,6 +29,10 @@ final class GenzGlow {
   static let bulbRadius: Float = 0.06
   static let wireThickness: Float = 0.012
   static let bulbSpacing: Float = 0.34
+  /// How bright the light a string spills onto the walls is, at full spill, and how far it
+  /// reaches.
+  static let spillIntensity: Float = 7_800
+  static let spillReach: Float = 4.5
   /// How far a string droops between two hooks.
   static let sag: Float = 0.28
   /// How dark a contact shadow is made before a preset sets it.
@@ -99,7 +103,7 @@ final class GenzGlow {
     for bulb in bulbs { bulb.model?.materials = [kit.glow(bulbColour)] }
     for spill in spills {
       spill.components[PointLightComponent.self]?.color = bulbColour.platformColour
-      spill.setLight(intensity: 2_600 * look.fairy.spill)
+      spill.setLight(intensity: Self.spillIntensity * look.fairy.spill)
     }
     core.components[PointLightComponent.self]?.color = look.key.colour.genz.platformColour
     core.setLight(intensity: look.core)
@@ -170,15 +174,15 @@ final class GenzGlow {
       } else {
         bulbs += lamps
       }
-      for index in stride(from: points.count / 6, to: points.count, by: max(points.count / 3, 1)) {
-        let spill = Entity()
-        spill.position = points[index].scene + [0, -0.4, 0.35]
-        spill.components.set(
-          PointLightComponent(
-            color: Self.bulbColour.platformColour, intensity: 0, attenuationRadius: 3.2))
-        fairy.addChild(spill)
-        spills.append(spill)
-      }
+      // One light for the whole string, in its middle, as bright as the three it stands for.
+      let spill = Entity()
+      spill.position = points[points.count / 2].scene + [0, -0.4, 0.35]
+      spill.components.set(
+        PointLightComponent(
+          color: Self.bulbColour.platformColour, intensity: 0,
+          attenuationRadius: Self.spillReach))
+      fairy.addChild(spill)
+      spills.append(spill)
     }
   }
 

@@ -76,7 +76,7 @@ struct LightingLookTests {
     #expect(GenzGlow.fairyHooks(.nooki).isEmpty)
   }
 
-  @Test func eachFairyStringIsTwoModelsWithEveryBulbInIt() throws {
+  @Test func eachFairyStringIsTwoModelsAndOneLightWithEveryBulbInIt() throws {
     let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
     let glow = GenzGlow(layout: layout, kit: GenzKit())
     let fairy = try #require(glow.root.children.first)
@@ -85,6 +85,8 @@ struct LightingLookTests {
     for strand in strands {
       #expect(strand.children.filter { $0.components.has(ModelComponent.self) }.count == 2)
     }
+    let spills = fairy.children.filter { $0.components.has(PointLightComponent.self) }
+    #expect(spills.count == strands.count)
     var bounds = BoundingBox()
     for strand in strands {
       for model in strand.children
