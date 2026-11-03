@@ -6,16 +6,6 @@ import SwiftUI
 /// One flat layer of a styled room. Each is drawn natively today; an artist's Rive file can take
 /// any one over through ``RoomLayerArt`` without the room changing.
 public enum RoomLayerSlot: String, CaseIterable, Hashable, Sendable {
-  /// Sunset Lamp, behind the room: the night city seen through the window.
-  case sunsetCity
-  /// Sunset Lamp, a texture on the back wall: the lamp's orange disc.
-  case sunsetDisc
-  /// Sunset Lamp, a texture in the poster frame.
-  case sunsetPoster
-  /// Sunset Lamp, over the room: the LED strip's bloom.
-  case sunsetBloom
-  /// Sunset Lamp, over the room: the dark the room opens in, before the lamp clicks on.
-  case sunsetDim
   /// Window Seat, behind the room and filling the screen: sky, suburb, street lamp, power lines.
   case windowNight
   /// Window Seat, over the room: the LED bloom around the window frame.
@@ -25,15 +15,6 @@ public enum RoomLayerSlot: String, CaseIterable, Hashable, Sendable {
   /// Window Seat, over the room: the dark the room opens in.
   case windowDim
 
-  /// Whether the layer is a texture on a surface of the room rather than a view over or under it.
-  public var isTexture: Bool {
-    switch self {
-    case .sunsetDisc, .sunsetPoster: true
-    case .sunsetCity, .sunsetBloom, .sunsetDim, .windowNight, .windowBloom, .windowBacklight,
-      .windowDim:
-      false
-    }
-  }
 }
 
 /// What a room layer is drawn from at one moment.
@@ -65,10 +46,8 @@ public struct RoomLayerState: Equatable, Sendable {
 /// Art for a styled room's flat layers. Return `nil` for a slot to keep the room's own drawing.
 @MainActor
 public protocol RoomLayerArt {
-  /// A view for a slot that is not a texture, sized to the whole scene.
+  /// A view for a slot, sized to the whole scene.
   func view(for slot: RoomLayerSlot, state: RoomLayerState) -> AnyView?
-  /// An image for a texture slot, at most `pixels` on its longer side.
-  func image(for slot: RoomLayerSlot, state: RoomLayerState, pixels: Int) -> CGImage?
 }
 
 /// Where the cat is on screen, so the host can pin a control beside it.
@@ -81,13 +60,8 @@ public struct PetSceneCatAnchorKey: PreferenceKey {
 }
 
 extension EnvironmentValues {
-  /// The room a scene with styles should show. Scenes without styles ignore it. Views that set
-  /// none, such as classic Home and renovating, show the Nooki room.
-  @Entry public var petSceneRoomStyle: RoomStyle = .nooki
   /// The cat a scene with more than one cat should show. Scenes with one cat ignore it.
   @Entry public var petSceneCat: CatChoice = .standard
   /// Art that replaces some of a styled room's flat layers. `nil` keeps every native drawing.
   @Entry public var petSceneRoomArt: (any RoomLayerArt)? = nil
-  /// Bumped by the host to play a styled room's opening again.
-  @Entry public var petSceneOpeningCount = 0
 }

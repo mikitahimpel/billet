@@ -27,27 +27,27 @@ import Wire
     FlagsResponse(flags: pairs.map { FlagAssignment(key: $0.0, variant: $0.1) })
   }
 
-  @Test func theServersVariantsAreKeptAndChooseTheRoom() async {
+  @Test func theServersVariantsAreKeptAndChooseTheLight() async {
     let labs = labs(storage())
-    await FlagsRefresher(api: api(.success(answer(("home-direction", "sunset-lamp")))), labs: labs)
+    await FlagsRefresher(api: api(.success(answer(("room-lighting", "golden-hour")))), labs: labs)
       .refresh()
-    #expect(labs.roomStyle == .sunsetLamp)
+    #expect(labs.lighting == .goldenHour)
   }
 
   @Test func theAnswerIsKeptForTheNextLaunch() async {
     let storage = storage()
     await FlagsRefresher(
-      api: api(.success(answer(("home-direction", "window-seat")))), labs: labs(storage)
+      api: api(.success(answer(("room-lighting", "fairy-lights")))), labs: labs(storage)
     ).refresh()
-    #expect(labs(storage).roomStyle == .windowSeat)
+    #expect(labs(storage).lighting == .fairyLights)
   }
 
   @Test func offlineKeepsTheLastAnswerRatherThanLosingIt() async {
     let labs = labs(storage())
-    await FlagsRefresher(api: api(.success(answer(("home-direction", "window-seat")))), labs: labs)
+    await FlagsRefresher(api: api(.success(answer(("room-lighting", "fairy-lights")))), labs: labs)
       .refresh()
     await FlagsRefresher(api: api(.failure(.network("offline"))), labs: labs).refresh()
-    #expect(labs.roomStyle == .windowSeat)
+    #expect(labs.lighting == .fairyLights)
   }
 
   @Test(arguments: [
@@ -57,50 +57,50 @@ import Wire
     let labs = labs(storage())
     await FlagsRefresher(api: api(.failure(error)), labs: labs).refresh()
     #expect(labs.remote.isEmpty)
-    #expect(labs.roomStyle == .standard)
+    #expect(labs.lighting == .standard)
   }
 
   @Test func anExperimentTheServerStopsListingFallsAway() async {
     let labs = labs(storage())
-    await FlagsRefresher(api: api(.success(answer(("home-direction", "window-seat")))), labs: labs)
+    await FlagsRefresher(api: api(.success(answer(("room-lighting", "fairy-lights")))), labs: labs)
       .refresh()
     await FlagsRefresher(api: api(.success(answer())), labs: labs).refresh()
     #expect(labs.remote.isEmpty)
-    #expect(labs.roomStyle == .standard)
+    #expect(labs.lighting == .standard)
   }
 
   @Test func aVariantThisBuildDoesNotHaveChangesNothingVisible() async {
     let labs = labs(storage())
-    await FlagsRefresher(api: api(.success(answer(("home-direction", "attic")))), labs: labs)
+    await FlagsRefresher(api: api(.success(answer(("room-lighting", "disco")))), labs: labs)
       .refresh()
-    #expect(labs.roomStyle == .standard)
+    #expect(labs.lighting == .standard)
   }
 
   @Test func theFirstOfARepeatedKeyWins() async {
     let labs = labs(storage())
     await FlagsRefresher(
       api: api(
-        .success(answer(("home-direction", "window-seat"), ("home-direction", "sunset-lamp")))),
+        .success(answer(("room-lighting", "fairy-lights"), ("room-lighting", "golden-hour")))),
       labs: labs
     ).refresh()
-    #expect(labs.roomStyle == .windowSeat)
+    #expect(labs.lighting == .fairyLights)
   }
 
   @Test func aLabsChoiceStillBeatsTheServer() async {
     let labs = labs(storage())
-    labs.setRoomStyle(.nooki)
-    await FlagsRefresher(api: api(.success(answer(("home-direction", "window-seat")))), labs: labs)
+    labs.setLighting(.candle)
+    await FlagsRefresher(api: api(.success(answer(("room-lighting", "fairy-lights")))), labs: labs)
       .refresh()
-    #expect(labs.roomStyle == .nooki)
+    #expect(labs.lighting == .candle)
   }
 
   @Test func leavingThePairForgetsItsVariants() async {
     let labs = labs(storage())
     let refresher = FlagsRefresher(
-      api: api(.success(answer(("home-direction", "window-seat")))), labs: labs)
+      api: api(.success(answer(("room-lighting", "fairy-lights")))), labs: labs)
     await refresher.refresh()
     refresher.forget()
     #expect(labs.remote.isEmpty)
-    #expect(labs.roomStyle == .standard)
+    #expect(labs.lighting == .standard)
   }
 }

@@ -22,6 +22,9 @@ a Blender render of billet's own detailed cat. Its image encoders were DINOv3
 only the generated splats and the meshes made from them do. The pipeline follows
 nexishq/idol-scenes. See [docs/idol-splats.md](docs/idol-splats.md).
 
+`Cat_idolIlya`: Cat by Ilya (nexishq), used with permission. Made by the same pipeline from his
+illustration in nexishq/idol-scenes.
+
 ## First-launch heart
 
 `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Heart.reality` is a new model made

@@ -44,9 +44,9 @@ struct BilletApp: App {
         },
         memory: .defaults(.standard),
         strings: ServiceStatusModel.strings(in: .main)))
-    // Before Home reads the room style.
+    // Before Home reads the scene choice.
     if let store = WidgetFeaturesStore.appGroup() {
-      FlatSceneMigration.run(
+      RemovedScenesMigration.run(
         defaults: .standard, choiceKey: PetSceneCatalog.choiceKey,
         keptSceneID: NookiPetScene().id, store: store)
     }

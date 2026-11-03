@@ -431,7 +431,7 @@ final class FlameSceneStage {
       room.addChild(ambient)
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
       self.receiver = receiver
-      NookiDiorama.visit(room) { $0.components.set(receiver) }
+      SceneParts.visit(room) { $0.components.set(receiver) }
     }
     isBuilt = true
     room.isEnabled = isOnScreen

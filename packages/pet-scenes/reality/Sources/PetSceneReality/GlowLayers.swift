@@ -125,7 +125,6 @@ struct GlowSpots: Equatable {
 /// available on every device the app runs on.
 struct GlowLights: View {
   let look: LightingLook
-  let style: RoomStyle
   let screen: GenzRoomScreen
   let isPaused: Bool
 
@@ -141,9 +140,9 @@ struct GlowLights: View {
         let state = screen.state(for: .windowBloom, at: context.date)
         let lights = screen.lights
         let amount = Double(look.halos)
-        let lit = Self.level(style, time: state.time)
+        let lit = Self.level(time: state.time)
         let flicker = Self.flicker(look.key.flicker, time: isPaused ? 0 : state.time)
-        let lamp = state.lampOn ? Self.lampLevel(style, time: state.time) * flicker : 0
+        let lamp = state.lampOn ? Self.lampLevel(time: state.time) * flicker : 0
         let bulb = look.fairy.colour.colour
         let led = (look.led ?? look.fairy.colour).colour
         let key = look.key.colour.colour
@@ -203,21 +202,13 @@ struct GlowLights: View {
   }
 
   /// How far the room's small lights have come on in its opening.
-  static func level(_ style: RoomStyle, time: Double) -> Double {
-    switch style {
-    case .windowSeat: GenzOpening.windowLED(time)
-    case .sunsetLamp: GenzOpening.sunsetLED(time)
-    case .nooki: 1
-    }
+  static func level(time: Double) -> Double {
+    GenzOpening.windowLED(time)
   }
 
   /// How far the lamp has come on in the room's opening.
-  static func lampLevel(_ style: RoomStyle, time: Double) -> Double {
-    switch style {
-    case .windowSeat: GenzOpening.eased(time, from: 1.4, length: 0.8)
-    case .sunsetLamp: GenzOpening.lampClick(time)
-    case .nooki: 1
-    }
+  static func lampLevel(time: Double) -> Double {
+    GenzOpening.eased(time, from: 1.4, length: 0.8)
   }
 
   private static func halo(

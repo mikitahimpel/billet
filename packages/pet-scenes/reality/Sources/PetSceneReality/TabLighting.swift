@@ -65,7 +65,7 @@ final class TabLighting {
     room.addChild(entity)
     ambient = entity
     let receiver = ImageBasedLightReceiverComponent(imageBasedLight: entity)
-    NookiDiorama.visit(room) { $0.components.set(receiver) }
+    SceneParts.visit(room) { $0.components.set(receiver) }
     return receiver
   }
 

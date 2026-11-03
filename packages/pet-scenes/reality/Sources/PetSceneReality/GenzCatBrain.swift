@@ -55,15 +55,14 @@ extension GenzRoom {
   /// The affordance kind of a piece, or nil for one the cat has no use for.
   static func affordanceKind(_ kind: GenzPiece.Kind) -> RoomAffordance.Kind? {
     switch kind {
-    case .platformBed, .daybed, .quiltedDaybed, .quiltedBed, .catBed: .bed
+    case .daybed, .quiltedDaybed, .catBed: .bed
     case .milkCrate, .bookCrate: .box
     case .bookshelf, .wallShelves: .shelf
-    case .hoodiePile, .chairWithClothes, .cardigan: .soft
+    case .cardigan: .soft
     case .mugs, .phoneOnCharger, .candles: .smallItem
-    case .checkeredRug, .roundRug, .patternRug: .rug
-    case .cubeNightstand, .sunsetLamp, .sneakers, .monstera, .posterFrame, .bookStack,
-      .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer, .speaker,
-      .windowBench, .sideTable, .knitPouf, .stringLights:
+    case .roundRug, .patternRug: .rug
+    case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,
+      .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil
     }
   }

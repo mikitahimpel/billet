@@ -9,54 +9,48 @@ import Testing
 @Suite struct GenzFurnitureTests {
   /// The first pieces, made of plain blocks, which the furnished sets replace.
   nonisolated private static let plain: Set<GenzPiece.Kind> = [
-    .platformBed, .cubeNightstand, .checkeredRug, .hoodiePile, .daybed, .milkCrate, .thriftLamp,
-    .roundRug,
+    .daybed, .milkCrate, .thriftLamp, .roundRug,
   ]
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
-  func theFirstSetLeavesTheRoomAsItWas(_ style: RoomStyle) throws {
-    let first = try #require(GenzLayout.of(style))
-    let original = try #require(GenzLayout.of(style, furniture: .original))
-    #expect(first.pieces.map(\.piece) == original.pieces.map(\.piece))
+  @Test func theFirstSetLeavesTheRoomAsItWas() {
+    let original = GenzLayout.of(.original)
+    #expect(GenzLayout.windowSeat.pieces.map(\.piece) == original.pieces.map(\.piece))
     #expect(original.furniture == .original)
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat], [RoomFurniture.cosyNook, .retroDen])
-  func aFurnishedSetHasNoPlainPieces(_ style: RoomStyle, _ furniture: RoomFurniture) throws {
-    let layout = try #require(GenzLayout.of(style, furniture: furniture))
+  @Test(arguments: [RoomFurniture.cosyNook, .retroDen])
+  func aFurnishedSetHasNoPlainPieces(_ furniture: RoomFurniture) {
+    let layout = GenzLayout.of(furniture)
     let kinds = Set(layout.pieces.map(\.piece.kind))
     #expect(kinds.isDisjoint(with: Self.plain))
     #expect(kinds.contains(.polaroids) && kinds.contains(.mugs))
-    #expect(kinds.intersection([.quiltedBed, .quiltedDaybed, .windowBench]).count == 1)
+    #expect(kinds.intersection([.quiltedDaybed, .windowBench]).count == 1)
     #expect(layout.furniture == furniture)
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
-  func theTwoSetsDiffer(_ style: RoomStyle) throws {
-    let cosy = try #require(GenzLayout.of(style, furniture: .cosyNook))
-    let retro = try #require(GenzLayout.of(style, furniture: .retroDen))
+  @Test func theTwoSetsDiffer() {
+    let cosy = GenzLayout.of(.cosyNook)
+    let retro = GenzLayout.of(.retroDen)
     #expect(cosy.pieces.map(\.piece) != retro.pieces.map(\.piece))
     #expect(retro.pieces.contains { $0.piece.kind == .recordPlayer })
     #expect(retro.pieces.contains { $0.piece.kind == .speaker })
     #expect(cosy.key != retro.key)
   }
 
-  @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat], RoomFurniture.allCases)
-  func everySetHasALampAndTheCatKeepsItsPlace(
-    _ style: RoomStyle, _ furniture: RoomFurniture
-  ) throws {
-    let layout = try #require(GenzLayout.of(style, furniture: furniture))
-    let lamps: Set<GenzPiece.Kind> = [.sunsetLamp, .thriftLamp, .pleatedLamp]
+  @Test(arguments: RoomFurniture.allCases)
+  func everySetHasALampAndTheCatKeepsItsPlace(_ furniture: RoomFurniture) {
+    let layout = GenzLayout.of(furniture)
+    let lamps: Set<GenzPiece.Kind> = [.thriftLamp, .pleatedLamp]
     #expect(layout.pieces.contains { lamps.contains($0.piece.kind) })
-    let first = try #require(GenzLayout.of(style))
+    let first = GenzLayout.of(.original)
     #expect(layout.cat.spot == first.cat.spot)
     #expect((layout.catSurface == nil) == (first.catSurface == nil))
   }
 
   @Test func eachRoomAndSetIsItsOwnRoomInTheCache() throws {
     let rooms = GenzRoomCache()
-    let cosy = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
-    let retro = try #require(GenzLayout.of(.windowSeat, furniture: .retroDen))
+    let cosy = GenzLayout.of(.cosyNook)
+    let retro = GenzLayout.of(.retroDen)
     #expect(rooms.room(cosy) !== rooms.room(retro))
     #expect(rooms.room(cosy) === rooms.room(cosy))
   }
@@ -74,7 +68,7 @@ import Testing
   /// The seat's cushion is level with the sill, where the cat sits and walks.
   @Test(arguments: seatSets)
   func theSeatIsWhereTheCatSits(_ furniture: RoomFurniture) throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: furniture))
+    let layout = GenzLayout.of(furniture)
     let seat = try #require(layout.pieces.first { $0.piece.kind == .windowBench })
     #expect(GenzPiece.Kind.windowBench.size.z == layout.cat.spot.z)
     let surface = try #require(layout.catSurface)
@@ -84,7 +78,7 @@ import Testing
   /// What stands on the floor never overlaps, rugs aside, and nothing pokes out of the room.
   @Test(arguments: seatSets)
   func piecesKeepToTheirOwnPlaces(_ furniture: RoomFurniture) throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: furniture))
+    let layout = GenzLayout.of(furniture)
     let flat: Set<GenzPiece.Kind> = [.patternRug]
     let standing = layout.pieces.filter { $0.centre.z == 0 && !flat.contains($0.piece.kind) }
     let boxes = standing.map { Self.footprint($0) }
@@ -116,11 +110,11 @@ import Testing
   /// The furnished room stays light enough to draw every frame on an older phone.
   @Test(arguments: seatSets)
   func theFurnitureKeepsToItsTriangleBudget(_ furniture: RoomFurniture) throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: furniture))
+    let layout = GenzLayout.of(furniture)
     let kit = GenzKit()
     var triangles = 0
     for placement in layout.pieces {
-      NookiDiorama.visit(kit.build(placement.piece)) { entity in
+      SceneParts.visit(kit.build(placement.piece)) { entity in
         guard let mesh = (entity as? ModelEntity)?.model?.mesh else { return }
         for model in mesh.contents.models {
           for part in model.parts { triangles += (part.triangleIndices?.count ?? 0) / 3 }
@@ -134,7 +128,7 @@ import Testing
   @Test func everyCandleIsLit() {
     let candles = GenzKit().build(GenzPiece(.candles))
     var flames = 0
-    NookiDiorama.visit(candles) { if $0.name == GenzRoom.flameName { flames += 1 } }
+    SceneParts.visit(candles) { if $0.name == GenzRoom.flameName { flames += 1 } }
     #expect(flames == 3)
   }
 }

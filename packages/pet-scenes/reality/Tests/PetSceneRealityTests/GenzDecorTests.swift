@@ -11,7 +11,7 @@ import Testing
 
   /// A room with its pieces stood where the room stands them, ready for decorating.
   private func room(_ furniture: RoomFurniture = .cosyNook) throws -> (GenzRoom, [Entity]) {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: furniture))
+    let layout = GenzLayout.of(furniture)
     let room = GenzRoomCache(suite: suite).room(layout)
     let kit = GenzKit()
     let holders = layout.pieces.map { placement -> Entity in

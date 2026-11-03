@@ -26,15 +26,12 @@ struct DecorStatus: Equatable {
 }
 
 /// The controls over a room while it is decorated: done and undo at the top, and at the foot the
-/// tools for the piece picked up, the closet's furniture to add, and paints where the room has
-/// them. The room stays in view between them.
+/// tools for the piece picked up and the closet's furniture to add. The room stays in view between
+/// them.
 struct DecorControls: View {
   let status: DecorStatus
   let closet: [ShopItem]
   let owned: (ShopItem) -> Int
-  /// The paint chosen, for a room whose walls and floor can be painted.
-  var paint: Binding<NookiSwatch>?
-  var onReset: (() -> Void)?
   let onUndo: () -> Void
   let onDone: () -> Void
   let onRotate: () -> Void
@@ -119,11 +116,10 @@ struct DecorControls: View {
   }
 
   @ViewBuilder private var bottom: some View {
-    if status.hasSelection || !closet.isEmpty || paint != nil {
+    if status.hasSelection || !closet.isEmpty {
       VStack(alignment: .leading, spacing: Spacing.small) {
         if status.hasSelection { pieceTools }
         if !closet.isEmpty { tray }
-        if let paint { paints(paint) }
       }
       .padding(Spacing.small)
       .frame(maxWidth: 420)
@@ -197,33 +193,5 @@ struct DecorControls: View {
       }
       .scrollIndicators(.hidden)
     }
-  }
-
-  private func paints(_ paint: Binding<NookiSwatch>) -> some View {
-    HStack(spacing: 0) {
-      ForEach(NookiSwatch.allCases, id: \.self) { option in
-        Button {
-          paint.wrappedValue = option
-        } label: {
-          Circle()
-            .fill(option.swatch.color)
-            .frame(width: 30, height: 30)
-            .overlay {
-              if option == paint.wrappedValue { Circle().strokeBorder(.white, lineWidth: 3) }
-            }
-            .frame(width: 40, height: 40)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(option.name)
-        .accessibilityAddTraits(option == paint.wrappedValue ? .isSelected : [])
-      }
-      Spacer(minLength: 8)
-      if let onReset {
-        Button("Reset", action: onReset)
-          .font(.footnote.weight(.semibold))
-      }
-    }
-    .accessibilityElement(children: .contain)
-    .accessibilityLabel("Paint: tap a wall or the floor")
   }
 }

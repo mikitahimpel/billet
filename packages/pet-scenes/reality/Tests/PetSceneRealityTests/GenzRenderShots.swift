@@ -25,10 +25,7 @@
           RoomFurniture(rawValue: $0)
         }
         ?? .cosyNook
-      let style =
-        ProcessInfo.processInfo.environment["GENZ_STYLE"].flatMap { RoomStyle(rawValue: $0) }
-        ?? .windowSeat
-      let layout = try #require(GenzLayout.of(style, furniture: furniture))
+      let layout = GenzLayout.of(furniture)
       let home = layout.camera
       let middleYaw = (home.yawLimits.lowerBound + home.yawLimits.upperBound) / 2
       let views: [(String, Float, Float, Float)] = [
@@ -59,7 +56,7 @@
         let image = try await Self.render(renderer, width: 786, height: 1704)
         try Self.write(
           image,
-          to: folder.appendingPathComponent("\(style.rawValue)-\(furniture.rawValue)-\(name).png"))
+          to: folder.appendingPathComponent("windowSeat-\(furniture.rawValue)-\(name).png"))
       }
       let details: [(String, GenzRoomPoint, GenzRoomPoint)] = [
         ("seat", GenzRoomPoint(3.6, 0.8, 1.4), GenzRoomPoint(4.6, 5.2, 3.2)),
@@ -67,13 +64,13 @@
         ("wall", GenzRoomPoint(0.3, 3.6, 2.2), GenzRoomPoint(4.6, 4.2, 2.8)),
         ("floor", GenzRoomPoint(4.4, 3.8, 0.3), GenzRoomPoint(5.6, 7.8, 3.2)),
       ]
-      for (name, target, eye) in style == .windowSeat ? details : [] {
+      for (name, target, eye) in details {
         lens.look(at: target.scene, from: eye.scene, relativeTo: nil)
         let image = try await Self.render(renderer, width: 1200, height: 900)
         try Self.write(
           image,
           to: folder.appendingPathComponent(
-            "\(style.rawValue)-\(furniture.rawValue)-detail-\(name).png"))
+            "windowSeat-\(furniture.rawValue)-detail-\(name).png"))
       }
     }
 

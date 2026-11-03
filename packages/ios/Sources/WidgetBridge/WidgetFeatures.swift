@@ -87,24 +87,11 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(features, named: Self.fileName)
   }
 
+  /// Where Labs kept the room style while there was more than one room.
   public static let roomStyleFileName = "room-style.json"
 
-  /// The room style chosen in Labs, or `nil` when none was or the file cannot be read.
-  public func loadRoomStyleOverride() -> RoomStyle? {
-    (try? storage.readJSON(RoomStyle.self, named: Self.roomStyleFileName)) ?? nil
-  }
-
-  /// The saved room style, or the standard one when nothing readable is saved.
-  public func loadRoomStyle() -> RoomStyle {
-    loadRoomStyleOverride() ?? .standard
-  }
-
-  public func saveRoomStyle(_ style: RoomStyle) throws(PersistenceError) {
-    try storage.writeJSON(style, named: Self.roomStyleFileName)
-  }
-
-  /// Forgets the Labs choice, so the room follows the pair's test, if one is running.
-  public func clearRoomStyle() throws(PersistenceError) {
+  /// Removes the room style Labs saved while there was more than one room.
+  public func removeRoomStyle() throws(PersistenceError) {
     try storage.remove(Self.roomStyleFileName)
   }
 
@@ -269,8 +256,6 @@ public struct WidgetFeaturesStore: Sendable {
 @Observable
 public final class WidgetFeaturesModel {
   public private(set) var features: WidgetFeatures
-  /// The room style chosen in Labs, or `nil` to follow the pair's test. Kept beside the flags.
-  public private(set) var roomStyleOverride: RoomStyle?
   /// What the server last said about the tests this pair is in. A Labs choice beats it.
   public private(set) var remote: RemoteFlags
   /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
@@ -299,7 +284,6 @@ public final class WidgetFeaturesModel {
     self.store = store
     self.onChange = onChange
     features = store?.load() ?? WidgetFeatures()
-    roomStyleOverride = store?.loadRoomStyleOverride()
     remote = store?.loadRemoteFlags() ?? RemoteFlags()
     cat = store?.loadCat() ?? .standard
     windowViewOverride = store?.loadWindowViewOverride()
@@ -404,22 +388,6 @@ public final class WidgetFeaturesModel {
     try? store?.clearHomeVariant()
   }
 
-  /// How a scene with more than one room dresses it: the Labs choice, else the variant of the
-  /// pair's `home-direction` test if one is running and this build has it, else the standard room.
-  /// Offline, with nothing saved, or with the test switched off, this is what the app always did.
-  public var roomStyle: RoomStyle {
-    roomStyleOverride
-      ?? remote.variant(of: Experiments.homeDirection).flatMap(
-        RoomStyle.init(homeDirectionVariant:))
-      ?? .standard
-  }
-
-  public func setRoomStyle(_ style: RoomStyle) {
-    guard roomStyleOverride != style else { return }
-    roomStyleOverride = style
-    try? store?.saveRoomStyle(style)
-  }
-
   public func setWindowView(_ choice: WindowViewChoice) {
     guard windowViewOverride != choice else { return }
     windowViewOverride = choice
@@ -439,13 +407,6 @@ public final class WidgetFeaturesModel {
     guard windowViewOverride != nil else { return }
     windowViewOverride = nil
     try? store?.clearWindowView()
-  }
-
-  /// Drops the Labs choice, so the room follows the pair's test.
-  public func followTheTest() {
-    guard roomStyleOverride != nil else { return }
-    roomStyleOverride = nil
-    try? store?.clearRoomStyle()
   }
 
   /// Takes the server's latest answer in place of the one held, and keeps it for next time.
