@@ -131,7 +131,7 @@ public enum CatCareRequest {
       case .treat:
         next.treat = next.treat == .waitingOnMe ? .fed : .waitingOnPartner
         if next.treat == .fed { next.streak += 1 }
-      case .pet, .feed, .play, .sleep:
+      case .pet, .feed, .play, .sleep, .shoo:
         guard let device, let kind = play.kind.lifeKind, var life = next.life else { continue }
         life.events.append(LifeEvent(id: play.id, kind: kind, by: device, at: now))
         next.life = life
