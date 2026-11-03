@@ -81,17 +81,27 @@ before anything is built on it.
 
 ### Authentication
 
-Users sign in with Apple. The Worker verifies the identity token and issues an opaque session token,
-stored hashed in D1. The widget and extensions read the token from a shared Keychain group.
+Every user starts anonymous: the app opens an account on first launch with no prompt. Sign in with
+Apple only links that account later, so it can be recovered without the phone. Sessions are opaque
+bearer tokens, stored hashed in D1. The widget and extensions read the token from a shared Keychain
+group.
 
-1. The app asks for a challenge (`POST /v1/auth/challenge`). The server stores only the nonce's hash,
-   for 10 minutes, and the app passes the nonce to Apple unchanged as the request's `nonce`.
-2. The app posts the identity token (`POST /v1/auth/apple`). The Worker checks the RS256 signature
-   against Apple's keys, then `iss`, `aud`, `exp`, `sub` and `nonce`, and deletes the nonce, so each
-   token signs in once. The Apple `sub` is stored; email and name are not.
-3. The server returns a 256-bit opaque session token and keeps only its SHA-256. Sign-in creates the
-   device, so a session belongs to exactly one device. Sessions last 90 days from the last use.
-4. The device registers one push token per kind (`PUT /v1/devices/current/push-token`), which replaces
+1. On first launch the app makes an account key (32 random bytes) and keeps it in the iCloud
+   Keychain, so the user's other and future phones have it too. It posts the key
+   (`POST /v1/auth/anonymous`). The server keeps only the key's SHA-256: a key it hasn't seen opens a
+   new anonymous user, and one it has seen signs in to the user it opened.
+2. To link Apple, the app asks for a challenge (`POST /v1/auth/challenge`). The server stores only
+   the nonce's hash, for 10 minutes, and the app passes the nonce to Apple unchanged.
+3. The app posts the identity token with its session (`POST /v1/auth/apple/link`). The Worker checks
+   the RS256 signature against Apple's keys, then `iss`, `aud`, `exp`, `sub` and `nonce`, and
+   deletes the nonce, so each token is used once. The user, the pair, the cat and the notes stay as
+   they are. An Apple ID already linked to another account is refused (409 `AppleIdInUse`).
+4. A phone with neither the key nor a session signs in with Apple instead (`POST /v1/auth/apple`),
+   which lands in the linked account. The Apple `sub` is stored; email, name and Apple's tokens are
+   not.
+5. Every sign-in returns a new session on a new device. The server keeps only the token's SHA-256,
+   and sessions last 90 days from the last use (`GET /v1/account` says whether Apple is linked).
+6. The device registers one push token per kind (`PUT /v1/devices/current/push-token`), which replaces
    the last one. A token moves to whichever device registered it last, and sign-out deletes the
    device and its tokens, so a phone never receives another account's notes.
 
@@ -99,8 +109,13 @@ Failures are uniform: any rejection is a 401, and if Apple's keys or the databas
 answer is a 503. Nothing is granted on a failure, and an expired key set is never used. Logs carry
 fixed reason labels only.
 
-`packages/backend/auth` holds this logic on injected services: `IdentityVerifier` and `AuthRepository`.
-`platform` provides the real ones, and `respondApi` serves the routes under `/v1/`.
+`packages/backend/auth` holds this logic on injected services: `IdentityVerifier`, `AuthRepository`
+(challenges, account keys, push tokens) and `AuthEngine` (users, sessions and linked identities).
+`platform` provides the real ones. `AuthEngine` is [Better Auth](https://www.better-auth.com) on D1
+through Kysely, with its anonymous and bearer plugins and the Apple provider; its HTTP handler is
+never mounted, so every request goes through the typed routes above. Better Auth keeps session
+tokens as they are, so `hashed-session-tokens.ts` wraps its database adapter to keep their SHA-256
+instead. `respondApi` serves the routes under `/v1/`.
 
 `respondApi` builds the router for each request, because a Worker request must not wait on I/O that
 another request started, and `Jwks` shares its in-flight fetch between callers. So Apple's keys are

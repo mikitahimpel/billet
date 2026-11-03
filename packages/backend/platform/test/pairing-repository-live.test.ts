@@ -27,12 +27,7 @@ const pair = Schema.decodeSync(PairId);
 
 const addUsers = (ids: ReadonlyArray<string>) =>
   env.DB.batch(
-    ids.map((id) =>
-      env.DB.prepare("INSERT INTO users (id, apple_subject, created_at) VALUES (?, ?, 1)").bind(
-        id,
-        `subject-${id}`,
-      ),
-    ),
+    ids.map((id) => env.DB.prepare("INSERT INTO users (id, created_at) VALUES (?, 1)").bind(id)),
   );
 
 const invite = (owner: string, codeHash = `hash-${owner}`): StoredInvite => ({

@@ -15,8 +15,14 @@ const route = <const P extends `/${string}`>(method: Route["method"], path: P) =
 
 export const routes = {
   authChallenge: route("POST", "/v1/auth/challenge"),
+  /** Signs in with the account key, opening the account the first time. */
+  authAnonymous: route("POST", "/v1/auth/anonymous"),
+  /** Signs in to the account linked to this Apple ID, or opens one linked to it. */
   authApple: route("POST", "/v1/auth/apple"),
+  /** Links the caller's account to an Apple ID, keeping the user, pair, cat and notes. */
+  authAppleLink: route("POST", "/v1/auth/apple/link"),
   authSignOut: route("POST", "/v1/auth/sign-out"),
+  getAccount: route("GET", "/v1/account"),
   registerPushToken: route("PUT", "/v1/devices/current/push-token"),
   createInvite: route("POST", "/v1/invites"),
   claimInvite: route("POST", "/v1/invites/claim"),
@@ -37,7 +43,7 @@ export const routes = {
 /** The concrete path of `downloadImage` for a media key. */
 export const mediaPath = (key: string): string => routes.downloadImage.path.replace("*", key);
 
-/** How a caller proves who it is, on every route except the two sign-in ones. */
+/** How a caller proves who it is, on every route except the sign-in ones. */
 export const authorizationHeader = "authorization";
 export const bearerPrefix = "Bearer ";
 

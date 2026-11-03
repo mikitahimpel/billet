@@ -12,3 +12,6 @@ export class AuthRejected extends Data.TaggedError("AuthRejected")<{
 export class AuthUnavailable extends Data.TaggedError("AuthUnavailable")<{
   readonly reason: string;
 }> {}
+
+/** The Apple ID is already linked to another account, so it can't be linked to the caller's. */
+export class AppleIdInUse extends Data.TaggedError("AppleIdInUse")<{}> {}

@@ -5,6 +5,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { authorizationHeader, bearerPrefix } from "@billet/contracts-http-api/routes";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { ROOM_USER_HEADER } from "./pair-room-durable-object.ts";
 import type { WorkerEnv } from "./worker-env.ts";
@@ -27,6 +28,7 @@ const whoIsAsking = (env: WorkerEnv, token: Redacted.Redacted<string>) =>
         Layer.provideMerge(
           Layer.mergeAll(
             AuthRepositoryLive(env.DB),
+            BetterAuthEngineLive(env.DB),
             AppleIdentityLive,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,

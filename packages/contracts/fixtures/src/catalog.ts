@@ -15,11 +15,14 @@ import { PairId } from "@billet/contracts-domain/pair-id";
 import { PushToken } from "@billet/contracts-domain/push-token";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import {
+  AccountKey,
+  AccountResponse,
   AuthChallengeResponse,
   AuthNonce,
   IdentityToken,
   SessionResponse,
   SessionToken,
+  SignInAnonymouslyRequest,
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
@@ -84,6 +87,7 @@ const deviceId = Schema.decodeUnknownSync(DeviceId)("device-1");
 // Sample shapes only: none of these was ever a real credential.
 const nonce = Schema.decodeUnknownSync(AuthNonce)("nonce-sample-".padEnd(43, "0"));
 const sessionToken = Schema.decodeUnknownSync(SessionToken)("session-sample-".padEnd(43, "0"));
+const accountKey = Schema.decodeUnknownSync(AccountKey)("account-key-sample-".padEnd(43, "0"));
 const identityToken = Schema.decodeUnknownSync(IdentityToken)("header.payload.signature");
 const pushToken = Schema.decodeUnknownSync(PushToken)("ab".repeat(32));
 
@@ -183,6 +187,11 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { nonce, expiresAt: 1_700_000_300_000 },
   }),
   fixture("SignInWithAppleRequest", SignInWithAppleRequest, { default: { identityToken } }),
+  fixture("SignInAnonymouslyRequest", SignInAnonymouslyRequest, { default: { accountKey } }),
+  fixture("AccountResponse", AccountResponse, {
+    anonymous: { userId: alice, linked: false },
+    linked: { userId: alice, linked: true },
+  }),
   fixture("SessionResponse", SessionResponse, {
     default: { sessionToken, expiresAt: 1_707_776_000_000, userId: alice, deviceId },
   }),
@@ -197,6 +206,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "not-found": ApiError.cases.NotFound.make({}),
     "invalid-invite": ApiError.cases.InvalidInvite.make({}),
     "already-paired": ApiError.cases.AlreadyPaired.make({}),
+    "apple-id-in-use": ApiError.cases.AppleIdInUse.make({}),
   }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),

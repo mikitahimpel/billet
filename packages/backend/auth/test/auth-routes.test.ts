@@ -4,10 +4,12 @@ import { HttpRouter } from "effect/http";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
 import { AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
+import { AuthEngine } from "../src/auth-engine.ts";
 import { AuthRepository } from "../src/auth-repository.ts";
 import { AuthRoutes } from "../src/auth-routes.ts";
 import { AuthService } from "../src/auth-service.ts";
 import { IdentityVerifier } from "../src/identity-verifier.ts";
+import { makeInMemoryAuthEngine } from "./in-memory-auth-engine.ts";
 import { makeInMemoryAuthRepository } from "./in-memory-auth-repository.ts";
 
 let verifyCalls = 0;
@@ -29,6 +31,7 @@ const setup = () => {
     Layer.provide(
       Layer.mergeAll(
         Layer.succeed(AuthRepository, memory.repository),
+        Layer.succeed(AuthEngine, makeInMemoryAuthEngine().engine),
         FakeIdentityVerifier,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
@@ -84,6 +87,84 @@ describe("auth routes", () => {
       request("/v1/devices/current/push-token", json(alert, session.sessionToken, "PUT")),
     );
     expect(after.status).toBe(401);
+  });
+
+  it("opens an anonymous account, links it to Apple, and reports it", async () => {
+    // Its own app: the fake verifier signs everyone in as one Apple ID.
+    const fresh = setup();
+    const { handler } = fresh;
+    const accountKey = "k".repeat(43);
+    const opened = await handler(request("/v1/auth/anonymous", json({ accountKey })));
+    expect(opened.status).toBe(200);
+    expect(opened.headers.get("cache-control")).toBe("no-store");
+    const session = Schema.decodeUnknownSync(SessionResponse)(await opened.json());
+
+    const account = (token: string) =>
+      handler(
+        request("/v1/account", { method: "GET", headers: { authorization: `Bearer ${token}` } }),
+      );
+    expect(await (await account(session.sessionToken)).json()).toEqual({
+      userId: session.userId,
+      linked: false,
+    });
+
+    const challenge = Schema.decodeUnknownSync(AuthChallengeResponse)(
+      await (await handler(request("/v1/auth/challenge"))).json(),
+    );
+    const linked = await handler(
+      request(
+        "/v1/auth/apple/link",
+        json({ identityToken: challenge.nonce }, session.sessionToken),
+      ),
+    );
+    expect(linked.status).toBe(200);
+    expect(await linked.json()).toEqual({ userId: session.userId, linked: true });
+    expect(await (await account(session.sessionToken)).json()).toEqual({
+      userId: session.userId,
+      linked: true,
+    });
+
+    // The same key on another phone returns to the same account.
+    const again = Schema.decodeUnknownSync(SessionResponse)(
+      await (await handler(request("/v1/auth/anonymous", json({ accountKey })))).json(),
+    );
+    expect(again.userId).toBe(session.userId);
+    await fresh.dispose();
+  });
+
+  it("answers 409 when the Apple ID is linked to another account", async () => {
+    const { session: owner } = await signIn(handler);
+    const other = Schema.decodeUnknownSync(SessionResponse)(
+      await (
+        await handler(request("/v1/auth/anonymous", json({ accountKey: "o".repeat(43) })))
+      ).json(),
+    );
+    expect(other.userId).not.toBe(owner.userId);
+    const challenge = Schema.decodeUnknownSync(AuthChallengeResponse)(
+      await (await handler(request("/v1/auth/challenge"))).json(),
+    );
+    const response = await handler(
+      request("/v1/auth/apple/link", json({ identityToken: challenge.nonce }, other.sessionToken)),
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ _tag: "AppleIdInUse" });
+  });
+
+  it("checks the session before reading a link request's body", async () => {
+    verifyCalls = 0;
+    const response = await handler(
+      request("/v1/auth/apple/link", json({ identityToken: "x" }, "x".repeat(43))),
+    );
+    expect(response.status).toBe(401);
+    expect(verifyCalls).toBe(0);
+  });
+
+  it.each([
+    ["a short key", { accountKey: "short" }],
+    ["no key", {}],
+  ])("answers 400 or 401 for %s, and opens nothing", async (_name, body) => {
+    const response = await handler(request("/v1/auth/anonymous", json(body)));
+    expect([400, 401]).toContain(response.status);
   });
 
   it("marks a challenge as not cacheable", async () => {
@@ -174,6 +255,7 @@ describe("logging", () => {
         Layer.provide(
           Layer.mergeAll(
             Layer.succeed(AuthRepository, memory.repository),
+            Layer.succeed(AuthEngine, makeInMemoryAuthEngine().engine),
             FakeIdentityVerifier,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,

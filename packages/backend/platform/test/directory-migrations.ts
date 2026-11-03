@@ -18,10 +18,11 @@ const sha256 = async (text: string) =>
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
 
-const records = (): Promise<ReadonlyArray<MigrationRecord>> =>
+const records = (before?: string): Promise<ReadonlyArray<MigrationRecord>> =>
   Promise.all(
     Object.entries(files)
       .toSorted(([a], [b]) => a.localeCompare(b))
+      .filter(([path]) => before === undefined || (path.split("/").at(-2) ?? path) < before)
       .map(async ([path, sql]) => ({
         name: path.split("/").at(-2) ?? path,
         hash: await sha256(sql),
@@ -53,12 +54,13 @@ const executor: SqlExecutor = {
     }),
 };
 
-export const applyDirectoryMigrations = async () =>
+/** Applies every pending migration, or only those named before `before`, as a deploy would. */
+export const applyDirectoryMigrations = async (before?: string) =>
   Effect.runPromise(
     applyPendingAlchemyFormat({
       executor,
       table: "__alchemy_migrations",
-      records: await records(),
+      records: await records(before),
     }),
   );
 
@@ -75,7 +77,11 @@ export const resetDirectory = async () => {
       "pair_members",
       "invites",
       "push_tokens",
-      "sessions",
+      "auth_session",
+      "auth_account",
+      "auth_verification",
+      "auth_user",
+      "account_keys",
       "devices",
       "users",
       "auth_challenges",

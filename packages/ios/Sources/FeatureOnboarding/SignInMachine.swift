@@ -18,7 +18,7 @@ public enum SignInFailure: Equatable, Sendable {
     switch error {
     case .api(.unauthorized), .api(.invalidRequest): self = .rejected
     case .api(.unavailable), .api(.notFound), .api(.invalidInvite), .api(.alreadyPaired),
-      .network, .status, .maintenance, .encoding, .decoding:
+      .api(.appleIdInUse), .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }
   }

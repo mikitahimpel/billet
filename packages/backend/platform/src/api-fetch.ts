@@ -24,6 +24,7 @@ import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairVariantsLive } from "./pair-variants-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
@@ -53,6 +54,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     Layer.provide(
       Layer.mergeAll(
         AuthRepositoryLive(env.DB),
+        BetterAuthEngineLive(env.DB),
         PairingRepositoryLive(env.DB),
         FlagsRepositoryLive(env.DB),
         FlagConfigRepositoryLive(env.DB, caches.default),
