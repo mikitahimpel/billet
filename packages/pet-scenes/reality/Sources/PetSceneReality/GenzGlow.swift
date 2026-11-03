@@ -25,6 +25,7 @@ final class GenzGlow {
   /// The fairy lights' colour, a warm filament white.
   static let bulbColour = GenzColour(0xFFD58A)
   static let bulbRadius: Float = 0.06
+  static let wireThickness: Float = 0.012
   static let bulbSpacing: Float = 0.34
   /// How far a string droops between two hooks.
   static let sag: Float = 0.28
@@ -133,7 +134,8 @@ final class GenzGlow {
       bulbPoints += points
       for point in points {
         let bulb = ModelEntity(mesh: bulbMesh, materials: [bulbMaterial])
-        bulb.position = point.scene + [0, -Self.bulbRadius, 0]
+        // Hung just under the wire, so its top never shares a plane with the wire's.
+        bulb.position = point.scene + [0, -Self.bulbRadius - Self.wireThickness, 0]
         fairy.addChild(bulb)
         bulbs.append(bulb)
       }
@@ -143,7 +145,7 @@ final class GenzGlow {
         let length = simd_distance(start, end)
         guard length > 0 else { continue }
         let segment = kit.part(
-          kit.box([0.012, 0.012, length]), wire, at: (start + end) / 2,
+          kit.box([Self.wireThickness, Self.wireThickness, length]), wire, at: (start + end) / 2,
           turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(end - start)))
         fairy.addChild(segment)
       }

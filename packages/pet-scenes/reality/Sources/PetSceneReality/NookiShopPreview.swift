@@ -60,6 +60,9 @@ final class NookiPreviewStage {
   init(models: NookiShopModels? = nil) {
     self.models = models ?? NookiShopModels()
     lens.camera.fieldOfViewInDegrees = 30
+    // The item stands about a metre and a quarter away, so these keep the depth fine.
+    lens.camera.near = 0.05
+    lens.camera.far = 20
     lens.look(at: [0, 0.2, 0], from: [0, 0.42, 1.25], relativeTo: nil)
     root.addChild(lens)
 

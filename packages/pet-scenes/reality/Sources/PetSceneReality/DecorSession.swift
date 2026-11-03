@@ -350,6 +350,7 @@ final class DecorSession {
       mesh: .generatePlane(width: 1, depth: 1, cornerRadius: 0.12),
       materials: [Self.markerMaterial(free: true)])
     marker.addChild(plane)
+    marker.position.y = markerHeight
   }
 
   private static func markerMaterial(free: Bool) -> UnlitMaterial {

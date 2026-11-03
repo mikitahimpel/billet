@@ -36,7 +36,8 @@ extension GenzKit {
     }
     let linen = piece.slot(1)
     let cushionSize = SIMD3<Float>(length - 0.1, 0.24, 1.36)
-    let cushionCentre = GenzRoomPoint(length / 2, 0.24 + cushionSize.z / 2, 1.18).scene
+    // The cushion's top stands just above the sill, so the two never share a plane.
+    let cushionCentre = GenzRoomPoint(length / 2, 0.24 + cushionSize.z / 2, 1.2).scene
     parts.append(
       part(stuffed(cushionSize, .cushion, repeats: 10), matte(linen, .linen), at: cushionCentre))
     parts.append(
@@ -44,7 +45,7 @@ extension GenzKit {
         tube("seat piping", piping(cushionSize, shape: .cushion), radius: 0.022, sides: 6),
         matte(linen.shaded(-0.12), .linen), at: cushionCentre))
     parts += pillows(piece)
-    parts += foldedThrow(piece.slot(2), x: 0.22, near: 0.8, top: 1.3)
+    parts += foldedThrow(piece.slot(2), x: 0.22, near: 0.8, top: 1.32)
     return parts
   }
 
@@ -84,7 +85,7 @@ extension GenzKit {
         : matte(spec.colour, .linen, repeats: [3, 3])
       let up = spec.height / 2
       let centre = GenzRoomPoint(
-        spec.x, 0.48 - up * sin(lean), 1.26 + up * cos(lean))
+        spec.x, 0.48 - up * sin(lean), 1.28 + up * cos(lean))
       return part(
         mesh, material, at: centre.scene,
         turn: simd_quatf(angle: spec.roll, axis: [0, 0, 1])
@@ -340,9 +341,10 @@ extension GenzKit {
     holder.position = point.scene + [0, 0.15, 0]
     holder.orientation = simd_quatf(angle: -0.18, axis: [1, 0, 0])
     holder.addChild(part(roundBox([0.26, 0.31, 0.03], radius: 0.008), matte(GenzColour(0x3B2A20))))
-    holder.addChild(part(box([0.2, 0.25, 0.006]), matte(GenzColour(0xF4EFE6)), at: [0, 0, 0.015]))
+    // The mat and the photo each stand clear of what is behind them, so no two share a plane.
+    holder.addChild(part(box([0.2, 0.25, 0.006]), matte(GenzColour(0xF4EFE6)), at: [0, 0, 0.02]))
     holder.addChild(
-      part(box([0.15, 0.15, 0.004]), matte(GenzColour(0xE9A07A)), at: [0, 0.03, 0.019]))
+      part(box([0.15, 0.15, 0.004]), matte(GenzColour(0xE9A07A)), at: [0, 0.03, 0.028]))
     return [holder]
   }
 
