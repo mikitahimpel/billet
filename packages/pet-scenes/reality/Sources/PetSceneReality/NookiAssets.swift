@@ -36,7 +36,9 @@ final class NookiAssets {
       return nil
     }
     do {
-      return try await Entity(contentsOf: url)
+      let cat = try await Entity(contentsOf: url)
+      SplatCat.dress(cat, as: model)
+      return cat
     } catch {
       log.error("\(name, privacy: .public): \(String(describing: error), privacy: .public)")
       return nil

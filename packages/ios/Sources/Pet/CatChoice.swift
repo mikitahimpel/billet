@@ -22,6 +22,16 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   case kitten
   /// A black cat with a white bib, muzzle and socks.
   case tuxedo
+  /// The detailed ginger tabby remade by Idol from one picture of it: a softer, plush-like body with
+  /// the coat baked into one texture, on the shared skeleton with every clip.
+  case idolGinger
+  /// Idol's ginger tabby as the Gaussian splat Idol made, skinned to the shared skeleton. Where
+  /// splats can't be drawn (before iOS 27, or on an older GPU) it is the Idol ginger mesh.
+  case splatGinger
+  /// The detailed tabby painted calico, remade by Idol: plush body, baked coat, every clip.
+  case idolCalico
+  /// The detailed tabby in its grey-and-white coat, remade by Idol: plush body, baked coat, every clip.
+  case idolGreyTabby
 
   public var title: String {
     switch self {
@@ -34,6 +44,10 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .chibi: "Chibi"
     case .kitten: "Fluffy kitten"
     case .tuxedo: "Tuxedo"
+    case .idolGinger: "Idol ginger"
+    case .splatGinger: "Splat ginger"
+    case .idolCalico: "Idol calico"
+    case .idolGreyTabby: "Idol grey tabby"
     }
   }
 
@@ -48,14 +62,43 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .chibi: "Big head, tiny body, huge eyes."
     case .kitten: "Tufted cheeks and a fluffy tail."
     case .tuxedo: "Black with a white bib and socks."
+    case .idolGinger: "Made by Idol from a picture of the tabby."
+    case .splatGinger: "Idol's ginger as a soft Gaussian splat."
+    case .idolCalico: "Made by Idol from a picture of a calico."
+    case .idolGreyTabby: "Made by Idol from a picture of the grey tabby."
     }
   }
 
   /// Whether each coat is a whole painted texture, `Cat_<model>_<coat>.jpg`, not a palette.
   public var paintsCoatTextures: Bool {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy, .hero: true
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .idolCalico,
+      .idolGreyTabby, .splatGinger:
+      true
     case .tabby, .plush, .chibi, .kitten, .tuxedo: false
+    }
+  }
+
+  /// The Gaussian-splat body this model wears where splats can be drawn, `<name>.bsplat` beside
+  /// the cat files; elsewhere its mesh shows. Nil for a cat that is only a mesh.
+  public var splatBody: String? {
+    switch self {
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .tabby, .plush, .chibi, .kitten,
+      .tuxedo, .idolGinger, .idolCalico, .idolGreyTabby:
+      nil
+    case .splatGinger: "Splat_ginger"
+    }
+  }
+
+  /// The model whose compiled mesh, clips and textures this one uses. A splat cat moves on the
+  /// skeleton of the mesh made from the same Idol picture, and shows that mesh where splats can't
+  /// be drawn.
+  public var mesh: CatModel {
+    switch self {
+    case .splatGinger: .idolGinger
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .tabby, .plush, .chibi, .kitten,
+      .tuxedo, .idolGinger, .idolCalico, .idolGreyTabby:
+      self
     }
   }
 
@@ -65,6 +108,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     switch self {
     case .tabby, .plush, .chibi, .kitten, .tuxedo: CatCoat.allCases
     case .detailed, .detailedKitten, .detailedFluffy, .hero: [.natural, .greyWhite, .black]
+    // Idol bakes the coat it saw into the texture; another coat is another Idol cat.
+    case .idolGinger, .idolCalico, .idolGreyTabby, .splatGinger: [.natural]
     }
   }
 }
