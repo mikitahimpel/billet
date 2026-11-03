@@ -237,6 +237,25 @@ export const pairEvents = sqliteTable(
   ],
 );
 
+// What the detailed app events carried, per UTC day: how many times each name came with each
+// detail (a catalogue id such as a cat or an item, or a word from a closed list), and the sum of
+// their values (a price in stamps). No user and no pair: only which things are chosen, for the
+// admin's top lists. The rules for each name are `clientEventRules` in `contracts-domain/metrics`.
+export const eventDetails = sqliteTable(
+  "event_details",
+  {
+    name: text("name").notNull(),
+    detail: text("detail").notNull(),
+    day: text("day").notNull(),
+    count: integer("count").notNull(),
+    total: integer("total").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.name, table.detail, table.day] }),
+    index("event_details_day_index").on(table.day),
+  ],
+);
+
 // The live configuration of each experiment and remote flag, as the admin panel last saved it.
 // The registry in `backend-flags/experiments` defines the keys and variants; a row here only
 // changes weights, default, exposure, status, kill switch and targeting (JSON in `config`).

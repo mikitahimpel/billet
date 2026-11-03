@@ -89,4 +89,54 @@ export const describeMetricsRepositoryContract = (
       const [row] = await Effect.runPromise(repository.all);
       expect(row?.count).toBe(10);
     });
+    it("counts a detail by name and day, apart from the person, and sums its value", async () => {
+      const repository = await make();
+      await Effect.runPromise(
+        Effect.all([
+          repository.record({
+            pairId: "p1",
+            userId: ana,
+            name: "ShopItemBought",
+            at: day1,
+            detail: "lamp",
+            value: 30,
+          }),
+          repository.record({
+            pairId: "p2",
+            userId: ben,
+            name: "ShopItemBought",
+            at: day1Later,
+            detail: "lamp",
+            value: 30,
+          }),
+          repository.record({
+            pairId: "p1",
+            userId: ana,
+            name: "ShopItemBought",
+            at: day2,
+            detail: "lamp",
+            value: 30,
+          }),
+          repository.record({
+            pairId: "p1",
+            userId: ana,
+            name: "CatChosen",
+            at: day1,
+            detail: "tabby",
+          }),
+          repository.record({ pairId: "p1", userId: ana, name: "CatPetted", at: day1 }),
+        ]),
+      );
+      const details = await Effect.runPromise(repository.details);
+      expect(details).toHaveLength(3);
+      expect(details).toEqual(
+        expect.arrayContaining([
+          { name: "ShopItemBought", detail: "lamp", day: "2026-11-02", count: 2, total: 60 },
+          { name: "ShopItemBought", detail: "lamp", day: "2026-11-03", count: 1, total: 30 },
+          { name: "CatChosen", detail: "tabby", day: "2026-11-02", count: 1, total: 0 },
+        ]),
+      );
+      // The person's count is kept by name, as for any event.
+      expect(await Effect.runPromise(repository.all)).toHaveLength(5);
+    });
   });

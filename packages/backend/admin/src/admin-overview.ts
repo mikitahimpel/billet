@@ -6,6 +6,8 @@ import {
   type Share,
 } from "@billet/backend-metrics/funnel";
 
+import { buildInApp, type DetailRow, type InApp } from "./admin-in-app.ts";
+
 export interface DailyPoint {
   readonly day: string;
   /** People who opened the app or sent a note that day. */
@@ -37,6 +39,8 @@ export interface Overview {
     readonly bothActive: Share;
     readonly bothSentNote: Share;
   }>;
+  /** What people do in the app: see `buildInApp`. */
+  readonly inApp: InApp;
 }
 
 const active = (row: EventRow) => row.name === "AppOpened" || row.name === "NoteSent";
@@ -51,6 +55,7 @@ export const buildOverview = (
   userCount: number,
   today: string,
   days = 30,
+  details: ReadonlyArray<DetailRow> = [],
 ): Overview => {
   const report = buildReport(events, flags, today);
 
@@ -130,5 +135,6 @@ export const buildOverview = (
       bothActive,
       bothSentNote,
     })),
+    inApp: buildInApp(events, details, today),
   };
 };

@@ -1,0 +1,21 @@
+{
+  "events": [
+    {
+      "name": "AppOpened"
+    },
+    {
+      "detail": "idolIlya",
+      "name": "CatChosen"
+    },
+    {
+      "detail": "widget",
+      "name": "NoteOpened"
+    },
+    {
+      "detail": "fairy-lights",
+      "name": "ShopItemBought",
+      "value": 40
+    },
+    "CatPetted"
+  ]
+}

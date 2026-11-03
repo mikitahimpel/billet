@@ -166,12 +166,14 @@ const readHandlers = Effect.gen(function* () {
   };
 
   const overview = Effect.gen(function* () {
-    const [events, rows, users] = yield* Effect.all([
+    const [events, rows, users, details] = yield* Effect.all([
       data.events,
       data.assignments,
       data.userCount,
+      data.details,
     ]);
-    return respondJson(buildOverview(events, rows, users, utcDay(yield* Clock.currentTimeMillis)));
+    const today = utcDay(yield* Clock.currentTimeMillis);
+    return respondJson(buildOverview(events, rows, users, today, 30, details));
   }).pipe(guarded);
 
   const flagList = Effect.gen(function* () {

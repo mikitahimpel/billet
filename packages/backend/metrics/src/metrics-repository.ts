@@ -20,21 +20,43 @@ export const StoredMetric = Schema.Struct({
 });
 export type StoredMetric = typeof StoredMetric.Type;
 
+/**
+ * An `event_details` row: how many times one name came with one detail on one UTC day, and the sum
+ * of their values. No user and no pair.
+ */
+export const StoredDetail = Schema.Struct({
+  name: MetricEventName,
+  detail: Schema.String,
+  day: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
+  count: Schema.Int,
+  total: Schema.Int,
+});
+export type StoredDetail = typeof StoredDetail.Type;
+
 /** One occurrence, before it is added to its day's count. */
 export interface MetricOccurrence {
   readonly pairId: string;
   readonly userId: UserId;
   readonly name: MetricEventName;
   readonly at: EpochMillis;
+  /** Also counted in `event_details`, apart from the person, when present. */
+  readonly detail?: string | undefined;
+  /** Added to the detail's `total`. Only with a detail. */
+  readonly value?: number | undefined;
 }
 
 /** Counts. Failure is a defect for the caller to log: a counter must never fail a request. */
 export class MetricsRepository extends Context.Service<
   MetricsRepository,
   {
-    /** Adds one to the day's count, or starts it. Two at once both count. */
+    /**
+     * Adds one to the day's count, or starts it, and the same for its detail when it has one. Two
+     * at once both count.
+     */
     readonly record: (occurrence: MetricOccurrence) => Effect.Effect<void, MetricsUnavailable>;
     /** Every row, oldest day first, for tests. */
     readonly all: Effect.Effect<ReadonlyArray<StoredMetric>, MetricsUnavailable>;
+    /** Every detail row, oldest day first, for tests. */
+    readonly details: Effect.Effect<ReadonlyArray<StoredDetail>, MetricsUnavailable>;
   }
 >()("@billet/backend-metrics/MetricsRepository") {}

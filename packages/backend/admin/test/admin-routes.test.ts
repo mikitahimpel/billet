@@ -14,6 +14,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
+import type { DetailRow } from "../src/admin-in-app.ts";
 import { adminApi, AdminRoutes, CurrentAdmin } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
@@ -42,6 +43,7 @@ const experiments = defineExperiments([
 
 const today = new Date().toISOString().slice(0, 10);
 const events: Array<EventRow> = [];
+const details: Array<DetailRow> = [];
 const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
@@ -69,6 +71,7 @@ const handlerFor = (email: string) =>
               }),
               Layer.succeed(AdminData, {
                 events: Effect.sync(() => events),
+                details: Effect.sync(() => details),
                 assignments: Effect.succeed([]),
                 userCount: Effect.succeed(3),
                 pair: (pairId) =>
@@ -117,6 +120,7 @@ beforeEach(() => {
   assignments = makeInMemoryFlagsRepository();
   appStatus = makeInMemoryAppStatusStore();
   events.length = 0;
+  details.length = 0;
 });
 
 describe("the admin API", () => {
@@ -239,6 +243,25 @@ describe("the admin API", () => {
       0,
     ]);
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
+  });
+
+  it("adds what people do in the app, with the most chosen things", async () => {
+    events.push({
+      pairId: "p1",
+      userId: "u1",
+      name: "CatChosen",
+      day: today,
+      count: 1,
+      firstAt: 4,
+    });
+    details.push({ name: "CatChosen", detail: "tabby", day: today, count: 1, total: 0 });
+    const { body } = await call(adminApi.overview);
+    const chosen = body.inApp.events.find(({ name }: { name: string }) => name === "CatChosen");
+    expect(chosen).toMatchObject({ pairs7d: 1 });
+    expect(chosen.daily.at(-1)).toBe(1);
+    expect(body.inApp.top.find(({ name }: { name: string }) => name === "CatChosen").items).toEqual(
+      [{ detail: "tabby", count: 1 }],
+    );
   });
 
   describe("pairs", () => {

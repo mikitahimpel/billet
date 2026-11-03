@@ -147,6 +147,15 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ReportEventsRequest", ReportEventsRequest, {
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },
+    detailed: {
+      events: [
+        { name: "AppOpened" },
+        { name: "CatChosen", detail: "idolIlya" },
+        { name: "NoteOpened", detail: "widget" },
+        { name: "ShopItemBought", detail: "fairy-lights", value: 40 },
+        "CatPetted",
+      ],
+    },
   }),
   fixture("StatusResponse", StatusResponse, {
     normal: { status: { maintenance: { active: false } } },
@@ -157,6 +166,9 @@ export const catalog: ReadonlyArray<Fixture> = [
         minVersion: "1.2.0+14",
         notice: { key: "notice.slow-notes", text: "Notes may be slow tonight." },
       },
+    },
+    "analytics-off": {
+      status: { maintenance: { active: false }, analytics: { enabled: false } },
     },
   }),
   fixture("MaintenanceResponse", MaintenanceResponse, {
