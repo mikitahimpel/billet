@@ -48,7 +48,14 @@ const admin = async (
 beforeEach(resetDirectory);
 
 describe("the admin panel behind Cloudflare Access", () => {
-  const paths = ["/admin", "/admin/app.js", "/admin/api/me", "/admin/api/flags", "/admin/nothing"];
+  const paths = [
+    "/admin",
+    "/admin/app.js",
+    "/admin/lib.js",
+    "/admin/api/me",
+    "/admin/api/flags",
+    "/admin/nothing",
+  ];
 
   it.each(paths)("refuses %s without an Access token with a bare 403", async (path) => {
     const response = await admin(path, { token: null });
@@ -95,13 +102,19 @@ describe("the admin panel behind Cloudflare Access", () => {
     expect(await page.text()).toContain("/admin/app.js");
     expect((await admin("/admin/app.js")).headers.get("content-type")).toContain("javascript");
     expect((await admin("/admin/app.css")).headers.get("content-type")).toContain("text/css");
+    expect((await admin("/admin/lib.js")).headers.get("content-type")).toContain("javascript");
   });
 
   it("answers the API as the Access identity", async () => {
     const response = await admin("/admin/api/me", {
       token: await signAccess({ email: "o@example.com" }),
     });
-    expect(await response.json()).toEqual({ email: "o@example.com" });
+    expect(await response.json()).toEqual({ email: "o@example.com", environment: "unknown" });
+  });
+
+  it("tells the panel which stage it is on", async () => {
+    const response = await admin("/admin/api/me", {}, { ...configured, STAGE: "dev" });
+    expect(await response.json()).toMatchObject({ environment: "dev" });
   });
 
   it("refuses a write from another site, and takes one from the panel's own origin", async () => {
