@@ -1471,7 +1471,8 @@ extension GenzRoom {
 
   func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
     let heading = homeHeading
-    trip = CatTrip(from: home, heading: heading, legs: legs, at: clock)
+    trip = CatTrip(
+      from: home, heading: heading, legs: legs.clear(of: layout, from: home), at: clock)
     tripKind = kind
   }
 
