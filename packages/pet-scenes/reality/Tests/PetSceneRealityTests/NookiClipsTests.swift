@@ -52,6 +52,12 @@ import Testing
     // stride, and travel has to match the stance or the paws skate.
     #expect(abs(NookiClip.pawSpeed - 0.083 / 0.62) < 0.01)
   }
+
+  @Test func runningAtTheClipsOwnSpeedKeepsPlantedPawsStill() {
+    // A 0.45 s gallop, each paw down for 36% of it and travelling 0.08 m while down.
+    #expect(abs(NookiClip.runPawSpeed - 0.08 / (0.36 * 0.45)) < 0.05)
+    #expect(NookiClip.runningSpeed > 3 * NookiClip.walkingSpeed)
+  }
 }
 
 @MainActor @Suite struct NookiBundledRigTests {

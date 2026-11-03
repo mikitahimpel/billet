@@ -65,6 +65,19 @@
   "trimEnd": 49.6667,
   "trimStart": 46.6667
  },
+ "lieDown": {
+  "base": "stand",
+  "ends": "sleep",
+  "loops": false,
+  "trimEnd": 89.4,
+  "trimStart": 86.2
+ },
+ "loaf": {
+  "base": "loaf",
+  "loops": true,
+  "trimEnd": 85.0667,
+  "trimStart": 79.0667
+ },
  "look": {
   "base": "sit",
   "loops": true,
@@ -94,6 +107,12 @@
   "loops": false,
   "trimEnd": 62.0,
   "trimStart": 58.0
+ },
+ "run": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 85.8667,
+  "trimStart": 85.4
  },
  "sit": {
   "base": "sit",

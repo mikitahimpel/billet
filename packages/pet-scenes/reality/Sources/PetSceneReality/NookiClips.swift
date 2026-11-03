@@ -25,6 +25,15 @@ enum NookiClip: String, CaseIterable, Sendable {
   /// How fast the walk clip's feet travel at normal rate, in metres a second in the room.
   static let walkingSpeed: Float = pawSpeed * NookiDiorama.catScale
 
+  /// How fast a planted paw moves back in the run clip at normal rate, in the model's metres a
+  /// second: a gallop of 0.45 s with each paw down for 36% of it and travelling 0.08 m, which is
+  /// 0.49 by design; measured off the four detailed cats it is 0.42 to 0.47.
+  static let runPawSpeed: Float = 0.46
+
+  /// How fast the run clip's feet travel at normal rate, in metres a second in the room: about
+  /// 3.7 times the walk. A slower run plays the clip slower.
+  static let runningSpeed: Float = runPawSpeed * NookiDiorama.catScale
+
   private static let fastestWalk: Float = 3
 
   /// The playback rate that keeps feet from sliding at `speed` metres a second.
