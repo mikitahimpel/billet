@@ -156,7 +156,12 @@ export const adoptFrame = (play: AdoptFrame): Readonly<Record<string, unknown>> 
     case "adopt":
       return { type: "adopt", id: play.id, move: play.move, cat: play.cat };
     case "hold":
-      return { type: "adopt", id: play.id, move: play.move, holding: play.holding };
+      return {
+        type: "adopt",
+        id: play.id,
+        move: play.move,
+        holding: play.holding,
+      };
   }
 };
 

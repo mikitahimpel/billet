@@ -112,7 +112,10 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       const token = frame["token"];
       if (typeof token !== "string" || !TOKEN.test(token)) return;
       const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
-      await this.ctx.storage.put("tokens", { ...tokens, [sender]: token.toLowerCase() });
+      await this.ctx.storage.put("tokens", {
+        ...tokens,
+        [sender]: token.toLowerCase(),
+      });
       return;
     }
     if (frame["type"] === "play") {
@@ -209,9 +212,19 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
         const partner = devices.find((d) => d !== sender);
         if (partner !== undefined) {
-          await this.relayPet({ ...play, kind: "pet", from: sender, to: partner });
+          await this.relayPet({
+            ...play,
+            kind: "pet",
+            from: sender,
+            to: partner,
+          });
         }
-        await this.recordLife({ id: play.id.toLowerCase(), kind: "pet", by: sender, at: play.at });
+        await this.recordLife({
+          id: play.id.toLowerCase(),
+          kind: "pet",
+          by: sender,
+          at: play.at,
+        });
       } else {
         await this.recordLife({
           id: play.id.toLowerCase(),
@@ -303,7 +316,14 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   private async deliverOrQueue(note: QueuedNote): Promise<QueuedNote | undefined> {
     const [target] = this.ctx.getWebSockets(note.to);
     if (target !== undefined) {
-      target.send(JSON.stringify({ type: "note", id: note.id, ink: note.ink, from: note.from }));
+      target.send(
+        JSON.stringify({
+          type: "note",
+          id: note.id,
+          ink: note.ink,
+          from: note.from,
+        }),
+      );
       return undefined;
     }
     const queue = (await this.ctx.storage.get<QueuedNote[]>("queue")) ?? [];
