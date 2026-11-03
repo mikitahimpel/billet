@@ -86,8 +86,11 @@ enum GenzOpening {
   /// How warm a room is after a note lands, from 1 just after down to 0 over a few seconds.
   static func warmth(sinceLanding time: Double?) -> Double {
     guard let time, time >= 0 else { return 0 }
-    return max(0, 1 - time / 6)
+    return max(0, 1 - time / warmthLength)
   }
+
+  /// How long a room stays warm after a note lands, in seconds.
+  static let warmthLength: Double = 6
 
   // MARK: Curves
 

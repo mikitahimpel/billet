@@ -123,8 +123,7 @@ struct GenzRoomView: View {
   @State private var holder = Entity()
   @State private var size: CGSize?
   @Environment(\.petSceneLighting) private var lighting
-  @State private var lastDrag = CGSize.zero
-  @State private var lastPinch: CGFloat = 1
+  @State private var track = GestureTrack()
   /// Where the drag in progress goes, decided where it began: the cat, a toy or the camera.
   @State private var dragRoute: CatTouchRoute?
   /// When the finger in the room touched down, and when it began to move.
@@ -180,7 +179,7 @@ struct GenzRoomView: View {
     ZStack {
       layer(behind, room: room)
       theirSky
-      GlowHaze(look: look, window: room.screen.window)
+      RoomHaze(look: look, screen: room.screen)
       stage(room)
       ForEach(over, id: \.self) { slot in layer(slot, room: room) }
       GlowLights(
@@ -190,7 +189,7 @@ struct GenzRoomView: View {
       GlowVignette(look: look)
       CatPurrOverlay(purr: room.purr)
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
-      catAnchor(room)
+      RoomCatAnchor(screen: room.screen)
     }
     .ignoresSafeArea()
     .overlay { decorControls(room) }
@@ -233,10 +232,17 @@ struct GenzRoomView: View {
     replacementArt?.view(for: slot, state: state) ?? GenzNativeArt().view(for: slot, state: state)
   }
 
-  /// One flat layer, redrawn every frame while the room is on screen. The window's view is drawn
-  /// by an artist's file for its slot or its view if there is one, else natively.
+  /// One flat layer, redrawn every frame while the room opens and then only as often as it
+  /// changes. The window's view is drawn by an artist's file for its slot or its view if there is
+  /// one, else natively.
   private func layer(_ slot: RoomLayerSlot, room: GenzRoom) -> some View {
-    TimelineView(.animation(paused: !isOnScreen || reduceMotion)) { context in
+    // Art from a file may move all the time, so it keeps every frame.
+    let isNative = replacementArt == nil && (slot != .windowNight || viewArt == nil)
+    let schedule = RoomLayerSchedule(
+      busyUntil: isNative ? room.screen.busyUntil : .distantFuture,
+      steady: isNative ? slot.steadyInterval : RoomLayerSchedule.busy,
+      isPaused: !isOnScreen || reduceMotion)
+    return TimelineView(schedule) { context in
       let state = room.screen.state(for: slot, at: context.date)
       if slot == .windowNight, replacementArt?.view(for: slot, state: state) == nil {
         let viewState = room.screen.viewState(at: context.date)
@@ -251,14 +257,6 @@ struct GenzRoomView: View {
     }
     .allowsHitTesting(false)
     .accessibilityHidden(true)
-  }
-
-  private func catAnchor(_ room: GenzRoom) -> some View {
-    Color.clear
-      .anchorPreference(key: PetSceneCatAnchorKey.self, value: .point(room.screen.cat ?? .zero)) {
-        room.screen.cat == nil ? nil : $0
-      }
-      .allowsHitTesting(false)
   }
 
   private func stage(_ room: GenzRoom) -> some View {
@@ -558,9 +556,9 @@ struct GenzRoomView: View {
           if let event = room.bat(at: value.location) { onEvent(event) }
           guard orbits else { return }
           room.orbit(
-            byX: Float(value.translation.width - lastDrag.width),
-            y: Float(value.translation.height - lastDrag.height))
-          lastDrag = value.translation
+            byX: Float(value.translation.width - track.drag.width),
+            y: Float(value.translation.height - track.drag.height))
+          track.drag = value.translation
         case .pat, .trick, .lift, .fillBowl, .call, .scenery, .ignore:
           break
         }
@@ -570,7 +568,7 @@ struct GenzRoomView: View {
           dragRoute = nil
           setOff = nil
         }
-        lastDrag = .zero
+        track.drag = .zero
         switch dragRoute {
         case .stroke: room.strokeEnded()
         case .offerTreat: room.endTreat()
@@ -604,11 +602,11 @@ struct GenzRoomView: View {
     MagnifyGesture()
       .onChanged { value in
         guard room.decor.selected == nil else { return }
-        room.zoom(by: Float(value.magnification / lastPinch))
-        lastPinch = value.magnification
+        room.zoom(by: Float(value.magnification / track.pinch))
+        track.pinch = value.magnification
       }
       .onEnded { _ in
-        lastPinch = 1
+        track.pinch = 1
         room.endZoom()
       }
   }

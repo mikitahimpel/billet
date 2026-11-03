@@ -116,14 +116,13 @@ private struct NookiStage: View {
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @State private var shopRoom: NookiShopRoom
-  @State private var lastDrag = CGSize.zero
+  @State private var track = GestureTrack()
   /// Whether the drag in progress began on one of the toys Nooki adds, once that is known.
   @State private var toyDrag: NookiDrag?
   @State private var lastTap: CatTap?
   @State private var holding: CatHold?
   @State private var holdTimer: Task<Void, Never>?
 
-  @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
   @State private var isRenovating = false
   @State private var paint = NookiSwatch.cream
@@ -446,13 +445,13 @@ private struct NookiStage: View {
         guard orbits else { return }
         let translation = value.gestureValue.translation
         diorama.orbit(
-          byX: Float(translation.width - lastDrag.width),
-          y: Float(translation.height - lastDrag.height))
-        lastDrag = translation
+          byX: Float(translation.width - track.drag.width),
+          y: Float(translation.height - track.drag.height))
+        track.drag = translation
       }
       .onEnded { value in
         let velocity = value.gestureValue.velocity
-        lastDrag = .zero
+        track.drag = .zero
         defer { toyDrag = nil }
         if toyDrag == .treat {
           diorama.endTreat()
@@ -560,11 +559,11 @@ private struct NookiStage: View {
     MagnifyGesture()
       .onChanged { value in
         guard diorama.renovation.decor.selected == nil else { return }
-        diorama.zoom(by: Float(value.magnification / lastPinch))
-        lastPinch = value.magnification
+        diorama.zoom(by: Float(value.magnification / track.pinch))
+        track.pinch = value.magnification
       }
       .onEnded { _ in
-        lastPinch = 1
+        track.pinch = 1
         diorama.endZoom()
       }
   }

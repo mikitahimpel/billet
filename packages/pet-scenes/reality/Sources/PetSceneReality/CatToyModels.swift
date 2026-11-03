@@ -17,9 +17,9 @@ enum CatToyModels {
     }
 
     let ball = ModelEntity(
-      mesh: .generateSphere(radius: length * 0.07), materials: [material(0x7EC8E3, rough: 0.35)])
+      mesh: LowPoly.sphere(radius: length * 0.07), materials: [material(0x7EC8E3, rough: 0.35)])
     let yarn = ModelEntity(
-      mesh: .generateSphere(radius: length * 0.09), materials: [material(0xD9566B, rough: 0.95)])
+      mesh: LowPoly.sphere(radius: length * 0.09), materials: [material(0xD9566B, rough: 0.95)])
     // A loose strand of yarn wound round it.
     let strand = ModelEntity(
       mesh: .generateBox(size: [length * 0.19, length * 0.012, length * 0.012]),
@@ -32,7 +32,7 @@ enum CatToyModels {
         size: [length * 0.26, length * 0.045, length * 0.045], cornerRadius: 0.01),
       materials: [material(0x3B3F4A, rough: 0.4)])
     let tip = ModelEntity(
-      mesh: .generateSphere(radius: length * 0.02),
+      mesh: LowPoly.sphere(radius: length * 0.02),
       materials: [UnlitMaterial(color: .init(red: 1, green: 0.2, blue: 0.2, alpha: 1))])
     tip.position = [length * 0.135, 0, 0]
     pen.addChild(tip)
@@ -48,7 +48,7 @@ enum CatToyModels {
     feather.name = "feather"
     for (index, hex) in [UInt32(0xF4A6C6), 0xE76FA5, 0xFFD27A].enumerated() {
       let plume = ModelEntity(
-        mesh: .generateSphere(radius: length * 0.045), materials: [material(hex, rough: 1)])
+        mesh: LowPoly.sphere(radius: length * 0.045), materials: [material(hex, rough: 1)])
       plume.scale = [0.45, 0.35, 1.6]
       plume.orientation = simd_quatf(angle: Float(index - 1) * 0.45, axis: [0, 1, 0])
       plume.position = [Float(index - 1) * length * 0.02, 0, -length * 0.05]
@@ -72,7 +72,7 @@ enum CatToyModels {
   /// The red dot a laser pointer makes on the floor.
   static func laserDot(length: Float) -> ModelEntity {
     let dot = ModelEntity(
-      mesh: .generateCylinder(height: 0.002, radius: length * 0.06),
+      mesh: LowPoly.cylinder(height: 0.002, radius: length * 0.06),
       materials: [UnlitMaterial(color: .init(red: 1, green: 0.12, blue: 0.12, alpha: 1))])
     dot.isEnabled = false
     return dot

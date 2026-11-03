@@ -173,10 +173,19 @@ public enum ScenePerf {
     try? await Task.sleep(for: .seconds(seconds))
   }
 
-  /// Asks the measuring script for a screenshot, and holds still while it takes one.
+  /// Asks the measuring script for a screenshot, and holds still until it says it has one: the
+  /// script writes `perf-shots/<name>` into the App Group, or 20 seconds pass.
   private static func shot(_ name: String) async {
     emit("shot \(name)")
-    await pause(1.5)
+    let done = FileManager.default
+      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mikitahimpel.billet")?
+      .appending(path: "perf-shots/\(name)")
+    let deadline = Date.now.addingTimeInterval(20)
+    while Date.now < deadline {
+      if let done, FileManager.default.fileExists(atPath: done.path) { return }
+      await pause(0.1)
+    }
+    emit("error no screenshot of \(name)")
   }
 
   private static func census() {

@@ -216,6 +216,8 @@ final class GenzRoom: CatPlayStage {
   private var tilt = NookiTilt()
   private var ambientLight: Entity?
   private let dayLamp = Entity()
+  /// The look the sunset disc's texture holds now.
+  private var drawnDisc: DiscLook?
   private(set) var glow: GenzGlow?
   /// The lighting preset the room is lit with.
   private(set) var look = LightingLook.off
@@ -322,6 +324,7 @@ final class GenzRoom: CatPlayStage {
     holder: Entity, piece: Entity
   ) {
     let piece = kit.build(placement.piece)
+    kit.merge(piece, key: "\(placement.piece)")
     let size = placement.piece.kind.size
     piece.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
     let holder = Entity()
@@ -1010,6 +1013,7 @@ final class GenzRoom: CatPlayStage {
       DirectionalLightComponent(
         color: (look?.sunColour ?? .one).platformColour,
         intensity: look.map { $0.sunIntensity * 1.5 } ?? 0))
+    dayLamp.isEnabled = look != nil
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
     ambient.intensityExponent =
       Self.ambientExponent + Self.ambientShift(look, phase: dayLight?.here.phase)
@@ -1159,17 +1163,18 @@ final class GenzRoom: CatPlayStage {
     let bloom = GenzOpening.discBloom(time) * (lampOn ? 1 : 0)
     let boost = lampBoost
     if changed("lamp", click + bloom * 10 + warmth * 100 + Double(boost) * 1_000, step: 0.02) {
-      lampLight.components[SpotLightComponent.self]?.intensity =
-        Float(click) * 90_000 * Float(1 + 0.3 * warmth) * boost
-      fillLight.components[PointLightComponent.self]?.intensity =
-        Float(bloom) * 26_000 * Float(1 + 0.4 * warmth)
+      lampLight.setLight(intensity: Float(click) * 90_000 * Float(1 + 0.3 * warmth) * boost)
+      fillLight.setLight(intensity: Float(bloom) * 26_000 * Float(1 + 0.4 * warmth))
+    }
+    // The lens follows the switch alone: a candle's flicker moves the light, not its material.
+    if changed("lens", click, step: 0.02) {
       for lens in lenses {
         lens.model?.materials = [kit.glow(GenzColour(0xFFB066).shaded(Float(click) - 1))]
       }
     }
     let moon = GenzOpening.eased(time, from: 0.2, length: 1)
     if changed("moon", moon) {
-      outsideLight.components[DirectionalLightComponent.self]?.intensity = Float(moon) * 420
+      outsideLight.setLight(intensity: Float(moon) * 420)
     }
     let breath = GenzOpening.discBreath(time) * (0.92 + 0.08 * warmth)
     if changed("breath", breath, step: 0.02) { setDiscOpacity(breath) }
@@ -1189,15 +1194,17 @@ final class GenzRoom: CatPlayStage {
   private func applyWindow(_ time: Double, warmth: Double) {
     let street = GenzOpening.streetLamp(time)
     if changed("street", street) {
-      outsideLight.components[DirectionalLightComponent.self]?.intensity = Float(street) * 900
+      outsideLight.setLight(intensity: Float(street) * 900)
     }
     let led = GenzOpening.windowLED(time)
     if changed("led", led, step: 0.05) { setLED(led) }
     let lamp = (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0)
     let boost = lampBoost
     if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
-      lampLight.components[PointLightComponent.self]?.intensity =
-        Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost
+      lampLight.setLight(intensity: Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost)
+    }
+    // The shade follows the switch alone, as the sunset lamp's lens does.
+    if changed("shade", lamp, step: 0.02) {
       for shade in shades {
         shade.model?.materials = [kit.glow(GenzColour(0xF3E3C3).shaded(Float(lamp) * 0.55 - 0.55))]
       }
@@ -1215,6 +1222,7 @@ final class GenzRoom: CatPlayStage {
         at: GenzRoomPoint(x + 3, 4, 0.3).scene, from: GenzRoomPoint(x, -7, 2.2).scene,
         relativeTo: room)
       let fade = pass.map { sin(Float($0) * .pi) } ?? 0
+      // Stays in the scene between cars: a light joining and leaving every pass costs a frame.
       headlight.components[SpotLightComponent.self]?.intensity = reduceMotion ? 0 : fade * 160_000
     }
   }
@@ -1256,9 +1264,16 @@ final class GenzRoom: CatPlayStage {
   private func refreshTextures(time: Double, warmth: Double) {
     lastTexture = clock
     var state = RoomLayerState(time: time, warmth: warmth, lampOn: lampOn)
-    if discModel != nil,
+    // The native disc only changes with its bloom, the lamp and the warmth, so once it has
+    // bloomed it is drawn again only when one of those changes.
+    let disc = DiscLook(
+      bloom: (GenzOpening.discBloom(time) * 100).rounded(), warmth: (warmth * 100).rounded(),
+      lampOn: lampOn)
+    let discIsDrawn = art is GenzNativeArt && discTexture != nil && disc == drawnDisc
+    if discModel != nil, !discIsDrawn,
       let image = art.image(for: .sunsetDisc, state: state, pixels: Self.discPixels)
     {
+      if discTexture != nil { drawnDisc = disc }
       updateTexture(image, current: discTexture, key: "disc") { texture in
         self.discTexture = texture
         var material = UnlitMaterial()
@@ -1281,6 +1296,13 @@ final class GenzRoom: CatPlayStage {
         if let receiver = self.ambientReceiver { self.posterModel?.components.set(receiver) }
       }
     }
+  }
+
+  /// What the native sunset disc was last drawn with.
+  private struct DiscLook: Equatable {
+    var bloom: Double
+    var warmth: Double
+    var lampOn: Bool
   }
 
   /// Draws `image` into the texture, or makes the texture first. Only one is ever made per `key`.
@@ -1601,7 +1623,7 @@ extension GenzRoom {
   func buildLightDot() {
     let radius = layout.cat.length * 0.07
     lightDot.model = ModelComponent(
-      mesh: .generateCylinder(height: 0.002, radius: radius),
+      mesh: LowPoly.cylinder(height: 0.002, radius: radius),
       materials: [UnlitMaterial(color: .init(red: 1, green: 0.42, blue: 0.3, alpha: 1))])
     lightDot.name = Self.lightDotName
     lightDot.isEnabled = false

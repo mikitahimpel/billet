@@ -12,14 +12,14 @@ extension GenzRoom {
   func buildCareProps() {
     let length = layout.cat.length
     let jar = ModelEntity(
-      mesh: .generateCylinder(height: length * 0.2, radius: length * 0.075),
+      mesh: LowPoly.cylinder(height: length * 0.2, radius: length * 0.075),
       materials: [
         SimpleMaterial(
           color: .init(red: 0.86, green: 0.93, blue: 0.97, alpha: 0.55), roughness: 0.15,
           isMetallic: false)
       ])
     let lid = ModelEntity(
-      mesh: .generateCylinder(height: length * 0.03, radius: length * 0.08),
+      mesh: LowPoly.cylinder(height: length * 0.03, radius: length * 0.08),
       materials: [
         SimpleMaterial(color: .init(red: 0.9, green: 0.45, blue: 0.4, alpha: 1), isMetallic: false)
       ])
@@ -49,7 +49,7 @@ extension GenzRoom {
   static func treatModel(length: Float) -> Entity {
     let colour = SimpleMaterial(
       color: .init(red: 0.78, green: 0.5, blue: 0.27, alpha: 1), roughness: 0.8, isMetallic: false)
-    let body = ModelEntity(mesh: .generateSphere(radius: length * 0.035), materials: [colour])
+    let body = ModelEntity(mesh: LowPoly.sphere(radius: length * 0.035), materials: [colour])
     body.scale = [1.6, 0.7, 0.9]
     let tail = ModelEntity(
       mesh: .generateBox(size: [length * 0.03, length * 0.035, length * 0.008]), materials: [colour]
