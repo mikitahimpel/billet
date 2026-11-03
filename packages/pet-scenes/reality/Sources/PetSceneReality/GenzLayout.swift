@@ -82,6 +82,9 @@ struct GenzLayout {
 
   /// How thick a window's sill is. The wall under the window stops at the sill's underside, so
   /// the two never show a top in the same plane.
+  /// How far a window sill stops short of the wall's outer face, so seen from outside the wall the
+  /// two never share a plane.
+  private static let sillInset: Float = 0.02
   private static let windowSill: Float = 0.12
 
   // MARK: - Sunset Lamp
@@ -106,7 +109,7 @@ struct GenzLayout {
       style: .sunsetLamp,
       camera: GenzCamera.Home(
         target: GenzRoomPoint(3.0, 3.6, 1.0).scene, yaw: 0.6, pitch: 0.44, distance: 20,
-        fieldOfView: 40, yawLimits: 0.2...1.15, pitchLimits: 0.22...0.85),
+        fieldOfView: 40, yawLimits: -0.2...1.6, pitchLimits: 0.22...0.85),
       pieces: [
         Placement(piece: GenzPiece(.checkeredRug), centre: GenzRoomPoint(3.9, 5.75, 0)),
         Placement(piece: GenzPiece(.cubeNightstand), centre: GenzRoomPoint(0.58, 0.58, 0)),
@@ -161,7 +164,8 @@ struct GenzLayout {
         -wall * 0.6, (window.y0 + window.y1) / 2 - 0.05, window.z0, 0.08, 0.1,
         window.z1 - window.z0, cut),
       kit.block(
-        -wall, window.y0 - 0.1, window.z0 - sill, wall + 0.3, opening + 0.2, sill,
+        -wall + sillInset, window.y0 - 0.1, window.z0 - sill, wall - sillInset + 0.3,
+        opening + 0.2, sill,
         kit.matte(GenzColour(0x5A4A58))),
       kit.block(-wall, -wall, height, width + wall, wall, 0.03, cut),
       kit.block(-wall, 0, height, wall, depth, 0.03, cut),
@@ -187,7 +191,7 @@ struct GenzLayout {
       style: .windowSeat,
       camera: GenzCamera.Home(
         target: GenzRoomPoint(4.3, 2.4, 1.9).scene, yaw: 0.34, pitch: 0.42, distance: 19.5,
-        fieldOfView: 40, yawLimits: 0.05...0.95, pitchLimits: 0.18...0.8),
+        fieldOfView: 40, yawLimits: -0.3...1.6, pitchLimits: 0.18...0.8),
       pieces: [
         Placement(piece: GenzPiece(.roundRug), centre: GenzRoomPoint(4.9, 4.3, 0)),
         Placement(piece: GenzPiece(.daybed), centre: GenzRoomPoint(3.8, 1.22, 0)),
@@ -237,7 +241,8 @@ struct GenzLayout {
       kit.block(window.x0, -wall, 0, opening, wall, window.z0 - sill, back),
       kit.block(window.x0, -wall, window.z1, opening, wall, height - window.z1, back),
       kit.block(
-        window.x0 - 0.2, -wall, window.z0 - sill, opening + 0.4, Seat.sillDepth + wall, sill,
+        window.x0 - 0.2, -wall + sillInset, window.z0 - sill, opening + 0.4,
+        Seat.sillDepth + wall - sillInset, sill,
         kit.matte(GenzColour(0x3A4660))),
       kit.block(-wall, -wall, height, width + wall, wall, 0.03, trim),
       kit.block(-wall, 0, height, wall, depth, 0.03, trim),

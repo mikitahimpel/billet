@@ -1,3 +1,6 @@
+import Foundation
+import simd
+
 /// What a touch in the room landed on, as a room finds it from the touch's first point.
 public enum CatTouchTarget: Hashable, Sendable {
   case cat
@@ -73,5 +76,54 @@ public enum CatTouchRouter {
       (.longPress, .scenery), (.longPress, .nothing):
       return .ignore
     }
+  }
+
+  /// How long a finger rests on the cat or a toy before moving for the drag to be theirs.
+  public static let restBeforeTaking: TimeInterval = 0.15
+  /// How far a quick drag goes before its direction is read, in points.
+  public static let readingDistance: Double = 12
+
+  /// Where a drag goes, from what its first point is on and how it began. `target` is what the
+  /// finger landed on itself, not what is near it. The cat, a toy or the treat jar takes the
+  /// drag when the finger rested on it first, or when it sets off along what that thing does: a
+  /// stroke along the cat's body, a flick of a ball up or down the floor, a toy carried any way.
+  /// A quick mostly sideways swipe always turns the room. Nil until a quick drag has gone far
+  /// enough to tell.
+  public static func routeDrag(
+    on target: CatTouchTarget, start: CatDragStart, isHoldingCat: Bool = false
+  ) -> CatTouchRoute? {
+    let route = route(.drag, on: target, isHoldingCat: isHoldingCat)
+    switch route {
+    case .stroke, .carry, .fling, .offerTreat: break
+    default: return route
+    }
+    if start.rested >= restBeforeTaking { return route }
+    let move = start.movement
+    guard simd_length(move) >= readingDistance else { return nil }
+    if abs(move.x) > abs(move.y) * 1.5 { return .camera }
+    switch target {
+    case .cat:
+      guard let axis = start.axis, simd_length(axis) > 0.001 else { return route }
+      let along = abs(simd_dot(simd_normalize(move), simd_normalize(axis)))
+      return along >= 0.8 ? route : .camera
+    default:
+      return route
+    }
+  }
+}
+
+/// How a drag began.
+public struct CatDragStart: Hashable, Sendable {
+  /// How long the finger rested before it began to move, in seconds.
+  public var rested: TimeInterval
+  /// How far the finger has gone since it touched down, in points with y down.
+  public var movement: SIMD2<Double>
+  /// The line a stroke runs along on screen, head to tail, when the drag began on the cat.
+  public var axis: SIMD2<Double>?
+
+  public init(rested: TimeInterval, movement: SIMD2<Double>, axis: SIMD2<Double>? = nil) {
+    self.rested = rested
+    self.movement = movement
+    self.axis = axis
   }
 }

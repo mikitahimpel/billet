@@ -127,6 +127,9 @@ struct GenzRoomView: View {
   @State private var lastPinch: CGFloat = 1
   /// Where the drag in progress goes, decided where it began: the cat, a toy or the camera.
   @State private var dragRoute: CatTouchRoute?
+  /// When the finger in the room touched down, and when it began to move.
+  @State private var touchedDown: Date?
+  @State private var setOff: Date?
   @State private var lastTap: CatTap?
   @State private var holding: CatHold?
   @State private var holdTimer: Task<Void, Never>?
@@ -500,6 +503,7 @@ struct GenzRoomView: View {
     DragGesture(minimumDistance: 0)
       .onChanged { value in
         if holding == nil {
+          touchedDown = value.time
           holding = .pressing
           guard !isDecorating, room.isOverCat(value.startLocation) else {
             holding = .elsewhere
@@ -525,15 +529,15 @@ struct GenzRoomView: View {
       }
   }
 
-  /// A drag from the cat strokes it and one from a toy plays with it; any other drag turns the
-  /// room. The cat's eyes follow the finger throughout.
+  /// A drag from the cat strokes it and one from a toy plays with it, as ``startingRoute`` tells;
+  /// any other drag turns the room. The cat's eyes follow the finger throughout.
   private func orbit(_ room: GenzRoom) -> some Gesture {
     DragGesture(minimumDistance: 6)
       .onChanged { value in
-        var route =
-          dragRoute
-          ?? CatTouchRouter.route(
-            .drag, on: room.tapTarget(at: value.startLocation), isHoldingCat: room.isHoldingCat)
+        guard var route = dragRoute ?? startingRoute(room, value) else {
+          room.followFinger(at: value.location)
+          return
+        }
         // A drag that moves or turns a piece is the piece's, to its end.
         if room.decor.isDragging || room.decor.isTurning { route = .ignore }
         let isFirst = dragRoute == nil
@@ -562,7 +566,10 @@ struct GenzRoomView: View {
         }
       }
       .onEnded { value in
-        defer { dragRoute = nil }
+        defer {
+          dragRoute = nil
+          setOff = nil
+        }
         lastDrag = .zero
         switch dragRoute {
         case .stroke: room.strokeEnded()
@@ -577,6 +584,20 @@ struct GenzRoomView: View {
           break
         }
       }
+  }
+
+  /// Where a drag goes once it has begun: to the cat, a toy or the treats only when it starts on
+  /// them and either rested there first or sets off along what they do. Nil while too short to
+  /// tell.
+  private func startingRoute(_ room: GenzRoom, _ value: DragGesture.Value) -> CatTouchRoute? {
+    let moved = setOff ?? value.time
+    setOff = moved
+    let start = CatDragStart(
+      rested: touchedDown.map { max(moved.timeIntervalSince($0), 0) } ?? 0,
+      movement: SIMD2(Double(value.translation.width), Double(value.translation.height)),
+      axis: room.catBody().map { $0.tail - $0.head })
+    return CatTouchRouter.routeDrag(
+      on: room.dragTarget(at: value.startLocation), start: start, isHoldingCat: room.isHoldingCat)
   }
 
   private func pinch(_ room: GenzRoom) -> some Gesture {

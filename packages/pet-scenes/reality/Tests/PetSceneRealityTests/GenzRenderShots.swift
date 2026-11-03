@@ -35,6 +35,8 @@
         ("home", 0, 0, 1),
         ("left", home.yawLimits.lowerBound - home.yaw, 0, 1),
         ("right", home.yawLimits.upperBound - home.yaw, 0, 1),
+        ("left-far", home.yawLimits.lowerBound - home.yaw, 0, home.zoomLimits.upperBound),
+        ("right-far", home.yawLimits.upperBound - home.yaw, 0, home.zoomLimits.upperBound),
         ("low", 0, home.pitchLimits.lowerBound - home.pitch, 1),
         ("high", 0, home.pitchLimits.upperBound - home.pitch, 1),
         ("close", middleYaw - home.yaw, 0, home.zoomLimits.lowerBound),
