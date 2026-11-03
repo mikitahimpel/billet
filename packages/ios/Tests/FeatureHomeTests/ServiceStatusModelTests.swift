@@ -174,6 +174,9 @@ private enum Status {
       api: backend.api,
       accounts: AccountStore(
         load: { nil }, save: { _, _ in }, setPaired: { _, _ in }, clear: {}),
+      keys: AccountKeyStore(
+        loadOrCreate: { () throws(PersistenceError) in "k" },
+        clear: { () throws(PersistenceError) in }),
       baseURL: URL(fileURLWithPath: "/"),
       labs: WidgetFeaturesModel(store: nil),
       eventStorage: .directory(
