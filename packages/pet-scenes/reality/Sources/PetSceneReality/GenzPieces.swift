@@ -426,8 +426,9 @@ extension GenzKit {
     return [
       block(0, 0, 0, 6.6, 2.4, 0.45, frame),
       block(0.06, 0.04, 0.45, 6.48, 2.3, 0.34, matte(piece.slot(1))),
-      block(0.3, 0.06, 0.79, 1.3, 0.45, 0.55, matte(piece.slot(1).shaded(0.45))),
-      block(1.8, 0.06, 0.79, 1.3, 0.45, 0.5, matte(piece.slot(0).shaded(0.4))),
+      // The pillows stand in front of the window sill, which reaches 0.57 into the room.
+      block(0.3, 0.6, 0.79, 1.3, 0.45, 0.55, matte(piece.slot(1).shaded(0.45))),
+      block(1.8, 0.6, 0.79, 1.3, 0.45, 0.5, matte(piece.slot(0).shaded(0.4))),
       block(3.4, 0.28, 0.79, 3.1, 2.08, 0.08, throwColour),
       block(3.4, 2.36, 0.25, 3.1, 0.06, 0.62, matte(piece.slot(2).shaded(-0.14))),
     ]

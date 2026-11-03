@@ -292,7 +292,8 @@ extension GenzRoom {
     guard laserOn || tripKind == nil else { return }
     if laserOn, let at = toys.heldAt {
       lightDot.isEnabled = true
-      lightDot.position = floorPoint(at, lift: 0.004)
+      // As high as the chase's dot, clear of the top it lands on.
+      lightDot.position = floorPoint(at, lift: 0.012)
       lightDot.components.set(OpacityComponent(opacity: 0.95))
     } else if toys.pursuit?.toy == .laser || lightDot.isEnabled {
       lightDot.isEnabled = false

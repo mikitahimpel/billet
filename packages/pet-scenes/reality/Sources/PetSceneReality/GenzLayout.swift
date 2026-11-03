@@ -56,6 +56,9 @@ struct GenzLayout {
   var shell: @MainActor (GenzKit) -> [Entity]
   /// The floor's width (x) and depth (y), from the back wall's left end.
   var floor: SIMD2<Float>
+  /// The top the cat lives on, when it is not a piece's: the window sill in the first Window
+  /// Seat, whose daybed is lower than the sill the cat sits on.
+  var catTop: (min: SIMD2<Float>, max: SIMD2<Float>)? = nil
   /// The set of furniture in the room.
   var furniture = RoomFurniture.original
 
@@ -167,12 +170,14 @@ struct GenzLayout {
 
   // MARK: - Window Seat
 
-  private enum Seat {
+  enum Seat {
     static let width: Float = 7.6
     static let depth: Float = 6
     static let height: Float = 5.4
     static let wall: Float = 0.35
     static let window = (x0: Float(0.6), x1: Float(7.0), z0: Float(1.3), z1: Float(5.0))
+    /// How far the sill under the window reaches into the room.
+    static let sillDepth: Float = 0.57
   }
 
   static let windowSeat: GenzLayout = {
@@ -211,7 +216,8 @@ struct GenzLayout {
       lamp: (GenzRoomPoint(2.15, 3.27, 1.6), GenzRoomPoint(2.15, 3.27, 0)),
       lampColour: GenzColour(0xFFC36B),
       shell: windowShell,
-      floor: [Seat.width, Seat.depth])
+      floor: [Seat.width, Seat.depth],
+      catTop: ([window.x0 - 0.2, 0], [window.x1 + 0.2, Seat.sillDepth]))
   }()
 
   private static func windowShell(_ kit: GenzKit) -> [Entity] {
@@ -231,7 +237,7 @@ struct GenzLayout {
       kit.block(window.x0, -wall, 0, opening, wall, window.z0 - sill, back),
       kit.block(window.x0, -wall, window.z1, opening, wall, height - window.z1, back),
       kit.block(
-        window.x0 - 0.2, -wall, window.z0 - sill, opening + 0.4, 0.62 + wall - 0.05, sill,
+        window.x0 - 0.2, -wall, window.z0 - sill, opening + 0.4, Seat.sillDepth + wall, sill,
         kit.matte(GenzColour(0x3A4660))),
       kit.block(-wall, -wall, height, width + wall, wall, 0.03, trim),
       kit.block(-wall, 0, height, wall, depth, 0.03, trim),
@@ -255,6 +261,7 @@ extension GenzLayout {
   /// or nil when the cat is on the floor. Trips keep to it, so the cat never walks out over the
   /// floor at the height of the bed.
   var catSurface: (min: SIMD2<Float>, max: SIMD2<Float>)? {
+    if let catTop { return catTop }
     let spot = cat.spot
     guard spot.z > 0.1 else { return nil }
     for placement in pieces {

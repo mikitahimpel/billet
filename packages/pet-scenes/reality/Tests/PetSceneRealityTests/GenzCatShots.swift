@@ -42,5 +42,38 @@
       let image = try await GenzRenderShots.render(renderer, width: 786, height: 1704)
       try GenzRenderShots.write(image, to: folder.appendingPathComponent("cat-to-cardigan.png"))
     }
+
+    /// The first Window Seat, with the cat sent towards the camera, and the daybed's pillows
+    /// against the sill.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_CAT_SHOTS"] != nil))
+    func catSentForwardOnTheFirstSeat() async throws {
+      let folder = URL(
+        fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_CAT_SHOTS"]))
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let layout = try #require(GenzLayout.of(.windowSeat, furniture: .original))
+      let room = GenzRoomCache(suite: "genz-cat-shots-\(UUID())").room(layout)
+      room.startBuilding()
+      let deadline = Date.now.addingTimeInterval(60)
+      while !(room.isBuilt && room.hasCat), Date.now < deadline {
+        try await Task.sleep(for: .milliseconds(10))
+      }
+      try #require(room.hasCat)
+      room.setLighting(.amberLantern)
+      room.room.isEnabled = true
+      room.catHolder.position = room.floorPoint(layout.onCatSurface([5.0, 2.2]))
+      room.catHolder.orientation = simd_quatf(angle: 0.4, axis: [0, 1, 0])
+
+      let renderer = try RealityRenderer()
+      renderer.entities.append(room.root)
+      let lens = PerspectiveCamera()
+      lens.camera.fieldOfViewInDegrees = layout.camera.fieldOfView
+      renderer.entities.append(lens)
+      renderer.activeCamera = lens
+      lens.look(
+        at: GenzRoomPoint(3.4, 1.0, 1.1).scene, from: GenzRoomPoint(6.8, 8.4, 3.0).scene,
+        relativeTo: nil)
+      let image = try await GenzRenderShots.render(renderer, width: 786, height: 1704)
+      try GenzRenderShots.write(image, to: folder.appendingPathComponent("first-seat.png"))
+    }
   }
 #endif
