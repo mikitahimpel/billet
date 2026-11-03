@@ -1,0 +1,198 @@
+name: iOS perf
+
+# Scene performance and the standard screenshots, measured on GitHub's Mac runners instead of the
+# shared local Mac. Release Simulator builds, unsigned: no secrets, no signing, no deploy, and the
+# token can only read, so a pull request from a fork gets nothing it could misuse.
+#
+#   gh workflow run perf.yml --ref <branch>                       # A/B main vs <branch>, and shots
+#   gh workflow run perf.yml --ref <branch> -f base=<ref> -f rounds=4 -f jobs=ab
+#   gh pr edit <n> --add-label perf                               # the same for a pull request
+#
+# Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
+# reports medians with min–max ranges. Compare ranges, not single numbers.
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: Ref to compare against
+        default: main
+      head:
+        description: Ref to measure (empty = the ref the run was started on)
+        default: ""
+      rounds:
+        description: A/B rounds, each one run of each build in turn
+        default: "3"
+      launches:
+        description: Cold launches per round
+        default: "2"
+      fulls:
+        description: Full scripted runs (orbit, zoom, rooms, lighting, tabs) per round
+        default: "1"
+      jobs:
+        description: What to run
+        type: choice
+        options: [both, ab, shots]
+        default: both
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+concurrency:
+  group: perf-${{ github.event.pull_request.number || github.ref }}-${{ inputs.head }}-${{ inputs.base }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # A pull request is measured at its head against the commit it is based on.
+  BASE_REF: ${{ inputs.base || github.event.pull_request.base.sha }}
+  HEAD_REF: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+
+# A pull request runs only while labelled `perf`, when the label goes on or on a new push.
+jobs:
+  ab:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.jobs != 'shots')
+      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+      && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    runs-on: macos-26
+    timeout-minutes: 150
+    env:
+      ROUNDS: ${{ inputs.rounds || '3' }}
+      LAUNCHES: ${{ inputs.launches || '2' }}
+      FULLS: ${{ inputs.fulls || '1' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.HEAD_REF }}
+          path: head
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.BASE_REF }}
+          path: base
+          persist-credentials: false
+
+      - name: Select Xcode from .xcode-version
+        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+
+      - name: Install XcodeGen
+        run: head/.github/scripts/install-xcodegen.sh
+
+      - name: Build base and head (Release, Simulator, unsigned)
+        run: |
+          for side in base head; do
+            echo "::group::build $side ($(git -C $side rev-parse --short HEAD))"
+            head/.github/scripts/build-perf.sh "$side" "$RUNNER_TEMP/$side-derived"
+            echo "::endgroup::"
+          done
+
+      - name: Pick the Simulator model
+        run: head/.github/scripts/pick-device.sh 'iPhone 17 Pro \('
+
+      - name: A/B, the two builds in turns
+        env:
+          PERF_OUT: ${{ runner.temp }}/perf
+          PERF_LOCK: ${{ runner.temp }}/sim.lock
+        run: |
+          [[ $ROUNDS =~ ^[0-9]+$ && $LAUNCHES =~ ^[0-9]+$ && $FULLS =~ ^[0-9]+$ ]] \
+            || { echo "::error::rounds, launches and fulls must be numbers"; exit 1; }
+          export PERF_AB_ARGS="--launches $LAUNCHES --full $FULLS"
+          zsh head/apps/ios/scripts/perf/ab.sh \
+            base "$RUNNER_TEMP/base-derived" head "$RUNNER_TEMP/head-derived" "$ROUNDS"
+
+      - name: Summary
+        if: always()
+        env:
+          PERF_OUT: ${{ runner.temp }}/perf
+        run: |
+          {
+            echo "## iOS perf A/B"
+            echo
+            echo "base \`$(git -C base rev-parse --short HEAD)\` ($BASE_REF) vs head \`$(git -C head rev-parse --short HEAD)\`;" \
+              "$ROUNDS rounds of $LAUNCHES launches + $FULLS full runs per build, in turns."
+            echo "Shared runner: compare the min–max ranges, not single numbers."
+            echo
+            if [[ -f $PERF_OUT/head/ab.md ]]; then cat "$PERF_OUT/head/ab.md"; else echo "No table: see the round logs in the artifact."; fi
+            echo
+            echo "Runner load (start and end of each run):"
+            echo '```'
+            cat "$PERF_OUT"/*/load.txt 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: perf-ab-${{ github.run_id }}
+          path: ${{ runner.temp }}/perf
+          if-no-files-found: warn
+
+  shots:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.jobs != 'ab')
+      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+      && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - size: se
+            model: 'iPhone SE \(3rd generation\)'
+          - size: pro-max
+            model: 'iPhone 17 Pro Max'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.HEAD_REF }}
+          path: head
+          persist-credentials: false
+
+      - name: Select Xcode from .xcode-version
+        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+
+      - name: Install XcodeGen
+        run: head/.github/scripts/install-xcodegen.sh
+
+      - name: Build head (Release, Simulator, unsigned)
+        run: head/.github/scripts/build-perf.sh head "$RUNNER_TEMP/head-derived"
+
+      - name: Pick the Simulator model
+        env:
+          MODEL: ${{ matrix.model }}
+        run: head/.github/scripts/pick-device.sh "$MODEL"
+
+      - name: Screenshots
+        env:
+          PERF_OUT: ${{ runner.temp }}/perf
+          PERF_LOCK: ${{ runner.temp }}/sim.lock
+          PERF_DERIVED: ${{ runner.temp }}/head-derived
+          PERF_DEVICE: billet-shots-${{ matrix.size }}
+        run: zsh head/apps/ios/scripts/perf/shots.sh shots-${{ matrix.size }}
+
+      - name: Summary
+        if: always()
+        env:
+          SHOTS: ${{ runner.temp }}/perf/shots-${{ matrix.size }}/shots
+          SIZE: ${{ matrix.size }}
+        run: |
+          {
+            echo "## Screenshots, $SIZE, head \`$(git -C head rev-parse --short HEAD)\`"
+            echo
+            if [[ -d $SHOTS ]]; then
+              echo "$(ls "$SHOTS" | wc -l | tr -d ' ') shots in the \`perf-shots-$SIZE\` artifact:"
+              ls "$SHOTS" | sed 's/^/- /'
+            else
+              echo "No shots: see the logs in the artifact."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: perf-shots-${{ matrix.size }}
+          path: ${{ runner.temp }}/perf
+          if-no-files-found: warn

@@ -43,6 +43,8 @@ repo=${app_dir:h:h}
 derived=${PERF_DERIVED:-$repo/build-perf}
 out=${PERF_OUT:-$HOME/.billet-manager/pet-concept/perf/runs}/$label
 device_name=${PERF_DEVICE:-billet-perf}
+# The model a missing device is made as, e.g. com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max.
+device_type=${PERF_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
 bundle=com.mikitahimpel.billet
 group=group.com.mikitahimpel.billet
 mkdir -p $out
@@ -98,7 +100,7 @@ if ! gate 2> /dev/null; then
 fi
 udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
 if [[ -z $udid ]]; then
-  udid=$(xcrun simctl create $device_name com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
+  udid=$(xcrun simctl create $device_name $device_type)
 fi
 trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true; perf_lock_give' EXIT
 xcrun simctl bootstatus $udid -b > /dev/null
