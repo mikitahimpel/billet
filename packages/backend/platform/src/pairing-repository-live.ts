@@ -9,7 +9,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
-import { invites, pairMembers, users } from "./directory-schema.ts";
+import { invites, pairMembers, partnerNotices, users } from "./directory-schema.ts";
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const unavailable = () => new PairingUnavailable({ reason: "directory-unavailable" });
@@ -101,11 +101,13 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
               .where(and(eq(invites.codeHash, codeHash), exists(newPair))),
           ),
           db.delete(invites).where(inArray(invites.ownerId, newPair)),
+          // A new pair ends any notice that an earlier partner left.
+          db.delete(partnerNotices).where(inArray(partnerNotices.userId, newPair)),
           db
             .select({ pairId: pairMembers.pairId })
             .from(pairMembers)
             .where(eq(pairMembers.userId, claimerId)),
-        ]).pipe(Effect.flatMap((results) => decodeClaimerRows(results[3]))),
+        ]).pipe(Effect.flatMap((results) => decodeClaimerRows(results[4]))),
       ).pipe(
         Effect.flatMap(([claimer]): Effect.Effect<void, InvalidInvite | AlreadyPaired> => {
           if (claimer === undefined) return Effect.fail(new InvalidInvite());

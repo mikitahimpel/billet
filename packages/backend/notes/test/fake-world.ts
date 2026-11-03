@@ -9,7 +9,7 @@ import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
-import { MediaStore } from "../src/media-store.ts";
+import { MediaStore, mediaPrefix } from "../src/media-store.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 
 export const user = Schema.decodeSync(UserId);
@@ -18,7 +18,7 @@ export const pair = Schema.decodeSync(PairId);
 /** The real room rules on memory. */
 const makeRoom = () => {
   let state: RoomState = { _tag: "Vacant" };
-  const notes: Array<SequencedNote> = [];
+  let notes: Array<SequencedNote> = [];
   let nextNote = 0;
   const keys = new Map<string, SequencedNote>();
   const store = Layer.succeed(RoomStore, {
@@ -35,6 +35,13 @@ const makeRoom = () => {
       Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    forgetAuthor: (author) =>
+      Effect.sync(() => {
+        const forgotten = notes.filter(({ note }) => note.author === author);
+        notes = notes.filter(({ note }) => note.author !== author);
+        for (const [key, entry] of keys) if (entry.note.author === author) keys.delete(key);
+        return forgotten;
+      }),
   });
   const ids = Layer.succeed(NoteIdSource, {
     next: Effect.sync(() => Schema.decodeSync(NoteId)(`note-${(nextNote += 1)}`)),
@@ -67,16 +74,35 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       }),
   };
 
+  const uploaders = new Map<MediaKey, UserId>();
   const media: MediaStore["Service"] = {
-    put: (key, bytes) => Effect.sync(() => void objects.set(key, bytes)),
+    put: (key, bytes, uploader) =>
+      Effect.sync(() => {
+        objects.set(key, bytes);
+        uploaders.set(key, uploader);
+      }),
     get: (key) => Effect.sync(() => Option.fromNullishOr(objects.get(key))),
     has: (key) => Effect.sync(() => objects.has(key)),
+    uploadedBy: (pairId, uploader) =>
+      Effect.sync(() =>
+        [...objects.keys()].filter(
+          (key) => key.startsWith(mediaPrefix(pairId)) && uploaders.get(key) === uploader,
+        ),
+      ),
+    remove: (keys) =>
+      Effect.sync(() => {
+        for (const key of keys) {
+          objects.delete(key);
+          uploaders.delete(key);
+        }
+      }),
   };
 
   const pairRooms: PairRooms["Service"] = {
     open: (pairId, members) => roomOf(pairId).dispatch({ _tag: "Open", pairId, members }),
     sendNote: (pairId, author, request) => roomOf(pairId).sendNote(author, request),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
+    forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
   };
 
   return {

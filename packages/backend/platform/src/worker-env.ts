@@ -31,6 +31,12 @@ export interface WorkerEnv {
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
+  /**
+   * Sign in with Apple key (PEM) and key id, for revoking a user's Apple token when they delete
+   * their account. Absent or empty: deletion still deletes, and logs that nothing was revoked.
+   */
+  readonly APPLE_SIGN_IN_KEY?: string;
+  readonly APPLE_SIGN_IN_KEY_ID?: string;
   /** Temporary demo rooms. Bound on the dev stage only. */
   readonly DEMO_ROOM?: DurableObjectNamespace<DemoRoom>;
 }

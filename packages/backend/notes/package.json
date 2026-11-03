@@ -9,6 +9,7 @@
     "./notes-error": "./src/notes-error.ts",
     "./notes-routes": "./src/notes-routes.ts",
     "./notes-service": "./src/notes-service.ts",
+    "./test/fake-world": "./test/fake-world.ts",
     "./pair-rooms": "./src/pair-rooms.ts"
   },
   "scripts": {

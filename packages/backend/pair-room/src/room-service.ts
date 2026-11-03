@@ -81,7 +81,16 @@ export class RoomService extends Context.Service<RoomService>()(
           });
         }).pipe(lock.withPermits(1));
 
-      return { dispatch, sendNote, state: store.load, notesAfter: store.notesAfter };
+      // Under the lock, so a note the author is sending at the same moment is not left behind.
+      const forgetAuthor = (author: UserId) => store.forgetAuthor(author).pipe(lock.withPermits(1));
+
+      return {
+        dispatch,
+        sendNote,
+        forgetAuthor,
+        state: store.load,
+        notesAfter: store.notesAfter,
+      };
     }),
   },
 ) {

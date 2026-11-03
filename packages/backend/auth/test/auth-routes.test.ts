@@ -4,6 +4,7 @@ import { HttpRouter } from "effect/http";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
 import { AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
+import { AccountNotices } from "../src/account-notices.ts";
 import { AuthEngine } from "../src/auth-engine.ts";
 import { AuthRepository } from "../src/auth-repository.ts";
 import { AuthRoutes } from "../src/auth-routes.ts";
@@ -32,6 +33,7 @@ const setup = () => {
       Layer.mergeAll(
         Layer.succeed(AuthRepository, memory.repository),
         Layer.succeed(AuthEngine, makeInMemoryAuthEngine().engine),
+        AccountNotices.none,
         FakeIdentityVerifier,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
@@ -256,6 +258,7 @@ describe("logging", () => {
           Layer.mergeAll(
             Layer.succeed(AuthRepository, memory.repository),
             Layer.succeed(AuthEngine, makeInMemoryAuthEngine().engine),
+            AccountNotices.none,
             FakeIdentityVerifier,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
