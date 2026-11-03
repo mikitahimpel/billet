@@ -271,12 +271,13 @@ extension GenzLayout {
     return nil
   }
 
-  /// `point` moved onto the cat's surface, a little in from its edges.
+  /// `point` moved onto the cat's surface, a little in from its edges and clear of what stands
+  /// on it.
   func onCatSurface(_ point: SIMD2<Float>) -> SIMD2<Float> {
     guard let surface = catSurface else { return point }
     let margin = SIMD2<Float>(repeating: cat.length * 0.35)
     let low = surface.min + margin
     let high = simd_max(surface.max - margin, low)
-    return simd_clamp(point, low, high)
+    return clearOfClutter(simd_clamp(point, low, high), within: low, high)
   }
 }

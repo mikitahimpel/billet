@@ -257,13 +257,15 @@ extension GenzRoom {
 
   /// A double tap on the floor calls the cat there. A tired cat only looks.
   func callCat(to point: CGPoint) -> [PetSceneEvent] {
-    guard isFreeToPlay, let spot = floorUnder(point),
+    guard isFreeToPlay, let under = floorUnder(point),
       let response = hands.play.handle(.called, at: clock)
     else { return [] }
     switch response.reaction {
     case .come:
       cancelPlay()
       let from = catSpot
+      // It comes as far as it can without walking through what stands on its top.
+      let spot = layout.catReach(from: from, to: layout.onCatSurface(under))
       if trip != nil { endTrip() }
       let eye = SIMD2(camera.position.x, camera.position.z)
       perch = (spot, CatTrip.heading(from: spot, to: eye))
@@ -276,7 +278,7 @@ extension GenzRoom {
         ], at: clock)
       tripKind = .wander
     default:
-      headLook(at: floorPoint(spot), for: 1.4)
+      headLook(at: floorPoint(under), for: 1.4)
       behaviour.perform(.slowBlink, at: clock)
     }
     return show(response)
