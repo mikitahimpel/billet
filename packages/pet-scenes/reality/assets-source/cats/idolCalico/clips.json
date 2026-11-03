@@ -104,12 +104,12 @@
   "trimEnd": 42.0
  },
  "groom": {
-  "first": 1271,
-  "last": 1391,
+  "first": 2959,
+  "last": 2989,
   "loops": false,
   "base": "sit",
-  "trimStart": 42.3333,
-  "trimEnd": 46.3333
+  "trimStart": 98.6,
+  "trimEnd": 99.6
  },
  "knead": {
   "first": 1401,
@@ -222,31 +222,6 @@
   "base": "stand",
   "trimStart": 85.4,
   "trimEnd": 85.8667
- },
- "lieDown": {
-  "first": 2587,
-  "last": 2683,
-  "loops": false,
-  "base": "stand",
-  "trimStart": 86.2,
-  "trimEnd": 89.4,
-  "ends": "sleep"
- },
- "groomFlank": {
-  "first": 2693,
-  "last": 2813,
-  "loops": false,
-  "base": "sit",
-  "trimStart": 89.7333,
-  "trimEnd": 93.7333
- },
- "groomTail": {
-  "first": 2823,
-  "last": 2949,
-  "loops": false,
-  "base": "sit",
-  "trimStart": 94.0667,
-  "trimEnd": 98.2667
  },
  "lickLips": {
   "first": 2959,

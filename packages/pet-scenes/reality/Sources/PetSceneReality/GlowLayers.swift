@@ -137,7 +137,7 @@ struct GlowLights: View {
         RoomLayerSchedule(
           busyUntil: screen.busyUntil, steady: steadyInterval, isPaused: isPaused)
       ) { context in
-        let state = screen.state(for: .windowBloom, at: context.date)
+        let state = screen.state(for: .windowBloom, at: context.date, followsCamera: false)
         let lights = screen.lights
         let amount = Double(look.halos)
         let lit = Self.level(time: state.time)

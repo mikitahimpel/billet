@@ -35,9 +35,12 @@ final class GenzRoomScreen {
     openedAt.map { date.timeIntervalSince($0) } ?? 0
   }
 
-  func state(for slot: RoomLayerSlot, at date: Date) -> RoomLayerState {
+  /// What a layer in `slot` draws at `date`. Without `followsCamera` it leaves out where the
+  /// camera is, so a view built from it does not redraw when the camera moves.
+  func state(for slot: RoomLayerSlot, at date: Date, followsCamera: Bool = true) -> RoomLayerState {
     RoomLayerState(
-      time: time(at: date), parallax: parallax, outline: outlines[slot] ?? [],
+      time: time(at: date), parallax: followsCamera ? parallax : .zero,
+      outline: followsCamera ? outlines[slot] ?? [] : [],
       warmth: GenzOpening.warmth(sinceLanding: landedAt.map { date.timeIntervalSince($0) }),
       lampOn: lampOn)
   }
@@ -655,7 +658,12 @@ final class GenzRoom: CatPlayStage {
         orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
         zoom: { [weak self] in self?.zoom(by: $0) },
         release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
-        census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
+        census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" },
+        switches: ["all"] + RoomCostSwitches.names,
+        setSwitch: { [weak self] name, isOn in
+          guard let self else { return }
+          RoomCostSwitches.shared.set(name, isOn: isOn, root: root, cat: catHolder)
+        }))
   }
 
   private func aimLens() {
