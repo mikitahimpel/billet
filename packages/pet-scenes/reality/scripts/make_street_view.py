@@ -228,6 +228,73 @@ class Part:
         return obj
 
 
+# MARK: - Idol pieces
+
+# Pieces made by FLUX -> Idol -> remesh_prop.py (an .obj, y up, front to +z, base centred, and its
+# colour .png), used in place of the modelled ones when present. Their colours are already the
+# night's, so the bake keeps them under the same white sky light and adds the lamps' pools.
+IDOL_DIR = Path(__file__).resolve().parent.parent / "assets-source" / "street"
+# kind: which measure fits, and the turn (degrees about up) that puts its front to the road.
+IDOL_FIT = {
+    "tree": ("height", 0), "mailbox": ("height", 0), "streetlamp": ("height", 0),
+    "car": ("width", 0), "cottage": ("width", 0), "house2": ("width", 0), "shop": ("width", 0),
+}
+IDOL_YAW = {}
+if (IDOL_DIR / "yaw.json").exists():
+    IDOL_YAW = json.loads((IDOL_DIR / "yaw.json").read_text())
+
+
+def idol(kind, name, layer, size, at, front=None):
+    """Places the Idol `kind` as part `name`: its fit measure `size` units, standing on the ground
+    at `at` (x, y), or with its front face on y = `front`. False when there is no such piece."""
+    obj_path = IDOL_DIR / f"{kind}.obj"
+    if not obj_path.exists():
+        return False
+    bpy.ops.object.select_all(action="DESELECT")
+    bpy.ops.wm.obj_import(filepath=str(obj_path), forward_axis="NEGATIVE_Z", up_axis="Y")
+    obj = bpy.context.selected_objects[0]
+    obj.name = name
+    obj.rotation_euler = (0, 0, math.radians(IDOL_FIT[kind][1] + IDOL_YAW.get(kind, 0)))
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    mesh = obj.data
+    xs = [v.co.x for v in mesh.vertices]
+    ys = [v.co.y for v in mesh.vertices]
+    zs = [v.co.z for v in mesh.vertices]
+    measure = (max(zs) - min(zs)) if IDOL_FIT[kind][0] == "height" else max(max(xs) - min(xs), 0.01)
+    k = size / measure
+    cx, cy = (max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2
+    for v in mesh.vertices:
+        x = at[0] + (v.co.x - cx) * k
+        y = (front + (v.co.y - min(ys)) * k) if front is not None else at[1] + (v.co.y - cy) * k
+        z = GROUND + (v.co.z - min(zs)) * k
+        v.co = Vector(mid_pt(x, y, z) if layer == "middle" else (x, y, z))
+    # Its own colour, read through its own UVs; the atlas is baked through new ones.
+    mesh.uv_layers[0].name = "src"
+    image = bpy.data.images.load(str(IDOL_DIR / f"{kind}.png"))
+    mat = bpy.data.materials.new(f"idol-{kind}")
+    mat.use_nodes = True
+    nodes, links = mat.node_tree.nodes, mat.node_tree.links
+    bsdf = nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.95
+    bsdf.inputs["Specular IOR Level"].default_value = 0.1
+    uv = nodes.new("ShaderNodeUVMap")
+    uv.uv_map = "src"
+    colour = nodes.new("ShaderNodeTexImage")
+    colour.image = image
+    links.new(uv.outputs["UV"], colour.inputs["Vector"])
+    links.new(colour.outputs["Color"], bsdf.inputs["Base Color"])
+    target = nodes.new("ShaderNodeTexImage")
+    target.image = ATLAS
+    nodes.active = target
+    mesh.materials.clear()
+    mesh.materials.append(mat)
+    atlas_uv = mesh.uv_layers.new(name="atlas")
+    mesh.uv_layers.active = atlas_uv
+    PARTS.append((obj, layer))
+    return True
+
+
 # Distances and how much atlas each layer gets per unit of surface, as a share of the near one.
 WEIGHT = {"near": 1.0, "street": 0.8, "middle": 0.6, "ground": 0.3, "car": 1.2}
 
@@ -291,6 +358,13 @@ def build_near():
     h.blob((-7.0, 11.0, GROUND + 1.0), 1.3, leaf, squash=0.8, seed=31)
     h.done()
 
+    if not idol("tree", "tree", "near", 13.0, (-10.0, 14.0)):
+        build_tree()
+    if not idol("mailbox", "mailbox", "near", 3.6, (-13.05, 27.15)):
+        build_mailbox()
+
+
+def build_tree():
     t = Part("tree", "near")
     bark = material("bark", lit(PAL["near"], 0.02))
     canopy = material("canopy", mixed(lit(PAL["near"], 0.07), 0x0E2A2A, 0.35))
@@ -304,6 +378,8 @@ def build_near():
         t.blob((tx + dx, ty + dy, GROUND + dz), r, canopy, squash=0.9, subdiv=2, seed=50 + k)
     t.done()
 
+
+def build_mailbox():
     m = Part("mailbox", "near")
     post = material("mail-post", lit(PAL["street"], -0.2))
     box = material("mail-box", lit(PAL["street"], 0.05))
@@ -323,6 +399,8 @@ MOVING = (24.0, 37.4)
 
 
 def build_street():
+    if idol("streetlamp", "lamp", "street", LAMP_HEAD[2] + 0.6 - GROUND, (LAMP_HEAD[0] + 0.8, LAMP_HEAD[1])):
+        return
     s = Part("lamp", "street")
     metal = material("lamp-metal", lit(PAL["street"], -0.25))
     glass = material("lamp-glass", PAL["lampCore"], emit=4.0, emit_colour=PAL["lampCore"])
@@ -337,6 +415,8 @@ def build_street():
 
 def car(name, x, y, body_hex, layer):
     """A small rounded hatchback along x, nose to +x, wheels on the ground."""
+    if idol("car", name, layer, 7.0, (x, y)):
+        return bpy.data.objects[name]
     c = Part(name, layer)
     body = material(f"{name}-body", body_hex)
     dark = material("car-glass", mixed(PAL["near"], 0x3A5A86, 0.2))
@@ -368,12 +448,19 @@ def car(name, x, y, body_hex, layer):
 # MARK: - Middle: the houses across the road and the corner shop
 
 SHOP_SPILL = []
-WINDOWS_LIT = []  # (x, y, z) of lit windows, for the porch-like glow of their light spilling out
+WINDOWS_LIT = []
+# Which houses across the road an Idol piece stands in for, when there is one.
+IDOL_HOUSES = {"house-a": "cottage", "house-c": "cottage", "house-f": "cottage",
+               "house-b": "house2", "house-e": "house2"}  # (x, y, z) of lit windows, for the porch-like glow of their light spilling out
 PORCHES = []
 
 
 def house(name, x0, width, depth, wall, rise, wall_hex, roof_hex, storeys, seed, garage=False):
     rng = random.Random(seed)
+    kind = IDOL_HOUSES.get(name)
+    if kind and idol(kind, name, "middle", width + (6 if garage else 0), (x0 + (width + (6 if garage else 0)) / 2, 0),
+                     front=FRONT):
+        return
     h = Part(name, "middle")
     y0, y1 = FRONT, FRONT + depth
     wall_m = material(f"wall", wall_hex)
@@ -425,6 +512,10 @@ def house(name, x0, width, depth, wall, rise, wall_hex, roof_hex, storeys, seed,
 
 
 def shop(name, x0, width):
+    if idol("shop", name, "middle", width, (x0 + width / 2, 0), front=FRONT + 0.5):
+        GLOWS.append(mid_pt(x0 + width / 2, FRONT - 1.0, GROUND + 2.2) + (3.2 * MID_SCALE,))
+        SHOP_SPILL.append(mid_pt(x0 + width / 2, FRONT - 1.5, GROUND + 2.0))
+        return
     s = Part(name, "middle")
     y0, y1 = FRONT + 0.5, FRONT + 9
     wall_hex = mixed(lit(PAL["middle"], 0.06), 0x3A2A30, 0.25)
@@ -575,6 +666,10 @@ def select_only(objs, active=None):
 
 def unwrap(parts):
     for obj, layer in parts:
+        layers = obj.data.uv_layers
+        if "atlas" not in layers:
+            layers.new(name="atlas")
+        layers.active = layers["atlas"]
         select_only([obj])
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
@@ -785,6 +880,7 @@ def join(objs, name):
     bpy.ops.object.join()
     obj = bpy.context.view_layer.objects.active
     obj.name = name
+    obj.data.uv_layers.active = obj.data.uv_layers["atlas"]
     return obj
 
 
