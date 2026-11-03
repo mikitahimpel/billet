@@ -30,6 +30,8 @@ export const deliveriesOf = (db: RoomDatabase) => ({
       Effect.map((rows) => rows.map(entryFrom)),
       Effect.orDie,
     ),
+  forget: (noteId: string) =>
+    db.delete(delivery).where(eq(delivery.noteId, noteId)).pipe(Effect.asVoid, Effect.orDie),
   save: (entry: DeliveryEntry) =>
     db
       .insert(delivery)

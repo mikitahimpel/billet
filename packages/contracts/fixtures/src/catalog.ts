@@ -13,10 +13,10 @@ import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PushToken } from "@billet/contracts-domain/push-token";
+import { AccountResponse, DeleteAccountRequest } from "@billet/contracts-http-api/account";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import {
   AccountKey,
-  AccountResponse,
   AuthChallengeResponse,
   AuthNonce,
   IdentityToken,
@@ -191,6 +191,15 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("AccountResponse", AccountResponse, {
     anonymous: { userId: alice, linked: false },
     linked: { userId: alice, linked: true },
+    "partner-left": {
+      userId: alice,
+      linked: false,
+      partnerLeft: { reason: "account-deleted", at: 1_700_000_400_000 },
+    },
+  }),
+  fixture("DeleteAccountRequest", DeleteAccountRequest, {
+    anonymous: {},
+    linked: { appleAuthorizationCode: "c0ffee.0.abcd.code" },
   }),
   fixture("SessionResponse", SessionResponse, {
     default: { sessionToken, expiresAt: 1_707_776_000_000, userId: alice, deviceId },

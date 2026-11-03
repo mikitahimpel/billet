@@ -108,7 +108,7 @@ export class NotesService extends Context.Service<
         if (!isPng(bytes)) return yield* Effect.fail(new InvalidNote());
         const id = yield* random.uuidV4();
         const key = decodeMediaKey(`${mediaPrefix(pairId)}notes/${id}.png`);
-        yield* media.put(key, bytes);
+        yield* media.put(key, bytes, userId);
         return key;
       });
 

@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./account-notices": "./src/account-notices.ts",
     "./apple-identity-verifier": "./src/apple-identity-verifier.ts",
     "./auth-engine": "./src/auth-engine.ts",
     "./auth-error": "./src/auth-error.ts",

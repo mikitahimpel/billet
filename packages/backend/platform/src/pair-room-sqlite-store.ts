@@ -1,4 +1,4 @@
-import { and, asc, eq, gt } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
@@ -124,6 +124,25 @@ export const SqliteRoomStore = Layer.effect(
             else page.push({ seq, note: decoded.value });
           }
           return page;
+        }).pipe(Effect.orDie),
+      // Notes stored before `author` existed have it only in the body.
+      forgetAuthor: (author: UserId) =>
+        Effect.gen(function* () {
+          const rows = yield* db
+            .delete(note)
+            .where(
+              or(
+                eq(note.author, author),
+                and(isNull(note.author), sql`json_extract(${note.body}, '$.author') = ${author}`),
+              ),
+            )
+            .returning({ seq: note.seq, body: note.body });
+          const forgotten: SequencedNote[] = [];
+          for (const { seq, body } of rows.toSorted((a, b) => a.seq - b.seq)) {
+            const decoded = decodeNoteOption(body);
+            if (Option.isSome(decoded)) forgotten.push({ seq, note: decoded.value });
+          }
+          return forgotten;
         }).pipe(Effect.orDie),
     };
   }),
