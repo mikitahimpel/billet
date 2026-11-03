@@ -14,6 +14,7 @@ import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { EventSinkLive } from "./event-sink-live.ts";
+import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairVariantsLive } from "./pair-variants-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
@@ -48,6 +49,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
         AuthRepositoryLive(env.DB),
         PairingRepositoryLive(env.DB),
         FlagsRepositoryLive(env.DB),
+        FlagConfigRepositoryLive(env.DB, caches.default),
         Metrics.layer.pipe(Layer.provide(MetricsRepositoryLive(env.DB))),
         Experiments.with(experiments),
         EventSinkLive(env.EVENTS),

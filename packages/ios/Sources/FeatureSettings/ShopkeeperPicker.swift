@@ -3,7 +3,8 @@ import Pet
 import SwiftUI
 import WidgetBridge
 
-/// Who keeps the 3D shop, one row each with a check on the chosen one. Saved with the Labs flags.
+/// Who keeps the 3D shop: following the pair's test, or one row each with a check on the chosen
+/// one. Saved with the Labs flags.
 struct ShopkeeperPicker: View {
   let model: WidgetFeaturesModel
 
@@ -14,8 +15,12 @@ struct ShopkeeperPicker: View {
         .foregroundStyle(Palette.muted.color)
         .padding(.horizontal, Spacing.medium)
       SettingsGroup {
+        FollowTheTestRow(
+          subtitle: "What this pair's test gives, else the standard shopkeeper.",
+          selected: model.shopkeeperOverride == nil, identifier: "shopkeeper-follow",
+          follow: model.followTheShopkeeperTest)
         ForEach(Shopkeeper.allCases, id: \.self) { keeper in
-          if keeper != Shopkeeper.allCases.first { ListDivider() }
+          ListDivider()
           row(keeper)
         }
       }
@@ -23,7 +28,7 @@ struct ShopkeeperPicker: View {
   }
 
   private func row(_ keeper: Shopkeeper) -> some View {
-    let selected = model.shopkeeper == keeper
+    let selected = model.shopkeeperOverride == keeper
     return Button {
       withAnimation(Motion.spring) { model.setShopkeeper(keeper) }
     } label: {

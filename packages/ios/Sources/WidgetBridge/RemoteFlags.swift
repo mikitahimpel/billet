@@ -15,14 +15,60 @@ public struct Experiment: Hashable, Sendable {
     self.key = key
     self.variants = variants
   }
+
+  /// A Labs setting the server can set too: one variant per case, named as `remoteVariant` says.
+  public init<Choice: RemoteChoice>(key: String, choices: Choice.Type) {
+    self.init(key: key, variants: Set(Choice.allCases.map(\.remoteVariant)))
+  }
 }
+
+/// A Labs setting whose cases are the variants of a remote flag. A variant id is the case's raw
+/// value in kebab-case (`amberLantern` is `amber-lantern`), as the server's registry names it.
+public protocol RemoteChoice: CaseIterable, RawRepresentable<String> {}
+
+extension RemoteChoice {
+  /// The id the server uses for this case.
+  public var remoteVariant: String {
+    rawValue.reduce(into: "") { id, character in
+      if character.isUppercase { id += "-" }
+      id += character.lowercased()
+    }
+  }
+
+  /// The case a variant id names, or `nil` for a variant this build does not have.
+  public init?(remoteVariant variant: String) {
+    guard let match = Self.allCases.first(where: { $0.remoteVariant == variant }) else {
+      return nil
+    }
+    self = match
+  }
+}
+
+extension RoomLighting: RemoteChoice {}
+extension WindowView: RemoteChoice {}
+extension HomeVariant: RemoteChoice {}
+extension Shopkeeper: RemoteChoice {}
 
 public enum Experiments {
   /// Which room Home shows: a night bedroom with a sunset lamp, or a daybed under a window.
   public static let homeDirection = Experiment(
     key: "home-direction", variants: ["window-seat", "sunset-lamp"])
 
-  public static let all: [Experiment] = [homeDirection]
+  /// How the rooms are lit (Labs > Lighting).
+  public static let roomLighting = Experiment(key: "room-lighting", choices: RoomLighting.self)
+
+  /// What the room's window looks out on (Labs > View). Only the view: no weather or hour.
+  public static let windowView = Experiment(key: "window-view", choices: WindowView.self)
+
+  /// How Home is laid out around the room (Labs > Home).
+  public static let homeLayout = Experiment(key: "home-layout", choices: HomeVariant.self)
+
+  /// Who keeps the 3D shop (Labs > Shopkeeper).
+  public static let shopkeeper = Experiment(key: "shopkeeper", choices: Shopkeeper.self)
+
+  public static let all: [Experiment] = [
+    homeDirection, roomLighting, windowView, homeLayout, shopkeeper,
+  ]
 }
 
 extension RoomStyle {
@@ -58,6 +104,13 @@ public struct RemoteFlags: Codable, Equatable, Sendable {
   /// The variant for `experiment` if the server gave one and this build has it.
   public func variant(of experiment: Experiment) -> String? {
     assigned[experiment.key].flatMap { experiment.variants.contains($0) ? $0 : nil }
+  }
+
+  /// The case the server gave for `experiment`, if it gave one and this build has it.
+  public func choice<Choice: RemoteChoice>(
+    of experiment: Experiment, as _: Choice.Type = Choice.self
+  ) -> Choice? {
+    variant(of: experiment).flatMap(Choice.init(remoteVariant:))
   }
 
   public init(from decoder: any Decoder) throws {

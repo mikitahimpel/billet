@@ -14,34 +14,16 @@ struct RoomStylePicker: View {
         .foregroundStyle(Palette.muted.color)
         .padding(.horizontal, Spacing.medium)
       SettingsGroup {
-        followRow
+        FollowTheTestRow(
+          subtitle: "What this pair's test gives, else the standard room.",
+          selected: model.roomStyleOverride == nil, identifier: "roomStyle-follow",
+          follow: model.followTheTest)
         ForEach(RoomStyle.allCases, id: \.self) { style in
           ListDivider()
           row(style)
         }
       }
     }
-  }
-
-  /// No Labs choice: the room is whatever the pair's test gives, or the standard room.
-  private var followRow: some View {
-    let selected = model.roomStyleOverride == nil
-    return Button {
-      withAnimation(Motion.spring) { model.followTheTest() }
-    } label: {
-      ListRow("Follow the test", subtitle: "What this pair's test gives, else the standard room.") {
-        EmptyView()
-      } trailing: {
-        if selected {
-          RowIcon("checkmark", color: Palette.gold)
-            .transition(.opacity)
-        }
-      }
-    }
-    .buttonStyle(RowButtonStyle())
-    .accessibilityAddTraits(selected ? .isSelected : [])
-    .accessibilityIdentifier("roomStyle-follow")
-    .sensoryFeedback(.selection, trigger: selected)
   }
 
   private func row(_ style: RoomStyle) -> some View {

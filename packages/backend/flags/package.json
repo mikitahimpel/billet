@@ -7,10 +7,15 @@
   "exports": {
     "./assignment": "./src/assignment.ts",
     "./experiments": "./src/experiments.ts",
+    "./flag-config": "./src/flag-config.ts",
+    "./flag-config-repository": "./src/flag-config-repository.ts",
     "./flags-error": "./src/flags-error.ts",
     "./flags-repository": "./src/flags-repository.ts",
     "./flags-routes": "./src/flags-routes.ts",
     "./flags-service": "./src/flags-service.ts",
+    "./targeting": "./src/targeting.ts",
+    "./test/flag-config-repository-contract": "./test/flag-config-repository-contract.ts",
+    "./test/in-memory-flag-config-repository": "./test/in-memory-flag-config-repository.ts",
     "./test/flags-repository-contract": "./test/flags-repository-contract.ts",
     "./test/in-memory-flags-repository": "./test/in-memory-flags-repository.ts"
   },

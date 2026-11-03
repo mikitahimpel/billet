@@ -3,9 +3,9 @@ import Pet
 import SwiftUI
 import WidgetBridge
 
-/// What the styled rooms' window looks out on: one row per view with a check on the chosen one,
-/// then its weather and hour. "As made" leaves the weather to the view and the hour to the room.
-/// Saved with the Labs flags; the window changes without a restart.
+/// What the styled rooms' window looks out on: following the pair's test, or one row per view
+/// with a check on the chosen one, then its weather and hour. "As made" leaves the weather to the
+/// view and the hour to the room. Saved with the Labs flags; the window changes without a restart.
 struct WindowViewPicker: View {
   let model: WidgetFeaturesModel
 
@@ -16,8 +16,12 @@ struct WindowViewPicker: View {
         .foregroundStyle(Palette.muted.color)
         .padding(.horizontal, Spacing.medium)
       SettingsGroup {
+        FollowTheTestRow(
+          subtitle: "What this pair's test gives, else the standard view.",
+          selected: model.windowViewOverride == nil, identifier: "view-follow",
+          follow: model.followTheWindowViewTest)
         ForEach(WindowView.allCases, id: \.self) { view in
-          if view != WindowView.allCases.first { ListDivider() }
+          ListDivider()
           row(view)
         }
         ListDivider()
@@ -43,7 +47,7 @@ struct WindowViewPicker: View {
   }
 
   private func row(_ view: WindowView) -> some View {
-    let selected = model.windowView.view == view
+    let selected = model.windowViewOverride?.view == view
     return Button {
       withAnimation(Motion.spring) {
         var choice = model.windowView

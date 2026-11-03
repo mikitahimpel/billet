@@ -3,8 +3,8 @@ import Pet
 import SwiftUI
 import WidgetBridge
 
-/// How the rooms are lit, one row per look with a check on the chosen one. Saved with the Labs
-/// flags.
+/// How the rooms are lit: following the pair's test, or one row per look with a check on the
+/// chosen one. Saved with the Labs flags.
 struct LightingPicker: View {
   let model: WidgetFeaturesModel
 
@@ -15,8 +15,12 @@ struct LightingPicker: View {
         .foregroundStyle(Palette.muted.color)
         .padding(.horizontal, Spacing.medium)
       SettingsGroup {
+        FollowTheTestRow(
+          subtitle: "What this pair's test gives, else the standard lighting.",
+          selected: model.lightingOverride == nil, identifier: "lighting-follow",
+          follow: model.followTheLightingTest)
         ForEach(RoomLighting.allCases, id: \.self) { lighting in
-          if lighting != RoomLighting.allCases.first { ListDivider() }
+          ListDivider()
           row(lighting)
         }
       }
@@ -24,7 +28,7 @@ struct LightingPicker: View {
   }
 
   private func row(_ lighting: RoomLighting) -> some View {
-    let selected = model.lighting == lighting
+    let selected = model.lightingOverride == lighting
     return Button {
       withAnimation(Motion.spring) { model.setLighting(lighting) }
     } label: {

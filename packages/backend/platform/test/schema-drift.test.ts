@@ -14,8 +14,11 @@ import * as directorySchema from "../src/directory-schema.ts";
 import {
   authChallenges,
   devices,
+  flagChanges,
+  flagConfigs,
   invites,
   pairEvents,
+  pairFlagOverrides,
   pairFlags,
   pairMembers,
   pushTokens,
@@ -24,6 +27,11 @@ import {
   users,
 } from "../src/directory-schema.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
+import {
+  FlagChangeRow,
+  FlagConfigRow,
+  PairOverrideRow,
+} from "../src/flag-config-repository-live.ts";
 import { SampleRow, StoredDelivery, StoredNote, StoredRoom } from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
 import { delivery, note, room } from "../src/room-schema.ts";
@@ -36,6 +44,9 @@ import { getTableName, tablesOf } from "./table-columns.ts";
 const checked = [
   ["auth_challenges", authChallenges, StoredChallenge],
   ["devices", devices, StoredDevice],
+  ["flag_changes", flagChanges, FlagChangeRow],
+  ["flag_configs", flagConfigs, FlagConfigRow],
+  ["pair_flag_overrides", pairFlagOverrides, PairOverrideRow],
   ["invites", invites, StoredInvite],
   ["pair_events", pairEvents, StoredMetric],
   ["pair_flags", pairFlags, StoredAssignment],

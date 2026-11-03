@@ -4,6 +4,7 @@ import { splitSqlStatements } from "@alchemy.run/sql/SqlFile";
 import type { MigrationRecord, SqlExecutor } from "@alchemy.run/sql/Migrations/Format";
 import { MigrationError } from "@alchemy.run/sql/Migrations/Format";
 import { Effect } from "effect";
+import { flagConfigCacheUrl } from "../src/flag-config-repository-live.ts";
 
 const files = import.meta.glob<string>("../migrations/directory/*/migration.sql", {
   eager: true,
@@ -68,6 +69,9 @@ export const resetDirectory = async () => {
     [
       "pair_events",
       "pair_flags",
+      "flag_configs",
+      "flag_changes",
+      "pair_flag_overrides",
       "pair_members",
       "invites",
       "push_tokens",
@@ -78,4 +82,6 @@ export const resetDirectory = async () => {
       "rate_limits",
     ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
   );
+  // The configurations are cached at the edge; a test starts from the empty table, not the cache.
+  await caches.default.delete(flagConfigCacheUrl);
 };
