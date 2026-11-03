@@ -47,7 +47,7 @@ struct OnboardingPairingView: View {
   var body: some View {
     CinematicOnboardingView(
       scenes: scenes, lighting: lighting, memory: memory, heading: heading, rest: pairing.scene,
-      onEvent: handle
+      onEvent: handle, back: back
     ) {
       if let failure {
         Text(failure)
@@ -118,30 +118,34 @@ struct OnboardingPairingView: View {
           } else if let goIn = actions.goIn {
             BilletButton("Go in, they can join later", rank: .secondary, action: goIn)
           }
-          BilletButton("Cancel", rank: .secondary, action: actions.cancel)
         }
       }
     case .enteringCode:
       codeField
-      GlassGroup {
-        VStack(spacing: Spacing.small) {
-          BilletButton("Join", rank: .primary) { actions.join(typedCode) }
-            .disabled(typedCode.isEmpty)
-          BilletButton("Back", rank: .secondary) { send(.back) }
-        }
-      }
+      BilletButton("Join", rank: .primary) { actions.join(typedCode) }
+        .disabled(typedCode.isEmpty)
     case .joining:
-      GlassGroup {
-        BilletButton("Cancel", rank: .secondary, action: actions.cancel)
-      }
+      EmptyView()
     case .joined, .done:
       EmptyView()
     }
   }
 
+  /// The top-left back button of each step after the welcome: from the invite or the joining it
+  /// cancels, from the code it goes back to the welcome.
+  private var back: (() -> Void)? {
+    switch pairing.step {
+    case .inviting, .joining: actions.cancel
+    case .enteringCode: { send(.back) }
+    case .welcome, .joined, .done: nil
+    }
+  }
+
   private var codeField: some View {
     TextField("Their code", text: $typed)
-      .billetType(.numeral)
+      // The app's own face, with figures of one width so the code does not shift as it is typed.
+      .billetType(.heading)
+      .monospacedDigit()
       .foregroundStyle(Palette.gold.color)
       .multilineTextAlignment(.center)
       .autocorrectionDisabled()

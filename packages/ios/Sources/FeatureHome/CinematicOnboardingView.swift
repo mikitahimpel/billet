@@ -25,6 +25,8 @@ struct CinematicOnboardingView<Actions: View>: View {
   private let heading: OnboardingHeading
   private let rest: OnboardingSceneState
   private let onEvent: (OnboardingSceneEvent) -> Void
+  /// Goes back a step, from the top-left corner; `nil` where there is no step to go back to.
+  private let back: (() -> Void)?
   private let actions: () -> Actions
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -39,6 +41,7 @@ struct CinematicOnboardingView<Actions: View>: View {
     heading: OnboardingHeading = .welcome,
     rest: OnboardingSceneState = OnboardingSceneState(moment: .resting),
     onEvent: @escaping (OnboardingSceneEvent) -> Void = { _ in },
+    back: (() -> Void)? = nil,
     @ViewBuilder actions: @escaping () -> Actions
   ) {
     self.scenes = scenes
@@ -47,6 +50,7 @@ struct CinematicOnboardingView<Actions: View>: View {
     self.heading = heading
     self.rest = rest
     self.onEvent = onEvent
+    self.back = back
     self.actions = actions
     _intro = State(
       initialValue: OnboardingIntro(seenBefore: startsAtRest || memory?.introSeen == true))
@@ -103,9 +107,23 @@ struct CinematicOnboardingView<Actions: View>: View {
     VStack(spacing: Spacing.large) {
       title
         .padding(.top, Spacing.wide)
+        // Clear of the back button, the same each side so the words stay centred.
+        .padding(.horizontal, back == nil ? 0 : Target.minimum + Spacing.hair)
       Spacer(minLength: 0)
     }
     .padding(.horizontal, Spacing.medium)
+    .overlay(alignment: .topLeading) {
+      if let back {
+        BackButton(action: back)
+          .padding(.leading, Spacing.medium)
+          .padding(.top, Spacing.wide - (Target.minimum - BilletType.title.lineHeight) / 2)
+          .opacity(intro.showsActions ? 1 : 0)
+          .allowsHitTesting(intro.showsActions)
+          .accessibilityHidden(!intro.showsActions)
+          .transition(.opacity)
+      }
+    }
+    .animation(.easeOut(duration: 0.3), value: back == nil)
     .safeAreaInset(edge: .bottom, spacing: 0) {
       VStack(spacing: Spacing.small) { actions() }
         .padding(.horizontal, Spacing.medium)
@@ -148,9 +166,10 @@ struct CinematicOnboardingView<Actions: View>: View {
   }
 }
 
-/// A title and its explanation over a scene. A new heading fades in over the old one as a whole:
-/// moving one block from the old words to the new would slide the lines across the screen while
-/// they rewrap, which reads as crooked text.
+/// A title and its explanation over a scene, on a calm dark scrim that comes down from the top of
+/// the screen, so the words stay crisp over the bright window and lights. A new heading fades in
+/// over the old one as a whole: moving one block from the old words to the new would slide the
+/// lines across the screen while they rewrap, which reads as crooked text.
 struct HeadingWords: View {
   let heading: OnboardingHeading
   var showsDetail = true
@@ -161,7 +180,6 @@ struct HeadingWords: View {
         Text(heading.title)
           .billetType(.title)
           .foregroundStyle(Palette.paper.color)
-          .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
           .accessibilityAddTraits(.isHeader)
           .lineLimit(3)
           .minimumScaleFactor(0.75)
@@ -170,17 +188,54 @@ struct HeadingWords: View {
           .layoutPriority(1)
         Text(heading.detail)
           .billetType(.body)
-          .foregroundStyle(Palette.paper.color.opacity(0.78))
+          .foregroundStyle(Palette.paper.color)
           .minimumScaleFactor(0.7)
           .opacity(showsDetail ? 1 : 0)
       }
-      // A soft dark edge keeps the words readable where they cross the lit window frame.
-      .shadow(color: .black.opacity(0.45), radius: 5, y: 1)
+      // A tight dark edge, not a glow: it only firms up the letters' outline.
+      .shadow(color: .black.opacity(0.5), radius: 1, y: 1)
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity)
       .id(heading)
       .transition(.opacity)
     }
     .animation(.easeInOut(duration: 0.45), value: heading)
+    .background(alignment: .top) { HeadingScrim() }
+  }
+}
+
+/// The dark behind the words: from the top of the screen down to the last line of the words it
+/// is a steady dark, then it fades out over the scene below them. Paper-white words over it keep
+/// AA contrast even where pure white, a light's glow, is behind.
+struct HeadingScrim: View {
+  /// How far below the words the scrim fades out.
+  static let fade: CGFloat = 110
+  /// How much of the scene's light it holds back under the words.
+  static let dark = 0.66
+
+  /// The brightest the scene can look through the scrim: pure white, darkened.
+  static var brightestBehindWords: Swatch {
+    let level = UInt32(((1 - dark) * 255).rounded(.up))
+    return Swatch(level * 0x010101)
+  }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      LinearGradient(
+        colors: [.black.opacity(0.8), .black.opacity(Self.dark)], startPoint: .top,
+        endPoint: .bottom)
+      LinearGradient(
+        colors: [.black.opacity(Self.dark), .black.opacity(0)], startPoint: .top,
+        endPoint: .bottom
+      )
+      .frame(height: Self.fade)
+      .padding(.bottom, -Self.fade)
+    }
+    // Out to the screen's edges and up under the status bar.
+    .padding(.horizontal, -60)
+    .padding(.top, -200)
+    .ignoresSafeArea()
+    .allowsHitTesting(false)
+    .accessibilityHidden(true)
   }
 }

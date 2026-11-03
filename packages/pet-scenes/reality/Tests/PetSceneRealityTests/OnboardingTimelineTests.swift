@@ -96,6 +96,20 @@ struct OnboardingHeartTests {
     #expect(abs(leftBounds.center.x + rightBounds.center.x) < 0.002)
   }
 
+  @Test func theHalvesAreCutStraightDownTheMiddleOfOneHeart() async throws {
+    let heart = try #require(await OnboardingStage.heartModel())
+    let left = try #require(heart.findEntity(named: "heart_L")).visualBounds(relativeTo: heart)
+    let right = try #require(heart.findEntity(named: "heart_R")).visualBounds(relativeTo: heart)
+    let whole = heart.visualBounds(relativeTo: heart)
+    let tolerance = whole.extents.y * 0.01
+    // They meet at the cut, with no gap and no overlap.
+    #expect(abs(left.max.x - whole.center.x) < tolerance)
+    #expect(abs(right.min.x - whole.center.x) < tolerance)
+    // Each has half of the point at the bottom and its own lobe up to the top.
+    #expect(abs(left.min.y - whole.min.y) < tolerance && abs(right.min.y - whole.min.y) < tolerance)
+    #expect(abs(left.max.y - whole.max.y) < tolerance && abs(right.max.y - whole.max.y) < tolerance)
+  }
+
   @Test func theHeartFileStaysSmall() throws {
     let url = try #require(Bundle.module.url(forResource: "Heart", withExtension: "reality"))
     let size = try #require(try url.resourceValues(forKeys: [.fileSizeKey]).fileSize)
