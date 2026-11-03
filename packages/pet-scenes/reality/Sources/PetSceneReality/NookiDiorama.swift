@@ -18,9 +18,9 @@ final class NookiDiorama: CatPlayStage {
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
 
-  private let room = Entity()
-  private let lens = PerspectiveCamera()
-  private let catHolder = Entity()
+  let room = Entity()
+  let lens = PerspectiveCamera()
+  let catHolder = Entity()
   private let note = Entity()
   private let bowlFill = Entity()
   private let streakMarks = Entity()
@@ -33,11 +33,11 @@ final class NookiDiorama: CatPlayStage {
   private var holderOrientations: [NookiTarget: simd_quatf] = [:]
   private var wobbles: [NookiTarget: Double] = [:]
   private var lampParts: [(model: ModelEntity, material: Int, glow: Float)] = []
-  private var world = PetWorld()
+  var world = PetWorld()
   private var play = PetPlayState()
   private(set) var clock = 0.0
   private var stepStart = 0.0
-  private var petStart: Double?
+  var petStart: Double?
   private var lookStart: Double?
   private var lookGoal: Float = 0
   private var lookTurn: Float = 0
@@ -49,12 +49,17 @@ final class NookiDiorama: CatPlayStage {
   private(set) var loading: Task<Void, Never>?
   private(set) var catLoading: Task<Void, Never>?
   private(set) var isCatMissing = false
-  private var hasCat = false
+  var hasCat = false
   /// The cat's clips, look and coat, once loaded.
   private(set) var rig: CatRig?
   var behaviour = CatBehaviour(clips: [:])
   /// The hands on the cat: petting, play and their cooldowns.
   let hands = CatHands()
+  /// The toys Nooki adds to its floor, and the game going on with one.
+  let toys = RoomToys()
+  let laserDot = CatToyModels.laserDot(length: NookiDiorama.catReach)
+  /// Where the room reports what happens outside a touch, such as a game the cat won.
+  var report: (@MainActor (PetSceneEvent) -> Void)?
   /// The cat's length in the room, measured once it is placed.
   private var catLength: Float?
   /// The cat moments switched on in Labs.
@@ -62,13 +67,13 @@ final class NookiDiorama: CatPlayStage {
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
   /// A trip away from the bed and back, while one is playing.
-  private var trip: CatTrip?
-  private var tripPose: CatTrip.Pose?
+  var trip: CatTrip?
+  var tripPose: CatTrip.Pose?
   private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
   private var lastBat = -Double.infinity
   private var rollingUntil = -Double.infinity
   /// Where the finger last stroked the cat, in the view's points, for the hearts.
-  private var strokePoint: CGPoint?
+  var strokePoint: CGPoint?
   private var greetPending = false
   private var lastSeenSaved = -Double.infinity
   /// The cat asked for, and the one on show (the standard cat stands in for one that will not load).
@@ -87,13 +92,13 @@ final class NookiDiorama: CatPlayStage {
   private var tilt = NookiTilt()
   private var ambientReceiver: ImageBasedLightReceiverComponent?
   private var onAmbient: ((ImageBasedLightReceiverComponent) -> Void)?
-  private let physics = NookiPhysics()
+  let physics = NookiPhysics()
   private var flight = NookiPlaneFlight()
   private lazy var plane = NookiPaperPlane(paper: Self.clay(.paper))
   private var noteSheet: ModelEntity?
   private var noteMark: ModelEntity?
   let renovation: NookiRenovation
-  private var yarnPlay = NookiYarnPlay(
+  var yarnPlay = NookiYarnPlay(
     bed: NookiDiorama.bedSpot, floor: NookiDiorama.wallSpot.y,
     restHeading: NookiChoreography.restHeading)
   private var ballWas: SIMD3<Float>?
@@ -109,12 +114,12 @@ final class NookiDiorama: CatPlayStage {
   private var settlingFrames = NookiDiorama.framesBeforeReady
   private let frames = FrameClock()
   private var isRehearsing = false
-  private var camera = NookiCamera()
+  var camera = NookiCamera()
   private var tapTimer = NookiTapTimer()
-  private var reduceMotion = false
+  var reduceMotion = false
   private var lampIsOn = true
   private var lampLevel: Float = 1
-  private var noteIsOpen = false
+  var noteIsOpen = false
   private var noteOpening: Float = 0
   private var bowlLevel: Float = 0
   private let windowLight = Entity()
@@ -123,7 +128,7 @@ final class NookiDiorama: CatPlayStage {
   private var light: Float = 0
   /// The opening the host asked for, waiting for the room to be on screen.
   private var pendingFlyIn: PetSceneFlyIn?
-  private var opening: SceneFlight?
+  var opening: SceneFlight?
   /// How far the room's lights are up, from dark at 0 to full at 1. Only an opening lowers it.
   private var lightsLevel: Float = 1
   private var shownLightsLevel: Float = 1
@@ -133,7 +138,7 @@ final class NookiDiorama: CatPlayStage {
   var fillsView = false {
     didSet { if fillsView != oldValue { fit(to: fittedSize) } }
   }
-  private var fittedSize = SIMD2<Float>(393, 852)
+  var fittedSize = SIMD2<Float>(393, 852)
 
   nonisolated static let catScale: Float = 1.25
   static let missingMarkName = "cat-missing"
@@ -151,8 +156,8 @@ final class NookiDiorama: CatPlayStage {
   private static let darkAmbientShift: Float = -3
 
   // The cat lies in the bed in the middle of the rug, and hops to a spot under the wire.
-  fileprivate static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
-  fileprivate static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
+  static let bedSpot: SIMD3<Float> = [0.05, 0.095, 0.12]
+  static let wallSpot: SIMD3<Float> = [0.08, 0.012, -0.38]
   /// Share of the walk spent dropping from the bed to the floor.
   private static let bedDrop: Float = 0.25
   private static let carryHeight: Float = 0.34
@@ -166,10 +171,10 @@ final class NookiDiorama: CatPlayStage {
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let lookLimit: Float = 1
   /// How fast the cat covers its walk to the wall, in metres a second.
-  private static let walkPace: Float = 0.23
-  private static let fieldOfView: Float = 30
+  static let walkPace: Float = 0.23
+  static let fieldOfView: Float = 30
   private static let noticeDistance: Float = 0.6
-  private static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
+  static let bowlPosition: SIMD3<Float> = [0.12, 0, 0.6]
   /// Extra turn towards the window when the partner is here.
   private static let windowTurn: Float = -0.55
   private static let windowCentre: SIMD3<Float> = [-0.28, 0.52, -0.59]
@@ -233,6 +238,7 @@ final class NookiDiorama: CatPlayStage {
     await Task.yield()
     await buildNote()
     buildBackstop()
+    buildToys()
     catHolder.position = Self.bedSpot
     catHolder.name = NookiTarget.cat.rawValue
     Self.makeTappable(catHolder, size: [0.34, 0.26, 0.34], center: [0, 0.13, 0])
@@ -456,7 +462,7 @@ final class NookiDiorama: CatPlayStage {
   }
 
   /// A trip's spot on the floor, as a place in the room: in the bed near it, on the floor beyond.
-  private func tripSpot(_ spot: SIMD2<Float>) -> SIMD3<Float> {
+  func tripSpot(_ spot: SIMD2<Float>) -> SIMD3<Float> {
     let fromBed = simd_distance(spot, SIMD2(Self.bedSpot.x, Self.bedSpot.z))
     let off = min(max((fromBed - 0.1) / 0.1, 0), 1)
     let height = Self.bedSpot.y + (Self.wallSpot.y - Self.bedSpot.y) * off
@@ -773,6 +779,7 @@ final class NookiDiorama: CatPlayStage {
     stepFlight()
     stepTilt(Float(step))
     stepYarn(step)
+    stepToys(step)
     renovation.step(Float(step), reduceMotion: reduceMotion)
     if !camera.isAtRest {
       camera.step(Float(step))
@@ -785,7 +792,7 @@ final class NookiDiorama: CatPlayStage {
   /// True while something should move at full rate. A sleeping room runs at the idle step.
   private var isBusy: Bool {
     !camera.isAtRest || renovation.isMoving || tilt.isMoving || tilt.pull != .zero
-      || yarnPlay.isPlaying
+      || yarnPlay.isPlaying || isPlayingWithToys
       || ballSpeed > NookiYarnPlay.noticeSpeed / 2 || world.activity != .sleeping || petStart != nil
       || !wobbles.isEmpty
       || lookStart != nil || lookTurn != 0 || opening != nil || trip != nil || purr.isPurring
@@ -817,7 +824,15 @@ final class NookiDiorama: CatPlayStage {
       awaySpot = pose.spot
     }
     tripPose = nil
-    if let trip {
+    if let pose = stepPursuit() {
+      frame.heading = pose.heading
+      frame.wake = 1
+      frame.eyesOpen = true
+      frame.hop = 0
+      frame.stretch = 0
+      awaySpot = tripSpot(pose.spot)
+      tripPose = pose
+    } else if let trip {
       let pose = trip.pose(at: clock)
       if pose.isDone {
         self.trip = nil
@@ -908,7 +923,7 @@ final class NookiDiorama: CatPlayStage {
   private static let fingerLookLength = 1.5
 
   /// Turns the head and neck, not the body, towards `point` for `length` seconds.
-  private func headLook(at point: SIMD3<Float>, for length: Double) {
+  func headLook(at point: SIMD3<Float>, for length: Double) {
     gazePoint = point
     gazeUntil = clock + length
   }

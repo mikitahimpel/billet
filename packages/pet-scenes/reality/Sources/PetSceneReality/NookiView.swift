@@ -101,6 +101,12 @@ private struct NookiStage: View {
 
   @State private var shopRoom: NookiShopRoom
   @State private var lastDrag = CGSize.zero
+  /// Whether the drag in progress began on one of the toys Nooki adds, once that is known.
+  @State private var toyDrag: ToyDrag?
+
+  enum ToyDrag: Equatable {
+    case decided(CatToy?)
+  }
   @State private var lastPinch: CGFloat = 1
   @State private var isAppeared = false
   @State private var isRenovating = false
@@ -137,6 +143,7 @@ private struct NookiStage: View {
   var body: some View {
     room
       .onAppear {
+        diorama.report = onEvent
         isAppeared = true
         connectRenovator()
         diorama.whenAmbientIsReady { shopRoom.ambient = $0 }
@@ -280,6 +287,12 @@ private struct NookiStage: View {
     SpatialTapGesture()
       .targetedToAnyEntity()
       .onEnded { value in
+        if !isRenovating, let toy = diorama.toyTarget(at: value.location),
+          case .fling = CatTouchRouter.route(.tap, on: .toy(toy))
+        {
+          diorama.nudge(toy)
+          return
+        }
         let time = ProcessInfo.processInfo.systemUptime
         if let event = diorama.tap(value.entity, at: time) { onEvent(event) }
       }
@@ -300,6 +313,15 @@ private struct NookiStage: View {
       .targetedToAnyEntity()
       .onChanged { value in
         let location = value.gestureValue.location
+        if toyDrag == nil {
+          let start = value.gestureValue.startLocation
+          toyDrag = .decided(isRenovating ? nil : diorama.toyTarget(at: start))
+        }
+        if case .decided(let toy?) = toyDrag {
+          diorama.followFinger(at: SIMD2(Float(location.x), Float(location.y)), in: viewSize)
+          diorama.carry(toy, to: location)
+          return
+        }
         let point = SIMD2(Float(location.x), Float(location.y))
         diorama.followFinger(at: point, in: viewSize)
         if diorama.bat(at: point, in: viewSize) { onEvent(.played) }
@@ -320,6 +342,11 @@ private struct NookiStage: View {
       .onEnded { value in
         let velocity = value.gestureValue.velocity
         lastDrag = .zero
+        defer { toyDrag = nil }
+        if case .decided(let toy?) = toyDrag {
+          diorama.release(toy, velocity: velocity, at: value.gestureValue.location)
+          return
+        }
         if isHoldingPiece(value.entity) {
           return
         } else if value.entity.name == NookiTarget.cat.rawValue, !isRenovating {

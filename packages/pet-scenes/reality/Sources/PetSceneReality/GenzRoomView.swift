@@ -125,8 +125,11 @@ struct GenzRoomView: View {
   @Environment(\.petSceneLighting) private var lighting
   @State private var lastDrag = CGSize.zero
   @State private var lastPinch: CGFloat = 1
-  /// Whether the drag in progress began on the cat, so it strokes rather than turns the room.
-  @State private var stroking: Bool?
+  /// Where the drag in progress goes, decided where it began: the cat, a toy or the camera.
+  @State private var dragRoute: CatTouchRoute?
+  @State private var lastTap: CatTap?
+  @State private var holding: CatHold?
+  @State private var holdTimer: Task<Void, Never>?
   @State private var isAppeared = false
   @State private var viewID = UUID()
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -272,6 +275,7 @@ struct GenzRoomView: View {
     .simultaneousGesture(orbit(room))
     .simultaneousGesture(pinch(room))
     .simultaneousGesture(tap(room))
+    .simultaneousGesture(lift(room))
     .modifier(GenzRoomFeeds(view: self, room: room))
   }
 
@@ -315,7 +319,10 @@ struct GenzRoomView: View {
       .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
       .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
       .onChange(of: moments, initial: true) { _, moments in room.setMoments(moments) }
-      .onAppear { room.art = replacementArt ?? GenzNativeArt() }
+      .onAppear {
+        room.art = replacementArt ?? GenzNativeArt()
+        room.report = onEvent
+      }
       .accessibilityElement()
       .accessibilityLabel(
         layout.style == .sunsetLamp ? "Bedroom lit by a sunset lamp" : "Window seat at night"
@@ -337,6 +344,7 @@ struct GenzRoomView: View {
 
   /// Gives a room swapped in everything the view has given the room before it.
   private func set(up room: GenzRoom) {
+    room.report = onEvent
     room.art = replacementArt ?? GenzNativeArt()
     if let size { room.fit(to: size) }
     room.setReduceMotion(reduceMotion)
@@ -353,41 +361,117 @@ struct GenzRoomView: View {
     room.setOnScreen(isOnScreen, in: viewID)
   }
 
+  /// A tap on the cat pats it and one on the bowl fills it. Two quick taps on the cat ask for a
+  /// trick and on the floor call the cat there; two anywhere else send the camera home, as the
+  /// room's own taps do.
   private func tap(_ room: GenzRoom) -> some Gesture {
     SpatialTapGesture()
       .targetedToAnyEntity()
       .onEnded { value in
-        if let event = room.tap(value.entity, at: ProcessInfo.processInfo.systemUptime) {
-          onEvent(event)
+        let target = room.tapTarget(at: value.location)
+        let now = ProcessInfo.processInfo.systemUptime
+        let isDouble = lastTap.map { $0.isPartner(of: target, at: value.location, now) } ?? false
+        lastTap = isDouble ? nil : CatTap(target: target, location: value.location, time: now)
+        let route = CatTouchRouter.route(
+          isDouble ? .doubleTap : .tap, on: target, isHoldingCat: room.isHoldingCat)
+        switch route {
+        case .trick:
+          room.tapTimer = NookiTapTimer()
+          room.askTrick().forEach(onEvent)
+        case .call:
+          room.tapTimer = NookiTapTimer()
+          room.callCat(to: value.location).forEach(onEvent)
+        case .fillBowl:
+          room.fillBowl().forEach(onEvent)
+        case .fling(let toy):
+          room.nudge(toy)
+        case .pat, .camera, .scenery, .ignore:
+          if let event = room.tap(value.entity, at: now) { onEvent(event) }
+        case .stroke, .lift, .carry, .offerTreat:
+          break
         }
       }
   }
 
+  /// A finger held still on the cat picks it up; it hangs under the finger until let go.
+  private func lift(_ room: GenzRoom) -> some Gesture {
+    DragGesture(minimumDistance: 0)
+      .onChanged { value in
+        if holding == nil {
+          holding = .pressing
+          guard room.isOverCat(value.startLocation) else {
+            holding = .elsewhere
+            return
+          }
+          holdTimer = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled, holding == .pressing, room.liftCat() else { return }
+            holding = .lifted
+          }
+        }
+        let moved = hypot(value.translation.width, value.translation.height)
+        if holding == .pressing, moved > 5 {
+          holdTimer?.cancel()
+          holding = .elsewhere
+        }
+        if holding == .lifted { room.moveLifted(to: value.location) }
+      }
+      .onEnded { _ in
+        holdTimer?.cancel()
+        if holding == .lifted { room.dropCat() }
+        holding = nil
+      }
+  }
+
+  /// A drag from the cat strokes it and one from a toy plays with it; any other drag turns the
+  /// room. The cat's eyes follow the finger throughout.
   private func orbit(_ room: GenzRoom) -> some Gesture {
     DragGesture(minimumDistance: 6)
       .onChanged { value in
-        let stroking = self.stroking ?? room.isOverCat(value.startLocation)
-        if self.stroking == nil {
-          self.stroking = stroking
-          if stroking { room.stroke(at: value.location).forEach(onEvent) }
-        } else if stroking {
-          room.strokeMoved(to: value.location).forEach(onEvent)
-        }
+        let route =
+          dragRoute
+          ?? CatTouchRouter.route(
+            .drag, on: room.tapTarget(at: value.startLocation), isHoldingCat: room.isHoldingCat)
+        let isFirst = dragRoute == nil
+        dragRoute = route
         room.followFinger(at: value.location)
-        if !stroking, let event = room.bat(at: value.location) { onEvent(event) }
-        guard orbits, !stroking else { return }
-        room.orbit(
-          byX: Float(value.translation.width - lastDrag.width),
-          y: Float(value.translation.height - lastDrag.height))
-        lastDrag = value.translation
+        switch route {
+        case .stroke:
+          if isFirst {
+            room.stroke(at: value.location).forEach(onEvent)
+          } else {
+            room.strokeMoved(to: value.location).forEach(onEvent)
+          }
+        case .carry(let toy), .fling(let toy):
+          room.carry(toy, to: value.location)
+        case .offerTreat:
+          room.offerTreat(at: value.location).forEach(onEvent)
+        case .camera:
+          if let event = room.bat(at: value.location) { onEvent(event) }
+          guard orbits else { return }
+          room.orbit(
+            byX: Float(value.translation.width - lastDrag.width),
+            y: Float(value.translation.height - lastDrag.height))
+          lastDrag = value.translation
+        case .pat, .trick, .lift, .fillBowl, .call, .scenery, .ignore:
+          break
+        }
       }
       .onEnded { value in
-        defer { stroking = nil }
+        defer { dragRoute = nil }
         lastDrag = .zero
-        if stroking == true { room.strokeEnded() }
-        guard orbits, stroking != true else { return }
-        room.endOrbit(
-          velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
+        switch dragRoute {
+        case .stroke: room.strokeEnded()
+        case .offerTreat: room.endTreat()
+        case .carry(let toy), .fling(let toy):
+          room.release(toy, velocity: value.velocity, at: value.location)
+        case .camera:
+          guard orbits else { return }
+          room.endOrbit(
+            velocityX: Float(value.velocity.width), velocityY: Float(value.velocity.height))
+        case .pat, .trick, .lift, .fillBowl, .call, .scenery, .ignore, nil:
+          break
+        }
       }
   }
 
@@ -402,4 +486,24 @@ struct GenzRoomView: View {
         room.endZoom()
       }
   }
+}
+
+/// One tap, kept to tell a double tap from two single ones.
+struct CatTap: Equatable {
+  let target: CatTouchTarget
+  let location: CGPoint
+  let time: TimeInterval
+
+  /// Whether a tap on `target` at `location` and `time` makes a double tap with this one.
+  func isPartner(of target: CatTouchTarget, at location: CGPoint, _ time: TimeInterval) -> Bool {
+    target == self.target && time - self.time <= NookiTapTimer.window
+      && hypot(location.x - self.location.x, location.y - self.location.y) < 60
+  }
+}
+
+/// A finger down that may become a hold on the cat.
+enum CatHold: Equatable {
+  case pressing
+  case lifted
+  case elsewhere
 }

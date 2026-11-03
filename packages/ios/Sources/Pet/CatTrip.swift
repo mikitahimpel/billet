@@ -24,6 +24,19 @@ public struct CatTrip: Sendable {
     public var leg: Int
     public var progress: Double
     public var isDone: Bool
+
+    public init(
+      spot: SIMD2<Float>, heading: Float, action: CatAction, speed: Float, leg: Int,
+      progress: Double, isDone: Bool
+    ) {
+      self.spot = spot
+      self.heading = heading
+      self.action = action
+      self.speed = speed
+      self.leg = leg
+      self.progress = progress
+      self.isDone = isDone
+    }
   }
 
   /// How long a turn on the spot takes before a walk sets off.
