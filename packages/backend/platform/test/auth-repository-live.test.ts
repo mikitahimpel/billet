@@ -112,6 +112,40 @@ describe("AuthRepositoryLive on D1", () => {
     expect(kept).toHaveLength(1);
   });
 
+  it("removes users no one can reach, and keeps every user something still points at", async () => {
+    const repository = await repositoryOn(env.DB);
+    const now = Date.now();
+    const old = now - 2 * 60 * 60 * 1000;
+    const iso = new Date(old).toISOString();
+    const userAt = (id: string, createdAt: number) => [
+      env.DB.prepare("INSERT INTO users (id, created_at) VALUES (?, ?)").bind(id, createdAt),
+      env.DB.prepare(
+        "INSERT INTO auth_user (id, name, email, email_verified, created_at, updated_at) VALUES (?, '', ?, 0, ?, ?)",
+      ).bind(id, `${id}@test.invalid`, iso, iso),
+    ];
+    await env.DB.batch([
+      // Lost a race to link an Apple ID: nothing points at it.
+      ...userAt("user-lost", old),
+      // Mid sign-in: too new to judge.
+      ...userAt("user-new", now),
+      ...userAt("user-linked", old),
+      env.DB.prepare(
+        "INSERT INTO auth_account (id, account_id, provider_id, user_id, created_at, updated_at) VALUES ('a', 'subject', 'apple', 'user-linked', ?, ?)",
+      ).bind(iso, iso),
+      ...userAt("user-keyed", old),
+      env.DB.prepare(
+        "INSERT INTO account_keys (key_hash, user_id, created_at) VALUES ('hash', 'user-keyed', 1)",
+      ),
+    ]);
+    await Effect.runPromise(repository.deleteExpired(now));
+    const left = await env.DB.prepare("SELECT id FROM users ORDER BY id").all<{ id: string }>();
+    expect(left.results.map(({ id }) => id)).toEqual(["user-keyed", "user-linked", "user-new"]);
+    const authLeft = await env.DB.prepare("SELECT id FROM auth_user ORDER BY id").all<{
+      id: string;
+    }>();
+    expect(authLeft.results.map(({ id }) => id)).toEqual(["user-keyed", "user-linked", "user-new"]);
+  });
+
   it("removes expired sessions with their devices and tokens, and old devices with none", async () => {
     const repository = await repositoryOn(env.DB);
     const now = Date.now();

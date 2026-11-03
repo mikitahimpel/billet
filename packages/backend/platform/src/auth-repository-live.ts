@@ -1,4 +1,4 @@
-import { and, eq, inArray, lt, lte, ne, notInArray } from "drizzle-orm";
+import { and, eq, inArray, lt, lte, ne, notExists, notInArray } from "drizzle-orm";
 import { Effect, Layer, Option, Schema } from "effect";
 import { AuthUnavailable } from "@billet/backend-auth/auth-error";
 import { AuthRepository, PushTokenRecord } from "@billet/backend-auth/auth-repository";
@@ -6,10 +6,15 @@ import { UserId } from "@billet/contracts-domain/ids";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
 import {
   accountKeys,
+  authAccounts,
   authChallenges,
   authSessions,
+  authUsers,
   devices,
+  invites,
+  pairMembers,
   pushTokens,
+  users,
 } from "./directory-schema.ts";
 
 /**
@@ -17,6 +22,27 @@ import {
  * Better Auth itself or mid sign-in. Only the first kind is old.
  */
 const orphanGrace = 60 * 60 * 1000;
+
+/**
+ * Users no one can reach: no Apple link, no session, no account key and nothing of theirs. Only
+ * the loser of two first Apple sign-ins at once leaves one (Better Auth writes the user, then the
+ * link, and D1 can't hold both in one transaction). The grace keeps a sign-in in progress.
+ */
+const unreachableUsers = (db: DirectoryDatabase, before: number) =>
+  db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        lt(users.createdAt, before),
+        notExists(db.select().from(authAccounts).where(eq(authAccounts.userId, users.id))),
+        notExists(db.select().from(authSessions).where(eq(authSessions.userId, users.id))),
+        notExists(db.select().from(accountKeys).where(eq(accountKeys.userId, users.id))),
+        notExists(db.select().from(devices).where(eq(devices.userId, users.id))),
+        notExists(db.select().from(pairMembers).where(eq(pairMembers.userId, users.id))),
+        notExists(db.select().from(invites).where(eq(invites.ownerId, users.id))),
+      ),
+    );
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const unavailable = () => new AuthUnavailable({ reason: "directory-unavailable" });
@@ -121,6 +147,10 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
                 notInArray(devices.id, db.select({ id: authSessions.deviceId }).from(authSessions)),
               ),
             ),
+          db
+            .delete(authUsers)
+            .where(inArray(authUsers.id, unreachableUsers(db, now - orphanGrace))),
+          db.delete(users).where(inArray(users.id, unreachableUsers(db, now - orphanGrace))),
         ]),
       ).pipe(Effect.asVoid);
     },

@@ -271,12 +271,15 @@ export const BetterAuthEngineLive = (db: D1Database): Layer.Layer<AuthEngine> =>
           return yield* issued(session.token);
         }),
 
+      // Two first sign-ins with one Apple ID at once both open a user, and the second link fails
+      // on the unique index. Trying again finds the first one's link and signs in to that user.
       signInWithApple: (apple) =>
         trusting(apple, (token) =>
           auth.api.signInSocial({
             body: { provider: "apple", idToken: { token, nonce: apple.nonce } },
           }),
         ).pipe(
+          Effect.retry({ times: 1 }),
           Effect.flatMap((result) =>
             "token" in result && typeof result.token === "string"
               ? issued(result.token)

@@ -445,6 +445,14 @@ describe("the Api Worker", () => {
     const results = await Promise.all(Array.from({ length: 5 }, () => signIn()));
     expect(results.map(({ response }) => response.status)).toEqual([200, 200, 200, 200, 200]);
     expect(appleFetch).toHaveBeenCalledTimes(5);
+    // One Apple ID, so one user, however the first sign-ins raced.
+    const sessions = await Promise.all(
+      results.map(async ({ response }) =>
+        Schema.decodeUnknownSync(SessionResponse)(await response.json()),
+      ),
+    );
+    expect(new Set(sessions.map(({ userId }) => userId)).size).toBe(1);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM auth_account").first("n")).toBe(1);
   });
 });
 
