@@ -38,6 +38,16 @@ struct GenzCamera: Equatable {
   private static let friction: Float = 4
   private static let homeRate: Float = 5
   private static let restingSpeed: Float = 0.005
+  /// How far past a limit a drag or a coast may carry the camera before it eases back, so the
+  /// view gives at its ends rather than stopping dead.
+  static let angleOvershoot: Float = 0.06
+  static let zoomOvershoot: Float = 0.05
+  /// How much of a drag past a limit the camera follows.
+  private static let resistance: Float = 0.3
+  /// How quickly the camera eases back inside its limits, per second.
+  private static let springRate: Float = 10
+  /// How quickly a coast past a limit dies away, per second.
+  private static let overshootFriction: Float = 30
 
   init(home: Home) {
     self.home = home
@@ -75,6 +85,8 @@ struct GenzCamera: Equatable {
 
   var isAtRest: Bool {
     !isHeld && !isReturningHome && yawVelocity == 0 && pitchVelocity == 0
+      && home.yawLimits.contains(yaw) && home.pitchLimits.contains(pitch)
+      && home.zoomLimits.contains(zoom)
   }
 
   /// How far the view has turned from home, from -1 to 1 across the yaw limits.
@@ -94,8 +106,9 @@ struct GenzCamera: Equatable {
     isReturningHome = false
     yawVelocity = 0
     pitchVelocity = 0
-    yaw = Self.clamped(yaw + deltaYaw, to: home.yawLimits)
-    pitch = Self.clamped(pitch + deltaPitch, to: home.pitchLimits)
+    yaw = Self.resisted(yaw, by: deltaYaw, in: home.yawLimits, overshoot: Self.angleOvershoot)
+    pitch = Self.resisted(
+      pitch, by: deltaPitch, in: home.pitchLimits, overshoot: Self.angleOvershoot)
   }
 
   /// Follows a pinch step, where a `scale` above 1 moves closer.
@@ -103,7 +116,8 @@ struct GenzCamera: Equatable {
     guard scale > 0 else { return }
     isHeld = true
     isReturningHome = false
-    zoom = Self.clamped(zoom / scale, to: home.zoomLimits)
+    zoom = Self.resisted(
+      zoom, by: zoom / scale - zoom, in: home.zoomLimits, overshoot: Self.zoomOvershoot)
   }
 
   mutating func release(yawVelocity: Float, pitchVelocity: Float, coasting: Bool) {
@@ -136,11 +150,48 @@ struct GenzCamera: Equatable {
       }
       return
     }
-    yaw = Self.clamped(yaw + yawVelocity * delta, to: home.yawLimits)
-    pitch = Self.clamped(pitch + pitchVelocity * delta, to: home.pitchLimits)
-    let decay = exp(-Self.friction * delta)
-    yawVelocity = abs(yawVelocity * decay) < Self.restingSpeed ? 0 : yawVelocity * decay
-    pitchVelocity = abs(pitchVelocity * decay) < Self.restingSpeed ? 0 : pitchVelocity * decay
+    (yaw, yawVelocity) = Self.coasted(
+      yaw, velocity: yawVelocity, in: home.yawLimits, overshoot: Self.angleOvershoot, delta)
+    (pitch, pitchVelocity) = Self.coasted(
+      pitch, velocity: pitchVelocity, in: home.pitchLimits, overshoot: Self.angleOvershoot, delta)
+    zoom = Self.settled(zoom, in: home.zoomLimits, delta)
+  }
+
+  /// A value `velocity` carries for `delta` seconds: slowed by friction, and past a limit slowed
+  /// hard while it eases back.
+  private static func coasted(
+    _ value: Float, velocity: Float, in limits: ClosedRange<Float>, overshoot: Float,
+    _ delta: Float
+  ) -> (Float, Float) {
+    let moved = min(
+      max(value + velocity * delta, limits.lowerBound - overshoot), limits.upperBound + overshoot)
+    let isOut = !limits.contains(moved)
+    let decay = exp(-(isOut ? overshootFriction : friction) * delta)
+    var slowed = velocity * decay
+    if abs(slowed) < restingSpeed || (isOut && moved != value + velocity * delta) { slowed = 0 }
+    // Past a limit the spring pulls back every frame, so the coast turns round in one arc.
+    return (settled(moved, in: limits, delta), slowed)
+  }
+
+  /// `value` eased back towards `limits` for `delta` seconds, or kept when inside them.
+  private static func settled(_ value: Float, in limits: ClosedRange<Float>, _ delta: Float)
+    -> Float
+  {
+    let edge = clamped(value, to: limits)
+    guard edge != value else { return value }
+    let next = value + (edge - value) * (1 - exp(-springRate * delta))
+    return abs(edge - next) < 0.0005 ? edge : next
+  }
+
+  /// `value` moved by `delta`, following only part of the way once past a limit, and no further
+  /// than `overshoot` beyond it.
+  private static func resisted(
+    _ value: Float, by delta: Float, in limits: ClosedRange<Float>, overshoot: Float
+  ) -> Float {
+    let outward =
+      (value >= limits.upperBound && delta > 0) || (value <= limits.lowerBound && delta < 0)
+    let moved = value + delta * (outward ? resistance : 1)
+    return min(max(moved, limits.lowerBound - overshoot), limits.upperBound + overshoot)
   }
 
   /// Where `point` lands in a view of `size` points, or `nil` when it is behind the camera.

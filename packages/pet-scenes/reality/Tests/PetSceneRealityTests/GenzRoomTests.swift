@@ -53,16 +53,55 @@ import Testing
     }
   }
 
-  @Test func dragAndPinchStayInsideTheLimits() {
+  @Test func dragAndPinchGiveALittleAtTheLimitsThenEaseBack() {
     let home = GenzLayout.windowSeat.camera
     var camera = GenzCamera(home: home)
     camera.drag(yaw: 10, pitch: -10)
+    #expect(camera.yaw > home.yawLimits.upperBound)
+    #expect(camera.yaw <= home.yawLimits.upperBound + GenzCamera.angleOvershoot)
+    #expect(camera.pitch < home.pitchLimits.lowerBound)
+    #expect(camera.pitch >= home.pitchLimits.lowerBound - GenzCamera.angleOvershoot)
+    camera.zoom(by: 0.01)
+    #expect(camera.zoom > home.zoomLimits.upperBound)
+    #expect(camera.zoom <= home.zoomLimits.upperBound + GenzCamera.zoomOvershoot)
+    camera.release(yawVelocity: 0, pitchVelocity: 0, coasting: true)
+    #expect(!camera.isAtRest)
+    for _ in 0..<120 { camera.step(1.0 / 60) }
+    #expect(camera.isAtRest)
     #expect(camera.yaw == home.yawLimits.upperBound)
     #expect(camera.pitch == home.pitchLimits.lowerBound)
-    camera.zoom(by: 0.01)
     #expect(camera.zoom == home.zoomLimits.upperBound)
     camera.goHome(animated: false)
     #expect(camera.yaw == home.yaw && camera.pitch == home.pitch && camera.zoom == 1)
+  }
+
+  @Test func aDragFollowsOnlyPartWayPastALimit() {
+    let home = GenzLayout.windowSeat.camera
+    var camera = GenzCamera(home: home)
+    camera.drag(yaw: home.yawLimits.upperBound - home.yaw, pitch: 0)
+    camera.drag(yaw: 0.05, pitch: 0)
+    #expect(abs(camera.yaw - (home.yawLimits.upperBound + 0.015)) < 0.0001)
+  }
+
+  @Test func aCoastIntoALimitSlowsPastItRatherThanStoppingDead() {
+    let home = GenzLayout.windowSeat.camera
+    var camera = GenzCamera(home: home)
+    camera.drag(yaw: home.yawLimits.upperBound - 0.05 - home.yaw, pitch: 0)
+    camera.release(yawVelocity: 1.5, pitchVelocity: 0, coasting: true)
+    var furthest = camera.yaw
+    var steps: [Float] = []
+    for _ in 0..<180 {
+      let was = camera.yaw
+      camera.step(1.0 / 60)
+      steps.append(abs(camera.yaw - was))
+      furthest = max(furthest, camera.yaw)
+    }
+    #expect(furthest > home.yawLimits.upperBound)
+    #expect(furthest <= home.yawLimits.upperBound + GenzCamera.angleOvershoot)
+    #expect(camera.yaw == home.yawLimits.upperBound)
+    #expect(camera.isAtRest)
+    // No frame jumps further than the release speed carries it in one frame.
+    #expect(steps.allSatisfy { $0 <= 1.5 / 60 + 0.0001 })
   }
 
   @Test func goingHomeAnimatedArrives() {
