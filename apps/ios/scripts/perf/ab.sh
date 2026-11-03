@@ -16,17 +16,19 @@ new_derived=${4:?}
 rounds=${5:-3}
 here=${0:A:h}
 out=${PERF_OUT:-$HOME/.billet-manager/pet-concept/perf/runs}
-args=(${=PERF_AB_ARGS:-"--launches 2 --full 1"})
+args=(${=PERF_AB_ARGS:---launches 2 --full 1})
 
 source $here/lock.sh
 perf_lock_take "ab $base vs $new"
 trap 'perf_lock_give' EXIT
 
+# Each round's output is kept beside its runs, so a failed round says why.
+mkdir -p $out/$base $out/$new
 for ((round = 1; round <= rounds; round++)); do
-  PERF_DERIVED=$base_derived $here/measure.sh $base $args > /dev/null 2>&1 \
-    || echo "base round $round failed" >&2
-  PERF_DERIVED=$new_derived $here/measure.sh $new $args > /dev/null 2>&1 \
-    || echo "new round $round failed" >&2
+  PERF_DERIVED=$base_derived $here/measure.sh $base $args > $out/$base/round-$round.log 2>&1 \
+    || echo "base round $round failed: $out/$base/round-$round.log" >&2
+  PERF_DERIVED=$new_derived $here/measure.sh $new $args > $out/$new/round-$round.log 2>&1 \
+    || echo "new round $round failed: $out/$new/round-$round.log" >&2
 done
 python3 -I $here/report.py $out/$base $out/$new > $out/$new/ab.md
 echo "wrote $out/$new/ab.md"
