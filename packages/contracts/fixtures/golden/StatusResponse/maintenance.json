@@ -1,0 +1,13 @@
+{
+  "status": {
+    "maintenance": {
+      "active": true,
+      "message": {
+        "key": "maintenance.default",
+        "text": "billet is resting for a little while."
+      },
+      "until": "2026-11-03T22:30:00Z"
+    },
+    "minVersion": "1.0"
+  }
+}

@@ -14,6 +14,7 @@ import { Experiments, defineExperiments } from "../src/experiments.ts";
 import { FlagsRepository } from "../src/flags-repository.ts";
 import { FlagsRoutes } from "../src/flags-routes.ts";
 import { FlagsService } from "../src/flags-service.ts";
+import { ServiceStatus } from "../src/service-status.ts";
 import { FlagConfigRepository } from "../src/flag-config-repository.ts";
 import { makeInMemoryFlagConfigRepository } from "./in-memory-flag-config-repository.ts";
 import { makeInMemoryFlagsRepository } from "./in-memory-flags-repository.ts";
@@ -44,7 +45,16 @@ describe("flags route", () => {
   );
   const { handler, dispose } = HttpRouter.toWebHandler(
     FlagsRoutes.pipe(
-      Layer.provide(Layer.mergeAll(FakeAuth, FlagsService.layer)),
+      Layer.provide(
+        Layer.mergeAll(
+          FakeAuth,
+          FlagsService.layer,
+          ServiceStatus.with({
+            maintenance: { active: false },
+            notice: { key: "notice.slow-notes", text: "Notes may be slow tonight." },
+          }),
+        ),
+      ),
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PairingRepository, pairs.repository),
@@ -108,7 +118,17 @@ describe("flags route", () => {
   it("lists nothing for a caller without a partner", async () => {
     const response = await get("cal");
     expect(response.status).toBe(200);
-    expect(Schema.decodeUnknownSync(FlagsResponse)(await response.json())).toEqual({ flags: [] });
+    expect(Schema.decodeUnknownSync(FlagsResponse)(await response.json())).toMatchObject({
+      flags: [],
+    });
+  });
+
+  it("carries the service status next to the flags", async () => {
+    const body = Schema.decodeUnknownSync(FlagsResponse)(await (await get("cal")).json());
+    expect(body.status).toEqual({
+      maintenance: { active: false },
+      notice: { key: "notice.slow-notes", text: "Notes may be slow tonight." },
+    });
   });
 
   it("gives both partners the same list, never cached", async () => {
