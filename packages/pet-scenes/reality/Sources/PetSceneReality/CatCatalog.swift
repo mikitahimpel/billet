@@ -20,9 +20,9 @@ struct CatClipRange: Decodable, Hashable, Sendable {
 enum CatCatalog {
   static let folder = "Cats"
 
-  /// The resource name of the model, without extension.
+  /// The resource name of the model's mesh, without extension. A splat cat uses its mesh model's.
   static func resourceName(_ model: CatModel) -> String {
-    "Cat_\(model.rawValue)"
+    "Cat_\(model.mesh.rawValue)"
   }
 
   /// The model's clips by action. Clip names the app does not know are skipped.
