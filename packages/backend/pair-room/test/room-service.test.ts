@@ -33,6 +33,15 @@ const memoryStore = (options?: { readonly failCommit?: boolean }) => {
       Effect.sync(() => Option.fromNullishOr(memory.keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => memory.notes.filter((n) => n.seq > afterSeq).slice(0, limit)),
+    forgetAuthor: (author) =>
+      Effect.sync(() => {
+        const forgotten = memory.notes.filter((entry) => entry.note.author === author);
+        memory.notes = memory.notes.filter((entry) => entry.note.author !== author);
+        for (const [key, entry] of memory.keys) {
+          if (entry.note.author === author) memory.keys.delete(key);
+        }
+        return forgotten;
+      }),
   });
   return { memory, layer };
 };
@@ -238,5 +247,27 @@ describe("RoomService", () => {
       }),
     );
     expect(memory.notes).toHaveLength(1);
+  });
+
+  it("forgets every note of one author, keeping the partner's and the room's sequence", async () => {
+    const { memory, layer } = memoryStore();
+    const outcome = await runWith(
+      layer,
+      Effect.gen(function* () {
+        const room = yield* RoomService;
+        yield* room.dispatch(open);
+        const repeated = photo();
+        yield* room.sendNote(alice, repeated);
+        yield* room.sendNote(bob, photo());
+        yield* room.sendNote(alice, photo());
+        const forgotten = yield* room.forgetAuthor(alice);
+        // A retry of a forgotten note's key is a new note, not an answer from storage.
+        const again = yield* room.sendNote(alice, repeated);
+        return { forgotten, again, after: yield* room.forgetAuthor(alice) };
+      }),
+    );
+    expect(outcome.forgotten.map(({ seq }) => seq)).toEqual([1, 3]);
+    expect(outcome.after.map(({ seq }) => seq)).toEqual([4]);
+    expect(memory.notes.map(({ seq, note }) => [seq, note.author])).toEqual([[2, bob]]);
   });
 });

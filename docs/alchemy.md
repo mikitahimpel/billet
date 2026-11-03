@@ -134,6 +134,18 @@ Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Bille
 
 The API token needs Workers Scripts, D1 and R2 edit on the account. Create one item per vault.
 
+`APPLE_SIGN_IN_KEY` (the `.p8` key's PEM) and its key id let the Worker revoke a user's Sign in
+with Apple token when they delete their account (App Store guideline 5.1.1(v)). Only the `dev`
+stage binds them for now. Before `prod` serves real accounts, the owner:
+
+1. adds the fields `APPLE_SIGN_IN_KEY` and `APPLE_SIGN_IN_KEY_ID` to an `Apple` item in
+   `Billet Release` (the same key works: it is the team's Sign in with Apple key, with
+   `com.mikitahimpel.billet` as its primary App ID);
+2. adds both `pass://Billet Release/Apple/...` lines to `.env.pass.release`;
+3. moves the two bindings in `alchemy.run.ts` out of the `dev`-only block.
+
+Without them deletion still deletes everything and logs `not-configured` for the revocation.
+
 ```sh
 PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm exec alchemy deploy --stage dev
 ```

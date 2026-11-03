@@ -6,9 +6,9 @@ import {
   HttpServerResponse,
   type HttpServerError,
 } from "effect/http";
+import { AccountResponse } from "@billet/contracts-http-api/account";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import {
-  AccountResponse,
   AuthChallengeResponse,
   SessionResponse,
   SignInAnonymouslyRequest,

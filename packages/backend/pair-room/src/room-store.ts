@@ -22,5 +22,7 @@ export class RoomStore extends Context.Service<
       afterSeq: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>>;
+    /** Deletes every note `author` sent and returns them. The room's `lastSeq` does not move. */
+    readonly forgetAuthor: (author: UserId) => Effect.Effect<ReadonlyArray<SequencedNote>>;
   }
 >()("@billet/backend-pair-room/RoomStore") {}

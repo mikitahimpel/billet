@@ -2,6 +2,8 @@ import { Layer } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { socketRoute } from "@billet/contracts-realtime/socket-route";
+import { AccountDeletion } from "@billet/backend-account/account-deletion";
+import { AccountRoutes } from "@billet/backend-account/account-routes";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
@@ -22,7 +24,9 @@ import { EventSinkLive } from "./event-sink-live.ts";
 import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairVariantsLive } from "./pair-variants-live.ts";
+import { AccountNoticesLive, AccountRepositoryLive } from "./account-repository-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
+import { AppleTokenRevokerLive, signInWithAppleKeyOf } from "./apple-token-revoker-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
@@ -37,10 +41,18 @@ import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) =>
-  Layer.mergeAll(AuthRoutes, PairingRoutes, NotesRoutes, FlagsRoutes, MetricsRoutes).pipe(
+  Layer.mergeAll(
+    AuthRoutes,
+    AccountRoutes,
+    PairingRoutes,
+    NotesRoutes,
+    FlagsRoutes,
+    MetricsRoutes,
+  ).pipe(
     Layer.provide(
       Layer.mergeAll(
         AuthService.layer,
+        AccountDeletion.layer,
         // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
         PairingService.layer.pipe(
           Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
@@ -55,6 +67,9 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
       Layer.mergeAll(
         AuthRepositoryLive(env.DB),
         BetterAuthEngineLive(env.DB),
+        AccountRepositoryLive(env.DB),
+        AccountNoticesLive(env.DB),
+        AppleTokenRevokerLive(signInWithAppleKeyOf(env)),
         PairingRepositoryLive(env.DB),
         FlagsRepositoryLive(env.DB),
         FlagConfigRepositoryLive(env.DB, caches.default),

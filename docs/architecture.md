@@ -173,6 +173,32 @@ A repeated open is accepted, so two first notes at once are safe.
 `packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
 `platform` provides.
 
+### Deleting an account
+
+`DELETE /v1/account` deletes the caller's account and everything it owns, as App Store guideline
+5.1.1(v) asks. The body is `DeleteAccountRequest`; a linked account sends the authorization code of
+a fresh Sign in with Apple in it. In order:
+
+1. With a code, the Worker trades it at Apple's `/auth/token` for a refresh token and revokes that at
+   `/auth/revoke`, with a client secret signed by the Sign in with Apple key (`APPLE_SIGN_IN_KEY`).
+   The outcome is logged as a label; a failure or a missing key never stops the deletion.
+2. In every room the user has been in (the current pair, and each pair `pair_events` names), the
+   `PairRoom` deletes the notes they sent and closes its sockets, and their images go from R2: the
+   ones those notes name, and every image under the prefix whose `uploader` metadata is theirs.
+3. One D1 batch ends the pair, leaves the partner a `partner_notices` row, and deletes the user's
+   `users` and `auth_user` rows with their sessions, Apple link, account key, devices, push tokens,
+   invite and counted events.
+4. One more pass over the current room catches a note sent while the batch ran.
+
+A failure before step 3 answers 503 and leaves the account, so the app tries again; nothing deleted
+comes back. Afterwards the old session is unauthorized, which is also the answer to a retry.
+
+The partner keeps the cat, their own notes and their account. They are unpaired, and
+`GET /v1/account` returns `partnerLeft` while they stay unpaired, so the app can tell them gently;
+pairing again clears it. Analytics Engine points hold no user id, only the pair hash, so nothing
+there names the user. `packages/backend/account` holds this logic on an injected
+`AccountRepository` and `AppleTokenRevoker`, which `platform` provides.
+
 ### Privacy
 
 Traffic uses TLS, the R2 bucket is private, and media routes are authorised. End-to-end encryption is
@@ -226,7 +252,7 @@ apps/
   ios/                  XcodeGen project.yml; thin App, Widget, NotificationService targets
 packages/
   contracts/{domain,http-api,realtime,push,fixtures}
-  backend/{platform,auth,pairing,pair-room,notes,push,accounts}
+  backend/{platform,auth,account,pairing,pair-room,notes,flags,metrics,admin}
   config/{typescript,oxlint}
   ios/                  Main SwiftPM package, many targets:
     BilletKit           Machine, Store

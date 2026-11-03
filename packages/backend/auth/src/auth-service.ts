@@ -6,11 +6,12 @@ import {
   AccountKey,
   AuthNonce,
   SessionToken,
-  type AccountResponse,
   type AuthChallengeResponse,
   type SessionResponse,
 } from "@billet/contracts-http-api/auth";
+import type { AccountResponse } from "@billet/contracts-http-api/account";
 import type { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
+import { AccountNotices } from "./account-notices.ts";
 import { AppleIdInUse, AuthRejected, type AuthUnavailable } from "./auth-error.ts";
 import { AuthEngine, type IssuedSession, type VerifiedApple } from "./auth-engine.ts";
 import { AuthRepository, type TokenHash } from "./auth-repository.ts";
@@ -80,11 +81,17 @@ export class AuthService extends Context.Service<
   static readonly layer: Layer.Layer<
     AuthService,
     never,
-    AuthEngine | AuthRepository | IdentityVerifier | Digest.Digest | SecureRandom.SecureRandom
+    | AccountNotices
+    | AuthEngine
+    | AuthRepository
+    | IdentityVerifier
+    | Digest.Digest
+    | SecureRandom.SecureRandom
   > = Layer.effect(
     AuthService,
     Effect.gen(function* () {
       const engine = yield* AuthEngine;
+      const notices = yield* AccountNotices;
       const repository = yield* AuthRepository;
       const verifier = yield* IdentityVerifier;
       const digest = yield* Digest.Digest;
@@ -194,7 +201,11 @@ export class AuthService extends Context.Service<
         sessionToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<AccountResponse, AuthRejected | AuthUnavailable> {
         const { userId, linked } = yield* liveSession(sessionToken);
-        return { userId, linked };
+        const partnerLeft = yield* notices.partnerLeft(userId);
+        return Option.match(partnerLeft, {
+          onNone: () => ({ userId, linked }),
+          onSome: (left) => ({ userId, linked, partnerLeft: left }),
+        });
       });
 
       const registerPushToken = Effect.fnUntraced(function* (

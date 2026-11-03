@@ -31,5 +31,7 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
       notesAfter: (pairId, afterSeq, limit) =>
         callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
+      forgetMember: (pairId, user) =>
+        callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
     }),
   );

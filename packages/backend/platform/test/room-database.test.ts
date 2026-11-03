@@ -4,6 +4,7 @@ import { Effect, Layer, Schema, type Scope } from "effect";
 import { describe, expect, it } from "vitest";
 import { openRoomDatabase } from "../src/room-database.ts";
 import * as roomSchema from "../src/room-schema.ts";
+import { UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
 import { RoomStore } from "@billet/backend-pair-room/room-store";
 import { RoomDb, SqliteRoomStore } from "../src/pair-room-sqlite-store.ts";
@@ -134,13 +135,24 @@ describe("room migrations", () => {
         Schema.encodeSync(Schema.fromJsonString(Note))(photo),
       );
 
-      const { state: loaded, notes } = await run(
+      const {
+        state: loaded,
+        notes,
+        forgotten,
+        remaining,
+      } = await run(
         Effect.gen(function* () {
           const db = yield* openRoomDatabase(state.storage);
           const store = yield* RoomStore.pipe(
             Effect.provide(SqliteRoomStore.pipe(Layer.provide(Layer.succeed(RoomDb, db)))),
           );
-          return { state: yield* store.load, notes: yield* store.notesAfter(0, 10) };
+          return {
+            state: yield* store.load,
+            notes: yield* store.notesAfter(0, 10),
+            // A legacy note has no `author` column: forgetting its author still finds it.
+            forgotten: yield* store.forgetAuthor(Schema.decodeSync(UserId)("user-alice")),
+            remaining: yield* store.notesAfter(0, 10),
+          };
         }),
       );
 
@@ -155,6 +167,8 @@ describe("room migrations", () => {
         ],
       });
       expect(notes).toEqual([{ seq: 1, note: photo }]);
+      expect(forgotten).toEqual([{ seq: 1, note: photo }]);
+      expect(remaining).toEqual([]);
       expect(userTables(state.storage).toSorted()).toEqual(["delivery", "note", "room"]);
       expect(history(state.storage)).toHaveLength(4);
     });

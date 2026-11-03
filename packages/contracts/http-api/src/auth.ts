@@ -49,10 +49,6 @@ export type SignInWithAppleRequest = typeof SignInWithAppleRequest.Type;
 export const SignInAnonymouslyRequest = Schema.Struct({ accountKey: AccountKey });
 export type SignInAnonymouslyRequest = typeof SignInAnonymouslyRequest.Type;
 
-/** The caller's account. `linked` is true once it can be recovered with Sign in with Apple. */
-export const AccountResponse = Schema.Struct({ userId: UserId, linked: Schema.Boolean });
-export type AccountResponse = typeof AccountResponse.Type;
-
 export const SessionResponse = Schema.Struct({
   sessionToken: SessionToken,
   expiresAt: EpochMillis,

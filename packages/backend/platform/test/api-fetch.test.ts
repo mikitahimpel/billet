@@ -128,6 +128,7 @@ const tables = [
   "push_tokens",
   "invites",
   "pair_members",
+  "partner_notices",
 ];
 
 const everythingStored = async () =>
@@ -453,6 +454,103 @@ describe("the Api Worker", () => {
     );
     expect(new Set(sessions.map(({ userId }) => userId)).size).toBe(1);
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM auth_account").first("n")).toBe(1);
+  });
+});
+
+describe("deleting an account", () => {
+  const remove = (token: string, body: unknown = {}) =>
+    call("/v1/account", json(body, "DELETE", token));
+  const account = async (token: string) => {
+    const response = await call("/v1/account", { method: "GET", headers: bearer(token) });
+    return { status: response.status, body: await response.json() };
+  };
+  const count = async (sql: string, ...values: ReadonlyArray<string>) =>
+    (
+      await env.DB.prepare(sql)
+        .bind(...values)
+        .first<{ n: number }>()
+    )?.n;
+
+  it("deletes the user and all they own, unpairs the partner and tells them kindly", async () => {
+    const accountKey = "d".repeat(43);
+    const opened = await call("/v1/auth/anonymous", json({ accountKey }));
+    const ana = Schema.decodeUnknownSync(SessionResponse)(await opened.json());
+    const ben = await signedInAs("subject-ben");
+    expect((await claimWith(ana.sessionToken, await inviteFrom(ben))).status).toBe(200);
+    const [{ pair_id: pairId }] = (await pairRows()) as [{ pair_id: string }];
+    await call(
+      "/v1/devices/current/push-token",
+      json(
+        { kind: "alert", environment: "production", token: "dd".repeat(32) },
+        "PUT",
+        ana.sessionToken,
+      ),
+    );
+
+    const anaNote = await sentPhoto(ana.sessionToken);
+    const benNote = await sentPhoto(ben);
+    const anaUnsent = await uploaded(ana.sessionToken);
+
+    const response = await remove(ana.sessionToken);
+    expect(response.status).toBe(204);
+
+    // Gone: every row that names her, her session, and her images.
+    for (const [table, column] of [
+      ["users", "id"],
+      ["auth_user", "id"],
+      ["auth_session", "user_id"],
+      ["auth_account", "user_id"],
+      ["account_keys", "user_id"],
+      ["devices", "user_id"],
+      ["pair_members", "user_id"],
+      ["invites", "owner_id"],
+      ["pair_events", "user_id"],
+    ] as const) {
+      expect(
+        await count(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`, ana.userId),
+      ).toBe(0);
+    }
+    expect(await count("SELECT COUNT(*) AS n FROM push_tokens")).toBe(0);
+    expect((await account(ana.sessionToken)).status).toBe(401);
+    expect(await env.MEDIA.head(anaNote.image)).toBeNull();
+    expect(await env.MEDIA.head(anaUnsent)).toBeNull();
+
+    // Ben keeps his account, his note and its image, and is unpaired with a notice.
+    expect(await env.MEDIA.head(benNote.image)).not.toBeNull();
+    const room = await env.PAIR_ROOM.getByName(pairId).notes(0, 100);
+    expect(room.map(({ note }) => note.id)).toEqual([benNote.id]);
+    expect(await pairRows()).toEqual([]);
+    const told = await account(ben);
+    expect(told.status).toBe(200);
+    expect(told.body).toMatchObject({
+      linked: true,
+      partnerLeft: { reason: "account-deleted", at: expect.any(Number) },
+    });
+
+    // Pairing again ends the notice; the same key opens a new, empty account.
+    const cal = await signedInAs("subject-cal");
+    expect((await claimWith(cal, await inviteFrom(ben))).status).toBe(200);
+    expect((await account(ben)).body).not.toHaveProperty("partnerLeft");
+    const again = Schema.decodeUnknownSync(SessionResponse)(
+      await (await call("/v1/auth/anonymous", json({ accountKey }))).json(),
+    );
+    expect(again.userId).not.toBe(ana.userId);
+  });
+
+  it("deletes an unpaired account, and takes an Apple code without the key configured", async () => {
+    const { session } = await signedIn();
+    const response = await remove(session.sessionToken, { appleAuthorizationCode: "code" });
+    expect(response.status).toBe(204);
+    expect(await count("SELECT COUNT(*) AS n FROM users")).toBe(0);
+    expect(await count("SELECT COUNT(*) AS n FROM auth_account")).toBe(0);
+    // Apple's keys were read to sign in; nothing else went to Apple.
+    expect(appleFetch.mock.calls.map(([input]) => String(input))).toEqual([appleKeysUrl]);
+  });
+
+  it("answers 401 without a session and deletes nothing", async () => {
+    await signedIn();
+    expect((await remove("x".repeat(43))).status).toBe(401);
+    expect(await count("SELECT COUNT(*) AS n FROM users")).toBe(1);
   });
 });
 

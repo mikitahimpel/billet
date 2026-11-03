@@ -92,11 +92,15 @@ export default Alchemy.Stack(
         ACCESS_AGENT_AUD: Config.String("ACCESS_AGENT_AUD").pipe(Config.withDefault("")),
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
+        // The Sign in with Apple key revokes a deleted account's Apple token. Only the dev vault
+        // has it so far; prod needs it in "Billet Release" first (docs/alchemy.md).
         ...(stage === "dev"
           ? {
               DEMO_ROOM: Cloudflare.DurableObject("DemoRoom"),
               APNS_KEY: Config.Redacted("APNS_KEY"),
               APNS_KEY_ID: Config.Redacted("APNS_KEY_ID"),
+              APPLE_SIGN_IN_KEY: Config.Redacted("APPLE_SIGN_IN_KEY"),
+              APPLE_SIGN_IN_KEY_ID: Config.Redacted("APPLE_SIGN_IN_KEY_ID"),
             }
           : {}),
       },

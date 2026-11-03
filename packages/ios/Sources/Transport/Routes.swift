@@ -19,6 +19,7 @@ public enum Routes {
   public static let authApple = Route(.post, "/v1/auth/apple")
   public static let authAppleLink = Route(.post, "/v1/auth/apple/link")
   public static let getAccount = Route(.get, "/v1/account")
+  public static let deleteAccount = Route(.delete, "/v1/account")
   public static let authSignOut = Route(.post, "/v1/auth/sign-out")
   public static let registerPushToken = Route(.put, "/v1/devices/current/push-token")
   public static let createInvite = Route(.post, "/v1/invites")

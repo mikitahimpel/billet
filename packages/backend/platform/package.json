@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@better-auth/kysely-adapter": "catalog:",
+    "@billet/backend-account": "workspace:*",
     "@billet/backend-admin": "workspace:*",
     "@billet/backend-auth": "workspace:*",
     "@billet/backend-flags": "workspace:*",

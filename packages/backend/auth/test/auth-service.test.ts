@@ -1,4 +1,4 @@
-import { Duration, Effect, Exit, Layer, Redacted, Schema } from "effect";
+import { Duration, Effect, Exit, Layer, Option, Redacted, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { DeviceId as DeviceIdSchema, UserId as UserIdSchema } from "@billet/cont
 import { PushToken } from "@billet/contracts-domain/push-token";
 import { AuthNonce, SessionToken } from "@billet/contracts-http-api/auth";
 import { AppleIdInUse, AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
+import { AccountNotices } from "../src/account-notices.ts";
 import { AuthEngine } from "../src/auth-engine.ts";
 import { AuthRepository, type TokenHash } from "../src/auth-repository.ts";
 import { AuthService, challengeLifetime, sessionLifetime } from "../src/auth-service.ts";
@@ -43,13 +44,14 @@ const service = Effect.gen(function* () {
 const setup = (
   overrides: Partial<AuthRepository["Service"]> = {},
   engineOverrides: Partial<AuthEngine["Service"]> = {},
+  notices: Layer.Layer<AccountNotices> = AccountNotices.none,
 ) => {
   const memory = makeInMemoryAuthRepository();
   const users = makeInMemoryAuthEngine();
   const repository = Layer.succeed(AuthRepository, { ...memory.repository, ...overrides });
   const engine = Layer.succeed(AuthEngine, { ...users.engine, ...engineOverrides });
   const auth = AuthService.layer.pipe(
-    Layer.provide(Layer.mergeAll(repository, engine, FakeIdentityVerifier)),
+    Layer.provide(Layer.mergeAll(repository, engine, notices, FakeIdentityVerifier)),
     Layer.provideMerge(Layer.merge(Digest.layerWebCrypto, SecureRandom.layerWebCrypto)),
   );
   const run = <A, E>(
@@ -285,6 +287,29 @@ describe("AuthService anonymous accounts", () => {
     expect(session.userId).toBe("winner");
     // The losing session is ended; only the user it opened is left behind, unreachable.
     expect(await Effect.runPromise(users.dump)).toContain('"sessions":[]');
+  });
+});
+
+describe("AuthService account", () => {
+  it("tells a user their partner left, from the notices", async () => {
+    const partnerLeft = { reason: "account-deleted" as const, at: 1_700_000_400_000 };
+    const { run } = setup(
+      {},
+      {},
+      Layer.succeed(AccountNotices, {
+        partnerLeft: () => Effect.succeed(Option.some(partnerLeft)),
+      }),
+    );
+    const result = await value(
+      run(
+        Effect.gen(function* () {
+          const auth = yield* service;
+          const session = yield* auth.signInAnonymously(accountKey("a"));
+          return { session, account: yield* auth.account(Redacted.make(session.sessionToken)) };
+        }),
+      ),
+    );
+    expect(result.account).toEqual({ userId: result.session.userId, linked: false, partnerLeft });
   });
 });
 

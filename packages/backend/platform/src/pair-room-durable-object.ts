@@ -176,6 +176,25 @@ export class PairRoom extends DurableObject {
   }
 
   /**
+   * The pair is ending because `user` is leaving: deletes every note they sent with its delivery
+   * rows, returns those notes so their images can go too, and closes every socket of the room.
+   * Repeating it finds nothing more to delete.
+   */
+  async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
+    const forgotten = await this.run((room) => room.forgetAuthor(user));
+    const deliveries = deliveriesOf(await this.database);
+    for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        socket.close(1000, "pair ended");
+      } catch {
+        // Already closing: nothing left to end.
+      }
+    }
+    return forgotten;
+  }
+
+  /**
    * Accepts a partner's hibernatable WebSocket. The object can leave memory while the socket stays
    * open, so an idle room costs nothing. Its messages are the relay in `webSocketMessage`.
    */

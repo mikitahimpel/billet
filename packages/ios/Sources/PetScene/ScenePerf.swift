@@ -183,7 +183,9 @@ public enum ScenePerf {
     let done = FileManager.default
       .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mikitahimpel.billet")?
       .appending(path: "perf-shots/\(name)")
-    let deadline = Date.now.addingTimeInterval(20)
+    // Generous: a busy CI runner can take most of a minute over one screenshot, and moving on
+    // before it lands would photograph the next pose instead.
+    let deadline = Date.now.addingTimeInterval(90)
     while Date.now < deadline {
       if let done, FileManager.default.fileExists(atPath: done.path) { return }
       await pause(0.1)

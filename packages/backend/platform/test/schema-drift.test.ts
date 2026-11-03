@@ -27,6 +27,7 @@ import {
   pairFlagOverrides,
   pairFlags,
   pairMembers,
+  partnerNotices,
   pushTokens,
   rateLimits,
   users,
@@ -37,6 +38,7 @@ import {
   AuthUserRow,
   AuthVerificationRow,
 } from "../src/better-auth-rows.ts";
+import { StoredPartnerNotice } from "../src/account-repository-live.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
 import {
   FlagChangeRow,
@@ -68,6 +70,7 @@ const checked = [
   ["pair_events", pairEvents, StoredMetric],
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],
+  ["partner_notices", partnerNotices, StoredPartnerNotice],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
   ["delivery", delivery, StoredDelivery],
