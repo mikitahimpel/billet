@@ -1,5 +1,6 @@
 import FeatureHome
 import Persistence
+import PetScene
 import PetSceneCatalog
 import PetSceneReality
 import SwiftUI
@@ -29,6 +30,7 @@ struct BilletApp: App {
   )
 
   init() {
+    ScenePerf.start()
     // Before Home reads the room style.
     if let store = WidgetFeaturesStore.appGroup() {
       FlatSceneMigration.run(

@@ -15,6 +15,8 @@ final class ShopStage: TabStage {
   static let keeperName = "shop-keeper"
 
   let root = Entity()
+  /// Whether a measuring run has been told this scene is drawing since it last came on screen.
+  private var isAnnounced = false
   let screen = TabScreen()
   /// Called with the item tapped, a moment after the tap so its hop and the keeper's glance read.
   var onPick: ((ShopItem.ID) -> Void)?
@@ -88,6 +90,7 @@ final class ShopStage: TabStage {
   }
 
   func setOnScreen(_ onScreen: Bool) {
+    if !onScreen { isAnnounced = false }
     if onScreen, !isOnScreen { waveAt = clock + 0.6 }
     isOnScreen = onScreen
     room.isEnabled = onScreen && isBuilt
@@ -144,6 +147,14 @@ final class ShopStage: TabStage {
 
   private func tick(_ delta: TimeInterval) {
     clock += delta
+    if ScenePerf.isOn, isBuilt, !isAnnounced {
+      isAnnounced = true
+      ScenePerf.shown(
+        ScenePerf.Scene(
+          name: "shop", orbit: { [weak self] in self?.orbit(byX: $0, y: $1) }, zoom: { _ in },
+          release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
+          census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
+    }
     lighting.step(delta)
     if view.step(Float(delta)) { updateGlows() }
     if let waveAt, clock >= waveAt, rig != nil {

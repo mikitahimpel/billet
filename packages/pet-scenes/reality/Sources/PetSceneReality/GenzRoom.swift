@@ -139,6 +139,8 @@ final class GenzRoom: CatPlayStage {
   var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
   private var lastBat = -Double.infinity
   private var greetPending = false
+  /// Whether a measuring run has been told this room is drawing since it last came on screen.
+  private var isAnnounced = false
   private var lastSeenSaved = -Double.infinity
   /// The scale the cat model is shown at, for matching its walk to how fast it moves.
   private var catScale: Float = 1
@@ -550,6 +552,7 @@ final class GenzRoom: CatPlayStage {
       greetPending = CatGreeting.isDue(lastSeen: CatSeen.last, now: .now)
     }
     if !isOnScreen, wasOnScreen { CatSeen.mark() }
+    if !isOnScreen { isAnnounced = false }
     room.isEnabled = isOnScreen && isBuilt
     frames.isPaused = !isOnScreen
     if isOnScreen { tiltSource?.start() } else { tiltSource?.stop() }
@@ -625,6 +628,18 @@ final class GenzRoom: CatPlayStage {
     lastTexture = -1
   }
 
+  /// Tells a measuring run that this room is drawing, and how to drive it.
+  private func announce() {
+    isAnnounced = true
+    ScenePerf.shown(
+      ScenePerf.Scene(
+        name: "\(layout.style.rawValue) room",
+        orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
+        zoom: { [weak self] in self?.zoom(by: $0) },
+        release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
+        census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
+  }
+
   private func aimLens() {
     lens.look(at: camera.target, from: camera.position, relativeTo: nil)
     updateScreen()
@@ -686,6 +701,7 @@ final class GenzRoom: CatPlayStage {
       }
       return
     }
+    if ScenePerf.isOn, !isAnnounced { announce() }
     if let pendingFlyIn {
       self.pendingFlyIn = nil
       startFlight(pendingFlyIn)
