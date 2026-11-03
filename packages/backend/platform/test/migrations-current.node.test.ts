@@ -25,11 +25,19 @@ const plan = (schema: string, out: string) =>
     ),
   );
 
+// drizzle-kit is a child process that replays every migration, so it takes seconds and grows with
+// each migration (over 6 s on CI at eight): the default 5 s timeout is too short.
+const planTimeout = 30_000;
+
 describe("committed migrations", () => {
   it.each([
     ["./src/directory-schema.ts", "./migrations/directory"],
     ["./src/room-schema.ts", "./migrations/room"],
-  ])("match %s", (schema, out) => {
-    expect(plan(schema, out)).toEqual({ status: "no_changes", dialect: "sqlite" });
-  });
+  ])(
+    "match %s",
+    (schema, out) => {
+      expect(plan(schema, out)).toEqual({ status: "no_changes", dialect: "sqlite" });
+    },
+    planTimeout,
+  );
 });
