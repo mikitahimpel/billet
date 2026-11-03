@@ -41,7 +41,8 @@ import Testing
 
   @Test func everySeedSurvivesTheFile() throws {
     let store = WidgetFeaturesStore(storage: storage())
-    for seed in [UInt64.max, 1 << 60 + 1, 0] {
+    let seeds: [UInt64] = [.max, (1 << 60) + 1, 0]
+    for seed in seeds {
       try store.saveTemperament(CatTemperamentRecord(seed: seed, temperament: .clown))
       #expect(store.loadTemperament()?.seed == seed)
     }
