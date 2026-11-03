@@ -104,6 +104,11 @@ struct HomeView: View {
       }
       .task { await keepSealedNotesCurrent() }
       .task(id: session.life.speed) { await session.life.run() }
+      .task(id: BrainInputs(on: session.labs.isOn(LabExperiment.catBrain), cat: session.labs.cat)) {
+        guard session.labs.isOn(LabExperiment.catBrain) else { return }
+        session.brain.setSeed(CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat))
+        await session.brain.run()
+      }
       .onChange(of: session.shop.state.treatsUsed) { old, new in
         if new > old { session.fed() }
       }
@@ -779,6 +784,8 @@ struct HomeView: View {
     case .played: session.played()
     case .fed: session.fed()
     case .noteOpened: onOpenNotes()
+    case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
+    case .touching(let interaction): session.brain.setLive(interaction)
     case .deliveryFinished, .settled: break
     }
   }
@@ -798,7 +805,9 @@ struct HomeView: View {
       catAway: catAway,
       life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil,
       lifeNeeds: session.labs.isOn(LabExperiment.catLife)
-        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil
+        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil,
+      brain: session.labs.isOn(LabExperiment.catBrain) ? session.brain.frame : nil,
+      brainSpeed: session.life.speed
     )
   }
 
@@ -913,4 +922,10 @@ extension PetPlayState.Treat {
 private struct StreakInputs: Equatable {
   let ledger: TreatLedger
   let porch: PorchLight?
+}
+
+/// What the brain's run restarts on: the switch, and the adopted cat its seed comes from.
+private struct BrainInputs: Hashable {
+  var on: Bool
+  var cat: CatChoice
 }

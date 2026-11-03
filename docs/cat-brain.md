@@ -79,6 +79,76 @@ Between decisions, `advance(to:)` is one comparison and a frame allocates nothin
 The cat never dies, is never sick, never guilts or sulks, and is never punished. Mischief is cute:
 a mug is nudged towards the edge, never off it. The touch router still decides what a touch is.
 
+## In the room
+
+With **Cat brain** on in Labs (The cat), Home runs a `CatBrainModel` beside the life model and
+hands each frame to the scene in `PetPlayState.brain`. The styled rooms (`GenzCatBrain.swift`)
+carry it out:
+
+- **Affordances** come from the room as it stands, after decorating: a bed, a box, a shelf,
+  something soft (cardigan, hoodie, jumper), a small item (mugs, phone, candles), a rug, the window,
+  the bowl and the toys. Whatever stands on the top the cat lives on is in reach. The rest can be
+  looked at: a moved piece out of reach is inspected from the nearest edge. The scene reports
+  them up as `PetSceneEvent.affordances` with the weather outside.
+- **Body**: the cat walks (or runs, for a chase or zoomies) to where the step wants it, then plays
+  the step's clip through the model's clip lookup and stand-ins. A one-shot that is shorter than
+  its step repeats with a rest in its base pose (groom, knead, eat, bat), or holds its base. A
+  blink or a tail flick cuts into the calm steps.
+- **Gaze**: the head follows the step's gaze (the camera, out through the window, the mug it is
+  about to nudge, or a slow sweep for looking around) unless a finger has it.
+- Touch, games, the bowl, lifting and calls keep their own handling. The scene reports what this
+  phone's touch is doing as `PetSceneEvent.touching`, which the brain shows in its interaction
+  region without changing the fold. With the brain on, the old "plays on its own" chase stays off;
+  deliveries and greetings still play.
+- At ×60 or ×600 on the debug clock the body jumps to each place instead of walking, so a day
+  reads as a time-lapse.
+
+### Clips
+
+| Step | Clip | Composed or standing in |
+|---|---|---|
+| Sit, find nap spot, wait by door, sit in cardigan, sit on desk | sit | |
+| Loaf | loaf | sit on the low-poly cats |
+| Look around | sit | head sweeps side to side |
+| Wander, sniff object, inspect furniture, walk to bowl, bring toy | walk, then sniff | no carry clip |
+| Knead | knead | repeats |
+| Curl | lieDown, then sleep | lieDown only when it comes from standing or kneading |
+| Wake | stretch | |
+| Groom paw, flank, tail | groom | one groom clip for all three |
+| Eat | eat | repeats |
+| Lick lips | happy | no lick clip |
+| Stalk | crouchWiggle | |
+| Pounce | pounce | |
+| Chase, zoomies | run at the clip's own speed, then perk or happy | a fast walk on the low-poly cats |
+| Bat object, push item | bat | |
+| Watch window | sit | head out through the glass |
+| Watch partner's window | slowBlink | |
+| Seek you | walk, then perk | |
+| Rub | headbutt | no side rub |
+| Slow blink | slowBlink | |
+| Startle, curious tilt | perk | no startle or tilt |
+
+### Clips wanted
+
+For the Detailed and Hero cats, in order of what shows most. Loaf, run and lieDown landed in
+#190 and are in use; the rest are coming.
+
+1. **loaf**: lying with the paws tucked under, eyes open, slow breath (loop, base sleep-low).
+2. **run**: a trot-to-gallop loop for chase and zoomies (walk at ×3 reads as skating).
+3. **lieDown**: from standing, a turn and settling into the curl (one-shot, stand → sleep). The
+   cross-fade from sit to sleep is the weakest moment of a nap.
+4. **groomFlank** and **groomTail**: licking the side, and the tail held in the forepaws.
+5. **lickLips**: a quick tongue flick after eating (one-shot, sit, about 1 s).
+6. **startle**: an arched back and a small hop back (one-shot, stand).
+7. **headTilt**: a curious tilt of the head to one side, ears forward (one-shot, sit).
+8. **carry**: walking with a toy in the mouth (loop, stand), for bringing a toy.
+9. **rubSide**: rubbing the cheek and flank along something (one-shot, stand).
+10. **lookUp**: sitting and watching something high, the head well back (loop, sit), for birds
+    and snow. The head turn stops at 0.45 rad up.
+11. Additive layers on masked joints: **blinkLayer**, **earFlick**, **tailFlickLayer**, **breathe**.
+    Reflexes now cut in as whole clips and only in calm steps.
+12. **jumpDown** and **jumpUp** for the seat: the cat bed on the rug is out of reach until then.
+
 ## Statechart
 
 ```mermaid

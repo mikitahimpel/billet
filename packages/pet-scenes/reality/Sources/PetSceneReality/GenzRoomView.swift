@@ -325,6 +325,9 @@ struct GenzRoomView: View {
       .onChange(of: play.treatsUsed) { room.react(.treat) }
       .onChange(of: play.petsReceived) { room.partnerPetted() }
       .onChange(of: play.life, initial: true) { _, life in room.follow(life) }
+      .onChange(of: play.brain, initial: true) { _, brain in
+        room.followBrain(brain, speed: play.brainSpeed)
+      }
       .onChange(of: play.lifeNeeds, initial: true) { _, needs in room.showLife(needs) }
       .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
       .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }

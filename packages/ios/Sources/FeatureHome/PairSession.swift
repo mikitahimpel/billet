@@ -42,6 +42,8 @@ final class PairSession {
   let advent: AdventStore
   /// The cat's needs, worked out from what both partners did.
   let life: PetLifeModel
+  /// The cat's brain, run from its life.
+  let brain: CatBrainModel
   private(set) var status = NoteDelivery.Status.connecting
   /// True once this connection has reached the room, which makes a later `.connecting` a reconnect.
   private(set) var hasConnected = false
@@ -110,6 +112,7 @@ final class PairSession {
     life = PetLifeModel(
       me: room.device, fallbackPartner: isFakePartner ? FakePartnerRoom.device : nil,
       key: isFakePartner ? "life.events.fake" : "life.events", clock: now)
+    brain = CatBrainModel(life: life)
     self.room = room
     self.delivery = delivery
     self.archive = archive
