@@ -76,7 +76,8 @@ def collect(run_dir):
         for phase, values in run["phases"].items():
             if kind == "launch" and phase != "idle":
                 continue
-            for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps"):
+            for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps", "slow",
+                        "slowMs", "slowBusyMs"):
                 add(f"{kind}.{phase}: {key}", number(values.get(key)))
         for timing, samples in run["timings"].items():
             for values in samples:

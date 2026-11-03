@@ -261,7 +261,10 @@ extension ScenePerf {
   final class Recorder: NSObject {
     private let launchedAt: Double
     private var intervals: [Double] = []
+    /// Each slow frame's length and how much of it the main thread was busy, in milliseconds.
+    private var slow: [(length: Double, busy: Double)] = []
     private var lastFrame: Double?
+    private var lastFrameCPU = 0.0
     private var frame = 0
     private var drive: (@MainActor (Int) -> Void)?
     private var mainCPUAtStart = 0.0
@@ -291,6 +294,7 @@ extension ScenePerf {
 
     func startPhase(drive: (@MainActor (Int) -> Void)? = nil) {
       intervals.removeAll(keepingCapacity: true)
+      slow.removeAll()
       lastFrame = nil
       frame = 0
       self.drive = drive
@@ -312,10 +316,16 @@ extension ScenePerf {
       let hitches = intervals.filter { $0 > 25 }.count
       let longest = sorted.last.map(ScenePerf.format) ?? "nan"
       let fps = intervals.isEmpty ? 0 : 1000 * Double(intervals.count) / intervals.reduce(0, +)
+      // A slow frame the main thread spent busy is our own work; one it spent idle waited on the
+      // renderer or on the rest of the machine.
+      let slowLength = slow.reduce(0) { $0 + $1.length }
+      let slowBusy = slow.reduce(0) { $0 + $1.busy }
       return
         "frames=\(intervals.count) fps=\(ScenePerf.format(fps)) p50=\(at(0.5)) p95=\(at(0.95)) "
         + "p99=\(at(0.99)) max=\(longest) hitches=\(hitches) "
-        + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process))"
+        + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process)) "
+        + "slow=\(slow.count) slowMs=\(ScenePerf.format(slowLength)) "
+        + "slowBusyMs=\(ScenePerf.format(slowBusy))"
     }
 
     #if canImport(UIKit)
@@ -324,8 +334,14 @@ extension ScenePerf {
         if frame == 0, intervals.isEmpty, lastFrame == nil, ScenePerf.marks.isEmpty {
           ScenePerf.mark("first frame")
         }
-        if let lastFrame { intervals.append((now - lastFrame) * 1000) }
+        let cpu = Self.threadCPU()
+        if let lastFrame {
+          let length = (now - lastFrame) * 1000
+          intervals.append(length)
+          if length > Self.slowFrame { slow.append((length, cpu - lastFrameCPU)) }
+        }
         lastFrame = now
+        lastFrameCPU = cpu
         drive?(frame)
         frame += 1
         if now - lastSample > 0.5 {
@@ -334,6 +350,9 @@ extension ScenePerf {
         }
       }
     #endif
+
+    /// A frame this long, three refreshes at 60 Hz, counts as slow.
+    private static let slowFrame = 50.0
 
     // MARK: Clocks
 
