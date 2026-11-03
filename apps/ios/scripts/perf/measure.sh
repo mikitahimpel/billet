@@ -112,10 +112,11 @@ run() {
   local pid=$! waited=0
   while ! grep -q '^PERF done' $log 2>/dev/null; do
     if grep -q '^PERF shot' $log 2>/dev/null; then
-      grep '^PERF shot' $log | while read -r _ _ shot; do
+      grep '^PERF shot' $log | tr -d '\r' | while read -r _ _ shot; do
         [[ -f $out/shots/$shot.png ]] && continue
         mkdir -p $out/shots
-        xcrun simctl io $udid screenshot $out/shots/$shot.png > /dev/null 2>&1 || true
+        perl -e 'alarm 20; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
+          > /dev/null 2>&1 || true
       done
     fi
     python3 -c 'import time; time.sleep(0.2)'
