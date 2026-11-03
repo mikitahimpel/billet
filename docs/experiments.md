@@ -163,8 +163,10 @@ list in `packages/contracts/domain/src/metrics.ts`:
 | `AppOpened` | app, `POST /v1/events` | the app came to the front, at most once per launch |
 | `WidgetAdded` | app | this phone has a billet widget; reported once |
 | `OpeningWatched`, `OpeningSkipped` | app | how the opening ended |
+| the product events | app | what people do with the cat, the room, the shop, the streak, the widget and the profile: see [analytics.md](analytics.md) |
 
-The app can report only its four names, and at most 20 per request. A name the server records
+The app can report only the names in `ClientEventName`, some with a short detail (see
+[analytics.md](analytics.md)), and at most 20 per request. A name the server records
 itself is refused with 400. Counting never fails a request: if the database is down, the event is
 lost and a fixed line is logged. Adding a name means adding it to the list, to the table above and
 to `docs/privacy.md`, because it is a privacy decision.
@@ -179,12 +181,14 @@ system with the SQL API. A refused request writes nothing. The row is fixed by
 | Column | Holds |
 | --- | --- |
 | `index1` | the pair hash, or `unpaired` (Analytics Engine samples by this, so a pair stays together) |
-| `blob1` | the event name, one of the app's four above |
+| `blob1` | the event name, one the app reports (above and in [analytics.md](analytics.md)) or `AccountDeleted` |
 | `blob2` | the pair hash: first 16 hex digits of SHA-256 of `billet-pair:<pair id>`; empty before pairing |
 | `blob3` | the pair's stored variants, `key=variant` joined by commas in key order; empty when none |
 | `blob4` | app version from `x-billet-app-version`, `<marketing>+<build>` such as `1.2.0+14`, else `unknown` |
 | `blob5` | system from `x-billet-os`, such as `iOS 26.1`, else `unknown` |
+| `blob6` | the event's detail (a catalogue id or a word from a closed list); empty when none |
 | `double1` | `1` (sum it; read `_sample_interval` too when the dataset is sampled) |
+| `double2` | the event's value: a price in stamps for `ShopItemBought`, else `0` |
 
 Not in the row: the user id, the Apple subject, any email, the IP address, the country or city,
 and anything a note says or shows. The two headers are accepted only in exactly the shapes above;

@@ -445,6 +445,244 @@
       ? `95% CI ${fmtInterval(sh.interval)} · ${sh.count} of ${sh.of} ${noun}`
       : `No eligible ${noun} yet`;
 
+  /** The app's event names by area, in the order the Overview lists them. */
+  const EVENT_GROUPS = [
+    [
+      "Cat",
+      [
+        "CatPetted",
+        "CatFed",
+        "CatPlayed",
+        "CatCalled",
+        "TrickDone",
+        "CatChosen",
+        "TemperamentShown",
+      ],
+    ],
+    ["Notes", ["NoteOpened"]],
+    [
+      "Room",
+      ["DecoratingOpened", "RoomItemPlaced", "RoomItemMoved", "RoomItemPutAway", "RoomCustomised"],
+    ],
+    ["Shop", ["ShopOpened", "ShopItemViewed", "ShopItemBought"]],
+    ["Streak", ["StreakOpened", "StreakMilestoneSeen"]],
+    ["Widget", ["WidgetAdded", "WidgetButtonTapped"]],
+    ["Profile", ["ProfileOpened", "SignInPromptShown", "SignInPromptAnswered"]],
+    ["App", ["AppOpened", "OpeningWatched", "OpeningSkipped"]],
+  ];
+  const EVENT_LABELS = {
+    ShopItemViewed: "Item looked at",
+    ShopItemBought: "Item bought",
+    SignInPromptShown: "Sign-in prompt shown",
+    SignInPromptAnswered: "Sign-in prompt answered",
+    StreakMilestoneSeen: "Streak milestone seen",
+  };
+  const TOP_TITLES = {
+    CatChosen: "Cats chosen",
+    ShopItemBought: "Items bought",
+    ShopItemViewed: "Items looked at in the shop",
+    RoomItemPlaced: "Pieces put in the room",
+    CatPlayed: "Toys played with",
+    TrickDone: "Tricks done",
+    TemperamentShown: "Temperaments shown",
+    WidgetAdded: "Widgets added",
+  };
+
+  /** `CatPetted` as "Cat petted". */
+  const eventLabel = (name) =>
+    EVENT_LABELS[name] || name.replace(/(?<=[a-z0-9])([A-Z])/g, (_, c) => ` ${c.toLowerCase()}`);
+
+  /** Fourteen small bars, one per day, scaled to the row's own busiest day. */
+  function miniBars(daily, days) {
+    const W = 112;
+    const H = 24;
+    const n = daily.length;
+    const peak = Math.max(0, ...daily);
+    const slot = W / Math.max(n, 1);
+    const bw = Math.max(2, slot - 2);
+    const peakAt = daily.indexOf(peak);
+    const label = peak
+      ? `${n} days, busiest ${fmtDay(days[peakAt])} with ${fmtNum(peak)}`
+      : `${n} days, none`;
+    return s(
+      "svg",
+      { class: "mini-bars", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": label },
+      s("title", { text: label }),
+      daily.map((v, i) => {
+        const bh = peak ? Math.max(v ? 3 : 1, (v / peak) * H) : 1;
+        return s("rect", {
+          class: v ? (i === n - 1 ? "today" : null) : "zero",
+          x: (i * slot + (slot - bw) / 2).toFixed(1),
+          y: (H - bh).toFixed(1),
+          width: bw.toFixed(1),
+          height: bh.toFixed(1),
+          rx: 1.5,
+        });
+      }),
+    );
+  }
+
+  function inAppSection(inApp) {
+    const title = h("h2", { class: "section-title", text: "In the app" });
+    const wrap = (...kids) =>
+      h("section", { class: "section", "aria-labelledby": "in-app-title" }, kids);
+    title.id = "in-app-title";
+    if (!inApp || !Array.isArray(inApp.events))
+      return wrap(
+        title,
+        h(
+          "div",
+          { class: "card" },
+          h("p", { class: "card-sub", text: "This server doesn't report app events yet." }),
+        ),
+      );
+
+    const days = inApp.days || [];
+    const byName = new Map(inApp.events.map((e) => [e.name, e]));
+    const known = new Set(EVENT_GROUPS.flatMap(([, names]) => names));
+    const others = inApp.events.map((e) => e.name).filter((n) => !known.has(n));
+    const groups = [...EVENT_GROUPS, ["Other", others]]
+      .map(([group, names]) => [group, names.map((n) => byName.get(n)).filter(Boolean)])
+      .filter(([, events]) => events.length);
+    const totalOf = (e) => e.daily.reduce((a, v) => a + v, 0);
+    const isQuiet = (e) => !totalOf(e) && !e.pairs7d;
+    const quiet = inApp.events.filter(isQuiet).length;
+    const tops = (inApp.top || []).filter((t) => t.items && t.items.length);
+
+    if (quiet === inApp.events.length && !tops.length)
+      return wrap(
+        title,
+        stateBox(
+          "Nothing yet",
+          "Counts appear here once apps report what people do: petting the cat, opening notes, the shop.",
+        ),
+      );
+
+    const period = days.length ? `${fmtDay(days[0])} – ${fmtDay(days.at(-1))}` : "";
+    const quietRows = [];
+    const tbody = h(
+      "tbody",
+      null,
+      groups.map(([group, events]) => {
+        const allQuiet = events.every(isQuiet);
+        const head = h(
+          "tr",
+          { class: "group-row" },
+          h("th", { scope: "colgroup", colspan: "5", text: group }),
+        );
+        if (allQuiet) quietRows.push(head);
+        return [
+          head,
+          events.map((e) => {
+            const row = h(
+              "tr",
+              { class: isQuiet(e) ? "quiet" : null },
+              h("th", { scope: "row", class: "lead-cell", text: eventLabel(e.name) }),
+              h("td", { class: "spark", "data-label": "Per day" }, miniBars(e.daily, days)),
+              h("td", { class: "num", "data-label": "Today", text: fmtNum(e.daily.at(-1) ?? 0) }),
+              h("td", { class: "num", "data-label": "14 days", text: fmtNum(totalOf(e)) }),
+              h("td", { class: "num", "data-label": "Pairs, 7 days", text: fmtNum(e.pairs7d) }),
+            );
+            if (isQuiet(e)) quietRows.push(row);
+            return row;
+          }),
+        ];
+      }),
+    );
+
+    const setShown = (all) => {
+      for (const row of quietRows) row.hidden = !all;
+      toggle.setAttribute("aria-pressed", String(all));
+      toggle.textContent = all ? "Hide events with none" : `Show all (${quiet} with none)`;
+    };
+    const toggle = h("button", {
+      type: "button",
+      class: "btn quiet small",
+      onclick: () => setShown(toggle.getAttribute("aria-pressed") !== "true"),
+    });
+    setShown(false);
+
+    const table = h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        { class: "stacked in-app" },
+        h("caption", { class: "sr-only", text: `App events per day, ${period}` }),
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: "Event" }),
+            h("th", { scope: "col", text: "Per day" }),
+            ["Today", "14 days", "Pairs, 7 days"].map((t) =>
+              h("th", { scope: "col", class: "num", text: t }),
+            ),
+          ),
+        ),
+        tbody,
+      ),
+    );
+
+    const topCard = (t) =>
+      h(
+        "section",
+        { class: "card top-card", "aria-label": TOP_TITLES[t.name] || eventLabel(t.name) },
+        h("h3", { class: "card-title", text: TOP_TITLES[t.name] || eventLabel(t.name) }),
+        t.name === "ShopItemBought" && h("p", { class: "card-sub", text: "Times · stamps spent" }),
+        h(
+          "ol",
+          { class: "top-list" },
+          t.items.map((it) =>
+            h(
+              "li",
+              null,
+              h("span", { class: "mono", text: it.detail }),
+              h(
+                "span",
+                { class: "top-count" },
+                h("b", { text: fmtNum(it.count) }),
+                it.total != null && ` · ${fmtNum(it.total)} stamps`,
+              ),
+            ),
+          ),
+        ),
+      );
+
+    return wrap(
+      title,
+      h(
+        "div",
+        { class: "card" },
+        h(
+          "div",
+          { class: "chart-head" },
+          h(
+            "div",
+            null,
+            h("h3", { class: "card-title", text: "What people do" }),
+            h("p", {
+              class: "card-sub",
+              text: `Events per UTC day, ${period}. Pairs counts each pair once.`,
+            }),
+          ),
+          quiet > 0 && toggle,
+        ),
+        table,
+      ),
+      h("h3", { class: "sub-title", text: "Most chosen (30 days)" }),
+      tops.length
+        ? h("div", { class: "grid tops" }, tops.map(topCard))
+        : h(
+            "div",
+            { class: "card" },
+            h("p", { class: "card-sub", text: "No choices recorded in the last 30 days." }),
+          ),
+    );
+  }
+
   async function renderOverview() {
     const o = await api("/overview");
     const daily = o.daily || [];
@@ -552,6 +790,7 @@
         h("h2", { class: "section-title", text: "Funnel" }),
         h("div", { class: "card" }, funnel(o.funnel || [])),
       ),
+      inAppSection(o.inApp),
     ];
   }
 
@@ -1413,6 +1652,8 @@
   const fmtInstant = (iso) => (iso ? fmtWhen(Date.parse(iso)) : "—");
   const clip = (text, n = 60) => (text.length > n ? `${text.slice(0, n - 1)}…` : text);
   const sameMessage = (a, b) => (a?.key ?? null) === (b?.key ?? null) && a?.text === b?.text;
+  /** Product analytics is on unless the status says `analytics.enabled: false`. */
+  const analyticsOn = (status) => status.analytics?.enabled !== false;
 
   /** What one saved status changed against the one before it, or the whole state without one. */
   function statusSummary(status, prev) {
@@ -1429,6 +1670,8 @@
       parts.push(status.minVersion ? `min version ${status.minVersion}` : "min version removed");
     if (prev ? !sameMessage(status.notice, prev.notice) : status.notice)
       parts.push(status.notice ? `notice “${clip(status.notice.text)}”` : "notice removed");
+    if (prev ? analyticsOn(status) !== analyticsOn(prev) : !analyticsOn(status))
+      parts.push(analyticsOn(status) ? "analytics on" : "analytics off");
     return parts.length ? parts.join(" · ") : "Saved with no changes";
   }
 
@@ -1441,13 +1684,19 @@
     ]);
     const st = current.status;
     const m = st.maintenance;
+    const analyticsWasOn = analyticsOn(st);
     const head = pageHead(
       "Maintenance",
-      "What every app is told: maintenance, the oldest build allowed to run, and a notice.",
-      h("span", {
-        class: `chip ${m.active ? "alert" : "running"}`,
-        text: m.active ? "MAINTENANCE ON" : "Normal",
-      }),
+      "What every app is told: maintenance, the oldest build allowed to run, a notice, and whether to report events.",
+      h(
+        "span",
+        { class: "chips" },
+        h("span", {
+          class: `chip ${m.active ? "alert" : "running"}`,
+          text: m.active ? "MAINTENANCE ON" : "Normal",
+        }),
+        !analyticsWasOn && h("span", { class: "chip", text: "ANALYTICS OFF" }),
+      ),
     );
 
     const notice = statusNotice
@@ -1481,6 +1730,12 @@
           null,
           h("dt", { text: "Notice" }),
           h("dd", { class: st.notice ? "text" : null, text: st.notice ? st.notice.text : "None" }),
+        ),
+        h(
+          "div",
+          null,
+          h("dt", { text: "Product analytics" }),
+          h("dd", { class: analyticsWasOn ? null : "on", text: analyticsWasOn ? "On" : "Off" }),
         ),
       ),
       h("p", {
@@ -1571,6 +1826,13 @@
     noticeText.addEventListener("input", showNotice);
     showNotice();
 
+    const analytics = h("input", {
+      type: "checkbox",
+      role: "switch",
+      checked: analyticsWasOn,
+      "aria-describedby": "analytics-hint",
+    });
+
     const readStatus = () => {
       const maintenance = { active: active.checked };
       const mt = msgText.value.trim();
@@ -1581,6 +1843,7 @@
       if (minV.value.trim()) status.minVersion = minV.value.trim();
       const nt = noticeText.value.trim();
       if (nt) status.notice = { key: noticeKey.value.trim(), text: nt };
+      if (!analytics.checked) status.analytics = { enabled: false };
       return status;
     };
 
@@ -1609,7 +1872,13 @@
           method: "PUT",
           body: { status, expectedVersion: current.version },
         });
-        toast(status.maintenance.active ? "Saved. Maintenance is on." : "Saved.");
+        toast(
+          status.maintenance.active
+            ? "Saved. Maintenance is on."
+            : analyticsOn(status)
+              ? "Saved."
+              : "Saved. Product analytics is off.",
+        );
         route();
       } catch (err) {
         save.disabled = false;
@@ -1628,12 +1897,29 @@
       }
     }
 
-    const askConfirm = (status) => {
+    const MAINTENANCE_ON =
+      "Every write is refused for all users until you turn it off: no notes, no pairing, no settings. Apps show the maintenance screen within about a minute.";
+    const ANALYTICS_OFF =
+      "Apps stop reporting what people do and drop the events they hold; the server drops what still arrives. The Overview's “In the app” counts stop until you turn it back on.";
+
+    const askConfirm = (status, { maintenanceOn, analyticsOff }) => {
+      const text =
+        maintenanceOn && analyticsOff
+          ? "Turn maintenance on and product analytics off?"
+          : maintenanceOn
+            ? "Turn maintenance on for everyone?"
+            : "Turn product analytics off?";
+      const confirm =
+        maintenanceOn && analyticsOff
+          ? "Turn both"
+          : maintenanceOn
+            ? "Turn maintenance on"
+            : "Turn analytics off";
       const title = h("h3", {
         class: "card-title",
         id: "turn-on-title",
         tabindex: "-1",
-        text: "Turn maintenance on for everyone?",
+        text,
       });
       const box = h(
         "div",
@@ -1652,7 +1938,9 @@
         title,
         h("p", {
           id: "turn-on-body",
-          text: "Every write is refused for all users until you turn it off: no notes, no pairing, no settings. Apps show the maintenance screen within about a minute.",
+          text: [maintenanceOn && MAINTENANCE_ON, analyticsOff && ANALYTICS_OFF]
+            .filter(Boolean)
+            .join(" "),
         }),
         h(
           "div",
@@ -1660,7 +1948,7 @@
           h("button", {
             type: "button",
             class: "btn danger",
-            text: "Turn maintenance on",
+            text: confirm,
             onclick: () => send(status),
           }),
           h("button", {
@@ -1691,7 +1979,9 @@
           noticeKey.required = Boolean(noticeText.value.trim());
           if (!form.reportValidity()) return;
           const status = readStatus();
-          if (status.maintenance.active && !m.active) askConfirm(status);
+          const maintenanceOn = status.maintenance.active && !m.active;
+          const analyticsOff = !analyticsOn(status) && analyticsWasOn;
+          if (maintenanceOn || analyticsOff) askConfirm(status, { maintenanceOn, analyticsOff });
           else send(status);
         },
       },
@@ -1727,6 +2017,22 @@
         field("Notice key", noticeKey),
         field("Notice text", noticeText),
         h("div", { class: "inline" }, removeNotice, noticeHint),
+      ),
+      h(
+        "fieldset",
+        null,
+        h("legend", { text: "Product analytics" }),
+        h(
+          "label",
+          { class: "check" },
+          analytics,
+          "Product analytics on: apps report what people do in the app",
+        ),
+        h("p", {
+          class: "hint",
+          id: "analytics-hint",
+          text: "Off: apps stop reporting events and drop what they hold; the server drops what still arrives.",
+        }),
       ),
       msg,
       confirmSlot,

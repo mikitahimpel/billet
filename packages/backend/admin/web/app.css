@@ -1204,6 +1204,113 @@ td.change {
   font-weight: 700;
 }
 
+.in-app {
+  margin-top: var(--s3);
+}
+
+.in-app th[scope="row"] {
+  padding: var(--s2) var(--s3) var(--s2) 0;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
+}
+
+.in-app td {
+  padding: var(--s2) var(--s3) var(--s2) 0;
+}
+
+.in-app tr:last-child th {
+  border-bottom: 0;
+}
+
+.in-app .group-row th {
+  padding-top: var(--s4);
+  border-bottom-color: var(--line-strong);
+  color: var(--gold-text);
+}
+
+.in-app tbody .group-row:first-child th {
+  padding-top: var(--s3);
+}
+
+.in-app tr.quiet th,
+.in-app tr.quiet td {
+  color: var(--muted);
+}
+
+.in-app td.spark {
+  width: 128px;
+}
+
+.mini-bars {
+  display: block;
+  width: 112px;
+  height: 24px;
+}
+
+.mini-bars rect {
+  fill: var(--gold-mark);
+}
+
+.mini-bars rect.today {
+  fill: var(--gold);
+}
+
+.mini-bars rect.zero {
+  fill: var(--line-strong);
+}
+
+.btn.small {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 var(--s3);
+  font-size: 12px;
+}
+
+.sub-title {
+  margin: var(--s5) 0 var(--s3);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tops {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.top-list {
+  margin-top: var(--s3);
+  font-size: 14px;
+}
+
+.top-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.top-list li:last-child {
+  border-bottom: 0;
+}
+
+.top-list .mono {
+  overflow-wrap: anywhere;
+  color: var(--text-2);
+}
+
+.top-count {
+  flex: none;
+  color: var(--muted);
+}
+
+.top-count b {
+  font-weight: 700;
+  color: var(--text);
+}
+
 .state {
   padding: var(--s6) var(--s4);
   text-align: center;
@@ -1480,6 +1587,28 @@ td.change {
 
   table.stacked td.lead-cell::before {
     content: none;
+  }
+
+  table.stacked th.lead-cell {
+    display: block;
+    padding: 0 0 var(--s1);
+    border: 0;
+    font-size: 17px;
+  }
+
+  table.stacked tr.group-row {
+    padding: 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+
+  table.stacked .group-row th {
+    display: block;
+    padding-bottom: var(--s2);
+    border: 0;
+  }
+
+  .in-app td.spark {
+    width: auto;
   }
 
   table.stacked .share {
