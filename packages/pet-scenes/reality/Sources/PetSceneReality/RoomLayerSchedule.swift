@@ -61,6 +61,14 @@ extension RoomLayerSlot {
     case .windowBloom, .windowBacklight, .windowDim: nil
     }
   }
+
+  /// Whether the native layer moves with the camera. The dims fill the view whatever it sees.
+  var nativeFollowsCamera: Bool {
+    switch self {
+    case .windowDim: false
+    case .windowNight, .windowBloom, .windowBacklight: true
+    }
+  }
 }
 
 /// Where a drag or a pinch was last frame. Held by reference, so following a finger does not

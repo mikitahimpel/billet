@@ -35,9 +35,12 @@ final class GenzRoomScreen {
     openedAt.map { date.timeIntervalSince($0) } ?? 0
   }
 
-  func state(for slot: RoomLayerSlot, at date: Date) -> RoomLayerState {
+  /// What a layer in `slot` draws at `date`. Without `followsCamera` it leaves out where the
+  /// camera is, so a view built from it does not redraw when the camera moves.
+  func state(for slot: RoomLayerSlot, at date: Date, followsCamera: Bool = true) -> RoomLayerState {
     RoomLayerState(
-      time: time(at: date), parallax: parallax, outline: outlines[slot] ?? [],
+      time: time(at: date), parallax: followsCamera ? parallax : .zero,
+      outline: followsCamera ? outlines[slot] ?? [] : [],
       warmth: GenzOpening.warmth(sinceLanding: landedAt.map { date.timeIntervalSince($0) }),
       lampOn: lampOn)
   }
