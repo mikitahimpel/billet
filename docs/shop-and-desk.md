@@ -11,8 +11,9 @@ starts on.
 
 Labs → Shopkeeper picks the keeper: **Teddy bear** (default: a
 well-loved plush bear in fuzzy fabric, with button eyes, stitched seams, nose and mouth, a red bow
-tie and a patched belly), **Shopkeeper** (a round, friendly person in a green apron), Old tabby,
-Raccoon or Fox. Stored as `shopkeeper.json` beside the flags.
+tie and a patched belly) or **Shopkeeper** (a round, friendly person in a green apron). Stored
+as `shopkeeper.json` beside the flags; a keeper saved before the old tabby, raccoon and fox were
+retired comes back as the teddy.
 
 ## The shop
 

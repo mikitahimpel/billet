@@ -109,7 +109,7 @@ all its weight on today's standard value, so starting one changes nothing until 
 | `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
 | `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk` |
 | `home-layout` | Home | `classic`, `immersive`, `cinematic`, `living-window`, `night-and-day` |
-| `shopkeeper` | Shopkeeper | `tabby`, `raccoon`, `fox` |
+| `shopkeeper` | Shopkeeper | `teddy`, `human` |
 
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
 tester tools or not yet complete and reviewable), and `nooki` (no licence).

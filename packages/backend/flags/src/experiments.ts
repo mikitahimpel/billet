@@ -207,7 +207,7 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     key: "shopkeeper",
     kind: "flag",
     description: "Who keeps the 3D shop (Labs > Shopkeeper).",
-    variants: { teddy: 1, human: 0, tabby: 0, raccoon: 0, fox: 0 },
+    variants: { teddy: 1, human: 0 },
     default: "teddy",
     exposure: 100,
     status: "draft",

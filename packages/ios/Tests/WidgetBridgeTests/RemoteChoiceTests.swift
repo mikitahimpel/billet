@@ -55,7 +55,7 @@ import Testing
       Experiments.homeLayout.variants == [
         "classic", "immersive", "cinematic", "living-window", "night-and-day",
       ])
-    #expect(Experiments.shopkeeper.variants == ["teddy", "human", "tabby", "raccoon", "fox"])
+    #expect(Experiments.shopkeeper.variants == ["teddy", "human"])
   }
 
   @Test func everyRemoteSettingIsListed() {
@@ -67,12 +67,12 @@ import Testing
   @Test func aChoiceTheServerGaveIsRead() {
     let flags = RemoteFlags(assignments: [
       "room-lighting": "neon-night", "window-view": "summer-cul-de-sac",
-      "home-layout": "night-and-day", "shopkeeper": "raccoon",
+      "home-layout": "night-and-day", "shopkeeper": "human",
     ])
     #expect(flags.choice(of: Experiments.roomLighting) == RoomLighting.neonNight)
     #expect(flags.choice(of: Experiments.windowView) == WindowView.summerCulDeSac)
     #expect(flags.choice(of: Experiments.homeLayout) == HomeVariant.nightAndDay)
-    #expect(flags.choice(of: Experiments.shopkeeper) == Shopkeeper.raccoon)
+    #expect(flags.choice(of: Experiments.shopkeeper) == Shopkeeper.human)
   }
 
   // MARK: the server's registry
