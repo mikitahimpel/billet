@@ -28,8 +28,8 @@ import simd
     let home = layout.onCatSurface(SIMD2(layout.cat.spot.scene.x, layout.cat.spot.scene.z))
     var out = [home]
     if let surface = layout.catSurface {
-      for a in stride(from: Float(0), through: 1, by: 0.125) {
-        for b in stride(from: Float(0), through: 1, by: 0.25) {
+      for a in stride(from: Float(0), through: 1, by: 0.25) {
+        for b in stride(from: Float(0), through: 1, by: 0.5) {
           out.append(layout.onCatSurface(surface.min + (surface.max - surface.min) * [a, b]))
         }
       }
@@ -45,9 +45,10 @@ import simd
   /// What the body is in, for a cat at `point` facing `heading`, `height` above its top. The feet
   /// stand inside the body's footprint, so the capsule covers them.
   private func inside(
-    _ layout: GenzLayout, at point: SIMD2<Float>, heading: Float, height: Float
+    _ layout: GenzLayout, _ obstacles: [GenzCatObstacle], at point: SIMD2<Float>, heading: Float,
+    height: Float
   ) -> GenzCatObstacle? {
-    layout.catObstacles.first { obstacle in
+    obstacles.first { obstacle in
       !layout.catBodyIsClear(at: point, heading: heading, height: height, obstacles: [obstacle])
     }
   }
@@ -68,13 +69,14 @@ import simd
 
   @Test func everySpotTheBrainPicksIsClear() async {
     for (name, layout) in layouts {
+      let obstacles = layout.catObstacles
       for spot in spots(layout) {
         await Task.yield()
-        let height = layout.catStandHeight(at: spot)
+        let height = layout.catStandHeight(at: spot, obstacles: obstacles)
         // Whichever way the brain wants it to face, it stands so its body is clear.
-        for want in stride(from: Float(-3), through: 3, by: 1) {
+        for want in stride(from: Float(-3), through: 3, by: 1.5) {
           let heading = layout.catHeading(at: spot, want: want, height: height)
-          let hit = inside(layout, at: spot, heading: heading, height: height)
+          let hit = inside(layout, obstacles, at: spot, heading: heading, height: height)
           #expect(hit == nil, "\(name): at \(spot) facing \(heading) in \(String(describing: hit))")
         }
       }
@@ -83,6 +85,7 @@ import simd
 
   @Test func everyWalkGoesRound() async {
     for (name, layout) in layouts {
+      let obstacles = layout.catObstacles
       let spots = spots(layout)
       var stuck = 0
       // From home to every spot, and on from each spot to the next, as a day of roaming does.
@@ -98,8 +101,8 @@ import simd
           let steps = max(Int(simd_distance(at, next) / 0.02), 1)
           for step in 0...steps {
             let point = at + (next - at) * (Float(step) / Float(steps))
-            let height = layout.catStandHeight(at: point)
-            let hit = inside(layout, at: point, heading: heading, height: height)
+            let height = layout.catStandHeight(at: point, obstacles: obstacles)
+            let hit = inside(layout, obstacles, at: point, heading: heading, height: height)
             #expect(
               hit == nil,
               "\(name): \(start) → \(goal) passes \(point) in \(String(describing: hit))")

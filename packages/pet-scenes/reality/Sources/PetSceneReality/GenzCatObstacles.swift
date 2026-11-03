@@ -251,12 +251,12 @@ extension GenzLayout {
     var from = [Int](repeating: -1, count: open.count)
     var done = [Bool](repeating: false, count: open.count)
     cost[startIndex] = 0
-    var frontier: [(index: Int, guess: Float)] = [(startIndex, 0)]
+    var frontier = GenzCellHeap()
+    frontier.push(startIndex, 0)
     var reached: Int?
     var nearest = (index: startIndex, distance: simd_distance(start, goal))
     let moves = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
-    while let best = frontier.indices.min(by: { frontier[$0].guess < frontier[$1].guess }) {
-      let current = frontier.remove(at: best).index
+    while let current = frontier.pop() {
       guard !done[current] else { continue }
       done[current] = true
       let leaving = current == startIndex ? start : point(current)
@@ -279,7 +279,7 @@ extension GenzLayout {
         guard (current == startIndex && stuck) || clear(leaving, point(next)) else { continue }
         cost[next] = total
         from[next] = current
-        frontier.append((next, total + simd_distance(point(next), goal)))
+        frontier.push(next, total + simd_distance(point(next), goal))
       }
     }
     let end = reached ?? nearest.index
@@ -302,5 +302,41 @@ extension GenzLayout {
       i = furthest + 1
     }
     return straight
+  }
+}
+
+/// The cells a route search has still to look at, cheapest guess first.
+private struct GenzCellHeap {
+  private var items: [(cell: Int, guess: Float)] = []
+
+  mutating func push(_ cell: Int, _ guess: Float) {
+    items.append((cell, guess))
+    var child = items.count - 1
+    while child > 0 {
+      let parent = (child - 1) / 2
+      guard items[child].guess < items[parent].guess else { break }
+      items.swapAt(child, parent)
+      child = parent
+    }
+  }
+
+  mutating func pop() -> Int? {
+    guard let first = items.first else { return nil }
+    let last = items.removeLast()
+    if !items.isEmpty {
+      items[0] = last
+      var parent = 0
+      while true {
+        let left = parent * 2 + 1
+        let right = left + 1
+        var least = parent
+        if left < items.count, items[left].guess < items[least].guess { least = left }
+        if right < items.count, items[right].guess < items[least].guess { least = right }
+        guard least != parent else { break }
+        items.swapAt(parent, least)
+        parent = least
+      }
+    }
+    return first.cell
   }
 }
