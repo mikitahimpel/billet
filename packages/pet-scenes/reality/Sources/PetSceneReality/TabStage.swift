@@ -54,6 +54,11 @@ final class TabCamera {
   private var lastPosition = SIMD3<Float>.zero
 
   private static let orbitPerPoint: Float = 0.003
+  /// The lens's clip planes. The rooms stand some twenty units off and never closer than a few,
+  /// so a near plane this far out keeps the depth fine enough for the shadows and paper lying
+  /// close over what is under them.
+  static let nearClip: Float = 1
+  static let farClip: Float = 200
 
   private let home: GenzCamera.Home
 
@@ -61,6 +66,8 @@ final class TabCamera {
     self.home = home
     camera = GenzCamera(home: home)
     lens.camera.fieldOfViewInDegrees = home.fieldOfView
+    lens.camera.near = Self.nearClip
+    lens.camera.far = Self.farClip
     aim()
   }
 

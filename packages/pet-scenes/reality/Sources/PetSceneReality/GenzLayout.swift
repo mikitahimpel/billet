@@ -77,6 +77,10 @@ struct GenzLayout {
 
   static func of(_ key: Key) -> GenzLayout? { of(key.style, furniture: key.furniture) }
 
+  /// How thick a window's sill is. The wall under the window stops at the sill's underside, so
+  /// the two never show a top in the same plane.
+  private static let windowSill: Float = 0.12
+
   // MARK: - Sunset Lamp
 
   private enum Sunset {
@@ -126,7 +130,7 @@ struct GenzLayout {
         GenzRoomPoint(-wall, window.y1, window.z0), GenzRoomPoint(-wall, window.y0, window.z0),
       ],
       discWall: Panel(
-        centre: GenzRoomPoint(width / 2, 0.012, height / 2), width: width, height: height),
+        centre: GenzRoomPoint(width / 2, 0.02, height / 2), width: width, height: height),
       lamp: (GenzRoomPoint(0.68, 0.62, 1.62), Sunset.disc),
       lampColour: GenzColour(0xFF9A52),
       shell: sunsetShell,
@@ -141,19 +145,20 @@ struct GenzLayout {
     let back = kit.matte(GenzColour(0x2E2433))
     let cut = kit.matte(GenzColour(0x4A3B4F))
     let opening = window.y1 - window.y0
+    let sill = windowSill
     return [
       kit.block(
         -wall, -wall, -wall, width + wall, depth + wall, wall, kit.matte(GenzColour(0x3A2C2C))),
       kit.block(-wall, -wall, 0, width + wall, wall, height, back),
       kit.block(-wall, 0, 0, wall, window.y0, height, side),
       kit.block(-wall, window.y1, 0, wall, depth - window.y1, height, side),
-      kit.block(-wall, window.y0, 0, wall, opening, window.z0, side),
+      kit.block(-wall, window.y0, 0, wall, opening, window.z0 - sill, side),
       kit.block(-wall, window.y0, window.z1, wall, opening, height - window.z1, side),
       kit.block(
         -wall * 0.6, (window.y0 + window.y1) / 2 - 0.05, window.z0, 0.08, 0.1,
         window.z1 - window.z0, cut),
       kit.block(
-        -wall, window.y0 - 0.1, window.z0 - 0.12, wall + 0.3, opening + 0.2, 0.12,
+        -wall, window.y0 - 0.1, window.z0 - sill, wall + 0.3, opening + 0.2, sill,
         kit.matte(GenzColour(0x5A4A58))),
       kit.block(-wall, -wall, height, width + wall, wall, 0.03, cut),
       kit.block(-wall, 0, height, wall, depth, 0.03, cut),
@@ -216,16 +221,17 @@ struct GenzLayout {
     let back = kit.matte(GenzColour(0x1A2436))
     let trim = kit.matte(GenzColour(0x2E3A50))
     let opening = window.x1 - window.x0
+    let sill = windowSill
     var parts: [Entity] = [
       kit.block(
         -wall, -wall, -wall, width + wall, depth + wall, wall, kit.matte(GenzColour(0x2A2F3B))),
       kit.block(-wall, 0, 0, wall, depth, height, kit.matte(GenzColour(0x141D2C))),
       kit.block(-wall, -wall, 0, window.x0 + wall, wall, height, back),
       kit.block(window.x1, -wall, 0, width - window.x1, wall, height, back),
-      kit.block(window.x0, -wall, 0, opening, wall, window.z0, back),
+      kit.block(window.x0, -wall, 0, opening, wall, window.z0 - sill, back),
       kit.block(window.x0, -wall, window.z1, opening, wall, height - window.z1, back),
       kit.block(
-        window.x0 - 0.2, -wall, window.z0 - 0.12, opening + 0.4, 0.62 + wall - 0.05, 0.12,
+        window.x0 - 0.2, -wall, window.z0 - sill, opening + 0.4, 0.62 + wall - 0.05, sill,
         kit.matte(GenzColour(0x3A4660))),
       kit.block(-wall, -wall, height, width + wall, wall, 0.03, trim),
       kit.block(-wall, 0, height, wall, depth, 0.03, trim),

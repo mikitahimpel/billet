@@ -414,7 +414,8 @@ extension GenzKit {
 
   /// The print is a separate part named for the poster texture.
   private func posterFrame(_ piece: GenzPiece) -> [Entity] {
-    let print = block(0.05, 0, 0.05, 0.95, 0.03, 1.8, matte(piece.slot(1)))
+    // The print stands a little proud of the frame, so their faces never share a plane.
+    let print = block(0.05, 0, 0.05, 0.95, 0.04, 1.8, matte(piece.slot(1)))
     print.name = GenzRoom.posterName
     return [block(0, 0.01, 0, 1.05, 0.02, 1.9, matte(piece.slot(0))), print]
   }

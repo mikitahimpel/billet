@@ -28,7 +28,7 @@ final class DeskStage: TabStage {
   private let view: TabCamera
   private let frames = FrameClock()
   private var building: Task<Void, Never>?
-  private var isBuilt = false
+  private(set) var isBuilt = false
   private var isOnScreen = false
   private var reduceMotion = false
   private var clock = 0.0

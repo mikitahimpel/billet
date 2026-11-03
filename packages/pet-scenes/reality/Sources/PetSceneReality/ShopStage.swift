@@ -29,7 +29,7 @@ final class ShopStage: TabStage {
   private let models: NookiShopModels
   private let frames = FrameClock()
   private var building: Task<Void, Never>?
-  private var isBuilt = false
+  private(set) var isBuilt = false
   private var isOnScreen = false
   private var reduceMotion = false
   private var clock = 0.0
@@ -497,8 +497,10 @@ final class ShopStage: TabStage {
     let wood = kit.matte(GenzColour(0xD9B48A))
     let cap = kit.matte(GenzColour(0xF0DCC0))
     var parts: [Entity] = [
+      // The boards' tops are the floor; the slab stops a little under them to show in the seams.
       kit.block(
-        -wall, -wall, -wall, width + wall, depth + wall, wall, kit.matte(GenzColour(0x4A2E22))),
+        -wall, -wall, -wall - 0.02, width + wall, depth + wall, wall,
+        kit.matte(GenzColour(0x4A2E22))),
       planks(),
       kit.block(-wall, -wall, 0, width + wall, wall, height, back),
       kit.block(0, 0, 0, width, 0.06, 1.15, kit.matte(GenzColour(0x6A3A2C))),
@@ -511,12 +513,13 @@ final class ShopStage: TabStage {
       kit.block(-wall, window.y0, 0, wall, window.y1 - window.y0, window.z0, side),
       kit.block(
         -wall, window.y0, window.z1, wall, window.y1 - window.y0, height - window.z1, side),
-      // Its frame, a cross of glazing bars and a deep sill.
+      // Its frame, a cross of glazing bars and a deep sill. The sill's top and the jambs' faces
+      // stand a little proud of the wall, so no two share a plane.
       kit.block(
-        -0.12, window.y0 - 0.1, window.z0 - 0.14, 0.42, window.y1 - window.y0 + 0.2, 0.14, wood),
+        -0.12, window.y0 - 0.1, window.z0 - 0.14, 0.42, window.y1 - window.y0 + 0.2, 0.16, wood),
       kit.block(-0.1, window.y0 - 0.1, window.z1, 0.14, window.y1 - window.y0 + 0.2, 0.12, wood),
-      kit.block(-0.1, window.y0 - 0.1, window.z0, 0.14, 0.1, window.z1 - window.z0, wood),
-      kit.block(-0.1, window.y1, window.z0, 0.14, 0.1, window.z1 - window.z0, wood),
+      kit.block(-0.1, window.y0 - 0.1, window.z0, 0.14, 0.12, window.z1 - window.z0, wood),
+      kit.block(-0.1, window.y1 - 0.02, window.z0, 0.14, 0.12, window.z1 - window.z0, wood),
       kit.block(
         -0.14, (window.y0 + window.y1) / 2 - 0.04, window.z0, 0.08, 0.08, window.z1 - window.z0,
         wood),
@@ -622,7 +625,7 @@ final class ShopStage: TabStage {
     room.addChild(
       kit.block(4.6, 3.35, top + 0.36, 0.65, 0.18, 0.3, kit.matte(GenzColour(0x2A2530))))
     room.addChild(
-      kit.block(4.67, 3.53, top + 0.42, 0.5, 0.01, 0.18, kit.glow(GenzColour(0xFFD08A))))
+      kit.block(4.67, 3.53, top + 0.42, 0.5, 0.04, 0.18, kit.glow(GenzColour(0xFFD08A))))
     let gold = kit.matte(GenzColour(0xD8B25A))
     room.addChild(
       kit.part(
@@ -853,11 +856,11 @@ final class ShopStage: TabStage {
       sample.addChild(kit.part(kit.prism(sides: 10, radius: 0.09, top: 0.09, height: 0.16), tin))
       sample.addChild(
         kit.part(
-          kit.prism(sides: 10, radius: 0.092, top: 0.092, height: 0.08), kit.matte(colour),
+          kit.prism(sides: 10, radius: 0.1, top: 0.1, height: 0.08), kit.matte(colour),
           at: [0, 0.04, 0]))
       sample.addChild(
         kit.part(
-          kit.prism(sides: 10, radius: 0.095, top: 0.095, height: 0.012), kit.matte(colour),
+          kit.prism(sides: 10, radius: 0.105, top: 0.105, height: 0.012), kit.matte(colour),
           at: [0, 0.16, 0]))
       // A drip down the side.
       sample.addChild(

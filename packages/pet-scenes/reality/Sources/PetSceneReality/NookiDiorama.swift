@@ -168,8 +168,14 @@ final class NookiDiorama: CatPlayStage {
   private static let noteHome: SIMD3<Float> = [0.08, 0.46, -0.565]
   private static let noteStart: SIMD3<Float> = [0.75, 1.05, -0.1]
   /// How far in front of the lens an opened note sits, and how much larger it gets.
-  private static let noteReadingDistance: Float = 2.4
+  static let noteReadingDistance: Float = 2.4
   private static let noteReadingScale: Float = 2
+  /// The lens's clip planes, in metres. The camera stands some nine metres from the room and an
+  /// opened note comes to `noteReadingDistance` in front of it, so a near plane this far out
+  /// keeps the depth fine enough for the paint, marks and window pane laid millimetres proud of
+  /// the walls. The default near plane of a centimetre let them shimmer as the room turned.
+  static let nearClip: Float = 0.2
+  static let farClip: Float = 60
   static let yarnPosition: SIMD3<Float> = [0.36, 0, 0.54]
   private static let lookLimit: Float = 1
   /// How fast the cat covers its walk to the wall, in metres a second.
@@ -210,6 +216,8 @@ final class NookiDiorama: CatPlayStage {
     root.addChild(room)
     room.isEnabled = false
     lens.camera.fieldOfViewInDegrees = Self.fieldOfView
+    lens.camera.near = Self.nearClip
+    lens.camera.far = Self.farClip
     root.addChild(lens)
     aimLens()
   }

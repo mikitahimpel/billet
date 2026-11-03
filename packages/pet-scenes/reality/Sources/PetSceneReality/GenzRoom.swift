@@ -115,6 +115,7 @@ final class GenzRoom: CatPlayStage {
   static let posterName = "genz-poster"
   /// A candle's flame, which flickers.
   static let flameName = "genz-flame"
+  static let lightDotName = "genz-light-dot"
 
   let layout: GenzLayout
   let root = Entity()
@@ -223,6 +224,12 @@ final class GenzRoom: CatPlayStage {
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "GenzRoom")
   private static let orbitPerPoint: Float = 0.004
+  /// The lens's clip planes. The camera never comes within a few units of the room, and stands
+  /// at most about a hundred off in the opening at full zoom out, so a near plane this far out
+  /// keeps the depth fine enough that the rug, poster and note never shimmer against what they
+  /// rest on. The default near plane of a centimetre left too little depth twenty units out.
+  static let nearClip: Float = 0.5
+  static let farClip: Float = 300
   private static let discPixels = 512
   private static let posterPixels = 128
   private static let textureStep = 1.0 / 15
@@ -248,6 +255,8 @@ final class GenzRoom: CatPlayStage {
       liftHeight: 0.45, markerHeight: 0.05, markerMargin: 0.12)
     camera = GenzCamera(home: layout.camera)
     lens.camera.fieldOfViewInDegrees = layout.camera.fieldOfView
+    lens.camera.near = Self.nearClip
+    lens.camera.far = Self.farClip
     root.addChild(room)
     root.addChild(lens)
     room.isEnabled = false
@@ -301,7 +310,10 @@ final class GenzRoom: CatPlayStage {
     await placeCat()
   }
 
-  private func place(_ placement: GenzLayout.Placement) -> Entity {
+  /// The piece for `placement`, inside a holder standing at its spot and turned its way.
+  static func placed(_ placement: GenzLayout.Placement, kit: GenzKit) -> (
+    holder: Entity, piece: Entity
+  ) {
     let piece = kit.build(placement.piece)
     let size = placement.piece.kind.size
     piece.position = GenzRoomPoint(-size.x / 2, -size.y / 2, 0).scene
@@ -309,6 +321,12 @@ final class GenzRoom: CatPlayStage {
     holder.position = placement.centre.scene
     holder.orientation = simd_quatf(angle: placement.yaw, axis: [0, 1, 0])
     holder.addChild(piece)
+    return (holder, piece)
+  }
+
+  private func place(_ placement: GenzLayout.Placement) -> Entity {
+    let (holder, piece) = Self.placed(placement, kit: kit)
+    let size = placement.piece.kind.size
     room.addChild(holder)
     switch placement.piece.kind {
     case .sunsetLamp, .thriftLamp, .pleatedLamp:
@@ -1500,7 +1518,8 @@ extension GenzRoom {
 
   /// The dot sits on the first spot, darts to the second as the cat lands, and fades at the end.
   private func showDot(_ pose: CatTrip.Pose, first: SIMD2<Float>, second: SIMD2<Float>) {
-    let height = layout.cat.spot.scene.y + 0.004
+    // Clear of the surface it lands on, so the two never fight for the same pixels.
+    let height = layout.cat.spot.scene.y + 0.012
     let at: SIMD2<Float>
     var opacity: Float = 0.9
     switch pose.leg {
@@ -1544,6 +1563,7 @@ extension GenzRoom {
     lightDot.model = ModelComponent(
       mesh: .generateCylinder(height: 0.002, radius: radius),
       materials: [UnlitMaterial(color: .init(red: 1, green: 0.42, blue: 0.3, alpha: 1))])
+    lightDot.name = Self.lightDotName
     lightDot.isEnabled = false
     room.addChild(lightDot)
   }

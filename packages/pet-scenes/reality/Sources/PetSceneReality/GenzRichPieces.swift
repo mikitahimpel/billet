@@ -46,7 +46,7 @@ extension GenzKit {
       parts.append(model)
     }
     parts += knittedThrow(
-      "daybed", x: 3.5, y: 0.35, w: 2.9, depth: 1.95, top: 0.8, drop: 0.55, colour: piece.slot(2))
+      "daybed", x: 3.5, y: 0.42, w: 2.9, depth: 1.95, top: 0.8, drop: 0.55, colour: piece.slot(2))
     return parts
   }
 
@@ -144,7 +144,7 @@ extension GenzKit {
   func bookCrate(_ piece: GenzPiece) -> [Entity] {
     let wood = matte(piece.slot(0))
     var parts: [Entity] = [
-      block(0, 0, 0, 0.9, 0.05, 0.9, matte(piece.slot(0).shaded(-0.15))),
+      block(0.06, 0, 0.06, 0.78, 0.05, 0.78, matte(piece.slot(0).shaded(-0.15))),
       block(0, 0, 0, 0.9, 0.9, 0.06, wood),
       block(0, 0, 0.84, 0.9, 0.9, 0.06, wood),
     ]
@@ -272,8 +272,9 @@ extension GenzKit {
   func patternRug(_ piece: GenzPiece) -> [Entity] {
     let centre = GenzRoomPoint(1.4, 1.4, 0).scene
     var parts: [Entity] = []
+    // Each ring, dot and the fringe stands clear of what is under it, so no two share a plane.
     let rings: [(radius: Float, height: Float, slot: Int)] = [
-      (1.4, 0.02, 0), (1.18, 0.024, 1), (0.8, 0.028, 2), (0.45, 0.032, 1),
+      (1.4, 0.02, 0), (1.18, 0.03, 1), (0.8, 0.04, 2), (0.45, 0.05, 1),
     ]
     for ring in rings {
       let edge = ring.radius
@@ -288,17 +289,18 @@ extension GenzKit {
     var dots: [(centre: SIMD3<Float>, size: SIMD3<Float>)] = []
     for index in 0..<18 {
       let angle = Float(index) * 2 * .pi / 18
-      dots.append((centre + [cos(angle) * 0.99, 0.03, sin(angle) * 0.99], [0.11, 0.012, 0.11]))
+      dots.append((centre + [cos(angle) * 0.99, 0.04, sin(angle) * 0.99], [0.11, 0.012, 0.11]))
     }
     for index in 0..<8 {
       let angle = Float(index) * 2 * .pi / 8 + 0.2
-      dots.append((centre + [cos(angle) * 0.62, 0.034, sin(angle) * 0.62], [0.1, 0.012, 0.1]))
+      dots.append((centre + [cos(angle) * 0.62, 0.05, sin(angle) * 0.62], [0.1, 0.012, 0.1]))
     }
     parts.append(part(boxes("rug dots", dots), matte(piece.slot(0))))
     var fringe: [(centre: SIMD3<Float>, size: SIMD3<Float>)] = []
     for index in 0..<40 {
       let angle = Float(index) * 2 * .pi / 40
-      fringe.append((centre + [cos(angle) * 1.45, 0.005, sin(angle) * 1.45], [0.03, 0.01, 0.03]))
+      fringe.append(
+        (centre + [cos(angle) * 1.45, 0.0025, sin(angle) * 1.45], [0.03, 0.005, 0.03]))
     }
     parts.append(part(boxes("rug fringe", fringe), matte(piece.slot(0).shaded(0.25))))
     return parts
@@ -398,10 +400,10 @@ extension GenzKit {
         prism(sides: 24, radius: 0.34, top: 0.34, height: 0.016, turn: 0),
         matte(GenzColour(0x151215)), at: platter + [0, 0.03, 0]),
       part(
-        prism(sides: 24, radius: 0.25, top: 0.25, height: 0.018, turn: 0),
+        prism(sides: 24, radius: 0.25, top: 0.25, height: 0.024, turn: 0),
         matte(GenzColour(0x27222A)), at: platter + [0, 0.03, 0]),
       part(
-        prism(sides: 16, radius: 0.1, top: 0.1, height: 0.02, turn: 0), matte(piece.slot(1)),
+        prism(sides: 16, radius: 0.1, top: 0.1, height: 0.032, turn: 0), matte(piece.slot(1)),
         at: platter + [0, 0.03, 0]),
       part(prism(sides: 8, radius: 0.07, top: 0.06, height: 0.08), metal, at: arm),
       part(
