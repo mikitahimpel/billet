@@ -186,6 +186,8 @@ private struct Fold {
     case .sleep:
       asleep = true
       return
+    case .shoo:
+      return
     }
     asleep = false
     wokeAt = event.at.timeIntervalSince1970

@@ -20,6 +20,8 @@ public struct SettingsView: View {
   private let labs: WidgetFeaturesModel?
   private let partnerStatus: String
   private let catName: String?
+  /// A few habits the cat has learned, in plain words.
+  private let habits: [String]
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?
   private let widgetFeatures: WidgetFeaturesModel?
@@ -41,6 +43,7 @@ public struct SettingsView: View {
     labs: WidgetFeaturesModel? = nil,
     partnerStatus: String,
     catName: String? = nil,
+    habits: [String] = [],
     scenes: [any PetScene],
     selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
@@ -54,6 +57,7 @@ public struct SettingsView: View {
     self.labs = labs
     self.partnerStatus = partnerStatus
     self.catName = catName
+    self.habits = habits
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
     self.widgetFeatures = widgetFeatures
@@ -97,6 +101,10 @@ public struct SettingsView: View {
           ListDivider()
           SettingsRow("Character", value: "\(temperament.title). \(temperament.line)")
             .accessibilityIdentifier("settings.character")
+        }
+        ForEach(habits, id: \.self) { habit in
+          ListDivider()
+          SettingsRow(habit, value: "")
         }
       }
       if let code {

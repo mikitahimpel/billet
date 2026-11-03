@@ -96,7 +96,7 @@ actor FakePartnerRoom {
       after(pace.treatBack) { $0.giveTreat() }
     case .play:
       after(pace.petBack) { $0.playWithCat() }
-    case .feed, .sleep:
+    case .feed, .sleep, .shoo:
       break
     }
   }

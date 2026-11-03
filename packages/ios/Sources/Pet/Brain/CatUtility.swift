@@ -8,6 +8,8 @@ public struct CatUtilityScore: Hashable, Sendable {
   public var personality: Double
   /// The temperament's lean towards the group, 1 for a cat with none.
   public var temperament: Double
+  /// What its upbringing adds: habits learned from the pair, 1 for a cat that learned none.
+  public var upbringing: Double
   public var time: Double
   public var room: Double
   public var novelty: Double
@@ -44,6 +46,10 @@ public struct CatUtilityInput: Sendable {
   public var hasNovelty: Bool
   /// How much the cat likes its best spots, from its memory: 0 for none, up to 1.
   public var spotFondness: Double
+  /// What it has learned from the pair, and whether it is the mealtime it learned and still
+  /// hungry.
+  public var upbringing: CatUpbringing
+  public var mealtime: Bool
 }
 
 /// Scores each activity group: `need × personality × time of day × room × novelty × mood ×
@@ -65,6 +71,8 @@ public enum CatUtility {
     let need = needTerm(group, input)
     let traits = personalityTerm(group, input.personality)
     let kind = input.temperament?.bias(group) ?? 1
+    let raised =
+      input.upbringing.bias(group, hour: input.hour) * (group == .eat && input.mealtime ? 3 : 1)
     let time = timeTerm(group, hour: input.hour)
     let room = roomTerm(group, input)
     let novelty = noveltyTerm(group, input)
@@ -72,8 +80,10 @@ public enum CatUtility {
     let vitality = vitalityTerm(group, input.vitality, sleepy: input.sleepy)
     return CatUtilityScore(
       group: group,
-      score: base(group) * need * traits * kind * time * room * novelty * mood * vitality,
-      need: need, personality: traits, temperament: kind, time: time, room: room,
+      score: base(group) * need * traits * kind * raised * time * room * novelty * mood
+        * vitality,
+      need: need, personality: traits, temperament: kind, upbringing: raised, time: time,
+      room: room,
       novelty: novelty, mood: mood,
       vitality: vitality)
   }

@@ -49,10 +49,15 @@ public struct CatMemory: Hashable, Sendable {
 public struct CatDay: Hashable, Sendable {
   public var personality: CatPersonality
   public var memory: CatMemory
+  public var upbringing: CatUpbringing
 
-  public init(personality: CatPersonality, memory: CatMemory = CatMemory()) {
+  public init(
+    personality: CatPersonality, memory: CatMemory = CatMemory(),
+    upbringing: CatUpbringing = .none
+  ) {
     self.personality = personality
     self.memory = memory
+    self.upbringing = upbringing
   }
 }
 
@@ -81,7 +86,7 @@ extension CatPersonality {
       case .pet: pet += weight
       case .note: note += weight
       case .feed: feed += weight
-      case .sleep: break
+      case .sleep, .shoo: break
       }
     }
     func move(_ amount: Double) -> Double { min(max(amount, -Self.driftLimit), Self.driftLimit) }

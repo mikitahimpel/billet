@@ -46,6 +46,6 @@ public struct CatReflexes: Hashable, Sendable {
 
   /// Steps quiet enough for a reflex clip to cut in without being noticed as a cut.
   static let calm: Set<CatActivityStep> = [
-    .sit, .loaf, .watchWindow, .waitByDoor, .sitInCardigan, .sitOnDesk,
+    .sit, .loaf, .watchWindow, .waitByDoor, .waitByBowl, .sitInCardigan, .sitOnDesk,
   ]
 }

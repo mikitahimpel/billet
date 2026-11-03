@@ -167,6 +167,7 @@ struct AppShellView: View {
           labs: labs,
           partnerStatus: line.text,
           catName: session.play.catName,
+          habits: session.brain.upbringing.habits,
           scenes: scenes,
           selectedSceneID: $selectedSceneID,
           widgetFeatures: widgetFeatures,
