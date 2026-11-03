@@ -14,10 +14,14 @@ public final class AccountModel {
 
   public var state: AccountMachine.State { store.state }
 
-  public init(api: APIClient, accounts: AccountStore, health: DeliveryHealth) {
+  public init(
+    api: APIClient, accounts: AccountStore, keys: AccountKeyStore, health: DeliveryHealth,
+    reauthorize: @escaping AppleReauthorizer
+  ) {
     self.health = health
     store = Store<AccountMachine>(initial: .initial) { output in
-      await AccountMachine.run(output, api: api, accounts: accounts)
+      await AccountMachine.run(
+        output, api: api, accounts: accounts, keys: keys, reauthorize: reauthorize)
     }
   }
 

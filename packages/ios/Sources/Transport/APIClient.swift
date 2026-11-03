@@ -15,6 +15,8 @@ public struct APIClient: Sendable {
   public var linkApple:
     @Sendable (SignInWithAppleRequest) async throws(TransportError) -> AccountResponse
   public var account: @Sendable () async throws(TransportError) -> AccountResponse
+  /// Deletes the account and everything it owns. The session is gone afterwards.
+  public var deleteAccount: @Sendable (DeleteAccountRequest) async throws(TransportError) -> Void
   public var signOut: @Sendable () async throws(TransportError) -> Void
   public var registerPushToken:
     @Sendable (RegisterPushTokenRequest) async throws(TransportError) -> Void
@@ -69,13 +71,18 @@ public struct APIClient: Sendable {
       AccountResponse = { (_) async throws(TransportError) in throw .network("offline") },
     account: @escaping @Sendable () async throws(TransportError) -> AccountResponse = {
       () async throws(TransportError) in throw .network("offline")
-    }
+    },
+    deleteAccount:
+      @escaping @Sendable (DeleteAccountRequest) async throws(TransportError) -> Void = {
+        (_) async throws(TransportError) in throw .network("offline")
+      }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
     self.signInWithApple = signInWithApple
     self.linkApple = linkApple
     self.account = account
+    self.deleteAccount = deleteAccount
     self.signOut = signOut
     self.registerPushToken = registerPushToken
     self.createInvite = createInvite
@@ -193,6 +200,9 @@ extension APIClient {
       account: { () async throws(TransportError) in
         try await http.perform(
           try await request(Routes.getAccount, signed: true), as: AccountResponse.self)
+      },
+      deleteAccount: { (body) async throws(TransportError) in
+        try await http.performEmpty(try await json(Routes.deleteAccount, signed: true, body: body))
       })
   }
 }

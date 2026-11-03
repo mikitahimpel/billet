@@ -62,6 +62,9 @@ public struct AccountSettingsView: View {
         SettingsLink("Unpair") { model.request(.unpair) }
         ListDivider()
         SettingsLink("Sign out") { model.request(.signOut) }
+        ListDivider()
+        SettingsLink("Delete account") { model.request(.deleteAccount) }
+          .accessibilityIdentifier("deleteAccount")
       }
     }
   }
@@ -109,6 +112,12 @@ public struct AccountSettingsView: View {
         title: "Sign out?",
         message: "This phone forgets your account. Sign in again to carry on.",
         button: "Sign out")
+    case .deleteAccount:
+      Confirmation(
+        title: "Delete your account?",
+        message:
+          "Your notes and pictures are deleted for good, on every phone. Your partner keeps the cat and their own notes, and we'll let them know gently. This can't be undone.",
+        button: "Delete account")
     }
   }
 
@@ -117,6 +126,9 @@ public struct AccountSettingsView: View {
     case (.unavailable, _): "Billet can't be reached right now. Try again in a moment."
     case (.storage, .unpair): "You're unpaired, but this phone couldn't save that. Try again."
     case (.storage, .signOut): "This phone couldn't forget your account. Try again."
+    case (.storage, .deleteAccount):
+      "Your account is deleted, but this phone couldn't forget it. Try again."
+    case (.appleCancelled, _): "Nothing was deleted. Sign in with Apple to confirm it's you."
     }
   }
 }

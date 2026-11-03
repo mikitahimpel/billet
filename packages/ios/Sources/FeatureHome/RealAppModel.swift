@@ -34,6 +34,9 @@ public final class RealAppModel {
   public let api: APIClient
   private let baseURL: URL
   public let accounts: AccountStore
+  /// The anonymous account's key in the iCloud Keychain.
+  public let keys: AccountKeyStore
+  @ObservationIgnored private let reauthorize: AppleReauthorizer
   public private(set) var signIn: SignInModel
   public private(set) var pairing: PairingModel
   /// The saved Labs choices and the server's test variants for this pair.
@@ -48,7 +51,8 @@ public final class RealAppModel {
   @ObservationIgnored private var cachedLive: LiveRoom?
 
   public init(
-    api: APIClient, accounts: AccountStore, baseURL: URL,
+    api: APIClient, accounts: AccountStore, keys: AccountKeyStore, baseURL: URL,
+    reauthorize: @escaping AppleReauthorizer = { await AppleReauthorization.system() },
     labs: WidgetFeaturesModel = WidgetFeaturesModel(store: .appGroup()),
     eventStorage: AppGroupStorage? = try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     hasWidget: (@MainActor () async -> Bool)? = nil,
@@ -66,6 +70,8 @@ public final class RealAppModel {
     self.hasWidget = hasWidget ?? { await WidgetPresence.isInstalled() }
     self.baseURL = baseURL
     self.accounts = accounts
+    self.keys = keys
+    self.reauthorize = reauthorize
     stage = RealStage((try? accounts.load()) ?? nil)
     signIn = SignInModel(api: api, accounts: accounts)
     pairing = PairingModel(api: api)
@@ -125,7 +131,9 @@ public final class RealAppModel {
   /// The settings of the signed-in account, kept for as long as the account stays signed in.
   public func account() -> AccountModel {
     if let cachedAccount { return cachedAccount }
-    let model = AccountModel(api: api, accounts: accounts, health: .system(api: api))
+    let model = AccountModel(
+      api: api, accounts: accounts, keys: keys, health: .system(api: api),
+      reauthorize: reauthorize)
     cachedAccount = model
     return model
   }
@@ -138,12 +146,12 @@ public final class RealAppModel {
     cachedAccount = nil
     // The variants belong to the pair, and what is waiting to be counted to the account.
     flags.forget()
-    if action == .signOut { reporter.discard() }
+    if action != .unpair { reporter.discard() }
     pairing = PairingModel(api: api)
     switch action {
     case .unpair:
       stage = .unpaired
-    case .signOut:
+    case .signOut, .deleteAccount:
       signIn = SignInModel(api: api, accounts: accounts)
       stage = .signedOut
     }
