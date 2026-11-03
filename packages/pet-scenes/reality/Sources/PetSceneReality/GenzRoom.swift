@@ -107,6 +107,8 @@ final class GenzRoomCache {
 final class GenzRoom: CatPlayStage {
   static let catName = "genz-cat"
   static let noteName = "genz-note"
+  /// The walls, floor, sill and trim, joined into one model per colour.
+  static let shellName = "genz-shell"
   static let lampName = "genz-lamp"
   static let lensName = "genz-lens"
   static let bulbName = "genz-bulb"
@@ -282,7 +284,11 @@ final class GenzRoom: CatPlayStage {
 
   private func build() async {
     await kit.makeTextures()
-    for part in layout.shell(kit) { room.addChild(part) }
+    let shell = Entity()
+    shell.name = Self.shellName
+    for part in layout.shell(kit) { shell.addChild(part) }
+    kit.merge(shell, key: "shell \(layout.style)")
+    room.addChild(shell)
     let holders = layout.pieces.map(place)
     arrangeDecor(holders)
     buildLED()
