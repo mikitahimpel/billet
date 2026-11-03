@@ -20,6 +20,9 @@ public final class ServiceStatusModel {
 
   public var screen: ServiceScreen { state.screen }
 
+  /// Whether the app may report events. On until the service says otherwise.
+  public var analyticsEnabled: Bool { state.status.analyticsEnabled }
+
   /// Asks the service for its status. `nil` when this build has nowhere to ask, as a demo build
   /// without a host.
   public typealias Fetch = @Sendable () async throws(TransportError) -> AppStatus

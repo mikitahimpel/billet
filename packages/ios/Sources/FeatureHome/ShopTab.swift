@@ -37,6 +37,7 @@ struct ShopTab: View {
   @AppStorage("shop.hintSeen") private var hintSeen = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var onScreen
+  @Environment(\.appEvents) private var events
 
   private var owned: Set<ShopItem.ID> {
     Set(shop.catalog.items.filter { $0.ownsAtMostOne && shop.owned($0) > 0 }.map(\.id))
@@ -114,6 +115,9 @@ struct ShopTab: View {
       }
     }
     .sensoryFeedback(.success, trigger: purchases)
+    .onChange(of: onScreen, initial: true) { _, shown in
+      if shown { events(.shopOpened) }
+    }
   }
 
   private var controls: some View {
@@ -150,6 +154,7 @@ struct ShopTab: View {
     dismissHint()
     bought = nil
     setFocus(id)
+    events(.shopItemViewed(id))
   }
 
   private func setFocus(_ id: ShopItem.ID?) {
@@ -169,6 +174,7 @@ struct ShopTab: View {
       let outcome = try shop.buy(item, transaction: transaction)
       transactions[item.id] = nil
       guard outcome == .applied else { return }
+      events(.shopItemBought(item.id, price: item.price))
       setFocus(nil)
       withAnimation(reduceMotion ? nil : Motion.spring) { bought = item }
       Task {

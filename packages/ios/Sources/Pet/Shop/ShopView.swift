@@ -35,6 +35,7 @@ public struct ShopView<Preview: View>: View {
   @State private var scrollTop: CGFloat = 0
   @State private var scrollOffset = ScrollBox()
   @State private var bought = 0
+  @Environment(\.appEvents) private var events
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var typeSize
 
@@ -264,6 +265,7 @@ public struct ShopView<Preview: View>: View {
   private func select(_ item: ShopItem) {
     guard item.id != selected else { return }
     withAnimation(reduceMotion ? nil : Motion.spring) { selected = item.id }
+    events(.shopItemViewed(item.id))
   }
 
   private func buy(_ item: ShopItem) {
@@ -273,6 +275,7 @@ public struct ShopView<Preview: View>: View {
       let outcome = try store.buy(item, transaction: transaction)
       transactions[item.id] = nil
       guard outcome == .applied else { return }
+      events(.shopItemBought(item.id, price: item.price))
       bought += 1
       launch(item)
     } catch {
