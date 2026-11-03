@@ -181,7 +181,9 @@ final class AdoptionStage: TabStage {
   }
 
   private func stepExit(_ time: TimeInterval) -> Bool {
-    screen.darkness = AdoptionExit.darkness(at: time, reduceMotion: reduceMotion)
+    let darkness = AdoptionExit.darkness(at: time, reduceMotion: reduceMotion)
+    // Every write invalidates the view over the scene, even of the same value.
+    if screen.darkness != darkness { screen.darkness = darkness }
     if !reduceMotion {
       let flight = AdoptionExit.flight(at: time)
       view.fly(yaw: flight.x, pitch: flight.y, distance: flight.z)

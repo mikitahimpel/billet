@@ -56,6 +56,13 @@ final class OnboardingStage: TabStage {
   /// Swells with the beat and squishes when tapped; holds the model.
   private let heartBeat = Entity()
   private var heartMaterial: PhysicallyBasedMaterial?
+  /// The heart's models, found once, so the beat's glow does not walk the heart every frame.
+  private var heartModels: [ModelEntity] = []
+  /// The glow last given to the heart's material, which is only written again once it has moved
+  /// by more than the eye can see.
+  private var heartGlow: Float?
+  /// The opacities last set, so that unchanged ones are not written every frame.
+  private var opacities: [ObjectIdentifier: Float] = [:]
   private var flames: [Entity] = []
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "OnboardingStage")
@@ -64,6 +71,9 @@ final class OnboardingStage: TabStage {
   private static let heartColour = GenzColour(0xFF6F7E)
   /// How much faster the rest of the flight runs once it is cut short.
   private static let hurry = 7.0
+  /// Changes smaller than these do not show, so they are not written.
+  private static let unseenGlow: Float = 0.004
+  private static let unseenOpacity: Float = 0.002
 
   init(kit: GenzKit) {
     self.kit = kit
@@ -175,7 +185,9 @@ final class OnboardingStage: TabStage {
     let away = timeline.away(time)
     let drift = reduceMotion ? 0 : Float(sin(clock * 0.16)) * 0.035
     view.fly(yaw: -0.6 * away + drift, pitch: 0.34 * away, distance: 1 + 2.4 * away)
-    screen.darkness = timeline.darkness(time)
+    let darkness = timeline.darkness(time)
+    // Every write invalidates the view over the scene, even of the same value.
+    if screen.darkness != darkness { screen.darkness = darkness }
     lighting.setDimmer(timeline.warmth(time))
     stepHeart(time)
     stepHalves()
@@ -201,7 +213,10 @@ final class OnboardingStage: TabStage {
     }
     if var material = heartMaterial {
       let beat = reduceMotion ? 0 : HeartMotion.beat(clock)
-      material.emissiveIntensity = (0.12 + 0.3 * glow) * (1 + 0.25 * beat) + 0.9 * burst
+      let intensity = (0.12 + 0.3 * glow) * (1 + 0.25 * beat) + 0.9 * burst
+      if let heartGlow, abs(intensity - heartGlow) < Self.unseenGlow { return }
+      heartGlow = intensity
+      material.emissiveIntensity = intensity
       heartMaterial = material
       setHeartMaterial(material)
     }
@@ -225,7 +240,7 @@ final class OnboardingStage: TabStage {
       }
       half.entity.position = half.home + pose.offset / heartScale
       half.entity.orientation = simd_quatf(angle: pose.tilt, axis: [0, 0, 1])
-      half.entity.components.set(OpacityComponent(opacity: min(max(opacity, 0), 1)))
+      setOpacity(min(max(opacity, 0), 1), of: half.entity)
       half.entity.isEnabled = opacity > 0.01
     }
   }
@@ -234,7 +249,14 @@ final class OnboardingStage: TabStage {
     tag.isEnabled = tagShown > 0.01
     let pop = reduceMotion ? 1 : 0.6 + 0.4 * tagShown
     tag.scale = .one * pop
-    tag.components.set(OpacityComponent(opacity: tagShown))
+    setOpacity(tagShown, of: tag)
+  }
+
+  private func setOpacity(_ opacity: Float, of entity: Entity) {
+    let key = ObjectIdentifier(entity)
+    if let last = opacities[key], abs(last - opacity) < Self.unseenOpacity { return }
+    opacities[key] = opacity
+    entity.components.set(OpacityComponent(opacity: opacity))
   }
 
   private func stepFlames(_ time: Double) {
@@ -613,10 +635,15 @@ final class OnboardingStage: TabStage {
   }
 
   private func setHeartMaterial(_ material: PhysicallyBasedMaterial) {
-    NookiDiorama.visit(heartBeat) { entity in
-      guard let model = entity as? ModelEntity, let count = model.model?.materials.count,
-        count > 0
-      else { return }
+    if heartModels.isEmpty {
+      NookiDiorama.visit(heartBeat) { entity in
+        if let model = entity as? ModelEntity, model.model?.materials.isEmpty == false {
+          heartModels.append(model)
+        }
+      }
+    }
+    for model in heartModels {
+      guard let count = model.model?.materials.count else { continue }
       model.model?.materials = Array(repeating: material, count: count)
     }
   }
