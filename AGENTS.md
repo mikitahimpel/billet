@@ -31,6 +31,14 @@ Versions come from the catalog in `pnpm-workspace.yaml`: use `"catalog:"` in `pa
 Secrets live in Proton Pass. Commit only references (`API_KEY=pass://Billet/<item>/<field>`) in
 `.env.pass`, and run with `pp run --env-file .env.pass -- <command>`. Never commit secret values.
 
+## Admin data
+
+Agents read the admin panel's numbers, experiments, flags, flag history and pairs (by pair id)
+read-only with `scripts/admin-read.sh <route>`, run as
+`PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags`.
+It prints JSON. Agents never create or change Access credentials, and cannot write through it. See
+[docs/admin.md](docs/admin.md#agent-api).
+
 ## Swift
 
 - Swift files are PascalCase, named after their main type (`PairingError.swift`). Kebab-case applies to TypeScript and config files only.
