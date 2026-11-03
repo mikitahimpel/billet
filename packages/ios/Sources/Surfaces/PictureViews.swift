@@ -163,7 +163,13 @@ public struct PictureView: View {
       HouseAtWindow(lit: context.phase == .night || context.phase == .dusk)
     case .partnerWindow:
       HouseAtWindow(lit: context.partnerHere)
-    case .streak, .daysTogether:
+    case .streak:
+      // The flame stands behind the plate, so the number still reads first.
+      ZStack(alignment: .bottom) {
+        FlameGlyph(streak: caption.number ?? 0)
+        HousePlate(caption.number ?? 0, scale: layout == .small ? 0.8 : 1.2)
+      }
+    case .daysTogether:
       HousePlate(caption.number ?? 0, scale: layout == .small ? 1 : 1.5)
     case .partnerDrawing:
       EmptyView()

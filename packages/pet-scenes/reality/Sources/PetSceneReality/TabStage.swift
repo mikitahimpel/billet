@@ -203,6 +203,7 @@ final class TabStages {
   private var desk: DeskStage?
   private var onboarding: OnboardingStage?
   private var adoption: AdoptionStage?
+  private var flame: FlameSceneStage?
   private var rehearsed: Set<ObjectIdentifier> = []
 
   nonisolated init(rooms: GenzRoomCache) {
@@ -239,6 +240,13 @@ final class TabStages {
     if let adoption { return adoption }
     let made = AdoptionStage(kit: rooms.kit, cats: rooms.cats)
     adoption = made
+    return made
+  }
+
+  var flameStage: FlameSceneStage {
+    if let flame { return flame }
+    let made = FlameSceneStage(kit: rooms.kit)
+    flame = made
     return made
   }
 }
