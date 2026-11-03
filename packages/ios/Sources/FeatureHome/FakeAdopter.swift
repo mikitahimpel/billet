@@ -19,8 +19,8 @@ struct FakeAdopter: Sendable {
   /// How often its first pick is the same as yours.
   static let agreeing = 0.55
 
-  /// Its pick as far as its replies go.
-  private(set) var pick: AdoptionCat?
+  /// Whether it has made its first pick.
+  private(set) var hasPicked = false
   /// Draws from 0 up to 1.
   private var roll: @Sendable () -> Double
 
@@ -34,22 +34,15 @@ struct FakeAdopter: Sendable {
     case .pick(nil), .hold(false), .adopt:
       return []
     case .pick(let yours?):
-      guard let current = pick else {
-        let first = roll() < Self.agreeing ? yours : other(than: yours)
-        pick = yours
-        return first == yours
-          ? [Reply(after: Self.pickDelay, move: .pick(yours))]
-          : [
-            Reply(after: Self.pickDelay, move: .pick(first)),
-            Reply(after: Self.pickDelay + Self.comeRoundDelay, move: .pick(yours)),
-          ]
+      // After its first pick it comes round to whichever cat you choose.
+      guard !hasPicked else { return [Reply(after: Self.pickDelay, move: .pick(yours))] }
+      hasPicked = true
+      guard roll() >= Self.agreeing else {
+        return [Reply(after: Self.pickDelay, move: .pick(yours))]
       }
-      pick = yours
-      // You came round to its cat: it says so again, in case an earlier reply was dropped.
-      if current == yours { return [Reply(after: .milliseconds(300), move: .pick(yours))] }
       return [
-        Reply(after: .milliseconds(300), move: .pick(current)),
-        Reply(after: Self.comeRoundDelay, move: .pick(yours)),
+        Reply(after: Self.pickDelay, move: .pick(other(than: yours))),
+        Reply(after: Self.pickDelay + Self.comeRoundDelay, move: .pick(yours)),
       ]
     case .hold(true):
       return [

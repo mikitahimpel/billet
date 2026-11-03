@@ -480,8 +480,8 @@ describe("choosing the cat together", () => {
   });
 
   it("relays moves to the partner and not back to the sender", async () => {
-    const a = await connect("ADOPTRELAY", alice);
-    const b = await connect("ADOPTRELAY", bob);
+    const a = await connect("PAWSNEWS23", alice);
+    const b = await connect("PAWSNEWS23", bob);
     await a.sendAcked(adoptPlay(uuid(21), { move: "pick", cat: "black" }), uuid(21));
     await a.sendAcked(adoptPlay(uuid(22), { move: "hold", holding: true }), uuid(22));
     await b.waitFor((f) => ofType(f, "adopt").length === 2, "two moves");
@@ -493,17 +493,17 @@ describe("choosing the cat together", () => {
   });
 
   it("replays the partner's latest pick and the adoption on connect", async () => {
-    const a = await connect("ADOPTLATER", alice);
+    const a = await connect("PAWSBACK34", alice);
     await a.sendAcked(adoptPlay(uuid(31), { move: "pick", cat: "kitten" }), uuid(31));
     await a.sendAcked(adoptPlay(uuid(32), { move: "pick", cat: "ginger" }), uuid(32));
     await a.sendAcked(adoptPlay(uuid(33), { move: "hold", holding: true }), uuid(33));
-    const b = await connect("ADOPTLATER", bob);
+    const b = await connect("PAWSBACK34", bob);
     expect(ofType(b.frames, "adopt")).toEqual([
       { type: "adopt", id: uuid(32), move: "pick", cat: "ginger" },
     ]);
     await b.sendAcked(adoptPlay(uuid(34), { move: "adopt", cat: "ginger" }), uuid(34));
     await leave(b, a);
-    const again = await connect("ADOPTLATER", bob);
+    const again = await connect("PAWSBACK34", bob);
     expect(ofType(again.frames, "adopt")).toEqual([
       { type: "adopt", id: uuid(32), move: "pick", cat: "ginger" },
       { type: "adopt", id: uuid(34), move: "adopt", cat: "ginger" },
@@ -511,8 +511,8 @@ describe("choosing the cat together", () => {
   });
 
   it("renames the cat over its first name, the last one winning", async () => {
-    const a = await connect("ADOPTNAMES", alice);
-    const b = await connect("ADOPTNAMES", bob);
+    const a = await connect("PAWSNAME45", alice);
+    const b = await connect("PAWSNAME45", bob);
     await a.sendAcked(nameFrame(uuid(41), "Mochi"), uuid(41));
     const rename = (id: string, name: string) =>
       JSON.stringify({ type: "play", id, kind: "rename", at, name });
@@ -520,7 +520,7 @@ describe("choosing the cat together", () => {
     await a.sendAcked(rename(uuid(43), "Pumpkin"), uuid(43));
     await b.waitFor((f) => ofType(f, "name").some((x) => x["name"] === "Pumpkin"), "the rename");
     await leave(b, a);
-    const later = await connect("ADOPTNAMES", bob);
+    const later = await connect("PAWSNAME45", bob);
     expect(ofType(later.frames, "name").at(-1)).toEqual({
       type: "name",
       name: "Pumpkin",
