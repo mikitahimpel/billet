@@ -271,5 +271,45 @@
   "base": "sit",
   "trimStart": 101.6667,
   "trimEnd": 104.0667
+ },
+ "carry": {
+  "first": 3133,
+  "last": 3163,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 104.4,
+  "trimEnd": 105.4
+ },
+ "rubSide": {
+  "first": 3173,
+  "last": 3251,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 105.7333,
+  "trimEnd": 108.3333
+ },
+ "lookUp": {
+  "first": 3261,
+  "last": 3381,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 108.6667,
+  "trimEnd": 112.6667
+ },
+ "jumpUp": {
+  "first": 3391,
+  "last": 3430,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 113.0,
+  "trimEnd": 114.3
+ },
+ "jumpDown": {
+  "first": 3440,
+  "last": 3476,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 114.6333,
+  "trimEnd": 115.8333
  }
 }

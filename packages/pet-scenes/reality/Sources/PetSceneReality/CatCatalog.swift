@@ -59,10 +59,10 @@ enum CatCatalog {
     case .sleep, .twitch: .sleep
     case .loaf: .loaf
     case .sit, .blink, .look, .tailFlick, .happy, .yawn, .groom, .knead, .slowBlink, .perk,
-      .rollOver, .bat, .grab, .wave, .groomFlank, .groomTail, .lickLips, .headTilt:
+      .rollOver, .bat, .grab, .wave, .groomFlank, .groomTail, .lickLips, .headTilt, .lookUp:
       .sit
     case .idle, .walk, .crouchWiggle, .pounce, .eat, .stretch, .headbutt, .reachUp, .sniff,
-      .dangle, .run, .lieDown, .startle:
+      .dangle, .run, .lieDown, .startle, .carry, .rubSide, .jumpUp, .jumpDown:
       .stand
     }
   }
