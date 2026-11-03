@@ -43,6 +43,10 @@ repo=${app_dir:h:h}
 derived=${PERF_DERIVED:-$repo/build-perf}
 out=${PERF_OUT:-$HOME/.billet-manager/pet-concept/perf/runs}/$label
 device_name=${PERF_DEVICE:-billet-perf}
+# Seconds one scripted run may take before it is given up on. CI runners are far slower.
+run_limit=${PERF_RUN_LIMIT:-600}
+# The model a missing device is made as, e.g. com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max.
+device_type=${PERF_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
 bundle=com.mikitahimpel.billet
 group=group.com.mikitahimpel.billet
 mkdir -p $out
@@ -98,7 +102,7 @@ if ! gate 2> /dev/null; then
 fi
 udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
 if [[ -z $udid ]]; then
-  udid=$(xcrun simctl create $device_name com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
+  udid=$(xcrun simctl create $device_name $device_type)
 fi
 trap 'xcrun simctl shutdown $udid >/dev/null 2>&1 || true; perf_lock_give' EXIT
 xcrun simctl bootstatus $udid -b > /dev/null
@@ -129,20 +133,22 @@ run() {
   xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
   python3 -c 'import time; time.sleep(1.5)'
   xcrun simctl launch --console-pty $udid $bundle -perf.script $script > $log 2>&1 &
-  local pid=$! waited=0
+  local pid=$! started=$SECONDS
   while ! grep -q '^PERF done' $log 2>/dev/null; do
     if grep -q '^PERF shot' $log 2>/dev/null; then
       grep '^PERF shot' $log | tr -d '\r' | while read -r _ _ shot; do
         [[ -f $out/shots/$shot.png ]] && continue
         mkdir -p $out/shots
-        perl -e 'alarm 20; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
-          > /dev/null 2>&1 || true
+        # Twice at most: a busy runner's first try can hang until the alarm.
+        for try in 1 2; do
+          perl -e 'alarm 40; exec @ARGV' xcrun simctl io $udid screenshot $out/shots/$shot.png \
+            > /dev/null 2>&1 && break
+        done || true
         mkdir -p $containers/perf-shots && touch $containers/perf-shots/$shot
       done
     fi
     python3 -c 'import time; time.sleep(0.2)'
-    waited=$((waited + 1))
-    if ((waited > 900)); then echo "PERF error timeout" >> $log; break; fi
+    if ((SECONDS - started > run_limit)); then echo "PERF error timeout" >> $log; break; fi
   done
   kill $pid 2> /dev/null || true
   wait $pid 2> /dev/null || true
