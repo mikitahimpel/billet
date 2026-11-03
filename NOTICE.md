@@ -6,9 +6,9 @@ it.
 ## Cats
 
 The cats in `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Cats` (tabby, plush,
-detailed, detailedKitten, detailedFluffy, chibi, kitten, tuxedo) are new models made for billet in
-Blender. The detailed cats' fur, stripes, fur cards and normal maps are made in Blender from
-billet's own model; no outside model or texture is used.
+detailed, detailedKitten, detailedFluffy, hero, chibi, kitten, tuxedo) are new models made for
+billet in Blender. The detailed cats' and the hero's fur, stripes, fur cards and normal maps are
+made in Blender from billet's own model; no outside model or texture is used.
 
 ## First-launch heart
 
