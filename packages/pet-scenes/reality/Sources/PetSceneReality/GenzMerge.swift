@@ -5,8 +5,9 @@ import RealityKit
 /// Joins the plain parts of a piece into one model per material, so the renderer draws a piece
 /// in a handful of calls rather than one per cushion, leg and button.
 ///
-/// Only unnamed parts in an opaque matte material without a texture are joined. Named parts are
-/// kept, since the room finds them by name to light, tint or move them, and so are glowing parts,
+/// Only unnamed parts in an opaque matte material are joined. A textured material joins parts
+/// that share its very textures, with any scaling of its texture coordinates carried into the
+/// joined mesh's coordinates; one turned or shifted is left alone. Named parts are kept, since the room finds them by name to light, tint or move them, and so are glowing parts,
 /// since lamps and LEDs change their material as they come on.
 @MainActor
 extension GenzKit {
@@ -20,7 +21,8 @@ extension GenzKit {
         !entity.components.has(InputTargetComponent.self),
         let mesh = model.model?.mesh, model.model?.materials.count == 1,
         let material = model.model?.materials.first as? PhysicallyBasedMaterial,
-        let matte = MatteKey(material), mesh.contents.models.count > 0
+        let matte = MatteKey(material, textures: textures), mesh.contents.models.count > 0,
+        !matte.isTextured || Self.hasPlainCoordinates(mesh)
       else { return }
       if groups[matte] == nil { order.append(matte) }
       groups[matte, default: []].append(model)
@@ -30,12 +32,17 @@ extension GenzKit {
       let cacheKey = "merged \(key) \(index)"
       guard
         let mesh = mergedMeshes[cacheKey]
-          ?? Self.joined(models, in: piece).map({ mesh in
+          ?? Self.joined(models, in: piece, textured: matte.isTextured).map({ mesh in
             mergedMeshes[cacheKey] = mesh
             return mesh
           })
       else { continue }
-      let joined = ModelEntity(mesh: mesh, materials: [models[0].model!.materials[0]])
+      var material = models[0].model!.materials[0]
+      if matte.isTextured, var textured = material as? PhysicallyBasedMaterial {
+        textured.textureCoordinateTransform = .init()
+        material = textured
+      }
+      let joined = ModelEntity(mesh: mesh, materials: [material])
       piece.addChild(joined)
       for model in models {
         for child in model.children { child.setParent(piece, preservingWorldTransform: true) }
@@ -44,13 +51,30 @@ extension GenzKit {
     }
   }
 
-  /// One mesh holding every part of `models`, placed as they are under `root`.
-  static func joined(_ models: [ModelEntity], in root: Entity) -> MeshResource? {
+  /// Whether every part of `mesh` has texture coordinates and no second, custom set of them.
+  static func hasPlainCoordinates(_ mesh: MeshResource) -> Bool {
+    mesh.contents.models.allSatisfy { model in
+      model.parts.allSatisfy { part in
+        part.textureCoordinates != nil
+          && !part.buffers.contains { $0.key.isCustom && $0.value.elementType == .simd2Float }
+      }
+    }
+  }
+
+  /// One mesh holding every part of `models`, placed as they are under `root`. With `textured`,
+  /// it keeps their texture coordinates, scaled as each model's material scales them.
+  static func joined(_ models: [ModelEntity], in root: Entity, textured: Bool = false)
+    -> MeshResource?
+  {
     var positions: [SIMD3<Float>] = []
     var normals: [SIMD3<Float>] = []
+    var coordinates: [SIMD2<Float>] = []
     var indices: [UInt32] = []
     for model in models {
       guard let mesh = model.model?.mesh else { continue }
+      let scale =
+        (model.model?.materials.first as? PhysicallyBasedMaterial)?.textureCoordinateTransform
+        .scale ?? [1, 1]
       let transform = model.transformMatrix(relativeTo: root)
       let turn = simd_float3x3(
         SIMD3(transform.columns.0.x, transform.columns.0.y, transform.columns.0.z),
@@ -83,6 +107,13 @@ extension GenzKit {
           } else {
             normals += Array(repeating: [0, 1, 0], count: partPositions.count)
           }
+          if textured {
+            let partCoordinates = part.textureCoordinates?.elements ?? []
+            coordinates +=
+              partCoordinates.count == partPositions.count
+              ? partCoordinates.map { $0 * scale }
+              : Array(repeating: .zero, count: partPositions.count)
+          }
           let partIndices =
             part.triangleIndices?.elements ?? (0..<UInt32(partPositions.count)).map { $0 }
           indices += partIndices.map { $0 + start }
@@ -93,23 +124,34 @@ extension GenzKit {
     var descriptor = MeshDescriptor(name: "genz-merged")
     descriptor.positions = MeshBuffer(positions)
     descriptor.normals = MeshBuffer(normals)
+    if textured { descriptor.textureCoordinates = MeshBuffer(coordinates) }
     descriptor.primitives = .triangles(indices)
     return try? MeshResource.generate(from: [descriptor])
   }
 }
 
-/// A matte material as a key: its colours, roughness and metalness, for materials without a
-/// texture and drawn opaque.
+/// A matte material as a key: its colours, roughness, metalness and culling, and the texture it
+/// is drawn with, for materials drawn opaque.
 struct MatteKey: Hashable {
   let colour: [CGFloat]
   let emissive: [CGFloat]
   let roughness: Float
   let metallic: Float
+  /// Which faces are left undrawn, so a two-sided drape never joins one-sided parts.
+  let culling: String
+  /// The kit's texture the material is drawn with, colour and normal both, if any.
+  let texture: GenzTexture?
 
+  var isTextured: Bool { texture != nil }
+
+  /// The key for `material`, or nil when its parts can't be joined: it is see-through, or drawn
+  /// with a texture that is not one of `textures`, or with its texture turned or shifted.
   @MainActor
-  init?(_ material: PhysicallyBasedMaterial) {
-    guard material.baseColor.texture == nil, material.normal.texture == nil,
-      material.emissiveColor.texture == nil, material.roughness.texture == nil,
+  init?(
+    _ material: PhysicallyBasedMaterial,
+    textures: [GenzTexture: (colour: TextureResource, normal: TextureResource?)]
+  ) {
+    guard material.emissiveColor.texture == nil, material.roughness.texture == nil,
       material.metallic.texture == nil
     else { return nil }
     if case .transparent = material.blending { return nil }
@@ -120,5 +162,21 @@ struct MatteKey: Hashable {
     emissive = material.emissiveColor.color.cgColor.components ?? []
     roughness = material.roughness.scale
     metallic = material.metallic.scale
+    culling = String(describing: material.faceCulling)
+    let colourTexture = material.baseColor.texture?.resource
+    let normalTexture = material.normal.texture?.resource
+    if colourTexture == nil, normalTexture == nil {
+      texture = nil
+      return
+    }
+    // Texture resources are compared, not hashed: each read of one gives a new object.
+    guard
+      let made = textures.first(where: { _, made in
+        made.colour == colourTexture && made.normal == normalTexture
+      })
+    else { return nil }
+    let transform = material.textureCoordinateTransform
+    guard transform.offset == .zero, transform.rotation == 0 else { return nil }
+    texture = made.key
   }
 }
