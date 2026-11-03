@@ -4,7 +4,9 @@ With Labs → First launch → **Cinematic onboarding** on (the default), the fi
 3D scene: the camera glides in out of the dark over a windowsill at night, the candles light one
 by one, fairy lights run along the window, and a soft glossy heart floats over a cushion, beating
 gently. The title settles in partway; the buttons come once the camera is at its place. A tap
-anywhere cuts the flight short, and it plays once per phone (`onboarding.introSeen`). With
+anywhere cuts the flight short. Until the pair is made it plays on every launch (once per
+launch: moving on to the next step does not fly in again); once paired it never shows, except
+through Labs → Replay onboarding. With
 Reduce Motion the scene fades up at its place instead of flying.
 
 Off, the app shows the plain welcome and code screens it always did.

@@ -148,8 +148,10 @@ struct OnboardingPairingView: View {
         .textInputAutocapitalization(.characters)
       #endif
       .padding(.horizontal, Spacing.medium)
-      .frame(minHeight: Target.row)
+      .frame(maxWidth: .infinity, minHeight: Target.row)
       .card()
+      // Ten letters in one line: larger than this they run off a small phone.
+      .dynamicTypeSize(...DynamicTypeSize.accessibility1)
       .accessibilityIdentifier("partnerCode")
   }
 

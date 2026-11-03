@@ -75,9 +75,12 @@ struct AdoptionView: View {
           .foregroundStyle(Palette.paper.color)
           .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
           .accessibilityAddTraits(.isHeader)
+          .lineLimit(3)
+          .minimumScaleFactor(0.75)
         Text(heading.detail)
           .billetType(.body)
           .foregroundStyle(Palette.paper.color.opacity(0.78))
+          .fixedSize(horizontal: false, vertical: true)
       }
       .multilineTextAlignment(.center)
       .contentTransition(.opacity)
@@ -87,6 +90,8 @@ struct AdoptionView: View {
       Spacer(minLength: 0)
       if model.moment == .choosing { legend }
     }
+    // The full width, so the name field and button below are not as narrow as the heading.
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .opacity(model.moment == .leaving ? 0 : 1)
     .animation(.easeOut(duration: 0.5), value: model.moment)
     .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -98,20 +103,28 @@ struct AdoptionView: View {
       }
     }
     .animation(reduceMotion ? .easeOut(duration: 0.3) : .spring(duration: 0.5), value: model.moment)
+    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
   }
 
   private var legend: some View {
-    HStack(spacing: Spacing.medium) {
-      Label("You", systemImage: "heart.fill")
-        .foregroundStyle(Color(red: 1.0, green: 0.8, blue: 0.36))
-      Label(
-        model.choice.partnerHere ? "Your person" : "Your person, away", systemImage: "pawprint.fill"
-      )
-      .foregroundStyle(Color(red: 1.0, green: 0.5, blue: 0.6))
+    // Side by side while they fit, one over the other when the text is large.
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: Spacing.medium) { legendItems }
+      VStack(spacing: Spacing.hair) { legendItems }
     }
     .billetType(.caption)
+    .padding(.horizontal, Spacing.medium)
     .padding(.bottom, Spacing.small)
     .accessibilityElement(children: .combine)
+  }
+
+  @ViewBuilder private var legendItems: some View {
+    Label("You", systemImage: "heart.fill")
+      .foregroundStyle(Color(red: 1.0, green: 0.8, blue: 0.36))
+    Label(
+      model.choice.partnerHere ? "Your person" : "Your person, away", systemImage: "pawprint.fill"
+    )
+    .foregroundStyle(Color(red: 1.0, green: 0.5, blue: 0.6))
   }
 
   private func naming(for cat: AdoptionCat?) -> some View {
@@ -125,6 +138,7 @@ struct AdoptionView: View {
           .focused($naming)
           .padding(.vertical, Spacing.small)
           .padding(.horizontal, Spacing.medium)
+          .frame(maxWidth: .infinity, minHeight: Target.row)
           .background(.white.opacity(0.08), in: Capsule())
           .onSubmit { commitName() }
           .onChange(of: naming) { _, focused in if !focused { commitName() } }

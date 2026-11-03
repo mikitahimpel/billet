@@ -110,12 +110,15 @@ struct CinematicOnboardingView<Actions: View>: View {
       VStack(spacing: Spacing.small) { actions() }
         .padding(.horizontal, Spacing.medium)
         .padding(.vertical, Spacing.small)
+        .frame(maxWidth: .infinity)
         .opacity(intro.showsActions ? 1 : 0)
         .offset(y: intro.showsActions || reduceMotion ? 0 : 24)
         .allowsHitTesting(intro.showsActions)
         .accessibilityHidden(!intro.showsActions)
         .animation(reduceMotion ? .easeOut(duration: 0.4) : .easeOut(duration: 0.7), value: intro)
     }
+    // Past this the title and the buttons no longer fit on a small phone together.
+    .dynamicTypeSize(...DynamicTypeSize.accessibility2)
   }
 
   private var title: some View {
@@ -127,9 +130,12 @@ struct CinematicOnboardingView<Actions: View>: View {
         .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
         .accessibilityAddTraits(.isHeader)
         .contentTransition(.opacity)
+        .lineLimit(3)
+        .minimumScaleFactor(0.75)
       Text(heading.detail)
         .billetType(.body)
         .foregroundStyle(Palette.paper.color.opacity(0.78))
+        .fixedSize(horizontal: false, vertical: true)
         .opacity(intro.showsActions ? 1 : 0)
         .contentTransition(.opacity)
     }

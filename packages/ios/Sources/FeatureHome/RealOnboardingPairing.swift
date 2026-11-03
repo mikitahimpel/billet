@@ -16,7 +16,7 @@ struct RealOnboardingPairing: View {
 
   var body: some View {
     OnboardingPairingView(
-      scenes: scenes, lighting: lighting, memory: OnboardingMemory(defaults: .standard),
+      scenes: scenes, lighting: lighting, memory: OnboardingMemory.thisLaunch,
       pairing: onboarding, failure: failure,
       actions: OnboardingPairingActions(
         create: { model.createInvite() },

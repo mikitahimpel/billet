@@ -102,7 +102,7 @@ public struct DemoRootView: View {
       case _ where !onboarding.isFinished && model.labs.isOn(LabExperiment.cinematicOnboarding):
         OnboardingPairingView(
           scenes: scenes, lighting: model.labs.lighting,
-          memory: OnboardingMemory(defaults: DemoRoom.sharedDefaults), pairing: onboarding,
+          memory: OnboardingMemory.thisLaunch, pairing: onboarding,
           failure: model.failure?.message,
           actions: OnboardingPairingActions(
             create: { model.createPair() },
