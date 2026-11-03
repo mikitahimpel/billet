@@ -664,7 +664,7 @@ final class OnboardingStage: TabStage {
   /// Two soft balls side by side, so the scene still has its heart if the file will not load.
   private static func fallbackHeart() -> Entity {
     let heart = Entity()
-    let mesh = MeshResource.generateSphere(radius: 0.5)
+    let mesh = LowPoly.sphere(radius: 0.5, segments: 24)
     for side: Float in [-1, 1] {
       let half = ModelEntity(mesh: mesh, materials: [SimpleMaterial()])
       half.name = side < 0 ? "heart_L" : "heart_R"

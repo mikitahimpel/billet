@@ -409,8 +409,7 @@ final class AdoptionStage: TabStage {
     for (index, spot) in AdoptionLayout.cushions.enumerated() {
       let colour = Self.cushionColours[index % Self.cushionColours.count]
       let cushion = ModelEntity(
-        mesh: .generateBox(
-          size: [size.width, size.height, size.depth], cornerRadius: size.height * 0.45),
+        mesh: kit.softBox([size.width, size.height, size.depth], radius: size.height * 0.45),
         materials: [kit.matte(GenzColour(colour))])
       cushion.position = GenzRoomPoint(spot.x, spot.y, size.height / 2 + 0.05).scene
       cushion.orientation = simd_quatf(angle: AdoptionLayout.heading(index), axis: [0, 1, 0])
