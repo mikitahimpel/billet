@@ -68,7 +68,7 @@ Nothing here has been done in the Cloudflare account. The steps for the owner:
    - Login method: One-time PIN is enough.
 3. **Copy two values.** The application's **AUD tag** (Applications → billet admin → Overview,
    64 hex digits) and the **team domain** (Settings → Custom pages: `<team>.cloudflareaccess.com`).
-4. **Store them in Proton Pass**, vault `Billet`, item `cloudflare-access`, fields `team_domain`
+4. **Store them in Proton Pass**, vault `Billet`, item `Cloudflare Access`, fields `team_domain`
    and `aud`. `.env.pass` already refers to them (`ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`); the deploy
    passes them to the Worker. Not secrets, but kept out of this public repo.
 5. **Analytics read token** (for Analytics Engine SQL, not needed by the panel): My Profile → API
@@ -105,7 +105,9 @@ a Cloudflare Access **service token**. They can't change anything.
 - Each read is logged (Workers logs) as `admin agent read` with the token's `common_name` (its
   client id, not the secret) and the path.
 - `scripts/admin-read.sh <route>` sends the `CF-Access-Client-Id` / `CF-Access-Client-Secret`
-  headers and prints the JSON. Credentials and the host come from `.env.pass.agents`:
+  headers and prints the JSON. The credentials come from `.env.pass.agents`; the API host from a
+  local file that is never committed (`~/.config/billet/admin.env`, a line
+  `BILLET_ADMIN_HOST=<host>`, or `BILLET_ADMIN_HOST` in the environment):
 
 ```sh
 PROTON_PASS_AGENT_REASON="read experiment results" pp run --env-file .env.pass.agents -- \
@@ -120,15 +122,16 @@ Agents never create credentials; the owner does.
    Create Service Token, name `billet-agents`, duration as you like (a year is fine; renew it
    before it ends). Copy the Client ID and the Client Secret: the secret is shown only once.
 2. **Store it in Proton Pass**, vault `Billet`, item `cloudflare-agents`, fields `client_id` and
-   `client_secret`. In item `cloudflare-access`, add a field `host` with the API host (no
-   `https://`), which `.env.pass.agents` reads.
+   `client_secret`.
 3. **Create the agents' Access application.** Zero Trust → Access → Applications → Add →
    Self-hosted: name `billet admin agents`, hostname the API host, path `admin/api/agent`. Policy:
    name `agents`, action **Service Auth**, Include → Service Token → `billet-agents`. Nothing else.
    Access uses the most specific path, so this application, not `billet admin`, guards the agent
    routes, and a browser login can't reach them.
-4. **Copy its AUD tag** into item `cloudflare-access`, field `agent_aud`. `.env.pass` passes it to
-   the Worker as `ACCESS_AGENT_AUD`; the next deploy carries it.
+4. **Copy its AUD tag** into item `Cloudflare Access`, field `agent_aud`. It is optional:
+   `.env.pass.agent-access` passes it to the Worker as `ACCESS_AGENT_AUD`, and a deploy adds that
+   file (`--env-file .env.pass --env-file .env.pass.agent-access`) only once the field exists.
+   Without it the agent API stays closed.
 
 ## Querying Analytics Engine
 

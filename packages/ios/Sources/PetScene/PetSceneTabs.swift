@@ -65,3 +65,25 @@ public enum DeskSceneEvent: Hashable, Sendable {
   /// A note on the board was tapped.
   case noteTapped(UUID)
 }
+
+/// What the streak's flame scene shows: the flame for the pair's streak, who added to it today,
+/// and what is new since this phone last opened it.
+public struct FlameSceneState: Equatable, Sendable {
+  public var flame: StreakFlame
+  public var today: FlameContributions
+  public var visit: FlameVisit
+
+  public init(flame: StreakFlame, today: FlameContributions = .init(), visit: FlameVisit = .quiet) {
+    self.flame = flame
+    self.today = today
+    self.visit = visit
+  }
+}
+
+/// What the flame scene reports to its host.
+public enum FlameSceneEvent: Hashable, Sendable {
+  /// A finger came down on the flame, for a soft tap of feedback.
+  case touched
+  /// The once-only celebration or the rekindling burst began.
+  case celebrated
+}
