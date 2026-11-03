@@ -117,19 +117,26 @@ struct CatMomentRuleTests {
     #expect(!CatEdge.isNearEdge(x: 20, width: 100))
   }
 
-  @Test func chasesComeSoonThenNowAndThen() {
-    var clock = CatPlayClock(seed: 3)
-    var dues: [Double] = []
-    var t = 0.0
-    while t < 400 {
-      if clock.isDue(at: t) { dues.append(t) }
-      t += 0.5
+  @Test func onlyAFingerHeldStillCountsAsResting() {
+    var rest = CatFingerRest()
+    // A quick swipe: the finger never stays put long enough.
+    for step in 0..<20 {
+      rest.moved(toX: 20 + Double(step) * 12, y: 300, at: Double(step) * 0.02)
+      #expect(rest.resting(at: Double(step) * 0.02) == nil)
     }
-    #expect((dues.first ?? 99) <= CatPlayClock.firstGap.upperBound + 0.5)
-    for (a, b) in zip(dues, dues.dropFirst()) {
-      #expect(b - a >= CatPlayClock.gap.lowerBound - 0.5)
-      #expect(b - a <= CatPlayClock.gap.upperBound + 0.5)
-    }
+    // Held still, small jitter allowed, it rests after the dwell.
+    rest.moved(toX: 30, y: 300, at: 1)
+    rest.moved(toX: 33, y: 302, at: 1.2)
+    #expect(rest.resting(at: 1.2) == nil)
+    #expect(rest.resting(at: 1 + CatFingerRest.dwell)?.x == 30)
+    // After a bat it waits again; lifted, it is gone.
+    rest.restart(at: 2)
+    #expect(rest.resting(at: 2.1) == nil)
+    #expect(rest.resting(at: 2 + CatFingerRest.dwell) != nil)
+    // A touch whose end never came lapses.
+    #expect(rest.resting(at: 1 + CatFingerRest.hold + 0.1) == nil)
+    rest.lifted()
+    #expect(rest.resting(at: 5) == nil)
   }
 
   @Test func reactionsPlayStandInsOnCatsWithoutTheClip() {

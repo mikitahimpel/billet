@@ -121,6 +121,21 @@ public struct IconButton: View {
   }
 }
 
+/// The one way back out of a step: a glass chevron in the top-left corner, never a big button at
+/// the bottom.
+public struct BackButton: View {
+  private let action: () -> Void
+
+  public init(action: @escaping () -> Void) {
+    self.action = action
+  }
+
+  public var body: some View {
+    IconButton("chevron.left", label: "Back", action: action)
+      .accessibilityIdentifier("back")
+  }
+}
+
 /// Keeps neighbouring glass controls one surface on iOS 26.
 public struct GlassGroup<Content: View>: View {
   private let content: Content

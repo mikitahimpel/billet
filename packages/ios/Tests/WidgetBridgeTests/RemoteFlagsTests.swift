@@ -138,9 +138,9 @@ import Testing
 
   @Test func theAnswerLeavesTheLabsFlagsAlone() throws {
     let (model, storage) = model()
-    model.set(LabExperiment.catPurrs, on: true)
+    model.set(LabExperiment.lifeBubble, on: true)
     model.setRemote(flags("window-seat"))
-    #expect(WidgetFeaturesStore(storage: storage).load().isOn(LabExperiment.catPurrs))
+    #expect(WidgetFeaturesStore(storage: storage).load().isOn(LabExperiment.lifeBubble))
   }
 
   @Test func theWidgetsAreToldWhenTheAnswerChangesAndNotWhenItDoesNot() {

@@ -36,15 +36,6 @@ public struct WidgetFeatures: Equatable, Sendable {
     choices[flag.rawValue] ?? flag.defaultOn
   }
 
-  /// The cat moments switched on in Labs.
-  public var catMoments: Set<CatMoment> {
-    let pairs: [(LabExperiment, CatMoment)] = [
-      (.catCarriesNote, .carriesNote), (.catPurrs, .purrs), (.catBats, .batsAtFinger),
-      (.catGreets, .greets), (.catChases, .chases),
-    ]
-    return Set(pairs.filter { isOn($0.0) }.map(\.1))
-  }
-
   /// The features that are on, in declaration order.
   public var enabled: [WidgetFeature] {
     WidgetFeature.allCases.filter(isOn)
@@ -52,16 +43,23 @@ public struct WidgetFeatures: Equatable, Sendable {
 }
 
 extension WidgetFeatures: Codable {
-  /// The key of the cat-mood picture, which is gone. A saved choice of it is dropped, and when it
-  /// was the only picture on, the pictures go back to their defaults rather than all off.
+  /// Keys of switches that are gone, because what they switched is always on now. A stored
+  /// choice under one is dropped on reading, so it never comes back to life if a key is reused,
+  /// and the next save leaves it out.
+  public static let retiredKeys: Set<String> = [
+    "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
+    "catChases", retiredCatMood,
+  ]
+
+  /// The key of the cat-mood picture, which is gone. When it was the only picture on, the
+  /// pictures go back to their defaults rather than all off.
   static let retiredCatMood = "catMood"
 
   public init(from decoder: any Decoder) throws {
-    var saved = try decoder.singleValueContainer().decode([String: Bool].self)
-    let catMoodWasOn = saved.removeValue(forKey: Self.retiredCatMood) == true
-    choices = saved
+    let saved = try decoder.singleValueContainer().decode([String: Bool].self)
+    choices = saved.filter { !Self.retiredKeys.contains($0.key) }
     let pictures = PictureMode.allCases.map(\.feature)
-    if catMoodWasOn, !pictures.contains(where: isOn) {
+    if saved[Self.retiredCatMood] == true, !pictures.contains(where: isOn) {
       for feature in pictures { choices[feature.rawValue] = nil }
     }
   }

@@ -73,12 +73,11 @@ struct AppShellView: View {
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
       latestNote: session.notes.first?.id,
       noteCount: session.notes.count, active: scenePhase == .active,
-      life: session.labs.isOn(LabExperiment.catLife) ? session.life.log : nil,
+      life: session.life.log,
       partnerCare: partnerCare)
   }
 
-  /// The partner's latest pet or meal, which the note widget mentions. Kept whether or not the
-  /// cat's needs are on, since the room sends every pet and meal to both phones.
+  /// The partner's latest pet or meal, which the note widget mentions.
   private var partnerCare: PartnerCare? {
     PartnerCare.latest(in: session.life.log.all, me: session.life.me)
   }
@@ -232,7 +231,7 @@ struct AppShellView: View {
         publisher.publish(
           play: session.play, notes: session.notes,
           partnerHere: scenePhase == .active && session.status == .partnerHere,
-          life: session.labs.isOn(LabExperiment.catLife) ? session.life.widgetLife : nil,
+          life: session.life.widgetLife,
           partnerCare: partnerCare)
         try? await Task.sleep(for: WidgetPublisher.refresh)
       }

@@ -30,7 +30,7 @@ import Testing
     model.setSeed(7)
     life.record(.note)
     model.tick()
-    #expect(model.frame?.stack.step == .curiousTilt || model.frame?.stack.step == .wake)
+    #expect(model.frame?.stack.step == .carryNote || model.frame?.stack.step == .wake)
   }
 
   @Test func touchShowsWithoutChangingTheBrain() {
