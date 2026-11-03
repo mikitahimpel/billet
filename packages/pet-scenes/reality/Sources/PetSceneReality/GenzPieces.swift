@@ -90,7 +90,9 @@ extension GenzPiece.Kind {
     case .stringLights: ["wire", "bulbs"]
     case .cardigan: ["knit", "buttons"]
     case .candles: ["wax", "dish"]
-    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed: []
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+      []
     }
   }
 
@@ -121,7 +123,9 @@ extension GenzPiece.Kind {
     case .stringLights: [GenzColour(0x3A3028), GenzColour(0xFFD58A)]
     case .cardigan: [GenzColour(0xD49A86), GenzColour(0xF1E6D6)]
     case .candles: [GenzColour(0xF3E8D6), GenzColour(0xC46E4A)]
-    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed: []
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+      []
     }
   }
 
@@ -194,7 +198,8 @@ extension GenzPiece.Kind {
     case .stringLights: GenzRoomPoint(5.6, 0.08, 0.5)
     case .cardigan: GenzRoomPoint(1.4, 1.25, 0.2)
     case .candles: GenzRoomPoint(0.5, 0.4, 0.3)
-    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       idol.map { prop in
         let size = prop.metres * GenzRoomPoint.perMetre
         return GenzRoomPoint(size.x, size.y, size.z)
@@ -257,7 +262,8 @@ extension GenzKit {
     case .stringLights: parts = stringLights(piece)
     case .cardigan: parts = cardigan(piece)
     case .candles: parts = candles(piece)
-    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       parts = piece.kind.idol.map(idolParts) ?? []
     }
     for part in parts { root.addChild(part) }
