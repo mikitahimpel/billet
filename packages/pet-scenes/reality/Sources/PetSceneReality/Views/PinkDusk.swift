@@ -247,6 +247,7 @@ struct PinkDusk: ViewRecipe {
       parrots(context, moment: moment)
     case .street:
       truckLights(context, moment: moment)
+      hummingbird(context, moment: moment)
       Self.lamp.draw(context, moment: moment)
       Self.skater.draw(context, moment: moment)
       Self.roadway.draw(context, moment: moment)
@@ -260,6 +261,48 @@ struct PinkDusk: ViewRecipe {
         )
       }
     }
+  }
+
+  /// A hummingbird working the bougainvillea while it is light: hover, dart, hover.
+  static let hummer = ViewRhythm(seed: 761, slot: 45, chance: 0.6, length: 16...24)
+
+  static func hummerPoint(_ pass: ViewRhythm.Pass, now: Double) -> CGPoint {
+    let flowers = [
+      CGPoint(x: 80, y: 40.6), CGPoint(x: 86, y: 42.4), CGPoint(x: 92, y: 40.2),
+      CGPoint(x: 98, y: 41.8),
+    ]
+    let stops = Double(flowers.count)
+    let step = pass.progress * stops
+    let index = min(Int(step), flowers.count - 1)
+    let next = flowers[(index + 1) % flowers.count]
+    let here = flowers[index]
+    // Hover for most of each stop, dart to the next at its end.
+    let local = step - Double(index)
+    let dart = CGFloat(max(0, (local - 0.8) / 0.2))
+    let x = here.x + (next.x - here.x) * dart + CGFloat(sin(now * 9)) * 0.15
+    let y = here.y - 1.2 + (next.y - here.y) * dart + CGFloat(sin(now * 13)) * 0.2
+    return CGPoint(x: x, y: y)
+  }
+
+  private func hummingbird(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.hour != .night, moment.look.weather == .clear,
+      let pass = Self.hummer.pass(at: moment.now)
+    else { return }
+    let point = Self.hummerPoint(pass, now: moment.now)
+    let body = ViewColour(0x3DBF8A).mixed(
+      with: moment.palette.street, by: moment.look.isDark ? 0.5 : 0.2)
+    context.fill(
+      Path(ellipseIn: CGRect(x: point.x - 0.7, y: point.y - 0.3, width: 1.4, height: 0.6)),
+      with: .color(body.color()))
+    ViewKit.circle(context, CGPoint(x: point.x - 0.7, y: point.y - 0.2), 0.3, body.lit(0.05))
+    var beak = Path()
+    beak.move(to: CGPoint(x: point.x - 0.95, y: point.y - 0.2))
+    beak.addLine(to: CGPoint(x: point.x - 1.9, y: point.y))
+    context.stroke(beak, with: .color(body.lit(-0.4).color()), lineWidth: 0.1)
+    // Wings too fast to see: a pale blur above the back.
+    context.fill(
+      Path(ellipseIn: CGRect(x: point.x - 0.4, y: point.y - 1.3, width: 1.2, height: 1.1)),
+      with: .color(ViewColour(0xEEF2F7).color(0.35)))
   }
 
   /// The breeze in the palms, from -1 to 1, never quite repeating.
@@ -361,6 +404,13 @@ struct PinkDusk: ViewRecipe {
       if lead.x > 0, lead.x < 100 {
         return ViewInterest(point: lead, plane: .middle, paw: false, id: pass.index)
       }
+    }
+    if moment.look.hour != .night, moment.look.weather == .clear,
+      let pass = Self.hummer.pass(at: moment.now)
+    {
+      return ViewInterest(
+        point: Self.hummerPoint(pass, now: moment.now), plane: .street, paw: false,
+        id: pass.index)
     }
     return Self.skater.interest(at: moment.now) ?? Self.roadway.interest(at: moment.now)
   }

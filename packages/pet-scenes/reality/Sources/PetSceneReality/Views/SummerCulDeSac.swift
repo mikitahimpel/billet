@@ -189,6 +189,7 @@ struct SummerCulDeSac: ViewRecipe {
     case .street:
       ViewWindows.draw(Self.streetWindows, context, moment: moment)
       swing(context, moment: moment)
+      bouncer(context, moment: moment)
       let porch = CGPoint(x: Self.house.x + 13.5, y: Self.streetBase - 8)
       ViewKit.circle(context, porch, 0.4, ViewPalette.lampCore, moment.lamps)
       ViewKit.glow(context, porch, 5, ViewPalette.lamp, 0.5 * moment.lamps)
@@ -205,6 +206,21 @@ struct SummerCulDeSac: ViewRecipe {
       ViewFireflies(count: 8, area: CGRect(x: 0, y: 30, width: 100, height: 22), seed: 1)
         .draw(context, moment: moment)
     }
+  }
+
+  /// A kid on the trampoline while it is light, bouncing higher and lower, now and then a tuck.
+  static let bouncing = ViewRhythm(seed: 461, slot: 70, chance: 0.65, length: 40...65)
+
+  private func bouncer(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.hour != .night, moment.look.weather == .clear,
+      let pass = Self.bouncing.pass(at: moment.now)
+    else { return }
+    let bounce = abs(sin(moment.now * 2.6)) * (2.4 + 1.2 * sin(moment.now * 0.3))
+    let point = CGPoint(
+      x: 40 + 2 * CGFloat(pass.variant - 0.5), y: Self.streetBase - 3.2 - CGFloat(bounce))
+    ViewWalker.figure(
+      context, at: point, height: 4.6, facing: 1, kind: .walker, coat: 0xFFD166, plane: .street,
+      moment: moment, walking: bounce > 1.5)
   }
 
   /// The porch swing, rocking.

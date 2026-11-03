@@ -101,6 +101,17 @@ struct RainySuburb: ViewRecipe {
 
   static let storeWindow = CGRect(x: 66, y: 39, width: 18, height: 6)
   static let shelter = CGRect(x: 38, y: 39, width: 14, height: 9)
+  /// A cat keeping dry under the shelter's bench: in most of the time, now and then trotting
+  /// off along the kerb. Its eyes catch the cars' lights.
+  static let shelterCat = ViewRoofCat(
+    rhythm: ViewRhythm(seed: 251, slot: 150, chance: 0.9, length: 110...140),
+    left: CGPoint(x: 30, y: streetBase - 0.2), ridge: CGPoint(x: 42, y: streetBase - 0.2),
+    right: CGPoint(x: 58, y: streetBase - 0.2), plane: .street, size: 0.55)
+
+  static func eyeShine(_ moment: ViewMoment) -> Double {
+    guard moment.palette.lampsOn, let pass = roadway.cars.pass(at: moment.now) else { return 0 }
+    return max(0, 1 - abs(Double(roadway.carX(pass) - shelterCat.ridge.x)) / 26)
+  }
 
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let base = Self.streetBase
@@ -296,6 +307,7 @@ struct RainySuburb: ViewRecipe {
       context, CGPoint(x: panel.midX, y: panel.midY), 6, ViewColour(0xC8DAFF), 0.25 * lamps)
     Self.lamp.draw(context, moment: moment)
     puddles(context, moment: moment)
+    Self.shelterCat.draw(context, moment: moment, eyeShine: Self.eyeShine(moment))
     walker(context, moment: moment)
     Self.roadway.draw(context, moment: moment)
   }
@@ -380,6 +392,7 @@ struct RainySuburb: ViewRecipe {
   func headlight(at now: Double) -> ViewHeadlight? { Self.roadway.headlight(at: now) }
 
   func interest(at moment: ViewMoment) -> ViewInterest? {
+    if let cat = Self.shelterCat.interest(at: moment.now) { return cat }
     if let car = Self.roadway.interest(at: moment.now) { return car }
     if let pass = Self.walker.pass(at: moment.now) {
       let point = Self.walkerPoint(pass)
