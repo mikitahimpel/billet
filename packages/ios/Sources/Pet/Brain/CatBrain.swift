@@ -57,10 +57,16 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var stepEnd: Double
   /// Whether it would bat at a finger resting near the edge of the screen.
   public var eager: Bool
+  /// How fast its clips play and it moves, and how big its small movements are, against 1.
+  public var tempo: Double
+  public var amplitude: Double
+  /// How far it keeps from a finger, from 0 (right up to it) to 1 (well back).
+  public var personalSpace: Double
 
   public init(
     stack: CatBrainStack, action: CatAction, target: CatTarget, gaze: CatGaze, pace: Double,
-    stepStart: Double, stepEnd: Double, eager: Bool = false
+    stepStart: Double, stepEnd: Double, eager: Bool = false, tempo: Double = 1,
+    amplitude: Double = 1, personalSpace: Double = 0.3
   ) {
     self.stack = stack
     self.action = action
@@ -70,6 +76,9 @@ public struct CatBrainFrame: Hashable, Sendable {
     self.stepStart = stepStart
     self.stepEnd = stepEnd
     self.eager = eager
+    self.tempo = tempo
+    self.amplitude = amplitude
+    self.personalSpace = personalSpace
   }
 
   /// The still picture a surface without a scene shows for this frame.
@@ -86,7 +95,9 @@ public struct CatBrainFrame: Hashable, Sendable {
 public struct CatBrain: Sendable {
   public let seed: UInt64
   public let config: CatBrainConfig
-  /// The personality the cat was born with, from its seed.
+  /// What kind of cat it is at heart, fixed for life; nil for a cat with none, as in tests.
+  public let temperament: CatTemperament?
+  /// The personality the cat was born with: its temperament's, with its seed's own touch.
   public let nature: CatPersonality
   /// Today's personality: the one it was born with, moved by the last few days.
   public private(set) var personality: CatPersonality
@@ -132,13 +143,15 @@ public struct CatBrain: Sendable {
   /// A brain starting at `start` from its canonical state for `life` there. `personality` is the
   /// one it was born with, and `day` what experience has made of it by `start`.
   public init(
-    seed: UInt64, personality: CatPersonality? = nil, day: CatDay? = nil, room: RoomAffordances,
+    seed: UInt64, temperament: CatTemperament? = nil, personality: CatPersonality? = nil,
+    day: CatDay? = nil, room: RoomAffordances,
     weather: ViewWeather = .clear, start: Double, life: CatLifeSample, utcOffset: Int,
     lifeConfig: LifeConfig = .standard, config: CatBrainConfig = .standard
   ) {
     self.seed = seed
     self.config = config
-    nature = personality ?? .seeded(seed)
+    self.temperament = temperament
+    nature = personality ?? Self.nature(seed: seed, temperament: temperament)
     self.personality = day?.personality ?? nature
     memory = day?.memory ?? CatMemory()
     self.room = room
@@ -158,6 +171,12 @@ public struct CatBrain: Sendable {
       napSpot: nil, inspecting: nil, target: .home, gaze: .ahead)
     nextDay = dayStart(after: start)
     startDay(at: start, record: false)
+  }
+
+  /// The nature a cat with `seed` and `temperament` is born with.
+  public static func nature(seed: UInt64, temperament: CatTemperament?) -> CatPersonality {
+    let seeded = CatPersonality.seeded(seed)
+    return temperament?.nature(from: seeded) ?? seeded
   }
 
   private let utcOffset: Int
@@ -182,7 +201,8 @@ public struct CatBrain: Sendable {
       stack: stack, action: action, target: interaction == nil ? activity.target : .stay,
       gaze: interaction.map { _ in CatGaze.camera } ?? activity.gaze,
       pace: CatStatechart.pace(activity.step), stepStart: activity.start, stepEnd: activity.end,
-      eager: eager)
+      eager: eager, tempo: temperament?.tempo ?? 1, amplitude: temperament?.amplitude ?? 1,
+      personalSpace: temperament?.personalSpace ?? 0.3)
   }
 
   /// Whether the cat is in the mood to bat at a finger: awake, not napping or eating, and keen
@@ -257,7 +277,8 @@ public struct CatBrain: Sendable {
       if nextDay <= time {
         nextDay = dayStart(after: time)
         let day = Self.opening(
-          at: time, seed: seed, nature: nature, room: room, weather: weather, sampler: &sampler,
+          at: time, seed: seed, temperament: temperament, nature: nature, room: room,
+          weather: weather, sampler: &sampler,
           utcOffset: utcOffset, config: config)
         personality = day.personality
         memory = day.memory
@@ -375,11 +396,20 @@ public struct CatBrain: Sendable {
   /// yet up goes on as if never left, such as a nap; one that ran out moves on.
   private mutating func endEcho() {
     let before = stack
+    let ended = echo?.interaction
     echo = nil
     guard let history else { return }
     self.history = nil
     activity = history
     log(before, cause: .history)
+    // An awake cat answers a pet as its temperament does; a napping one sleeps on.
+    if case .petted = ended, vitality == .awake, activity.step != .curl,
+      let answer = temperament?.afterTouch
+    {
+      finishGroup(at: time)
+      enter(script: answer, at: time, cause: .event)
+      return
+    }
     if activity.end <= time { stepEnded() }
   }
 
@@ -641,6 +671,7 @@ public struct CatBrain: Sendable {
     CatUtilityInput(
       now: t, needs: life.needs, focus: focus.focus, mood: life.mood, hour: hour(at: t),
       vitality: vitality, sleepy: life.pressure > config.drowsyAbove, personality: personality,
+      temperament: temperament,
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
       spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0)

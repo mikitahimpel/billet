@@ -191,10 +191,12 @@ extension GenzRoom {
     let distance = simd_length(gap)
     if distance > layout.cat.length * 0.04, frame.stack.interaction == nil {
       // A gallop at the run clip's own speed keeps its paws planted; without one, a fast walk.
+      // A lively temperament moves quicker, and its clip plays quicker to keep the paws planted.
       let gallops = frame.pace > 0.5 && behaviour.has(.run)
       let speed =
-        gallops
-        ? galloping : frame.pace > 0.5 ? runSpeed : frame.pace > 0 ? walkSpeed * 1.4 : walkSpeed
+        (gallops
+          ? galloping : frame.pace > 0.5 ? runSpeed : frame.pace > 0 ? walkSpeed * 1.4 : walkSpeed)
+        * Float(frame.tempo)
       let next =
         brainBody.speed > 1 || reduceMotion
         ? goal : at + gap / distance * min(speed * step, distance)
@@ -219,11 +221,21 @@ extension GenzRoom {
     }
     let since = clock - (brainBody.arrived ?? clock)
     let reflex = CatReflexes.at(clock, seed: Self.reflexSeed, vitality: frame.stack.vitality)
+    // A skeleton with the reflex joints blinks and flicks over any clip, as big as its
+    // temperament moves; one without gets the reflex as a one-shot clip in a calm step.
+    let layered = rig?.hasReflexes ?? false
+    if layered {
+      rig?.reflex(
+        blink: reflex.blink ? 1 : 0, earTwitch: reflex.earTwitch ? 1 : 0,
+        tailFlick: reflex.tailFlick ? 1 : 0, breath: Float(reflex.breath),
+        strength: reduceMotion ? 0 : Float(frame.amplitude))
+    }
     let action =
       frame.stack.interaction == nil
-      ? lyingDown(frame, since: since) ?? reflex.oneShot(during: frame.stack.step).flatMap {
-        behaviour.has($0) ? $0 : nil
-      }
+      ? lyingDown(frame, since: since)
+        ?? (layered ? nil : reflex.oneShot(during: frame.stack.step)).flatMap {
+          behaviour.has($0) ? $0 : nil
+        }
         ?? cycled(frame.action, since: since) : behaviour.playable(frame.action)
     return CatTrip.Pose(
       spot: at, heading: headingFor(frame) ?? bodyHeading, action: action, speed: 0, leg: 0,

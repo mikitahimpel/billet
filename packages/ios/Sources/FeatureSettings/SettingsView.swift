@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import Pet
 import PetScene
 import SwiftUI
 import UserNotifications
@@ -92,6 +93,11 @@ public struct SettingsView: View {
         SettingsRow("Partner", value: partnerStatus)
         ListDivider()
         SettingsRow("Cat", value: catName ?? "Not named yet")
+        if let temperament = labs?.temperamentRecord?.temperament {
+          ListDivider()
+          SettingsRow("Character", value: "\(temperament.title). \(temperament.line)")
+            .accessibilityIdentifier("settings.character")
+        }
       }
       if let code {
         PairCodeCard(code: code)
