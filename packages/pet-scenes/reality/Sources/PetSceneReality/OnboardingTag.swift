@@ -27,9 +27,8 @@ enum OnboardingTag {
     draw(
       "our code", in: context, font: font(BilletFonts.monoFamily, size: 40),
       colour: GenzColour(0xB0705A), centreY: Double(height) - 160, width: Double(width))
-    let codeSize = min(150, 1.55 * Double(width - 120) / Double(max(code.count, 1)))
     draw(
-      code, in: context, font: font(BilletFonts.monoFamily, size: codeSize, bold: true),
+      code, in: context, font: codeFont(size: codeSize(code)),
       colour: GenzColour(0x5A2E26), centreY: Double(height) * 0.36, width: Double(width))
     return context.makeImage()
   }
@@ -42,18 +41,46 @@ enum OnboardingTag {
     return CTFontCreateWithFontDescriptor(descriptor, size, nil)
   }
 
+  /// The size the code is drawn at: as large as fits between the borders with a margin, measured
+  /// rather than guessed from the count, so a long code never runs into the border.
+  static func codeSize(_ code: String) -> Double {
+    let width = measure(code, font: codeFont(size: 150))
+    return width > 0 ? 150 * min(1, codeRoom / width) : 150
+  }
+
+  static func codeFont(size: Double) -> CTFont {
+    font(BilletFonts.monoFamily, size: size, bold: true)
+  }
+
+  /// The width the code may take: inside the border, with a margin each side.
+  static let codeRoom = Double(size.width) - 2 * 26 - 2 * 70
+
+  /// How wide `text` is drawn in `font`, without the spacing after its last letter.
+  static func measure(_ text: String, font: CTFont) -> Double {
+    guard let line = line(text, font: font, colour: GenzColour(0)) else { return 0 }
+    return CTLineGetTypographicBounds(line, nil, nil, nil) - kern(font)
+  }
+
+  private static func kern(_ font: CTFont) -> Double { CTFontGetSize(font) * 0.06 }
+
+  private static func line(_ text: String, font: CTFont, colour: GenzColour) -> CTLine? {
+    let attributes: [CFString: Any] = [
+      kCTFontAttributeName: font, kCTForegroundColorAttributeName: colour.cgColor,
+      kCTKernAttributeName: kern(font),
+    ]
+    guard let string = CFAttributedStringCreate(nil, text as CFString, attributes as CFDictionary)
+    else { return nil }
+    return CTLineCreateWithAttributedString(string)
+  }
+
+  /// Draws `text` centred across `width`, its capitals centred on `centreY`. The spacing after the
+  /// last letter is left out of the centring, or the line sits off to the left.
   private static func draw(
     _ text: String, in context: CGContext, font: CTFont, colour: GenzColour, centreY: Double,
     width: Double
   ) {
-    let attributes: [CFString: Any] = [
-      kCTFontAttributeName: font, kCTForegroundColorAttributeName: colour.cgColor,
-      kCTKernAttributeName: CTFontGetSize(font) * 0.06,
-    ]
-    guard let string = CFAttributedStringCreate(nil, text as CFString, attributes as CFDictionary)
-    else { return }
-    let line = CTLineCreateWithAttributedString(string)
-    let lineWidth = CTLineGetTypographicBounds(line, nil, nil, nil)
+    guard let line = line(text, font: font, colour: colour) else { return }
+    let lineWidth = CTLineGetTypographicBounds(line, nil, nil, nil) - kern(font)
     context.textPosition = CGPoint(
       x: (width - lineWidth) / 2, y: centreY - CTFontGetCapHeight(font) / 2)
     CTLineDraw(line, context)
