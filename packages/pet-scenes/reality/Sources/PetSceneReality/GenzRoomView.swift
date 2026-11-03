@@ -112,6 +112,7 @@ struct GenzRoomView: View {
       GlowGrade(look: look)
       GlowVignette(look: look)
       CatPurrOverlay(purr: room.purr)
+      CatSayOverlay(say: room.say) { room.screen.cat }
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
     }
