@@ -47,6 +47,8 @@ env:
   # A pull request is measured at its head against the commit it is based on.
   BASE_REF: ${{ inputs.base || github.event.pull_request.base.sha }}
   HEAD_REF: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
+  # A runner draws slowly, a Pro Max's screen most of all: give each scripted run room to finish.
+  PERF_RUN_LIMIT: "1500"
 
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
@@ -143,7 +145,7 @@ jobs:
           - size: se
             model: 'iPhone SE \(3rd generation\)'
           - size: pro-max
-            model: 'iPhone 17 Pro Max'
+            model: "iPhone 17 Pro Max"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
