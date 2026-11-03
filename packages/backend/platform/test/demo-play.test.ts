@@ -16,7 +16,9 @@ import {
   type LifeEvent,
 } from "../src/demo-play.ts";
 
-const { DEMO_ROOM } = env as unknown as { DEMO_ROOM: DurableObjectNamespace<DemoRoom> };
+const { DEMO_ROOM } = env as unknown as {
+  DEMO_ROOM: DurableObjectNamespace<DemoRoom>;
+};
 
 const alice = "11111111-1111-4111-8111-111111111111";
 const bob = "22222222-2222-4222-8222-222222222222";
@@ -80,14 +82,22 @@ const ofType = (frames: Array<Record<string, unknown>>, type: string) =>
 describe("play frame parsing", () => {
   it("accepts pet and treat with an offset time", () => {
     const at = "2026-11-01T23:30:00+01:00";
-    expect(parsePlay({ id: uuid(1), kind: "pet", at })).toEqual({ id: uuid(1), kind: "pet", at });
+    expect(parsePlay({ id: uuid(1), kind: "pet", at })).toEqual({
+      id: uuid(1),
+      kind: "pet",
+      at,
+    });
     expect(parsePlay({ id: uuid(1), kind: "treat", at })?.kind).toBe("treat");
   });
 
   it("accepts the life plays: feeding, a game and bedtime", () => {
     const at = "2026-11-01T23:30:00+01:00";
     for (const kind of ["feed", "play", "sleep"]) {
-      expect(parsePlay({ id: uuid(1), kind, at })).toEqual({ id: uuid(1), kind, at });
+      expect(parsePlay({ id: uuid(1), kind, at })).toEqual({
+        id: uuid(1),
+        kind,
+        at,
+      });
     }
   });
 
@@ -128,7 +138,12 @@ describe("treat ledger", () => {
 });
 
 describe("life log", () => {
-  const event = (n: number, at: string): LifeEvent => ({ id: uuid(n), kind: "pet", by: alice, at });
+  const event = (n: number, at: string): LifeEvent => ({
+    id: uuid(n),
+    kind: "pet",
+    by: alice,
+    at,
+  });
 
   it("keeps events in time order and ignores a repeated id", () => {
     const log = recordLife([event(1, "2026-11-01T10:00:00Z")], event(2, "2026-11-01T09:00:00Z"));
@@ -229,14 +244,24 @@ describe("demo room play", () => {
     await a.sendAcked(play(uuid(12), "pet", "2026-11-01T10:00:00+01:00"), uuid(12));
     await b.sendAcked(play(uuid(13), "feed", "2026-11-01T10:05:00+01:00"), uuid(13));
     await a.sendAcked(
-      JSON.stringify({ type: "note", id: uuid(14), ink: "x", at: "2026-11-01T10:06:00+01:00" }),
+      JSON.stringify({
+        type: "note",
+        id: uuid(14),
+        ink: "x",
+        at: "2026-11-01T10:06:00+01:00",
+      }),
       uuid(14),
     );
     await a.sendAcked(play(uuid(15), "treat", "2026-11-01T10:07:00+01:00"), uuid(15));
     const expected = [
       { id: uuid(12), kind: "pet", by: alice, at: "2026-11-01T10:00:00+01:00" },
       { id: uuid(13), kind: "feed", by: bob, at: "2026-11-01T10:05:00+01:00" },
-      { id: uuid(14), kind: "note", by: alice, at: "2026-11-01T10:06:00+01:00" },
+      {
+        id: uuid(14),
+        kind: "note",
+        by: alice,
+        at: "2026-11-01T10:06:00+01:00",
+      },
     ];
     const events = (frames: Frame[]) => ofType(frames, "life").flatMap((f) => f["events"]);
     await b.waitFor((f) => events(f).length === 3, "three life events on B");
@@ -284,17 +309,41 @@ describe("name and reaction parsing", () => {
       name: "Mochi",
     });
     expect(
-      parsePlay({ id: uuid(1), kind: "react", at, note: uuid(2).toUpperCase(), reaction: "stamp" }),
-    ).toEqual({ id: uuid(1), kind: "react", at, note: uuid(2), reaction: "stamp" });
+      parsePlay({
+        id: uuid(1),
+        kind: "react",
+        at,
+        note: uuid(2).toUpperCase(),
+        reaction: "stamp",
+      }),
+    ).toEqual({
+      id: uuid(1),
+      kind: "react",
+      at,
+      note: uuid(2),
+      reaction: "stamp",
+    });
   });
 
   it("rejects a react frame with a bad note or reaction", () => {
-    expect(parsePlay({ id: uuid(1), kind: "react", at, note: "x", reaction: "heart" })).toBe(
-      undefined,
-    );
-    expect(parsePlay({ id: uuid(1), kind: "react", at, note: uuid(2), reaction: "coin" })).toBe(
-      undefined,
-    );
+    expect(
+      parsePlay({
+        id: uuid(1),
+        kind: "react",
+        at,
+        note: "x",
+        reaction: "heart",
+      }),
+    ).toBe(undefined);
+    expect(
+      parsePlay({
+        id: uuid(1),
+        kind: "react",
+        at,
+        note: uuid(2),
+        reaction: "coin",
+      }),
+    ).toBe(undefined);
     expect(parsePlay({ id: uuid(1), kind: "name", at })).toBeUndefined();
   });
 });
@@ -307,7 +356,9 @@ describe("name and reaction rules", () => {
 
   it("replaces a reaction on the same note and drops the oldest past the cap", () => {
     const first = recordReaction({}, uuid(1), "heart");
-    expect(recordReaction(first, uuid(1), "stamp")).toEqual({ [uuid(1)]: "stamp" });
+    expect(recordReaction(first, uuid(1), "stamp")).toEqual({
+      [uuid(1)]: "stamp",
+    });
     let table = {};
     for (let n = 1; n <= MAX_REACTIONS + 5; n++) table = recordReaction(table, uuid(n), "heart");
     expect(Object.keys(table)).toHaveLength(MAX_REACTIONS);
@@ -327,7 +378,10 @@ describe("demo room name", () => {
       { type: "name", name: "Mochi" },
       { type: "name", name: "Mochi" },
     ]);
-    expect(ofType(b.frames, "name").at(-1)).toEqual({ type: "name", name: "Mochi" });
+    expect(ofType(b.frames, "name").at(-1)).toEqual({
+      type: "name",
+      name: "Mochi",
+    });
   });
 
   it("tells a phone that connects later", async () => {
@@ -392,5 +446,84 @@ describe("demo room reactions", () => {
     await leave(a, b);
     const back = await connect(code, alice);
     expect(ofType(back.frames, "reactions")).toEqual([reactions(uuid(37), "stamp")]);
+  });
+});
+
+const adoptPlay = (id: string, fields: Record<string, unknown>) =>
+  JSON.stringify({ type: "play", id, kind: "adopt", at, ...fields });
+
+describe("choosing the cat together", () => {
+  it("parses picks, holds and adoptions and drops anything else", () => {
+    const frame = (fields: Record<string, unknown>) => ({
+      type: "play",
+      id: uuid(1),
+      kind: "adopt",
+      at,
+      ...fields,
+    });
+    expect(parsePlay(frame({ move: "pick", cat: "ginger" }))).toMatchObject({
+      cat: "ginger",
+    });
+    expect(parsePlay(frame({ move: "pick", cat: null }))).toMatchObject({
+      cat: null,
+    });
+    expect(parsePlay(frame({ move: "hold", holding: true }))).toMatchObject({
+      holding: true,
+    });
+    expect(parsePlay(frame({ move: "adopt", cat: "fluffy" }))).toMatchObject({
+      cat: "fluffy",
+    });
+    expect(parsePlay(frame({ move: "pick", cat: "tiger" }))).toBeUndefined();
+    expect(parsePlay(frame({ move: "hold" }))).toBeUndefined();
+    expect(parsePlay(frame({ move: "adopt", cat: null }))).toBeUndefined();
+    expect(parsePlay(frame({ move: "dance" }))).toBeUndefined();
+  });
+
+  it("relays moves to the partner and not back to the sender", async () => {
+    const a = await connect("PAWSNEWS23", alice);
+    const b = await connect("PAWSNEWS23", bob);
+    await a.sendAcked(adoptPlay(uuid(21), { move: "pick", cat: "black" }), uuid(21));
+    await a.sendAcked(adoptPlay(uuid(22), { move: "hold", holding: true }), uuid(22));
+    await b.waitFor((f) => ofType(f, "adopt").length === 2, "two moves");
+    expect(ofType(b.frames, "adopt")).toEqual([
+      { type: "adopt", id: uuid(21), move: "pick", cat: "black" },
+      { type: "adopt", id: uuid(22), move: "hold", holding: true },
+    ]);
+    expect(ofType(a.frames, "adopt")).toEqual([]);
+  });
+
+  it("replays the partner's latest pick and the adoption on connect", async () => {
+    const a = await connect("PAWSBACK34", alice);
+    await a.sendAcked(adoptPlay(uuid(31), { move: "pick", cat: "kitten" }), uuid(31));
+    await a.sendAcked(adoptPlay(uuid(32), { move: "pick", cat: "ginger" }), uuid(32));
+    await a.sendAcked(adoptPlay(uuid(33), { move: "hold", holding: true }), uuid(33));
+    const b = await connect("PAWSBACK34", bob);
+    expect(ofType(b.frames, "adopt")).toEqual([
+      { type: "adopt", id: uuid(32), move: "pick", cat: "ginger" },
+    ]);
+    await b.sendAcked(adoptPlay(uuid(34), { move: "adopt", cat: "ginger" }), uuid(34));
+    await leave(b, a);
+    const again = await connect("PAWSBACK34", bob);
+    expect(ofType(again.frames, "adopt")).toEqual([
+      { type: "adopt", id: uuid(32), move: "pick", cat: "ginger" },
+      { type: "adopt", id: uuid(34), move: "adopt", cat: "ginger" },
+    ]);
+  });
+
+  it("renames the cat over its first name, the last one winning", async () => {
+    const a = await connect("PAWSNAME45", alice);
+    const b = await connect("PAWSNAME45", bob);
+    await a.sendAcked(nameFrame(uuid(41), "Mochi"), uuid(41));
+    const rename = (id: string, name: string) =>
+      JSON.stringify({ type: "play", id, kind: "rename", at, name });
+    await b.sendAcked(rename(uuid(42), "Biscuit"), uuid(42));
+    await a.sendAcked(rename(uuid(43), "Pumpkin"), uuid(43));
+    await b.waitFor((f) => ofType(f, "name").some((x) => x["name"] === "Pumpkin"), "the rename");
+    await leave(b, a);
+    const later = await connect("PAWSNAME45", bob);
+    expect(ofType(later.frames, "name").at(-1)).toEqual({
+      type: "name",
+      name: "Pumpkin",
+    });
   });
 });

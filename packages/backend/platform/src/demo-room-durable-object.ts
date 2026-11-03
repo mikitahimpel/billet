@@ -1,6 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import {
   MAX_QUEUED_PETS,
+  adoptFrame,
+  type AdoptFrame,
   isTime,
   keepFirstName,
   parsePlay,
@@ -110,7 +112,10 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       const token = frame["token"];
       if (typeof token !== "string" || !TOKEN.test(token)) return;
       const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
-      await this.ctx.storage.put("tokens", { ...tokens, [sender]: token.toLowerCase() });
+      await this.ctx.storage.put("tokens", {
+        ...tokens,
+        [sender]: token.toLowerCase(),
+      });
       return;
     }
     if (frame["type"] === "play") {
@@ -163,7 +168,9 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * A pet is relayed to the partner, or kept (newest few) until they connect, and joins the cat's
    * life with feeding, play and bedtime, which go to both sockets. A treat is recorded
    * once per device per day, and the whole ledger goes to both sockets so phones agree. The cat's
-   * name is the first one given. A reaction is accepted only from the receiver of that note, and
+   * name is the first one given, unless renamed, when the last one wins. A move in choosing the
+   * cat is relayed to the partner live; the latest pick of each phone and the adoption are kept
+   * and replayed when the partner connects. A reaction is accepted only from the receiver of that note, and
    * the whole table goes to both sockets.
    */
   private async handlePlay(
@@ -185,6 +192,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         const name = keepFirstName(current, play.name);
         if (current === undefined) await this.ctx.storage.put("catName", name);
         this.broadcast({ type: "name", name });
+      } else if (play.kind === "rename") {
+        await this.ctx.storage.put("catName", play.name);
+        this.broadcast({ type: "name", name: play.name });
+      } else if (play.kind === "adopt") {
+        await this.relayAdopt(sender, play);
       } else if (play.kind === "react") {
         const senders = (await this.ctx.storage.get<Record<string, string>>("noteFrom")) ?? {};
         const author = senders[play.note];
@@ -200,9 +212,19 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
         const partner = devices.find((d) => d !== sender);
         if (partner !== undefined) {
-          await this.relayPet({ ...play, kind: "pet", from: sender, to: partner });
+          await this.relayPet({
+            ...play,
+            kind: "pet",
+            from: sender,
+            to: partner,
+          });
         }
-        await this.recordLife({ id: play.id.toLowerCase(), kind: "pet", by: sender, at: play.at });
+        await this.recordLife({
+          id: play.id.toLowerCase(),
+          kind: "pet",
+          by: sender,
+          at: play.at,
+        });
       } else {
         await this.recordLife({
           id: play.id.toLowerCase(),
@@ -222,6 +244,20 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     if (next === log) return;
     await this.ctx.storage.put("life", next);
     this.broadcast({ type: "life", events: [event] });
+  }
+
+  private async relayAdopt(sender: string, play: AdoptFrame): Promise<void> {
+    if (play.move === "pick") {
+      const picks = (await this.ctx.storage.get<Record<string, AdoptFrame>>("adoptPicks")) ?? {};
+      await this.ctx.storage.put("adoptPicks", { ...picks, [sender]: play });
+    } else if (play.move === "adopt") {
+      await this.ctx.storage.put("adopted", play);
+    }
+    const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
+    const partner = devices.find((d) => d !== sender);
+    if (partner === undefined) return;
+    const [target] = this.ctx.getWebSockets(partner);
+    target?.send(JSON.stringify(adoptFrame(play)));
   }
 
   private async relayPet(pet: QueuedPet): Promise<void> {
@@ -245,6 +281,12 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     }
     const life = (await this.ctx.storage.get<readonly LifeEvent[]>("life")) ?? [];
     if (life.length > 0) socket.send(JSON.stringify({ type: "life", events: life }));
+    const picks = (await this.ctx.storage.get<Record<string, AdoptFrame>>("adoptPicks")) ?? {};
+    for (const [from, pick] of Object.entries(picks)) {
+      if (from !== device) socket.send(JSON.stringify(adoptFrame(pick)));
+    }
+    const adopted = await this.ctx.storage.get<AdoptFrame>("adopted");
+    if (adopted !== undefined) socket.send(JSON.stringify(adoptFrame(adopted)));
     const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
     const mine = queue.filter((p) => p.to === device);
     if (mine.length === 0) return;
@@ -274,7 +316,14 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
   private async deliverOrQueue(note: QueuedNote): Promise<QueuedNote | undefined> {
     const [target] = this.ctx.getWebSockets(note.to);
     if (target !== undefined) {
-      target.send(JSON.stringify({ type: "note", id: note.id, ink: note.ink, from: note.from }));
+      target.send(
+        JSON.stringify({
+          type: "note",
+          id: note.id,
+          ink: note.ink,
+          from: note.from,
+        }),
+      );
       return undefined;
     }
     const queue = (await this.ctx.storage.get<QueuedNote[]>("queue")) ?? [];

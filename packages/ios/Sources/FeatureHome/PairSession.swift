@@ -64,6 +64,17 @@ final class PairSession {
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
+  /// Called with each of the partner's moves while the pair chooses its cat. Moves that arrive
+  /// before anything listens are kept, the last few, and handed over when something does.
+  @ObservationIgnored var onAdoption: ((AdoptionMove) -> Void)? {
+    didSet {
+      guard let onAdoption else { return }
+      let early = earlyAdoption
+      earlyAdoption = []
+      for move in early { onAdoption(move) }
+    }
+  }
+  @ObservationIgnored private var earlyAdoption: [AdoptionMove] = []
 
   @ObservationIgnored private let delivery: NoteDelivery
   @ObservationIgnored private let archive: NoteArchive
@@ -272,6 +283,19 @@ final class PairSession {
     Task { [delivery] in await delivery.nameCat(name) }
   }
 
+  /// Names the cat here at once and tells the room, over any name it had: the last name given
+  /// wins on both phones.
+  func renameCat(_ raw: String) {
+    guard let name = CatName.clean(raw) else { return }
+    play.named(name)
+    Task { [delivery] in await delivery.renameCat(name) }
+  }
+
+  /// Tells the partner this phone's move while the pair chooses its cat.
+  func adopt(_ move: AdoptionMove) {
+    Task { [delivery] in await delivery.adopt(move) }
+  }
+
   /// What became of an action taken outside the app.
   enum Disposition: Equatable {
     case done
@@ -400,6 +424,12 @@ final class PairSession {
       applyTreat { $0.treatsReceived(days) }
     case .catName(let name):
       play.named(name)
+    case .partnerAdoption(let move):
+      if let onAdoption {
+        onAdoption(move)
+      } else {
+        earlyAdoption = Array((earlyAdoption + [move]).suffix(8))
+      }
     }
   }
 

@@ -187,6 +187,7 @@ final class TabStages {
   private var shop: ShopStage?
   private var desk: DeskStage?
   private var onboarding: OnboardingStage?
+  private var adoption: AdoptionStage?
 
   nonisolated init(rooms: GenzRoomCache) {
     self.rooms = rooms
@@ -210,6 +211,13 @@ final class TabStages {
     if let onboarding { return onboarding }
     let made = OnboardingStage(kit: rooms.kit)
     onboarding = made
+    return made
+  }
+
+  var adoptionStage: AdoptionStage {
+    if let adoption { return adoption }
+    let made = AdoptionStage(kit: rooms.kit, cats: rooms.cats)
+    adoption = made
     return made
   }
 }

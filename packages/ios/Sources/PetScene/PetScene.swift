@@ -111,6 +111,12 @@ public protocol PetScene {
   func makeOnboardingScene(
     state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
   ) -> AnyView?
+
+  /// The pair choosing its cat among a few on cushions, or `nil` when the scene has none. Mounts
+  /// like ``makeOnboardingScene(state:onEvent:)``.
+  func makeAdoptionScene(
+    state: AdoptionSceneState, onEvent: @escaping @MainActor (AdoptionSceneEvent) -> Void
+  ) -> AnyView?
 }
 
 extension PetScene {
@@ -141,6 +147,10 @@ extension PetScene {
 
   public func makeOnboardingScene(
     state: OnboardingSceneState, onEvent: @escaping @MainActor (OnboardingSceneEvent) -> Void
+  ) -> AnyView? { nil }
+
+  public func makeAdoptionScene(
+    state: AdoptionSceneState, onEvent: @escaping @MainActor (AdoptionSceneEvent) -> Void
   ) -> AnyView? { nil }
 }
 

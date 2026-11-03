@@ -66,6 +66,12 @@ public struct NookiPetScene: PetScene {
     AnyView(OnboardingSceneView(state: state, stages: tabs, onEvent: onEvent))
   }
 
+  public func makeAdoptionScene(
+    state: AdoptionSceneState, onEvent: @escaping @MainActor (AdoptionSceneEvent) -> Void
+  ) -> AnyView? {
+    AnyView(AdoptionSceneView(state: state, stages: tabs, onEvent: onEvent))
+  }
+
   public func posePNG(_ pose: PetPose) -> Data? {
     guard
       let url = Bundle.module.url(forResource: "pose-\(pose.rawValue)", withExtension: "png")

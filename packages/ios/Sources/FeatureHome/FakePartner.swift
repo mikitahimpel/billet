@@ -60,6 +60,8 @@ actor FakePartnerRoom {
   private var colour = LampColour.rose
   private var lampOn = true
   private var reactions: [UUID: Reaction] = [:]
+  private var adopter = FakeAdopter()
+  private var adopting: Task<Void, Never>?
 
   init(
     pace: FakePartnerPace = .calm,
@@ -116,6 +118,28 @@ actor FakePartnerRoom {
     }
   }
 
+  /// The partner chooses the cat with you. Its replies to an earlier move that are not sent yet
+  /// give way to these, except that a finger already down still comes up.
+  func adopted(_ move: AdoptionMove) {
+    let replies = adopter.answer(move)
+    guard !replies.isEmpty else { return }
+    if case .hold = move {} else { adopting?.cancel() }
+    adopting = Task { [sleep] in
+      var waited = Duration.zero
+      for reply in replies {
+        await sleep(reply.after - waited)
+        waited = reply.after
+        guard !Task.isCancelled else { return }
+        emit(.partnerAdoption(reply.move))
+      }
+    }
+  }
+
+  /// A new name is echoed by the room, as the real one does.
+  func catRenamed(_ name: String) {
+    emit(.catName(name))
+  }
+
   /// The room confirms a name after a moment, as the real one does.
   func catNamed(_ name: String) {
     after(pace.petBack) { $0.emit(.catName(name)) }
@@ -152,6 +176,8 @@ actor FakePartnerRoom {
     idle?.cancel()
     idle = nil
     for task in tasks { task.cancel() }
+    adopting?.cancel()
+    adopting = nil
     tasks = []
     continuation = nil
     current = nil
@@ -258,6 +284,8 @@ extension NoteDelivery {
         if let kind = event.kind.playKind { await room.played(kind) }
       },
       nameCat: { await room.catNamed($0) },
+      renameCat: { await room.catRenamed($0) },
+      adopt: { await room.adopted($0) },
       react: { _, _ in },
       signal: { await room.signalled($0) },
       updates: { room.updates() })

@@ -31,13 +31,23 @@ private struct ReplayRun: View {
   @State private var pairing = OnboardingPairing()
   @State private var failure: String?
   @State private var script: Task<Void, Never>?
+  @State private var adoption: AdoptionModel?
+  @State private var adopter = ScriptedAdopter()
+  @State private var catName: String?
+  @State private var adopted = false
 
   /// How long the scripted partner takes to arrive after the code is made.
   static let partnerDelay = Duration.milliseconds(4_500)
   static let joinDelay = Duration.milliseconds(1_200)
 
   var body: some View {
-    if pairing.isFinished {
+    if let adoption, !adopted {
+      AdoptionView(
+        scenes: scenes, lighting: lighting, model: adoption, catName: catName,
+        rename: { catName = $0 }, onDone: { adopted = true }
+      )
+      .onDisappear { adopter.stop() }
+    } else if pairing.isFinished {
       CinematicOnboardingView(
         scenes: scenes, lighting: lighting, memory: nil, startsAtRest: true,
         heading: OnboardingHeading(title: "Two halves, one house", detail: "That's the opening."),
@@ -58,10 +68,22 @@ private struct ReplayRun: View {
         actions: OnboardingPairingActions(
           create: create, join: join, cancel: cancel, goIn: { pairing.send(.goIn) },
           tryAlone: onClose),
-        send: { pairing.send($0) }
+        send: { event in
+          let wasJoined = if case .joined = pairing.step { true } else { false }
+          pairing.send(event)
+          if pairing.isFinished, wasJoined { startChoosing() }
+        }
       )
       .onDisappear { script?.cancel() }
     }
+  }
+
+  /// The scripted partner chooses too; the choice is kept nowhere.
+  private func startChoosing() {
+    let adopter = adopter
+    let model = AdoptionModel(send: { adopter.answer($0) }, adopt: { _ in })
+    adopter.model = model
+    adoption = model
   }
 
   private func create() {
