@@ -65,6 +65,7 @@ public struct BrainDebugOverlay: View {
     }
     section("Cat")
     line(Self.temperament(brain.temperament), Palette.paper)
+    line(Self.upbringing(brain.upbringing), Palette.paper)
     line(Self.traits(brain.personality, nature: brain.nature), Palette.paper)
     line(memorySummary, Palette.paper)
   }
@@ -96,12 +97,13 @@ public struct BrainDebugOverlay: View {
     Array(scores.sorted { $0.score > $1.score }.prefix(5))
   }
 
-  /// One score and the factors that made it, such as `Rest 2.31 n1.9 p1.2 k2.4 t1.4 r1.3 v1`,
-  /// where k is the temperament's lean.
+  /// One score and the factors that made it, such as `Rest 2.31 n1.9 p1.2 k2.4 u1 t1.4 r1.3 v1`,
+  /// where k is the temperament's lean and u the upbringing's.
   static func describe(_ score: CatUtilityScore) -> String {
     func f(_ value: Double) -> String { String(format: "%.2g", value) }
     let factors = [
       "n\(f(score.need))", "p\(f(score.personality))", "k\(f(score.temperament))",
+      "u\(f(score.upbringing))",
       "t\(f(score.time))", "r\(f(score.room))",
       "b\(f(score.novelty))", "m\(f(score.mood))", "v\(f(score.vitality))",
     ]
@@ -121,6 +123,19 @@ public struct BrainDebugOverlay: View {
     func f(_ value: Double) -> String { String(format: "%.2f", value) }
     return "\(temperament.title) tempo\(f(temperament.tempo)) amp\(f(temperament.amplitude)) "
       + "space\(f(temperament.personalSpace))"
+  }
+
+  /// The upbringing's counters, its learned hours and tricks.
+  static func upbringing(_ raised: CatUpbringing) -> String {
+    func f(_ value: Double) -> String { String(Int((100 * value).rounded())) }
+    var parts = [
+      "aff\(f(raised.affection))", "ply\(f(raised.playfulness))", "alo\(f(raised.aloofness))",
+      "off\(f(raised.stayingOff))",
+    ]
+    if let hour = raised.mealHour { parts.append("meal\(hour)h") }
+    if let hour = raised.petHour { parts.append("pets\(hour)h") }
+    parts += raised.tricks.map(\.rawValue).sorted()
+    return parts.joined(separator: " ")
   }
 
   /// Each trait as today's value, with the change experience made to it.

@@ -94,13 +94,15 @@ struct CatTemperamentTests {
     #expect(lively.tempo > 1.15 && slow.tempo < 0.85)
     #expect(lively.amplitude > slow.amplitude)
     #expect(CatTemperament.cuddler.personalSpace < CatTemperament.diva.personalSpace)
-    let frame = CatBrainRunner(
+    let runner = CatBrainRunner(
       events: Day.bothActive, now: Day.at(10), context: Day.context, seed: 5, temperament: lively,
-      room: Day.room
-    ).frame
+      room: Day.room)
+    let frame = runner.frame
     #expect(frame.tempo == lively.tempo)
     #expect(frame.amplitude == lively.amplitude)
-    #expect(frame.personalSpace == lively.personalSpace)
+    // Upbringing moves the distance it keeps from there.
+    #expect(
+      frame.personalSpace == runner.brain.upbringing.personalSpace(from: lively.personalSpace))
   }
 
   @Test func anAwakeCatAnswersAPetAsItsTypeDoes() {

@@ -274,7 +274,12 @@ extension NookiDiorama {
     return show(response)
   }
 
+  /// A double tap on the cat asks for a trick, or is a shoo when it sits where it should not.
   func askTrick() -> [PetSceneEvent] {
+    if let step = brain?.stack.step, CatUpbringing.shooable.contains(step) {
+      behaviour.perform(.perk, at: clock)
+      return [.shooed]
+    }
     guard isFreeToPlay, trip == nil, let response = hands.play.handle(.trickAsked, at: clock)
     else { return [] }
     switch response.reaction {
@@ -293,6 +298,12 @@ extension NookiDiorama {
           .hold(behaviour.playable(.sit), seconds: 0.4, facing: eye),
           .hold(behaviour.playable(.wave), seconds: 1.6, facing: eye),
           .hold(behaviour.playable(.happy), seconds: 0.8, facing: eye),
+        ]
+      case .highFive:
+        legs = [
+          .hold(behaviour.playable(.sit), seconds: 0.3, facing: eye),
+          .hold(behaviour.playable(.reachUp), seconds: 1.2, facing: eye),
+          .hold(behaviour.playable(.happy), seconds: 0.9, facing: eye),
         ]
       case .spin:
         let facing = CatTrip.heading(from: from, to: eye)

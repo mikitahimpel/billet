@@ -44,6 +44,7 @@ extension GenzRoom {
     guard frame != brainBody.frame else { return }
     let before = brainBody.frame
     brainBody.frame = frame
+    hands.play.learned = frame?.tricks ?? []
     // Play chose a chase: the cat goes after the lamp's dot of light once it is free. Any other
     // step lets a chase that never started go.
     let step = frame?.stack.step

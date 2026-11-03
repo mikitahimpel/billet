@@ -142,8 +142,8 @@ extension CatBrain {
     return day * 86400 + config.dayStartHour * 3600 - Double(utcOffset)
   }
 
-  /// What a day starting at `t` begins with: the personality moved by the days before it, and the
-  /// memory of a rehearsal of the day before from its own canonical start. The rehearsal starts
+  /// What a day starting at `t` begins with: the personality moved by the days before it, what
+  /// the cat has learned from them, and the memory of a rehearsal of the day before from its own canonical start. The rehearsal starts
   /// with no memory, so it reaches back one day only, and both phones work out the same.
   public static func opening(
     at t: Double, seed: UInt64, temperament: CatTemperament? = nil, nature: CatPersonality,
@@ -156,16 +156,21 @@ extension CatBrain {
       ?? sampler.all.first?.at
       .timeIntervalSince1970
     let start = max(t - 86400, birth ?? t)
-    guard start < t else { return CatDay(personality: personality) }
+    let upbringing = CatUpbringing.learned(from: sampler.all, at: t, utcOffset: utcOffset)
+    guard start < t else { return CatDay(personality: personality, upbringing: upbringing) }
     var rehearsal = CatBrain(
       seed: seed, temperament: temperament, personality: nature,
-      day: CatDay(personality: nature.drifted(by: sampler.all, at: start)), room: room,
+      day: CatDay(
+        personality: nature.drifted(by: sampler.all, at: start),
+        upbringing: .learned(from: sampler.all, at: start, utcOffset: utcOffset)),
+      room: room,
       weather: weather, start: start, life: sampler.sample(at: start), utcOffset: utcOffset,
       lifeConfig: sampler.config, config: config)
     rehearsal.remember(sampler.all.filter { $0.at.timeIntervalSince1970 < rehearsal.time })
     rehearsal.schedule(sampler.events(after: rehearsal.time - 1e-9, through: t - 1e-9))
     // Up to just before the day line, so the rehearsal never starts a day of its own.
     rehearsal.advance(to: t - config.decisionStep / 2, life: &sampler)
-    return CatDay(personality: personality, memory: rehearsal.memory.carried())
+    return CatDay(
+      personality: personality, memory: rehearsal.memory.carried(), upbringing: upbringing)
   }
 }

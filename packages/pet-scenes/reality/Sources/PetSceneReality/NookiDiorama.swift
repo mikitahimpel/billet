@@ -68,7 +68,7 @@ final class NookiDiorama: CatPlayStage {
   private var catLength: Float?
   /// What the cat's brain shows now: whether it is awake and in the mood to bat, and the Play
   /// step that asks for a chase.
-  private var brain: CatBrainFrame?
+  private(set) var brain: CatBrainFrame?
   /// A chase the brain asked for, waiting for the cat to be free.
   private var chaseWanted = false
   /// The finger on the room and the view it is in, for a cat that bats at one resting near the
@@ -417,6 +417,7 @@ final class NookiDiorama: CatPlayStage {
     guard frame != brain else { return }
     let before = brain
     brain = frame
+    hands.play.learned = frame?.tricks ?? []
     let step = frame?.stack.step
     let isNew = step != before?.stack.step || frame?.stepStart != before?.stepStart
     if isNew { chaseWanted = step == .chase || step == .zoomies }
