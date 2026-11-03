@@ -1,0 +1,63 @@
+import Foundation
+import Pet
+import PetScene
+import Testing
+
+@testable import PetSceneReality
+
+@MainActor
+@Suite struct GenzCatBrainTests {
+  private func built(_ style: RoomStyle, _ furniture: RoomFurniture) async throws -> GenzRoom {
+    let layout = try #require(GenzLayout.of(style, furniture: furniture))
+    let room = GenzRoom(
+      layout: layout, kit: GenzKit(), cats: GenzCatSource(),
+      spots: GenzSpotStore(defaults: UserDefaults(suiteName: "brain-\(UUID())")!, key: layout.key))
+    room.startBuilding()
+    let deadline = Date.now.addingTimeInterval(60)
+    while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
+    try #require(room.isBuilt)
+    return room
+  }
+
+  @Test func theWindowSeatOffersWhatItHas() async throws {
+    let room = try await built(.windowSeat, .cosyNook)
+    let found = RoomAffordances(room.affordances().map(\.affordance))
+    // On the seat: the window, the cardigan, the mugs and the phone, the bowl and the toys.
+    for kind in [RoomAffordance.Kind.window, .soft, .smallItem, .bowl, .toy] {
+      #expect(found.reachable(kind), "\(kind)")
+    }
+    // The cat bed is down on the rug, out of reach of a cat that lives on the seat.
+    #expect(found.has(.bed))
+    #expect(!found.reachable(.bed))
+    #expect(!found.has(.door))
+  }
+
+  @Test func theSunsetLampsBedIsWhereTheCatLies() async throws {
+    let room = try await built(.sunsetLamp, .cosyNook)
+    let places = room.affordances()
+    let bed = try #require(places.first { $0.affordance.kind == .bed })
+    #expect(bed.affordance.reachable)
+    #expect(bed.spot == room.home)
+  }
+
+  @Test func everyPieceKindIsSorted() {
+    // Each kind is either something the cat uses or deliberately nothing, so a new piece is
+    // decided on rather than forgotten.
+    let used = GenzPiece.Kind.allCases.filter { GenzRoom.affordanceKind($0) != nil }
+    #expect(used.count >= 15)
+    #expect(GenzRoom.affordanceKind(.cardigan) == .soft)
+    #expect(GenzRoom.affordanceKind(.mugs) == .smallItem)
+    #expect(GenzRoom.affordanceKind(.windowBench) == nil)
+  }
+
+  @Test func aFrameWaitsForTheCatToLoad() async throws {
+    let room = try await built(.windowSeat, .cosyNook)
+    let frame = CatBrainFrame(
+      stack: CatBrainStack(vitality: .awake, step: .watchWindow), action: .sit,
+      target: .affordance(.window), gaze: .window, pace: 0, stepStart: 0, stepEnd: 30)
+    room.followBrain(frame, speed: 600)
+    // With no cat loaded the body waits; the frame is kept for when it comes.
+    #expect(room.stepBrain(1 / 60) == nil || room.rig != nil)
+    #expect(room.brainBody.frame == frame)
+  }
+}

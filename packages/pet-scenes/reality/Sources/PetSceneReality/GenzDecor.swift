@@ -101,6 +101,7 @@ extension GenzRoom {
     stored[name] =
       box == piece.home ? nil : NookiLayout.Spot(x: box.centre.x, z: box.centre.y, yaw: box.yaw)
     spots.save(stored)
+    pieceMoved(name)
   }
 
   static func decorName(_ placement: GenzLayout.Placement, index: Int) -> String {

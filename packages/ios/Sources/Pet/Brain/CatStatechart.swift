@@ -145,10 +145,11 @@ public enum CatStatechart {
   // MARK: - Animation
 
   /// The clip a step plays once the cat is where the step wants it. A step with no clip of its
-  /// own composes one: looking round is sitting with the head turning, a loaf is the sit.
+  /// own composes one: looking round is sitting with the head turning.
   public static func clip(_ step: CatActivityStep) -> CatAction {
     switch step {
-    case .sit, .loaf, .lookAround, .findNapSpot, .watchWindow, .waitByDoor, .sitInCardigan,
+    case .loaf: .loaf
+    case .sit, .lookAround, .findNapSpot, .watchWindow, .waitByDoor, .sitInCardigan,
       .sitOnDesk:
       .sit
     case .wander, .walkToBowl, .bringToy, .inspectFurniture, .sniffObject: .sniff

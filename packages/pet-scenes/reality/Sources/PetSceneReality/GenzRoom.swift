@@ -181,6 +181,10 @@ final class GenzRoom: CatPlayStage {
   var catShadow: ModelEntity?
   var catShadowShape = GenzRoom.catShadowFootprint(.sleep)
   var behaviour = CatBehaviour(clips: [:])
+  /// The brain's frame and how the body is carrying it out, while the Labs switch is on.
+  var brainBody = CatBrainBody()
+  /// The holders of `layout.pieces`, in order, standing where decorating left them.
+  private(set) var pieceHolders: [Entity] = []
   private var life = LifeDrive()
   private var lifeNeeds: PetNeeds?
   var lifeProps: GenzLifeProps?
@@ -232,7 +236,7 @@ final class GenzRoom: CatPlayStage {
   /// The last thing outside the cat pawed at, so each drop is pawed at once.
   private var pawedAt: Int64?
   /// Whether the cat's gaze is on something outside rather than a finger.
-  private var watchingView = false
+  private(set) var watchingView = false
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "GenzRoom")
   private static let orbitPerPoint: Float = 0.004
@@ -290,6 +294,7 @@ final class GenzRoom: CatPlayStage {
     kit.merge(shell, key: "shell \(layout.style)")
     room.addChild(shell)
     let holders = layout.pieces.map(place)
+    pieceHolders = holders
     arrangeDecor(holders)
     buildLED()
     buildDisc()
@@ -325,6 +330,7 @@ final class GenzRoom: CatPlayStage {
     room.isEnabled = isOnScreen
     applyLevels()
     updateScreen()
+    reportAffordances()
     await placeCat()
   }
 
@@ -776,6 +782,7 @@ final class GenzRoom: CatPlayStage {
     stepFlames()
     stepDecor(Float(delta))
     applyCat()
+    reportTouch()
     applyLevels()
   }
 
@@ -958,6 +965,7 @@ final class GenzRoom: CatPlayStage {
     screen.windowView = choice
     viewRecipe = ViewRecipes.recipe(for: choice.view)
     applyViewHour()
+    reportAffordances()
   }
 
   private func applyViewHour() {
@@ -1042,6 +1050,7 @@ final class GenzRoom: CatPlayStage {
       }
     var rate: Float = 1
     var headingGoal = homeHeading
+    let step = Float(min(clock - lastCatClock, 0.1))
     stepToys()
     if let pose = stepHeld() {
       mode = .fixed(pose.action)
@@ -1054,8 +1063,12 @@ final class GenzRoom: CatPlayStage {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
+    } else if let pose = stepBrain(step) {
+      mode = .fixed(pose.action)
+      headingGoal = pose.heading
+      if pose.action == .walk { rate = walkRate(pose.speed) }
+      if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }
-    let step = Float(min(clock - lastCatClock, 0.1))
     bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
     if toys.liftedAt == nil { settleDrop() }
     hands.stepLean(step, reduceMotion: reduceMotion)
@@ -1067,6 +1080,11 @@ final class GenzRoom: CatPlayStage {
     rig.play(beat.action, rate: rate)
     fitCatShadow(step)
     if clock > gazeUntil { gazePoint = nil }
+    if gazePoint == nil, trip == nil, let gaze = brainGaze() {
+      let freedom = reduceMotion ? 0 : CatBehaviour.lookWeight(beat.action)
+      rig.look(at: gaze.point, weight: gaze.weight * Float(freedom))
+      return
+    }
     rig.look(
       at: gazePoint ?? lens.position(relativeTo: nil),
       weight: Float(
@@ -1476,6 +1494,9 @@ extension GenzRoom {
 
   static let catShadowHeight: Float = 0.015
 
+  /// The run clip's own travel speed at the cat's size here.
+  var galloping: Float { NookiClip.runningSpeed * catScale / NookiDiorama.catScale }
+
   /// The walk clip's speed for moving at `speed`, at the cat's size here.
   func walkRate(_ speed: Float) -> Float {
     let natural = NookiClip.walkingSpeed * catScale / NookiDiorama.catScale
@@ -1496,7 +1517,9 @@ extension GenzRoom {
       greetPending = false
       startGreeting()
       playClock.postpone(from: clock)
-    } else if moments.contains(.chases), isFree, playClock.isDue(at: clock) {
+    } else if moments.contains(.chases), isFree, brainBody.frame == nil,
+      playClock.isDue(at: clock)
+    {
       startChase()
     }
   }

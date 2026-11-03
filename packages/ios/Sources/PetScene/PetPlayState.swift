@@ -27,11 +27,18 @@ public struct PetPlayState: Hashable, Sendable {
   /// The needs for a scene to show in the room itself: the bowl, a toy, the lamp's warmth. Nil
   /// when that variant is off.
   public var lifeNeeds: PetNeeds?
+  /// What the cat's brain asks of the cat now, or nil when the brain is off and the scene picks
+  /// the cat's clips itself.
+  public var brain: CatBrainFrame?
+  /// How many times faster than real time the brain's clock runs, for a scene that should jump
+  /// rather than walk.
+  public var brainSpeed: Double
 
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
-    catAway: Bool = false, life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil
+    catAway: Bool = false, life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
+    brain: CatBrainFrame? = nil, brainSpeed: Double = 1
   ) {
     self.treat = treat
     self.streak = streak
@@ -42,5 +49,7 @@ public struct PetPlayState: Hashable, Sendable {
     self.catAway = catAway
     self.life = life
     self.lifeNeeds = lifeNeeds
+    self.brain = brain
+    self.brainSpeed = brainSpeed
   }
 }

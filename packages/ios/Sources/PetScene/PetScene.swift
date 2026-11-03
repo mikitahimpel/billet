@@ -17,6 +17,11 @@ public enum PetSceneEvent: Hashable, Sendable {
   case fed
   /// The user opened the hanging note of `delivery`.
   case noteOpened(delivery: Int)
+  /// What the room offers the cat, and the weather outside, for its brain. Sent when built and
+  /// when either changes.
+  case affordances(RoomAffordances, weather: ViewWeather)
+  /// What this phone's touch is doing with the cat now, or nil when nothing.
+  case touching(CatInteraction?)
 }
 
 /// Where a scene's own note sits, so the received drawing can be laid exactly over it. Rects are in
@@ -169,7 +174,7 @@ extension PetMachine.Event {
       self = .deliveryFinished(delivery: delivery)
     case .settled(let delivery):
       self = .settled(delivery: delivery)
-    case .petted, .played, .fed, .noteOpened:
+    case .petted, .played, .fed, .noteOpened, .affordances, .touching:
       return nil
     }
   }

@@ -56,6 +56,19 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var stepStart: Double
   public var stepEnd: Double
 
+  public init(
+    stack: CatBrainStack, action: CatAction, target: CatTarget, gaze: CatGaze, pace: Double,
+    stepStart: Double, stepEnd: Double
+  ) {
+    self.stack = stack
+    self.action = action
+    self.target = target
+    self.gaze = gaze
+    self.pace = pace
+    self.stepStart = stepStart
+    self.stepEnd = stepEnd
+  }
+
   /// The still picture a surface without a scene shows for this frame.
   public var pose: PetPose { stack.vitality == .asleep ? .sleeping : .proud }
 }
