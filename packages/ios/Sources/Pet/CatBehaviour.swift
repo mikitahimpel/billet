@@ -441,14 +441,14 @@ public struct CatBehaviour: Sendable {
   /// themselves, or keep it down, get little or none.
   public static func lookWeight(_ action: CatAction) -> Double {
     switch action {
-    case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead: 1
+    case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead, .loaf: 1
     case .perk, .happy: 0.5
-    case .walk, .eat: 0.3
+    case .walk, .eat, .run: 0.3
     case .bat, .wave: 0.6
     case .sniff: 0.4
     case .grab, .dangle: 0
     case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce, .rollOver,
-      .headbutt, .reachUp:
+      .headbutt, .reachUp, .lieDown:
       0
     }
   }
