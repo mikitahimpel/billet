@@ -24,7 +24,7 @@ is still working on it, which can take up to half an hour after the run ends.
 2. Writes the App Store Connect key to a file only the runner user can read (mode 0600). The last
    step deletes it, along with the run's keychain, even when an earlier step failed.
 3. Picks the build number: one above the highest build App Store Connect has for the app, and at
-   least 100 + the run number. Local archives went up to 15, so CI builds start at 101. The version
+   least 16, since the local archives went up to 15. The version
    stays 0.1.0 (`MARKETING_VERSION` in `apps/ios/project.yml`).
 4. Generates the project with XcodeGen and archives Release with automatic signing:
    `xcodebuild archive -allowProvisioningUpdates -authenticationKeyPath … -authenticationKeyID … -authenticationKeyIssuerID …`.

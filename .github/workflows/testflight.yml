@@ -101,13 +101,12 @@ jobs:
           security default-keychain -d user -s "$keychain"
           echo "KEYCHAIN=$keychain" >> "$GITHUB_ENV"
 
-      # Above every build App Store Connect has, and above the local archives (up to 15).
+      # One above every build App Store Connect has, and never below 16: the local archives went
+      # up to 15.
       - name: Pick the build number
         id: build
-        env:
-          FLOOR: ${{ github.run_number }}
         run: |
-          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor $((100 + FLOOR)))"
+          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor 16)"
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
