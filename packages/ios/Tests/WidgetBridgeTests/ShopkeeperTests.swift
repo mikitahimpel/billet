@@ -10,7 +10,7 @@ import Testing
     .directory(FileManager.default.temporaryDirectory.appending(path: UUID().uuidString))
   }
 
-  @Test func theOldTabbyKeepsTheShopUntilSomeoneChooses() {
+  @Test func theTeddyKeepsTheShopUntilSomeoneChooses() {
     #expect(Shopkeeper.standard == .teddy)
     #expect(WidgetFeaturesStore(storage: storage()).loadShopkeeper() == .teddy)
   }
@@ -24,6 +24,14 @@ import Testing
     #expect(!keeper.detail.isEmpty)
   }
 
+  @Test(arguments: ["tabby", "raccoon", "fox"])
+  func aRetiredKeeperComesBackAsTheTeddy(_ retired: String) throws {
+    let storage = storage()
+    try storage.write(WidgetFeaturesStore.shopkeeperFileName, Data("\"\(retired)\"".utf8))
+    #expect(WidgetFeaturesStore(storage: storage).loadShopkeeperOverride() == .teddy)
+    #expect(Shopkeeper.allCases == [.teddy, .human])
+  }
+
   @Test func anUnknownKeeperGivesTheStandardOne() throws {
     let storage = storage()
     try storage.write(WidgetFeaturesStore.shopkeeperFileName, Data(#""badger""#.utf8))
@@ -34,16 +42,15 @@ import Testing
     let store = WidgetFeaturesStore(storage: storage())
     var changes = 0
     let model = WidgetFeaturesModel(store: store) { changes += 1 }
-    model.setShopkeeper(.fox)
-    #expect(model.shopkeeper == .fox)
-    #expect(WidgetFeaturesModel(store: store).shopkeeper == .fox)
+    model.setShopkeeper(.human)
+    #expect(model.shopkeeper == .human)
+    #expect(WidgetFeaturesModel(store: store).shopkeeper == .human)
     #expect(changes == 0)
   }
 
-  @Test func theTabScenesAreLabsSwitchesThatStartOn() {
-    #expect(LabExperiment.shopScene.defaultOn)
+  @Test func theNotesDeskIsALabsSwitchThatStartsOn() {
     #expect(LabExperiment.notesDesk.defaultOn)
-    #expect(!LabExperiment.shopScene.hasHomeCard)
+    #expect(!LabExperiment.allCases.map(\.rawValue).contains("shopScene"))
     #expect(LabExperiment.notesDesk.group == .notes)
   }
 }

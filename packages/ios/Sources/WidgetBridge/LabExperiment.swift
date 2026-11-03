@@ -28,7 +28,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case advent
   case bedsideHouse
   case shelfBoard
-  case shopScene
   case notesDesk
   case cinematicOnboarding
   case lifeBubble
@@ -78,7 +77,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: .notes
     case .bedsideHouse: .home
     case .shelfBoard: .notes
-    case .shopScene: .home
     case .notesDesk: .notes
     case .cinematicOnboarding: .firstLaunch
     case .lifeBubble: .cat
@@ -112,7 +110,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: "Our advent"
     case .bedsideHouse: "Bedside house"
     case .shelfBoard: "Shelf board"
-    case .shopScene: "Shop tab"
     case .notesDesk: "Notes desk"
     case .cinematicOnboarding: "Cinematic onboarding"
     case .lifeBubble: "Thought bubble"
@@ -135,8 +132,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
     case .brainDebug:
       "A card on Home shows what the brain is doing and why: its state, the five best scores, the last ten moves, its traits and favourite spot, and a faster clock."
-    case .shopScene:
-      "A Shop tab: a little 3D shop with a keeper behind the counter. Tap anything on the shelves to see it and buy it. The keeper is chosen under Shopkeeper. Off, the shop stays a sheet on Home."
     case .cinematicOnboarding:
       "First launch flies into a windowsill of candles with a soft beating heart, and pairing happens in that scene. Off, it is the plain welcome and code screens. Replay it below without touching your pair."
     case .notesDesk:
@@ -210,7 +205,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: false
     case .shelfBoard: false
-    case .shopScene: false
     case .notesDesk: false
     case .cinematicOnboarding: false
     case .lifeBubble: false
@@ -244,7 +238,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: true
     case .shelfBoard: true
-    case .shopScene: true
     case .notesDesk: true
     case .cinematicOnboarding: true
     case .lifeBubble: false
