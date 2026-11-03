@@ -69,24 +69,9 @@ struct AdoptionView: View {
 
   private var overlay: some View {
     VStack(spacing: Spacing.small) {
-      VStack(spacing: Spacing.small) {
-        Text(heading.title)
-          .billetType(.title)
-          .foregroundStyle(Palette.paper.color)
-          .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
-          .accessibilityAddTraits(.isHeader)
-          .lineLimit(3)
-          .minimumScaleFactor(0.75)
-        Text(heading.detail)
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color.opacity(0.78))
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      .multilineTextAlignment(.center)
-      .contentTransition(.opacity)
-      .animation(.easeInOut(duration: 0.4), value: heading)
-      .padding(.top, Spacing.wide)
-      .padding(.horizontal, Spacing.medium)
+      HeadingWords(heading: heading)
+        .padding(.top, Spacing.wide)
+        .padding(.horizontal, Spacing.medium)
       Spacer(minLength: 0)
       if model.moment == .choosing { legend }
     }
