@@ -198,10 +198,9 @@ struct GenzRoomView: View {
       room.fit(to: $0)
     }
     .onChange(of: layout.key) { old, _ in
-      if let left = GenzLayout.of(old).map(rooms.room) {
-        left.setOnScreen(false, in: viewID)
-        left.setFollowsTilt(false)
-      }
+      let left = rooms.room(GenzLayout.of(old))
+      left.setOnScreen(false, in: viewID)
+      left.setFollowsTilt(false)
       set(up: room)
     }
     .simultaneousGesture(orbit(room))
