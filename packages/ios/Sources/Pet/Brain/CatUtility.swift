@@ -6,6 +6,8 @@ public struct CatUtilityScore: Hashable, Sendable {
   public var score: Double
   public var need: Double
   public var personality: Double
+  /// The temperament's lean towards the group, 1 for a cat with none.
+  public var temperament: Double
   public var time: Double
   public var room: Double
   public var novelty: Double
@@ -32,6 +34,7 @@ public struct CatUtilityInput: Sendable {
   /// Whether the sleep pressure is high, rather than the cat only being drowsy from a nap.
   public var sleepy: Bool
   public var personality: CatPersonality
+  public var temperament: CatTemperament?
   public var room: RoomAffordances
   public var weather: ViewWeather
   public var recent: [CatEpisode]
@@ -61,6 +64,7 @@ public enum CatUtility {
   static func score(_ group: CatActivityGroup, _ input: CatUtilityInput) -> CatUtilityScore {
     let need = needTerm(group, input)
     let traits = personalityTerm(group, input.personality)
+    let kind = input.temperament?.bias(group) ?? 1
     let time = timeTerm(group, hour: input.hour)
     let room = roomTerm(group, input)
     let novelty = noveltyTerm(group, input)
@@ -68,8 +72,9 @@ public enum CatUtility {
     let vitality = vitalityTerm(group, input.vitality, sleepy: input.sleepy)
     return CatUtilityScore(
       group: group,
-      score: base(group) * need * traits * time * room * novelty * mood * vitality,
-      need: need, personality: traits, time: time, room: room, novelty: novelty, mood: mood,
+      score: base(group) * need * traits * kind * time * room * novelty * mood * vitality,
+      need: need, personality: traits, temperament: kind, time: time, room: room,
+      novelty: novelty, mood: mood,
       vitality: vitality)
   }
 
@@ -100,7 +105,8 @@ public enum CatUtility {
       case .idle, .explore, .groom, .watch, .react: nil
       }
     guard let need else { return 1 }
-    let term = (need == .rested ? 0.25 : 0.5) + 4 * NeedFocus.urgency(input.needs[need])
+    let weight = input.temperament?.weight(need) ?? 1
+    let term = (need == .rested ? 0.25 : 0.5) + 4 * weight * NeedFocus.urgency(input.needs[need])
     return input.focus == need ? term * 1.5 : term
   }
 

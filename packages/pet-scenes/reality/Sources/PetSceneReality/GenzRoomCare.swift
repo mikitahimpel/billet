@@ -266,8 +266,14 @@ extension GenzRoom {
     case .come:
       cancelPlay()
       let from = catSpot
-      // It comes as far as it can without walking through what stands on its top.
-      let spot = layout.catReach(from: from, to: layout.onCatSurface(under))
+      // It stops as far short of the finger as its temperament keeps, and comes as far as it can
+      // without walking through what stands on its top.
+      let wanted = layout.onCatSurface(under)
+      let keep = Float(brainBody.frame?.personalSpace ?? 0) * layout.cat.length * 1.5
+      let gap = wanted - from
+      let distance = simd_length(gap)
+      let near = distance > keep ? wanted - gap / distance * keep : from
+      let spot = layout.catReach(from: from, to: near)
       if trip != nil { endTrip() }
       let eye = SIMD2(camera.position.x, camera.position.z)
       perch = (spot, CatTrip.heading(from: spot, to: eye))

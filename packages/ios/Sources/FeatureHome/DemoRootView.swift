@@ -3,7 +3,9 @@ import DesignSystem
 import FeatureInbox
 import Foundation
 import Ink
+import Labs
 import Persistence
+import Pet
 import PetScene
 import SwiftUI
 import WidgetBridge
@@ -153,9 +155,18 @@ public struct DemoRootView: View {
 
   private func startChoosing() {
     let model = model
+    // Each cat's temperament comes from the pair and the cat, so both phones show the same, and
+    // the one adopted is saved for life.
+    func seed(_ cat: AdoptionCat) -> UInt64? {
+      model.session.map { CatBrainModel.seed(pair: $0.room.code, cat: cat.choice) }
+    }
     adoption = AdoptionModel(
       send: { model.session?.adopt($0) },
-      adopt: { model.labs.setCat($0.choice) })
+      adopt: { cat in
+        model.labs.setCat(cat.choice)
+        if let seed = seed(cat) { _ = model.labs.temperament(forSeed: seed) }
+      },
+      temperament: { cat in seed(cat).map(CatTemperament.born(seed:)) })
   }
 
   /// Where the pairing is, as the first-launch scene follows it.
