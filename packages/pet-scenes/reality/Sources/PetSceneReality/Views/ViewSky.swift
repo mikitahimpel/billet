@@ -246,7 +246,10 @@ enum ViewGlass {
       ViewKit.glow(context, frame.point(CGPoint(x: 10, y: 50)), unit * 20, ViewPalette.lamp, 0.13)
     }
     switch moment.look.weather {
-    case .rain: drops(context, frame: frame, moment: moment)
+    case .rain:
+      mist(context, frame: frame, moment: moment)
+      rivulets(context, frame: frame, moment: moment)
+      drops(context, frame: frame, moment: moment)
     case .snow: frost(context, window: window)
     case .fog: context.fill(Path(window), with: .color(.white.opacity(0.05)))
     case .clear: break
@@ -270,6 +273,53 @@ enum ViewGlass {
       drop(
         context, frame: frame, x: point.x, y0: point.y, size: 1.1, progress: pass.progress,
         tint: tint)
+    }
+  }
+
+  /// A fine mist of tiny beads all over the glass, a different scatter every half minute.
+  private static func mist(_ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment) {
+    let tint = moment.palette.skyMiddle.lit(0.5)
+    let scatter = Int((moment.now / 30).rounded(.down)) % 10_000
+    for index in 0..<90 {
+      let id = scatter * 128 + index
+      let point = frame.point(
+        CGPoint(
+          x: 1 + 98 * ViewRhythm.hash(id, seed: 84),
+          y: 1 + (ViewStage.windowHeight - 2) * ViewRhythm.hash(id, seed: 85)))
+      ViewKit.circle(
+        context, point, frame.unit * (0.08 + 0.1 * ViewRhythm.hash(id, seed: 86)), tint, 0.3)
+    }
+  }
+
+  /// Rivulets: water finding its way down the glass in wavering lines, each running for a while
+  /// and then drying off as another starts somewhere else.
+  private static func rivulets(
+    _ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment
+  ) {
+    let tint = moment.palette.skyMiddle.lit(0.5)
+    for index in 0..<7 {
+      let rhythm = ViewRhythm(
+        seed: UInt64(index) &* 977 &+ 41, slot: 24, chance: 0.8, length: 14...22)
+      guard let pass = rhythm.pass(at: moment.now) else { continue }
+      let x0 = 4 + 92 * ViewRhythm.hash(Int(pass.index) &* 16 &+ index, seed: 87)
+      let reach =
+        min(pass.progress / 0.4, 1) * ViewStage.windowHeight * (0.4 + 0.6 * pass.variant)
+      let fade = pass.progress > 0.75 ? (1 - pass.progress) / 0.25 : 1
+      var line = Path()
+      line.move(to: frame.point(CGPoint(x: x0, y: 0)))
+      var y = 0.0
+      while y < reach {
+        y += 1.2
+        let wander =
+          1.1 * sin(y * 0.18 + Double(index) * 2) + 0.25 * sin(y * 0.9 + pass.variant * 6)
+        line.addLine(to: frame.point(CGPoint(x: x0 + wander, y: y)))
+      }
+      context.stroke(
+        line, with: .color(tint.color(0.16 * fade)),
+        style: StrokeStyle(lineWidth: frame.unit * 0.22, lineCap: .round, lineJoin: .round))
+      context.stroke(
+        line, with: .color(ViewColour(0xFFFFFF).color(0.12 * fade)),
+        style: StrokeStyle(lineWidth: frame.unit * 0.07, lineCap: .round, lineJoin: .round))
     }
   }
 

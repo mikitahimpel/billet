@@ -59,6 +59,17 @@ enum ViewKit {
   ) {
     let eave = base - wall
     rect(context, CGRect(x: x, y: eave, width: width, height: wall), colour)
+    // Clapboard siding: fine shadow lines across the wall, a shadow under the eave and a
+    // foundation strip.
+    var board = eave + 1.4
+    while board < base - 1 {
+      rect(context, CGRect(x: x, y: board, width: width, height: 0.1), colour.lit(-0.07), 0.9)
+      board += 1.05
+    }
+    rect(context, CGRect(x: x, y: eave, width: width, height: 0.7), colour.lit(-0.14), 0.8)
+    rect(
+      context, CGRect(x: x - 0.2, y: base - 0.9, width: width + 0.4, height: 0.9),
+      colour.lit(-0.1))
     var gable = Path()
     gable.move(to: CGPoint(x: x - overhang, y: eave + 0.4))
     gable.addLine(to: CGPoint(x: x + width / 2, y: eave - roof))
@@ -71,6 +82,19 @@ enum ViewKit {
     lit.addLine(to: CGPoint(x: x + width / 2 + 1, y: eave + 0.4))
     lit.closeSubpath()
     context.fill(lit, with: .color(colour.lit(look.isDark ? 0.06 : 0.12).color()))
+    // Rows of shingles, and the fascia along the eave.
+    var shingles = context
+    shingles.clip(to: gable)
+    var row = eave + 0.4 - 0.9
+    while row > eave - roof {
+      shingles.fill(
+        Path(CGRect(x: x - overhang, y: row, width: width + 2 * overhang, height: 0.1)),
+        with: .color(colour.lit(-0.2).color(0.55)))
+      row -= 0.9
+    }
+    rect(
+      context, CGRect(x: x - overhang, y: eave + 0.2, width: width + 2 * overhang, height: 0.35),
+      colour.lit(look.isDark ? 0.02 : 0.08))
     if look.weather == .snow {
       var cap = Path()
       cap.move(to: CGPoint(x: x - overhang, y: eave + 0.4))
@@ -93,6 +117,21 @@ enum ViewKit {
   static func windowFrame(_ context: GraphicsContext, _ window: CGRect, _ colour: ViewColour) {
     rect(context, window.insetBy(dx: -0.35, dy: -0.35), colour.lit(-0.25))
     rect(context, window, colour.lit(-0.35))
+    // The sky caught in dark glass: a pale diagonal sheen.
+    var glass = context
+    glass.clip(to: Path(window))
+    var sheen = Path()
+    sheen.move(to: CGPoint(x: window.minX + window.width * 0.15, y: window.maxY))
+    sheen.addLine(to: CGPoint(x: window.minX + window.width * 0.55, y: window.minY))
+    sheen.addLine(to: CGPoint(x: window.minX + window.width * 0.8, y: window.minY))
+    sheen.addLine(to: CGPoint(x: window.minX + window.width * 0.4, y: window.maxY))
+    sheen.closeSubpath()
+    glass.fill(sheen, with: .color(colour.lit(0.25).color(0.18)))
+    // Sill.
+    rect(
+      context,
+      CGRect(x: window.minX - 0.4, y: window.maxY, width: window.width + 0.8, height: 0.35),
+      colour.lit(0.06))
   }
 
   /// A round tree of overlapping circles on a short trunk.
@@ -115,6 +154,21 @@ enum ViewKit {
     circle(
       context, CGPoint(x: x + size * 0.15, y: base - size * 1.05), size * 0.22,
       colour.lit(look.isDark ? 0.05 : 0.1))
+    // Leaf clusters: small lighter and darker clumps over the crown, lit from above right.
+    for index in 0..<14 {
+      let a = ViewRhythm.hash(seed * 47 + index, seed: 13)
+      let b = ViewRhythm.hash(seed * 47 + index, seed: 14)
+      let centre = CGPoint(
+        x: x + (CGFloat(a) - 0.5) * size * 1.0, y: base - size * (0.7 + CGFloat(b) * 0.55))
+      let lit = Double(centre.x - x) / Double(size) - Double(base - size - centre.y) / Double(size)
+      circle(
+        context, centre, size * 0.07, colour.lit(lit > 0 ? (look.isDark ? 0.05 : 0.09) : -0.06),
+        0.9)
+    }
+    rect(
+      context,
+      CGRect(x: x - size * 0.4, y: base - size * 0.72, width: size * 0.8, height: size * 0.06),
+      colour.lit(-0.12), 0.5)
     if look.weather == .snow {
       // Snow lies on the tops of the puffs as flat caps.
       for index in 0..<3 {
@@ -365,6 +419,28 @@ enum ViewKit {
           colour.color(level * 0.85),
         ]), startPoint: CGPoint(x: rect.midX, y: rect.minY),
         endPoint: CGPoint(x: rect.midX, y: rect.maxY)))
+    if !window.isTV, rect.width > 1.5 {
+      // Curtains drawn to the sides, a lamp's brighter spot low in the room, and the mullions.
+      let curtain = ViewColour(
+        window.id % 3 == 0 ? 0xC0603A : window.id % 3 == 1 ? 0xD8B070 : 0x8A6A9A)
+      for side in [rect.minX, rect.maxX - rect.width * 0.22] {
+        context.fill(
+          Path(CGRect(x: side, y: rect.minY, width: rect.width * 0.22, height: rect.height)),
+          with: .color(curtain.mixed(with: colour, by: 0.4).color(0.75 * level)))
+      }
+      glow(
+        context,
+        CGPoint(
+          x: rect.minX + rect.width * (window.id % 2 == 0 ? 0.35 : 0.65),
+          y: rect.maxY - rect.height * 0.3),
+        rect.width * 0.4, ViewPalette.lampCore, 0.5 * level)
+      context.fill(
+        Path(CGRect(x: rect.midX - 0.07, y: rect.minY, width: 0.14, height: rect.height)),
+        with: .color(ViewColour(0x2A1A10).color(0.5 * level)))
+      context.fill(
+        Path(CGRect(x: rect.minX, y: rect.midY - 0.07, width: rect.width, height: 0.14)),
+        with: .color(ViewColour(0x2A1A10).color(0.5 * level)))
+    }
     glow(
       context, CGPoint(x: rect.midX, y: rect.midY), max(rect.width, rect.height) * 1.3, colour,
       0.22 * level)

@@ -60,6 +60,17 @@ final class ViewPlateCache {
         context.scaleBy(x: size.width / plate.width, y: size.height / plate.height)
         context.translateBy(x: -plate.minX, y: -plate.minY)
         recipe.paint(key.plane, context, look: key.look)
+        // A fine grain over whatever was painted, a pixel to a grain, so flat shapes read as
+        // made rather than filled.
+        if let grain = ViewGrain.tile {
+          var grained = context
+          grained.blendMode = .sourceAtop
+          grained.fill(
+            Path(plate),
+            with: .tiledImage(
+              Image(decorative: grain, scale: 1), origin: CGPoint(x: plate.minX, y: plate.minY),
+              scale: plate.width / CGFloat(max(key.pixels, 1))))
+        }
       }
       .frame(width: plate.width, height: plate.height))
     renderer.scale = CGFloat(key.pixels) / plate.width
