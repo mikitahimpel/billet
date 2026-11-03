@@ -48,6 +48,25 @@ import Testing
     #expect(choice == WindowViewChoice(view: .standard, weather: .fog))
   }
 
+  @Test func aChoiceSavedBefore3DDecodesFlat() throws {
+    let data = Data(#"{"view":"suburbNight"}"#.utf8)
+    #expect(try JSONDecoder().decode(WindowViewChoice.self, from: data).inDepth == false)
+    let deep = WindowViewChoice(view: .suburbNight, inDepth: true)
+    let coded = try JSONDecoder().decode(
+      WindowViewChoice.self, from: try JSONEncoder().encode(deep))
+    #expect(coded.inDepth)
+  }
+
+  @Test func theSuburbIsIn3DOnlyOnAClearNightWithTheSwitchOn() {
+    let deep = WindowViewChoice(view: .suburbNight, inDepth: true)
+    #expect(deep.showsInDepth(weather: .clear, hour: .night))
+    #expect(!deep.showsInDepth(weather: .rain, hour: .night))
+    #expect(!deep.showsInDepth(weather: .clear, hour: .day))
+    #expect(!WindowViewChoice(view: .suburbNight).showsInDepth(weather: .clear, hour: .night))
+    #expect(
+      !WindowViewChoice(view: .fireEscape, inDepth: true).showsInDepth(weather: .clear, hour: .night))
+  }
+
   // MARK: - Rhythm
 
   private let cars = ViewRhythm(seed: 21, slot: 16, chance: 0.75, length: 3.6...5.4)

@@ -81,7 +81,7 @@ final class ViewPlateCache {
 
 /// A window view drawn natively, filling the scene behind the room: the sky over everything,
 /// then each plane's plate and life from the back, the weather in the air, and the glass, all but
-/// the sky seen only through the window's opening.
+/// the sky seen only through the window's opening. With the view in 3D, only the sky.
 struct NativeWindowView: View {
   let state: WindowViewState
   let plates: ViewPlateCache
@@ -103,7 +103,8 @@ struct NativeWindowView: View {
         let frame = ViewStage.Frame.blend(home: home, live: live, follow: ViewSky.follow)
         ViewSky.draw(context, size: size, frame: frame, moment: moment, moon: recipe.moon)
       }
-      if let live, let home {
+      // In 3D the room draws the street through the window itself, over this sky.
+      if let live, let home, !state.inDepth {
         ZStack {
           ForEach(ViewPlane.allCases, id: \.self) { plane in
             let frame = ViewStage.Frame.blend(home: home, live: live, follow: plane.follow)
