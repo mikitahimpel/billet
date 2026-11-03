@@ -10,7 +10,7 @@ import RealityKit
 /// furniture on the shelves, treats on the counter and paints on a table by the window. Built from
 /// the styled rooms' shared meshes; only the keeper and the furniture load from files.
 @MainActor
-final class ShopStage: TabStage {
+final class ShopStage: RehearsedStage {
   static let itemPrefix = "shop-item:"
   static let keeperName = "shop-keeper"
 
@@ -31,6 +31,7 @@ final class ShopStage: TabStage {
   private var building: Task<Void, Never>?
   private(set) var isBuilt = false
   private var isOnScreen = false
+  private var isRehearsing = false
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
@@ -125,8 +126,14 @@ final class ShopStage: TabStage {
     if !onScreen { isAnnounced = false }
     if onScreen, !isOnScreen { welcomeAt = clock + 0.5 }
     isOnScreen = onScreen
-    room.isEnabled = onScreen && isBuilt
+    room.isEnabled = (onScreen || isRehearsing) && isBuilt
     frames.isPaused = !onScreen
+  }
+
+  func setRehearsing(_ rehearsing: Bool) {
+    isRehearsing = rehearsing
+    if rehearsing, building == nil { building = Task { await build() } }
+    room.isEnabled = (isOnScreen || rehearsing) && isBuilt
   }
 
   func setReduceMotion(_ reduced: Bool) {
@@ -480,7 +487,7 @@ final class ShopStage: TabStage {
     buildParcel()
     lighting.apply(look)
     isBuilt = true
-    room.isEnabled = isOnScreen
+    room.isEnabled = isOnScreen || isRehearsing
     screen.isLit = true
     updateGlows()
     restock()
