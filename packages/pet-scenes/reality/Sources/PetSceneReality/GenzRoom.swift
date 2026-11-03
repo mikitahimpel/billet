@@ -105,6 +105,8 @@ final class GenzRoom: CatPlayStage {
   /// The bulb seen under a shade, which keeps its own glow when the shade's changes.
   static let bulbGlassName = "genz-bulb-glass"
   static let posterName = "genz-poster"
+  /// A candle's flame, which flickers.
+  static let flameName = "genz-flame"
 
   let layout: GenzLayout
   let root = Entity()
@@ -148,6 +150,8 @@ final class GenzRoom: CatPlayStage {
   private var leds: [ModelEntity] = []
   private var lenses: [ModelEntity] = []
   private var shades: [ModelEntity] = []
+  /// Candle flames, which flicker.
+  private var flames: [ModelEntity] = []
   private let lampLight = Entity()
   private let outsideLight = Entity()
   private let fillLight = Entity()
@@ -232,6 +236,7 @@ final class GenzRoom: CatPlayStage {
   }
 
   private func build() async {
+    await kit.makeTextures()
     for part in layout.shell(kit) { room.addChild(part) }
     for placement in layout.pieces { place(placement) }
     buildLED()
@@ -288,6 +293,7 @@ final class GenzRoom: CatPlayStage {
       case Self.lensName: lenses.append(model)
       case Self.posterName: posterModel = model
       case Self.bulbGlassName: break
+      case Self.flameName: flames.append(model)
       default:
         let isShaded = [.thriftLamp, .pleatedLamp].contains(placement.piece.kind)
         if isShaded, model.model?.materials.first is UnlitMaterial {
@@ -684,8 +690,21 @@ final class GenzRoom: CatPlayStage {
     }
     stepMoments()
     stepView()
+    stepFlames()
     applyCat()
     applyLevels()
+  }
+
+  /// Each flame sways and stretches a little, out of step with the others.
+  private func stepFlames() {
+    guard !reduceMotion else { return }
+    for (index, flame) in flames.enumerated() {
+      let phase = clock * 7 + Double(index) * 1.7
+      let stretch = Float(1 + 0.1 * sin(phase) + 0.05 * sin(phase * 2.3))
+      let sway = Float(0.06 * sin(phase * 0.8 + 0.5))
+      flame.scale = [1 / stretch.squareRoot(), stretch, 1 / stretch.squareRoot()]
+      flame.orientation = simd_quatf(angle: sway, axis: [0, 0, 1])
+    }
   }
 
   // MARK: - Direction

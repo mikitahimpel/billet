@@ -115,6 +115,41 @@ polaroids taped to the glass. Retro den adds a record player and a speaker. Each
 kinds of piece in its own colours (`GenzFurnitureSets.swift`), placed to suit each room. The cat
 keeps its place in every set.
 
+In the Window Seat, the furnished sets build a whole cosy corner (`GenzSeatPieces.swift`):
+
+- a built-in seat under the window, with panelled doors, a piped linen cushion level with the sill
+  where the cat sits, pillows leaning on the glass, a folded knitted throw over the front, a
+  cardigan dropped on the seat, mugs and a phone;
+- a bookshelf beside the seat full of varied books, with a vase, a sprig, a photo and a candle;
+- a turned side table holding the lamp (a glazed ceramic base) and candles that flicker;
+- polaroids, wall shelves (a trailing plant, dried grass, candles, a cactus) and string lights
+  on the side wall;
+- a knitted pouf and a cat bed on the rug, and plants on the floor.
+
+The camera starts a little further round, so the bookshelf corner is in view.
+
+Soft things use smooth meshes made in code (`GenzSoft.swift`):
+
+- pillows and cushions seamed round their middle;
+- turned pots, mugs and candles;
+- tubes for sleeves and wires;
+- rounded boxes for the wood.
+
+Wood, knit and linen get 128-pixel textures drawn in code, with a normal map for their relief.
+Ceramics are glazed. The room keeps to a budget of 120,000 triangles (a test checks it). A test
+also checks that floor pieces never overlap and stay inside the room.
+
+`GenzRenderShots` renders a styled room offscreen on the Mac from home, from each end of the orbit
+and close up:
+
+```sh
+cd packages/pet-scenes/reality
+GENZ_SHOTS=/path/to/folder GENZ_FURNITURE=cosyNook swift test --filter GenzRenderShots
+```
+
+It runs only when `GENZ_SHOTS` is set. `GENZ_STYLE=sunsetLamp` renders the other room. The glow
+layers are drawn by SwiftUI, so they are not in these renders.
+
 Each room and set is its own room in the cache (`GenzLayout.Key`), built the first time it is
 shown. The pieces are not sold in the shop yet, because the shop sells the diorama's models.
 Where each model came from is logged in `~/.billet-manager/product/art/provenance.md`.

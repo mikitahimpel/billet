@@ -34,6 +34,15 @@ struct GenzPiece: Hashable, Sendable {
     case polaroids
     case recordPlayer
     case speaker
+    case windowBench
+    case bookshelf
+    case sideTable
+    case knitPouf
+    case catBed
+    case wallShelves
+    case stringLights
+    case cardigan
+    case candles
   }
 
   var kind: Kind
@@ -80,6 +89,15 @@ extension GenzPiece.Kind {
     case .polaroids: ["print", "print", "print"]
     case .recordPlayer: ["wood", "label", "metal"]
     case .speaker: ["wood", "grille", "cone"]
+    case .windowBench: ["wood", "cushion", "throw"]
+    case .bookshelf: ["wood", "books", "more books"]
+    case .sideTable: ["wood", "magazine"]
+    case .knitPouf: ["knit", "button"]
+    case .catBed: ["fleece", "blanket"]
+    case .wallShelves: ["wood", "pot", "vase"]
+    case .stringLights: ["wire", "bulbs"]
+    case .cardigan: ["knit", "buttons"]
+    case .candles: ["wax", "dish"]
     }
   }
 
@@ -111,6 +129,15 @@ extension GenzPiece.Kind {
     case .polaroids: [GenzColour(0xE9A07A), GenzColour(0x8DB0C9), GenzColour(0xA9C48E)]
     case .recordPlayer: [GenzColour(0x6B4430), GenzColour(0xE24B2D), GenzColour(0xB8B2A8)]
     case .speaker: [GenzColour(0x5C3B28), GenzColour(0x2A2421), GenzColour(0x1B1817)]
+    case .windowBench: [GenzColour(0xC79A6B), GenzColour(0xEADCC6), GenzColour(0xD9A441)]
+    case .bookshelf: [GenzColour(0xB98A5E), GenzColour(0xC2603F), GenzColour(0x8FA67E)]
+    case .sideTable: [GenzColour(0xA97850), GenzColour(0xC27A55)]
+    case .knitPouf: [GenzColour(0xE8D5B5), GenzColour(0xB89A6A)]
+    case .catBed: [GenzColour(0xF1E6D6), GenzColour(0xD99A8A)]
+    case .wallShelves: [GenzColour(0xB98A5E), GenzColour(0xC46E4A), GenzColour(0xE9DCC6)]
+    case .stringLights: [GenzColour(0x3A3028), GenzColour(0xFFD58A)]
+    case .cardigan: [GenzColour(0xD49A86), GenzColour(0xF1E6D6)]
+    case .candles: [GenzColour(0xF3E8D6), GenzColour(0xC46E4A)]
     }
   }
 
@@ -142,6 +169,15 @@ extension GenzPiece.Kind {
     case .polaroids: "Polaroids"
     case .recordPlayer: "Record player"
     case .speaker: "Speaker"
+    case .windowBench: "Window seat"
+    case .bookshelf: "Bookshelf"
+    case .sideTable: "Side table"
+    case .knitPouf: "Knitted pouf"
+    case .catBed: "Cat bed"
+    case .wallShelves: "Wall shelves"
+    case .stringLights: "String lights"
+    case .cardigan: "Cardigan"
+    case .candles: "Candles"
     }
   }
 
@@ -174,6 +210,15 @@ extension GenzPiece.Kind {
     case .polaroids: GenzRoomPoint(1.6, 0.04, 1.1)
     case .recordPlayer: GenzRoomPoint(1.1, 0.85, 0.3)
     case .speaker: GenzRoomPoint(0.6, 0.56, 1)
+    case .windowBench: GenzRoomPoint(6.4, 1.6, 1.3)
+    case .bookshelf: GenzRoomPoint(1.6, 0.6, 3.4)
+    case .sideTable: GenzRoomPoint(1, 1, 0.92)
+    case .knitPouf: GenzRoomPoint(0.9, 0.9, 0.5)
+    case .catBed: GenzRoomPoint(1, 1, 0.36)
+    case .wallShelves: GenzRoomPoint(1.4, 0.32, 1.2)
+    case .stringLights: GenzRoomPoint(5.6, 0.08, 0.5)
+    case .cardigan: GenzRoomPoint(1.4, 1.25, 0.2)
+    case .candles: GenzRoomPoint(0.5, 0.4, 0.3)
     }
   }
 }
@@ -233,6 +278,15 @@ extension GenzKit {
     case .polaroids: parts = polaroids(piece)
     case .recordPlayer: parts = recordPlayer(piece)
     case .speaker: parts = speaker(piece)
+    case .windowBench: parts = windowBench(piece)
+    case .bookshelf: parts = bookshelf(piece)
+    case .sideTable: parts = sideTable(piece)
+    case .knitPouf: parts = knitPouf(piece)
+    case .catBed: parts = catBed(piece)
+    case .wallShelves: parts = wallShelves(piece)
+    case .stringLights: parts = stringLights(piece)
+    case .cardigan: parts = cardigan(piece)
+    case .candles: parts = candles(piece)
     }
     for part in parts { root.addChild(part) }
     return root
@@ -434,10 +488,14 @@ extension GenzKit {
 
   private func snakePlant(_ piece: GenzPiece) -> [Entity] {
     let centre = GenzRoomPoint(0.25, 0.25, 0)
+    let basket: [SIMD2<Float>] = [
+      [0, 0], [0.19, 0], [0.21, 0.02], [0.24, 0.3], [0.255, 0.32], [0.25, 0.34], [0.23, 0.33],
+      [0, 0.32],
+    ]
     var parts: [Entity] = [
       part(
-        prism(sides: 7, radius: 0.22, top: 0.25, height: 0.34), matte(piece.slot(0)),
-        at: centre.scene)
+        lathe("snake basket", basket, sides: 20, repeats: 6),
+        matte(piece.slot(0), .linen, repeats: [6, 2]), at: centre.scene)
     ]
     let blade = slab("snake blade", outline: [[-0.06, 0], [0.06, 0], [0, 1.2]], depth: 0.02)
     let blades: [(turn: Float, lean: Float, length: Float)] = [

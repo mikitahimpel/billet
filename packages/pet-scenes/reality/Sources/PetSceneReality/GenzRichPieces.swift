@@ -11,16 +11,12 @@ extension GenzKit {
     _ x: Float, _ y: Float, _ z: Float, _ w: Float, _ d: Float, _ h: Float, radius: Float,
     _ material: any RealityKit.Material
   ) -> ModelEntity {
-    let radius = min(radius, min(w, d, h) / 2 - 0.001)
-    let mesh = cached("pad \(w) \(d) \(h) \(radius)") {
-      .generateBox(size: [w, h, d], cornerRadius: max(radius, 0))
-    }
-    return part(mesh, material, at: GenzRoomPoint(x + w / 2, y + d / 2, z + h / 2).scene)
+    return part(
+      softBox([w, h, d], radius: radius), material,
+      at: GenzRoomPoint(x + w / 2, y + d / 2, z + h / 2).scene)
   }
 
-  func sphere(_ radius: Float) -> MeshResource {
-    cached("sphere \(radius)") { .generateSphere(radius: radius) }
-  }
+  func sphere(_ radius: Float) -> MeshResource { ball(radius) }
 
   // MARK: - Beds
 
@@ -139,10 +135,7 @@ extension GenzKit {
   }
 
   func roundBox(_ size: SIMD3<Float>, radius: Float) -> MeshResource {
-    let radius = min(radius, size.min() / 2 - 0.001)
-    return cached("round \(size) \(radius)") {
-      .generateBox(size: size, cornerRadius: max(radius, 0))
-    }
+    softBox(size, radius: radius)
   }
 
   // MARK: - Storage and lamps
@@ -191,10 +184,14 @@ extension GenzKit {
     glass.name = GenzRoom.bulbGlassName
     let shadeBottom: Float = 0.52
     let sides = 20
+    let body: [SIMD2<Float>] = [
+      [0, 0], [0.11, 0], [0.14, 0.02], [0.17, 0.1], [0.175, 0.18], [0.15, 0.27], [0.09, 0.33],
+      [0.05, 0.35], [0.05, 0.37], [0, 0.37],
+    ]
     var parts: [Entity] = [
-      part(prism(sides: 10, radius: 0.2, top: 0.16, height: 0.08), brass, at: centre),
+      part(lathe("lamp body", body, sides: 24), glaze(GenzColour(0xA9BFA4)), at: centre),
       part(
-        prism(sides: 6, radius: 0.03, top: 0.03, height: 0.52), brass, at: centre + [0, 0.08, 0]),
+        prism(sides: 10, radius: 0.025, top: 0.025, height: 0.2), brass, at: centre + [0, 0.36, 0]),
       glass,
       part(
         prism(sides: sides, radius: 0.48, top: 0.28, height: 0.48, turn: 0),
@@ -223,21 +220,27 @@ extension GenzKit {
   func leafyPlant(_ piece: GenzPiece) -> [Entity] {
     let centre = GenzRoomPoint(0.6, 0.6, 0).scene
     let pot = piece.slot(0)
-    var parts: [Entity] = [
-      part(prism(sides: 8, radius: 0.28, top: 0.34, height: 0.5), matte(pot), at: centre),
-      part(
-        prism(sides: 8, radius: 0.38, top: 0.38, height: 0.09), matte(pot.shaded(-0.1)),
-        at: centre + [0, 0.48, 0]),
-      part(
-        prism(sides: 8, radius: 0.33, top: 0.33, height: 0.02), matte(GenzColour(0x3B2A20)),
-        at: centre + [0, 0.56, 0]),
+    let profile: [SIMD2<Float>] = [
+      [0, 0], [0.24, 0], [0.27, 0.03], [0.32, 0.44], [0.36, 0.46], [0.37, 0.52], [0.35, 0.56],
+      [0.32, 0.55], [0.31, 0.53], [0, 0.53],
     ]
-    let leaf = slab(
-      "leafy leaf",
-      outline: [
-        [0, 0], [0.1, 0.12], [0.15, 0.32], [0.12, 0.52], [0, 0.7], [-0.12, 0.52], [-0.15, 0.32],
-        [-0.1, 0.12],
-      ], depth: 0.02)
+    var parts: [Entity] = [
+      part(lathe("leafy pot", profile, sides: 28), glaze(pot), at: centre),
+      part(
+        lathe("leafy soil", [[0.31, 0.53], [0.31, 0.54], [0, 0.54]], sides: 20),
+        matte(GenzColour(0x3B2A20)), at: centre),
+    ]
+    let leaf = cached("leafy leaf soft") {
+      var mesh = GenzSmooth()
+      for side: Float in [1, -1] {
+        mesh.grid(columns: 6, rows: 10, flip: side < 0) { u, v in
+          let across = (u * 2 - 1) * 0.15 * sin(v * .pi) * (1 - 0.3 * v)
+          let fold = abs(u * 2 - 1) * 0.04
+          return [across, v * 0.7, fold + side * 0.008 * sin(v * .pi) + 0.06 * v * v]
+        }
+      }
+      return mesh.mesh("leaf")
+    }
     let colours = [
       matte(piece.slot(1)), matte(piece.slot(2)), matte(piece.slot(1).shaded(0.18)),
     ]
@@ -273,10 +276,14 @@ extension GenzKit {
       (1.4, 0.02, 0), (1.18, 0.024, 1), (0.8, 0.028, 2), (0.45, 0.032, 1),
     ]
     for ring in rings {
+      let edge = ring.radius
+      let profile: [SIMD2<Float>] = [
+        [edge, 0], [edge, ring.height - 0.008], [edge - 0.02, ring.height], [0, ring.height],
+      ]
       parts.append(
         part(
-          prism(sides: 24, radius: ring.radius, top: ring.radius, height: ring.height, turn: 0),
-          matte(piece.slot(ring.slot)), at: centre))
+          lathe("rug ring \(ring.radius)", profile, sides: 48, repeats: 12),
+          matte(piece.slot(ring.slot), .linen, repeats: [12, 1]), at: centre))
     }
     var dots: [(centre: SIMD3<Float>, size: SIMD3<Float>)] = []
     for index in 0..<18 {
@@ -330,19 +337,24 @@ extension GenzKit {
   func mugs(_ piece: GenzPiece) -> [Entity] {
     var parts: [Entity] = []
     let mugs: [(x: Float, slot: Int, full: Bool)] = [(0.13, 0, true), (0.42, 1, false)]
+    let profile: [SIMD2<Float>] = [
+      [0, 0], [0.085, 0], [0.095, 0.012], [0.1, 0.1], [0.1, 0.19], [0.096, 0.2], [0.088, 0.19],
+      [0.086, 0.03], [0, 0.03],
+    ]
+    let handle = (0...8).map { step -> SIMD3<Float> in
+      let angle = Float(step) / 8 * .pi - .pi / 2
+      return [0.095 + cos(angle) * 0.055, 0.1 + sin(angle) * 0.055, 0]
+    }
     for mug in mugs {
       let centre = GenzRoomPoint(mug.x, 0.15, 0).scene
-      let body = matte(piece.slot(mug.slot))
-      parts.append(
-        part(prism(sides: 12, radius: 0.1, top: 0.1, height: 0.2, turn: 0), body, at: centre))
+      let body = glaze(piece.slot(mug.slot))
+      parts.append(part(lathe("mug", profile, sides: 20), body, at: centre))
+      parts.append(part(tube("mug handle", handle, radius: 0.016, sides: 6), body, at: centre))
       parts.append(
         part(
-          prism(sides: 12, radius: 0.085, top: 0.085, height: 0.005, turn: 0),
+          lathe("mug drink", [[0.087, 0], [0, 0]], sides: 20),
           matte(mug.full ? GenzColour(0x4A2C1C) : piece.slot(mug.slot).shaded(-0.35)),
-          at: centre + [0, mug.full ? 0.18 : 0.04, 0]))
-      parts.append(block(mug.x + 0.1, 0.13, 0.05, 0.06, 0.04, 0.03, body))
-      parts.append(block(mug.x + 0.1, 0.13, 0.14, 0.06, 0.04, 0.03, body))
-      parts.append(block(mug.x + 0.14, 0.13, 0.05, 0.03, 0.04, 0.12, body))
+          at: centre + [0, mug.full ? 0.165 : 0.035, 0]))
     }
     return parts
   }

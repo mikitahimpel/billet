@@ -12,6 +12,8 @@ final class GenzKit {
   private var meshes: [String: MeshResource] = [:]
   private var materials: [GenzColour: PhysicallyBasedMaterial] = [:]
   private var glows: [GlowKey: UnlitMaterial] = [:]
+  /// The grain textures, once ``makeTextures()`` has made them.
+  var textures: [GenzTexture: (colour: TextureResource, normal: TextureResource?)] = [:]
 
   private struct GlowKey: Hashable {
     let colour: GenzColour
