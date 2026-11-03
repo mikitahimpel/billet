@@ -57,24 +57,51 @@ struct CatFeelingTests {
 
   // MARK: - Acted out
 
+  /// `count` events of `kind`, `every` hours apart from `from`, by `a` and `b` in turn from
+  /// `first`.
+  static func series(
+    _ kind: LifeEvent.Kind, _ count: Int, from: Double, every: Double, first: String = "a",
+    _ n: Int
+  ) -> [LifeEvent] {
+    let second = first == "a" ? "b" : "a"
+    var out: [LifeEvent] = []
+    for index in 0..<count {
+      let by = index % 2 == 0 ? first : second
+      out.append(Day.event(kind, by, from + Double(index) * every, n))
+    }
+    return out
+  }
+
   /// Fed two days ago and never since, but petted and played with: hangry all day.
-  static let starving: [LifeEvent] =
-    [Day.event(.feed, "a", -50)]
-    + (0..<12).map { Day.event(.pet, $0 % 2 == 0 ? "a" : "b", -20 + Double($0) * 3, 1) }
-    + (0..<6).map { Day.event(.note, $0 % 2 == 0 ? "b" : "a", -18 + Double($0) * 6, 2) }
-    + (0..<6).map { Day.event(.play, "a", -10 + Double($0) * 5, 3) }
+  static let starving: [LifeEvent] = {
+    var events = [Day.event(.feed, "a", -50)]
+    events += series(.pet, 12, from: -20, every: 3, 1)
+    events += series(.note, 6, from: -18, every: 6, first: "b", 2)
+    events += series(.play, 6, from: -10, every: 5, first: "a", 3).map {
+      LifeEvent(id: $0.id, kind: $0.kind, by: "a", at: $0.at)
+    }
+    return events
+  }()
 
   /// Fed every three hours, petted, written to and played with: never hungry.
-  static let wellFed: [LifeEvent] =
-    (0..<16).map { Day.event(.feed, $0 % 2 == 0 ? "a" : "b", -24 + Double($0) * 3, 4) }
-    + (0..<16).map { Day.event(.pet, $0 % 2 == 0 ? "b" : "a", -23 + Double($0) * 3, 5) }
-    + (0..<8).map { Day.event(.note, $0 % 2 == 0 ? "a" : "b", -22 + Double($0) * 6, 6) }
-    + (0..<8).map { Day.event(.play, "b", -21 + Double($0) * 6, 7) }
+  static let wellFed: [LifeEvent] = {
+    var events = series(.feed, 16, from: -24, every: 3, 4)
+    events += series(.pet, 16, from: -23, every: 3, first: "b", 5)
+    events += series(.note, 8, from: -22, every: 6, 6)
+    events += series(.play, 8, from: -21, every: 6, first: "b", 7)
+    return events
+  }()
 
   /// Fed and played with, but nobody has petted it or written for days.
-  static let unloved: [LifeEvent] =
-    (0..<24).map { Day.event(.feed, "a", -48 + Double($0) * 3, 8) }
-    + (0..<12).map { Day.event(.play, "a", -46 + Double($0) * 6, 9) }
+  static let unloved: [LifeEvent] = {
+    var events = series(.feed, 24, from: -48, every: 3, 8).map {
+      LifeEvent(id: $0.id, kind: $0.kind, by: "a", at: $0.at)
+    }
+    events += series(.play, 12, from: -46, every: 6, 9).map {
+      LifeEvent(id: $0.id, kind: $0.kind, by: "a", at: $0.at)
+    }
+    return events
+  }()
 
   static let tantrum: Set<CatActivityStep> = [.yowl, .knockOff, .flop]
   static let asking: Set<CatActivityStep> = [.waitByBowl, .pawBowl, .beg]
@@ -83,12 +110,13 @@ struct CatFeelingTests {
     let starving = Self.day(Self.starving)
     let fed = Self.day(Self.wellFed)
     #expect(starving.allSatisfy { $0.1.feeling == .hangry || $0.1.feeling == .asleep })
-    #expect(
-      Day.share(starving.map { ($0.0, $0.1.stack) }) { Self.tantrum.contains($0.step) } > 0.04)
-    #expect(
-      Day.share(starving.map { ($0.0, $0.1.stack) }) {
-        Self.tantrum.contains($0.step) || Self.asking.contains($0.step)
-      } > 0.12)
+    let stacks: [(Double, CatBrainStack)] = starving.map { ($0.0, $0.1.stack) }
+    let raging = Day.share(stacks) { Self.tantrum.contains($0.step) }
+    let needy = Day.share(stacks) {
+      Self.tantrum.contains($0.step) || Self.asking.contains($0.step)
+    }
+    #expect(raging > 0.04)
+    #expect(needy > 0.12)
     #expect(fed.allSatisfy { !Self.tantrum.contains($0.1.stack.step) })
     // An empty bowl is never eaten from.
     #expect(starving.allSatisfy { $0.1.stack.step != .eat })
@@ -176,7 +204,9 @@ struct CatFeelingTests {
     #expect(day.allSatisfy { !$0.1.purring || $0.1.stack.vitality != .asleep })
   }
 
-  @Test(arguments: [nil] + CatTemperament.allCases.map(Optional.some))
+  static let types: [CatTemperament?] = [nil, .cuddler, .explorer, .diva, .sleepyhead, .clown]
+
+  @Test(arguments: types)
   func everyMoveOfANeedyDayIsLegal(_ type: CatTemperament?) {
     for events in [Self.starving, Self.unloved] {
       var illegal: [CatBrainTransition] = []
@@ -234,15 +264,20 @@ struct CatFeelingTests {
   // MARK: - Decay
 
   /// A couple who feed it twice a day, pet it a few times, write once and play once.
-  static let couple: [LifeEvent] = (-3...1).flatMap { day -> [LifeEvent] in
-    let o = Double(day) * 24
-    return [
-      Day.event(.feed, "a", o + 8, 20), Day.event(.pet, "a", o + 8.5, 21),
-      Day.event(.note, "b", o + 12.5, 22), Day.event(.feed, "b", o + 19, 23),
-      Day.event(.play, "b", o + 20, 24), Day.event(.pet, "b", o + 21.5, 25),
-      Day.event(.pet, "a", o + 22, 26),
-    ]
-  }
+  static let couple: [LifeEvent] = {
+    var events: [LifeEvent] = []
+    for day in -3...1 {
+      let o = Double(day) * 24
+      events.append(Day.event(.feed, "a", o + 8, 20))
+      events.append(Day.event(.pet, "a", o + 8.5, 21))
+      events.append(Day.event(.note, "b", o + 12.5, 22))
+      events.append(Day.event(.feed, "b", o + 19, 23))
+      events.append(Day.event(.play, "b", o + 20, 24))
+      events.append(Day.event(.pet, "b", o + 21.5, 25))
+      events.append(Day.event(.pet, "a", o + 22, 26))
+    }
+    return events
+  }()
 
   @Test func aNormalCoupleSeesEachNeedWithinADay() {
     var seen = Set<CatFeeling>()
