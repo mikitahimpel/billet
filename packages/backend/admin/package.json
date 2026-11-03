@@ -1,0 +1,38 @@
+{
+  "name": "@billet/backend-admin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./access": "./src/access.ts",
+    "./admin-assets": "./src/admin-assets.ts",
+    "./admin-data": "./src/admin-data.ts",
+    "./admin-overview": "./src/admin-overview.ts",
+    "./admin-routes": "./src/admin-routes.ts",
+    "./test/access-tokens": "./test/access-tokens.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "assets": "node scripts/build-assets.mjs"
+  },
+  "dependencies": {
+    "@billet/backend-flags": "workspace:*",
+    "@billet/backend-metrics": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

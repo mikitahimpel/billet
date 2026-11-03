@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>billet admin</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/admin/app.css" />
+    <script src="/admin/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main" id="skip">Skip to content</a>
+    <header class="top">
+      <div class="top-in">
+        <a class="brand" href="#/overview" aria-label="billet admin, overview">
+          <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 11.5 12 5l8 6.5V20H4z" />
+            <rect x="10" y="13.5" width="4" height="6.5" rx="1" />
+          </svg>
+          <span class="brand-name">billet</span><span class="brand-sub">admin</span>
+        </a>
+        <nav class="nav" aria-label="Sections">
+          <a href="#/overview" data-route="overview">Overview</a>
+          <a href="#/experiments" data-route="experiments">Experiments</a>
+          <a href="#/flags" data-route="flags">Flags</a>
+          <a href="#/pairs" data-route="pairs">Pairs</a>
+        </nav>
+        <p class="me" id="me">
+          <span class="sr-only">Signed in as </span><span id="me-email">…</span>
+        </p>
+      </div>
+    </header>
+    <main id="main" class="main" tabindex="-1">
+      <noscript><p class="state">The admin panel needs JavaScript.</p></noscript>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <dialog
+      id="confirm"
+      class="dialog"
+      aria-labelledby="confirm-title"
+      aria-describedby="confirm-body"
+    >
+      <h2 id="confirm-title" class="dialog-title"></h2>
+      <p id="confirm-body" class="dialog-body"></p>
+      <div class="actions">
+        <button type="button" class="btn" id="confirm-cancel" autofocus>Cancel</button>
+        <button type="button" class="btn danger" id="confirm-ok">Confirm</button>
+      </div>
+    </dialog>
+  </body>
+</html>

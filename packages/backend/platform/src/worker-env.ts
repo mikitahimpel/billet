@@ -14,6 +14,13 @@ export interface WorkerEnv {
   readonly EVENTS?: AnalyticsEngineDataset;
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
+  /**
+   * The Cloudflare Access application in front of `/admin`: team domain
+   * (`<team>.cloudflareaccess.com`) and audience (AUD) tag. Missing or malformed: every `/admin`
+   * request is refused. See docs/admin.md.
+   */
+  readonly ACCESS_TEAM_DOMAIN?: string;
+  readonly ACCESS_AUD?: string;
   /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
