@@ -40,6 +40,8 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
   public var latestReceivedNote: UUID?
   /// The cat's life, when its needs are switched on in Labs.
   public var life: WidgetLife?
+  /// The partner's latest pet or meal for the cat, which the note widget mentions.
+  public var partnerCare: PartnerCare?
   public var updatedAt: Date
 
   public init(
@@ -53,6 +55,7 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
     lastReceivedAt: Date? = nil,
     latestReceivedNote: UUID? = nil,
     life: WidgetLife? = nil,
+    partnerCare: PartnerCare? = nil,
     updatedAt: Date
   ) {
     self.catName = catName
@@ -65,6 +68,7 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
     self.lastReceivedAt = lastReceivedAt
     self.latestReceivedNote = latestReceivedNote
     self.life = life
+    self.partnerCare = partnerCare
     self.updatedAt = updatedAt
   }
 

@@ -23,7 +23,7 @@ struct WidgetPublisher: Sendable {
   /// front, because the room connection closes then and the app can no longer vouch for it.
   static func snapshot(
     play: PairPlay, notes: [NoteRecord], partnerHere: Bool, previous: WidgetSnapshot?,
-    now: Date, calendar: Calendar, life: WidgetLife? = nil
+    now: Date, calendar: Calendar, life: WidgetLife? = nil, partnerCare: PartnerCare? = nil
   ) -> WidgetSnapshot {
     let day = TreatDay.key(for: now, calendar: calendar)
     return WidgetSnapshot(
@@ -37,18 +37,19 @@ struct WidgetPublisher: Sendable {
       lastReceivedAt: notes.first { $0.direction == .received }?.date,
       latestReceivedNote: notes.first { $0.direction == .received }?.id,
       life: life,
+      partnerCare: partnerCare,
       updatedAt: now)
   }
 
   func publish(
     play: PairPlay, notes: [NoteRecord], partnerHere: Bool, now: Date = .now,
-    calendar: Calendar = .current, life: WidgetLife? = nil
+    calendar: Calendar = .current, life: WidgetLife? = nil, partnerCare: PartnerCare? = nil
   ) {
     guard let store else { return }
     let previous = store.load()
     let next = Self.snapshot(
       play: play, notes: notes, partnerHere: partnerHere, previous: previous, now: now,
-      calendar: calendar, life: life)
+      calendar: calendar, life: life, partnerCare: partnerCare)
     try? store.save(next)
     var changed = next
     changed.updatedAt = previous?.updatedAt ?? next.updatedAt
