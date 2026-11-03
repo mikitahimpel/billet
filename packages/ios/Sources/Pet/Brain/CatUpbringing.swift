@@ -122,12 +122,14 @@ public struct CatUpbringing: Hashable, Sendable {
   }
 
   /// The local hour most of `times` fall within an hour of, if they do so on at least `days`
-  /// different days. Ties go to the earlier hour.
+  /// different days. Between hours with as many, the one they lie closest to wins, then the
+  /// earlier.
   static func habitHour(_ times: [Double], utcOffset: Int, days: Int) -> Int? {
-    var best: (hour: Int, count: Int)?
+    var best: (hour: Int, count: Int, gaps: Double)?
     for hour in 0..<24 {
       var seen = Set<Int>()
       var count = 0
+      var gaps = 0.0
       for at in times {
         let local = at + Double(utcOffset)
         let minute = local.truncatingRemainder(dividingBy: 86400) / 60
@@ -135,8 +137,11 @@ public struct CatUpbringing: Hashable, Sendable {
         guard min(gap, 1440 - gap) <= 60 else { continue }
         seen.insert(Int((local / 86400).rounded(.down)))
         count += 1
+        gaps += min(gap, 1440 - gap)
       }
-      if seen.count >= days, count > best?.count ?? 0 { best = (hour, count) }
+      guard seen.count >= days else { continue }
+      if let best, count < best.count || (count == best.count && gaps >= best.gaps) { continue }
+      best = (hour, count, gaps)
     }
     return best?.hour
   }

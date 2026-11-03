@@ -303,7 +303,9 @@ stateDiagram-v2
         [*] --> WalkToBowl
         Eat --> LickLips
         WalkToBowl --> Eat
+        WalkToBowl --> WaitByBowl
         LickLips --> [*]
+        WaitByBowl --> [*]
       }
       state Play {
         [*] --> Stalk

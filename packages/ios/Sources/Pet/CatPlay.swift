@@ -295,8 +295,9 @@ public struct CatPlay: Sendable {
       // A cat that knows the high-five gives it every other time.
       let known = CatTrick.allCases.filter { $0 != .highFive }
       let trick =
-        learned.contains(.highFive) && nextTrick % 2 == 1
-        ? CatTrick.highFive : known[(nextTrick / 2) % known.count]
+        !learned.contains(.highFive)
+        ? known[nextTrick % known.count]
+        : nextTrick % 2 == 1 ? CatTrick.highFive : known[(nextTrick / 2) % known.count]
       nextTrick += 1
       return CatPlayResponse(
         reaction: .trick(trick), haptic: .trick, need: need(.play, at: now), interest: keenness)
