@@ -2,12 +2,15 @@ import { Duration, Effect, Exit, Layer, Redacted, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
+import { DeviceId as DeviceIdSchema, UserId as UserIdSchema } from "@billet/contracts-domain/ids";
 import { PushToken } from "@billet/contracts-domain/push-token";
 import { AuthNonce, SessionToken } from "@billet/contracts-http-api/auth";
-import { AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
+import { AppleIdInUse, AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
+import { AuthEngine } from "../src/auth-engine.ts";
 import { AuthRepository, type TokenHash } from "../src/auth-repository.ts";
 import { AuthService, challengeLifetime, sessionLifetime } from "../src/auth-service.ts";
 import { IdentityVerifier } from "../src/identity-verifier.ts";
+import { makeInMemoryAuthEngine } from "./in-memory-auth-engine.ts";
 import { makeInMemoryAuthRepository } from "./in-memory-auth-repository.ts";
 
 const startMillis = 1_800_000_000_000;
@@ -37,11 +40,16 @@ const service = Effect.gen(function* () {
   return yield* AuthService;
 });
 
-const setup = (overrides: Partial<AuthRepository["Service"]> = {}) => {
+const setup = (
+  overrides: Partial<AuthRepository["Service"]> = {},
+  engineOverrides: Partial<AuthEngine["Service"]> = {},
+) => {
   const memory = makeInMemoryAuthRepository();
+  const users = makeInMemoryAuthEngine();
   const repository = Layer.succeed(AuthRepository, { ...memory.repository, ...overrides });
+  const engine = Layer.succeed(AuthEngine, { ...users.engine, ...engineOverrides });
   const auth = AuthService.layer.pipe(
-    Layer.provide(Layer.mergeAll(repository, FakeIdentityVerifier)),
+    Layer.provide(Layer.mergeAll(repository, engine, FakeIdentityVerifier)),
     Layer.provideMerge(Layer.merge(Digest.layerWebCrypto, SecureRandom.layerWebCrypto)),
   );
   const run = <A, E>(
@@ -57,7 +65,7 @@ const setup = (overrides: Partial<AuthRepository["Service"]> = {}) => {
         Effect.provide(Layer.merge(auth, TestClock.layer())),
       ),
     );
-  return { memory, run };
+  return { memory, users, run };
 };
 
 const signIn = (subject = "subject-a") =>
@@ -66,6 +74,9 @@ const signIn = (subject = "subject-a") =>
     const { nonce } = yield* auth.issueChallenge;
     return yield* auth.signInWithApple(identityToken(subject, nonce));
   });
+
+/** 32 random bytes as base64url, like the app's account key. */
+const accountKey = (fill: string) => Redacted.make(fill.repeat(43).slice(0, 43));
 
 const rejected = (reason: string) => Exit.fail(new AuthRejected({ reason }));
 
@@ -108,24 +119,6 @@ describe("AuthService sign-in", () => {
     const session = await value(run(signIn()));
     expect(Schema.is(SessionToken)(session.sessionToken)).toBe(true);
     expect(session.expiresAt).toBe(startMillis + Duration.toMillis(sessionLifetime));
-  });
-
-  it("keeps only the hash of the session token in storage", async () => {
-    const { memory, run } = setup();
-    const { session, stored, expected } = await value(
-      run(
-        Effect.gen(function* () {
-          const session = yield* signIn();
-          return {
-            session,
-            stored: yield* memory.dump,
-            expected: yield* sha256(session.sessionToken),
-          };
-        }),
-      ),
-    );
-    expect(stored).toContain(expected);
-    expect(stored).not.toContain(session.sessionToken);
   });
 
   it("gives the same user a new session and device on each sign-in", async () => {
@@ -179,7 +172,7 @@ describe("AuthService sign-in", () => {
   });
 
   it("creates nothing and leaves the nonce unused when verification fails", async () => {
-    const { memory, run } = setup();
+    const { users, run } = setup();
     const { exit, retried } = await value(
       run(
         Effect.gen(function* () {
@@ -193,16 +186,16 @@ describe("AuthService sign-in", () => {
     );
     expect(exit).toEqual(rejected("fake-rejected"));
     expect(retried.sessionToken).toBeDefined();
-    expect(await Effect.runPromise(memory.dump)).toContain('"users":[[');
+    expect(await Effect.runPromise(users.userCount)).toBe(1);
   });
 
   it("creates no session while the verifier is unavailable", async () => {
-    const { memory, run } = setup();
+    const { users, run } = setup();
     const exit = await run(
       Effect.flatMap(service, (auth) => auth.signInWithApple(Redacted.make("unavailable"))),
     );
     expect(exit).toEqual(Exit.fail(new AuthUnavailable({ reason: "fake-unavailable" })));
-    expect(await Effect.runPromise(memory.dump)).toContain('"sessions":[]');
+    expect(await Effect.runPromise(users.dump)).toContain('"sessions":[]');
   });
 
   it("fails closed when storage fails", async () => {
@@ -216,6 +209,149 @@ describe("AuthService sign-in", () => {
       deleteExpired: () => Effect.fail(new AuthUnavailable({ reason: "storage" })),
     });
     expect(Exit.isSuccess(await run(signIn()))).toBe(true);
+  });
+});
+
+describe("AuthService anonymous accounts", () => {
+  const anonymously = (key: Redacted.Redacted<string>) =>
+    Effect.flatMap(service, (auth) => auth.signInAnonymously(key));
+
+  it("opens an account the first time a key is seen, and returns to it after", async () => {
+    const { users, run } = setup();
+    const [first, again, other] = await value(
+      run(
+        Effect.all([
+          anonymously(accountKey("a")),
+          anonymously(accountKey("a")),
+          anonymously(accountKey("b")),
+        ]),
+      ),
+    );
+    expect(again?.userId).toBe(first?.userId);
+    expect(again?.deviceId).not.toBe(first?.deviceId);
+    expect(again?.sessionToken).not.toBe(first?.sessionToken);
+    expect(other?.userId).not.toBe(first?.userId);
+    expect(await Effect.runPromise(users.userCount)).toBe(2);
+  });
+
+  it("keeps only the hash of the key", async () => {
+    const { memory, run } = setup();
+    const { stored, expected } = await value(
+      run(
+        Effect.gen(function* () {
+          yield* anonymously(accountKey("a"));
+          return { stored: yield* memory.dump, expected: yield* sha256("a".repeat(43)) };
+        }),
+      ),
+    );
+    expect(stored).toContain(expected);
+    expect(stored).not.toContain("a".repeat(43));
+  });
+
+  it("refuses a malformed key without opening an account", async () => {
+    const { users, run } = setup();
+    const exit = await run(anonymously(Redacted.make("too-short")));
+    expect(exit).toEqual(rejected("account-key-malformed"));
+    expect(await Effect.runPromise(users.userCount)).toBe(0);
+  });
+
+  it("joins the account that won a race for the same new key", async () => {
+    const memory = makeInMemoryAuthRepository().repository;
+    let racing = true;
+    const { users, run } = setup(
+      {
+        // The other first sign-in saves the key between our lookup and our save.
+        findAccountKey: (keyHash) => (racing ? Effect.succeedNone : memory.findAccountKey(keyHash)),
+        saveAccountKey: (keyHash, userId, at) =>
+          Effect.gen(function* () {
+            if (racing) {
+              racing = false;
+              yield* memory.saveAccountKey(keyHash, Schema.decodeSync(UserIdSchema)("winner"), at);
+            }
+            return yield* memory.saveAccountKey(keyHash, userId, at);
+          }),
+      },
+      {
+        startSession: (userId) =>
+          Effect.succeed({
+            sessionToken: Schema.decodeSync(SessionToken)("w".repeat(32)),
+            userId,
+            deviceId: Schema.decodeSync(DeviceIdSchema)("device-winner"),
+            expiresAt: 1,
+          }),
+      },
+    );
+    const session = await value(run(anonymously(accountKey("a"))));
+    expect(session.userId).toBe("winner");
+    // The losing session is ended; only the user it opened is left behind, unreachable.
+    expect(await Effect.runPromise(users.dump)).toContain('"sessions":[]');
+  });
+});
+
+describe("AuthService linking", () => {
+  const link = (sessionToken: string, subject: string) =>
+    Effect.gen(function* () {
+      const auth = yield* service;
+      const { nonce } = yield* auth.issueChallenge;
+      return yield* auth.linkApple(Redacted.make(sessionToken), identityToken(subject, nonce));
+    });
+
+  it("links an anonymous account to Apple and keeps the same user", async () => {
+    const { run } = setup();
+    const result = await value(
+      run(
+        Effect.gen(function* () {
+          const auth = yield* service;
+          const anonymous = yield* auth.signInAnonymously(accountKey("a"));
+          const before = yield* auth.account(Redacted.make(anonymous.sessionToken));
+          const linked = yield* link(anonymous.sessionToken, "subject-a");
+          const after = yield* auth.account(Redacted.make(anonymous.sessionToken));
+          // A new phone without the keychain signs in with Apple and lands in the same account.
+          const restored = yield* signIn("subject-a");
+          return { anonymous, before, linked, after, restored };
+        }),
+      ),
+    );
+    expect(result.before).toEqual({ userId: result.anonymous.userId, linked: false });
+    expect(result.linked).toEqual({ userId: result.anonymous.userId, linked: true });
+    expect(result.after).toEqual({ userId: result.anonymous.userId, linked: true });
+    expect(result.restored.userId).toBe(result.anonymous.userId);
+  });
+
+  it("refuses an Apple ID that belongs to another account", async () => {
+    const { run } = setup();
+    const exit = await run(
+      Effect.gen(function* () {
+        yield* signIn("subject-a");
+        const auth = yield* service;
+        const anonymous = yield* auth.signInAnonymously(accountKey("a"));
+        return yield* link(anonymous.sessionToken, "subject-a");
+      }),
+    );
+    expect(exit).toEqual(Exit.fail(new AppleIdInUse()));
+  });
+
+  it("refuses a caller without a live session before verifying anything", async () => {
+    const { run } = setup();
+    const exit = await run(link("x".repeat(43), "subject-a"));
+    expect(exit).toEqual(rejected("session-not-live"));
+  });
+
+  it("refuses a replayed identity token", async () => {
+    const { run } = setup();
+    const exit = await run(
+      Effect.gen(function* () {
+        const auth = yield* service;
+        const { sessionToken } = yield* auth.signInAnonymously(accountKey("a"));
+        const { nonce } = yield* auth.issueChallenge;
+        yield* auth.linkApple(Redacted.make(sessionToken), identityToken("subject-a", nonce));
+        return yield* auth.linkApple(
+          Redacted.make(sessionToken),
+          identityToken("subject-a", nonce),
+        );
+      }),
+    );
+    expect(exit).toEqual(rejected("nonce-not-live"));
   });
 });
 
@@ -237,7 +373,7 @@ describe("AuthService authenticate", () => {
   });
 
   it("refuses a malformed token without reading storage", async () => {
-    const { run } = setup({ findSession: () => Effect.die("storage must not be read") });
+    const { run } = setup({}, { findSession: () => Effect.die("storage must not be read") });
     const exit = await run(
       Effect.flatMap(service, (auth) => auth.authenticate(Redacted.make("short"))),
     );
@@ -292,35 +428,6 @@ describe("AuthService authenticate", () => {
     expect(Exit.isSuccess(exit)).toBe(true);
   });
 
-  it("writes the renewal at most once a day", async () => {
-    let writes = 0;
-    const memory = makeInMemoryAuthRepository().repository;
-    const { run } = setup({
-      createSession: memory.createSession,
-      findSession: memory.findSession,
-      extendSession: (hash, expiresAt) => {
-        writes += 1;
-        return memory.extendSession(hash, expiresAt);
-      },
-    });
-    await value(
-      run(
-        Effect.gen(function* () {
-          const { sessionToken } = yield* signIn();
-          const auth = yield* service;
-          const use = auth.authenticate(Redacted.make(sessionToken));
-          yield* use;
-          yield* TestClock.adjust(Duration.hours(23));
-          yield* use;
-          yield* TestClock.adjust(Duration.hours(2));
-          yield* use;
-          yield* use;
-        }),
-      ),
-    );
-    expect(writes).toBe(1);
-  });
-
   it("refuses a token after sign-out", async () => {
     const { run } = setup();
     const exit = await run(
@@ -361,26 +468,5 @@ describe("AuthService push tokens", () => {
         updatedAt: startMillis,
       },
     ]);
-  });
-
-  it("stops a signed-out device from receiving pushes", async () => {
-    const { memory, run } = setup();
-    const stored = await value(
-      run(
-        Effect.gen(function* () {
-          const { sessionToken, deviceId } = yield* signIn();
-          const auth = yield* service;
-          const principal = yield* auth.authenticate(Redacted.make(sessionToken));
-          yield* auth.registerPushToken(principal, {
-            kind: "widget",
-            environment: "sandbox",
-            token: token("aa".repeat(32)),
-          });
-          yield* auth.signOut(principal);
-          return yield* memory.repository.listPushTokens(deviceId);
-        }),
-      ),
-    );
-    expect(stored).toEqual([]);
   });
 });

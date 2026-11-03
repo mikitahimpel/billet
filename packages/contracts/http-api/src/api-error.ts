@@ -10,5 +10,7 @@ export const ApiError = Schema.TaggedUnion({
   NotFound: {},
   InvalidInvite: {},
   AlreadyPaired: {},
+  /** This Apple ID is already linked to another account, so it can't be linked to the caller's. */
+  AppleIdInUse: {},
 });
 export type ApiError = typeof ApiError.Type;

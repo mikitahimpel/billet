@@ -28,7 +28,10 @@ describe("events route", () => {
     AuthService,
     AuthService.of({
       issueChallenge: Effect.die("unused"),
+      signInAnonymously: () => Effect.die("unused"),
       signInWithApple: () => Effect.die("unused"),
+      linkApple: () => Effect.die("unused"),
+      account: () => Effect.die("unused"),
       signOut: () => Effect.die("unused"),
       registerPushToken: () => Effect.die("unused"),
       authenticate: (token) => {

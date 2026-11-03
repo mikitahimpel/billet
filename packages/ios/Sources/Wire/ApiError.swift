@@ -5,6 +5,8 @@ public enum ApiError: Codable, Hashable, Sendable {
   case notFound
   case invalidInvite
   case alreadyPaired
+  /// The Apple ID is already linked to another account.
+  case appleIdInUse
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -20,6 +22,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "NotFound": self = .notFound
     case "InvalidInvite": self = .invalidInvite
     case "AlreadyPaired": self = .alreadyPaired
+    case "AppleIdInUse": self = .appleIdInUse
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -35,6 +38,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .notFound: try container.encode("NotFound", forKey: .tag)
     case .invalidInvite: try container.encode("InvalidInvite", forKey: .tag)
     case .alreadyPaired: try container.encode("AlreadyPaired", forKey: .tag)
+    case .appleIdInUse: try container.encode("AppleIdInUse", forKey: .tag)
     }
   }
 }

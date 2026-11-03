@@ -1,23 +1,30 @@
-import { and, eq, inArray, lte, ne, sql } from "drizzle-orm";
-import { Effect, Layer, Schema } from "effect";
+import { and, eq, lt, lte, ne, notInArray } from "drizzle-orm";
+import { Effect, Layer, Option, Schema } from "effect";
 import { AuthUnavailable } from "@billet/backend-auth/auth-error";
-import {
-  AuthRepository,
-  PushTokenRecord,
-  SessionRecord,
-} from "@billet/backend-auth/auth-repository";
+import { AuthRepository, PushTokenRecord } from "@billet/backend-auth/auth-repository";
 import { UserId } from "@billet/contracts-domain/ids";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
-import { authChallenges, devices, pushTokens, sessions, users } from "./directory-schema.ts";
+import {
+  accountKeys,
+  authChallenges,
+  authSessions,
+  devices,
+  pushTokens,
+} from "./directory-schema.ts";
+
+/**
+ * A device is made just before its session, so one without a session is either signed out by
+ * Better Auth itself or mid sign-in. Only the first kind is old.
+ */
+const orphanGrace = 60 * 60 * 1000;
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const unavailable = () => new AuthUnavailable({ reason: "directory-unavailable" });
 
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
-const decodeSession = Schema.decodeUnknownEffect(SessionRecord);
 const decodePushTokens = Schema.decodeUnknownEffect(Schema.Array(PushTokenRecord));
-const decodeCreatedUser = Schema.decodeUnknownEffect(Schema.Tuple([Schema.Struct({ id: UserId })]));
+const decodeUserIds = Schema.decodeUnknownEffect(Schema.Array(Schema.Struct({ userId: UserId })));
 
 const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
   AuthRepository.of({
@@ -32,78 +39,23 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
           .returning({ expiresAt: authChallenges.expiresAt }),
       ).pipe(Effect.map((deleted) => deleted.some(({ expiresAt }) => expiresAt > now))),
 
-    createSession: (session) => {
-      const userId = sql`(${db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.appleSubject, session.appleSubject))})`;
-      return guarded(
-        atomically(db, [
-          db
-            .insert(users)
-            .values({
-              id: session.candidateUserId,
-              appleSubject: session.appleSubject,
-              createdAt: session.createdAt,
-            })
-            .onConflictDoNothing({ target: users.appleSubject }),
-          db.insert(devices).values({ id: session.deviceId, userId, createdAt: session.createdAt }),
-          db.insert(sessions).values({
-            tokenHash: session.sessionHash,
-            deviceId: session.deviceId,
-            createdAt: session.createdAt,
-            expiresAt: session.expiresAt,
-          }),
-          db
-            .select({ id: users.id })
-            .from(users)
-            .where(eq(users.appleSubject, session.appleSubject)),
-        ]).pipe(
-          Effect.flatMap((results) => decodeCreatedUser(results[3])),
-          Effect.map(([user]) => user.id),
-        ),
-      );
-    },
-
-    findSession: (sessionHash, now) =>
+    findAccountKey: (keyHash) =>
       guarded(
         db
-          .select({
-            userId: devices.userId,
-            deviceId: sessions.deviceId,
-            expiresAt: sessions.expiresAt,
-          })
-          .from(sessions)
-          .innerJoin(devices, eq(devices.id, sessions.deviceId))
-          .where(eq(sessions.tokenHash, sessionHash))
-          .pipe(
-            Effect.flatMap(([row]) =>
-              row === undefined || row.expiresAt <= now
-                ? Effect.succeedNone
-                : Effect.asSome(decodeSession(row)),
-            ),
-          ),
-      ),
+          .select({ userId: accountKeys.userId })
+          .from(accountKeys)
+          .where(eq(accountKeys.keyHash, keyHash))
+          .pipe(Effect.flatMap(decodeUserIds)),
+      ).pipe(Effect.map(([row]) => (row === undefined ? Option.none() : Option.some(row.userId)))),
 
-    extendSession: (sessionHash, expiresAt) =>
-      guarded(
-        db.update(sessions).set({ expiresAt }).where(eq(sessions.tokenHash, sessionHash)),
-      ).pipe(Effect.asVoid),
-
-    revokeSession: (sessionHash) =>
+    saveAccountKey: (keyHash, userId, createdAt) =>
       guarded(
         db
-          .delete(devices)
-          .where(
-            inArray(
-              devices.id,
-              db
-                .select({ id: sessions.deviceId })
-                .from(sessions)
-                .where(eq(sessions.tokenHash, sessionHash)),
-            ),
-          ),
-      ).pipe(Effect.asVoid),
+          .insert(accountKeys)
+          .values({ keyHash, userId, createdAt })
+          .onConflictDoNothing({ target: accountKeys.keyHash })
+          .returning({ keyHash: accountKeys.keyHash }),
+      ).pipe(Effect.map((inserted) => inserted.length === 1)),
 
     savePushToken: (deviceId, record) => {
       const { environment, kind, token, updatedAt } = record;
@@ -146,18 +98,18 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
     deleteExpired: (now) =>
       guarded(
         atomically(db, [
+          db.delete(authChallenges).where(lte(authChallenges.expiresAt, now)),
+          // Better Auth's dates are ISO text, which sorts in time order.
+          db.delete(authSessions).where(lte(authSessions.expiresAt, new Date(now).toISOString())),
+          // Its push tokens and anything else of the device's go with it.
           db
             .delete(devices)
             .where(
-              inArray(
-                devices.id,
-                db
-                  .select({ id: sessions.deviceId })
-                  .from(sessions)
-                  .where(lte(sessions.expiresAt, now)),
+              and(
+                lt(devices.createdAt, now - orphanGrace),
+                notInArray(devices.id, db.select({ id: authSessions.deviceId }).from(authSessions)),
               ),
             ),
-          db.delete(authChallenges).where(lte(authChallenges.expiresAt, now)),
         ]),
       ).pipe(Effect.asVoid),
   });

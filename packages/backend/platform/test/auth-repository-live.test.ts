@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { Effect, Exit, Layer, Scope, Schema } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
-import { AuthRepository, type NewSession } from "@billet/backend-auth/auth-repository";
+import { AuthRepository } from "@billet/backend-auth/auth-repository";
 import { describeAuthRepositoryContract } from "@billet/backend-auth/test/auth-repository-contract";
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { PushToken } from "@billet/contracts-domain/push-token";
@@ -20,15 +20,32 @@ const device = Schema.decodeSync(DeviceId);
 const user = Schema.decodeSync(UserId);
 const pushToken = Schema.decodeSync(PushToken);
 
-const newSession = (overrides: Partial<NewSession> = {}): NewSession => ({
-  appleSubject: "subject-a",
-  candidateUserId: user("user-a"),
-  deviceId: device("device-a"),
-  sessionHash: "hash-a",
-  createdAt: 1_000,
-  expiresAt: 2_000,
-  ...overrides,
-});
+/** A user and a device of theirs, as a sign-in leaves them. */
+const seedDevice = async (deviceId: string, userId: string, createdAt = Date.now()) => {
+  await env.DB.batch([
+    env.DB.prepare("INSERT INTO users (id, created_at) VALUES (?, 1) ON CONFLICT DO NOTHING").bind(
+      userId,
+    ),
+    env.DB.prepare("INSERT INTO devices (id, user_id, created_at) VALUES (?, ?, ?)").bind(
+      deviceId,
+      userId,
+      createdAt,
+    ),
+  ]);
+};
+
+/** A Better Auth session on a seeded device, expiring at `expiresAt`. */
+const seedSession = async (deviceId: string, userId: string, expiresAt: number) => {
+  const iso = new Date(expiresAt).toISOString();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO auth_user (id, name, email, email_verified, created_at, updated_at) VALUES (?, '', ?, 0, ?, ?) ON CONFLICT DO NOTHING",
+    ).bind(userId, `${userId}@test.invalid`, iso, iso),
+    env.DB.prepare(
+      "INSERT INTO auth_session (id, token, user_id, device_id, expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).bind(`session-${deviceId}`, `hash-${deviceId}`, userId, deviceId, iso, iso, iso),
+  ]);
+};
 
 const countOf = async (table: string) =>
   (await env.DB.prepare(`SELECT count(*) AS total FROM ${table}`).first<{ total: number }>())
@@ -36,7 +53,7 @@ const countOf = async (table: string) =>
 
 describeAuthRepositoryContract("D1", async () => {
   await resetDirectory();
-  return repositoryOn(env.DB);
+  return { repository: await repositoryOn(env.DB), seedDevice };
 });
 
 describe("AuthRepositoryLive on D1", () => {
@@ -53,41 +70,28 @@ describe("AuthRepositoryLive on D1", () => {
     expect(results.filter(Boolean)).toHaveLength(1);
   });
 
-  it("gives concurrent first sign-ins of one subject the same user", async () => {
+  it("keeps one user for a key that many first sign-ins save at once", async () => {
     const repository = await repositoryOn(env.DB);
-    const ids = await Promise.all(
-      ["a", "b", "c"].map((name) =>
-        Effect.runPromise(
-          repository.createSession(
-            newSession({
-              candidateUserId: user(`user-${name}`),
-              deviceId: device(`device-${name}`),
-              sessionHash: `hash-${name}`,
-            }),
-          ),
-        ),
+    const names = ["a", "b", "c", "d"];
+    for (const name of names) await seedDevice(`device-${name}`, `user-${name}`);
+    const saved = await Promise.all(
+      names.map((name) =>
+        Effect.runPromise(repository.saveAccountKey("key", user(`user-${name}`), 1)),
       ),
     );
-    expect(new Set(ids).size).toBe(1);
-    expect(await countOf("users")).toBe(1);
-    expect(await countOf("devices")).toBe(3);
+    expect(saved.filter(Boolean)).toHaveLength(1);
+    expect(await countOf("account_keys")).toBe(1);
   });
 
-  it("writes nothing when any step of creating a session fails", async () => {
+  it("forgets a user's account keys with the user", async () => {
     const repository = await repositoryOn(env.DB);
-    await Effect.runPromise(repository.createSession(newSession()));
-    const exit = await Effect.runPromiseExit(
-      repository.createSession(
-        newSession({
-          appleSubject: "subject-b",
-          candidateUserId: user("user-b"),
-          deviceId: device("device-b"),
-        }),
-      ),
-    );
-    expect(Exit.isFailure(exit)).toBe(true);
-    expect(await countOf("users")).toBe(1);
-    expect(await countOf("devices")).toBe(1);
+    await seedDevice("device-a", "user-a");
+    await Effect.runPromise(repository.saveAccountKey("key", user("user-a"), 1));
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM devices"),
+      env.DB.prepare("DELETE FROM users"),
+    ]);
+    expect(await countOf("account_keys")).toBe(0);
   });
 
   it("keeps a token on its old device when moving it fails", async () => {
@@ -98,7 +102,7 @@ describe("AuthRepositoryLive on D1", () => {
       token: pushToken("aa".repeat(32)),
       updatedAt: 1,
     } as const;
-    await Effect.runPromise(repository.createSession(newSession()));
+    await seedDevice("device-a", "user-a");
     await Effect.runPromise(repository.savePushToken(device("device-a"), record));
     const exit = await Effect.runPromiseExit(
       repository.savePushToken(device("no-such-device"), record),
@@ -108,41 +112,35 @@ describe("AuthRepositoryLive on D1", () => {
     expect(kept).toHaveLength(1);
   });
 
-  it("removes the device and its tokens on sign-out, and keeps the user", async () => {
+  it("removes expired sessions with their devices and tokens, and old devices with none", async () => {
     const repository = await repositoryOn(env.DB);
-    await Effect.runPromise(repository.createSession(newSession()));
+    const now = Date.now();
+    await seedDevice("device-expired", "user-a");
+    await seedSession("device-expired", "user-a", now - 1);
+    await seedDevice("device-live", "user-a");
+    await seedSession("device-live", "user-a", now + 60_000);
+    await seedDevice("device-orphan", "user-a", now - 2 * 60 * 60 * 1000);
+    await seedDevice("device-signing-in", "user-a");
     await Effect.runPromise(
-      repository.savePushToken(device("device-a"), {
+      repository.savePushToken(device("device-expired"), {
         kind: "alert",
         environment: "sandbox",
         token: pushToken("aa".repeat(32)),
         updatedAt: 1,
       }),
     );
-    await Effect.runPromise(repository.revokeSession("hash-a"));
-    expect(await countOf("sessions")).toBe(0);
-    expect(await countOf("devices")).toBe(0);
+    await Effect.runPromise(repository.deleteExpired(now));
+    const remaining = await env.DB.prepare("SELECT id FROM devices ORDER BY id").all();
+    expect(remaining.results).toEqual([{ id: "device-live" }, { id: "device-signing-in" }]);
+    expect(await countOf("auth_session")).toBe(1);
     expect(await countOf("push_tokens")).toBe(0);
     expect(await countOf("users")).toBe(1);
-  });
-
-  it("removes an expired session's device, and leaves other devices alone", async () => {
-    const repository = await repositoryOn(env.DB);
-    await Effect.runPromise(repository.createSession(newSession()));
-    await Effect.runPromise(
-      repository.createSession(
-        newSession({ deviceId: device("device-b"), sessionHash: "hash-b", expiresAt: 4_000 }),
-      ),
-    );
-    await Effect.runPromise(repository.deleteExpired(3_000));
-    const remaining = await env.DB.prepare("SELECT id FROM devices").all();
-    expect(remaining.results).toEqual([{ id: "device-b" }]);
   });
 
   it.each([
     [
       "a single statement",
-      (repository: AuthRepository["Service"]) => repository.findSession("h", 1),
+      (repository: AuthRepository["Service"]) => repository.findAccountKey("h"),
     ],
     ["a batch", (repository: AuthRepository["Service"]) => repository.deleteExpired(1)],
   ])("reports AuthUnavailable when %s fails", async (_, run) => {

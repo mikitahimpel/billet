@@ -25,7 +25,10 @@ import Testing
     let contract = try Self.contractRoutes()
     let mirrored: [String: Route] = [
       "authChallenge": Routes.authChallenge,
+      "authAnonymous": Routes.authAnonymous,
       "authApple": Routes.authApple,
+      "authAppleLink": Routes.authAppleLink,
+      "getAccount": Routes.getAccount,
       "authSignOut": Routes.authSignOut,
       "registerPushToken": Routes.registerPushToken,
       "createInvite": Routes.createInvite,

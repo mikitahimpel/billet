@@ -7,9 +7,17 @@ import { socketRoute } from "@billet/contracts-realtime/socket-route";
 it("pins the routes that clients call", () => {
   expect({ ...routes, socket: socketRoute }).toMatchInlineSnapshot(`
     {
+      "authAnonymous": {
+        "method": "POST",
+        "path": "/v1/auth/anonymous",
+      },
       "authApple": {
         "method": "POST",
         "path": "/v1/auth/apple",
+      },
+      "authAppleLink": {
+        "method": "POST",
+        "path": "/v1/auth/apple/link",
       },
       "authChallenge": {
         "method": "POST",
@@ -30,6 +38,10 @@ it("pins the routes that clients call", () => {
       "downloadImage": {
         "method": "GET",
         "path": "/v1/media/*",
+      },
+      "getAccount": {
+        "method": "GET",
+        "path": "/v1/account",
       },
       "getFlags": {
         "method": "GET",

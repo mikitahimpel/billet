@@ -8,23 +8,27 @@ import {
 } from "effect/http";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import {
+  AccountResponse,
   AuthChallengeResponse,
   SessionResponse,
+  SignInAnonymouslyRequest,
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { authorizationHeader, bearerPrefix, routes } from "@billet/contracts-http-api/routes";
-import { AuthRejected, type AuthUnavailable } from "./auth-error.ts";
+import { type AppleIdInUse, AuthRejected, type AuthUnavailable } from "./auth-error.ts";
 import { AuthService, type Principal } from "./auth-service.ts";
 
 const respondError = HttpServerResponse.schemaJson(ApiError);
 const respondChallenge = HttpServerResponse.schemaJson(AuthChallengeResponse);
 const respondSession = HttpServerResponse.schemaJson(SessionResponse);
+const respondAccount = HttpServerResponse.schemaJson(AccountResponse);
 
 /** These responses carry credentials or one-time values. */
 const noStore = { "cache-control": "no-store" };
 
 export type RouteFailure =
+  | AppleIdInUse
   | AuthRejected
   | AuthUnavailable
   | HttpBody.HttpBodyError
@@ -40,6 +44,8 @@ export const respondFailures = <R>(
 ) =>
   effect.pipe(
     Effect.catchTags({
+      AppleIdInUse: () =>
+        respondError(ApiError.cases.AppleIdInUse.make({}), { status: 409, headers: noStore }),
       AuthRejected: ({ reason }) =>
         Effect.logInfo("auth rejected", reason).pipe(
           Effect.andThen(respondError(ApiError.cases.Unauthorized.make({}), { status: 401 })),
@@ -83,6 +89,16 @@ export const AuthRoutes = HttpRouter.use((router) =>
     );
 
     yield* router.add(
+      routes.authAnonymous.method,
+      routes.authAnonymous.path,
+      Effect.gen(function* () {
+        const body = yield* HttpServerRequest.schemaBodyJson(SignInAnonymouslyRequest);
+        const session = yield* auth.signInAnonymously(Redacted.make(body.accountKey));
+        return yield* respondSession(session, { headers: noStore });
+      }).pipe(respondFailures),
+    );
+
+    yield* router.add(
       routes.authApple.method,
       routes.authApple.path,
       Effect.gen(function* () {
@@ -90,6 +106,28 @@ export const AuthRoutes = HttpRouter.use((router) =>
         const session = yield* auth.signInWithApple(Redacted.make(body.identityToken));
         return yield* respondSession(session, { headers: noStore });
       }).pipe(respondFailures),
+    );
+
+    yield* router.add(
+      routes.authAppleLink.method,
+      routes.authAppleLink.path,
+      Effect.gen(function* () {
+        const token = yield* bearerToken;
+        // The caller is checked before the body is read, as on every authenticated route.
+        yield* auth.authenticate(token);
+        const body = yield* HttpServerRequest.schemaBodyJson(SignInWithAppleRequest);
+        const account = yield* auth.linkApple(token, Redacted.make(body.identityToken));
+        return yield* respondAccount(account, { headers: noStore });
+      }).pipe(respondFailures),
+    );
+
+    yield* router.add(
+      routes.getAccount.method,
+      routes.getAccount.path,
+      Effect.flatMap(bearerToken, auth.account).pipe(
+        Effect.flatMap((account) => respondAccount(account, { headers: noStore })),
+        respondFailures,
+      ),
     );
 
     yield* router.add(
