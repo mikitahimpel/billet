@@ -174,5 +174,37 @@
   "base": "stand",
   "trimStart": 66.2,
   "trimEnd": 68.4
+ },
+ "sniff": {
+  "first": 2063,
+  "last": 2129,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 68.7333,
+  "trimEnd": 70.9333
+ },
+ "wave": {
+  "first": 2139,
+  "last": 2199,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 71.2667,
+  "trimEnd": 73.2667
+ },
+ "grab": {
+  "first": 2209,
+  "last": 2263,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 73.6,
+  "trimEnd": 75.4
+ },
+ "dangle": {
+  "first": 2273,
+  "last": 2363,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 75.7333,
+  "trimEnd": 78.7333
  }
 }

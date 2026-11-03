@@ -17,11 +17,23 @@
   "trimEnd": 17.3333,
   "trimStart": 16.3333
  },
+ "dangle": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 78.7333,
+  "trimStart": 75.7333
+ },
  "eat": {
   "base": "stand",
   "loops": true,
   "trimEnd": 23.5,
   "trimStart": 19.5
+ },
+ "grab": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 75.4,
+  "trimStart": 73.6
  },
  "groom": {
   "base": "sit",
@@ -101,6 +113,12 @@
   "trimEnd": 52.5,
   "trimStart": 50.0
  },
+ "sniff": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 70.9333,
+  "trimStart": 68.7333
+ },
  "stretch": {
   "base": "stand",
   "loops": false,
@@ -124,6 +142,12 @@
   "loops": true,
   "trimEnd": 5.3333,
   "trimStart": 4.3333
+ },
+ "wave": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 73.2667,
+  "trimStart": 71.2667
  },
  "yawn": {
   "base": "sit",
