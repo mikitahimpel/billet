@@ -1071,6 +1071,8 @@ final class GenzRoom: CatPlayStage {
     } else if let pose = stepBrain(step) {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
+      // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
+      rate = Float(brainBody.frame?.tempo ?? 1)
       if pose.action == .walk { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }

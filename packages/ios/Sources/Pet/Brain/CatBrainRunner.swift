@@ -10,6 +10,7 @@ public struct CatBrainRunner: Sendable {
   public var live: CatInteraction?
   private var checkpoints: [CatBrain] = []
   private let seed: UInt64
+  private let temperament: CatTemperament?
   private let personality: CatPersonality?
   private let config: CatBrainConfig
 
@@ -19,15 +20,18 @@ public struct CatBrainRunner: Sendable {
 
   public init(
     events: some Sequence<LifeEvent>, now: Double, context: LifeContext, seed: UInt64,
-    personality: CatPersonality? = nil, room: RoomAffordances, weather: ViewWeather = .clear,
+    temperament: CatTemperament? = nil, personality: CatPersonality? = nil,
+    room: RoomAffordances, weather: ViewWeather = .clear,
     lifeConfig: LifeConfig = .standard, config: CatBrainConfig = .standard
   ) {
     self.seed = seed
+    self.temperament = temperament
     self.personality = personality
     self.config = config
     sampler = CatLifeSampler(events: events, context: context, config: lifeConfig)
     brain = Self.start(
-      sampler: &sampler, now: now, seed: seed, personality: personality, room: room,
+      sampler: &sampler, now: now, seed: seed, temperament: temperament,
+      personality: personality, room: room,
       weather: weather, config: config)
     advance(to: now)
   }
@@ -69,7 +73,8 @@ public struct CatBrainRunner: Sendable {
     } else {
       checkpoints.removeAll()
       brain = Self.start(
-        sampler: &sampler, now: now, seed: seed, personality: personality, room: brain.room,
+        sampler: &sampler, now: now, seed: seed, temperament: temperament,
+        personality: personality, room: brain.room,
         weather: brain.weather, config: config)
     }
     advance(to: now)
@@ -85,12 +90,14 @@ public struct CatBrainRunner: Sendable {
   /// The brain at `now` for these events, worked out from scratch. Both phones get the same.
   public static func replay(
     events: some Sequence<LifeEvent>, now: Double, context: LifeContext, seed: UInt64,
-    personality: CatPersonality? = nil, room: RoomAffordances, weather: ViewWeather = .clear,
+    temperament: CatTemperament? = nil, personality: CatPersonality? = nil,
+    room: RoomAffordances, weather: ViewWeather = .clear,
     lifeConfig: LifeConfig = .standard, config: CatBrainConfig = .standard
   ) -> CatBrain {
     var sampler = CatLifeSampler(events: events, context: context, config: lifeConfig)
     var brain = start(
-      sampler: &sampler, now: now, seed: seed, personality: personality, room: room,
+      sampler: &sampler, now: now, seed: seed, temperament: temperament,
+      personality: personality, room: room,
       weather: weather, config: config)
     brain.advance(to: now, life: &sampler)
     return brain
@@ -99,7 +106,8 @@ public struct CatBrainRunner: Sendable {
   /// A brain at the start of the day `now` falls in, or at the pet's birth if later, with the
   /// events before it remembered and the rest scheduled.
   private static func start(
-    sampler: inout CatLifeSampler, now: Double, seed: UInt64, personality: CatPersonality?,
+    sampler: inout CatLifeSampler, now: Double, seed: UInt64, temperament: CatTemperament?,
+    personality: CatPersonality?,
     room: RoomAffordances, weather: ViewWeather, config: CatBrainConfig
   ) -> CatBrain {
     let context = sampler.context
@@ -107,10 +115,13 @@ public struct CatBrainRunner: Sendable {
     let born = context.born?.timeIntervalSince1970 ?? sampler.all.first?.at.timeIntervalSince1970
     let start = min(max(dayStart, born ?? dayStart), now)
     let day = CatBrain.opening(
-      at: start, seed: seed, nature: personality ?? .seeded(seed), room: room, weather: weather,
+      at: start, seed: seed, temperament: temperament,
+      nature: personality ?? CatBrain.nature(seed: seed, temperament: temperament), room: room,
+      weather: weather,
       sampler: &sampler, utcOffset: context.utcOffset, config: config)
     var brain = CatBrain(
-      seed: seed, personality: personality, day: day, room: room, weather: weather,
+      seed: seed, temperament: temperament, personality: personality, day: day, room: room,
+      weather: weather,
       start: start, life: sampler.sample(at: start), utcOffset: context.utcOffset,
       lifeConfig: sampler.config, config: config)
     brain.remember(sampler.all.filter { $0.at.timeIntervalSince1970 < brain.time })
@@ -135,7 +146,8 @@ extension CatBrain {
   /// memory of a rehearsal of the day before from its own canonical start. The rehearsal starts
   /// with no memory, so it reaches back one day only, and both phones work out the same.
   public static func opening(
-    at t: Double, seed: UInt64, nature: CatPersonality, room: RoomAffordances,
+    at t: Double, seed: UInt64, temperament: CatTemperament? = nil, nature: CatPersonality,
+    room: RoomAffordances,
     weather: ViewWeather, sampler: inout CatLifeSampler, utcOffset: Int, config: CatBrainConfig
   ) -> CatDay {
     let personality = nature.drifted(by: sampler.all, at: t)
@@ -146,7 +158,7 @@ extension CatBrain {
     let start = max(t - 86400, birth ?? t)
     guard start < t else { return CatDay(personality: personality) }
     var rehearsal = CatBrain(
-      seed: seed, personality: nature,
+      seed: seed, temperament: temperament, personality: nature,
       day: CatDay(personality: nature.drifted(by: sampler.all, at: start)), room: room,
       weather: weather, start: start, life: sampler.sample(at: start), utcOffset: utcOffset,
       lifeConfig: sampler.config, config: config)

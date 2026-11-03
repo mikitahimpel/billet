@@ -64,6 +64,7 @@ public struct BrainDebugOverlay: View {
       line(Self.describe(move), Palette.muted)
     }
     section("Cat")
+    line(Self.temperament(brain.temperament), Palette.paper)
     line(Self.traits(brain.personality, nature: brain.nature), Palette.paper)
     line(memorySummary, Palette.paper)
   }
@@ -95,11 +96,13 @@ public struct BrainDebugOverlay: View {
     Array(scores.sorted { $0.score > $1.score }.prefix(5))
   }
 
-  /// One score and the factors that made it, such as `Rest 2.31 n1.9 p1.2 t1.4 r1.3 v1`.
+  /// One score and the factors that made it, such as `Rest 2.31 n1.9 p1.2 k2.4 t1.4 r1.3 v1`,
+  /// where k is the temperament's lean.
   static func describe(_ score: CatUtilityScore) -> String {
     func f(_ value: Double) -> String { String(format: "%.2g", value) }
     let factors = [
-      "n\(f(score.need))", "p\(f(score.personality))", "t\(f(score.time))", "r\(f(score.room))",
+      "n\(f(score.need))", "p\(f(score.personality))", "k\(f(score.temperament))",
+      "t\(f(score.time))", "r\(f(score.room))",
       "b\(f(score.novelty))", "m\(f(score.mood))", "v\(f(score.vitality))",
     ]
     return "\(score.group.title) \(String(format: "%.2f", score.score)) "
@@ -110,6 +113,14 @@ public struct BrainDebugOverlay: View {
     let time = Date(timeIntervalSince1970: move.at).formatted(
       .dateTime.hour(.twoDigits(amPM: .omitted)).minute().second())
     return "\(time) \(move.cause.rawValue) → \(move.to.step.rawValue)"
+  }
+
+  /// The temperament and what it sets in the body: tempo, amplitude and personal space.
+  static func temperament(_ temperament: CatTemperament?) -> String {
+    guard let temperament else { return "no temperament" }
+    func f(_ value: Double) -> String { String(format: "%.2f", value) }
+    return "\(temperament.title) tempo\(f(temperament.tempo)) amp\(f(temperament.amplitude)) "
+      + "space\(f(temperament.personalSpace))"
   }
 
   /// Each trait as today's value, with the change experience made to it.

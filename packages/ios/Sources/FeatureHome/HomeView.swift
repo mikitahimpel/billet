@@ -108,7 +108,8 @@ struct HomeView: View {
       .task { await keepSealedNotesCurrent() }
       .task(id: session.life.speed) { await session.life.run() }
       .task(id: session.labs.cat) {
-        session.brain.setSeed(CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat))
+        let seed = CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat)
+        session.brain.setSeed(seed, temperament: session.labs.temperament(forSeed: seed))
         await session.brain.run()
       }
       .onChange(of: session.shop.state.treatsUsed) { old, new in
