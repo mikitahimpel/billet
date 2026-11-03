@@ -57,8 +57,9 @@ import Testing
   @Test(arguments: [RoomStyle.sunsetLamp, .windowSeat])
   func theShellIsOneModelPerColour(_ style: RoomStyle) async throws {
     let layout = try #require(GenzLayout.of(style))
+    let kit = GenzKit()
     let room = GenzRoom(
-      layout: layout, kit: GenzKit(), cats: GenzCatSource(),
+      layout: layout, kit: kit, cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "shell-\(UUID())")!, key: layout.key))
     room.startBuilding()
     let deadline = Date.now.addingTimeInterval(60)
@@ -71,7 +72,7 @@ import Testing
       guard let model = entity as? ModelEntity else { return }
       models += 1
       if let material = model.model?.materials.first as? PhysicallyBasedMaterial,
-        let key = MatteKey(material)
+        let key = MatteKey(material, textures: kit.textures)
       {
         keys.append(key)
       }
