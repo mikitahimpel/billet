@@ -155,6 +155,34 @@ returns to `lit`. Streak repair is post-launch.
 Before day 30 there's no chimney, so no chimney heart. The bedroom's heart, the paired objects and
 the widget's steam carry the love until then, which makes the big heart something earned.
 
+### The streak's flame
+
+Tapping the streak chip on a styled Home opens the flame: the first-launch windowsill at night,
+the room's own view through the window, and a flame in the middle of the sill. It is the streak
+felt rather than counted, so it has its own nine stages (`FlameStage`) instead of the house's five:
+the house is drawn art that must stay few, while the flame is code whose size, colour, sparks,
+halo and light all follow one continuous `growth`, so more stages cost nothing.
+
+| Stage | Streak | Holder |
+| --- | --- | --- |
+| `ember` | 0 | a clay saucer with a glowing coal |
+| `spark` | 1–2 | the saucer |
+| `candle`, `steady` | 3–13 | a short candle in the saucer |
+| `lantern` | 14–29 | a little lantern round the candle |
+| `hearth`, `fire`, `beacon`, `everglow` | 30–59, 60–99, 100–364, 365+ | a brazier with 2, 3, then 4 logs |
+
+- **Shared.** Two tongues twist round each other, honey for this phone and rose for the partner.
+  Whoever added today (a note either way, or the day's treat) burns a little brighter.
+- **Never punished.** A broken streak rests as a warm ember that breathes; it never goes dark, and
+  no copy says what was lost. The next shared day rekindles it with a small burst.
+- **Once.** Each phone remembers its last visit (`FlameMemory`): a stage reached is celebrated
+  once with sparks and a haptic, a rekindling is seen once, and a new note gives a gentle pulse.
+- **Cheap.** Unlit meshes, at most 40 spark cubes, one point light, the bloom drawn flat in one
+  `Canvas`, and nothing stepped while it is off screen. Reduce Motion keeps the camera still,
+  slows the flicker and drops the thrown sparks.
+
+The small widget's streak picture draws the same flame flat (`FlameGlyph`) behind the plate.
+
 ## Notes in the world
 
 A note arrives through the letterbox and hangs on a wire on the living-room wall, on paper held by

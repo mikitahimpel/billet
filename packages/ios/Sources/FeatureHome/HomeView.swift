@@ -37,6 +37,8 @@ struct HomeView: View {
   @State private var latestDrawing: CGImage?
   @State private var drawerOpen = false
   @State private var ringsOpen = false
+  /// True while the streak's flame covers Home, so the room under it pauses.
+  @State private var flameShowing = false
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -252,7 +254,7 @@ struct HomeView: View {
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
           .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
-          .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
+          .environment(\.petSceneOnScreen, roomShows)
           .environment(\.petSceneRenovator, session.renovator)
           .overlay { catReactions.allowsHitTesting(false) }),
       notes: session.notes,
@@ -264,7 +266,43 @@ struct HomeView: View {
       onOpenNotes: onOpenNotes,
       onDraw: { store.send(.canvasOpened) },
       isDecorating: isRenovating,
-      onDecorate: { session.renovator.requestOpen() })
+      onDecorate: { session.renovator.requestOpen() },
+      flame: flameHost(scene: scene))
+  }
+
+  /// Whether Home's room is in sight: its tab shows, nothing covers it and the flame is closed.
+  private var roomShows: Bool {
+    tabShown && store.state.screen == .home && !flameShowing
+  }
+
+  /// Opens the streak's flame over Home: works out today's flame, remembers the visit on this
+  /// phone, and pauses the room under it while it shows.
+  private func flameHost(scene: any PetScene) -> StreakFlameHost {
+    StreakFlameHost(
+      open: {
+        let calendar = Calendar.current
+        let now = Date.now
+        let today = TreatDay.key(for: now, calendar: calendar)
+        let streak = session.streak(today: today, calendar: calendar)
+        let newest = session.notes.max { $0.date < $1.date }?.id
+        let visit = FlameMemoryStore.visit(
+          streak: streak, newestNote: newest,
+          key: FlameMemoryStore.key(fakePartner: session.isFakePartner))
+        return FlameSceneState(
+          flame: StreakFlame(streak: streak),
+          today: FlameToday.contributions(
+            notes: session.notes, treat: session.play.status(on: today), now: now,
+            calendar: calendar),
+          visit: visit)
+      },
+      view: { state, close in
+        AnyView(
+          StreakFlameCover(scene: scene, state: state, onClose: close)
+            .environment(\.petSceneOnScreen, true)
+            .environment(\.petSceneWindowView, session.labs.windowView)
+            .onAppear { flameShowing = true }
+            .onDisappear { flameShowing = false })
+      })
   }
 
   private func fullBleedHome(_ scene: any PetScene) -> some View {
