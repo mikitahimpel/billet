@@ -18,6 +18,7 @@ final class ShopStage: TabStage {
   /// Whether a measuring run has been told this scene is drawing since it last came on screen.
   private var isAnnounced = false
   let screen = TabScreen()
+  let shopScreen = ShopScreen()
   /// Called with the item tapped, a moment after the tap so its hop and the keeper's glance read.
   var onPick: ((ShopItem.ID) -> Void)?
 
@@ -33,14 +34,30 @@ final class ShopStage: TabStage {
   private var reduceMotion = false
   private var clock = 0.0
   private var receiver: ImageBasedLightReceiverComponent?
-  private let lighting = TabLighting()
+  private let lighting = TabLighting(coreShare: 0.3, boostLimit: 1.3, haloLimit: 1.1)
   private var look = LightingLook.off
 
   private var items: [ShopItem] = []
   private var stocked: [ShopItem.ID] = []
   private var stocking: Task<Void, Never>?
   private var holders: [ShopItem.ID: Entity] = [:]
+  private var slots: [ShopItem.ID: ShopLayout.Slot] = [:]
   private var hops: [ShopItem.ID: Double] = [:]
+  private var owned: Set<ShopItem.ID> = []
+
+  /// The item brought forward, and how far each item is from its place to the front, 0 to 1.
+  private var focused: ShopItem.ID?
+  private var forward: [ShopItem.ID: Float] = [:]
+  private var forwardScale: [ShopItem.ID: Float] = [:]
+  private var spin: Float = 0
+
+  /// Glints to come, each on an item from a time on the clock, and when the next idle one is.
+  private var glints: [(item: ShopItem.ID, at: Double)] = []
+  private var nextGlint = 2.5
+  private var random = SplitMix(seed: UInt64.random(in: 1...UInt64.max))
+
+  private let parcel = Entity()
+  private var parcelFlight: (from: SIMD3<Float>, start: Double)?
 
   private let keeperHolder = Entity()
   private var keeper: Shopkeeper?
@@ -49,13 +66,23 @@ final class ShopStage: TabStage {
   private var rig: KeeperRig?
   private var motion = KeeperMotion(seed: UInt64.random(in: 1...UInt64.max))
   private var purchases: Int?
-  private var waveAt: Double?
+  private var welcomeAt: Double?
 
   private var beads: [GenzRoomPoint] = []
+  /// The window's opening as the camera sees it from its home place, which the view outside is
+  /// laid out on.
+  private var homeWindow: [CGPoint] = []
 
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "ShopStage")
-  private static let pickDelay = Duration.milliseconds(320)
+  private static let pickDelay = Duration.milliseconds(180)
   private static let hopLength = 0.32
+  private static let glintLength = 0.7
+  private static let parcelSize: Float = 1.7
+  private static let forwardLength: Float = 0.45
+  /// Where an item floats when it is brought forward: in front of the counter, at eye height.
+  static let front = GenzRoomPoint(3.3, 6.1, 2.3)
+  /// How big an item is brought forward, across its longest side, in room units.
+  static let frontSize: Float = 1.7
   private static let lampColour = GenzColour(0xFFC36B)
   private static let ledColour = GenzColour(0xFFE2B0)
 
@@ -79,8 +106,13 @@ final class ShopStage: TabStage {
       keeper = state.keeper
       if isBuilt { loadKeeper() }
     }
-    if let purchases, state.purchases > purchases { motion.cheer() }
+    if let purchases, state.purchases > purchases { handOver() }
     purchases = state.purchases
+    if state.owned != owned {
+      owned = state.owned
+      updateTags()
+    }
+    if state.focused != focused { focus(state.focused) }
   }
 
   func start() {
@@ -91,7 +123,7 @@ final class ShopStage: TabStage {
 
   func setOnScreen(_ onScreen: Bool) {
     if !onScreen { isAnnounced = false }
-    if onScreen, !isOnScreen { waveAt = clock + 0.6 }
+    if onScreen, !isOnScreen { welcomeAt = clock + 0.5 }
     isOnScreen = onScreen
     room.isEnabled = onScreen && isBuilt
     frames.isPaused = !onScreen
@@ -113,11 +145,13 @@ final class ShopStage: TabStage {
   func fit(to size: CGSize) {
     view.fit(to: size)
     updateGlows()
+    updateTags()
   }
 
   func orbit(byX deltaX: Float, y deltaY: Float) {
     view.orbit(byX: deltaX, y: deltaY)
     updateGlows()
+    updateTags()
   }
 
   func endOrbit(velocityX: Float, velocityY: Float) {
@@ -130,7 +164,17 @@ final class ShopStage: TabStage {
       return
     }
     guard let (holder, id) = TabLook.named(Self.itemPrefix, from: entity) else { return }
-    if !reduceMotion { hops[id] = clock }
+    pick(id, holder: holder)
+  }
+
+  /// Picks `id`, from its item or its tag: it hops, the keeper looks at it, and the host hears.
+  func pick(_ id: ShopItem.ID) {
+    guard let holder = holders[id] else { return }
+    pick(id, holder: holder)
+  }
+
+  private func pick(_ id: ShopItem.ID, holder: Entity) {
+    if !reduceMotion, id != focused { hops[id] = clock }
     if let head = rig?.head {
       let offset = holder.position(relativeTo: nil) - head.position(relativeTo: nil)
       var aim = KeeperMotion.aim(at: offset)
@@ -156,21 +200,202 @@ final class ShopStage: TabStage {
           census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
     }
     lighting.step(delta)
-    if view.step(Float(delta)) { updateGlows() }
-    if let waveAt, clock >= waveAt, rig != nil {
-      self.waveAt = nil
-      motion.wave()
+    if view.step(Float(delta)) {
+      updateGlows()
+      updateTags()
+    }
+    if let welcomeAt, clock >= welcomeAt, isBuilt {
+      self.welcomeAt = nil
+      welcome()
     }
     if let rig, let head = rig.head {
       let offset = view.position - head.position(relativeTo: nil)
       rig.apply(motion.step(delta, viewer: KeeperMotion.aim(at: offset), still: reduceMotion))
     }
-    for (id, start) in hops {
-      let age = clock - start
-      let lift = age < Self.hopLength ? Float(sin(age / Self.hopLength * .pi)) : 0
-      holders[id]?.scale = .one * (1 + 0.16 * lift)
-      if age >= Self.hopLength { hops[id] = nil }
+    stepItems(delta)
+    stepGlint()
+    stepParcel()
+  }
+
+  /// Every item bobs a little where it stands, out of step with the others; the one brought
+  /// forward floats to the front, grown, and turns slowly; a tapped one hops.
+  private func stepItems(_ delta: TimeInterval) {
+    let rate = reduceMotion ? 1 : Float(delta) / Self.forwardLength
+    var moving = false
+    for (id, holder) in holders {
+      guard let slot = slots[id] else { continue }
+      let wanted: Float = id == focused ? 1 : 0
+      var amount = forward[id] ?? 0
+      if amount != wanted {
+        amount = wanted > amount ? min(amount + rate, 1) : max(amount - rate, 0)
+        forward[id] = amount
+        moving = true
+      }
+      let ease = amount * amount * (3 - 2 * amount)
+      let phase = Double(slot.centre.x * 1.7 + slot.centre.z * 2.3)
+      let bob: Float = reduceMotion ? 0 : 0.07 * Float(0.5 - 0.5 * cos(clock * 1.9 + phase))
+      let home = slot.centre.scene + [0, bob, 0]
+      holder.position = home + (Self.front.scene - home) * ease
+      var size = 1 + ((forwardScale[id] ?? 1) - 1) * ease
+      if let start = hops[id] {
+        let age = clock - start
+        size *= 1 + 0.16 * (age < Self.hopLength ? Float(sin(age / Self.hopLength * .pi)) : 0)
+        if age >= Self.hopLength { hops[id] = nil }
+      }
+      holder.scale = .one * size
+      let wobble: Float = reduceMotion ? 0 : 0.06 * Float(sin(clock * 1.3 + phase))
+      // Brought forward it swings slowly from side to side, so a flat thing never shows its back.
+      let swing = 0.55 * sin(spin)
+      holder.orientation = simd_quatf(angle: wobble * (1 - ease) + swing * ease, axis: [0, 1, 0])
     }
+    if focused != nil, !reduceMotion { spin += Float(delta) * 0.9 }
+    if moving { updateGlows() }
+  }
+
+  private func stepGlint() {
+    if glints.isEmpty, clock >= nextGlint, focused == nil, !stocked.isEmpty {
+      glints.append((stocked[Int(random.next() % UInt64(stocked.count))], clock))
+      nextGlint = clock + 1.6 + random.unit() * 1.8
+    }
+    glints.removeAll { clock - $0.at > Self.glintLength }
+    guard let glint = glints.first(where: { clock >= $0.at }), let slot = slots[glint.item],
+      let holder = holders[glint.item]
+    else {
+      if shopScreen.glint != nil { shopScreen.glint = nil }
+      return
+    }
+    let top = holder.position(relativeTo: room) + [0, slot.box.y * 0.8, 0]
+    guard let centre = view.project(top) else { return }
+    shopScreen.glint = ShopGlint(
+      centre: centre, size: max(view.reach(0.9, at: top), 22),
+      phase: (clock - glint.at) / Self.glintLength)
+  }
+
+  /// The parcel appears in the keeper's paws over the front of the counter while it hands it
+  /// over, then flies to you and fades.
+  private func stepParcel() {
+    if let progress = motion.handOverProgress, progress < 0.7, let rig,
+      let paws = rig.paws(relativeTo: room)
+    {
+      parcel.isEnabled = true
+      let grow = Float(min(progress / 0.2, 1))
+      // Held out over the counter, just clear of its top, between the paws.
+      let over = GenzRoomPoint(
+        ShopLayout.keeper.x, ShopLayout.counter.y0 + 0.45,
+        ShopLayout.counterTop + 0.36 * Self.parcelSize / 2 + 0.05
+      ).scene
+      parcel.position = SIMD3(paws.x, max(paws.y, over.y), over.z)
+      parcel.scale = .one * Self.parcelSize * grow
+      parcel.components.set(OpacityComponent(opacity: 1))
+      parcelFlight = (parcel.position, clock)
+      return
+    }
+    guard let flight = parcelFlight else {
+      parcel.isEnabled = false
+      return
+    }
+    let age = Float((clock - flight.start) / 0.55)
+    guard age < 1 else {
+      parcelFlight = nil
+      parcel.isEnabled = false
+      return
+    }
+    let camera = view.position - [0, 2, 0]
+    parcel.position = flight.from + (camera - flight.from) * (age * age * 0.45)
+    parcel.scale = .one * Self.parcelSize * (1 + age * 0.6)
+    parcel.components.set(OpacityComponent(opacity: 1 - age))
+  }
+
+  /// The keeper bows hello and sweeps its arms to the shelves, while a glint runs over each side
+  /// it shows: first the shelves on its left, then those on its right, then the counter.
+  private func welcome() {
+    motion.welcome()
+    let start = clock + KeeperMotion.greetLength + 0.25
+    let half = KeeperMotion.presentLength / 2
+    let shelf = stocked.compactMap { id in slots[id].map { (id, $0) } }
+    let right = shelf.filter { $0.1.stand == .shelf && $0.1.centre.x > ShopLayout.keeper.x }
+    let left = shelf.filter { $0.1.stand == .shelf && $0.1.centre.x <= ShopLayout.keeper.x }
+    let front = shelf.filter { $0.1.stand != .shelf }
+    var queue: [(ShopItem.ID, Double)] = []
+    for (group, at) in [(right, start), (left, start + half), (front, start + 2 * half - 0.2)] {
+      for (index, entry) in group.sorted(by: { $0.1.centre.z > $1.1.centre.z }).enumerated() {
+        queue.append((entry.0, at + Double(index) * 0.12))
+      }
+    }
+    glints = queue.map { (item: $0.0, at: $0.1) }
+    nextGlint = (queue.last?.1 ?? clock) + 3
+  }
+
+  private func handOver() {
+    motion.handOver()
+    parcelFlight = nil
+  }
+
+  private func focus(_ id: ShopItem.ID?) {
+    focused = id
+    shopScreen.showsTags = id == nil
+    spin = 0
+    if let id, let holder = holders[id], forwardScale[id] == nil {
+      let bounds = holder.visualBounds(relativeTo: holder)
+      if !bounds.isEmpty, bounds.extents.max() > 0 {
+        let scale = Self.frontSize / bounds.extents.max() * holder.scale.x
+        forwardScale[id] = min(max(scale, 1), 4)
+      }
+    }
+    updateGlows()
+  }
+
+  /// Puts each item's tag at the front edge of its place, in the view's points.
+  private func updateTags() {
+    var tags: [ShopTag] = []
+    // The paints and boards on the table stand too close for a tag each: one sign for them all.
+    let table = items.filter { slots[$0.id]?.stand == .table }
+    if let first = table.first {
+      let edges = table.compactMap { slots[$0.id] }.map {
+        GenzRoomPoint($0.centre.x, $0.centre.y + $0.box.z / 2 + 0.05, $0.centre.z - 0.08)
+      }
+      let middle = GenzRoomPoint(
+        edges.map(\.x).reduce(0, +) / Float(edges.count), ShopLayout.table.y1 + 0.05,
+        ShopLayout.tableTop - 0.08)
+      if let centre = view.project(middle.scene) {
+        let prices = table.map(\.price)
+        let low = prices.min() ?? first.price
+        let high = prices.max() ?? first.price
+        tags.append(
+          ShopTag(
+            id: first.id, centre: CGPoint(x: centre.x, y: centre.y + 8),
+            price: low == high ? "\(low)" : "\(low)–\(high)", owned: false))
+      }
+    }
+    for item in items where slots[item.id]?.stand != .table {
+      guard let slot = slots[item.id] else { continue }
+      let edge = GenzRoomPoint(
+        slot.centre.x, slot.centre.y + slot.box.z / 2 + 0.05, slot.centre.z - 0.08)
+      guard let centre = view.project(edge.scene) else { continue }
+      tags.append(
+        ShopTag(
+          id: item.id, centre: CGPoint(x: centre.x, y: centre.y + 8), price: "\(item.price)",
+          owned: owned.contains(item.id)))
+    }
+    tags = Self.spread(tags, width: view.size.width)
+    if tags != shopScreen.tags { shopScreen.tags = tags }
+  }
+
+  /// Tags moved apart where items stand close, each stepping down under the one it would cover,
+  /// and kept inside the view.
+  static func spread(_ tags: [ShopTag], width: CGFloat) -> [ShopTag] {
+    let (across, down): (CGFloat, CGFloat) = (40, 21)
+    var placed: [ShopTag] = []
+    for var tag in tags.sorted(by: { ($0.centre.y, $0.centre.x) < ($1.centre.y, $1.centre.x) }) {
+      tag.centre.x = min(max(tag.centre.x, across / 2 + 4), width - across / 2 - 4)
+      while placed.contains(where: {
+        abs($0.centre.x - tag.centre.x) < across && abs($0.centre.y - tag.centre.y) < down
+      }) {
+        tag.centre.y += down
+      }
+      placed.append(tag)
+    }
+    return placed
   }
 
   private func updateGlows() {
@@ -182,7 +407,7 @@ final class ShopStage: TabStage {
       glows.append(
         TabGlow(
           centre: centre, radius: view.reach(3.4, at: bulb), colour: lighting.tint(Self.lampColour),
-          strength: 0.42 * halos))
+          strength: 0.32 * halos))
     }
     let counter = GenzRoomPoint(
       ShopLayout.keeper.x, ShopLayout.counter.y0, ShopLayout.counterTop + 0.6
@@ -201,6 +426,15 @@ final class ShopStage: TabStage {
           centre: centre, radius: view.reach(0.45, at: point),
           colour: lighting.fairyColour ?? Self.ledColour, strength: 0.5 * halos))
     }
+    if let focused, let amount = forward[focused], amount > 0.01 {
+      let point = Self.front.scene
+      if let centre = view.project(point) {
+        glows.append(
+          TabGlow(
+            centre: centre, radius: view.reach(2.6, at: point),
+            colour: lighting.tint(GenzColour(0xFFC36B)), strength: 0.45 * Double(amount)))
+      }
+    }
     screen.glows = glows
     let window = ShopLayout.window
     let corners = [
@@ -208,6 +442,21 @@ final class ShopStage: TabStage {
       GenzRoomPoint(0, window.y1, window.z1), GenzRoomPoint(0, window.y0, window.z1),
     ].compactMap { view.project($0.scene) }
     screen.window = corners.count == 4 ? corners : []
+    let home = [
+      GenzRoomPoint(0, window.y0, window.z0), GenzRoomPoint(0, window.y1, window.z0),
+      GenzRoomPoint(0, window.y1, window.z1), GenzRoomPoint(0, window.y0, window.z1),
+    ].compactMap { view.projectFromHome($0.scene) }
+    homeWindow = home.count == 4 ? home : []
+  }
+
+  /// What the shop window looks out on at `date`: the same view, weather and hour as the room's.
+  func windowState(choice: WindowViewChoice, dayLight: PetSceneDayLight?, at date: Date)
+    -> WindowViewState
+  {
+    WindowViewState(
+      view: choice.view, weather: choice.shownWeather, hour: choice.shownHour(room: dayLight?.here),
+      time: 30, now: date.timeIntervalSinceReferenceDate, window: screen.window,
+      home: homeWindow.isEmpty ? screen.window : homeWindow, lampOn: true)
   }
 
   // MARK: - Building
@@ -228,6 +477,7 @@ final class ShopStage: TabStage {
     keeperHolder.name = Self.keeperName
     keeperHolder.position = ShopLayout.keeper.scene
     room.addChild(keeperHolder)
+    buildParcel()
     lighting.apply(look)
     isBuilt = true
     room.isEnabled = isOnScreen
@@ -274,7 +524,6 @@ final class ShopStage: TabStage {
         -0.14, window.y0, (window.z0 + window.z1) / 2 - 0.04, 0.08, window.y1 - window.y0, 0.08,
         wood),
     ]
-    if let outside = outside() { parts.append(outside) }
     return parts
   }
 
@@ -303,15 +552,6 @@ final class ShopStage: TabStage {
   }
 
   /// The street outside the window at blue hour: a picture on a plane behind the glass.
-  private func outside() -> Entity? {
-    guard let image = ShopArt.street(), let material = TabLook.picture(image) else { return nil }
-    let window = ShopLayout.window
-    let plane = kit.part(
-      kit.plane(width: 7, height: 4.6), material,
-      at: GenzRoomPoint(-1.6, (window.y0 + window.y1) / 2, (window.z0 + window.z1) / 2).scene,
-      turn: simd_quatf(angle: .pi / 2, axis: [0, 1, 0]))
-    return plane
-  }
 
   private func buildShelves() {
     let body = kit.matte(GenzColour(0x6B4632))
@@ -514,6 +754,27 @@ final class ShopStage: TabStage {
     room.addChild(lighting.root)
   }
 
+  /// A little parcel in craft paper tied with a red ribbon, which the keeper hands over.
+  private func buildParcel() {
+    let paper = kit.matte(GenzColour(0xF2DDB8))
+    let ribbon = kit.matte(GenzColour(0xD8392B))
+    parcel.addChild(kit.part(kit.box([0.5, 0.36, 0.4]), paper))
+    parcel.addChild(kit.part(kit.box([0.08, 0.37, 0.41]), ribbon))
+    parcel.addChild(kit.part(kit.box([0.51, 0.37, 0.08]), ribbon))
+    parcel.scale = .one * Self.parcelSize
+    parcel.addChild(
+      kit.part(
+        kit.box([0.2, 0.08, 0.1]), ribbon, at: [-0.08, 0.21, 0],
+        turn: simd_quatf(angle: 0.5, axis: [0, 0, 1])))
+    parcel.addChild(
+      kit.part(
+        kit.box([0.2, 0.08, 0.1]), ribbon, at: [0.08, 0.21, 0],
+        turn: simd_quatf(angle: -0.5, axis: [0, 0, 1])))
+    if let receiver { NookiDiorama.visit(parcel) { $0.components.set(receiver) } }
+    parcel.isEnabled = false
+    room.addChild(parcel)
+  }
+
   // MARK: - Stock
 
   private func restock() {
@@ -522,6 +783,9 @@ final class ShopStage: TabStage {
     stocking?.cancel()
     for child in Array(stock.children) { child.removeFromParent() }
     holders = [:]
+    slots = [:]
+    forward = [:]
+    forwardScale = [:]
     let byID = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     var furniture: [(ShopItem, Entity, ShopLayout.Slot)] = []
     for slot in ShopLayout.slots(for: items) {
@@ -531,6 +795,7 @@ final class ShopStage: TabStage {
       holder.position = slot.centre.scene
       stock.addChild(holder)
       holders[item.id] = holder
+      slots[item.id] = slot
       switch item.look {
       case .furniture: furniture.append((item, holder, slot))
       case .treat(let shape):
@@ -544,6 +809,7 @@ final class ShopStage: TabStage {
         fill(holder, with: sample(surface, tone.swatch), slot: slot, unitsPerMetre: 1, least: 0)
       }
     }
+    updateTags()
     stocking = Task {
       for (item, holder, slot) in furniture {
         guard let model = await models.furniture(item), !Task.isCancelled else { continue }
@@ -635,6 +901,6 @@ final class ShopStage: TabStage {
     TabLook.makeTappable(keeperHolder, margin: 0)
     rig = KeeperRig(model: model)
     shownKeeper = keeper
-    if isOnScreen { waveAt = clock + 0.4 }
+    if isOnScreen, motion.gesture == nil { welcomeAt = clock + 0.3 }
   }
 }

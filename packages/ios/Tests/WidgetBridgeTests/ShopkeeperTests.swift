@@ -11,8 +11,8 @@ import Testing
   }
 
   @Test func theOldTabbyKeepsTheShopUntilSomeoneChooses() {
-    #expect(Shopkeeper.standard == .tabby)
-    #expect(WidgetFeaturesStore(storage: storage()).loadShopkeeper() == .tabby)
+    #expect(Shopkeeper.standard == .teddy)
+    #expect(WidgetFeaturesStore(storage: storage()).loadShopkeeper() == .teddy)
   }
 
   @Test(arguments: Shopkeeper.allCases)

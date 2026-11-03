@@ -30,6 +30,14 @@ final class KeeperRig {
 
   var head: Entity? { rest["head"]?.entity }
 
+  /// Where the keeper's paws are now, between them, relative to `entity`: where it holds what it
+  /// hands over. Each paw hangs `length` model units down its arm.
+  func paws(relativeTo entity: Entity?, length: Float = 0.33) -> SIMD3<Float>? {
+    guard let left = rest["arm_L"]?.entity, let right = rest["arm_R"]?.entity else { return nil }
+    let tip = SIMD3<Float>(0, -length, 0)
+    return (left.convert(position: tip, to: entity) + right.convert(position: tip, to: entity)) / 2
+  }
+
   static func resourceName(_ keeper: Shopkeeper) -> String {
     "Keeper_\(keeper.rawValue)"
   }
@@ -54,7 +62,9 @@ final class KeeperRig {
   func apply(_ pose: KeeperPose) {
     set("body") { transform in
       transform.translation.y += pose.hop
-      transform.rotation *= simd_quatf(angle: pose.sway, axis: [0, 0, 1])
+      transform.rotation *=
+        simd_quatf(angle: pose.sway, axis: [0, 0, 1])
+        * simd_quatf(angle: pose.bow, axis: [1, 0, 0])
       transform.scale *= SIMD3(1, 1 + pose.breath, 1 + pose.breath * 0.5)
     }
     set("head") { transform in
@@ -63,9 +73,15 @@ final class KeeperRig {
         * simd_quatf(angle: -pose.headPitch, axis: [1, 0, 0])
         * simd_quatf(angle: pose.headTilt, axis: [0, 0, 1])
     }
-    // The keeper faces +z, so its left arm is on +x and lifts by turning about +z.
-    set("arm_L") { $0.rotation *= simd_quatf(angle: pose.leftArm, axis: [0, 0, 1]) }
-    set("arm_R") { $0.rotation *= simd_quatf(angle: -pose.rightArm, axis: [0, 0, 1]) }
+    // The keeper faces +z, so its left arm is on +x and lifts by turning about +z, and an arm
+    // reaches forward by turning about -x.
+    let forward = simd_quatf(angle: -pose.reach, axis: [1, 0, 0])
+    set("arm_L") {
+      $0.rotation *= forward * simd_quatf(angle: pose.leftArm, axis: [0, 0, 1])
+    }
+    set("arm_R") {
+      $0.rotation *= forward * simd_quatf(angle: -pose.rightArm, axis: [0, 0, 1])
+    }
     for eye in ["eye_L", "eye_R"] {
       set(eye) { $0.scale.y *= max(1 - 0.9 * pose.blink, 0.05) }
     }
@@ -79,94 +95,5 @@ final class KeeperRig {
     var posed = transform
     change(&posed)
     entity.transform = posed
-  }
-}
-
-/// The pictures the shop draws for itself.
-@MainActor
-enum ShopArt {
-  /// The street outside the shop window at blue hour: sky, a row of houses with a few lit
-  /// windows, a street lamp. Flat shapes in the style bible's night palette.
-  static func street(width: Int = 512, height: Int = 336) -> CGImage? {
-    guard
-      let sky = TabLook.gradient(
-        [GenzColour(0x3A5A86), GenzColour(0x162846), GenzColour(0x070C18)], width: width,
-        height: height),
-      let space = CGColorSpace(name: CGColorSpace.sRGB),
-      let context = CGContext(
-        data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-    else { return nil }
-    let w = CGFloat(width)
-    let h = CGFloat(height)
-    context.draw(sky, in: CGRect(x: 0, y: 0, width: w, height: h))
-    var random = SplitMix(seed: 7)
-    // Stars in the top half.
-    context.setFillColor(
-      GenzColour(0xEEF2F7).cgColor.copy(alpha: 0.7) ?? GenzColour(0xEEF2F7).cgColor)
-    for _ in 0..<40 {
-      let x = CGFloat(random.unit()) * w
-      let y = h * 0.6 + CGFloat(random.unit()) * h * 0.4
-      let side = 1 + CGFloat(random.unit()) * 1.5
-      context.fill(CGRect(x: x, y: y, width: side, height: side))
-    }
-    // The far roofs, then the houses across the street.
-    context.setFillColor(GenzColour(0x20365A).cgColor)
-    var x: CGFloat = -10
-    while x < w {
-      let roof = h * (0.36 + 0.12 * CGFloat(random.unit()))
-      let span = 50 + CGFloat(random.unit()) * 40
-      context.fill(CGRect(x: x, y: 0, width: span, height: roof))
-      context.move(to: CGPoint(x: x - 4, y: roof))
-      context.addLine(to: CGPoint(x: x + span / 2, y: roof + span * 0.3))
-      context.addLine(to: CGPoint(x: x + span + 4, y: roof))
-      context.fillPath()
-      x += span + 6
-    }
-    x = -20
-    var houses: [CGRect] = []
-    while x < w {
-      let span = 90 + CGFloat(random.unit()) * 60
-      let top = h * (0.26 + 0.08 * CGFloat(random.unit()))
-      houses.append(CGRect(x: x, y: 0, width: span, height: top))
-      context.setFillColor(GenzColour(0x14233D).cgColor)
-      context.fill(CGRect(x: x, y: 0, width: span, height: top))
-      context.move(to: CGPoint(x: x - 6, y: top))
-      context.addLine(to: CGPoint(x: x + span / 2, y: top + span * 0.33))
-      context.addLine(to: CGPoint(x: x + span + 6, y: top))
-      context.fillPath()
-      x += span + 14
-    }
-    for house in houses {
-      for row in 0..<2 {
-        for column in 0..<3 where random.unit() < 0.45 {
-          let window = CGRect(
-            x: house.minX + 14 + CGFloat(column) * (house.width - 28) / 3,
-            y: house.height * (0.25 + 0.4 * CGFloat(row)), width: 12, height: 14)
-          context.setFillColor(GenzColour(0xFFC36B).cgColor)
-          context.fill(window)
-          context.setFillColor(GenzColour(0xFFE2B0).cgColor)
-          context.fill(window.insetBy(dx: 3, dy: 4))
-        }
-      }
-    }
-    // The pavement and a street lamp with its pool of light.
-    context.setFillColor(GenzColour(0x0E1A2E).cgColor)
-    context.fill(CGRect(x: 0, y: 0, width: w, height: h * 0.08))
-    let lamp = w * 0.7
-    context.setFillColor(GenzColour(0x0A1220).cgColor)
-    context.fill(CGRect(x: lamp - 2, y: 0, width: 4, height: h * 0.42))
-    if let glow = CGGradient(
-      colorsSpace: space,
-      colors: [
-        GenzColour(0xFFC36B).cgColor.copy(alpha: 0.9) ?? GenzColour(0xFFC36B).cgColor,
-        GenzColour(0xFFC36B).cgColor.copy(alpha: 0) ?? GenzColour(0xFFC36B).cgColor,
-      ] as CFArray, locations: [0, 1])
-    {
-      let bulb = CGPoint(x: lamp, y: h * 0.43)
-      context.drawRadialGradient(
-        glow, startCenter: bulb, startRadius: 0, endCenter: bulb, endRadius: 40, options: [])
-    }
-    return context.makeImage()
   }
 }

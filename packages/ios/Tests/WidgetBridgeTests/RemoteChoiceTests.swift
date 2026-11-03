@@ -55,7 +55,7 @@ import Testing
       Experiments.homeLayout.variants == [
         "classic", "immersive", "cinematic", "living-window", "night-and-day",
       ])
-    #expect(Experiments.shopkeeper.variants == ["tabby", "raccoon", "fox"])
+    #expect(Experiments.shopkeeper.variants == ["teddy", "human", "tabby", "raccoon", "fox"])
   }
 
   @Test func everyRemoteSettingIsListed() {

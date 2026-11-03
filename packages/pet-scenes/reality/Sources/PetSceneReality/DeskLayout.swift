@@ -17,15 +17,30 @@ enum DeskLayout {
 
   /// The blank paper to draw on: its middle on the desk, size across and deep, and its turn.
   static let paper = (
-    centre: GenzRoomPoint(2.85, 2.25, 2.6), width: Float(2.0), depth: Float(1.45),
-    yaw: Float(0.08)
+    centre: GenzRoomPoint(3.0, 2.3, 2.6), width: Float(3.1), depth: Float(2.1),
+    yaw: Float(0.06)
   )
   static let lamp = (base: GenzRoomPoint(0.85, 1.0, 2.6), shade: GenzRoomPoint(2.05, 1.85, 4.0))
   /// Where the cat sits when it visits, the way it faces, and its length.
-  static let cat = (spot: GenzRoomPoint(4.55, 2.0, 2.6), heading: Float(0.35), length: Float(1.2))
+  static let cat = (spot: GenzRoomPoint(5.1, 1.9, 2.6), heading: Float(0.35), length: Float(1.2))
+
+  /// The paper's corners on the desk, far left first and round to near left, as the view sees
+  /// a page: its top edge is the one away from you.
+  static var paperCorners: [GenzRoomPoint] {
+    let spec = paper
+    let (cosine, sine) = (cos(spec.yaw), sin(spec.yaw))
+    return [(-1, -1), (1, -1), (1, 1), (-1, 1)].map { (u: Float, v: Float) in
+      let across = u * spec.width / 2
+      let toward = v * spec.depth / 2
+      // Turning by `yaw` about up, in room axes: x along the wall, y toward the viewer.
+      return GenzRoomPoint(
+        spec.centre.x + across * cosine + toward * sine,
+        spec.centre.y - across * sine + toward * cosine, spec.centre.z + 0.04)
+    }
+  }
 
   static let camera = GenzCamera.Home(
-    target: GenzRoomPoint(3.0, 2.0, 5.4).scene, yaw: 0.1, pitch: 0.34, distance: 19,
+    target: GenzRoomPoint(3.0, 2.0, 5.1).scene, yaw: 0.1, pitch: 0.34, distance: 18,
     fieldOfView: 40, yawLimits: -0.12...0.32, pitchLimits: 0.2...0.55)
 
   /// The latest note, pinned large in the top left of the board.

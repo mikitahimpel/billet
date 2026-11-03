@@ -55,7 +55,10 @@ final class TabCamera {
 
   private static let orbitPerPoint: Float = 0.003
 
+  private let home: GenzCamera.Home
+
   init(home: GenzCamera.Home) {
+    self.home = home
     camera = GenzCamera(home: home)
     lens.camera.fieldOfViewInDegrees = home.fieldOfView
     aim()
@@ -100,6 +103,11 @@ final class TabCamera {
   /// Where a point of the scene lands in the view.
   func project(_ point: SIMD3<Float>) -> CGPoint? {
     camera.project(point, in: size)
+  }
+
+  /// Where `point` is in the view as the camera sees it from its home place.
+  func projectFromHome(_ point: SIMD3<Float>) -> CGPoint? {
+    GenzCamera(home: home).project(point, in: size)
   }
 
   /// How many points across a length of `span` at `point` covers in the view.
@@ -228,6 +236,10 @@ final class TabStages {
 /// never draws, and then stays. Its stage steps from the display and pauses off screen.
 struct TabSceneView: View {
   let stage: any TabStage
+  /// Drawn behind the scene, as the view through a window, in the points the stage projects into.
+  var behind: AnyView?
+  /// Drawn over everything else, in the same points the stage projects into.
+  var overlay: AnyView?
 
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.scenePhase) private var scenePhase
@@ -245,6 +257,7 @@ struct TabSceneView: View {
     let look = LightingLook.of(lighting)
     ZStack {
       TabBackdrop()
+      if stage.screen.isLit, let behind { behind }
       GlowHaze(look: look, window: stage.screen.window)
       if isMounted { reality }
       TabGlowLayer(screen: stage.screen)
@@ -256,6 +269,7 @@ struct TabSceneView: View {
           .allowsHitTesting(false)
           .accessibilityHidden(true)
       }
+      if stage.screen.isLit, let overlay { overlay }
     }
     .ignoresSafeArea()
     .onAppear { isAppeared = true }

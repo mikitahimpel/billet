@@ -138,6 +138,8 @@ struct AppShellView: View {
           .tabEntrance(destination == .shop)
           .environment(\.petSceneOnScreen, destination == .shop)
           .environment(\.petSceneLighting, labs.lighting)
+          .environment(\.petSceneWindowView, labs.windowView)
+          .modifier(ShopDayLight(followsDay: labs.homeVariant == .nightAndDay))
         }
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
@@ -280,5 +282,20 @@ private struct WarmTabBarFallback: ViewModifier {
     #else
       content
     #endif
+  }
+}
+
+/// The time of day for the shop window, as the room's: the hour here when Home follows it.
+private struct ShopDayLight: ViewModifier {
+  let followsDay: Bool
+
+  func body(content: Content) -> some View {
+    TimelineView(.everyMinute) { context in
+      content.environment(
+        \.petSceneDayLight,
+        followsDay
+          ? PetSceneDayLight(here: DayLight.at(context.date, in: .current), theirs: nil) : nil
+      )
+    }
   }
 }

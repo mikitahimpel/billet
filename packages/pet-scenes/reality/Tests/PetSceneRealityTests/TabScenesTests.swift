@@ -158,6 +158,42 @@ struct KeeperMotionTests {
     #expect(shut)
   }
 
+  @Test func aWelcomeBowsThenShowsBothSidesOfTheShop() {
+    var motion = KeeperMotion(seed: 7)
+    motion.welcome()
+    var bowed = false
+    var left: Float = 0
+    var right: Float = 0
+    var turns: Set<Int> = []
+    for _ in 0..<Int((KeeperMotion.greetLength + KeeperMotion.presentLength) * 60) + 30 {
+      let pose = motion.step(1 / 60, viewer: ahead)
+      bowed = bowed || pose.bow > 0.2
+      left = max(left, pose.leftArm)
+      right = max(right, pose.rightArm)
+      if abs(pose.headYaw) > 0.3 { turns.insert(pose.headYaw > 0 ? 1 : -1) }
+    }
+    #expect(bowed)
+    #expect(left > 1.2 && right > 1.2)
+    #expect(turns == [1, -1])
+    #expect(!motion.isBusy)
+  }
+
+  @Test func aHandOverReachesForwardThenCheers() {
+    var motion = KeeperMotion(seed: 8)
+    motion.handOver()
+    var reach: Float = 0
+    var progress: [Double] = []
+    for _ in 0..<Int(KeeperMotion.handOverLength * 60) {
+      reach = max(reach, motion.step(1 / 60, viewer: ahead).reach)
+      progress.append(motion.handOverProgress ?? -1)
+    }
+    #expect(reach > 1)
+    #expect(progress == progress.sorted())
+    _ = motion.step(1 / 60, viewer: ahead)
+    #expect(motion.gesture?.kind == .cheer)
+    #expect(motion.handOverProgress == nil)
+  }
+
   @Test func aimPointsTheFaceAtTheOffset() {
     let right = KeeperMotion.aim(at: [1, 0, 1])
     #expect(abs(right.x - .pi / 4) < 1e-5)
@@ -255,8 +291,15 @@ struct TabStagesTests {
     #expect(rig.head != nil)
   }
 
-  @Test func theStreetOutsideTheShopIsDrawn() {
-    #expect(ShopArt.street() != nil)
+  @Test func theShopWindowLooksOutOnTheRoomsView() {
+    let stage = TabStages(rooms: GenzRoomCache()).shopStage
+    stage.fit(to: CGSize(width: 393, height: 852))
+    let choice = WindowViewChoice(view: .standard, hour: .dusk)
+    let state = stage.windowState(choice: choice, dayLight: nil, at: .now)
+    #expect(state.view == choice.view)
+    #expect(state.hour == .dusk)
+    #expect(state.window.count == 4)
+    #expect(state.home.count == 4)
   }
 
   @Test func theNookiSceneHasBothTabScenes() {
@@ -323,5 +366,68 @@ struct TabLightingTests {
     stages.shopStage.setLighting(.amberLantern)
     stages.deskStage.setLighting(.neonNight)
     stages.shopStage.setLighting(.off)
+  }
+}
+
+struct DeskCuesTests {
+  @Test func theDoodleLiesOnThePapersCorners() throws {
+    let corners = [
+      CGPoint(x: 100, y: 500), CGPoint(x: 260, y: 505), CGPoint(x: 280, y: 600),
+      CGPoint(x: 90, y: 596),
+    ]
+    let transform = try #require(DeskDoodleLayer.projection(onto: corners))
+    let page = DeskDoodleLayer.page
+    let pageCorners = [
+      CGPoint.zero, CGPoint(x: page.width, y: 0), CGPoint(x: page.width, y: page.height),
+      CGPoint(x: 0, y: page.height),
+    ]
+    for (from, to) in zip(pageCorners, corners) {
+      let w = from.x * transform.m13 + from.y * transform.m23 + transform.m33
+      let x = (from.x * transform.m11 + from.y * transform.m21 + transform.m31) / w
+      let y = (from.x * transform.m12 + from.y * transform.m22 + transform.m32) / w
+      let missX: CGFloat = abs(x - to.x)
+      let missY: CGFloat = abs(y - to.y)
+      #expect(missX < 0.01)
+      #expect(missY < 0.01)
+    }
+    #expect(DeskDoodleLayer.projection(onto: []) == nil)
+  }
+
+  @Test func thePapersCornersSurroundItsMiddle() {
+    let corners = DeskLayout.paperCorners
+    let middle = DeskLayout.paper.centre
+    #expect(corners.count == 4)
+    let meanX: Float = corners.map(\.x).reduce(0, +) / 4
+    let meanY: Float = corners.map(\.y).reduce(0, +) / 4
+    #expect(abs(meanX - middle.x) < 1e-4)
+    #expect(abs(meanY - middle.y) < 1e-4)
+    // Far edge first: the first two are further from the viewer than the last two.
+    #expect(corners[0].y < corners[3].y && corners[1].y < corners[2].y)
+  }
+
+  @MainActor
+  @Test func theEmptyBoardHasAPlaceholderCard() {
+    #expect(DeskArt.placeholder() != nil)
+  }
+}
+
+@MainActor
+struct ShopTagTests {
+  @Test func closeTagsStepApartAndStayInTheView() {
+    let tags =
+      [3, 4, 5].map {
+        ShopTag(
+          id: "t\($0)", centre: CGPoint(x: 100 + CGFloat($0) * 6, y: 400), price: "\($0)",
+          owned: false)
+      } + [ShopTag(id: "edge", centre: CGPoint(x: 2, y: 300), price: "9", owned: false)]
+    let spread = ShopStage.spread(tags, width: 393)
+    #expect(spread.count == tags.count)
+    for (index, a) in spread.enumerated() {
+      for b in spread.dropFirst(index + 1) {
+        let apart = abs(a.centre.x - b.centre.x) >= 40 || abs(a.centre.y - b.centre.y) >= 21
+        #expect(apart, "\(a.id) and \(b.id)")
+      }
+    }
+    #expect(spread.allSatisfy { $0.centre.x >= 24 && $0.centre.x <= 369 })
   }
 }

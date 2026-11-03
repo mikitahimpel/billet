@@ -9,6 +9,8 @@ struct KeeperPose: Equatable {
   var breath: Float = 0
   /// The body's lean to the side.
   var sway: Float = 0
+  /// The body's bow forward, as in a greeting.
+  var bow: Float = 0
   /// Turn to its left (positive) or right, lift up (positive) or down, and tilt of the head.
   var headYaw: Float = 0
   var headPitch: Float = 0
@@ -16,23 +18,42 @@ struct KeeperPose: Equatable {
   /// How far each arm is lifted out to the side, from hanging (0).
   var leftArm: Float = KeeperMotion.restingArm
   var rightArm: Float = KeeperMotion.restingArm
+  /// How far both arms reach forward, from hanging (0), as when handing something over.
+  var reach: Float = 0
   /// 0 with the eyes open, 1 shut.
   var blink: Float = 0
   var tail: Float = 0
   var ear: Float = 0
 }
 
-/// The shopkeeper's life behind the counter as plain numbers: breathing, blinking, a tail that
-/// sways, eyes that follow you, a glance at what you tapped, a wave hello and a little cheer when
-/// you buy something.
+/// The shopkeeper's life behind the counter as plain numbers, the same for every keeper: an idle of
+/// breathing, blinking, a tail that sways and eyes that follow you; a greeting bow when you come
+/// in, then a sweep of the arms to the shelves; a glance at what you tapped; a wave; handing over
+/// what you bought, then a little cheer.
 struct KeeperMotion {
   enum Gesture: Equatable {
+    case greet
+    case present
     case wave
+    case handOver
     case cheer
+
+    var length: Double {
+      switch self {
+      case .greet: KeeperMotion.greetLength
+      case .present: KeeperMotion.presentLength
+      case .wave: KeeperMotion.waveLength
+      case .handOver: KeeperMotion.handOverLength
+      case .cheer: KeeperMotion.cheerLength
+      }
+    }
   }
 
   static let restingArm: Float = 0.12
+  static let greetLength = 1.3
+  static let presentLength = 2.6
   static let waveLength = 2.1
+  static let handOverLength = 2.0
   static let cheerLength = 1.5
   static let glanceLength = 1.6
   /// How far the head turns or lifts at most to follow you, so it never looks over its shoulder.
@@ -42,6 +63,8 @@ struct KeeperMotion {
 
   private(set) var time = 0.0
   private(set) var gesture: (kind: Gesture, start: Double)?
+  /// What follows the gesture now playing, in order.
+  private(set) var queue: [Gesture] = []
   private var glance: (yaw: Float, pitch: Float, until: Double)?
   private var nextBlink = 1.4
   private var nextTwitch = 5.0
@@ -55,14 +78,33 @@ struct KeeperMotion {
 
   var isBusy: Bool { gesture != nil }
 
+  /// How far into a hand-over the keeper is, from 0 to 1, or `nil` when it is not handing over.
+  var handOverProgress: Double? {
+    guard let gesture, gesture.kind == .handOver else { return nil }
+    return min(max((time - gesture.start) / Self.handOverLength, 0), 1)
+  }
+
   mutating func wave() {
     guard gesture == nil else { return }
     gesture = (.wave, time)
   }
 
+  /// A bow hello, then a sweep of the arms to what is for sale, as when you come in.
+  mutating func welcome() {
+    gesture = (.greet, time)
+    queue = [.present]
+  }
+
+  /// Hands over what you bought, then cheers. It cuts in on anything, since it answers a purchase.
+  mutating func handOver() {
+    gesture = (.handOver, time)
+    queue = [.cheer]
+  }
+
   /// A cheer cuts in on anything, since it answers a purchase.
   mutating func cheer() {
     gesture = (.cheer, time)
+    queue = []
   }
 
   /// Turns to look at something for a moment, at `yaw` and `pitch` from straight ahead.
@@ -101,30 +143,62 @@ struct KeeperMotion {
 
     if let gesture {
       let age = time - gesture.start
-      switch gesture.kind {
-      case .wave:
-        if age >= Self.waveLength {
-          self.gesture = nil
-        } else {
-          let lift = Self.envelope(age, rise: 0.35, fall: 0.4, length: Self.waveLength)
-          let swing = still ? 0 : 0.38 * sin(Float(age - 0.35) * 2 * .pi * 2.6)
-          pose.rightArm = Self.restingArm + lift * (2.45 - Self.restingArm) + lift * swing
-          pose.headTilt += lift * 0.14
-        }
-      case .cheer:
-        if age >= Self.cheerLength {
-          self.gesture = nil
-        } else {
-          let lift = Self.envelope(age, rise: 0.25, fall: 0.35, length: Self.cheerLength)
-          pose.leftArm = Self.restingArm + lift * (2.2 - Self.restingArm)
-          pose.rightArm = pose.leftArm
-          pose.blink = max(pose.blink, lift * 0.85)
-          if !still, age < 1.0 {
-            pose.hop = 0.09 * abs(sin(Float(age) * .pi * 2))
-          }
-          pose.headPitch += lift * 0.15
-        }
+      if age >= gesture.kind.length {
+        self.gesture = queue.isEmpty ? nil : (queue.removeFirst(), time)
+      } else {
+        pose = Self.perform(gesture.kind, age: age, on: pose, still: still)
       }
+    }
+    return pose
+  }
+
+  /// `pose` with `gesture` laid over it, `age` seconds in.
+  private static func perform(_ gesture: Gesture, age: Double, on base: KeeperPose, still: Bool)
+    -> KeeperPose
+  {
+    var pose = base
+    let length = gesture.length
+    switch gesture {
+    case .greet:
+      let lift = envelope(age, rise: 0.35, fall: 0.45, length: length)
+      pose.bow = lift * 0.32
+      pose.headPitch -= lift * 0.3
+      pose.headTilt += lift * 0.1
+      pose.leftArm = restingArm + lift * 0.25
+      pose.rightArm = pose.leftArm
+    case .present:
+      // Its left arm out to the shelves on its left, then its right to the other side, the head
+      // following each, palms open.
+      let half = length / 2
+      let first = envelope(age, rise: 0.3, fall: 0.3, length: half)
+      let second = envelope(age - half, rise: 0.3, fall: 0.3, length: half)
+      pose.leftArm = restingArm + first * (1.35 - restingArm)
+      pose.rightArm = restingArm + second * (1.35 - restingArm)
+      pose.reach = (first + second) * 0.35
+      pose.headYaw += (first - second) * 0.55
+      pose.headPitch += (first + second) * 0.1
+    case .wave:
+      let lift = envelope(age, rise: 0.35, fall: 0.4, length: length)
+      let swing = still ? 0 : 0.38 * sin(Float(age - 0.35) * 2 * .pi * 2.6)
+      pose.rightArm = restingArm + lift * (2.45 - restingArm) + lift * swing
+      pose.headTilt += lift * 0.14
+    case .handOver:
+      let lift = envelope(age, rise: 0.45, fall: 0.5, length: length)
+      pose.reach = lift * 1.25
+      pose.leftArm = restingArm + lift * 0.18
+      pose.rightArm = pose.leftArm
+      pose.bow = lift * 0.14
+      pose.headPitch -= lift * 0.12
+      pose.headTilt += lift * 0.08
+    case .cheer:
+      let lift = envelope(age, rise: 0.25, fall: 0.35, length: length)
+      pose.leftArm = restingArm + lift * (2.2 - restingArm)
+      pose.rightArm = pose.leftArm
+      pose.blink = max(pose.blink, lift * 0.85)
+      if !still, age < 1.0 {
+        pose.hop = 0.09 * abs(sin(Float(age) * .pi * 2))
+      }
+      pose.headPitch += lift * 0.15
     }
     return pose
   }
