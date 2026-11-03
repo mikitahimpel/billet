@@ -43,6 +43,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case lifeChips
   case lifeDebug
   case catBrain
+  case brainDebug
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -102,6 +103,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeChips: .cat
     case .lifeDebug: .cat
     case .catBrain: .cat
+    case .brainDebug: .cat
     }
   }
 
@@ -143,6 +145,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeChips: "Need words"
     case .lifeDebug: "Life debug"
     case .catBrain: "Cat brain"
+    case .brainDebug: "Brain debug"
     }
   }
 
@@ -162,6 +165,8 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
     case .catBrain:
       "The cat in the styled rooms runs on its brain: it naps in the sun, watches the rain, grooms after a meal, nudges a mug and waits by the window when one of you is away. Both phones see the same cat."
+    case .brainDebug:
+      "With the cat brain on, a card on Home shows what the brain is doing and why: its state, the five best scores, the last ten moves, its traits and favourite spot, and a faster clock."
     case .catCarriesNote:
       "When a note arrives, the cat carries it in its mouth to the wall or the glass and tapes it up."
     case .catPurrs:
@@ -262,6 +267,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeChips: false
     case .lifeDebug: false
     case .catBrain: false
+    case .brainDebug: false
     }
   }
 
@@ -303,6 +309,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeChips: false
     case .lifeDebug: false
     case .catBrain: false
+    case .brainDebug: false
     }
   }
 }

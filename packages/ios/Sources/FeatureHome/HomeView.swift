@@ -119,11 +119,17 @@ struct HomeView: View {
           onPet: pet)
       }
       .overlay(alignment: .topLeading) {
-        if session.labs.isOn(LabExperiment.lifeDebug) {
-          LifeDebugOverlay(model: session.life)
-            .padding(.top, Spacing.wide * 2)
-            .padding(.leading, Spacing.medium)
+        VStack(alignment: .leading, spacing: Spacing.small) {
+          if session.labs.isOn(LabExperiment.lifeDebug) {
+            LifeDebugOverlay(model: session.life)
+          }
+          if session.labs.isOn(LabExperiment.catBrain), session.labs.isOn(LabExperiment.brainDebug)
+          {
+            BrainDebugOverlay(brain: session.brain, life: session.life)
+          }
         }
+        .padding(.top, Spacing.wide * 2)
+        .padding(.leading, Spacing.medium)
       }
       .task(id: delivery) {
         guard delivery > 0, let wall = scene?.noteWall else { return }

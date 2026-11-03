@@ -254,6 +254,93 @@ struct CatBrainTests {
       events: events, now: t, context: Self.context, seed: 3, room: Self.room)
     long.advance(to: t)
     #expect(fresh.frame() == long.brain.frame())
+    #expect(fresh.personality == long.brain.personality)
+    #expect(fresh.memory == long.brain.memory)
+    #expect(!fresh.memory.spots.isEmpty)
+  }
+
+  // MARK: - Memory and drift
+
+  static let napRoom = RoomAffordances([
+    RoomAffordance(id: "window", kind: .window),
+    RoomAffordance(id: "cardigan", kind: .soft),
+    RoomAffordance(id: "rug", kind: .rug),
+    RoomAffordance(id: "cat-bed", kind: .bed),
+  ])
+
+  @Test func aDayBeginsWithYesterdaysSpots() throws {
+    var sampler = CatLifeSampler(events: Self.bothActive, context: Self.context)
+    let line = CatBrain.dayStart(before: Self.at(12), utcOffset: 0, config: .standard)
+    let day = CatBrain.opening(
+      at: line, seed: 5, nature: .even, room: Self.napRoom, weather: .clear, sampler: &sampler,
+      utcOffset: 0, config: .standard)
+    let favourite = try #require(day.memory.favourite)
+    #expect([.bed, .soft, .rug, .sunbeam].contains(favourite))
+    let total = RoomAffordance.Kind.allCases.map { day.memory.fondness($0) }.reduce(0, +)
+    #expect(abs(total - 1) < 1e-9)
+    // Before the cat was born there is nothing to remember.
+    let first = try #require(Self.context.born).timeIntervalSince1970
+    let newborn = CatBrain.opening(
+      at: first, seed: 5, nature: .even, room: Self.napRoom, weather: .clear, sampler: &sampler,
+      utcOffset: 0, config: .standard)
+    #expect(newborn.memory.spots.isEmpty)
+  }
+
+  @Test func aFavouriteSpotIsWhereItNaps() {
+    // The same cat, once fond of the cardigan and once of the rug, naps where it likes.
+    func naps(fondOf kind: RoomAffordance.Kind) -> [RoomAffordance.Kind: Int] {
+      var memory = CatMemory()
+      memory.rested(at: kind, seconds: 6 * 3600)
+      var counts: [RoomAffordance.Kind: Int] = [:]
+      for seed in UInt64(1)...6 {
+        var sampler = CatLifeSampler(events: Self.lotsOfPlay, context: Self.context)
+        let start = Self.at(4)
+        var brain = CatBrain(
+          seed: seed, personality: .even, day: CatDay(personality: .even, memory: memory),
+          room: Self.napRoom, start: start, life: sampler.sample(at: start), utcOffset: 0)
+        brain.schedule(sampler.events(after: start, through: .infinity))
+        var t = start
+        var last: CatTarget?
+        while t < Self.at(23) {
+          brain.advance(to: t, life: &sampler)
+          let frame = brain.frame()
+          if frame.stack.step == .curl, frame.target != last,
+            case .affordance(let spot) =
+              frame.target
+          {
+            counts[spot, default: 0] += 1
+          }
+          last = frame.stack.step == .curl ? frame.target : nil
+          t += 30
+        }
+      }
+      return counts
+    }
+    let soft = naps(fondOf: .soft)
+    let rug = naps(fondOf: .rug)
+    #expect((soft[.soft] ?? 0) > (rug[.soft] ?? 0))
+    #expect((rug[.rug] ?? 0) > (soft[.rug] ?? 0))
+  }
+
+  @Test func experienceMovesThePersonality() {
+    let nature = CatPersonality.even
+    let play = (0..<40).map { Self.event(.play, "a", -60 + Double($0)) }
+    let pets = (0..<40).map { Self.event(.pet, "b", -60 + Double($0)) }
+    let played = nature.drifted(by: play, at: Self.at(4))
+    let petted = nature.drifted(by: pets, at: Self.at(4))
+    #expect(played.playful > nature.playful)
+    #expect(played.lazy < nature.lazy)
+    #expect(played.cuddly == nature.cuddly)
+    #expect(petted.cuddly > nature.cuddly)
+    #expect(petted.playful == nature.playful)
+    // However much happens, a trait moves a little and stays inside 0…1.
+    let lots = (0..<2000).map { Self.event(.play, "a", -100 + Double($0) * 0.05, $0) }
+    let most = nature.drifted(by: lots, at: Self.at(4))
+    #expect(most.playful <= nature.playful + CatPersonality.driftLimit + 1e-9)
+    // A week ago is forgotten, and what has not happened yet does not count.
+    let old = nature.drifted(by: play, at: Self.at(4 + 8 * 24))
+    #expect(old == nature)
+    #expect(nature.drifted(by: play, at: Self.at(-70)) == nature)
   }
 
   // MARK: - Personality

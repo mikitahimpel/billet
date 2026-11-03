@@ -106,8 +106,11 @@ public struct CatBrainRunner: Sendable {
     let dayStart = CatBrain.dayStart(before: now, utcOffset: context.utcOffset, config: config)
     let born = context.born?.timeIntervalSince1970 ?? sampler.all.first?.at.timeIntervalSince1970
     let start = min(max(dayStart, born ?? dayStart), now)
+    let day = CatBrain.opening(
+      at: start, seed: seed, nature: personality ?? .seeded(seed), room: room, weather: weather,
+      sampler: &sampler, utcOffset: context.utcOffset, config: config)
     var brain = CatBrain(
-      seed: seed, personality: personality, room: room, weather: weather,
+      seed: seed, personality: personality, day: day, room: room, weather: weather,
       start: start, life: sampler.sample(at: start), utcOffset: context.utcOffset,
       lifeConfig: sampler.config, config: config)
     brain.remember(sampler.all.filter { $0.at.timeIntervalSince1970 < brain.time })
@@ -126,5 +129,31 @@ extension CatBrain {
     let local = t + Double(utcOffset) - config.dayStartHour * 3600
     let day = (local / 86400).rounded(.down)
     return day * 86400 + config.dayStartHour * 3600 - Double(utcOffset)
+  }
+
+  /// What a day starting at `t` begins with: the personality moved by the days before it, and the
+  /// memory of a rehearsal of the day before from its own canonical start. The rehearsal starts
+  /// with no memory, so it reaches back one day only, and both phones work out the same.
+  public static func opening(
+    at t: Double, seed: UInt64, nature: CatPersonality, room: RoomAffordances,
+    weather: ViewWeather, sampler: inout CatLifeSampler, utcOffset: Int, config: CatBrainConfig
+  ) -> CatDay {
+    let personality = nature.drifted(by: sampler.all, at: t)
+    let birth =
+      sampler.context.born?.timeIntervalSince1970
+      ?? sampler.all.first?.at
+      .timeIntervalSince1970
+    let start = max(t - 86400, birth ?? t)
+    guard start < t else { return CatDay(personality: personality) }
+    var rehearsal = CatBrain(
+      seed: seed, personality: nature,
+      day: CatDay(personality: nature.drifted(by: sampler.all, at: start)), room: room,
+      weather: weather, start: start, life: sampler.sample(at: start), utcOffset: utcOffset,
+      lifeConfig: sampler.config, config: config)
+    rehearsal.remember(sampler.all.filter { $0.at.timeIntervalSince1970 < rehearsal.time })
+    rehearsal.schedule(sampler.events(after: rehearsal.time - 1e-9, through: t - 1e-9))
+    // Up to just before the day line, so the rehearsal never starts a day of its own.
+    rehearsal.advance(to: t - config.decisionStep / 2, life: &sampler)
+    return CatDay(personality: personality, memory: rehearsal.memory.carried())
   }
 }

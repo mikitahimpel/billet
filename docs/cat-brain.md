@@ -52,6 +52,33 @@ Six traits from 0 to 1: curious, lazy, cuddly, playful, bold, vocal. They are dr
 seed in 0.15…0.85, so every cat is someone, and two cats in the same room behave differently.
 The app makes no sound: a vocal cat shows itself by perking up and seeking company.
 
+Experience moves them a little. At each day start the traits are the born ones moved by the last
+six days of events, each weighted by `e^(−age/3 days)`: games make the cat more playful and less
+lazy, pets more cuddly, notes more vocal and a little more curious, and any care a little bolder.
+No trait moves more than 0.15 from where it was born, and a week without a game sends it back.
+
+## Memory
+
+- **Favourite spots**: seconds curled up or kneading at each kind of spot, with a minute for each
+  pet there. A nap spot it is fond of is up to four times likelier, and Rest scores up to 1.3 times
+  higher when one is in reach.
+- **Yesterday**: a day starts with yesterday's spots at half strength. Yesterday is not carried
+  from the phone's own run but rehearsed: the brain replays the previous day from its canonical
+  start with no memory (about 20 ms) and keeps what that rehearsal did. So a phone that just
+  launched remembers exactly what one that ran all week remembers, and anything older than two
+  days is gone.
+- **Who was last**: the partner whose event came last, and how long the other has been away
+  (Social and Watch wait for a partner away 12 hours).
+- **Recent toys**: the toys this phone's finger played with, shown in the overlay and never
+  folded, as the live touch is.
+
+## Brain debug
+
+**Brain debug** in Labs (The cat), with Cat brain on, puts a card on Home: the state stack, the
+five best scores at the last choice with their factors (`n` need, `p` personality, `t` time, `r`
+room, `b` boredom, `m` mood, `v` vitality), the last ten moves with their causes, today's traits
+with arrows where experience moved them, the favourite spot, and the ×1, ×60 and ×600 clock.
+
 ## Determinism and sync
 
 The brain is a pure function of the life events, the time and the seed:
