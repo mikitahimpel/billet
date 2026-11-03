@@ -3,7 +3,8 @@ import Pet
 import PetScene
 import SwiftUI
 
-/// Adds the shop and the closet to Home when the chosen scene can draw what they hold.
+/// Adds the closet to Home when the chosen scene can draw what it holds. The closet can still
+/// open the shop; the Shop tab is the usual way in.
 ///
 /// Neither screen is built until it is opened, so a scene without a shop pays nothing.
 struct HomeShop: ViewModifier {
@@ -30,7 +31,6 @@ struct HomeShop: ViewModifier {
           GlassGroup {
             HStack(spacing: Spacing.small) {
               IconButton("archivebox.fill", label: "Closet") { sheet = .closet }
-              IconButton("bag.fill", label: "Shop") { sheet = .shop }
             }
           }
           .padding(.top, Spacing.small)

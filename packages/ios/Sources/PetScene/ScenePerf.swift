@@ -46,7 +46,6 @@ public enum ScenePerf {
   /// What the app's shell lets a run change.
   public struct Host {
     public var selectTab: @MainActor (String) -> Void = { _ in }
-    public var setRoom: @MainActor (RoomStyle) -> Void = { _ in }
     public var setLighting: @MainActor (RoomLighting) -> Void = { _ in }
     public init() {}
   }
@@ -113,10 +112,7 @@ public enum ScenePerf {
     }
     scene?.release()
     await pause(1.5)
-    for style in [RoomStyle.sunsetLamp, .windowSeat, .sunsetLamp, .windowSeat] {
-      await timed("room.\(style.rawValue)", until: "room on screen") { host.setRoom(style) }
-      census()
-    }
+    census()
     for lighting in RoomLighting.allCases + [RoomLighting.amberLantern] {
       host.setLighting(lighting)
       await record("light.\(lighting.rawValue)", seconds: 2)
@@ -142,31 +138,28 @@ public enum ScenePerf {
     scene?.release()
   }
 
-  /// Each room under each lighting preset, at the camera's extremes, held still for a screenshot.
+  /// The room under each lighting preset, at the camera's extremes, held still for a screenshot.
   private static func sweep() async {
-    for style in [RoomStyle.windowSeat, .sunsetLamp] {
-      await timed("room.\(style.rawValue)", until: "room on screen") { host.setRoom(style) }
-      for lighting in RoomLighting.allCases {
-        host.setLighting(lighting)
-        await pause(2.5)
-        await shot("\(style.rawValue)-\(lighting.rawValue)-home")
-      }
-      host.setLighting(.amberLantern)
-      await pause(1.5)
-      let poses: [(String, Float, Float, Float)] = [
-        ("left", 4000, 0, 1), ("right", -4000, 0, 1), ("high", 0, -4000, 1),
-        ("low", 0, 4000, 1), ("near", 0, 0, 3), ("far", 0, 0, 0.3),
-      ]
-      for (name, x, y, scale) in poses {
-        scene?.orbit(x, y)
-        scene?.zoom(scale)
-        await pause(1.2)
-        await shot("\(style.rawValue)-\(name)")
-        scene?.zoom(1 / scale)
-        scene?.orbit(-x, -y)
-        scene?.release()
-        await pause(1)
-      }
+    for lighting in RoomLighting.allCases {
+      host.setLighting(lighting)
+      await pause(2.5)
+      await shot("windowSeat-\(lighting.rawValue)-home")
+    }
+    host.setLighting(.amberLantern)
+    await pause(1.5)
+    let poses: [(String, Float, Float, Float)] = [
+      ("left", 4000, 0, 1), ("right", -4000, 0, 1), ("high", 0, -4000, 1),
+      ("low", 0, 4000, 1), ("near", 0, 0, 3), ("far", 0, 0, 0.3),
+    ]
+    for (name, x, y, scale) in poses {
+      scene?.orbit(x, y)
+      scene?.zoom(scale)
+      await pause(1.2)
+      await shot("windowSeat-\(name)")
+      scene?.zoom(1 / scale)
+      scene?.orbit(-x, -y)
+      scene?.release()
+      await pause(1)
     }
     for tab in ["shop", "notes"] {
       await timed("tab.\(tab)", until: "\(tab) on screen") { host.selectTab(tab) }
