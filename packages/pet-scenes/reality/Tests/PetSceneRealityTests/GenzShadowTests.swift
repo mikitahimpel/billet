@@ -77,6 +77,33 @@ import Testing
     #expect(asleep.x == asleep.y)
   }
 
+  @Test func theCatTurnsTheShortWayRoundInsteadOfSnapping() {
+    let start: Float = 3.0
+    let goal: Float = -3.0
+    let next = GenzRoom.turn(start, towards: goal, step: 1.0 / 60)
+    #expect(next > start, "across the back, not the long way through the front")
+    #expect(next - start < 0.1, "a little each frame")
+    var heading = start
+    for _ in 0..<30 { heading = GenzRoom.turn(heading, towards: goal, step: 1.0 / 60) }
+    #expect(abs(sin(heading) - sin(goal)) < 0.02 && abs(cos(heading) - cos(goal)) < 0.02)
+  }
+
+  @Test func aCatPutDownComesDownOntoTheSeatRatherThanDropping() async throws {
+    let room = try await builtRoom()
+    let seat = room.homeScene.y
+    room.dropped = (seat + 0.2, room.clock)
+    room.settleDrop()
+    #expect(room.catHolder.position.y > seat + 0.19, "still up there the moment it is let go")
+    room.dropped = (seat + 0.2, room.clock - Double(GenzRoom.dropLength) / 2)
+    room.settleDrop()
+    let half = room.catHolder.position.y
+    #expect(half > seat && half < seat + 0.2)
+    room.dropped = (seat + 0.2, room.clock - 1)
+    room.settleDrop()
+    #expect(room.catHolder.position.y == seat)
+    #expect(room.dropped == nil)
+  }
+
   @Test func shadowsGoWithTheLights() async throws {
     let room = try await builtRoom()
     let glow = try #require(room.glow)
