@@ -105,7 +105,7 @@ struct FlameSceneView: View {
 
   /// The room's window view through the opening, always at night.
   private func outside(_ stage: FlameSceneStage) -> some View {
-    TimelineView(.animation(minimumInterval: 1 / 20, paused: !isOnScreen || reduceMotion)) {
+    TimelineView(.animation(minimumInterval: 0.05, paused: !isOnScreen || reduceMotion)) {
       context in
       let screen = stage.screen
       let state = WindowViewState(
