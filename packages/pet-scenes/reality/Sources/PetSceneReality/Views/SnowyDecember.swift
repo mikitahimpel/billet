@@ -235,8 +235,45 @@ struct SnowyDecember: ViewRecipe {
     }
   }
 
+  /// A neighbour clearing the driveway now and then: scoop, lift, toss, a puff of snow.
+  static let shoveller = ViewRhythm(seed: 351, slot: 90, chance: 0.6, length: 50...80)
+  static let shovelSpot = CGPoint(x: 46, y: streetBase + 0.2)
+
+  private func shovelling(_ context: GraphicsContext, moment: ViewMoment) {
+    guard Self.shoveller.pass(at: moment.now) != nil else { return }
+    let spot = Self.shovelSpot
+    ViewWalker.figure(
+      context, at: spot, height: 6.4, facing: -1, kind: .walker, coat: 0xE5503A, plane: .street,
+      moment: moment, walking: false)
+    // One stroke every 2.4 s: down to the snow, up and over the shoulder.
+    let phase = (moment.now / 2.4).truncatingRemainder(dividingBy: 1)
+    let lift = phase < 0.5 ? 0 : sin((phase - 0.5) / 0.5 * Double.pi)
+    let angle = -0.35 - 1.2 * lift
+    let hands = CGPoint(x: spot.x - 0.6, y: spot.y - 3.6)
+    let blade = CGPoint(
+      x: hands.x - 3.6 * CGFloat(cos(angle)), y: hands.y - 3.6 * CGFloat(sin(angle)))
+    var shaft = Path()
+    shaft.move(to: hands)
+    shaft.addLine(to: blade)
+    let dark = moment.palette.street.lit(-0.4)
+    context.stroke(shaft, with: .color(dark.color()), lineWidth: 0.22)
+    ViewKit.rect(context, CGRect(x: blade.x - 0.7, y: blade.y - 0.3, width: 1.4, height: 0.6), dark)
+    // The toss: a puff of snow flying off the blade and falling.
+    if phase > 0.7 {
+      let t = (phase - 0.7) / 0.3
+      let snow = ViewKit.snow(moment.look)
+      for flake in 0..<6 {
+        let spread = CGFloat(ViewRhythm.hash(flake, seed: 352))
+        let x = blade.x - CGFloat(t) * (3 + 3 * spread)
+        let y = blade.y - CGFloat(sin(t * Double.pi)) * (2 + spread) + CGFloat(t * t) * 3
+        ViewKit.circle(context, CGPoint(x: x, y: y), 0.25 + 0.2 * spread, snow, 0.9 * (1 - t))
+      }
+    }
+  }
+
   private func streetLife(_ context: GraphicsContext, moment: ViewMoment) {
     ViewWindows.draw(Self.streetWindows, context, moment: moment)
+    shovelling(context, moment: moment)
     for string in Self.gutterLights.prefix(4) { string.draw(context, moment: moment) }
     let lamps = moment.lamps
     // The wreath on the big house's door, with a red bow.

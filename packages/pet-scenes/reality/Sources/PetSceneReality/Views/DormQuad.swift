@@ -262,6 +262,7 @@ struct DormQuad: ViewRecipe {
           context, CGPoint(x: globe.x, y: 46), 6, ViewPalette.lamp, 0.12 * moment.lamps)
       }
       frisbee(context, moment: moment)
+      benchSitter(context, moment: moment)
       squirrel(context, moment: moment)
       for walker in Self.walkers { walker.draw(context, moment: moment) }
       ViewLeaves(count: 4, area: CGRect(x: -10, y: 8, width: 120, height: 42), seed: 5)
@@ -321,6 +322,33 @@ struct DormQuad: ViewRecipe {
           to: CGPoint(x: rect.maxX - 0.2, y: rect.minY + 0.4), sag: 0.5, count: 6, seed: index
         ).draw(context, moment: moment)
       }
+    }
+  }
+
+  /// Someone on the left bench with a laptop open, its screen lighting their face after dark.
+  static let sitter = ViewRhythm(seed: 531, slot: 120, chance: 0.7, length: 70...110)
+
+  private func benchSitter(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.weather != .rain, moment.look.weather != .snow,
+      Self.sitter.pass(at: moment.now) != nil
+    else { return }
+    let seat = CGPoint(x: 33, y: 44.2)
+    let shade = moment.palette.street.lit(-0.38)
+    let coat = shade.mixed(with: ViewColour(0x5A6AA8), by: moment.look.isDark ? 0.25 : 0.5)
+    // Seated: body on the bench, legs down, head bent over the screen.
+    ViewKit.rect(context, CGRect(x: seat.x - 0.9, y: seat.y - 3.4, width: 1.8, height: 3.4), coat)
+    ViewKit.rect(context, CGRect(x: seat.x - 0.2, y: seat.y, width: 1.8, height: 0.5), shade)
+    ViewKit.rect(context, CGRect(x: seat.x + 1.2, y: seat.y, width: 0.45, height: 1.6), shade)
+    ViewKit.circle(context, CGPoint(x: seat.x + 0.3, y: seat.y - 4), 0.65, shade)
+    let screen = ViewColour(0xCFE4FF)
+    var lid = Path()
+    lid.move(to: CGPoint(x: seat.x + 1.2, y: seat.y - 0.6))
+    lid.addLine(to: CGPoint(x: seat.x + 2.2, y: seat.y - 2.2))
+    context.stroke(
+      lid, with: .color(screen.color(moment.look.isDark ? 0.9 : 0.4)), lineWidth: 0.35)
+    if moment.look.isDark {
+      let flicker = 0.85 + 0.15 * sin(moment.now * 1.7)
+      ViewKit.glow(context, CGPoint(x: seat.x + 1.4, y: seat.y - 2.4), 3.4, screen, 0.45 * flicker)
     }
   }
 

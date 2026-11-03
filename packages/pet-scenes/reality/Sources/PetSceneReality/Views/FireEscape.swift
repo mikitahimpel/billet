@@ -325,7 +325,9 @@ struct FireEscape: ViewRecipe {
         ViewKit.circle(context, Self.spire, 0.5, ViewColour(0xFF3B3B))
         ViewKit.glow(context, Self.spire, 3, ViewColour(0xFF3B3B), 0.6)
       }
-    case .middle: ViewWindows.draw(Self.middleWindows, context, moment: moment)
+    case .middle:
+      ViewWindows.draw(Self.middleWindows, context, moment: moment)
+      neighbour(context, moment: moment)
     case .street:
       bodegaLights(context, moment: moment)
       steam(context, moment: moment)
@@ -339,6 +341,42 @@ struct FireEscape: ViewRecipe {
       for (index, rhythm) in Self.pigeons.enumerated() {
         pigeon(context, moment: moment, rhythm: rhythm, index: index)
       }
+    }
+  }
+
+  /// A neighbour out on their fire escape across the street: watering the plants by day, on
+  /// their phone after dark.
+  static let neighbourOut = ViewRhythm(seed: 651, slot: 100, chance: 0.6, length: 50...85)
+
+  private func neighbour(_ context: GraphicsContext, moment: ViewMoment) {
+    guard moment.look.weather != .rain, Self.neighbourOut.pass(at: moment.now) != nil else {
+      return
+    }
+    let building = Self.buildings[4]
+    let landing = CGPoint(x: building.x + 6, y: building.top + 6.6 + 5.6)
+    let dark = moment.look.isDark
+    ViewWalker.figure(
+      context, at: landing, height: 4.2, facing: 1, kind: dark ? .phone : .walker, coat: 0xC8A050,
+      plane: .middle, moment: moment, walking: false)
+    // Pots along the landing.
+    let pot = ViewColour(0xC0603A).mixed(with: moment.palette.middle, by: dark ? 0.6 : 0.3)
+    for dx in [3.0, 4.6, 6.2] as [CGFloat] {
+      ViewKit.rect(context, CGRect(x: landing.x + dx, y: landing.y - 1, width: 1, height: 1), pot)
+      ViewKit.circle(
+        context, CGPoint(x: landing.x + dx + 0.5, y: landing.y - 1.4), 0.7,
+        ViewColour(0x3F8A4E).mixed(with: moment.palette.middle, by: dark ? 0.6 : 0.3))
+    }
+    guard !dark else { return }
+    // The watering can and its stream.
+    let spout = CGPoint(x: landing.x + 2, y: landing.y - 2.6)
+    ViewKit.rect(
+      context, CGRect(x: landing.x + 0.6, y: landing.y - 3, width: 1.2, height: 0.9),
+      ViewColour(0x5BA8FF).mixed(with: moment.palette.middle, by: 0.3))
+    for drop in 0..<5 {
+      let p = (moment.now * 1.6 + Double(drop) / 5).truncatingRemainder(dividingBy: 1)
+      ViewKit.circle(
+        context, CGPoint(x: spout.x + 0.8 + CGFloat(p) * 1.4, y: spout.y + CGFloat(p * p) * 2.4),
+        0.14, moment.palette.skyMiddle.lit(0.5), 0.8 * (1 - p))
     }
   }
 
