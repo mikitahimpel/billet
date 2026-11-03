@@ -22,6 +22,8 @@ public struct APIClient: Sendable {
   public var listNotes: @Sendable (_ after: Int?) async throws(TransportError) -> ListNotesResponse
   /// The test variants the server has given this pair. Empty without a partner.
   public var flags: @Sendable () async throws(TransportError) -> FlagsResponse
+  /// Maintenance, the oldest build that may run, and a notice. Needs no session.
+  public var status: @Sendable () async throws(TransportError) -> StatusResponse
   /// Counts a few named things the app did. Names only; the server stamps the time.
   public var reportEvents:
     @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
@@ -49,6 +51,7 @@ public struct APIClient: Sendable {
       @escaping @Sendable (_ after: Int?) async throws(TransportError) ->
       ListNotesResponse,
     flags: @escaping @Sendable () async throws(TransportError) -> FlagsResponse,
+    status: @escaping @Sendable () async throws(TransportError) -> StatusResponse,
     reportEvents:
       @escaping @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
   ) {
@@ -64,6 +67,7 @@ public struct APIClient: Sendable {
     self.sendNote = sendNote
     self.listNotes = listNotes
     self.flags = flags
+    self.status = status
     self.reportEvents = reportEvents
   }
 }
@@ -148,6 +152,10 @@ extension APIClient {
         try await http.perform(
           try await request(Routes.getFlags, signed: true), as: FlagsResponse.self)
       },
+      status: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getStatus, signed: false), as: StatusResponse.self)
+      },
       reportEvents: { (events) async throws(TransportError) in
         try await http.performEmpty(
           try await json(
@@ -172,5 +180,6 @@ extension APIClient {
     sendNote: { (_) async throws(TransportError) in throw .network("offline") },
     listNotes: { (_) async throws(TransportError) in throw .network("offline") },
     flags: { () async throws(TransportError) in throw .network("offline") },
+    status: { () async throws(TransportError) in throw .network("offline") },
     reportEvents: { (_) async throws(TransportError) in throw .network("offline") })
 }

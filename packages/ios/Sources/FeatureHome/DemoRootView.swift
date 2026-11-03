@@ -25,12 +25,21 @@ public struct DemoRootView: View {
   @State private var onboarding: OnboardingPairing
   /// Choosing the cat together, once the pair was made in the first-launch scene.
   @State private var adoption: AdoptionModel?
+  @State private var serviceStatus: ServiceStatusModel
+  private let updateLink: UpdateLink
   private let publisher = WidgetPublisher.live()
 
-  public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
+  /// `serviceStatus` asks the demo Worker at `host` for its status (see
+  /// ``ServiceStatusModel/demoBaseURL(host:)``), and `updateLink` is where "Update billet" goes.
+  public init(
+    host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>,
+    serviceStatus: ServiceStatusModel, updateLink: UpdateLink
+  ) {
     self.host = host
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
+    _serviceStatus = State(initialValue: serviceStatus)
+    self.updateLink = updateLink
     // Without the bundled faces SwiftUI falls back to the system font, which still reads fine.
     try? BilletFonts.register()
     // Widget features and lab experiments share one file, so they share the one model that saves it.
@@ -61,26 +70,46 @@ public struct DemoRootView: View {
   }
 
   public var body: some View {
-    content
-      .environment(\.eveningGround, model.labs.eveningGround)
-      .preferredColorScheme(.dark)
-      .tint(Palette.gold.color)
-      .calmAnimation(value: model.isPaired)
-      .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
-        model.fakePartnerSwitched(on: on)
+    ServiceStatusLayer(model: serviceStatus, updateLink: updateLink, room: sleepingRoom) {
+      content
+    }
+    .environment(\.eveningGround, model.labs.eveningGround)
+    .preferredColorScheme(.dark)
+    .tint(Palette.gold.color)
+    .calmAnimation(value: model.isPaired)
+    .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
+      model.fakePartnerSwitched(on: on)
+    }
+    .onChange(of: pairingFacts, initial: true) { _, facts in
+      // Logged out: the next pairing gets the scene again.
+      if facts == .unpaired, onboarding.isFinished { onboarding = OnboardingPairing() }
+      onboarding.observe(facts)
+    }
+    .task(id: scenePhase == .active) {
+      if scenePhase == .active {
+        model.session?.connect()
+      } else {
+        model.session?.disconnect()
       }
-      .onChange(of: pairingFacts, initial: true) { _, facts in
-        // Logged out: the next pairing gets the scene again.
-        if facts == .unpaired, onboarding.isFinished { onboarding = OnboardingPairing() }
-        onboarding.observe(facts)
-      }
-      .task(id: scenePhase == .active) {
-        if scenePhase == .active {
-          model.session?.connect()
-        } else {
-          model.session?.disconnect()
-        }
-      }
+    }
+    .task(id: scenePhase == .active) {
+      guard scenePhase == .active else { return }
+      await serviceStatus.run()
+    }
+    .onChange(of: serviceStatus.maintenanceEnds) {
+      // A room still backing off reconnects now, and sends what waited in its outbox.
+      guard let session = model.session, session.status == .connecting else { return }
+      session.disconnect()
+      session.connect()
+    }
+  }
+
+  /// The chosen scene with its cat asleep, for the maintenance screen.
+  private func sleepingRoom() -> AnyView? {
+    guard let scene = scenes.first(where: { $0.id == selectedSceneID }) ?? scenes.first else {
+      return nil
+    }
+    return AnyView(SleepingRoom(scene: scene, labs: model.labs))
   }
 
   @ViewBuilder private var content: some View {

@@ -36,6 +36,7 @@ import Testing
       "sendNote": Routes.sendNote,
       "listNotes": Routes.listNotes,
       "getFlags": Routes.getFlags,
+      "getStatus": Routes.getStatus,
       "reportEvents": Routes.reportEvents,
     ]
     #expect(contract == mirrored)

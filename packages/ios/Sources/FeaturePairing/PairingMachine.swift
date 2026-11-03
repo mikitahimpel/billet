@@ -19,7 +19,8 @@ public enum PairingFailure: Equatable, Sendable {
     case .api(.alreadyPaired): self = .alreadyPaired
     case .api(.unauthorized): self = .signedOut
     case .api(.invalidRequest): self = .invalidCode
-    case .api(.unavailable), .api(.notFound), .network, .status, .encoding, .decoding:
+    case .api(.unavailable), .api(.notFound), .network, .status, .maintenance, .encoding,
+      .decoding:
       self = .unavailable
     }
   }
