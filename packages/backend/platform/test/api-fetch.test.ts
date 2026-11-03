@@ -1,3 +1,4 @@
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { Effect, Layer, Redacted, Schema } from "effect";
 import { SecureRandom, Signature } from "effect/crypto";
@@ -10,7 +11,9 @@ import {
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
 import { limits } from "../src/rate-limit.ts";
-import { mediaPath, routes } from "@billet/contracts-http-api/routes";
+import { clientHeaders, mediaPath, routes } from "@billet/contracts-http-api/routes";
+import { respondApi } from "../src/api-fetch.ts";
+import { testExperiments } from "./test-experiments.ts";
 import { imageSizeLimit } from "@billet/backend-notes/notes-routes";
 import { AuthChallengeResponse, SessionResponse } from "@billet/contracts-http-api/auth";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
@@ -571,6 +574,79 @@ describe("notes", () => {
       image,
       compact: { strokes: [{ points: [10, 20, 30, 40] }] },
     });
+  });
+});
+
+describe("Analytics Engine", () => {
+  const report = async (token: string, dataset: AnalyticsEngineDataset | undefined) => {
+    const ctx = createExecutionContext();
+    const response = await respondApi(
+      new Request("https://billet.test/v1/events", {
+        method: "POST",
+        headers: {
+          ...bearer(token),
+          "content-type": "application/json",
+          [clientHeaders.appVersion]: "1.0.0+12",
+          [clientHeaders.os]: "iOS 26.1",
+          "cf-connecting-ip": "203.0.113.9",
+        },
+        body: JSON.stringify({ events: ["AppOpened", "WidgetAdded"] }),
+      }),
+      { ...env, ...(dataset === undefined ? {} : { EVENTS: dataset }) },
+      ctx,
+      testExperiments,
+    );
+    await waitOnExecutionContext(ctx);
+    return response;
+  };
+
+  it("writes each accepted event with the pair hashed, its variants, build and system", async () => {
+    const { owner, pairId } = await pairOf("subject-a", "subject-b");
+    const written: Array<AnalyticsEngineDataPoint> = [];
+    const response = await report(owner, { writeDataPoint: (point) => void written.push(point!) });
+    expect(response.status).toBe(204);
+
+    const hash = (await sha256Hex(`billet-pair:${pairId}`)).slice(0, 16);
+    const stored = (
+      await env.DB.prepare("SELECT experiment_key, variant FROM pair_flags WHERE pair_id = ?")
+        .bind(pairId)
+        .all<{ experiment_key: string; variant: string }>()
+    ).results;
+    const variants = stored
+      .map((row) => `${row.experiment_key}=${row.variant}`)
+      .toSorted()
+      .join(",");
+    expect(variants).not.toBe("");
+    expect(written).toEqual(
+      ["AppOpened", "WidgetAdded"].map((name) => ({
+        indexes: [hash],
+        blobs: [name, hash, variants, "1.0.0+12", "iOS 26.1"],
+        doubles: [1],
+      })),
+    );
+    const text = JSON.stringify(written);
+    for (const secret of [pairId, owner, "subject-a", "203.0.113.9"]) {
+      expect(text).not.toContain(secret);
+    }
+    // The D1 counts are still kept: the funnel reads them.
+    expect(await everythingStored()).toContain("WidgetAdded");
+  });
+
+  it("still counts in D1 when no dataset is bound, and when a write throws", async () => {
+    const token = await signedInAs("subject-c");
+    expect((await report(token, undefined)).status).toBe(204);
+    const throwing = {
+      writeDataPoint: () => {
+        throw new Error("dataset down");
+      },
+    };
+    expect((await report(token, throwing)).status).toBe(204);
+    const rows = (
+      await env.DB.prepare("SELECT count FROM pair_events WHERE name = 'AppOpened'").all<{
+        count: number;
+      }>()
+    ).results;
+    expect(rows.map(({ count }) => count)).toEqual([2]);
   });
 });
 

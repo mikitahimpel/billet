@@ -66,7 +66,7 @@ enum RealBackend {
       ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
     let accounts = AccountStore.live(tokens: tokens, storage: storage)
     let api = APIClient.live(
-      http: .urlSession(baseURL: baseURL, session: .shared),
+      http: .urlSession(baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers),
       token: { (try? accounts.load())?.token })
     return RealAppModel(api: api, accounts: accounts, baseURL: baseURL)
   }

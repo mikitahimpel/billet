@@ -38,3 +38,14 @@ export const mediaPath = (key: string): string => routes.downloadImage.path.repl
 /** How a caller proves who it is, on every route except the two sign-in ones. */
 export const authorizationHeader = "authorization";
 export const bearerPrefix = "Bearer ";
+
+/**
+ * What the app says about its own build, on every request. Both are optional: an older build sends
+ * neither, and the server reads a missing or malformed value as `unknown`. Nothing in them names a
+ * person or a device. `appVersion` is `<marketing version>+<build>`, such as `1.2.0+14`; `os` is the
+ * platform and its version, such as `iOS 26.1`.
+ */
+export const clientHeaders = {
+  appVersion: "x-billet-app-version",
+  os: "x-billet-os",
+} as const;
