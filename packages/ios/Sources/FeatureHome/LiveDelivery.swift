@@ -32,6 +32,10 @@ actor LiveDelivery {
     var name: String?
     var note: String?
     var reaction: String?
+    /// For an `adopt` play: `pick`, `hold` or `adopt`, and its cat or finger.
+    var move: String?
+    var cat: String?
+    var holding: Bool?
   }
 
   private struct Frame: Decodable {
@@ -46,6 +50,9 @@ actor LiveDelivery {
     let from: String?
     let at: String?
     let events: [LifeFrameEvent]?
+    let move: String?
+    let cat: String?
+    let holding: Bool?
   }
 
   private struct LifeFrameEvent: Decodable {
@@ -132,6 +139,38 @@ actor LiveDelivery {
     let at = TreatDay.timestamp(for: .now, calendar: .current)
     let frame = OutgoingPlay(
       id: UUID().uuidString.lowercased(), kind: "name", at: at, name: name)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// A new name over the old one goes like a treat: kept until acked and sent again after a
+  /// reconnect. The room keeps the last one and tells both phones.
+  func renameCat(_ name: String) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    let frame = OutgoingPlay(
+      id: UUID().uuidString.lowercased(), kind: "rename", at: at, name: name)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// A finger on the cat only matters now, so it is dropped when the socket is down. A pick and
+  /// an adoption wait for the ack and are sent again after a reconnect.
+  func adopt(_ move: AdoptionMove) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "adopt", at: at)
+    switch move {
+    case .pick(let cat):
+      frame.move = "pick"
+      frame.cat = cat?.rawValue
+    case .hold(let holding):
+      frame.move = "hold"
+      frame.holding = holding
+      if let openSocket { await Self.write(frame, to: openSocket) }
+      return
+    case .adopt(let cat):
+      frame.move = "adopt"
+      frame.cat = cat.rawValue
+    }
     treatOutbox.append(frame)
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
@@ -236,6 +275,11 @@ actor LiveDelivery {
       updates.yield(.reactions(table))
     case "name":
       if let name = frame.name { updates.yield(.catName(name)) }
+    case "adopt":
+      guard let id = frame.id, receivedIDs.insert(id).inserted,
+        let move = Self.adoption(frame)
+      else { return }
+      updates.yield(.partnerAdoption(move))
     case "note":
       guard let id = frame.id, let ink = frame.ink, let noteID = UUID(uuidString: id),
         receivedIDs.insert(id).inserted, let strokes = try? NoteInk.decode(ink)
@@ -256,6 +300,16 @@ actor LiveDelivery {
     if let date = formatter.date(from: text) { return date }
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     return formatter.date(from: text)
+  }
+
+  /// The partner's move in an `adopt` frame, or `nil` when it is malformed.
+  private static func adoption(_ frame: Frame) -> AdoptionMove? {
+    switch frame.move {
+    case "pick": .pick(frame.cat.flatMap(AdoptionCat.init(rawValue:)))
+    case "hold": frame.holding.map(AdoptionMove.hold)
+    case "adopt": frame.cat.flatMap(AdoptionCat.init(rawValue:)).map(AdoptionMove.adopt)
+    default: nil
+    }
   }
 
   /// A failed write surfaces as a failed receive, which reconnects and resends.

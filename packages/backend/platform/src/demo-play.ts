@@ -1,5 +1,5 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with
-// and putting the cat to bed, naming the cat and reacting to a note.
+// and putting the cat to bed, naming the cat, reacting to a note, and choosing the cat together.
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -9,7 +9,7 @@ export const MAX_LIFE_EVENTS = 400;
 
 /** Plays that only the cat's life counts, with nothing but who did it and when. */
 export type LifePlayKind = "feed" | "play" | "sleep";
-export type PlayKind = "pet" | "treat" | LifePlayKind | "name" | "react";
+export type PlayKind = "pet" | "treat" | LifePlayKind | "name" | "rename" | "react" | "adopt";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -43,7 +43,31 @@ export interface ReactFrame {
   readonly reaction: Reaction;
 }
 
-export type AnyPlayFrame = PlayFrame | NameFrame | ReactFrame;
+/** A name over the old one: the last one given wins. */
+export interface RenameFrame {
+  readonly id: string;
+  readonly kind: "rename";
+  readonly at: string;
+  readonly name: string;
+}
+
+/** The cats a pair chooses between, as the phones name them. */
+export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
+export type AdoptionCat = (typeof ADOPTION_CATS)[number];
+
+/** One phone's move while the pair chooses its cat: its pick, a finger on the cat, or adopting. */
+export type AdoptMove =
+  | { readonly move: "pick"; readonly cat: AdoptionCat | null }
+  | { readonly move: "hold"; readonly holding: boolean }
+  | { readonly move: "adopt"; readonly cat: AdoptionCat };
+
+export type AdoptFrame = {
+  readonly id: string;
+  readonly kind: "adopt";
+  readonly at: string;
+} & AdoptMove;
+
+export type AnyPlayFrame = PlayFrame | NameFrame | RenameFrame | ReactFrame | AdoptFrame;
 
 /** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
@@ -85,10 +109,13 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "play":
     case "sleep":
       return { id, kind, at };
-    case "name": {
+    case "name":
+    case "rename": {
       const name = parseName(frame["name"]);
       return name === undefined ? undefined : { id, kind, at, name };
     }
+    case "adopt":
+      return parseAdopt(id, at, frame);
     case "react": {
       const { note, reaction } = frame;
       if (typeof note !== "string" || !UUID.test(note)) return undefined;
@@ -97,6 +124,39 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     }
     default:
       return undefined;
+  }
+};
+
+const isAdoptionCat = (value: unknown): value is AdoptionCat =>
+  typeof value === "string" && (ADOPTION_CATS as readonly string[]).includes(value);
+
+const parseAdopt = (
+  id: string,
+  at: string,
+  frame: Readonly<Record<string, unknown>>,
+): AdoptFrame | undefined => {
+  const { move, cat, holding } = frame;
+  switch (move) {
+    case "pick":
+      if (cat === undefined || cat === null) return { id, kind: "adopt", at, move, cat: null };
+      return isAdoptionCat(cat) ? { id, kind: "adopt", at, move, cat } : undefined;
+    case "hold":
+      return typeof holding === "boolean" ? { id, kind: "adopt", at, move, holding } : undefined;
+    case "adopt":
+      return isAdoptionCat(cat) ? { id, kind: "adopt", at, move, cat } : undefined;
+    default:
+      return undefined;
+  }
+};
+
+/** What the partner's phone receives for an adoption move. */
+export const adoptFrame = (play: AdoptFrame): Readonly<Record<string, unknown>> => {
+  switch (play.move) {
+    case "pick":
+    case "adopt":
+      return { type: "adopt", id: play.id, move: play.move, cat: play.cat };
+    case "hold":
+      return { type: "adopt", id: play.id, move: play.move, holding: play.holding };
   }
 };
 

@@ -45,6 +45,8 @@ public struct NoteDelivery: Sendable {
     case giftOpened(UUID)
     /// The partner drew behind advent door `number` for this phone. Only the fake partner does.
     case adventDoor(Int, [Stroke])
+    /// The partner's move while the pair chooses its cat.
+    case partnerAdoption(AdoptionMove)
   }
 
   /// This device's ID, to tell its own treats from the partner's.
@@ -58,6 +60,10 @@ public struct NoteDelivery: Sendable {
   public var life: @Sendable (LifeEvent) async -> Void
   /// Names the cat. The room keeps the first name from either partner.
   public var nameCat: @Sendable (String) async -> Void
+  /// Names the cat over any name it had: the last name given wins on both phones.
+  public var renameCat: @Sendable (String) async -> Void
+  /// Tells the partner this phone's move while the pair chooses its cat.
+  public var adopt: @Sendable (AdoptionMove) async -> Void
   /// Sends a reaction to a note the partner sent.
   public var react: @Sendable (_ note: UUID, Reaction) async -> Void
   /// Tells the partner something an experiment needs and the room has no frame for. Left as it is,
@@ -73,6 +79,8 @@ public struct NoteDelivery: Sendable {
     play: @escaping @Sendable (PlayKind, String) async -> Void = { _, _ in },
     life: @escaping @Sendable (LifeEvent) async -> Void = { _ in },
     nameCat: @escaping @Sendable (String) async -> Void = { _ in },
+    renameCat: @escaping @Sendable (String) async -> Void = { _ in },
+    adopt: @escaping @Sendable (AdoptionMove) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
     signal: @escaping @Sendable (LabSignal) async -> Void = { _ in },
     updates: @escaping @Sendable () -> AsyncStream<Update> = { AsyncStream { $0.finish() } },
@@ -82,6 +90,8 @@ public struct NoteDelivery: Sendable {
     self.play = play
     self.life = life
     self.nameCat = nameCat
+    self.renameCat = renameCat
+    self.adopt = adopt
     self.react = react
     self.signal = signal
     self.deliver = deliver
@@ -98,6 +108,8 @@ public struct NoteDelivery: Sendable {
       play: { await socket.play($0, at: $1) },
       life: { await socket.life($0) },
       nameCat: { await socket.nameCat($0) },
+      renameCat: { await socket.renameCat($0) },
+      adopt: { await socket.adopt($0) },
       react: { await socket.react(to: $0, $1) },
       updates: {
         AsyncStream { continuation in
