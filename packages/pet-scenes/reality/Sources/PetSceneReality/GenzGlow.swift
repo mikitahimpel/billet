@@ -119,13 +119,17 @@ final class GenzGlow {
     }
   }
 
-  /// Puts a soft shadow under the cat, inside `holder`, so it follows the cat about.
-  func shadeCat(in holder: Entity, length: Float) {
-    guard let shadow = Self.shadow(width: length * 0.95, depth: length * 0.6) else { return }
+  /// Puts a soft shadow under the cat, inside `holder`, so it follows the cat about. It is a
+  /// `length` square: the room scales it to the cat's pose and keeps it on the seat.
+  @discardableResult
+  func shadeCat(in holder: Entity, length: Float) -> ModelEntity? {
+    guard let shadow = Self.shadow(width: length, depth: length) else { return nil }
     shadow.position = [0, 0.015, 0]
+    shadow.scale = [0.64, 1, 0.64]
     holder.addChild(shadow)
     shadows.append(shadow)
     shade([shadow])
+    return shadow
   }
 
   private func buildFairyLights(_ kit: GenzKit) {

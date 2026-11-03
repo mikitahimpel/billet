@@ -51,6 +51,32 @@ import Testing
     #expect(abs(settled.y - shadow.height) < 0.001)
   }
 
+  @Test func theCatsShadowStaysLevelOnTheSeatWhenTheCatLeansOrIsLifted() async throws {
+    let room = try await builtRoom()
+    let shadow = try #require(room.catShadow)
+    let ground = room.layout.cat.spot.scene.y
+    room.fitCatShadow(0.1)
+    let resting = shadow.scale(relativeTo: room.room)
+
+    room.catHolder.position.y = ground + room.layout.cat.length * 0.55
+    room.catHolder.orientation =
+      simd_quatf(angle: 0.7, axis: [0, 1, 0]) * simd_quatf(angle: 0.13, axis: [0, 0, 1])
+    room.bodyHeading = 0.7
+    room.fitCatShadow(0.1)
+    let lifted = shadow.position(relativeTo: room.room)
+    #expect(abs(lifted.y - (ground + GenzRoom.catShadowHeight)) < 0.001)
+    let up = shadow.orientation(relativeTo: room.room).act([0, 1, 0])
+    #expect(simd_distance(up, [0, 1, 0]) < 0.001, "level, not leaning with the cat")
+    #expect(shadow.scale(relativeTo: room.room).x < resting.x, "smaller under a lifted cat")
+  }
+
+  @Test func theCatsShadowIsLongStandingAndRoundAsleep() {
+    let standing = GenzRoom.catShadowFootprint(.stand)
+    let asleep = GenzRoom.catShadowFootprint(.sleep)
+    #expect(standing.y > standing.x * 1.8)
+    #expect(asleep.x == asleep.y)
+  }
+
   @Test func shadowsGoWithTheLights() async throws {
     let room = try await builtRoom()
     let glow = try #require(room.glow)
