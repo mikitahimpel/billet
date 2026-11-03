@@ -1440,12 +1440,14 @@ extension GenzRoom {
   }
 
   /// The patch the cat's shadow covers in each base pose, across and along its body, as fractions
-  /// of its length: long and narrow standing, rounder sitting, a round patch curled up asleep.
+  /// of its length: long and narrow standing, rounder sitting, a round patch curled up asleep,
+  /// and lying as a loaf a little wider than standing and nearly as long.
   static func catShadowFootprint(_ base: CatBase) -> SIMD2<Float> {
     switch base {
     case .stand: [0.42, 0.92]
     case .sit: [0.5, 0.62]
     case .sleep: [0.64, 0.64]
+    case .loaf: [0.5, 0.82]
     }
   }
 

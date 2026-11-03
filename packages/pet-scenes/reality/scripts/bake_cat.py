@@ -72,7 +72,7 @@ def bake_cat(model: str, work: Path) -> None:
     output = CATS / f"{name}.reality"
     compile_reality(assets, output)
     clips = {
-        clip: {key: value for key, value in range_.items() if key in ("trimStart", "trimEnd", "loops", "base")}
+        clip: {key: value for key, value in range_.items() if key in ("trimStart", "trimEnd", "loops", "base", "ends")}
         for clip, range_ in table.items()
     }
     (CATS / f"{name}.clips.json").write_text(json.dumps(clips, indent=1, sort_keys=True) + "\n")

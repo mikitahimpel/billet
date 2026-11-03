@@ -38,6 +38,14 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case wave
   /// Held up under the forelegs, the hind legs and tail hang loose.
   case dangle
+  /// Lying like a loaf: paws tucked under, eyes open, breathing slowly. A loop in its own base.
+  case loaf
+  /// A gallop in place, for chases and zoomies. Travel at `NookiClip.runningSpeed` keeps the paws
+  /// planted.
+  case run
+  /// From standing, noses round to pick a spot and settles into the sleeping curl. Starts in
+  /// `stand` and ends in `sleep` (`CatClipInfo.ends`).
+  case lieDown
 
   /// The moves to play instead, in order, for a model without this clip.
   public var standIns: [CatAction] {
@@ -50,6 +58,9 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
     case .sniff: [.look, .perk]
     case .wave: [.bat, .perk]
     case .dangle: [.stretch, .idle]
+    case .loaf: [.sit]
+    case .run: [.walk]
+    case .lieDown: [.sleep]
     case .idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick,
       .happy, .stretch, .yawn, .groom, .knead, .slowBlink, .perk, .twitch:
       []
@@ -62,6 +73,8 @@ public enum CatBase: String, Codable, Hashable, Sendable {
   case stand
   case sit
   case sleep
+  /// Lying with the belly down and the paws tucked under.
+  case loaf
 }
 
 /// What one model's clip is like, read from its clip table.
@@ -69,11 +82,14 @@ public struct CatClipInfo: Hashable, Sendable {
   public var duration: Double
   public var loops: Bool
   public var base: CatBase
+  /// The pose the clip ends in: its base, except for a clip that goes from one base to another.
+  public var ends: CatBase
 
-  public init(duration: Double, loops: Bool, base: CatBase) {
+  public init(duration: Double, loops: Bool, base: CatBase, ends: CatBase? = nil) {
     self.duration = duration
     self.loops = loops
     self.base = base
+    self.ends = ends ?? base
   }
 }
 
