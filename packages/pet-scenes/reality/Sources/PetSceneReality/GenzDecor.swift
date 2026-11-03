@@ -108,6 +108,12 @@ extension GenzRoom {
     "\(placement.piece.kind.rawValue)-\(index)"
   }
 
+  /// What a piece named by ``decorName(_:index:)`` is called, or `nil` for any other name.
+  nonisolated static func title(ofDecorName name: String) -> String? {
+    guard let dash = name.lastIndex(of: "-") else { return nil }
+    return GenzPiece.Kind(rawValue: String(name[..<dash]))?.title
+  }
+
   static func isFlat(_ kind: GenzPiece.Kind) -> Bool {
     [.patternRug, .roundRug].contains(kind)
   }

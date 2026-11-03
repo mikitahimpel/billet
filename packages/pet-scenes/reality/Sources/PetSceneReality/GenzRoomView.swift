@@ -117,6 +117,7 @@ struct GenzRoomView: View {
     }
     .ignoresSafeArea()
     .overlay { decorControls(room) }
+    .sensoryFeedback(trigger: decorStatus, Self.gripFeedback)
     .modifier(GenzDecorFeeds(view: self, room: room))
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
@@ -309,7 +310,7 @@ struct GenzRoomView: View {
     content
       .onAppear {
         let decor = room.decor
-        decor.onChange = { decorStatus = DecorStatus(decor) }
+        decor.onChange = { decorStatus = DecorStatus(decor, title: GenzRoom.title(ofDecorName:)) }
       }
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
@@ -322,10 +323,19 @@ struct GenzRoomView: View {
 
   @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
     if isDecorating {
+      // The room draws none of the shop's furniture, so it offers no closet to add from.
       DecorControls(
-        status: decorStatus, closet: [], owned: { _ in 0 }, onUndo: { touch(room).undo() },
-        onDone: { isDecorating = false }, onRotate: { room.decor.rotateStep() },
-        onPutAway: { touch(room).putAway() }, onAdd: { _ in })
+        status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
+        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() })
+    }
+  }
+
+  /// A soft tap as a piece is picked up, and a lighter one as it is set down.
+  private static func gripFeedback(_ old: DecorStatus, _ new: DecorStatus) -> SensoryFeedback? {
+    switch new.grip(from: old) {
+    case .pickUp: .impact(flexibility: .soft, intensity: 0.55)
+    case .drop: .impact(flexibility: .soft, intensity: 0.35)
+    case nil: nil
     }
   }
 

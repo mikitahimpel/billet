@@ -157,15 +157,26 @@ treat.
 
 **Moving pieces:**
 - Drag a piece to move it over the floor. It snaps to a grid of a quarter unit.
-- Twist with two fingers, or tap Turn, to rotate it in 15° steps. Turn tries a quarter turn, then
-  the nearest turn that fits.
+- Twist with two fingers, or tap Turn 90°, to rotate it in 15° steps. Turn 90° tries a quarter
+  turn, then the nearest turn that fits.
 - A piece keeps inside the room: pushed into a wall, it slides along it.
-- It never overlaps another piece or something fixed. The marker under it is cream where it fits
-  and coral where it doesn't.
+- It never overlaps another piece or something fixed. The piece picked up lifts, with a soft
+  glowing ring on the floor under it that breathes slowly. The ring is gold where the piece fits
+  and coral where it doesn't, and the toolbar then says "No room here".
 - Letting go somewhere that doesn't fit sends it back.
 - Rugs lie under everything.
 
 **Undo:** steps back through moves and turns.
+
+**Controls:**
+- Top: undo on the left and a gold-tinted Done on the right, both 44 pt Liquid Glass.
+- Bottom, while a piece is picked up: one glass toolbar with the piece's name and Turn 90°, plus
+  Put away for furniture from the closet.
+- Bottom, with nothing picked up: "Tap a piece to move it". A room that takes closet furniture
+  shows an Add items button there instead; Window Seat draws none, so it doesn't.
+- The first time a piece is picked up, "Drag to move · twist to turn" shows for four seconds
+  and never again (`decorGestureHintShown` in the app's defaults).
+- A soft haptic tap as a piece is picked up, and a lighter one as it is set down.
 
 **What moves:**
 - Every piece standing on the floor can be moved. What stands on a piece rides with it, such as
