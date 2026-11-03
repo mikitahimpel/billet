@@ -35,6 +35,36 @@ holds the joined moment on screen after the pairing itself has finished.
   the pair, with a scripted partner: a made code is joined after about 4 s, and any well-formed typed
   code is joined at once.
 
+## Choosing the cat together
+
+Once the pair is made in the scene (behind the same flag, demo backend), both phones open a cosy
+corner with five cats on cushions: the ginger tabby, the grey and white cat and the black cat (all
+the Detailed cat with a coat), the kitten and the fluffy one.
+
+- **Picking:** a tap picks a cat. A gold heart floats over your pick and a rose paw over your
+  person's, live on both phones. Picks go as room `play` frames of kind `adopt` (`move` is
+  `pick`, `hold` or `adopt`). The room relays them to the partner and keeps each phone's latest
+  pick and the adoption, which it replays on connect.
+- **Different picks:** the two candidates step forward and make a small bid. The one on the left
+  crouches and pounces, the other headbutts the air. There is no timer; either can pick again.
+- **The same pick:** each partner presses and holds the cat on their own phone until their ring
+  fills (1.2 s). Holding together adopts it, and so does holding one after the other. A new pick
+  empties both rings. A partner who leaves lifts their finger, but their pick stays.
+- **Adopted:** the cat greets you (`happy`), the others curl up, and a name field comes up. Either
+  partner can name the cat (kind `rename`: the last edit wins). The cat is kept with
+  `WidgetFeaturesModel.setCat`, so Labs → Cat still shows and changes it.
+- **Into the room:** "Take them home": the cat walks out and the camera swings after it, the scene
+  goes dark, and the room opens with its own warm-up. With Reduce Motion it only fades.
+- **The fake partner** (`FakeAdopter`) picks about 2 s after you. Just over half the time it picks
+  the same cat; otherwise it picks another and comes round to yours about 9 s later. It holds
+  when you hold. The Labs replay plays this too, keeping nothing.
+
+`JointCatChoice` (Pet) is the shared machine; `AdoptionModel` runs it on a phone. The scene is
+`PetScene.makeAdoptionScene`, built by `AdoptionStage`/`AdoptionLayout`/`AdoptionSceneView` in
+`packages/pet-scenes/reality`.
+
+The real backend skips this step for now and keeps the standard cat; it has no frames for it.
+
 ## Where things are
 
 - `PetScene.makeOnboardingScene(state:onEvent:)`: the contract. `OnboardingSceneState.Moment` is

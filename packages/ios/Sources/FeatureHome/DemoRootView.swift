@@ -23,6 +23,8 @@ public struct DemoRootView: View {
   /// The first-launch scene's pairing: held past the pairing itself, until the joined moment
   /// has been shown.
   @State private var onboarding: OnboardingPairing
+  /// Choosing the cat together, once the pair was made in the first-launch scene.
+  @State private var adoption: AdoptionModel?
   private let publisher = WidgetPublisher.live()
 
   public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
@@ -109,9 +111,29 @@ public struct DemoRootView: View {
             goIn: { model.finishCreating() },
             tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
           send: { event in
+            let wasJoined = if case .joined = onboarding.step { true } else { false }
             onboarding.send(event)
-            if onboarding.isFinished { model.finishCreating() }
+            guard onboarding.isFinished else { return }
+            if wasJoined { startChoosing() }
+            model.finishCreating()
           })
+      case .paired(let session) where adoption != nil:
+        if let adoption {
+          AdoptionView(
+            scenes: scenes, lighting: model.labs.lighting, model: adoption,
+            catName: session.play.catName, rename: { session.renameCat($0) },
+            onDone: { self.adoption = nil }
+          )
+          .onAppear {
+            adoption.partnerPresence(session.status == .partnerHere)
+            session.onAdoption = { [weak adoption] in adoption?.received($0) }
+          }
+          .onChange(of: session.status) { _, status in
+            adoption.partnerPresence(status == .partnerHere)
+          }
+          .onDisappear { session.onAdoption = nil }
+          .transition(.opacity)
+        }
       case .unpaired, .pairing:
         PairingView(model: model)
       case .paired(let session):
@@ -127,6 +149,13 @@ public struct DemoRootView: View {
         )
       }
     }
+  }
+
+  private func startChoosing() {
+    let model = model
+    adoption = AdoptionModel(
+      send: { model.session?.adopt($0) },
+      adopt: { model.labs.setCat($0.choice) })
   }
 
   /// Where the pairing is, as the first-launch scene follows it.

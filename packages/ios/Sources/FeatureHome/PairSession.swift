@@ -64,8 +64,17 @@ final class PairSession {
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
-  /// Called with each of the partner's moves while the pair chooses its cat.
-  @ObservationIgnored var onAdoption: ((AdoptionMove) -> Void)?
+  /// Called with each of the partner's moves while the pair chooses its cat. Moves that arrive
+  /// before anything listens are kept, the last few, and handed over when something does.
+  @ObservationIgnored var onAdoption: ((AdoptionMove) -> Void)? {
+    didSet {
+      guard let onAdoption else { return }
+      let early = earlyAdoption
+      earlyAdoption = []
+      for move in early { onAdoption(move) }
+    }
+  }
+  @ObservationIgnored private var earlyAdoption: [AdoptionMove] = []
 
   @ObservationIgnored private let delivery: NoteDelivery
   @ObservationIgnored private let archive: NoteArchive
@@ -416,7 +425,11 @@ final class PairSession {
     case .catName(let name):
       play.named(name)
     case .partnerAdoption(let move):
-      onAdoption?(move)
+      if let onAdoption {
+        onAdoption(move)
+      } else {
+        earlyAdoption = Array((earlyAdoption + [move]).suffix(8))
+      }
     }
   }
 
