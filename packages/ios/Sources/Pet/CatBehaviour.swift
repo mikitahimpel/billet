@@ -46,6 +46,16 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   /// From standing, noses round to pick a spot and settles into the sleeping curl. Starts in
   /// `stand` and ends in `sleep` (`CatClipInfo.ends`).
   case lieDown
+  /// Sitting, the head turns right round to lick the right flank.
+  case groomFlank
+  /// Sitting, the tail comes round in front, pinned by a forepaw, and is licked.
+  case groomTail
+  /// Sitting, two quick flicks of the mouth with the chin up, as after eating.
+  case lickLips
+  /// Standing, a fright: the back arches, it springs back a little with the tail up and ears flat.
+  case startle
+  /// Sitting, ears forward, the head tilts over to one side and then a little to the other.
+  case headTilt
 
   /// The moves to play instead, in order, for a model without this clip.
   public var standIns: [CatAction] {
@@ -61,6 +71,9 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
     case .loaf: [.sit]
     case .run: [.walk]
     case .lieDown: [.sleep]
+    case .groomFlank, .groomTail: [.groom]
+    case .lickLips: [.happy]
+    case .startle, .headTilt: [.perk]
     case .idle, .walk, .sit, .sleep, .crouchWiggle, .pounce, .eat, .blink, .look, .tailFlick,
       .happy, .stretch, .yawn, .groom, .knead, .slowBlink, .perk, .twitch:
       []
@@ -442,13 +455,13 @@ public struct CatBehaviour: Sendable {
   public static func lookWeight(_ action: CatAction) -> Double {
     switch action {
     case .sit, .idle, .blink, .slowBlink, .tailFlick, .knead, .loaf: 1
-    case .perk, .happy: 0.5
+    case .perk, .happy, .lickLips: 0.5
     case .walk, .eat, .run: 0.3
     case .bat, .wave: 0.6
     case .sniff: 0.4
     case .grab, .dangle: 0
     case .sleep, .twitch, .look, .groom, .yawn, .stretch, .crouchWiggle, .pounce, .rollOver,
-      .headbutt, .reachUp, .lieDown:
+      .headbutt, .reachUp, .lieDown, .groomFlank, .groomTail, .startle, .headTilt:
       0
     }
   }
