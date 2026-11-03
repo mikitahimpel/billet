@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Pet
 import RealityKit
@@ -47,6 +48,8 @@ final class DecorSession {
   /// How high a piece picked up floats, in the room's units.
   private let liftHeight: Float
   private var lift: Float = 0
+  /// Seconds the ring under the piece picked up has been breathing.
+  private var breath: Float = 0
   private var grab = SIMD2<Float>.zero
   private var turnStart: Float?
   /// True while a finger moves the piece picked up.
@@ -187,6 +190,7 @@ final class DecorSession {
     guard let selected, let box = plan.pieces[selected] else { return }
     grab = box.centre - point
     isDragging = true
+    onChange?()
   }
 
   /// The finger is over the floor point `point`.
@@ -207,6 +211,7 @@ final class DecorSession {
   func beginTurn() {
     guard let selected, let box = plan.pieces[selected] else { return }
     turnStart = candidate?.box.yaw ?? box.yaw
+    onChange?()
   }
 
   /// Turns by `angle` radians since the twist began; clockwise on screen turns clockwise from above.
@@ -300,6 +305,12 @@ final class DecorSession {
       piece.holder.position = [at.x, lift, at.y]
       piece.holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
       placeMarker(candidate.box, fit: candidate.fit)
+      breath += delta
+      let calm = reduceMotion || !candidate.fit.isFree
+      marker.components.set(
+        OpacityComponent(opacity: calm ? 1 : 0.8 + 0.2 * (0.5 + 0.5 * cos(breath * 2.4))))
+    } else {
+      breath = 0
     }
     for (name, elapsed) in settling {
       guard let piece = pieces[name], let box = plan.pieces[name] else {
@@ -343,23 +354,62 @@ final class DecorSession {
 
   private var markerIsFree: Bool?
 
-  /// Builds the marker's plane, one unit square, to be scaled to each footprint.
+  /// Builds the marker, one unit square to be scaled to each footprint: a soft glowing ring on the
+  /// floor round the piece, with a faint wash inside it.
   func buildMarker() {
     guard marker.children.isEmpty else { return }
     let plane = ModelEntity(
-      mesh: .generatePlane(width: 1, depth: 1, cornerRadius: 0.12),
+      mesh: .generatePlane(width: 1, depth: 1, cornerRadius: 0),
       materials: [Self.markerMaterial(free: true)])
     marker.addChild(plane)
     marker.position.y = markerHeight
   }
 
   private static func markerMaterial(free: Bool) -> UnlitMaterial {
-    var material = UnlitMaterial(
-      color: free
-        ? .init(red: 0.98, green: 0.86, blue: 0.55, alpha: 1)
-        : .init(red: 0.95, green: 0.36, blue: 0.3, alpha: 1))
-    material.blending = .transparent(opacity: .init(floatLiteral: free ? 0.45 : 0.6))
+    let tint: UnlitMaterial.Color =
+      free
+      ? .init(red: 1, green: 0.84, blue: 0.48, alpha: 1)
+      : .init(red: 0.96, green: 0.36, blue: 0.28, alpha: 1)
+    // Untouched by the room's tone mapping, so the ring stays bright over a lamp-lit floor.
+    var material = UnlitMaterial(applyPostProcessToneMap: false)
+    material.color = .init(tint: tint)
+    if let ring = ringTexture {
+      material.blending = .transparent(opacity: .init(scale: 1, texture: .init(ring)))
+    } else {
+      material.blending = .transparent(opacity: .init(floatLiteral: 0.5))
+    }
     return material
+  }
+
+  private static let ringTexture: TextureResource? = {
+    guard let image = ringImage(pixels: 128) else { return nil }
+    return try? TextureResource(image: image, options: .init(semantic: .raw))
+  }()
+
+  /// How opaque the marker is across its square, white for solid: a rounded ring a little in from
+  /// the edge, glowing to both sides, round a faint wash.
+  nonisolated static func ringImage(pixels: Int) -> CGImage? {
+    guard
+      let context = CGContext(
+        data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: 0,
+        space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
+    else { return nil }
+    let side = CGFloat(pixels)
+    context.setFillColor(gray: 0, alpha: 1)
+    context.fill(CGRect(x: 0, y: 0, width: side, height: side))
+    let ring = CGRect(x: 0, y: 0, width: side, height: side).insetBy(dx: side * 0.15, dy: side * 0.15)
+    let path = CGPath(
+      roundedRect: ring, cornerWidth: ring.width * 0.24, cornerHeight: ring.height * 0.24,
+      transform: nil)
+    context.addPath(path)
+    context.setFillColor(gray: 1, alpha: 0.18)
+    context.fillPath()
+    context.setShadow(offset: .zero, blur: side * 0.09, color: CGColor(gray: 1, alpha: 1))
+    context.addPath(path)
+    context.setStrokeColor(gray: 1, alpha: 1)
+    context.setLineWidth(side * 0.045)
+    context.strokePath()
+    return context.makeImage()
   }
 
   private func stand(_ holder: Entity, at box: DecorBox) {
