@@ -23,15 +23,20 @@ final class AdoptionModel {
   @ObservationIgnored private let send: (AdoptionMove) -> Void
   @ObservationIgnored private let adopt: (AdoptionCat) -> Void
   @ObservationIgnored private let clock: () -> Date
+  /// What kind of cat each one would be, for this pair; nil where that is not known.
+  @ObservationIgnored let temperament: (AdoptionCat) -> CatTemperament?
 
   /// `send` tells the partner a move; `adopt` keeps the adopted cat.
   init(
     partnerHere: Bool = true, send: @escaping (AdoptionMove) -> Void,
-    adopt: @escaping (AdoptionCat) -> Void, clock: @escaping () -> Date = Date.init
+    adopt: @escaping (AdoptionCat) -> Void,
+    temperament: @escaping (AdoptionCat) -> CatTemperament? = { _ in nil },
+    clock: @escaping () -> Date = Date.init
   ) {
     choice = JointCatChoice(partnerHere: partnerHere)
     self.send = send
     self.adopt = adopt
+    self.temperament = temperament
     self.clock = clock
     now = clock()
   }

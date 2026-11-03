@@ -3,7 +3,9 @@ import DesignSystem
 import FeatureInbox
 import Foundation
 import Ink
+import Labs
 import Persistence
+import Pet
 import PetScene
 import SwiftUI
 import WidgetBridge
@@ -128,24 +130,8 @@ public struct DemoRootView: View {
       }
     } else {
       switch model.stage {
-      case _ where !onboarding.isFinished && model.labs.isOn(LabExperiment.cinematicOnboarding):
-        OnboardingPairingView(
-          scenes: scenes, lighting: model.labs.lighting,
-          memory: OnboardingMemory.thisLaunch, pairing: onboarding,
-          failure: model.failure?.message,
-          actions: OnboardingPairingActions(
-            create: { model.createPair() },
-            join: { model.join(code: $0) },
-            cancel: { model.cancelPairing() },
-            goIn: { model.finishCreating() },
-            tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
-          send: { event in
-            let wasJoined = if case .joined = onboarding.step { true } else { false }
-            onboarding.send(event)
-            guard onboarding.isFinished else { return }
-            if wasJoined { startChoosing() }
-            model.finishCreating()
-          })
+      case _ where !onboarding.isFinished:
+        onboardingPairing
       case .paired(let session) where adoption != nil:
         if let adoption {
           AdoptionView(
@@ -164,7 +150,7 @@ public struct DemoRootView: View {
           .transition(.opacity)
         }
       case .unpaired, .pairing:
-        PairingView(model: model)
+        onboardingPairing
       case .paired(let session):
         AppShellView(
           session: session,
@@ -180,11 +166,42 @@ public struct DemoRootView: View {
     }
   }
 
+  /// Pairing in the first-launch scene. It is also what shows if the pairing is ever left
+  /// unfinished after the scene's own steps are over.
+  private var onboardingPairing: some View {
+    OnboardingPairingView(
+      scenes: scenes, lighting: model.labs.lighting,
+      memory: OnboardingMemory.thisLaunch, pairing: onboarding,
+      failure: model.failure?.message,
+      actions: OnboardingPairingActions(
+        create: { model.createPair() },
+        join: { model.join(code: $0) },
+        cancel: { model.cancelPairing() },
+        goIn: { model.finishCreating() },
+        tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
+      send: { event in
+        let wasJoined = if case .joined = onboarding.step { true } else { false }
+        onboarding.send(event)
+        guard onboarding.isFinished else { return }
+        if wasJoined { startChoosing() }
+        model.finishCreating()
+      })
+  }
+
   private func startChoosing() {
     let model = model
+    // Each cat's temperament comes from the pair and the cat, so both phones show the same, and
+    // the one adopted is saved for life.
+    func seed(_ cat: AdoptionCat) -> UInt64? {
+      model.session.map { CatBrainModel.seed(pair: $0.room.code, cat: cat.choice) }
+    }
     adoption = AdoptionModel(
       send: { model.session?.adopt($0) },
-      adopt: { model.labs.setCat($0.choice) })
+      adopt: { cat in
+        model.labs.setCat(cat.choice)
+        if let seed = seed(cat) { _ = model.labs.temperament(forSeed: seed) }
+      },
+      temperament: { cat in seed(cat).map(CatTemperament.born(seed:)) })
   }
 
   /// Where the pairing is, as the first-launch scene follows it.

@@ -161,10 +161,10 @@ import Wire
 
   @Test func appleSheetResultsMapToEvents() {
     #expect(
-      OnboardingView.outcome(of: .failure(ASAuthorizationError(.canceled))) == .cancelled)
-    #expect(OnboardingView.outcome(of: .failure(ASAuthorizationError(.failed))) == .failed)
+      SignInControls.outcome(of: .failure(ASAuthorizationError(.canceled))) == .cancelled)
+    #expect(SignInControls.outcome(of: .failure(ASAuthorizationError(.failed))) == .failed)
     #expect(
-      OnboardingView.outcome(of: .failure(URLError(.notConnectedToInternet))) == .failed)
+      SignInControls.outcome(of: .failure(URLError(.notConnectedToInternet))) == .failed)
   }
 }
 

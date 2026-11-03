@@ -39,6 +39,8 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   case seekYou, rub, slowBlink, bringToy, waitByDoor
   case pushItem, sitInCardigan, sitOnDesk
   case startle, curiousTilt
+  /// A note came: the cat carries it in its mouth to the wall or the glass and tapes it up.
+  case carryNote
 
   public var group: CatActivityGroup {
     switch self {
@@ -51,7 +53,7 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
     case .watchWindow, .watchPartnerWindow: .watch
     case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor: .social
     case .pushItem, .sitInCardigan, .sitOnDesk: .mischief
-    case .startle, .curiousTilt: .react
+    case .startle, .curiousTilt, .carryNote: .react
     }
   }
 
@@ -64,7 +66,7 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
     case .sit, .loaf, .lookAround, .sniffObject, .knead, .curl, .wake, .groomPaw, .groomFlank,
       .groomTail, .eat, .lickLips, .stalk, .pounce, .batObject, .watchWindow,
       .watchPartnerWindow, .rub, .slowBlink, .waitByDoor, .pushItem, .sitInCardigan, .sitOnDesk,
-      .startle, .curiousTilt:
+      .startle, .curiousTilt, .carryNote:
       false
     }
   }
@@ -80,6 +82,10 @@ public enum CatInteraction: Hashable, Sendable {
   case fed
   /// A finger hovering near the cat: only its head follows.
   case followFinger
+  /// Back after hours away: it runs up to whoever holds the phone and headbutts the glass.
+  case greeting
+  /// A finger resting near the edge of the screen, batted at by a cat in the mood to play.
+  case batting
 
   public var title: String {
     switch self {
@@ -89,6 +95,8 @@ public enum CatInteraction: Hashable, Sendable {
     case .called: "Called"
     case .fed: "Fed"
     case .followFinger: "FollowFinger"
+    case .greeting: "Greeting"
+    case .batting: "Batting"
     }
   }
 
@@ -98,8 +106,8 @@ public enum CatInteraction: Hashable, Sendable {
     case .held: 5
     case .fed: 4
     case .petted: 3
-    case .toy: 2
-    case .called: 1
+    case .toy, .batting: 2
+    case .called, .greeting: 1
     case .followFinger: 0
     }
   }

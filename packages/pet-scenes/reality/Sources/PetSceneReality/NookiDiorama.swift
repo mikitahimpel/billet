@@ -17,6 +17,8 @@ final class NookiDiorama: CatPlayStage {
   var onReady: (() -> Void)?
   /// Called when the cat is found to be missing, and again if a late load puts things right.
   var onCatMissing: ((Bool) -> Void)?
+  /// Called when an opening asked for through ``flyIn(_:)`` starts, once the diorama is built.
+  var onOpeningStarted: (() -> Void)?
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
 
@@ -64,14 +66,20 @@ final class NookiDiorama: CatPlayStage {
   var report: (@MainActor (PetSceneEvent) -> Void)?
   /// The cat's length in the room, measured once it is placed.
   private var catLength: Float?
-  /// The cat moments switched on in Labs.
-  private(set) var moments: Set<CatMoment> = []
+  /// What the cat's brain shows now: whether it is awake and in the mood to bat, and the Play
+  /// step that asks for a chase.
+  private var brain: CatBrainFrame?
+  /// A chase the brain asked for, waiting for the cat to be free.
+  private var chaseWanted = false
+  /// The finger on the room and the view it is in, for a cat that bats at one resting near the
+  /// edge.
+  private var fingerRest = CatFingerRest()
+  private var fingerView = SIMD2<Float>.zero
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
   /// A trip away from the bed and back, while one is playing.
   var trip: CatTrip?
   var tripPose: CatTrip.Pose?
-  private var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
   private var lastBat = -Double.infinity
   private var rollingUntil = -Double.infinity
   /// Where the finger last stroked the cat, in the view's points, for the hearts.
@@ -403,31 +411,48 @@ final class NookiDiorama: CatPlayStage {
 
   // MARK: - Moments
 
-  /// Switches the cat moments to `moments`.
-  func setMoments(_ moments: Set<CatMoment>) {
-    self.moments = moments
-    if !moments.contains(.greets) { greetPending = false }
+  /// Follows the cat's brain. Play choosing a chase sends the yarn rolling once the cat is free;
+  /// any other step lets a chase that never started go.
+  func followBrain(_ frame: CatBrainFrame?) {
+    guard frame != brain else { return }
+    let before = brain
+    brain = frame
+    let step = frame?.stack.step
+    let isNew = step != before?.stack.step || frame?.stepStart != before?.stepStart
+    if isNew { chaseWanted = step == .chase || step == .zoomies }
   }
 
-  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it.
-  /// Returns true when this bat starts a game, rather than going on with one.
-  @discardableResult
-  func bat(at point: SIMD2<Float>, in size: SIMD2<Float>) -> Bool {
-    guard moments.contains(.batsAtFinger), trip == nil, !yarnPlay.isPlaying,
-      world.activity == .sleeping, clock - lastBat > Self.batGap,
-      CatEdge.isNearEdge(x: Double(point.x), width: Double(size.x))
-    else { return false }
+  /// The finger turning the room is at `point`. Moving, it only turns the room; held still near
+  /// the edge, it may get batted at.
+  func fingerAt(_ point: SIMD2<Float>, in size: SIMD2<Float>) {
+    fingerView = size
+    fingerRest.moved(toX: Double(point.x), y: Double(point.y), at: clock)
+  }
+
+  func fingerLifted() {
+    fingerRest.lifted()
+  }
+
+  /// A finger resting near the edge of the view catches the eye of a cat in the mood to play: it
+  /// looks, then bats at it. A finger on the move, turning the room, is never batted at.
+  private func batAtRestingFinger() {
+    guard let rest = fingerRest.resting(at: clock), brain?.eager ?? false, trip == nil,
+      !yarnPlay.isPlaying, world.activity == .sleeping, clock - lastBat > Self.batGap,
+      CatEdge.isNearEdge(x: rest.x, width: Double(fingerView.x))
+    else { return }
     let starts = clock - lastBat > Self.gameGap
     lastBat = clock
-    followFinger(at: point, in: size)
+    fingerRest.restart(at: clock)
+    followFinger(at: SIMD2(Float(rest.x), Float(rest.y)), in: fingerView)
     behaviour.react(.bat, at: clock)
-    return starts
+    if starts { report?(.played) }
   }
 
   /// Bats closer together than this are one game.
   private static var gameGap: Double { 60 }
 
-  /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
+  /// Starts what the moments do when the brain wants them: a greeting after hours away for a cat
+  /// that is awake, a chase when Play chose one, a bat at a resting finger.
   private func stepMoments() {
     purr.tick(at: clock, cat: strokePoint)
     if clock - lastSeenSaved > 30 {
@@ -437,13 +462,17 @@ final class NookiDiorama: CatPlayStage {
     let isFree =
       trip == nil && !yarnPlay.isPlaying && world.activity == .sleeping && !noteIsOpen
       && !reduceMotion && hasCat && opening == nil
+    // A sleeping cat does not run up to the glass; the greeting is let go.
+    if greetPending, brain?.stack.vitality == .asleep { greetPending = false }
     if greetPending, isFree {
       greetPending = false
+      chaseWanted = false
       startGreeting()
-      playClock.postpone(from: clock)
-    } else if moments.contains(.chases), isFree, playClock.isDue(at: clock) {
+    } else if chaseWanted, isFree {
+      chaseWanted = false
       chaseYarn()
     }
+    batAtRestingFinger()
   }
 
   /// Runs up from the bed towards the camera, headbutts it, and goes back.
@@ -483,7 +512,7 @@ final class NookiDiorama: CatPlayStage {
 
   /// Whether the note rides in the cat's mouth to the wall, for this delivery.
   private var carriesNote: Bool {
-    moments.contains(.carriesNote) && !reduceMotion && world.activity == .delivering
+    !reduceMotion && world.activity == .delivering
   }
 
   /// The part of the delivery spent at the wall, taping the note up.
@@ -670,6 +699,7 @@ final class NookiDiorama: CatPlayStage {
 
   private func startFlight(_ request: PetSceneFlyIn) {
     opening = SceneFlight(id: request.id, clock: clock, atEnd: reduceMotion || request.isSkipped)
+    onOpeningStarted?()
     if reduceMotion || request.isSkipped {
       settleFlight()
     } else {
@@ -971,7 +1001,7 @@ final class NookiDiorama: CatPlayStage {
     let fresh = petStart == nil
     petStart = petStart ?? clock
     strokePoint = point
-    if moments.contains(.purrs), purr.touch(at: clock, cat: point), trip == nil {
+    if purr.touch(at: clock, cat: point), trip == nil {
       behaviour.react(.roll, at: clock)
       rollingUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
       hands.onBackUntil = rollingUntil

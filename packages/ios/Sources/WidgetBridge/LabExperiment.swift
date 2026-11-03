@@ -4,8 +4,8 @@ import Foundation
 /// stored under, beside the widget features.
 ///
 /// An experiment that cannot get in the way of drawing, sending and reading notes starts on. The
-/// ones that stand in for the partner, or change what the cat does, start off, except the cat's
-/// needs, which the owner wants on, shown in the room.
+/// ones that stand in for the partner, or change what the cat does, start off. What the cat does
+/// is not an experiment: its needs, its brain and its moments are always on.
 public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag {
   case fakePartner
   case overnightStay
@@ -28,20 +28,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case advent
   case bedsideHouse
   case shelfBoard
-  case catCarriesNote
-  case catPurrs
-  case catBats
-  case catGreets
-  case catChases
   case notesDesk
-  case cinematicOnboarding
-  case catLife
-  case lifeInRoom
   case lifeBubble
   case lifeRings
   case lifeChips
   case lifeDebug
-  case catBrain
   case brainDebug
 
   public enum Group: CaseIterable, Sendable {
@@ -49,7 +40,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case cat
     case notes
     case home
-    case catMoments
     case firstLaunch
 
     public var title: String {
@@ -58,7 +48,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       case .cat: "The cat"
       case .notes: "Notes"
       case .home: "The house"
-      case .catMoments: "Cat moments"
       case .firstLaunch: "First launch"
       }
     }
@@ -87,20 +76,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: .notes
     case .bedsideHouse: .home
     case .shelfBoard: .notes
-    case .catCarriesNote: .catMoments
-    case .catPurrs: .catMoments
-    case .catBats: .catMoments
-    case .catGreets: .catMoments
-    case .catChases: .catMoments
     case .notesDesk: .notes
-    case .cinematicOnboarding: .firstLaunch
-    case .catLife: .cat
-    case .lifeInRoom: .cat
     case .lifeBubble: .cat
     case .lifeRings: .cat
     case .lifeChips: .cat
     case .lifeDebug: .cat
-    case .catBrain: .cat
     case .brainDebug: .cat
     }
   }
@@ -128,54 +108,27 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: "Our advent"
     case .bedsideHouse: "Bedside house"
     case .shelfBoard: "Shelf board"
-    case .catCarriesNote: "Carries the note"
-    case .catPurrs: "Purrs when petted"
-    case .catBats: "Bats at your finger"
-    case .catGreets: "Greets you"
-    case .catChases: "Plays on its own"
     case .notesDesk: "Notes desk"
-    case .cinematicOnboarding: "Cinematic onboarding"
-    case .catLife: "The cat's needs"
-    case .lifeInRoom: "Needs in the room"
     case .lifeBubble: "Thought bubble"
     case .lifeRings: "Need rings"
     case .lifeChips: "Need words"
     case .lifeDebug: "Life debug"
-    case .catBrain: "Cat brain"
     case .brainDebug: "Brain debug"
     }
   }
 
   public var detail: String {
     switch self {
-    case .catLife:
-      "The cat gets hungry, sleepy, playful and wants to be loved by you both, and lets it show. Treats feed it, petting and notes most of all make it feel loved, playing with it keeps it lively, and it sleeps at night. It never gets sick, and a few days away hurt little."
-    case .lifeInRoom:
-      "With the cat's needs on, the room shows them: the bowl empties, a ball of yarn comes out when it wants to play, and the lamp burns warmer the more loved it feels."
     case .lifeBubble:
-      "With the cat's needs on, a small thought bubble floats over the cat when one need is low: a fish, a ball, a heart or a z. Tap it to answer."
+      "A small thought bubble floats over the cat when one need is low: a fish, a ball, a heart or a z. Tap it to answer."
     case .lifeRings:
-      "With the cat's needs on, a long press on the cat pulls up its portrait in four soft rings, one per need, with no numbers."
+      "A long press on the cat pulls up its portrait in four soft rings, one per need, with no numbers."
     case .lifeChips:
-      "With the cat's needs on, four small words under the room, Full, Rested, Loved and Playful, glow when the need is met and fade when it is not."
+      "Four small words under the room, Full, Rested, Loved and Playful, glow when the need is met and fade when it is not."
     case .lifeDebug:
       "A small card on Home with the cat's four needs and mood, a faster clock and a button for each event. What it adds stays on this phone."
-    case .catBrain:
-      "The cat in the styled rooms runs on its brain: it naps in the sun, watches the rain, grooms after a meal, nudges a mug and waits by the window when one of you is away. Both phones see the same cat."
     case .brainDebug:
-      "With the cat brain on, a card on Home shows what the brain is doing and why: its state, the five best scores, the last ten moves, its traits and favourite spot, and a faster clock."
-    case .catCarriesNote:
-      "When a note arrives, the cat carries it in its mouth to the wall or the glass and tapes it up."
-    case .catPurrs:
-      "Stroke the cat for a soft purr under your finger and small floating hearts. Keep going and it rolls onto its back."
-    case .catBats:
-      "Touch near the edge of the screen and the cat notices, then bats at your finger."
-    case .catGreets:
-      "Open billet after a few hours away and the cat runs up to the camera and headbutts it."
-    case .catChases:
-      "Now and then the cat chases the yarn, or a dot of light from the lamp, all by itself."
-    case .cinematicOnboarding:
-      "First launch flies into a windowsill of candles with a soft beating heart, and pairing happens in that scene. Off, it is the plain welcome and code screens. Replay it below without touching your pair."
+      "A card on Home shows what the brain is doing and why: its state, the five best scores, the last ten moves, its traits and favourite spot, and a faster clock."
     case .notesDesk:
       "Notes becomes a desk under a board: tap the paper to draw, tap a pinned note to open it. The list is one tap away. Off, Notes is the list."
     case .shelfBoard:
@@ -247,20 +200,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: false
     case .shelfBoard: false
-    case .catCarriesNote: false
-    case .catPurrs: false
-    case .catBats: false
-    case .catGreets: false
-    case .catChases: false
     case .notesDesk: false
-    case .cinematicOnboarding: false
-    case .catLife: false
-    case .lifeInRoom: false
     case .lifeBubble: false
     case .lifeRings: false
     case .lifeChips: false
     case .lifeDebug: false
-    case .catBrain: false
     case .brainDebug: false
     }
   }
@@ -288,20 +232,11 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .advent: true
     case .bedsideHouse: true
     case .shelfBoard: true
-    case .catCarriesNote: false
-    case .catPurrs: false
-    case .catBats: false
-    case .catGreets: false
-    case .catChases: false
     case .notesDesk: true
-    case .cinematicOnboarding: true
-    case .catLife: true
-    case .lifeInRoom: true
     case .lifeBubble: false
     case .lifeRings: false
     case .lifeChips: false
     case .lifeDebug: false
-    case .catBrain: false
     case .brainDebug: false
     }
   }

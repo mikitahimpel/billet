@@ -30,13 +30,13 @@ public enum CatStatechart {
     case .social:
       [[.seekYou, .rub], [.slowBlink], [.bringToy], [.waitByDoor], [.seekYou, .slowBlink]]
     case .mischief: [[.pushItem], [.sitInCardigan], [.sitOnDesk]]
-    case .react: [[.startle], [.curiousTilt]]
+    case .react: [[.startle], [.curiousTilt], [.carryNote]]
     }
   }
 
   /// Scripts only an event starts. A curled cat wakes first, then turns to what woke it.
   public static let eventScripts: [[CatActivityStep]] = [
-    [.wake, .curiousTilt], [.wake, .stalk, .pounce],
+    [.wake, .curiousTilt], [.wake, .carryNote], [.wake, .stalk, .pounce],
   ]
 
   /// The steps a group can be entered at.
@@ -129,6 +129,7 @@ public enum CatStatechart {
     case .sitOnDesk: 10...25
     case .startle: 1...1.5
     case .curiousTilt: 1.5...2.5
+    case .carryNote: 5...7
     }
   }
 
@@ -168,6 +169,7 @@ public enum CatStatechart {
     case .rub: .headbutt
     case .slowBlink: .slowBlink
     case .startle, .curiousTilt: .perk
+    case .carryNote: .reachUp
     }
   }
 
@@ -204,7 +206,7 @@ public enum CatStatechart {
     case .sitInCardigan: return spot(.soft)
     case .sitOnDesk: return spot(.desk)
     case .sit, .loaf, .lookAround, .groomPaw, .groomFlank, .groomTail, .stalk, .pounce,
-      .batObject, .startle, .curiousTilt:
+      .batObject, .startle, .curiousTilt, .carryNote:
       return .stay
     }
   }
@@ -220,7 +222,7 @@ public enum CatStatechart {
     case .stalk, .pounce, .batObject: .affordance(.toy)
     case .loaf, .wander, .inspectFurniture, .findNapSpot, .knead, .curl, .wake, .groomPaw,
       .groomFlank, .groomTail, .walkToBowl, .eat, .lickLips, .chase, .zoomies, .sitInCardigan,
-      .sitOnDesk, .startle:
+      .sitOnDesk, .startle, .carryNote:
       .ahead
     }
   }
@@ -272,7 +274,9 @@ public enum CatStatechart {
     lines.append("  --")
     lines.append("  state Interaction {")
     lines.append("    [*] --> None")
-    for interaction in ["Petted", "Held", "Toy", "Called", "Fed", "FollowFinger"] {
+    for interaction in [
+      "Petted", "Held", "Toy", "Called", "Fed", "FollowFinger", "Greeting", "Batting",
+    ] {
       lines.append("    None --> \(interaction)")
       lines.append("    \(interaction) --> None : ends, activity resumes from history")
     }

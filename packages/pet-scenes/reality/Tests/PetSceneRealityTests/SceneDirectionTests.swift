@@ -7,12 +7,12 @@ import simd
 @testable import PetSceneReality
 
 @Suite struct SceneDirectionTests {
-  @Test func theOpeningCuesTheCatOnceEachInOrder() {
+  @Test func theOpeningAsksTheCatToLookUpOnce() {
     var flight = SceneFlight(id: 1, clock: 10, atEnd: false)
     #expect(flight.dueCues(at: 10.5).isEmpty)
-    #expect(flight.dueCues(at: 10 + FlyInTimeline.wake) == [.wakeUp])
-    #expect(flight.dueCues(at: 10 + FlyInTimeline.wake + 0.1).isEmpty)
-    #expect(flight.dueCues(at: 10 + FlyInTimeline.length) == [.lookAtCamera])
+    #expect(flight.dueCues(at: 10 + FlyInTimeline.look) == [.lookAtCamera])
+    #expect(flight.dueCues(at: 10 + FlyInTimeline.look + 0.1).isEmpty)
+    #expect(flight.dueCues(at: 10 + FlyInTimeline.length).isEmpty)
     #expect(flight.isOver(at: 10 + FlyInTimeline.length))
   }
 

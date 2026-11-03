@@ -36,15 +36,6 @@ public struct WidgetFeatures: Equatable, Sendable {
     choices[flag.rawValue] ?? flag.defaultOn
   }
 
-  /// The cat moments switched on in Labs.
-  public var catMoments: Set<CatMoment> {
-    let pairs: [(LabExperiment, CatMoment)] = [
-      (.catCarriesNote, .carriesNote), (.catPurrs, .purrs), (.catBats, .batsAtFinger),
-      (.catGreets, .greets), (.catChases, .chases),
-    ]
-    return Set(pairs.filter { isOn($0.0) }.map(\.1))
-  }
-
   /// The features that are on, in declaration order.
   public var enabled: [WidgetFeature] {
     WidgetFeature.allCases.filter(isOn)
@@ -52,8 +43,17 @@ public struct WidgetFeatures: Equatable, Sendable {
 }
 
 extension WidgetFeatures: Codable {
+  /// Keys of switches that are gone, because what they switched is always on now. A stored
+  /// choice under one is dropped on reading, so it never comes back to life if a key is reused,
+  /// and the next save leaves it out.
+  public static let retiredKeys: Set<String> = [
+    "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
+    "catChases", "cinematicOnboarding",
+  ]
+
   public init(from decoder: any Decoder) throws {
     choices = try decoder.singleValueContainer().decode([String: Bool].self)
+      .filter { !Self.retiredKeys.contains($0.key) }
   }
 
   public func encode(to encoder: any Encoder) throws {
@@ -128,6 +128,17 @@ public struct WidgetFeaturesStore: Sendable {
 
   public func saveCat(_ cat: CatChoice) throws(PersistenceError) {
     try storage.writeJSON(cat, named: Self.catFileName)
+  }
+
+  public static let temperamentFileName = "cat-temperament.json"
+
+  /// The temperament saved for a cat, or nil when none is or the file cannot be read.
+  public func loadTemperament() -> CatTemperamentRecord? {
+    try? storage.readJSON(CatTemperamentRecord.self, named: Self.temperamentFileName)
+  }
+
+  public func saveTemperament(_ record: CatTemperamentRecord) throws(PersistenceError) {
+    try storage.writeJSON(record, named: Self.temperamentFileName)
   }
 
   public static let windowViewFileName = "window-view.json"
@@ -278,6 +289,8 @@ public final class WidgetFeaturesModel {
   public private(set) var shopkeeperOverride: Shopkeeper?
   /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
+  /// The temperament saved for the cat, in its own file. See ``temperament(forSeed:)``.
+  public private(set) var temperamentRecord: CatTemperamentRecord?
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
   @ObservationIgnored private let onChange: @MainActor () -> Void
@@ -296,6 +309,19 @@ public final class WidgetFeaturesModel {
     lightingOverride = store?.loadLightingOverride()
     shopkeeperOverride = store?.loadShopkeeperOverride()
     furniture = store?.loadFurniture() ?? .standard
+    temperamentRecord = store?.loadTemperament()
+  }
+
+  /// The temperament of the cat with `seed`, fixed for life: the one saved for it, or else the
+  /// one its seed was born with, saved now. A cat adopted before temperaments existed gets the
+  /// one that fits the traits it already had. Both phones work out the same from the shared seed,
+  /// so nothing needs syncing; the file only keeps it from changing if that rule ever does.
+  public func temperament(forSeed seed: UInt64) -> CatTemperament {
+    if let record = temperamentRecord, record.seed == seed { return record.temperament }
+    let record = CatTemperamentRecord(seed: seed, temperament: .born(seed: seed))
+    temperamentRecord = record
+    try? store?.saveTemperament(record)
+    return record.temperament
   }
 
   // Each Labs setting the server can also set reads the same way: the choice made in Labs on this
@@ -455,5 +481,36 @@ public final class WidgetFeaturesModel {
   private func changed() {
     try? store?.save(features)
     onChange()
+  }
+}
+
+/// A temperament and the seed of the cat it belongs to. The seed is written as text, since a JSON
+/// number cannot hold every 64-bit one exactly.
+public struct CatTemperamentRecord: Codable, Hashable, Sendable {
+  public var seed: UInt64
+  public var temperament: CatTemperament
+
+  public init(seed: UInt64, temperament: CatTemperament) {
+    self.seed = seed
+    self.temperament = temperament
+  }
+
+  private enum CodingKeys: String, CodingKey { case seed, temperament }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let text = try container.decode(String.self, forKey: .seed)
+    guard let seed = UInt64(text) else {
+      throw DecodingError.dataCorruptedError(
+        forKey: .seed, in: container, debugDescription: "Not a seed: \(text)")
+    }
+    self.seed = seed
+    temperament = try container.decode(CatTemperament.self, forKey: .temperament)
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(String(seed), forKey: .seed)
+    try container.encode(temperament, forKey: .temperament)
   }
 }

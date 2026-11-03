@@ -135,8 +135,6 @@ final class GenzRoom: CatPlayStage {
   let room = Entity()
   private let lens = PerspectiveCamera()
   let catHolder = Entity()
-  /// The cat moments switched on in Labs.
-  private(set) var moments: Set<CatMoment> = []
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
   /// The hands on the cat: petting, play and the cooldowns that keep it from feeling spammy.
@@ -150,8 +148,11 @@ final class GenzRoom: CatPlayStage {
   private var lastCatClock = 0.0
   var trip: CatTrip?
   var tripKind: CatTripKind?
-  var playClock = CatPlayClock(seed: UInt64.random(in: 1...UInt64.max))
-  private var lastBat = -Double.infinity
+  /// A chase the brain asked for, waiting for the cat to be free.
+  var chaseWanted = false
+  /// The finger on the room, for a cat that bats at one resting near the edge.
+  private var fingerRest = CatFingerRest()
+  var lastBat = -Double.infinity
   private var greetPending = false
   /// Whether a measuring run has been told this room is drawing since it last came on screen.
   private var isAnnounced = false
@@ -229,6 +230,9 @@ final class GenzRoom: CatPlayStage {
   private(set) var glow: GenzGlow?
   /// The lighting preset the room is lit with.
   private(set) var look = LightingLook.off
+  /// Called when an opening asked for through ``flyIn(_:)`` starts, once the room is built and on
+  /// screen.
+  var onOpeningStarted: (() -> Void)?
   /// Called when an opening asked for through ``flyIn(_:)`` is over.
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
@@ -544,7 +548,7 @@ final class GenzRoom: CatPlayStage {
     screen.landedAt = .now
     noteClock = clock - (layout.style == .sunsetLamp ? 1.05 : 1.1)
     if reduceMotion { noteClock = clock - GenzOpening.length }
-    if moments.contains(.carriesNote), !reduceMotion, hasCat {
+    if !reduceMotion, hasCat {
       // The note is all there from the start: it rides in the cat's mouth until it is taped up.
       noteClock = clock - GenzOpening.length
       startDelivery()
@@ -815,6 +819,7 @@ final class GenzRoom: CatPlayStage {
   private func startFlight(_ request: PetSceneFlyIn) {
     let atEnd = reduceMotion || request.isSkipped
     opening = SceneFlight(id: request.id, clock: clock, atEnd: atEnd)
+    onOpeningStarted?()
     startOpening()
     if atEnd { skipFlight() }
     stepFlight()
@@ -1066,6 +1071,8 @@ final class GenzRoom: CatPlayStage {
     } else if let pose = stepBrain(step) {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
+      // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
+      rate = Float(brainBody.frame?.tempo ?? 1)
       if pose.action == .walk { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }
@@ -1144,7 +1151,7 @@ final class GenzRoom: CatPlayStage {
   func strokeMoved(to point: CGPoint) -> [PetSceneEvent] {
     guard trip == nil else { return [] }
     petClock = clock
-    if moments.contains(.purrs), purr.touch(at: clock, cat: point) {
+    if purr.touch(at: clock, cat: point) {
       behaviour.react(.roll, at: clock)
       hands.onBackUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
     }
@@ -1368,25 +1375,31 @@ enum CatTripKind: Equatable {
 }
 
 extension GenzRoom {
-  /// Switches the cat moments to `moments`.
-  func setMoments(_ moments: Set<CatMoment>) {
-    self.moments = moments
-    if !moments.contains(.greets) { greetPending = false }
+  /// The finger turning the room is at `point`. Moving, it only turns the room; held still near
+  /// the edge, it may get batted at.
+  func fingerAt(_ point: CGPoint) {
+    fingerRest.moved(toX: Double(point.x), y: Double(point.y), at: clock)
   }
 
-  /// A finger near the edge of the view catches the cat's eye: it looks, then bats at it, which
-  /// counts as a game.
-  func bat(at point: CGPoint) -> PetSceneEvent? {
-    guard moments.contains(.batsAtFinger), trip == nil, toys.pursuit == nil,
-      world.activity == .sleeping,
+  func fingerLifted() {
+    fingerRest.lifted()
+  }
+
+  /// A finger resting near the edge of the view catches the eye of a cat in the mood to play: it
+  /// looks, then bats at it, which counts as a game. A finger on the move, turning the room, is
+  /// never batted at.
+  private func batAtRestingFinger() {
+    guard let rest = fingerRest.resting(at: clock), brainBody.frame?.eager ?? false,
+      trip == nil, toys.pursuit == nil, world.activity == .sleeping,
       clock - lastBat > Self.batGap,
-      CatEdge.isNearEdge(x: Double(point.x), width: Double(viewSize.width))
-    else { return nil }
+      CatEdge.isNearEdge(x: rest.x, width: Double(viewSize.width))
+    else { return }
     let played = clock - lastBat > Self.gameGap
     lastBat = clock
-    followFinger(at: point)
+    fingerRest.restart(at: clock)
+    followFinger(at: CGPoint(x: rest.x, y: rest.y))
     behaviour.react(.bat, at: clock)
-    return played ? .played : nil
+    if played { report?(.played) }
   }
 
   /// Bats closer together than this are one game.
@@ -1503,7 +1516,8 @@ extension GenzRoom {
     return min(max(speed / max(natural, 0.001), 0.6), 3)
   }
 
-  /// Starts what the moments do on their own: a greeting after hours away, a chase now and then.
+  /// Starts what the moments do when the brain wants them: a greeting after hours away for a cat
+  /// that is awake, a chase when Play chose one, a bat at a resting finger.
   func stepMoments() {
     purr.tick(at: clock, cat: screen.cat)
     if clock - lastSeenSaved > 30 {
@@ -1513,15 +1527,17 @@ extension GenzRoom {
     let isFree =
       trip == nil && toys.pursuit == nil && world.activity == .sleeping && !reduceMotion && hasCat
       && opening == nil
+    // A sleeping cat does not run up to the glass; the greeting is let go.
+    if greetPending, brainBody.frame?.stack.vitality == .asleep { greetPending = false }
     if greetPending, isFree {
       greetPending = false
+      chaseWanted = false
       startGreeting()
-      playClock.postpone(from: clock)
-    } else if moments.contains(.chases), isFree, brainBody.frame == nil,
-      playClock.isDue(at: clock)
-    {
+    } else if chaseWanted, isFree {
+      chaseWanted = false
       startChase()
     }
+    batAtRestingFinger()
   }
 
   func startDelivery() {

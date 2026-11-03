@@ -135,7 +135,6 @@ private struct NookiStage: View {
   @Environment(\.petSceneRenovator) private var renovator
   @Environment(\.petSceneDrawing) private var drawing
   @Environment(\.petSceneCat) private var cat
-  @Environment(\.petSceneMoments) private var moments
   @Environment(\.petSceneFlyIn) private var flyIn
   @Environment(\.petSceneGaze) private var gaze
   @Environment(\.petSceneOrbits) private var orbits
@@ -144,6 +143,7 @@ private struct NookiStage: View {
   @Environment(\.petSceneFillsView) private var fillsView
   @Environment(\.petSceneShowsControls) private var showsControls
   @Environment(\.petSceneOpeningEnded) private var openingEnded
+  @Environment(\.petSceneOpeningStarted) private var openingStarted
   @Environment(\.scenePhase) private var scenePhase
 
   init(
@@ -197,6 +197,7 @@ private struct NookiStage: View {
       }
       .onChange(of: flyIn, initial: true) { _, flyIn in
         diorama.onOpeningEnded = openingEnded
+        diorama.onOpeningStarted = openingStarted
         diorama.flyIn(flyIn)
       }
       .onChange(of: gaze) { _, gaze in diorama.gaze(at: gaze, in: viewSize) }
@@ -300,7 +301,7 @@ private struct NookiStage: View {
     // In the same frame as the gestures, so a heart rises from under the stroking finger.
     .overlay { CatPurrOverlay(purr: diorama.purr) }
     .overlay { PartnerTouchOverlay(trigger: play.petsReceived) { diorama.catPointOnScreen } }
-    .onChange(of: moments, initial: true) { _, moments in diorama.setMoments(moments) }
+    .onChange(of: play.brain, initial: true) { _, brain in diorama.followBrain(brain) }
   }
 
   private var isOnScreen: Bool {
@@ -434,7 +435,7 @@ private struct NookiStage: View {
         }
         let point = SIMD2(Float(location.x), Float(location.y))
         diorama.followFinger(at: point, in: viewSize)
-        if diorama.bat(at: point, in: viewSize) { onEvent(.played) }
+        diorama.fingerAt(point, in: viewSize)
         guard value.entity.name != NookiTarget.yarn.rawValue, !isHoldingPiece(value.entity) else {
           return
         }
@@ -452,6 +453,7 @@ private struct NookiStage: View {
       .onEnded { value in
         let velocity = value.gestureValue.velocity
         track.drag = .zero
+        diorama.fingerLifted()
         defer { toyDrag = nil }
         if toyDrag == .treat {
           diorama.endTreat()

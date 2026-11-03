@@ -32,8 +32,10 @@ struct HomeView: View {
   @State private var shopSheet: HomeShop.Sheet?
   /// Where cues for the cat go. An idle scheduler can send through the same director.
   @State private var director = CatDirector()
-  /// Whether the cinematic opening has played since launch. Home stays alive across tabs.
-  @State private var hasOpened = false
+  /// Whether the launch's glide into the room is playing. Only the first Home of a cold launch
+  /// plays it, and not after the first-launch scene; Home stays alive across tabs.
+  @State private var launchPlaying = LaunchCinematic.thisLaunch.claim(
+    onboardingPlayed: OnboardingMemory.thisLaunch.introSeen)
   @State private var latestDrawing: CGImage?
   @State private var drawerOpen = false
   @State private var ringsOpen = false
@@ -74,7 +76,6 @@ struct HomeView: View {
     home
       .environment(\.petSceneCat, session.labs.cat)
       .environment(\.petSceneWindowView, session.labs.windowView)
-      .environment(\.petSceneMoments, session.labs.features.catMoments)
       .environment(\.petSceneLighting, session.labs.lighting)
       .environment(\.petSceneFurniture, session.labs.furniture)
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
@@ -106,9 +107,9 @@ struct HomeView: View {
       }
       .task { await keepSealedNotesCurrent() }
       .task(id: session.life.speed) { await session.life.run() }
-      .task(id: BrainInputs(on: session.labs.isOn(LabExperiment.catBrain), cat: session.labs.cat)) {
-        guard session.labs.isOn(LabExperiment.catBrain) else { return }
-        session.brain.setSeed(CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat))
+      .task(id: session.labs.cat) {
+        let seed = CatBrainModel.seed(pair: session.room.code, cat: session.labs.cat)
+        session.brain.setSeed(seed, temperament: session.labs.temperament(forSeed: seed))
         await session.brain.run()
       }
       .onChange(of: session.shop.state.treatsUsed) { old, new in
@@ -125,8 +126,7 @@ struct HomeView: View {
           if session.labs.isOn(LabExperiment.lifeDebug) {
             LifeDebugOverlay(model: session.life)
           }
-          if session.labs.isOn(LabExperiment.catBrain), session.labs.isOn(LabExperiment.brainDebug)
-          {
+          if session.labs.isOn(LabExperiment.brainDebug) {
             BrainDebugOverlay(brain: session.brain, life: session.life)
           }
         }
@@ -256,7 +256,8 @@ struct HomeView: View {
           .id(scene.id)
           .environment(\.petSceneOnScreen, roomShows)
           .environment(\.petSceneRenovator, session.renovator)
-          .overlay { catReactions.allowsHitTesting(false) }),
+          .overlay { catReactions.allowsHitTesting(false) }
+          .modifier(LaunchGlide(isPlaying: $launchPlaying))),
       notes: session.notes,
       streak: session.streak(today: today, calendar: calendar),
       treats: ShopCatalog.standard.items(in: .treats).reduce(0) { $0 + session.shop.owned($1) },
@@ -266,6 +267,7 @@ struct HomeView: View {
       onOpenNotes: onOpenNotes,
       onDraw: { store.send(.canvasOpened) },
       isDecorating: isRenovating,
+      isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
       flame: flameHost(scene: scene))
   }
@@ -327,6 +329,7 @@ struct HomeView: View {
             }
           }
           .overlay { catReactions.allowsHitTesting(false) }
+          .modifier(LaunchGlide(isPlaying: $launchPlaying))
           .background {
             // The styled rooms draw their own night; the diorama floats in Home's evening, or
             // under the sky of the hour when Home follows the time of day.
@@ -338,8 +341,7 @@ struct HomeView: View {
       isFakePartner: session.isFakePartner,
       theirTimeZone: session.lamp.theirs?.timeZoneID.flatMap(TimeZone.init(identifier:)),
       pretendHour: session.labs.pretendHour,
-      hasOpened: hasOpened,
-      onOpened: { hasOpened = true },
+      isOpening: launchPlaying,
       onTreat: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
       onDraw: { store.send(.canvasOpened) },
       isDecorating: isRenovating,
@@ -847,10 +849,9 @@ struct HomeView: View {
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
       catAway: catAway,
-      life: session.labs.isOn(LabExperiment.catLife) ? session.life.drive : nil,
-      lifeNeeds: session.labs.isOn(LabExperiment.catLife)
-        && session.labs.isOn(LabExperiment.lifeInRoom) ? session.life.state.needs : nil,
-      brain: session.labs.isOn(LabExperiment.catBrain) ? session.brain.frame : nil,
+      life: session.life.drive,
+      lifeNeeds: session.life.state.needs,
+      brain: session.brain.frame,
       brainSpeed: session.life.speed
     )
   }
@@ -966,10 +967,4 @@ extension PetPlayState.Treat {
 private struct StreakInputs: Equatable {
   let ledger: TreatLedger
   let porch: PorchLight?
-}
-
-/// What the brain's run restarts on: the switch, and the adopted cat its seed comes from.
-private struct BrainInputs: Hashable {
-  var on: Bool
-  var cat: CatChoice
 }

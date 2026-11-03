@@ -3,7 +3,7 @@ import PetScene
 import simd
 
 /// Where everything stands on the first-launch windowsill, in room units (``GenzRoomPoint``): a
-/// deep sill under a night window, candles at both ends, fairy lights along the top of the
+/// deep sill under a night window, candles at both ends, fairy lights down the sides of the
 /// window, and the heart floating over a cushion in the middle.
 enum OnboardingLayout {
   static let width: Float = 6
@@ -27,11 +27,18 @@ enum OnboardingLayout {
     (GenzRoomPoint(5.2, 0.95, sillTop), 0.22, 1.55),
   ]
 
-  /// The fairy lights strung along the top of the window, sagging in the middle.
-  static let beads: [GenzRoomPoint] = (0..<15).map { index in
-    let along = Float(index) / 14
-    return GenzRoomPoint(0.55 + along * 4.9, 0.4, 8.95 - 0.75 * sin(along * .pi))
+  /// The fairy lights: a strand hanging down each side of the window, bellying out a little,
+  /// from below its top to the sill. They stay off the top of the window, where the words are.
+  static let strands: [[GenzRoomPoint]] = [Float(0.5), Float(5.5)].map { x in
+    let out: Float = x < 3 ? -1 : 1
+    return (0..<7).map { index in
+      let along = Float(index) / 6
+      return GenzRoomPoint(x + out * 0.12 * sin(along * .pi), 0.4, 6.9 - along * 3.9)
+    }
   }
+
+  /// Every fairy light, the left strand top to bottom and then the right.
+  static let beads: [GenzRoomPoint] = strands.flatMap { $0 }
 
   /// The stars and the moon in the window, as points on its glass and sizes.
   static let stars: [(x: Float, z: Float, size: Float)] = [

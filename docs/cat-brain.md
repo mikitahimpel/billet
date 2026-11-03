@@ -14,8 +14,10 @@ Four regions run side by side.
   asleep when the life says so or while curled up for a nap.
 - **Activity**: ten groups of steps (Idle, Explore, Rest, Groom, Eat, Play, Watch, Social, Mischief,
   React). Entering a group plays one of its scripts, such as Rest = find a nap spot, knead, curl,
-  wake. When a script ends, utility chooses the next group. React is only entered by events.
-- **Interaction**: Petted(zone), Held, Toy(kind), Called, Fed, FollowFinger. It overrides the
+  wake. When a script ends, utility chooses the next group. React is only entered by events: a
+  note sends the cat to carry it to the wall (CarryNote), waking it first if it is curled up.
+- **Interaction**: Petted(zone), Held, Toy(kind), Called, Fed, FollowFinger, Greeting, Batting.
+  It overrides the
   activity while active, and the activity comes back from its **history** afterwards: a nap
   briefly petted goes on to the end it had.
 - **Reflex**: blinks, ear twitches, tail flicks, breath and head tracking. Each is a pure function
@@ -29,12 +31,14 @@ groups are entered at their entry steps, vitality never skips drowsy.
 Each group's score is
 
 ```
-score = base × need × personality × time of day × room × novelty × mood × vitality
+score = base × need × personality × temperament × time of day × room × novelty × mood × vitality
 ```
 
 - **need**: `0.5 + 4·(1 − n)²` for the need the group answers (Rest → Rested, Eat → Full, Play and
   Mischief → Playful, Social → Loved), ×1.5 for the need `NeedFocus` holds.
 - **personality**: `Π (1 + wᵢ·(2·tᵢ − 1))` over the traits that lean on the group.
+- **temperament**: the type's lean towards the group (below); its need weights also scale the
+  `4·(1 − n)²` part of the need term.
 - **time of day**: play and mischief peak at dawn and dusk; rest peaks after midday.
 - **room**: no window, no Watch; Mischief needs something to nudge, a heap of clothes or a desk;
   a sunbeam (by day, under the window, in clear weather) and something soft make Rest likelier;
@@ -57,6 +61,34 @@ six days of events, each weighted by `e^(−age/3 days)`: games make the cat mor
 lazy, pets more cuddly, notes more vocal and a little more curious, and any care a little bolder.
 No trait moves more than 0.15 from where it was born, and a week without a game sends it back.
 
+## Temperament
+
+What kind of cat it is at heart, fixed for life. There are five types, each a corner of the
+trait axes bold–shy, energetic–lazy, cuddly–independent, curious–cautious and vocal–quiet:
+
+| Type | Leans to | Needs that weigh more | Tempo | Amplitude | Keeps from a finger | After a pet |
+|---|---|---|---|---|---|---|
+| Cuddler | Social ×2.6, Idle ×1.2, Mischief ×0.5 | Loved ×1.6 | 1 | 1 | 0.05 | seeks you, rubs |
+| Explorer | Explore ×2.6, Watch ×1.5, Idle ×0.6 | Playful ×1.25 | 1.1 | 1.1 | 0.35 | looks around |
+| Diva | Groom ×2.4, Mischief ×1.6, Watch ×1.4, Social ×0.5 | Full ×1.4, Loved ×0.75 | 0.92 | 0.85 | 0.7 | grooms |
+| Sleepyhead | Rest ×2.4, Idle ×1.6, Play and Explore ×0.45 | Rested ×1.6, Playful ×0.7 | 0.78 | 0.7 | 0.3 | sleeps on |
+| Clown | Play ×2.8, Mischief ×2, Idle and Rest ×0.55 | Playful ×1.6 | 1.22 | 1.3 | 0.15 | zoomies |
+
+- **Born.** A cat's type is the one its seeded traits lean towards most, measured from an even cat
+  along the way each type's heart lies. Leaning, rather than nearness, keeps the five about equally
+  common. Its nature is then its seeded traits pulled 65% of the way to the type's heart, so two
+  Clowns are still two cats. Drift (below) moves that nature, never the type.
+- **Shown and kept.** Adoption shows each cat's type and a line about it. The seed comes from the
+  pair and the cat, so both phones show the same. The one adopted is saved in the App Group
+  (`cat-temperament.json`, with its seed) and never changes. A cat adopted before temperaments
+  existed gets the type its traits fit, saved the first time Home opens. Nothing is synced: both
+  phones work it out from the shared seed.
+- **In the body.** Tempo scales the clip rate and travel speed. Amplitude scales the reflex layer
+  (blinks, ear and tail flicks, breath) on a skeleton that has it. Personal space is how far short
+  of a called-to spot the cat stops, in cat lengths × 1.5.
+- **Seen.** Settings → Pair → Character, and the Brain debug card (type, tempo, amplitude, space,
+  and each score's `k` factor).
+
 ## Memory
 
 - **Favourite spots**: seconds curled up or kneading at each kind of spot, with a minute for each
@@ -74,7 +106,7 @@ No trait moves more than 0.15 from where it was born, and a week without a game 
 
 ## Brain debug
 
-**Brain debug** in Labs (The cat), with Cat brain on, puts a card on Home: the state stack, the
+**Brain debug** in Labs (The cat) puts a card on Home: the state stack, the
 five best scores at the last choice with their factors (`n` need, `p` personality, `t` time, `r`
 room, `b` boredom, `m` mood, `v` vitality), the last ten moves with their causes, today's traits
 with arrows where experience moved them, the favourite spot, and the ×1, ×60 and ×600 clock.
@@ -108,9 +140,9 @@ a mug is nudged towards the edge, never off it. The touch router still decides w
 
 ## In the room
 
-With **Cat brain** on in Labs (The cat), Home runs a `CatBrainModel` beside the life model and
-hands each frame to the scene in `PetPlayState.brain`. The styled rooms (`GenzCatBrain.swift`)
-carry it out:
+The brain is always on, and so are the cat's needs: there is no switch for either. Home runs a
+`CatBrainModel` beside the life model and hands each frame to the scene in `PetPlayState.brain`.
+The styled rooms (`GenzCatBrain.swift`) carry it out:
 
 - **Affordances** come from the room as it stands, after decorating: a bed, a box, a shelf,
   something soft (cardigan, hoodie, jumper), a small item (mugs, phone, candles), a rug, the window,
@@ -125,10 +157,27 @@ carry it out:
   about to nudge, or a slow sweep for looking around) unless a finger has it.
 - Touch, games, the bowl, lifting and calls keep their own handling. The scene reports what this
   phone's touch is doing as `PetSceneEvent.touching`, which the brain shows in its interaction
-  region without changing the fold. With the brain on, the old "plays on its own" chase stays off;
-  deliveries and greetings still play.
+  region without changing the fold.
 - At ×60 or ×600 on the debug clock the body jumps to each place instead of walking, so a day
   reads as a time-lapse.
+
+### Moments
+
+What used to be five Labs switches is part of the brain, in the styled rooms and the Nooki room:
+
+- **Carries the note**: a note puts the brain in React's CarryNote, and the room plays the cat
+  carrying the note in its mouth to the wall or the glass and taping it up.
+- **Purrs**: stroking purrs under the finger with hearts, a long pet rolls it over. It is the
+  Petted interaction.
+- **Bats at your finger**: only a finger *resting* near the edge (still within 8 pt for 0.35 s),
+  so a quick swipe to turn the room is never batted at, and only by a cat in the mood: awake, not
+  napping or eating, and `½·urgency(Playful) + ½·playful trait ≥ 0.4`. A playful cat nearly
+  always is, an even one once its Playful need is below about half, a lazy one rarely. It shows
+  as the Batting interaction and counts as a game. A rest lapses after 6 s.
+- **Greets you**: back after 3 hours or more away, an awake cat runs up to the glass and
+  headbutts it (the Greeting interaction). A sleeping cat lets it go.
+- **Chases**: only when Play chooses a chase or zoomies; the room sends the cat after the lamp's
+  dot of light (the yarn in the Nooki room). There is no fixed 45–90 s clock any more.
 
 ### Clips
 
@@ -275,8 +324,10 @@ stateDiagram-v2
       state React {
         [*] --> Startle
         [*] --> CuriousTilt
+        [*] --> CarryNote
         Startle --> [*]
         CuriousTilt --> [*]
+        CarryNote --> [*]
       }
       Idle --> Choose : script ends
       Explore --> Choose : script ends
@@ -314,6 +365,10 @@ stateDiagram-v2
       Fed --> None : ends, activity resumes from history
       None --> FollowFinger
       FollowFinger --> None : ends, activity resumes from history
+      None --> Greeting
+      Greeting --> None : ends, activity resumes from history
+      None --> Batting
+      Batting --> None : ends, activity resumes from history
     }
     --
     state Reflex {

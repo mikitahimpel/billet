@@ -13,26 +13,21 @@ import WidgetBridge
 public struct RealRootView: View {
   @State private var model: RealAppModel
   private let scenes: [any PetScene]
-  /// Whether signing in happens in the first-launch scene, as Labs sets it.
-  private let isCinematic: Bool
   private let lighting: RoomLighting
   private let updateLink: UpdateLink
 
   @Environment(\.scenePhase) private var scenePhase
 
-  /// `scenes` give the first-launch scene; with none, or with the Labs switch off, it is the
-  /// plain welcome. `updateLink` is where "Update billet" goes.
+  /// `scenes` give the first-launch scene; with none, signing in and pairing happen over the
+  /// evening background instead, with the same words and controls. `updateLink` is where
+  /// "Update billet" goes.
   public init(
     model: RealAppModel, scenes: [any PetScene] = [], updateLink: UpdateLink = .testFlight
   ) {
     _model = State(initialValue: model)
     self.scenes = scenes
     self.updateLink = updateLink
-    let store = WidgetFeaturesStore.appGroup()
-    isCinematic =
-      !scenes.isEmpty
-      && (store?.load() ?? WidgetFeatures()).isOn(LabExperiment.cinematicOnboarding)
-    lighting = store?.loadLighting() ?? .standard
+    lighting = WidgetFeaturesStore.appGroup()?.loadLighting() ?? .standard
     try? BilletFonts.register()
   }
 
@@ -60,20 +55,16 @@ public struct RealRootView: View {
   private var stages: some View {
     Group {
       switch model.stage {
-      case .signedOut where isCinematic:
+      case .signedOut:
         CinematicOnboardingView(
           scenes: scenes, lighting: lighting, memory: OnboardingMemory.thisLaunch
         ) {
           SignInControls(model: model.signIn) { model.signedIn() }
         }
-      case .signedOut:
-        OnboardingView(model: model.signIn) { model.signedIn() }
-      case .unpaired where isCinematic:
+      case .unpaired:
         RealOnboardingPairing(model: model.pairing, scenes: scenes, lighting: lighting) {
           model.paired()
         }
-      case .unpaired:
-        PairingFlowView(model: model.pairing) { model.paired() }
       case .paired:
         RealPairedView(model: model)
       }

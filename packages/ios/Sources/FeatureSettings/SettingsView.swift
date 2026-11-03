@@ -1,5 +1,6 @@
 import DesignSystem
 import Foundation
+import Pet
 import PetScene
 import SwiftUI
 import UserNotifications
@@ -92,6 +93,11 @@ public struct SettingsView: View {
         SettingsRow("Partner", value: partnerStatus)
         ListDivider()
         SettingsRow("Cat", value: catName ?? "Not named yet")
+        if let temperament = labs?.temperamentRecord?.temperament {
+          ListDivider()
+          SettingsRow("Character", value: "\(temperament.title). \(temperament.line)")
+            .accessibilityIdentifier("settings.character")
+        }
       }
       if let code {
         PairCodeCard(code: code)
@@ -169,23 +175,27 @@ public struct SettingsView: View {
         ShopkeeperPicker(model: model)
       }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
-        VStack(alignment: .leading, spacing: Spacing.small) {
-          Text(group.title)
-            .billetType(.caption)
-            .foregroundStyle(Palette.muted.color)
-            .padding(.horizontal, Spacing.medium)
-          SettingsGroup {
-            let experiments = LabExperiment.allCases.filter { $0.group == group }
-            ForEach(experiments, id: \.self) { experiment in
-              if experiment != experiments.first { ListDivider() }
-              ToggleRow(
-                experiment.title, subtitle: experiment.detail,
-                isOn: Binding(
-                  get: { model.isOn(experiment) }, set: { model.set(experiment, on: $0) }))
-            }
-            if group == .firstLaunch, let onReplayOnboarding {
-              ListDivider()
-              SettingsLink("Replay onboarding", action: onReplayOnboarding)
+        let experiments = LabExperiment.allCases.filter { $0.group == group }
+        // The first launch has no switches, only a way to watch it again.
+        let replay = group == .firstLaunch ? onReplayOnboarding : nil
+        if !experiments.isEmpty || replay != nil {
+          VStack(alignment: .leading, spacing: Spacing.small) {
+            Text(group.title)
+              .billetType(.caption)
+              .foregroundStyle(Palette.muted.color)
+              .padding(.horizontal, Spacing.medium)
+            SettingsGroup {
+              ForEach(experiments, id: \.self) { experiment in
+                if experiment != experiments.first { ListDivider() }
+                ToggleRow(
+                  experiment.title, subtitle: experiment.detail,
+                  isOn: Binding(
+                    get: { model.isOn(experiment) }, set: { model.set(experiment, on: $0) }))
+              }
+              if let replay {
+                if !experiments.isEmpty { ListDivider() }
+                SettingsLink("Replay onboarding", action: replay)
+              }
             }
           }
         }

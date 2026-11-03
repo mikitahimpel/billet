@@ -33,7 +33,7 @@ struct SceneFlight: Equatable {
   mutating func dueCues(at clock: Double) -> [CatCue] {
     let time = time(at: clock)
     var due: [CatCue] = []
-    for (cue, moment) in [(CatCue.wakeUp, FlyInTimeline.wake), (.lookAtCamera, FlyInTimeline.look)]
+    for (cue, moment) in [(CatCue.lookAtCamera, FlyInTimeline.look)]
     where time >= moment && !cuesSent.contains(cue) {
       cuesSent.insert(cue)
       due.append(cue)
