@@ -4,7 +4,7 @@ import PetScene
 import SwiftUI
 
 /// The words over the first-launch scene.
-struct OnboardingHeading: Equatable {
+struct OnboardingHeading: Hashable {
   var title: String
   var detail: String
 
@@ -123,31 +123,13 @@ struct CinematicOnboardingView<Actions: View>: View {
 
   private var title: some View {
     let shown = intro.showsTitle
-    return VStack(spacing: Spacing.small) {
-      Text(heading.title)
-        .billetType(.title)
-        .foregroundStyle(Palette.paper.color)
-        .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
-        .accessibilityAddTraits(.isHeader)
-        .contentTransition(.opacity)
-        .lineLimit(3)
-        .minimumScaleFactor(0.75)
-      Text(heading.detail)
-        .billetType(.body)
-        .foregroundStyle(Palette.paper.color.opacity(0.78))
-        .fixedSize(horizontal: false, vertical: true)
-        .opacity(intro.showsActions ? 1 : 0)
-        .contentTransition(.opacity)
-    }
-    .multilineTextAlignment(.center)
-    .frame(maxWidth: .infinity)
-    .opacity(shown ? 1 : 0)
-    .blur(radius: shown || reduceMotion ? 0 : 10)
-    .scaleEffect(shown || reduceMotion ? 1 : 1.05)
-    .offset(y: shown || reduceMotion ? 0 : -10)
-    .animation(reduceMotion ? .easeOut(duration: 0.5) : .easeOut(duration: 1.4), value: intro)
-    .animation(.easeInOut(duration: 0.5), value: heading)
-    .accessibilityHidden(!shown)
+    return HeadingWords(heading: heading, showsDetail: intro.showsActions)
+      .opacity(shown ? 1 : 0)
+      .blur(radius: shown || reduceMotion ? 0 : 10)
+      .scaleEffect(shown || reduceMotion ? 1 : 1.05)
+      .offset(y: shown || reduceMotion ? 0 : -10)
+      .animation(reduceMotion ? .easeOut(duration: 0.5) : .easeOut(duration: 1.4), value: intro)
+      .accessibilityHidden(!shown)
   }
 
   private func handle(_ event: OnboardingSceneEvent) {
@@ -163,5 +145,39 @@ struct CinematicOnboardingView<Actions: View>: View {
   private func send(_ event: OnboardingIntro.Event) {
     intro.send(event)
     if intro.step == .ready { memory?.rememberIntro() }
+  }
+}
+
+/// A title and its explanation over a scene. A new heading fades in over the old one as a whole:
+/// moving one block from the old words to the new would slide the lines across the screen while
+/// they rewrap, which reads as crooked text.
+struct HeadingWords: View {
+  let heading: OnboardingHeading
+  var showsDetail = true
+
+  var body: some View {
+    ZStack(alignment: .top) {
+      VStack(spacing: Spacing.small) {
+        Text(heading.title)
+          .billetType(.title)
+          .foregroundStyle(Palette.paper.color)
+          .shadow(color: Color(red: 1, green: 0.55, blue: 0.4).opacity(0.55), radius: 18)
+          .accessibilityAddTraits(.isHeader)
+          .lineLimit(3)
+          .minimumScaleFactor(0.75)
+        Text(heading.detail)
+          .billetType(.body)
+          .foregroundStyle(Palette.paper.color.opacity(0.78))
+          .fixedSize(horizontal: false, vertical: true)
+          .opacity(showsDetail ? 1 : 0)
+      }
+      // A soft dark edge keeps the words readable where they cross the lit window frame.
+      .shadow(color: .black.opacity(0.45), radius: 5, y: 1)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .id(heading)
+      .transition(.opacity)
+    }
+    .animation(.easeInOut(duration: 0.45), value: heading)
   }
 }

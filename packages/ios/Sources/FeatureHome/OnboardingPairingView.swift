@@ -110,6 +110,7 @@ struct OnboardingPairingView: View {
           ShareLink(item: Self.invitation(code: code)) {
             ButtonLabel("Invite your person", rank: .primary, systemImage: "square.and.arrow.up")
           }
+          .billetButton(.primary)
           .accessibilityHint("Our code is \(code.map(String.init).joined(separator: " "))")
           .accessibilityIdentifier("inviteYourPerson")
           if !live {
