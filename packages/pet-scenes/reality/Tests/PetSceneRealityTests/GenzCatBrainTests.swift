@@ -30,6 +30,8 @@ import Testing
     #expect(found.has(.bed))
     #expect(!found.reachable(.bed))
     #expect(!found.has(.door))
+    // Wherever it sends the cat there, its body keeps out of the pillows.
+    try GenzCatObstacleTests.theBrainsTargetsAreClear(in: room)
   }
 
   @Test func theSunsetLampsBedIsWhereTheCatLies() async throws {

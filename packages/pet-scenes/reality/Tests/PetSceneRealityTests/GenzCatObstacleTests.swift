@@ -132,17 +132,13 @@ import simd
     let beside = cardigan.box.centre + [cardigan.box.half.x + layout.cat.length, 0]
     #expect(layout.catStandHeight(at: beside) == 0)
   }
+}
 
-  @Test func theBrainsTargetsAreClearInTheRoom() async throws {
-    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
-    let room = GenzRoom(
-      layout: layout, kit: GenzKit(), cats: GenzCatSource(),
-      spots: GenzSpotStore(
-        defaults: UserDefaults(suiteName: "cushions-\(UUID())")!, key: layout.key))
-    room.startBuilding()
-    let deadline = Date.now.addingTimeInterval(60)
-    while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
-    try #require(room.isBuilt)
+extension GenzCatObstacleTests {
+  /// What the brain resolves its targets to in a built Window Seat room is clear of every pillow,
+  /// and its cardigan is lain on top of. Run by `GenzCatBrainTests`, which builds the room anyway.
+  static func theBrainsTargetsAreClear(in room: GenzRoom) throws {
+    let layout = room.layout
     room.brainBody.places = room.affordances()
     let cardigan = try #require(layout.catObstacles.first { $0.sitOnTop })
     #expect(cardigan.box.contains(room.resolve(.affordance(.soft))))
@@ -160,39 +156,37 @@ import simd
     }
   }
 
-  /// The body the obstacles are kept from is as wide as each cat's middle and reaches its nose,
-  /// measured on its mesh: the head (and whiskers) at -z, the tail at +z.
-  @Test func everyCatFitsTheBodyTheRoomsKeepClear() async throws {
-    for model in CatModel.allCases where !CatCatalog.clips(model).isEmpty {
-      let cat = try #require(await NookiAssets.compiledCat(model), "\(model)")
-      var points: [SIMD3<Float>] = []
-      func gather(_ entity: Entity) {
-        if let model = entity as? ModelEntity, let mesh = model.model?.mesh {
-          let transform = model.transformMatrix(relativeTo: cat)
-          for part in mesh.contents.models.flatMap(\.parts) {
-            for p in part.positions.elements {
-              let at = transform * SIMD4(p, 1)
-              points.append([at.x, at.y, at.z])
-            }
+  /// The body the obstacles are kept from is as wide as `model`'s middle and reaches its nose,
+  /// measured on its mesh: the head (and whiskers) at -z, the tail at +z. Run by
+  /// `CatCatalogTests`, which loads every cat anyway.
+  static func theBodyFits(_ model: CatModel, _ cat: Entity) throws {
+    var points: [SIMD3<Float>] = []
+    func gather(_ entity: Entity) {
+      if let piece = entity as? ModelEntity, let mesh = piece.model?.mesh {
+        let transform = piece.transformMatrix(relativeTo: cat)
+        for part in mesh.contents.models.flatMap(\.parts) {
+          for p in part.positions.elements {
+            let at = transform * SIMD4(p, 1)
+            points.append([at.x, at.y, at.z])
           }
         }
-        entity.children.forEach(gather)
       }
-      gather(cat)
-      let length = model.anatomy.length
-      let back = try #require(points.map(\.z).min())
-      let front = try #require(points.map(\.z).max())
-      // Across its middle, between the head and the haunches.
-      let middle = points.filter {
-        let share = ($0.z - back) / (front - back)
-        return share > 0.35 && share < 0.65
-      }
-      let width =
-        (try #require(middle.map(\.x).max()) - (try #require(middle.map(\.x).min()))) / length
-      #expect(width / 2 <= GenzCatBody.radius + 0.01, "\(model) is \(width) of its length wide")
-      // The tip of its nose, inside the capsule's round front end.
-      let nose = -back / length
-      #expect(nose <= GenzCatBody.reach + GenzCatBody.radius + 0.04, "\(model) nose at \(nose)")
+      entity.children.forEach(gather)
     }
+    gather(cat)
+    let length = model.anatomy.length
+    let back = try #require(points.map(\.z).min())
+    let front = try #require(points.map(\.z).max())
+    // Across its middle, between the head and the haunches.
+    let middle = points.filter {
+      let share = ($0.z - back) / (front - back)
+      return share > 0.35 && share < 0.65
+    }
+    let width =
+      (try #require(middle.map(\.x).max()) - (try #require(middle.map(\.x).min()))) / length
+    #expect(width / 2 <= GenzCatBody.radius + 0.01, "\(model) is \(width) of its length wide")
+    // The tip of its nose, inside the capsule's round front end.
+    let nose = -back / length
+    #expect(nose <= GenzCatBody.reach + GenzCatBody.radius + 0.04, "\(model) nose at \(nose)")
   }
 }
