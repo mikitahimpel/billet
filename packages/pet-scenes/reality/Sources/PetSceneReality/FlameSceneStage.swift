@@ -230,10 +230,10 @@ final class FlameSceneStage {
 
   private func stepFlame() {
     let ember = Self.ember
-    let caught = caught
+    let caught = self.caught
     let height = mix(ember.height, look.height, caught) * (1 + 0.28 * swell + 0.12 * pulse)
     let width = mix(ember.width, look.width, caught) * (1 + 0.18 * swell + 0.06 * pulse)
-    let flicker = flicker
+    let flicker = self.flicker
     let breath = look.isEmber ? 0.88 + 0.12 * Float(sin(clock * (reduceMotion ? 0.6 : 1.1))) : 1
     let stretch = 1 + 0.14 * max(lean.y, 0)
     let leanAngle = -lean.x * 0.42
@@ -363,7 +363,7 @@ final class FlameSceneStage {
   private func updateGlows() {
     let point = middle
     guard let centre = view.project(point) else { return }
-    let caught = Double(caught)
+    let caught = Double(self.caught)
     let ember = Self.ember
     let lit = Double(look.isEmber ? 0.88 + 0.12 * sin(clock * 1.1) : Double(flicker))
     let boost = 1 + 0.8 * Double(swell) + 0.4 * Double(pulse)
