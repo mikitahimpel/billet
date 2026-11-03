@@ -41,6 +41,10 @@ public struct RealRootView: View {
         }
       case .signedOut:
         OnboardingView(model: model.signIn) { model.signedIn() }
+      case .unpaired where isCinematic:
+        RealOnboardingPairing(model: model.pairing, scenes: scenes, lighting: lighting) {
+          model.paired()
+        }
       case .unpaired:
         PairingFlowView(model: model.pairing) { model.paired() }
       case .paired:

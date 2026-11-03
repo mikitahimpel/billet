@@ -1,4 +1,5 @@
 import Foundation
+import PetScene
 import simd
 
 /// Where everything stands on the first-launch windowsill, in room units (``GenzRoomPoint``): a
@@ -140,4 +141,130 @@ enum HeartMotion {
   static func sway(_ time: Double) -> (yaw: Float, roll: Float) {
     (Float(sin(time * 0.55)) * 0.2, Float(sin(time * 0.9 + 0.7)) * 0.045)
   }
+}
+
+/// Where the two halves of the heart are, each eased towards where the moment wants it: together,
+/// opened with this phone's half forward and the partner's waiting on its side, or the partner's
+/// gone until it flies in. Offsets are in room units from the heart's middle, x to the viewer's
+/// right, y up and z towards the viewer. With motion reduced nothing travels: each half is at its
+/// place at once and fades in or out there.
+struct HeartHalves: Equatable {
+  struct Pose: Equatable {
+    var offset: SIMD3<Float>
+    var opacity: Float
+    /// How far the half leans out, about the axis towards the viewer.
+    var tilt: Float
+
+    static let home = Pose(offset: .zero, opacity: 1, tilt: 0)
+  }
+
+  private(set) var mine: HeartSide
+  private(set) var me = Pose.home
+  private(set) var partner = Pose.home
+  /// True once the halves have met in `together`, until the heart opens again.
+  private(set) var hasMet = true
+
+  /// How fast each half closes on its place, per second.
+  static let rate: Float = 2.4
+  static let fadeRate: Float = 3.2
+  /// How close the partner's half must come to count as met.
+  static let meeting: Float = 0.05
+
+  init(mine: HeartSide = .left) {
+    self.mine = mine
+  }
+
+  /// Where each half wants to be in `moment`, for this phone's `mine`.
+  static func targets(_ moment: OnboardingSceneState.Moment, mine: HeartSide) -> (
+    me: Pose, partner: Pose
+  ) {
+    let out: Float = mine == .left ? -1 : 1
+    let opened = Pose(offset: [out * 0.95, -0.08, 0.3], opacity: 1, tilt: -out * 0.14)
+    switch moment {
+    case .arriving, .resting, .together:
+      return (.home, .home)
+    case .apart(.waiting):
+      return (opened, Pose(offset: [-out * 1.4, 0.4, -0.35], opacity: 0.42, tilt: out * 0.2))
+    case .apart(.away):
+      return (opened, Pose(offset: [-out * 7, 3.2, -2.5], opacity: 0, tilt: out * 0.8))
+    }
+  }
+
+  /// Moves `delta` seconds towards `moment`. Returns true on the step the partner's half meets
+  /// this one.
+  mutating func step(
+    _ delta: Double, towards moment: OnboardingSceneState.Moment, mine: HeartSide,
+    reduceMotion: Bool
+  ) -> Bool {
+    if mine != self.mine {
+      self.mine = mine
+    }
+    let target = Self.targets(moment, mine: mine)
+    let move = 1 - exp(-Self.rate * Float(delta))
+    let fade = 1 - exp(-Self.fadeRate * Float(delta))
+    for (pose, wanted) in [(\HeartHalves.me, target.me), (\HeartHalves.partner, target.partner)] {
+      var current = self[keyPath: pose]
+      if reduceMotion {
+        current.offset = wanted.offset
+        current.tilt = wanted.tilt
+      } else {
+        current.offset += (wanted.offset - current.offset) * move
+        current.tilt += (wanted.tilt - current.tilt) * move
+      }
+      current.opacity += (wanted.opacity - current.opacity) * fade
+      self[keyPath: pose] = current
+    }
+    guard moment == .together else {
+      if case .apart = moment { hasMet = false }
+      return false
+    }
+    let met =
+      reduceMotion
+      ? partner.opacity > 0.95
+      : simd_length(partner.offset) < Self.meeting && simd_length(me.offset) < Self.meeting
+    guard met, !hasMet else { return false }
+    hasMet = true
+    return true
+  }
+
+  /// Puts both halves at their places for `moment` at once, as when the scene opens there.
+  mutating func settle(_ moment: OnboardingSceneState.Moment, mine: HeartSide) {
+    self.mine = mine
+    let target = Self.targets(moment, mine: mine)
+    me = target.me
+    partner = target.partner
+    hasMet = true
+  }
+}
+
+extension OnboardingLayout {
+  /// The paper tag with the pair's code, leaning back against the front of the cushion: where its
+  /// bottom edge stands, its size, its turn and how far back it leans.
+  static let tag = (
+    foot: GenzRoomPoint(3.0, 2.55, sillTop + 0.02), width: Float(2.5), height: Float(1.2),
+    yaw: Float(0.06), lean: Float(0.32)
+  )
+}
+
+/// The burst of warm light as the halves meet: a flash that spreads and fades.
+enum OnboardingBurst {
+  /// Seconds it lasts.
+  static let length = 1.6
+
+  /// How strong it is `age` seconds in: up fast, then a long fall.
+  static func strength(_ age: Double) -> Double {
+    guard age >= 0, age < length else { return 0 }
+    let rise = min(age / 0.12, 1)
+    let fall = 1 - TimelineEase.smoother((age - 0.12) / (length - 0.12))
+    return rise * fall
+  }
+
+  /// How far out it has spread `age` seconds in, in room units.
+  static func spread(_ age: Double) -> Double {
+    1.5 + 7.5 * TimelineEase.smoother(age / length)
+  }
+}
+
+enum TimelineEase {
+  static func smoother(_ value: Double) -> Double { OnboardingTimeline.smoother(value) }
 }

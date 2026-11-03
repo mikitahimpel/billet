@@ -20,8 +20,9 @@ public struct DemoRootView: View {
   @Environment(\.scenePhase) private var scenePhase
   @State private var model: AppModel
   @State private var widgetFeatures: WidgetFeaturesModel
-  /// Where the plain pairing screens start when the cinematic welcome hands over to them.
-  @State private var pairingStart: PairingView.Step?
+  /// The first-launch scene's pairing: held past the pairing itself, until the joined moment
+  /// has been shown.
+  @State private var onboarding: OnboardingPairing
   private let publisher = WidgetPublisher.live()
 
   public init(host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>) {
@@ -54,6 +55,7 @@ public struct DemoRootView: View {
           labs: features,
           fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
+    _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
   }
 
   public var body: some View {
@@ -65,8 +67,10 @@ public struct DemoRootView: View {
       .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
         model.fakePartnerSwitched(on: on)
       }
-      .onChange(of: model.isPaired) { _, paired in
-        if paired { pairingStart = nil }
+      .onChange(of: pairingFacts, initial: true) { _, facts in
+        // Logged out: the next pairing gets the scene again.
+        if facts == .unpaired, onboarding.isFinished { onboarding = OnboardingPairing() }
+        onboarding.observe(facts)
       }
       .task(id: scenePhase == .active) {
         if scenePhase == .active {
@@ -93,21 +97,23 @@ public struct DemoRootView: View {
       }
     } else {
       switch model.stage {
-      case .unpaired
-      where pairingStart == nil && model.labs.isOn(LabExperiment.cinematicOnboarding):
-        CinematicOnboardingView(
+      case _ where !onboarding.isFinished && model.labs.isOn(LabExperiment.cinematicOnboarding):
+        OnboardingPairingView(
           scenes: scenes, lighting: model.labs.lighting,
-          memory: OnboardingMemory(defaults: DemoRoom.sharedDefaults)
-        ) {
-          WelcomeActions(
-            onCreate: { model.createPair() },
-            onEnterCode: { pairingStart = .enterCode },
-            onTryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) })
-        }
+          memory: OnboardingMemory(defaults: DemoRoom.sharedDefaults), pairing: onboarding,
+          failure: model.failure?.message,
+          actions: OnboardingPairingActions(
+            create: { model.createPair() },
+            join: { model.join(code: $0) },
+            cancel: { model.cancelPairing() },
+            goIn: { model.finishCreating() },
+            tryAlone: { model.labs.set(LabExperiment.fakePartner, on: true) }),
+          send: { event in
+            onboarding.send(event)
+            if onboarding.isFinished { model.finishCreating() }
+          })
       case .unpaired, .pairing:
-        PairingView(
-          model: model, startsAt: pairingStart ?? .welcome,
-          onWelcome: pairingStart == nil ? nil : { pairingStart = nil })
+        PairingView(model: model)
       case .paired(let session):
         AppShellView(
           session: session,
@@ -120,6 +126,19 @@ public struct DemoRootView: View {
           onLogOut: { await model.logOut() }
         )
       }
+    }
+  }
+
+  /// Where the pairing is, as the first-launch scene follows it.
+  private var pairingFacts: OnboardingPairing.Facts {
+    switch model.stage {
+    case .unpaired: .unpaired
+    case .pairing(let session, creating: true):
+      .creating(
+        code: session.room.code, live: session.hasConnected,
+        partnerHere: session.status == .partnerHere)
+    case .pairing(_, creating: false): .joining
+    case .paired: .paired
     }
   }
 
