@@ -1617,7 +1617,7 @@ extension GenzRoom {
   func buildLightDot() {
     let radius = layout.cat.length * 0.07
     lightDot.model = ModelComponent(
-      mesh: .generateCylinder(height: 0.002, radius: radius),
+      mesh: LowPoly.cylinder(height: 0.002, radius: radius),
       materials: [UnlitMaterial(color: .init(red: 1, green: 0.42, blue: 0.3, alpha: 1))])
     lightDot.name = Self.lightDotName
     lightDot.isEnabled = false

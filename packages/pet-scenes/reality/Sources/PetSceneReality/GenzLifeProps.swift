@@ -26,14 +26,14 @@ final class GenzLifeProps {
     let height = length * 0.09
     foodHeight = height * 0.8
     let bowl = ModelEntity(
-      mesh: .generateCylinder(height: height, radius: radius),
+      mesh: LowPoly.cylinder(height: height, radius: radius),
       materials: [kit.matte(GenzColour(0xA5442B))])
     bowl.position.y = height / 2
     food = ModelEntity(
-      mesh: .generateCylinder(height: foodHeight, radius: radius * 0.82),
+      mesh: LowPoly.cylinder(height: foodHeight, radius: radius * 0.82),
       materials: [kit.matte(GenzColour(0x8A5422))])
     yarn = ModelEntity(
-      mesh: .generateSphere(radius: length * 0.09),
+      mesh: LowPoly.sphere(radius: length * 0.09),
       materials: [kit.matte(GenzColour(0xD06A43))])
     let bowlHolder = Entity()
     bowlHolder.name = "genz-bowl"

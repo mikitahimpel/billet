@@ -190,7 +190,8 @@ struct GlowLights: View {
   /// twinkle slowly, and otherwise they hold still.
   private var steadyInterval: TimeInterval? {
     if look.key.flicker > 0 { return 1 / 30 }
-    if look.fairy.shown, !screen.lights.bulbs.isEmpty { return 1 / 15 }
+    // From the look alone: reading the lights here would redraw this view on every camera move.
+    if look.fairy.shown { return 1 / 15 }
     return nil
   }
 

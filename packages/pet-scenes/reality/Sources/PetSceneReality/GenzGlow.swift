@@ -133,7 +133,7 @@ final class GenzGlow {
   }
 
   private func buildFairyLights(_ kit: GenzKit) {
-    let bulbMesh = MeshResource.generateSphere(radius: Self.bulbRadius)
+    let bulbMesh = LowPoly.sphere(radius: Self.bulbRadius)
     let bulbMaterial = kit.glow(Self.bulbColour)
     let wire = kit.matte(GenzColour(0x2B2622))
     for hooks in Self.fairyHooks(layout.style) {
