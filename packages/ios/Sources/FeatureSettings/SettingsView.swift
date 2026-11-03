@@ -165,7 +165,7 @@ public struct SettingsView: View {
       if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
         CatPicker(model: model, cats: cats)
       }
-      if model.isOn(LabExperiment.shopScene), scenes.contains(where: { $0.hasShop }) {
+      if scenes.contains(where: { $0.hasShop }) {
         ShopkeeperPicker(model: model)
       }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
