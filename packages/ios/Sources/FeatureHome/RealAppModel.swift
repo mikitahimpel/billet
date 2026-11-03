@@ -38,6 +38,13 @@ public final class RealAppModel {
   public let keys: AccountKeyStore
   @ObservationIgnored private let reauthorize: AppleReauthorizer
   public private(set) var signIn: SignInModel
+  /// Opens or restores the account from the iCloud key, with no question asked.
+  public private(set) var anonymous: AnonymousSignInModel
+  /// Whether the account can also be recovered with Sign in with Apple; `nil` until the server
+  /// has said.
+  public private(set) var linked: Bool?
+  /// The partner left and the user hasn't been told yet. The pair has already ended.
+  public private(set) var partnerLeft: PartnerLeft?
   public private(set) var pairing: PairingModel
   /// The saved Labs choices and the server's test variants for this pair.
   public let labs: WidgetFeaturesModel
@@ -49,6 +56,8 @@ public final class RealAppModel {
   @ObservationIgnored private var cachedHistory: HistoryModel?
   @ObservationIgnored private var cachedAccount: AccountModel?
   @ObservationIgnored private var cachedLive: LiveRoom?
+  @ObservationIgnored private let noticeStorage: AppGroupStorage?
+  private static let seenNoticeFile = "partner-left-seen.json"
 
   public init(
     api: APIClient, accounts: AccountStore, keys: AccountKeyStore, baseURL: URL,
@@ -74,12 +83,15 @@ public final class RealAppModel {
     self.reauthorize = reauthorize
     stage = RealStage((try? accounts.load()) ?? nil)
     signIn = SignInModel(api: api, accounts: accounts)
+    anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
     pairing = PairingModel(api: api)
+    noticeStorage = eventStorage
   }
 
   /// The app came to the front with a paired account: learn which test variants the pair is in
   /// and count what happened. Neither can fail the screen; a failure keeps what was held.
   public func becameActive() async {
+    await refreshAccount()
     reporter.appOpened()
     if let status = await flags.refresh() { serviceStatus.received(status) }
     if await hasWidget() { reporter.widgetAdded() }
@@ -95,6 +107,31 @@ public final class RealAppModel {
     }
     cachedHistory?.refresh()
     await reporter.flush()
+  }
+
+  /// Asks the server about the account: whether it is linked, and whether the partner left. A
+  /// partner who left ends the pair here too, and the notice waits for ``partnerLeftSeen()``.
+  public func refreshAccount() async {
+    guard stage != .signedOut, let account = try? await api.account() else { return }
+    linked = account.linked
+    guard let left = account.partnerLeft else { return }
+    if stage == .paired {
+      try? accounts.setPaired(false, nil)
+      finished(.unpair)
+    }
+    let seen = try? noticeStorage?.readJSON(Int.self, named: Self.seenNoticeFile)
+    if seen != left.at { partnerLeft = left }
+  }
+
+  /// The user has read that their partner left; it isn't shown again.
+  public func partnerLeftSeen() {
+    if let partnerLeft { try? noticeStorage?.writeJSON(partnerLeft.at, named: Self.seenNoticeFile) }
+    partnerLeft = nil
+  }
+
+  /// The account is now linked to an Apple ID.
+  public func linkedApple() {
+    linked = true
   }
 
   public func signedIn() {
@@ -153,6 +190,8 @@ public final class RealAppModel {
       stage = .unpaired
     case .signOut, .deleteAccount:
       signIn = SignInModel(api: api, accounts: accounts)
+      anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
+      linked = nil
       stage = .signedOut
     }
   }
