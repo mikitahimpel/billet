@@ -3,7 +3,7 @@ import PetScene
 
 /// The first-launch flight, as the screen over the scene follows it: the camera glides in, the
 /// title settles in partway, and the buttons come once the camera is at its place. A tap cuts it
-/// short. After the first time it opens already at rest.
+/// short. Once it has played in this run of the app it opens already at rest.
 struct OnboardingIntro: Equatable {
   enum Step: Equatable {
     /// The camera is gliding in; nothing over the scene yet.
@@ -52,15 +52,17 @@ struct OnboardingIntro: Equatable {
   }
 }
 
-/// Whether this phone has seen the first-launch flight, so it plays once.
-struct OnboardingMemory {
-  static let key = "onboarding.introSeen"
+/// Whether the first-launch flight has played in this run of the app. Until the pair is made it
+/// plays on every launch, but only once per launch, so going from one step to the next (signing
+/// in, then pairing) does not fly in again.
+@MainActor
+final class OnboardingMemory {
+  /// The memory of this run of the app.
+  static let thisLaunch = OnboardingMemory()
 
-  let defaults: UserDefaults
-
-  var introSeen: Bool { defaults.bool(forKey: Self.key) }
+  private(set) var introSeen = false
 
   func rememberIntro() {
-    defaults.set(true, forKey: Self.key)
+    introSeen = true
   }
 }
