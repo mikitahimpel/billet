@@ -24,6 +24,18 @@ struct KeeperPose: Equatable {
   var blink: Float = 0
   var tail: Float = 0
   var ear: Float = 0
+
+  /// The pose `amount` of the way from `self` to `other`.
+  func mixed(with other: KeeperPose, by amount: Float) -> KeeperPose {
+    func mix(_ a: Float, _ b: Float) -> Float { a + (b - a) * amount }
+    return KeeperPose(
+      hop: mix(hop, other.hop), breath: mix(breath, other.breath), sway: mix(sway, other.sway),
+      bow: mix(bow, other.bow), headYaw: mix(headYaw, other.headYaw),
+      headPitch: mix(headPitch, other.headPitch), headTilt: mix(headTilt, other.headTilt),
+      leftArm: mix(leftArm, other.leftArm), rightArm: mix(rightArm, other.rightArm),
+      reach: mix(reach, other.reach), blink: mix(blink, other.blink), tail: mix(tail, other.tail),
+      ear: mix(ear, other.ear))
+  }
 }
 
 /// The shopkeeper's life behind the counter as plain numbers, the same for every keeper: an idle of
@@ -56,6 +68,8 @@ struct KeeperMotion {
   static let handOverLength = 2.0
   static let cheerLength = 1.5
   static let glanceLength = 1.6
+  /// How long a gesture that cuts into another takes to take over from where the body was.
+  static let cutLength = 0.25
   /// How far the head turns or lifts at most to follow you, so it never looks over its shoulder.
   static let headYawLimit: Float = 0.75
   static let headPitchLimit: Float = 0.4
@@ -71,6 +85,9 @@ struct KeeperMotion {
   private var yaw: Float = 0
   private var pitch: Float = 0
   private var random: SplitMix
+  /// The pose last stepped, and where a gesture that cut in started from.
+  private var last = KeeperPose()
+  private var cut: (from: KeeperPose, start: Double)?
 
   init(seed: UInt64) {
     random = SplitMix(seed: seed)
@@ -91,23 +108,31 @@ struct KeeperMotion {
 
   /// A bow hello, then a sweep of the arms to what is for sale, as when you come in.
   mutating func welcome() {
+    cutIn()
     gesture = (.greet, time)
     queue = [.present]
   }
 
   /// Hands over what you bought, then cheers. It cuts in on anything, since it answers a purchase.
   mutating func handOver() {
+    cutIn()
     gesture = (.handOver, time)
     queue = [.cheer]
   }
 
   /// A cheer cuts in on anything, since it answers a purchase.
   mutating func cheer() {
+    cutIn()
     gesture = (.cheer, time)
     queue = []
   }
 
   /// Turns to look at something for a moment, at `yaw` and `pitch` from straight ahead.
+  /// A gesture that starts while another is under way starts from the pose the body is in.
+  private mutating func cutIn() {
+    if gesture != nil { cut = (last, time) }
+  }
+
   mutating func glance(yaw: Float, pitch: Float) {
     glance = (yaw, pitch, time + Self.glanceLength)
   }
@@ -149,6 +174,16 @@ struct KeeperMotion {
         pose = Self.perform(gesture.kind, age: age, on: pose, still: still)
       }
     }
+    if let cut {
+      let amount = (time - cut.start) / Self.cutLength
+      if amount >= 1 || still {
+        self.cut = nil
+      } else {
+        let eased = Float(amount * amount * (3 - 2 * amount))
+        pose = cut.from.mixed(with: pose, by: eased)
+      }
+    }
+    last = pose
     return pose
   }
 

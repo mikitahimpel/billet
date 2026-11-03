@@ -123,6 +123,25 @@ struct KeeperMotionTests {
     #expect(arms > 1.5)
   }
 
+  @Test func aHandOverCuttingIntoThePresentDoesNotSnapTheArms() {
+    var motion = KeeperMotion(seed: 4)
+    motion.welcome()
+    var before = KeeperPose()
+    // Into the present, with the left arm out to the shelves.
+    let into = KeeperMotion.greetLength + KeeperMotion.presentLength / 4
+    for _ in 0..<Int(into * 60) { before = motion.step(1 / 60, viewer: ahead) }
+    #expect(before.leftArm > 1)
+    motion.handOver()
+    var previous = before
+    var largest: Float = 0
+    for _ in 0..<30 {
+      let pose = motion.step(1 / 60, viewer: ahead)
+      largest = max(largest, abs(pose.leftArm - previous.leftArm))
+      previous = pose
+    }
+    #expect(largest < 0.15)
+  }
+
   @Test func reducedMotionNeverHops() {
     var motion = KeeperMotion(seed: 3)
     motion.cheer()
