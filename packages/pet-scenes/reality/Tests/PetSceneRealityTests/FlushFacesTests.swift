@@ -12,9 +12,12 @@ import Testing
   /// Where the camera can stand: home, and each corner of its turn and tilt, near and far.
   private func eyes(_ home: GenzCamera.Home) -> [SIMD3<Float>] {
     var eyes = [GenzCamera(home: home).position]
-    for yaw in [home.yawLimits.lowerBound, home.yawLimits.upperBound] {
-      for pitch in [home.pitchLimits.lowerBound, home.pitchLimits.upperBound] {
-        for zoom in [home.zoomLimits.lowerBound, home.zoomLimits.upperBound] {
+    // Out to where a drag past a limit can carry the camera before it eases back.
+    let give = GenzCamera.angleOvershoot
+    let zoomGive = GenzCamera.zoomOvershoot
+    for yaw in [home.yawLimits.lowerBound - give, home.yawLimits.upperBound + give] {
+      for pitch in [home.pitchLimits.lowerBound - give, home.pitchLimits.upperBound + give] {
+        for zoom in [home.zoomLimits.lowerBound - zoomGive, home.zoomLimits.upperBound + zoomGive] {
           var camera = GenzCamera(home: home)
           camera.drag(yaw: yaw - home.yaw, pitch: pitch - home.pitch)
           camera.zoom(by: 1 / zoom)
