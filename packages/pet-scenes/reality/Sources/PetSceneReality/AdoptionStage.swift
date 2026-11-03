@@ -26,7 +26,7 @@ final class AdoptionMarks {
 @MainActor
 final class AdoptionStage: TabStage {
   static let catPrefix = "adoption-cat:"
-  private static let seatName = "adoption-seat"
+  static let seatName = "adoption-seat"
 
   let root = Entity()
   let screen = TabScreen()
@@ -37,7 +37,8 @@ final class AdoptionStage: TabStage {
   private let cats: GenzCatSource
   private let room = Entity()
   private let view: TabCamera
-  private let frames = FrameClock()
+  /// The stage's frames; tests fire them by hand.
+  let frames = FrameClock()
   private var building: Task<Void, Never>?
   private var isBuilt = false
   private var isOnScreen = false
@@ -52,6 +53,8 @@ final class AdoptionStage: TabStage {
   private var rigs: [CatRig?] = []
   private var shown: [CatChoice?] = []
   private var loads: [Task<Void, Never>?] = []
+  /// When each newly placed cat started fading in, on the stage's clock.
+  private var fades: [Int: Double] = [:]
   private var forward: [Float] = []
   /// Until when each cat is busy with a move, on the stage's clock.
   private var busyUntil: [Double] = []
@@ -64,6 +67,9 @@ final class AdoptionStage: TabStage {
   private static let beadColour = GenzColour(0xFFD9A0)
   private static let cushionColours: [UInt32] = [0xC9786A, 0xE0A86A, 0x9F7AA8, 0xD98C8C, 0x7FA08E]
   private static let forwardRate: Float = 2.2
+  /// How long a cat takes to fade in once its model has loaded, rather than popping onto its
+  /// cushion.
+  static let fadeLength = 0.3
 
   init(kit: GenzKit, cats: GenzCatSource) {
     self.kit = kit
@@ -178,6 +184,27 @@ final class AdoptionStage: TabStage {
     }
     if moved || !marks.heads.isEmpty { updateMarks() }
     stepActs()
+    stepFades()
+  }
+
+  private func stepFades() {
+    for (index, start) in fades {
+      guard index < holders.count,
+        let seat = holders[index].children.first(where: { $0.name == Self.seatName })
+      else {
+        fades[index] = nil
+        continue
+      }
+      let age = (clock - start) / Self.fadeLength
+      if age >= 1 {
+        // A cat left translucent would be drawn in the slower transparent pass for good.
+        seat.components.remove(OpacityComponent.self)
+        fades[index] = nil
+      } else {
+        let eased = Float(age * age * (3 - 2 * age))
+        seat.components.set(OpacityComponent(opacity: eased))
+      }
+    }
   }
 
   private func stepExit(_ time: TimeInterval) -> Bool {
@@ -532,6 +559,10 @@ final class AdoptionStage: TabStage {
     }
     for child in Array(seat.children) { child.removeFromParent() }
     seat.addChild(model)
+    if isOnScreen, !reduceMotion {
+      seat.components.set(OpacityComponent(opacity: 0))
+      fades[index] = clock
+    }
     if let receiver { NookiDiorama.visit(model) { $0.components.set(receiver) } }
     rig?.play(.sit, blend: 0)
     rigs[index] = rig
