@@ -83,7 +83,12 @@ public struct CatBrainFrame: Hashable, Sendable {
 public struct CatBrain: Sendable {
   public let seed: UInt64
   public let config: CatBrainConfig
-  public var personality: CatPersonality
+  /// The personality the cat was born with, from its seed.
+  public let nature: CatPersonality
+  /// Today's personality: the one it was born with, moved by the last few days.
+  public private(set) var personality: CatPersonality
+  /// Where it likes to rest, from yesterday and today.
+  public private(set) var memory: CatMemory
   public private(set) var room: RoomAffordances
   public private(set) var weather: ViewWeather
 
@@ -121,15 +126,18 @@ public struct CatBrain: Sendable {
     var gaze: CatGaze
   }
 
-  /// A brain starting at `start` from its canonical state for `life` there.
+  /// A brain starting at `start` from its canonical state for `life` there. `personality` is the
+  /// one it was born with, and `day` what experience has made of it by `start`.
   public init(
-    seed: UInt64, personality: CatPersonality? = nil, room: RoomAffordances,
+    seed: UInt64, personality: CatPersonality? = nil, day: CatDay? = nil, room: RoomAffordances,
     weather: ViewWeather = .clear, start: Double, life: CatLifeSample, utcOffset: Int,
     lifeConfig: LifeConfig = .standard, config: CatBrainConfig = .standard
   ) {
     self.seed = seed
     self.config = config
-    self.personality = personality ?? .seeded(seed)
+    nature = personality ?? .seeded(seed)
+    self.personality = day?.personality ?? nature
+    memory = day?.memory ?? CatMemory()
     self.room = room
     self.weather = weather
     self.utcOffset = utcOffset
@@ -229,6 +237,11 @@ public struct CatBrain: Sendable {
       time = max(time, next)
       if nextDay <= time {
         nextDay = dayStart(after: time)
+        let day = Self.opening(
+          at: time, seed: seed, nature: nature, room: room, weather: weather, sampler: &sampler,
+          utcOffset: utcOffset, config: config)
+        personality = day.personality
+        memory = day.memory
         life = sampler.sample(at: time)
         startDay(at: time, record: true)
         continue
@@ -303,11 +316,13 @@ public struct CatBrain: Sendable {
     switch event.kind {
     case .note:
       let curled = activity.step == .curl
+      countRest(at: t)
       echo = nil
       history = nil
       enter(script: curled ? [.wake, .curiousTilt] : [.curiousTilt], at: t, cause: .event)
       if vitality == .asleep { moveVitality(to: .drowsy, at: t) }
     case .pet:
+      if let spot = spot { memory.petted(at: spot) }
       interrupt(with: .petted(.back), for: config.petEcho, at: t)
     case .feed:
       interrupt(with: .fed, for: config.feedEcho, at: t)
@@ -315,6 +330,7 @@ public struct CatBrain: Sendable {
       echo = nil
       history = nil
       let curled = activity.step == .curl
+      countRest(at: t)
       enter(script: curled ? [.wake, .stalk, .pounce] : [.stalk, .pounce], at: t, cause: .event)
       if vitality == .asleep { moveVitality(to: .drowsy, at: t) }
     case .sleep:
@@ -350,8 +366,26 @@ public struct CatBrain: Sendable {
 
   // MARK: - Steps
 
+  /// The kind of spot the cat is at, or headed for.
+  private var spot: RoomAffordance.Kind? {
+    if activity.step.group == .rest, let napSpot = activity.napSpot { return napSpot }
+    switch activity.target {
+    case .affordance(let kind): return kind
+    case .stay, .home, .camera, .roam: return nil
+    }
+  }
+
+  /// Remembers the time curled up or kneading in this nap spot.
+  private mutating func countRest(at t: Double) {
+    guard activity.step == .curl || activity.step == .knead, let napSpot = activity.napSpot else {
+      return
+    }
+    memory.rested(at: napSpot, seconds: t - activity.start)
+  }
+
   private mutating func stepEnded() {
     let t = time
+    countRest(at: t)
     // A cat curled up at night sleeps on: the curl renews without a move.
     if activity.step == .curl,
       life.asleep || vitality == .asleep && life.pressure > config.drowsyAbove
@@ -514,13 +548,10 @@ public struct CatBrain: Sendable {
   }
 
   /// Where to curl up: a bed or something soft, the sun by day, the rug, else its own place.
+  /// A spot it has rested and been petted in a lot is up to four times likelier.
   private func chooseNapSpot(at t: Double) -> RoomAffordance.Kind? {
-    let sunny = isSunny(at: t)
-    let options: [(RoomAffordance.Kind, Double)] = [
-      (.bed, 3), (.soft, 2 + personality.cuddly), (.sunbeam, sunny ? 3 : 0), (.rug, 1),
-      (.box, 1 + personality.curious), (.shelf, personality.bold * 1.5),
-    ].filter { kind, weight in
-      weight > 0 && (kind == .sunbeam ? sunny && room.reachable(.window) : room.reachable(kind))
+    let options = napSpots(at: t).map { kind, weight in
+      (kind, weight * (1 + 3 * memory.fondness(kind)))
     }
     let total = options.reduce(0) { $0 + $1.1 }
     guard total > 0 else { return nil }
@@ -530,6 +561,18 @@ public struct CatBrain: Sendable {
       if left < 0 { return kind }
     }
     return options.last?.0
+  }
+
+  /// The places the cat can curl up in now, weighted by its traits.
+  private func napSpots(at t: Double) -> [(RoomAffordance.Kind, Double)] {
+    let sunny = isSunny(at: t)
+    let options: [(RoomAffordance.Kind, Double)] = [
+      (.bed, 3), (.soft, 2 + personality.cuddly), (.sunbeam, sunny ? 3 : 0), (.rug, 1),
+      (.box, 1 + personality.curious), (.shelf, personality.bold * 1.5),
+    ]
+    return options.filter { kind, weight in
+      weight > 0 && (kind == .sunbeam ? sunny && room.reachable(.window) : room.reachable(kind))
+    }
   }
 
   // MARK: - Vitality
@@ -581,7 +624,7 @@ public struct CatBrain: Sendable {
       vitality: vitality, sleepy: life.pressure > config.drowsyAbove, personality: personality,
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
-      spotFondness: 0)
+      spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0)
   }
 
   /// How long a piece counts as new after it appears, in seconds.
@@ -610,6 +653,11 @@ public struct CatBrain: Sendable {
   private func isSunny(at t: Double) -> Bool {
     let hour = hour(at: t)
     return weather == .clear && hour >= 9 && hour < 17
+  }
+
+  /// Who did something for the cat last, of the events folded so far.
+  public var lastBy: String? {
+    lastSeen.max { a, b in a.value != b.value ? a.value < b.value : a.key > b.key }?.key
   }
 
   /// How long the partner seen least recently has been away. With only one partner seen yet,

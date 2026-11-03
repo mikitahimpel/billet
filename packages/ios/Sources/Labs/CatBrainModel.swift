@@ -14,6 +14,14 @@ public final class CatBrainModel {
   public private(set) var transitions: [CatBrainTransition] = []
   public private(set) var scores: [CatUtilityScore] = []
   public private(set) var personality = CatPersonality.even
+  /// The personality it was born with, before experience moved it.
+  public private(set) var nature = CatPersonality.even
+  public private(set) var memory = CatMemory()
+  /// Who did something for the cat last, and how long the one seen least is away, in hours.
+  public private(set) var lastBy: String?
+  public private(set) var awayHours = 0.0
+  /// The toys this phone played with lately, the newest first. They stay on this phone.
+  public private(set) var recentToys: [CatToy] = []
 
   @ObservationIgnored private let life: PetLifeModel
   @ObservationIgnored private var runner: CatBrainRunner?
@@ -52,6 +60,11 @@ public final class CatBrainModel {
   public func setLive(_ interaction: CatInteraction?) {
     guard runner?.live != interaction else { return }
     runner?.live = interaction
+    if case .toy(let toy) = interaction {
+      recentToys.removeAll { $0 == toy }
+      recentToys.insert(toy, at: 0)
+      if recentToys.count > 3 { recentToys.removeLast() }
+    }
     publish()
   }
 
@@ -83,6 +96,10 @@ public final class CatBrainModel {
     transitions = runner.brain.transitions
     scores = runner.brain.scores
     personality = runner.brain.personality
+    nature = runner.brain.nature
+    memory = runner.brain.memory
+    lastBy = runner.brain.lastBy
+    awayHours = runner.brain.awayHours(at: runner.brain.time)
   }
 
   /// Seconds of real time to the next decision, kept between a twentieth of a second and one.
