@@ -45,7 +45,7 @@ extension GenzKit {
   }
 
   /// One mesh holding every part of `models`, placed as they are under `root`.
-  private static func joined(_ models: [ModelEntity], in root: Entity) -> MeshResource? {
+  static func joined(_ models: [ModelEntity], in root: Entity) -> MeshResource? {
     var positions: [SIMD3<Float>] = []
     var normals: [SIMD3<Float>] = []
     var indices: [UInt32] = []

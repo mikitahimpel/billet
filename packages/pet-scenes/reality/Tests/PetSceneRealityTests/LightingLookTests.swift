@@ -1,5 +1,6 @@
 import Foundation
 import Pet
+import RealityKit
 import Testing
 
 @testable import PetSceneReality
@@ -73,6 +74,28 @@ struct LightingLookTests {
     #expect(!GenzGlow.fairyHooks(.windowSeat).isEmpty)
     #expect(GenzGlow.fairyHooks(.sunsetLamp).isEmpty)
     #expect(GenzGlow.fairyHooks(.nooki).isEmpty)
+  }
+
+  @Test func eachFairyStringIsTwoModelsWithEveryBulbInIt() throws {
+    let layout = try #require(GenzLayout.of(.windowSeat, furniture: .cosyNook))
+    let glow = GenzGlow(layout: layout, kit: GenzKit())
+    let fairy = try #require(glow.root.children.first)
+    let strands = Array(fairy.children.filter { !$0.children.isEmpty })
+    #expect(strands.count == GenzGlow.fairyHooks(.windowSeat).count)
+    for strand in strands {
+      #expect(strand.children.filter { $0.components.has(ModelComponent.self) }.count == 2)
+    }
+    var bounds = BoundingBox()
+    for strand in strands {
+      for model in strand.children
+      where model.components[ModelComponent.self]?.materials.first is UnlitMaterial {
+        bounds = bounds.union(model.visualBounds(relativeTo: fairy))
+      }
+    }
+    for point in glow.bulbPoints {
+      let bulb = point.scene - [0, GenzGlow.bulbRadius + GenzGlow.wireThickness, 0]
+      #expect(bounds.contains(bulb))
+    }
   }
 
   @Test func aShadowIsDarkInTheMiddleAndClearAtTheEdge() throws {

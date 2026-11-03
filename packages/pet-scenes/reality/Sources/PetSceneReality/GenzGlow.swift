@@ -132,19 +132,24 @@ final class GenzGlow {
     return shadow
   }
 
+  /// Builds each string as two models, its bulbs and its wire, so a string costs the renderer two
+  /// draws rather than one for every bulb and every length of wire.
   private func buildFairyLights(_ kit: GenzKit) {
     let bulbMesh = LowPoly.sphere(radius: Self.bulbRadius)
     let bulbMaterial = kit.glow(Self.bulbColour)
     let wire = kit.matte(GenzColour(0x2B2622))
-    for hooks in Self.fairyHooks(layout.style) {
+    for (number, hooks) in Self.fairyHooks(layout.style).enumerated() {
       let points = Self.string(hooks, spacing: Self.bulbSpacing, sag: Self.sag)
       bulbPoints += points
+      let strand = Entity()
+      fairy.addChild(strand)
+      var lamps: [ModelEntity] = []
       for point in points {
         let bulb = ModelEntity(mesh: bulbMesh, materials: [bulbMaterial])
         // Hung just under the wire, so its top never shares a plane with the wire's.
         bulb.position = point.scene + [0, -Self.bulbRadius - Self.wireThickness, 0]
-        fairy.addChild(bulb)
-        bulbs.append(bulb)
+        strand.addChild(bulb)
+        lamps.append(bulb)
       }
       for (from, to) in zip(points, points.dropFirst()) {
         let start = from.scene
@@ -154,7 +159,16 @@ final class GenzGlow {
         let segment = kit.part(
           kit.box([Self.wireThickness, Self.wireThickness, length]), wire, at: (start + end) / 2,
           turn: simd_quatf(from: [0, 0, 1], to: simd_normalize(end - start)))
-        fairy.addChild(segment)
+        strand.addChild(segment)
+      }
+      kit.merge(strand, key: "fairy wire \(layout.style) \(number)")
+      if let mesh = GenzKit.joined(lamps, in: strand) {
+        let joined = ModelEntity(mesh: mesh, materials: [bulbMaterial])
+        strand.addChild(joined)
+        for lamp in lamps { lamp.removeFromParent() }
+        bulbs.append(joined)
+      } else {
+        bulbs += lamps
       }
       for index in stride(from: points.count / 6, to: points.count, by: max(points.count / 3, 1)) {
         let spill = Entity()
