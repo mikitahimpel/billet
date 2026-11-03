@@ -16,6 +16,8 @@ final class GenzGlow {
   private(set) var bulbPoints: [GenzRoomPoint] = []
   private var spills: [Entity] = []
   private var shadows: [ModelEntity] = []
+  /// The furniture's shadows: the piece's index in the layout, and the shadow's height.
+  private(set) var pieceShadows: [(index: Int, shadow: ModelEntity, height: Float)] = []
   private let fairy = Entity()
   private let rim = Entity()
   private let sun = Entity()
@@ -89,6 +91,8 @@ final class GenzGlow {
     guard look != self.look else { return }
     self.look = look
     root.isEnabled = look.isLit
+    // The shadows follow their pieces and the cat, outside the root, so they are shaded here.
+    shade(shadows)
     guard look.isLit else { return }
     fairy.isEnabled = look.fairy.shown
     let bulbColour = look.fairy.colour.genz
@@ -104,7 +108,6 @@ final class GenzGlow {
     sun.isEnabled = look.sun.intensity > 0
     sun.components[DirectionalLightComponent.self]?.color = look.sun.colour.genz.platformColour
     sun.components[DirectionalLightComponent.self]?.intensity = look.sun.intensity
-    shade(shadows)
   }
 
   private func shade(_ shadows: [ModelEntity]) {
@@ -162,16 +165,42 @@ final class GenzGlow {
   }
 
   private func buildShadows() {
-    for placement in layout.pieces {
+    for (index, placement) in layout.pieces.enumerated() {
       let size = placement.piece.kind.size
       // Flat pieces lie on the floor, and pieces stood on others are shaded by what is below.
       guard size.z > 0.1, placement.centre.z < 0.05 else { continue }
       guard let shadow = Self.shadow(width: size.x * 1.08 + 0.5, depth: size.y * 1.08 + 0.5)
       else { continue }
-      shadow.position = GenzRoomPoint(placement.centre.x, placement.centre.y, 0.012).scene
+      let height = Self.shadowHeight(pieceShadows.count)
+      shadow.position = GenzRoomPoint(placement.centre.x, placement.centre.y, height).scene
       shadow.orientation = simd_quatf(angle: placement.yaw, axis: [0, 1, 0])
       root.addChild(shadow)
       shadows.append(shadow)
+      pieceShadows.append((index, shadow, height))
+    }
+  }
+
+  /// How high the `order`th furniture shadow lies. Each lies at its own height, so two that
+  /// overlap never share a plane, and all stay under the rugs' lowest ring.
+  static func shadowHeight(_ order: Int) -> Float {
+    min(0.008 + 0.0008 * Float(order), 0.018)
+  }
+
+  /// Hands each furniture shadow to the holder of its piece, so it follows the piece when the
+  /// piece is moved or turned. `holders` are in the layout's order.
+  func follow(_ holders: [Entity]) {
+    for (index, shadow, height) in pieceShadows where holders.indices.contains(index) {
+      shadow.setParent(holders[index])
+      shadow.transform = Transform(translation: [0, height, 0])
+    }
+    groundShadows()
+    shade(shadows)
+  }
+
+  /// Keeps each furniture shadow on the floor while its piece is lifted.
+  func groundShadows() {
+    for (_, shadow, height) in pieceShadows {
+      shadow.position.y = height - (shadow.parent?.position.y ?? 0)
     }
   }
 
