@@ -125,7 +125,9 @@ for dir in $HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Containers/S
   fi
 done
 [[ -n $containers ]] || { echo "no App Group container for $group" >&2; exit 1; }
-print -r -- '{"fakePartner":true,"notesDesk":true}' > $containers/widget-features.json
+# PERF_FEATURES replaces the switches, e.g. '{"fakePartner":true,"notesDesk":true,"idolProps":true}'.
+features='{"fakePartner":true,"notesDesk":true}'
+print -r -- "${PERF_FEATURES:-$features}" > $containers/widget-features.json
 print -r -- '"windowSeat"' > $containers/room-style.json
 print -r -- '"amberLantern"' > $containers/room-lighting.json
 print -r -- '"cosyNook"' > $containers/room-furniture.json

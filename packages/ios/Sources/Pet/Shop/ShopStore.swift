@@ -9,9 +9,14 @@ public final class ShopStore {
   /// The ledger ID of the one-off demo grant.
   public static let grantID = "grant:demo"
 
-  public let catalog: ShopCatalog
+  /// What the shop sells: its own catalogue, or the one with the generated pieces while the
+  /// Labs pilot is on.
+  public var catalog: ShopCatalog { showsIdolProps ? base.withIdolProps : base }
+  /// Whether the generated (Idol) pieces are for sale beside the hand-made ones.
+  public var showsIdolProps = false
   public private(set) var state: ShopState
 
+  @ObservationIgnored private let base: ShopCatalog
   @ObservationIgnored private let storage: ShopStorage
   @ObservationIgnored private let makeID: @Sendable () -> String
 
@@ -21,7 +26,7 @@ public final class ShopStore {
     grant: Int = ShopConfig.demoGrant,
     makeID: @escaping @Sendable () -> String = { UUID().uuidString }
   ) {
-    self.catalog = catalog
+    base = catalog
     self.storage = storage
     self.makeID = makeID
     var loaded = storage.load() ?? ShopState()

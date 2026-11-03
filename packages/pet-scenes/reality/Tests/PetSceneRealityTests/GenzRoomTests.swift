@@ -168,7 +168,7 @@ import Testing
     #expect(GenzOpening.warmth(sinceLanding: 10) == 0)
   }
 
-  @Test(arguments: GenzPiece.Kind.allCases)
+  @Test(arguments: GenzPiece.Kind.allCases.filter { $0.idol == nil })
   func everyPieceHasTwoOrThreeColourSlots(_ kind: GenzPiece.Kind) {
     #expect((2...3).contains(kind.slotNames.count))
     #expect(kind.standardSlots.count == kind.slotNames.count)

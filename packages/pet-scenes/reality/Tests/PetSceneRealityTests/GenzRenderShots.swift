@@ -13,6 +13,8 @@
 
   /// Renders a styled room's shell and furniture from its home camera and the ends of its orbit,
   /// for checking composition by eye. Runs only when `GENZ_SHOTS` names a folder to write into.
+  /// `GENZ_IDOL=1` shows the generated props in place of the hand-made ones, from the same
+  /// cameras under the same lights, for comparing the two.
   @MainActor
   @Suite struct GenzRenderShots {
     @Test(.enabled(if: ProcessInfo.processInfo.environment["GENZ_SHOTS"] != nil))
@@ -25,7 +27,9 @@
           RoomFurniture(rawValue: $0)
         }
         ?? .cosyNook
-      let layout = GenzLayout.of(furniture)
+      let idol = ProcessInfo.processInfo.environment["GENZ_IDOL"] == "1"
+      let layout = GenzLayout.of(furniture, idolProps: idol)
+      let label = "windowSeat-\(furniture.rawValue)\(idol ? "-idol" : "")"
       let home = layout.camera
       let middleYaw = (home.yawLimits.lowerBound + home.yawLimits.upperBound) / 2
       let views: [(String, Float, Float, Float)] = [
@@ -42,6 +46,8 @@
       let renderer = try RealityRenderer()
       let scene = await Self.scene(layout)
       renderer.entities.append(scene)
+      try SceneCensus.of(scene).write(
+        to: folder.appendingPathComponent("\(label)-census.txt"), atomically: true, encoding: .utf8)
       let lens = PerspectiveCamera()
       lens.camera.fieldOfViewInDegrees = home.fieldOfView
       renderer.entities.append(lens)
@@ -56,7 +62,7 @@
         let image = try await Self.render(renderer, width: 786, height: 1704)
         try Self.write(
           image,
-          to: folder.appendingPathComponent("windowSeat-\(furniture.rawValue)-\(name).png"))
+          to: folder.appendingPathComponent("\(label)-\(name).png"))
       }
       let details: [(String, GenzRoomPoint, GenzRoomPoint)] = [
         ("seat", GenzRoomPoint(3.6, 0.8, 1.4), GenzRoomPoint(4.6, 5.2, 3.2)),
@@ -69,8 +75,7 @@
         let image = try await Self.render(renderer, width: 1200, height: 900)
         try Self.write(
           image,
-          to: folder.appendingPathComponent(
-            "windowSeat-\(furniture.rawValue)-detail-\(name).png"))
+          to: folder.appendingPathComponent("\(label)-detail-\(name).png"))
       }
     }
 
@@ -79,6 +84,7 @@
     static func scene(_ layout: GenzLayout) async -> Entity {
       let kit = GenzKit()
       await kit.makeTextures()
+      await kit.loadIdolProps()
       let root = Entity()
       for part in layout.shell(kit) { root.addChild(part) }
       for placement in layout.pieces {

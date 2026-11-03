@@ -15,6 +15,7 @@ struct NookiRoom: View {
   let onEvent: @MainActor (PetSceneEvent) -> Void
 
   @Environment(\.petSceneFurniture) private var furniture
+  @Environment(\.petSceneIdolProps) private var idolProps
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @State private var canMount = false
 
@@ -22,7 +23,8 @@ struct NookiRoom: View {
     ZStack {
       if canMount {
         GenzRoomView(
-          layout: GenzLayout.of(furniture), world: world, play: play, rooms: rooms,
+          layout: GenzLayout.of(furniture, idolProps: idolProps), world: world, play: play,
+          rooms: rooms,
           isShown: true, onEvent: onEvent)
       }
     }

@@ -6,7 +6,8 @@ import Testing
 @MainActor
 @Suite struct GenzCatPathTests {
   private static var layouts: [GenzLayout] {
-    RoomFurniture.allCases.map(GenzLayout.of)
+    RoomFurniture.allCases.map { GenzLayout.of($0) }
+      + [RoomFurniture.cosyNook, .retroDen].map { GenzLayout.of($0, idolProps: true) }
   }
 
   @Test func theCatsPlaceIsClearOfWhatStandsOnItsTop() {

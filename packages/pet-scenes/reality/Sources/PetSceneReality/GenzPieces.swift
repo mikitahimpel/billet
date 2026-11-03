@@ -33,6 +33,18 @@ struct GenzPiece: Hashable, Sendable {
     case stringLights
     case cardigan
     case candles
+    // Generated (FLUX.2-klein → Idol), each one model with its colour baked on: see IdolProp.
+    case idolBeanBag
+    case idolFloorLamp
+    case idolThrow
+    case idolMonstera
+    case idolCactus
+    case idolBooks
+    case idolRecordPlayer
+    case idolMugs
+    case idolStringLights
+    case idolRug
+    case idolCatBed
   }
 
   var kind: Kind
@@ -78,6 +90,7 @@ extension GenzPiece.Kind {
     case .stringLights: ["wire", "bulbs"]
     case .cardigan: ["knit", "buttons"]
     case .candles: ["wax", "dish"]
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed: []
     }
   }
 
@@ -108,6 +121,7 @@ extension GenzPiece.Kind {
     case .stringLights: [GenzColour(0x3A3028), GenzColour(0xFFD58A)]
     case .cardigan: [GenzColour(0xD49A86), GenzColour(0xF1E6D6)]
     case .candles: [GenzColour(0xF3E8D6), GenzColour(0xC46E4A)]
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed: []
     }
   }
 
@@ -138,6 +152,17 @@ extension GenzPiece.Kind {
     case .stringLights: "String lights"
     case .cardigan: "Cardigan"
     case .candles: "Candles"
+    case .idolBeanBag: "Bean bag"
+    case .idolFloorLamp: "Standing lamp"
+    case .idolThrow: "Knitted throw"
+    case .idolMonstera: "Potted monstera"
+    case .idolCactus: "Little cactus"
+    case .idolBooks: "Pile of books"
+    case .idolRecordPlayer: "Record player (Idol)"
+    case .idolMugs: "Two mugs"
+    case .idolStringLights: "Coil of fairy lights"
+    case .idolRug: "Woven rug"
+    case .idolCatBed: "Plush cat bed"
     }
   }
 
@@ -169,6 +194,11 @@ extension GenzPiece.Kind {
     case .stringLights: GenzRoomPoint(5.6, 0.08, 0.5)
     case .cardigan: GenzRoomPoint(1.4, 1.25, 0.2)
     case .candles: GenzRoomPoint(0.5, 0.4, 0.3)
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+      idol.map { prop in
+        let size = prop.metres * GenzRoomPoint.perMetre
+        return GenzRoomPoint(size.x, size.y, size.z)
+      } ?? GenzRoomPoint(1, 1, 1)
     }
   }
 }
@@ -227,6 +257,8 @@ extension GenzKit {
     case .stringLights: parts = stringLights(piece)
     case .cardigan: parts = cardigan(piece)
     case .candles: parts = candles(piece)
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks, .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+      parts = piece.kind.idol.map(idolParts) ?? []
     }
     for part in parts { root.addChild(part) }
     return root

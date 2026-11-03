@@ -240,6 +240,30 @@ struct ShopTests {
     #expect(ShopConfig.demoGrant == 10_000)
   }
 
+  @MainActor @Test func theIdolPiecesAreForSaleOnlyWhileTheirLabIsOn() throws {
+    let shop = store()
+    let standard = shop.catalog.items.map(\.id)
+    #expect(!standard.contains { $0.hasPrefix("furniture-idol-") })
+    shop.showsIdolProps = true
+    let idol = shop.catalog.items(in: .furniture).filter { $0.id.hasPrefix("furniture-idol-") }
+    #expect(idol.count == 11)
+    // Beside the hand-made pieces, none of them taken away.
+    #expect(Set(standard).isSubset(of: Set(shop.catalog.items.map(\.id))))
+    for item in idol {
+      guard case .furniture(let model, _, let size, .floor) = item.look else {
+        Issue.record("\(item.id) is not floor furniture")
+        continue
+      }
+      #expect(model.hasPrefix("Idol_"))
+      #expect(size > 0)
+    }
+    let bed = try #require(shop.catalog.item("furniture-idol-catbed"))
+    try shop.buy(bed, transaction: "idol-1")
+    #expect(shop.owned(bed) == 1)
+    shop.showsIdolProps = false
+    #expect(shop.catalog.item(bed.id) == nil)
+  }
+
   @MainActor @Test func aNewShopIsGrantedTheDemoAmountByDefault() {
     #expect(ShopStore(storage: .memory()).stamps == ShopConfig.demoGrant)
   }

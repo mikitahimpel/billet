@@ -18,6 +18,9 @@ import simd
     RoomFurniture.allCases.map { furniture in
       ("windowSeat \(furniture)", GenzLayout.of(furniture))
     }
+      + [RoomFurniture.cosyNook, .retroDen].map { furniture in
+        ("windowSeat \(furniture) idol", GenzLayout.of(furniture, idolProps: true))
+      }
   }
 
   /// The spots the brain sends the cat to, as `GenzRoom.resolve` works them out: home, a grid of

@@ -25,6 +25,19 @@ nexishq/idol-scenes. See [docs/idol-splats.md](docs/idol-splats.md).
 `Cat_idolIlya`: Cat by Ilya (nexishq), used with permission. Made by the same pipeline from his
 illustration in nexishq/idol-scenes.
 
+## Idol props
+
+`packages/pet-scenes/reality/Sources/PetSceneReality/Resources/IdolProps.reality` (the Labs
+"Idol props" pilot) holds room props generated for billet. Each began as a picture made with
+[FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) (Black Forest Labs,
+Apache License 2.0), prompted in words and, for some, with a render of billet's own Window Seat
+room as a style reference. [Idol](https://huggingface.co/speridlabs/idol) (Speridlabs, Apache
+License 2.0) turned each picture into a splat, run on a CUDA GPU through Speridlabs' own
+[idol-sdk](https://github.com/speridlabs/idol-sdk) (Apache License 2.0), with the DINOv3 image
+encoder (`facebook/dinov3-vith16plus-pretrain-lvd1689m`, Meta's DINOv3 License) and the FLUX.2
+VAE from FLUX.2-klein-4B. The splats were remeshed, decimated and their colour baked in Blender.
+None of these models ships in the app; only the meshes and their one baked texture do.
+
 ## First-launch heart
 
 `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Heart.reality` is a new model made
