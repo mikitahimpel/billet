@@ -165,10 +165,13 @@ struct HeadingWords: View {
           .accessibilityAddTraits(.isHeader)
           .lineLimit(3)
           .minimumScaleFactor(0.75)
+          // When the keyboard leaves little room, the title keeps its lines and the
+          // explanation gives way.
+          .layoutPriority(1)
         Text(heading.detail)
           .billetType(.body)
           .foregroundStyle(Palette.paper.color.opacity(0.78))
-          .fixedSize(horizontal: false, vertical: true)
+          .minimumScaleFactor(0.7)
           .opacity(showsDetail ? 1 : 0)
       }
       // A soft dark edge keeps the words readable where they cross the lit window frame.
