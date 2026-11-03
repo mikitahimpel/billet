@@ -45,7 +45,8 @@ struct NoteBeacon: View {
 
   private func glow(opacity: Double) -> some View {
     let width = max(size * 0.12, 6)
-    return paper
+    return
+      paper
       .stroke(Self.gold, style: StrokeStyle(lineWidth: width, lineJoin: .round))
       .blur(radius: width)
       .opacity(opacity)
