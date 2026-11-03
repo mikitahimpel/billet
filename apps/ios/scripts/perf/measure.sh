@@ -2,13 +2,14 @@
 # Measures the scenes on a Release build in the Simulator, the same way every time.
 #
 #   apps/ios/scripts/perf/measure.sh <label> [--build] [--build-only] [--launches N] [--full N]
-#                                    [--sweep]
+#                                    [--sweep] [--cost N]
 #
 # --build       generate the project and build Release for the Simulator first
 # --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
 #               dropped, so N+1 are run)
 # --full N      runs of `-perf.script full`: orbit, zoom, lighting, tabs (default 3)
 # --sweep       one `-perf.script sweep` run, saving a screenshot at each held pose
+# --cost N      runs of `-perf.script cost`: each part of the room switched off in turn (default 0)
 # --build-only  build, then stop
 #
 # Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
@@ -22,9 +23,9 @@
 # while another build runs, and shuts its Simulator down when it ends.
 set -euo pipefail
 
-label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep]}
+label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep] [--cost N]}
 shift
-build=0 build_only=0 launches=7 fulls=3 sweep=0
+build=0 build_only=0 launches=7 fulls=3 sweep=0 costs=0
 while (($#)); do
   case $1 in
     --build) build=1 ;;
@@ -32,6 +33,7 @@ while (($#)); do
     --launches) launches=$2; shift ;;
     --full) fulls=$2; shift ;;
     --sweep) sweep=1 ;;
+    --cost) costs=$2; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
   shift
@@ -159,6 +161,7 @@ run warmup launch
 for ((i = 1; i <= launches; i++)); do run launch-$i launch; done
 for ((i = 1; i <= fulls; i++)); do run full-$i full; done
 ((sweep)) && run sweep sweep
+for ((i = 1; i <= costs; i++)); do run cost-$i cost; done
 uptime >> $out/load.txt
 
 du -sk $app | awk '{print $1}' > $out/app-kb.txt

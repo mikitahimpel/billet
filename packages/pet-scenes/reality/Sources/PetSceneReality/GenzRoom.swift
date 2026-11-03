@@ -658,7 +658,12 @@ final class GenzRoom: CatPlayStage {
         orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
         zoom: { [weak self] in self?.zoom(by: $0) },
         release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
-        census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" }))
+        census: { [weak self] in self.map { SceneCensus.of($0.root) } ?? "" },
+        switches: ["all"] + RoomCostSwitches.names,
+        setSwitch: { [weak self] name, isOn in
+          guard let self else { return }
+          RoomCostSwitches.shared.set(name, isOn: isOn, root: root, cat: catHolder)
+        }))
   }
 
   private func aimLens() {
