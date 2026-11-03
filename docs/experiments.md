@@ -83,6 +83,8 @@ App Store review. A switch the owner can flip without a deploy (a D1 row) is a p
   Labs to look at any variant on purpose.
 - **What reads it.** `WidgetFeaturesModel.roomStyle` is the resolved value; screens read that and
   never the raw answer. Add a typed accessor like it for each new experiment.
+- **Build and system.** Every request carries `X-Billet-App-Version` and `X-Billet-OS`
+  (`ClientInfo` in `Transport`), so events and flags can be read by version.
 - **Counting.** `EventReporter` queues the app's events (`AppOpened` once per launch, `WidgetAdded`
   once, found with `WidgetCenter`) in a small file of names, sends them to `POST /v1/events`
   (at most 20 at a time), and keeps whatever could not be sent for the next time. `OpeningWatched`
@@ -115,6 +117,43 @@ The app can report only its four names, and at most 20 per request. A name the s
 itself is refused with 400. Counting never fails a request: if the database is down, the event is
 lost and a fixed line is logged. Adding a name means adding it to the list, to the table above and
 to `docs/privacy.md`, because it is a privacy decision.
+
+### Analytics Engine
+
+Each event the app reports to `POST /v1/events` and the server accepts is also written to Workers
+Analytics Engine (binding `EVENTS`, dataset `billet_<stage>_events`), for slicing by build and
+system with the SQL API. A refused request writes nothing. The row is fixed by
+`packages/backend/platform/src/event-sink-live.ts`; never reorder it, only add at the end:
+
+| Column | Holds |
+| --- | --- |
+| `index1` | the pair hash, or `unpaired` (Analytics Engine samples by this, so a pair stays together) |
+| `blob1` | the event name, one of the app's four above |
+| `blob2` | the pair hash: first 16 hex digits of SHA-256 of `billet-pair:<pair id>`; empty before pairing |
+| `blob3` | the pair's stored variants, `key=variant` joined by commas in key order; empty when none |
+| `blob4` | app version from `x-billet-app-version`, `<marketing>+<build>` such as `1.2.0+14`, else `unknown` |
+| `blob5` | system from `x-billet-os`, such as `iOS 26.1`, else `unknown` |
+| `double1` | `1` (sum it; read `_sample_interval` too when the dataset is sampled) |
+
+Not in the row: the user id, the Apple subject, any email, the IP address, the country or city,
+and anything a note says or shows. The two headers are accepted only in exactly the shapes above;
+anything else (free text, an email) is stored as `unknown`. Country is left out on purpose:
+`docs/privacy.md` promises no location, and some users are minors. Adding it is a privacy-policy
+change for the owner to make first.
+
+**Why the D1 counts stay.** The funnel and the north star join one person's events across days and
+need both partners of a pair (both sent a note on day 7, D1/D7/D30 retention, time to first note).
+Analytics Engine keeps rows for three months and has no user id by design, so it cannot answer
+those, and D30 would fall off its end. D1 stays the source for the report and the admin panel;
+Analytics Engine is the high-volume stream for "which build, which system" questions. Example, with
+an Analytics read token (see `docs/admin.md`):
+
+```sql
+SELECT blob4 AS app_version, SUM(_sample_interval * double1) AS opens
+FROM billet_dev_events
+WHERE blob1 = 'AppOpened' AND timestamp > NOW() - INTERVAL '7' DAY
+GROUP BY app_version ORDER BY opens DESC
+```
 
 Because the rows carry a user and a pair id they are personal data, even without content. The App
 Store privacy label has to declare usage data (product interaction) used for analytics and linked

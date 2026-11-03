@@ -11,6 +11,9 @@ declare namespace Cloudflare {
       import("../src/demo-room-durable-object.ts").DemoRoom
     >;
     readonly MEDIA: R2Bucket;
+    readonly PAIR_ROOM: DurableObjectNamespace<
+      import("../src/pair-room-durable-object.ts").PairRoom
+    >;
     readonly ACTIVATED_ROOM: DurableObjectNamespace;
     readonly BROKEN_ROOM: DurableObjectNamespace;
     readonly LEGACY_ROOM: DurableObjectNamespace;

@@ -45,8 +45,11 @@ public struct HTTPService: Sendable {
 }
 
 extension HTTPService {
-  /// The live service over `URLSession`, resolving each path against `baseURL`.
-  public static func urlSession(baseURL: URL, session: URLSession) -> HTTPService {
+  /// The live service over `URLSession`, resolving each path against `baseURL`. `headers` go on
+  /// every request; a header the request sets itself wins.
+  public static func urlSession(
+    baseURL: URL, session: URLSession, headers: [String: String] = [:]
+  ) -> HTTPService {
     HTTPService { request throws(TransportError) in
       // `URL(string:relativeTo:)` lets an absolute path replace the base's host, which would send
       // whatever headers the request carries to another server. A path is a path only.
@@ -58,6 +61,9 @@ extension HTTPService {
       var urlRequest = URLRequest(url: url)
       urlRequest.httpMethod = request.method.rawValue
       urlRequest.httpBody = request.body
+      for (name, value) in headers {
+        urlRequest.setValue(value, forHTTPHeaderField: name)
+      }
       for (name, value) in request.headers {
         urlRequest.setValue(value, forHTTPHeaderField: name)
       }
