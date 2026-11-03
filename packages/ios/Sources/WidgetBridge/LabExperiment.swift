@@ -33,7 +33,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case catBats
   case catGreets
   case catChases
-  case shopScene
   case notesDesk
   case cinematicOnboarding
   case catLife
@@ -93,7 +92,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: .catMoments
     case .catGreets: .catMoments
     case .catChases: .catMoments
-    case .shopScene: .home
     case .notesDesk: .notes
     case .cinematicOnboarding: .firstLaunch
     case .catLife: .cat
@@ -135,7 +133,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: "Bats at your finger"
     case .catGreets: "Greets you"
     case .catChases: "Plays on its own"
-    case .shopScene: "Shop tab"
     case .notesDesk: "Notes desk"
     case .cinematicOnboarding: "Cinematic onboarding"
     case .catLife: "The cat's needs"
@@ -177,8 +174,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
       "Open billet after a few hours away and the cat runs up to the camera and headbutts it."
     case .catChases:
       "Now and then the cat chases the yarn, or a dot of light from the lamp, all by itself."
-    case .shopScene:
-      "A Shop tab: a little 3D shop with a keeper behind the counter. Tap anything on the shelves to see it and buy it. The keeper is chosen under Shopkeeper. Off, the shop stays a sheet on Home."
     case .cinematicOnboarding:
       "First launch flies into a windowsill of candles with a soft beating heart, and pairing happens in that scene. Off, it is the plain welcome and code screens. Replay it below without touching your pair."
     case .notesDesk:
@@ -257,7 +252,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: false
     case .catGreets: false
     case .catChases: false
-    case .shopScene: false
     case .notesDesk: false
     case .cinematicOnboarding: false
     case .catLife: false
@@ -299,7 +293,6 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .catBats: false
     case .catGreets: false
     case .catChases: false
-    case .shopScene: true
     case .notesDesk: true
     case .cinematicOnboarding: true
     case .catLife: true

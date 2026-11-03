@@ -23,7 +23,7 @@ import Testing
 
   private let everything = [
     "room-lighting": "candle", "window-view": "fire-escape", "home-layout": "immersive",
-    "shopkeeper": "fox",
+    "shopkeeper": "human",
   ]
 
   // MARK: with nothing chosen and nothing from the server
@@ -48,7 +48,7 @@ import Testing
     #expect(model.lighting == .candle)
     #expect(model.windowView == WindowViewChoice(view: .fireEscape))
     #expect(model.homeVariant == .immersive)
-    #expect(model.shopkeeper == .fox)
+    #expect(model.shopkeeper == .human)
   }
 
   @Test func theServerSetsOnlyTheViewNotItsWeatherOrHour() {
@@ -90,15 +90,15 @@ import Testing
     model.setLighting(.off)
     model.setWindowView(view)
     model.setHomeVariant(.cinematic)
-    model.setShopkeeper(.raccoon)
+    model.setShopkeeper(.teddy)
     #expect(model.lighting == .off)
     #expect(model.windowView == view)
     #expect(model.homeVariant == .cinematic)
-    #expect(model.shopkeeper == .raccoon)
+    #expect(model.shopkeeper == .teddy)
     #expect(model.lightingOverride == .off)
     #expect(model.windowViewOverride == view)
     #expect(model.homeVariantOverride == .cinematic)
-    #expect(model.shopkeeperOverride == .raccoon)
+    #expect(model.shopkeeperOverride == .teddy)
   }
 
   @Test func choosingTheStandardValueStillBeatsTheServer() {
@@ -116,7 +116,7 @@ import Testing
     model.setLighting(.off)
     model.setWindowView(WindowViewChoice(view: .pinkDusk, weather: .fog))
     model.setHomeVariant(.cinematic)
-    model.setShopkeeper(.raccoon)
+    model.setShopkeeper(.teddy)
     model.followTheLightingTest()
     model.followTheWindowViewTest()
     model.followTheHomeVariantTest()
@@ -128,7 +128,7 @@ import Testing
     #expect(model.lighting == .candle)
     #expect(model.windowView == WindowViewChoice(view: .fireEscape))
     #expect(model.homeVariant == .immersive)
-    #expect(model.shopkeeper == .fox)
+    #expect(model.shopkeeper == .human)
   }
 
   @Test func followingTheTestWithNoTestGivesTheStandardValue() {
@@ -146,17 +146,17 @@ import Testing
     first.setLighting(.goldenHour)
     first.setWindowView(view)
     first.setHomeVariant(.livingWindow)
-    first.setShopkeeper(.fox)
+    first.setShopkeeper(.teddy)
     let (second, _) = model(storage)
     second.setRemote(flags(everything))
     #expect(second.lightingOverride == .goldenHour)
     #expect(second.windowViewOverride == view)
     #expect(second.homeVariantOverride == .livingWindow)
-    #expect(second.shopkeeperOverride == .fox)
+    #expect(second.shopkeeperOverride == .teddy)
     #expect(second.lighting == .goldenHour)
     #expect(second.windowView == view)
     #expect(second.homeVariant == .livingWindow)
-    #expect(second.shopkeeper == .fox)
+    #expect(second.shopkeeper == .teddy)
   }
 
   @Test func followingTheTestSurvivesANewModel() {
@@ -164,7 +164,7 @@ import Testing
     first.setLighting(.goldenHour)
     first.setWindowView(WindowViewChoice(view: .dormQuad))
     first.setHomeVariant(.livingWindow)
-    first.setShopkeeper(.fox)
+    first.setShopkeeper(.teddy)
     first.followTheLightingTest()
     first.followTheWindowViewTest()
     first.followTheHomeVariantTest()
@@ -183,7 +183,7 @@ import Testing
       WidgetFeaturesStore.windowViewFileName,
       Data(#"{"view":"snowyDecember","weather":"snow","hour":"dusk"}"#.utf8))
     try storage.write(WidgetFeaturesStore.homeVariantFileName, Data(#""nightAndDay""#.utf8))
-    try storage.write(WidgetFeaturesStore.shopkeeperFileName, Data(#""raccoon""#.utf8))
+    try storage.write(WidgetFeaturesStore.shopkeeperFileName, Data(#""teddy""#.utf8))
     let (model, _) = model(storage)
     model.setRemote(flags(everything))
     #expect(model.lightingOverride == .neonNight)
@@ -191,7 +191,7 @@ import Testing
       model.windowViewOverride
         == WindowViewChoice(view: .snowyDecember, weather: .snow, hour: .dusk))
     #expect(model.homeVariantOverride == .nightAndDay)
-    #expect(model.shopkeeperOverride == .raccoon)
+    #expect(model.shopkeeperOverride == .teddy)
     #expect(model.lighting == .neonNight)
   }
 
@@ -220,10 +220,10 @@ import Testing
   @Test func noStoreStillWorksInMemory() {
     let model = WidgetFeaturesModel(store: nil)
     model.setRemote(flags(everything))
-    #expect(model.shopkeeper == .fox)
-    model.setShopkeeper(.tabby)
-    #expect(model.shopkeeper == .tabby)
+    #expect(model.shopkeeper == .human)
+    model.setShopkeeper(.teddy)
+    #expect(model.shopkeeper == .teddy)
     model.followTheShopkeeperTest()
-    #expect(model.shopkeeper == .fox)
+    #expect(model.shopkeeper == .human)
   }
 }

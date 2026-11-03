@@ -8,7 +8,7 @@ import PetScene
 import SwiftUI
 import WidgetBridge
 
-/// The tabs of a paired device: Home, the Shop when its 3D scene is on, Notes and Settings.
+/// The tabs of a paired device: Home, the Shop when the chosen scene has one, Notes and Settings.
 /// Drawing is opened from Home or the Notes desk and is not a tab.
 ///
 /// A native `TabView`, so iOS 26 gives it Liquid Glass and content runs on under it.
@@ -84,11 +84,9 @@ struct AppShellView: View {
     return session.streak(today: TreatDay.key(for: .now, calendar: calendar), calendar: calendar)
   }
 
-  /// The scene the Shop tab shows, when the shop scene is on and the chosen scene has one.
+  /// The scene the Shop tab shows: the chosen scene, when it has a shop.
   private var shopScene: (any PetScene)? {
-    guard labs.isOn(LabExperiment.shopScene), let scene = selectedScene, scene.hasShop else {
-      return nil
-    }
+    guard let scene = selectedScene, scene.hasShop else { return nil }
     return scene
   }
 
