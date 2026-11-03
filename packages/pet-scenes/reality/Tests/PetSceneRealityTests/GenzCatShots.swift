@@ -105,7 +105,8 @@
       renderer.entities.append(lens)
       renderer.activeCamera = lens
       lens.look(
-        at: ground + [0, length * 0.4, 0], from: ground + [length * 2.2, length * 2.4, length * 3.2],
+        at: ground + [0, length * 0.4, 0],
+        from: ground + [length * 2.2, length * 2.4, length * 3.2],
         relativeTo: nil)
 
       for (name, action, lift, lean) in [
@@ -118,7 +119,8 @@
         room.bodyHeading = heading
         for fitted in [false, true] {
           if fitted {
-            room.catShadowShape = GenzRoom.catShadowFootprint(room.rig?.info[action]?.base ?? .stand)
+            room.catShadowShape = GenzRoom.catShadowFootprint(
+              room.rig?.info[action]?.base ?? .stand)
             room.fitCatShadow(0)
           } else {
             shadow.transform = Transform(
