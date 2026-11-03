@@ -17,9 +17,8 @@ struct FullBleedHome<Drawer: View>: View {
   let theirTimeZone: TimeZone?
   /// The hour the night-and-day variant pretends it is, or `nil` to follow the clock.
   let pretendHour: Int?
-  /// Whether the opening has already played since launch.
-  let hasOpened: Bool
-  let onOpened: () -> Void
+  /// Whether the launch's glide into the room is playing, which keeps the controls back.
+  let isOpening: Bool
   let onTreat: () -> Void
   let onDraw: () -> Void
   /// Whether the room is being decorated, which hides everything over it but its own controls.
@@ -31,18 +30,15 @@ struct FullBleedHome<Drawer: View>: View {
   @ViewBuilder let drawer: () -> Drawer
 
   @State private var drawerDrag: CGFloat = 0
-  @State private var flyIn: PetSceneFlyIn?
-  @State private var isOpening = false
   @State private var gaze: CGPoint?
   @State private var lastTouch = Date.distantPast
   @State private var controlsShown = true
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.eveningGround) private var eveningGround
 
-  /// The cinematic variant keeps its controls back from the first frame until its opening is over.
+  /// The controls stay back while the launch glides in, and in the living window until the room
+  /// is left alone.
   private var showsControls: Bool {
-    controlsShown && !isOpening && !(variant == .cinematic && !hasOpened)
-      && !(variant == .livingWindow && lastTouch == .distantPast)
+    controlsShown && !isOpening && !(variant == .livingWindow && lastTouch == .distantPast)
   }
 
   /// How long the room is left alone before the living window shows its controls.
@@ -51,15 +47,6 @@ struct FullBleedHome<Drawer: View>: View {
   var body: some View {
     ZStack {
       room
-      if isOpening {
-        // A tap anywhere during the opening skips to its end.
-        Color.clear
-          .contentShape(Rectangle())
-          .ignoresSafeArea()
-          .onTapGesture { skipOpening() }
-          .accessibilityAddTraits(.isButton)
-          .accessibilityLabel("Skip the opening")
-      }
       controls
         .opacity(showsControls && !isDecorating ? 1 : 0)
         .allowsHitTesting(showsControls && !isDecorating)
@@ -125,8 +112,6 @@ struct FullBleedHome<Drawer: View>: View {
       scene
         .environment(\.petSceneFillsView, true)
         .environment(\.petSceneShowsControls, false)
-        .environment(\.petSceneFlyIn, flyIn)
-        .environment(\.petSceneOpeningEnded) { isOpening = false }
         .environment(\.petSceneCatCue, director.latest)
         .environment(\.petSceneGaze, gaze)
         .environment(\.petSceneOrbits, variant != .livingWindow)
@@ -191,25 +176,6 @@ struct FullBleedHome<Drawer: View>: View {
       controlsShown = false
       lastTouch = .now
     }
-    guard variant == .cinematic, !hasOpened else { return }
-    onOpened()
-    if reduceMotion {
-      flyIn = PetSceneFlyIn(id: 1, isSkipped: true)
-      return
-    }
-    flyIn = PetSceneFlyIn(id: 1)
-    isOpening = true
-    // The room says when its opening is over. This only frees the screen if it never does.
-    try? await Task.sleep(for: .seconds(FlyInTimeline.length + Self.roomStartAllowance))
-    isOpening = false
-  }
-
-  /// Time allowed for the room to come on screen before its opening starts.
-  private static var roomStartAllowance: Double { 8 }
-
-  private func skipOpening() {
-    flyIn?.isSkipped = true
-    isOpening = false
   }
 
   private var controls: some View {

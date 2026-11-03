@@ -154,20 +154,26 @@ struct AdoptionView: View {
       if let cat = choice.agreed {
         return OnboardingHeading(
           title: "You both picked \(cat.title)",
-          detail: "Hold them together until your rings fill.")
+          detail: nature(of: cat) + "Hold them together until your rings fill.")
       }
       if choice.bid != nil {
         return OnboardingHeading(
           title: "Two favourites",
           detail: "They're making their case. Pick again whenever you like.")
       }
-      if choice.mine != nil {
+      if let mine = choice.mine {
         return OnboardingHeading(
-          title: "Good taste", detail: "Waiting for your person to pick too.")
+          title: "Good taste", detail: nature(of: mine) + "Waiting for your person to pick too.")
       }
       return OnboardingHeading(
         title: "Choose your cat together", detail: "Tap the one you'd love to bring home.")
     }
+  }
+
+  /// What kind of cat `cat` is, as the start of a heading's detail, or nothing when not known.
+  private func nature(of cat: AdoptionCat) -> String {
+    guard let temperament = model.temperament(cat) else { return "" }
+    return "\(temperament.title): \(temperament.line) "
   }
 
   /// Without a 3D scene: the cats as buttons.
@@ -178,7 +184,8 @@ struct AdoptionView: View {
         let mine = model.choice.mine == cat
         let theirs = model.choice.theirs == cat
         BilletButton(
-          cat.title.capitalized + (mine ? " ♥" : "") + (theirs ? " 🐾" : ""),
+          cat.title.capitalized + (model.temperament(cat).map { ", \($0.title)" } ?? "")
+            + (mine ? " ♥" : "") + (theirs ? " 🐾" : ""),
           rank: mine ? .primary : .secondary
         ) { model.tapped(index) }
       }

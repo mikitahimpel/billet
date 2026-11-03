@@ -26,6 +26,8 @@ public final class CatBrainModel {
   @ObservationIgnored private let life: PetLifeModel
   @ObservationIgnored private var runner: CatBrainRunner?
   @ObservationIgnored private var seed: UInt64 = 1
+  /// What kind of cat it is at heart, fixed for life.
+  public private(set) var temperament: CatTemperament?
   @ObservationIgnored private var room = RoomAffordances.empty
   @ObservationIgnored private var weather = ViewWeather.clear
   @ObservationIgnored private var known = Set<UUID>()
@@ -39,10 +41,11 @@ public final class CatBrainModel {
     StableHash.of("\(pair)/\(cat.model.rawValue)/\(cat.coat.rawValue)")
   }
 
-  /// Starts again for a different pet. The same seed keeps the brain as it is.
-  public func setSeed(_ seed: UInt64) {
-    guard seed != self.seed else { return }
+  /// Starts again for a different pet. The same pet keeps the brain as it is.
+  public func setSeed(_ seed: UInt64, temperament: CatTemperament? = nil) {
+    guard seed != self.seed || temperament != self.temperament else { return }
     self.seed = seed
+    self.temperament = temperament
     runner = nil
     tick()
   }
@@ -81,7 +84,8 @@ public final class CatBrainModel {
       self.runner = runner
     } else {
       runner = CatBrainRunner(
-        events: events, now: now, context: life.context, seed: seed, room: room,
+        events: events, now: now, context: life.context, seed: seed, temperament: temperament,
+        room: room,
         weather: weather, lifeConfig: life.config)
     }
     known = Set(events.map(\.id))

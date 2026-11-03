@@ -31,12 +31,14 @@ groups are entered at their entry steps, vitality never skips drowsy.
 Each group's score is
 
 ```
-score = base × need × personality × time of day × room × novelty × mood × vitality
+score = base × need × personality × temperament × time of day × room × novelty × mood × vitality
 ```
 
 - **need**: `0.5 + 4·(1 − n)²` for the need the group answers (Rest → Rested, Eat → Full, Play and
   Mischief → Playful, Social → Loved), ×1.5 for the need `NeedFocus` holds.
 - **personality**: `Π (1 + wᵢ·(2·tᵢ − 1))` over the traits that lean on the group.
+- **temperament**: the type's lean towards the group (below); its need weights also scale the
+  `4·(1 − n)²` part of the need term.
 - **time of day**: play and mischief peak at dawn and dusk; rest peaks after midday.
 - **room**: no window, no Watch; Mischief needs something to nudge, a heap of clothes or a desk;
   a sunbeam (by day, under the window, in clear weather) and something soft make Rest likelier;
@@ -58,6 +60,34 @@ Experience moves them a little. At each day start the traits are the born ones m
 six days of events, each weighted by `e^(−age/3 days)`: games make the cat more playful and less
 lazy, pets more cuddly, notes more vocal and a little more curious, and any care a little bolder.
 No trait moves more than 0.15 from where it was born, and a week without a game sends it back.
+
+## Temperament
+
+What kind of cat it is at heart, fixed for life. There are five types, each a corner of the
+trait axes bold–shy, energetic–lazy, cuddly–independent, curious–cautious and vocal–quiet:
+
+| Type | Leans to | Needs that weigh more | Tempo | Amplitude | Keeps from a finger | After a pet |
+|---|---|---|---|---|---|---|
+| Cuddler | Social ×2.6, Idle ×1.2, Mischief ×0.5 | Loved ×1.6 | 1 | 1 | 0.05 | seeks you, rubs |
+| Explorer | Explore ×2.6, Watch ×1.5, Idle ×0.6 | Playful ×1.25 | 1.1 | 1.1 | 0.35 | looks around |
+| Diva | Groom ×2.4, Mischief ×1.6, Watch ×1.4, Social ×0.5 | Full ×1.4, Loved ×0.75 | 0.92 | 0.85 | 0.7 | grooms |
+| Sleepyhead | Rest ×2.4, Idle ×1.6, Play and Explore ×0.45 | Rested ×1.6, Playful ×0.7 | 0.78 | 0.7 | 0.3 | sleeps on |
+| Clown | Play ×2.8, Mischief ×2, Idle and Rest ×0.55 | Playful ×1.6 | 1.22 | 1.3 | 0.15 | zoomies |
+
+- **Born.** A cat's type is the one its seeded traits lean towards most, measured from an even cat
+  along the way each type's heart lies. Leaning, rather than nearness, keeps the five about equally
+  common. Its nature is then its seeded traits pulled 65% of the way to the type's heart, so two
+  Clowns are still two cats. Drift (below) moves that nature, never the type.
+- **Shown and kept.** Adoption shows each cat's type and a line about it. The seed comes from the
+  pair and the cat, so both phones show the same. The one adopted is saved in the App Group
+  (`cat-temperament.json`, with its seed) and never changes. A cat adopted before temperaments
+  existed gets the type its traits fit, saved the first time Home opens. Nothing is synced: both
+  phones work it out from the shared seed.
+- **In the body.** Tempo scales the clip rate and travel speed. Amplitude scales the reflex layer
+  (blinks, ear and tail flicks, breath) on a skeleton that has it. Personal space is how far short
+  of a called-to spot the cat stops, in cat lengths × 1.5.
+- **Seen.** Settings → Pair → Character, and the Brain debug card (type, tempo, amplitude, space,
+  and each score's `k` factor).
 
 ## Memory
 

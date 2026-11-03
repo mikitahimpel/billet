@@ -5,14 +5,15 @@ import Testing
 @Suite struct FlyInTimelineTests {
   @Test func theCameraStartsFarOutAndArrivesHome() {
     let start = FlyInTimeline.offset(at: 0)
-    #expect(start.yaw > 0.5 && start.pitch > 0.15 && start.distance > 2)
+    #expect(start.yaw > 0.2 && start.pitch > 0.1 && start.distance > 1.5)
     let end = FlyInTimeline.offset(at: FlyInTimeline.flight.upperBound)
     #expect(end.yaw == 0 && end.pitch == 0 && end.distance == 1)
   }
 
-  @Test func theFlightIsBetweenOneAndAHalfAndTwoAndAHalfSeconds() {
+  @Test func theWholeOpeningIsBetweenOneAndAHalfAndTwoSeconds() {
     let length = FlyInTimeline.flight.upperBound - FlyInTimeline.flight.lowerBound
-    #expect((1.5...2.5).contains(length))
+    #expect((1.5...2).contains(length))
+    #expect((1.5...2).contains(FlyInTimeline.length))
   }
 
   @Test func theFlightNeverGoesBack() {
@@ -26,11 +27,9 @@ import Testing
 
   @Test func theOpeningHappensInOrder() {
     #expect(FlyInTimeline.lights(at: 0) == 0)
-    #expect(FlyInTimeline.lights(at: FlyInTimeline.wake) > 0.8)
-    #expect(FlyInTimeline.wake < FlyInTimeline.look)
+    // The lights are up by the time the cat looks up, and the note grows in after.
+    #expect(FlyInTimeline.lights(at: FlyInTimeline.look) == 1)
     #expect(FlyInTimeline.note(at: FlyInTimeline.look) == 0)
-    // A three-second stretch from the wake is over by the time the note starts to grow in.
-    #expect(FlyInTimeline.wake + 3 <= FlyInTimeline.noteReveal.lowerBound)
     #expect(FlyInTimeline.note(at: FlyInTimeline.length) == 1)
   }
 }
