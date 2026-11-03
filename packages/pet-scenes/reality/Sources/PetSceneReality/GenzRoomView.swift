@@ -101,12 +101,15 @@ struct GenzRoomView: View {
   var body: some View {
     let room = room
     let look = LightingLook.of(lighting)
+    let parts = RoomCostSwitches.shared
     ZStack {
-      layer(behind, room: room)
-      theirSky
-      RoomHaze(look: look, screen: room.screen)
+      if parts.shows("layers") { layer(behind, room: room) }
+      if parts.shows("sky") { theirSky }
+      if parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
       stage(room)
-      ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      if parts.shows("layers") {
+        ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      }
       if noteUnread, !isDecorating {
         NoteBeacon(
           outline: room.screen.outlines[.windowBacklight] ?? [],
@@ -114,11 +117,15 @@ struct GenzRoomView: View {
         )
         .transition(.opacity)
       }
-      GlowLights(
-        look: look, screen: room.screen,
-        isPaused: !isOnScreen || reduceMotion)
-      GlowGrade(look: look)
-      GlowVignette(look: look)
+      if parts.shows("halos") {
+        GlowLights(
+          look: look, screen: room.screen,
+          isPaused: !isOnScreen || reduceMotion)
+      }
+      if parts.shows("grade") {
+        GlowGrade(look: look)
+        GlowVignette(look: look)
+      }
       CatPurrOverlay(purr: room.purr)
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
@@ -176,7 +183,8 @@ struct GenzRoomView: View {
       steady: isNative ? slot.steadyInterval : RoomLayerSchedule.busy,
       isPaused: !isOnScreen || reduceMotion)
     return TimelineView(schedule) { context in
-      let state = room.screen.state(for: slot, at: context.date)
+      let state = room.screen.state(
+        for: slot, at: context.date, followsCamera: !isNative || slot.nativeFollowsCamera)
       if slot == .windowNight, replacementArt?.view(for: slot, state: state) == nil {
         let viewState = room.screen.viewState(at: context.date)
         if let art = viewArt?.view(viewState.view, state: viewState) {

@@ -11,7 +11,8 @@ import Pet
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
 /// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled.
 /// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
-/// of it. Every result is one line on
+/// of it. `-perf.script cost` orbits and holds the room with everything, then with each of its
+/// switches off, in pairs, to show what each part costs to draw. Every result is one line on
 /// standard error that starts with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
 @MainActor
 public enum ScenePerf {
@@ -28,19 +29,26 @@ public enum ScenePerf {
     public var release: @MainActor () -> Void
     /// Entities, models, triangles, textures and lights, as `key=value` pairs.
     public var census: @MainActor () -> String
+    /// Parts of the scene a `cost` run can switch off, and how to switch one off or back on.
+    public var switches: [String]
+    public var setSwitch: @MainActor (_ name: String, _ isOn: Bool) -> Void
 
     public init(
       name: String,
       orbit: @escaping @MainActor (_ deltaX: Float, _ deltaY: Float) -> Void,
       zoom: @escaping @MainActor (_ scale: Float) -> Void,
       release: @escaping @MainActor () -> Void,
-      census: @escaping @MainActor () -> String
+      census: @escaping @MainActor () -> String,
+      switches: [String] = [],
+      setSwitch: @escaping @MainActor (_ name: String, _ isOn: Bool) -> Void = { _, _ in }
     ) {
       self.name = name
       self.orbit = orbit
       self.zoom = zoom
       self.release = release
       self.census = census
+      self.switches = switches
+      self.setSwitch = setSwitch
     }
   }
 
@@ -99,6 +107,8 @@ public enum ScenePerf {
       await full()
     case "sweep":
       await sweep()
+    case "cost":
+      await cost()
     default:
       break
     }
@@ -137,6 +147,23 @@ public enum ScenePerf {
       scene?.orbit(side, frame % 180 < 90 ? 0.6 : -0.6)
     }
     scene?.release()
+  }
+
+  /// Each switch of the scene off and on again, back to back so the two compare under the same load:
+  /// the room held still, then orbiting, with the part and without it.
+  private static func cost() async {
+    guard let scene else { return }
+    for name in scene.switches {
+      for isOn in [true, false] {
+        scene.setSwitch(name, isOn)
+        await pause(1)
+        let side = isOn ? "on" : "off"
+        await record("cost.\(name).\(side).still", seconds: 3)
+        await orbit("cost.\(name).\(side).orbit")
+        await pause(0.5)
+      }
+      scene.setSwitch(name, true)
+    }
   }
 
   /// The room under each lighting preset, at the camera's extremes, held still for a screenshot.

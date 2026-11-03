@@ -11,6 +11,20 @@ import Testing
 @Suite struct GenzRoomTests {
   private let size = CGSize(width: 393, height: 852)
 
+  @Test func aLayerThatHoldsStillLeavesTheCameraOut() {
+    let screen = GenzRoomScreen()
+    screen.parallax = CGSize(width: 12, height: -4)
+    screen.outlines[.windowDim] = [.zero, CGPoint(x: 10, y: 10)]
+    let held = screen.state(for: .windowDim, at: .now, followsCamera: false)
+    #expect(held.parallax == .zero)
+    #expect(held.outline.isEmpty)
+    let following = screen.state(for: .windowDim, at: .now)
+    #expect(following.parallax == CGSize(width: 12, height: -4))
+    #expect(following.outline.count == 2)
+    #expect(!RoomLayerSlot.windowDim.nativeFollowsCamera)
+    #expect(RoomLayerSlot.windowBloom.nativeFollowsCamera)
+  }
+
   @Test func everyFurnitureSetIsWindowSeatFurnished() {
     for furniture in RoomFurniture.allCases {
       #expect(GenzLayout.of(furniture).furniture == furniture)
