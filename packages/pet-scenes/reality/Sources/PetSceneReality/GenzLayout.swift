@@ -55,6 +55,8 @@ struct GenzLayout {
   /// The top the cat lives on, when it is not a piece's: the window sill in the first Window
   /// Seat, whose daybed is lower than the sill the cat sits on.
   var catTop: (min: SIMD2<Float>, max: SIMD2<Float>)? = nil
+  /// The body of the cat shown, standing and resting: the pillows slide aside for it.
+  var catBody = (standing: GenzCatShape.widestStanding, resting: GenzCatShape.widestResting)
   /// The set of furniture in the room.
   var furniture = RoomFurniture.original
   /// Whether the generated props stand in for the hand-made ones (``withIdolProps()``).

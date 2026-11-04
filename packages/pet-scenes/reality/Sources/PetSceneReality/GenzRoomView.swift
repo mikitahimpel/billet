@@ -380,6 +380,8 @@ struct GenzRoomView: View {
         }
         room.decor.isOn = isOn
         renovator?.isRenovating = isOn
+        // Done decorating: a pillow left against the cat slides aside for it.
+        if !isOn { room.nudgePillows(heading: room.bodyHeading) }
       }
       .onChange(of: layout.key) { isDecorating = false }
       .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }

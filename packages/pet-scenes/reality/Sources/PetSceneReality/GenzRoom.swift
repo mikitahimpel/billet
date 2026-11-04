@@ -164,6 +164,8 @@ final class GenzRoom: CatPlayStage {
   /// Where the body faces this frame, before the lean into a hand.
   var bodyHeading: Float = 0
   private var lastCatClock = 0.0
+  /// Where the cat stood last frame, to log a step too big for one frame.
+  private var lastCatPosition = SIMD3<Float>.zero
   var trip: CatTrip?
   var tripKind: CatTripKind?
   /// A chase the brain asked for, waiting for the cat to be free.
@@ -470,6 +472,8 @@ final class GenzRoom: CatPlayStage {
     let bounds = model.visualBounds(relativeTo: nil)
     guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
     let anatomy = shown.model.anatomy
+    layout.catBody = shown.model.footprint
+    nudgePillows(heading: bodyHeading)
     let scale = layout.cat.length / anatomy.length
     model.scale = .one * scale
     catScale = scale
@@ -1097,7 +1101,14 @@ final class GenzRoom: CatPlayStage {
       simd_quatf(angle: bodyHeading, axis: [0, 1, 0])
       * simd_quatf(angle: hands.lean, axis: [0, 0, 1])
     let beat = behaviour.beat(at: clock, mode: mode)
+    if beat.action != rig.current { NookiTrace.catMotion("clip \(beat.action)", at: clock) }
     rig.play(beat.action, rate: rate)
+    stepNudges()
+    let moved = catHolder.position - lastCatPosition
+    if simd_length(SIMD2(moved.x, moved.z)) > layout.cat.length * 0.25 {
+      NookiTrace.catMotion("jump \(simd_length(moved) / layout.cat.length)", at: clock)
+    }
+    lastCatPosition = catHolder.position
     fitCatShadow(step)
     if clock > gazeUntil { gazePoint = nil }
     if gazePoint == nil, trip == nil, let gaze = brainGaze() {
