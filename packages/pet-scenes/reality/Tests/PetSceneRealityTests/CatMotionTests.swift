@@ -13,7 +13,8 @@ import Testing
         let clip = clips[move]
         #expect(clip != nil, "\(model) has no \(move)")
         #expect(clip?.loops == false, "\(model) \(move) loops")
-        #expect(clip?.base == .sit || clip?.base == .loaf, "\(model) \(move) starts from \(String(describing: clip?.base))")
+        let base = clip?.base.map(\.rawValue) ?? "nothing"
+        #expect(clip?.base == .sit || clip?.base == .loaf, "\(model) \(move) starts from \(base)")
       }
     }
   }
