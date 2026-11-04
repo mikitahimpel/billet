@@ -150,10 +150,12 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
-      # TODO: the payments input, BILLET_PAYMENTS and the demo host come back with the server wiring.
+      # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Nooki/Server/Backend.swift).
+      # TODO: the payments input and BILLET_PAYMENTS come back with the Payments wiring.
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
+          BILLET_API_HOST: ${{ secrets.DEMO_HOST }}
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e
@@ -172,6 +174,8 @@ jobs:
           exit $status
 
       - name: Check the archive
+        env:
+          DEMO_HOST: ${{ secrets.DEMO_HOST }}
         run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
 
       - name: Upload to TestFlight
