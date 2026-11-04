@@ -1154,7 +1154,7 @@ final class GenzRoom: CatPlayStage {
     let led = GenzOpening.windowLED(time)
     if changed("led", led, step: 0.05) { setLED(led) }
     let lamp =
-      (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0) * lightSwitch.lampLevel
+      (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0) * Double(lightSwitch.lampLevel)
     let boost = lampBoost
     if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
       lampLight.setLight(intensity: Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost)

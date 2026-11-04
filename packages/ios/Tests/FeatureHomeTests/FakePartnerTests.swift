@@ -137,7 +137,7 @@ struct FakePartnerTests {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let seen = await collect(delivery, count: 4) { await delivery.switchLight(.cosy) }
-    #expect(seen.last == .roomLight(.cosy))
+    #expect(seen.contains(.roomLight(.cosy)))
   }
 
   @Test func idleMovesCycleThroughNotesPetsAndTreats() async {

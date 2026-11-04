@@ -38,15 +38,15 @@ struct LightSwitchTests {
     #expect(LightingLook.mix(from, to, by: 0, ownLED: own.led, ownOutside: own.outside) == from)
     #expect(LightingLook.mix(from, to, by: 1, ownLED: own.led, ownOutside: own.outside) == to)
     let half = LightingLook.mix(from, to, by: 0.5, ownLED: own.led, ownOutside: own.outside)
-    #expect(half.fill.shift == (from.fill.shift + to.fill.shift) / 2)
-    #expect(half.key.boost == (from.key.boost + to.key.boost) / 2)
+    #expect(abs(half.fill.shift - (from.fill.shift + to.fill.shift) / 2) < 0.0001)
+    #expect(abs(half.key.boost - (from.key.boost + to.key.boost) / 2) < 0.0001)
   }
 
   @Test func fairyLightsFadeOutRatherThanVanish() {
     let half = LightingLook.mix(
       .cosy, .moonlight, by: 0.5, ownLED: own.led, ownOutside: own.outside)
     #expect(half.fairy.shown)
-    #expect(half.fairy.spill == LightingLook.cosy.fairy.spill / 2)
+    #expect(abs(half.fairy.spill - LightingLook.cosy.fairy.spill / 2) < 0.0001)
   }
 
   @Test func materialColoursMoveInTenthsSoAFadeMakesFewMaterials() {

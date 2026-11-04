@@ -52,18 +52,20 @@ struct GenzLightSwitch {
     return Float(1 - pow(1 - t, 3))
   }
 
-  /// The plate on the side wall by the lamp, at shoulder height: its middle in room units.
-  static let plate = GenzRoomPoint(0, 4.25, 2.55)
-  /// The plate's size along the wall and up it, and how far it stands out.
-  static let plateSize = SIMD2<Float>(0.42, 0.64)
+  /// The plate on the back wall in the strip left of the window, at shoulder height: its middle
+  /// in room units. The rest of the walls fall outside the view from home on a phone.
+  static let plate = GenzRoomPoint(0.27, 0, 2.55)
+  /// The plate's size along the wall and up it, and how far it stands out. Narrow enough to keep
+  /// clear of the LED strip round the window.
+  static let plateSize = SIMD2<Float>(0.34, 0.56)
   static let plateDepth: Float = 0.05
   /// How much bigger than the plate a finger may land and still press it.
-  static let reach = SIMD2<Float>(1.1, 1.3)
+  static let reach = SIMD2<Float>(0.9, 1.3)
 }
 
 @MainActor
 extension GenzRoom {
-  /// Hangs the switch plate on the side wall, by the lamp. It is three small boxes: the plate, the
+  /// Hangs the switch plate on the back wall, left of the window. It is three small boxes: the plate, the
   /// rocker, and a pin of light that glows when the room is dark so the switch can be found.
   func buildSwitchPlate() {
     let plate = Entity()
@@ -73,17 +75,18 @@ extension GenzRoom {
     let size = GenzLightSwitch.plateSize
     let depth = GenzLightSwitch.plateDepth
     let face = kit.matte(GenzColour(0xEFE6D4))
-    plate.addChild(kit.part(kit.box([depth, size.y, size.x]), face, at: [depth / 2, 0, 0]))
+    // Out of the back wall is the scene's +z.
+    plate.addChild(kit.part(kit.box([size.x, size.y, depth]), face, at: [0, 0, depth / 2]))
     let rocker = kit.part(
-      kit.box([depth, size.y * 0.38, size.x * 0.36]), kit.matte(GenzColour(0xF8F2E6)),
-      at: [depth * 1.5, GenzLightSwitch.rockerLift(lightSwitch.light), 0])
+      kit.box([size.x * 0.4, size.y * 0.38, depth]), kit.matte(GenzColour(0xF8F2E6)),
+      at: [0, GenzLightSwitch.rockerLift(lightSwitch.light), depth * 1.5])
     plate.addChild(rocker)
     let finder = kit.part(
-      kit.box([depth * 0.6, 0.035, 0.035]), kit.glow(finderColour(lightSwitch.light)),
-      at: [depth * 1.3, size.y * 0.36, 0])
+      kit.box([0.035, 0.035, depth * 0.6]), kit.glow(finderColour(lightSwitch.light)),
+      at: [0, size.y * 0.36, depth * 1.3])
     plate.addChild(finder)
     let reach = GenzLightSwitch.reach
-    SceneParts.makeTappable(plate, size: [0.3, reach.y, reach.x], center: [0.15, 0, 0])
+    SceneParts.makeTappable(plate, size: [reach.x, reach.y, 0.3], center: [0, 0, 0.15])
     room.addChild(plate)
     lightSwitch.rocker = rocker
     lightSwitch.finder = finder

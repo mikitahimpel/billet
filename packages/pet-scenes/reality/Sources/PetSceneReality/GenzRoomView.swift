@@ -263,10 +263,6 @@ struct GenzRoomView: View {
         room.followBrain(brain, speed: play.brainSpeed)
       }
       .onChange(of: play.lifeNeeds, initial: true) { _, needs in room.showLife(needs) }
-      .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
-      .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
-      .onChange(of: play.light, initial: true) { _, light in room.setRoomLight(light) }
-      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
       .onAppear {
         room.report = onEvent
       }
@@ -274,7 +270,7 @@ struct GenzRoomView: View {
       .accessibilityLabel("Window seat at night")
       .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
       .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
-      .accessibilityAction(named: "Press the light switch") { onEvent(room.pressSwitch()) }
+      .accessibilityAction(named: Text("Press the light switch")) { onEvent(room.pressSwitch()) }
       .accessibilityAction(named: "Open the note") {
         onEvent(.noteOpened(delivery: world.delivery))
       }
@@ -332,6 +328,10 @@ struct GenzRoomView: View {
         renovator?.isRenovating = isOn
       }
       .onChange(of: layout.key) { isDecorating = false }
+      .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+      .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
+      .onChange(of: play.light, initial: true) { _, light in room.setRoomLight(light) }
+      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
   }
 
   @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
