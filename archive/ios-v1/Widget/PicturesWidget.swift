@@ -80,7 +80,7 @@ extension WidgetFamily {
     case .accessoryRectangular: .rectangular
     case .systemSmall: .small
     case .systemMedium, .systemLarge, .systemExtraLarge: .roomy
-    @unknown default: .roomy
+    default: .roomy
     }
   }
 
@@ -88,7 +88,7 @@ extension WidgetFamily {
     switch self {
     case .accessoryCircular, .accessoryRectangular, .accessoryInline: true
     case .systemSmall, .systemMedium, .systemLarge, .systemExtraLarge: false
-    @unknown default: false
+    default: false
     }
   }
 }

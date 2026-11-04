@@ -143,8 +143,9 @@ public final class StoreKitPayments: Payments {
       case .userCancelled: return .failed("cancelled")
       case .networkError: return .unavailable
       case .notAvailableInStorefront, .notEntitled: return .notAllowed
-      case .systemError, .unknown, .unsupported: return .failed(String(describing: error))
-      @unknown default: return .failed(String(describing: error))
+      // Newer SDKs add cases (iOS 27: invalidPresentationContext); they all fail with the
+      // error's description.
+      default: return .failed(String(describing: error))
       }
     }
     if let error = error as? Product.PurchaseError {
@@ -154,7 +155,7 @@ public final class StoreKitPayments: Payments {
       case .invalidQuantity, .ineligibleForOffer, .invalidOfferIdentifier, .invalidOfferPrice,
         .invalidOfferSignature, .missingOfferParameters:
         return .failed(String(describing: error))
-      @unknown default: return .failed(String(describing: error))
+      default: return .failed(String(describing: error))
       }
     }
     return .failed(String(describing: error))

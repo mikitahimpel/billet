@@ -157,7 +157,7 @@ public struct DemoRootView: View {
             catName: session.play.catName, rename: { session.renameCat($0) },
             onDone: { self.adoption = nil }
           )
-          .onAppear {
+          .onAppear { [adoption] in
             adoption.partnerPresence(session.status == .partnerHere)
             session.onAdoption = { [weak adoption] in adoption?.received($0) }
           }

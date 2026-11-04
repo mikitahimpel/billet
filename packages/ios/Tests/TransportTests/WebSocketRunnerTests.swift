@@ -15,11 +15,19 @@ import Wire
     deliver: @escaping @Sendable (ServerMessage) async -> Void = { _ in },
     open: (@Sendable () async throws(TransportError) -> WebSocketConnection)? = nil
   ) -> WebSocketDependencies {
-    WebSocketDependencies(
-      open: open ?? { () async throws(TransportError) -> WebSocketConnection in
+    // `if let`, not `??`: the Xcode 27.1 compiler crashes emitting a typed-throws closure wrapped
+    // in the autoclosure `??` makes.
+    let opener: @Sendable () async throws(TransportError) -> WebSocketConnection
+    if let open {
+      opener = open
+    } else {
+      opener = { () async throws(TransportError) -> WebSocketConnection in
         guard let connection = await pool.next() else { throw .network("no connection") }
         return connection
-      },
+      }
+    }
+    return WebSocketDependencies(
+      open: opener,
       sleep: sleep,
       deliver: deliver,
       jitter: { 1 }

@@ -11,8 +11,14 @@ final class NookiShopModels {
   private var prototypes: [String: Entity] = [:]
 
   init(loadModel: NookiModelLoader? = nil) {
-    let assets = NookiAssets()
-    self.loadModel = loadModel ?? { name throws(NookiLoadError) in try await assets.model(name) }
+    // `if let`, not `??`: the Xcode 27.1 compiler crashes emitting a typed-throws closure wrapped
+    // in the autoclosure `??` makes.
+    if let loadModel {
+      self.loadModel = loadModel
+    } else {
+      let assets = NookiAssets()
+      self.loadModel = { name throws(NookiLoadError) in try await assets.model(name) }
+    }
   }
 
   /// A piece of furniture scaled to its catalog size, standing on y = 0 and centred on x and z.

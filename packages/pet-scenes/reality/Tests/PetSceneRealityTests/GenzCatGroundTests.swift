@@ -180,8 +180,9 @@ import simd
       var both: [Bool: Float] = [:]
       for standing in [true, false] {
         let paws = room.pawPoints(at: surface.spot, heading: 0, base: standing ? .stand : .sit)
-        both[standing] = try #require(
+        let top: Float = try #require(
           paws.compactMap { Self.exactTop(of: surface.roots, at: $0, in: room.room) }.max())
+        both[standing] = top
       }
       exacts.append(both)
     }

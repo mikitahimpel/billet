@@ -160,7 +160,7 @@ struct TabLightingTests {
   }
 }
 
-struct DeskCuesTests {
+@MainActor struct DeskCuesTests {
   @Test func theDoodleLiesOnThePapersCorners() throws {
     let corners = [
       CGPoint(x: 100, y: 500), CGPoint(x: 260, y: 505), CGPoint(x: 280, y: 600),
