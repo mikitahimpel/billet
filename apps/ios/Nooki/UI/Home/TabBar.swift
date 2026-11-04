@@ -7,17 +7,20 @@ struct TabBar: View {
 
     /// The tabs only navigate; adding lives in its own button beside them, as iOS 26 places search.
     var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 0) {
-                item(.world, "World", "house.fill")
-                item(.moments, "Moments", "photo.on.rectangle")
-                item(.shop, "Shop", "bag")
-                item(.us, "Us", "heart")
-            }
-            .padding(6)
-            .glass(.capsule)
+        // One container, so the bar and the "+" sample the room together and read as one piece of glass.
+        GlassGroup(spacing: 10) {
+            HStack(spacing: 10) {
+                HStack(spacing: 0) {
+                    item(.world, "World", "house.fill")
+                    item(.moments, "Moments", "photo.on.rectangle")
+                    item(.shop, "Shop", "bag")
+                    item(.us, "Us", "heart")
+                }
+                .padding(6)
+                .glass(.capsule, tint: Ink.glassTint)
 
-            AddButton(state: state)
+                AddButton(state: state)
+            }
         }
     }
 
@@ -70,6 +73,25 @@ struct AddButton: View {
     @State private var picking = false
     @State private var pick: PhotosPickerItem?
 
+    /// Honey glass from iOS 26, the prominent action beside the bar; earlier systems keep the solid honey disc.
+    @ViewBuilder
+    private var plus: some View {
+        let symbol = Image(systemName: "plus")
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 66, height: 66)
+        if #available(iOS 26, *) {
+            symbol
+                .glassEffect(.regular.tint(.honeyDeep.opacity(0.9)).interactive(), in: .circle)
+                .shadow(color: .honeyDeep.opacity(0.4), radius: 8, y: 3)
+        } else {
+            symbol
+                .background(.honeyGradient, in: .circle)
+                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+                .shadow(color: .honeyDeep.opacity(0.45), radius: 8, y: 3)
+        }
+    }
+
     var body: some View {
         Menu {
             Button { picking = true } label: {
@@ -103,13 +125,7 @@ struct AddButton: View {
                 Text("Find an idea or plan one")
             }
         } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 66, height: 66)
-                .background(.honeyGradient, in: .circle)
-                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
-                .shadow(color: .honeyDeep.opacity(0.45), radius: 8, y: 3)
+            plus
         }
         .accessibilityLabel("Add")
         .photosPicker(isPresented: $picking, selection: $pick, matching: .images)

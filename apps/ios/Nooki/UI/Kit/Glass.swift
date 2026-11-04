@@ -1,11 +1,12 @@
 import SwiftUI
 
 extension View {
-    /// Liquid Glass from iOS 26; earlier systems get a frosted material in the same shape.
+    /// Liquid Glass from iOS 26, tinted when given one (`Ink.glassTint` keeps it warm over the room); earlier systems
+    /// get a frosted material in the same shape.
     @ViewBuilder
-    func glass<S: Shape>(_ shape: S, interactive: Bool = false) -> some View {
+    func glass<S: Shape>(_ shape: S, tint: Color? = nil, interactive: Bool = false) -> some View {
         if #available(iOS 26, *) {
-            glassEffect(interactive ? .regular.interactive() : .regular, in: shape)
+            glassEffect(Glass.regular.tint(tint).interactive(interactive), in: shape)
         } else {
             background(.ultraThinMaterial, in: shape)
         }
