@@ -24,10 +24,19 @@ struct RoomLayerSchedule: TimelineSchedule {
       if date < busyUntil {
         upcoming = date.addingTimeInterval(RoomLayerSchedule.busy)
       } else {
-        upcoming = steady.map { date.addingTimeInterval($0) }
+        upcoming = steady.map { RoomLayerSchedule.tick(after: date, every: $0) }
       }
       return date
     }
+  }
+
+  /// The first tick after `date` on a clock shared by every layer, every `interval`. Each settled
+  /// redraw composites the whole screen again, so layers that change at the same moment cost one
+  /// frame where layers ticking out of step would cost one each: a layer at 15 a second then
+  /// lands on every other tick of one at 30.
+  static func tick(after date: Date, every interval: TimeInterval) -> Date {
+    let ticks = (date.timeIntervalSinceReferenceDate / interval + 1e-6).rounded(.down) + 1
+    return Date(timeIntervalSinceReferenceDate: ticks * interval)
   }
 
   func entries(from startDate: Date, mode: TimelineScheduleMode) -> Entries {
