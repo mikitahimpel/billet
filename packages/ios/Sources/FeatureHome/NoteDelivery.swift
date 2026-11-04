@@ -28,6 +28,8 @@ public struct NoteDelivery: Sendable {
     case catName(String)
     /// Where the room's light switch stands, from either partner's last press.
     case roomLight(RoomLight)
+    /// Where a room's furniture stands, from either partner's last arrangement of it.
+    case roomArranged(RoomArrangement)
     /// The room's table of reactions: note to the reaction its receiver sent.
     case reactions([UUID: Reaction])
     /// A note from the partner that stays closed until `opensAt`. Only the fake partner sends
@@ -66,6 +68,9 @@ public struct NoteDelivery: Sendable {
   /// Tells the room where this phone's light switch now stands: the last press wins on both
   /// phones.
   public var switchLight: @Sendable (RoomLight) async -> Void
+  /// Tells the room where this phone has arranged a room's furniture: the last arrangement of
+  /// each room wins on both phones.
+  public var arrange: @Sendable (RoomArrangement) async -> Void
   /// Tells the partner this phone's move while the pair chooses its cat.
   public var adopt: @Sendable (AdoptionMove) async -> Void
   /// Sends a reaction to a note the partner sent.
@@ -88,6 +93,7 @@ public struct NoteDelivery: Sendable {
     nameCat: @escaping @Sendable (String) async -> Void = { _ in },
     renameCat: @escaping @Sendable (String) async -> Void = { _ in },
     switchLight: @escaping @Sendable (RoomLight) async -> Void = { _ in },
+    arrange: @escaping @Sendable (RoomArrangement) async -> Void = { _ in },
     adopt: @escaping @Sendable (AdoptionMove) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
     drawDaily: @escaping @Sendable ([Stroke], String) async -> Void = { _, _ in },
@@ -101,6 +107,7 @@ public struct NoteDelivery: Sendable {
     self.nameCat = nameCat
     self.renameCat = renameCat
     self.switchLight = switchLight
+    self.arrange = arrange
     self.adopt = adopt
     self.react = react
     self.drawDaily = drawDaily
@@ -121,6 +128,7 @@ public struct NoteDelivery: Sendable {
       nameCat: { await socket.nameCat($0) },
       renameCat: { await socket.renameCat($0) },
       switchLight: { await socket.switchLight($0) },
+      arrange: { await socket.arrange($0) },
       adopt: { await socket.adopt($0) },
       react: { await socket.react(to: $0, $1) },
       drawDaily: { await socket.drawDaily($0, at: $1) },

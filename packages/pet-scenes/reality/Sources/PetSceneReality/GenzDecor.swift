@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import Pet
 import RealityKit
 
 /// Where the furniture of one set was moved to in the room, by piece.
@@ -7,9 +8,14 @@ struct GenzSpotStore {
   let defaults: UserDefaults
   let key: GenzLayout.Key
 
-  private var storageKey: String {
-    "genz.spots.windowSeat.\(key.furniture.rawValue)\(key.idolProps ? ".idol" : "")"
+  /// The name both partners' rooms know this room and furniture set by.
+  var room: String { Self.room(key) }
+
+  static func room(_ key: GenzLayout.Key) -> String {
+    "windowSeat.\(key.furniture.rawValue)\(key.idolProps ? ".idol" : "")"
   }
+
+  private var storageKey: String { "genz.spots.\(room)" }
 
   func load() -> [String: NookiSpot] {
     defaults.data(forKey: storageKey)
@@ -200,8 +206,51 @@ extension GenzRoom {
 
   /// Every piece back where the room first put it.
   func resetDecor() {
+    isRearranging = true
     _ = decor.resetAll()
+    isRearranging = false
     spots.save([:])
+    onArranged?(arrangement)
+  }
+
+  /// Where this room's furniture stands, as both partners' rooms share it.
+  var arrangement: RoomArrangement {
+    RoomArrangement(
+      room: spots.room,
+      spots: spots.load().mapValues {
+        PieceSpot(x: Double($0.x), z: Double($0.z), yaw: Double($0.yaw))
+      })
+  }
+
+  /// Stands the furniture where the partner arranged it: each piece named in `arranged` where it
+  /// says, every other piece where the room first put it. A piece picked up here stays in hand.
+  func arrange(_ arranged: [String: PieceSpot]) {
+    let given = arranged.mapValues { NookiSpot(x: Float($0.x), z: Float($0.z), yaw: Float($0.yaw)) }
+    guard !decor.pieces.isEmpty else {
+      // Not built yet: the room stands its pieces from what is saved when it is.
+      spots.save(given)
+      return
+    }
+    let current = spots.load()
+    var kept: [String: NookiSpot] = [:]
+    isRearranging = true
+    defer { isRearranging = false }
+    for (name, piece) in decor.pieces where piece.placement == nil {
+      guard name != decor.selected, let box = decor.plan(of: name)?.pieces[name] else {
+        if let spot = current[name] { kept[name] = spot }
+        continue
+      }
+      var target = piece.home
+      if let spot = given[name] {
+        target = DecorBox(centre: [spot.x, spot.z], half: box.half, yaw: spot.yaw)
+        kept[name] = spot
+      }
+      guard target != box else { continue }
+      decor.place(name, at: target)
+      moveInLayout(name)
+      pieceMoved(name)
+    }
+    spots.save(kept)
   }
 
   func stepDecor(_ delta: Float) {
@@ -218,6 +267,7 @@ extension GenzRoom {
     spots.save(stored)
     moveInLayout(name)
     pieceMoved(name)
+    if !isRearranging { onArranged?(arrangement) }
   }
 
   static func decorName(_ placement: GenzLayout.Placement, index: Int) -> String {
