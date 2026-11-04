@@ -1,7 +1,7 @@
 import { CODE_HEADER, DEVICE_HEADER, type DemoRoom } from "./demo-room-durable-object.ts";
 
 const ROUTE =
-  /^\/demo\/rooms\/([23456789ABCDEFGHJKMNPQRSTVWXYZ]{10})\/(?:socket|notes\/[0-9a-fA-F-]{36})$/;
+  /^\/demo\/rooms\/([23456789ABCDEFGHJKMNPQRSTVWXYZ]{10})\/(socket|notes\/[0-9a-fA-F-]{36}|plays)$/;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 /**
@@ -18,7 +18,8 @@ export const routeDemo = (
 
   const match = ROUTE.exec(url.pathname);
   const device = url.searchParams.get("device");
-  if (request.method !== "GET" || match === null || device === null || !UUID.test(device)) {
+  const method = match?.[2] === "plays" ? "POST" : "GET";
+  if (request.method !== method || match === null || device === null || !UUID.test(device)) {
     return Promise.resolve(new Response(null, { status: 400 }));
   }
   const headers = new Headers(request.headers);

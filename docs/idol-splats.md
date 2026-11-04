@@ -46,8 +46,14 @@ the cat still sits through the sit clip.
 Marching cubes leaves slivers and seams that open into white cracks once the mesh bends, so
 `remesh_bake.py` rebuilds the surface in Blender: a 2.5 mm voxel remesh (closed, even triangles),
 decimated to 9k, new UVs with wide margins, the colour baked from the first mesh with a 24 px
-bleed. The weights then move across from the template and are smoothed (`IDOL_SMOOTH=20`). Every
-clip holds up from the front, side and back (`pose_sheet.py`).
+bleed. The weights then move across from the template and are smoothed (`IDOL_SMOOTH=20`).
+
+An Idol cat's head is much bigger than the template's, so clips that bring the head down to the
+body push it inside: groomFlank and groomTail (head turned back to the flank), groom (head down to
+a paw) and lieDown. Check every clip from the room camera's angle, high and in front, not only
+side-on. The Idol cats' clip tables leave groomFlank, groomTail and lieDown out, so the cat plays
+their stand-ins (groom, sleep). Their groom plays the lickLips frames: groom has no stand-in, and a
+made cat must have it.
 
 ## How a splat cat runs
 
