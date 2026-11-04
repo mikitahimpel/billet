@@ -15,8 +15,10 @@ enum DecorStep: Equatable {
 }
 
 /// Decorating one room: which piece is picked up, where it would go and whether it can, the
-/// marker under it, and the steps to undo. The room gives it the pieces and a floor; this moves
-/// their holders, which stand on the floor at height 0 with their footprint on the scene's x and z.
+/// marker under it, and the steps to undo. The room gives it the pieces and the surfaces they
+/// stand on: the floor, and others such as a seat's top or a table's. Each piece keeps to its own
+/// surface. A surface is a plane in its parent's space, so a table's top moves with the table;
+/// a piece's footprint is on its parent's x and z, and it rests at the height it was registered.
 @MainActor
 final class DecorSession {
   struct Piece {
@@ -25,11 +27,30 @@ final class DecorSession {
     var home: DecorBox
     /// The shop placement it shows, for a piece bought in the shop.
     var placement: RoomLayout.Placement.ID?
+    /// The surface it stands on.
+    var surface = DecorSession.floor
+    /// Its height in its parent's space when it rests.
+    var rest: Float = 0
   }
+
+  /// A surface other than the floor: where its marker hangs, and how high over the surface.
+  struct Surface {
+    /// The entity whose space the surface is in, or nil for the floor's.
+    var parent: Entity?
+    var markerHeight: Float
+  }
+
+  nonisolated static let floor = "floor"
 
   /// The marker that shows under the piece picked up, added to the room by its owner.
   let marker = Entity()
-  private(set) var plan: DecorPlan
+  /// Where pieces may stand, by surface.
+  private(set) var plans: [String: DecorPlan]
+  private var surfaces: [String: Surface] = [:]
+  /// The floor's plan.
+  var plan: DecorPlan { plans[Self.floor] ?? DecorPlan(minimum: .zero, maximum: .zero, grid: 1) }
+  /// The entity the marker hangs from on the floor, kept when it moves to another surface.
+  private var floorParent: Entity?
   private(set) var pieces: [String: Piece] = [:]
   private(set) var selected: String?
   /// Where the piece picked up would go, and whether it can.
@@ -40,6 +61,9 @@ final class DecorSession {
     didSet { if !isOn { deselect() } }
   }
 
+  /// What blocks pieces on a surface for now, by name, asked as a piece there is picked up: the
+  /// cat lying on the seat, say.
+  var blockers: ((String) -> [String: DecorBox])?
   /// Told where a piece now stands, after a move that stuck or an undo.
   var onMoved: ((String, Piece, DecorBox) -> Void)?
   /// Told when the selection, the fit or what can be undone changes, for the controls.
@@ -71,7 +95,7 @@ final class DecorSession {
   private let markerMargin: Float
 
   init(plan: DecorPlan, liftHeight: Float, markerHeight: Float? = nil, markerMargin: Float? = nil) {
-    self.plan = plan
+    plans = [Self.floor: plan]
     self.liftHeight = liftHeight
     self.markerHeight = markerHeight ?? liftHeight * 0.06
     self.markerMargin = markerMargin ?? liftHeight * 0.6
@@ -81,17 +105,48 @@ final class DecorSession {
 
   // MARK: - Pieces
 
-  /// Makes a piece movable, standing where its holder stands now.
+  /// Adds a surface other than the floor, such as a seat's top, for pieces registered on it.
+  func addSurface(_ key: String, plan: DecorPlan, parent: Entity?, markerHeight: Float) {
+    plans[key] = plan
+    surfaces[key] = Surface(parent: parent, markerHeight: markerHeight)
+  }
+
+  /// The surface the piece `name` stands on.
+  func surface(of name: String) -> String { pieces[name]?.surface ?? Self.floor }
+
+  /// The plan of the surface the piece `name` stands on.
+  func plan(of name: String) -> DecorPlan? { plans[surface(of: name)] }
+
+  /// The piece `name`'s holder and the height it rests at in its parent's space.
+  func rest(of name: String) -> (holder: Entity, height: Float)? {
+    pieces[name].map { ($0.holder, $0.rest) }
+  }
+
+  private func boxOf(_ name: String) -> DecorBox? { plans[surface(of: name)]?.pieces[name] }
+
+  private func setBox(_ name: String, _ box: DecorBox?) {
+    plans[surface(of: name)]?.pieces[name] = box
+  }
+
+  /// Makes a piece movable, standing where its holder stands now, on `surface`. A piece that
+  /// `slidesOnly` keeps its depth and turn, moving only along the surface's width.
   func register(
     _ name: String, holder: Entity, half: SIMD2<Float>, placement: RoomLayout.Placement.ID? = nil,
-    isFlat: Bool = false
+    isFlat: Bool = false, surface: String = DecorSession.floor, slidesOnly: Bool = false
   ) {
     let box = DecorBox(
       centre: SIMD2(holder.position.x, holder.position.z), half: half,
       yaw: Self.yaw(of: holder.orientation))
-    pieces[name] = Piece(holder: holder, home: box, placement: placement)
-    plan.pieces[name] = box
-    if isFlat { plan.flat.insert(name) } else { plan.flat.remove(name) }
+    pieces[name] = Piece(
+      holder: holder, home: box, placement: placement, surface: surface,
+      rest: holder.position.y)
+    plans[surface]?.pieces[name] = box
+    if isFlat { plans[surface]?.flat.insert(name) } else { plans[surface]?.flat.remove(name) }
+    if slidesOnly {
+      plans[surface]?.slidesOnly.insert(name)
+    } else {
+      plans[surface]?.slidesOnly.remove(name)
+    }
     if selectWhenRegistered == name, isOn {
       selectWhenRegistered = nil
       select(name: name)
@@ -100,29 +155,40 @@ final class DecorSession {
 
   func unregister(_ name: String) {
     if selected == name { deselect() }
+    let surface = surface(of: name)
     pieces[name] = nil
-    plan.pieces[name] = nil
-    plan.flat.remove(name)
+    plans[surface]?.pieces[name] = nil
+    plans[surface]?.flat.remove(name)
+    plans[surface]?.slidesOnly.remove(name)
     shown[name] = nil
     settling[name] = nil
   }
 
-  func addFixed(_ name: String, _ box: DecorBox) {
-    plan.fixed[name] = box
+  func addFixed(_ name: String, _ box: DecorBox, on surface: String = DecorSession.floor) {
+    plans[surface]?.fixed[name] = box
   }
+
+  /// Something on `surface` that blocks pieces for now, such as the cat lying there, or nil to
+  /// clear it.
+  func setBlocker(_ name: String, _ box: DecorBox?, on surface: String) {
+    plans[surface]?.fixed[name] = box
+  }
+
+  /// Whether the piece `name` can be turned.
+  func canTurn(_ name: String) -> Bool { plan(of: name)?.slidesOnly.contains(name) == false }
 
   /// Puts a piece where something outside decorating says, such as the stored layout or a change
   /// from the shop, keeping the plan in step with it.
   func place(_ name: String, at box: DecorBox) {
     guard let piece = pieces[name] else { return }
-    if let current = plan.pieces[name], simd_distance(current.centre, box.centre) < 0.0001,
+    if let current = boxOf(name), simd_distance(current.centre, box.centre) < 0.0001,
       abs(current.yaw - box.yaw) < 0.0001
     {
       return
     }
-    plan.pieces[name] = box
+    setBox(name, box)
     guard selected != name else { return }
-    stand(piece.holder, at: box)
+    stand(piece, at: box)
     shown[name] = nil
   }
 
@@ -146,9 +212,9 @@ final class DecorSession {
     history.clear()
     var moved: [String] = []
     for (name, piece) in pieces where piece.placement == nil {
-      guard plan.pieces[name] != piece.home else { continue }
-      plan.pieces[name] = piece.home
-      stand(piece.holder, at: piece.home)
+      guard boxOf(name) != piece.home else { continue }
+      setBox(name, piece.home)
+      stand(piece, at: piece.home)
       onMoved?(name, piece, piece.home)
       moved.append(name)
     }
@@ -167,8 +233,14 @@ final class DecorSession {
   }
 
   func select(name: String) {
-    guard pieces[name] != nil, let box = plan.pieces[name] else { return }
+    guard let piece = pieces[name], let box = boxOf(name) else { return }
     if let selected, selected != name { settleSelected() }
+    if floorParent == nil { floorParent = marker.parent }
+    let parent = surfaces[piece.surface]?.parent ?? floorParent
+    if let parent, marker.parent !== parent { marker.setParent(parent) }
+    for (blocker, area) in blockers?(piece.surface) ?? [:] {
+      plans[piece.surface]?.fixed[blocker] = area
+    }
     selected = name
     candidate = (box, .free)
     lift = 0
@@ -187,7 +259,7 @@ final class DecorSession {
 
   /// A finger starts moving the piece picked up, from the floor point `point`.
   func beginDrag(at point: SIMD2<Float>) {
-    guard let selected, let box = plan.pieces[selected] else { return }
+    guard let selected, let box = boxOf(selected) else { return }
     grab = box.centre - point
     isDragging = true
     onChange?()
@@ -196,7 +268,7 @@ final class DecorSession {
   /// The finger is over the floor point `point`.
   func drag(to point: SIMD2<Float>) {
     guard isDragging, let selected, let current = candidate else { return }
-    candidate = plan.candidate(for: selected, at: point + grab, yaw: current.box.yaw)
+    candidate = plan(of: selected)?.candidate(for: selected, at: point + grab, yaw: current.box.yaw)
     onChange?()
   }
 
@@ -209,7 +281,7 @@ final class DecorSession {
 
   /// A two-finger twist begins on the piece picked up.
   func beginTurn() {
-    guard let selected, let box = plan.pieces[selected] else { return }
+    guard let selected, canTurn(selected), let box = boxOf(selected) else { return }
     turnStart = candidate?.box.yaw ?? box.yaw
     onChange?()
   }
@@ -218,7 +290,7 @@ final class DecorSession {
   func turn(by angle: Float) {
     guard let selected, let start = turnStart, let current = candidate else { return }
     let yaw = start - angle
-    candidate = plan.candidate(for: selected, at: current.box.centre, yaw: yaw)
+    candidate = plan(of: selected)?.candidate(for: selected, at: current.box.centre, yaw: yaw)
     onChange?()
   }
 
@@ -230,7 +302,8 @@ final class DecorSession {
 
   /// Turns the piece picked up a quarter of the way round, or as far short of that as fits.
   func rotateStep() {
-    guard let selected, let box = plan.pieces[selected] else { return }
+    guard let selected, canTurn(selected), let box = boxOf(selected), let plan = plan(of: selected)
+    else { return }
     for steps in [6, 3, 9, 12] {
       let yaw = box.yaw - Float(steps) * plan.turnStep
       if let next = plan.candidate(for: selected, at: box.centre, yaw: yaw), next.fit.isFree {
@@ -246,10 +319,10 @@ final class DecorSession {
 
   private func commit() {
     guard let selected, let piece = pieces[selected], let candidate,
-      let before = plan.pieces[selected]
+      let before = boxOf(selected)
     else { return }
     if candidate.fit.isFree, candidate.box != before {
-      plan.pieces[selected] = candidate.box
+      setBox(selected, candidate.box)
       history.record(.moved(selected, from: before))
       onMoved?(selected, piece, candidate.box)
     } else {
@@ -274,8 +347,8 @@ final class DecorSession {
   func undo() -> DecorStep? {
     guard let step = history.undo() else { return nil }
     if case .moved(let name, let from) = step, let piece = pieces[name] {
-      plan.pieces[name] = from
-      if selected == name { candidate = (from, .free) } else { stand(piece.holder, at: from) }
+      setBox(name, from)
+      if selected == name { candidate = (from, .free) } else { stand(piece, at: from) }
       shown[name] = nil
       onMoved?(name, piece, from)
     }
@@ -302,7 +375,7 @@ final class DecorSession {
       let fromYaw = shownYaw[selected] ?? Self.yaw(of: piece.holder.orientation)
       let yaw = fromYaw + Self.wrapped(candidate.box.yaw - fromYaw) * follow
       shownYaw[selected] = yaw
-      piece.holder.position = [at.x, lift, at.y]
+      piece.holder.position = [at.x, piece.rest + lift, at.y]
       piece.holder.orientation = simd_quatf(angle: yaw, axis: [0, 1, 0])
       placeMarker(candidate.box, fit: candidate.fit)
       breath += delta
@@ -313,7 +386,7 @@ final class DecorSession {
       breath = 0
     }
     for (name, elapsed) in settling {
-      guard let piece = pieces[name], let box = plan.pieces[name] else {
+      guard let piece = pieces[name], let box = boxOf(name) else {
         settling[name] = nil
         continue
       }
@@ -322,7 +395,7 @@ final class DecorSession {
       let start = shown[name] ?? box.centre
       let at = start + (box.centre - start) * min(next / 0.2, 1)
       let height = done ? 0 : Self.bounce(next) * liftHeight * 3
-      piece.holder.position = [at.x, height, at.y]
+      piece.holder.position = [at.x, piece.rest + height, at.y]
       piece.holder.orientation = simd_quatf(angle: box.yaw, axis: [0, 1, 0])
       if done {
         settling[name] = nil
@@ -343,7 +416,8 @@ final class DecorSession {
   }
 
   private func placeMarker(_ box: DecorBox, fit: DecorPlan.Fit) {
-    marker.position = [box.centre.x, markerHeight, box.centre.y]
+    let height = selected.flatMap { surfaces[surface(of: $0)]?.markerHeight } ?? markerHeight
+    marker.position = [box.centre.x, height, box.centre.y]
     marker.orientation = simd_quatf(angle: box.yaw, axis: [0, 1, 0])
     marker.scale = [box.half.x * 2 + markerMargin * 2, 1, box.half.y * 2 + markerMargin * 2]
     let isFree = fit.isFree
@@ -413,8 +487,9 @@ final class DecorSession {
     return context.makeImage()
   }
 
-  private func stand(_ holder: Entity, at box: DecorBox) {
-    holder.position = [box.centre.x, 0, box.centre.y]
+  private func stand(_ piece: Piece, at box: DecorBox) {
+    let holder = piece.holder
+    holder.position = [box.centre.x, piece.rest, box.centre.y]
     holder.orientation = simd_quatf(angle: box.yaw, axis: [0, 1, 0])
   }
 

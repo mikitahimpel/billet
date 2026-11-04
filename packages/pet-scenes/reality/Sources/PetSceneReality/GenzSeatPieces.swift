@@ -44,8 +44,6 @@ extension GenzKit {
       part(
         tube("seat piping", piping(cushionSize, shape: .cushion), radius: 0.022, sides: 6),
         matte(linen.shaded(-0.12), .linen), at: cushionCentre))
-    parts += pillows(piece)
-    parts += foldedThrow(piece.slot(2), x: 0.22, near: 0.8, top: 1.32)
     return parts
   }
 
@@ -66,31 +64,32 @@ extension GenzKit {
     }
   }
 
-  /// Pillows standing on the cushion and leaning back on the glass, each its own fabric.
-  private func pillows(_ piece: GenzPiece) -> [Entity] {
-    let specs:
-      [(x: Float, width: Float, height: Float, colour: GenzColour, knit: Bool, roll: Float)] = [
-        (1.45, 1.2, 1.0, piece.slot(1).shaded(0.35), true, 0.07),
-        (2.62, 1.05, 0.9, GenzColour(0xC2603F), false, -0.05),
-        (3.66, 0.95, 0.84, GenzColour(0x8FA67E), false, 0.09),
-        (4.5, 0.74, 0.68, piece.slot(2), true, -0.12),
-      ]
+  /// A pillow standing on a seat and leaning back, as on the window seat's glass, its bottom
+  /// edge along the front of its footprint.
+  func pillow(_ piece: GenzPiece) -> [Entity] {
+    let shape = piece.kind.pillow
     let lean: Float = 0.22
     let thickness: Float = 0.34
-    return specs.map { spec in
-      let mesh = stuffed([spec.width, thickness, spec.height], .pillow, repeats: 2)
-      let material =
-        spec.knit
-        ? matte(spec.colour, .knit, repeats: [2.5, 2.5])
-        : matte(spec.colour, .linen, repeats: [3, 3])
-      let up = spec.height / 2
-      let centre = GenzRoomPoint(
-        spec.x, 0.48 - up * sin(lean), 1.28 + up * cos(lean))
-      return part(
+    let mesh = stuffed([shape.width, thickness, shape.height], .pillow, repeats: 2)
+    let material =
+      shape.knit
+      ? matte(piece.slot(0), .knit, repeats: [2.5, 2.5])
+      : matte(piece.slot(0), .linen, repeats: [3, 3])
+    let up = shape.height / 2
+    let centre = GenzRoomPoint(
+      (shape.width + 0.12) / 2, 0.48 - up * sin(lean), up * cos(lean))
+    return [
+      part(
         mesh, material, at: centre.scene,
-        turn: simd_quatf(angle: spec.roll, axis: [0, 0, 1])
+        turn: simd_quatf(angle: shape.roll, axis: [0, 0, 1])
           * simd_quatf(angle: -.pi / 2 - lean, axis: [1, 0, 0]))
-    }
+    ]
+  }
+
+  /// A chunky throw folded in three on a seat, its last fold falling over the seat's front edge,
+  /// which runs along the front of its footprint.
+  func blanket(_ piece: GenzPiece) -> [Entity] {
+    foldedThrow(piece.slot(0), x: 0, near: 0, top: 0)
   }
 
   /// A chunky throw folded in three on the seat, its last fold falling over the front edge
@@ -110,7 +109,7 @@ extension GenzKit {
           at: GenzRoomPoint(x + width / 2 + layer.shift, near + 0.4, top + layer.lift).scene,
           turn: simd_quatf(angle: layer.turn, axis: [0, 1, 0])))
     }
-    let front: Float = 1.6
+    let front: Float = near + 0.8
     let drop: Float = 0.62
     let drape = cached("throw drape") {
       var mesh = GenzSmooth()
