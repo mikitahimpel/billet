@@ -277,8 +277,9 @@ struct CatChoiceTests {
     #expect(CatChoice(model: .detailed, coat: .black).coat == .black)
   }
 
-  @Test func theDetailedGingerCatIsTheStandard() {
-    #expect(CatChoice.standard == CatChoice(model: .detailed, coat: .natural))
+  @Test func marmaladeIsTheStandardAndFirstInThePicker() {
+    #expect(CatChoice.standard == CatChoice(model: .marmalade, coat: .natural))
+    #expect(CatModel.allCases.first == .marmalade)
   }
 
   @Test(arguments: ["mochi", "slim", "blocky", "tabby", "plush", "chibi", "kitten", "tuxedo"])

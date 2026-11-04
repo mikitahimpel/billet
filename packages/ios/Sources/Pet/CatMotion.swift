@@ -33,6 +33,8 @@ extension CatModel {
     case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .splatGinger,
       .idolCalico, .idolGreyTabby:
       .even
+    case .marmalade:
+      CatMotion(tempo: 0.95, signature: [.slowBlink, .headTilt], temperament: .cuddler)
     case .gingerChonk:
       CatMotion(tempo: 0.85, signature: [.yawn, .slowBlink], temperament: .sleepyhead)
     case .mooCat:
