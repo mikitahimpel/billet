@@ -36,9 +36,9 @@ struct ServerSessionPairingTests {
 
         var store: AccountStore {
             AccountStore(
-                load: { [record] () throws(PersistenceError) in ("token", record.withLock { $0 }) },
-                save: { [record] (_, new) throws(PersistenceError) in record.withLock { $0 = new } },
-                setPaired: { [record] (paired, pairID) throws(PersistenceError) in
+                load: { [self] () throws(PersistenceError) in ("token", record.withLock { $0 }) },
+                save: { [self] (_, new) throws(PersistenceError) in record.withLock { $0 = new } },
+                setPaired: { [self] (paired, pairID) throws(PersistenceError) in
                     record.withLock {
                         $0.isPaired = paired
                         $0.pairID = pairID
