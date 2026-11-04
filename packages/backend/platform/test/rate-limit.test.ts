@@ -29,6 +29,8 @@ describe("rate limit groups", () => {
     ["/v1/media", "media"],
     ["/v1/media/pairs/p/notes/n.png", "media"],
     ["/v1/events", "events"],
+    ["/v1/onboarding/answers", "onboarding"],
+    ["/v1/onboarding", undefined],
     ["/v1/purchases", "purchases"],
     ["/v1/purchases/mock", "purchases"],
     ["/v1/stamps", undefined],

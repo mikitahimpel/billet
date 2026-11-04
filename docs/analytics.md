@@ -40,6 +40,9 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `ProfileOpened` | none | | Is the profile ("Us") visited? |
 | `SignInPromptShown` | none | | How often is Sign in with Apple offered? |
 | `SignInPromptAnswered` | `accepted` or `dismissed` | | And taken up? |
+| `OnboardingStepViewed` | the step's id | | How far into onboarding do people get? |
+| `OnboardingStepAnswered` | the step's id | | Which steps are answered? (Never the answer: that is in `onboarding_answers`.) |
+| `OnboardingStepSkipped` | the step's id | | Which steps are skipped? |
 | `AccountDeleted` (server) | none | | How many leave? Written to Analytics Engine only: the account's own counts are deleted with it. |
 
 The opening's cinematic is covered by `OpeningWatched` and `OpeningSkipped`.

@@ -1,0 +1,16 @@
+{
+  "_tag": "Range",
+  "id": "notes-a-day",
+  "max": 10,
+  "min": 0,
+  "skippable": true,
+  "step": 1,
+  "title": {
+    "en": "How many notes a day?",
+    "ru": "Сколько записок в день?"
+  },
+  "unit": {
+    "en": "notes",
+    "ru": "записок"
+  }
+}

@@ -76,6 +76,13 @@ export const ClientEventName = Schema.Literals([
   "SignInPromptShown",
   /** The user answered that prompt: `accepted` or `dismissed`. */
   "SignInPromptAnswered",
+
+  /** An onboarding step came on screen (detail: the step id). */
+  "OnboardingStepViewed",
+  /** An onboarding step was answered (detail: the step id). Never the answer itself. */
+  "OnboardingStepAnswered",
+  /** An onboarding step was skipped (detail: the step id). */
+  "OnboardingStepSkipped",
 ]);
 export type ClientEventName = typeof ClientEventName.Type;
 
@@ -133,6 +140,9 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   ProfileOpened: { detail: "none" },
   SignInPromptShown: { detail: "none" },
   SignInPromptAnswered: { detail: ["accepted", "dismissed"], required: true },
+  OnboardingStepViewed: { detail: "id", required: true },
+  OnboardingStepAnswered: { detail: "id", required: true },
+  OnboardingStepSkipped: { detail: "id", required: true },
 };
 
 /** Why an event breaks its name's rule, or undefined when it keeps it. */

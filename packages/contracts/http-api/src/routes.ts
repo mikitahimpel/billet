@@ -38,6 +38,10 @@ export const routes = {
   getFlags: route("GET", "/v1/flags"),
   /** Maintenance, the minimum build and a notice. No session; answered without the database. */
   getStatus: route("GET", "/v1/status"),
+  /** The onboarding questions: see `OnboardingResponse`. Any session, anonymous included. */
+  getOnboarding: route("GET", "/v1/onboarding"),
+  /** Stores one step's answer or skip, once per account and step. */
+  saveOnboardingAnswer: route("POST", "/v1/onboarding/answers"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
   /** Credits a verified App Store transaction's stamps to the caller's pair, once. */
