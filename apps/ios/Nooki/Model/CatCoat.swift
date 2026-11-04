@@ -3,9 +3,10 @@ import RealityKit
 
 /// Mochi's coat, picked in onboarding. Grey is Ilya's cat as he made it; every other coat is a recolour by billet-gpu
 /// that differs from it only in each splat's colour (`f_dc_0...2`), so the app ships just those colours
-/// (`Coats/<pose>-<coat>.fdc`, three little-endian floats per splat, in the PLY's order) and lays them over Ilya's
-/// PLY when it loads. That rebuilds billet-gpu's coat PLY byte for byte (`CatCoatTests`). Where splats can't be drawn
-/// the mesh cat wears the coat's colour texture instead (`Coats/<model>Color-<coat>.jpg`).
+/// (`Coats/<pose>-<coat>.fdc`, three little-endian floats per splat, in the PLY's order) and lays them over a copy of
+/// Ilya's PLY in Caches, which the rigs then load (`bundle`); his files and CatRig stay untouched. That rebuilds
+/// billet-gpu's coat PLY byte for byte (`CatCoatTests`). Where splats can't be drawn the mesh cat wears the coat's
+/// colour texture instead (`Coats/<model>Color-<coat>.jpg`).
 nonisolated enum CatCoat: String, CaseIterable, Sendable {
     case grey, ginger, cream, tuxedo, black, calico
 
@@ -34,27 +35,61 @@ nonisolated enum CatCoat: String, CaseIterable, Sendable {
         case mismatch(String)
     }
 
-    /// `file` in this coat: the same splats with this coat's colours.
-    func dress(_ file: SplatLoader.File, in bundle: Bundle = .main) throws -> SplatLoader.File {
-        guard self != .grey else { return file }
-        let name = "\(file.name)-\(rawValue)"
-        guard let url = bundle.url(forResource: name, withExtension: "fdc") else { throw Failure.missing(name) }
-        let colours = try Data(contentsOf: url)
-        let size = 3 * MemoryLayout<Float>.size
-        let offset = 11 * MemoryLayout<Float>.size
-        guard colours.count == file.count * size, file.stride == 14 * MemoryLayout<Float>.size else {
-            throw Failure.mismatch(name)
+    /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
+    static let poses = ["Mochi", "MochiStanding"]
+
+    /// Where the rigs are read from in this coat (`CatRig.Files(named:drawn:in:)`): the app itself for grey, else a
+    /// folder in Caches holding each pose's PLY in this coat, written once, beside links to Ilya's skins and rigs.
+    func bundle(from main: Bundle = .main, caches: URL = .cachesDirectory) throws -> Bundle {
+        guard self != .grey else { return main }
+        // One folder per build, so an update that changes a coat's colours never reads the old ones.
+        let root = caches.appending(path: "Coats")
+        let build = main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+        let files = FileManager.default
+        for old in (try? files.contentsOfDirectory(atPath: root.path)) ?? [] where old != build {
+            try? files.removeItem(at: root.appending(path: old))
         }
-        var body = Data(file.body)
-        body.withUnsafeMutableBytes { out in
-            colours.withUnsafeBytes { from in
-                for index in 0..<file.count {
-                    let at = out.baseAddress! + index * file.stride + offset
-                    at.copyMemory(from: from.baseAddress! + index * size, byteCount: size)
+        let folder = root.appending(path: "\(build)/\(rawValue).bundle")
+        try files.createDirectory(at: folder, withIntermediateDirectories: true)
+        for pose in Self.poses {
+            let ply = folder.appending(path: "\(pose).ply")
+            if !files.fileExists(atPath: ply.path) {
+                try dressedPLY(pose, from: main).write(to: ply, options: .atomic)
+            }
+            for (name, ext) in [(pose, "skin"), ("\(pose).rig", "json")] {
+                guard let source = main.url(forResource: name, withExtension: ext) else { throw Failure.missing(name) }
+                let link = folder.appending(path: "\(name).\(ext)")
+                if (try? files.destinationOfSymbolicLink(atPath: link.path)) != source.path {
+                    try? files.removeItem(at: link)
+                    try files.createSymbolicLink(at: link, withDestinationURL: source)
                 }
             }
         }
-        return SplatLoader.File(name: file.name, count: file.count, stride: file.stride, body: body)
+        guard let bundle = Bundle(url: folder) else { throw Failure.missing(folder.path) }
+        return bundle
+    }
+
+    /// Ilya's PLY of `pose` with this coat's colours (`Coats/<pose>-<coat>.fdc`) laid over each splat's `f_dc`.
+    func dressedPLY(_ pose: String, from bundle: Bundle = .main) throws -> Data {
+        let name = "\(pose)-\(rawValue)"
+        guard let plyURL = bundle.url(forResource: pose, withExtension: "ply") else { throw Failure.missing(pose) }
+        guard let url = bundle.url(forResource: name, withExtension: "fdc") else { throw Failure.missing(name) }
+        var ply = try Data(contentsOf: plyURL)
+        let colours = try Data(contentsOf: url)
+        guard let end = ply.range(of: Data("end_header\n".utf8))?.upperBound else { throw Failure.mismatch(pose) }
+        let stride = 14 * MemoryLayout<Float>.size, offset = 11 * MemoryLayout<Float>.size
+        let size = 3 * MemoryLayout<Float>.size
+        let count = (ply.count - end) / stride
+        guard (ply.count - end) % stride == 0, colours.count == count * size else { throw Failure.mismatch(name) }
+        ply.withUnsafeMutableBytes { out in
+            colours.withUnsafeBytes { from in
+                for index in 0..<count {
+                    (out.baseAddress! + end + index * stride + offset)
+                        .copyMemory(from: from.baseAddress! + index * size, byteCount: size)
+                }
+            }
+        }
+        return ply
     }
 
     /// Puts this coat's colour texture on the mesh cat loaded from `model` (Cat or CatStanding).

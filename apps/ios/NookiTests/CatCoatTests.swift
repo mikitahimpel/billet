@@ -18,19 +18,28 @@ struct CatCoatTests {
         "MochiStanding-calico": "95585254d29fcfe8fa46c7fb181120d8c781591e8959df2e57fbe87e0ab5fb0a",
     ]
 
-    @Test(arguments: ["Mochi", "MochiStanding"], CatCoat.allCases.filter { $0 != .grey })
-    func aCoatRebuildsBilletGPUsPLY(pose: String, coat: CatCoat) throws {
-        let url = try #require(Bundle.main.url(forResource: pose, withExtension: "ply"))
-        let original = try Data(contentsOf: url)
-        let header = original[..<(original.range(of: Data("end_header\n".utf8))!.upperBound)]
-        let dressed = try coat.dress(SplatLoader.read(named: pose))
-        let digest = SHA256.hash(data: header + dressed.body).map { String(format: "%02x", $0) }.joined()
-        #expect(digest == Self.expected["\(pose)-\(coat.rawValue)"])
+    private static func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
     }
 
-    @Test func greyIsIlyasCatUntouched() throws {
-        let file = try SplatLoader.read(named: "Mochi")
-        #expect(try CatCoat.grey.dress(file).body == file.body)
+    @Test(arguments: CatCoat.poses, CatCoat.allCases.filter { $0 != .grey })
+    func aCoatRebuildsBilletGPUsPLY(pose: String, coat: CatCoat) throws {
+        #expect(Self.sha256(try coat.dressedPLY(pose)) == Self.expected["\(pose)-\(coat.rawValue)"])
+    }
+
+    @Test func aCoatsBundleHoldsItsPLYsBesideIlyasSkinsAndRigs() throws {
+        let caches = URL.temporaryDirectory.appending(path: "coats-\(UUID().uuidString)")
+        let bundle = try CatCoat.ginger.bundle(caches: caches)
+        for pose in CatCoat.poses {
+            let ply = try #require(bundle.url(forResource: pose, withExtension: "ply"))
+            #expect(Self.sha256(try Data(contentsOf: ply)) == Self.expected["\(pose)-ginger"])
+            let skin = try #require(bundle.url(forResource: pose, withExtension: "skin"))
+            #expect(try Data(contentsOf: skin) == Data(contentsOf: Bundle.main.url(forResource: pose, withExtension: "skin")!))
+            #expect(bundle.url(forResource: "\(pose).rig", withExtension: "json") != nil)
+        }
+        // A second call reuses what the first wrote.
+        #expect(try CatCoat.ginger.bundle(caches: caches).bundleURL == bundle.bundleURL)
+        #expect(try CatCoat.grey.bundle() == .main)
     }
 
     @Test func everyCoatHasItsCardAndMeshTextures() {

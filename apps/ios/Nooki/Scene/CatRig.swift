@@ -117,7 +117,7 @@ final class CatRig {
                 return
             }
             guard let skinURL = bundle.url(forResource: name, withExtension: "skin") else { throw Failure.missing(name) }
-            let splat = try CatCoat.current().dress(SplatLoader.read(named: name, in: bundle), in: bundle)
+            let splat = try SplatLoader.read(named: name, in: bundle)
             let skin = try [UInt8](Data(contentsOf: skinURL))
             guard skin.count == splat.count * 8 else { throw Failure.mismatch(name) }
             self.splat = splat

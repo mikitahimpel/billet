@@ -221,7 +221,10 @@ class CatRoom {
         let task = Task {
             let drawn = SplatLoader.isSupported
             let files = try await Task.detached {
-                (try CatRig.Files(named: "MochiStanding", drawn: drawn), try CatRig.Files(named: "Mochi", drawn: drawn))
+                // Grey reads Ilya's files from the app; another coat reads its recoloured copy (CatCoat.bundle).
+                let coat = try drawn ? CatCoat.current().bundle() : .main
+                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
+                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
             if !drawn {
