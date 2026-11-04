@@ -9,5 +9,7 @@ if [ ! -d "$app" ]; then
   exit 1
 fi
 sudo xcode-select -s "$app"
-xcodebuild -version
-xcodebuild -version | head -n 1 | grep -qx "Xcode ${version}"
+# Captured, not piped: `head` closing the pipe early makes xcodebuild abort on the broken pipe.
+selected="$(xcodebuild -version)"
+echo "$selected"
+[ "$(sed -n 1p <<< "$selected")" = "Xcode ${version}" ]
