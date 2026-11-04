@@ -14,11 +14,14 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
+import { makeSeed } from "../src/seed-data.ts";
 import type { DetailRow } from "../src/admin-top-details.ts";
 import { OnboardingCatalogue, seedCatalogue } from "@billet/backend-onboarding/catalogue";
 import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
+import { makeInMemoryFunnelStore } from "./in-memory-funnel-store.ts";
+import { FunnelStore } from "../src/funnel-store.ts";
 
 const experiments = defineExperiments([
   {
@@ -49,6 +52,7 @@ const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
 let appStatus = makeInMemoryAppStatusStore();
+const funnels = makeInMemoryFunnelStore();
 
 const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
@@ -115,6 +119,7 @@ const handlerFor = (email: string) =>
                       : { members: 0, pairedAt: null },
                   ),
               }),
+              Layer.succeed(FunnelStore, funnels.store),
               Layer.succeed(AppStatusStore, {
                 current: Effect.suspend(() => appStatus.store.current),
                 history: (limit) => appStatus.store.history(limit),
@@ -281,6 +286,70 @@ describe("the admin API", () => {
       0,
     ]);
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
+  });
+
+  it("serves the retention grid, filtered, and refuses a malformed filter", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const { status, body } = await call(adminApi.retention);
+    expect(status).toBe(200);
+    expect(body.days).toEqual([1, 3, 7, 14, 30, 60]);
+    expect(body.rows.at(-1).week).toBe("all");
+    expect(body.options.appVersions.length).toBeGreaterThan(0);
+    const filtered = await call(
+      `${adminApi.retention}?variant=home-layout%3Dimmersive&version=1.0.0%2B10`,
+    );
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.filter).toEqual({
+      variant: "home-layout=immersive",
+      appVersion: "1.0.0+10",
+    });
+    expect((await call(`${adminApi.retention}?variant=Home+Layout`)).status).toBe(400);
+    expect((await call(`${adminApi.retention}?version=my%20phone`)).status).toBe(400);
+  });
+
+  it("builds a funnel, refuses a bad one, and saves, lists and removes funnels", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const built = await call(
+      `${adminApi.funnel}?steps=PairClaimed,NoteSent&window=7d&unit=pair&range=all&split=home-layout`,
+    );
+    expect(built.status).toBe(200);
+    expect(built.body.definition).toEqual({
+      steps: ["PairClaimed", "NoteSent"],
+      window: "7d",
+      unit: "pair",
+    });
+    expect(built.body.groups[0].entered).toBeGreaterThan(5);
+    for (const bad of [
+      "steps=PairClaimed&window=7d&unit=pair",
+      "steps=PairClaimed,Nope&window=7d&unit=pair",
+      "steps=PairClaimed,NoteSent&window=2d&unit=pair",
+      "steps=PairClaimed,NoteSent&window=7d&unit=couple",
+      "steps=PairClaimed,NoteSent&window=7d&unit=pair&split=Not%20A%20Key",
+    ]) {
+      expect((await call(`${adminApi.funnel}?${bad}`)).status).toBe(400);
+    }
+
+    const definition = { steps: ["AppOpened", "NoteSent"], window: "day", unit: "person" };
+    const saved = await call(adminApi.funnels, "POST", { name: "Open to note", definition });
+    expect(saved.status).toBe(201);
+    expect(saved.body).toMatchObject({ name: "Open to note", createdBy: "owner@example.com" });
+    const listed = (await call(adminApi.funnels)).body;
+    expect(listed.funnels).toEqual([saved.body]);
+    expect(listed.events).toContain("PairClaimed");
+    expect(listed.events).not.toContain("AccountDeleted");
+    expect((await call(adminApi.funnels, "POST", { name: "", definition })).status).toBe(400);
+    expect(
+      (
+        await call(adminApi.funnels, "POST", {
+          name: "x",
+          definition: { ...definition, steps: [] },
+        })
+      ).status,
+    ).toBe(400);
+    const path = adminApi.savedFunnel.replace(":id", saved.body.id);
+    expect((await call(path, "DELETE")).status).toBe(204);
+    expect((await call(path, "DELETE")).status).toBe(404);
+    expect((await call(adminApi.funnels)).body.funnels).toEqual([]);
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

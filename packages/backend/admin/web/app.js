@@ -2843,11 +2843,492 @@ async function renderOnboarding() {
   ];
 }
 
+/* ---------- Retention ---------- */
+
+const RETENTION_MODES = [
+  ["both", "Both active", "Both partners opened the app or sent a note on day N."],
+  ["either", "Either active", "At least one partner opened the app or sent a note on day N."],
+  ["bothNote", "Both sent a note", "Both partners sent a note on day N: the north star at day 7."],
+];
+
+/** `#/retention/<mode>/<key=variant or ->/<build or ->`. */
+const retentionHref = (mode, variant, version) =>
+  `#/retention/${mode}/${enc(variant || "-")}/${enc(version || "-")}`;
+
+function retentionCell(cell, max) {
+  if (cell.state === "pending")
+    return h(
+      "td",
+      { class: "heat pending", title: "No pair of this week has reached this day yet" },
+      "",
+    );
+  if (cell.state === "too-few")
+    return h(
+      "td",
+      { class: "heat few", title: "Fewer than 5 pairs: no number is shown" },
+      "too few",
+    );
+  const level = max > 0 ? cell.share / max : 0;
+  return h(
+    "td",
+    {
+      class: `heat${level > 0.6 ? " hot" : ""}${cell.partial ? " partial" : ""}`,
+      style: { "--heat": level.toFixed(3) },
+      title: `${cell.count} of ${cell.of} pairs · 95% interval ${fmtPct(cell.low, 0)}–${fmtPct(cell.high, 0)}${
+        cell.partial ? " · some pairs of this week are still too young" : ""
+      }`,
+    },
+    fmtPct(cell.share, 0),
+  );
+}
+
+async function renderRetention([modeArg, variantArg, versionArg]) {
+  const mode = RETENTION_MODES.some(([m]) => m === modeArg) ? modeArg : "both";
+  const variant = variantArg && variantArg !== "-" ? variantArg : "";
+  const version = versionArg && versionArg !== "-" ? versionArg : "";
+  const query = new URLSearchParams();
+  if (variant) query.set("variant", variant);
+  if (version) query.set("version", version);
+  const grid = await api(`/retention${query.size ? `?${query}` : ""}`);
+  const [, modeLabel, modeHelp] = RETENTION_MODES.find(([m]) => m === mode);
+
+  const values = grid.rows.flatMap((row) =>
+    row.cells[mode].filter((c) => c.state === "value").map((c) => c.share),
+  );
+  const max = values.length ? Math.max(...values) : 0;
+
+  const modePicker = h(
+    "nav",
+    { class: "seg", "aria-label": "What counts as retained" },
+    RETENTION_MODES.map(([m, label]) =>
+      h("a", {
+        href: retentionHref(m, variant, version),
+        "aria-current": m === mode ? "true" : null,
+        text: label,
+      }),
+    ),
+  );
+  const filter = (label, value, options, toHref) => {
+    const id = fid();
+    return h(
+      "label",
+      { class: "inline-field", for: id },
+      h("span", { text: label }),
+      h(
+        "select",
+        { id, onchange: (e) => (location.hash = toHref(e.target.value)) },
+        h("option", { value: "", text: "All", selected: !value }),
+        options.map(([v, text]) => h("option", { value: v, text, selected: v === value })),
+      ),
+    );
+  };
+  const filters = h(
+    "div",
+    { class: "filters" },
+    filter(
+      "Variant",
+      variant,
+      grid.options.variants.map(({ key, variant: v }) => [`${key}=${v}`, `${key}: ${v}`]),
+      (v) => retentionHref(mode, v, version),
+    ),
+    filter(
+      "Build when paired",
+      version,
+      grid.options.appVersions.map((v) => [v, v === "unknown" ? "unknown (no report)" : v]),
+      (v) => retentionHref(mode, variant, v),
+    ),
+  );
+
+  const table = h(
+    "div",
+    { class: "box table-wrap" },
+    h(
+      "table",
+      { class: "retention" },
+      h("caption", { class: "sr-only", text: `Retention by week paired: ${modeLabel}` }),
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", { scope: "col", text: "Week paired" }),
+          h("th", { scope: "col", class: "num", text: "Pairs" }),
+          grid.days.map((d) => h("th", { scope: "col", class: "num", text: `Day ${d}` })),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        grid.rows.map((row) =>
+          h(
+            "tr",
+            { class: row.week === "all" ? "total" : null },
+            h("th", {
+              scope: "row",
+              text: row.week === "all" ? "All weeks" : `${fmtDay(row.week)} week`,
+            }),
+            h("td", { class: "num", text: row.pairs == null ? "too few" : fmtNum(row.pairs, 0) }),
+            row.cells[mode].map((cell) => retentionCell(cell, max)),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  const anyPairs = grid.rows.some((row) => row.pairs != null);
+  return [
+    pageHead(
+      "Retention",
+      "Pairs by the week they formed (UTC, from Monday), and the share retained N days after. Day 0 is the day they paired.",
+      modePicker,
+    ),
+    filters,
+    anyPairs
+      ? section(
+          modeLabel,
+          modeHelp,
+          table,
+          h(
+            "p",
+            { class: "heat-legend" },
+            h("span", { class: "key heat-key" }),
+            "stronger colour is a higher share, within this view",
+            h("span", { class: "key pending-key" }),
+            "not reached yet",
+            h("span", { class: "key few-key" }),
+            "under 5 pairs: too few",
+            h("i", { text: "Italic" }),
+            "some pairs of the week are still too young; hover a cell for its count and 95% interval",
+          ),
+        )
+      : empty(
+          "Not enough pairs yet",
+          "A row appears once 5 pairs formed in a week" +
+            (variant || version ? " under these filters." : "."),
+        ),
+  ];
+}
+
+/* ---------- Funnels ---------- */
+
+const FUNNEL_WINDOWS = [
+  ["day", "Same day"],
+  ["1d", "Within 1 day"],
+  ["7d", "Within 7 days"],
+];
+const FUNNEL_UNITS = [
+  ["pair", "Pairs"],
+  ["person", "People"],
+];
+const FUNNEL_RANGES = [
+  ["7", "7 days"],
+  ["30", "30 days"],
+  ["90", "90 days"],
+  ["all", "All time"],
+];
+const DEFAULT_FUNNEL = {
+  steps: ["PairClaimed", "NoteSent", "WidgetAdded"],
+  window: "7d",
+  unit: "pair",
+  range: "90",
+  split: "",
+};
+
+/** `#/funnels/<steps,comma>/<window>/<unit>/<range>/<split or ->`. */
+const funnelHref = (f) =>
+  `#/funnels/${f.steps.map(enc).join(",")}/${f.window}/${f.unit}/${f.range}/${enc(f.split || "-")}`;
+
+function funnelFromArgs([steps, window, unit, range, split]) {
+  const pick = (value, options, fallback) =>
+    options.some(([v]) => v === value) ? value : fallback;
+  return {
+    steps: steps ? steps.split(",").filter(Boolean) : DEFAULT_FUNNEL.steps,
+    window: pick(window, FUNNEL_WINDOWS, DEFAULT_FUNNEL.window),
+    unit: pick(unit, FUNNEL_UNITS, DEFAULT_FUNNEL.unit),
+    range: pick(range, FUNNEL_RANGES, DEFAULT_FUNNEL.range),
+    split: split && split !== "-" ? split : "",
+  };
+}
+
+const segOf = (label, options, current, toHref) =>
+  h(
+    "nav",
+    { class: "seg", "aria-label": label },
+    options.map(([v, text]) =>
+      h("a", { href: toHref(v), "aria-current": v === current ? "true" : null, text }),
+    ),
+  );
+
+function funnelBars(group, unitNoun) {
+  const top = Math.max(1, group.steps[0]?.count ?? 0);
+  return h(
+    "div",
+    {
+      class: "funnel funnel-built",
+      role: "table",
+      "aria-label": `Funnel, ${group.variant || "everyone"}`,
+    },
+    h(
+      "div",
+      { role: "row", style: { display: "contents" } },
+      h("span", { class: "funnel-head", role: "columnheader", text: "Step" }),
+      h("span", { class: "funnel-head bar", role: "columnheader", "aria-hidden": "true" }),
+      h("span", { class: "funnel-head f-num", role: "columnheader", text: unitNoun }),
+      h("span", { class: "funnel-head f-conv", role: "columnheader", text: "From step before" }),
+      h("span", { class: "funnel-head f-conv", role: "columnheader", text: "Median time" }),
+    ),
+    group.steps.map((st, i) =>
+      h(
+        "div",
+        { role: "row", style: { display: "contents" } },
+        h("span", { class: "f-label mono", role: "rowheader", text: `${i + 1}. ${st.name}` }),
+        h(
+          "span",
+          { class: "f-track", "aria-hidden": "true" },
+          st.count != null &&
+            h("span", {
+              class: "f-fill",
+              style: { "--w": `${((st.count / top) * 100).toFixed(1)}%` },
+            }),
+        ),
+        h("span", {
+          class: `f-num${st.count == null ? " faint" : ""}`,
+          role: "cell",
+          text: st.count == null ? "too few" : fmtNum(st.count, 0),
+        }),
+        h(
+          "span",
+          {
+            class: "f-conv",
+            role: "cell",
+            title: st.fromPrevious
+              ? `95% interval ${fmtPct(st.fromPrevious.low, 0)}–${fmtPct(st.fromPrevious.high, 0)}; ${fmtPct(st.fromFirst)} of step 1`
+              : null,
+          },
+          i === 0 ? "—" : st.fromPrevious ? fmtPct(st.fromPrevious.share) : "too few",
+        ),
+        h("span", {
+          class: "f-conv",
+          role: "cell",
+          text: i === 0 ? "—" : st.count == null ? "too few" : fmtDuration(st.medianFromPrevious),
+        }),
+      ),
+    ),
+  );
+}
+
+async function renderFunnels(args) {
+  const f = funnelFromArgs(args);
+  const query = new URLSearchParams({
+    steps: f.steps.join(","),
+    window: f.window,
+    unit: f.unit,
+    range: f.range,
+  });
+  if (f.split) query.set("split", f.split);
+  const [saved, result] = await Promise.all([
+    api("/funnels"),
+    api(`/funnel?${query}`).catch((err) => ({ error: errorText(err) })),
+  ]);
+  const go = (patch) => (location.hash = funnelHref({ ...f, ...patch }));
+  const unitNoun = f.unit === "pair" ? "Pairs" : "People";
+
+  const stepPicker = h(
+    "ol",
+    { class: "step-list" },
+    f.steps.map((name, i) =>
+      h(
+        "li",
+        null,
+        h(
+          "select",
+          {
+            "aria-label": `Step ${i + 1}`,
+            onchange: (e) => go({ steps: f.steps.map((x, j) => (j === i ? e.target.value : x)) }),
+          },
+          saved.events.map((ev) =>
+            h("option", {
+              value: ev,
+              text: ev,
+              selected: ev === name,
+              disabled: ev !== name && f.steps.includes(ev),
+            }),
+          ),
+        ),
+        f.steps.length > 2 &&
+          h("button", {
+            type: "button",
+            class: "btn icon",
+            "aria-label": `Remove step ${i + 1}`,
+            text: "×",
+            onclick: () => go({ steps: f.steps.filter((_, j) => j !== i) }),
+          }),
+      ),
+    ),
+    f.steps.length < 6 &&
+      h(
+        "li",
+        null,
+        h("button", {
+          type: "button",
+          class: "btn",
+          text: "Add a step",
+          onclick: () =>
+            go({ steps: [...f.steps, saved.events.find((ev) => !f.steps.includes(ev))] }),
+        }),
+      ),
+  );
+
+  const splitPicker = h(
+    "label",
+    { class: "inline-field" },
+    h("span", { text: "Split by" }),
+    h(
+      "select",
+      { onchange: (e) => go({ split: e.target.value }) },
+      h("option", { value: "", text: "Nothing", selected: !f.split }),
+      (result.experiments || []).map((key) =>
+        h("option", { value: key, text: key, selected: key === f.split }),
+      ),
+    ),
+  );
+
+  const nameId = fid();
+  const saveForm = h(
+    "form",
+    {
+      class: "save-funnel",
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const name = e.target.elements.name.value.trim();
+        try {
+          await api("/funnels", {
+            method: "POST",
+            body: { name, definition: { steps: f.steps, window: f.window, unit: f.unit } },
+          });
+          toast(`Saved "${name}"`, "good");
+          route();
+        } catch (err) {
+          toast(errorText(err), "bad");
+        }
+      },
+    },
+    h("label", { for: nameId, class: "sr-only", text: "Name for this funnel" }),
+    h("input", {
+      id: nameId,
+      name: "name",
+      placeholder: "Name this funnel",
+      maxlength: "80",
+      required: true,
+    }),
+    h("button", { type: "submit", class: "btn", text: "Save" }),
+  );
+
+  const savedList = saved.funnels.length
+    ? h(
+        "ul",
+        { class: "saved-funnels" },
+        saved.funnels.map((sf) =>
+          h(
+            "li",
+            null,
+            h("a", {
+              href: funnelHref({ ...f, ...sf.definition, split: f.split }),
+              text: sf.name,
+              title: `${sf.definition.steps.join(" → ")} · saved by ${sf.createdBy}`,
+            }),
+            h("button", {
+              type: "button",
+              class: "btn icon",
+              "aria-label": `Delete ${sf.name}`,
+              text: "×",
+              onclick: async () => {
+                if (
+                  !(await confirmDialog({
+                    title: `Delete "${sf.name}"?`,
+                    body: "Only the saved definition goes; nothing else changes.",
+                    confirm: "Delete",
+                  }))
+                )
+                  return;
+                await api(`/funnels/${enc(sf.id)}`, { method: "DELETE" });
+                route();
+              },
+            }),
+          ),
+        ),
+      )
+    : h("p", { class: "faint", text: "No saved funnels yet." });
+
+  const results = result.error
+    ? callout("bad", result.error, null)
+    : h(
+        "div",
+        { class: "funnel-groups" },
+        result.groups.map((group) =>
+          h(
+            "div",
+            { class: "box" },
+            h(
+              "div",
+              { class: "box-head" },
+              h("h3", { class: "box-title", text: group.variant ?? "Everyone" }),
+              h("p", {
+                class: "box-sub",
+                text:
+                  group.entered == null
+                    ? `Under 5 ${unitNoun.toLowerCase()}: too few`
+                    : `${fmtNum(group.entered, 0)} ${unitNoun.toLowerCase()} did step 1`,
+              }),
+            ),
+            funnelBars(group, unitNoun),
+          ),
+        ),
+      );
+
+  return [
+    pageHead(
+      "Funnels",
+      "Pick 2 to 6 steps from the event list. Each step counts once it happens after the one before, within the window of step 1. Times come from each day's first and last moment, so a step is never placed earlier than it happened.",
+    ),
+    h(
+      "div",
+      { class: "funnel-builder box box-pad" },
+      h(
+        "div",
+        { class: "builder-steps" },
+        h("h3", { class: "box-title", text: "Steps" }),
+        stepPicker,
+      ),
+      h(
+        "div",
+        { class: "builder-options" },
+        segOf("Window", FUNNEL_WINDOWS, f.window, (v) => funnelHref({ ...f, window: v })),
+        segOf("Count", FUNNEL_UNITS, f.unit, (v) => funnelHref({ ...f, unit: v })),
+        segOf("Step 1 in the last", FUNNEL_RANGES, f.range, (v) => funnelHref({ ...f, range: v })),
+        splitPicker,
+        saveForm,
+      ),
+    ),
+    section("Saved", null, savedList),
+    section(
+      "Result",
+      f.split
+        ? `Everyone, then each variant of ${f.split}. Groups under 5 show "too few".`
+        : 'Groups under 5 show "too few".',
+      results,
+    ),
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
   overview: renderOverview,
   events: renderEvents,
+  retention: renderRetention,
+  funnels: renderFunnels,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,

@@ -53,8 +53,9 @@ is needed, a word outside a closed list, and a value anywhere but a price.
 
 ## Where it is kept
 
-- **`pair_events`** (D1): per person, pair, name and UTC day, a count. The same table as before,
-  so the funnel and the admin's per-pair views see the new names too.
+- **`pair_events`** (D1): per person, pair, name and UTC day, a count, with the build and system
+  the app sent that day. The same table as before, so the funnel and the admin's per-pair views
+  see the new names too, and the admin can split pairs by build past Analytics Engine's 90 days.
 - **`event_details`** (D1): per name, detail and UTC day, a count and the sum of the values. No
   person and no pair, so it can say which cats and items are chosen without saying by whom.
 - **Analytics Engine** (`EVENTS`): one row per event, with the detail as `blob6` and the value as

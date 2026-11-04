@@ -34,7 +34,23 @@ export const describeMetricsRepositoryContract = (
           count: 1,
           firstAt: day1,
           lastAt: day1,
+          appVersion: null,
+          os: null,
         },
+      ]);
+    });
+
+    it("keeps the build and system of the day's latest report, and keeps them when one has none", async () => {
+      const repository = await make();
+      const opened = (at: number, client?: { appVersion: string; os: string }) =>
+        Effect.runPromise(
+          repository.record({ pairId: "p1", userId: ana, name: "AppOpened", at, client }),
+        );
+      await opened(day1, { appVersion: "1.1.0+12", os: "iOS 26.0" });
+      await opened(day1 + 1_000, { appVersion: "1.2.0+14", os: "iOS 26.1" });
+      await opened(day1 + 2_000);
+      expect(await Effect.runPromise(repository.all)).toMatchObject([
+        { count: 3, appVersion: "1.2.0+14", os: "iOS 26.1" },
       ]);
     });
 

@@ -14,6 +14,11 @@ export interface MetricEvent {
   readonly name: MetricEventName;
   readonly detail?: string | undefined;
   readonly value?: number | undefined;
+  /**
+   * The build and system the app said it was (`clientInfoOf`), for what the app reports. Absent for
+   * what the server records itself.
+   */
+  readonly client?: { readonly appVersion: string; readonly os: string } | undefined;
 }
 
 /**
@@ -32,10 +37,10 @@ export class Metrics extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* MetricsRepository;
       return Metrics.of({
-        record: ({ userId, pairId, name, detail, value }) =>
+        record: ({ userId, pairId, name, detail, value, client }) =>
           Clock.currentTimeMillis.pipe(
             Effect.flatMap((at) =>
-              repository.record({ pairId: pairId ?? "", userId, name, at, detail, value }),
+              repository.record({ pairId: pairId ?? "", userId, name, at, detail, value, client }),
             ),
             Effect.catchCause(() => Effect.logWarning("metric not recorded")),
           ),
