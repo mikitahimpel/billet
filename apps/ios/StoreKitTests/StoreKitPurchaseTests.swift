@@ -24,7 +24,11 @@ final class StoreKitPurchaseTests: XCTestCase {
     var server: PaymentsServer {
       PaymentsServer(
         verify: { (jws) async throws(PaymentsError) in
-          if self.failNext.withLock({ let fail = $0; $0 = false; return fail }) {
+          if self.failNext.withLock({
+            let fail = $0
+            $0 = false
+            return fail
+          }) {
             throw .unavailable
           }
           self.sent.withLock { $0.append(jws) }

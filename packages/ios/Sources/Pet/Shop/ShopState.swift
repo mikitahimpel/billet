@@ -34,6 +34,11 @@ public struct ShopState: Codable, Hashable, Sendable {
   }
 
   /// The ledger ID of the entry a purchase transaction writes.
+  /// Takes back bought stamps after an App Store refund. See ``StampWallet/revoke(_:id:)``.
+  public mutating func revoke(_ amount: Int, id: String) -> Int? {
+    wallet.revoke(amount, id: id)
+  }
+
   static func spendID(_ transaction: String) -> String { "spend:\(transaction)" }
 
   /// Pays for `item` and puts it in the closet. Nothing changes if it cannot be paid for.

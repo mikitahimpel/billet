@@ -66,7 +66,8 @@ struct BilletApp: App {
             set: { id in id.map(catalog.select) }
           ),
           serviceStatus: demoStatus,
-          updateLink: updateLink)
+          updateLink: updateLink,
+          payments: AppPayments.make)
       case .real(let baseURL):
         RealRootView(
           model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes,

@@ -78,6 +78,7 @@ import Testing
     let source = try String(contentsOf: file, encoding: .utf8)
     #expect(source.contains(#"appVersion: "\#(Routes.appVersionHeader.lowercased())""#))
     #expect(source.contains(#"os: "\#(Routes.osHeader.lowercased())""#))
+    #expect(source.contains(#"demoRoomHeader = "\#(Routes.demoRoomHeader.lowercased())""#))
   }
 
   @Test func theSocketRequestIsSignedAndSecure() throws {

@@ -11,12 +11,15 @@ public struct StampWallet: Codable, Hashable, Sendable {
   public enum Source: String, Codable, Hashable, Sendable {
     /// Free stamps given by the app.
     case grant
-    /// Stamps bought for money. Nothing creates these yet.
+    /// Stamps bought for money, as the server credited them (`purchase:<transaction>`).
     case purchase
     /// Stamps paid for an item.
     case spend
     /// Stamps given back for a purchase that was undone.
     case refund
+    /// Bought stamps taken back after an App Store refund (`revoked:<transaction>`). Never takes
+    /// the balance below zero, so it can be less than was bought.
+    case revoked
   }
 
   /// A way stamps can arrive. Spending is not one: it only comes from ``debit(_:id:)``.
@@ -68,6 +71,15 @@ public struct StampWallet: Codable, Hashable, Sendable {
     seen.insert(id)
     entries.append(Entry(id: id, source: .spend, amount: -amount))
     return .applied
+  }
+
+  /// Takes back up to `amount` bought stamps under a unique `id`, stopping at zero. Returns the
+  /// stamps taken, `nil` when `id` was already applied.
+  public mutating func revoke(_ amount: Int, id: String) -> Int? {
+    guard amount > 0, seen.insert(id).inserted else { return nil }
+    let taken = min(amount, max(balance, 0))
+    entries.append(Entry(id: id, source: .revoked, amount: -taken))
+    return taken
   }
 }
 

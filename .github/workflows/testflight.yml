@@ -15,6 +15,12 @@ on:
         description: A commit on main to build instead of main's newest (empty builds the newest)
         required: false
         default: ""
+      payments:
+        description: "Store for stamp packs: mock (fake store, dev server credits) or storekit (App Store sandbox). docs/payments.md"
+        required: false
+        type: choice
+        options: [mock, storekit]
+        default: mock
 
 concurrency:
   group: testflight
@@ -150,10 +156,14 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
+      # BILLET_PAYMENTS is read from the environment by both Package.swift and the app target,
+      # so it must be set here and not as an xcodebuild argument.
       - name: Archive
         env:
           BILLET_DEMO_HOST: ${{ secrets.DEMO_HOST }}
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
+          BILLET_PAYMENTS: ${{ inputs.payments || 'mock' }}
+          BILLET_DISTRIBUTION: testflight
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e
@@ -174,6 +184,7 @@ jobs:
       - name: Check the archive
         env:
           DEMO_HOST: ${{ secrets.DEMO_HOST }}
+          PAYMENTS: ${{ inputs.payments || 'mock' }}
         run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
 
       - name: Upload to TestFlight

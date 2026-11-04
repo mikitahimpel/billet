@@ -16,9 +16,11 @@ public struct PurchasesClient: Sendable {
   public var stamps: @Sendable () async throws(TransportError) -> StampsResponse
 
   public init(
-    purchase: @escaping @Sendable (PurchaseRequest) async throws(TransportError) ->
+    purchase:
+      @escaping @Sendable (PurchaseRequest) async throws(TransportError) ->
       PurchaseResponse,
-    mockPurchase: @escaping @Sendable (MockPurchaseRequest) async throws(TransportError) ->
+    mockPurchase:
+      @escaping @Sendable (MockPurchaseRequest) async throws(TransportError) ->
       PurchaseResponse,
     stamps: @escaping @Sendable () async throws(TransportError) -> StampsResponse
   ) {

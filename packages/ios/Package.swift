@@ -4,14 +4,17 @@ import PackageDescription
 // Which payments implementation the app carries: `mock` (the default) or `storekit`. Read from the
 // environment, the same variable the app target reads as a build setting (docs/payments.md), so
 // `BILLET_PAYMENTS=storekit xcodebuild ...` switches both. Only `PaymentsLive` depends on it.
-let paymentsMode = Context.environment["BILLET_PAYMENTS"].flatMap { $0.isEmpty ? nil : $0 } ?? "mock"
+let paymentsMode =
+  Context.environment["BILLET_PAYMENTS"].flatMap { $0.isEmpty ? nil : $0 } ?? "mock"
 precondition(
   ["mock", "storekit"].contains(paymentsMode),
   "BILLET_PAYMENTS must be mock or storekit, not \(paymentsMode)")
 let paymentsLive: Target = .target(
   name: "PaymentsLive",
-  dependencies: paymentsMode == "storekit" ? ["Payments", "PaymentsStoreKit"] : ["Payments", "PaymentsMock"],
-  swiftSettings: paymentsMode == "storekit" ? [.define("PAYMENTS_STOREKIT")] : [.define("PAYMENTS_MOCK")]
+  dependencies: paymentsMode == "storekit"
+    ? ["Payments", "PaymentsStoreKit"] : ["Payments", "PaymentsMock"],
+  swiftSettings: paymentsMode == "storekit"
+    ? [.define("PAYMENTS_STOREKIT")] : [.define("PAYMENTS_MOCK")]
 )
 
 let features = [
@@ -87,6 +90,7 @@ let homeTarget: Target = .target(
     "Ink",
     "Labs",
     "Persistence",
+    "Payments",
     "Pet",
     "PetScene",
     "Transport",
@@ -107,7 +111,8 @@ let testTargets: [Target] = [
   .testTarget(
     name: "FeatureHomeTests",
     dependencies: [
-      "BilletKit", "Delivery", "FeatureHome", "FeatureInbox", "Ink", "Persistence", "Pet",
+      "BilletKit", "Delivery", "FeatureHome", "FeatureInbox", "Ink", "Payments", "Persistence",
+      "Pet",
       "PetScene", "Transport", "WidgetBridge",
       "Wire",
     ]),

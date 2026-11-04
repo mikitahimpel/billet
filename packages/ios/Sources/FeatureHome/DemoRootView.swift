@@ -4,10 +4,12 @@ import FeatureInbox
 import Foundation
 import Ink
 import Labs
+import Payments
 import Persistence
 import Pet
 import PetScene
 import SwiftUI
+import Transport
 import WidgetBridge
 import WidgetKit
 
@@ -30,12 +32,17 @@ public struct DemoRootView: View {
   @State private var serviceStatus: ServiceStatusModel
   private let updateLink: UpdateLink
   private let publisher = WidgetPublisher.live()
+  /// Stamp packs for money, when the build sells them, and the room their purchases are for.
+  @State private var stampShop: StampShop?
+  private let paymentsLabs: (@MainActor @Sendable () -> AnyView)?
+  private let paymentsCaller = DemoPaymentsCaller()
 
   /// `serviceStatus` asks the demo Worker at `host` for its status (see
   /// ``ServiceStatusModel/demoBaseURL(host:)``), and `updateLink` is where "Update billet" goes.
   public init(
     host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>,
-    serviceStatus: ServiceStatusModel, updateLink: UpdateLink
+    serviceStatus: ServiceStatusModel, updateLink: UpdateLink,
+    payments: (@MainActor (PaymentsServer) -> DemoPayments)? = nil
   ) {
     self.host = host
     DemoRoom.saveHost(host)
@@ -70,6 +77,17 @@ public struct DemoRootView: View {
           fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
     _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
+    let caller = paymentsCaller
+    let built = ServiceStatusModel.demoBaseURL(host: host).flatMap { baseURL in
+      payments?(
+        .live(
+          .live(
+            http: .urlSession(
+              baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers),
+            caller: .demoRoom { caller.current() })))
+    }
+    _stampShop = State(initialValue: built.map { StampShop(payments: $0.payments) })
+    paymentsLabs = built?.labs
     ScenePerf.mark("root built")
   }
 
@@ -81,6 +99,11 @@ public struct DemoRootView: View {
     .preferredColorScheme(.dark)
     .tint(Palette.gold.color)
     .calmAnimation(value: model.isPaired)
+    .environment(\.labsPayments, labsPayments)
+    .onChange(of: model.session.map(ObjectIdentifier.init), initial: true) {
+      paymentsCaller.set(model.session?.room.code)
+      stampShop?.attach(model.session?.shop)
+    }
     .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
       model.fakePartnerSwitched(on: on)
     }
@@ -106,6 +129,11 @@ public struct DemoRootView: View {
       session.disconnect()
       session.connect()
     }
+  }
+
+  private var labsPayments: AnyView? {
+    guard let stampShop, let shop = model.session?.shop else { return nil }
+    return AnyView(PaymentsLabsSection(stampShop: stampShop, shop: shop, extra: paymentsLabs?()))
   }
 
   /// The chosen scene with its cat asleep, for the maintenance screen.

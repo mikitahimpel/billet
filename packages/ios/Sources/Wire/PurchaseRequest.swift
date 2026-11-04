@@ -46,3 +46,13 @@ public struct PurchaseResponse: Codable, Hashable, Sendable {
     self.duplicate = duplicate
   }
 }
+
+/// `POST /v1/appstore/notifications`: an App Store Server Notification V2, as Apple sends it. The
+/// app never sends this; it is here so the contract's every payload has a Swift twin.
+public struct AppStoreNotificationRequest: Codable, Hashable, Sendable {
+  public let signedPayload: String
+
+  public init(signedPayload: String) {
+    self.signedPayload = signedPayload
+  }
+}

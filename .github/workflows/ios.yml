@@ -76,3 +76,17 @@ jobs:
 
       - name: Xcode build
         run: pnpm turbo run ios:build
+
+      # The App Store build of payments: generates the project with BILLET_PAYMENTS=storekit (read
+      # from the environment by Package.swift and the app target) and buys every stamp pack from
+      # apps/ios/App/Billet.storekit on a Simulator with StoreKitTest (docs/payments.md).
+      - name: StoreKit purchases on the Simulator
+        env:
+          BILLET_PAYMENTS: storekit
+        run: |
+          (cd apps/ios && xcodegen generate --quiet)
+          set -o pipefail
+          xcodebuild test -project apps/ios/Billet.xcodeproj -scheme BilletStoreKitTests \
+            -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' -derivedDataPath "$RUNNER_TEMP/storekit" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/storekit.log" \
+            | grep -E 'error:|Test Case .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)'

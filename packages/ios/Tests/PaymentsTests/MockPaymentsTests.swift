@@ -32,7 +32,8 @@ private final class FakeServer: Sendable {
       guard !entries.contains(where: { $0.id == id }) else { return true }
       let kindValue: StampLedger.Kind = kind == .purchase ? .purchase : .refund
       entries.append(
-        .init(id: id, kind: kindValue, amount: kind == .purchase ? stamps : -stamps,
+        .init(
+          id: id, kind: kindValue, amount: kind == .purchase ? stamps : -stamps,
           productID: product))
       return false
     }
