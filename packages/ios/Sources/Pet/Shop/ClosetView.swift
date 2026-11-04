@@ -177,7 +177,8 @@ public struct ClosetView: View {
     switch error {
     case .roomIsFull: "There is no free spot left in the room."
     case .notInCloset: "That is not in the closet."
-    case .unknownItem, .notEnoughStamps, .alreadyOwned, .wrongKind, .unknownPlacement:
+    case .unknownItem, .notEnoughStamps, .alreadyOwned, .wrongKind, .unknownPlacement,
+      .unknownPurchase:
       "That didn't work."
     }
   }

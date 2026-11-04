@@ -10,9 +10,9 @@ struct CatBrainBody {
   /// How many times faster than real time the brain's clock runs. Above 1 the body jumps to each
   /// place instead of walking there, so a fast day reads as a time-lapse.
   var speed = 1.0
-  /// Where the current frame sends the cat, and the way there round what stands on its top.
+  /// Where the current frame sends the cat (on ``goalLevel``).
   var goal: SIMD2<Float>?
-  var route: [SIMD2<Float>] = []
+  var goalLevel: Int?
   /// The room clock when the cat got to `goal`, or nil while it is on its way.
   var arrived: Double?
   /// The way the settled cat faces, clear of what is beside it, and the way it wanted to face
@@ -36,6 +36,12 @@ struct CatBrainBody {
   var spoke: Double?
   /// Something a tantrum knocked off the seat, falling or gone until it is put back.
   var knock: CatKnock?
+  /// The way to the goal across the room's levels, walks and jumps, the next first.
+  var ways: [GenzCatWay] = []
+  /// The jump under way, and since when.
+  var jump: (jump: GenzCatJump, start: Double, length: Double, action: CatAction)?
+  /// When the settled cat last checked nothing had been put where it is.
+  var crowdCheck = 0.0
   /// Pillows sliding aside for the settled cat: each holder, from and to, and since when.
   var nudges: [(holder: Entity, from: SIMD3<Float>, to: SIMD3<Float>, start: Double)] = []
 }
@@ -54,6 +60,8 @@ struct GenzAffordance {
   var affordance: RoomAffordance
   var spot: SIMD2<Float>
   var height: Float
+  /// The level it is on, for one the cat goes to (``GenzCatLevel``): its own top unless said.
+  var level = GenzCatLevel.homeID
 }
 
 extension GenzRoom {
@@ -116,6 +124,7 @@ extension GenzRoom {
         && spot.x <= surface.max.x + margin && spot.y >= surface.min.y - margin
         && spot.y <= surface.max.y + margin
     }
+    let reach = layout.catReachableLevels(from: layout.catHomeLevel)
     for (index, placement) in layout.pieces.enumerated() {
       guard let kind = Self.affordanceKind(placement.piece.kind) else { continue }
       let name = Self.decorName(placement, index: index)
@@ -127,12 +136,20 @@ extension GenzRoom {
       let carries =
         surface.map { spot == simd_clamp(spot, $0.min, $0.max) } ?? false
         && placement.piece.kind.size.z > layout.cat.spot.z * 0.5 && at.y < catHeight
-      let reachable = carries || onTop(spot, at.y)
+      // A piece standing on the floor that the cat gets up onto, such as the cat bed, or a rug:
+      // in reach when a jump or two gets it there.
+      let level =
+        carries
+        ? layout.catHomeLevel
+        : layout.catLevel(ofPiece: index)
+          ?? (placement.piece.kind.catWalksOver && at.y < 0.05 ? GenzCatLevel.floorID : nil)
+      let reachable = carries || onTop(spot, at.y) || level.map(reach.contains) ?? false
       out.append(
         GenzAffordance(
           affordance: RoomAffordance(
             id: name, kind: kind, reachable: reachable, since: brainBody.moved[name]),
-          spot: carries ? home : spot, height: carries ? catHeight : at.y))
+          spot: carries ? home : spot, height: carries ? catHeight : at.y,
+          level: level ?? layout.catHomeLevel))
     }
     if !layout.window.isEmpty {
       let xs = layout.window.map(\.x)
@@ -186,14 +203,19 @@ extension GenzRoom {
   /// was moved, or when a bigger cat is shown. Not while decorating, when the pieces are in the
   /// person's hands. Where they cannot part, the cat moves along to where they can.
   func nudgePillows(heading: Float) {
-    guard brainBody.arrived != nil, !decor.isOn else { return }
+    // The pillows are on the seat: a cat on another level has none beside it.
+    guard brainBody.arrived != nil, !decor.isOn, footing.level == layout.catHomeLevel else {
+      return
+    }
     guard let nudges = layout.pillowNudges(clearOf: catSpot, heading: heading) else {
       // No room for the pillows to part here, near the seat's end: it gets up and settles
       // where there is, and they part there.
       let room = layout.pillowRoom(near: catSpot, heading: heading)
       guard room != catSpot else { return }
-      brainBody.route = layout.catRoute(from: catSpot, to: room)
-      brainBody.goal = brainBody.route.last ?? catSpot
+      let route = layout.catRoute(from: catSpot, to: room)
+      brainBody.ways = route.map { .walk(to: $0, level: footing.level) }
+      brainBody.goal = route.last ?? catSpot
+      brainBody.goalLevel = footing.level
       brainBody.arrived = nil
       brainBody.rest = nil
       return
@@ -255,30 +277,58 @@ extension GenzRoom {
   /// The pose the brain asks for this frame, or nil when it is off. Walks the cat to where its
   /// step wants it, then plays the step's clip there, with a reflex now and then in a calm one.
   func stepBrain(_ step: Float) -> CatTrip.Pose? {
+    if GenzCatTour.isOn { brainBody.frame = GenzCatTour.frame(at: clock) }
     guard let frame = brainBody.frame, rig != nil else { return nil }
     let key = (frame.stack.step, frame.stepStart)
     if brainBody.goalFor.map({ $0 != key }) ?? true {
       brainBody.cameFrom = brainBody.goalFor?.0
       brainBody.goalFor = key
       refreshPlaces()
-      let goal = resolve(frame.target)
-      brainBody.route = layout.catRoute(from: catSpot, to: goal)
-      // Somewhere it cannot get to without going through something: as near as it gets.
-      brainBody.goal = brainBody.route.last ?? catSpot
+      planWay(for: frame)
       brainBody.arrived = nil
       brainBody.rest = nil
       brainBody.spoke = nil
     }
+    if brainBody.arrived != nil, clock - brainBody.crowdCheck > 0.5 {
+      brainBody.crowdCheck = clock
+      makeRoom(for: frame)
+    }
+    if brainBody.ways.isEmpty, brainBody.jump == nil,
+      let level = brainBody.goalLevel, level != footing.level
+    {
+      // Moved off the way it was on (put down, or back from a trip): a new way from here.
+      planWay(for: frame)
+    }
+    if frame.stack.interaction == nil, let pose = stepJump(frame) { return pose }
     let at = catSpot
     let goal = brainBody.goal ?? at
     let near = layout.cat.length * 0.04
-    while brainBody.route.count > 1, simd_distance(at, brainBody.route[0]) < near {
-      brainBody.route.removeFirst()
+    while case .walk(let to, _)? = brainBody.ways.first, simd_distance(at, to) < near,
+      brainBody.ways.count > 1
+    {
+      brainBody.ways.removeFirst()
     }
-    let waypoint = brainBody.route.first ?? goal
+    let waypoint: SIMD2<Float>
+    switch brainBody.ways.first {
+    case .walk(let to, _)?: waypoint = to
+    case .jump(let jump)?: waypoint = jump.from
+    case nil: waypoint = goal
+    }
     let gap = waypoint - at
     let distance = simd_length(gap)
-    if simd_distance(at, goal) > near, frame.stack.interaction == nil {
+    let walking =
+      brainBody.ways.contains { if case .jump = $0 { true } else { false } }
+      || simd_distance(at, goal) > near
+    if walking, frame.stack.interaction == nil, brainBody.speed > 1 || reduceMotion {
+      // A time-lapse, or less motion asked for: there at once, on the level it goes to.
+      catHolder.position = SIMD3(
+        goal.x, groundHeight(at: goal, on: brainBody.goalLevel ?? footing.level), goal.y)
+      footing.level = brainBody.goalLevel ?? footing.level
+      footing.height = nil
+      brainBody.ways = []
+      return stepBrain(step)
+    }
+    if walking, frame.stack.interaction == nil {
       // A gallop at the run clip's own speed keeps its paws planted; without one, a fast walk.
       // A lively temperament moves quicker, and its clip plays quicker to keep the paws planted.
       let gallops = frame.pace > 0.5 && behaviour.has(.run)
@@ -287,15 +337,13 @@ extension GenzRoom {
           ? galloping : frame.pace > 0.5 ? runSpeed : frame.pace > 0 ? walkSpeed * 1.4 : walkSpeed)
         * Float(frame.tempo * motion.tempo)
       let next =
-        brainBody.speed > 1 || reduceMotion || distance < 1e-5
-        ? goal : at + gap / distance * min(speed * step, distance)
-      // Up onto the cardigan where it lies, down off it after.
-      let height = layout.cat.spot.scene.y + layout.catStandHeight(at: next)
-      catHolder.position = SIMD3(
-        next.x,
-        catHolder.position.y + (height - catHolder.position.y)
-          * min(step * 6, 1),
-        next.y)
+        distance < 1e-5 ? waypoint : at + gap / distance * min(speed * step, distance)
+      if distance < 1e-5 || simd_distance(next, waypoint) < 1e-5 {
+        // At a jump's take-off, or the end of a walk: on to the next part of the way.
+        if case .walk? = brainBody.ways.first { brainBody.ways.removeFirst() }
+      }
+      // The height is the footing's: on whatever is under it (``stepFooting``).
+      catHolder.position = SIMD3(next.x, catHolder.position.y, next.y)
       screen.cat = camera.project(
         catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
       // Bringing a toy over, it carries it in its mouth.
@@ -311,9 +359,9 @@ extension GenzRoom {
     let heading = restHeading(at: at, want: headingFor(frame), height: up)
     if brainBody.arrived == nil {
       brainBody.arrived = clock
-      catHolder.position.y = layout.cat.spot.scene.y + up
-      // Trips, games and calls start from here and come back here.
-      perch = (at, heading)
+      // Trips, games and calls start from here and come back here: only on its own top, which
+      // they keep to.
+      if footing.level == layout.catHomeLevel { perch = (at, heading) }
       updateScreen()
       nudgePillows(heading: heading)
     }
@@ -494,7 +542,7 @@ extension GenzRoom {
   static let restBetween = 0.6
 
   /// Which way the cat faces for `frame` once it is there.
-  private func headingFor(_ frame: CatBrainFrame) -> Float? {
+  func headingFor(_ frame: CatBrainFrame) -> Float? {
     let eye = SIMD2(camera.position.x, camera.position.z)
     switch frame.gaze {
     case .camera: return CatTrip.heading(from: catSpot, to: eye)
@@ -559,7 +607,7 @@ extension GenzRoom {
   }
 
   /// The first place of `kind`, one in reach before one out of it.
-  private func place(_ kind: RoomAffordance.Kind) -> GenzAffordance? {
+  func place(_ kind: RoomAffordance.Kind) -> GenzAffordance? {
     brainBody.places.first { $0.affordance.kind == kind && $0.affordance.reachable }
       ?? brainBody.places.first { $0.affordance.kind == kind }
   }

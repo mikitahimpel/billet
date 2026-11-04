@@ -47,7 +47,6 @@ extension RemoteChoice {
 extension RoomLighting: RemoteChoice {}
 extension WindowView: RemoteChoice {}
 extension HomeVariant: RemoteChoice {}
-extension Shopkeeper: RemoteChoice {}
 
 public enum Experiments {
   /// How the rooms are lit (Labs > Lighting).
@@ -59,11 +58,8 @@ public enum Experiments {
   /// How Home is laid out around the room (Labs > Home).
   public static let homeLayout = Experiment(key: "home-layout", choices: HomeVariant.self)
 
-  /// Who keeps the 3D shop (Labs > Shopkeeper).
-  public static let shopkeeper = Experiment(key: "shopkeeper", choices: Shopkeeper.self)
-
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, shopkeeper,
+    roomLighting, windowView, homeLayout,
   ]
 }
 

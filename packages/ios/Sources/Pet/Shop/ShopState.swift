@@ -46,6 +46,33 @@ public struct ShopState: Codable, Hashable, Sendable {
     return .applied
   }
 
+  /// Takes back the purchase made under `transaction`: the item leaves the room and the closet,
+  /// and its stamps go back to the wallet. `placement` is where the purchase was stood in the room,
+  /// if it was. Nothing changes when any of that cannot be done, such as a treat already used.
+  public mutating func undoBuy(
+    _ item: ShopItem, transaction: String, placement: RoomLayout.Placement.ID? = nil
+  ) throws(ShopError) -> ShopOutcome {
+    let undo = Self.undoID(transaction)
+    guard !applied.contains(undo) else { return .duplicate }
+    let spendID = Self.spendID(transaction)
+    guard applied.contains(transaction),
+      let spent = wallet.entries.first(where: { $0.id == spendID })
+    else { throw .unknownPurchase }
+    var next = self
+    if let placement, next.layout.placements.contains(where: { $0.id == placement }) {
+      let removed = try next.layout.remove(placement)
+      next.closet.add(removed.item)
+    }
+    try next.closet.take(item.id)
+    _ = next.wallet.credit(-spent.amount, as: .refund, id: Self.refundID(transaction))
+    next.applied.insert(undo)
+    self = next
+    return .applied
+  }
+
+  static func undoID(_ transaction: String) -> String { "undo:\(transaction)" }
+  static func refundID(_ transaction: String) -> String { "refund:\(transaction)" }
+
   /// Takes a piece of furniture out of the closet and stands it in the room. Without a spot it
   /// goes to the first open one, and throws when none is left.
   public mutating func place(
