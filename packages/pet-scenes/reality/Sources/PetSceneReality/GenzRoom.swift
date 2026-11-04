@@ -36,6 +36,10 @@ final class GenzRoomScreen {
   var look = LightingLook.off
   /// Counts up each time the switch on the wall is pressed here, for its click.
   var switchPresses = 0
+  /// Where the switch on the wall stands, for what VoiceOver says of it.
+  var roomLight = RoomLight.standard
+  /// The switch plate's middle in the view, or `nil` while it is off screen.
+  var lightSwitch: CGPoint?
   /// How bright the LED strip's glow is as the switch has it, from 0 to 1.
   var ledLevel = 1.0
 
@@ -214,7 +218,7 @@ final class GenzRoom: CatPlayStage {
   private let frames = FrameClock()
   var viewSize = CGSize(width: 393, height: 852)
   var clock = 0.0
-  private var openedClock: Double?
+  private(set) var openedClock: Double?
   private var noteClock = 0.0
   private var landedClock: Double?
   var petClock: Double?
@@ -746,6 +750,8 @@ final class GenzRoom: CatPlayStage {
     if screen.homeWindow != homeWindow { screen.homeWindow = homeWindow }
     let cat = camera.project(catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
     if screen.cat != cat { screen.cat = cat }
+    let plate = project(GenzLightSwitch.plate)
+    if screen.lightSwitch != plate { screen.lightSwitch = plate }
     let parallax = CGSize(
       width: -CGFloat(camera.turn) * Self.parallaxPoints,
       height: CGFloat(camera.pitch - layout.camera.pitch) * Self.parallaxPoints)
@@ -784,6 +790,7 @@ final class GenzRoom: CatPlayStage {
     stepFlames()
     stepDecor(Float(delta))
     stepSwitch()
+    stepSwitchPlate()
     applyCat()
     reportTouch()
     applyLevels()

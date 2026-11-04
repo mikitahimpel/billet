@@ -147,6 +147,9 @@ struct GenzRoomView: View {
       CatSayOverlay(say: room.say) { room.screen.cat }
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
+      if !isDecorating {
+        LightSwitchSpot(screen: room.screen) { onEvent(room.pressSwitch()) }
+      }
     }
     .ignoresSafeArea()
     .overlay { decorControls(room) }

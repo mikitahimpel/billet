@@ -1,3 +1,4 @@
+import Foundation
 import Pet
 import PetScene
 import RealityKit
@@ -18,10 +19,20 @@ struct GenzLightSwitch {
   var lampLevel: Float = 1
   /// How bright the LED strip's glow round the window is, the same way.
   var ledLevel: Float = 1
-  /// The rocker on the plate, which tips with the switch, and the small light that finds the
-  /// switch in the dark.
-  var rocker: ModelEntity?
-  var finder: ModelEntity?
+  /// The toggle on the plate, which flips up for light and down for dark, and the small warm
+  /// dot that shows the lights are on.
+  var toggle: ModelEntity?
+  var indicator: ModelEntity?
+  /// The plate itself, which pulses once the first time the room is shown.
+  var plateEntity: Entity?
+  /// The toggle's flip under way: where it started, and when.
+  var flip: (from: Float, start: Double)?
+  /// Where the toggle stands now, from -1 (down) to 1 (up).
+  var toggleAt: Float = 1
+  /// When the plate's one pulse started, while it plays, and whether it has been looked at for
+  /// this room already.
+  var pulseStart: Double?
+  var pulseChecked = false
   /// The quarter of the fade the ambient light's colours were last remade at.
   var fillStep = 0
 
@@ -43,13 +54,62 @@ struct GenzLightSwitch {
     }
   }
 
-  /// How far the rocker tips up (positive) or down at `light`, in room units.
-  static func rockerLift(_ light: RoomLight) -> Float {
+  /// Where the toggle stands at `light`: up (1) while any light is on, down (-1) when it is all
+  /// out, so it reads as a plain on/off switch at a glance.
+  static func toggleStand(_ light: RoomLight) -> Float {
     switch light {
-    case .on: 0.06
-    case .cosy: 0
-    case .off: -0.06
+    case .on, .cosy: 1
+    case .off: -1
     }
+  }
+
+  /// Whether the warm dot on the plate is lit at `light`.
+  static func indicatorLit(_ light: RoomLight) -> Bool {
+    switch light {
+    case .on, .cosy: true
+    case .off: false
+    }
+  }
+
+  /// What VoiceOver says the switch is at: on or off, with the cosy light as a low on.
+  static func spoken(_ light: RoomLight) -> String {
+    switch light {
+    case .on: "on"
+    case .cosy: "on, low"
+    case .off: "off"
+    }
+  }
+
+  /// A flip takes about as long as a real toggle's snap.
+  static let flipLength = 0.14
+
+  /// Where the toggle is `elapsed` seconds into a flip from `from` to `to`. A press that leaves
+  /// it where it stood (on to cosy) still dips it half way and back, so every press shows.
+  static func toggle(from: Float, to: Float, elapsed: Double) -> Float {
+    let t = Float(min(max(elapsed / flipLength, 0), 1))
+    guard t < 1 else { return to }
+    guard from != to else { return to - to * 0.5 * sin(t * .pi) }
+    let eased = t * t * (3 - 2 * t)
+    return from + (to - from) * eased
+  }
+
+  /// The plate's one pulse when the room is first shown: how long it takes, and how much the
+  /// plate swells at its height, `elapsed` seconds in.
+  static let pulseLength = 1.1
+  static func pulseScale(_ elapsed: Double) -> Float {
+    guard elapsed > 0, elapsed < pulseLength else { return 1 }
+    return 1 + 0.16 * Float(sin(elapsed / pulseLength * .pi))
+  }
+  /// How long after the opening ends the plate pulses, so it is not lost in the fly-in.
+  static let pulseDelay = 0.8
+  /// The defaults key that remembers the pulse has played, once per install.
+  static let introducedKey = "genz.lightSwitch.introduced"
+
+  /// Whether the pulse is still to play on this install, marking it played if so.
+  static func claimPulse(in defaults: UserDefaults) -> Bool {
+    guard !defaults.bool(forKey: introducedKey) else { return false }
+    defaults.set(true, forKey: introducedKey)
+    return true
   }
 
   /// A fade takes about as long as an old bulb takes to warm up or die down.
@@ -67,19 +127,20 @@ struct GenzLightSwitch {
   /// The plate on the back wall in the strip left of the window: its middle in room units. The
   /// rest of the walls fall outside the view from home on a phone, and it hangs high enough to
   /// show over the tallest piece any set stands in that corner, the bookshelf.
-  static let plate = GenzRoomPoint(0.27, 0, 3.95)
+  static let plate = GenzRoomPoint(0.27, 0, 4.02)
   /// The plate's size along the wall and up it, and how far it stands out. Narrow enough to keep
   /// clear of the LED strip round the window.
-  static let plateSize = SIMD2<Float>(0.34, 0.56)
-  static let plateDepth: Float = 0.05
+  static let plateSize = SIMD2<Float>(0.42, 0.68)
+  static let plateDepth: Float = 0.06
   /// How much bigger than the plate a finger may land and still press it.
-  static let reach = SIMD2<Float>(0.9, 1.3)
+  static let reach = SIMD2<Float>(1.0, 1.4)
 }
 
 @MainActor
 extension GenzRoom {
-  /// Hangs the switch plate on the back wall, left of the window. It is three small boxes: the plate, the
-  /// rocker, and a pin of light that glows when the room is dark so the switch can be found.
+  /// Hangs the switch plate on the back wall, left of the window: a cream plate with a soft
+  /// shadow on the wall, a dark slot with a toggle up or down in it, and a warm dot under it that
+  /// glows while the lights are on.
   func buildSwitchPlate() {
     let plate = Entity()
     plate.name = Self.switchName
@@ -87,22 +148,75 @@ extension GenzRoom {
     plate.position = at.scene
     let size = GenzLightSwitch.plateSize
     let depth = GenzLightSwitch.plateDepth
-    let face = kit.matte(GenzColour(0xEFE6D4))
-    // Out of the back wall is the scene's +z.
-    plate.addChild(kit.part(kit.box([size.x, size.y, depth]), face, at: [0, 0, depth / 2]))
-    let rocker = kit.part(
-      kit.box([size.x * 0.4, size.y * 0.38, depth]), kit.matte(GenzColour(0xF8F2E6)),
-      at: [0, GenzLightSwitch.rockerLift(lightSwitch.light), depth * 1.5])
-    plate.addChild(rocker)
-    let finder = kit.part(
-      kit.box([0.035, 0.035, depth * 0.6]), kit.glow(finderColour(lightSwitch.light)),
-      at: [0, size.y * 0.36, depth * 1.3])
-    plate.addChild(finder)
+    // Out of the back wall is the scene's +z. The shadow is three faint layers, each a little
+    // wider, so its edge falls off softly; it sits a touch low, as if lit from above.
+    for (index, grow) in [Float(0.03), 0.07, 0.12].enumerated() {
+      plate.addChild(
+        kit.part(
+          kit.plane(width: size.x + grow, height: size.y + grow),
+          kit.glow(GenzColour(0x1A120A), opacity: 0.16),
+          at: [0, -0.04, 0.004 + Float(index) * 0.002]))
+    }
+    plate.addChild(
+      kit.part(
+        LowPoly.roundedBox([size.x, size.y, depth], radius: 0.03), kit.matte(GenzColour(0xF1E7D2)),
+        at: [0, 0, depth / 2]))
+    let slot = SIMD2(size.x * 0.4, size.y * 0.5)
+    plate.addChild(
+      kit.part(
+        LowPoly.roundedBox([slot.x, slot.y, 0.012], radius: 0.006), kit.matte(GenzColour(0x5C4A36)),
+        at: [0, size.y * 0.04, depth + 0.004]))
+    let toggle = kit.part(
+      LowPoly.roundedBox([slot.x * 0.78, slot.y * 0.5, 0.07], radius: 0.02),
+      kit.matte(GenzColour(0xFFFAF0)))
+    plate.addChild(toggle)
+    let indicator = kit.part(
+      LowPoly.roundedBox([0.06, 0.06, 0.02], radius: 0.01),
+      kit.glow(indicatorColour(lightSwitch.light)), at: [0, -size.y * 0.36, depth + 0.008])
+    plate.addChild(indicator)
     let reach = GenzLightSwitch.reach
     SceneParts.makeTappable(plate, size: [reach.x, reach.y, 0.3], center: [0, 0, 0.15])
     room.addChild(plate)
-    lightSwitch.rocker = rocker
-    lightSwitch.finder = finder
+    lightSwitch.plateEntity = plate
+    lightSwitch.toggle = toggle
+    lightSwitch.indicator = indicator
+    lightSwitch.flip = nil
+    placeToggle(GenzLightSwitch.toggleStand(lightSwitch.light))
+  }
+
+  /// Stands the toggle at `stand`, from -1 (down) to 1 (up): it slides to that end of the slot and
+  /// leans out at it, as a real toggle's lever does.
+  func placeToggle(_ stand: Float) {
+    lightSwitch.toggleAt = stand
+    guard let toggle = lightSwitch.toggle else { return }
+    let size = GenzLightSwitch.plateSize
+    let depth = GenzLightSwitch.plateDepth
+    toggle.position = [0, size.y * 0.04 + stand * size.y * 0.11, depth + 0.04]
+    toggle.orientation = simd_quatf(angle: -stand * 0.45, axis: [1, 0, 0])
+  }
+
+  /// Moves the toggle's flip and the plate's first pulse on by a frame, and starts the pulse the
+  /// first time the room has opened.
+  func stepSwitchPlate() {
+    if let flip = lightSwitch.flip {
+      let target = GenzLightSwitch.toggleStand(lightSwitch.light)
+      let elapsed = clock - flip.start
+      placeToggle(GenzLightSwitch.toggle(from: flip.from, to: target, elapsed: elapsed))
+      if elapsed >= GenzLightSwitch.flipLength { lightSwitch.flip = nil }
+    }
+    if !lightSwitch.pulseChecked, opening == nil, let openedClock,
+      clock - openedClock > GenzOpening.length + GenzLightSwitch.pulseDelay
+    {
+      lightSwitch.pulseChecked = true
+      if GenzLightSwitch.claimPulse(in: spots.defaults), !reduceMotion {
+        lightSwitch.pulseStart = clock
+      }
+    }
+    if let start = lightSwitch.pulseStart {
+      let scale = GenzLightSwitch.pulseScale(clock - start)
+      lightSwitch.plateEntity?.scale = [scale, scale, 1]
+      if clock - start >= GenzLightSwitch.pulseLength { lightSwitch.pulseStart = nil }
+    }
   }
 
   /// A press on the plate: the switch moves on, the room starts fading to it at once, and the
@@ -120,8 +234,14 @@ extension GenzRoom {
     guard light != lightSwitch.light else { return }
     let before = lightSwitch.light
     lightSwitch.light = light
-    lightSwitch.rocker?.position.y = GenzLightSwitch.rockerLift(light)
-    lightSwitch.finder?.model?.materials = [kit.glow(finderColour(light))]
+    screen.roomLight = light
+    lightSwitch.indicator?.model?.materials = [kit.glow(indicatorColour(light))]
+    if isBuilt, isOnScreen, !reduceMotion {
+      lightSwitch.flip = (lightSwitch.toggleAt, clock)
+    } else {
+      lightSwitch.flip = nil
+      placeToggle(GenzLightSwitch.toggleStand(light))
+    }
     relight(animated: animated && isBuilt && isOnScreen)
     guard isBuilt else { return }
     if light == .off {
@@ -174,12 +294,13 @@ extension GenzRoom {
     if progress >= 1 { lightSwitch.fade = nil }
   }
 
-  /// The pin of light on the plate: bright in the dark, faint when the room is lit.
-  private func finderColour(_ light: RoomLight) -> GenzColour {
+  /// The dot on the plate: a warm glow while the lights are on, lower for the cosy light, and a
+  /// dull ember when they are out.
+  private func indicatorColour(_ light: RoomLight) -> GenzColour {
     switch light {
-    case .on: GenzColour(0x6E5A3C)
-    case .cosy: GenzColour(0xB08850)
-    case .off: GenzColour(0xFFC873)
+    case .on: GenzColour(0xFFB347)
+    case .cosy: GenzColour(0xE0913A)
+    case .off: GenzColour(0x4A3A2A)
     }
   }
 }
