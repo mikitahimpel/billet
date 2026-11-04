@@ -13,7 +13,8 @@ struct GenzNativeArt: RoomLayerArt {
       AnyView(
         GenzBloomLayer(
           state: state, colour: Color(red: 1, green: 0.7, blue: 0.3), width: 10,
-          level: 0.8 * GenzOpening.windowLED(state.time) * (state.lampOn ? 1 : 0.3)))
+          level: 0.8 * GenzOpening.windowLED(state.time) * (state.lampOn ? 1 : 0.3)
+            * state.ledLevel))
     case .windowBacklight: AnyView(GenzBacklightLayer(state: state))
     case .windowDim:
       AnyView(

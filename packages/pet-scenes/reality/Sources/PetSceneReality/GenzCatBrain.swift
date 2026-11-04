@@ -223,7 +223,7 @@ extension GenzRoom {
       let speed =
         (gallops
           ? galloping : frame.pace > 0.5 ? runSpeed : frame.pace > 0 ? walkSpeed * 1.4 : walkSpeed)
-        * Float(frame.tempo)
+        * Float(frame.tempo * motion.tempo)
       let next =
         brainBody.speed > 1 || reduceMotion || distance < 1e-5
         ? goal : at + gap / distance * min(speed * step, distance)
@@ -273,6 +273,7 @@ extension GenzRoom {
     let action =
       frame.stack.interaction == nil
       ? lyingDown(frame, since: since)
+        ?? ownMove(frame, since: since)
         ?? (layered ? nil : reflex.oneShot(during: frame.stack.step)).flatMap {
           behaviour.has($0) ? $0 : nil
         }
@@ -289,6 +290,23 @@ extension GenzRoom {
       behaviour.has(.lieDown), let info = rig?.info[.lieDown], since < info.duration
     else { return nil }
     return .lieDown
+  }
+
+  /// Now and then in a calm step, one of the moves this cat's look makes its own, from the same
+  /// base pose as the step's clip so it cuts in unnoticed.
+  private func ownMove(_ frame: CatBrainFrame, since: Double) -> CatAction? {
+    let moves = motion.signature.filter { behaviour.has($0) }
+    guard !moves.isEmpty, !reduceMotion, CatReflexes.calm.contains(frame.stack.step) else {
+      return nil
+    }
+    let turn = Int(since / motion.every)
+    guard turn > 0 else { return nil }
+    let move = moves[turn % moves.count]
+    guard let info = rig?.info[move], !info.loops,
+      info.base == rig?.info[behaviour.playable(frame.action)]?.base,
+      since - Double(turn) * motion.every < info.duration
+    else { return nil }
+    return move
   }
 
   /// A one-shot clip played again and again through a long step, resting in its base pose

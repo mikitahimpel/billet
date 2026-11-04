@@ -1,5 +1,6 @@
 import { routes } from "@billet/contracts-http-api/routes";
 import {
+  analyticsEnabled,
   type AppStatus,
   type MaintenanceResponse,
   type StatusResponse,
@@ -22,8 +23,9 @@ export const retryAfterSeconds = (status: AppStatus, now: number): number => {
 };
 
 /**
- * What the service status decides for a `/v1` request before the API sees it: `/v1/status` itself,
- * or, during maintenance, a 503 for every write and for the realtime socket (which carries writes).
+ * What the service status decides for a `/v1` request before the API sees it: `/v1/status` itself;
+ * while analytics is off, a 204 for reported events, which are dropped unread; and during
+ * maintenance, a 503 for every write and for the realtime socket (which carries writes).
  * `undefined` lets the request through. Nothing here touches the database.
  */
 export const gateRequest = (
@@ -35,6 +37,13 @@ export const gateRequest = (
   if (pathname === routes.getStatus.path) {
     if (request.method !== routes.getStatus.method) return json({ error: "method" }, 405);
     return json({ status } satisfies StatusResponse, 200);
+  }
+  if (
+    !analyticsEnabled(status) &&
+    pathname === routes.reportEvents.path &&
+    request.method === routes.reportEvents.method
+  ) {
+    return new Response(null, { status: 204 });
   }
   if (!status.maintenance.active) return undefined;
   if (reads.has(request.method) && pathname !== socketRoute.path) return undefined;

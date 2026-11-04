@@ -5,14 +5,14 @@ import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures } from "@billet/backend-auth/auth-routes";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { clientInfoOf } from "@billet/contracts-http-api/client-info";
-import { ReportEventsRequest } from "@billet/contracts-http-api/events";
+import { clientEventOf, ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { routes } from "@billet/contracts-http-api/routes";
 import { EventSink, pairHashOf, PairVariants, variantsLabel } from "./analytics.ts";
 import { Metrics } from "./metrics.ts";
 
 /**
- * The route the app reports its few named events to. Each accepted event is counted in D1 and
- * written to Analytics Engine. Needs `AuthService`, `Metrics`, `PairingRepository`, `EventSink`,
+ * The route the app reports its named events to. Each accepted event is counted in D1, its detail
+ * apart from the person, and written to Analytics Engine. Needs `AuthService`, `Metrics`, `PairingRepository`, `EventSink`,
  * `PairVariants` and `Digest`.
  */
 export const MetricsRoutes = HttpRouter.use((router) =>
@@ -29,16 +29,20 @@ export const MetricsRoutes = HttpRouter.use((router) =>
       routes.reportEvents.path,
       Effect.gen(function* () {
         const { userId } = yield* principal;
-        const { events } = yield* HttpServerRequest.schemaBodyJson(ReportEventsRequest);
+        const events = (yield* HttpServerRequest.schemaBodyJson(ReportEventsRequest)).events.map(
+          clientEventOf,
+        );
         if (events.length === 0) return HttpServerResponse.empty({ status: 204 });
         // A directory failure only costs the pair on these counts; the events are still counted.
         const pairId = yield* pairing.findPair(userId).pipe(
           Effect.map(Option.getOrUndefined),
           Effect.catch(() => Effect.succeed(undefined)),
         );
-        yield* Effect.forEach(events, (name) => metrics.record({ userId, pairId, name }), {
-          discard: true,
-        });
+        yield* Effect.forEach(
+          events,
+          ({ name, detail, value }) => metrics.record({ userId, pairId, name, detail, value }),
+          { discard: true },
+        );
 
         const { appVersion, os } = clientInfoOf(
           (yield* HttpServerRequest.HttpServerRequest).headers,
@@ -50,7 +54,16 @@ export const MetricsRoutes = HttpRouter.use((router) =>
         const variants = pairId === undefined ? "" : variantsLabel(yield* pairVariants.of(pairId));
         yield* Effect.forEach(
           events,
-          (name) => sink.write({ name, pairHash, variants, appVersion, os }),
+          ({ name, detail, value }) =>
+            sink.write({
+              name,
+              pairHash,
+              variants,
+              appVersion,
+              os,
+              ...(detail === undefined ? {} : { detail }),
+              ...(value === undefined ? {} : { value }),
+            }),
           { discard: true },
         );
         return HttpServerResponse.empty({ status: 204 });

@@ -6,6 +6,7 @@ import FeatureSettings
 import Foundation
 import Observation
 import Persistence
+import Pet
 import Transport
 import WidgetBridge
 import Wire
@@ -56,7 +57,7 @@ public final class RealAppModel {
   public let serviceStatus: ServiceStatusModel
   @ObservationIgnored private let flags: FlagsRefresher
   @ObservationIgnored private let reporter: EventReporter
-  @ObservationIgnored private let hasWidget: @MainActor () async -> Bool
+  @ObservationIgnored private let widgetKinds: @MainActor () async -> Set<String>
   @ObservationIgnored private var cachedHistory: HistoryModel?
   @ObservationIgnored private var cachedAccount: AccountModel?
   @ObservationIgnored private var cachedLive: LiveRoom?
@@ -68,19 +69,22 @@ public final class RealAppModel {
     reauthorize: @escaping AppleReauthorizer = { await AppleReauthorization.system() },
     labs: WidgetFeaturesModel = WidgetFeaturesModel(store: .appGroup()),
     eventStorage: AppGroupStorage? = try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
-    hasWidget: (@MainActor () async -> Bool)? = nil,
-    serviceStatus: ServiceStatusModel? = nil
+    widgetKinds: (@MainActor () async -> Set<String>)? = nil,
+    serviceStatus: ServiceStatusModel? = nil,
+    now: @escaping () -> Date = Date.init
   ) {
     self.api = api
     self.labs = labs
-    self.serviceStatus =
+    let status =
       serviceStatus
       ?? ServiceStatusModel(
         appVersion: nil,
         fetch: { () async throws(TransportError) -> AppStatus in try await api.status().status })
+    self.serviceStatus = status
     flags = FlagsRefresher(api: api, labs: labs)
-    reporter = EventReporter(api: api, storage: eventStorage)
-    self.hasWidget = hasWidget ?? { await WidgetPresence.isInstalled() }
+    reporter = EventReporter(
+      api: api, storage: eventStorage, isEnabled: { status.analyticsEnabled }, now: now)
+    self.widgetKinds = widgetKinds ?? { await WidgetPresence.kinds() }
     self.baseURL = baseURL
     self.accounts = accounts
     self.keys = keys
@@ -114,8 +118,23 @@ public final class RealAppModel {
     await refreshAccount()
     reporter.appOpened()
     if let status = await flags.refresh() { serviceStatus.received(status) }
-    if await hasWidget() { reporter.widgetAdded() }
+    reporter.widgetsAdded(kinds: await widgetKinds())
     await reporter.flush()
+  }
+
+  /// The app left the front: what is waiting is sent while it still can be.
+  public func enteredBackground() async {
+    await reporter.flush()
+  }
+
+  /// The service switched reporting on or off. Off drops what was waiting at once.
+  public func analyticsChanged() {
+    reporter.analyticsChanged()
+  }
+
+  /// Where the views report what the user did, for ``EnvironmentValues/appEvents``.
+  public var events: AppEvents {
+    AppEvents { [reporter] in reporter.record($0) }
   }
 
   /// Maintenance is over: the room reconnects now instead of waiting out its back-off, and the

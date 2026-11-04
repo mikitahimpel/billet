@@ -16,6 +16,10 @@ export interface AnalyticsPoint {
   readonly variants: string;
   readonly appVersion: string;
   readonly os: string;
+  /** The event's catalogue id or closed-list word (`ClientEvent.detail`). Empty when none. */
+  readonly detail?: string | undefined;
+  /** A price in stamps (`ClientEvent.value`). Absent when none. */
+  readonly value?: number | undefined;
 }
 
 const encoder = new TextEncoder();

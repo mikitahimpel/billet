@@ -1,0 +1,10 @@
+{
+  "status": {
+    "analytics": {
+      "enabled": false
+    },
+    "maintenance": {
+      "active": false
+    }
+  }
+}

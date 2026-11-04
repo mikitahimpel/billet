@@ -8,8 +8,15 @@ import { EventSink, type AnalyticsPoint } from "@billet/backend-metrics/analytic
 export const dataPointOf = (point: AnalyticsPoint): AnalyticsEngineDataPoint => ({
   // The sampling key: Analytics Engine samples by index, so one pair's events stay together.
   indexes: [point.pairHash === "" ? "unpaired" : point.pairHash],
-  blobs: [point.name, point.pairHash, point.variants, point.appVersion, point.os],
-  doubles: [1],
+  blobs: [
+    point.name,
+    point.pairHash,
+    point.variants,
+    point.appVersion,
+    point.os,
+    point.detail ?? "",
+  ],
+  doubles: [1, point.value ?? 0],
 });
 
 /**

@@ -21,10 +21,10 @@ public struct NookiPetScene: PetScene {
   public let handlesTouches = true
   public let hasShop = true
   public let hasRoom = true
-  /// Every cat, except splat cats on a build or device that can't draw splats: there they would
-  /// only repeat the Idol mesh they fall back to.
+  /// Every listed cat, except splat cats on a build or device that can't draw splats: there they
+  /// would only repeat the Idol mesh they fall back to.
   public var cats: [CatModel] {
-    CatModel.allCases.filter { $0.splatBody == nil || SplatCat.isAvailable }
+    CatModel.allCases.filter { $0.isListed && ($0.splatBody == nil || SplatCat.isAvailable) }
   }
 
   public func makeShopPreview(item: ShopItem) -> AnyView? {

@@ -49,6 +49,7 @@ struct AppShellView: View {
   /// False while something covers the whole shell, such as the maintenance screen.
   @Environment(\.petSceneOnScreen) private var shellShown
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.appEvents) private var events
   @State private var destination = Destination.home
   @State private var replayingOnboarding = false
   @State private var showsUs = false
@@ -219,7 +220,7 @@ struct AppShellView: View {
     .modifier(WarmTabBarFallback())
   }
 
-  /// Lets a measuring run switch tabs, rooms and lighting.
+  /// Lets a measuring run switch tabs, rooms, lighting and the window view.
   private func drivePerf() {
     let destination = $destination
     let labs = labs
@@ -231,6 +232,7 @@ struct AppShellView: View {
       }
     }
     ScenePerf.host.setLighting = { labs.setLighting($0) }
+    ScenePerf.host.setWindowView = { labs.setWindowView($0) }
   }
 }
 
@@ -269,7 +271,8 @@ extension AppShellView {
           ShelfBoardView(
             notes: board.notes, reactions: board.reactions, streak: streak,
             detail: board.detail, onClose: board.close))
-      }
+      },
+      onOpen: { events(.noteOpened(.app)) }
     )
   }
 }

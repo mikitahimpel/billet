@@ -44,6 +44,11 @@ public struct RealRootView: View {
     .onChange(of: model.serviceStatus.maintenanceEnds) {
       Task { await model.maintenanceEnded() }
     }
+    .onChange(of: model.serviceStatus.analyticsEnabled) { model.analyticsChanged() }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .background { Task { await model.enteredBackground() } }
+    }
+    .environment(\.appEvents, model.events)
   }
 
   /// The first scene with its cat asleep, for the maintenance screen.
@@ -118,6 +123,7 @@ struct RealPairedView: View {
   let model: RealAppModel
 
   @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.appEvents) private var events
   @State private var room: LiveRoom?
   @State private var showsUs = false
 
@@ -125,7 +131,7 @@ struct RealPairedView: View {
     let history = model.history()
     VStack(spacing: 0) {
       if let room { LivePartnerView(room: room) }
-      HistoryView(model: history)
+      HistoryView(model: history) { events(.noteOpened(.app)) }
     }
     .safeAreaInset(edge: .top, spacing: Spacing.small) {
       VStack(alignment: .leading, spacing: Spacing.small) {

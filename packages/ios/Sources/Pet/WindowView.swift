@@ -17,6 +17,22 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   case fireEscape
   /// Los Angeles at pink dusk: tall palms, a taco truck, parrots and planes lining up to land.
   case pinkDusk
+  /// A beach at sunset: gentle waves, a sailboat on the horizon, gulls and a lifeguard tower.
+  case sunsetBeach
+  /// A cabin in a pine forest at night, its window lit and smoke from the chimney, fireflies.
+  case forestCabin
+  /// Snowy mountains under the moon, a lit chalet and a gondola crossing on its cable.
+  case moonlitPeaks
+  /// A narrow city street in the rain: neon signs, umbrellas and a train on the line above.
+  case neonStreet
+  /// Old city rooftops at dusk: chimney pots, zinc roofs, a dome and balconies with flowers.
+  case rooftopsDusk
+  /// An autumn park: leaves falling from orange trees, a pond, joggers and dogs.
+  case autumnPark
+  /// A lake at sunrise with mist on the water, a canoe and ducks.
+  case mistyLake
+  /// A desert at night under a huge starry sky, a camper van glowing by the mesas.
+  case desertStars
 
   /// What a window shows before anyone chooses.
   public static let standard = WindowView.suburbNight
@@ -30,6 +46,14 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
     case .dormQuad: "College dorm quad"
     case .fireEscape: "NYC fire escape"
     case .pinkDusk: "LA palms at pink dusk"
+    case .sunsetBeach: "Beach at sunset"
+    case .forestCabin: "Forest cabin at night"
+    case .moonlitPeaks: "Mountains under the moon"
+    case .neonStreet: "Neon street in the rain"
+    case .rooftopsDusk: "Rooftops at dusk"
+    case .autumnPark: "Autumn park"
+    case .mistyLake: "Misty lake at sunrise"
+    case .desertStars: "Desert under the stars"
     }
   }
 
@@ -46,14 +70,24 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
     case .fireEscape: "Pigeons on the railing, cabs below, a steam stack and the skyline behind."
     case .pinkDusk:
       "Palms against a pink sky, a taco truck, wild parrots and planes coming in to land."
+    case .sunsetBeach: "Gentle waves at sunset, a sailboat going by, gulls and a lifeguard tower."
+    case .forestCabin: "A lit cabin among the pines, smoke from the chimney and fireflies."
+    case .moonlitPeaks: "Snowy peaks in moonlight, a lit chalet and a gondola on its cable."
+    case .neonStreet: "Neon signs in the rain, umbrellas below and a train rattling over."
+    case .rooftopsDusk: "Chimney pots and zinc roofs at dusk, flowers on the balconies, pigeons."
+    case .autumnPark: "Orange trees letting go of their leaves, a pond, joggers and dogs."
+    case .mistyLake: "Mist lifting off a still lake at sunrise, a canoe and a line of ducks."
+    case .desertStars: "Mesas under a sky full of stars, shooting stars and a glowing camper."
     }
   }
 
   /// The weather the view is made for, used when the choice leaves weather to the view.
   public var weather: ViewWeather {
     switch self {
-    case .suburbNight, .summerCulDeSac, .dormQuad, .fireEscape, .pinkDusk: .clear
-    case .rainySuburb: .rain
+    case .suburbNight, .summerCulDeSac, .dormQuad, .fireEscape, .pinkDusk, .sunsetBeach,
+      .forestCabin, .moonlitPeaks, .rooftopsDusk, .autumnPark, .mistyLake, .desertStars:
+      .clear
+    case .rainySuburb, .neonStreet: .rain
     case .snowyDecember: .snow
     }
   }
@@ -61,9 +95,12 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   /// The hour the view is made for, used when neither the choice nor the room sets one.
   public var hour: ViewHour {
     switch self {
-    case .suburbNight, .rainySuburb, .snowyDecember, .summerCulDeSac, .dormQuad, .fireEscape:
+    case .suburbNight, .rainySuburb, .snowyDecember, .summerCulDeSac, .dormQuad, .fireEscape,
+      .forestCabin, .moonlitPeaks, .neonStreet, .desertStars:
       .night
-    case .pinkDusk: .dusk
+    case .pinkDusk, .sunsetBeach, .rooftopsDusk: .dusk
+    case .autumnPark: .day
+    case .mistyLake: .morning
     }
   }
 }

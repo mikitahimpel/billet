@@ -136,11 +136,53 @@ describe("events route", () => {
       { events: Array.from({ length: maxEventsPerRequest + 1 }, () => "AppOpened") },
     ],
     ["no events field", {}],
-    ["events that are objects", { events: [{ name: "AppOpened", note: "hi" }] }],
+    ["an object with a name the server records itself", { events: [{ name: "PairClaimed" }] }],
+    ["a detail on a name that takes none", { events: [{ name: "CatPetted", detail: "tabby" }] }],
+    ["a missing detail where one is needed", { events: [{ name: "CatChosen" }] }],
+    ["a detail outside the closed list", { events: [{ name: "NoteOpened", detail: "email" }] }],
+    ["a detail that is free text", { events: [{ name: "CatChosen", detail: "my cat Tom" }] }],
+    ["an over-long detail", { events: [{ name: "CatChosen", detail: "a".repeat(41) }] }],
+    [
+      "a value on a name that takes none",
+      { events: [{ name: "CatChosen", detail: "tabby", value: 3 }] },
+    ],
+    ["a negative price", { events: [{ name: "ShopItemBought", detail: "lamp", value: -1 }] }],
+    ["a fractional price", { events: [{ name: "ShopItemBought", detail: "lamp", value: 1.5 }] }],
   ])("refuses %s", async (_, body) => {
     const before = metrics.rows.size;
     expect((await post(body, "ana")).status).toBe(400);
     expect(metrics.rows.size).toBe(before);
+  });
+
+  it("counts detailed events like bare ones, and their details apart from the person", async () => {
+    const response = await post(
+      {
+        events: [
+          "AppOpened",
+          { name: "CatChosen", detail: "idolIlya" },
+          { name: "ShopItemBought", detail: "fairy-lights", value: 40 },
+          { name: "CatPetted" },
+          { name: "CatPetted", note: "ignored" },
+        ],
+      },
+      "dan",
+    );
+    expect(response.status).toBe(204);
+    const dan = [...metrics.rows.values()].filter(({ userId }) => userId === user("dan"));
+    expect(dan.map(({ name, count }) => [name, count]).toSorted()).toEqual([
+      ["AppOpened", 1],
+      ["CatChosen", 1],
+      ["CatPetted", 2],
+      ["ShopItemBought", 1],
+    ]);
+    expect([...metrics.details.values()]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "CatChosen", detail: "idolIlya", count: 1, total: 0 }),
+        expect.objectContaining({ name: "ShopItemBought", detail: "fairy-lights", total: 40 }),
+      ]),
+    );
+    expect(JSON.stringify([...metrics.details.values()])).not.toContain(user("dan"));
+    expect(JSON.stringify([...metrics.rows.values()])).not.toContain("ignored");
   });
 
   it("ignores any other field in the body and stores none of it", async () => {
@@ -223,6 +265,27 @@ describe("events route", () => {
         [clientHeaders.os]: value,
       });
       expect(points[0]).toMatchObject({ appVersion: "unknown", os: "unknown" });
+    });
+
+    it("adds the detail and the price to the point when the event has them", async () => {
+      points.length = 0;
+      await post(
+        { events: [{ name: "ShopItemBought", detail: "lamp", value: 25 }, "AppOpened"] },
+        "ana",
+      );
+      expect(points).toEqual([
+        {
+          name: "ShopItemBought",
+          pairHash: "",
+          variants: "",
+          appVersion: "unknown",
+          os: "unknown",
+          detail: "lamp",
+          value: 25,
+        },
+        { name: "AppOpened", pairHash: "", variants: "", appVersion: "unknown", os: "unknown" },
+      ]);
+      points.length = 0;
     });
 
     it("writes nothing for a refused request", async () => {

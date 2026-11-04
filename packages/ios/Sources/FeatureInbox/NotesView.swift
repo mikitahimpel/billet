@@ -11,6 +11,7 @@ public struct NotesView: View {
   private let detailDrawing: ((NoteRecord) -> AnyView)?
   private let detailActions: ((NoteRecord) -> AnyView)?
   private let board: ((NoteBoard) -> AnyView)?
+  private let onOpen: (() -> Void)?
 
   @Namespace private var zoom
   @State private var opened: NoteRecord?
@@ -22,6 +23,7 @@ public struct NotesView: View {
   ///   - detailDrawing: Shows a note's drawing in the full-screen view instead of the still one.
   ///   - detailActions: Extra controls shown under a note in the full-screen view.
   ///   - board: Another way to see the notes, reached from the top of the list.
+  ///   - onOpen: Called when a note in the list is opened full screen.
   public init(
     notes: [NoteRecord],
     loadFailed: Bool = false,
@@ -29,8 +31,10 @@ public struct NotesView: View {
     onReact: ((NoteRecord, Reaction) -> Void)? = nil,
     detailDrawing: ((NoteRecord) -> AnyView)? = nil,
     detailActions: ((NoteRecord) -> AnyView)? = nil,
-    board: ((NoteBoard) -> AnyView)? = nil
+    board: ((NoteBoard) -> AnyView)? = nil,
+    onOpen: (() -> Void)? = nil
   ) {
+    self.onOpen = onOpen
     self.detailDrawing = detailDrawing
     self.detailActions = detailActions
     self.board = board
@@ -107,6 +111,7 @@ public struct NotesView: View {
   @ViewBuilder private func row(_ note: NoteRecord) -> some View {
     let button = Button {
       opened = note
+      onOpen?()
     } label: {
       NoteRow(note: note, reaction: reactions[note.id])
     }

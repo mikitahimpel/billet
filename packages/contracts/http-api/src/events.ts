@@ -1,11 +1,22 @@
 import { Schema } from "effect";
-import { ClientEventName } from "@billet/contracts-domain/metrics";
+import { ClientEvent, ClientEventName } from "@billet/contracts-domain/metrics";
 
 /** The most events one request carries. */
 export const maxEventsPerRequest = 20;
 
-/** Names only: see `ClientEventName`. The server answers 204. */
+/**
+ * One reported event: a bare name, as builds before the detailed events send it, or a
+ * `ClientEvent` with its detail. Both mean the same when there is no detail.
+ */
+export const ReportedEvent = Schema.Union([ClientEventName, ClientEvent]);
+export type ReportedEvent = typeof ReportedEvent.Type;
+
+/** See `ClientEvent`. The server answers 204. */
 export const ReportEventsRequest = Schema.Struct({
-  events: Schema.Array(ClientEventName).check(Schema.isMaxLength(maxEventsPerRequest)),
+  events: Schema.Array(ReportedEvent).check(Schema.isMaxLength(maxEventsPerRequest)),
 });
 export type ReportEventsRequest = typeof ReportEventsRequest.Type;
+
+/** Either form as a `ClientEvent`. */
+export const clientEventOf = (event: ReportedEvent): ClientEvent =>
+  typeof event === "string" ? { name: event } : event;

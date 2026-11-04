@@ -145,9 +145,9 @@ private enum Status {
   final class Backend: @unchecked Sendable {
     private let lock = NSLock()
     private var down = true
-    private var batches: [[ClientEventName]] = []
+    private var batches: [[ClientEvent]] = []
 
-    var sent: [[ClientEventName]] { lock.withLock { batches } }
+    var sent: [[ClientEvent]] { lock.withLock { batches } }
     func end() { lock.withLock { down = false } }
 
     var api: APIClient {
@@ -181,7 +181,7 @@ private enum Status {
       labs: WidgetFeaturesModel(store: nil),
       eventStorage: .directory(
         FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)),
-      hasWidget: { false },
+      widgetKinds: { [] },
       serviceStatus: status)
 
     await model.becameActive()
@@ -192,6 +192,6 @@ private enum Status {
     status.received(.normal)
     #expect(status.maintenanceEnds == 1)
     await model.maintenanceEnded()
-    #expect(backend.sent == [[.appOpened]])
+    #expect(backend.sent == [[ClientEvent(.appOpened)]])
   }
 }

@@ -205,6 +205,7 @@ const readHandlers = Effect.gen(function* () {
         yield* data.events,
         utcDay(yield* Clock.currentTimeMillis),
         Number(days ?? 30),
+        yield* data.details,
       ),
     );
   }).pipe(guarded);

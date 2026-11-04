@@ -6,7 +6,7 @@ import {
   StoredUser,
 } from "@billet/backend-auth/auth-repository";
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
-import { StoredMetric } from "@billet/backend-metrics/metrics-repository";
+import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
 import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
@@ -22,6 +22,7 @@ import {
   flagChanges,
   flagConfigs,
   invites,
+  eventDetails,
   pairEvents,
   pairFlagOverrides,
   pairFlags,
@@ -65,6 +66,7 @@ const checked = [
   ["flag_configs", flagConfigs, FlagConfigRow],
   ["pair_flag_overrides", pairFlagOverrides, PairOverrideRow],
   ["invites", invites, StoredInvite],
+  ["event_details", eventDetails, StoredDetail],
   ["pair_events", pairEvents, StoredMetric],
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],

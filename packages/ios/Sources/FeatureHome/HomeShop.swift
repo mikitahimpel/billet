@@ -21,6 +21,7 @@ struct HomeShop: ViewModifier {
   /// False when Home opens the shop and the closet from somewhere else.
   var showsButtons = true
   @Binding var sheet: Sheet?
+  @Environment(\.appEvents) private var events
 
   private var isAvailable: Bool { scene?.hasShop ?? false }
 
@@ -49,6 +50,7 @@ struct HomeShop: ViewModifier {
             scene?.makeShopPreview(item: item) ?? AnyView(EmptyView())
           }
           .presentationDetents([.large])
+          .onAppear { events(.shopOpened) }
         case .closet:
           ClosetView(
             store: shop, renovator: renovator,
