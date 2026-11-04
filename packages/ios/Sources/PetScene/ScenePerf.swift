@@ -383,7 +383,7 @@ extension ScenePerf {
     #if canImport(UIKit)
       @objc private func tick(_ link: CADisplayLink) {
         let now = link.timestamp
-        if frame == 0, intervals.isEmpty, lastFrame == nil, ScenePerf.marks.isEmpty {
+        if frame == 0, intervals.isEmpty, lastFrame == nil, !ScenePerf.marks.contains(where: { $0.name == "first frame" }) {
           ScenePerf.mark("first frame")
         }
         let cpu = Self.threadCPU()
