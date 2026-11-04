@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   check:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,17 +41,7 @@ jobs:
           cache: pnpm
 
       - name: Select Xcode from .xcode-version
-        run: |
-          version="$(tr -d '[:space:]' < .xcode-version)"
-          app="/Applications/Xcode_${version}.app"
-          if [ ! -d "$app" ]; then
-            echo "::error::$app is not installed on this runner (.xcode-version is $version)"
-            ls -d /Applications/Xcode_*.app
-            exit 1
-          fi
-          sudo xcode-select -s "$app"
-          xcodebuild -version
-          xcodebuild -version | head -n 1 | grep -qx "Xcode ${version}"
+        run: .github/scripts/select-xcode.sh .xcode-version
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -86,17 +76,20 @@ jobs:
         run: |
           # From iOS 26.4 on, Simulators don't get the .storekit file from `xcodebuild test`, so
           # StoreKitTest serves no products (seen on 26.4 and 26.5 here; developer.apple.com/forums/
-          # thread/826971). Run on the newest runtime before 26.3 until Apple fixes it.
+          # thread/826971). Run on the newest runtime before 26.3 when the runner has one, else on
+          # the newest iOS 27 runtime.
           xcrun simctl list runtimes
           runtime=$(xcrun simctl list runtimes -j | python3 -c '
           import json, sys
-          rs = [r for r in json.load(sys.stdin)["runtimes"]
-                if r["platform"] == "iOS" and r["isAvailable"]
-                and tuple(map(int, r["version"].split(".")[:2])) < (26, 3)]
-          rs.sort(key=lambda r: tuple(map(int, r["version"].split("."))))
-          print(rs[-1]["identifier"] if rs else "")')
+          v = lambda r: tuple(map(int, r["version"].split(".")))
+          rs = sorted((r for r in json.load(sys.stdin)["runtimes"]
+                       if r["platform"] == "iOS" and r["isAvailable"]), key=v)
+          ok = [r for r in rs if v(r)[:2] < (26, 3) or v(r)[0] >= 27]
+          old = [r for r in ok if v(r)[:2] < (26, 3)]
+          pick = (old or ok)[-1:]
+          print(pick[0]["identifier"] if pick else "")')
           if [ -z "$runtime" ]; then
-            echo "::error::no iOS Simulator runtime before 26.3 on this runner"
+            echo "::error::no iOS Simulator runtime before 26.3 or from 27 on this runner"
             exit 1
           fi
           udid=$(xcrun simctl create storekit-tests "iPhone 17" "$runtime")

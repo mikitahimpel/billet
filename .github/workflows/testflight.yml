@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   upload:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: testflight
     env:
@@ -78,16 +78,7 @@ jobs:
           git log --oneline -1
 
       - name: Select Xcode from .xcode-version
-        run: |
-          version="$(tr -d '[:space:]' < .xcode-version)"
-          app="/Applications/Xcode_${version}.app"
-          if [ ! -d "$app" ]; then
-            echo "::error::$app is not installed on this runner (.xcode-version is $version)"
-            ls -d /Applications/Xcode_*.app
-            exit 1
-          fi
-          sudo xcode-select -s "$app"
-          xcodebuild -version | head -n 1 | grep -qx "Xcode ${version}"
+        run: .github/scripts/select-xcode.sh .xcode-version
 
       # Pinned release, verified by checksum, so project generation cannot drift.
       - name: Install XcodeGen
