@@ -37,6 +37,7 @@ extension View {
   /// the evening's dark scheme. Every sheet goes through here, so none styles itself.
   public func billetSheet(_ detents: Set<PresentationDetent> = [.large]) -> some View {
     environment(\.isInSheet, true)
+      .modifier(CountsAsSheet())
       .presentationDetents(detents)
       .presentationBackground { SheetGround() }
       .presentationDragIndicator(.visible)
