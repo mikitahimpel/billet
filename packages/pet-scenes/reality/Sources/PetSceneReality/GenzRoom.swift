@@ -430,7 +430,7 @@ final class GenzRoom: CatPlayStage {
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
-    if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
+    if let palette = CatCatalog.coatTexture(shown.model, coat: shown.coat) { rig?.paint(palette) }
     let action = self.rig?.current ?? .sleep
     catModel?.removeFromParent()
     catModel = model
