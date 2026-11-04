@@ -53,8 +53,6 @@ struct ShopView: View {
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
 
             Spacer(minLength: 0)
-
-            CoinPill(coins: state.coins)
         }
         .frame(height: 44)
     }

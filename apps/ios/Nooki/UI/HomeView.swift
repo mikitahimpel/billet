@@ -33,26 +33,30 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
 
-            if state.tab == .shop {
-                // The scroll view runs under the tab bar and keeps its own 16pt margins.
-                ShopView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else if state.tab == .moments {
-                MomentsView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else if state.tab == .us {
-                UsView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else {
-                VStack(spacing: 16) {
-                    CoupleRow(state: state)
-                    RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
-                    Spacer(minLength: 0)
+            VStack(spacing: 12) {
+                // The same header, in the same place, on every tab.
+                AppHeader(state: state)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+
+                Group {
+                    switch state.tab {
+                    case .shop:
+                        // The scroll view runs under the tab bar and keeps its own 16pt margins.
+                        ShopView(state: state)
+                    case .moments:
+                        MomentsView(state: state)
+                    case .world:
+                        VStack(spacing: 16) {
+                            RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 82)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .padding(.bottom, 82)
                 .transition(.opacity.combined(with: .offset(y: 12)))
+                .frame(maxHeight: .infinity, alignment: .top)
             }
 
             VStack {
@@ -122,14 +126,19 @@ struct HomeView: View {
             default: break
             }
         }
-        .sheet(isPresented: $state.showsSettings) {
-            SettingsView(state: state) {
-                scene?.stop()
-                HomeState.eraseAll()
-                state = HomeState()
-            }
-            .presentationBackground(Ink.sheet)
-            .presentationDragIndicator(.visible)
+        .sheet(isPresented: $state.showsUs) {
+            UsView(state: state)
+                .usSheet()
+                // Settings opens from Us, so it is presented over the Us sheet.
+                .sheet(isPresented: $state.showsSettings) {
+                    SettingsView(state: state) {
+                        scene?.stop()
+                        HomeState.eraseAll()
+                        state = HomeState()
+                    }
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
+                }
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)

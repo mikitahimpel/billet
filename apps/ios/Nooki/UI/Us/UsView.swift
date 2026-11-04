@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists.
+/// Us, opened from the couple's avatars: the couple's plans (countdown hero, love streak, three feature tiles,
+/// shared lists), with today's mood, profile and settings in its header.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -19,8 +20,7 @@ struct UsView: View {
     }
 
     private let hMargin: CGFloat = 16
-    /// Same tab bar clearance as the shop.
-    private let bottomInset: CGFloat = 134
+    private let bottomInset: CGFloat = 32
     private var us: UsStore { state.us }
 
     var body: some View {
@@ -34,7 +34,7 @@ struct UsView: View {
                 lists
             }
             .padding(.horizontal, hMargin)
-            .padding(.top, 4)
+            .padding(.top, 20)
             .padding(.bottom, bottomInset)
         }
         .scrollIndicators(.hidden)
@@ -58,6 +58,20 @@ struct UsView: View {
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
             Spacer(minLength: 0)
             ViewerSwitch(state: state)
+            Menu {
+                Section("How are you, \(state.profile.name(of: state.viewer))?") {
+                    ForEach(PartnerMood.allCases, id: \.self) { mood in
+                        Button("\(mood.emoji) \(mood.title.capitalized)") { state.setMood(mood) }
+                    }
+                }
+            } label: {
+                Image(systemName: "face.smiling")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Ink.primary)
+                    .frame(width: 40, height: 40)
+            }
+            .glass(.circle, interactive: true)
+            .accessibilityLabel("Mood")
             Button { state.showsSettings = true } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 17, weight: .semibold))
