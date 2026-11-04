@@ -1,0 +1,14 @@
+{
+  "_tag": "Text",
+  "id": "name",
+  "maxLength": 20,
+  "placeholder": {
+    "en": "Your name",
+    "ru": "Имя"
+  },
+  "skippable": true,
+  "title": {
+    "en": "What does your person call you?",
+    "ru": "Как тебя называет твой человек?"
+  }
+}

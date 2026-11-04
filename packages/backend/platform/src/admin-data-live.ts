@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, min } from "drizzle-orm";
+import { asc, count, countDistinct, desc, eq, min } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { AdminData, AdminUnavailable } from "@billet/backend-admin/admin-data";
 import { MetricEventName } from "@billet/contracts-domain/metrics";
@@ -6,6 +6,7 @@ import { openDirectoryDatabase, type DirectoryDatabase } from "./directory-datab
 import {
   appStoreNotifications,
   eventDetails,
+  onboardingAnswers,
   pairEvents,
   pairFlags,
   pairMembers,
@@ -111,6 +112,29 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
             notifications,
           })),
         ),
+      // Never `text`: what a person typed stays in the table.
+      onboarding: guarded(
+        Effect.all([
+          db
+            .select({
+              stepId: onboardingAnswers.stepId,
+              kind: onboardingAnswers.kind,
+              optionIds: onboardingAnswers.optionIds,
+              value: onboardingAnswers.value,
+            })
+            .from(onboardingAnswers),
+          db.select({ accounts: countDistinct(onboardingAnswers.userId) }).from(onboardingAnswers),
+        ]),
+      ).pipe(
+        Effect.map(([rows, [total]]) => ({
+          rows: rows.map((row) => ({
+            ...row,
+            optionIds:
+              row.optionIds === null ? [] : (JSON.parse(row.optionIds) as ReadonlyArray<string>),
+          })),
+          accounts: total?.accounts ?? 0,
+        })),
+      ),
       pair: (pairId) =>
         guarded(
           db

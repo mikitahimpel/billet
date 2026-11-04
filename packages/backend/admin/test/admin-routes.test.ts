@@ -15,6 +15,7 @@ import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-m
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
 import type { DetailRow } from "../src/admin-top-details.ts";
+import { OnboardingCatalogue, seedCatalogue } from "@billet/backend-onboarding/catalogue";
 import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
@@ -99,6 +100,14 @@ const handlerFor = (email: string) =>
                     ledger: [],
                     notifications: [],
                   }),
+                onboarding: Effect.succeed({
+                  rows: [
+                    { stepId: "age", kind: "Single", optionIds: ["age-18-24"], value: null },
+                    { stepId: "age", kind: "Skipped", optionIds: [], value: null },
+                    { stepId: "cat_coat", kind: "Single", optionIds: ["grey"], value: null },
+                  ],
+                  accounts: 2,
+                }),
                 pair: (pairId) =>
                   Effect.succeed(
                     pairId === "pair-1"
@@ -112,6 +121,7 @@ const handlerFor = (email: string) =>
                 save: (input) => appStatus.store.save(input),
               }),
               Experiments.with(experiments),
+              OnboardingCatalogue.seed,
               Digest.layerWebCrypto,
             ),
           ),
@@ -463,5 +473,29 @@ describe("purchases", () => {
     expect(listed.body).toMatchObject({ ledger: [], notifications: [] });
     expect((await call(`${adminApi.purchases}?limit=0`)).status).toBe(400);
     expect((await call(adminApi.purchases, "POST", {})).status).toBe(404);
+  });
+});
+
+describe("onboarding", () => {
+  it("counts answers and skips per step, the app's own steps last, read-only", async () => {
+    const listed = await call(adminApi.onboarding);
+    expect(listed.status).toBe(200);
+    expect(listed.body).toMatchObject({ version: seedCatalogue.version, accounts: 2, retired: [] });
+    const steps = listed.body.steps as ReadonlyArray<{ id: string; native: boolean }>;
+    expect(steps.map((step) => step.id)).toEqual([
+      "age",
+      "pronouns",
+      "name",
+      "goals",
+      "cat_coat",
+      "cat_name",
+      "invite_partner",
+    ]);
+    expect(steps[0]).toMatchObject({ answered: 1, skipped: 1, skipRate: 0.5, native: false });
+    expect(steps[4]).toMatchObject({
+      native: true,
+      options: [{ id: "grey", label: "grey", count: 1 }],
+    });
+    expect((await call(adminApi.onboarding, "POST", {})).status).toBe(404);
   });
 });

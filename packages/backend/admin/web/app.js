@@ -2707,6 +2707,142 @@ async function renderPurchases() {
   ];
 }
 
+/* ---------- Onboarding ---------- */
+
+const KIND_LABEL = {
+  Single: "one choice",
+  Multi: "several choices",
+  Range: "range",
+  Text: "typed",
+  OpenChoice: "one choice (app's list)",
+};
+
+/** One bar per option or value: how many picked it, and its share of the step's answers. */
+function answerBars(label, rows, answered) {
+  const top = Math.max(1, ...rows.map((r) => r.count));
+  if (!rows.some((r) => r.count)) return empty("No picks yet");
+  return h(
+    "div",
+    { class: "funnel", role: "table", "aria-label": label },
+    h(
+      "div",
+      { role: "row", style: { display: "contents" } },
+      h("span", { class: "funnel-head", role: "columnheader", text: "Answer" }),
+      h("span", { class: "funnel-head bar", role: "columnheader", "aria-hidden": "true" }),
+      h("span", { class: "funnel-head f-num", role: "columnheader", text: "Picked" }),
+      h("span", { class: "funnel-head f-conv", role: "columnheader", text: "Of answers" }),
+    ),
+    rows.map((r) =>
+      h(
+        "div",
+        { role: "row", style: { display: "contents" } },
+        h("span", { class: "f-label", role: "rowheader", text: r.label }),
+        h(
+          "span",
+          { class: "f-track", "aria-hidden": "true" },
+          h("span", {
+            class: "f-fill",
+            style: { "--w": `${((r.count / top) * 100).toFixed(1)}%` },
+          }),
+        ),
+        h("span", { class: "f-num", role: "cell", text: fmtNum(r.count, 0) }),
+        h("span", {
+          class: "f-conv",
+          role: "cell",
+          text: answered === 0 ? "—" : fmtPct(r.count / answered),
+        }),
+      ),
+    ),
+  );
+}
+
+async function renderOnboarding() {
+  const { version, accounts, steps, retired } = await api("/onboarding");
+  const answered = steps.reduce((a, st) => a + st.answered, 0);
+  const skipped = steps.reduce((a, st) => a + st.skipped, 0);
+  const picks = (st) =>
+    st.kind === "Range"
+      ? st.values.map((v) => ({ label: String(v.value), count: v.count }))
+      : st.options;
+
+  return [
+    pageHead(
+      "Onboarding",
+      "How each onboarding step was answered or skipped. Typed answers (names) are never shown here.",
+    ),
+    h(
+      "div",
+      { class: "stats" },
+      statCard({ label: "Accounts", value: fmtNum(accounts, 0), foot: "with an answer or a skip" }),
+      statCard({
+        label: "Skip rate",
+        value: answered + skipped === 0 ? "—" : fmtPct(skipped / (answered + skipped)),
+        foot: "all steps",
+      }),
+      statCard({ label: "Questions", value: version, foot: "version served" }),
+    ),
+    section(
+      "Steps",
+      "Served questions in order, then the steps the app draws itself.",
+      dataTable({
+        caption: "Steps",
+        noun: "steps",
+        rows: steps,
+        columns: [
+          {
+            label: "Step",
+            value: (st) => st.id,
+            cell: (st) => [
+              h("span", { class: "mono", text: st.id }),
+              st.native ? [" ", pill("", "in the app", true)] : null,
+            ],
+          },
+          { label: "Question", value: (st) => st.title },
+          { label: "Kind", value: (st) => KIND_LABEL[st.kind] || st.kind },
+          { label: "Answered", num: true, value: (st) => st.answered },
+          { label: "Skipped", num: true, value: (st) => st.skipped },
+          {
+            label: "Skip rate",
+            num: true,
+            value: (st) => st.skipRate ?? -1,
+            cell: (st) => (st.skipRate == null ? "—" : fmtPct(st.skipRate)),
+          },
+        ],
+        none: empty("No steps"),
+      }),
+    ),
+    steps
+      .filter((st) => st.kind !== "Text")
+      .map((st) =>
+        section(
+          st.title,
+          `${fmtNum(st.answered, 0)} answered · ${fmtNum(st.skipped, 0)} skipped${
+            st.kind === "Multi" ? " · one answer can pick several" : ""
+          }`,
+          answerBars(st.title, picks(st), st.answered),
+        ),
+      ),
+    retired.length > 0 &&
+      section(
+        "Retired steps",
+        "Answers to steps the questions no longer have.",
+        dataTable({
+          caption: "Retired steps",
+          noun: "steps",
+          rows: retired,
+          columns: [
+            {
+              label: "Step",
+              value: (r) => r.stepId,
+              cell: (r) => h("span", { class: "mono", text: r.stepId }),
+            },
+            { label: "Answers", num: true, value: (r) => r.count },
+          ],
+        }),
+      ),
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -2717,6 +2853,7 @@ const ROUTES = {
   pairs: renderPairs,
   maintenance: renderMaintenance,
   purchases: renderPurchases,
+  onboarding: renderOnboarding,
   audit: renderAudit,
 };
 const updatedEl = document.getElementById("updated");

@@ -216,4 +216,55 @@ import Testing
     expectRejected(
       PushPayload.self, ##"{"_tag":"Alert","noteId":"n1","author":"u1","text":null}"##)
   }
+
+  // MARK: onboarding
+
+  private let title = ##"{"en":"t","ru":"т"}"##
+
+  @Test func aChoiceStepKeepsItsOptionsAndFlags() throws {
+    let step = try decode(
+      OnboardingStep.self,
+      ##"{"_tag":"Multi","id":"goals","title":\##(title),"skippable":true,"options":[{"id":"a","label":\##(title),"exclusive":true}]}"##
+    )
+    guard case .multi(let multi) = step else {
+      Issue.record("expected a multi step")
+      return
+    }
+    #expect(step.id == "goals")
+    #expect(multi.options.first?.exclusive == true)
+    #expect(multi.options.first?.emoji == nil)
+  }
+
+  @Test(arguments: [
+    ##"{"_tag":"Single","id":"s","title":{"en":"t","ru":"т"},"skippable":true,"options":[]}"##,
+    ##"{"_tag":"Single","id":"s","title":{"en":"t","ru":"т"},"skippable":true,"subtitle":null,"options":[{"id":"a","label":{"en":"t","ru":"т"}}]}"##,
+    ##"{"_tag":"Range","id":"r","title":{"en":"t","ru":"т"},"skippable":true,"min":0,"max":9,"step":0}"##,
+    ##"{"_tag":"Text","id":"t","title":{"en":"t","ru":"т"},"skippable":true,"maxLength":0}"##,
+    ##"{"_tag":"Date","id":"d","title":{"en":"t","ru":"т"},"skippable":true}"##,
+  ])
+  func aBrokenStepIsRejected(_ json: String) {
+    expectRejected(OnboardingStep.self, json)
+  }
+
+  @Test(arguments: [
+    ##"{"_tag":"Multi","options":[]}"##,
+    ##"{"_tag":"Multi","options":["a","a"]}"##,
+    ##"{"_tag":"Text","text":"  "}"##,
+    ##"{"_tag":"Single"}"##,
+  ])
+  func aBrokenAnswerIsRejected(_ json: String) {
+    expectRejected(OnboardingAnswer.self, json)
+  }
+
+  @Test func anAnswerRequestEncodesAsTheServerReadsIt() throws {
+    let request = SaveOnboardingAnswerRequest(
+      version: "2026-11-04", stepId: "cat_coat", answer: .single(option: "grey"),
+      answeredAt: 1000)
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    #expect(
+      String(decoding: try encoder.encode(request), as: UTF8.self)
+        == ##"{"answer":{"_tag":"Single","option":"grey"},"answeredAt":1000,"stepId":"cat_coat","version":"2026-11-04"}"##
+    )
+  }
 }

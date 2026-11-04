@@ -13,7 +13,14 @@ export const StoredRateLimit = Schema.Struct({
 export const windowMillis = 60_000;
 
 /** Requests per client per window. A couple's real use is far below these. */
-export const limits = { auth: 30, pairing: 20, media: 60, events: 60, purchases: 30 } as const;
+export const limits = {
+  auth: 30,
+  pairing: 20,
+  media: 60,
+  events: 60,
+  purchases: 30,
+  onboarding: 60,
+} as const;
 export type LimitedGroup = keyof typeof limits;
 
 export const groupOf = (pathname: string): LimitedGroup | undefined => {
@@ -22,6 +29,7 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
     return "pairing";
   }
   if (pathname === "/v1/events") return "events";
+  if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";
   if (pathname === "/v1/media" || pathname.startsWith("/v1/media/")) return "media";
   return undefined;

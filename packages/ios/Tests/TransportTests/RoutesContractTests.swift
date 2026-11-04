@@ -38,6 +38,8 @@ import Testing
       "uploadImage": Routes.uploadImage,
       "downloadImage": Route(.get, Routes.downloadImagePrefix + "*"),
       "sendNote": Routes.sendNote,
+      "getOnboarding": Routes.getOnboarding,
+      "saveOnboardingAnswer": Routes.saveOnboardingAnswer,
       "listNotes": Routes.listNotes,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
