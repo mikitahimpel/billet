@@ -15,6 +15,10 @@ struct CatBrainBody {
   var route: [SIMD2<Float>] = []
   /// The room clock when the cat got to `goal`, or nil while it is on its way.
   var arrived: Double?
+  /// The way the settled cat faces, clear of what is beside it, and the way it wanted to face
+  /// when that was worked out (nil for no wish of its own). Kept while the wish holds, so the
+  /// body does not hunt between headings from frame to frame.
+  var rest: (want: Float?, heading: Float)?
   /// The step and its start the goal was worked out for, and the step before it.
   var goalFor: (CatActivityStep, Double)?
   var cameFrom: CatActivityStep?
@@ -32,6 +36,8 @@ struct CatBrainBody {
   var spoke: Double?
   /// Something a tantrum knocked off the seat, falling or gone until it is put back.
   var knock: CatKnock?
+  /// Pillows sliding aside for the settled cat: each holder, from and to, and since when.
+  var nudges: [(holder: Entity, from: SIMD3<Float>, to: SIMD3<Float>, start: Double)] = []
 }
 
 /// A piece the cat batted off the seat: where it stood, and since when it has been falling.
@@ -169,7 +175,52 @@ extension GenzRoom {
   func pieceMoved(_ name: String) {
     brainBody.moved[name] = Date().timeIntervalSince1970
     reportAffordances()
+    nudgePillows(heading: bodyHeading)
   }
+
+  /// Slides the seat's pillows the settled cat's resting body is in aside along the backrest,
+  /// easing them there, as a cat settling against them would: after it arrives, when a piece
+  /// was moved, or when a bigger cat is shown. Not while decorating, when the pieces are in the
+  /// person's hands. Where they cannot part, the cat moves along to where they can.
+  func nudgePillows(heading: Float) {
+    guard brainBody.arrived != nil, !decor.isOn else { return }
+    guard let nudges = layout.pillowNudges(clearOf: catSpot, heading: heading) else {
+      // No room for the pillows to part here, near the seat's end: it gets up and settles
+      // where there is, and they part there.
+      let room = layout.pillowRoom(near: catSpot, heading: heading)
+      guard room != catSpot else { return }
+      brainBody.route = layout.catRoute(from: catSpot, to: room)
+      brainBody.goal = brainBody.route.last ?? catSpot
+      brainBody.arrived = nil
+      brainBody.rest = nil
+      return
+    }
+    for (index, x) in nudges {
+      let name = Self.decorName(layout.pieces[index], index: index)
+      guard var box = decor.plan(of: name)?.pieces[name], let holder = decor.rest(of: name)?.holder
+      else { continue }
+      let from = holder.position
+      box.centre.x = x
+      decor.place(name, at: box)
+      moveInLayout(name)
+      brainBody.nudges.append((holder, from, holder.position, clock))
+      holder.position = from
+    }
+  }
+
+  /// Eases the pillows being nudged to where they go.
+  func stepNudges() {
+    guard !brainBody.nudges.isEmpty else { return }
+    brainBody.nudges.removeAll { nudge in
+      let t = Float(min((clock - nudge.start) / Self.nudgeLength, 1))
+      let eased = t * t * (3 - 2 * t)
+      nudge.holder.position = nudge.from + (nudge.to - nudge.from) * eased
+      return t >= 1
+    }
+  }
+
+  /// How long a pillow takes to slide aside, in seconds.
+  static let nudgeLength = 0.35
 
   /// What a person is doing with the cat right now, as this phone's touch shows it.
   var liveInteraction: CatInteraction? {
@@ -212,6 +263,7 @@ extension GenzRoom {
       // Somewhere it cannot get to without going through something: as near as it gets.
       brainBody.goal = brainBody.route.last ?? catSpot
       brainBody.arrived = nil
+      brainBody.rest = nil
       brainBody.spoke = nil
     }
     let at = catSpot
@@ -253,13 +305,14 @@ extension GenzRoom {
     }
     let up = layout.catStandHeight(at: at)
     // Turned, if it must be, so its body keeps off the pillows beside it.
-    let heading = layout.catHeading(at: at, want: headingFor(frame) ?? bodyHeading, height: up)
+    let heading = restHeading(at: at, want: headingFor(frame), height: up)
     if brainBody.arrived == nil {
       brainBody.arrived = clock
       catHolder.position.y = layout.cat.spot.scene.y + up
       // Trips, games and calls start from here and come back here.
       perch = (at, heading)
       updateScreen()
+      nudgePillows(heading: heading)
     }
     let since = clock - (brainBody.arrived ?? clock)
     speak(frame)
@@ -289,6 +342,26 @@ extension GenzRoom {
       spot: at, heading: heading, action: action, speed: 0, leg: 0,
       progress: 0, isDone: false)
   }
+
+  /// The way the settled cat faces: `want`, or its body's heading for none, turned if it must be
+  /// so its body keeps off what is beside it. Worked out again only when `want` turns by more
+  /// than a little, as when what it watches moves.
+  private func restHeading(at: SIMD2<Float>, want: Float?, height: Float) -> Float {
+    if let rest = brainBody.rest {
+      switch (rest.want, want) {
+      case (nil, nil): return rest.heading
+      case (let was?, let now?) where abs(remainder(now - was, 2 * .pi)) < Self.wantSlack:
+        return rest.heading
+      default: break
+      }
+    }
+    let heading = layout.catHeading(at: at, want: want ?? bodyHeading, height: height)
+    brainBody.rest = (want, heading)
+    return heading
+  }
+
+  /// How far, in radians, what the settled cat faces may move before it turns again.
+  static let wantSlack: Float = 0.2
 
   /// Lying down into a nap from standing or kneading, before the sleep loop takes over. A nap
   /// that only renews, or one already under way when the scene opened, goes straight to sleep.
