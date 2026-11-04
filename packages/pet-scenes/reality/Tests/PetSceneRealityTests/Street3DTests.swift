@@ -65,4 +65,23 @@ struct Street3DTests {
   @Test func theMeshFileRefusesSomethingElse() {
     #expect(throws: StreetMeshFile.Failure.self) { try StreetMeshFile(Data("nope".utf8)) }
   }
+
+  @Test func theMeshFileTurnsItsImageRowsIntoRealityKitsUp() throws {
+    var data = Data("BSV1".utf8)
+    func put<T>(_ value: T) { withUnsafeBytes(of: value) { data.append(contentsOf: $0) } }
+    put(UInt32(1))
+    data.append(4)
+    data.append(contentsOf: Array("road".utf8))
+    put(UInt32(3))
+    put(UInt32(3))
+    for (u, v) in [(0.25, 0.1), (0.5, 0.2), (0.75, 0.9)] as [(Float, Float)] {
+      for value in [0, 0, 0, u, v] as [Float] { put(value) }
+    }
+    for index in [0, 1, 2] as [UInt16] { put(index) }
+    let part = try #require(try StreetMeshFile(data).parts["road"])
+    // A point near the image's top is near the top of RealityKit's texture too.
+    let expected: [SIMD2<Float>] = [[0.25, 0.9], [0.5, 0.8], [0.75, 0.1]]
+    #expect(zip(part.uvs, expected).allSatisfy { simd_distance($0, $1) < 1e-6 })
+    #expect(part.indices == [0, 1, 2])
+  }
 }

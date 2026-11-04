@@ -156,7 +156,8 @@ final class Street3D {
 
 /// `street.bin`, as `make_street_view.py` writes it: `BSV1`, a mesh count, then per mesh a name
 /// (a byte of length and UTF-8), vertex and index counts (u32), vertices as x y z u v (f32) and
-/// u16 indices. Little-endian throughout.
+/// u16 indices. Little-endian throughout. v counts down from the image's top row; RealityKit's
+/// counts up from its bottom, so it is turned over as it is read.
 struct StreetMeshFile {
   struct Part {
     var positions: [SIMD3<Float>]
@@ -202,7 +203,8 @@ struct StreetMeshFile {
       part.uvs.reserveCapacity(vertices)
       for _ in 0..<vertices {
         part.positions.append(SIMD3(try f32(), try f32(), try f32()))
-        part.uvs.append(SIMD2(try f32(), try f32()))
+        let (u, v) = (try f32(), try f32())
+        part.uvs.append(SIMD2(u, 1 - v))
       }
       part.indices.reserveCapacity(indexCount)
       for _ in 0..<indexCount { part.indices.append(UInt32(try u16())) }
