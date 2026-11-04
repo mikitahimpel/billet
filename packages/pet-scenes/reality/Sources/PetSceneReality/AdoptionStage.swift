@@ -98,6 +98,7 @@ final class AdoptionStage: TabStage {
     guard state != self.state else { return }
     let before = self.state
     self.state = state
+    if !hasLeft { cats.hold(state.cats, for: self) }
     if forward.count != state.cats.count {
       forward = AdoptionLayout.forward(state)
       busyUntil = Array(repeating: 0, count: state.cats.count)
@@ -217,9 +218,24 @@ final class AdoptionStage: TabStage {
     }
     if !hasLeft, AdoptionExit.isDone(at: time, reduceMotion: reduceMotion) {
       hasLeft = true
+      dropCats()
       onEvent?(.left)
     }
     return true
+  }
+
+  /// Lets go of the cats once the scene is left: the room shows only the one adopted, so the
+  /// others need not stay loaded. A new adoption loads them again.
+  private func dropCats() {
+    cats.hold([], for: self)
+    for (index, holder) in holders.enumerated() {
+      if let seat = holder.children.first(where: { $0.name == Self.seatName }) {
+        for cat in Array(seat.children) { cat.removeFromParent() }
+      }
+      if rigs.indices.contains(index) { rigs[index] = nil }
+      if shown.indices.contains(index) { shown[index] = nil }
+      if loads.indices.contains(index) { loads[index]?.cancel() }
+    }
   }
 
   private func placeHolders() {
