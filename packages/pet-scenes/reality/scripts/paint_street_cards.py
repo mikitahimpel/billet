@@ -35,8 +35,8 @@ SS = 2  # painted at twice the size, then halved, for smooth edges
 
 FAR, MIDDLE, HORIZON, STREET = 0x20365A, 0x14233D, 0x3A5A86, 0x0E1A2E
 LAMP, LAMP_CORE = 0xFFC36B, 0xFFE2B0
-# The flat views' night sky (ViewLook, night): its top, middle and horizon.
-SKY_TOP, SKY_MIDDLE = 0x070C18, 0x162846
+# The flat views' night sky (ViewLook, night): its middle; the horizon is HORIZON.
+SKY_MIDDLE = 0x162846
 
 
 def rgb(h, a=255):
@@ -55,12 +55,13 @@ def lit(h, s):
 
 # The sky's colour by height in units, from the top of its wall to below the horizon, which sits
 # at the far card's foot as the flat view's does at its hills.
-# A camera pulled in close looks up through the window, so the sky stays the flat view's middle
-# well above the far card and only darkens towards its top past what a window shows.
+# Through the glass and the room's grade the sky reads a good deal darker than it is painted, and
+# a camera pulled in close looks up through the window, so the sky never goes darker than the flat
+# view's middle and is mostly towards its horizon, as the flat view's window shows it.
 SKY_STOPS = [
-    (240.0, mixed(SKY_TOP, SKY_MIDDLE, 0.5)),
-    (130.0, SKY_MIDDLE),
-    (40.0, mixed(SKY_MIDDLE, HORIZON, 0.55)),
+    (240.0, mixed(SKY_MIDDLE, HORIZON, 0.3)),
+    (100.0, mixed(SKY_MIDDLE, HORIZON, 0.6)),
+    (30.0, mixed(SKY_MIDDLE, HORIZON, 0.85)),
     (-5.0, HORIZON),
     (-60.0, mixed(HORIZON, STREET, 0.6)),
 ]
