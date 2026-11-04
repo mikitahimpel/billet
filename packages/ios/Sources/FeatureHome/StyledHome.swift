@@ -33,6 +33,8 @@ struct StyledHome: View {
   var flame: StreakFlameHost?
   /// The cat's needs and mood, for the paw by the streak, or nil to leave it out.
   var mood: CatNeedsSnapshot?
+  /// Does a need's action from the needs card, as the room's own gestures do.
+  var onAnswer: ((PetNeed) -> Void)?
   /// First in the top row, before the streak: the way into "Us".
   var leading: AnyView?
 
@@ -84,14 +86,7 @@ struct StyledHome: View {
       }
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
-    .sheet(isPresented: $isMoodOpen) {
-      if let mood {
-        CatNeedsCard(mood)
-          .presentationDetents([.height(250)])
-          .presentationBackground(Self.ground)
-          .preferredColorScheme(.dark)
-      }
-    }
+    .needsSheet(isPresented: $isMoodOpen, mood: mood) { onAnswer?($0) }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
         flame.view(flameState) { isFlameOpen = false }
@@ -203,9 +198,6 @@ struct StyledHome: View {
     .accessibilityHint("Opens the note")
     .accessibilityIdentifier("newNoteToast")
   }
-
-  /// The room's own night colour, behind the cat's mood sheet.
-  static let ground = Color(red: 0.047, green: 0.075, blue: 0.125)
 
   static let toastText = "New note from your partner"
   /// How long the toast stays.

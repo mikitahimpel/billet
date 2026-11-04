@@ -76,7 +76,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .wrappedDelivery: "Wrapped delivery"
     case .advent: "Our advent"
     case .lifeBubble: "Thought bubble"
-    case .lifeRings: "Need rings"
+    case .lifeRings: "Needs on long press"
     case .lifeChips: "Need words"
     case .lifeDebug: "Life debug"
     case .brainDebug: "Brain debug"
@@ -91,7 +91,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeBubble:
       "A small thought bubble floats over the cat when one need is low: a fish, a ball, a heart or a z. Tap it to answer."
     case .lifeRings:
-      "A long press on the cat pulls up its portrait in four soft rings, one per need, with no numbers."
+      "A long press on the room pulls up the needs card, as the paw does: what the cat needs and a button for each."
     case .lifeChips:
       "Four small words under the room, Full, Rested, Loved and Playful, glow when the need is met and fade when it is not."
     case .lifeDebug:

@@ -41,6 +41,8 @@ struct HomeView: View {
   @State private var latestDrawing: CGImage?
   @State private var drawerOpen = false
   @State private var ringsOpen = false
+  /// Counts the meals asked for from the needs card, for the scene to fill its bowl.
+  @State private var bowlFills = 0
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
   /// True while the canvas is drawing today's prompt rather than a note.
@@ -163,9 +165,7 @@ struct HomeView: View {
       }
       .overlay {
         HomeLifeLayer(
-          session: session, scene: scene, ringsOpen: $ringsOpen,
-          onFeed: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
-          onPet: pet)
+          session: session, ringsOpen: $ringsOpen, mood: catMood, onAnswer: answer)
       }
       .overlay(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: Spacing.small) {
@@ -295,6 +295,7 @@ struct HomeView: View {
     return StyledHome(
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .environment(\.petSceneBowlFills, bowlFills)
           .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, roomShows)
@@ -311,6 +312,7 @@ struct HomeView: View {
       onDecorate: { session.renovator.requestOpen() },
       flame: flameHost(scene: scene),
       mood: catMood,
+      onAnswer: answer,
       leading: onOpenUs == nil ? nil : AnyView(usButton))
   }
 
@@ -412,6 +414,7 @@ struct HomeView: View {
       variant: variant,
       scene: AnyView(
         scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+          .environment(\.petSceneBowlFills, bowlFills)
           .lifeRingsPress(session, open: $ringsOpen)
           .id(scene.id)
           .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
@@ -451,7 +454,7 @@ struct HomeView: View {
     let streak = session.streak(today: today, calendar: calendar)
     return VStack(spacing: Spacing.small) {
       fakePartnerCaption
-      CatNeedsCard(catMood)
+      CatNeedsCard(catMood, onAnswer: answer)
       HStack(spacing: Spacing.small) {
         Label("\(streak) \(streak == 1 ? "day" : "days")", systemImage: "flame.fill")
           .billetType(.action)
@@ -548,6 +551,7 @@ struct HomeView: View {
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
+        .environment(\.petSceneBowlFills, bowlFills)
         .lifeRingsPress(session, open: $ringsOpen)
         .id(scene.id)
         .environment(\.petSceneOnScreen, tabShown && store.state.screen == .home)
@@ -844,6 +848,27 @@ struct HomeView: View {
     session.pet()
     petBounce.toggle()
     events(.catPetted)
+  }
+
+  /// Answers one of the cat's needs from its card or its thought bubble, the way the room's own
+  /// gestures do.
+  private func answer(_ need: PetNeed) {
+    switch need {
+    case .full: feedFromCard()
+    case .loved: pet()
+    case .playful: handle(.played)
+    case .rested: session.tuckIn()
+    }
+  }
+
+  /// Feeds the cat from its card the way a tap on the bowl does: the scene fills the bowl and the
+  /// cat goes to eat. A room with no bowl just counts the meal.
+  private func feedFromCard() {
+    if scene?.hasRoom == true {
+      bowlFills += 1
+    } else {
+      handle(.fed)
+    }
   }
 
   private func handle(_ event: PetSceneEvent) {
