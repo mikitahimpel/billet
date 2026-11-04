@@ -46,9 +46,11 @@ final class Street3D {
 
   init(assets: Assets) {
     world.components.set(WorldComponent())
-    var atlas = UnlitMaterial()
+    // The bake is already the flat views' palette, so it is drawn as it is, not tone-mapped:
+    // tone mapping took the night's dark blues down to black.
+    var atlas = UnlitMaterial(applyPostProcessToneMap: false)
     atlas.color = .init(tint: .white, texture: .init(assets.atlas))
-    var cards = UnlitMaterial()
+    var cards = UnlitMaterial(applyPostProcessToneMap: false)
     cards.color = .init(tint: .white, texture: .init(assets.cardTexture))
     cards.blending = .transparent(opacity: .init(scale: 1))
     let street = ModelEntity(mesh: assets.street, materials: [atlas])

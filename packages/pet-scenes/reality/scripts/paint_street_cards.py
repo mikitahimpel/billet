@@ -55,11 +55,12 @@ def lit(h, s):
 
 # The sky's colour by height in units, from the top of its wall to below the horizon, which sits
 # at the far card's foot as the flat view's does at its hills.
+# A camera pulled in close looks up through the window, so the sky stays the flat view's middle
+# well above the far card and only darkens towards its top past what a window shows.
 SKY_STOPS = [
-    (240.0, SKY_TOP),
-    (110.0, mixed(SKY_TOP, SKY_MIDDLE, 0.55)),
-    (50.0, SKY_MIDDLE),
-    (12.0, mixed(SKY_MIDDLE, HORIZON, 0.6)),
+    (240.0, mixed(SKY_TOP, SKY_MIDDLE, 0.5)),
+    (130.0, SKY_MIDDLE),
+    (40.0, mixed(SKY_MIDDLE, HORIZON, 0.55)),
     (-5.0, HORIZON),
     (-60.0, mixed(HORIZON, STREET, 0.6)),
 ]
