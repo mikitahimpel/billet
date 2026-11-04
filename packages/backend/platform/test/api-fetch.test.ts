@@ -830,8 +830,8 @@ describe("Analytics Engine", () => {
     expect(written).toEqual(
       ["AppOpened", "WidgetAdded"].map((name) => ({
         indexes: [hash],
-        blobs: [name, hash, variants, "1.0.0+12", "iOS 26.1"],
-        doubles: [1],
+        blobs: [name, hash, variants, "1.0.0+12", "iOS 26.1", ""],
+        doubles: [1, 0],
       })),
     );
     const text = JSON.stringify(written);

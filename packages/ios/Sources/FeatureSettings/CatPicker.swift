@@ -8,6 +8,7 @@ import WidgetBridge
 struct CatPicker: View {
   let model: WidgetFeaturesModel
   let cats: [CatModel]
+  @Environment(\.appEvents) private var events
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
@@ -30,6 +31,7 @@ struct CatPicker: View {
   private func row(_ cat: CatModel) -> some View {
     let selected = model.cat.model == cat
     return Button {
+      if !selected { events(.catChosen(cat)) }
       withAnimation(Motion.spring) { model.setCat(CatChoice(model: cat, coat: model.cat.coat)) }
     } label: {
       ListRow(cat.title, subtitle: cat.detail) {

@@ -4,6 +4,7 @@ import {
   ServerEventName,
   type MetricEventName,
 } from "@billet/contracts-domain/metrics";
+import { buildTopDetails, type DetailRow, type TopDetails } from "./admin-top-details.ts";
 import { rangeOf, type OverviewRange } from "./admin-overview.ts";
 
 export interface AppEvent {
@@ -30,6 +31,8 @@ export interface AppEvents {
   readonly days: ReadonlyArray<string>;
   /** Every event the contract knows, busiest first; ones never recorded come last. */
   readonly events: ReadonlyArray<AppEvent>;
+  /** The most chosen cats, items and the like over the range: see `buildTopDetails`. */
+  readonly top: ReadonlyArray<TopDetails>;
 }
 
 const sources: ReadonlyArray<readonly [MetricEventName, AppEvent["source"]]> = [
@@ -45,6 +48,7 @@ export const buildAppEvents = (
   events: ReadonlyArray<EventRow>,
   today: string,
   days: number = 30,
+  details: ReadonlyArray<DetailRow> = [],
 ): AppEvents => {
   const range = rangeOf(days);
   const dayList = Array.from({ length: range }, (_, index) => addDays(today, index - range + 1));
@@ -94,5 +98,6 @@ export const buildAppEvents = (
         b.total - a.total ||
         a.name.localeCompare(b.name),
     ),
+    top: buildTopDetails(details, today, range),
   };
 };

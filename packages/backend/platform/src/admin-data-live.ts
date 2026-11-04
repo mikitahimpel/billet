@@ -3,7 +3,7 @@ import { Effect, Layer, Schema } from "effect";
 import { AdminData, AdminUnavailable } from "@billet/backend-admin/admin-data";
 import { MetricEventName } from "@billet/contracts-domain/metrics";
 import { openDirectoryDatabase, type DirectoryDatabase } from "./directory-database.ts";
-import { pairEvents, pairFlags, pairMembers, users } from "./directory-schema.ts";
+import { eventDetails, pairEvents, pairFlags, pairMembers, users } from "./directory-schema.ts";
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const guarded = <A, E>(effect: Effect.Effect<A, E>) =>
@@ -38,6 +38,19 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
         .from(pairEvents)
         .orderBy(asc(pairEvents.day))
         .pipe(Effect.flatMap(decodeEvents)),
+    ),
+    // Counts per thing and day; the table has no person or pair in it.
+    details: guarded(
+      db
+        .select({
+          name: eventDetails.name,
+          detail: eventDetails.detail,
+          day: eventDetails.day,
+          count: eventDetails.count,
+          total: eventDetails.total,
+        })
+        .from(eventDetails)
+        .orderBy(asc(eventDetails.day)),
     ),
     assignments: guarded(
       db

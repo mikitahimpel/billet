@@ -95,16 +95,23 @@ import Wire
     #expect(server.requests.isEmpty)
   }
 
-  @Test func eventsGoUpAsNamesAndNothingElse() async throws {
+  @Test func eventsGoUpAsNamesWithTheirDetailAndNothingElse() async throws {
     let server = Server(status: 204, body: "")
-    try await Self.client(server).reportEvents([.appOpened, .widgetAdded])
+    try await Self.client(server).reportEvents([
+      ClientEvent(.appOpened), ClientEvent(.shopItemBought, detail: "treat-fish", value: 3),
+    ])
     let request = try #require(server.requests.first)
     #expect(request.method == .post)
     #expect(request.path == "/v1/events")
     #expect(request.headers["Authorization"] == "Bearer tok")
-    #expect(
-      request.body.map { String(decoding: $0, as: UTF8.self) }
-        == #"{"events":["AppOpened","WidgetAdded"]}"#)
+    let body = try #require(request.body)
+    let sent = try #require(try JSONSerialization.jsonObject(with: body) as? NSDictionary)
+    let expected: NSDictionary = [
+      "events": [
+        ["name": "AppOpened"], ["name": "ShopItemBought", "detail": "treat-fish", "value": 3],
+      ]
+    ]
+    #expect(sent == expected)
   }
 
   @Test func imagesGoUpAsPNGAndComeBackAsBytes() async throws {

@@ -25,13 +25,16 @@ struct DeskTab: View {
   @State private var drawing = false
   @State private var opened: NoteRecord?
   @State private var listOpen = false
+  @Environment(\.appEvents) private var events
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
       scene.makeDeskScene(state: DeskSceneState(notes: desk)) { event in
         switch event {
         case .paperTapped: drawing = true
-        case .noteTapped(let id): opened = session.notes.first { $0.id == id }
+        case .noteTapped(let id):
+          opened = session.notes.first { $0.id == id }
+          if opened != nil { events(.noteOpened(.app)) }
         }
       }
       GlassGroup {
