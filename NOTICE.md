@@ -25,6 +25,14 @@ nexishq/idol-scenes. See [docs/idol-splats.md](docs/idol-splats.md).
 `Cat_idolIlya`: Cat by Ilya (nexishq), used with permission. Made by the same pipeline from his
 illustration in nexishq/idol-scenes.
 
+The cats in the room's style (`Cat_gingerChonk` and the others made with it) were generated on a
+PC: each starts from a picture made by FLUX.2-klein-4B (Black Forest Labs, Apache License 2.0)
+from a text prompt, with renders of billet's own room and detailed cat as style references. Idol
+then ran through [idol-sdk](https://github.com/speridlabs/idol-sdk) (Speridlabs, Apache License
+2.0) on PyTorch (BSD-3-Clause), with the same DINOv3 (Meta's DINOv3 License) and FLUX.2 VAE
+encoders, and BiRefNet (MIT) to cut the cat from its background. As above, no model ships in the
+app, only the meshes made from its output.
+
 ## First-launch heart
 
 `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Heart.reality` is a new model made

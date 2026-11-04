@@ -3,8 +3,10 @@ import Foundation
 /// Which cat lives in the room. The raw value is what gets stored, so it stays stable. A stored
 /// value that is no longer a case (a removed cat) decodes as the standard choice.
 public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
-  /// Ilya's (nexishq) grey tabby, made by Idol from his illustration and used with his permission.
+  /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
   /// First, so the picker lists it at the top.
+  case gingerChonk
+  /// Ilya's (nexishq) grey tabby, made by Idol from his illustration and used with his permission.
   case idolIlya
   /// A ginger tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
   case detailed
@@ -21,6 +23,14 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// Idol's ginger tabby as the Gaussian splat Idol made, skinned to the shared skeleton. Where
   /// splats can't be drawn (before iOS 27, or on an older GPU) it is the Idol ginger mesh.
   case splatGinger
+  /// A ragdoll in the room's style, by Idol from a FLUX.2-klein picture.
+  case ragdoll
+  /// A Maine Coon in the room's style, by Idol from a FLUX.2-klein picture.
+  case maineCoon
+  /// A black cat in the room's style, by Idol from a FLUX.2-klein picture.
+  case voidCat
+  /// A Siamese in the room's style, by Idol from a FLUX.2-klein picture.
+  case siamese
   /// The detailed tabby painted calico, remade by Idol: plush body, baked coat, every clip.
   case idolCalico
   /// The detailed tabby in its grey-and-white coat, remade by Idol: plush body, baked coat, every clip.
@@ -34,6 +44,11 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .hero: "Hero"
     case .idolGinger: "Idol ginger"
     case .splatGinger: "Splat ginger"
+    case .ragdoll: "Ragdoll"
+    case .maineCoon: "Maine Coon"
+    case .voidCat: "Void"
+    case .siamese: "Siamese"
+    case .gingerChonk: "Ginger chonk"
     case .idolIlya: "Ilya's cat"
     case .idolCalico: "Idol calico"
     case .idolGreyTabby: "Idol grey tabby"
@@ -48,9 +63,29 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .hero: "Chunky and plush, big glossy eyes, 26 clips."
     case .idolGinger: "Made by Idol from a picture of the tabby."
     case .splatGinger: "Idol's ginger as a soft Gaussian splat."
+    case .ragdoll: "Floppy, gentle and in no hurry."
+    case .maineCoon: "A big, gentle long-hair."
+    case .voidCat: "A black cat with amber eyes, curious about everything."
+    case .siamese: "Blue eyes, dark points, always has something to say."
+    case .gingerChonk: "A round ginger tabby who would rather loaf than walk."
     case .idolIlya: "Ilya's grey tabby, made by Idol. Used with his permission."
     case .idolCalico: "Made by Idol from a picture of a calico."
     case .idolGreyTabby: "Made by Idol from a picture of the grey tabby."
+    }
+  }
+
+  /// Whether the cat picker offers it. Ilya's cat sinks its head into its body as it sleeps, which
+  /// every Idol cat with its big head does; it comes back once it is remade in the room's style. A
+  /// pet that already has it keeps it.
+  public var isListed: Bool {
+    switch self {
+    case .idolIlya: false
+    case .gingerChonk, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .ragdoll,
+      .maineCoon,
+      .voidCat,
+      .siamese,
+      .splatGinger, .idolCalico, .idolGreyTabby:
+      true
     }
   }
 
@@ -58,7 +93,11 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// the cat files; elsewhere its mesh shows. Nil for a cat that is only a mesh.
   public var splatBody: String? {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .idolIlya, .idolCalico,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .ragdoll, .maineCoon,
+      .voidCat,
+      .siamese,
+      .gingerChonk, .idolIlya,
+      .idolCalico,
       .idolGreyTabby:
       nil
     case .splatGinger: "Splat_ginger"
@@ -71,7 +110,11 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   public var mesh: CatModel {
     switch self {
     case .splatGinger: .idolGinger
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .idolIlya, .idolCalico,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .ragdoll, .maineCoon,
+      .voidCat,
+      .siamese,
+      .gingerChonk, .idolIlya,
+      .idolCalico,
       .idolGreyTabby:
       self
     }
@@ -82,7 +125,11 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     switch self {
     case .detailed, .detailedKitten, .detailedFluffy, .hero: [.natural, .greyWhite, .black]
     // Idol bakes the coat it saw into the texture; another coat is another Idol cat.
-    case .idolGinger, .idolIlya, .idolCalico, .idolGreyTabby, .splatGinger: [.natural]
+    case .idolGinger, .ragdoll, .maineCoon, .voidCat, .siamese, .gingerChonk, .idolIlya,
+      .idolCalico,
+      .idolGreyTabby,
+      .splatGinger:
+      [.natural]
     }
   }
 }
