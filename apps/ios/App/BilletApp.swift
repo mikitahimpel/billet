@@ -49,7 +49,7 @@ struct BilletApp: App {
     if let store = WidgetFeaturesStore.appGroup() {
       RemovedScenesMigration.run(
         defaults: .standard, choiceKey: PetSceneCatalog.choiceKey,
-        keptSceneID: NookiPetScene().id, store: store)
+        keptSceneID: NookiPetScene.sceneID, store: store)
     }
   }
 

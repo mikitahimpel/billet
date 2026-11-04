@@ -316,18 +316,22 @@ final class GenzRoom: CatPlayStage {
   }
 
   private func build() async {
+    NookiTrace.mark("styled room building")
     await kit.makeTextures()
+    NookiTrace.mark("styled room textures")
     let shell = Entity()
     shell.name = Self.shellName
     for part in layout.shell(kit) { shell.addChild(part) }
     kit.merge(shell, key: "shell")
     room.addChild(shell)
+    NookiTrace.mark("styled room shell")
     let styler = GenzRoomStyler(kit: kit)
     room.addChild(styler.root)
     styler.apply(style, animated: false)
     self.styler = styler
     if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
+    NookiTrace.mark("styled room pieces")
     pieceHolders = holders
     arrangeDecor(holders)
     buildLED()
