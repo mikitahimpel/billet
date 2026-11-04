@@ -37,6 +37,9 @@ final class NookiAssets {
   /// A cat from its compiled file, or nil when the file is missing or will not open, so the room
   /// can show the standard cat instead.
   static func compiledCat(_ model: CatModel) async -> Entity? {
+    #if DEBUG
+      if HeroCatPreview.file != nil, let hero = await HeroCatPreview.load() { return hero }
+    #endif
     let name = CatCatalog.resourceName(model)
     guard
       let url = Bundle.module.url(
