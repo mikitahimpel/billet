@@ -84,7 +84,7 @@ imported with its author's permission, including its publication in this reposit
 tools are his. Changes made for billet: bundle IDs, app group, team and build
 number. The cat's files and the shop thumbnails are his, byte for byte
 (`apps/ios/nooki-cat.sha256`, checked in CI).
-Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
+Its HTML mockups, research notes and hamster files are not imported. billet's first app
 is kept, unbuilt, in `archive/ios-v1`.
 
 ## Cat generation tools
