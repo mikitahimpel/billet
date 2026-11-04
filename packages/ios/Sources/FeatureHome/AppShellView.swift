@@ -186,6 +186,7 @@ struct AppShellView: View {
       .allowsHitTesting(false)
       .accessibilityHidden(true)
     }
+    .onAppear { ScenePerf.mark("shell shown") }
     .task {
       try? await Task.sleep(for: Self.prepareDelay)
       preparingScenes = scenes.filter { $0.id != selectedScene?.id }
