@@ -202,4 +202,6 @@ extension EnvironmentValues {
   @Entry public var petSceneRenovator: RoomRenovator?
   /// The drawing of the note being delivered, for scenes that show it themselves.
   @Entry public var petSceneDrawing: CGImage? = nil
+  /// Whether the note in the room is new and not yet opened, which scenes mark on the note itself.
+  @Entry public var petSceneNoteUnread = false
 }
