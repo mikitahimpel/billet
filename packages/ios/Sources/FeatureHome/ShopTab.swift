@@ -104,14 +104,14 @@ struct ShopTab: View {
         ) { item in
           scene.makeShopPreview(item: item) ?? AnyView(EmptyView())
         }
-        .presentationDetents([.medium, .large])
+        .billetSheet([.medium, .large])
       case .closet:
         ClosetView(
           store: shop, renovator: renovator,
           onOpenShop: { self.sheet = nil },
           onClose: { self.sheet = nil }
         )
-        .presentationDetents([.medium, .large])
+        .billetSheet([.medium, .large])
       }
     }
     .sensoryFeedback(.success, trigger: purchases)

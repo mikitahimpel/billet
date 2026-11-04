@@ -55,6 +55,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_FILE: App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The other icons people can pick in Us → App icon (FeatureSettings/AppIconSection.swift).
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconAsleep AppIconLetter AppIconNight AppIconHeartWindow
         INFOPLIST_KEY_CFBundleDisplayName: billet
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "billet saves your wallpapers and Sunday posts to Photos."

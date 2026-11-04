@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import OSLog
 import Pet
 import RealityKit
 
@@ -121,12 +122,18 @@ extension GenzRoom {
       name, holder: holder, half: half, isFlat: Self.isFlat(kind), surface: surface,
       slidesOnly: Self.slidesOnly(kind))
     if let spot = stored[name] {
-      decor.place(name, at: DecorBox(centre: [spot.x, spot.z], half: half, yaw: spot.yaw))
+      let box = DecorBox(centre: [spot.x, spot.z], half: half, yaw: spot.yaw)
+      guard decor.canStand(name, at: box) else {
+        Self.decorLog.error("Dropped a bad saved spot for \(name, privacy: .public)")
+        return
+      }
+      decor.place(name, at: box)
       moveInLayout(name)
     }
   }
 
   static let seatSurface = "seat"
+  private static let decorLog = Logger(subsystem: "com.mikitahimpel.billet", category: "Decor")
 
   static func topSurface(_ base: String) -> String { "top:\(base)" }
 
@@ -242,8 +249,13 @@ extension GenzRoom {
       }
       var target = piece.home
       if let spot = given[name] {
-        target = DecorBox(centre: [spot.x, spot.z], half: box.half, yaw: spot.yaw)
-        kept[name] = spot
+        let spotBox = DecorBox(centre: [spot.x, spot.z], half: box.half, yaw: spot.yaw)
+        if decor.canStand(name, at: spotBox) {
+          target = spotBox
+          kept[name] = spot
+        } else {
+          Self.decorLog.error("Dropped a bad arranged spot for \(name, privacy: .public)")
+        }
       }
       guard target != box else { continue }
       decor.place(name, at: target)

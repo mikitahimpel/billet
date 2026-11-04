@@ -9,6 +9,7 @@ owner's approval before it can read any secret.
 ```sh
 gh workflow run testflight.yml --ref main
 gh workflow run testflight.yml --ref main -f build=17   # a particular build number
+gh workflow run testflight.yml --ref main -f build=20 -f commit=4e2684c   # a hotfix from an earlier commit on main
 gh run watch "$(gh run list --workflow testflight.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
 
