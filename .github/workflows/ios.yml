@@ -99,10 +99,26 @@ jobs:
           fi
           echo "Testing on $udid"
           set -o pipefail
+          status=0
           xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/app-tests.log" \
-            | grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)'
+            CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/app-tests.log" 2>&1 || status=$?
+          grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
+            "$RUNNER_TEMP/app-tests.log" || true
+          if [ "$status" != 0 ]; then
+            echo "::group::Last 120 lines of the test log"
+            tail -n 120 "$RUNNER_TEMP/app-tests.log"
+            echo "::endgroup::"
+          fi
+          exit "$status"
+
+      - name: Keep the app test log
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-tests-log
+          path: ${{ runner.temp }}/app-tests.log
+          retention-days: 7
 
       # The App Store build of payments: generates the project with BILLET_PAYMENTS=storekit (read
       # from the environment by Package.swift and the app target) and buys every stamp pack from
