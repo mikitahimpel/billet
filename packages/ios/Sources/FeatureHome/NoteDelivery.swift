@@ -28,15 +28,9 @@ public struct NoteDelivery: Sendable {
     case catName(String)
     /// The room's table of reactions: note to the reaction its receiver sent.
     case reactions([UUID: Reaction])
-    /// The partner opened a note this device sent. Only the fake partner says this for now: the
-    /// room has no frame for it.
-    case noteOpened(UUID)
     /// A note from the partner that stays closed until `opensAt`. Only the fake partner sends
     /// these for now: the room has no frame for them.
     case sealedNote([Stroke], id: UUID, opensAt: Date)
-    /// The partner put a finger on the cat, or lifted it. Only the fake partner says this for
-    /// now: the room has no realtime frame for it.
-    case partnerHolding(Bool)
     /// The colour of the partner's lamp. Only the fake partner says this for now: the room has no
     /// frame for it.
     case partnerGlow(PartnerGlow)

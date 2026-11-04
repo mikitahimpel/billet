@@ -64,11 +64,20 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var personalSpace: Double
   /// The tricks care has taught it.
   public var tricks: Set<CatLearnedTrick>
+  /// How it feels, from its needs and temperament.
+  public var feeling: CatFeeling
+  /// The sound it makes as the step starts, if any, and how often again while the step lasts.
+  public var voice: CatVoice?
+  public var voiceEvery: Double?
+  /// Whether it purrs: content and close, or kneading, rolling or blinking at you.
+  public var purring: Bool
 
   public init(
     stack: CatBrainStack, action: CatAction, target: CatTarget, gaze: CatGaze, pace: Double,
     stepStart: Double, stepEnd: Double, eager: Bool = false, tempo: Double = 1,
-    amplitude: Double = 1, personalSpace: Double = 0.3, tricks: Set<CatLearnedTrick> = []
+    amplitude: Double = 1, personalSpace: Double = 0.3, tricks: Set<CatLearnedTrick> = [],
+    feeling: CatFeeling = .content, voice: CatVoice? = nil, voiceEvery: Double? = nil,
+    purring: Bool = false
   ) {
     self.stack = stack
     self.action = action
@@ -82,6 +91,10 @@ public struct CatBrainFrame: Hashable, Sendable {
     self.amplitude = amplitude
     self.personalSpace = personalSpace
     self.tricks = tricks
+    self.feeling = feeling
+    self.voice = voice
+    self.voiceEvery = voiceEvery
+    self.purring = purring
   }
 
   /// The still picture a surface without a scene shows for this frame.
@@ -127,6 +140,8 @@ public struct CatBrain: Sendable {
   private var lastSeen: [String: Double] = [:]
   private var born: Double
   private var inspected = Set<String>()
+  /// Whether the sulk under way has ignored a touch already; the next one is forgiven.
+  private var snubbed = false
   public private(set) var recent: [CatEpisode] = []
   public private(set) var transitions: [CatBrainTransition] = []
   /// The last utility scores worked out, in the order of ``CatActivityGroup/chosen``.
@@ -198,19 +213,72 @@ public struct CatBrain: Sendable {
   public func frame(live: CatInteraction? = nil) -> CatBrainFrame {
     var interaction = echo?.interaction
     if let live, live.priority >= interaction?.priority ?? .min { interaction = live }
+    // A sulk keeps its back turned to a touch until it forgives, at the second pet.
+    if activity.step == .sulk, case .petted = interaction { interaction = nil }
     var stack = stack
     stack.interaction = interaction
-    let action =
+    let feeling = feeling
+    var action =
       interaction.map { Self.clip($0, asleep: vitality == .asleep) }
       ?? CatStatechart.clip(activity.step)
+    // A hungry cat begs at a finger instead of only watching it.
+    if interaction == .followFinger, feeling == .hungry || feeling == .hangry { action = .wave }
+    let voice = interaction == nil ? Self.voice(activity.step, feeling: feeling) : nil
     return CatBrainFrame(
       stack: stack, action: action, target: interaction == nil ? activity.target : .stay,
       gaze: interaction.map { _ in CatGaze.camera } ?? activity.gaze,
       pace: CatStatechart.pace(activity.step), stepStart: activity.start, stepEnd: activity.end,
       eager: eager, tempo: temperament?.tempo ?? 1, amplitude: temperament?.amplitude ?? 1,
       personalSpace: upbringing.personalSpace(from: temperament?.personalSpace ?? 0.3),
-      tricks: upbringing.tricks)
+      tricks: upbringing.tricks, feeling: feeling, voice: voice,
+      voiceEvery: voice.flatMap { Self.voiceEvery($0, step: activity.step) },
+      purring: purrs(interaction))
   }
+
+  /// How the cat feels now.
+  public var feeling: CatFeeling {
+    CatFeeling.of(
+      needs: life.needs, mood: life.mood, asleep: vitality == .asleep,
+      sleepy: vitality == .drowsy || life.pressure > config.drowsyAbove, temperament: temperament,
+      config: lifeConfig)
+  }
+
+  /// How hungry it acts, from 0 up, after its temperament's drama.
+  public var hunger: Double {
+    CatFeeling.hunger(life.needs.full, temperament: temperament, config: lifeConfig)
+  }
+
+  /// The sound a step makes for a cat that feels this way.
+  static func voice(_ step: CatActivityStep, feeling: CatFeeling) -> CatVoice? {
+    let hungry = feeling == .hungry || feeling == .hangry
+    if step == .yowl { return .yowl }
+    if step == .dropToy { return .chirp }
+    if asks.contains(step) { return hungry ? .meow : nil }
+    if rages.contains(step) { return feeling == .hangry ? .yowl : nil }
+    if step == .seekYou { return feeling == .lonely || feeling == .bored ? .meow : nil }
+    return nil
+  }
+
+  /// Steps that meow for food, and tantrum steps that yowl.
+  static let asks: Set<CatActivityStep> = [.waitByBowl, .pawBowl, .beg]
+  static let rages: Set<CatActivityStep> = [.knockOff, .flop]
+
+  /// How often a long step's sound comes again, in seconds, or nil for once.
+  static func voiceEvery(_ voice: CatVoice, step: CatActivityStep) -> Double? {
+    repeats[step]
+  }
+
+  private static let repeats: [CatActivityStep: Double] = [.waitByBowl: 7, .beg: 3.5, .flop: 4]
+
+  /// Whether it purrs: being petted, or a happy cat close to you. A sulk is never petted.
+  private func purrs(_ interaction: CatInteraction?) -> Bool {
+    guard vitality != .asleep else { return false }
+    if case .petted = interaction { return true }
+    guard interaction == nil, Self.purrSteps.contains(activity.step) else { return false }
+    return feeling == .happy || feeling == .content
+  }
+
+  static let purrSteps: Set<CatActivityStep> = [.bellyUp, .knead, .slowBlink, .rub]
 
   /// Whether the cat is in the mood to bat at a finger: awake, not napping or eating, and keen
   /// to play by its nature and by how long since its last game. A playful cat nearly always is;
@@ -224,6 +292,8 @@ public struct CatBrain: Sendable {
   }
 
   static let eagerAbove = 0.4
+  /// A meal from a full bowl.
+  static let meal: [CatActivityStep] = [.walkToBowl, .eat, .lickLips]
   /// Below this Full, a cat whose mealtime it is goes to wait by the bowl.
   static let waitsBelow = 0.85
 
@@ -339,6 +409,7 @@ public struct CatBrain: Sendable {
     // Nothing the trajectory learned crosses the day line, so a fold from today's start gives
     // the same cat as one that has run for a week.
     inspected.removeAll(keepingCapacity: true)
+    snubbed = false
     focus = NeedFocus(config: lifeConfig, seed: seed ^ 0x464F_4355_53)
     vitalitySince = t
     if life.asleep {
@@ -372,13 +443,25 @@ public struct CatBrain: Sendable {
       enter(script: curled ? [.wake, .carryNote] : [.carryNote], at: t, cause: .event)
       if vitality == .asleep { moveVitality(to: .drowsy, at: t) }
     case .pet:
+      if activity.step == .sulk, echo == nil {
+        if !snubbed {
+          // The first touch is ignored.
+          snubbed = true
+          return
+        }
+        // The second is forgiven, with a head-bump.
+        if let spot = spot { memory.petted(at: spot) }
+        finishGroup(at: t)
+        enter(script: [.seekYou, .rub], at: t, cause: .event)
+        return
+      }
       if let spot = spot { memory.petted(at: spot) }
       interrupt(with: .petted(.back), for: config.petEcho, at: t)
     case .feed:
-      if activity.step == .waitByBowl {
-        // The meal it waited for: it goes on to eat once the bowl is full.
+      if activity.step.group == .eat, activity.script != Self.meal {
+        // The meal it waited, begged or raged for: it goes to eat once the bowl is full.
         finishGroup(at: t)
-        enter(script: [.walkToBowl, .eat, .lickLips], at: t, cause: .event)
+        enter(script: Self.meal, at: t, cause: .event)
       }
       interrupt(with: .fed, for: config.feedEcho, at: t)
     case .play:
@@ -530,8 +613,11 @@ public struct CatBrain: Sendable {
   private mutating func enterRest(at t: Double, cause: CatTransitionCause) {
     let spot = chooseNapSpot(at: t)
     let kneads = dice(t, 3) < 0.3 + 0.5 * personality.cuddly
-    let script: [CatActivityStep] =
+    var script: [CatActivityStep] =
       kneads ? [.findNapSpot, .knead, .curl, .wake] : [.findNapSpot, .curl, .wake]
+    // A sleepy cat yawns first; an awake one on its way to a nap only now and then.
+    let sleepy = vitality != .awake || life.pressure > config.drowsyAbove
+    if vitality != .asleep, dice(t, 7) < (sleepy ? 0.85 : 0.25) { script.insert(.yawn, at: 0) }
     enter(script: script, at: t, cause: cause, napSpot: spot)
   }
 
@@ -540,6 +626,7 @@ public struct CatBrain: Sendable {
     napSpot: RoomAffordance.Kind? = nil
   ) {
     let before = stack
+    if script.first == .sulk { snubbed = false }
     let inspecting = script.contains(.inspectFurniture) ? novelPiece(at: t) : nil
     activity = makeActivity(
       script: script, index: 0, at: t, groupStart: t, napSpot: napSpot ?? activity.napSpot,
@@ -568,12 +655,18 @@ public struct CatBrain: Sendable {
     let away = awayHours(at: t) > CatBrainConfig.missingAfterHours
     // A cat shooed off enough keeps off the desk and the cardigan.
     let stayOn = 1 - 0.9 * upbringing.stayingOff
+    let feeling = feeling
+    let drama = temperament?.drama ?? 1
+    let low = lifeConfig.lowBelow
+    let bored = life.needs.playful < low ? 1.0 : 0
+    let lonely = life.needs.loved < low
+    let happy = feeling == .happy
     let candidates: [([CatActivityStep], Double)] =
       switch group {
       case .idle:
         [
           ([.sit], 1), ([.loaf], 0.4 + p.lazy), ([.sit, .lookAround], 0.4 + p.curious),
-          ([.lookAround, .sit], 0.3 + p.curious),
+          ([.lookAround, .sit], 0.3 + p.curious), ([.bellyUp], happy ? 1.2 + p.cuddly : 0),
         ]
       case .explore:
         [
@@ -585,24 +678,28 @@ public struct CatBrain: Sendable {
           ([.groomPaw], 1), ([.groomPaw, .groomFlank], 1), ([.groomFlank, .groomTail], 0.7),
           ([.groomPaw, .groomFlank, .groomTail], 0.4 + p.lazy),
         ]
-      case .eat:
-        [
-          ([.walkToBowl, .eat, .lickLips], 1),
-          ([.walkToBowl, .waitByBowl], isMealtime(at: t) ? 4 : 0),
-        ]
+      case .eat: eatScripts(at: t, feeling: feeling)
       case .play:
         [
           ([.stalk, .pounce], 1), ([.stalk, .pounce, .chase], 0.4 + p.bold),
           ([.batObject], room.reachable(.toy) ? 0.8 : 0.3),
-          ([.zoomies], 0.2 + p.playful * 0.8), ([.chase, .pounce], 0.5),
+          ([.zoomies], 0.2 + p.playful * 0.8 + 2 * bored * drama), ([.chase, .pounce], 0.5),
+          ([.scratch], room.reachable(.soft) ? 0.15 + 1.5 * bored * drama : 0),
+          ([.stalk, .pounce, .batObject], room.reachable(.toy) ? 0.3 + 1.5 * bored : 0),
         ]
       case .watch: [([.watchWindow], 1), ([.watchPartnerWindow], away ? 1.5 : 0)]
       case .social:
         [
           ([.seekYou, .rub], 0.6 + p.cuddly), ([.slowBlink], 0.8),
           ([.seekYou, .slowBlink], 0.4 + p.vocal),
-          ([.bringToy], room.reachable(.toy) ? 0.3 + p.playful * 0.5 + upbringing.playfulness : 0),
+          (
+            [.bringToy, .dropToy],
+            room.reachable(.toy)
+              ? 0.3 + p.playful * 0.5 + upbringing.playfulness + 2 * bored : 0
+          ),
           ([.waitByDoor], away ? 1.2 : 0),
+          // Lonely, it sulks: more the bigger its feelings, less the more it loves company.
+          ([.sulk], lonely ? 2.5 * drama * (1.4 - p.cuddly) : 0),
         ]
       case .mischief:
         [
@@ -622,6 +719,32 @@ public struct CatBrain: Sendable {
       if left < 0 { return script }
     }
     return open.last?.0 ?? [.sit]
+  }
+
+  /// What a cat at the bowl does, by how hungry it is: a snack from a full bowl, waiting for the
+  /// meal it is used to, asking at an empty one, and a tantrum once it is hangry.
+  private func eatScripts(at t: Double, feeling: CatFeeling) -> [([CatActivityStep], Double)] {
+    // At the hour it is fed, even a starving cat mostly sits by the bowl: it knows dinner comes.
+    let mealtime = isMealtime(at: t) ? 4.0 : 0
+    switch feeling {
+    case .hangry:
+      let reach = room.reachable(.smallItem) ? 1.0 : 0
+      return [
+        ([.yowl, .knockOff], 1.6 * reach), ([.walkToBowl, .pawBowl, .yowl], 1.2), ([.flop], 1),
+        ([.beg, .yowl], 1), ([.knockOff, .flop], 1.2 * reach),
+        ([.walkToBowl, .waitByBowl], mealtime),
+      ]
+    case .hungry:
+      return [
+        ([.walkToBowl, .waitByBowl], 1.2 + mealtime), ([.walkToBowl, .pawBowl, .waitByBowl], 1),
+        ([.beg], 0.8),
+      ]
+    case .asleep, .lonely, .bored, .sleepy, .happy, .content:
+      return [
+        ([.walkToBowl, .eat, .lickLips], 1),
+        ([.walkToBowl, .waitByBowl], isMealtime(at: t) ? 4 : 0),
+      ]
+    }
   }
 
   /// Where to curl up: a bed or something soft, the sun by day, the rug, else its own place.
@@ -703,7 +826,7 @@ public struct CatBrain: Sendable {
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
       spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0,
-      upbringing: upbringing, mealtime: isMealtime(at: t))
+      upbringing: upbringing, mealtime: isMealtime(at: t), hunger: hunger)
   }
 
   /// Whether it is the hour the pair feeds it and it has not eaten yet.

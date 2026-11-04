@@ -32,48 +32,20 @@ import Testing
       #expect(clips[.idle] != nil, "\(model)")
       #expect(clips[.sleep] != nil, "\(model)")
       for coat in model.coats where coat != .natural {
-        #expect(CatCatalog.palette(model, coat: coat) != nil, "\(model) \(coat)")
+        #expect(CatCatalog.coatTexture(model, coat: coat) != nil, "\(model) \(coat)")
       }
     }
-  }
-
-  @Test func aCoatRepaintsOnlyItsSwatches() throws {
-    let size = 128
-    let space = try #require(CGColorSpace(name: CGColorSpace.sRGB))
-    let context = try #require(
-      CGContext(
-        data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: size * 4,
-        space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-    context.setFillColor(red: 1, green: 0, blue: 1, alpha: 1)
-    context.fill(CGRect(x: 0, y: 0, width: size, height: size))
-    let blank = try #require(context.makeImage())
-    let colours = try #require(CatCatalog.colours(.black, keepsWhiteBelly: false))
-    let painted = try #require(CatCatalog.repaint(blank, colours))
-    let pixels = try #require(painted.dataProvider?.data as Data?)
-    func pixel(swatch: Int) -> [UInt8] {
-      let x = (swatch % 4) * 32 + 16
-      let y = (swatch / 4) * 32 + 16
-      let at = y * painted.bytesPerRow + x * 4
-      return Array(pixels[at..<at + 3])
-    }
-    #expect(pixel(swatch: 0) == [0x2A, 0x27, 0x2C])
-    #expect(pixel(swatch: 7) == [0x3A, 0x36, 0x3D])
-    #expect(pixel(swatch: 4) == [0xFF, 0x00, 0xFF])
-    #expect(CatCatalog.colours(.natural, keepsWhiteBelly: false) == nil)
-    #expect(CatCatalog.colours(.black, keepsWhiteBelly: true)?[.belly] == 0xF7F5F2)
   }
 
   /// Each detailed cat swaps its whole painted texture for a coat, eyes included, keeps its own for
   /// the coat it was made with, and plays every action.
   @MainActor @Test(arguments: [CatModel.detailed, .detailedKitten, .detailedFluffy, .hero])
   func detailedCatsWearTheirCoatTextures(model: CatModel) async throws {
-    #expect(model.paintsCoatTextures)
-    #expect(CatCatalog.palette(model, coat: .natural) == nil)
-    #expect(CatCatalog.palette(model, coat: .cream) == nil)
+    #expect(CatCatalog.coatTexture(model, coat: .natural) == nil)
     let cat = try #require(await NookiAssets.compiledCat(model))
     let rig = try #require(CatRig(model: cat, clips: CatCatalog.clips(model)))
     for coat in model.coats where coat != .natural {
-      let texture = try #require(CatCatalog.palette(model, coat: coat), "\(model) \(coat)")
+      let texture = try #require(CatCatalog.coatTexture(model, coat: coat), "\(model) \(coat)")
       #expect(texture.width == 1024)
       #expect(rig.paint(texture) >= 2, "\(model) \(coat): fur and eyes both take the coat")
     }
@@ -92,7 +64,7 @@ import Testing
       #expect(rig.info[.sleep] != nil || rig.info[.idle] != nil)
       let missing = Set(CatCatalog.clips(model).keys).subtracting(rig.info.keys)
       #expect(missing.isEmpty, "\(model) drops \(missing.map(\.rawValue).sorted())")
-      if let palette = CatCatalog.palette(model, coat: .black) {
+      if let palette = CatCatalog.coatTexture(model, coat: .black) {
         #expect(rig.paint(palette) > 0, "\(model) has no material a coat can repaint")
       }
     }
