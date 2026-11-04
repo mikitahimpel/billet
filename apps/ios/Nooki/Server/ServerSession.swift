@@ -2,6 +2,7 @@ import FeatureOnboarding
 import FeaturePairing
 import Observation
 import Persistence
+import Transport
 
 /// The phone's place on the billet server: the anonymous sign-in, pairing with the partner, and whether this
 /// account has a partner. One per launch, and none at all in a build without a server.
@@ -22,6 +23,9 @@ final class ServerSession {
         pairing = PairingModel(api: backend.api)
         isPaired = (try? backend.accounts.load())?.record.isPaired ?? false
     }
+
+    var onboarding: OnboardingClient { backend.onboarding }
+    var api: APIClient { backend.api }
 
     var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
 

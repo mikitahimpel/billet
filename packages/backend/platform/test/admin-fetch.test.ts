@@ -175,6 +175,7 @@ describe("the read-only agent API", () => {
     "/admin/api/agent/flags",
     "/admin/api/agent/flag-history",
     "/admin/api/agent/purchases",
+    "/admin/api/agent/onboarding",
   ];
 
   afterEach(() => vi.restoreAllMocks());
@@ -207,6 +208,36 @@ describe("the read-only agent API", () => {
       ledger: [{ id: "purchase:tx-1", amount: 100 }],
       notifications: [],
     });
+  });
+
+  it("counts onboarding answers from D1, and never shows what was typed", async () => {
+    await env.DB.batch([
+      ...["u1", "u2"].map((id) =>
+        env.DB.prepare("INSERT INTO users (id, created_at) VALUES (?, 1)").bind(id),
+      ),
+      env.DB.prepare(
+        `INSERT INTO onboarding_answers VALUES
+         ('u1', 'age', '2026-11-04', 'Single', '["age-18-24"]', NULL, NULL, 1000),
+         ('u1', 'name', '2026-11-04', 'Text', NULL, NULL, 'Secret Name', 1000),
+         ('u1', 'goals', '2026-11-04', 'Multi', '["widgets","raise-pet"]', NULL, NULL, 1000),
+         ('u2', 'age', '2026-11-04', 'Skipped', NULL, NULL, NULL, 1000),
+         ('u2', 'cat_coat', '2026-11-04', 'Single', '["grey"]', NULL, NULL, 1000)`,
+      ),
+    ]);
+    const response = await admin("/admin/api/agent/onboarding", { token: await signAgent() });
+    const text = await response.text();
+    expect(text).not.toContain("Secret Name");
+    const body = JSON.parse(text);
+    expect(body).toEqual(await (await admin("/admin/api/onboarding")).json());
+    const step = (id: string) => body.steps.find((s: { id: string }) => s.id === id);
+    expect(body.accounts).toBe(2);
+    expect(step("age")).toMatchObject({ answered: 1, skipped: 1, skipRate: 0.5 });
+    expect(step("name")).toMatchObject({ answered: 1, skipped: 0, options: [] });
+    expect(step("goals").options.filter((o: { count: number }) => o.count > 0)).toEqual([
+      { id: "raise-pet", label: "Raise a pet together", count: 1 },
+      { id: "widgets", label: "Use widgets", count: 1 },
+    ]);
+    expect(step("cat_coat")).toMatchObject({ native: true, options: [{ id: "grey", count: 1 }] });
   });
 
   it("answers the same flags the panel shows", async () => {

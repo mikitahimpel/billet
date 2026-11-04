@@ -1,0 +1,29 @@
+{
+  "_tag": "Single",
+  "id": "age",
+  "options": [
+    {
+      "id": "age-18-24",
+      "label": {
+        "en": "18–24",
+        "ru": "18–24"
+      }
+    },
+    {
+      "id": "age-45-plus",
+      "label": {
+        "en": "45+",
+        "ru": "45+"
+      }
+    }
+  ],
+  "skippable": true,
+  "subtitle": {
+    "en": "Only you see this.",
+    "ru": "Это видишь только ты."
+  },
+  "title": {
+    "en": "How old are you?",
+    "ru": "Сколько тебе лет?"
+  }
+}

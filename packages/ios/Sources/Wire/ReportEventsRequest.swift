@@ -72,6 +72,13 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case signInPromptShown = "SignInPromptShown"
   /// The user answered that prompt: `accepted` or `dismissed`.
   case signInPromptAnswered = "SignInPromptAnswered"
+
+  /// An onboarding step came on screen (detail: the step id).
+  case onboardingStepViewed = "OnboardingStepViewed"
+  /// An onboarding step was answered (detail: the step id). Never the answer itself.
+  case onboardingStepAnswered = "OnboardingStepAnswered"
+  /// An onboarding step was skipped (detail: the step id).
+  case onboardingStepSkipped = "OnboardingStepSkipped"
 }
 
 /// What a name may carry besides itself, as `clientEventRules` in the contract says.
@@ -107,7 +114,8 @@ extension ClientEventName {
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)
     case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
-      .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen:
+      .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen,
+      .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped:
       ClientEventRule(detail: .id, required: true)
     case .shopItemBought, .shopBundleBought, .shopPurchaseUndone, .shopDailyGiftClaimed,
       .shopGiftSent:

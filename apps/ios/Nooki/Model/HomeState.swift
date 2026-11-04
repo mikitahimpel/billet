@@ -34,7 +34,8 @@ struct Mood: Identifiable {
 /// the widgets read the same data.
 @Observable
 final class HomeState {
-    var petName = "Mochi"
+    /// Named in onboarding; Mochi until then.
+    var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
     var room: RoomKind = .home
     var petPulse = 0

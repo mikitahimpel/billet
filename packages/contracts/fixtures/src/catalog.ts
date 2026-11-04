@@ -51,6 +51,11 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
+import {
+  OnboardingResponse,
+  SaveOnboardingAnswerRequest,
+} from "@billet/contracts-http-api/onboarding";
+import { OnboardingAnswer, OnboardingStep } from "@billet/contracts-domain/onboarding";
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
@@ -149,6 +154,53 @@ const maintenanceStatus: AppStatus = {
   },
   minVersion: "1.0",
 };
+
+const onboardingStep = Schema.decodeUnknownSync(OnboardingStep);
+const onboardingTitle = (en: string, ru: string) => ({ en, ru });
+const ageStep = onboardingStep({
+  _tag: "Single",
+  id: "age",
+  title: onboardingTitle("How old are you?", "Сколько тебе лет?"),
+  subtitle: onboardingTitle("Only you see this.", "Это видишь только ты."),
+  skippable: true,
+  options: [
+    { id: "age-18-24", label: onboardingTitle("18–24", "18–24") },
+    { id: "age-45-plus", label: onboardingTitle("45+", "45+") },
+  ],
+});
+const goalsStep = onboardingStep({
+  _tag: "Multi",
+  id: "goals",
+  title: onboardingTitle("What do you want to do together?", "Что вы хотите делать вместе?"),
+  skippable: true,
+  options: [
+    { id: "widgets", label: onboardingTitle("Use widgets", "Пользоваться виджетами"), emoji: "📱" },
+    {
+      id: "just-exploring",
+      label: onboardingTitle("Just exploring", "Просто смотрю"),
+      exclusive: true,
+    },
+  ],
+});
+const rangeStep = onboardingStep({
+  _tag: "Range",
+  id: "notes-a-day",
+  title: onboardingTitle("How many notes a day?", "Сколько записок в день?"),
+  skippable: true,
+  min: 0,
+  max: 10,
+  step: 1,
+  unit: onboardingTitle("notes", "записок"),
+});
+const nameStep = onboardingStep({
+  _tag: "Text",
+  id: "name",
+  title: onboardingTitle("What does your person call you?", "Как тебя называет твой человек?"),
+  skippable: true,
+  placeholder: onboardingTitle("Your name", "Имя"),
+  maxLength: 20,
+});
+const onboardingAnswer = Schema.decodeUnknownSync(OnboardingAnswer);
 
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
@@ -345,6 +397,39 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("AppStoreNotificationRequest", AppStoreNotificationRequest, {
     default: { signedPayload: "eyJhbGciOiJFUzI1NiJ9.eyJub3RpZmljYXRpb25UeXBlIjoiUkVGVU5EIn0.c2ln" },
+  }),
+  fixture("OnboardingStep", OnboardingStep, {
+    single: ageStep,
+    multi: goalsStep,
+    range: rangeStep,
+    text: nameStep,
+  }),
+  fixture("OnboardingAnswer", OnboardingAnswer, {
+    skipped: onboardingAnswer({ _tag: "Skipped" }),
+    single: onboardingAnswer({ _tag: "Single", option: "age-25-34" }),
+    multi: onboardingAnswer({ _tag: "Multi", options: ["widgets", "raise-pet"] }),
+    range: onboardingAnswer({ _tag: "Range", value: 3 }),
+    text: onboardingAnswer({ _tag: "Text", text: "Лев 💛" }),
+  }),
+  fixture("OnboardingResponse", OnboardingResponse, {
+    default: {
+      version: Schema.decodeUnknownSync(OnboardingResponse.fields.version)("2026-11-04"),
+      steps: [ageStep, goalsStep, rangeStep, nameStep],
+    },
+  }),
+  fixture("SaveOnboardingAnswerRequest", SaveOnboardingAnswerRequest, {
+    single: Schema.decodeUnknownSync(SaveOnboardingAnswerRequest)({
+      version: "2026-11-04",
+      stepId: "age",
+      answer: { _tag: "Single", option: "age-25-34" },
+      answeredAt: 1_700_000_000_000,
+    }),
+    skipped: Schema.decodeUnknownSync(SaveOnboardingAnswerRequest)({
+      version: "2026-11-04",
+      stepId: "cat_name",
+      answer: { _tag: "Skipped" },
+      answeredAt: 1_700_000_001_000,
+    }),
   }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),

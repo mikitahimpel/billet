@@ -29,6 +29,7 @@ import {
   flagConfigs,
   invites,
   eventDetails,
+  onboardingAnswers,
   pairEvents,
   pairFlagOverrides,
   pairFlags,
@@ -48,6 +49,7 @@ import {
 } from "../src/better-auth-rows.ts";
 import { StoredPartnerNotice } from "../src/account-repository-live.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
+import { OnboardingAnswerRow } from "../src/onboarding-repository-live.ts";
 import {
   FlagChangeRow,
   FlagConfigRow,
@@ -76,6 +78,7 @@ const checked = [
   ["pair_flag_overrides", pairFlagOverrides, PairOverrideRow],
   ["invites", invites, StoredInvite],
   ["event_details", eventDetails, StoredDetail],
+  ["onboarding_answers", onboardingAnswers, OnboardingAnswerRow],
   ["pair_events", pairEvents, StoredMetric],
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],

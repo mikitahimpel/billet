@@ -13,7 +13,8 @@
     "./note": "./src/note.ts",
     "./delivery-lane": "./src/delivery-lane.ts",
     "./push-token": "./src/push-token.ts",
-    "./stamp-packs": "./src/stamp-packs.ts"
+    "./stamp-packs": "./src/stamp-packs.ts",
+    "./onboarding": "./src/onboarding.ts"
   },
   "scripts": {
     "lint": "oxlint .",
