@@ -20,6 +20,7 @@ struct HomeShop: ViewModifier {
   let checkout: ShopCheckout
   /// How the room is done up now.
   let style: RoomStyle
+  let context: ShopView.Context
   let scene: (any PetScene)?
   /// False when Home opens the shop and the closet from somewhere else.
   var showsButtons = true
@@ -48,7 +49,7 @@ struct HomeShop: ViewModifier {
         switch sheet {
         case .shop:
           ShopView(
-            store: shop, checkout: checkout, style: style,
+            store: shop, checkout: checkout, style: style, context: context,
             thumbnail: { [scene] item, side, scale in
               await scene?.shopThumbnail(item, side: side, scale: scale)
             },

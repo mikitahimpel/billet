@@ -85,7 +85,10 @@ extension ShopItem {
       case .cookie: "circle.hexagongrid.fill"
       case .milk: "cup.and.saucer.fill"
       }
-    case .style: "paintbrush.fill"
+    case .style(.curtains): "curtains.closed"
+    case .style(.fairy): "sparkles"
+    case .style(.view): "window.horizontal"
+    case .style(.wall), .style(.floor): "paintbrush.fill"
     }
   }
 

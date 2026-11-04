@@ -3,9 +3,12 @@ import DesignSystem
 import Pet
 import SwiftUI
 
-/// The shop: a grid of cards on four shelves (furniture, decor, window views and things for the
-/// cat), each with a picture and its price. Tapping the price buys it at once; for a few seconds
-/// the purchase can be taken back. A long press looks closer, and tries a window view on.
+/// The shop, laid out like a good game store for two: the week's bundle at the top, a free gift
+/// each day, three deals a day, the bundles, things for the cat with what it does with them, and
+/// then every shelf. Every price is one tap, and for a few seconds the purchase can be taken back.
+///
+/// The offers follow from the pair's room code and the date, so both phones show the same, and
+/// each timer runs to a real change. Nothing is scarce: nothing runs out, and nothing is hidden.
 ///
 /// In a tab it has the evening behind it; in a sheet (``View/billetSheet(_:)``) the sheet's ground.
 struct ShopView: View {
@@ -14,15 +17,33 @@ struct ShopView: View {
     @MainActor (ShopItem, _ side: CGFloat, _ scale: CGFloat) async ->
     CGImage?
 
+  /// What the shop needs from the pair beyond its store.
+  struct Context {
+    /// Seeds the offers. Both phones of the pair have the same: the room's code.
+    var pair: String
+    /// Where packs of stamps would be bought.
+    var stampPacks: any StampPackSource
+    /// Whether the stamps sheet shows the stamp packs row (Labs).
+    var showsStampPacks: Bool
+  }
+
   /// What the strip at the foot says.
   private enum Notice: Equatable {
     case bought(ShopCheckout.Receipt)
-    case short(ShopItem, by: Int)
+    case short(String, by: Int)
+  }
+
+  /// An item about to be bought for the partner, at `price`.
+  private struct Giving: Identifiable {
+    let item: ShopItem
+    let price: Int
+    var id: ShopItem.ID { item.id }
   }
 
   private let store: ShopStore
   private let checkout: ShopCheckout
   private let style: RoomStyle
+  private let context: Context
   private let thumbnail: Thumbnail
   private let onPlace: (ShopItem) -> Void
   private let onTryOn: ((RoomStyleItem) -> Void)?
@@ -31,7 +52,11 @@ struct ShopView: View {
 
   @State private var notice: Notice?
   @State private var purchases = 0
-  @State private var popped: ShopItem.ID?
+  @State private var popped: String?
+  @State private var now = Date.now
+  @State private var showsStamps = false
+  @State private var giving: Giving?
+  @State private var seen: Set<String> = []
   @Environment(\.isInSheet) private var isInSheet
   @Environment(\.appEvents) private var events
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -47,6 +72,7 @@ struct ShopView: View {
     store: ShopStore,
     checkout: ShopCheckout,
     style: RoomStyle,
+    context: Context,
     thumbnail: @escaping Thumbnail,
     onPlace: @escaping (ShopItem) -> Void,
     onTryOn: ((RoomStyleItem) -> Void)?,
@@ -56,6 +82,7 @@ struct ShopView: View {
     self.store = store
     self.checkout = checkout
     self.style = style
+    self.context = context
     self.thumbnail = thumbnail
     self.onPlace = onPlace
     self.onTryOn = onTryOn
@@ -63,15 +90,25 @@ struct ShopView: View {
     self.onClose = onClose
   }
 
+  private var offers: ShopOffers {
+    ShopOffers(pair: context.pair, now: now, catalog: store.catalog)
+  }
+
   var body: some View {
+    let offers = offers
     ZStack {
       if !isInSheet { EveningBackground() }
       ScrollView {
         VStack(alignment: .leading, spacing: Spacing.large) {
           header
-          ForEach(ShopItem.Shelf.allCases, id: \.self) { shelf in
+          if let featured = offers.featured { featuredBanner(featured, ends: offers.featuredEnds) }
+          dailyGift(offers)
+          deals(offers)
+          bundles(offers.bundles)
+          catShelf
+          ForEach([ShopItem.Shelf.furniture, .decor, .views], id: \.self) { shelf in
             let items = store.catalog.items(on: shelf)
-            if !items.isEmpty { section(shelf, items: items) }
+            if !items.isEmpty { section(shelf.title, subtitle: shelf.subtitle, items: items) }
           }
         }
         .padding(.horizontal, Spacing.medium)
@@ -93,6 +130,31 @@ struct ShopView: View {
     .sensoryFeedback(.warning, trigger: notice) { _, new in
       if case .short = new { true } else { false }
     }
+    // Wakes when the deals or the week's bundle change, so the shop shows the new ones.
+    .task(id: now) {
+      let next = min(offers.dayEnds, offers.featuredEnds)
+      try? await Task.sleep(for: .seconds(max(next.timeIntervalSinceNow, 1)))
+      guard !Task.isCancelled else { return }
+      now = .now
+    }
+    .sheet(isPresented: $showsStamps) {
+      ShopStampsSheet(
+        balance: store.stamps, gift: offers.gift,
+        isGiftClaimed: store.state.hasClaimed(offers.gift),
+        giftEnds: offers.dayEnds, catalog: store.catalog, packs: context.stampPacks,
+        showsPacks: context.showsStampPacks, onClaimGift: { claim(offers.gift) }
+      )
+      .billetSheet([.medium, .large])
+    }
+    .sheet(item: $giving) { giving in
+      ShopGiftSheet(
+        item: giving.item, price: giving.price,
+        shortfall: checkout.shortfall(price: giving.price), thumbnail: thumbnail
+      ) { note in
+        give(giving.item, price: giving.price, note: note)
+      }
+      .billetSheet([.medium])
+    }
   }
 
   // MARK: - Header
@@ -113,8 +175,14 @@ struct ShopView: View {
   }
 
   @ViewBuilder private var controls: some View {
-    StampPlate(balance: store.stamps)
-      .accessibilityIdentifier("shopStamps")
+    Button {
+      showsStamps = true
+    } label: {
+      StampPlate(balance: store.stamps)
+    }
+    .buttonStyle(.plain)
+    .accessibilityHint("Where stamps come from")
+    .accessibilityIdentifier("shopStamps")
     IconButton("archivebox.fill", label: "Closet", action: onOpenCloset)
       .overlay(alignment: .topTrailing) { closetBadge }
       .symbolEffect(.bounce, value: purchases)
@@ -136,19 +204,107 @@ struct ShopView: View {
     }
   }
 
+  // MARK: - Offers
+
+  private func featuredBanner(_ bundle: ShopBundle, ends: Date) -> some View {
+    let left = checkout.remaining(of: bundle)
+    return FeaturedBanner(
+      bundle: bundle, items: bundle.items(in: store.catalog), sum: left.sum, ends: ends,
+      thumbnail: thumbnail
+    ) {
+      bundleButton(bundle, left: left)
+    }
+    .scaleEffect(popped == bundle.id ? 1.03 : 1)
+    .onAppear { viewed(bundle.id) }
+  }
+
+  private func dailyGift(_ offers: ShopOffers) -> some View {
+    DailyGiftCard(
+      gift: offers.gift, catalog: store.catalog, isClaimed: store.state.hasClaimed(offers.gift),
+      ends: offers.dayEnds, onClaim: { claim(offers.gift) })
+  }
+
+  private func deals(_ offers: ShopOffers) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      heading("Today's deals", subtitle: nil) {
+        RotationTimer(prefix: "New in", ends: offers.dayEnds)
+      }
+      ScrollView(.horizontal) {
+        HStack(alignment: .top, spacing: Spacing.small) {
+          ForEach(offers.deals) { deal in
+            DealCard(deal: deal, thumbnail: thumbnail) {
+              dealButton(deal)
+            }
+            .scaleEffect(popped == deal.id ? 1.06 : 1)
+            .contextMenu {
+              menu(deal.item, price: deal.price)
+            } preview: {
+              ShopItemCloser(item: deal.item, price: deal.price, thumbnail: thumbnail)
+            }
+            .onAppear { viewed("deal-\(deal.id)") }
+          }
+        }
+        .padding(.vertical, Spacing.hair)
+      }
+      .scrollIndicators(.hidden)
+      .scrollClipDisabled()
+    }
+  }
+
+  @ViewBuilder private func bundles(_ bundles: [ShopBundle]) -> some View {
+    let shown = bundles.filter { !($0.isStarter && store.state.hasBought(bundle: $0.id)) }
+    if !shown.isEmpty {
+      VStack(alignment: .leading, spacing: Spacing.small) {
+        heading("Bundles", subtitle: "Sets that go together, for less") { EmptyView() }
+        ForEach(shown) { bundle in
+          let left = checkout.remaining(of: bundle)
+          BundleCard(
+            bundle: bundle, items: bundle.items(in: store.catalog), sum: left.sum,
+            thumbnail: thumbnail
+          ) {
+            bundleButton(bundle, left: left)
+          }
+          .scaleEffect(popped == bundle.id ? 1.03 : 1)
+          .onAppear { viewed(bundle.id) }
+        }
+      }
+    }
+  }
+
+  @ViewBuilder private var catShelf: some View {
+    let items = store.catalog.items(on: .cat)
+    if !items.isEmpty {
+      section(
+        "For your cat", subtitle: "Treats, toys and beds, and what the cat does with them",
+        items: items)
+    }
+  }
+
   // MARK: - Shelves
 
-  private func section(_ shelf: ShopItem.Shelf, items: [ShopItem]) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.small) {
+  private func heading<Trailing: View>(
+    _ title: String, subtitle: String?, @ViewBuilder trailing: () -> Trailing
+  ) -> some View {
+    HStack(alignment: .lastTextBaseline, spacing: Spacing.small) {
       VStack(alignment: .leading, spacing: 0) {
-        Text(shelf.title)
+        Text(title)
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)
           .accessibilityAddTraits(.isHeader)
-        Text(shelf.subtitle)
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
+        if let subtitle {
+          Text(subtitle)
+            .billetType(.label)
+            .foregroundStyle(Palette.muted.color)
+        }
       }
+      Spacer(minLength: Spacing.small)
+      trailing()
+    }
+  }
+
+  private func section(_ title: String, subtitle: String, items: [ShopItem]) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      heading(title, subtitle: subtitle) { EmptyView() }
       LazyVGrid(columns: columns, spacing: Spacing.small) {
         ForEach(items) { item in
           card(item)
@@ -174,6 +330,9 @@ struct ShopView: View {
         .foregroundStyle(Palette.paper.color)
         .lineLimit(2, reservesSpace: true)
         .fixedSize(horizontal: false, vertical: true)
+      if let reaction = item.catReaction {
+        CatReactionLine(reaction: reaction)
+      }
       Spacer(minLength: 0)
       buttons(item)
     }
@@ -183,9 +342,9 @@ struct ShopView: View {
     .card()
     .modifier(CardPreviewShape())
     .contextMenu {
-      menu(item)
+      menu(item, price: item.price)
     } preview: {
-      ShopItemCloser(item: item, thumbnail: thumbnail)
+      ShopItemCloser(item: item, price: item.price, thumbnail: thumbnail)
     }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("shopItem-\(item.id)")
@@ -224,42 +383,65 @@ struct ShopView: View {
 
   @ViewBuilder private func priceButton(_ item: ShopItem) -> some View {
     if checkout.isOwned(item) {
-      if case .style(let choice) = item.look, !style.shows(choice) {
-        Button {
-          use(choice)
-        } label: {
-          PillLabel("Use", systemImage: "checkmark", rank: .secondary)
-        }
-        .billetButton(.secondary)
-        .accessibilityLabel("Use \(item.name)")
-        .accessibilityIdentifier("shopUse-\(item.id)")
-      } else {
-        PillLabel("Owned", systemImage: "checkmark", rank: .secondary)
-          .opacity(0.7)
-          .accessibilityLabel("\(item.name), owned")
-      }
+      ownedButton(item)
     } else {
-      let short = checkout.shortfall(for: item)
-      Button {
-        buy(item)
-      } label: {
-        if short > 0 {
-          PillLabel("\(short) more", systemImage: "seal", rank: .secondary)
-        } else {
-          PillLabel("\(item.price)", systemImage: "seal.fill", rank: .primary)
-        }
+      PriceButton(
+        name: item.name, price: item.price, shortfall: checkout.shortfall(for: item),
+        identifier: "shopBuy-\(item.id)"
+      ) {
+        perform(checkout.buy(item), name: item.name, pop: item.id)
       }
-      .billetButton(short > 0 ? .secondary : .primary)
-      .accessibilityLabel(
-        short > 0
-          ? "\(item.name), \(item.price) stamps. You need \(short) more."
-          : "Buy \(item.name) for \(item.price) stamps"
-      )
-      .accessibilityIdentifier("shopBuy-\(item.id)")
     }
   }
 
-  @ViewBuilder private func menu(_ item: ShopItem) -> some View {
+  @ViewBuilder private func ownedButton(_ item: ShopItem) -> some View {
+    if case .style(let choice) = item.look, !style.shows(choice) {
+      Button {
+        checkout.use(choice)
+      } label: {
+        PillLabel("Use", systemImage: "checkmark", rank: .secondary)
+      }
+      .billetButton(.secondary)
+      .accessibilityLabel("Use \(item.name)")
+      .accessibilityIdentifier("shopUse-\(item.id)")
+    } else {
+      PillLabel("Owned", systemImage: "checkmark", rank: .secondary)
+        .opacity(0.7)
+        .accessibilityLabel("\(item.name), owned")
+    }
+  }
+
+  @ViewBuilder private func dealButton(_ deal: ShopDeal) -> some View {
+    if checkout.isOwned(deal.item) {
+      ownedButton(deal.item)
+    } else {
+      PriceButton(
+        name: deal.item.name, price: deal.price, shortfall: checkout.shortfall(price: deal.price),
+        identifier: "shopBuy-deal-\(deal.id)"
+      ) {
+        perform(checkout.buy(deal), name: deal.item.name, pop: deal.id)
+      }
+    }
+  }
+
+  @ViewBuilder private func bundleButton(
+    _ bundle: ShopBundle, left: (items: [ShopItem], price: Int, sum: Int)
+  ) -> some View {
+    if left.items.isEmpty {
+      PillLabel("All yours", systemImage: "checkmark", rank: .secondary)
+        .opacity(0.7)
+        .accessibilityLabel("\(bundle.name), all owned")
+    } else {
+      PriceButton(
+        name: bundle.name, price: left.price, shortfall: checkout.shortfall(price: left.price),
+        identifier: "shopBuy-\(bundle.id)"
+      ) {
+        perform(checkout.buy(bundle), name: bundle.name, pop: bundle.id)
+      }
+    }
+  }
+
+  @ViewBuilder private func menu(_ item: ShopItem, price: Int) -> some View {
     if case .style(let choice) = item.look, let onTryOn, !style.shows(choice) {
       Button("Try it on in your room", systemImage: "eye") { onTryOn(choice) }
     }
@@ -267,7 +449,14 @@ struct ShopView: View {
       Button("Place in your room", systemImage: "hand.point.up.left") { onPlace(item) }
     }
     if !checkout.isOwned(item) {
-      Button("Buy for \(item.price) stamps", systemImage: "seal") { buy(item) }
+      Button("Buy for \(price) stamps", systemImage: "seal") {
+        perform(checkout.buy(item), name: item.name, pop: item.id)
+      }
+    }
+    if !item.ownsAtMostOne {
+      Button("Give to your partner", systemImage: "gift") {
+        giving = Giving(item: item, price: price)
+      }
     }
   }
 
@@ -277,7 +466,7 @@ struct ShopView: View {
     HStack(spacing: Spacing.small) {
       switch notice {
       case .bought(let receipt):
-        Image(systemName: receipt.needsPlacing ? "archivebox.fill" : "checkmark.circle.fill")
+        Image(systemName: Self.boughtSymbol(receipt))
           .font(IconStyle.font)
           .foregroundStyle(Palette.gold.color)
           .symbolEffect(.bounce, value: receipt.id)
@@ -297,18 +486,21 @@ struct ShopView: View {
           .foregroundStyle(Palette.light.color)
           .frame(minHeight: Target.minimum)
           .accessibilityIdentifier("shopUndo")
-      case .short(let item, let by):
+      case .short(let name, let by):
         Image(systemName: "seal")
           .font(IconStyle.font)
           .foregroundStyle(Palette.gold.color)
         VStack(alignment: .leading, spacing: 2) {
-          Text(by == 1 ? "1 more stamp for \(item.name)" : "\(by) more stamps for \(item.name)")
+          Text(by == 1 ? "1 more stamp for \(name)" : "\(by) more stamps for \(name)")
             .billetType(.label)
             .foregroundStyle(Palette.paper.color)
-          Text(Self.earning)
-            .billetType(.caption)
-            .foregroundStyle(Palette.muted.color)
-            .fixedSize(horizontal: false, vertical: true)
+          Button("Where stamps come from") {
+            dismissNotice()
+            showsStamps = true
+          }
+          .billetType(.caption)
+          .foregroundStyle(Palette.light.color)
+          .accessibilityIdentifier("shopShortHow")
         }
         Spacer(minLength: Spacing.small)
         IconButton("xmark", label: "Close") { dismissNotice() }
@@ -327,12 +519,20 @@ struct ShopView: View {
     .accessibilityIdentifier("shopNotice")
   }
 
-  /// How stamps come, for someone short of them. Nothing in the app pays stamps out: each pair
-  /// starts with a grant, and buying more is still to come.
-  static let earning =
-    "Stamps aren't earned by doing things here: every pair starts with a gift of them, and you'll be able to get more in the shop soon."
+  static func boughtSymbol(_ receipt: ShopCheckout.Receipt) -> String {
+    switch receipt.kind {
+    case .gift: "gift.fill"
+    case .forUs: receipt.needsPlacing ? "archivebox.fill" : "checkmark.circle.fill"
+    }
+  }
 
   static func boughtLine(_ receipt: ShopCheckout.Receipt) -> String {
+    if case .gift = receipt.kind { return "\(receipt.item.name) is wrapped for your partner" }
+    if let bundle = receipt.bundle {
+      return receipt.needsPlacing
+        ? "\(bundle.name) is yours. Some of it is in your closet"
+        : "\(bundle.name) is in your room"
+    }
     let name = receipt.item.name
     switch receipt.item.look {
     case .furniture:
@@ -345,12 +545,21 @@ struct ShopView: View {
 
   // MARK: - Actions
 
-  private func buy(_ item: ShopItem) {
-    switch checkout.buy(item) {
+  /// Shows what a tap on a price did, and counts it.
+  private func perform(_ outcome: ShopCheckout.Outcome, name: String, pop key: String) {
+    switch outcome {
     case .bought(let receipt):
-      events(.shopItemBought(item.id, price: item.price))
+      switch receipt.kind {
+      case .gift: events(.shopGiftSent(receipt.item.id, price: receipt.price))
+      case .forUs:
+        if let bundle = receipt.bundle {
+          events(.shopBundleBought(bundle.id, price: receipt.price))
+        } else {
+          events(.shopItemBought(receipt.item.id, price: receipt.price))
+        }
+      }
       purchases += 1
-      pop(item)
+      pop(key)
       show(.bought(receipt))
       Task {
         try? await Task.sleep(for: ShopCheckout.undoWindow)
@@ -358,32 +567,45 @@ struct ShopView: View {
         if self.notice == .bought(receipt) { dismissNotice() }
       }
     case .short(let by):
-      show(.short(item, by: by))
+      show(.short(name, by: by))
       Task {
         try? await Task.sleep(for: .seconds(8))
-        if self.notice == .short(item, by: by) { dismissNotice() }
+        if self.notice == .short(name, by: by) { dismissNotice() }
       }
     case .owned, .refused:
       break
     }
   }
 
+  private func give(_ item: ShopItem, price: Int, note: String?) {
+    perform(checkout.give(item, price: price, note: note), name: item.name, pop: item.id)
+  }
+
   private func undo(_ receipt: ShopCheckout.Receipt) {
-    checkout.undo(receipt)
+    if checkout.undo(receipt) {
+      events(.shopPurchaseUndone(receipt.bundle?.id ?? receipt.item.id, stamps: receipt.price))
+    }
     dismissNotice()
   }
 
-  private func use(_ choice: RoomStyleItem) {
-    checkout.use(choice)
+  private func claim(_ gift: DailyGift) {
+    guard store.claim(gift) == .applied else { return }
+    events(.shopDailyGiftClaimed(gift.reward))
   }
 
-  private func pop(_ item: ShopItem) {
+  /// Counts an offer the first time it comes on screen while the shop is open.
+  private func viewed(_ offer: String) {
+    guard seen.insert(offer).inserted else { return }
+    events(.shopOfferViewed(offer))
+  }
+
+  private func pop(_ key: String) {
     guard !reduceMotion else { return }
-    withAnimation(.spring(duration: 0.18, bounce: 0.5)) { popped = item.id }
+    withAnimation(.spring(duration: 0.18, bounce: 0.5)) { popped = key }
     Task {
       try? await Task.sleep(for: .milliseconds(180))
       withAnimation(.spring(duration: 0.35, bounce: 0.4)) {
-        if popped == item.id { popped = nil }
+        if popped == key { popped = nil }
       }
     }
   }
@@ -394,6 +616,32 @@ struct ShopView: View {
 
   private func dismissNotice() {
     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { notice = nil }
+  }
+}
+
+/// A price as a button: the stamps it costs, or how many more are needed. One tap buys.
+private struct PriceButton: View {
+  let name: String
+  let price: Int
+  let shortfall: Int
+  let identifier: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      if shortfall > 0 {
+        PillLabel("\(shortfall) more", systemImage: "seal", rank: .secondary)
+      } else {
+        PillLabel("\(price)", systemImage: "seal.fill", rank: .primary)
+      }
+    }
+    .billetButton(shortfall > 0 ? .secondary : .primary)
+    .accessibilityLabel(
+      shortfall > 0
+        ? "\(name), \(price) stamps. You need \(shortfall) more."
+        : "Buy \(name) for \(price) stamps"
+    )
+    .accessibilityIdentifier(identifier)
   }
 }
 
@@ -409,7 +657,7 @@ private struct CardPreviewShape: ViewModifier {
 }
 
 /// A compact pill for a card's buttons: a symbol and a few words, at least 44 points tall.
-private struct PillLabel: View {
+struct PillLabel: View {
   let title: String
   let systemImage: String
   let rank: ButtonRank
@@ -444,6 +692,8 @@ private struct PillLabel: View {
 struct ShopThumbnail: View {
   let item: ShopItem
   let thumbnail: ShopView.Thumbnail
+  /// On its own warm plate, or bare, to stand on another.
+  var plated = true
 
   @State private var image: CGImage?
   @Environment(\.displayScale) private var displayScale
@@ -473,10 +723,12 @@ struct ShopThumbnail: View {
     .background(
       RadialGradient(
         colors: [Palette.lightWarm.color.opacity(0.16), Palette.plate.color.opacity(0.5)],
-        center: .init(x: 0.5, y: 0.42), startRadius: 4, endRadius: 120),
+        center: .init(x: 0.5, y: 0.42), startRadius: 4, endRadius: 120
+      )
+      .opacity(plated ? 1 : 0),
       in: .rect(cornerRadius: Radius.plate)
     )
-    .clipShape(.rect(cornerRadius: Radius.plate))
+    .clipShape(.rect(cornerRadius: plated ? Radius.plate : 0))
   }
 
   private struct ThumbnailKey: Hashable {
@@ -485,19 +737,24 @@ struct ShopThumbnail: View {
   }
 }
 
-/// The closer look a long press brings up: the picture large, with what the item is.
-private struct ShopItemCloser: View {
+/// The closer look a long press brings up: the picture large, with what the item is. For a thing
+/// made for the cat, the cat is there too, already taken with it.
+struct ShopItemCloser: View {
   let item: ShopItem
+  let price: Int
   let thumbnail: ShopView.Thumbnail
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       ShopThumbnail(item: item, thumbnail: thumbnail)
         .frame(width: 280, height: 280)
+        .overlay(alignment: .bottomLeading) {
+          if let reaction = item.catReaction { CatTakenWith(reaction: reaction) }
+        }
       Text(item.name)
         .billetType(.heading)
         .foregroundStyle(Palette.paper.color)
-      Text("\(item.detail) · \(item.price) stamps")
+      Text("\(item.detail) · \(price) stamps")
         .billetType(.label)
         .foregroundStyle(Palette.muted.color)
     }
@@ -548,5 +805,46 @@ struct StampPlate: View {
     .calmAnimation(value: balance)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("\(balance) stamps")
+  }
+}
+
+/// The cat beside a thing made for it, with hearts rising and its reaction in a bubble.
+private struct CatTakenWith: View {
+  let reaction: String
+
+  @State private var beat = 0
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: Spacing.hair) {
+      ZStack(alignment: .topTrailing) {
+        Image(systemName: "cat.fill")
+          .font(.system(size: 44))
+          .foregroundStyle(Palette.paper.color)
+          .symbolEffect(.bounce, value: beat)
+        Image(systemName: "heart.fill")
+          .font(.system(size: 16))
+          .foregroundStyle(Palette.clayLit.color)
+          .offset(x: 10, y: -12)
+          .symbolEffect(.pulse, isActive: !reduceMotion)
+      }
+      Text(reaction)
+        .billetType(.label)
+        .foregroundStyle(Palette.ink.color)
+        .padding(.horizontal, Spacing.small)
+        .padding(.vertical, Spacing.hair)
+        .background(Palette.paper.color, in: .rect(cornerRadius: Radius.plate))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(Spacing.small)
+    .task {
+      guard !reduceMotion else { return }
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .seconds(1.6))
+        beat += 1
+      }
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel("Your cat: \(reaction)")
   }
 }

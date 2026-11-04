@@ -26,7 +26,18 @@ final class PairSession {
   @ObservationIgnored private(set) lazy var checkout = ShopCheckout(
     store: shop, renovator: renovator,
     style: { [weak self] in self?.play.roomStyle ?? .standard },
-    restyle: { [weak self] in self?.restyle($0) })
+    restyle: { [weak self] in self?.restyle($0) },
+    send: { [weak self] item, note in self?.wrap(item, note: note) })
+  /// Where packs of stamps would be bought. None are for sale yet.
+  @ObservationIgnored let stampPacks: any StampPackSource = NoStampPacks()
+
+  /// What the shop needs from the pair: the room's code seeds its offers, so both phones show
+  /// the same.
+  var shopContext: ShopView.Context {
+    ShopView.Context(
+      pair: room.code, stampPacks: stampPacks,
+      showsStampPacks: labs.isOn(LabExperiment.stampPacks))
+  }
   let trips: CatTripController
   /// True when the partner is the scripted one from Labs.
   let isFakePartner: Bool

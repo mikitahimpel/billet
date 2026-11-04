@@ -23,6 +23,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
   case lifeDebug
   case brainDebug
   case idolProps
+  case stampPacks
 
   public enum Group: CaseIterable, Sendable {
     case demo
@@ -60,6 +61,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeDebug: .cat
     case .brainDebug: .cat
     case .idolProps: .home
+    case .stampPacks: .home
     }
   }
 
@@ -81,11 +83,14 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeDebug: "Life debug"
     case .brainDebug: "Brain debug"
     case .idolProps: "Idol props"
+    case .stampPacks: "Stamp packs"
     }
   }
 
   public var detail: String {
     switch self {
+    case .stampPacks:
+      "A row in the shop's stamps sheet where packs of stamps will be sold. Nothing is for sale yet: the row is a placeholder and its button does nothing."
     case .idolProps:
       "Window Seat's lamp, plants, books, mugs, record player, rug, cat bed and more as generated 3D models (FLUX and Idol) instead of the hand-made ones, and the same pieces in the shop. A pilot, to compare the two."
     case .lifeBubble:
@@ -140,6 +145,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeDebug: false
     case .brainDebug: false
     case .idolProps: false
+    case .stampPacks: false
     }
   }
 
@@ -161,6 +167,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeDebug: false
     case .brainDebug: false
     case .idolProps: false
+    case .stampPacks: false
     }
   }
 }

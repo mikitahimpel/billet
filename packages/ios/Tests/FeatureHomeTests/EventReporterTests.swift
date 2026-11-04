@@ -318,9 +318,18 @@ import Wire
       events += [
         .roomItemPlaced(item.id), .roomItemMoved(item.id), .roomItemPutAway(item.id),
         .roomCustomised(item.id), .shopItemViewed(item.id),
-        .shopItemBought(item.id, price: item.price),
+        .shopItemBought(item.id, price: item.price), .shopOfferViewed("deal-\(item.id)"),
+        .shopGiftSent(item.id, price: item.price),
+        .shopPurchaseUndone(item.id, stamps: item.price),
       ]
     }
+    for bundle in ShopBundle.all {
+      events += [
+        .shopOfferViewed(bundle.id), .shopBundleBought(bundle.id, price: 30),
+        .shopPurchaseUndone(bundle.id, stamps: 30),
+      ]
+    }
+    events += [.shopDailyGiftClaimed(.stamps(15)), .shopDailyGiftClaimed(.item("treat-milk"))]
     for event in events {
       #expect(ClientEvent(reporting: event).problem == nil, "\(event)")
     }
