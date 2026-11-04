@@ -817,6 +817,9 @@ final class ShopStage: RehearsedStage {
         fill(holder, with: treat, slot: slot, unitsPerMetre: 3.2, least: 0.42, lift: 0.04)
       case .material(let surface, let tone):
         fill(holder, with: sample(surface, tone.swatch), slot: slot, unitsPerMetre: 1, least: 0)
+      case .style:
+        // Styles are sold in the Style tab, never on these shelves.
+        break
       }
     }
     updateTags()

@@ -1,7 +1,7 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
 // shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, the room's light switch, where the room's furniture stands, and the drawing of the
-// day.
+// together, the room's light switch, how the room is done up, where its furniture stands, and
+// the drawing of the day.
 
 import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
@@ -25,6 +25,7 @@ export type PlayKind =
   | "react"
   | "adopt"
   | "light"
+  | "style"
   | "arrange"
   | "daily";
 export type Reaction = "heart" | "stamp";
@@ -80,6 +81,37 @@ export interface LightFrame {
   readonly light: RoomLight;
 }
 
+/**
+ * How the room is done up, part by part, as the phones name each choice. The room keeps whatever
+ * names it is sent, so a phone with newer choices needs no new room; a phone reads a name it
+ * doesn't know as that part's standard look.
+ */
+export const ROOM_STYLE_PARTS = ["wall", "floor", "curtains", "drape", "view", "fairy"] as const;
+export type RoomStylePart = (typeof ROOM_STYLE_PARTS)[number];
+export type RoomStyle = Readonly<Partial<Record<RoomStylePart, string>>>;
+
+/** A change of the room's style: the last one from either phone wins, whole. */
+export interface StyleFrame {
+  readonly id: string;
+  readonly kind: "style";
+  readonly at: string;
+  readonly style: RoomStyle;
+}
+
+const STYLE_NAME = /^[A-Za-z]{1,32}$/;
+
+/** `value` as a room style, or undefined unless it is an object of known parts given by name. */
+export const parseStyle = (value: unknown): RoomStyle | undefined => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const style: Partial<Record<RoomStylePart, string>> = {};
+  for (const [key, name] of Object.entries(value)) {
+    if (!(ROOM_STYLE_PARTS as readonly string[]).includes(key)) return undefined;
+    if (typeof name !== "string" || !STYLE_NAME.test(name)) return undefined;
+    style[key as RoomStylePart] = name;
+  }
+  return style;
+};
+
 /** The cats a pair chooses between, as the phones name them. */
 export const MAX_ARRANGED_PIECES = 80;
 /** How far from the room's middle, in room units, a moved piece can stand. */
@@ -130,6 +162,7 @@ export type AnyPlayFrame =
   | ReactFrame
   | AdoptFrame
   | LightFrame
+  | StyleFrame
   | ArrangeFrame
   | DailyFrame;
 
@@ -211,6 +244,10 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "light": {
       const { light } = frame;
       return isRoomLight(light) ? { id, kind, at, light } : undefined;
+    }
+    case "style": {
+      const style = parseStyle(frame["style"]);
+      return style ? { id, kind, at, style } : undefined;
     }
     case "arrange": {
       const arrangement = parseArrangement(frame["room"], frame["spots"]);

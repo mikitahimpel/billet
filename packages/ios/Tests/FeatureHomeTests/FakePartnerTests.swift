@@ -139,6 +139,14 @@ struct FakePartnerTests {
     #expect(seen.contains(.roomLight(.cosy)))
   }
 
+  @Test func theStyleIsEchoedLikeTheRoomDoes() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let style = RoomStyle(wall: .sage, curtains: .linen, drape: .half)
+    let seen = await collect(delivery, count: 4) { await delivery.restyle(style) }
+    #expect(seen.contains(.roomStyle(style)))
+  }
+
   @Test func anArrangementIsEchoedLikeTheRoomDoes() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))

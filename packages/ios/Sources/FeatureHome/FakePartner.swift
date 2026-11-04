@@ -158,6 +158,11 @@ actor FakePartnerRoom {
     emit(.roomLight(light))
   }
 
+  /// The room keeps the last change of style and tells both phones.
+  func restyled(_ style: RoomStyle) {
+    emit(.roomStyle(style))
+  }
+
   /// The room keeps the last arrangement of each room and tells both phones.
   func arranged(_ arrangement: RoomArrangement) {
     emit(.roomArranged(arrangement))
@@ -325,6 +330,7 @@ extension NoteDelivery {
       nameCat: { await room.catNamed($0) },
       renameCat: { await room.catRenamed($0) },
       switchLight: { await room.lightSwitched($0) },
+      restyle: { await room.restyled($0) },
       arrange: { await room.arranged($0) },
       adopt: { await room.adopted($0) },
       react: { _, _ in },

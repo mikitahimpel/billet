@@ -24,6 +24,7 @@ extension ShopItem.Category {
     case .materials: "Materials"
     case .furniture: "Furniture"
     case .treats: "Treats"
+    case .style: "Style"
     }
   }
 
@@ -32,6 +33,7 @@ extension ShopItem.Category {
     case .materials: "Paint for the walls and the floor"
     case .furniture: "Pieces for the room"
     case .treats: "A little something for the cat"
+    case .style: "Colours and finishes for the room"
     }
   }
 }
@@ -63,6 +65,7 @@ extension ShopItem {
       case .cookie: "circle.hexagongrid.fill"
       case .milk: "cup.and.saucer.fill"
       }
+    case .style: "paintbrush.fill"
     }
   }
 
@@ -71,6 +74,7 @@ extension ShopItem {
     case .material(_, let tone): tone.swatch
     case .furniture: Palette.woodLit
     case .treat: Palette.gold
+    case .style: Palette.lightWarm
     }
   }
 
@@ -80,6 +84,7 @@ extension ShopItem {
     case .furniture(_, _, _, let mount): mount == .wall ? "Hangs on the wall" : "Stands in the room"
     case .material(let surface, _): surface == .wall ? "Paints the walls" : "Covers the floor"
     case .treat: "Used up when given"
+    case .style: "Chosen in the Style tab"
     }
   }
 }

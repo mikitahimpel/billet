@@ -323,6 +323,13 @@ final class PairSession {
     Task { [delivery] in await delivery.switchLight(light) }
   }
 
+  /// Does up the room here at once and tells the room, which tells the partner.
+  func restyle(_ style: RoomStyle) {
+    guard style != play.roomStyle else { return }
+    play.style(style)
+    Task { [delivery] in await delivery.restyle(style) }
+  }
+
   /// Arranges a room's furniture here at once and tells the room, which tells the partner.
   func arrange(_ arrangement: RoomArrangement) {
     guard play.arrangements[arrangement.room] != arrangement.spots else { return }
@@ -478,6 +485,8 @@ final class PairSession {
       play.named(name)
     case .roomLight(let light):
       play.light(light)
+    case .roomStyle(let style):
+      play.style(style)
     case .roomArranged(let arrangement):
       play.arrange(arrangement)
     case .dailyPrompts(let prompts):

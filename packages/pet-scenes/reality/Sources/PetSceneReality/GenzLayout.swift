@@ -142,8 +142,10 @@ struct GenzLayout {
     let opening = window.x1 - window.x0
     let sill = windowSill
     var parts: [Entity] = [
+      // The floor's own top sits just under the floor line: the style's floor covers it there.
       kit.block(
-        -wall, -wall, -wall, width + wall, depth + wall, wall, kit.matte(GenzColour(0x2A2F3B))),
+        -wall, -wall, -wall, width + wall, depth + wall, wall - GenzRoomStyler.floorDrop,
+        kit.matte(GenzColour(0x2A2F3B))),
       kit.block(-wall, 0, 0, wall, depth, height, kit.matte(GenzColour(0x141D2C))),
       kit.block(-wall, -wall, 0, window.x0 + wall, wall, height, back),
       kit.block(window.x1, -wall, 0, width - window.x1, wall, height, back),

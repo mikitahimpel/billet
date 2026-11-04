@@ -139,7 +139,7 @@ public struct ShopView<Preview: View>: View {
     ScrollView {
       ZStack(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: Spacing.large) {
-          ForEach(ShopItem.Category.allCases, id: \.self) { category in
+          ForEach(ShopItem.Category.shelves, id: \.self) { category in
             section(category)
           }
         }

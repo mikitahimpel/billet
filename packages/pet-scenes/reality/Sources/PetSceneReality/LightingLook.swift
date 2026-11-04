@@ -186,6 +186,14 @@ extension LightingLook {
     }
   }
 
+  /// The look with its fairy lights glowing `fairy`'s colour, where it has a colour of its own.
+  func tinted(_ fairy: FairyColour) -> LightingLook {
+    guard let colour = fairy.rgb else { return self }
+    var look = self
+    look.fairy.colour = colour
+    return look
+  }
+
   /// The lamp turned low and the fairy lights, the strip dark: warm pools in a dim room.
   static let cosy = LightingLook(
     key: Key(colour: [1, 0.6, 0.3], warmth: 0.85, boost: 0.45, softness: 0.9, flicker: 0),

@@ -1,3 +1,4 @@
+import DesignSystem
 import Foundation
 import Pet
 import PetScene
@@ -88,6 +89,10 @@ struct GenzRoomView: View {
   @State private var isDecorating = false
   @State private var decorStatus = DecorStatus()
   @State private var holdBegan: Date?
+  /// Whether the Style tab is open over the decorated room.
+  @State private var isStyling = false
+  /// A locked style being tried on in this room only.
+  @State private var tryingStyle: RoomStyleItem?
   @Environment(\.scenePhase) private var scenePhase
 
   private let behind = RoomLayerSlot.windowNight
@@ -95,6 +100,16 @@ struct GenzRoomView: View {
 
   private var isOnScreen: Bool {
     isAppeared && hostShowsScene && scenePhase == .active
+  }
+
+  /// How the room is done up here: the pair's style, with anything tried on in the Style tab.
+  private var shownStyle: RoomStyle {
+    tryingStyle.map(play.style.with) ?? play.style
+  }
+
+  /// The view through the window: the style's, else the one chosen in Settings.
+  private var shownView: WindowViewChoice {
+    shownStyle.view.map { WindowViewChoice(view: $0) } ?? windowView
   }
 
   /// The room for `layout`. The cache makes each room once, so this is the same room every time.
@@ -325,7 +340,8 @@ struct GenzRoomView: View {
     room.setCat(cat)
     room.setLighting(lighting)
     room.setRoomLight(play.light, animated: false)
-    room.setWindowView(windowView)
+    room.setStyle(shownStyle, animated: false)
+    room.setWindowView(shownView)
     room.setOnScreen(isOnScreen, in: viewID)
   }
 
@@ -351,6 +367,10 @@ struct GenzRoomView: View {
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
       .onChange(of: isDecorating, initial: true) { _, isOn in
+        if !isOn {
+          isStyling = false
+          tryingStyle = nil
+        }
         room.decor.isOn = isOn
         renovator?.isRenovating = isOn
       }
@@ -362,16 +382,30 @@ struct GenzRoomView: View {
         _, arranged in
         if let arranged, arranged != room.arrangement.spots { room.arrange(arranged) }
       }
-      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
+      .onChange(of: shownView, initial: true) { _, choice in room.setWindowView(choice) }
+      .onChange(of: shownStyle, initial: true) { _, style in room.setStyle(style) }
   }
 
   @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
-    if isDecorating {
+    if isDecorating, isStyling {
+      VStack {
+        Spacer(minLength: 0)
+        RoomStylePanel(
+          style: play.style, trying: $tryingStyle, renovator: renovator,
+          onChoose: { onEvent(.styled($0)) }, onClose: { isStyling = false })
+      }
+      .padding(.horizontal, Spacing.small)
+      .padding(.bottom, DecorControls.windowInsets.bottom + Spacing.small)
+      .transition(.move(edge: .bottom).combined(with: .opacity))
+    } else if isDecorating {
       // The room draws none of the shop's furniture, so it offers no closet to add from.
       DecorControls(
         status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
         onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() },
-        onReset: { room.resetDecor() })
+        onReset: { room.resetDecor() },
+        onStyle: { isStyling = true }
+      )
+      .transition(.opacity)
     }
   }
 

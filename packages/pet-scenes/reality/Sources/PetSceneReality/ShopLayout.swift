@@ -108,7 +108,7 @@ enum ShopLayout {
   static func surface(of item: ShopItem) -> RoomSurface? {
     switch item.look {
     case .material(let surface, _): surface
-    case .furniture, .treat: nil
+    case .furniture, .treat, .style: nil
     }
   }
 
