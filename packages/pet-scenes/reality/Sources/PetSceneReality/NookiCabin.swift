@@ -15,6 +15,9 @@ enum NookiCabin {
   static let wallHeight: Float = 0.8
 
   /// A point in the Nooki project's metres as a point in the room.
+  /// How high the rug stands, above the furniture shadows on the floor.
+  static let rugTop: Float = 0.005
+
   static func room(_ x: Float, _ y: Float, _ z: Float) -> GenzRoomPoint {
     GenzRoomPoint((x + 0.5) * scale, (z + 0.5) * scale, (y - plankTop) * scale)
   }
@@ -125,7 +128,7 @@ extension GenzLayout {
       sunFrom: room(1.4, 2.2, 0.9),
       switchPlate: room(0.06, 0.42, -0.5),
       // On the floor in front of the bed, clear of its rim and its shadow.
-      bowl: room(-0.2, NookiCabin.plankTop, 0.2),
+      bowl: room(-0.2, NookiCabin.plankTop + NookiCabin.rugTop + 0.001, 0.2),
       ownLights: NookiCabin.lights)
   }()
 }
@@ -278,12 +281,13 @@ extension NookiCabin {
         0.056, 0.056, 0.001, r: 0, prints[slot], at: card + turn.act([0, -0.033, 0.0049]),
         turn: turn)
     }
-    // The note's frame and peg; the room hangs the note itself in front.
+    // The note's frame and peg; the room hangs the note itself in front. The frame lies behind
+    // the polaroids on either side, which it overlaps.
     let note = NookiCabin.note
     let middle = garlandPoint(0.5)
     c.box(
-      note.width + 0.016, note.height + 0.034, 0.004, r: 0.002, 0xFFFBF3,
-      at: noteCentre + [0, -0.008, -0.006])
+      note.width + 0.016, note.height + 0.034, 0.003, r: 0.0015, 0xFFFBF3,
+      at: noteCentre + [0, -0.008, -0.0085])
     c.box(0.016, 0.024, 0.01, r: 0.002, Tone.woodLight, at: middle + [0, -0.008, 0.006])
   }
 

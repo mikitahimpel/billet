@@ -20,9 +20,11 @@ extension GenzKit {
 
   func cabinRug(_ piece: GenzPiece) -> [Entity] {
     var c = cabinClay(piece)
-    // Thinner than the Nooki project's, so toys lying on it are on top of it.
-    c.cylinder(0.002, 0.33, slotHex(piece, 0), at: [0, 0.001, 0])
-    c.cylinder(0.002, 0.31, slotHex(piece, 1), at: [0, 0.002, 0])
+    // Thinner than the Nooki project's, so toys lying on it are on top of it, but above the
+    // furniture shadows on the floor.
+    let top = NookiCabin.rugTop
+    c.cylinder(top - 0.001, 0.33, slotHex(piece, 0), at: [0, (top - 0.001) / 2, 0])
+    c.cylinder(0.002, 0.31, slotHex(piece, 1), at: [0, top - 0.001, 0])
     return c.parts
   }
 
