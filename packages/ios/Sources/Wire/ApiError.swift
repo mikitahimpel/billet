@@ -7,6 +7,8 @@ public enum ApiError: Codable, Hashable, Sendable {
   case alreadyPaired
   /// The Apple ID is already linked to another account.
   case appleIdInUse
+  /// The server would not credit a purchase: its signature, bundle, environment or product.
+  case invalidPurchase
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -23,6 +25,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "InvalidInvite": self = .invalidInvite
     case "AlreadyPaired": self = .alreadyPaired
     case "AppleIdInUse": self = .appleIdInUse
+    case "InvalidPurchase": self = .invalidPurchase
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -39,6 +42,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .invalidInvite: try container.encode("InvalidInvite", forKey: .tag)
     case .alreadyPaired: try container.encode("AlreadyPaired", forKey: .tag)
     case .appleIdInUse: try container.encode("AppleIdInUse", forKey: .tag)
+    case .invalidPurchase: try container.encode("InvalidPurchase", forKey: .tag)
     }
   }
 }

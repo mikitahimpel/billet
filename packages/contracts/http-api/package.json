@@ -14,6 +14,7 @@
     "./flags": "./src/flags.ts",
     "./invite": "./src/invite.ts",
     "./note": "./src/note.ts",
+    "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",
     "./status": "./src/status.ts"
   },

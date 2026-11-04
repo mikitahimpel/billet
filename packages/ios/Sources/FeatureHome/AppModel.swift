@@ -49,6 +49,8 @@ final class AppModel {
     /// Where the fake partner keeps its notes, apart from the real archive.
     var fakeArchive: NoteArchive?
     var fakeDelivery: (DemoRoom) -> NoteDelivery = { .fakePartner(device: $0.device) }
+    /// Stamp packs for money, shared by every session: they credit whichever shop is current.
+    var stampPacks: (any StampPackSource)?
   }
 
   private(set) var stage = Stage.unpaired
@@ -111,7 +113,8 @@ final class AppModel {
       room: room, delivery: dependencies.fakeDelivery(room), archive: archive,
       shop: shop, now: dependencies.now,
       isFakePartner: true, labs: labs,
-      playStorage: .defaults(dependencies.defaults, key: Self.fakePlayKey))
+      playStorage: .defaults(dependencies.defaults, key: Self.fakePlayKey),
+      stampPacks: dependencies.stampPacks ?? NoStampPacks())
     beforeFake = wasPairing
     stage = .paired(fake)
     let now = dependencies.now()
@@ -229,7 +232,7 @@ final class AppModel {
     return PairSession(
       room: room, delivery: delivery, archive: dependencies.archive,
       shop: ShopStore(storage: .defaults(dependencies.defaults)), now: dependencies.now,
-      labs: labs)
+      labs: labs, stampPacks: dependencies.stampPacks ?? NoStampPacks())
   }
 
   private func pair(code: String, creating: Bool) {

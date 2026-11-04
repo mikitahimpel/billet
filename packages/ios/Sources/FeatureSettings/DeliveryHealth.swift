@@ -96,6 +96,7 @@ extension DeliveryHealth {
         switch error {
         case .api(.notFound), .api(.unauthorized), .api(.invalidRequest), .maintenance: return true
         case .api(.unavailable), .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse),
+          .api(.invalidPurchase),
           .network, .status, .encoding, .decoding:
           return false
         }

@@ -7,7 +7,8 @@
 # - nothing from Rive is in the app;
 # - every cat file in the PetSceneReality sources is in the bundle;
 # - the demo host (DEMO_HOST in the environment) is the app's BilletDemoHost and is nowhere in
-#   the git history of this checkout.
+#   the git history of this checkout;
+# - the app carries the store PAYMENTS (mock or storekit) asked for, and not the other one.
 # Prints what it checked, never the host. Run from the repository root with full history.
 set -euo pipefail
 
@@ -59,6 +60,19 @@ missing=$(comm -23 <(echo "$want") <(echo "$have"))
 [ -n "$want" ] || fail "no cat files found in $cats_source"
 [ -z "$missing" ] || fail "cat files missing from the app: $(echo "$missing" | tr '\n' ' ')"
 echo "cats: $(comm -12 <(echo "$want") <(echo "$have") | grep -c .) of $(echo "$want" | grep -c .) in the app"
+
+payments=${PAYMENTS:-mock}
+[ "$(plist "$app" BilletPayments)" = "$payments" ] || fail "the app's BilletPayments is $(plist "$app" BilletPayments), not $payments"
+case "$payments" in
+  mock) absent='PaymentsStoreKit|StoreKitPayments' ;;
+  storekit) absent='PaymentsMock|MockPayments' ;;
+  *) absent='' ; fail "PAYMENTS must be mock or storekit, not $payments" ;;
+esac
+if [ -n "$absent" ]; then
+  found=$(strings -a "$app/Billet" | grep -cE "$absent" || true)
+  [ "$found" = 0 ] || fail "the $payments build carries the other store ($found strings match $absent)"
+  echo "payments: $payments, the other store is not in the binary"
+fi
 
 if [ -z "${DEMO_HOST:-}" ]; then
   fail "DEMO_HOST is not set"

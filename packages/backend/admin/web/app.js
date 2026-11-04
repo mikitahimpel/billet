@@ -2562,6 +2562,151 @@ async function renderAudit() {
   ];
 }
 
+/* ---------- Purchases ---------- */
+
+const PURCHASE_TONE = { credited: "good", refunded: "warn" };
+const signed = (n) => (n > 0 ? `+${n}` : String(n));
+const packName = (productId) => productId.replace(/^com\.mikitahimpel\.billet\./, "");
+
+async function renderPurchases() {
+  const { purchases, ledger, notifications } = await api("/purchases?limit=500");
+  const flagged = purchases.filter((p) => p.flagged).length;
+  const refunded = purchases.filter((p) => p.status === "refunded").length;
+  const ownerCell = (owner) =>
+    owner.startsWith("demo:")
+      ? h("span", { class: "mono", text: owner })
+      : h("a", { class: "mono", href: `#/pairs/${enc(owner)}`, text: owner });
+
+  return [
+    pageHead(
+      "Purchases",
+      "Stamp packs bought through the App Store, and on dev the mock ones. Read-only: refunds come from Apple.",
+    ),
+    h(
+      "div",
+      { class: "stats" },
+      statCard({ label: "Purchases", value: fmtNum(purchases.length, 0), foot: "newest 500" }),
+      statCard({ label: "Refunded", value: fmtNum(refunded, 0) }),
+      statCard({
+        label: "Flagged",
+        value: fmtNum(flagged, 0),
+        foot: "a refund took back less than the pack",
+      }),
+    ),
+    flagged > 0 &&
+      callout(
+        "warn",
+        `${flagged} flagged ${flagged === 1 ? "purchase" : "purchases"}`,
+        "The pair had fewer stamps than the refund, so the balance stopped at 0. Check them by hand.",
+      ),
+    section(
+      "Purchases",
+      "One row per App Store original transaction; each is credited once.",
+      dataTable({
+        caption: "Purchases",
+        noun: "purchases",
+        rows: purchases,
+        sort: [6, "desc"],
+        search: (p) => `${p.ownerId} ${p.productId} ${p.originalTransactionId} ${p.environment}`,
+        filters: {
+          label: "Status",
+          options: [
+            ["all", "All"],
+            ["credited", "Credited"],
+            ["refunded", "Refunded"],
+            ["flagged", "Flagged"],
+          ],
+          test: (p, f) => f === "all" || (f === "flagged" ? p.flagged : p.status === f),
+        },
+        columns: [
+          { label: "Owner", value: (p) => p.ownerId, cell: (p) => ownerCell(p.ownerId) },
+          {
+            label: "Pack",
+            value: (p) => p.productId,
+            cell: (p) => h("span", { class: "mono", text: packName(p.productId) }),
+          },
+          { label: "Stamps", num: true, value: (p) => p.stamps },
+          {
+            label: "Environment",
+            value: (p) => p.environment,
+            cell: (p) => pill("", p.environment, true),
+          },
+          {
+            label: "Status",
+            value: (p) => p.status,
+            cell: (p) => [
+              pill(PURCHASE_TONE[p.status] || "", p.status),
+              p.flagged ? [" ", pill("bad", "flagged")] : null,
+            ],
+          },
+          {
+            label: "Transaction",
+            value: (p) => p.originalTransactionId,
+            cell: (p) => h("span", { class: "mono", text: p.originalTransactionId }),
+          },
+          { label: "Bought", value: (p) => p.purchasedAt, cell: (p) => fmtWhen(p.purchasedAt) },
+          { label: "Updated", value: (p) => p.updatedAt, cell: (p) => ago(p.updatedAt) },
+        ],
+        none: empty(
+          "No purchases yet",
+          "A pack bought in the app appears here once it is credited.",
+        ),
+      }),
+    ),
+    section(
+      "Stamp ledger",
+      "Every change to a balance, newest first. A balance is the sum of its entries.",
+      dataTable({
+        caption: "Stamp ledger",
+        noun: "entries",
+        rows: ledger,
+        sort: [4, "desc"],
+        search: (e) => `${e.ownerId} ${e.id} ${e.productId}`,
+        columns: [
+          { label: "Owner", value: (e) => e.ownerId, cell: (e) => ownerCell(e.ownerId) },
+          {
+            label: "Entry",
+            value: (e) => e.id,
+            cell: (e) => h("span", { class: "mono", text: e.id }),
+          },
+          { label: "Kind", value: (e) => e.kind, cell: (e) => pill("", e.kind, true) },
+          { label: "Amount", num: true, value: (e) => e.amount, cell: (e) => signed(e.amount) },
+          { label: "When", value: (e) => e.at, cell: (e) => fmtWhen(e.at) },
+        ],
+        none: empty("The ledger is empty"),
+      }),
+    ),
+    section(
+      "App Store notifications",
+      "What Apple told the server, and what was done. Consumption requests are not answered yet.",
+      dataTable({
+        caption: "App Store notifications",
+        noun: "notifications",
+        rows: notifications,
+        sort: [0, "desc"],
+        search: (n) => `${n.type} ${n.subtype || ""} ${n.outcome} ${n.originalTransactionId || ""}`,
+        columns: [
+          { label: "Received", value: (n) => n.receivedAt, cell: (n) => fmtWhen(n.receivedAt) },
+          {
+            label: "Type",
+            value: (n) => n.type,
+            cell: (n) =>
+              h("span", { class: "mono", text: n.subtype ? `${n.type} · ${n.subtype}` : n.type }),
+          },
+          { label: "Environment", value: (n) => n.environment || "" },
+          {
+            label: "Transaction",
+            value: (n) => n.originalTransactionId || "",
+            cell: (n) => h("span", { class: "mono", text: n.originalTransactionId || "—" }),
+          },
+          { label: "Outcome", value: (n) => n.outcome, cell: (n) => pill("", n.outcome, true) },
+        ],
+        none: empty("No notifications yet", "Apple sends them to /v1/appstore/notifications."),
+      }),
+    ),
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -2571,6 +2716,7 @@ const ROUTES = {
   flags: renderFlags,
   pairs: renderPairs,
   maintenance: renderMaintenance,
+  purchases: renderPurchases,
   audit: renderAudit,
 };
 const updatedEl = document.getElementById("updated");

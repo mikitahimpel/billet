@@ -18,6 +18,13 @@ settings:
     # Where "Update billet" sends a build the service no longer accepts: an App Store or https
     # link. Empty opens the TestFlight app.
     BILLET_UPDATE_URL: ""
+    # Which store the app carries: "mock" (the default: fake store, dev server credits) or
+    # "storekit" (Apple's). Set it in the ENVIRONMENT, not as an xcodebuild argument, because
+    # Package.swift reads the same variable to link only that implementation:
+    #   BILLET_PAYMENTS=storekit xcodebuild ...   (docs/payments.md)
+    BILLET_PAYMENTS_MODE: $(BILLET_PAYMENTS:default=mock)
+    # "testflight" (the default) or "appstore". An App Store build refuses the mock store.
+    BILLET_DISTRIBUTION_MODE: $(BILLET_DISTRIBUTION:default=testflight)
   configs:
     # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
     Release:
@@ -33,10 +40,24 @@ targets:
   Billet:
     type: application
     platform: iOS
-    sources: [App]
+    sources:
+      - path: App
+        excludes: [Billet.storekit]
     dependencies:
       - package: Billet
-        products: [FeatureHome, Ink, Labs, Persistence, PetScene, PetSceneCatalog, Transport, WidgetBridge]
+        products:
+          [
+            FeatureHome,
+            Ink,
+            Labs,
+            Payments,
+            PaymentsLive,
+            Persistence,
+            PetScene,
+            PetSceneCatalog,
+            Transport,
+            WidgetBridge,
+          ]
       - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService
@@ -60,6 +81,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: billet
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "billet saves your wallpapers and Sunday posts to Photos."
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) DISTRIBUTION_$(BILLET_DISTRIBUTION_MODE:upper)
   BilletWidget:
     type: app-extension
     platform: iOS
@@ -109,8 +131,37 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_CFBundleDisplayName: billet
+  # StoreKit testing on the Simulator: buys each stamp pack from Billet.storekit with
+  # StoreKitTest, hosted in the app. Run with BILLET_PAYMENTS=storekit (docs/payments.md).
+  BilletStoreKitTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: StoreKitTests
+      - path: App/Billet.storekit
+        buildPhase: resources
+    dependencies:
+      - target: Billet
+      - package: Billet
+        products: [Payments, PaymentsStoreKit]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.storekit-tests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Billet.app/Billet
+        BUNDLE_LOADER: $(TEST_HOST)
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   Billet:
     build:
       targets:
         Billet: all
+    run:
+      # Xcode's local store for Run from Xcode. Only a StoreKit build asks it for anything.
+      storeKitConfiguration: App/Billet.storekit
+  BilletStoreKitTests:
+    build:
+      targets:
+        Billet: all
+        BilletStoreKitTests: [test]
+    test:
+      targets: [BilletStoreKitTests]

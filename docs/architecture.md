@@ -252,7 +252,7 @@ apps/
   ios/                  XcodeGen project.yml; thin App, Widget, NotificationService targets
 packages/
   contracts/{domain,http-api,realtime,push,fixtures}
-  backend/{platform,auth,account,pairing,pair-room,notes,flags,metrics,admin}
+  backend/{platform,auth,account,pairing,pair-room,notes,flags,metrics,admin,payments}
   config/{typescript,oxlint}
   ios/                  Main SwiftPM package, many targets:
     BilletKit           Machine, Store

@@ -53,6 +53,7 @@ export const adminApi = {
   pairOverride: "/admin/api/pairs/:pairId/overrides/:key",
   status: "/admin/api/status",
   statusHistory: "/admin/api/status/history",
+  purchases: "/admin/api/purchases",
 } as const;
 
 /** The read-only API for agents' service tokens, under `/admin/api/agent`. GET only. */
@@ -65,6 +66,7 @@ export const agentApi = {
   pair: "/admin/api/agent/pairs/:pairId",
   status: "/admin/api/agent/status",
   statusHistory: "/admin/api/agent/status-history",
+  purchases: "/admin/api/agent/purchases",
 } as const;
 
 // Absent values go out as `null`, so the page never has to tell `undefined` from a missing field.
@@ -127,6 +129,11 @@ const ActionParams = Schema.Struct({
 });
 const PairParams = Schema.Struct({ pairId: PairId });
 const PairKeyParams = Schema.Struct({ pairId: PairId, key: ExperimentKey });
+const PurchasesQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 1000 })),
+  ),
+});
 const HistoryQuery = Schema.Struct({
   key: Schema.optional(ExperimentKey),
   limit: Schema.optional(
@@ -287,6 +294,12 @@ const readHandlers = Effect.gen(function* () {
     return respondJson({ changes: yield* appStatus.history(limit ?? 50) });
   }).pipe(guarded);
 
+  // Read-only: refunds come from Apple, and nothing here changes a ledger.
+  const purchases = Effect.gen(function* () {
+    const { limit } = yield* HttpServerRequest.schemaSearchParams(PurchasesQuery);
+    return respondJson(yield* data.purchases(limit ?? 200));
+  }).pipe(guarded);
+
   return {
     flags,
     configs,
@@ -301,6 +314,7 @@ const readHandlers = Effect.gen(function* () {
     pair,
     status,
     statusHistory,
+    purchases,
   };
 });
 
@@ -350,6 +364,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.pair, reads.pair);
     yield* router.add("GET", adminApi.status, reads.status);
     yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
+    yield* router.add("GET", adminApi.purchases, reads.purchases);
 
     // Maintenance, the minimum build and the notice. Saved whole, with the version read, so two
     // tabs can't overwrite each other unseen; every save is kept in the history with the email.
@@ -448,5 +463,6 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.pair, reads.pair);
     yield* router.add("GET", agentApi.status, reads.status);
     yield* router.add("GET", agentApi.statusHistory, reads.statusHistory);
+    yield* router.add("GET", agentApi.purchases, reads.purchases);
   }),
 ).pipe(Layer.orDie);

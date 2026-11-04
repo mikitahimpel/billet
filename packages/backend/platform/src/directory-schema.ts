@@ -308,3 +308,58 @@ export const pairFlagOverrides = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
 );
+
+// App Store purchases of stamp packs (and the dev stage's mock ones), one row per original
+// transaction, so each is credited once. `owner_id` is the pair the stamps went to, or
+// `demo:<code>` for a demo room on the dev stage; not a foreign key, so the record outlives the
+// pair. No user, Apple account or receipt is kept. `flagged` is 1 when a refund could not take the
+// whole pack back, for the admin to look at.
+export const purchases = sqliteTable(
+  "purchases",
+  {
+    originalTransactionId: text("original_transaction_id").primaryKey(),
+    transactionId: text("transaction_id").notNull(),
+    ownerId: text("owner_id").notNull(),
+    productId: text("product_id").notNull(),
+    stamps: integer("stamps").notNull(),
+    environment: text("environment").notNull(),
+    status: text("status").notNull(),
+    refunds: integer("refunds").notNull(),
+    flagged: integer("flagged").notNull(),
+    purchasedAt: integer("purchased_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("purchases_owner_id_index").on(table.ownerId)],
+);
+
+// Every change to an owner's bought stamps; the balance is the sum of `amount`. Ids are stable
+// (`purchase:<id>`, `refund:<id>`, `restore:<id>`), and the app merges entries by them.
+export const stampLedger = sqliteTable(
+  "stamp_ledger",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    kind: text("kind").notNull(),
+    amount: integer("amount").notNull(),
+    productId: text("product_id").notNull(),
+    originalTransactionId: text("original_transaction_id").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [index("stamp_ledger_owner_id_index").on(table.ownerId, table.at)],
+);
+
+// The App Store Server Notifications handled, by Apple's UUID, so a retried one is applied once.
+export const appStoreNotifications = sqliteTable(
+  "app_store_notifications",
+  {
+    notificationUuid: text("notification_uuid").primaryKey(),
+    type: text("type").notNull(),
+    subtype: text("subtype"),
+    environment: text("environment"),
+    originalTransactionId: text("original_transaction_id"),
+    outcome: text("outcome").notNull(),
+    receivedAt: integer("received_at").notNull(),
+  },
+  (table) => [index("app_store_notifications_received_at_index").on(table.receivedAt)],
+);

@@ -8,11 +8,17 @@ import {
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
 import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
 import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
+import {
+  StoredNotification,
+  StoredPurchase,
+  StoredStampEntry,
+} from "@billet/backend-payments/payments-repository";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
 import {
   accountKeys,
+  appStoreNotifications,
   authAccounts,
   authChallenges,
   authSessions,
@@ -28,8 +34,10 @@ import {
   pairFlags,
   pairMembers,
   partnerNotices,
+  purchases,
   pushTokens,
   rateLimits,
+  stampLedger,
   users,
 } from "../src/directory-schema.ts";
 import {
@@ -56,6 +64,7 @@ import { getTableName, tablesOf } from "./table-columns.ts";
 // fails on one that is missing.
 const checked = [
   ["account_keys", accountKeys, StoredAccountKey],
+  ["app_store_notifications", appStoreNotifications, StoredNotification],
   ["auth_account", authAccounts, AuthAccountRow],
   ["auth_challenges", authChallenges, StoredChallenge],
   ["auth_session", authSessions, AuthSessionRow],
@@ -71,8 +80,10 @@ const checked = [
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],
   ["partner_notices", partnerNotices, StoredPartnerNotice],
+  ["purchases", purchases, StoredPurchase],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
+  ["stamp_ledger", stampLedger, StoredStampEntry],
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["room", room, StoredRoom],

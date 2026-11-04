@@ -26,6 +26,8 @@ struct BilletApp: App {
   /// The demo Worker's maintenance, minimum build and notice. Unused by the real client, which
   /// asks its own backend.
   @State private var demoStatus: ServiceStatusModel
+  /// The build's store (mock or StoreKit), made once: it listens for transactions while it lives.
+  private let payments: DemoPaymentsSetup?
   @State private var catalog = PetSceneCatalog(
     scenes: [NookiPetScene()],
     defaults: .standard,
@@ -44,6 +46,9 @@ struct BilletApp: App {
         },
         memory: .defaults(.standard),
         strings: ServiceStatusModel.strings(in: .main)))
+    payments = DemoPaymentsSetup(
+      host: Bundle.main.object(forInfoDictionaryKey: "BilletDemoHost") as? String ?? "",
+      make: AppPayments.make)
     RetiredLabsMigration.run(defaults: .standard)
     // Before Home reads the scene choice.
     if let store = WidgetFeaturesStore.appGroup() {
@@ -66,7 +71,8 @@ struct BilletApp: App {
             set: { id in id.map(catalog.select) }
           ),
           serviceStatus: demoStatus,
-          updateLink: updateLink)
+          updateLink: updateLink,
+          payments: payments)
       case .real(let baseURL):
         RealRootView(
           model: RealBackend.model(baseURL: baseURL), scenes: catalog.scenes,

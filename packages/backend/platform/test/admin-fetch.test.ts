@@ -174,6 +174,7 @@ describe("the read-only agent API", () => {
     "/admin/api/agent/experiments",
     "/admin/api/agent/flags",
     "/admin/api/agent/flag-history",
+    "/admin/api/agent/purchases",
   ];
 
   afterEach(() => vi.restoreAllMocks());
@@ -184,6 +185,28 @@ describe("the read-only agent API", () => {
     expect(response.headers.get("content-type")).toContain("application/json");
     expect(response.headers.get("cache-control")).toBe("no-store");
     await response.json();
+  });
+
+  it("answers the same purchases the panel shows, from D1", async () => {
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO purchases VALUES ('tx-1', 'tx-1', 'pair-1', 'com.mikitahimpel.billet.stamps.100',
+         100, 'Sandbox', 'refunded', 1, 1, 1000, 1000, 2000)`,
+      ),
+      env.DB.prepare(
+        `INSERT INTO stamp_ledger VALUES ('purchase:tx-1', 'pair-1', 'purchase', 100,
+         'com.mikitahimpel.billet.stamps.100', 'tx-1', 1000)`,
+      ),
+    ]);
+    const agent = await (
+      await admin("/admin/api/agent/purchases", { token: await signAgent() })
+    ).json();
+    expect(agent).toEqual(await (await admin("/admin/api/purchases")).json());
+    expect(agent).toMatchObject({
+      purchases: [{ originalTransactionId: "tx-1", ownerId: "pair-1", flagged: true }],
+      ledger: [{ id: "purchase:tx-1", amount: 100 }],
+      notifications: [],
+    });
   });
 
   it("answers the same flags the panel shows", async () => {

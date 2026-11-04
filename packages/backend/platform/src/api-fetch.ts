@@ -1,5 +1,5 @@
 import { type Context, Layer } from "effect";
-import { Digest, SecureRandom } from "effect/crypto";
+import { Digest, SecureRandom, Signature } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { socketRoute } from "@billet/contracts-realtime/socket-route";
 import { AccountDeletion } from "@billet/backend-account/account-deletion";
@@ -17,6 +17,9 @@ import { NotesRoutes } from "@billet/backend-notes/notes-routes";
 import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
+import { PaymentsConfig, settingsForStage } from "@billet/backend-payments/payments-config";
+import { PaymentsRoutes } from "@billet/backend-payments/payments-routes";
+import { PaymentsService } from "@billet/backend-payments/payments-service";
 import { isAdminPath, respondAdmin } from "./admin-fetch.ts";
 import { readServedStatus } from "./app-status-live.ts";
 import { gateRequest } from "./maintenance-gate.ts";
@@ -34,20 +37,25 @@ import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
+import { PaymentsRepositoryLive } from "./payments-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
 import { withRequestSpan } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
 import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
-const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) =>
-  Layer.mergeAll(
+const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) => {
+  // The stage decides which App Store environments count, and whether the dev extras (Xcode
+  // transactions, mock purchases, demo-room callers) exist at all.
+  const payments = PaymentsConfig.with(settingsForStage(env.STAGE));
+  return Layer.mergeAll(
     AuthRoutes,
     AccountRoutes,
     PairingRoutes,
     NotesRoutes,
     FlagsRoutes,
     MetricsRoutes,
+    PaymentsRoutes,
   ).pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -61,6 +69,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),
+        PaymentsService.layer,
+        payments,
       ),
     ),
     Layer.provide(
@@ -71,6 +81,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AccountNoticesLive(env.DB),
         AppleTokenRevokerLive(signInWithAppleKeyOf(env)),
         PairingRepositoryLive(env.DB),
+        PaymentsRepositoryLive(env.DB),
+        payments,
         FlagsRepositoryLive(env.DB),
         FlagConfigRepositoryLive(env.DB, caches.default),
         Metrics.layer.pipe(Layer.provide(MetricsRepositoryLive(env.DB))),
@@ -81,9 +93,11 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AppleIdentityLive,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
+        Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto)),
       ),
     ),
   );
+};
 
 /**
  * The `Api` Worker's `fetch`. The router is built per request, because the services under it hold

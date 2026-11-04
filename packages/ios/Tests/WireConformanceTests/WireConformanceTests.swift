@@ -45,6 +45,11 @@ let roundTrips: [String: RoundTrip] = [
   "ClientMessage": codec(ClientMessage.self),
   "ServerMessage": codec(ServerMessage.self),
   "PushPayload": codec(PushPayload.self),
+  "PurchaseRequest": codec(PurchaseRequest.self),
+  "MockPurchaseRequest": codec(MockPurchaseRequest.self),
+  "PurchaseResponse": codec(PurchaseResponse.self),
+  "StampsResponse": codec(StampsResponse.self),
+  "AppStoreNotificationRequest": codec(AppStoreNotificationRequest.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

@@ -151,6 +151,25 @@ public final class ShopStore {
     }
   }
 
+  /// Adds stamps bought for money, under the server's entry ID (`purchase:<transaction>`), once.
+  @discardableResult
+  public func creditPurchase(_ stamps: Int, id: String) -> ShopOutcome {
+    var next = state
+    let outcome = next.credit(stamps, as: .purchase, id: id)
+    if outcome == .applied { commit(next) }
+    return outcome
+  }
+
+  /// Takes back bought stamps after an App Store refund (`revoked:<transaction>`), once, never
+  /// below zero. Returns the stamps taken, `nil` when already applied.
+  @discardableResult
+  public func revokePurchase(_ stamps: Int, id: String) -> Int? {
+    var next = state
+    guard let taken = next.revoke(stamps, id: id) else { return nil }
+    commit(next)
+    return taken
+  }
+
   private func change(
     _ body: (inout ShopState) throws(ShopError) -> ShopOutcome
   ) throws(ShopError) -> ShopOutcome {

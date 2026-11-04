@@ -30,12 +30,15 @@ public struct DemoRootView: View {
   @State private var serviceStatus: ServiceStatusModel
   private let updateLink: UpdateLink
   private let publisher = WidgetPublisher.live()
+  /// Stamp packs for money, when the build sells them and has a demo server.
+  private let payments: DemoPaymentsSetup?
 
   /// `serviceStatus` asks the demo Worker at `host` for its status (see
   /// ``ServiceStatusModel/demoBaseURL(host:)``), and `updateLink` is where "Update billet" goes.
   public init(
     host: String, scenes: [any PetScene], selectedSceneID: Binding<String?>,
-    serviceStatus: ServiceStatusModel, updateLink: UpdateLink
+    serviceStatus: ServiceStatusModel, updateLink: UpdateLink,
+    payments: DemoPaymentsSetup? = nil
   ) {
     self.host = host
     DemoRoom.saveHost(host)
@@ -67,9 +70,11 @@ public struct DemoRootView: View {
           },
           pairingTimeout: Self.pairingTimeout,
           labs: features,
-          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
+          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory)),
+          stampPacks: payments.map { StampShopPacks($0.stampShop) }
         )))
     _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
+    self.payments = payments
     ScenePerf.mark("root built")
   }
 
@@ -81,6 +86,11 @@ public struct DemoRootView: View {
     .preferredColorScheme(.dark)
     .tint(Palette.gold.color)
     .calmAnimation(value: model.isPaired)
+    .environment(\.labsPayments, labsPayments)
+    .onChange(of: model.session.map(ObjectIdentifier.init), initial: true) {
+      payments?.caller.set(model.session?.room.code)
+      payments?.stampShop.attach(model.session?.shop)
+    }
     .onChange(of: model.labs.isOn(LabExperiment.fakePartner)) { _, on in
       model.fakePartnerSwitched(on: on)
     }
@@ -106,6 +116,12 @@ public struct DemoRootView: View {
       session.disconnect()
       session.connect()
     }
+  }
+
+  private var labsPayments: AnyView? {
+    guard let payments, let shop = model.session?.shop else { return nil }
+    return AnyView(
+      PaymentsLabsSection(stampShop: payments.stampShop, shop: shop, extra: payments.labs?()))
   }
 
   /// The chosen scene with its cat asleep, for the maintenance screen.

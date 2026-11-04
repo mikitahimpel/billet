@@ -1,0 +1,146 @@
+import { Context, type Effect, type Option, Schema } from "effect";
+import { EpochMillis } from "@billet/contracts-domain/ids";
+import type { PaymentsUnavailable } from "./payments-error.ts";
+
+/**
+ * Whose stamps these are: a pair id, or `demo:<code>` for a demo room on the dev stage. Stamps
+ * belong to the pair, so both partners share them, and a new pair starts from none.
+ */
+export const StampOwner = Schema.String.check(Schema.isNonEmpty()).pipe(Schema.brand("StampOwner"));
+export type StampOwner = typeof StampOwner.Type;
+
+export const PurchaseStatus = Schema.Literals(["credited", "refunded"]);
+export type PurchaseStatus = typeof PurchaseStatus.Type;
+
+/** What each stored table holds. A test in `platform` fails if a table's columns differ. */
+export const StoredPurchase = Schema.Struct({
+  /** The App Store's `originalTransactionId`, or a mock transaction id. Credited once. */
+  originalTransactionId: Schema.String,
+  transactionId: Schema.String,
+  ownerId: StampOwner,
+  productId: Schema.String,
+  stamps: Schema.Int,
+  /** `Production`, `Sandbox`, `Xcode` or `Mock`. */
+  environment: Schema.String,
+  status: PurchaseStatus,
+  /** How many times it has been refunded; the next ledger entry ids count on it. */
+  refunds: Schema.Int,
+  /** 1 when a refund took back fewer stamps than the pack, because the pair had fewer left. */
+  flagged: Schema.Int,
+  purchasedAt: EpochMillis,
+  createdAt: EpochMillis,
+  updatedAt: EpochMillis,
+});
+export type StoredPurchase = typeof StoredPurchase.Type;
+
+export const StampEntryKind = Schema.Literals(["purchase", "refund"]);
+
+/** One change to an owner's stamps. The balance is the sum of `amount`, never below 0. */
+export const StoredStampEntry = Schema.Struct({
+  id: Schema.String,
+  ownerId: StampOwner,
+  kind: StampEntryKind,
+  amount: Schema.Int,
+  productId: Schema.String,
+  originalTransactionId: Schema.String,
+  at: EpochMillis,
+});
+export type StoredStampEntry = typeof StoredStampEntry.Type;
+
+/** Every App Store Server Notification handled, so each is applied once. */
+export const StoredNotification = Schema.Struct({
+  notificationUuid: Schema.String,
+  type: Schema.String,
+  subtype: Schema.NullOr(Schema.String),
+  environment: Schema.NullOr(Schema.String),
+  originalTransactionId: Schema.NullOr(Schema.String),
+  /** What was done: `refunded`, `restored`, `duplicate`, `unknown-transaction`, `recorded`… */
+  outcome: Schema.String,
+  receivedAt: EpochMillis,
+});
+export type StoredNotification = typeof StoredNotification.Type;
+
+export interface NewPurchase {
+  readonly originalTransactionId: string;
+  readonly transactionId: string;
+  readonly ownerId: StampOwner;
+  readonly productId: string;
+  readonly stamps: number;
+  readonly environment: string;
+  readonly purchasedAt: number;
+  readonly at: number;
+}
+
+export interface Balance {
+  readonly balance: number;
+}
+
+export interface Credited extends Balance {
+  /** The purchase was already stored (for this owner or another), so nothing was credited. */
+  readonly duplicate: boolean;
+}
+
+export interface Reversal extends Balance {
+  /** Nothing changed: the purchase was not in the state the reversal starts from. */
+  readonly duplicate: boolean;
+  /** The stamps this step took back (a refund) or gave back (a restore), as a positive number. */
+  readonly stamps: number;
+}
+
+export interface Ledger extends Balance {
+  readonly entries: ReadonlyArray<StoredStampEntry>;
+}
+
+/**
+ * Purchases, the stamp ledger and handled notifications. Each method is one atomic operation and
+ * every storage failure is `PaymentsUnavailable`. `test/payments-repository-contract.ts` is the
+ * behaviour any implementation must pass.
+ */
+export class PaymentsRepository extends Context.Service<
+  PaymentsRepository,
+  {
+    /**
+     * Stores the purchase and credits its stamps to the owner, once per `originalTransactionId`.
+     * A purchase already stored, for any owner, credits nothing.
+     */
+    readonly credit: (purchase: NewPurchase) => Effect.Effect<Credited, PaymentsUnavailable>;
+    readonly findPurchase: (
+      originalTransactionId: string,
+    ) => Effect.Effect<Option.Option<StoredPurchase>, PaymentsUnavailable>;
+    /**
+     * Takes a credited purchase's stamps back, at most the owner's balance, and marks it refunded.
+     * Takes fewer than the pack's stamps only when the balance is short, and then flags the
+     * purchase. Its entry is `refund:<id>`, then `refund:<id>:2` and so on for later refunds.
+     * Records `notification` in the same batch, when given. A purchase that is not `credited`
+     * with `refunds` as given is left alone (`duplicate`).
+     */
+    readonly refund: (
+      purchase: StoredPurchase,
+      at: number,
+      notification?: StoredNotification,
+    ) => Effect.Effect<Reversal, PaymentsUnavailable>;
+    /**
+     * Gives a refunded purchase back what its last refund took (Apple reversed the refund), as a
+     * `purchase` entry `restore:<id>` (`restore:<id>:2`…), and marks it credited again.
+     */
+    readonly restore: (
+      purchase: StoredPurchase,
+      at: number,
+      notification?: StoredNotification,
+    ) => Effect.Effect<Reversal, PaymentsUnavailable>;
+    readonly hasNotification: (uuid: string) => Effect.Effect<boolean, PaymentsUnavailable>;
+    /** Stores a notification once; a second one with the same UUID changes nothing. */
+    readonly recordNotification: (
+      notification: StoredNotification,
+    ) => Effect.Effect<void, PaymentsUnavailable>;
+    /** The owner's balance and entries, oldest first. */
+    readonly ledger: (owner: StampOwner) => Effect.Effect<Ledger, PaymentsUnavailable>;
+  }
+>()("@billet/backend-payments/PaymentsRepository") {}
+
+/** The ledger entry id of a purchase, and of its `n`th refund or restore (from 1). */
+export const entryIds = {
+  purchase: (id: string) => `purchase:${id}`,
+  refund: (id: string, n: number) => (n === 1 ? `refund:${id}` : `refund:${id}:${n}`),
+  restore: (id: string, n: number) => (n === 1 ? `restore:${id}` : `restore:${id}:${n}`),
+};

@@ -40,6 +40,14 @@ export const routes = {
   getStatus: route("GET", "/v1/status"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
+  /** Credits a verified App Store transaction's stamps to the caller's pair, once. */
+  purchase: route("POST", "/v1/purchases"),
+  /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
+  mockPurchase: route("POST", "/v1/purchases/mock"),
+  /** The pair's bought stamps: the balance and every ledger entry. */
+  getStamps: route("GET", "/v1/stamps"),
+  /** App Store Server Notifications V2 (refunds and the like). Apple calls it; no session. */
+  appStoreNotifications: route("POST", "/v1/appstore/notifications"),
 } as const satisfies Record<string, Route>;
 
 /** The concrete path of `downloadImage` for a media key. */
@@ -59,3 +67,11 @@ export const clientHeaders = {
   appVersion: "x-billet-app-version",
   os: "x-billet-os",
 } as const;
+
+/**
+ * The demo room a caller is in, for the app's demo mode, which has no session and no pair. Only the
+ * dev stage reads it, and only on the purchase and stamp routes, where it names the ledger
+ * (`demo:<code>`) when there is no bearer token. A code is 1 to 64 of `A-Z a-z 0-9 _ -`. Every
+ * other stage ignores it.
+ */
+export const demoRoomHeader = "x-billet-demo-room";

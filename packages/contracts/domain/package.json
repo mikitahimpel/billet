@@ -12,7 +12,8 @@
     "./metrics": "./src/metrics.ts",
     "./note": "./src/note.ts",
     "./delivery-lane": "./src/delivery-lane.ts",
-    "./push-token": "./src/push-token.ts"
+    "./push-token": "./src/push-token.ts",
+    "./stamp-packs": "./src/stamp-packs.ts"
   },
   "scripts": {
     "lint": "oxlint .",

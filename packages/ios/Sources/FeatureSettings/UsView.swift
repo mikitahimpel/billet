@@ -26,6 +26,7 @@ public struct UsView<Account: View>: View {
   private let onReplayOnboarding: (() -> Void)?
   private let account: Account
 
+  @Environment(\.labsPayments) private var labsPayments
   @State private var showsLabs = false
   @State private var labsOpen = false
   @State private var confirmingUnpair = false
@@ -211,6 +212,7 @@ public struct UsView<Account: View>: View {
       if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
         CatPicker(model: model, cats: cats)
       }
+      if let labsPayments { labsPayments }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         let experiments = LabExperiment.allCases.filter { $0.group == group }
         // The first launch has no switches, only a way to watch it again.
@@ -356,4 +358,10 @@ struct SettingsLink: View {
     }
     .buttonStyle(RowButtonStyle())
   }
+}
+
+extension EnvironmentValues {
+  /// Labs → Payments: the stamp packs and, in a mock build, the mock store's switches. Set by the
+  /// app's root view when the build sells stamps.
+  @Entry public var labsPayments: AnyView? = nil
 }
