@@ -312,7 +312,7 @@ jobs:
     if: >-
       !cancelled() && github.event_name == 'workflow_dispatch'
       && (inputs.jobs == 'steady' || inputs.jobs == 'all')
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 90
     strategy:
       fail-fast: false
