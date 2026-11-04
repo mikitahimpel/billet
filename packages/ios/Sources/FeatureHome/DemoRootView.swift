@@ -70,6 +70,7 @@ public struct DemoRootView: View {
           fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
     _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
+    ScenePerf.mark("root built")
   }
 
   public var body: some View {

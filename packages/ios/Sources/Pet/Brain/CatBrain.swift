@@ -735,9 +735,12 @@ public struct CatBrain: Sendable {
         ([.walkToBowl, .waitByBowl], mealtime),
       ]
     case .hungry:
+      // It waits where the food comes, facing you, so a glance at the room says what it wants.
+      // With no bowl it can reach, it begs at you instead.
+      let bowl = room.reachable(.bowl)
       return [
-        ([.walkToBowl, .waitByBowl], 1.2 + mealtime), ([.walkToBowl, .pawBowl, .waitByBowl], 1),
-        ([.beg], 0.8),
+        ([.walkToBowl, .waitByBowl], bowl ? 2 + mealtime : 0),
+        ([.walkToBowl, .pawBowl, .waitByBowl], bowl ? 1 : 0), ([.beg], bowl ? 0 : 1),
       ]
     case .asleep, .lonely, .bored, .sleepy, .happy, .content:
       return [

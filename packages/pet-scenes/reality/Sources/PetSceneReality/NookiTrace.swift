@@ -19,4 +19,12 @@ enum NookiTrace {
   static func frame(_ body: () -> Void) {
     signposter.withIntervalSignpost("frame", around: body)
   }
+
+  private static let motion = Logger(subsystem: "com.mikitahimpel.billet", category: "CatMotion")
+
+  /// What the cat's body does each time it changes, at debug level, to find snaps in a log
+  /// stream: a new clip, or a step or a turn bigger than a frame's walk or turn could be.
+  static func catMotion(_ what: String, at clock: Double) {
+    motion.debug("\(what, privacy: .public) at \(clock, privacy: .public)")
+  }
 }

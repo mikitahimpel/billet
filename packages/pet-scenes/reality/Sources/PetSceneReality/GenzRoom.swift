@@ -23,6 +23,8 @@ final class GenzRoomScreen {
   var lights = GlowSpots()
   /// Just above the cat, or `nil` before the room has been fitted.
   var cat: CGPoint?
+  /// The middle of the cat's bowl, or `nil` before the room has been fitted.
+  var bowl: CGPoint?
   var parallax = CGSize.zero
   /// The window's opening as the camera sees it now, and as it sees it from its home place.
   var window: [CGPoint] = []
@@ -66,10 +68,27 @@ final class GenzRoomScreen {
 }
 
 /// The cat models, each loaded once from its compiled file and cloned into each styled room. A
-/// cat that will not load is replaced by the standard cat, so a room always has one.
+/// cat that will not load is replaced by the standard cat, so a room always has one. Only the
+/// models someone holds stay loaded: each room's and the desk's cat, and the adoption's cats
+/// while it shows.
 @MainActor
 final class GenzCatSource {
   private var loading: [CatModel: Task<Entity?, Never>] = [:]
+  private var held: [ObjectIdentifier: Set<CatModel>] = [:]
+
+  /// The models loaded or loading now.
+  var loaded: Set<CatModel> { Set(loading.keys) }
+
+  /// Keeps the models for `choices` loaded for `owner`, in place of what it held before, and lets
+  /// go of every model nobody holds. A cat already placed is a copy and stays where it is.
+  func hold(_ choices: [CatChoice], for owner: AnyObject) {
+    let key = ObjectIdentifier(owner)
+    held[key] = choices.isEmpty ? nil : Set(choices.map(\.model))
+    let kept = held.values.reduce(into: Set<CatModel>()) { $0.formUnion($1) }
+    for model in loading.keys where !kept.contains(model) {
+      loading[model] = nil
+    }
+  }
 
   /// A fresh copy of the model for `choice`, and the choice it really shows.
   func cat(_ choice: CatChoice = .standard) async -> (Entity, CatChoice)? {
@@ -103,6 +122,14 @@ final class GenzRoomCache {
 
   nonisolated init(suite: String? = nil) {
     self.suite = suite
+  }
+
+  /// Lets go of the room for `key` once no view shows it, with its cat, so a set of furniture
+  /// left for another stops holding its meshes. Asked for again, it is built afresh.
+  func release(_ key: GenzLayout.Key) {
+    guard let room = rooms[key], !room.isOnScreen else { return }
+    rooms[key] = nil
+    cats.hold([], for: room)
   }
 
   func room(_ layout: GenzLayout) -> GenzRoom {
@@ -164,6 +191,12 @@ final class GenzRoom: CatPlayStage {
   /// Where the body faces this frame, before the lean into a hand.
   var bodyHeading: Float = 0
   private var lastCatClock = 0.0
+  /// Where the cat stood last frame, to log a step too big for one frame.
+  private var lastCatPosition = SIMD3<Float>.zero
+  /// What keeps the clip from switching for a frame or two.
+  var clipGate = CatClipGate()
+  /// The rate the clip shown plays at, kept while the gate holds it over another's.
+  private var clipRate: Float = 1
   var trip: CatTrip?
   var tripKind: CatTripKind?
   /// A chase the brain asked for, waiting for the cat to be free.
@@ -472,6 +505,7 @@ final class GenzRoom: CatPlayStage {
 
   private func placeCat() async {
     let wanted = catChoice
+    cats.hold([wanted], for: self)
     guard let (model, shown) = await cats.cat(wanted) else {
       Self.log.error("No cat for \(String(describing: wanted), privacy: .public)")
       return
@@ -480,6 +514,8 @@ final class GenzRoom: CatPlayStage {
     let bounds = model.visualBounds(relativeTo: nil)
     guard !bounds.isEmpty, bounds.extents.max().isFinite else { return }
     let anatomy = shown.model.anatomy
+    layout.catBody = shown.model.footprint
+    nudgePillows(heading: bodyHeading)
     let scale = layout.cat.length / anatomy.length
     model.scale = .one * scale
     catScale = scale
@@ -493,6 +529,7 @@ final class GenzRoom: CatPlayStage {
     motion = shown.model.motion
     behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
     behaviour.follow(life)
+    clipGate = CatClipGate()
     rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
     catHolder.addChild(model)
     if let receiver = ambientReceiver { SceneParts.visit(model) { $0.components.set(receiver) } }
@@ -771,6 +808,10 @@ final class GenzRoom: CatPlayStage {
     if screen.homeWindow != homeWindow { screen.homeWindow = homeWindow }
     let cat = camera.project(catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
     if screen.cat != cat { screen.cat = cat }
+    let bowl = lifeProps.flatMap {
+      camera.project($0.bowl.position(relativeTo: room), in: viewSize)
+    }
+    if screen.bowl != bowl { screen.bowl = bowl }
     let plate = project(layout.switchPlate)
     if screen.lightSwitch != plate { screen.lightSwitch = plate }
     let parallax = CGSize(
@@ -1116,7 +1157,18 @@ final class GenzRoom: CatPlayStage {
       simd_quatf(angle: bodyHeading, axis: [0, 1, 0])
       * simd_quatf(angle: hands.lean, axis: [0, 0, 1])
     let beat = behaviour.beat(at: clock, mode: mode)
-    rig.play(beat.action, rate: rate)
+    // Held, the cat dangles at once; otherwise the gate keeps a clip asked for for a frame or
+    // two from cutting in.
+    let shown = clipGate.choose(beat.action, at: clock, force: toys.liftedAt != nil)
+    if shown != rig.current { NookiTrace.catMotion("clip \(shown)", at: clock) }
+    if shown == beat.action { clipRate = rate }
+    rig.play(shown, rate: clipRate)
+    stepNudges()
+    let moved = catHolder.position - lastCatPosition
+    if lastCatPosition != .zero, simd_length(SIMD2(moved.x, moved.z)) > layout.cat.length * 0.25 {
+      NookiTrace.catMotion("jump \(simd_length(moved) / layout.cat.length)", at: clock)
+    }
+    lastCatPosition = catHolder.position
     fitCatShadow(step)
     if clock > gazeUntil { gazePoint = nil }
     if gazePoint == nil, trip == nil, let gaze = brainGaze() {

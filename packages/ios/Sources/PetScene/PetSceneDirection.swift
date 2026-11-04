@@ -102,4 +102,7 @@ extension EnvironmentValues {
   @Entry public var petSceneOpeningEnded: (@MainActor () -> Void)? = nil
   /// The newest cue for the cat, from ``CatDirector``.
   @Entry public var petSceneCatCue: CatCueRequest? = nil
+  /// Counts the host's asks to fill the cat's bowl, as a tap on it does: each new count fills it
+  /// once. Only a scene with a room (``PetScene/hasRoom``) is asked.
+  @Entry public var petSceneBowlFills = 0
 }
