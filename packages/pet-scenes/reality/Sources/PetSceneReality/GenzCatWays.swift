@@ -90,7 +90,7 @@ extension GenzRoom {
     if base != .stand {
       goal = layout.catRestSpot(near: goal, on: level, heading: headingFor(frame) ?? bodyHeading)
     }
-    var ways = layout.catWay(
+    let ways = layout.catWay(
       from: catSpot, on: footing.level, to: goal, on: level, cache: wayCache)
     // Somewhere it cannot get to without going through something: as near as it gets.
     var end = catSpot

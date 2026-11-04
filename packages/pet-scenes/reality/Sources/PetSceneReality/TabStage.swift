@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import Observation
+import Pet
 import PetScene
 import RealityKit
 import SwiftUI
