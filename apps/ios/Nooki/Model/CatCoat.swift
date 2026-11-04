@@ -39,7 +39,7 @@ nonisolated enum CatCoat: String, CaseIterable, Sendable {
     }
 
     /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
-    static let poses = ["Mochi", "MochiStanding"]
+    static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
 
     /// Where the rigs are read from in this coat (`CatRig.Files(named:drawn:in:)`): the app itself for grey, else a
     /// folder in Caches holding each pose's PLY in this coat, written once, beside links to Ilya's skins and rigs.

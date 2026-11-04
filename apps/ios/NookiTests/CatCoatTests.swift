@@ -4,7 +4,7 @@ import Testing
 @testable import Billet
 
 struct CatCoatTests {
-    /// sha256 of billet-gpu's coat PLYs (coats/SHA256SUMS), which Ilya's PLY plus the shipped colours must rebuild.
+    /// sha256 of billet-gpu's coat PLYs (coats/SHA256SUMS, lying ones from coats/brain), which Ilya's PLY plus the shipped colours must rebuild.
     static let expected: [String: String] = [
         "Mochi-ginger": "41a838b2b7508d7dbdf71a8bcbdab1dbcf2cd7e038d7a18e9853a07df7a8c114",
         "MochiStanding-ginger": "a11409cbd072d4a9855708e6e507e64d60d84906f226d2d1759bc8e0e0d0d761",
@@ -15,6 +15,16 @@ struct CatCoatTests {
         "Mochi-black": "e478b74296d0746753665883d32bb2c5c35ef584c580daa0b02d163bd3e5c030",
         "MochiStanding-black": "20f56e95fa5f577c7c341b3f67d55a82fc89942476f855572274c735dc5e3a48",
         "Mochi-calico": "5fc9176dddba1fc302b647d15666621b7b09af55e16981586315193ec285cd19",
+        "MochiLoaf-ginger": "e03d59d4240e8537bbfa33d851858b0fae8b6ec93d27c56125688dcd865eee5a",
+        "MochiLoaf-cream": "0b76a9064082ed55792e64f98345a4a7f4f5e1ffe94b0e4c15f53577ac863df5",
+        "MochiLoaf-tuxedo": "e92a3ee5724596bac376f0d0173e9458c7dd16431473f2b0d65cd4bea279e3ae",
+        "MochiLoaf-black": "49d7d3ce8b130245c314cca81ded9b22b087e9eb98ad6f33ed0edc6c24710e36",
+        "MochiLoaf-calico": "4eed55d67e958a84082dd62e7045665609ba90a4eb8db5e0afe5215928d4e2cd",
+        "MochiSleep-ginger": "be6f6cd93959123525f42533b56805f17d2a6e9ebdc8841fa5fc61a41b8e962d",
+        "MochiSleep-cream": "6ae96ffb6dd6eb0f5466053e3f5f66a25013b2f4bacb28ce223f56778f51cb2a",
+        "MochiSleep-tuxedo": "e66fe2ddcf9591e0281f483adfc0a18264ae608bf0c4043fe6600ae272fbf0d0",
+        "MochiSleep-black": "c5d02c7ee4bd80862f0b0954df12190259607b45494eb8932facfc60313a01be",
+        "MochiSleep-calico": "865fa2bbdc5b5222c8b211824258bed53abdc1cebf792ca651b83fd93b78574c",
         "MochiStanding-calico": "95585254d29fcfe8fa46c7fb181120d8c781591e8959df2e57fbe87e0ab5fb0a",
     ]
 
