@@ -6,7 +6,7 @@ import SwiftUI
 import WidgetBridge
 
 /// "Us", opened from the two avatars on Home: the two of us and the cat, its character, where the
-/// account is saved, notifications and widgets, the pair, and about. Labs come last, and only in
+/// account is saved, notifications, the app icon and widgets, the pair, and about. Labs come last, and only in
 /// builds for testing.
 public struct UsView<Account: View>: View {
   private let code: String?
@@ -77,6 +77,7 @@ public struct UsView<Account: View>: View {
       CatCharacterSection(catName: catName, card: characterCard)
       account
       NotificationsSection()
+      AppIconSection()
       if let widgetFeatures {
         widgetSection(widgetFeatures)
       }
