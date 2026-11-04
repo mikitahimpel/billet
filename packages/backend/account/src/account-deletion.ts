@@ -42,14 +42,17 @@ export class AccountDeletion extends Context.Service<
       const media = yield* MediaStore;
 
       /** Deletes the user's notes in one room and every image of theirs under its prefix. */
-      const clearRoom = Effect.fnUntraced(function* (pairId: PairId, userId: UserId) {
+      const clearRoom = Effect.fn("AccountDeletion.clearRoom")(function* (
+        pairId: PairId,
+        userId: UserId,
+      ) {
         const notes = yield* rooms.forgetMember(pairId, userId);
         const uploaded = yield* media.uploadedBy(pairId, userId);
         const keys = new Set<MediaKey>([...uploaded, ...notes.map(({ note }) => note.image)]);
         yield* media.remove([...keys]);
       });
 
-      const deleteAccount = Effect.fnUntraced(function* (
+      const deleteAccount = Effect.fn("AccountDeletion.deleteAccount")(function* (
         userId: UserId,
         appleAuthorizationCode: Option.Option<Redacted.Redacted<string>>,
       ): Effect.fn.Return<void, AccountUnavailable> {

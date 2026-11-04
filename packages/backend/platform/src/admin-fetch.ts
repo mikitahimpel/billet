@@ -1,4 +1,4 @@
-import { Effect, Layer } from "effect";
+import { Context, Effect, Layer } from "effect";
 import { Digest, SecureRandom, Signature } from "effect/crypto";
 import { FetchHttpClient, HttpRouter } from "effect/http";
 import { Jwks } from "effect/jose";
@@ -23,6 +23,7 @@ import {
 import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { AdminDataLive } from "./admin-data-live.ts";
+import { Observability } from "./observability.ts";
 import { AppStatusStoreLive } from "./app-status-live.ts";
 import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
@@ -88,6 +89,8 @@ const signature = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layer
 export interface AdminOptions {
   readonly experiments: ReadonlyArray<Experiment>;
   readonly accessKeys?: Layer.Layer<Jwks.Jwks>;
+  /** The request span's context (observability.ts), so the panel's spans and logs join it. */
+  readonly context?: Context.Context<never>;
 }
 
 /** Fails closed: no configuration, no header, or any doubt about the token is `undefined`. */
@@ -95,6 +98,7 @@ export const verifyAccess = async (
   request: Request,
   env: WorkerEnv,
   accessKeys?: Layer.Layer<Jwks.Jwks>,
+  context: Context.Context<never> = Context.empty(),
 ): Promise<AccessIdentity | undefined> => {
   const config = accessConfigOf(env.ACCESS_TEAM_DOMAIN, env.ACCESS_AUD, env.ACCESS_AGENT_AUD);
   const verifier =
@@ -106,7 +110,7 @@ export const verifyAccess = async (
           ),
         );
   const token = request.headers.get(accessJwtHeader);
-  return Effect.runPromise(
+  return Effect.runPromiseWith(context)(
     Effect.gen(function* () {
       const access = yield* AccessVerifier;
       return yield* access.verify(token);
@@ -114,7 +118,10 @@ export const verifyAccess = async (
       Effect.provide(verifier),
       Effect.tapError(({ reason }) => Effect.logWarning("admin access denied", reason)),
       Effect.orElseSucceed(() => undefined),
-      Effect.catchCause(() => Effect.succeed(undefined)),
+      Effect.catchCause((cause) =>
+        Effect.logError("admin access check failed", cause).pipe(Effect.as(undefined)),
+      ),
+      Effect.provide(Observability),
     ),
   );
 };
@@ -164,10 +171,11 @@ const route = async (
   layer: Layer.Layer<never, never, HttpRouter.HttpRouter>,
   request: Request,
   ctx: ExecutionContext,
+  context: Context.Context<never>,
 ) => {
   const { handler, dispose } = HttpRouter.toWebHandler(layer, { disableLogger: true });
   try {
-    return withSecurity(await handler(request));
+    return withSecurity(await handler(request, context));
   } finally {
     ctx.waitUntil(dispose());
   }
@@ -187,16 +195,20 @@ export const respondAdmin = async (
   ctx: ExecutionContext,
   options: AdminOptions,
 ): Promise<Response> => {
-  const identity = await verifyAccess(request, env, options.accessKeys);
+  const context = options.context ?? Context.empty();
+  const identity = await verifyAccess(request, env, options.accessKeys, context);
   if (identity === undefined) return forbidden();
   const { pathname } = new URL(request.url);
 
   if (identity.kind === "agent") {
     if (request.method !== "GET" || !pathname.startsWith(agentApiPrefix)) return forbidden();
-    console.info(
-      JSON.stringify({ message: "admin agent read", commonName: identity.commonName, pathname }),
+    await Effect.runPromiseWith(context)(
+      Effect.logInfo("admin agent read").pipe(
+        Effect.annotateLogs({ commonName: identity.commonName, pathname }),
+        Effect.provide(Observability),
+      ),
     );
-    return route(agentLayer(env, options.experiments), request, ctx);
+    return route(agentLayer(env, options.experiments), request, ctx, context);
   }
 
   if (!isSameOriginWrite(request)) return forbidden();
@@ -209,5 +221,10 @@ export const respondAdmin = async (
   if (!pathname.startsWith("/admin/api/")) {
     return withSecurity(new Response("Not found", { status: 404 }));
   }
-  return route(adminLayer(env, options.experiments, { email: identity.email }), request, ctx);
+  return route(
+    adminLayer(env, options.experiments, { email: identity.email }),
+    request,
+    ctx,
+    context,
+  );
 };

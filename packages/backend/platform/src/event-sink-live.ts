@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 import { EventSink, type AnalyticsPoint } from "@billet/backend-metrics/analytics";
+import { spanMethods } from "@billet/backend-observability/span-methods";
 
 /**
  * The row an `AnalyticsPoint` becomes. Positions are the query schema, so never reorder them:
@@ -29,9 +30,12 @@ export const EventSinkLive = (
 ): Layer.Layer<EventSink> =>
   dataset === undefined
     ? EventSink.silent
-    : Layer.succeed(EventSink, {
-        write: (point) =>
-          Effect.try(() => dataset.writeDataPoint(dataPointOf(point))).pipe(
-            Effect.catch(() => Effect.logWarning("analytics point not written")),
-          ),
-      });
+    : Layer.succeed(
+        EventSink,
+        spanMethods("EventSink", {
+          write: (point) =>
+            Effect.try(() => dataset.writeDataPoint(dataPointOf(point))).pipe(
+              Effect.catch(() => Effect.logWarning("analytics point not written")),
+            ),
+        }),
+      );

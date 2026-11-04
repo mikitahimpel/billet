@@ -18,8 +18,8 @@ const respondAccountFailures = <R>(
   >,
 ) =>
   effect.pipe(
-    Effect.catchTag("AccountUnavailable", ({ reason }) =>
-      Effect.logError("account unavailable", reason).pipe(
+    Effect.catchTag("AccountUnavailable", (error) =>
+      Effect.logError("account unavailable", error).pipe(
         Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
       ),
     ),

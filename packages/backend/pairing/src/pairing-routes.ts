@@ -30,8 +30,8 @@ const respondPairingFailures = <R>(
     Effect.catchTags({
       InvalidInvite: () => respondError(ApiError.cases.InvalidInvite.make({}), { status: 404 }),
       AlreadyPaired: () => respondError(ApiError.cases.AlreadyPaired.make({}), { status: 409 }),
-      PairingUnavailable: ({ reason }) =>
-        Effect.logError("pairing unavailable", reason).pipe(
+      PairingUnavailable: (error) =>
+        Effect.logError("pairing unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
         ),
     }),

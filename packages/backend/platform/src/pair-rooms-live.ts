@@ -4,11 +4,12 @@ import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { SequencedNote } from "@billet/backend-pair-room/room-state";
 import type { PairRoom } from "./pair-room-durable-object.ts";
+import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const decodeDecision = Schema.decodeUnknownEffect(RoomDecision);
 const decodeNotes = Schema.decodeUnknownEffect(Schema.Array(SequencedNote));
 
-const unavailable = () => new NotesUnavailable({ reason: "room-unavailable" });
+const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
 /** RPC erases tuples and brands from the stub's types, so a reply is decoded as it comes back. */
 const callRoom = <A, E>(
@@ -24,14 +25,16 @@ const callRoom = <A, E>(
 export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.Layer<PairRooms> =>
   Layer.succeed(
     PairRooms,
-    PairRooms.of({
-      open: (pairId, members) =>
-        callRoom(() => rooms.getByName(pairId).open(pairId, members), decodeDecision),
-      sendNote: (pairId, author, request) =>
-        callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
-      notesAfter: (pairId, afterSeq, limit) =>
-        callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
-      forgetMember: (pairId, user) =>
-        callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
-    }),
+    PairRooms.of(
+      spanMethods("PairRooms", {
+        open: (pairId, members) =>
+          callRoom(() => rooms.getByName(pairId).open(pairId, members), decodeDecision),
+        sendNote: (pairId, author, request) =>
+          callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
+        notesAfter: (pairId, afterSeq, limit) =>
+          callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
+        forgetMember: (pairId, user) =>
+          callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
+      }),
+    ),
   );

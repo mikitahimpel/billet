@@ -73,6 +73,21 @@ export default Alchemy.Stack(
       dataset: `billet_${stage}_events`,
     });
 
+    // Workers Logs and traces (docs/observability.md). Head sampling keeps or drops a whole
+    // request, its log lines and its trace together. Dev keeps every request; prod is planned at
+    // 15% and can be changed for one deploy with API_SAMPLING_RATE (0 to 1).
+    const samplingRate = yield* Config.Number("API_SAMPLING_RATE").pipe(
+      Config.withDefault(stage === "dev" ? 1 : 0.15),
+    );
+    const observability = {
+      enabled: true,
+      headSamplingRate: samplingRate,
+      // Query strings can hold something personal; the Worker's own lines never carry them.
+      redactQueryString: true,
+      logs: { enabled: true, invocationLogs: true, headSamplingRate: samplingRate, persist: true },
+      traces: { enabled: true, headSamplingRate: samplingRate, persist: true },
+    };
+
     // Bindings must match packages/backend/platform/src/worker-env.ts. `PairRoom` is the class
     // exported by apps/api/src/worker.ts, one object per couple, SQLite-backed by default.
     const api = yield* Cloudflare.Worker("Api", {
@@ -106,6 +121,7 @@ export default Alchemy.Stack(
             }
           : {}),
       },
+      observability,
       dev: { host: "0.0.0.0", port: 8787 },
     });
 
