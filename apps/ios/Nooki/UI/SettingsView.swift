@@ -1,3 +1,4 @@
+import Pet
 import StoreKit
 import SwiftUI
 
@@ -12,6 +13,8 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.requestReview) private var requestReview
     @AppStorage(AppSettings.hapticsKey) private var haptics = true
+    @AppStorage(WindowChoice.key) private var windowView = WindowChoice.suburbia
+    @AppStorage(WindowChoice.weatherKey) private var windowWeather = ViewWeather.clear
     @State private var editingProfile = false
     @State private var confirmingErase = false
 
@@ -34,6 +37,26 @@ struct SettingsView: View {
                     Text("General")
                 } footer: {
                     Text("Small taps when you pet Mochi, buy something or add a wish.")
+                }
+                .listRowBackground(rowBackground)
+
+                Section {
+                    Picker(selection: $windowView) {
+                        ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
+                    } label: {
+                        row("View", symbol: "window.horizontal", tint: .sky)
+                    }
+                    if windowView == .suburbia {
+                        Picker(selection: $windowWeather) {
+                            ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
+                        } label: {
+                            row("Weather", symbol: "cloud.rain.fill", tint: .sky)
+                        }
+                    }
+                } header: {
+                    Text("Window")
+                } footer: {
+                    Text("What the City room's window looks out on. Suburbia follows the time of day.")
                 }
                 .listRowBackground(rowBackground)
 

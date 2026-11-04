@@ -3,6 +3,9 @@ options:
   bundleIdPrefix: com.mikitahimpel
   deploymentTarget:
     iOS: "18.0"
+packages:
+  BilletPackages:
+    path: ../../packages/ios
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -31,6 +34,9 @@ targets:
           UIColorName: LaunchBackground
     dependencies:
       - target: NookiWidgets
+      - target: WindowViews
+      - package: BilletPackages
+        product: Pet
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
@@ -46,6 +52,18 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  # The old app's flat window views, compiled from packages/pet-scenes/reality without RealityKit or its
+  # resources, plus a painter that turns one into images for the City room's window (WindowViews/).
+  WindowViews:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: ../../packages/pet-scenes/reality/Sources/PetSceneReality/Views
+        excludes: [NativeWindowView.swift, Street3D.swift]
+      - path: WindowViews
+    dependencies:
+      - package: BilletPackages
+        product: Pet
   NookiWidgets:
     type: app-extension
     platform: iOS
