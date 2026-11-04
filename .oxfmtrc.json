@@ -7,6 +7,7 @@
     "**/.build/**",
     "packages/contracts/fixtures/golden/**",
     "packages/backend/platform/migrations/**/migrations.js",
-    "packages/backend/platform/migrations/**/snapshot.json"
+    "packages/backend/platform/migrations/**/snapshot.json",
+    "tools/cat-gen/**"
   ]
 }

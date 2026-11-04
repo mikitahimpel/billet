@@ -86,3 +86,13 @@ number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats p
 commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
 Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
 is kept, unbuilt, in `archive/ios-v1`.
+
+## Cat generation tools
+
+`tools/cat-gen` is Ilya's cat splat pipeline from
+[nexishq/idol-scenes](https://github.com/nexishq/idol-scenes) (`generate/`, commit
+`f12f168dd2f5a3159a3067a3a6e6ff120054d74c`), used with his permission; the reference pictures in
+`tools/cat-gen/refs` are his. `tools/cat-gen/idol-sdk` is the inference code of
+[Idol](https://huggingface.co/speridlabs/idol) by Speridlabs, under the Apache License 2.0 (its
+`LICENSE` is kept beside it), as vendored in idol-scenes, without its gallery images and demo. No
+model weights are in the repository; the setup script downloads them.

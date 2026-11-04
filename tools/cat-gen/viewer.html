@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Splat viewer</title>
+    <style>html, body { margin: 0; height: 100%; background: #f3e3cc; overflow: hidden; }</style>
+  </head>
+  <body>
+    <!-- One generated asset on its own: /generate/viewer.html?ply=Puppy.ply (a file of the public folder). -->
+    <script type="module">
+      import * as THREE from 'three';
+      import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+      import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+
+      const params = new URLSearchParams(location.search);
+      const file = params.get('ply') ?? 'Cat.ply';
+      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+      renderer.setPixelRatio(devicePixelRatio);
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.setClearColor(0xf3e3cc);
+      document.body.append(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.add(new SparkRenderer({ renderer }));
+      scene.add(new SplatMesh({ url: `/${file}` }));
+      scene.add(new THREE.GridHelper(1, 20, 0xb46c3c, 0xddb98a));
+
+      // RealityKit front is -Z, so yaw 0 (degrees, ?yaw=) looks at the asset's face.
+      const yaw = THREE.MathUtils.degToRad(Number(params.get('yaw') ?? 0));
+      const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.01, 20);
+      camera.position.set(-0.9 * Math.sin(yaw), 0.2, -0.9 * Math.cos(yaw));
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0.14, 0);
+      controls.update();
+
+      addEventListener('resize', () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+      });
+      renderer.setAnimationLoop(() => renderer.render(scene, camera));
+    </script>
+  </body>
+</html>
