@@ -35,6 +35,19 @@ export class HangingApnsRoom extends StubbedDemoRoom {
   protected override apnsFetch = (): Promise<Response> => new Promise(() => {});
 }
 
+/** StubbedDemoRoom on a clock the test sets, for the evening reminder. */
+export class ClockedDemoRoom extends StubbedDemoRoom {
+  private fixedNow: number | undefined;
+
+  setNow(ms: number): void {
+    this.fixedNow = ms;
+  }
+
+  protected override clock(): number {
+    return this.fixedNow ?? Date.now();
+  }
+}
+
 export default {
   fetch: () => new Response(null, { status: 404 }),
 };
