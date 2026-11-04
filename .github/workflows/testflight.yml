@@ -31,7 +31,7 @@ permissions:
 
 jobs:
   upload:
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     environment: testflight
     env:
@@ -77,12 +77,13 @@ jobs:
           git checkout -q --detach "$COMMIT"
           git log --oneline -1
 
-      - name: Select Xcode from .xcode-version
+      # The app's splat cats use the iOS 27 SDK. TODO: read .xcode-version again once it is 27.2 (#284).
+      - name: Select Xcode 27.2
         run: |
-          version="$(tr -d '[:space:]' < .xcode-version)"
+          version=27.2
           app="/Applications/Xcode_${version}.app"
           if [ ! -d "$app" ]; then
-            echo "::error::$app is not installed on this runner (.xcode-version is $version)"
+            echo "::error::$app is not installed on this runner"
             ls -d /Applications/Xcode_*.app
             exit 1
           fi
@@ -156,14 +157,10 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
-      # BILLET_PAYMENTS is read from the environment by both Package.swift and the app target,
-      # so it must be set here and not as an xcodebuild argument.
+      # TODO: the payments input, BILLET_PAYMENTS and the demo host come back with the server wiring.
       - name: Archive
         env:
-          BILLET_DEMO_HOST: ${{ secrets.DEMO_HOST }}
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
-          BILLET_PAYMENTS: ${{ inputs.payments || 'mock' }}
-          BILLET_DISTRIBUTION: testflight
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e
@@ -182,9 +179,6 @@ jobs:
           exit $status
 
       - name: Check the archive
-        env:
-          DEMO_HOST: ${{ secrets.DEMO_HOST }}
-          PAYMENTS: ${{ inputs.payments || 'mock' }}
         run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
 
       - name: Upload to TestFlight

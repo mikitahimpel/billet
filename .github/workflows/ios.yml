@@ -80,7 +80,9 @@ jobs:
       # The App Store build of payments: generates the project with BILLET_PAYMENTS=storekit (read
       # from the environment by Package.swift and the app target) and buys every stamp pack from
       # apps/ios/App/Billet.storekit on a Simulator with StoreKitTest (docs/payments.md).
+      # TODO: back with the Payments wiring; this tested the archived v1 app's StoreKit target.
       - name: StoreKit purchases on the Simulator
+        if: false
         env:
           BILLET_PAYMENTS: storekit
         run: |
