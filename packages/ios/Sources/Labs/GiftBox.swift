@@ -19,12 +19,18 @@ public struct Gift: Codable, Equatable, Identifiable, Sendable {
   public let itemID: String
   public let direction: Direction
   public var state: State
+  /// A few words that came with it, if any.
+  public let note: String?
 
-  public init(id: UUID = UUID(), itemID: String, direction: Direction, state: State = .wrapped) {
+  public init(
+    id: UUID = UUID(), itemID: String, direction: Direction, state: State = .wrapped,
+    note: String? = nil
+  ) {
     self.id = id
     self.itemID = itemID
     self.direction = direction
     self.state = state
+    self.note = note
   }
 }
 

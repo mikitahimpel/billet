@@ -46,6 +46,11 @@ actor LiveDelivery {
     var spots: [String: PieceSpot]?
     /// For a `daily` play: the drawing of the day.
     var ink: String?
+    /// For a `gift` play: the shop item, and the sender's note.
+    var item: String?
+    var message: String?
+    /// For a `gift-opened` play: the gift unwrapped.
+    var gift: String?
   }
 
   private struct Frame: Decodable {
@@ -73,6 +78,8 @@ actor LiveDelivery {
     let mine: DrawingFrame?
     let theirs: DrawingFrame?
     let theirsDrawn: Bool?
+    let item: String?
+    let message: String?
   }
 
   private struct PromptFrame: Decodable {
@@ -262,6 +269,26 @@ actor LiveDelivery {
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
 
+  /// A gift waits for the ack and is sent again after a reconnect. Its frame carries the gift's
+  /// own ID, so the room passes it on once.
+  func gift(id: UUID, item: String, note: String?) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: id.uuidString.lowercased(), kind: "gift", at: at)
+    frame.item = item
+    frame.message = note
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// Word that a gift was unwrapped goes like a gift.
+  func giftOpened(_ gift: UUID) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "gift-opened", at: at)
+    frame.gift = gift.uuidString.lowercased()
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
   /// Connects and reconnects with backoff until cancelled or the server refuses this device.
   func run(_ updates: AsyncStream<NoteDelivery.Update>.Continuation) async {
     var failures = 0
@@ -338,6 +365,12 @@ actor LiveDelivery {
         let at = frame.at.flatMap(Self.date) ?? .now
         updates.yield(.life([LifeEvent(id: uuid, kind: .pet, by: frame.from ?? "", at: at)]))
       }
+    case "gift":
+      guard let id = frame.id.flatMap(UUID.init(uuidString:)), let item = frame.item else { return }
+      updates.yield(.gift(id: id, item: item, note: frame.message))
+    case "gift-opened":
+      guard let id = frame.id.flatMap(UUID.init(uuidString:)) else { return }
+      updates.yield(.giftOpened(id))
     case "life":
       updates.yield(.life((frame.events ?? []).compactMap(\.event)))
     case "treats":

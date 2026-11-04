@@ -234,12 +234,12 @@ final class PairSession {
     if out { lived(.sleep) }
   }
 
-  /// Wraps `item` from the closet for the partner's doormat.
-  func wrap(_ item: ShopItem) {
+  /// Wraps `item` from the closet for the partner's doormat, with a note if there is one.
+  func wrap(_ item: ShopItem, note: String? = nil) {
     guard (try? shop.give(item, transaction: shop.newTransaction())) != nil else { return }
-    let gift = Gift(itemID: item.id, direction: .outgoing)
+    let gift = Gift(itemID: item.id, direction: .outgoing, note: note)
     gifts.add(gift)
-    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id)) }
+    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id, note: note)) }
   }
 
   /// Opens a wrapped gift: the item goes into the closet.
@@ -474,8 +474,8 @@ final class PairSession {
       sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
     case .adventDoor(let number, let strokes):
       advent.partnerFilled(number, strokes: strokes)
-    case .gift(let id, let item):
-      gifts.add(Gift(id: id, itemID: item, direction: .incoming))
+    case .gift(let id, let item, let note):
+      gifts.add(Gift(id: id, itemID: item, direction: .incoming, note: note))
     case .giftOpened(let id):
       gifts.partnerOpened(id)
     case .partnerGlow(let glow):
