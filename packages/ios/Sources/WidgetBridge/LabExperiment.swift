@@ -160,7 +160,7 @@ public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag 
     case .lifeChips: false
     case .lifeDebug: false
     case .brainDebug: false
-    case .idolProps: false
+    case .idolProps: true
     }
   }
 }
