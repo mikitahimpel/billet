@@ -56,8 +56,10 @@ extension RoomLayerSlot {
   /// How often the layer changes once the room has opened, or `nil` when it holds still.
   var steadyInterval: TimeInterval? {
     switch self {
-    // The view outside: cars, planes, weather and its own small life.
-    case .windowNight: 1 / 30
+    // The view outside: cars, planes, weather and its own small life. Each redraw paints the whole
+    // view, sky, planes, haze and glass, so it costs more than any other layer; its life is small
+    // and far off, and 15 a second is smooth enough for it. A moving camera redraws it every frame.
+    case .windowNight: 1 / 15
     case .windowBloom, .windowBacklight, .windowDim: nil
     }
   }
