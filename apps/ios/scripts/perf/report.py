@@ -87,6 +87,7 @@ def collect(run_dir):
             for values in samples:
                 add(f"switch {timing}: ms", number(values.get("ms")))
                 add(f"switch {timing}: worst frame (ms)", number(values.get("max")))
+                add(f"switch {timing}: memory after (MB)", number(values.get("mb")))
         for scene, values in run["census"].items():
             for key, value in values.items():
                 if key not in ("scene", "heaviest"):
