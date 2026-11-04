@@ -36,6 +36,13 @@ export const AppVersion = Schema.String.check(
 );
 
 /**
+ * Product analytics (the events of `ClientEventName`). On unless `enabled` is false: then the app
+ * stops reporting and drops what it was holding, and the server drops what still arrives.
+ */
+export const AnalyticsStatus = Schema.Struct({ enabled: Schema.Boolean });
+export type AnalyticsStatus = typeof AnalyticsStatus.Type;
+
+/**
  * What the service says to every app, signed in or not. `minVersion` is the oldest build that may
  * run: an older one shows "Update billet" and nothing else. `notice` is a soft, dismissible line.
  * Every field but `maintenance` may be absent, and a client ignores fields it does not know.
@@ -44,8 +51,12 @@ export const AppStatus = Schema.Struct({
   maintenance: MaintenanceStatus,
   minVersion: Schema.optional(AppVersion),
   notice: Schema.optional(StatusMessage),
+  analytics: Schema.optional(AnalyticsStatus),
 });
 export type AppStatus = typeof AppStatus.Type;
+
+/** Whether the app may report events: yes unless the status says `analytics.enabled: false`. */
+export const analyticsEnabled = (status: AppStatus): boolean => status.analytics?.enabled !== false;
 
 /** No maintenance, no minimum, no notice: what is served when nothing was ever set. */
 export const normalStatus: AppStatus = { maintenance: { active: false } };

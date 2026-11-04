@@ -29,9 +29,16 @@ describe("EventSinkLive", () => {
         "home-direction=window-seat",
         "1.0.0+12",
         "iOS 26.1",
+        "",
       ],
-      doubles: [1],
+      doubles: [1, 0],
     });
+  });
+
+  it("puts the detail last among the blobs and the price second among the doubles", () => {
+    const bought = dataPointOf({ ...point, name: "ShopItemBought", detail: "lamp", value: 25 });
+    expect(bought.blobs?.[5]).toBe("lamp");
+    expect(bought.doubles).toEqual([1, 25]);
   });
 
   it("samples events before pairing under one fixed index", () => {

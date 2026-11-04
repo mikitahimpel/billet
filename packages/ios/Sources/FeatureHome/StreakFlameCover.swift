@@ -22,6 +22,7 @@ struct StreakFlameCover: View {
 
   @State private var celebrations = 0
   @State private var touches = 0
+  @Environment(\.appEvents) private var events
 
   /// How far down a swipe has to go to close the scene.
   private static let closeDistance: CGFloat = 120
@@ -55,6 +56,10 @@ struct StreakFlameCover: View {
     .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.45), trigger: touches)
     .accessibilityAction(.escape, onClose)
     .accessibilityIdentifier("streakFlame")
+    .onAppear {
+      events(.streakOpened)
+      if let milestone = state.visit.milestone { events(.streakMilestoneSeen(milestone)) }
+    }
   }
 
   private func handle(_ event: FlameSceneEvent) {

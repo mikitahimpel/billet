@@ -64,10 +64,12 @@ describe("Metrics", () => {
     const failing = Layer.succeed(MetricsRepository, {
       record: () => Effect.fail(new MetricsUnavailable({ reason: "directory-unavailable" })),
       all: Effect.succeed([]),
+      details: Effect.succeed([]),
     });
     const dying = Layer.succeed(MetricsRepository, {
       record: () => Effect.die("storage is on fire: user-a pair-1"),
       all: Effect.succeed([]),
+      details: Effect.succeed([]),
     });
     for (const repository of [failing, dying]) {
       await expect(

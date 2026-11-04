@@ -16,6 +16,7 @@ struct AdoptionView: View {
   let onDone: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.appEvents) private var events
   @State private var name = ""
   @FocusState private var naming: Bool
   @State private var adoptions = 0
@@ -35,6 +36,9 @@ struct AdoptionView: View {
     .preferredColorScheme(.dark)
     .sensoryFeedback(.success, trigger: adoptions)
     .onChange(of: model.adopted) { _, adopted in if adopted != nil { adoptions += 1 } }
+    .onChange(of: shownTemperament, initial: true) { _, temperament in
+      if let temperament { events(.temperamentShown(temperament)) }
+    }
     .onChange(of: catName, initial: true) { _, catName in
       if let catName, !naming { name = catName }
     }
@@ -168,6 +172,15 @@ struct AdoptionView: View {
       return OnboardingHeading(
         title: "Choose your cat together", detail: "Tap the one you'd love to bring home.")
     }
+  }
+
+  /// The temperament the heading names, if it names one.
+  private var shownTemperament: CatTemperament? {
+    guard model.moment == .choosing else { return nil }
+    let choice = model.choice
+    if let cat = choice.agreed { return model.temperament(cat) }
+    guard choice.bid == nil else { return nil }
+    return choice.mine.flatMap(model.temperament)
   }
 
   /// What kind of cat `cat` is, as the start of a heading's detail, or nothing when not known.

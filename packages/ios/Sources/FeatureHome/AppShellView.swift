@@ -49,6 +49,7 @@ struct AppShellView: View {
   /// False while something covers the whole shell, such as the maintenance screen.
   @Environment(\.petSceneOnScreen) private var shellShown
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.appEvents) private var events
   @State private var destination = Destination.home
   @State private var replayingOnboarding = false
 
@@ -263,7 +264,8 @@ extension AppShellView {
           ShelfBoardView(
             notes: board.notes, reactions: board.reactions, streak: streak,
             detail: board.detail, onClose: board.close))
-      }
+      },
+      onOpen: { events(.noteOpened(.app)) }
     )
   }
 }

@@ -63,6 +63,8 @@
       "outputs": [],
       "inputs": [
         "$TURBO_ROOT$/packages/contracts/fixtures/**",
+        "$TURBO_ROOT$/packages/contracts/domain/src/metrics.ts",
+        "$TURBO_ROOT$/packages/backend/flags/src/experiments.ts",
         "Sources/**",
         "Tests/**",
         "Package.swift",
