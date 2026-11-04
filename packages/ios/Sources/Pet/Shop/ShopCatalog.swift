@@ -92,6 +92,12 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
 
   public static let standard = ShopCatalog(items: materials + furniture + treats)
 
+  /// This catalogue with the generated (Idol) pieces added beside its furniture, for the Labs
+  /// pilot that compares them with the hand-made ones.
+  public var withIdolProps: ShopCatalog {
+    ShopCatalog(items: items + Self.idolProps.filter { item($0.id) == nil })
+  }
+
   private static let materials: [ShopItem] = [
     material("wall-rose", "Rose wall", 10, .wall, .clayLit),
     material("wall-sage", "Sage wall", 10, .wall, .greenLit),
@@ -118,6 +124,22 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
     piece("mouse", "Toy mouse", 6, "Item_mouse", .height, 0.07),
   ]
 
+  /// Made from a FLUX.2 picture by Idol, remeshed and baked onto one shared texture. Model names
+  /// start with `Idol_`, and the models live in their own file beside the room's.
+  static let idolProps: [ShopItem] = [
+    idol("beanbag", "Bean bag", 26, .width, 0.4),
+    idol("floorlamp", "Standing lamp", 24, .height, 0.75),
+    idol("throwblanket", "Knitted throw", 14, .width, 0.25),
+    idol("monstera", "Potted monstera", 18, .height, 0.55),
+    idol("cactus", "Little cactus", 8, .height, 0.09),
+    idol("books", "Pile of books", 10, .width, 0.14),
+    idol("recordplayer", "Record player", 28, .width, 0.21),
+    idol("mugs", "Two mugs", 8, .width, 0.11),
+    idol("stringlights", "Coil of fairy lights", 12, .width, 0.18),
+    idol("rug", "Woven rug", 20, .width, 0.6),
+    idol("catbed", "Plush cat bed", 22, .width, 0.25),
+  ]
+
   private static let treats: [ShopItem] = [
     ShopItem(id: "treat-fish", name: "Dried fish", price: 3, look: .treat(shape: .fish)),
     ShopItem(id: "treat-cookie", name: "Cat cookie", price: 4, look: .treat(shape: .cookie)),
@@ -128,6 +150,15 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
     _ id: String, _ name: String, _ price: Int, _ surface: RoomSurface, _ tone: ShopItem.Tone
   ) -> ShopItem {
     ShopItem(id: id, name: name, price: price, look: .material(surface: surface, tone: tone))
+  }
+
+  private static func idol(
+    _ id: String, _ name: String, _ price: Int, _ fit: ShopItem.Fit, _ size: Double,
+    mount: ShopItem.Mount = .floor
+  ) -> ShopItem {
+    ShopItem(
+      id: "furniture-idol-\(id)", name: name, price: price,
+      look: .furniture(model: "Idol_\(id)", fit: fit, size: size, mount: mount))
   }
 
   private static func piece(

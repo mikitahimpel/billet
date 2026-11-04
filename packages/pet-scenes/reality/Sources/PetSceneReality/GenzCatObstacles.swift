@@ -89,10 +89,13 @@ extension GenzLayout {
       if abs(placement.centre.z - ground) < 0.15, size.z >= 0.1,
         centre == simd_clamp(centre, surface.min, surface.max)
       {
+        // A generated prop's box is its model's bounds; a round one fills less of it.
+        let share = placement.piece.kind.idol?.footprint ?? 1
         out.append(
           GenzCatObstacle(
-            box: DecorBox(centre: centre, half: [size.x / 2, size.y / 2], yaw: placement.yaw),
-            top: placement.centre.z + size.z, sitOnTop: placement.piece.kind == .cardigan,
+            box: DecorBox(
+              centre: centre, half: [size.x / 2, size.y / 2] * share, yaw: placement.yaw),
+            top: placement.centre.z + size.z, sitOnTop: placement.piece.kind.catSitsOnTop,
             builtIn: placement.piece.kind.isSoftSeatThing))
       }
       let axes = DecorBox.axes(placement.yaw)

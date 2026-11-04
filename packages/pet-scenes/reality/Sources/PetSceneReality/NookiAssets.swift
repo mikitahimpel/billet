@@ -9,11 +9,21 @@ import RealityKit
 @MainActor
 final class NookiAssets {
   private var room: Task<Entity?, Never>?
+  /// The generated props, in a file of their own: models named `Idol_…`.
+  private var idolProps: Task<Entity?, Never>?
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiAssets")
   private static let roomName = "Room"
 
   /// The named model, ready to be added to a scene.
   func model(_ name: String) async throws(NookiLoadError) -> Entity {
+    if name.hasPrefix("Idol_") {
+      if idolProps == nil { idolProps = Task { await Self.compiled(GenzKit.idolFile) } }
+      guard let piece = await idolProps?.value?.findEntity(named: name) else {
+        throw .unreadable(name, reason: "not in \(GenzKit.idolFile)")
+      }
+      piece.removeFromParent()
+      return piece
+    }
     if room == nil {
       room = Task { try? await Self.whole(Self.roomName) }
     }

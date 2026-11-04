@@ -107,6 +107,10 @@ struct HomeView: View {
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
       .environment(\.petSceneFurniture, session.labs.furniture)
+      .environment(\.petSceneIdolProps, session.labs.isOn(LabExperiment.idolProps))
+      .onChange(of: session.labs.isOn(LabExperiment.idolProps), initial: true) { _, isOn in
+        session.shop.showsIdolProps = isOn
+      }
       .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.6), trigger: session.play.petsGiven)
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(
