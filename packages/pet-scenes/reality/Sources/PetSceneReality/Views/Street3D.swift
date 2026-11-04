@@ -7,8 +7,10 @@ import os
 /// that fills the window's opening, so it never shows past the walls.
 ///
 /// The street is made by `scripts/make_street_view.py`: one mesh of everything that stands still,
-/// one of a car, both on one baked atlas, and the far cards with the lamps' glows on a second
-/// texture. Everything is unlit, so it adds no real-time light: four draws with the portal.
+/// one of a car, both on one baked atlas, and the far cards with the lamps' glows, the stars and
+/// the night sky behind it all on a second texture. The portal draws nothing where the street has
+/// nothing, so the sky is the street's own. Everything is unlit, so it adds no real-time light:
+/// four draws with the portal.
 ///
 /// It is laid out in the view's own frame: x right, y up, and minus z out from the camera's home
 /// place through the window's middle, so at home it is seen straight on, as the flat views are,
@@ -30,12 +32,21 @@ final class Street3D {
   /// How far along the street a pass runs, either side of the window's middle.
   static let passReach: Float = 80
   static let portalName = "street-3d-portal"
+  /// How far the street turns with the camera as it orbits, from 0 (it stands still, true to the
+  /// room) to 1 (always seen straight on). Standing still, a camera turned high looked down into
+  /// the lawn and one turned low into empty sky; part way keeps the houses and the horizon in the
+  /// window while the layers still slide past each other with their depth.
+  static let follow: Float = 0.7
 
   let root = Entity()
   private let world = Entity()
   private let portal = ModelEntity()
   private let car = ModelEntity()
   private let cars = SuburbNight.cars
+  /// The window's middle, and the line out through it from the camera's home place.
+  private var origin = SIMD3<Float>.zero
+  private var homeOut = SIMD3<Float>(0, 0, -1)
+  private var aimedOut = SIMD3<Float>(0, 0, -1)
 
   /// Whether a car is passing now.
   var isCarShown: Bool { car.isEnabled }
@@ -44,9 +55,11 @@ final class Street3D {
 
   init(assets: Assets) {
     world.components.set(WorldComponent())
-    var atlas = UnlitMaterial()
+    // The bake is already the flat views' palette, so it is drawn as it is, not tone-mapped:
+    // tone mapping took the night's dark blues down to black.
+    var atlas = UnlitMaterial(applyPostProcessToneMap: false)
     atlas.color = .init(tint: .white, texture: .init(assets.atlas))
-    var cards = UnlitMaterial()
+    var cards = UnlitMaterial(applyPostProcessToneMap: false)
     cards.color = .init(tint: .white, texture: .init(assets.cardTexture))
     cards.blending = .transparent(opacity: .init(scale: 1))
     let street = ModelEntity(mesh: assets.street, materials: [atlas])
@@ -78,8 +91,26 @@ final class Street3D {
       mesh: .generatePlane(width: x1 - x0 + margin * 2, height: y1 - y0 + margin * 2),
       materials: [PortalMaterial()])
     portal.position = [(x0 + x1) / 2, (y0 + y1) / 2, wall - 0.01]
-    let origin = SIMD3<Float>((x0 + x1) / 2, (y0 + y1) / 2, wall)
-    world.transform = Transform(matrix: Self.frame(origin: origin, eye: eye))
+    origin = SIMD3<Float>((x0 + x1) / 2, (y0 + y1) / 2, wall)
+    homeOut = simd_normalize(origin - eye)
+    aim(out: homeOut)
+  }
+
+  /// Turns the street part of the way (`follow`) from facing the camera's home place towards
+  /// facing `eye`, where the camera is now.
+  func follow(eye: SIMD3<Float>) {
+    let now = simd_normalize(origin - eye)
+    let out = simd_normalize(homeOut + (now - homeOut) * Self.follow)
+    guard simd_distance(out, aimedOut) > 1e-5 else { return }
+    aim(out: out)
+  }
+
+  /// The line out through the window the street is laid along now.
+  var out: SIMD3<Float> { aimedOut }
+
+  private func aim(out: SIMD3<Float>) {
+    aimedOut = out
+    world.transform = Transform(matrix: Self.frame(origin: origin, eye: origin - out))
   }
 
   /// The view's frame: its origin at `origin`, out along the line from `eye`, up as near the

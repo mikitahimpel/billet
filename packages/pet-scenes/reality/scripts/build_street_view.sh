@@ -7,7 +7,7 @@ here=${0:A:h}
 blender=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}
 work=$(mktemp -d)
 $blender -b --factory-startup -t 4 -P $here/make_street_view.py -- $work ${1:-64} 2>&1 | grep -E '^STREET|Error'
-python3 -I $here/paint_street_cards.py $work
+python3 $here/paint_street_cards.py $work
 $blender -b --factory-startup -t 4 -P $here/preview_street_view.py -- $work $work/preview.png > /dev/null 2>&1
 res=$here/../Sources/PetSceneReality/Resources/StreetView
 mkdir -p $res

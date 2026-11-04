@@ -89,6 +89,11 @@ def mixed(a, b, share):
     return (c[0] << 16) | (c[1] << 8) | c[2]
 
 
+# The near layer (fence, hedge, tree, lawn), lifted part way to the far hills' colour: seen close
+# up from a near or high pose it fills the window, and at the flat view's near it read as black.
+NEAR = mixed(PAL["near"], PAL["far"], 0.45)
+
+
 # MARK: - Scene and materials
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -319,7 +324,7 @@ WEIGHT = {"near": 1.0, "street": 0.8, "middle": 0.6, "ground": 0.3, "car": 1.2}
 
 def build_ground():
     g = Part("ground", "ground")
-    lawn = material("lawn", lit(PAL["near"], 0.06))
+    lawn = material("lawn", lit(NEAR, 0.06))
     far_lawn = material("far-lawn", lit(PAL["street"], 0.02))
     pave = material("pavement", lit(PAL["street"], 0.10))
     kerb = material("kerb", lit(PAL["street"], 0.16))
@@ -347,8 +352,8 @@ def build_ground():
 
 def build_near():
     p = Part("fence", "near")
-    wood = material("fence", lit(PAL["near"], 0.14))
-    rail = material("fence-rail", lit(PAL["near"], 0.08))
+    wood = material("fence", lit(NEAR, 0.14))
+    rail = material("fence-rail", lit(NEAR, 0.08))
     fy = 9.0
     for x0, x1 in [(-46, -2.2), (2.2, 46)]:
         x = x0
@@ -368,7 +373,7 @@ def build_near():
     p.done()
 
     h = Part("hedge", "near")
-    leaf = material("hedge", lit(PAL["near"], 0.05))
+    leaf = material("hedge", lit(NEAR, 0.05))
     for k in range(8):
         h.blob((4.6 + k * 2.1, 11.2, GROUND + 1.4), 1.6, leaf, squash=0.85, subdiv=2, seed=10 + k)
     h.blob((-7.0, 11.0, GROUND + 1.0), 1.3, leaf, squash=0.8, seed=31)
@@ -382,8 +387,8 @@ def build_near():
 
 def build_tree():
     t = Part("tree", "near")
-    bark = material("bark", lit(PAL["near"], 0.02))
-    canopy = material("canopy", mixed(lit(PAL["near"], 0.07), 0x0E2A2A, 0.35))
+    bark = material("bark", lit(NEAR, 0.02))
+    canopy = material("canopy", mixed(lit(NEAR, 0.07), 0x0E2A2A, 0.35))
     tx, ty = -10.0, 14.0
     t.cylinder(tx, ty, GROUND, GROUND + 7.0, 0.45, bark, sides=7, top=False)
     t.box(tx - 0.15, ty - 0.15, GROUND + 4.5, tx + 3.0, ty + 0.15, GROUND + 4.8, bark)
@@ -642,7 +647,7 @@ def lights():
     data.shape = "RECTANGLE"
     data.size, data.size_y = 6.4, 3.7
     data.color = srgb(PAL["lamp"])[:3]
-    data.energy = 900
+    data.energy = 1500
     obj = bpy.data.objects.new("our-window", data)
     obj.location = (0, 0.3, 0)
     obj.rotation_euler = (-math.pi / 2, 0, 0)
@@ -779,6 +784,14 @@ CARDS = [
     ("skyline", 230.0, GROUND - 2, 34.0),
 ]
 CARD_TEX = (4096, 1024)
+# The night sky behind everything: a gradient on a wall just behind the far card, swung back at
+# its ends so an orbit right round to the side still looks into sky. It stays within the room
+# camera's far plane (500) from every pose.
+SKY_DISTANCE = 240.0
+SKY_BOTTOM, SKY_TOP = GROUND - 55.0, 240.0
+# The wall's outline seen from above, from straight out to the side: (x, y).
+SKY_WALL = [(0.0, SKY_DISTANCE), (380.0, SKY_DISTANCE), (410.0, 140.0), (430.0, 0.0)]
+STARS = 110
 # How far round to either side of straight out a card reaches. Past it the card fades out into
 # the sky, which only the far ends of an orbit ever show.
 CARD_REACH = math.radians(58)
@@ -795,9 +808,11 @@ def card_layout():
         layout.append(dict(name=name, distance=distance, x0=x0, x1=x1, z0=bottom, z1=height,
                            px=[0, top, CARD_TEX[0], px_h]))
         top += px_h + 8
-    # A glow sprite and the far ground's fade share the last strip.
+    # A glow sprite, the far ground's fade, the sky's gradient and a star share the last strip.
     layout.append(dict(name="glow", px=[0, top, 128, 128]))
     layout.append(dict(name="ground", px=[136, top, 32, 128]))
+    layout.append(dict(name="sky", px=[176, top, 32, 128], z0=SKY_BOTTOM, z1=SKY_TOP))
+    layout.append(dict(name="star", px=[216, top, 32, 32]))
     assert top + 128 <= CARD_TEX[1], f"cards need {top + 128} px rows"
     return layout
 
@@ -819,6 +834,29 @@ def card_mesh(layout):
 
     # Drawn in this order, from the back, as one mesh: the transparent parts never hide what
     # stands behind them. The far ground runs from the end of the modelled ground to the far card.
+    sky = next(c for c in layout if c["name"] == "sky")
+    for side in (-1, 1):
+        for (ax, ay), (bx, by) in zip(SKY_WALL, SKY_WALL[1:]):
+            a, b = (ax * side, ay), (bx * side, by)
+            if side < 0:
+                a, b = b, a
+            quad([(a[0], a[1], sky["z1"]), (b[0], b[1], sky["z1"]), (b[0], b[1], sky["z0"]),
+                  (a[0], a[1], sky["z0"])],
+                 [uv_of(sky["px"], 0.5, 0.01), uv_of(sky["px"], 0.5, 0.01),
+                  uv_of(sky["px"], 0.5, 0.99), uv_of(sky["px"], 0.5, 0.99)])
+    # Stars on the sky's middle, in front of it and behind the far card, none in the far card's
+    # towers' way: they sit above its top.
+    star = next(c for c in layout if c["name"] == "star")
+    rng = random.Random(11)
+    top_of_far = max(c["z1"] for c in layout if c["name"] == "skyline")
+    for _ in range(STARS):
+        x = rng.uniform(-370, 370)
+        z = top_of_far + 4 + (SKY_TOP * 0.8 - top_of_far) * rng.random() ** 1.3
+        r = 0.45 + 0.9 * rng.random() ** 3
+        y = SKY_DISTANCE - 1.0
+        quad([(x - r, y, z + r), (x + r, y, z + r), (x + r, y, z - r), (x - r, y, z - r)],
+             [uv_of(star["px"], 0, 0), uv_of(star["px"], 1, 0), uv_of(star["px"], 1, 1),
+              uv_of(star["px"], 0, 1)])
     cards = sorted((c for c in layout if "distance" in c), key=lambda c: -c["distance"])
     ground = next(c for c in layout if c["name"] == "ground")
     far = cards[0]
