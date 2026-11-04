@@ -62,6 +62,7 @@ struct AppShellView: View {
     let noteCount: Int
     let active: Bool
     let life: LifeLog?
+    let daily: Set<String>
     let partnerCare: PartnerCare?
   }
 
@@ -76,7 +77,7 @@ struct AppShellView: View {
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
       latestNote: session.notes.first?.id,
       noteCount: session.notes.count, active: scenePhase == .active,
-      life: session.life.log,
+      life: session.life.log, daily: session.daily.sharedDays,
       partnerCare: partnerCare)
   }
 
@@ -226,7 +227,7 @@ struct AppShellView: View {
           play: session.play, notes: session.notes,
           partnerHere: scenePhase == .active && session.status == .partnerHere,
           life: session.life.widgetLife,
-          partnerCare: partnerCare)
+          partnerCare: partnerCare, dailyShared: session.daily.sharedDays)
         try? await Task.sleep(for: WidgetPublisher.refresh)
       }
     }
@@ -265,6 +266,7 @@ extension AppShellView {
             notes: board.notes, reactions: board.reactions, streak: streak,
             detail: board.detail, onClose: board.close))
       },
+      daily: session.daily.archive,
       onOpen: { events(.noteOpened(.app)) }
     )
   }
