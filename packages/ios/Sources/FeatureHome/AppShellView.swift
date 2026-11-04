@@ -233,7 +233,7 @@ struct AppShellView: View {
     .modifier(WarmTabBarFallback())
   }
 
-  /// Lets a measuring run switch tabs, rooms and lighting.
+  /// Lets a measuring run switch tabs, rooms, lighting and the window view.
   private func drivePerf() {
     let destination = $destination
     let labs = labs
@@ -246,6 +246,7 @@ struct AppShellView: View {
       }
     }
     ScenePerf.host.setLighting = { labs.setLighting($0) }
+    ScenePerf.host.setWindowView = { labs.setWindowView($0) }
   }
 }
 

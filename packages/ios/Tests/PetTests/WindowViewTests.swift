@@ -31,6 +31,20 @@ import Testing
     #expect(WindowViewChoice(view: .pinkDusk, hour: .night).shownHour(room: nil) == .night)
   }
 
+  @Test func theNewViewsAreMadeForTheirOwnHourAndWeather() {
+    #expect(WindowView.mistyLake.hour == .morning)
+    #expect(WindowView.autumnPark.hour == .day)
+    #expect(WindowView.sunsetBeach.hour == .dusk)
+    #expect(WindowView.desertStars.hour == .night)
+    #expect(WindowView.neonStreet.weather == .rain)
+    #expect(WindowView.moonlitPeaks.weather == .clear)
+  }
+
+  @Test func everyViewHasATitleAndADetailOfItsOwn() {
+    #expect(Set(WindowView.allCases.map(\.title)).count == WindowView.allCases.count)
+    #expect(Set(WindowView.allCases.map(\.detail)).count == WindowView.allCases.count)
+  }
+
   @Test(arguments: ViewHour.allCases)
   func eachHourIsLitAsItsPartOfTheDay(_ hour: ViewHour) {
     #expect(ViewHour(hour.light.phase) == hour)
