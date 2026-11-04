@@ -26,6 +26,8 @@ FLUX_BAND = (330, 700)
 FLUX_TOWERS_AT = 30.0
 # The share of its width a mirrored tile keeps: everything left of the mast.
 FLUX_MIRROR_KEEP = 0.76
+# How much of the far card's height the band fills, from its foot.
+FLUX_HEIGHT_SHARE = 0.7
 INFO = json.loads((OUT / "cards.json").read_text())
 SIZE = (4096, 1024)
 SS = 2  # painted at twice the size, then halved, for smooth edges
@@ -210,6 +212,10 @@ def flux_skyline(image, card):
             dark = (expected - lum((r, g, b))) / max(expected * 0.22, 1)
             warm = r > b + 40 or r > 150
             a = 1.0 if warm else min(max(dark, 0.0), 1.0)
+            if 0 < a < 1:
+                # Take the sky's share back out of an edge, so it never keeps a light rim.
+                k = expected / max(lum((r, g, b)), 1)
+                r, g, b = (int(min(255, max(0, (c - (1 - a) * c * k) / a))) for c in (r, g, b))
             out[x, y - y0] = (r, g, b, int(255 * a))
     # Below the first solid row of a column it is all hill: fill any gaps keying left there.
     alpha = band.getchannel("A").load()
@@ -221,7 +227,10 @@ def flux_skyline(image, card):
             elif alpha[x, y] > 240 and y + 6 < y1 - y0 and all(alpha[x, y + k] > 200 for k in range(1, 6)):
                 seen = True
     band.putalpha(band.getchannel("A"))
-    cx, cy, cw, ch = card.ox, card.oy, int(card.w), int(card.h)
+    cx, cy, cw, card_h = card.ox, card.oy, int(card.w), int(card.h)
+    # The band fills the lower part of the card, so the town sits far off and low.
+    ch = int(card_h * FLUX_HEIGHT_SHARE)
+    cy += card_h - ch
     tile_w = int(w * ch / (y1 - y0))
     tile = band.resize((tile_w, ch), Image.LANCZOS)
     # Mirrored tiles leave out the mast, so two never stand side by side at a seam.
@@ -289,6 +298,23 @@ def fade_edges(image):
     image.putalpha(alpha)
 
 
+def bleed(image):
+    """Fills the colour under fully transparent pixels from the nearby opaque ones (alpha-weighted),
+    so filtering at an edge blends towards the silhouette's own colour, never a light rim."""
+    import numpy as np
+
+    rgba = np.asarray(image).astype(np.float32) / 255
+    a = rgba[..., 3:4]
+    pre = Image.fromarray((np.clip(rgba[..., :3] * a, 0, 1) * 255).astype(np.uint8))
+    weight = Image.fromarray((a[..., 0] * 255).astype(np.uint8))
+    blurred = np.asarray(pre.filter(ImageFilter.GaussianBlur(6))).astype(np.float32) / 255
+    w = np.asarray(weight.filter(ImageFilter.GaussianBlur(6))).astype(np.float32)[..., None] / 255
+    fill = blurred / np.maximum(w, 1e-4)
+    rgb = np.where(a > 0, rgba[..., :3], fill)
+    out = np.concatenate([np.clip(rgb, 0, 1), a], -1)
+    return Image.fromarray((out * 255).round().astype(np.uint8))
+
+
 def main():
     image = Image.new("RGBA", (SIZE[0] * SS, SIZE[1] * SS), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
@@ -308,13 +334,7 @@ def main():
             glow(image, card["px"])
     fade_edges(image)
     image = image.resize(SIZE, Image.LANCZOS)
-    # Colour bleeds under the transparent edges, so filtering never darkens a silhouette.
-    solid = image.copy()
-    for _ in range(4):
-        solid = Image.alpha_composite(solid.filter(ImageFilter.MaxFilter(3)), solid)
-    bled = solid.copy()
-    bled.putalpha(image.getchannel("A"))
-    bled.save(OUT / "street-cards.png", optimize=True)
+    bleed(image).save(OUT / "street-cards.png", optimize=True)
     print("CARDS", OUT / "street-cards.png")
 
 

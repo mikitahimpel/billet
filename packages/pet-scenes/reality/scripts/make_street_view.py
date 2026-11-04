@@ -240,6 +240,8 @@ IDOL_FIT = {
     "car": ("width", 0), "cottage": ("width", 0), "house2": ("width", 0), "shop": ("width", 0),
 }
 IDOL_YAW = {}
+# Boxy pieces, squared to the street by their footprint.
+SQUARED = {"car", "mailbox", "cottage", "house2", "shop"}
 if (IDOL_DIR / "yaw.json").exists():
     IDOL_YAW = json.loads((IDOL_DIR / "yaw.json").read_text())
 
@@ -254,10 +256,24 @@ def idol(kind, name, layer, size, at, front=None):
     bpy.ops.wm.obj_import(filepath=str(obj_path), forward_axis="NEGATIVE_Z", up_axis="Y")
     obj = bpy.context.selected_objects[0]
     obj.name = name
-    obj.rotation_euler = (0, 0, math.radians(IDOL_FIT[kind][1] + IDOL_YAW.get(kind, 0)))
+    if kind not in SQUARED:
+        obj.rotation_euler = (0, 0, math.radians(IDOL_FIT[kind][1] + IDOL_YAW.get(kind, 0)))
     bpy.context.view_layer.objects.active = obj
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     mesh = obj.data
+    if kind in SQUARED:
+        # Idol leaves a piece turned as its reference was shot: square its footprint to x and y,
+        # its longest side along x, before the turn in yaw.json puts its front to the road.
+        n = len(mesh.vertices)
+        mx = sum(v.co.x for v in mesh.vertices) / n
+        my = sum(v.co.y for v in mesh.vertices) / n
+        sxx = sum((v.co.x - mx) ** 2 for v in mesh.vertices)
+        syy = sum((v.co.y - my) ** 2 for v in mesh.vertices)
+        sxy = sum((v.co.x - mx) * (v.co.y - my) for v in mesh.vertices)
+        angle = 0.5 * math.atan2(2 * sxy, sxx - syy)
+        turn = Matrix.Rotation(-angle + math.radians(IDOL_YAW.get(kind, 0)), 4, "Z")
+        mesh.transform(turn)
+    mesh.update()
     xs = [v.co.x for v in mesh.vertices]
     ys = [v.co.y for v in mesh.vertices]
     zs = [v.co.z for v in mesh.vertices]
