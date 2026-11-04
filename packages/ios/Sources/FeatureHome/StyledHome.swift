@@ -9,8 +9,9 @@ import PetScene
 import SwiftUI
 
 /// Home for the room: the room fills the screen and the controls float over it. The streak sits
-/// top left and the latest note's caption at the bottom. Treats are given in the room itself, and
-/// notes are drawn from the Notes tab. The closet comes from ``HomeShop``. Tapping the streak opens
+/// top left. The latest note lives in the room, marked while it is unread, and a toast says so
+/// for a moment when one has just come. Treats are given in the room itself, and notes are drawn
+/// from the Notes tab. The closet comes from ``HomeShop``. Tapping the streak opens
 /// its flame, zooming out of the chip.
 struct StyledHome: View {
   private static let streakSource = "streak"
@@ -19,6 +20,8 @@ struct StyledHome: View {
   let notes: [NoteRecord]
   let streak: Int
   let isFakePartner: Bool
+  /// Whether the newest note from the partner has not been opened yet.
+  var isNoteUnread = false
   let onOpenNotes: () -> Void
   /// Whether the room is being decorated, which hides everything over it but its own controls.
   var isDecorating = false
@@ -38,6 +41,9 @@ struct StyledHome: View {
   /// zooms closed.
   @State private var flameState: FlameSceneState?
   @State private var isFlameOpen = false
+  /// The note the toast is telling about, while it shows.
+  @State private var toastNote: UUID?
+  @State private var arrivals = NoteArrivals()
   @State private var isMoodOpen = false
   @Namespace private var zoom
 
@@ -54,13 +60,23 @@ struct StyledHome: View {
         VStack(spacing: 0) {
           header
           Spacer(minLength: 0)
-          bottom
+          if toastNote != nil {
+            toast
+              .padding(.bottom, Spacing.medium)
+              .transition(.move(edge: .bottom).combined(with: .opacity))
+          }
         }
         .transition(.opacity)
       }
     }
     .calmAnimation(value: isDecorating)
     .calmAnimation(value: isOpening)
+    .calmAnimation(value: toastNote)
+    .environment(\.petSceneNoteUnread, isNoteUnread)
+    .task(id: latestReceived?.id) {
+      guard arrivals.update(latestReceived?.id) else { return }
+      await noteArrived(latestReceived?.id)
+    }
     .task(id: latestReceived?.id) {
       guard let note = latestReceived else {
         latestDrawing = nil
@@ -98,6 +114,13 @@ struct StyledHome: View {
     }
     .padding(.top, Spacing.small)
     .padding(.horizontal, Spacing.medium)
+    .overlay(alignment: .bottomLeading) {
+      if isFakePartner {
+        demoPill
+          .padding(.leading, Spacing.medium)
+          .alignmentGuide(.bottom) { $0[.top] - Spacing.small }
+      }
+    }
   }
 
   @ViewBuilder private var streakChip: some View {
@@ -142,68 +165,63 @@ struct StyledHome: View {
     .frame(minHeight: Target.minimum)
   }
 
-  private var bottom: some View {
-    VStack(spacing: Spacing.medium) {
-      if isFakePartner {
-        Text("Fake partner: scripted replies, on this phone only")
-          .billetType(.caption)
-          .foregroundStyle(Palette.muted.color)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .accessibilityIdentifier("fakePartnerNotice")
-      }
-      Button(action: onOpenNotes) { caption }
-        .buttonStyle(RowButtonStyle())
-        .accessibilityIdentifier("styledCaption")
-    }
-    .padding(.horizontal, Spacing.medium)
-    .padding(.top, Spacing.page)
-    .padding(.bottom, Spacing.small)
-    .background {
-      LinearGradient(
-        stops: [
-          .init(color: .clear, location: 0),
-          .init(color: Self.ground.opacity(0.92), location: 0.45),
-          .init(color: Self.ground, location: 1),
-        ], startPoint: .top, endPoint: .bottom
-      )
-      .ignoresSafeArea(edges: .bottom)
-      .allowsHitTesting(false)
-    }
+  /// "Demo" under the top bar while the partner is scripted, so nobody takes the replies for a
+  /// person. Small and not a control, so it takes no room from the bar's buttons.
+  private var demoPill: some View {
+    Text("Demo")
+      .billetType(.caption)
+      .foregroundStyle(Palette.paper.color)
+      .padding(.horizontal, Spacing.small + Spacing.hair)
+      .padding(.vertical, Spacing.hair)
+      .floatingGlass()
+      .accessibilityLabel("Fake partner: scripted replies, on this phone only")
+      .accessibilityIdentifier("fakePartnerNotice")
   }
 
-  /// The room's own night colour, which the bottom fades into.
+  /// Says a note has just come, for a moment, over the bottom of the room. Tapping it opens the
+  /// note, as tapping the note in the room does.
+  private var toast: some View {
+    Button {
+      toastNote = nil
+      onOpenNotes()
+    } label: {
+      HStack(spacing: Spacing.small) {
+        Image(systemName: "envelope.fill")
+          .font(IconStyle.font)
+          .foregroundStyle(Palette.gold.color)
+          .accessibilityHidden(true)
+        Text(Self.toastText)
+          .billetType(.action)
+          .foregroundStyle(Palette.paper.color)
+      }
+      .padding(.horizontal, Spacing.medium + Spacing.hair)
+      .frame(minHeight: Target.minimum)
+      .contentShape(.capsule)
+    }
+    .buttonStyle(RowButtonStyle())
+    .floatingGlass()
+    .accessibilityHint("Opens the note")
+    .accessibilityIdentifier("newNoteToast")
+  }
+
+  /// The room's own night colour, behind the cat's mood sheet.
   static let ground = Color(red: 0.047, green: 0.075, blue: 0.125)
 
-  private var caption: some View {
-    VStack(alignment: .leading, spacing: Spacing.hair) {
-      if let note = latestReceived {
-        TimelineView(.everyMinute) { context in
-          Text(Self.caption(for: note.date, now: context.date))
-            .billetType(.heading)
-            .foregroundStyle(Palette.paper.color)
-        }
-        Text("Tap the note to open it")
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
-      } else {
-        Text("No notes yet")
-          .billetType(.heading)
-          .foregroundStyle(Palette.paper.color)
-        Text("Draw one from the Notes tab")
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
+  static let toastText = "New note from your partner"
+  /// How long the toast stays.
+  static let toastHold = Duration.milliseconds(3_500)
 
-  /// "A note from your partner · 5 minutes ago". A date a little ahead of `now`, from a clock
-  /// that runs fast, reads as now.
-  static func caption(for date: Date, now: Date) -> String {
-    let formatter = RelativeDateTimeFormatter()
-    formatter.dateTimeStyle = .named
-    let when = formatter.localizedString(for: min(date, now), relativeTo: now)
-    return "A note from your partner · \(when)"
+  /// Shows the toast for a note that has just come in while Home is up, and not for the one that
+  /// was already there when it opened.
+  private func noteArrived(_ id: UUID?) async {
+    guard let id, isNoteUnread else { return }
+    toastNote = id
+    #if os(iOS)
+      AccessibilityNotification.Announcement(Self.toastText).post()
+    #endif
+    try? await Task.sleep(for: Self.toastHold)
+    guard !Task.isCancelled, toastNote == id else { return }
+    toastNote = nil
   }
 }
 
@@ -229,5 +247,18 @@ extension View {
     #else
       self
     #endif
+  }
+}
+
+/// Tells a note that has just come from the one Home opened on.
+struct NoteArrivals: Equatable {
+  private var known: UUID??
+
+  /// Takes the newest note's id, and says whether it is a new one arriving: never the first id
+  /// seen, nor no note at all.
+  mutating func update(_ id: UUID?) -> Bool {
+    defer { known = .some(id) }
+    guard let known else { return false }
+    return id != nil && id != known
   }
 }

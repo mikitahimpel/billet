@@ -99,10 +99,11 @@ struct OnboardingPairingView: View {
             actions.create()
           }
           BilletButton("I have a code", rank: .secondary) { send(.enterCode) }
-          if let tryAlone = actions.tryAlone {
-            BilletButton("Try alone with a fake partner", rank: .secondary, action: tryAlone)
-          }
         }
+      }
+      if let tryAlone = actions.tryAlone {
+        QuietButton("Try alone with a fake partner", action: tryAlone)
+          .accessibilityIdentifier("tryAlone")
       }
     case .inviting(let code, let live):
       GlassGroup {

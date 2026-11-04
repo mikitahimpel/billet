@@ -131,6 +131,11 @@ public struct UsView<Account: View>: View {
       SettingsHeading("Pair")
       SettingsGroup {
         SettingsRow("Partner", value: partnerStatus)
+        if isFakePartner {
+          ListDivider()
+          SettingsRow("Fake partner", value: "Scripted replies, on this phone only")
+            .accessibilityIdentifier("settings.fakePartner")
+        }
         if onRenameCat != nil {
           ListDivider()
           SettingsLink("Rename \(catName ?? "the cat")") {
