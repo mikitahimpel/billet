@@ -3,8 +3,10 @@ import Foundation
 /// Which cat lives in the room. The raw value is what gets stored, so it stays stable. A stored
 /// value that is no longer a case (a removed cat) decodes as the standard choice.
 public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
-  /// Ilya's (nexishq) grey tabby, made by Idol from his illustration and used with his permission.
+  /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
   /// First, so the picker lists it at the top.
+  case gingerChonk
+  /// Ilya's (nexishq) grey tabby, made by Idol from his illustration and used with his permission.
   case idolIlya
   /// A ginger tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
   case detailed
@@ -31,8 +33,6 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// Idol's ginger tabby as the Gaussian splat Idol made, skinned to the shared skeleton. Where
   /// splats can't be drawn (before iOS 27, or on an older GPU) it is the Idol ginger mesh.
   case splatGinger
-  /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
-  case gingerChonk
   /// The detailed tabby painted calico, remade by Idol: plush body, baked coat, every clip.
   case idolCalico
   /// The detailed tabby in its grey-and-white coat, remade by Idol: plush body, baked coat, every clip.
@@ -75,6 +75,18 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .idolIlya: "Ilya's grey tabby, made by Idol. Used with his permission."
     case .idolCalico: "Made by Idol from a picture of a calico."
     case .idolGreyTabby: "Made by Idol from a picture of the grey tabby."
+    }
+  }
+
+  /// Whether the cat picker offers it. Ilya's cat sinks its head into its body as it sleeps, which
+  /// every Idol cat with its big head does; it comes back once it is remade in the room's style. A
+  /// pet that already has it keeps it.
+  public var isListed: Bool {
+    switch self {
+    case .idolIlya: false
+    case .gingerChonk, .detailed, .detailedKitten, .detailedFluffy, .hero, .tabby, .plush, .chibi,
+      .kitten, .tuxedo, .idolGinger, .splatGinger, .idolCalico, .idolGreyTabby:
+      true
     }
   }
 
