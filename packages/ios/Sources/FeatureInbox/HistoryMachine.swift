@@ -37,6 +37,7 @@ public enum HistoryFailure: Equatable, Sendable {
     case .api(.unauthorized): self = .signedOut
     case .api(.notFound): self = .notPaired
     case .api(.invalidRequest), .api(.unavailable), .api(.invalidInvite), .api(.alreadyPaired),
+      .api(.invalidPurchase),
       .api(.appleIdInUse), .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }

@@ -1,0 +1,65 @@
+{
+  "identifier": "5D3C2B4A-0B1E-4C6F-9A51-B11E7A2F0001",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "6700000001",
+      "localizations": [
+        {
+          "description": "A handful of stamps for the shop.",
+          "displayName": "100 stamps",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.mikitahimpel.billet.stamps.100",
+      "referenceName": "Stamps 100",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "6700000002",
+      "localizations": [
+        {
+          "description": "A pouch of stamps for the shop.",
+          "displayName": "550 stamps",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.mikitahimpel.billet.stamps.550",
+      "referenceName": "Stamps 550",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "9.99",
+      "familyShareable": false,
+      "internalID": "6700000003",
+      "localizations": [
+        {
+          "description": "A chest of stamps for the shop.",
+          "displayName": "1,200 stamps",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.mikitahimpel.billet.stamps.1200",
+      "referenceName": "Stamps 1200",
+      "type": "Consumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "6700000000",
+    "_developerTeamID": "2666YPBJTB",
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 0,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

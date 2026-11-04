@@ -31,6 +31,12 @@ public enum Routes {
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let reportEvents = Route(.post, "/v1/events")
+  public static let purchase = Route(.post, "/v1/purchases")
+  /// Dev server only: the mock store's purchases and refunds.
+  public static let mockPurchase = Route(.post, "/v1/purchases/mock")
+  public static let getStamps = Route(.get, "/v1/stamps")
+  /// Called by Apple, never by the app. Mirrored so the contract test covers every route.
+  public static let appStoreNotifications = Route(.post, "/v1/appstore/notifications")
 
   /// `GET /v1/media/*`: the media key is the rest of the path.
   public static let downloadImagePrefix = "/v1/media/"
@@ -50,6 +56,8 @@ public enum Routes {
   /// See ``ClientInfo``.
   public static let appVersionHeader = "X-Billet-App-Version"
   public static let osHeader = "X-Billet-OS"
+  /// Dev server only: names the demo room on the purchase routes when there is no session.
+  public static let demoRoomHeader = "X-Billet-Demo-Room"
 }
 
 extension URLRequest {

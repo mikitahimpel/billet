@@ -8,6 +8,8 @@
 	<string>$(BILLET_BACKEND)</string>
 	<key>BilletAPIBaseURL</key>
 	<string>$(BILLET_API_BASE_URL)</string>
+	<key>BilletPayments</key>
+	<string>$(BILLET_PAYMENTS_MODE)</string>
 	<key>BilletUpdateURL</key>
 	<string>$(BILLET_UPDATE_URL)</string>
 	<key>NSSupportsLiveActivities</key>
