@@ -8,13 +8,13 @@ struct NookiApp: App {
     @State private var onboarding: OnboardingFlow
 
     init() {
-        let session = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
+        let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
+        let client: OnboardingClient = session?.onboarding ?? .offline
+        let api: APIClient = session?.api ?? .offline
+        let canInvite = session.map { !$0.isPaired } ?? false
         _session = State(initialValue: session)
         _onboarding = State(initialValue: OnboardingFlow(
-            client: session?.onboarding ?? .offline,
-            report: session?.api.reportEvents ?? { (_) async throws(TransportError) in throw .network("offline") },
-            queue: AnswerQueue(),
-            canInvite: session.map { !$0.isPaired } ?? false))
+            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite))
     }
 
     var body: some Scene {
