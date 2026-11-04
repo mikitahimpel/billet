@@ -54,7 +54,9 @@ import Testing
   @Test func theCatsShadowStaysLevelOnTheSeatWhenTheCatLeansOrIsLifted() async throws {
     let room = try await builtRoom()
     let shadow = try #require(room.catShadow)
-    let ground = room.layout.cat.spot.scene.y
+    // The seat's top as built, under the cat.
+    let base = room.rig?.current.flatMap { room.rig?.info[$0]?.base } ?? .sleep
+    let ground = room.groundUnderCat(base: base)
     room.fitCatShadow(0.1)
     let resting = shadow.scale(relativeTo: room.room)
 
