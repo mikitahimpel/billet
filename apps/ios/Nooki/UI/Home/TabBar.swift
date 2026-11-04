@@ -17,7 +17,7 @@ struct TabBar: View {
                     item(.us, "Us", "heart")
                 }
                 .padding(6)
-                .glass(.capsule, tint: Ink.glassTint)
+                .glass(.capsule, tint: Ink.glassTint, interactive: true)
 
                 AddButton(state: state)
             }
@@ -73,25 +73,6 @@ struct AddButton: View {
     @State private var picking = false
     @State private var pick: PhotosPickerItem?
 
-    /// Honey glass from iOS 26, the prominent action beside the bar; earlier systems keep the solid honey disc.
-    @ViewBuilder
-    private var plus: some View {
-        let symbol = Image(systemName: "plus")
-            .font(.system(size: 24, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: 66, height: 66)
-        if #available(iOS 26, *) {
-            symbol
-                .glassEffect(.regular.tint(.honeyDeep.opacity(0.9)).interactive(), in: .circle)
-                .shadow(color: .honeyDeep.opacity(0.4), radius: 8, y: 3)
-        } else {
-            symbol
-                .background(.honeyGradient, in: .circle)
-                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
-                .shadow(color: .honeyDeep.opacity(0.45), radius: 8, y: 3)
-        }
-    }
-
     var body: some View {
         Menu {
             Button { picking = true } label: {
@@ -125,8 +106,12 @@ struct AddButton: View {
                 Text("Find an idea or plan one")
             }
         } label: {
-            plus
+            Image(systemName: "plus")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.white)
+                .modifier(PlusLook())
         }
+        .modifier(PlusGlass())
         .accessibilityLabel("Add")
         .photosPicker(isPresented: $picking, selection: $pick, matching: .images)
         .onChange(of: pick) { _, item in
@@ -150,6 +135,37 @@ struct AddButton: View {
             case .event: EventEditor(state: state, event: UsEvent(title: "", icon: UsGlyph.palette[0], date: .now), isNew: true)
             case .dates: DatesScreen(state: state)
             }
+        }
+    }
+}
+
+/// The "+" disc: before iOS 26 a solid honey gradient with a soft shadow. From iOS 26 the label is just its symbol,
+/// sized so the prominent glass around it comes out at the same 66 pt.
+private struct PlusLook: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.frame(width: 46, height: 46)
+        } else {
+            content
+                .frame(width: 66, height: 66)
+                .background(.honeyGradient, in: .circle)
+                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+                .shadow(color: .honeyDeep.opacity(0.45), radius: 8, y: 3)
+        }
+    }
+}
+
+/// Honey-tinted prominent glass from iOS 26, the system's look for the one main action beside a tab bar.
+private struct PlusGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .menuStyle(.button)
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.circle)
+                .tint(.honey)
+        } else {
+            content
         }
     }
 }
