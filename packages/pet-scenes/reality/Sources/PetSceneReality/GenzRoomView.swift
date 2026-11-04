@@ -78,6 +78,9 @@ struct GenzRoomView: View {
   @Environment(\.petSceneGaze) private var gaze
   @Environment(\.petSceneOrbits) private var orbits
   @Environment(\.petSceneCatCue) private var catCue
+  @Environment(\.petSceneBowlFills) private var bowlFills
+  /// Whether the bowl has ever been filled on this phone, which retires its hint.
+  @AppStorage("bowlHintDone") private var bowlHintDone = false
   @Environment(\.petSceneDayLight) private var dayLight
   @Environment(\.petSceneFollowsTilt) private var followsTilt
   @Environment(\.petSceneOpeningEnded) private var openingEnded
@@ -126,7 +129,9 @@ struct GenzRoomView: View {
     ZStack {
       if isOpen, parts.shows("layers") { layer(behind, room: room) }
       if isOpen, parts.shows("sky") { theirSky }
-      if isOpen, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+      if isOpen, parts.shows("haze"), !FramePace.shared.isHot {
+        RoomHaze(look: look, screen: room.screen)
+      }
       stage(room)
       if isOpen, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
@@ -148,6 +153,8 @@ struct GenzRoomView: View {
         GlowVignette(look: look)
       }
       CatPurrOverlay(purr: room.purr)
+      BowlHint(
+        screen: room.screen, shows: !bowlHintDone && !isDecorating && BowlHint.wantsFood(play))
       CatSayOverlay(say: room.say) { room.screen.cat }
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
@@ -286,6 +293,7 @@ struct GenzRoomView: View {
       .onChange(of: catCue) { _, request in
         if let request { room.cue(request.cue) }
       }
+      .onChange(of: bowlFills) { fillBowl(room, forHost: true) }
       .onChange(of: dayLight, initial: true) { _, light in room.show(dayLight: light) }
       .onChange(of: followsTilt, initial: true) { _, follows in room.setFollowsTilt(follows) }
       .onDisappear { room.setFollowsTilt(false) }
@@ -480,6 +488,15 @@ struct GenzRoomView: View {
       .onEnded { _ in touch(room).endTwist() }
   }
 
+  /// Fills the bowl, from a tap on it or from the host. The cat eats if it can; when it is busy,
+  /// carrying a note or held, the host's meal still counts and it eats once it is free.
+  private func fillBowl(_ room: GenzRoom, forHost: Bool) {
+    bowlHintDone = true
+    let events = room.fillBowl()
+    events.forEach(onEvent)
+    if forHost, events.isEmpty, !room.isFreeToPlay { onEvent(.fed) }
+  }
+
   /// A tap on the cat pats it and one on the bowl fills it. Two quick taps on the cat ask for a
   /// trick and on the floor call the cat there; two anywhere else send the camera home, as the
   /// room's own taps do.
@@ -505,7 +522,7 @@ struct GenzRoomView: View {
           room.tapTimer = NookiTapTimer()
           room.callCat(to: value.location).forEach(onEvent)
         case .fillBowl:
-          room.fillBowl().forEach(onEvent)
+          fillBowl(room, forHost: false)
         case .fling(let toy):
           room.nudge(toy)
         case .pat, .camera, .scenery, .ignore:

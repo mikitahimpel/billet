@@ -33,6 +33,8 @@ struct StyledHome: View {
   var flame: StreakFlameHost?
   /// The cat's needs and mood, for the paw by the streak, or nil to leave it out.
   var mood: CatNeedsSnapshot?
+  /// Does a need's action from the needs card, as the room's own gestures do.
+  var onAnswer: ((PetNeed) -> Void)?
   /// First in the top row, before the streak: the way into "Us".
   var leading: AnyView?
   /// Last in the top row, at the far edge: the closet.
@@ -86,13 +88,11 @@ struct StyledHome: View {
       }
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
-    .sheet(isPresented: $isMoodOpen) {
-      if let mood {
-        SheetPanel(mood.name) {
-          CatNeedsCard(mood, isNamed: false)
-        }
-        .billetSheet([.medium])
-      }
+    .needsSheet(isPresented: $isMoodOpen, mood: mood) { onAnswer?($0) }
+    .task {
+      guard let delay = ShotHooks.openNeeds else { return }
+      try? await Task.sleep(for: delay)
+      isMoodOpen = true
     }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
