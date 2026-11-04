@@ -114,7 +114,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// into its body (Ilya's) dozes in its loaf instead, set in its clip table.
   public var isListed: Bool {
     switch self {
-    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade,
+    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger,
+      .marmalade,
       .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico,
       .ragdoll, .maineCoon, .voidCat, .siamese, .splatGinger, .idolCalico, .idolGreyTabby:
       true
@@ -125,7 +126,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// the cat files; elsewhere its mesh shows. Nil for a cat that is only a mesh.
   public var splatBody: String? {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat, .fluffyWhite,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat,
+      .fluffyWhite,
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
@@ -143,7 +145,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   public var mesh: CatModel {
     switch self {
     case .splatGinger: .idolGinger
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat, .fluffyWhite,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat,
+      .fluffyWhite,
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
@@ -159,7 +162,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     switch self {
     case .detailed, .detailedKitten, .detailedFluffy, .hero: [.natural, .greyWhite, .black]
     // Idol bakes the coat it saw into the texture; another coat is another Idol cat.
-    case .idolGinger, .marmalade, .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal,
+    case .idolGinger, .marmalade, .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom,
+      .tortie, .bengal,
       .calico, .ragdoll, .maineCoon, .voidCat, .siamese, .gingerChonk, .idolIlya,
       .idolCalico,
       .idolGreyTabby,
