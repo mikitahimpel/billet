@@ -30,16 +30,19 @@ public struct RoomLayerState: Equatable, Sendable {
   public var warmth: Double
   /// False while the room's own lamp is off.
   public var lampOn: Bool
+  /// From 0 to 1, how bright the LED strip round the window is as the room's light switch has it.
+  public var ledLevel: Double
 
   public init(
     time: Double = 0, parallax: CGSize = .zero, outline: [CGPoint] = [], warmth: Double = 0,
-    lampOn: Bool = true
+    lampOn: Bool = true, ledLevel: Double = 1
   ) {
     self.time = time
     self.parallax = parallax
     self.outline = outline
     self.warmth = warmth
     self.lampOn = lampOn
+    self.ledLevel = ledLevel
   }
 }
 

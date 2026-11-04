@@ -49,7 +49,8 @@ import Testing
     #expect(
       Experiments.windowView.variants == [
         "suburb-night", "rainy-suburb", "snowy-december", "summer-cul-de-sac", "dorm-quad",
-        "fire-escape", "pink-dusk",
+        "fire-escape", "pink-dusk", "sunset-beach", "forest-cabin", "moonlit-peaks", "neon-street",
+        "rooftops-dusk", "autumn-park", "misty-lake", "desert-stars",
       ])
     #expect(
       Experiments.homeLayout.variants == [

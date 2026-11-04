@@ -71,6 +71,14 @@ enum ViewRecipes {
     case .dormQuad: DormQuad()
     case .fireEscape: FireEscape()
     case .pinkDusk: PinkDusk()
+    case .sunsetBeach: SunsetBeach()
+    case .forestCabin: ForestCabin()
+    case .moonlitPeaks: MoonlitPeaks()
+    case .neonStreet: NeonStreet()
+    case .rooftopsDusk: RooftopsDusk()
+    case .autumnPark: AutumnPark()
+    case .mistyLake: MistyLake()
+    case .desertStars: DesertStars()
     }
   }
 
