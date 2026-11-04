@@ -14,6 +14,8 @@ struct SettingsView: View {
     @Environment(AnonymousSignInModel.self) private var signIn: AnonymousSignInModel?
     @Environment(\.requestReview) private var requestReview
     @AppStorage(AppSettings.hapticsKey) private var haptics = true
+    @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @State private var editingProfile = false
     @State private var confirmingErase = false
 
@@ -64,6 +66,17 @@ struct SettingsView: View {
                            + "are saved only on this phone."
                          : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
                            + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
+                }
+                .listRowBackground(rowBackground)
+
+                Section {
+                    Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
+                    Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
+                } header: {
+                    Text("Labs")
+                } footer: {
+                    Text("With the brain off, Mochi lives on her own timers as Ilya made her. The card shows what the "
+                         + "brain has her doing and why: her state, needs and the last thing she heard.")
                 }
                 .listRowBackground(rowBackground)
 
