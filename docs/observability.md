@@ -70,7 +70,7 @@ A `trace` line, written when a root span ends:
 | `http.request` | `withRequestSpan`, every `/v1/` and `/admin` request | method, route template, status, `request.id`, `user.ref`, `pair.ref` |
 | `PairRoom.open`, `.sendNote`, `.notes`, `.setPresence`, `.forgetMember` | `PairRoom.run` | each room command; reads made per drawing frame are not traced |
 | `PairRoom.alarm` | `PairRoom.alarm` | one line per alarm, plus a `delivery` line per try |
-| `DemoRoom.fetch`, `.note`, `.play`, `.alarm`, `.alertPartner` | the demo room | requests, notes, plays (with `play.kind`), the evening reminder, APNs alerts |
+| `DemoRoom.fetch`, `.note`, `.play`, `.alarm`, `.alertPartner` | the demo room (`demo-trace.ts`) | requests, notes, plays (with `play.kind`), the evening reminder, APNs alerts. The demo Worker must not load Effect, so these lines are written by hand in the same shape, with no child spans |
 
 A Durable Object call is its own trace: the Worker's `PairRooms.sendNote` span and the room's
 `PairRoom.sendNote` trace are joined by `pair.ref` and time. Cloudflare's own Workers traces
@@ -84,7 +84,7 @@ A Durable Object call is its own trace: the Worker's `PairRooms.sendNote` span a
   `AuthRepository`, `AuthEngine`, `AccountRepository`, `AccountNotices`, `PairingRepository`,
   `PairingObserver`, `FlagsRepository`, `FlagConfigRepository`, `MetricsRepository`,
   `AdminData`, `MediaStore`, `PairRooms`, `EventSink` (analytics events), `AppleTokenRevoker`.
-- `@effect/sql` adds a `sqlite` or `BATCH` span per statement. Its SQL text is left out of the line.
+- `@effect/sql` adds a `sqlite` or `BATCH` span per statement, and `HttpClient` a `GET`/`POST` span per outbound call (Apple's keys). The SQL text and any `url.full`/`url.path`/`url.query` are left out of the line. The HTTP router's own server span is switched off: `http.request` replaces it.
 - `Effect.fnUntraced` stays only on inner helpers that run many times per request
   (`FlagsService.decide`, `AuthService.liveSession`, `issued` in the auth engine).
 

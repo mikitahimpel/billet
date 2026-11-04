@@ -1,5 +1,5 @@
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
-import { logLine } from "./observability.ts";
+import { logLine } from "./demo-trace.ts";
 
 // Minimal APNs alert sender for the demo: one HTTP/2 request, no retries, no token cleanup.
 export const APNS_TOPIC = "com.mikitahimpel.billet";
@@ -51,7 +51,7 @@ export const sendAlert = async (
     if (!response.ok) logLine("warn", "demo apns rejected", { status: response.status });
     return response.ok;
   } catch (error) {
-    logLine("warn", "demo apns failed", { error });
+    logLine("warn", "demo apns failed", { error: error instanceof Error ? error.name : "error" });
     return false;
   }
 };

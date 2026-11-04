@@ -38,11 +38,15 @@ class ReportingSpan extends Tracer.NativeSpan {
 const isRoot = (span: Tracer.Span): boolean =>
   Option.match(span.parent, { onNone: () => true, onSome: (parent) => parent._tag !== "Span" });
 
+/** A URL's path and query can hold an id or a media key; the host and route say enough. */
+const urlKeys = new Set(["url.full", "url.path", "url.query"]);
+
 /**
- * Left out of a line: the caller's source location, which Effect adds to some spans, and the SQL
- * of `@effect/sql` spans, which the repository span above it already names.
+ * Left out of a line: the caller's source location, which Effect adds to some spans, the SQL of
+ * `@effect/sql` spans, which the repository span above it already names, and URLs.
  */
-const isNoise = (key: string): boolean => key.startsWith("code.") || key === "db.query.text";
+const isNoise = (key: string): boolean =>
+  key.startsWith("code.") || key === "db.query.text" || urlKeys.has(key);
 
 const recordOf = (span: ReportingSpan, exit: Exit.Exit<unknown, unknown>): SpanRecord => {
   const ended = span.status._tag === "Ended" ? span.status.endTime : span.startTime;

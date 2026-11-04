@@ -71,6 +71,14 @@ describe("withRequestSpan", () => {
     }
   });
 
+  it("makes up a short request id when there is no cf-ray, which redaction keeps", async () => {
+    const { lines, restore } = capture();
+    await withRequestSpan(new Request("https://billet.test/v1/notes"), async () => new Response());
+    restore();
+    const attributes = lines[0]?.["attributes"] as Record<string, unknown> | undefined;
+    expect(attributes?.["request.id"]).toMatch(/^[0-9a-f]{16}$/);
+  });
+
   it("logs a thrown error once with its class and request id only, and answers 500", async () => {
     const { lines, restore } = capture();
     const request = new Request("https://billet.test/v1/notes", {

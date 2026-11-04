@@ -35,8 +35,7 @@ import {
   type DailyDrawing,
   type Reminded,
 } from "./daily-drawing.ts";
-import { opaqueRef } from "@billet/backend-observability/opaque-ref";
-import { traced } from "./observability.ts";
+import { traced } from "./demo-trace.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
@@ -100,8 +99,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     return Date.now();
   }
 
-  /** Names the room in spans by the ref of its id, never by its code. */
-  private readonly spanAttributes = { "room.ref": opaqueRef(this.ctx.id.toString()) };
+  /** Names the room in spans by the start of its object id, never by its code. */
+  private readonly spanAttributes = { "room.ref": this.ctx.id.toString().slice(0, 16) };
 
   protected apnsCredentials(): Promise<ApnsCredentials | undefined> {
     const { APNS_KEY: key, APNS_KEY_ID: keyId } = this.env;

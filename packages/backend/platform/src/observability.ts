@@ -1,4 +1,5 @@
 import { type Context, Effect } from "effect";
+import { HttpMiddleware } from "effect/http";
 import type { LogSink, SinkLevel } from "@billet/backend-observability/json-logger";
 import { redactField } from "@billet/backend-observability/redact";
 import { observabilityLayer } from "@billet/backend-observability/observability-layer";
@@ -62,9 +63,12 @@ export const logLine = (
  */
 export const Observability = observabilityLayer(consoleSink);
 
-/** Cloudflare's ray id, which the client also sees as the `cf-ray` response header. */
+/**
+ * Cloudflare's ray id, which the client also sees as the `cf-ray` response header. Without one
+ * (local dev, tests), 16 random hex digits: short enough not to look like a token to `redact`.
+ */
 export const requestIdOf = (request: Request): string =>
-  request.headers.get("cf-ray") ?? crypto.randomUUID();
+  request.headers.get("cf-ray") ?? crypto.randomUUID().replaceAll("-", "").slice(0, 16);
 
 /**
  * Runs a request inside an `http.request` root span: method, route template (never the real path:
@@ -81,15 +85,24 @@ export const withRequestSpan = (
   run: (context: Context.Context<never>) => Promise<Response>,
 ): Promise<Response> => {
   const requestId = requestIdOf(request);
+  const route = routeLabel(request.method, new URL(request.url).pathname);
   return Effect.runPromise(
     Effect.context<never>().pipe(
       Effect.flatMap((context) => Effect.tryPromise(() => run(context))),
+      // The router would open its own server span, named by method and carrying the raw URL.
+      Effect.provideService(HttpMiddleware.TracerDisabledWhen, () => true),
+      // The router sets `http.route` to its path template; the label adds the method.
       Effect.tap((response) =>
-        Effect.annotateCurrentSpan("http.response.status_code", response.status),
+        Effect.annotateCurrentSpan({
+          "http.route": route,
+          "http.response.status_code": response.status,
+        }),
       ),
       Effect.tapCause((cause) =>
         Effect.logError("request crashed", cause).pipe(
-          Effect.andThen(Effect.annotateCurrentSpan("http.response.status_code", 500)),
+          Effect.andThen(
+            Effect.annotateCurrentSpan({ "http.route": route, "http.response.status_code": 500 }),
+          ),
         ),
       ),
       Effect.withSpan("http.request", {
@@ -97,7 +110,7 @@ export const withRequestSpan = (
         root: true,
         attributes: {
           "http.request.method": request.method,
-          "http.route": routeLabel(request.method, new URL(request.url).pathname),
+          "http.route": route,
           "request.id": requestId,
         },
       }),

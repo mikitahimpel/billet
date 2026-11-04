@@ -413,6 +413,9 @@ describe("the Api Worker", () => {
       ]),
     );
     for (const span of spans) expect(span["spanId"]).toMatch(/^[0-9a-f]{16}$/);
+    // The router's own server span would carry the raw URL; the request span replaces it.
+    expect(names).not.toContain("POST");
+    expect(JSON.stringify(trace)).not.toContain("url.");
     const output = raw.join("\n");
     for (const secret of [claimer, code, pairId]) expect(output).not.toContain(secret);
   });
