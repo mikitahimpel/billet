@@ -20,6 +20,28 @@ enum IdolProp: String, CaseIterable, Sendable {
   case stringlights
   case rug
   case catbed
+  case desk
+  case armchair
+  case floorCushionTerracotta = "floorcushion_terracotta"
+  case floorCushionSage = "floorcushion_sage"
+  case frameLandscape = "frame_landscape"
+  case posterMoon = "poster_moon"
+  case clock
+  case fishTank = "fishtank"
+  case catTree = "cattree"
+  case scratchPost = "scratchpost"
+  case fiddleFig = "fiddlefig"
+  case pothos
+  case succulents
+  case guitar
+  case teaSet = "teaset"
+  case radio
+  case globe
+  case lavaLamp = "lavalamp"
+  case neonHeart = "neonheart"
+  case beanBagSage = "beanbag_sage"
+  case beanBagTerracotta = "beanbag_terracotta"
+  case yarnBasket = "yarnbasket"
 
   var kind: GenzPiece.Kind {
     switch self {
@@ -34,6 +56,28 @@ enum IdolProp: String, CaseIterable, Sendable {
     case .stringlights: .idolStringLights
     case .rug: .idolRug
     case .catbed: .idolCatBed
+    case .desk: .idolDesk
+    case .armchair: .idolArmchair
+    case .floorCushionTerracotta: .idolFloorCushionTerracotta
+    case .floorCushionSage: .idolFloorCushionSage
+    case .frameLandscape: .idolFrameLandscape
+    case .posterMoon: .idolPosterMoon
+    case .clock: .idolClock
+    case .fishTank: .idolFishTank
+    case .catTree: .idolCatTree
+    case .scratchPost: .idolScratchPost
+    case .fiddleFig: .idolFiddleFig
+    case .pothos: .idolPothos
+    case .succulents: .idolSucculents
+    case .guitar: .idolGuitar
+    case .teaSet: .idolTeaSet
+    case .radio: .idolRadio
+    case .globe: .idolGlobe
+    case .lavaLamp: .idolLavaLamp
+    case .neonHeart: .idolNeonHeart
+    case .beanBagSage: .idolBeanBagSage
+    case .beanBagTerracotta: .idolBeanBagTerracotta
+    case .yarnBasket: .idolYarnBasket
     }
   }
 
@@ -53,23 +97,57 @@ enum IdolProp: String, CaseIterable, Sendable {
     case .stringlights: [0.36, 0.35, 0.112]
     case .rug: [1.192, 1.192, 0.098]
     case .catbed: [0.497, 0.5, 0.15]
+    case .desk: [0.746, 1, 0.964]
+    case .armchair: [0.8, 0.779, 0.738]
+    case .floorCushionTerracotta: [0.6, 0.599, 0.177]
+    case .floorCushionSage: [0.6, 0.581, 0.25]
+    case .frameLandscape: [0.032, 0.445, 0.546]
+    case .posterMoon: [0.109, 0.393, 0.6]
+    case .clock: [0.057, 0.319, 0.319]
+    case .fishTank: [0.683, 0.697, 0.699]
+    case .catTree: [0.926, 0.925, 1.099]
+    case .scratchPost: [0.502, 0.515, 0.599]
+    case .fiddleFig: [0.735, 0.72, 1.5]
+    case .pothos: [0.369, 0.342, 0.35]
+    case .succulents: [0.3, 0.289, 0.231]
+    case .guitar: [0.248, 0.419, 0.999]
+    case .teaSet: [0.36, 0.36, 0.236]
+    case .radio: [0.196, 0.32, 0.302]
+    case .globe: [0.217, 0.25, 0.36]
+    case .lavaLamp: [0.195, 0.2, 0.399]
+    case .neonHeart: [0.028, 0.448, 0.449]
+    case .beanBagSage: [0.8, 0.8, 0.51]
+    case .beanBagTerracotta: [0.8, 0.8, 0.553]
+    case .yarnBasket: [0.401, 0.396, 0.309]
     }
   }
 
   /// How much of its bounding box the cat must keep off: a round thing fills less of it.
   var footprint: Float {
     switch self {
-    case .beanbag, .monstera, .cactus, .mugs, .stringlights, .rug, .catbed: 0.85
+    case .beanbag, .monstera, .cactus, .mugs, .stringlights, .rug, .catbed, .floorCushionTerracotta,
+      .catTree, .pothos, .globe, .lavaLamp, .beanBagSage, .beanBagTerracotta, .yarnBasket:
+      0.85
     case .floorlamp: 0.6
-    case .throwblanket, .books, .recordplayer: 1
+    case .throwblanket, .books, .recordplayer, .desk, .frameLandscape, .posterMoon, .clock,
+      .succulents, .radio, .neonHeart:
+      1
+    case .armchair, .floorCushionSage, .fishTank, .teaSet: 0.9
+    case .scratchPost, .fiddleFig: 0.8
+    case .guitar: 0.7
     }
   }
 
   /// Whether the cat may get up on it and sit or lie there, as on the cardigan.
   var catSitsOnTop: Bool {
     switch self {
-    case .beanbag, .throwblanket, .books, .rug, .catbed: true
-    case .floorlamp, .monstera, .cactus, .recordplayer, .mugs, .stringlights: false
+    case .beanbag, .throwblanket, .books, .rug, .catbed, .armchair, .floorCushionTerracotta,
+      .floorCushionSage, .catTree, .beanBagSage, .beanBagTerracotta:
+      true
+    case .floorlamp, .monstera, .cactus, .recordplayer, .mugs, .stringlights, .desk,
+      .frameLandscape, .posterMoon, .clock, .fishTank, .scratchPost, .fiddleFig, .pothos,
+      .succulents, .guitar, .teaSet, .radio, .globe, .lavaLamp, .neonHeart, .yarnBasket:
+      false
     }
   }
 
@@ -77,16 +155,25 @@ enum IdolProp: String, CaseIterable, Sendable {
   /// table or shelf top and the seat, big things on the floor.
   var surfaces: Set<DecorSurface> {
     switch self {
-    case .beanbag, .floorlamp, .monstera, .rug, .catbed: [.floor]
-    case .throwblanket, .cactus, .books, .recordplayer, .mugs, .stringlights: [.floor, .top, .seat]
+    case .beanbag, .floorlamp, .monstera, .rug, .catbed, .desk, .armchair, .floorCushionTerracotta,
+      .floorCushionSage, .fishTank, .catTree, .scratchPost, .fiddleFig, .guitar, .beanBagSage,
+      .beanBagTerracotta:
+      [.floor]
+    case .throwblanket, .cactus, .books, .recordplayer, .mugs, .stringlights, .pothos, .succulents,
+      .teaSet, .radio, .globe, .lavaLamp, .yarnBasket:
+      [.floor, .top, .seat]
+    case .frameLandscape, .posterMoon, .clock, .neonHeart: [.wall]
     }
   }
 
   /// Whether it shines by itself, as a lamp or a neon sign does, rather than taking the room's light.
   var glows: Bool {
     switch self {
+    case .lavaLamp, .neonHeart: true
     case .beanbag, .floorlamp, .throwblanket, .monstera, .cactus, .books, .recordplayer, .mugs,
-      .stringlights, .rug, .catbed:
+      .stringlights, .rug, .catbed, .desk, .armchair, .floorCushionTerracotta, .floorCushionSage,
+      .frameLandscape, .posterMoon, .clock, .fishTank, .catTree, .scratchPost, .fiddleFig, .pothos,
+      .succulents, .guitar, .teaSet, .radio, .globe, .beanBagSage, .beanBagTerracotta, .yarnBasket:
       false
     }
   }
@@ -94,11 +181,15 @@ enum IdolProp: String, CaseIterable, Sendable {
   /// What the cat makes of it, as it does of the hand-made piece of the same kind, or nil.
   var affordance: RoomAffordance.Kind? {
     switch self {
-    case .beanbag, .throwblanket, .books: .soft
-    case .floorlamp, .monstera, .recordplayer, .stringlights: nil
-    case .cactus, .mugs: .smallItem
+    case .beanbag, .throwblanket, .books, .armchair, .floorCushionTerracotta, .floorCushionSage,
+      .beanBagSage, .beanBagTerracotta:
+      .soft
+    case .floorlamp, .monstera, .recordplayer, .stringlights, .desk, .frameLandscape, .posterMoon,
+      .clock, .fishTank, .scratchPost, .fiddleFig, .pothos, .guitar, .lavaLamp, .neonHeart:
+      nil
+    case .cactus, .mugs, .succulents, .teaSet, .radio, .globe, .yarnBasket: .smallItem
     case .rug: .rug
-    case .catbed: .bed
+    case .catbed, .catTree: .bed
     }
   }
 
@@ -115,6 +206,28 @@ enum IdolProp: String, CaseIterable, Sendable {
     case .stringlights: "Coil of fairy lights"
     case .rug: "Woven rug"
     case .catbed: "Plush cat bed"
+    case .desk: "Writing desk"
+    case .armchair: "Round armchair"
+    case .floorCushionTerracotta: "Terracotta floor cushion"
+    case .floorCushionSage: "Sage floor cushion"
+    case .frameLandscape: "Sunset hills painting"
+    case .posterMoon: "Moon poster"
+    case .clock: "Wall clock"
+    case .fishTank: "Fishbowl on a stand"
+    case .catTree: "Cat tree"
+    case .scratchPost: "Scratching post"
+    case .fiddleFig: "Fiddle leaf fig"
+    case .pothos: "Trailing pothos"
+    case .succulents: "Succulent trio"
+    case .guitar: "Acoustic guitar"
+    case .teaSet: "Tea set"
+    case .radio: "Wooden radio"
+    case .globe: "Desk globe"
+    case .lavaLamp: "Lava lamp"
+    case .neonHeart: "Neon heart"
+    case .beanBagSage: "Sage bean bag"
+    case .beanBagTerracotta: "Terracotta bean bag"
+    case .yarnBasket: "Basket of yarn"
     }
   }
 }
