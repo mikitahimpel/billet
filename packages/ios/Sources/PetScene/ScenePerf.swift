@@ -9,7 +9,8 @@ import Pet
 /// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
 ///
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled.
+/// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled, and
+/// last switches the cat through four models and back, as `-perf.script cats` does alone.
 /// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
 /// of it. `-perf.script views` shows each window view from the room's own camera, then through the
 /// shop window, and asks for a screenshot of each. `-perf.script cost` orbits and holds the room
@@ -63,6 +64,9 @@ public enum ScenePerf {
     public var selectTab: @MainActor (String) -> Void = { _ in }
     public var setLighting: @MainActor (RoomLighting) -> Void = { _ in }
     public var setWindowView: @MainActor (WindowViewChoice) -> Void = { _ in }
+    /// The cat model shown now, and how to show another.
+    public var cat: @MainActor () -> CatModel = { CatChoice.standard.model }
+    public var setCat: @MainActor (CatModel) -> Void = { _ in }
     public init() {}
   }
 
@@ -114,6 +118,8 @@ public enum ScenePerf {
       await full()
     case "sweep":
       await sweep()
+    case "cats":
+      await cats()
     case "views":
       await views()
     case "cost":
@@ -148,6 +154,7 @@ public enum ScenePerf {
     await pause(20)
     await record("settled", seconds: 5)
     await orbit("settled.orbit")
+    await cats()
   }
 
   private static func orbit(_ name: String) async {
@@ -163,7 +170,9 @@ public enum ScenePerf {
   private static func cost() async {
     guard let scene else { return }
     for name in scene.switches where onlySwitches?.contains(name) ?? true {
-      for isOn in [true, false] {
+      // Which side goes first changes from launch to launch: a runner's load often climbs through a
+      // launch, and the side always measured second would always look worse.
+      for isOn in Bool.random() ? [true, false] : [false, true] {
         scene.setSwitch(name, isOn)
         await pause(1)
         let side = isOn ? "on" : "off"
@@ -172,6 +181,21 @@ public enum ScenePerf {
         await pause(0.5)
       }
       scene.setSwitch(name, true)
+    }
+  }
+
+  /// Models a `cats` step switches through: four of different builds, so each is a model of its own.
+  static let catModels: [CatModel] = [.detailedKitten, .mooCat, .britishGrey, .bengal]
+
+  /// Shows four other cat models and then the first again, with the memory in use after each. What
+  /// a model costs to hold shows as the rise after it; one let go when the next comes shows as
+  /// memory that does not keep climbing, and coming back to the first as no rise at all.
+  private static func cats() async {
+    let first = host.cat()
+    for model in catModels.filter({ $0 != first }) + [first] {
+      host.setCat(model)
+      await record("cat.\(model.rawValue)", seconds: 5)
+      emit("timing cat.\(model.rawValue) mb=\(format(Recorder.footprint() / 1_048_576))")
     }
   }
 
@@ -383,7 +407,9 @@ extension ScenePerf {
     #if canImport(UIKit)
       @objc private func tick(_ link: CADisplayLink) {
         let now = link.timestamp
-        if frame == 0, intervals.isEmpty, lastFrame == nil, ScenePerf.marks.isEmpty {
+        if frame == 0, intervals.isEmpty, lastFrame == nil,
+          !ScenePerf.marks.contains(where: { $0.name == "first frame" })
+        {
           ScenePerf.mark("first frame")
         }
         let cpu = Self.threadCPU()
@@ -450,7 +476,7 @@ extension ScenePerf {
     }
 
     /// The memory the system charges the app for, in bytes.
-    private static func footprint() -> Double {
+    static func footprint() -> Double {
       var info = task_vm_info_data_t()
       var count = mach_msg_type_number_t(
         MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)

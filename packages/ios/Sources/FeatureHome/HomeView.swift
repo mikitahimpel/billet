@@ -81,6 +81,7 @@ struct HomeView: View {
 
   var body: some View {
     home
+      .onAppear { ScenePerf.mark("home shown") }
       .overlay(alignment: .top) { partnerCareToast }
       .task(id: session.careNotice) { await showPartnerCare() }
       .task(id: NudgeInputs(events: session.life.log.all.count, name: session.play.catName)) {

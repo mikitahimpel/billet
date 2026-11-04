@@ -71,6 +71,9 @@ def collect(run_dir):
         if kind == "launch":
             add("launch: process start to first frame (ms)", run["marks"].get("first_frame"))
             add("launch: process start to Home room drawing (ms)", first_room(run["marks"]))
+            # The stages between, in the order a launch reaches them.
+            for stage in ("app_built", "root_built", "shell_shown", "home_shown"):
+                add(f"launch: process start to {stage.replace('_', ' ')} (ms)", run["marks"].get(stage))
             add("launch: memory peak (MB)", run["memory"])
         else:
             add(f"{kind}: memory peak (MB)", run["memory"])
@@ -84,6 +87,7 @@ def collect(run_dir):
             for values in samples:
                 add(f"switch {timing}: ms", number(values.get("ms")))
                 add(f"switch {timing}: worst frame (ms)", number(values.get("max")))
+                add(f"switch {timing}: memory after (MB)", number(values.get("mb")))
         for scene, values in run["census"].items():
             for key, value in values.items():
                 if key not in ("scene", "heaviest"):

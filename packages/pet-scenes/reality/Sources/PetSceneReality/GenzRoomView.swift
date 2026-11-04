@@ -246,6 +246,7 @@ struct GenzRoomView: View {
       left.setOnScreen(false, in: viewID)
       left.setFollowsTilt(false)
       set(up: room)
+      rooms.release(old)
     }
     .simultaneousGesture(orbit(room))
     .simultaneousGesture(pinch(room))
