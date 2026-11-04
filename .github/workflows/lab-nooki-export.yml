@@ -1,0 +1,59 @@
+name: Lab Nooki export
+
+# Builds Nooki's rooms (Diorama, City, Board) with the app's scene code on a Simulator and writes
+# them as glTF for the local web lab (NookiTests/NookiLabExport), uploaded as the artifact
+# lab-nooki. Runs on pushes to its own branch only; no secrets, read-only token.
+on:
+  push:
+    branches: [chore/lab-nooki-export]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode from .xcode-version
+        run: .github/scripts/select-xcode.sh .xcode-version
+
+      - name: Metal Toolchain
+        run: .github/scripts/metal-toolchain.sh
+
+      - name: Install XcodeGen
+        env:
+          XCODEGEN_VERSION: 2.46.0
+          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Export the rooms
+        env:
+          TEST_RUNNER_NOOKI_LAB_EXPORT: ${{ runner.temp }}/lab-nooki
+        run: |
+          (cd apps/ios && xcodegen generate --quiet)
+          device="$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in d if "iOS" in k), reverse=True)
+          print(next(x["udid"] for k in ios for x in d[k] if x["name"].startswith("iPhone")))')"
+          echo "Simulator $device"
+          set -o pipefail
+          xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
+            -destination "id=$device" -only-testing:NookiTests/NookiLabExport \
+            CODE_SIGNING_ALLOWED=NO | tail -80
+          ls -la "$TEST_RUNNER_NOOKI_LAB_EXPORT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lab-nooki
+          path: ${{ runner.temp }}/lab-nooki
+          retention-days: 14
