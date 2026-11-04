@@ -308,6 +308,7 @@ final class GenzRoom: CatPlayStage {
     for part in layout.shell(kit) { shell.addChild(part) }
     kit.merge(shell, key: "shell")
     room.addChild(shell)
+    if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
     pieceHolders = holders
     arrangeDecor(holders)

@@ -91,6 +91,8 @@ extension EnvironmentValues {
   @Entry public var petSceneLighting = RoomLighting.off
   /// Which furniture fills the styled rooms. A host that sets nothing gets the first pieces.
   @Entry public var petSceneFurniture = RoomFurniture.original
+  /// Whether the styled rooms show the generated (Idol) props in place of their hand-made ones.
+  @Entry public var petSceneIdolProps = false
   /// Called when the opening asked for by ``petSceneFlyIn`` starts, which is once the room is
   /// built and on screen: a host covering the room while it loads can uncover it then.
   @Entry public var petSceneOpeningStarted: (@MainActor () -> Void)? = nil

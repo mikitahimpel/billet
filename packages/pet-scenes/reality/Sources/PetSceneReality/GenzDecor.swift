@@ -7,7 +7,9 @@ struct GenzSpotStore {
   let defaults: UserDefaults
   let key: GenzLayout.Key
 
-  private var storageKey: String { "genz.spots.windowSeat.\(key.rawValue)" }
+  private var storageKey: String {
+    "genz.spots.windowSeat.\(key.furniture.rawValue)\(key.idolProps ? ".idol" : "")"
+  }
 
   func load() -> [String: NookiSpot] {
     defaults.data(forKey: storageKey)

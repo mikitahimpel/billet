@@ -84,6 +84,9 @@ extension GenzRoom {
     case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,
       .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil
+    case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
+      kind.idol?.affordance
     }
   }
 
