@@ -84,5 +84,5 @@ imported with its author's permission, including its publication in this reposit
 tools are his. Changes made for billet: the Billet name, bundle IDs, app group, team and build
 number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats packed from that
 commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
-Its HTML mockups, research notes and hamster reference shots are not imported. billet's first app
+Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
 is kept, unbuilt, in `archive/ios-v1`.
