@@ -1,10 +1,21 @@
+import Transport
 import SwiftUI
 
 @main
 struct NookiApp: App {
     /// Nil when the build has no server; the app then keeps everything on the phone.
-    @State private var session: ServerSession? =
-        NookiApp.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
+    @State private var session: ServerSession?
+    @State private var onboarding: OnboardingFlow
+
+    init() {
+        let session = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
+        _session = State(initialValue: session)
+        _onboarding = State(initialValue: OnboardingFlow(
+            client: session?.onboarding ?? .offline,
+            report: session?.api.reportEvents ?? { (_) async throws(TransportError) in throw .network("offline") },
+            queue: AnswerQueue(),
+            canInvite: session.map { !$0.isPaired } ?? false))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +26,13 @@ struct NookiApp: App {
                 HomeView()
                     .preferredColorScheme(.dark)
                     .environment(session)
+                    .overlay {
+                        if !onboarding.isFinished {
+                            OnboardingView(flow: onboarding, pairing: session?.pairing)
+                                .transition(.opacity)
+                        }
+                    }
+                    .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
             }
