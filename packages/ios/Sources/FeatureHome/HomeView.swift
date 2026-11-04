@@ -41,6 +41,8 @@ struct HomeView: View {
   @State private var ringsOpen = false
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
+  /// The partner's meal or game being shown, for a few seconds.
+  @State private var shownCare: CatCareNotice?
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -74,6 +76,13 @@ struct HomeView: View {
 
   var body: some View {
     home
+      .overlay(alignment: .top) { partnerCareToast }
+      .task(id: session.careNotice) { await showPartnerCare() }
+      .task(id: NudgeInputs(events: session.life.log.all.count, name: session.play.catName)) {
+        await CatNudges.plan(
+          life: session.life, temperament: session.brain.temperament,
+          name: session.play.catName ?? "Your cat")
+      }
       .environment(\.petSceneCat, session.labs.cat)
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
@@ -241,7 +250,44 @@ struct HomeView: View {
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
-      flame: flameHost(scene: scene))
+      flame: flameHost(scene: scene),
+      mood: catMood)
+  }
+
+  /// The cat's needs and how it feels, for the paw by the streak and the drawer.
+  private var catMood: CatNeedsSnapshot {
+    let life = session.life.state
+    let feeling =
+      session.brain.frame?.feeling
+      ?? CatFeeling.of(
+        needs: life.needs, mood: life.mood, asleep: life.asleep, sleepy: false,
+        temperament: session.brain.temperament, config: session.life.config)
+    return CatNeedsSnapshot(
+      needs: life.needs, feeling: feeling, name: session.play.catName ?? "Your cat")
+  }
+
+  /// "Your partner fed Mochi", under the header for a few seconds.
+  @ViewBuilder private var partnerCareToast: some View {
+    if let care = shownCare, !isRenovating {
+      Text(care.line(catName: session.play.catName))
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .padding(.horizontal, Spacing.medium)
+        .frame(minHeight: Target.minimum)
+        .floatingGlass()
+        .padding(.top, Self.statusTop + Target.minimum + Spacing.small)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .allowsHitTesting(false)
+        .accessibilityIdentifier("partnerCare")
+    }
+  }
+
+  private func showPartnerCare() async {
+    guard let care = session.careNotice else { return }
+    withAnimation(Motion.spring) { shownCare = care }
+    try? await Task.sleep(for: .seconds(3.5))
+    guard !Task.isCancelled else { return }
+    withAnimation(Motion.spring) { shownCare = nil }
   }
 
   /// Whether Home's room is in sight: its tab shows, nothing covers it and the flame is closed.
@@ -323,6 +369,7 @@ struct HomeView: View {
     let streak = session.streak(today: today, calendar: calendar)
     return VStack(spacing: Spacing.small) {
       fakePartnerCaption
+      CatNeedsCard(catMood)
       HStack(spacing: Spacing.small) {
         Label("\(streak) \(streak == 1 ? "day" : "days")", systemImage: "flame.fill")
           .billetType(.action)
@@ -913,6 +960,12 @@ extension PetPlayState.Treat {
     case .fed: self = .fed
     }
   }
+}
+
+/// What the cat's nudge is planned from, so it is planned again when either changes.
+private struct NudgeInputs: Equatable {
+  let events: Int
+  let name: String?
 }
 
 /// What the streak is worked out from, so it is worked out again when either changes.
