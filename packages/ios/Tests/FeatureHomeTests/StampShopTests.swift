@@ -95,3 +95,27 @@ private final class ScriptedPayments: Payments {
     #expect(StampShop.revokedID(for: "refund:t1:2") == "revoked:t1:2")
   }
 }
+
+@MainActor
+@Suite struct StampShopPacksTests {
+  @Test func theShopsRowBuysThroughTheStampShop() async throws {
+    let payments = ScriptedPayments()
+    let shop = ShopStore(storage: .memory(), grant: 0)
+    let stampShop = StampShop(payments: payments)
+    stampShop.attach(shop)
+    await stampShop.load()
+    let row = StampShopPacks(stampShop)
+    #expect(row.packs.map(\.id) == ["p100"])
+    #expect(row.state == .idle)
+    payments.result.withLock {
+      $0 = .success(
+        .purchased(
+          StampCredit(
+            entryID: "purchase:t9", transactionID: "t9", productID: "p100", stamps: 100,
+            serverBalance: 100, duplicate: false)))
+    }
+    row.buy(try #require(row.packs.first))
+    for _ in 0..<50 where shop.stamps == 0 { try await Task.sleep(for: .milliseconds(20)) }
+    #expect(shop.stamps == 100)
+  }
+}

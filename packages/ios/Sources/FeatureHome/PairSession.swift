@@ -28,8 +28,9 @@ final class PairSession {
     style: { [weak self] in self?.play.roomStyle ?? .standard },
     restyle: { [weak self] in self?.restyle($0) },
     send: { [weak self] item, note in self?.wrap(item, note: note) })
-  /// Where packs of stamps would be bought. None are for sale yet.
-  @ObservationIgnored let stampPacks: any StampPackSource = NoStampPacks()
+  /// Where packs of stamps are bought: the build's store, or none when the build has no server to
+  /// credit them.
+  @ObservationIgnored let stampPacks: any StampPackSource
 
   /// What the shop needs from the pair: the room's code seeds its offers, so both phones show
   /// the same.
@@ -120,8 +121,10 @@ final class PairSession {
     trips: CatTripController = .live(),
     isFakePartner: Bool = false,
     labs: WidgetFeaturesModel = WidgetFeaturesModel(store: nil),
-    playStorage: PairPlayStorage? = nil
+    playStorage: PairPlayStorage? = nil,
+    stampPacks: any StampPackSource = NoStampPacks()
   ) {
+    self.stampPacks = stampPacks
     self.playStorage = playStorage
     self.isFakePartner = isFakePartner
     self.labs = labs

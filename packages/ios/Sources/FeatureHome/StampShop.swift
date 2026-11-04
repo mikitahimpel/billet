@@ -130,3 +130,36 @@ public final class StampShop {
     }
   }
 }
+
+/// The shop's row of stamp packs, sold by a ``StampShop``. Reads its observed values, so the row
+/// redraws as the purchase moves along.
+@MainActor
+final class StampShopPacks: StampPackSource {
+  private let stampShop: StampShop
+
+  init(_ stampShop: StampShop) {
+    self.stampShop = stampShop
+    Task { await stampShop.load() }
+  }
+
+  var packs: [StampPackOffer] {
+    stampShop.packs.map {
+      StampPackOffer(
+        id: $0.id, stamps: $0.stamps, displayName: $0.displayName, displayPrice: $0.displayPrice)
+    }
+  }
+
+  var state: StampPackState {
+    switch stampShop.state {
+    case .idle, .loading, .bought: .idle
+    case .buying: .buying
+    case .pending: .pending
+    case .failed(let message): .failed(message)
+    }
+  }
+
+  func buy(_ offer: StampPackOffer) {
+    guard let pack = stampShop.packs.first(where: { $0.id == offer.id }) else { return }
+    Task { await stampShop.buy(pack) }
+  }
+}

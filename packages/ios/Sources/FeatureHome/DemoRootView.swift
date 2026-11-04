@@ -70,7 +70,8 @@ public struct DemoRootView: View {
           },
           pairingTimeout: Self.pairingTimeout,
           labs: features,
-          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
+          fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory)),
+          stampPacks: payments.map { StampShopPacks($0.stampShop) }
         )))
     _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
     self.payments = payments

@@ -78,8 +78,9 @@ default).
   pair's wallet (`ShopStore.creditPurchase`, entry `purchase:<transaction>`), merges the server's
   ledger on attach and on `updates()`, and takes App Store refunds back with
   `ShopStore.revokePurchase` (source `revoked`, entry `revoked:<transaction>`, never below zero; the
-  shop's own `refund:` entries are its 5-second Undo). `StampPacksSheet` is a plain sheet of the
-  packs; the shop decides where it appears. Until then it is reachable from Labs → Payments.
+  shop's own `refund:` entries are its 5-second Undo). The shop's own row of packs (behind the Labs
+  switch "Stamp packs") gets them through `StampShopPacks`, its `StampPackSource`. Labs → Payments
+  also opens a plain `StampPacksSheet`, next to the mock store's switches.
 - The shop lives in the demo app, which has no session: on the dev server, its purchase calls carry
   the room code in `X-Billet-Demo-Room` (see Stages).
 
