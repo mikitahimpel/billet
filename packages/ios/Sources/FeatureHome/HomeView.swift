@@ -619,7 +619,7 @@ struct HomeView: View {
     .accessibilityIdentifier("labsDrawer")
     .sheet(isPresented: $labsOpen) {
       ZStack(alignment: .topTrailing) {
-        EveningBackground()
+        EveningBackground(isStill: true)
         ScrollView {
           VStack(spacing: Spacing.small) {
             Text("Labs")
