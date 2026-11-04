@@ -1,3 +1,4 @@
+import Pet
 import RealityKit
 import SwiftUI
 import UIKit
@@ -113,11 +114,25 @@ final class DioramaScene: CatRoom {
         if entity === bed { send(to: nil) }
     }
 
-    /// Sends her off, walking around the bed when she crosses the floor between two places.
+    /// Sends her off; she stays there a while before her brain takes her on.
     private func send(to destination: CatWalker.Destination?) {
-        walker?.keepOut = (SIMD2(bedCenter.x, bedCenter.z), 0.22)
-        walker?.go(to: destination)
+        guard let walker else { return }
+        walker.go(to: destination)
+        let spot = destination.flatMap { d in catSpots.first { $0.value.id == d.id }?.key } ?? .home
+        director?.sent(to: spot)
     }
+
+    override var catSpots: [NookiSpot: CatWalker.Destination] {
+        var spots: [NookiSpot: CatWalker.Destination] = [:]
+        spots[.tree] = walker?.main
+        spots[.sill] = sillVisit
+        spots[.ball] = ballVisit
+        spots[.basket] = basketVisit
+        return spots
+    }
+
+    /// Walks between two places go around the bed.
+    override var catKeepOut: (center: SIMD2<Float>, radius: Float)? { (SIMD2(bedCenter.x, bedCenter.z), 0.22) }
 
     private func bounce(_ toy: Entity, spins: Bool) {
         guard !bounces.contains(where: { $0.toy === toy }) else { return }
