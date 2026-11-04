@@ -23,6 +23,9 @@ final class ViewPlateCache {
   @ObservationIgnored private var waiting: [Key] = []
   @ObservationIgnored private var painting: Task<Void, Never>?
 
+  /// True when no plate is waiting to be painted.
+  var isIdle: Bool { waiting.isEmpty && painting == nil }
+
   /// The plate for `key`, or `nil` while it is being painted.
   func plate(_ key: Key) -> CGImage? {
     if let plate = plates[key] { return plate }

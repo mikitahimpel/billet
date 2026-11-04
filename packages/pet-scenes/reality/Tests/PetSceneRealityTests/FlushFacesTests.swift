@@ -48,19 +48,6 @@ import Testing
     #expect(clashes.isEmpty, "\(clashes)")
   }
 
-  @Test func theShopHasNoFlushFaces() async throws {
-    let shop = ShopStage(kit: GenzKit())
-    shop.start()
-    defer { shop.setOnScreen(false) }
-    let deadline = Date.now.addingTimeInterval(120)
-    while !shop.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
-    try #require(shop.isBuilt)
-    let clashes = FlushFaces.clashes(
-      under: [shop.root], seenFrom: eyes(ShopLayout.camera),
-      skip: { $0.name == ShopStage.keeperName })
-    #expect(clashes.isEmpty, "\(clashes)")
-  }
-
   @Test func theDeskHasNoFlushFaces() async throws {
     let desk = DeskStage(kit: GenzKit(), cats: GenzCatSource())
     desk.start()

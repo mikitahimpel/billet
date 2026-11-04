@@ -211,9 +211,6 @@ public struct UsView<Account: View>: View {
       if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
         CatPicker(model: model, cats: cats)
       }
-      if scenes.contains(where: { $0.hasShop }) {
-        ShopkeeperPicker(model: model)
-      }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         let experiments = LabExperiment.allCases.filter { $0.group == group }
         // The first launch has no switches, only a way to watch it again.

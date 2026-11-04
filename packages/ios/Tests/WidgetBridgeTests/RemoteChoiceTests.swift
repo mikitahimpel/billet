@@ -27,18 +27,11 @@ import Testing
     #expect(HomeVariant(remoteVariant: variant.remoteVariant) == variant)
   }
 
-  @Test(arguments: Shopkeeper.allCases)
-  func everyShopkeeperIsAVariantAndBack(_ keeper: Shopkeeper) {
-    #expect(Experiments.shopkeeper.variants.contains(keeper.remoteVariant))
-    #expect(Shopkeeper(remoteVariant: keeper.remoteVariant) == keeper)
-  }
-
   @Test func anUnknownVariantIsNoChoice() {
     #expect(RoomLighting(remoteVariant: "disco") == nil)
     #expect(RoomLighting(remoteVariant: "amberLantern") == nil)
     #expect(WindowView(remoteVariant: "moon-base") == nil)
     #expect(HomeVariant(remoteVariant: "") == nil)
-    #expect(Shopkeeper(remoteVariant: "Fox") == nil)
   }
 
   @Test func theVariantsAreTheCaseNamesInKebabCase() {
@@ -56,24 +49,22 @@ import Testing
       Experiments.homeLayout.variants == [
         "classic", "immersive", "living-window", "night-and-day",
       ])
-    #expect(Experiments.shopkeeper.variants == ["teddy", "human"])
   }
 
   @Test func everyRemoteSettingIsListed() {
     let keys = Set(Experiments.all.map(\.key))
     #expect(
-      keys == ["room-lighting", "window-view", "home-layout", "shopkeeper"])
+      keys == ["room-lighting", "window-view", "home-layout"])
   }
 
   @Test func aChoiceTheServerGaveIsRead() {
     let flags = RemoteFlags(assignments: [
       "room-lighting": "neon-night", "window-view": "summer-cul-de-sac",
-      "home-layout": "night-and-day", "shopkeeper": "human",
+      "home-layout": "night-and-day",
     ])
     #expect(flags.choice(of: Experiments.roomLighting) == RoomLighting.neonNight)
     #expect(flags.choice(of: Experiments.windowView) == WindowView.summerCulDeSac)
     #expect(flags.choice(of: Experiments.homeLayout) == HomeVariant.nightAndDay)
-    #expect(flags.choice(of: Experiments.shopkeeper) == Shopkeeper.human)
   }
 
   // MARK: the server's registry

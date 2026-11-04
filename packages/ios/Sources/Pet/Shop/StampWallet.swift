@@ -15,17 +15,21 @@ public struct StampWallet: Codable, Hashable, Sendable {
     case purchase
     /// Stamps paid for an item.
     case spend
+    /// Stamps given back for a purchase that was undone.
+    case refund
   }
 
   /// A way stamps can arrive. Spending is not one: it only comes from ``debit(_:id:)``.
   public enum Credit: Hashable, Sendable {
     case grant
     case purchase
+    case refund
 
     var source: Source {
       switch self {
       case .grant: .grant
       case .purchase: .purchase
+      case .refund: .refund
       }
     }
   }
@@ -77,6 +81,8 @@ public enum ShopError: Error, Hashable, Sendable {
   case wrongKind
   case roomIsFull
   case unknownPlacement
+  /// Nothing was bought under the transaction being undone.
+  case unknownPurchase
 }
 
 /// Whether a change took effect now or had already been applied under the same transaction ID.
