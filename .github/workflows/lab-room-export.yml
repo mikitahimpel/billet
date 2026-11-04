@@ -1,0 +1,42 @@
+name: Lab room export
+
+# Builds the Window Seat room in RealityKit and writes it as glTF for the local web lab
+# (GenzLabExport): room-<furniture>.glb and lights-<furniture>.json, uploaded as the artifact
+# lab-room. Runs on pushes to its own branch only; no secrets, read-only token.
+on:
+  push:
+    branches: [chore/lab-room-export]
+    paths:
+      - packages/pet-scenes/**
+      - packages/ios/**
+      - .github/workflows/lab-room-export.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Select Xcode from .xcode-version
+        run: |
+          version="$(tr -d '[:space:]' < .xcode-version)"
+          sudo xcode-select -s "/Applications/Xcode_${version}.app"
+          xcodebuild -version
+
+      - name: Export the room
+        env:
+          GENZ_LAB_EXPORT: ${{ runner.temp }}/lab-room
+        run: |
+          swift test --package-path packages/pet-scenes/reality --filter GenzLabExport
+          ls -la "$GENZ_LAB_EXPORT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lab-room
+          path: ${{ runner.temp }}/lab-room
+          retention-days: 14
