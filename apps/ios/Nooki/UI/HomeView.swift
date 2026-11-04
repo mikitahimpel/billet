@@ -202,7 +202,7 @@ private struct RoomControls: View {
                 }
             }
             .padding(3)
-            .glass(.capsule)
+            .warmGlass(.capsule)
 
             Spacer(minLength: 0)
 
@@ -216,7 +216,7 @@ private struct RoomControls: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(height: 40)
-                .glass(.capsule, interactive: true)
+                .warmGlass(.capsule, interactive: true)
             }
             .buttonStyle(.plain)
             .disabled(showcase != nil)

@@ -43,6 +43,10 @@ struct CoupleRow: View {
                         .foregroundStyle(Ink.secondary)
                 }
             }
+            .padding(.leading, 5)
+            .padding(.trailing, 18)
+            .padding(.vertical, 5)
+            .warmGlass(.capsule)
 
             Spacer(minLength: 0)
 
@@ -83,6 +87,6 @@ struct CoinPill: View {
         .padding(.leading, 8)
         .padding(.trailing, 14)
         .frame(height: 40)
-        .glass(.capsule, interactive: true)
+        .warmGlass(.capsule, interactive: true)
     }
 }
