@@ -28,9 +28,11 @@ CATS = RESOURCES / "Cats"
 
 # A compiled cat over this many bytes is a sign something came in unreduced. The detailed cats
 # carry a 1024 px albedo and a normal map, and the kitten and fluffy one fur cards too, so they
-# are allowed more; the hero ships four more clips than the others.
+# are allowed more; the hero ships four more clips than the others. Marmalade, the standard
+# cat, keeps its 1024 px coat so its face stays sharp at the room's distance.
 LARGEST_CAT = 2_500_000
 LARGEST = {
+    "marmalade": 2_700_000,
     "detailed": 3_000_000,
     "detailedKitten": 3_400_000,
     "detailedFluffy": 3_600_000,

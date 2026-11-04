@@ -31,7 +31,9 @@ from a text prompt, with renders of billet's own room and detailed cat as style 
 then ran through [idol-sdk](https://github.com/speridlabs/idol-sdk) (Speridlabs, Apache License
 2.0) on PyTorch (BSD-3-Clause), with the same DINOv3 (Meta's DINOv3 License) and FLUX.2 VAE
 encoders, and BiRefNet (MIT) to cut the cat from its background. As above, no model ships in the
-app, only the meshes made from its output.
+app, only the meshes made from its output. Marmalade (`Cat_marmalade`) was made the same way from a
+standing view FLUX.2-klein-4B drew of billet's own ginger cat concept and then redrew matte, with
+the picture's lighting taken out of its baked colour.
 
 ## Idol props
 

@@ -19,10 +19,11 @@ struct GenzCatSourceTests {
     source.hold([kitten, fluffy, .standard], for: adoption)
     _ = await source.cat(kitten)
     _ = await source.cat(fluffy)
-    #expect(source.loaded == [.detailed, .detailedKitten, .detailedFluffy])
+    let standard = CatChoice.standard.model
+    #expect(source.loaded == [standard, .detailedKitten, .detailedFluffy])
 
     source.hold([], for: adoption)
-    #expect(source.loaded == [.detailed], "the room's cat stays when the adoption lets go")
+    #expect(source.loaded == [standard], "the room's cat stays when the adoption lets go")
 
     source.hold([kitten], for: room)
     #expect(source.loaded.isEmpty, "a cat nobody holds any more is let go")
