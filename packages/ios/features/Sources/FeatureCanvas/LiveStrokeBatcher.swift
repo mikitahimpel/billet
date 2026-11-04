@@ -60,8 +60,9 @@ public struct LiveStrokeBatcher: Sendable {
     guard let open = id, !pending.isEmpty else { return [] }
     let batch = pending
     pending = []
-    return stride(from: 0, to: batch.count, by: LiveStrokeStart.maxPoints).map {
-      .strokePoints(id: open, points: Array(batch[$0..<min($0 + LiveStrokeStart.maxPoints, batch.count)]))
+    let size = LiveStrokeStart.maxPoints
+    return stride(from: 0, to: batch.count, by: size).map { start in
+      .strokePoints(id: open, points: Array(batch[start..<min(start + size, batch.count)]))
     }
   }
 }
