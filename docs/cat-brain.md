@@ -112,6 +112,37 @@ cat; the only new thing synced is the `shoo` life kind.
 - **Seen.** Settings shows up to three habits in plain words ("Loves morning pets", "Waits for
   dinner at 8"), and Brain debug shows the raw counters and each score's `u` factor.
 
+## Feelings: the needs you can see
+
+`CatFeeling.of` turns the needs, sleep and temperament into one feeling, in this order: asleep,
+hangry, hungry, lonely, bored, sleepy, happy, content. Hunger is how far Full sits below the low
+line on its way to the floor, times the temperament's `drama` (Diva 1.5, Clown 1.2, Cuddler 1,
+Explorer 0.9, Sleepyhead 0.55); at 0.5 the cat is hangry. The brain acts each feeling out:
+
+| Feeling | What the cat does | Ends with |
+| --- | --- | --- |
+| Hungry | waits by the empty bowl meowing at you (`WaitByBowl`), paws at it (`PawBowl`), begs with a raised paw and follows a finger (`Beg`) | a meal from either phone: it walks to the bowl and eats at once |
+| Hangry | yowls (`Yowl`), bats the mug off the seat (`KnockOff`), flops over in despair with the tail lashing (`Flop`); the eat group scores `×(1 + 3·hunger)` | the same meal |
+| Lonely | sits with its back to you (`Sulk`); the first pet is ignored, the second forgiven with a head-bump (`SeekYou`, `Rub`) | pets or a note |
+| Bored | zoomies, scratches the cushion (`Scratch`), attacks the yarn, brings a toy and drops it at the camera (`BringToy`, `DropToy`) | a game |
+| Sleepy | yawns (`Yawn`) before it finds its spot, kneads, curls up | sleep |
+| Happy | rolls onto its back (`BellyUp`), slow-blinks, kneads, and purrs (a haptic) | — |
+
+The frame carries the feeling, a `voice` (meow, yowl, chirp) the room plays as the step starts,
+with a small thought bubble of what it wants, and `purring`. The room's sound is made in code and
+silent with the ringer off. When care ends a need, hearts rise over the cat.
+
+The needs card opens from the paw by the streak: bars for Food, Play, Love and Sleep, the mood in
+words ("Hangry 😾") and what the cat wants. The partner's meals and games show for a moment
+("Your partner fed Mochi 🐟"). `CatNudge` plans one local notification for the first time in the
+next day the cat would be hangry or lonely, outside 22:00–08:30, at most two a day and four hours
+apart; every new event plans it again, so care from either phone moves or cancels it.
+
+Decay is tuned so a couple who feed it twice, pet it a few times and play once a day see it
+hungry, lonely and bored for a while each day, and hangry after a skipped meal: Full falls by 1/e
+in 6 hours, Loved in 14, Playful in 10. Nothing falls below 0.2, and one meal brings Full from the
+floor back above 0.5.
+
 ## Memory
 
 - **Favourite spots**: seconds curled up or kneading at each kind of spot, with a minute for each
@@ -268,11 +299,13 @@ stateDiagram-v2
         [*] --> Sit
         [*] --> Loaf
         [*] --> LookAround
+        [*] --> BellyUp
         LookAround --> Sit
         Sit --> LookAround
         Sit --> [*]
         Loaf --> [*]
         LookAround --> [*]
+        BellyUp --> [*]
       }
       state Explore {
         [*] --> Wander
@@ -284,10 +317,12 @@ stateDiagram-v2
       }
       state Rest {
         [*] --> FindNapSpot
+        [*] --> Yawn
         Curl --> Wake
         FindNapSpot --> Curl
         FindNapSpot --> Knead
         Knead --> Curl
+        Yawn --> FindNapSpot
         Wake --> [*]
       }
       state Groom {
@@ -301,24 +336,41 @@ stateDiagram-v2
       }
       state Eat {
         [*] --> WalkToBowl
+        [*] --> Beg
+        [*] --> Yowl
+        [*] --> KnockOff
+        [*] --> Flop
+        Beg --> Yowl
         Eat --> LickLips
+        KnockOff --> Flop
+        PawBowl --> WaitByBowl
+        PawBowl --> Yowl
         WalkToBowl --> Eat
+        WalkToBowl --> PawBowl
         WalkToBowl --> WaitByBowl
+        Yowl --> KnockOff
         LickLips --> [*]
         WaitByBowl --> [*]
+        Beg --> [*]
+        Yowl --> [*]
+        KnockOff --> [*]
+        Flop --> [*]
       }
       state Play {
         [*] --> Stalk
         [*] --> Chase
         [*] --> BatObject
         [*] --> Zoomies
+        [*] --> Scratch
         Chase --> Pounce
+        Pounce --> BatObject
         Pounce --> Chase
         Stalk --> Pounce
         Pounce --> [*]
         Chase --> [*]
         BatObject --> [*]
         Zoomies --> [*]
+        Scratch --> [*]
       }
       state Watch {
         [*] --> WatchWindow
@@ -331,12 +383,15 @@ stateDiagram-v2
         [*] --> SlowBlink
         [*] --> BringToy
         [*] --> WaitByDoor
+        [*] --> Sulk
+        BringToy --> DropToy
         SeekYou --> Rub
         SeekYou --> SlowBlink
         Rub --> [*]
         SlowBlink --> [*]
-        BringToy --> [*]
         WaitByDoor --> [*]
+        DropToy --> [*]
+        Sulk --> [*]
       }
       state Mischief {
         [*] --> PushItem

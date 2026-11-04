@@ -30,8 +30,8 @@ public struct CatMotion: Hashable, Sendable {
 extension CatModel {
   public var motion: CatMotion {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .tabby, .plush, .chibi, .kitten,
-      .tuxedo, .idolGinger, .splatGinger, .idolCalico, .idolGreyTabby:
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .splatGinger,
+      .idolCalico, .idolGreyTabby:
       .even
     case .gingerChonk:
       CatMotion(tempo: 0.85, signature: [.yawn, .slowBlink], temperament: .sleepyhead)

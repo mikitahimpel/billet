@@ -137,6 +137,9 @@ final class GenzRoom: CatPlayStage {
   let catHolder = Entity()
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
+  /// What the cat says and the bubble that shows it, and its voice.
+  let say = CatSay()
+  let sounds = CatSounds()
   /// The hands on the cat: petting, play and the cooldowns that keep it from feeling spammy.
   let hands = CatHands()
   /// The toys on the cat's floor, and the game going on with one.
@@ -432,7 +435,7 @@ final class GenzRoom: CatPlayStage {
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
-    if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
+    if let palette = CatCatalog.coatTexture(shown.model, coat: shown.coat) { rig?.paint(palette) }
     let action = self.rig?.current ?? .sleep
     catModel?.removeFromParent()
     catModel = model
@@ -1012,7 +1015,7 @@ final class GenzRoom: CatPlayStage {
       headingGoal = pose.heading
       // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
       rate = Float((brainBody.frame?.tempo ?? 1) * motion.tempo)
-      if pose.action == .walk { rate = walkRate(pose.speed) }
+      if pose.action == .walk || pose.action == .carry { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }
     bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
@@ -1090,6 +1093,8 @@ final class GenzRoom: CatPlayStage {
   func strokeMoved(to point: CGPoint) -> [PetSceneEvent] {
     guard trip == nil else { return [] }
     petClock = clock
+    // A sulking cat keeps its back turned: no lean, no purr, until it forgives.
+    guard brainBody.frame?.stack.step != .sulk else { return [] }
     if purr.touch(at: clock, cat: point) {
       behaviour.react(.roll, at: clock)
       hands.onBackUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)

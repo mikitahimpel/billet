@@ -79,13 +79,10 @@ struct CatPicker: View {
       switch coat {
       case .natural:
         (Color(red: 0.93, green: 0.58, blue: 0.27), Color(red: 0.36, green: 0.36, blue: 0.4))
-      case .ginger:
-        (Color(red: 0.93, green: 0.58, blue: 0.27), Color(red: 1, green: 0.9, blue: 0.78))
       case .greyWhite:
         (Color(red: 0.55, green: 0.56, blue: 0.6), Color(red: 0.97, green: 0.97, blue: 0.96))
       case .black:
         (Color(red: 0.14, green: 0.13, blue: 0.15), Color(red: 0.3, green: 0.29, blue: 0.32))
-      case .cream: (Color(red: 0.96, green: 0.86, blue: 0.7), Color(red: 1, green: 0.96, blue: 0.9))
       }
     return LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
   }

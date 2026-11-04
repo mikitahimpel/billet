@@ -50,6 +50,9 @@ public struct CatUtilityInput: Sendable {
   /// hungry.
   public var upbringing: CatUpbringing
   public var mealtime: Bool
+  /// How hungry it acts, from 0 up, after its temperament's drama: a hungry cat keeps going
+  /// back to the bowl.
+  public var hunger: Double = 0
 }
 
 /// Scores each activity group: `need × personality × time of day × room × novelty × mood ×
@@ -116,7 +119,8 @@ public enum CatUtility {
       }
     guard let need else { return 1 }
     let weight = input.temperament?.weight(need) ?? 1
-    let term = (need == .rested ? 0.25 : 0.5) + 4 * weight * NeedFocus.urgency(input.needs[need])
+    var term = (need == .rested ? 0.25 : 0.5) + 4 * weight * NeedFocus.urgency(input.needs[need])
+    if group == .eat { term *= 1 + 3 * input.hunger }
     return input.focus == need ? term * 1.5 : term
   }
 

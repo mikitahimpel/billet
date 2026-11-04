@@ -11,10 +11,12 @@ public struct LifeConfig: Hashable, Sendable {
   /// Where every need starts, before any event.
   public var initial = 0.7
 
-  /// How long each need takes to fall by 1/e of the way to the floor.
-  public var fullHours = 10.0
-  public var lovedHours = 24.0
-  public var playfulHours = 8.0
+  /// How long each need takes to fall by 1/e of the way to the floor. Tuned so a couple who feed
+  /// it twice, pet it a few times and play once a day still see it hungry, lonely and bored for
+  /// a while each day, and a skipped meal makes it hangry; care brings it back in one go.
+  public var fullHours = 6.0
+  public var lovedHours = 14.0
+  public var playfulHours = 10.0
   /// Rested falls while awake and rises while asleep.
   public var restedAwakeHours = 18.0
   public var restedAsleepHours = 2.5
@@ -24,9 +26,9 @@ public struct LifeConfig: Hashable, Sendable {
 
   /// The exponent k of the diminishing return `n ← n + g·(1 − n)^k`.
   public var returns = 1.5
-  public var feedGain = 0.5
-  public var petGain = 0.18
-  public var playGain = 0.35
+  public var feedGain = 0.6
+  public var petGain = 0.2
+  public var playGain = 0.45
   /// A note fills Loved for both partners, more than anything else.
   public var noteGain = 0.4
   /// A game also counts a little as care from whoever played.

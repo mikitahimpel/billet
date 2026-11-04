@@ -32,7 +32,7 @@ import Testing
         == DailyPrompt.doodle(on: "2026-11-10"))
   }
 
-  @Test func theShortcutOpensTheCanvasOnlyWhenItsFlagIsOn() {
+  @Test func theShortcutAlwaysOpensTheCanvas() {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = TimeZone(identifier: "UTC")!
     let now = Date(timeIntervalSince1970: 1_800_000_000)
@@ -43,8 +43,8 @@ import Testing
         calendar: calendar)
     }
     #expect((try? decide().get()) != nil)
-    features.set(.canvasShortcut, on: false)
-    #expect(decide() == .failure(.off))
+    features.set(.questionCard, on: false)
+    #expect((try? decide().get()) != nil)
   }
 
   @Test func theDoodleCardStartsOffSoTheHomeScreenHasOneCard() {

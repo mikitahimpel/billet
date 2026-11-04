@@ -62,7 +62,7 @@ import Testing
     #expect(PicturePlan.choice(inputs(only(.streak), snapshot(at: now)), at: now) == .nothingYet)
     #expect(
       PicturePlan.choice(inputs(only(.daysTogether), snapshot(at: now)), at: now) == .nothingYet)
-    #expect(PicturePlan.choice(inputs(only(.catMood), nil), at: now) == .nothingYet)
+    #expect(PicturePlan.choice(inputs(only(.partnerWindow), nil), at: now) == .nothingYet)
   }
 
   @Test func nudgeWaitsForTwoQuietDays() {
@@ -90,12 +90,12 @@ import Testing
 
   @Test func rotationTakesTurnsByTheClock() {
     var features = only(.rotatePictures)
-    features.set(.catMood, on: true)
+    features.set(.partnerWindow, on: true)
     features.set(.timeOfDay, on: true)
     let start = Date(timeIntervalSinceReferenceDate: 0)
     let snap = snapshot(at: start)
     let list = PicturePlan.available(inputs(features, snap), at: start)
-    #expect(list == [.catMood, .timeOfDay])
+    #expect(list == [.partnerWindow, .timeOfDay])
     var seen: [PictureMode] = []
     for turn in 0..<4 {
       let at = start.addingTimeInterval(Double(turn) * PicturePlan.slot + 5)
@@ -106,17 +106,17 @@ import Testing
       }
       seen.append(mode)
     }
-    #expect(seen == [.catMood, .timeOfDay, .catMood, .timeOfDay])
+    #expect(seen == [.partnerWindow, .timeOfDay, .partnerWindow, .timeOfDay])
   }
 
   @Test func rotationHoldsStillWithOnePicture() {
     let now = date(10, 12)
-    var features = only(.catMood)
+    var features = only(.partnerWindow)
     features.set(.rotatePictures, on: true)
     for step in 0..<3 {
       let at = now.addingTimeInterval(Double(step) * PicturePlan.slot)
       #expect(
-        PicturePlan.choice(inputs(features, snapshot(at: at)), at: at) == .picture(.catMood))
+        PicturePlan.choice(inputs(features, snapshot(at: at)), at: at) == .picture(.partnerWindow))
     }
   }
 
@@ -126,7 +126,7 @@ import Testing
     #expect(rotating.first == now)
     #expect(rotating.dropFirst().first == date(10, 12, 15))
     #expect(rotating.allSatisfy { $0 < now.addingTimeInterval(PicturePlan.horizon) })
-    let still = PicturePlan.dates(inputs(only(.catMood), nil), from: now)
+    let still = PicturePlan.dates(inputs(only(.partnerWindow), nil), from: now)
     #expect(still.dropFirst().first == date(10, 13))
   }
 
@@ -182,13 +182,10 @@ import Testing
     #expect(away.headline == "Window's dark")
   }
 
-  @Test func nudgeCountsQuietDaysAndMoodUsesTheCatsName() {
+  @Test func nudgeCountsQuietDays() {
     let nudge = PictureCaption.make(
       .nudge, snapshot: snapshot(), now: at(10, 12), calendar: calendar)
     #expect(nudge.detail.contains("3 days"))
-    let mood = PictureCaption.make(
-      .catMood, snapshot: snapshot(), now: at(10, 12), calendar: calendar)
-    #expect(mood.headline == "Mochi")
   }
 
   @Test func timeOfDayFollowsTheHour() {

@@ -28,6 +28,19 @@ struct CatBrainBody {
   var places: [GenzAffordance] = []
   /// A step from the window's spot out through the glass.
   var outward = SIMD2<Float>.zero
+  /// The room clock when the step last made its sound, or nil before it has.
+  var spoke: Double?
+  /// Something a tantrum knocked off the seat, falling or gone until it is put back.
+  var knock: CatKnock?
+}
+
+/// A piece the cat batted off the seat: where it stood, and since when it has been falling.
+struct CatKnock {
+  let holder: Entity
+  let position: SIMD3<Float>
+  let orientation: simd_quatf
+  let away: SIMD2<Float>
+  let start: Double
 }
 
 /// One affordance of the styled room, with where it stands.
@@ -45,6 +58,13 @@ extension GenzRoom {
     let before = brainBody.frame
     brainBody.frame = frame
     hands.play.learned = frame?.tricks ?? []
+    purr.brainPurring = frame?.purring ?? false
+    // Care ended a need: hearts, and a happy buzz.
+    if let was = before?.feeling, let now = frame?.feeling, was.isNeedy, !now.isNeedy {
+      for _ in 0..<3 { purr.heart(at: screen.cat) }
+      purr.feel(.trick)
+      say.clear()
+    }
     // Play chose a chase: the cat goes after the lamp's dot of light once it is free. Any other
     // step lets a chase that never started go.
     let step = frame?.stack.step
@@ -185,6 +205,7 @@ extension GenzRoom {
       // Somewhere it cannot get to without going through something: as near as it gets.
       brainBody.goal = brainBody.route.last ?? catSpot
       brainBody.arrived = nil
+      brainBody.spoke = nil
     }
     let at = catSpot
     let goal = brainBody.goal ?? at
@@ -215,9 +236,11 @@ extension GenzRoom {
         next.y)
       screen.cat = camera.project(
         catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
+      // Bringing a toy over, it carries it in its mouth.
+      let carries = frame.stack.step == .dropToy && behaviour.has(.carry)
       return CatTrip.Pose(
         spot: next, heading: CatTrip.heading(from: at, to: distance < 1e-5 ? goal : waypoint),
-        action: gallops ? .run : .walk,
+        action: gallops ? .run : carries ? .carry : .walk,
         speed: speed,
         leg: 0, progress: 0, isDone: false)
     }
@@ -232,14 +255,19 @@ extension GenzRoom {
       updateScreen()
     }
     let since = clock - (brainBody.arrived ?? clock)
+    speak(frame)
+    stepKnock(frame, since: since)
     let reflex = CatReflexes.at(clock, seed: Self.reflexSeed, vitality: frame.stack.vitality)
+    // Cross or sulking, the tail lashes.
+    let lashing = Self.lashing.contains(frame.stack.step) && !reduceMotion
     // A skeleton with the reflex joints blinks and flicks over any clip, as big as its
     // temperament moves; one without gets the reflex as a one-shot clip in a calm step.
     let layered = rig?.hasReflexes ?? false
     if layered {
       rig?.reflex(
         blink: reflex.blink ? 1 : 0, earTwitch: reflex.earTwitch ? 1 : 0,
-        tailFlick: reflex.tailFlick ? 1 : 0, breath: Float(reflex.breath),
+        tailFlick: lashing ? Float(0.5 + 0.5 * sin(clock * 7)) : reflex.tailFlick ? 1 : 0,
+        breath: Float(reflex.breath),
         strength: reduceMotion ? 0 : Float(frame.amplitude))
     }
     let action =
@@ -299,6 +327,82 @@ extension GenzRoom {
     return since.truncatingRemainder(dividingBy: period) < info.duration ? action : base
   }
 
+  /// Steps the tail lashes through.
+  static let lashing: Set<CatActivityStep> = [.yowl, .flop, .knockOff, .sulk]
+
+  /// Makes the step's sound once the cat is there, and again as often as the step says.
+  private func speak(_ frame: CatBrainFrame) {
+    guard let voice = frame.voice, frame.stack.interaction == nil else { return }
+    if let last = brainBody.spoke {
+      guard let every = frame.voiceEvery, clock - last >= every / max(frame.tempo, 0.5) else {
+        return
+      }
+    }
+    brainBody.spoke = clock
+    sounds.play(voice, at: clock)
+    say.say(voice, feeling: frame.feeling)
+    if voice == .yowl { purr.feel(.settle) }
+  }
+
+  /// A tantrum bats the nearest small thing off the seat a second into the swipe. It slides,
+  /// tips over the edge and falls out of sight, and is back where it stood a little later.
+  private func stepKnock(_ frame: CatBrainFrame, since: Double) {
+    if let knock = brainBody.knock {
+      let u = Float(clock - knock.start)
+      // Decorating puts it straight back, so the piece is where the person sees it.
+      guard u < Self.knockGone, !decor.isOn else {
+        knock.holder.position = knock.position
+        knock.holder.orientation = knock.orientation
+        knock.holder.isEnabled = true
+        brainBody.knock = nil
+        return
+      }
+      guard knock.holder.isEnabled else { return }
+      let length = layout.cat.length
+      let slide = min(u / 0.35, 1) * length * 0.35
+      let fall = max(u - 0.35, 0)
+      let drop = 4.9 * fall * fall
+      let out = knock.away * (slide + fall * length * 0.8)
+      knock.holder.position = knock.position + SIMD3(out.x, -drop, out.y)
+      knock.holder.orientation =
+        simd_quatf(
+          angle: min(u * 5, 1.6), axis: simd_normalize(SIMD3(knock.away.y, 0, -knock.away.x)))
+        * knock.orientation
+      if drop > length * 4 { knock.holder.isEnabled = false }
+      return
+    }
+    guard frame.stack.step == .knockOff, since > 1, !reduceMotion, !decor.isOn,
+      let (holder, spot) = nearestSmallThing(),
+      simd_distance(spot, catSpot) < layout.cat.length * 1.1
+    else { return }
+    let away = spot - catSpot
+    let length = simd_length(away)
+    brainBody.knock = CatKnock(
+      holder: holder, position: holder.position, orientation: holder.orientation,
+      away: length > 1e-4 ? away / length : [0, 1], start: clock)
+    purr.feel(.pounce)
+  }
+
+  /// How long a knocked thing stays gone before it is back, in seconds.
+  static let knockGone: Float = 25
+
+  /// The holder of the small thing nearest the cat, and where it stands.
+  private func nearestSmallThing() -> (Entity, SIMD2<Float>)? {
+    var best: (Entity, SIMD2<Float>)?
+    for (index, placement) in layout.pieces.enumerated()
+    where Self.affordanceKind(placement.piece.kind) == .smallItem
+      && pieceHolders.indices.contains(index)
+    {
+      let holder = pieceHolders[index]
+      let at = holder.position(relativeTo: room)
+      let spot = SIMD2(at.x, at.z)
+      if best.map({ simd_distance($0.1, catSpot) > simd_distance(spot, catSpot) }) ?? true {
+        best = (holder, spot)
+      }
+    }
+    return best
+  }
+
   /// The reflexes only need to look random, not to agree with the partner's phone.
   static let reflexSeed: UInt64 = 0xB1E7_CA75
 
@@ -311,6 +415,7 @@ extension GenzRoom {
     let eye = SIMD2(camera.position.x, camera.position.z)
     switch frame.gaze {
     case .camera: return CatTrip.heading(from: catSpot, to: eye)
+    case .away: return CatTrip.heading(from: catSpot, to: catSpot * 2 - eye)
     case .window:
       guard let window = affordanceSpot(.window) else { return nil }
       return CatTrip.heading(from: catSpot, to: window + brainBody.outward)
@@ -342,6 +447,9 @@ extension GenzRoom {
     let head = catHolder.position(relativeTo: nil) + [0, layout.cat.length * 0.5, 0]
     switch frame.gaze {
     case .camera: return (camera.position, 0.9)
+    case .away:
+      let ahead = SIMD3(-sin(bodyHeading), -0.1, -cos(bodyHeading)) * layout.cat.length * 3
+      return (head + ahead, 0.6)
     case .window:
       guard let first = layout.window.first, let last = layout.window.dropFirst(2).first else {
         return nil

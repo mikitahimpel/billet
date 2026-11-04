@@ -41,6 +41,8 @@ struct HomeView: View {
   @State private var ringsOpen = false
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
+  /// The partner's meal or game being shown, for a few seconds.
+  @State private var shownCare: CatCareNotice?
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -54,17 +56,6 @@ struct HomeView: View {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
-  /// The cat is with the partner: the last note on this device is one it sent.
-  private var catAway: Bool {
-    session.labs.isOn(LabExperiment.overnightStay)
-      && OvernightStay.place(after: session.notes).isAway
-  }
-
-  /// The notes in frames, in the order they were hung.
-  private var framedNotes: [NoteRecord] {
-    session.frames.wall.hung.compactMap { id in session.notes.first { $0.id == id } }
-  }
-
   private var delivery: Int { store.state.pet.world.delivery }
 
   private var isRenovating: Bool { session.renovator.isRenovating }
@@ -74,6 +65,13 @@ struct HomeView: View {
 
   var body: some View {
     home
+      .overlay(alignment: .top) { partnerCareToast }
+      .task(id: session.careNotice) { await showPartnerCare() }
+      .task(id: NudgeInputs(events: session.life.log.all.count, name: session.play.catName)) {
+        await CatNudges.plan(
+          life: session.life, temperament: session.brain.temperament,
+          name: session.play.catName ?? "Your cat")
+      }
       .environment(\.petSceneCat, session.labs.cat)
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
@@ -241,7 +239,44 @@ struct HomeView: View {
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
-      flame: flameHost(scene: scene))
+      flame: flameHost(scene: scene),
+      mood: catMood)
+  }
+
+  /// The cat's needs and how it feels, for the paw by the streak and the drawer.
+  private var catMood: CatNeedsSnapshot {
+    let life = session.life.state
+    let feeling =
+      session.brain.frame?.feeling
+      ?? CatFeeling.of(
+        needs: life.needs, mood: life.mood, asleep: life.asleep, sleepy: false,
+        temperament: session.brain.temperament, config: session.life.config)
+    return CatNeedsSnapshot(
+      needs: life.needs, feeling: feeling, name: session.play.catName ?? "Your cat")
+  }
+
+  /// "Your partner fed Mochi", under the header for a few seconds.
+  @ViewBuilder private var partnerCareToast: some View {
+    if let care = shownCare, !isRenovating {
+      Text(care.line(catName: session.play.catName))
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .padding(.horizontal, Spacing.medium)
+        .frame(minHeight: Target.minimum)
+        .floatingGlass()
+        .padding(.top, Self.statusTop + Target.minimum + Spacing.small)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .allowsHitTesting(false)
+        .accessibilityIdentifier("partnerCare")
+    }
+  }
+
+  private func showPartnerCare() async {
+    guard let care = session.careNotice else { return }
+    withAnimation(Motion.spring) { shownCare = care }
+    try? await Task.sleep(for: .seconds(3.5))
+    guard !Task.isCancelled else { return }
+    withAnimation(Motion.spring) { shownCare = nil }
   }
 
   /// Whether Home's room is in sight: its tab shows, nothing covers it and the flame is closed.
@@ -323,6 +358,7 @@ struct HomeView: View {
     let streak = session.streak(today: today, calendar: calendar)
     return VStack(spacing: Spacing.small) {
       fakePartnerCaption
+      CatNeedsCard(catMood)
       HStack(spacing: Spacing.small) {
         Label("\(streak) \(streak == 1 ? "day" : "days")", systemImage: "flame.fill")
           .billetType(.action)
@@ -411,12 +447,6 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var framedWall: some View {
-    if session.labs.isOn(LabExperiment.framedNotes) {
-      FramedWallView(notes: framedNotes)
-    }
-  }
-
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
@@ -434,27 +464,6 @@ struct HomeView: View {
           }
         }
         .overlay { catReactions }
-        .overlay {
-          // A scene with touches keeps its own controls in the corners the season would fill.
-          if session.labs.isOn(LabExperiment.seasons), !scene.handlesTouches {
-            SeasonOverlay(look: Season.look(on: .now, calendar: .current))
-          }
-        }
-        .overlay(alignment: .topLeading) {
-          if !scene.handlesTouches { framedWall }
-        }
-        .background(alignment: .topLeading) {
-          // A scene with touches keeps its controls in this corner, drawn over the frames.
-          if scene.handlesTouches { framedWall.padding(.top, Spacing.wide) }
-        }
-        .overlay(alignment: .bottomLeading) {
-          if catAway {
-            OvernightStayView()
-              .scaleEffect(0.55, anchor: .bottomLeading)
-              .padding(.leading, Spacing.small)
-              .padding(.bottom, Spacing.small)
-          }
-        }
         .overlay {
           if let hungImage, let wall = scene.noteWall {
             HungNote(drawing: hungImage, wall: wall)
@@ -474,31 +483,15 @@ struct HomeView: View {
           .transition(.opacity)
       }
       if typeSize.isAccessibilitySize { fakePartnerNotice }
-      overnightStayNotice
-      catCameBackNotice
       catNaming
       latestReceived
       treatPanel
       promptCards
-      if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
-        labsDrawer
-      }
+      // The porch light is always there, so the sheet always has a card.
+      labsDrawer
     }
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
-    .calmAnimation(value: catAway)
-  }
-
-  /// A TimelineView lets the satchel go away on its own once its twelve hours are up.
-  @ViewBuilder private var catCameBackNotice: some View {
-    if session.labs.isOn(LabExperiment.catCameBack) {
-      TimelineView(.everyMinute) { context in
-        if session.catReturn.isBack(now: context.date) {
-          CatCameBackRow(catName: session.play.catName)
-            .transition(.opacity)
-        }
-      }
-    }
   }
 
   @ViewBuilder private var lampColourCard: some View {
@@ -541,9 +534,7 @@ struct HomeView: View {
             onThisDayCard
             sundayPostCard
             sealedNoteCards
-            twoWispsCard
             lampColourCard
-            theirSkyCard
             nextVisitCard
             porchLightCard
           }
@@ -588,24 +579,8 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var theirSkyCard: some View {
-    if session.labs.isOn(LabExperiment.theirSky) {
-      TheirSkySection(store: session.lamp)
-    }
-  }
-
-  @ViewBuilder private var porchLightCard: some View {
-    if session.labs.isOn(LabExperiment.porchLight) {
-      PorchLightSection(store: session.porch)
-    }
-  }
-
-  @ViewBuilder private var twoWispsCard: some View {
-    if session.labs.isOn(LabExperiment.twoWisps) {
-      TwoWispsSection(hold: session.hold, catName: session.play.catName) {
-        session.holdChanged($0)
-      }
-    }
+  private var porchLightCard: some View {
+    PorchLightSection(store: session.porch)
   }
 
   @ViewBuilder private var sealedNoteCards: some View {
@@ -623,23 +598,6 @@ struct HomeView: View {
   @ViewBuilder private var todaysWordCard: some View {
     if session.labs.isOn(LabExperiment.todaysWord) {
       TodaysWordSection(notes: session.notes) { store.send(.canvasOpened) }
-    }
-  }
-
-  @ViewBuilder private var overnightStayNotice: some View {
-    if catAway {
-      let name = session.play.catName
-      ListRow(
-        OvernightStayCaption.title(catName: name),
-        subtitle: OvernightStayCaption.detail(catName: name)
-      ) {
-        EmptyView()
-      } trailing: {
-        EmptyView()
-      }
-      .card()
-      .transition(.opacity)
-      .accessibilityIdentifier("overnightStayNotice")
     }
   }
 
@@ -787,7 +745,6 @@ struct HomeView: View {
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
-      catAway: catAway,
       life: session.life.drive,
       lifeNeeds: session.life.state.needs,
       brain: session.brain.frame,
@@ -913,6 +870,12 @@ extension PetPlayState.Treat {
     case .fed: self = .fed
     }
   }
+}
+
+/// What the cat's nudge is planned from, so it is planned again when either changes.
+private struct NudgeInputs: Equatable {
+  let events: Int
+  let name: String?
 }
 
 /// What the streak is worked out from, so it is worked out again when either changes.
