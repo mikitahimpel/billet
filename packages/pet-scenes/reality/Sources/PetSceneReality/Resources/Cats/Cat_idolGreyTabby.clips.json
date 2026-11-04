@@ -44,8 +44,14 @@
  "groom": {
   "base": "sit",
   "loops": false,
-  "trimEnd": 99.6,
-  "trimStart": 98.6
+  "trimEnd": 46.3333,
+  "trimStart": 42.3333
+ },
+ "groomTail": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 98.2667,
+  "trimStart": 94.0667
  },
  "happy": {
   "base": "sit",
@@ -95,6 +101,13 @@
   "trimEnd": 99.6,
   "trimStart": 98.6
  },
+ "lieDown": {
+  "base": "stand",
+  "ends": "sleep",
+  "loops": false,
+  "trimEnd": 89.4,
+  "trimStart": 86.2
+ },
  "loaf": {
   "base": "loaf",
   "loops": true,
@@ -130,12 +143,6 @@
   "loops": false,
   "trimEnd": 68.4,
   "trimStart": 66.2
- },
- "rollOver": {
-  "base": "sit",
-  "loops": false,
-  "trimEnd": 62.0,
-  "trimStart": 58.0
  },
  "rubSide": {
   "base": "stand",
@@ -173,12 +180,6 @@
   "trimEnd": 70.9333,
   "trimStart": 68.7333
  },
- "startle": {
-  "base": "stand",
-  "loops": false,
-  "trimEnd": 101.3333,
-  "trimStart": 99.9333
- },
  "stretch": {
   "base": "stand",
   "loops": false,
@@ -194,8 +195,8 @@
  "twitch": {
   "base": "sleep",
   "loops": false,
-  "trimEnd": 57.6667,
-  "trimStart": 55.1667
+  "trimEnd": 16.0,
+  "trimStart": 10.0
  },
  "walk": {
   "base": "stand",
