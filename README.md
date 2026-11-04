@@ -9,7 +9,7 @@ Pre-alpha, under construction. There is no app code yet; the repository currentl
 and architecture only.
 
 The iOS app in `apps/ios` is Ilya's Nooki ([nexishq/nooki-ios](https://github.com/nexishq/nooki-ios)),
-used with his permission and shipped as Billet; see [NOTICE.md](NOTICE.md#the-ios-app). The first
+used with his permission and shipped under its own name, Nooki; see [NOTICE.md](NOTICE.md#the-ios-app). The first
 billet app is archived in `archive/ios-v1`.
 
 ## Stack

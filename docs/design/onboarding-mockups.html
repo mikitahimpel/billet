@@ -1,0 +1,2658 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Billet onboarding</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;600;700;800;900&display=swap"
+    />
+    <style>
+      :root {
+        --honey: #f2a65e;
+        --honey-deep: #d9784a;
+        --honey-light: #ffc27d;
+        --blush: #ff8fa3;
+        --heart: #ff5d73;
+        --hero-ink: #3a2114;
+        --sheet: #2a1a12;
+        --primary: rgba(255, 255, 255, 0.96);
+        --secondary: rgba(255, 255, 255, 0.72);
+        --tertiary: rgba(255, 255, 255, 0.5);
+        --hairline: rgba(255, 255, 255, 0.14);
+        --card: rgba(255, 255, 255, 0.08);
+        --round: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #140c07;
+        color: var(--primary);
+        font-family: var(--round);
+        padding: 56px 16px 80px;
+        -webkit-font-smoothing: antialiased;
+      }
+      .board {
+        max-width: 1440px;
+        margin: 0 auto;
+      }
+      .board > header {
+        display: flex;
+        gap: 48px;
+        align-items: flex-end;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-bottom: 56px;
+      }
+      .board > header h1 {
+        font-size: 56px;
+        line-height: 1;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+      }
+      .board > header p {
+        max-width: 520px;
+        font-size: 16px;
+        line-height: 23px;
+        color: rgba(255, 255, 255, 0.55);
+        font-weight: 600;
+      }
+      .flow {
+        margin-bottom: 72px;
+      }
+      .flow > h2 {
+        font-size: 15px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        color: var(--honey);
+        margin-bottom: 28px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px 32px;
+      }
+      figure {
+        width: 314px;
+      }
+      figcaption {
+        margin-top: 18px;
+        font-size: 13.5px;
+        line-height: 19px;
+        color: rgba(255, 255, 255, 0.5);
+        font-weight: 600;
+      }
+      figcaption b {
+        display: block;
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 15px;
+        font-weight: 800;
+        margin-bottom: 3px;
+      }
+      figcaption b span {
+        color: var(--honey);
+        margin-right: 6px;
+      }
+
+      /* ---------- Phone (402 × 874 pt, shown at 78%) ---------- */
+      .device {
+        zoom: 0.78;
+        width: 402px;
+        height: 874px;
+        border-radius: 62px;
+        padding: 6px;
+        background: linear-gradient(145deg, #3b302a, #17110d 40%, #2b231e);
+        box-shadow:
+          0 40px 80px rgba(0, 0, 0, 0.55),
+          0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+      .screen {
+        position: relative;
+        width: 390px;
+        height: 862px;
+        border-radius: 56px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        isolation: isolate;
+        background:
+          radial-gradient(60% 30% at 80% 18%, rgba(255, 190, 120, 0.22), transparent 70%),
+          radial-gradient(70% 40% at 20% 62%, rgba(255, 170, 100, 0.25), transparent 70%),
+          linear-gradient(180deg, #3e2616 0%, #6e4124 30%, #9a5f35 58%, #8a532d 78%, #4a2b18 100%);
+      }
+      .bokeh {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+      }
+      .bokeh i {
+        position: absolute;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 214, 160, 0.28), rgba(255, 214, 160, 0) 70%);
+      }
+      .island {
+        position: absolute;
+        top: 11px;
+        left: 50%;
+        translate: -50% 0;
+        width: 124px;
+        height: 36px;
+        border-radius: 20px;
+        background: #000;
+        z-index: 20;
+      }
+      .status {
+        height: 54px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 34px 0 46px;
+        font-family: -apple-system, "SF Pro Text", system-ui;
+        font-size: 17px;
+        font-weight: 600;
+        position: relative;
+        z-index: 10;
+      }
+      .status .icons {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .home-ind {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        translate: -50% 0;
+        width: 140px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.85);
+        z-index: 20;
+      }
+      .body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 8px 20px 34px;
+        min-height: 0;
+        position: relative;
+      }
+      .grow {
+        flex: 1;
+      }
+
+      /* ---------- Kit ---------- */
+      .glass {
+        background: var(--card);
+        border: 0.5px solid var(--hairline);
+        backdrop-filter: blur(24px) saturate(1.3);
+        -webkit-backdrop-filter: blur(24px) saturate(1.3);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 48px;
+        margin-bottom: 18px;
+      }
+      .round-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+      .progress {
+        flex: 1;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.14);
+        overflow: hidden;
+        margin-right: 58px;
+      }
+      .progress b {
+        display: block;
+        height: 100%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, #ffc27d, #d9784a);
+        box-shadow: 0 0 10px rgba(255, 170, 100, 0.6);
+      }
+
+      .mochi-says {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 10px;
+      }
+      .mochi-says .face {
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        flex: none;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 35%, #fff4e4, #f2c08a);
+        border: 2.5px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 6px 14px rgba(58, 33, 20, 0.35);
+      }
+      .mochi-says .face img {
+        width: 118%;
+        margin: 2px 0 0 -9%;
+      }
+      .mochi-says .bubble {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--hero-ink);
+        background: #fff6ea;
+        padding: 9px 14px;
+        border-radius: 18px 18px 18px 6px;
+        box-shadow: 0 6px 14px rgba(58, 33, 20, 0.25);
+        margin-bottom: 8px;
+      }
+
+      h1.title {
+        font-size: 32px;
+        line-height: 36px;
+        font-weight: 800;
+        letter-spacing: -0.6px;
+        text-wrap: balance;
+      }
+      p.sub {
+        font-size: 16px;
+        line-height: 22px;
+        font-weight: 600;
+        color: var(--secondary);
+        margin-top: 8px;
+        text-wrap: balance;
+      }
+
+      .cta {
+        height: 58px;
+        border-radius: 29px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 18px;
+        font-weight: 800;
+        color: #fff;
+        background: linear-gradient(135deg, #ffc27d, #d9784a);
+        box-shadow:
+          0 10px 22px rgba(217, 120, 74, 0.42),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        text-shadow: 0 1px 2px rgba(120, 50, 20, 0.25);
+      }
+      .cta.ghost {
+        background: rgba(255, 255, 255, 0.1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        border: 0.5px solid var(--hairline);
+        text-shadow: none;
+      }
+      .cta.apple {
+        background: #fff;
+        color: #000;
+        box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25);
+        text-shadow: none;
+        font-family: -apple-system, system-ui;
+        font-weight: 600;
+        font-size: 19px;
+      }
+      .cta.dim {
+        opacity: 0.45;
+        box-shadow: none;
+      }
+      .link {
+        text-align: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--secondary);
+        padding-top: 16px;
+        height: 36px;
+      }
+
+      /* glossy app-icon tiles (as on the Us tab) */
+      .tile {
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        flex: none;
+        position: relative;
+        box-shadow:
+          0 6px 14px rgba(40, 18, 8, 0.3),
+          inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+          inset 0 -2px 4px rgba(0, 0, 0, 0.12);
+      }
+      .tile::after {
+        content: "";
+        position: absolute;
+        inset: 2px 3px 50% 3px;
+        border-radius: 14px 14px 30px 30px;
+        background: linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0));
+      }
+      .tile svg {
+        width: 26px;
+        height: 26px;
+        position: relative;
+        z-index: 1;
+        filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+      }
+      .t-yellow {
+        background: linear-gradient(160deg, #ffe07a, #f4a92a);
+      }
+      .t-pink {
+        background: linear-gradient(160deg, #ffb0c8, #e9679a);
+      }
+      .t-coral {
+        background: linear-gradient(160deg, #ffb08e, #e8664e);
+      }
+      .t-blue {
+        background: linear-gradient(160deg, #a8c2ff, #5f80e2);
+      }
+      .t-green {
+        background: linear-gradient(160deg, #a9e58f, #4ea95e);
+      }
+      .t-violet {
+        background: linear-gradient(160deg, #d2b2ff, #8c66de);
+      }
+      .t-sm {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+      }
+      .t-sm svg {
+        width: 21px;
+        height: 21px;
+      }
+
+      .goal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .goal {
+        position: relative;
+        border-radius: 24px;
+        padding: 14px 14px 16px;
+        min-height: 132px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .goal b {
+        font-size: 16px;
+        line-height: 20px;
+        font-weight: 800;
+        display: block;
+        margin-top: 12px;
+      }
+      .goal.on {
+        background: linear-gradient(160deg, rgba(255, 200, 140, 0.3), rgba(217, 120, 74, 0.22));
+        border: 2px solid #ffc27d;
+        box-shadow:
+          0 0 0 4px rgba(255, 194, 125, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+      .check {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+      .on .check {
+        background: linear-gradient(135deg, #ffc27d, #d9784a);
+        border-color: #fff;
+        display: grid;
+        place-items: center;
+      }
+      .on .check::after {
+        content: "";
+        width: 10px;
+        height: 5px;
+        border-left: 2.5px solid #fff;
+        border-bottom: 2.5px solid #fff;
+        rotate: -45deg;
+        translate: 0 -1px;
+      }
+
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 76px;
+        border-radius: 24px;
+        padding: 0 18px 0 14px;
+        position: relative;
+      }
+      .choice b {
+        font-size: 18px;
+        font-weight: 800;
+        display: block;
+      }
+      .choice small {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--secondary);
+      }
+      .choice .check {
+        position: static;
+        margin-left: auto;
+      }
+      .choice.on {
+        background: linear-gradient(160deg, rgba(255, 200, 140, 0.3), rgba(217, 120, 74, 0.22));
+        border: 2px solid #ffc27d;
+        box-shadow: 0 0 0 4px rgba(255, 194, 125, 0.14);
+      }
+
+      /* wheel */
+      .wheel {
+        position: relative;
+        border-radius: 28px;
+        height: 236px;
+        overflow: hidden;
+        --fade: linear-gradient(transparent, #000 22%, #000 78%, transparent);
+        display: flex;
+        justify-content: center;
+        gap: 26px;
+      }
+      .wheel .band {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 50%;
+        height: 46px;
+        translate: 0 -50%;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .wheel .col {
+        -webkit-mask-image: var(--fade);
+        mask-image: var(--fade);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .wheel .col span {
+        height: 38px;
+        line-height: 38px;
+      }
+      .wheel .col .s3 {
+        opacity: 0.14;
+        transform: perspective(200px) rotateX(48deg) scale(0.86);
+      }
+      .wheel .col .s2 {
+        opacity: 0.3;
+        transform: perspective(200px) rotateX(32deg) scale(0.92);
+      }
+      .wheel .col .s1 {
+        opacity: 0.55;
+        transform: perspective(200px) rotateX(16deg) scale(0.97);
+      }
+      .wheel .col .s0 {
+        font-size: 25px;
+        font-weight: 800;
+        height: 46px;
+        line-height: 46px;
+      }
+
+      /* hero peach card (Us tab) */
+      .hero {
+        border-radius: 30px;
+        padding: 20px;
+        color: var(--hero-ink);
+        background: linear-gradient(135deg, #f9cf98 0%, #f0a970 55%, #e48a5c 100%);
+        box-shadow:
+          0 14px 30px rgba(120, 55, 20, 0.35),
+          inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .hero .num {
+        width: 104px;
+        height: 104px;
+        border-radius: 50%;
+        background: rgba(255, 240, 225, 0.6);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        flex: none;
+        margin-left: auto;
+      }
+      .hero .num b {
+        font-size: 34px;
+        line-height: 34px;
+        font-weight: 800;
+        display: block;
+        letter-spacing: -1px;
+      }
+      .hero .num span {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      /* text field and keyboard */
+      .field {
+        height: 64px;
+        border-radius: 22px;
+        padding: 0 20px;
+        display: flex;
+        align-items: center;
+        font-size: 24px;
+        font-weight: 800;
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid #ffc27d;
+        box-shadow: 0 0 0 4px rgba(255, 194, 125, 0.14);
+      }
+      .caret {
+        width: 2.5px;
+        height: 28px;
+        border-radius: 2px;
+        background: #ffc27d;
+        margin-left: 2px;
+      }
+      .kb {
+        margin: 0 -20px -34px;
+        padding: 8px 3px 44px;
+        background: rgba(40, 26, 18, 0.72);
+        backdrop-filter: blur(30px);
+        border-top: 0.5px solid rgba(255, 255, 255, 0.08);
+        font-family: -apple-system, system-ui;
+      }
+      .kb .sugg {
+        display: flex;
+        justify-content: space-around;
+        font-size: 16px;
+        color: var(--primary);
+        height: 36px;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+      .kb .sugg span + span {
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+        padding-left: 30px;
+      }
+      .kb .r {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 11px;
+      }
+      .kb .k {
+        width: 33px;
+        height: 44px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.28);
+        display: grid;
+        place-items: center;
+        font-size: 22px;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+      }
+      .kb .k.f {
+        background: rgba(255, 255, 255, 0.14);
+        width: 44px;
+        font-size: 15px;
+      }
+      .kb .k.sp {
+        width: 188px;
+        font-size: 15px;
+      }
+      .kb .k.go {
+        width: 88px;
+        background: linear-gradient(135deg, #ffc27d, #d9784a);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      /* monograms */
+      .mono {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 27px;
+        font-weight: 800;
+        color: #fff;
+        border: 3px solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 18px rgba(40, 18, 8, 0.35);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+      }
+      .mono.blue {
+        background: linear-gradient(135deg, #9dbbf5, #6c89d9);
+      }
+      .mono.pink {
+        background: linear-gradient(135deg, #f9b8cb, #e287a9);
+      }
+      .mono.empty {
+        background: rgba(255, 255, 255, 0.08);
+        border: 2.5px dashed rgba(255, 255, 255, 0.45);
+        box-shadow: none;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .heart-badge {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--blush);
+        border: 2.5px solid #fff;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .row-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-radius: 24px;
+        padding: 14px 16px 14px 14px;
+      }
+      .row-card b {
+        font-size: 16.5px;
+        font-weight: 800;
+        display: block;
+      }
+      .row-card small {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: var(--secondary);
+        line-height: 18px;
+        display: block;
+        margin-top: 1px;
+      }
+      .chev {
+        margin-left: auto;
+        opacity: 0.55;
+      }
+
+      .notif {
+        border-radius: 24px;
+        padding: 12px 14px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.18);
+        backdrop-filter: blur(30px);
+        border: 0.5px solid rgba(255, 255, 255, 0.18);
+        font-family: -apple-system, system-ui;
+      }
+      .notif .ai {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        flex: none;
+        background:
+          url(onboarding-assets/MochiPortrait.png) 50% 20%/130% no-repeat,
+          radial-gradient(#fff4e4, #f2c08a);
+      }
+      .notif .t {
+        flex: 1;
+        min-width: 0;
+      }
+      .notif b {
+        font-size: 15px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+      }
+      .notif b em {
+        font-style: normal;
+        font-weight: 400;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .notif span {
+        font-size: 14.5px;
+        line-height: 19px;
+        color: rgba(255, 255, 255, 0.88);
+        display: block;
+      }
+
+      .code {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      .code span {
+        width: 46px;
+        height: 60px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        font-weight: 800;
+        background: rgba(255, 255, 255, 0.1);
+        border: 0.5px solid var(--hairline);
+      }
+      .code span.cur {
+        border: 2px solid #ffc27d;
+        box-shadow: 0 0 0 4px rgba(255, 194, 125, 0.14);
+      }
+      .code i {
+        align-self: center;
+        width: 10px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.4);
+      }
+
+      .sheet {
+        margin: 0 -20px -34px;
+        padding: 26px 22px 44px;
+        border-radius: 40px 40px 0 0;
+        background: rgba(42, 26, 18, 0.82);
+        backdrop-filter: blur(30px);
+        border-top: 0.5px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 -20px 40px rgba(0, 0, 0, 0.25);
+      }
+      .grabber {
+        width: 38px;
+        height: 5px;
+        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.28);
+        margin: -14px auto 18px;
+      }
+      .seg {
+        display: flex;
+        padding: 4px;
+        border-radius: 24px;
+        flex: 1;
+        margin-right: 58px;
+      }
+      .seg span {
+        flex: 1;
+        height: 38px;
+        border-radius: 19px;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--secondary);
+      }
+      .seg span.on {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.2),
+          0 2px 8px rgba(40, 18, 8, 0.2);
+      }
+      .chip {
+        height: 34px;
+        padding: 0 13px;
+        border-radius: 17px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.12);
+        border: 0.5px solid var(--hairline);
+      }
+    </style>
+  </head>
+  <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <symbol id="back" viewBox="0 0 24 24">
+          <path
+            d="M15 5 8 12l7 7"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </symbol>
+        <symbol id="chev" viewBox="0 0 24 24">
+          <path
+            d="m9 5 7 7-7 7"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </symbol>
+        <symbol id="heart" viewBox="0 0 24 24">
+          <path
+            d="M12 21s-8.5-5.2-8.5-11.2A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 3.2C20.5 15.8 12 21 12 21Z"
+            fill="#fff"
+          />
+        </symbol>
+        <symbol id="g-globe" viewBox="0 0 24 24">
+          <g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3c2.8 2.6 2.8 15.4 0 18M12 3c-2.8 2.6-2.8 15.4 0 18" />
+          </g>
+        </symbol>
+        <symbol id="g-paw" viewBox="0 0 24 24">
+          <g fill="#fff">
+            <path
+              d="M12 11.5c3.3 0 6 3.4 6 6 0 2-1.7 2.8-3.2 2.4-1-.3-1.8-.7-2.8-.7s-1.8.4-2.8.7C7.7 20.3 6 19.5 6 17.5c0-2.6 2.7-6 6-6Z"
+            />
+            <ellipse cx="5" cy="10" rx="2.2" ry="2.7" />
+            <ellipse cx="9" cy="5.6" rx="2.2" ry="2.8" />
+            <ellipse cx="15" cy="5.6" rx="2.2" ry="2.8" />
+            <ellipse cx="19" cy="10" rx="2.2" ry="2.7" />
+          </g>
+        </symbol>
+        <symbol id="g-widget" viewBox="0 0 24 24">
+          <g fill="#fff">
+            <rect x="3" y="3" width="8" height="8" rx="2.4" />
+            <rect x="13" y="3" width="8" height="8" rx="2.4" opacity=".75" />
+            <rect x="3" y="13" width="18" height="8" rx="2.4" />
+          </g>
+        </symbol>
+        <symbol id="g-heart" viewBox="0 0 24 24">
+          <path
+            d="M12 21s-8.5-5.2-8.5-11.2A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 3.2C20.5 15.8 12 21 12 21Z"
+            fill="#fff"
+          />
+          <path
+            d="M8 9.5c.6-1.2 1.6-1.8 2.6-1.8"
+            stroke="#E9679A"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            fill="none"
+            opacity=".6"
+          />
+        </symbol>
+        <symbol id="g-pen" viewBox="0 0 24 24">
+          <g fill="#fff">
+            <path
+              d="M16.6 3.4a2.2 2.2 0 0 1 3.1 0l.9.9a2.2 2.2 0 0 1 0 3.1L9.4 18.6 4 20l1.4-5.4Z"
+            />
+          </g>
+          <path
+            d="M3 22c3-1.6 6-1.6 9 0s6 1.6 9 0"
+            stroke="#fff"
+            stroke-width="2"
+            fill="none"
+            stroke-linecap="round"
+            opacity=".7"
+          />
+        </symbol>
+        <symbol id="g-spark" viewBox="0 0 24 24">
+          <g fill="#fff">
+            <path
+              d="M10 2.5c.7 4.6 2.9 6.8 7.5 7.5-4.6.7-6.8 2.9-7.5 7.5-.7-4.6-2.9-6.8-7.5-7.5C7.1 9.3 9.3 7.1 10 2.5Z"
+            />
+            <path
+              d="M18.5 14c.3 2.2 1.3 3.2 3.5 3.5-2.2.3-3.2 1.3-3.5 3.5-.3-2.2-1.3-3.2-3.5-3.5 2.2-.3 3.2-1.3 3.5-3.5Z"
+              opacity=".85"
+            />
+          </g>
+        </symbol>
+        <symbol id="g-bell" viewBox="0 0 24 24">
+          <path
+            d="M12 3a6 6 0 0 0-6 6v3.5L4.3 15.6A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.4L18 12.5V9a6 6 0 0 0-6-6Zm-2.6 15.5a2.7 2.7 0 0 0 5.2 0Z"
+            fill="#fff"
+          />
+        </symbol>
+        <symbol id="g-lock" viewBox="0 0 24 24">
+          <path
+            d="M7 10V7.5a5 5 0 0 1 10 0V10h.5A2.5 2.5 0 0 1 20 12.5v6a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-6A2.5 2.5 0 0 1 6.5 10Zm2.5 0h5V7.5a2.5 2.5 0 0 0-5 0Z"
+            fill="#fff"
+          />
+        </symbol>
+        <symbol id="g-link" viewBox="0 0 24 24">
+          <g fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round">
+            <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" />
+            <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
+          </g>
+        </symbol>
+        <symbol id="g-copy" viewBox="0 0 24 24">
+          <g fill="none" stroke="#fff" stroke-width="2.2">
+            <rect x="8" y="8" width="12" height="12" rx="3" />
+            <path d="M16 5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16" />
+          </g>
+        </symbol>
+        <symbol id="apple" viewBox="0 0 17 20">
+          <path
+            d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9s-2-.9-3.4-.9C3.6 4.8 2 5.8 1.1 7.3-.7 10.4.6 15 2.4 17.5c.8 1.2 1.8 2.6 3.1 2.5 1.3 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.2-1.2 3-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.6-1-2.6-4.2ZM11.6 3.1c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"
+            fill="#000"
+          />
+        </symbol>
+        <symbol id="sig" viewBox="0 0 64 40">
+          <g fill="#fff">
+            <rect x="0" y="26" width="10" height="14" rx="2.5" />
+            <rect x="18" y="18" width="10" height="22" rx="2.5" />
+            <rect x="36" y="9" width="10" height="31" rx="2.5" />
+            <rect x="54" y="0" width="10" height="40" rx="2.5" />
+          </g>
+        </symbol>
+      </defs>
+    </svg>
+
+    <!-- reusable status bar -->
+    <template id="status"
+      ><div class="status">
+        <span>9:41</span
+        ><span class="icons"
+          ><svg width="18" height="12"><use href="#sig" /></svg
+          ><svg width="17" height="12" viewBox="0 0 17 12">
+            <path
+              d="M8.5 2.3c2.4 0 4.6.9 6.2 2.5l1.3-1.3A10.6 10.6 0 0 0 8.5.5 10.6 10.6 0 0 0 1 3.5l1.3 1.3a8.8 8.8 0 0 1 6.2-2.5Zm0 3.6c1.4 0 2.7.5 3.6 1.4l1.3-1.3a7 7 0 0 0-9.8 0l1.3 1.3c.9-.9 2.2-1.4 3.6-1.4Zm0 3.6c.5 0 .9.2 1.2.5L8.5 11.2 7.3 10c.3-.3.7-.5 1.2-.5Z"
+              fill="#fff"
+            /></svg
+          ><svg width="27" height="13" viewBox="0 0 27 13">
+            <rect
+              x=".5"
+              y=".5"
+              width="23"
+              height="12"
+              rx="3.8"
+              fill="none"
+              stroke="#fff"
+              stroke-opacity=".4"
+            />
+            <rect x="2" y="2" width="20" height="9" rx="2.5" fill="#fff" />
+            <path
+              d="M25 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2Z"
+              fill="#fff"
+              fill-opacity=".45"
+            /></svg
+        ></span></div
+    ></template>
+
+    <div class="board">
+      <header>
+        <h1>Onboarding</h1>
+        <p>
+          Nooki's look: caramel evening, Liquid Glass, glossy tiles from the Us tab and the honey
+          button. Mochi asks the questions. Answers stay on the phone until Sign in with Apple.
+        </p>
+      </header>
+
+      <section class="flow">
+        <h2>The one who invites</h2>
+        <div class="row">
+          <!-- 0 · Welcome -->
+          <figure>
+            <div class="device">
+              <div class="screen" style="background: #2a1a12">
+                <div class="island"></div>
+                <img
+                  src="onboarding-assets/room.jpg"
+                  alt=""
+                  style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 600px;
+                    object-fit: cover;
+                    object-position: 50% 40%;
+                    z-index: -1;
+                  "
+                />
+                <div
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    z-index: -1;
+                    background: linear-gradient(
+                      180deg,
+                      rgba(42, 26, 18, 0.55) 0%,
+                      rgba(42, 26, 18, 0) 18%,
+                      rgba(42, 26, 18, 0) 46%,
+                      rgba(42, 26, 18, 0.92) 64%,
+                      #2a1a12 72%
+                    );
+                  "
+                ></div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="grow"></div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px">
+                    <div
+                      class="tile t-pink t-sm"
+                      style="width: 34px; height: 34px; border-radius: 10px"
+                    >
+                      <svg style="width: 18px; height: 18px"><use href="#heart" /></svg>
+                    </div>
+                    <span style="font-size: 19px; font-weight: 800; letter-spacing: -0.2px"
+                      >Billet</span
+                    >
+                  </div>
+                  <h1 class="title" style="font-size: 38px; line-height: 42px">
+                    A cozy home<br />for the two of you
+                  </h1>
+                  <p class="sub">
+                    Raise Mochi together, leave little notes and stay close from anywhere.
+                  </p>
+                  <div style="height: 28px"></div>
+                  <div class="cta">Get started</div>
+                  <div class="link">I have an invite code</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>0</span>Welcome</b>Your real room, lit, with Mochi on the donut bed. «I have
+              an invite code» opens the partner's short path.
+            </figcaption>
+          </figure>
+
+          <!-- 1 · Age -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 180px; height: 180px; left: -60px; top: 520px"></i
+                  ><i style="width: 120px; height: 120px; right: -30px; top: 120px"></i
+                  ><i style="width: 70px; height: 70px; left: 220px; top: 700px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 16%"></b></div>
+                  </div>
+                  <div class="mochi-says">
+                    <div class="face"><img src="onboarding-assets/MochiPortrait.png" alt="" /></div>
+                    <div class="bubble">Hi, I'm Mochi! Let's get to know you.</div>
+                  </div>
+                  <h1 class="title">When were you born?</h1>
+                  <p class="sub">Billet is for 13 and up. Only you see this.</p>
+                  <div class="grow"></div>
+                  <div class="wheel glass">
+                    <div class="band"></div>
+                    <div class="col">
+                      <span class="s3">1995</span><span class="s2">1996</span
+                      ><span class="s1">1997</span><span class="s0">1998</span
+                      ><span class="s1">1999</span><span class="s2">2000</span
+                      ><span class="s3">2001</span>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Continue</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>1</span>Age</b>Year only. Under 13 gets a kind stop screen and no account.
+            </figcaption>
+          </figure>
+
+          <!-- 2 · Pronouns -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 200px; height: 200px; right: -80px; top: 560px"></i
+                  ><i style="width: 90px; height: 90px; left: 30px; top: 180px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 32%"></b></div>
+                  </div>
+                  <div class="mochi-says">
+                    <div class="face"><img src="onboarding-assets/MochiPortrait.png" alt="" /></div>
+                    <div class="bubble">So I tell your person right.</div>
+                  </div>
+                  <h1 class="title">How should we talk about you?</h1>
+                  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px">
+                    <div class="choice glass">
+                      <div class="tile t-pink t-sm">
+                        <svg><use href="#g-heart" /></svg>
+                      </div>
+                      <div><b>She / her</b><small>«She left you a note»</small></div>
+                      <span class="check"></span>
+                    </div>
+                    <div class="choice on">
+                      <div class="tile t-blue t-sm">
+                        <svg><use href="#g-heart" /></svg>
+                      </div>
+                      <div><b>He / him</b><small>«He left you a note»</small></div>
+                      <span class="check"></span>
+                    </div>
+                    <div class="choice glass">
+                      <div class="tile t-violet t-sm">
+                        <svg><use href="#g-heart" /></svg>
+                      </div>
+                      <div><b>They / them</b><small>«They left you a note»</small></div>
+                      <span class="check"></span>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Continue</div>
+                  <div class="link">Skip</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>2</span>Pronouns</b>Gender, asked by what it changes: how pushes and Mochi's
+              lines read. Skip means «they».
+            </figcaption>
+          </figure>
+
+          <!-- 3 · Name -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 140px; height: 140px; right: -40px; top: 200px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 48%"></b></div>
+                  </div>
+                  <h1 class="title">What does your person call you?</h1>
+                  <p class="sub">It goes on your notes and your side of the room.</p>
+                  <div class="field" style="margin-top: 22px">Lev<span class="caret"></span></div>
+                  <div style="display: flex; align-items: center; gap: 12px; margin-top: 16px">
+                    <div
+                      class="mono blue"
+                      style="width: 46px; height: 46px; font-size: 20px; border-width: 2.5px"
+                    >
+                      L
+                    </div>
+                    <span style="font-size: 14px; font-weight: 700; color: var(--secondary)"
+                      >This is you on the Home screen</span
+                    >
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta" style="margin-bottom: 12px">Continue</div>
+                  <div class="kb">
+                    <div class="sugg"><span>"Lev"</span><span>Leva</span><span>Levi</span></div>
+                    <div class="r">
+                      <span class="k">q</span><span class="k">w</span><span class="k">e</span
+                      ><span class="k">r</span><span class="k">t</span><span class="k">y</span
+                      ><span class="k">u</span><span class="k">i</span><span class="k">o</span
+                      ><span class="k">p</span>
+                    </div>
+                    <div class="r">
+                      <span class="k">a</span><span class="k">s</span><span class="k">d</span
+                      ><span class="k">f</span><span class="k">g</span><span class="k">h</span
+                      ><span class="k">j</span><span class="k">k</span><span class="k">l</span>
+                    </div>
+                    <div class="r">
+                      <span class="k f">⇧</span><span class="k">z</span><span class="k">x</span
+                      ><span class="k">c</span><span class="k">v</span><span class="k">b</span
+                      ><span class="k">n</span><span class="k">m</span><span class="k f">⌫</span>
+                    </div>
+                    <div class="r" style="margin-bottom: 0">
+                      <span class="k f">123</span><span class="k sp">space</span
+                      ><span class="k go">done</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>3</span>Name</b>A nickname. The monogram fills in as you type, in the blue
+              it'll wear on Home.
+            </figcaption>
+          </figure>
+
+          <!-- 4 · Goals -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 220px; height: 220px; left: -90px; top: 420px"></i
+                  ><i style="width: 80px; height: 80px; right: 20px; top: 110px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 64%"></b></div>
+                  </div>
+                  <h1 class="title" style="font-size: 29px; line-height: 33px">
+                    What do you want to do together?
+                  </h1>
+                  <p class="sub" style="margin-top: 6px">Pick all that fit.</p>
+                  <div class="goal-grid" style="margin-top: 18px">
+                    <div class="goal on">
+                      <div class="tile t-blue">
+                        <svg><use href="#g-globe" /></svg>
+                      </div>
+                      <span class="check"></span><b>Stay close at a distance</b>
+                    </div>
+                    <div class="goal on">
+                      <div class="tile t-coral">
+                        <svg><use href="#g-paw" /></svg>
+                      </div>
+                      <span class="check"></span><b>Raise a pet together</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-green">
+                        <svg><use href="#g-widget" /></svg>
+                      </div>
+                      <span class="check"></span><b>Use widgets</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-pink">
+                        <svg><use href="#g-heart" /></svg>
+                      </div>
+                      <span class="check"></span><b>Grow closer</b>
+                    </div>
+                    <div class="goal on">
+                      <div class="tile t-violet">
+                        <svg><use href="#g-pen" /></svg>
+                      </div>
+                      <span class="check"></span><b>Draw together</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-yellow">
+                        <svg><use href="#g-spark" /></svg>
+                      </div>
+                      <span class="check"></span><b>Just exploring</b>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Continue · 3 picked</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>4</span>Goals</b>Tiles in the Us tab's own glossy style. «Just exploring»
+              clears the rest. The picks decide the next screens and Home's order.
+            </figcaption>
+          </figure>
+
+          <!-- 5 · Together since -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 160px; height: 160px; right: -50px; top: 600px"></i
+                  ><i style="width: 110px; height: 110px; left: -30px; top: 240px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 80%"></b></div>
+                  </div>
+                  <h1 class="title">When did your story start?</h1>
+                  <p class="sub">Mochi will count your days and remember the big ones.</p>
+                  <div class="hero" style="margin-top: 22px">
+                    <div>
+                      <div style="font-size: 14px; font-weight: 700; opacity: 0.75">
+                        Together since
+                      </div>
+                      <div
+                        style="
+                          font-size: 22px;
+                          line-height: 27px;
+                          font-weight: 800;
+                          white-space: nowrap;
+                        "
+                      >
+                        14 March 2024
+                      </div>
+                      <div
+                        style="font-size: 13.5px; font-weight: 700; opacity: 0.75; margin-top: 2px"
+                      >
+                        Anniversary in 130 days
+                      </div>
+                    </div>
+                    <div class="num" style="width: 88px; height: 88px">
+                      <div>
+                        <b style="font-size: 27px; line-height: 28px">964</b><span>days</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="wheel glass" style="gap: 34px">
+                    <div class="band"></div>
+                    <div class="col">
+                      <span class="s3">11</span><span class="s2">12</span><span class="s1">13</span
+                      ><span class="s0">14</span><span class="s1">15</span><span class="s2">16</span
+                      ><span class="s3">17</span>
+                    </div>
+                    <div class="col" style="width: 120px">
+                      <span class="s3">December</span><span class="s2">January</span
+                      ><span class="s1">February</span><span class="s0">March</span
+                      ><span class="s1">April</span><span class="s2">May</span
+                      ><span class="s3">June</span>
+                    </div>
+                    <div class="col">
+                      <span class="s3">2021</span><span class="s2">2022</span
+                      ><span class="s1">2023</span><span class="s0">2024</span
+                      ><span class="s1">2025</span><span class="s2">2026</span
+                      ><span class="s3">2027</span>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Continue</div>
+                  <div class="link">Add it later</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>5</span>Together since</b>The Us tab's peach hero card, updating live from
+              the wheel. It feeds Day N, anniversaries and the widget.
+            </figcaption>
+          </figure>
+
+          <!-- 6 · Your home -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 200px; height: 200px; left: -80px; top: 640px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 100%"></b></div>
+                  </div>
+                  <h1 class="title">Your home is ready, Lev</h1>
+                  <p class="sub">Made for what you picked.</p>
+                  <div
+                    style="
+                      margin-top: 18px;
+                      height: 200px;
+                      border-radius: 30px;
+                      overflow: hidden;
+                      position: relative;
+                      box-shadow: 0 14px 30px rgba(40, 18, 8, 0.4);
+                    "
+                  >
+                    <img
+                      src="onboarding-assets/room.jpg"
+                      alt=""
+                      style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 62%"
+                    />
+                    <div style="position: absolute; left: 12px; bottom: 12px" class="chip glass">
+                      Mochi is waiting for you both
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px">
+                    <div class="row-card glass">
+                      <div class="tile t-blue t-sm">
+                        <svg><use href="#g-globe" /></svg>
+                      </div>
+                      <div>
+                        <b>Their time, always in view</b
+                        ><small>See when it's night where they are</small>
+                      </div>
+                    </div>
+                    <div class="row-card glass">
+                      <div class="tile t-coral t-sm">
+                        <svg><use href="#g-paw" /></svg>
+                      </div>
+                      <div>
+                        <b>Mochi, raised by two</b><small>Feed and play from either phone</small>
+                      </div>
+                    </div>
+                    <div class="row-card glass">
+                      <div class="tile t-violet t-sm">
+                        <svg><use href="#g-pen" /></svg>
+                      </div>
+                      <div>
+                        <b>Drawings on the wall</b
+                        ><small>Doodle a note, it lands in their room</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Invite my person</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>6</span>Your home</b>The payoff before any ask. One row per goal picked,
+              using the same tiles, so the choice feels heard.
+            </figcaption>
+          </figure>
+
+          <!-- 7 · Sign in -->
+          <figure>
+            <div class="device">
+              <div class="screen" style="background: #2a1a12">
+                <div class="island"></div>
+                <img
+                  src="onboarding-assets/room.jpg"
+                  alt=""
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    filter: blur(3px) brightness(0.85);
+                    transform: scale(1.05);
+                    z-index: -1;
+                  "
+                />
+                <div class="status"></div>
+                <div class="body">
+                  <div class="grow"></div>
+                  <div class="sheet">
+                    <div class="grabber"></div>
+                    <div
+                      class="tile t-yellow"
+                      style="width: 60px; height: 60px; border-radius: 18px; margin: 0 auto"
+                    >
+                      <svg style="width: 30px; height: 30px"><use href="#g-lock" /></svg>
+                    </div>
+                    <h1
+                      class="title"
+                      style="
+                        text-align: center;
+                        margin-top: 16px;
+                        font-size: 28px;
+                        line-height: 32px;
+                      "
+                    >
+                      Keep your home safe
+                    </h1>
+                    <p class="sub" style="text-align: center">
+                      So Mochi and your notes come with you to a new phone.
+                    </p>
+                    <div
+                      style="
+                        display: flex;
+                        gap: 8px;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                        margin-top: 18px;
+                      "
+                    >
+                      <span class="chip"
+                        ><span
+                          class="mono blue"
+                          style="
+                            width: 20px;
+                            height: 20px;
+                            font-size: 10px;
+                            border-width: 1.5px;
+                            box-shadow: none;
+                          "
+                          >L</span
+                        >Lev</span
+                      >
+                      <span class="chip">964 days</span>
+                      <span class="chip">3 goals</span>
+                    </div>
+                    <div class="cta apple" style="margin-top: 24px">
+                      <svg width="17" height="20"><use href="#apple" /></svg>Sign in with Apple
+                    </div>
+                    <div class="link">Not now</div>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>7</span>Sign in with Apple</b>Optional. The account already exists, made
+              silently and anonymously at launch; this links it so it survives a new phone. «Not
+              now» moves on and the Us row stays.
+            </figcaption>
+          </figure>
+
+          <!-- 8 · Invite -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i
+                    style="
+                      width: 240px;
+                      height: 240px;
+                      left: 70px;
+                      top: 150px;
+                      background: radial-gradient(
+                        circle,
+                        rgba(255, 160, 170, 0.3),
+                        transparent 70%
+                      );
+                    "
+                  ></i
+                  ><i style="width: 100px; height: 100px; right: -20px; top: 620px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="seg glass">
+                      <span class="on">Invite</span><span>Enter code</span>
+                    </div>
+                  </div>
+                  <div class="grow" style="flex: 0.6"></div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      gap: 0;
+                      position: relative;
+                    "
+                  >
+                    <div
+                      class="mono blue"
+                      style="width: 96px; height: 96px; font-size: 40px; border-width: 4px"
+                    >
+                      L
+                    </div>
+                    <div
+                      class="heart-badge"
+                      style="
+                        width: 40px;
+                        height: 40px;
+                        margin: 0 -8px;
+                        z-index: 2;
+                        border-width: 3px;
+                      "
+                    >
+                      <svg width="20" height="20"><use href="#heart" /></svg>
+                    </div>
+                    <div class="mono empty" style="width: 96px; height: 96px; font-size: 40px">
+                      ?
+                    </div>
+                  </div>
+                  <h1 class="title" style="text-align: center; margin-top: 28px">
+                    Invite your person
+                  </h1>
+                  <p class="sub" style="text-align: center">
+                    Mochi needs two to call it home. Send them your link or code.
+                  </p>
+                  <div
+                    class="glass"
+                    style="border-radius: 26px; padding: 18px; margin-top: 24px; text-align: center"
+                  >
+                    <div
+                      style="
+                        font-size: 13px;
+                        font-weight: 800;
+                        letter-spacing: 1px;
+                        text-transform: uppercase;
+                        color: var(--tertiary);
+                      "
+                    >
+                      Your code
+                    </div>
+                    <div
+                      style="
+                        font-size: 33px;
+                        font-weight: 800;
+                        letter-spacing: 3px;
+                        margin-top: 6px;
+                        font-variant-numeric: tabular-nums;
+                        white-space: nowrap;
+                      "
+                    >
+                      K7QM4 R2XHP
+                    </div>
+                    <div
+                      style="
+                        display: inline-flex;
+                        gap: 6px;
+                        align-items: center;
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: var(--honey-light);
+                        margin-top: 6px;
+                      "
+                    >
+                      <svg width="16" height="16"><use href="#g-copy" /></svg>Tap to copy · works
+                      for 24 hours
+                    </div>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      justify-content: center;
+                      margin-top: 16px;
+                      font-size: 14px;
+                      font-weight: 700;
+                      color: var(--secondary);
+                    "
+                  >
+                    <span
+                      style="
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: #8fe39a;
+                        box-shadow: 0 0 8px #8fe39a;
+                      "
+                    ></span
+                    >Waiting for them to join…
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">
+                    <svg width="20" height="20"><use href="#g-link" /></svg>Share invite link
+                  </div>
+                  <div class="link">I'll invite them later</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>8</span>Invite</b>«Invite / Enter code» on top: whoever opens the app first
+              can still join instead. Your monogram and an empty seat. When they join, the «?» turns
+              into their pink monogram with a pop. «Later» lets you in alone.
+            </figcaption>
+          </figure>
+
+          <!-- 8b · Enter code -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i
+                    style="
+                      width: 240px;
+                      height: 240px;
+                      left: 70px;
+                      top: 150px;
+                      background: radial-gradient(
+                        circle,
+                        rgba(255, 160, 170, 0.3),
+                        transparent 70%
+                      );
+                    "
+                  ></i
+                  ><i style="width: 100px; height: 100px; left: -20px; top: 620px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="seg glass">
+                      <span>Invite</span><span class="on">Enter code</span>
+                    </div>
+                  </div>
+                  <div class="grow" style="flex: 0.6"></div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      position: relative;
+                    "
+                  >
+                    <div class="mono empty" style="width: 96px; height: 96px; font-size: 40px">
+                      ?
+                    </div>
+                    <div
+                      class="heart-badge"
+                      style="
+                        width: 40px;
+                        height: 40px;
+                        margin: 0 -8px;
+                        z-index: 2;
+                        border-width: 3px;
+                      "
+                    >
+                      <svg width="20" height="20"><use href="#heart" /></svg>
+                    </div>
+                    <div
+                      class="mono blue"
+                      style="width: 96px; height: 96px; font-size: 40px; border-width: 4px"
+                    >
+                      L
+                    </div>
+                  </div>
+                  <h1 class="title" style="text-align: center; margin-top: 28px">
+                    Join your person
+                  </h1>
+                  <p class="sub" style="text-align: center">
+                    Type the code from their screen or their message.
+                  </p>
+                  <div
+                    class="field"
+                    style="
+                      margin-top: 26px;
+                      justify-content: center;
+                      letter-spacing: 4px;
+                      font-size: 26px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                  >
+                    K7QM4<span style="width: 14px"></span>R2X<span class="caret"></span
+                    ><span style="color: rgba(255, 255, 255, 0.28)">··</span>
+                  </div>
+                  <div
+                    style="
+                      text-align: center;
+                      font-size: 13px;
+                      font-weight: 700;
+                      color: var(--tertiary);
+                      margin-top: 8px;
+                    "
+                  >
+                    10 letters and digits · no 0, O, 1 or I
+                  </div>
+                  <div style="text-align: center; margin-top: 18px">
+                    <span class="chip glass" style="color: var(--honey-light)"
+                      ><svg width="15" height="15"><use href="#g-copy" /></svg>Paste
+                      K7QM4-R2XHP</span
+                    >
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta dim">Join</div>
+                  <div class="link">A wrong code says so here, under the field</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>8b</span>Enter code</b>The other tab. Your monogram moves to their side, the
+              empty seat is the inviter. Paste appears when the clipboard holds a code-shaped
+              string; a good code joins at once.
+            </figcaption>
+          </figure>
+
+          <!-- 9 · Notifications -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 200px; height: 200px; right: -70px; top: 300px"></i
+                  ><i style="width: 120px; height: 120px; left: -40px; top: 620px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div style="height: 48px"></div>
+                  <div
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 8px;
+                      margin-top: 24px;
+                      transform: rotate(-1.5deg);
+                    "
+                  >
+                    <div class="notif">
+                      <span class="ai"></span>
+                      <div class="t">
+                        <b>Billet <em>now</em></b
+                        ><span>Masha drew you something 💌</span>
+                      </div>
+                    </div>
+                    <div class="notif" style="margin: 0 10px; opacity: 0.85">
+                      <span class="ai"></span>
+                      <div class="t">
+                        <b>Billet <em>2h ago</em></b
+                        ><span>Mochi is hungry. Masha's on it</span>
+                      </div>
+                    </div>
+                    <div class="notif" style="margin: 0 20px; opacity: 0.6">
+                      <span class="ai"></span>
+                      <div class="t">
+                        <b>Billet <em>Tue</em></b
+                        ><span>Day 1,000 together tomorrow ✨</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div
+                    class="tile t-coral"
+                    style="width: 60px; height: 60px; border-radius: 18px; margin: 0 auto"
+                  >
+                    <svg style="width: 30px; height: 30px"><use href="#g-bell" /></svg>
+                  </div>
+                  <h1 class="title" style="text-align: center; margin-top: 16px">
+                    Don't miss a note
+                  </h1>
+                  <p class="sub" style="text-align: center">
+                    Only when your person or Mochi needs you. Never ads.
+                  </p>
+                  <div class="grow"></div>
+                  <div class="cta">Turn on notifications</div>
+                  <div class="link">Not now</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>9</span>Notifications</b>Real-looking pushes in the person's own name, then
+              the system prompt. Asked after pairing, or right away on the «later» path.
+            </figcaption>
+          </figure>
+
+          <!-- 10 · Cat -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i
+                    style="
+                      width: 300px;
+                      height: 300px;
+                      left: 45px;
+                      top: 180px;
+                      background: radial-gradient(
+                        circle,
+                        rgba(255, 220, 170, 0.4),
+                        transparent 68%
+                      );
+                    "
+                  ></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      height: 48px;
+                    "
+                  >
+                    <div style="display: flex">
+                      <div
+                        class="mono blue"
+                        style="width: 40px; height: 40px; font-size: 17px; border-width: 2px"
+                      >
+                        L
+                      </div>
+                      <div
+                        class="mono pink"
+                        style="
+                          width: 40px;
+                          height: 40px;
+                          font-size: 17px;
+                          border-width: 2px;
+                          margin-left: -10px;
+                        "
+                      >
+                        M
+                      </div>
+                    </div>
+                    <span class="chip glass"
+                      ><span
+                        style="width: 7px; height: 7px; border-radius: 50%; background: #8fe39a"
+                      ></span
+                      >Masha is choosing too</span
+                    >
+                  </div>
+                  <h1 class="title" style="text-align: center; margin-top: 14px">
+                    Choose your cat
+                  </h1>
+                  <p class="sub" style="text-align: center">
+                    Pick the same one, then hold together.
+                  </p>
+                  <div style="position: relative; height: 330px; margin: 12px -20px 0">
+                    <img
+                      src="onboarding-assets/MochiPortrait.png"
+                      alt=""
+                      style="
+                        position: absolute;
+                        width: 150px;
+                        left: -40px;
+                        top: 90px;
+                        filter: sepia(0.9) saturate(2.6) hue-rotate(-12deg) brightness(0.95)
+                          blur(0.5px);
+                        opacity: 0.55;
+                      "
+                    />
+                    <img
+                      src="onboarding-assets/MochiPortrait.png"
+                      alt=""
+                      style="
+                        position: absolute;
+                        width: 150px;
+                        right: -40px;
+                        top: 90px;
+                        filter: brightness(0.38) contrast(1.2) blur(0.5px);
+                        opacity: 0.6;
+                      "
+                    />
+                    <div
+                      style="
+                        position: absolute;
+                        left: 50%;
+                        top: 268px;
+                        translate: -50% 0;
+                        width: 200px;
+                        height: 30px;
+                        border-radius: 50%;
+                        background: radial-gradient(rgba(40, 18, 8, 0.45), transparent 70%);
+                      "
+                    ></div>
+                    <img
+                      src="onboarding-assets/MochiPortrait.png"
+                      alt=""
+                      style="
+                        position: absolute;
+                        width: 250px;
+                        left: 50%;
+                        top: 20px;
+                        translate: -50% 0;
+                        filter: drop-shadow(0 12px 18px rgba(40, 18, 8, 0.35));
+                      "
+                    />
+                    <div
+                      class="heart-badge"
+                      style="position: absolute; left: calc(50% + 62px); top: 28px"
+                    >
+                      <svg width="15" height="15"><use href="#heart" /></svg>
+                    </div>
+                    <div
+                      class="mono pink"
+                      style="
+                        position: absolute;
+                        left: calc(50% - 96px);
+                        top: 30px;
+                        width: 34px;
+                        height: 34px;
+                        font-size: 15px;
+                        border-width: 2px;
+                      "
+                    >
+                      M
+                    </div>
+                  </div>
+                  <div style="text-align: center">
+                    <div style="font-size: 24px; font-weight: 800">Tabby</div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--secondary)">
+                      You both picked this one
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 6px; justify-content: center; margin-top: 12px">
+                    <i
+                      style="
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.3);
+                      "
+                    ></i
+                    ><i style="width: 20px; height: 7px; border-radius: 4px; background: #fff"></i
+                    ><i
+                      style="
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.3);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.3);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        width: 7px;
+                        height: 7px;
+                        border-radius: 4px;
+                        background: rgba(255, 255, 255, 0.3);
+                      "
+                    ></i>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta" style="position: relative; overflow: hidden">
+                    <span
+                      style="
+                        position: absolute;
+                        inset: 0 38% 0 0;
+                        background: rgba(255, 255, 255, 0.22);
+                      "
+                    ></span
+                    ><span style="position: relative">Hold to adopt</span>
+                  </div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>10</span>The cat</b>Ginger, black, grey and the rest as a carousel. Masha's
+              «M» marks her pick live; the button fills while both hold.
+            </figcaption>
+          </figure>
+
+          <!-- 10b · Name the cat -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i
+                    style="
+                      width: 300px;
+                      height: 300px;
+                      left: 45px;
+                      top: 120px;
+                      background: radial-gradient(
+                        circle,
+                        rgba(255, 220, 170, 0.45),
+                        transparent 68%
+                      );
+                    "
+                  ></i
+                  ><i style="width: 90px; height: 90px; right: -20px; top: 640px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      height: 48px;
+                    "
+                  >
+                    <div style="display: flex">
+                      <div
+                        class="mono blue"
+                        style="width: 40px; height: 40px; font-size: 17px; border-width: 2px"
+                      >
+                        L
+                      </div>
+                      <div
+                        class="mono pink"
+                        style="
+                          width: 40px;
+                          height: 40px;
+                          font-size: 17px;
+                          border-width: 2px;
+                          margin-left: -10px;
+                        "
+                      >
+                        M
+                      </div>
+                    </div>
+                    <span class="chip glass"
+                      ><span
+                        style="width: 7px; height: 7px; border-radius: 50%; background: #ff8fa3"
+                      ></span
+                      >Masha is typing…</span
+                    >
+                  </div>
+                  <div style="position: relative; height: 250px; margin-top: 4px">
+                    <div
+                      style="
+                        position: absolute;
+                        left: 50%;
+                        top: 206px;
+                        translate: -50% 0;
+                        width: 180px;
+                        height: 26px;
+                        border-radius: 50%;
+                        background: radial-gradient(rgba(40, 18, 8, 0.45), transparent 70%);
+                      "
+                    ></div>
+                    <img
+                      src="onboarding-assets/MochiPortrait.png"
+                      alt=""
+                      style="
+                        position: absolute;
+                        width: 220px;
+                        left: 50%;
+                        top: 0;
+                        translate: -50% 0;
+                        filter: drop-shadow(0 12px 18px rgba(40, 18, 8, 0.35));
+                      "
+                    />
+                    <div
+                      class="heart-badge"
+                      style="
+                        position: absolute;
+                        left: calc(50% + 70px);
+                        top: 14px;
+                        width: 36px;
+                        height: 36px;
+                      "
+                    >
+                      <svg width="17" height="17"><use href="#heart" /></svg>
+                    </div>
+                  </div>
+                  <h1 class="title" style="text-align: center; margin-top: 6px">
+                    They're yours! Name them
+                  </h1>
+                  <p class="sub" style="text-align: center">
+                    Either of you can name them. You'll both see it change.
+                  </p>
+                  <div class="field" style="margin-top: 18px; justify-content: center">
+                    Biscuit<span class="caret"></span>
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      gap: 8px;
+                      justify-content: center;
+                      flex-wrap: wrap;
+                      margin-top: 12px;
+                    "
+                  >
+                    <span class="chip glass">Mochi</span><span class="chip glass">Tofu</span
+                    ><span class="chip glass">Pumpkin</span
+                    ><span class="chip glass"
+                      ><svg width="14" height="14"><use href="#g-spark" /></svg>Surprise me</span
+                    >
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Take Biscuit home</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>10b</span>Name the cat</b>Right after adoption. The field is shared live (the
+              last edit wins), chips fill it in one tap, and the button says the name. Max 20
+              characters, can't be empty.
+            </figcaption>
+          </figure>
+
+          <!-- 11 · Widget -->
+          <figure>
+            <div class="device">
+              <div
+                class="screen"
+                style="background: linear-gradient(160deg, #c9a27e, #7a5236 50%, #3b2416)"
+              >
+                <div class="island"></div>
+                <div class="status"></div>
+                <div class="body" style="padding-top: 18px">
+                  <div
+                    style="
+                      border-radius: 26px;
+                      overflow: hidden;
+                      height: 172px;
+                      position: relative;
+                      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+                      outline: 3px solid rgba(255, 194, 125, 0.9);
+                      outline-offset: 4px;
+                    "
+                  >
+                    <img
+                      src="onboarding-assets/room.jpg"
+                      alt=""
+                      style="width: 100%; height: 100%; object-fit: cover; object-position: 50% 58%"
+                    />
+                    <div
+                      style="
+                        position: absolute;
+                        inset: 0;
+                        background: linear-gradient(
+                          90deg,
+                          rgba(42, 26, 18, 0.75),
+                          rgba(42, 26, 18, 0) 55%
+                        );
+                      "
+                    ></div>
+                    <div style="position: absolute; left: 16px; top: 16px">
+                      <div style="display: flex">
+                        <div
+                          class="mono blue"
+                          style="width: 30px; height: 30px; font-size: 13px; border-width: 2px"
+                        >
+                          L
+                        </div>
+                        <div
+                          class="mono pink"
+                          style="
+                            width: 30px;
+                            height: 30px;
+                            font-size: 13px;
+                            border-width: 2px;
+                            margin-left: -8px;
+                          "
+                        >
+                          M
+                        </div>
+                      </div>
+                      <div
+                        style="
+                          font-size: 28px;
+                          font-weight: 800;
+                          margin-top: 10px;
+                          line-height: 28px;
+                        "
+                      >
+                        Day 964
+                      </div>
+                      <div
+                        style="
+                          font-size: 13px;
+                          font-weight: 700;
+                          color: var(--secondary);
+                          margin-top: 4px;
+                        "
+                      >
+                        Masha: «miss you ♡»
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    style="
+                      display: grid;
+                      grid-template-columns: repeat(4, 1fr);
+                      gap: 22px 18px;
+                      margin: 28px 8px 0;
+                      opacity: 0.5;
+                    "
+                  >
+                    <i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i
+                    ><i
+                      style="
+                        aspect-ratio: 1;
+                        border-radius: 16px;
+                        background: rgba(255, 255, 255, 0.35);
+                      "
+                    ></i>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="sheet" style="padding-top: 28px">
+                    <h1 class="title" style="font-size: 27px; line-height: 31px">
+                      Keep them on your Home Screen
+                    </h1>
+                    <div
+                      style="
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        margin-top: 16px;
+                        font-size: 15.5px;
+                        font-weight: 700;
+                      "
+                    >
+                      <div style="display: flex; gap: 12px; align-items: center">
+                        <span
+                          class="tile t-sm t-green"
+                          style="
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 9px;
+                            font-size: 14px;
+                            font-weight: 800;
+                          "
+                          >1</span
+                        >Touch and hold the Home Screen
+                      </div>
+                      <div style="display: flex; gap: 12px; align-items: center">
+                        <span
+                          class="tile t-sm t-green"
+                          style="
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 9px;
+                            font-size: 14px;
+                            font-weight: 800;
+                          "
+                          >2</span
+                        >Tap Edit, then Add Widget
+                      </div>
+                      <div style="display: flex; gap: 12px; align-items: center">
+                        <span
+                          class="tile t-sm t-green"
+                          style="
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 9px;
+                            font-size: 14px;
+                            font-weight: 800;
+                          "
+                          >3</span
+                        >Find Billet, pick the wide one
+                      </div>
+                    </div>
+                    <div class="cta" style="margin-top: 22px">Got it</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>11</span>Widget</b>A live preview of the real widget on a home screen, then
+              three steps. Shown to those who picked widgets or distance.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="flow">
+        <h2>The one who was invited</h2>
+        <div class="row">
+          <!-- J1 · Code -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 180px; height: 180px; right: -60px; top: 160px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                  </div>
+                  <h1 class="title">Enter your invite code</h1>
+                  <p class="sub">It's in the message your person sent, or on their screen.</p>
+                  <div
+                    class="field"
+                    style="
+                      margin-top: 30px;
+                      justify-content: center;
+                      letter-spacing: 4px;
+                      font-size: 26px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                  >
+                    K7QM4<span style="width: 14px"></span>R2X<span class="caret"></span
+                    ><span style="color: rgba(255, 255, 255, 0.28)">··</span>
+                  </div>
+                  <div
+                    style="
+                      text-align: center;
+                      font-size: 13px;
+                      font-weight: 700;
+                      color: var(--tertiary);
+                      margin-top: 8px;
+                    "
+                  >
+                    10 letters and digits · no 0, O, 1 or I
+                  </div>
+                  <div class="link" style="text-align: left; padding-top: 18px">
+                    Opened from their link? It's filled in for you.
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta dim" style="margin-bottom: 12px">Join</div>
+                  <div class="kb">
+                    <div class="sugg"><span>K7QM4-R2XHP</span><span>From Messages</span></div>
+                    <div class="r">
+                      <span class="k">q</span><span class="k">w</span><span class="k">e</span
+                      ><span class="k">r</span><span class="k">t</span><span class="k">y</span
+                      ><span class="k">u</span><span class="k">i</span><span class="k">o</span
+                      ><span class="k">p</span>
+                    </div>
+                    <div class="r">
+                      <span class="k">a</span><span class="k">s</span><span class="k">d</span
+                      ><span class="k">f</span><span class="k">g</span><span class="k">h</span
+                      ><span class="k">j</span><span class="k">k</span><span class="k">l</span>
+                    </div>
+                    <div class="r">
+                      <span class="k f">⇧</span><span class="k">z</span><span class="k">x</span
+                      ><span class="k">c</span><span class="k">v</span><span class="k">b</span
+                      ><span class="k">n</span><span class="k">m</span><span class="k f">⌫</span>
+                    </div>
+                    <div class="r" style="margin-bottom: 0">
+                      <span class="k f">123</span><span class="k sp">space</span
+                      ><span class="k go">done</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>J1</span>Code first</b>From «I have an invite code» or the link. Then age,
+              pronouns and name, the same screens 1–3.
+            </figcaption>
+          </figure>
+
+          <!-- J2 · Their goals -->
+          <figure>
+            <div class="device">
+              <div class="screen">
+                <div class="island"></div>
+                <div class="bokeh">
+                  <i style="width: 200px; height: 200px; left: -70px; top: 520px"></i>
+                </div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="nav">
+                    <div class="round-btn glass">
+                      <svg width="22" height="22"><use href="#back" /></svg>
+                    </div>
+                    <div class="progress"><b style="width: 80%"></b></div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 12px">
+                    <div
+                      class="mono blue"
+                      style="width: 52px; height: 52px; font-size: 22px; border-width: 2.5px"
+                    >
+                      L
+                    </div>
+                    <h1 class="title" style="font-size: 27px; line-height: 31px">
+                      Lev wants to do this with you
+                    </h1>
+                  </div>
+                  <p class="sub">Add anything that's yours too.</p>
+                  <div class="goal-grid" style="margin-top: 18px">
+                    <div class="goal on">
+                      <div class="tile t-blue">
+                        <svg><use href="#g-globe" /></svg>
+                      </div>
+                      <span class="check"></span><b>Stay close at a distance</b>
+                    </div>
+                    <div class="goal on">
+                      <div class="tile t-coral">
+                        <svg><use href="#g-paw" /></svg>
+                      </div>
+                      <span class="check"></span><b>Raise a pet together</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-green">
+                        <svg><use href="#g-widget" /></svg>
+                      </div>
+                      <span class="check"></span><b>Use widgets</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-pink">
+                        <svg><use href="#g-heart" /></svg>
+                      </div>
+                      <span class="check"></span><b>Grow closer</b>
+                    </div>
+                    <div class="goal on">
+                      <div class="tile t-violet">
+                        <svg><use href="#g-pen" /></svg>
+                      </div>
+                      <span class="check"></span><b>Draw together</b>
+                    </div>
+                    <div class="goal glass">
+                      <div class="tile t-yellow">
+                        <svg><use href="#g-spark" /></svg>
+                      </div>
+                      <span class="check"></span><b>Just exploring</b>
+                    </div>
+                  </div>
+                  <div class="grow"></div>
+                  <div class="cta">Sounds good</div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>J2</span>Their goals</b>Lev's picks come pre-checked. No «together since»:
+              the date comes from the inviter.
+            </figcaption>
+          </figure>
+
+          <!-- J3 · Joined -->
+          <figure>
+            <div class="device">
+              <div class="screen" style="background: #2a1a12">
+                <div class="island"></div>
+                <img
+                  src="onboarding-assets/room.jpg"
+                  alt=""
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    z-index: -1;
+                  "
+                />
+                <div
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    z-index: -1;
+                    background: linear-gradient(
+                      180deg,
+                      rgba(42, 26, 18, 0.5) 0%,
+                      rgba(42, 26, 18, 0) 14%,
+                      rgba(42, 26, 18, 0) 40%,
+                      rgba(42, 26, 18, 0.9) 60%,
+                      #2a1a12 70%
+                    );
+                  "
+                ></div>
+                <div class="status"></div>
+                <div class="body">
+                  <div class="grow"></div>
+                  <div style="display: flex; align-items: center; justify-content: center">
+                    <div
+                      class="mono blue"
+                      style="width: 100px; height: 100px; font-size: 42px; border-width: 4px"
+                    >
+                      L
+                    </div>
+                    <div
+                      class="heart-badge"
+                      style="
+                        width: 44px;
+                        height: 44px;
+                        margin: 0 -10px;
+                        z-index: 2;
+                        border-width: 3px;
+                      "
+                    >
+                      <svg width="22" height="22"><use href="#heart" /></svg>
+                    </div>
+                    <div
+                      class="mono pink"
+                      style="width: 100px; height: 100px; font-size: 42px; border-width: 4px"
+                    >
+                      M
+                    </div>
+                  </div>
+                  <h1
+                    class="title"
+                    style="text-align: center; margin-top: 22px; font-size: 36px; line-height: 40px"
+                  >
+                    You're home!
+                  </h1>
+                  <p class="sub" style="text-align: center">Lev and Masha · Day 964 together</p>
+                  <div class="cta" style="margin-top: 28px">Meet Mochi</div>
+                  <div class="link"></div>
+                </div>
+                <div class="home-ind"></div>
+              </div>
+            </div>
+            <figcaption>
+              <b><span>J3</span>Joined</b>Both phones get this at once with a success haptic. Then
+              notifications, the cat and the widget, same as the main path.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const bar = document.getElementById("status").content;
+      document.querySelectorAll(".status").forEach((s) => {
+        if (!s.children.length) s.replaceWith(bar.cloneNode(true));
+      });
+    </script>
+  </body>
+</html>

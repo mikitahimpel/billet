@@ -80,9 +80,19 @@ it does. No outside model or texture is used.
 
 The iOS app in `apps/ios` is Nooki by Ilya ([nexishq/nooki-ios](https://github.com/nexishq/nooki-ios)),
 imported with its author's permission, including its publication in this repository, from commit
-`0deb4a25ebcef528ee32d0b796c1d59e8f359730`. Its code, scenes, cats, rooms, shop items, icon and
-tools are his. Changes made for billet: the Billet name, bundle IDs, app group, team and build
-number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats packed from that
-commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
+`61e6a97cb310882d3949224d63a2f9b8e5014a5f`. Its code, scenes, cats, rooms, shop items, icon and
+tools are his. Changes made for billet: bundle IDs, app group, team and build
+number; the shop thumbnails are resized to 900 px. The cat's files are his, byte for byte
+(`apps/ios/nooki-cat.sha256`, checked in CI).
 Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
 is kept, unbuilt, in `archive/ios-v1`.
+
+## Cat generation tools
+
+`tools/cat-gen` is Ilya's cat splat pipeline from
+[nexishq/idol-scenes](https://github.com/nexishq/idol-scenes) (`generate/`, commit
+`f12f168dd2f5a3159a3067a3a6e6ff120054d74c`), used with his permission; the reference pictures in
+`tools/cat-gen/refs` are his. `tools/cat-gen/idol-sdk` is the inference code of
+[Idol](https://huggingface.co/speridlabs/idol) by Speridlabs, under the Apache License 2.0 (its
+`LICENSE` is kept beside it), as vendored in idol-scenes, without its gallery images and demo. No
+model weights are in the repository; the setup script downloads them.

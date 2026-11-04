@@ -14,20 +14,23 @@ struct Splat {
     let rest: Data
 }
 
-/// Loads Gaussian splats written by nooki-scene/generate/make_splat.py and packed by Tools/ply_to_spz.py.
+/// Loads Gaussian splats written by nooki-scene/generate/make_splat.py.
+/// The PLY body already holds GaussianSplatResource's interleaved layout (14 floats per splat), so it is copied as is.
 nonisolated enum SplatLoader {
     nonisolated enum Failure: Error {
         case missing(String)
         case unsupportedFormat(String)
     }
 
-    /// A splat file read and unpacked: `count` splats of `stride` bytes in `body`.
+    /// A PLY read and checked: `count` splats of `stride` bytes in `body`.
     nonisolated struct File {
         let name: String
         let count: Int
         let stride: Int
         let body: Data
     }
+
+    private static let fields = "x y z scale_0 scale_1 scale_2 rot_0 rot_1 rot_2 rot_3 opacity f_dc_0 f_dc_1 f_dc_2"
 
     /// RealityKit renders splats only from iOS 27 on Apple7-family GPUs, and the simulator SDK has no splat API at all.
     static var isSupported: Bool {
@@ -39,17 +42,23 @@ nonisolated enum SplatLoader {
         #endif
     }
 
-    /// Floats per splat in `File.body`: position, log scale, rotation (w first), logit opacity, SH DC color.
-    static let floatsPerSplat = 14
-
-    /// Reads `<name>.spz` (Tools/ply_to_spz.py) and unpacks it into GaussianSplatResource's layout, so the copy in
-    /// `make` never waits on the disk.
+    /// Reads the whole file into memory, so the copy in `make` never waits on the disk.
     static func read(named name: String, in bundle: Bundle = .main) throws -> File {
-        guard let url = bundle.url(forResource: name, withExtension: "spz") else { throw Failure.missing(name) }
-        let packed = try Data(contentsOf: url)
-        guard let raw = Spz.gunzip(packed), let body = Spz.unpack(raw) else { throw Failure.unsupportedFormat(name) }
-        let stride = floatsPerSplat * MemoryLayout<Float>.size
-        return File(name: name, count: body.count / stride, stride: stride, body: body)
+        guard let url = bundle.url(forResource: name, withExtension: "ply") else { throw Failure.missing(name) }
+        let data = try Data(contentsOf: url)
+        guard let end = data.range(of: Data("end_header\n".utf8)) else { throw Failure.unsupportedFormat(name) }
+
+        let header = String(decoding: data[..<end.lowerBound], as: UTF8.self).split(separator: "\n")
+        let properties = header.filter { $0.hasPrefix("property float ") }.map { $0.dropFirst(15) }
+        let stride = properties.count * MemoryLayout<Float>.size
+        let body = data[end.upperBound...]
+        guard header.contains("format binary_little_endian 1.0"),
+              properties.joined(separator: " ") == fields,
+              let countLine = header.first(where: { $0.hasPrefix("element vertex ") }),
+              let count = Int(countLine.dropFirst(15)),
+              body.count == count * stride
+        else { throw Failure.unsupportedFormat(name) }
+        return File(name: name, count: count, stride: stride, body: body)
     }
 
     @MainActor static func make(_ file: File) throws -> Splat {

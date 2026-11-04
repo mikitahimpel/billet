@@ -8,7 +8,8 @@ import Wire
 public struct HistoryNote: Equatable, Sendable {
   public enum Content: Equatable, Sendable {
     case drawing([Stroke])
-    /// A photo, or a drawing whose strokes could not be read. The list does not show these yet.
+    /// A photo, a text note, or a drawing whose strokes could not be read. The list does not show
+    /// these yet.
     case other
   }
 
@@ -164,12 +165,16 @@ extension HistoryMachine {
 
   static func note(from entry: NoteEntry) -> HistoryNote {
     switch entry.note {
-    case .drawing(_, let author, let sentAt, let compact, _):
+    case .drawing(_, let author, let sentAt, let compact, _, _):
       let strokes = try? InkDecoder.decode(compact)
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt),
         content: strokes.map(HistoryNote.Content.drawing) ?? .other)
     case .photo(_, let author, let sentAt, _):
+      return HistoryNote(
+        seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt), content: .other)
+    // The Nooki notes screen shows text notes; this list keeps to drawings.
+    case .text(_, let author, let sentAt, _, _):
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt), content: .other)
     }

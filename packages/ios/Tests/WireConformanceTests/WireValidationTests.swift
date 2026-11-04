@@ -153,4 +153,67 @@ import Testing
         == .widget(
           noteId: NoteId("n1"), author: UserId("u1"), compact: CompactStrokes(strokes: [])))
   }
+
+  // MARK: text notes and paper
+
+  private func textNote(_ text: String, paper: String? = nil) -> String {
+    let paperField = paper.map { ##","paper":\##($0)"## } ?? ""
+    let fields = ##""id":"n1","author":"u1","sentAt":0"##
+    return ##"{"_tag":"Text",\##(fields),"text":"\##(text)"\##(paperField)}"##
+  }
+
+  @Test func aTextNoteDecodesWithAndWithoutPaper() throws {
+    #expect(
+      try decode(Note.self, textNote("hi", paper: ##""sage""##))
+        == .text(
+          id: NoteId("n1"), author: UserId("u1"), sentAt: 0, text: NoteText(validating: "hi")!,
+          paper: .sage))
+    #expect(
+      try decode(Note.self, textNote("hi"))
+        == .text(
+          id: NoteId("n1"), author: UserId("u1"), sentAt: 0, text: NoteText(validating: "hi")!))
+  }
+
+  @Test(arguments: [##""mint""##, "null", ##""""##])
+  func anUnknownOrNullPaperIsRejected(_ paper: String) {
+    expectRejected(Note.self, textNote("hi", paper: paper))
+  }
+
+  @Test(arguments: ["", "   ", String(repeating: "a", count: NoteText.maxCharacters + 1)])
+  func aBlankOrLongTextIsRejected(_ text: String) {
+    expectRejected(Note.self, textNote(text))
+    #expect(NoteText(validating: text) == nil)
+  }
+
+  @Test func textCountsCharactersAsAPersonDoes() throws {
+    let family = String(repeating: "👩‍👩‍👧‍👦", count: NoteText.maxCharacters)
+    #expect(NoteText(validating: family) != nil)
+    _ = try decode(Note.self, textNote(family))
+    #expect(NoteText(validating: String(repeating: "💛", count: NoteText.maxCharacters + 1)) == nil)
+  }
+
+  @Test func aDrawingKeepsItsPaper() throws {
+    let note = try decode(
+      Note.self,
+      ##"{"_tag":"Drawing","id":"n1","author":"u1","sentAt":0,"compact":{"version":1,"strokes":[]},"image":"k1","paper":"blush"}"##
+    )
+    guard case .drawing(_, _, _, _, _, let paper) = note else {
+      Issue.record("expected a drawing")
+      return
+    }
+    #expect(paper == .blush)
+  }
+
+  @Test func aTextPushCarriesItsWords() throws {
+    let payload = try decode(
+      PushPayload.self,
+      ##"{"_tag":"Widget","noteId":"n1","author":"u1","text":"hi","paper":"sky"}"##)
+    #expect(
+      payload
+        == .widget(
+          noteId: NoteId("n1"), author: UserId("u1"), compact: nil,
+          text: NoteText(validating: "hi"), paper: .sky))
+    expectRejected(
+      PushPayload.self, ##"{"_tag":"Alert","noteId":"n1","author":"u1","text":null}"##)
+  }
 }

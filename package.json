@@ -13,7 +13,7 @@
     "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'",
     "alchemy": "alchemy",
     "typecheck:root": "tsc --noEmit -p tsconfig.json",
-    "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' .",
+    "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' --ignore-pattern 'tools/cat-gen/**' .",
     "metrics:report": "pnpm --filter @billet/backend-metrics metrics:report",
     "db:generate": "pnpm --filter @billet/backend-platform db:generate"
   },

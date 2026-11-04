@@ -2,7 +2,7 @@ import RealityKit
 import SwiftUI
 
 /// What every room shares, ported from nooki-scene/src/three/catRoom.js: the turning pivot, Mochi on her two
-/// skeletons with breathing and a pet bounce, and a showcase that plays each of her animations in turn.
+/// skeletons with a pet bounce, and a showcase that plays each of her animations in turn.
 class CatRoom {
     /// One step of the showcase: `label` shows while it runs, `start` kicks it off; with no `seconds` it lasts until
     /// she stops moving.
@@ -121,14 +121,21 @@ class CatRoom {
         walker?.pet()
     }
 
+    /// Makes Mochi follow a finger dragged `offset` points from her head on screen, or stop with nil.
+    func follow(_ offset: CGSize?) {
+        walker?.follow(offset.map { SIMD2<Float>(Float($0.width), Float($0.height)) / 400 })
+    }
+
     /// Drives animation every frame, hands the frame time on to `beforeProjecting` first (the camera follows
     /// `settledYaw`), and reports where the spot above Mochi's head lands on screen.
-    func start(updatesFrom content: RealityViewCameraContent, beforeProjecting: @escaping (Float) -> Void,
+    /// `viewer` is the camera, which Mochi checks on now and then.
+    func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
         adoptCat()
         subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { [weak self] event in
             guard let self, !paused else { return }
             let dt = Float(event.deltaTime)
+            walker?.watch(catModel.convert(position: viewer.position(relativeTo: nil), from: nil))
             tick(dt)
             beforeProjecting(dt)
             let anchor = catGroup.position(relativeTo: nil) + [0, catHeadTop, 0]
@@ -159,12 +166,11 @@ class CatRoom {
 
         walker?.update(dt)
 
-        // Slow breathing, plus a quick squash-and-stretch after a tap while her mesh is still loading; posed, she leans
-        // into the pet instead.
-        let breath = 0.035 * sin(t * 1.7)
+        // A quick squash-and-stretch after a tap while her mesh is still loading; posed, she leans into the pet
+        // instead, and breathes on her own skeleton.
         let p = t - purrStart
         let bounce: Float = p < 0.7 && walker?.standing.entity == nil ? sin(p / 0.7 * .pi * 3) * (1 - p / 0.7) * 0.12 : 0
-        catBody.scale = [1 + 0.4 * (breath + bounce), 1 + breath - bounce, 1 + 0.4 * (breath + bounce)]
+        catBody.scale = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
 
         advanceShowcase(dt)
     }
@@ -322,6 +328,7 @@ class CatRoom {
             .init(label: "Yawn", seconds: 3.2) { b.perform(.yawn) },
             .init(label: "Tail flick", seconds: 1.6) { b.perform(.flick) },
             .init(label: "Tail curl", seconds: 3.4) { b.perform(.curl) },
+            .init(label: "Washing", seconds: 5.4) { b.perform(.groom) },
             .init(label: "Falling asleep", seconds: 7) { b.perform(.doze(7)) },
         ]
         steps += roomShowcase

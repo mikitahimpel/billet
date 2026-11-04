@@ -1,0 +1,63 @@
+{
+  "about": "Mochi sitting (cat-sit.ply), the same cat as cat-standing.ply generated seated: front -Z, up +Y, paws and haunches on y = 0, meters. Only what moves while she sits is boned: head with ears, and the tail lying on the floor around her left side with its tip by the front paws; the body is split into rump and chest only to share what the parts leave. `eyes` is the point between the eyes; `mount` places this model in cat-standing.ply's space, head on head, for the swap between the two.",
+  "eyes": [-0.01, 0.195, -0.092],
+  "mount": [0.01, 0, -0.058],
+  "bones": [
+    { "name": "hips", "head": [-0.01, 0.07, 0.02], "tail": [-0.01, 0.04, 0.09] },
+    { "name": "chest", "head": [-0.01, 0.07, 0.02], "tail": [-0.01, 0.13, -0.04] },
+    { "name": "head", "parent": "chest", "head": [-0.01, 0.15, -0.029], "tail": [-0.01, 0.18, -0.1], "part": "head" },
+    { "name": "earLeft", "parent": "head", "head": [0.027, 0.237, -0.062], "tail": [0.046, 0.26, -0.062], "part": "earLeft" },
+    { "name": "earRight", "parent": "head", "head": [-0.047, 0.237, -0.055], "tail": [-0.066, 0.26, -0.055], "part": "earRight" },
+    { "name": "tail0", "parent": "hips", "head": [0.0, 0.03, 0.11], "tail": [0.055, 0.022, 0.085], "part": "tail" },
+    { "name": "tail1", "parent": "tail0", "head": [0.055, 0.022, 0.085], "tail": [0.085, 0.02, 0.02], "part": "tail" },
+    { "name": "tail2", "parent": "tail1", "head": [0.085, 0.02, 0.02], "tail": [0.055, 0.02, -0.03], "part": "tailTip" },
+    { "name": "lidLeft", "parent": "head", "head": [0.017, 0.193, -0.088], "tail": [0.017, 0.2055, -0.1], "part": "lidLeft" },
+    { "name": "lidLeftLow", "parent": "head", "head": [0.017, 0.193, -0.088], "tail": [0.017, 0.1795, -0.1], "part": "lidLeftLow" },
+    { "name": "lidRight", "parent": "head", "head": [-0.0375, 0.193, -0.087], "tail": [-0.0375, 0.2055, -0.099], "part": "lidRight" },
+    { "name": "lidRightLow", "parent": "head", "head": [-0.0375, 0.193, -0.087], "tail": [-0.0375, 0.1795, -0.099], "part": "lidRightLow" }
+  ],
+  "parts": {
+    "lidLeft": [
+      { "normal": [0, 1, 0], "point": [0, 0.1995, 0], "soft": 0.002 },
+      { "center": [0.017, 0.1995, -0.1], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.094], "soft": 0.004 }
+    ],
+    "lidLeftLow": [
+      { "normal": [0, -1, 0], "point": [0, 0.1855, 0], "soft": 0.002 },
+      { "center": [0.017, 0.1855, -0.1], "radii": [0.012, 0.012, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.094], "soft": 0.004 }
+    ],
+    "lidRight": [
+      { "normal": [0, 1, 0], "point": [0, 0.1995, 0], "soft": 0.002 },
+      { "center": [-0.0375, 0.1995, -0.099], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.093], "soft": 0.004 }
+    ],
+    "lidRightLow": [
+      { "normal": [0, -1, 0], "point": [0, 0.1855, 0], "soft": 0.002 },
+      { "center": [-0.0375, 0.1855, -0.099], "radii": [0.012, 0.012, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.093], "soft": 0.004 }
+    ],
+    "earLeft": [
+      { "normal": [0.6, 0.8, 0], "point": [0.0395, 0.236, 0], "soft": 0.01 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.033], "soft": 0.01 },
+      { "normal": [0, 0, 1], "point": [0, 0, -0.088], "soft": 0.01 }
+    ],
+    "earRight": [
+      { "normal": [-0.6, 0.8, 0], "point": [-0.0595, 0.236, 0], "soft": 0.01 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.03], "soft": 0.01 },
+      { "normal": [0, 0, 1], "point": [0, 0, -0.082], "soft": 0.01 }
+    ],
+    "head": [
+      { "normal": [0, 1, -0.3], "point": [0, 0.139, -0.037], "soft": 0.012 }
+    ],
+    "tailTip": [
+      { "normal": [0, -1, 0], "point": [0, 0.045, 0], "soft": 0.012 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.005], "soft": 0.012 },
+      { "normal": [1, 0, 0], "point": [0.035, 0, 0], "soft": 0.01 }
+    ],
+    "tail": [
+      { "normal": [0, -1, 0], "point": [0, 0.045, 0], "soft": 0.012 },
+      { "normal": [1, 0, 0.6], "point": [0.045, 0, 0.04], "soft": 0.012 }
+    ]
+  }
+}

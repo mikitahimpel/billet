@@ -51,7 +51,7 @@ struct MochiWidget: Widget {
             }
             .containerBackground(WidgetInk.background, for: .widget)
         }
-        .configurationDisplayName("Billet")
+        .configurationDisplayName("Nooki")
         .description("Mochi and what matters right now.")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()

@@ -1,0 +1,42 @@
+import Foundation
+import Persistence
+import Transport
+
+/// The billet server this build talks to, and what signing in to it needs: the API client, the saved session and
+/// the anonymous account key in the iCloud Keychain.
+///
+/// The host comes from the build (`BILLET_API_HOST`, read into Info.plist as `BilletAPIHost`) and never from the
+/// repository. A build without one has no backend and keeps everything on the phone, as Nooki did before.
+struct Backend {
+    let baseURL: URL
+    let api: APIClient
+    let accounts: AccountStore
+    let keys: AccountKeyStore
+
+    static let infoKey = "BilletAPIHost"
+    /// The Keychain service of the session token and the account key; the same as billet's first app, so a phone
+    /// that had it signs in to the same account.
+    static let keychainService = "com.mikitahimpel.billet"
+
+    /// `https://<host>`, or `http` for a server on this Mac. Nil for an empty or unusable host.
+    nonisolated static func baseURL(host: String?) -> URL? {
+        guard let host = host?.trimmingCharacters(in: .whitespaces), !host.isEmpty, !host.contains("/") else {
+            return nil
+        }
+        let local = host.hasPrefix("localhost") || host.hasPrefix("127.0.0.1")
+        guard let url = URL(string: "\(local ? "http" : "https")://\(host)"), url.host() != nil else { return nil }
+        return url
+    }
+
+    static func live(info: [String: Any]? = Bundle.main.infoDictionary) -> Backend? {
+        guard let baseURL = baseURL(host: info?[infoKey] as? String) else { return nil }
+        let tokens = SessionTokenStore.keychain(client: .security, service: keychainService, accessGroup: nil)
+        let storage = (try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier))
+            ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
+        let accounts = AccountStore.live(tokens: tokens, storage: storage)
+        let http = HTTPService.urlSession(baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers)
+        let api = APIClient.live(http: http, token: { (try? accounts.load())?.token })
+        let keys = AccountKeyStore.keychain(client: .security, service: keychainService)
+        return Backend(baseURL: baseURL, api: api, accounts: accounts, keys: keys)
+    }
+}
