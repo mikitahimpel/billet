@@ -117,6 +117,17 @@ final class DecorSession {
   /// The plan of the surface the piece `name` stands on.
   func plan(of name: String) -> DecorPlan? { plans[surface(of: name)] }
 
+  /// Whether `box` is somewhere the piece `name` could stand on its surface: finite, and with its
+  /// middle no further than half a unit past the surface's edges. Anything else is bad data,
+  /// saved by an older release or sent by a partner, and the piece stays where the room put it.
+  func canStand(_ name: String, at box: DecorBox) -> Bool {
+    guard let plan = plan(of: name),
+      box.centre.x.isFinite, box.centre.y.isFinite, box.yaw.isFinite, abs(box.yaw) <= 2 * .pi
+    else { return false }
+    let margin: SIMD2<Float> = [0.5, 0.5]
+    return all(box.centre .>= plan.minimum - margin) && all(box.centre .<= plan.maximum + margin)
+  }
+
   /// The piece `name`'s holder and the height it rests at in its parent's space.
   func rest(of name: String) -> (holder: Entity, height: Float)? {
     pieces[name].map { ($0.holder, $0.rest) }
