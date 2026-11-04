@@ -6,7 +6,8 @@ import Testing
 @Suite("Room style")
 struct RoomStyleTests {
   @Test func eachPartDecodesOnItsOwnAndUnknownChoicesReadAsStandard() throws {
-    let json = Data(#"{"wall":"sage","floor":"marble","curtains":"linen","drape":7,"view":"moonBase"}"#.utf8)
+    let json = Data(
+      #"{"wall":"sage","floor":"marble","curtains":"linen","drape":7,"view":"moonBase"}"#.utf8)
     let style = try JSONDecoder().decode(RoomStyle.self, from: json)
     #expect(style.wall == .sage)
     #expect(style.floor == .standard)

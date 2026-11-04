@@ -163,11 +163,14 @@ struct GenzPatternCanvas {
             let middle = CGPoint(
               x: at.x + cos(angle) * petal * 1.15, y: at.y + sin(angle) * petal * 1.15)
             context.fillEllipse(
-              in: CGRect(x: middle.x - petal, y: middle.y - petal, width: petal * 2, height: petal * 2))
+              in: CGRect(
+                x: middle.x - petal, y: middle.y - petal, width: petal * 2, height: petal * 2))
           }
           context.setFillColor(Self.colour(0xE5C878))
           context.fillEllipse(
-            in: CGRect(x: at.x - petal * 0.6, y: at.y - petal * 0.6, width: petal * 1.2, height: petal * 1.2))
+            in: CGRect(
+              x: at.x - petal * 0.6, y: at.y - petal * 0.6, width: petal * 1.2, height: petal * 1.2)
+          )
         }
       }
     }

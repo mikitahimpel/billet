@@ -237,7 +237,8 @@ final class GenzRoomStyler {
     for (panel, span, out) in [
       (panels.left, spans.left, Float(0)), (panels.right, spans.right, Float(-0.006)),
     ] {
-      panel.position = GenzRoomPoint(span.lowerBound, Self.curtainY + out, seat.window.z1 + 0.02)
+      panel.position =
+        GenzRoomPoint(span.lowerBound, Self.curtainY + out, seat.window.z1 + 0.02)
         .scene
       panel.scale = [span.upperBound - span.lowerBound, 1, 1]
     }

@@ -373,7 +373,8 @@ struct GenzRoomView: View {
         status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
         onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() },
         onReset: { room.resetDecor() },
-        onStyle: { isStyling = true })
+        onStyle: { isStyling = true }
+      )
       .transition(.opacity)
     }
   }
