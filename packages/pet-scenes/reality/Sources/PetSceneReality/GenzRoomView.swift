@@ -129,7 +129,7 @@ struct GenzRoomView: View {
     ZStack {
       if isOpen, parts.shows("layers") { layer(behind, room: room) }
       if isOpen, parts.shows("sky") { theirSky }
-      if isOpen, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+      if isOpen, parts.shows("haze"), !FramePace.shared.isHot { RoomHaze(look: look, screen: room.screen) }
       stage(room)
       if isOpen, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }

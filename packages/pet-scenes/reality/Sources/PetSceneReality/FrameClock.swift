@@ -40,6 +40,21 @@ final class FrameClock {
 
   var isRunning: Bool { step != nil }
 
+  /// The most frames a second it steps, or nil for the display's own rate. See ``FramePace``.
+  var rate: Float? = FramePace.moving {
+    didSet {
+      guard rate != oldValue else { return }
+      applyRate()
+    }
+  }
+
+  private func applyRate() {
+    #if canImport(UIKit)
+      link?.preferredFrameRateRange =
+        rate.map { CAFrameRateRange(minimum: min(10, $0), maximum: $0, preferred: $0) } ?? .default
+    #endif
+  }
+
   /// Calls `step` on every frame from now on, in place of whatever it called before.
   func run(_ step: @escaping @MainActor (TimeInterval) -> Void) {
     self.step = step
@@ -51,6 +66,7 @@ final class FrameClock {
       link.isPaused = isPaused
       link.add(to: .main, forMode: .common)
       self.link = link
+      applyRate()
     #else
       guard timer == nil else { return }
       timer = Timer.scheduledTimer(withTimeInterval: 1 / Self.framesPerSecond, repeats: true) {
