@@ -111,7 +111,6 @@ export type AnyPlayFrame =
   | LightFrame
   | DailyFrame;
 
-
 const isRoomLight = (value: unknown): value is RoomLight =>
   typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
 
