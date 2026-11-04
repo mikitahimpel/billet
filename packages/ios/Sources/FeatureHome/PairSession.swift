@@ -63,6 +63,8 @@ final class PairSession {
   private(set) var hold = TogetherHold()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
+  /// The partner's latest meal or game for the cat, to show for a moment.
+  private(set) var careNotice: CatCareNotice?
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
@@ -428,6 +430,7 @@ final class PairSession {
       play.petReceived()
     case .life(let events):
       life.receive(events)
+      notePartnerCare(events)
     case .treats(let days):
       applyTreat { $0.treatsReceived(days) }
     case .catName(let name):
@@ -441,6 +444,19 @@ final class PairSession {
     }
   }
 
+  /// Remembers the partner's newest meal or game, if it is fresh: an old one sent again on a
+  /// reconnect is not news.
+  private func notePartnerCare(_ events: [LifeEvent]) {
+    let current = now()
+    let fresh = events.filter { event in
+      event.by != life.me && CatCareNotice.shows(event.kind)
+        && abs(event.at.timeIntervalSince(current)) < CatCareNotice.freshFor
+        && event.id != careNotice?.id
+    }
+    guard let newest = fresh.max(by: { $0.at < $1.at }) else { return }
+    careNotice = CatCareNotice(id: newest.id, kind: newest.kind)
+  }
+
   private func keep(_ strokes: [Stroke], _ direction: NoteRecord.Direction, id: UUID) {
     let note = NoteRecord(id: id, direction: direction, date: now(), strokes: strokes)
     // Shown straight away: a failed save costs the note after a restart, not on screen.
@@ -449,6 +465,34 @@ final class PairSession {
     lastSave = Task { [archive] in
       await previous?.value
       _ = try? await archive.add(note)
+    }
+  }
+}
+
+/// The partner fed or played with the cat on their phone.
+struct CatCareNotice: Hashable, Sendable {
+  let id: UUID
+  let kind: LifeEvent.Kind
+
+  /// How old an event can be and still be shown, in seconds.
+  static let freshFor: TimeInterval = 180
+
+  /// Meals and games show; pets have their own hand over the cat, and notes their own arrival.
+  static func shows(_ kind: LifeEvent.Kind) -> Bool {
+    switch kind {
+    case .feed, .play: true
+    case .pet, .note, .sleep, .shoo: false
+    }
+  }
+
+  /// "Your partner fed Mochi 🐟".
+  func line(catName: String?) -> String {
+    let cat = catName ?? "the cat"
+    switch kind {
+    case .feed: return "Your partner fed \(cat) 🐟"
+    case .play: return "Your partner played with \(cat) 🧶"
+    case .pet: return "Your partner petted \(cat) 💛"
+    case .note, .sleep, .shoo: return "Your partner looked in on \(cat)"
     }
   }
 }
