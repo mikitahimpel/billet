@@ -19,10 +19,12 @@ public struct WindowViewState: Equatable, Sendable {
   public var home: [CGPoint]
   /// False while the room's own lamp is off, so the glass reflects less.
   public var lampOn: Bool
+  /// True while the room draws the view in 3D through its window: only the sky is left to draw.
+  public var inDepth: Bool
 
   public init(
     view: WindowView, weather: ViewWeather, hour: ViewHour, time: Double, now: Double,
-    window: [CGPoint], home: [CGPoint], lampOn: Bool
+    window: [CGPoint], home: [CGPoint], lampOn: Bool, inDepth: Bool = false
   ) {
     self.view = view
     self.weather = weather
@@ -32,6 +34,7 @@ public struct WindowViewState: Equatable, Sendable {
     self.window = window
     self.home = home
     self.lampOn = lampOn
+    self.inDepth = inDepth
   }
 }
 
