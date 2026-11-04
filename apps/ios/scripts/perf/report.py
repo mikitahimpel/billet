@@ -47,7 +47,8 @@ def parse(log):
 
 
 def first_room(marks):
-    rooms = [t for name, t in marks.items() if name.endswith("room_on_screen") and t is not None]
+    rooms = [t for name, t in marks.items()
+             if name.endswith("room_on_screen") and not name.startswith("trace.") and t is not None]
     return min(rooms) if rooms else None
 
 
@@ -75,6 +76,12 @@ def collect(run_dir):
             # The stages between, in the order a launch reaches them.
             for stage in ("app_built", "root_built", "shell_shown", "home_shown"):
                 add(f"launch: process start to {stage.replace('_', ' ')} (ms)", run["marks"].get(stage))
+            # The room's own build, from its first moment (each mark's first time in the launch).
+            for stage in ("building", "textures", "shell", "pieces", "built", "mounted", "shown",
+                          "on_screen", "cat_placed"):
+                add(f"launch: process start to room {stage.replace('_', ' ')} (ms)",
+                    run["marks"].get(f"trace.styled_room_{stage}" if stage != "cat_placed"
+                                     else "trace.styled_cat_placed"))
             add("launch: memory peak (MB)", run["memory"])
         else:
             add(f"{kind}: memory peak (MB)", run["memory"])
