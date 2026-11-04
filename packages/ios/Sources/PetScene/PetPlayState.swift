@@ -32,12 +32,15 @@ public struct PetPlayState: Hashable, Sendable {
   public var brainSpeed: Double
   /// Where the room's light switch stands, the same in both partners' rooms.
   public var light: RoomLight
+  /// Where each room's furniture stands, by room and piece, the same in both partners' rooms.
+  public var arrangements: [String: [String: PieceSpot]]
 
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
     life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
-    brain: CatBrainFrame? = nil, brainSpeed: Double = 1, light: RoomLight = .standard
+    brain: CatBrainFrame? = nil, brainSpeed: Double = 1, light: RoomLight = .standard,
+    arrangements: [String: [String: PieceSpot]] = [:]
   ) {
     self.treat = treat
     self.streak = streak
@@ -50,5 +53,6 @@ public struct PetPlayState: Hashable, Sendable {
     self.brain = brain
     self.brainSpeed = brainSpeed
     self.light = light
+    self.arrangements = arrangements
   }
 }

@@ -15,6 +15,7 @@ import {
   type TreatDays,
   dayOf,
   type DailyFrame,
+  type PieceSpot,
 } from "./demo-play.ts";
 import { sendAlert, sendNoteAlert, type ApnsCredentials, type ApnsFetch } from "./demo-apns.ts";
 import {
@@ -47,6 +48,11 @@ export interface DemoRoomEnv {
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
 }
+
+/** Where each room's arrangement is kept, under the room's name. */
+const ARRANGEMENT_PREFIX = "arrangement:";
+/** The most rooms whose arrangement is kept: every furniture set, plain and with Idol props. */
+export const MAX_ARRANGED_ROOMS = 24;
 
 const NOTE_PATH = /^\/demo\/rooms\/[^/]+\/notes\/([^/]+)$/;
 const PLAYS_PATH = /^\/demo\/rooms\/[^/]+\/plays$/;
@@ -207,7 +213,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * name is the first one given, unless renamed, when the last one wins. A move in choosing the
    * cat is relayed to the partner live; the latest pick of each phone and the adoption are kept
    * and replayed when the partner connects. The room's light switch is the last press from either
-   * phone, sent to both and replayed on connect. A reaction is accepted only from the receiver of that note, and
+   * phone, sent to both and replayed on connect, and so is where each room's furniture stands,
+   * room by room, for a few rooms. A reaction is accepted only from the receiver of that note, and
    * the whole table goes to both sockets.
    */
   private async handlePlay(
@@ -239,6 +246,13 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       } else if (play.kind === "light") {
         await this.ctx.storage.put("roomLight", play.light);
         this.broadcast({ type: "light", light: play.light });
+      } else if (play.kind === "arrange") {
+        const key = `${ARRANGEMENT_PREFIX}${play.room}`;
+        const known = await this.ctx.storage.list({ prefix: ARRANGEMENT_PREFIX });
+        if (known.has(key) || known.size < MAX_ARRANGED_ROOMS) {
+          await this.ctx.storage.put(key, play.spots);
+          this.broadcast({ type: "arrange", room: play.room, spots: play.spots });
+        }
       } else if (play.kind === "react") {
         const senders = (await this.ctx.storage.get<Record<string, string>>("noteFrom")) ?? {};
         const author = senders[play.note];
@@ -478,6 +492,13 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     if (name !== undefined) socket.send(JSON.stringify({ type: "name", name }));
     const light = await this.ctx.storage.get<string>("roomLight");
     if (light !== undefined) socket.send(JSON.stringify({ type: "light", light }));
+    const arrangements = await this.ctx.storage.list<Record<string, PieceSpot>>({
+      prefix: ARRANGEMENT_PREFIX,
+    });
+    for (const [key, spots] of arrangements) {
+      const room = key.slice(ARRANGEMENT_PREFIX.length);
+      socket.send(JSON.stringify({ type: "arrange", room, spots }));
+    }
     const reactions = (await this.ctx.storage.get<Reactions>("reactions")) ?? {};
     if (Object.keys(reactions).length > 0) {
       socket.send(JSON.stringify({ type: "reactions", reactions }));

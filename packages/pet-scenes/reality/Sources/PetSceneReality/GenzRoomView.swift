@@ -346,6 +346,7 @@ struct GenzRoomView: View {
       .onAppear {
         let decor = room.decor
         decor.onChange = { decorStatus = DecorStatus(decor, title: GenzRoom.title(ofDecorName:)) }
+        room.onArranged = { onEvent(.roomArranged($0)) }
       }
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
@@ -357,6 +358,10 @@ struct GenzRoomView: View {
       .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
       .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
       .onChange(of: play.light, initial: true) { _, light in room.setRoomLight(light) }
+      .onChange(of: play.arrangements[GenzSpotStore.room(layout.key)], initial: true) {
+        _, arranged in
+        if let arranged, arranged != room.arrangement.spots { room.arrange(arranged) }
+      }
       .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
   }
 
