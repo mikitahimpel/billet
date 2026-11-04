@@ -68,12 +68,7 @@ struct DeskTab: View {
       }
     #endif
     .sheet(isPresented: $listOpen) {
-      list()
-        .overlay(alignment: .topTrailing) {
-          IconButton("xmark", label: "Close the list") { listOpen = false }
-            .padding(Spacing.medium)
-        }
-        .presentationDetents([.large])
+      list().billetSheet()
     }
   }
 

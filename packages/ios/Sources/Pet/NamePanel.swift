@@ -1,7 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// Asks the pair to name the cat. Shown until either partner has chosen a name.
+/// The sheet asking the pair to name the cat. Shown until either partner has chosen a name.
 public struct NamePanel: View {
   private let onName: (String) -> Void
 
@@ -15,18 +15,13 @@ public struct NamePanel: View {
   private var name: String? { CatName.clean(typed) }
 
   public var body: some View {
-    VStack(spacing: Spacing.small) {
-      Text("Name your cat")
-        .billetType(.heading)
-        .foregroundStyle(Palette.paper.color)
+    SheetPanel("Name your cat") {
       Text("Whoever chooses first names it for both of you.")
         .billetType(.label)
         .foregroundStyle(Palette.muted.color)
-        .multilineTextAlignment(.center)
       TextField("Name", text: $typed)
         .billetType(.body)
         .foregroundStyle(Palette.paper.color)
-        .multilineTextAlignment(.center)
         .autocorrectionDisabled()
         .focused($isTyping)
         .submitLabel(.done)

@@ -39,14 +39,14 @@ struct HomeLifeLayer: View {
     }
     .calmAnimation(value: LifeThought.need(session.life.drive))
     .sheet(isPresented: $ringsOpen) {
-      ZStack {
-        EveningBackground()
+      SheetPanel(session.play.catName ?? "The cat") {
         LifeRings(
           needs: session.life.state.needs, portrait: portrait,
-          name: session.play.catName ?? "The cat")
+          name: session.play.catName ?? "The cat"
+        )
+        .frame(maxWidth: .infinity)
       }
-      .presentationDetents([.medium])
-      .preferredColorScheme(.dark)
+      .billetSheet([.medium])
     }
   }
 

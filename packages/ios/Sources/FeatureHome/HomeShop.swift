@@ -49,7 +49,7 @@ struct HomeShop: ViewModifier {
           ) { item in
             scene?.makeShopPreview(item: item) ?? AnyView(EmptyView())
           }
-          .presentationDetents([.large])
+          .billetSheet()
           .onAppear { events(.shopOpened) }
         case .closet:
           ClosetView(
@@ -57,7 +57,7 @@ struct HomeShop: ViewModifier {
             onOpenShop: { self.sheet = .shop }, onClose: { self.sheet = nil }
           )
           // The room stays in view and live, so the cat can be seen reacting to a treat.
-          .presentationDetents([.medium, .large])
+          .billetSheet([.medium, .large])
           .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
       }
