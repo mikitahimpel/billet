@@ -106,7 +106,7 @@ struct CinematicOnboardingView<Actions: View>: View {
   private var overlay: some View {
     VStack(spacing: Spacing.large) {
       title
-        .padding(.top, Spacing.wide)
+        .padding(.top, HeadingWords.top)
         // Clear of the back button, the same each side so the words stay centred.
         .padding(.horizontal, back == nil ? 0 : Target.minimum + Spacing.hair)
       Spacer(minLength: 0)
@@ -116,7 +116,7 @@ struct CinematicOnboardingView<Actions: View>: View {
       if let back {
         BackButton(action: back)
           .padding(.leading, Spacing.medium)
-          .padding(.top, Spacing.wide - (Target.minimum - BilletType.title.lineHeight) / 2)
+          .padding(.top, HeadingWords.top - (Target.minimum - BilletType.title.lineHeight) / 2)
           .opacity(intro.showsActions ? 1 : 0)
           .allowsHitTesting(intro.showsActions)
           .accessibilityHidden(!intro.showsActions)
@@ -174,27 +174,39 @@ struct HeadingWords: View {
   let heading: OnboardingHeading
   var showsDetail = true
 
+  /// The widest the words get.
+  static let measure: CGFloat = 300
+  /// From the top of the safe area to the title: close under the status bar, so the words sit
+  /// above the scene's window rather than over it.
+  static let top = Spacing.medium
+
   var body: some View {
     ZStack(alignment: .top) {
       VStack(spacing: Spacing.small) {
-        Text(heading.title)
-          .billetType(.title)
-          .foregroundStyle(Palette.paper.color)
-          .accessibilityAddTraits(.isHeader)
-          .lineLimit(3)
-          .minimumScaleFactor(0.75)
-          // When the keyboard leaves little room, the title keeps its lines and the
-          // explanation gives way.
-          .layoutPriority(1)
-        Text(heading.detail)
-          .billetType(.body)
-          .foregroundStyle(Palette.paper.color)
-          .minimumScaleFactor(0.7)
-          .opacity(showsDetail ? 1 : 0)
+        BalancedLines {
+          Text(heading.title)
+            .billetType(.title)
+            .foregroundStyle(Palette.paper.color)
+            .accessibilityAddTraits(.isHeader)
+            .lineLimit(3)
+            .minimumScaleFactor(0.75)
+        }
+        // When the keyboard leaves little room, the title keeps its lines and the explanation
+        // gives way.
+        .layoutPriority(1)
+        BalancedLines {
+          Text(heading.detail)
+            .billetType(.body)
+            .foregroundStyle(Palette.paper.color.opacity(0.9))
+            .minimumScaleFactor(0.7)
+        }
+        .opacity(showsDetail ? 1 : 0)
       }
       // A tight dark edge, not a glow: it only firms up the letters' outline.
       .shadow(color: .black.opacity(0.5), radius: 1, y: 1)
       .multilineTextAlignment(.center)
+      // One block, as narrow as a short paragraph, so its lines stay short and even.
+      .frame(maxWidth: Self.measure)
       .frame(maxWidth: .infinity)
       .id(heading)
       .transition(.opacity)

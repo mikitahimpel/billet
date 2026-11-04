@@ -16,10 +16,24 @@ const providerToken = ({ key, keyId }: ApnsCredentials): Promise<string> =>
   signEs256({ pem: key, keyId }, { iss: APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) });
 
 /** Sends one "New note" alert. Resolves to whether APNs accepted it; never throws, never logs the token. */
-export const sendNoteAlert = async (
+export const sendNoteAlert = (
   credentials: ApnsCredentials,
   deviceToken: string,
   noteURL: string,
+  send: ApnsFetch = fetch,
+): Promise<boolean> =>
+  sendAlert(
+    credentials,
+    deviceToken,
+    { aps: { alert: { body: "New note" }, "mutable-content": 1 }, noteURL },
+    send,
+  );
+
+/** Sends one alert with `payload` as its body. Resolves to whether APNs accepted it; never throws. */
+export const sendAlert = async (
+  credentials: ApnsCredentials,
+  deviceToken: string,
+  payload: Readonly<Record<string, unknown>>,
   send: ApnsFetch = fetch,
 ): Promise<boolean> => {
   try {
@@ -31,10 +45,7 @@ export const sendNoteAlert = async (
         "apns-push-type": "alert",
         "apns-priority": "10",
       },
-      body: JSON.stringify({
-        aps: { alert: { body: "New note" }, "mutable-content": 1 },
-        noteURL,
-      }),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) console.warn(`demo apns rejected: status ${response.status}`);
     return response.ok;

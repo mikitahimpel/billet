@@ -55,6 +55,7 @@ export default defineConfig({
               durableObjects: {
                 STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
                 HANG_DEMO_ROOM: { className: "HangingApnsRoom", useSQLite: true },
+                CLOCK_DEMO_ROOM: { className: "ClockedDemoRoom", useSQLite: true },
                 DEMO_ROOM: { className: "DemoRoom", useSQLite: true },
               },
             },

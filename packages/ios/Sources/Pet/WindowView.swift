@@ -37,6 +37,9 @@ public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
   /// What a window shows before anyone chooses.
   public static let standard = WindowView.suburbNight
 
+  /// The views that have a 3D version, behind Labs' "3D view" switch.
+  public static let inDepth: Set<WindowView> = [.suburbNight]
+
   public var title: String {
     switch self {
     case .suburbNight: "Suburb at night"
@@ -164,13 +167,19 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
   public var view: WindowView
   public var weather: ViewWeather?
   public var hour: ViewHour?
+  /// Labs: the view in 3D, with true depth as the room turns, where the view has a 3D version
+  /// for the weather and hour shown. Elsewhere the flat view stays.
+  public var inDepth: Bool
 
   public static let standard = WindowViewChoice(view: .standard)
 
-  public init(view: WindowView, weather: ViewWeather? = nil, hour: ViewHour? = nil) {
+  public init(
+    view: WindowView, weather: ViewWeather? = nil, hour: ViewHour? = nil, inDepth: Bool = false
+  ) {
     self.view = view
     self.weather = weather
     self.hour = hour
+    self.inDepth = inDepth
   }
 
   /// The weather shown: the chosen one, or the view's own.
@@ -188,6 +197,13 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
     view = WindowView(rawValue: raw) ?? .standard
     weather = try? container.decodeIfPresent(ViewWeather.self, forKey: .weather)
     hour = try? container.decodeIfPresent(ViewHour.self, forKey: .hour)
+    inDepth = (try? container.decodeIfPresent(Bool.self, forKey: .inDepth)) ?? false
+  }
+
+  /// Whether the view is shown in 3D in `weather` at `hour`: only the suburb has a 3D street so
+  /// far, made for a clear night.
+  public func showsInDepth(weather: ViewWeather, hour: ViewHour) -> Bool {
+    inDepth && WindowView.inDepth.contains(view) && weather == .clear && hour == .night
   }
 }
 

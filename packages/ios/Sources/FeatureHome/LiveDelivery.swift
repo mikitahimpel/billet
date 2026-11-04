@@ -1,5 +1,6 @@
 import Delivery
 import DesignSystem
+import FeatureInbox
 import Foundation
 import Ink
 import Pet
@@ -40,6 +41,8 @@ actor LiveDelivery {
     var light: String?
     /// For a `style` play: how the room is now done up.
     var style: RoomStyle?
+    /// For a `daily` play: the drawing of the day.
+    var ink: String?
   }
 
   private struct Frame: Decodable {
@@ -59,6 +62,25 @@ actor LiveDelivery {
     let holding: Bool?
     let light: String?
     let style: RoomStyle?
+    let day: String?
+    let prompt: PromptFrame?
+    let prompts: [String: PromptFrame]?
+    let mine: DrawingFrame?
+    let theirs: DrawingFrame?
+    let theirsDrawn: Bool?
+  }
+
+  private struct PromptFrame: Decodable {
+    let id: String
+    let text: String
+
+    var prompt: DailyPromptText { DailyPromptText(id: id, text: text) }
+  }
+
+  private struct DrawingFrame: Decodable {
+    let ink: String
+
+    var strokes: [Stroke]? { try? NoteInk.decode(ink) }
   }
 
   private struct LifeFrameEvent: Decodable {
@@ -213,6 +235,16 @@ actor LiveDelivery {
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
 
+  /// The drawing of the day goes like a treat: kept until acked and sent again after a reconnect.
+  /// The room keeps the first drawing of a day, so a repeat changes nothing.
+  func drawDaily(_ strokes: [Stroke], at time: String) async {
+    guard let ink = try? NoteInk.encode(strokes) else { return }
+    let frame = OutgoingPlay(
+      id: UUID().uuidString.lowercased(), kind: "daily", at: time, ink: ink)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
   /// Connects and reconnects with backoff until cancelled or the server refuses this device.
   func run(_ updates: AsyncStream<NoteDelivery.Update>.Continuation) async {
     var failures = 0
@@ -309,6 +341,15 @@ actor LiveDelivery {
       }
     case "style":
       if let style = frame.style { updates.yield(.roomStyle(style)) }
+    case "daily-prompts":
+      updates.yield(.dailyPrompts((frame.prompts ?? [:]).mapValues(\.prompt)))
+    case "daily":
+      guard let day = frame.day, let prompt = frame.prompt?.prompt else { return }
+      updates.yield(
+        .daily(
+          DailyEntry(
+            day: day, prompt: prompt, mine: frame.mine?.strokes, theirs: frame.theirs?.strokes,
+            theirsDrawn: frame.theirsDrawn ?? false)))
     case "adopt":
       guard let id = frame.id, receivedIDs.insert(id).inserted,
         let move = Self.adoption(frame)

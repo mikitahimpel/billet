@@ -42,6 +42,12 @@ struct HomeView: View {
   @State private var ringsOpen = false
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
+  /// True while the canvas is drawing today's prompt rather than a note.
+  @State private var drawingDaily = false
+  /// The day of the drawing of the day whose two sheets are showing.
+  @State private var dailyReveal: DailyEntry?
+  /// The newest partner's note opened from Home, so the room stops marking it as new.
+  @AppStorage("home.openedNote") private var openedNoteID = ""
   /// The toy this phone's touch is moving now, for counting a game with it.
   @State private var touchingToy: CatToy?
   /// The partner's meal or game being shown, for a few seconds.
@@ -79,6 +85,21 @@ struct HomeView: View {
           life: session.life, temperament: session.brain.temperament,
           name: session.play.catName ?? "Your cat")
       }
+      .overlay(alignment: .top) { dailyCard }
+      .overlay {
+        if let dailyReveal {
+          DailyReveal(entry: dailyReveal, catName: session.play.catName) {
+            session.dailyRevealShown(dailyReveal.day)
+            self.dailyReveal = nil
+          }
+          .transition(.opacity)
+        }
+      }
+      .calmAnimation(value: dailyReveal)
+      .calmAnimation(value: session.hasDrawnDaily())
+      .task(id: RevealKey(day: session.daily.pendingReveal?.day, ready: roomShows)) {
+        await revealDaily()
+      }
       .environment(\.petSceneCat, session.labs.cat)
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
@@ -107,7 +128,10 @@ struct HomeView: View {
       .onReceive(NotificationCenter.default.publisher(for: DemoPush.tokenDidChange)) { _ in
         Task { await session.pushTokenChanged() }
       }
-      .task(id: StreakInputs(ledger: session.play.ledger, porch: session.porch.light)) {
+      .task(
+        id: StreakInputs(
+          ledger: session.play.ledger, porch: session.porch.light, daily: session.daily.sharedDays)
+      ) {
         await keepStreakCurrent()
       }
       .task { await keepSealedNotesCurrent() }
@@ -162,14 +186,22 @@ struct HomeView: View {
       #if os(iOS)
         .fullScreenCover(isPresented: canvasPresented, onDismiss: clearCardPrompt) {
           CanvasView(
-            prompt: cardPrompt
-              ?? DailyPrompt.canvasPrompt(
-                features: widgetFeatures.features, day: TreatDay.key(for: .now, calendar: .current)),
+            prompt: drawingDaily
+              ? session.dailyPrompt()?.text
+              : cardPrompt
+                ?? DailyPrompt.canvasPrompt(
+                  features: widgetFeatures.features,
+                  day: TreatDay.key(for: .now, calendar: .current)),
             onClose: {
               session.advent.drawingFor = nil
               store.send(.canvasClosed)
             },
             onSend: {
+              if drawingDaily {
+                drawingDaily = false
+                session.drawDaily($0)
+                return
+              }
               session.send($0)
               notesSent += 1
             }
@@ -219,6 +251,17 @@ struct HomeView: View {
     session.notes.first { $0.direction == .received }
   }
 
+  private var isNoteUnread: Bool {
+    guard let note = latestReceivedNote else { return false }
+    return note.id.uuidString != openedNoteID
+  }
+
+  /// Opens the notes from the note in the room, which counts the newest as read.
+  private func openLatestNote() {
+    if let note = latestReceivedNote { openedNoteID = note.id.uuidString }
+    onOpenNotes()
+  }
+
   @ViewBuilder private var home: some View {
     if variant.isFullBleed, let scene {
       fullBleedHome(scene)
@@ -252,7 +295,8 @@ struct HomeView: View {
       notes: session.notes,
       streak: session.streak(today: today, calendar: calendar),
       isFakePartner: session.isFakePartner,
-      onOpenNotes: onOpenNotes,
+      isNoteUnread: isNoteUnread,
+      onOpenNotes: openLatestNote,
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
@@ -317,8 +361,8 @@ struct HomeView: View {
         return FlameSceneState(
           flame: StreakFlame(streak: streak),
           today: FlameToday.contributions(
-            notes: session.notes, treat: session.play.status(on: today), now: now,
-            calendar: calendar),
+            notes: session.notes, treat: session.play.status(on: today),
+            daily: session.daily.entry(on: today), now: now, calendar: calendar),
           visit: visit)
       },
       view: { state, close in
@@ -677,6 +721,37 @@ struct HomeView: View {
 
   private func clearCardPrompt() {
     cardPrompt = nil
+    drawingDaily = false
+  }
+
+  /// Today's prompt, until today is drawn. Hidden while decorating or while a reveal shows.
+  @ViewBuilder private var dailyCard: some View {
+    if !isRenovating, dailyReveal == nil, !session.hasDrawnDaily(),
+      let prompt = session.dailyPrompt()
+    {
+      let today = session.daily.entry(on: TreatDay.key(for: .now, calendar: .current))
+      DailyDrawingCard(prompt: prompt, partnerDrew: today?.theirsDrawn == true) {
+        drawingDaily = true
+        store.send(.canvasOpened)
+      }
+      .padding(.horizontal, Spacing.medium)
+      .padding(.top, Spacing.page + Spacing.small)
+      .transition(.move(edge: .top).combined(with: .opacity))
+    }
+  }
+
+  /// Once both drawings of a day are here and the room is in sight, the cat carries the
+  /// partner's in, the way it brings a note, and then both sheets come up together.
+  private func revealDaily() async {
+    guard roomShows, dailyReveal == nil, let entry = session.daily.pendingReveal,
+      let theirs = entry.theirs
+    else { return }
+    if let wall = scene?.noteWall {
+      store.send(.noteReceived(theirs))
+      try? await Task.sleep(for: wall.revealDelay + .seconds(1.5))
+      guard !Task.isCancelled else { return }
+    }
+    dailyReveal = entry
   }
 
   private func promptCard(_ title: String, prompt: String) -> some View {
@@ -753,7 +828,7 @@ struct HomeView: View {
       session.fed()
       events(.catFed(.food))
     case .shooed: session.shooed()
-    case .noteOpened: onOpenNotes()
+    case .noteOpened: openLatestNote()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
     case .touching(let interaction):
       session.brain.setLive(interaction)
@@ -917,8 +992,15 @@ private struct NudgeInputs: Equatable {
   let name: String?
 }
 
+/// When to try the reveal of the drawing of the day: a new day to reveal, or the room in sight.
+private struct RevealKey: Equatable {
+  let day: String?
+  let ready: Bool
+}
+
 /// What the streak is worked out from, so it is worked out again when either changes.
 private struct StreakInputs: Equatable {
   let ledger: TreatLedger
   let porch: PorchLight?
+  let daily: Set<String>
 }

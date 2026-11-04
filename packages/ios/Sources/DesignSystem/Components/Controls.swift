@@ -81,6 +81,33 @@ extension View {
   }
 }
 
+/// A way out to the side of a screen's path, below its buttons: words alone, no surface, still a
+/// 44pt target.
+public struct QuietButton: View {
+  private let title: String
+  private let action: () -> Void
+
+  public init(_ title: String, action: @escaping () -> Void) {
+    self.title = title
+    self.action = action
+  }
+
+  public var body: some View {
+    Button(action: action) {
+      Text(title)
+        .billetType(.label)
+        .underline(color: Palette.paper.color.opacity(0.4))
+        .foregroundStyle(Palette.paper.color.opacity(0.85))
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, Spacing.medium)
+        .frame(maxWidth: .infinity, minHeight: Target.minimum)
+        .contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+  }
+}
+
 /// The app's one icon button: a 44pt circle holding a symbol. Selection turns it gold.
 public struct IconButton: View {
   private let systemImage: String

@@ -1,6 +1,8 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
 // shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, the room's light switch, and how the room is done up.
+// together, the room's light switch, how the room is done up, and the drawing of the day.
+
+import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -22,7 +24,8 @@ export type PlayKind =
   | "react"
   | "adopt"
   | "light"
-  | "style";
+  | "style"
+  | "daily";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -123,6 +126,14 @@ export type AdoptFrame = {
   readonly at: string;
 } & AdoptMove;
 
+/** This device's drawing of the day's prompt. The day is the one `at` was written on. */
+export interface DailyFrame {
+  readonly id: string;
+  readonly kind: "daily";
+  readonly at: string;
+  readonly ink: string;
+}
+
 export type AnyPlayFrame =
   | PlayFrame
   | NameFrame
@@ -130,7 +141,8 @@ export type AnyPlayFrame =
   | ReactFrame
   | AdoptFrame
   | LightFrame
-  | StyleFrame;
+  | StyleFrame
+  | DailyFrame;
 
 const isRoomLight = (value: unknown): value is RoomLight =>
   typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
@@ -190,6 +202,13 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "style": {
       const style = parseStyle(frame["style"]);
       return style ? { id, kind, at, style } : undefined;
+    }
+    case "daily": {
+      const { ink } = frame;
+      if (typeof ink !== "string" || ink.length === 0 || ink.length > MAX_DAILY_INK) {
+        return undefined;
+      }
+      return { id, kind, at, ink };
     }
     case "react": {
       const { note, reaction } = frame;
