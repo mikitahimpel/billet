@@ -120,27 +120,30 @@ struct GenzRoomView: View {
     let look = room.screen.look
     let parts = RoomCostSwitches.shared
     ZStack {
-      if parts.shows("layers") { layer(behind, room: room) }
-      if parts.shows("sky") { theirSky }
-      if parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
-      stage(room)
-      if parts.shows("layers") {
-        ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      ZStack {
+        if parts.shows("layers") { layer(behind, room: room) }
+        if parts.shows("sky") { theirSky }
+        if parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+        stage(room)
+        if parts.shows("layers") {
+          ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+        }
+        if noteUnread, !isDecorating {
+          NoteBeacon(
+            outline: room.screen.outlines[.windowBacklight] ?? [],
+            isPaused: !isOnScreen || reduceMotion
+          )
+          .transition(.opacity)
+        }
+        if parts.shows("halos") {
+          GlowLights(
+            look: look, screen: room.screen,
+            isPaused: !isOnScreen || reduceMotion)
+        }
       }
-      if noteUnread, !isDecorating {
-        NoteBeacon(
-          outline: room.screen.outlines[.windowBacklight] ?? [],
-          isPaused: !isOnScreen || reduceMotion
-        )
-        .transition(.opacity)
-      }
-      if parts.shows("halos") {
-        GlowLights(
-          look: look, screen: room.screen,
-          isPaused: !isOnScreen || reduceMotion)
-      }
+      .colorMultiply(parts.shows("grade") ? GlowGrade.tint(of: look) : .white)
       if parts.shows("grade") {
-        GlowGrade(look: look)
+        GlowGrade(look: look, includesTint: false)
         GlowVignette(look: look)
       }
       CatPurrOverlay(purr: room.purr)

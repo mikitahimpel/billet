@@ -49,13 +49,24 @@ struct GlowHaze: View {
 /// too, like light scattering in the lens.
 struct GlowGrade: View {
   let look: LightingLook
+  /// Whether this layer multiplies the tint in. A view that applies `tint(of:)` to what it
+  /// grades with `colorMultiply` leaves it out: the same colour, without a second full-screen
+  /// layer blended over the view.
+  var includesTint = true
+
+  /// The tint to multiply what is graded by.
+  static func tint(of look: LightingLook) -> Color {
+    LightingLook.RGB.mix(.one, look.grade.tint, by: look.grade.tintAmount).colour
+  }
 
   var body: some View {
     let grade = look.grade
-    if grade.tintAmount > 0 || grade.liftAmount > 0 {
+    let tints = includesTint && grade.tintAmount > 0
+    if tints || grade.liftAmount > 0 {
       ZStack {
-        LightingLook.RGB.mix(.one, grade.tint, by: grade.tintAmount).colour
-          .blendMode(.multiply)
+        if tints {
+          Self.tint(of: look).blendMode(.multiply)
+        }
         grade.lift.colour.opacity(Double(grade.liftAmount))
           .blendMode(.screen)
       }
