@@ -200,6 +200,7 @@ final class GenzRoom: CatPlayStage {
   private var clipRate: Float = 1
   /// What stands the cat on the surface under it (``stepFooting``).
   var footing = CatFooting()
+  let wayCache = GenzCatWayCache()
   var trip: CatTrip?
   /// A trip waiting for the cat to get back up onto its own top.
   var pendingTrip: (kind: CatTripKind, legs: [CatTrip.Leg])?
