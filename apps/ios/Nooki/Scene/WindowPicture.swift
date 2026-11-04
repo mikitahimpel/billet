@@ -70,8 +70,6 @@ final class WindowPicture {
     private var choice = WindowChoice.current
     private var weather = WindowChoice.weather
     private var moves = false
-    private var spent: Double = 0
-    private var frames = 0
 
     /// The next frame for the pane, or `nil` when the one shown still stands. Changing views or the hour's part of the
     /// day repaints at once.
@@ -89,15 +87,6 @@ final class WindowPicture {
         if changed { moves = WindowPainter.moves(look.view) }
         guard changed || (moves && age >= 1 / Self.rate) || age > 4 else { return nil }
         age = 0
-        let start = CFAbsoluteTimeGetCurrent()
-        let image = painter.frame()
-        spent += CFAbsoluteTimeGetCurrent() - start
-        frames += 1
-        if frames == 60 {
-            NSLog("[WindowPicture] %@ %.2f ms a frame", look.view.rawValue, spent / 60 * 1000)
-            spent = 0
-            frames = 0
-        }
-        return image
+        return painter.frame()
     }
 }
