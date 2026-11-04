@@ -45,8 +45,9 @@ extension GenzPiece.Kind {
     switch self {
     case .windowBench, .daybed, .quiltedDaybed: .seat
     case .sideTable, .milkCrate, .bookCrate, .knitPouf: .table
-    case .catBed: .bed
-    case .idolCatBed: .bed
+    case .catBed, .idolCatBed, .cabinBed: .bed
+    case .cabinNightstand: .table
+    case .cabinCatTree: .top
     case .idolBeanBag, .idolBeanBagSage, .idolBeanBagTerracotta, .idolArmchair,
       .idolFloorCushionSage, .idolFloorCushionTerracotta, .idolCatTree:
       .top
@@ -57,7 +58,8 @@ extension GenzPiece.Kind {
       .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolDesk, .idolFrameLandscape,
       .idolPosterMoon, .idolClock, .idolFishTank, .idolScratchPost, .idolFiddleFig, .idolPothos,
       .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolYarnBasket:
+      .idolNeonHeart, .idolYarnBasket, .cabinRug, .cabinPlant, .cabinBasket, .cabinStoolLamp,
+      .cabinBooks:
       nil
     }
   }
@@ -66,7 +68,8 @@ extension GenzPiece.Kind {
   /// feet on top of it, rather than going round it.
   var catWalksOver: Bool {
     switch self {
-    case .roundRug, .patternRug, .idolRug, .phoneOnCharger, .cardigan, .blanket, .idolThrow,
+    case .roundRug, .patternRug, .idolRug, .cabinRug, .phoneOnCharger, .cardigan, .blanket,
+      .idolThrow,
       .idolBooks:
       true
     default: false
