@@ -1,4 +1,5 @@
 import CoreGraphics
+import DesignSystem
 import Foundation
 import OSLog
 import Observation
@@ -856,7 +857,7 @@ final class GenzRoom: CatPlayStage {
       opening == nil && camera.isAtRest && trip == nil && !decor.isMoving
       && liveInteraction == nil && clock - lastTouchClock > FramePace.stillAfter
       && Date.now > screen.busyUntil
-    frames.rate = FramePace.shared.rate(isStill: isStill)
+    frames.rate = FramePace.shared.rate(isStill: isStill, isCovered: SheetsShowing.shared.any)
   }
 
   /// Each flame sways and stretches a little, out of step with the others.
