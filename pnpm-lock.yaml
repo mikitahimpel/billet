@@ -480,6 +480,9 @@ importers:
       '@billet/backend-auth':
         specifier: workspace:*
         version: link:../auth
+      '@billet/backend-observability':
+        specifier: workspace:*
+        version: link:../observability
       '@billet/backend-pairing':
         specifier: workspace:*
         version: link:../pairing

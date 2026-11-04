@@ -14,4 +14,6 @@ export class PaymentsNotFound extends Data.TaggedError("PaymentsNotFound") {}
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class PaymentsUnavailable extends Data.TaggedError("PaymentsUnavailable")<{
   readonly reason: string;
+  /** What failed underneath, for the one log line at the edge. Never sent to the client. */
+  readonly cause?: unknown;
 }> {}

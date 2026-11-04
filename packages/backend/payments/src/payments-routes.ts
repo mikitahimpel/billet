@@ -1,4 +1,4 @@
-import { ByteSize, Effect, Layer, type Schema } from "effect";
+import { ByteSize, Effect, Layer, Redacted, type Schema } from "effect";
 import {
   HttpIncomingMessage,
   HttpRouter,
@@ -41,13 +41,14 @@ const respondPaymentsFailures = <R>(
 ) =>
   effect.pipe(
     Effect.catchTags({
+      // A client error, so not a log line; the fixed reason goes on the span for the trace.
       InvalidPurchase: ({ reason }) =>
-        Effect.logInfo("purchase refused", reason).pipe(
+        Effect.annotateCurrentSpan("purchase.refused", reason).pipe(
           Effect.andThen(respondError(ApiError.cases.InvalidPurchase.make({}), { status: 400 })),
         ),
       PaymentsNotFound: () => respondError(ApiError.cases.NotFound.make({}), { status: 404 }),
-      PaymentsUnavailable: ({ reason }) =>
-        Effect.logError("payments unavailable", reason).pipe(
+      PaymentsUnavailable: (error) =>
+        Effect.logError("payments unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
         ),
     }),
@@ -91,7 +92,7 @@ export const PaymentsRoutes = HttpRouter.use((router) =>
       Effect.gen(function* () {
         const caller = yield* owner;
         const { signedTransaction } = yield* body(PurchaseRequest);
-        const result = yield* payments.purchase(caller, signedTransaction);
+        const result = yield* payments.purchase(caller, Redacted.make(signedTransaction));
         return yield* respondPurchase(result, { headers: noStore });
       }).pipe(respondPaymentsFailures),
     );
@@ -126,7 +127,7 @@ export const PaymentsRoutes = HttpRouter.use((router) =>
       routes.appStoreNotifications.path,
       Effect.gen(function* () {
         const { signedPayload } = yield* body(AppStoreNotificationRequest);
-        yield* payments.notification(signedPayload);
+        yield* payments.notification(Redacted.make(signedPayload));
         return HttpServerResponse.jsonUnsafe({}, { headers: noStore });
       }).pipe(respondPaymentsFailures),
     );

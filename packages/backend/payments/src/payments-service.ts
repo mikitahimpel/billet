@@ -1,4 +1,4 @@
-import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option, Redacted, Schema } from "effect";
 import type { Signature } from "effect/crypto";
 import type { UserId } from "@billet/contracts-domain/ids";
 import { appBundleId, stampPackOf } from "@billet/contracts-domain/stamp-packs";
@@ -7,6 +7,7 @@ import type {
   PurchaseResponse,
   StampsResponse,
 } from "@billet/contracts-http-api/purchase";
+import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { verifySignedData } from "./app-store-signed-data.ts";
 import { InvalidPurchase, PaymentsNotFound, PaymentsUnavailable } from "./payments-error.ts";
@@ -65,7 +66,7 @@ export class PaymentsService extends Context.Service<
     /** Verifies a StoreKit 2 transaction and credits its pack, once. */
     readonly purchase: (
       owner: StampOwner,
-      signedTransaction: string,
+      signedTransaction: Redacted.Redacted<string>,
     ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsUnavailable>;
     /** The dev stage's purchase without the App Store. The routes only serve it there. */
     readonly mockPurchase: (
@@ -82,7 +83,7 @@ export class PaymentsService extends Context.Service<
      * then decides the refund without that information.
      */
     readonly notification: (
-      signedPayload: string,
+      signedPayload: Redacted.Redacted<string>,
     ) => Effect.Effect<void, InvalidPurchase | PaymentsUnavailable>;
   }
 >()("@billet/backend-payments/PaymentsService") {
@@ -119,19 +120,29 @@ export class PaymentsService extends Context.Service<
       const accepts = (environment: string) =>
         config.environments.some((accepted) => accepted === environment);
 
-      const ownerOf = (userId: UserId) =>
-        pairing.findPair(userId).pipe(
-          Effect.mapError(({ reason }) => new PaymentsUnavailable({ reason })),
-          Effect.flatMap(
-            Option.match({
-              onNone: () => Effect.fail(new PaymentsNotFound()),
-              onSome: (pairId) => Effect.succeed(decodeOwner(pairId)),
-            }),
-          ),
-        );
+      // Where a request learns whose stamps it touches. A demo owner has no user or pair to name.
+      const ownerOf = Effect.fn("PaymentsService.ownerOf")(function* (userId: UserId) {
+        yield* annotateRefs({ user: userId });
+        const pairId = yield* pairing
+          .findPair(userId)
+          .pipe(
+            Effect.mapError(
+              (error) => new PaymentsUnavailable({ reason: error.reason, cause: error }),
+            ),
+          );
+        if (Option.isNone(pairId)) return yield* new PaymentsNotFound();
+        yield* annotateRefs({ pair: pairId.value });
+        return decodeOwner(pairId.value);
+      });
 
-      const purchase = Effect.fnUntraced(function* (owner: StampOwner, jws: string) {
-        const transaction: Transaction = yield* verifiedTransaction(jws, config.devTools);
+      const purchase = Effect.fn("PaymentsService.purchase")(function* (
+        owner: StampOwner,
+        signedTransaction: Redacted.Redacted<string>,
+      ) {
+        const transaction: Transaction = yield* verifiedTransaction(
+          Redacted.value(signedTransaction),
+          config.devTools,
+        );
         if (!accepts(transaction.environment)) {
           return yield* new InvalidPurchase({ reason: "environment-not-accepted" });
         }
@@ -162,7 +173,7 @@ export class PaymentsService extends Context.Service<
         };
       });
 
-      const mockPurchase = Effect.fnUntraced(function* (
+      const mockPurchase = Effect.fn("PaymentsService.mockPurchase")(function* (
         owner: StampOwner,
         request: MockPurchaseRequest,
       ) {
@@ -201,7 +212,7 @@ export class PaymentsService extends Context.Service<
         };
       });
 
-      const stamps = (owner: StampOwner) =>
+      const stamps = Effect.fn("PaymentsService.stamps")((owner: StampOwner) =>
         repository.ledger(owner).pipe(
           Effect.map(({ balance, entries }) => ({
             balance,
@@ -213,10 +224,13 @@ export class PaymentsService extends Context.Service<
               at: iso(at),
             })),
           })),
-        );
+        ),
+      );
 
-      const notification = Effect.fnUntraced(function* (signedPayload: string) {
-        const { payload } = yield* verified(signedPayload, false);
+      const notification = Effect.fn("PaymentsService.notification")(function* (
+        signedPayload: Redacted.Redacted<string>,
+      ) {
+        const { payload } = yield* verified(Redacted.value(signedPayload), false);
         const decoded = yield* shapeOf(Notification, "notification-shape")(payload);
         const { data } = decoded;
         if (data?.bundleId !== undefined && data.bundleId !== appBundleId) {

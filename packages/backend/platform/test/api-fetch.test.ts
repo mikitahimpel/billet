@@ -1549,6 +1549,55 @@ describe("payments in the Worker", () => {
     expect(await notified.json()).toEqual({ _tag: "InvalidPurchase" });
   });
 
+  it("never logs a signed transaction or payload, and logs storage trouble once", async () => {
+    const { owner } = await pairOf("subject-logs-a", "subject-logs-b");
+    const xcode = await makeXcodeChain();
+    const chain = await makeChain();
+    const fromXcode = await signJws(
+      transactionPayload({ environment: "Xcode", transactionId: "9", originalTransactionId: "9" }),
+      xcode.chain,
+      xcode.leafKey,
+    );
+    const foreign = await signJws(transactionPayload(), chain.chain, chain.leafKey);
+    const signedPayload = await signJws(
+      notificationPayload("REFUND", foreign),
+      chain.chain,
+      chain.leafKey,
+    );
+    const lines: string[] = [];
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation((...args: unknown[]) => {
+        lines.push(
+          args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" "),
+        );
+      }),
+    );
+    await env.DB.prepare("ALTER TABLE stamp_ledger RENAME TO stamp_ledger_away").run();
+    try {
+      const down = await atStage(
+        "dev",
+        post("/v1/purchases", { signedTransaction: fromXcode }, bearer(owner)),
+      );
+      expect(down.status).toBe(503);
+    } finally {
+      await env.DB.prepare("ALTER TABLE stamp_ledger_away RENAME TO stamp_ledger").run();
+    }
+    try {
+      await atStage("dev", post("/v1/purchases", { signedTransaction: fromXcode }, bearer(owner)));
+      await atStage("prod", post("/v1/purchases", { signedTransaction: foreign }, bearer(owner)));
+      await atStage("prod", post("/v1/appstore/notifications", { signedPayload }));
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+    }
+    const output = lines.join("\n");
+    expect(output.match(/payments unavailable/g)).toHaveLength(1);
+    expect(output).toContain("directory-unavailable");
+    for (const jws of [fromXcode, foreign, signedPayload]) {
+      for (const part of jws.split(".")) expect(output).not.toContain(part);
+    }
+    expect(output).not.toContain(owner);
+  });
+
   it("answers 404 to a purchase from a caller with no pair", async () => {
     const token = await signedInAs("subject-alone");
     const response = await atStage(

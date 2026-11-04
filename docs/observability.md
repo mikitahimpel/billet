@@ -79,10 +79,11 @@ A Durable Object call is its own trace: the Worker's `PairRooms.sendNote` span a
 ## Child spans
 
 - Services name their methods with `Effect.fn("Service.method")`: `AuthService.*`,
-  `NotesService.*`, `PairingService.*`, `AccountDeletion.*`, `FlagsService.flagsFor`.
+  `NotesService.*`, `PairingService.*`, `PaymentsService.*`, `AccountDeletion.*`,
+  `FlagsService.flagsFor`.
 - Repositories and adapters built as object literals are wrapped with `spanMethods("Name", …)`:
   `AuthRepository`, `AuthEngine`, `AccountRepository`, `AccountNotices`, `PairingRepository`,
-  `PairingObserver`, `FlagsRepository`, `FlagConfigRepository`, `MetricsRepository`,
+  `PairingObserver`, `PaymentsRepository`, `FlagsRepository`, `FlagConfigRepository`, `MetricsRepository`,
   `AdminData`, `MediaStore`, `PairRooms`, `EventSink` (analytics events), `AppleTokenRevoker`.
 - `@effect/sql` adds a `sqlite` or `BATCH` span per statement, and `HttpClient` a `GET`/`POST` span per outbound call (Apple's keys). The SQL text and any `url.full`/`url.path`/`url.query` are left out of the line. The HTTP router's own server span is switched off: `http.request` replaces it.
 - `Effect.fnUntraced` stays only on inner helpers that run many times per request
