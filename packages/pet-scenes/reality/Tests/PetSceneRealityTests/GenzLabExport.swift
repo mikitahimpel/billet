@@ -22,11 +22,16 @@
       for furniture in RoomFurniture.allCases {
         let layout = GenzLayout.of(furniture)
         let room = GenzRoomCache(suite: "genz-lab-\(UUID())").room(layout)
+        // As GenzRenderShots lights it: on screen and updating, so the opening brings the lights up.
+        room.fit(to: CGSize(width: 393, height: 852))
+        room.setLighting(.standard)
+        room.setOnScreen(true, in: UUID())
+        room.startUpdates()
         room.startBuilding()
         let deadline = Date.now.addingTimeInterval(120)
         while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
         try #require(room.isBuilt)
-        room.room.isEnabled = true
+        try await Task.sleep(for: .seconds(GenzOpening.length + 1))
 
         var writer = GLBWriter()
         for child in room.room.children where child !== room.catHolder {
@@ -35,8 +40,10 @@
         try writer.data().write(to: directory.appending(path: "room-\(furniture).glb"))
 
         var presets: [String: Any] = [:]
+        defer { room.setOnScreen(false, in: UUID()) }
         for preset in RoomLighting.allCases {
           room.setLighting(preset)
+          try await Task.sleep(for: .seconds(2))
           var lights: [[String: Any]] = []
           Self.lights(in: room.root, root: room.root, into: &lights)
           presets[preset.rawValue] = lights
