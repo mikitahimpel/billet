@@ -234,6 +234,8 @@ struct ShopSellingTests {
     }
     #expect(store.state.layout.placements.isEmpty)
     #expect(room.sent.isEmpty)
+    // Wrapped and about to go: not the room's to place.
+    #expect(checkout.owned(mouse) == 0)
     checkout.settle(receipt)
     #expect(room.sent.map(\.0) == [mouse.id])
     #expect(room.sent.map(\.1) == ["for the little one"])

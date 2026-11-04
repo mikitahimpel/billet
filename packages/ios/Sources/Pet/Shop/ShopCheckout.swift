@@ -104,6 +104,14 @@ public final class ShopCheckout {
     item.ownsAtMostOne && store.state.owns(item)
   }
 
+  /// How many of `item` the closet holds for the room: a gift wrapped for the partner and about
+  /// to go is not counted.
+  public func owned(_ item: ShopItem) -> Int {
+    var wrapping = 0
+    if let latest, case .gift = latest.kind, latest.item.id == item.id { wrapping = 1 }
+    return max(store.owned(item) - wrapping, 0)
+  }
+
   /// What is left to buy of `bundle`, and what it costs: an item that can only be owned once and
   /// already is, is left out and not charged for.
   public func remaining(of bundle: ShopBundle) -> (items: [ShopItem], price: Int, sum: Int) {

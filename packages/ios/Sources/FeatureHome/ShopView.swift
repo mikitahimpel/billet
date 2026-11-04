@@ -351,7 +351,7 @@ struct ShopView: View {
   }
 
   @ViewBuilder private func badge(_ item: ShopItem) -> some View {
-    let owned = store.owned(item)
+    let owned = checkout.owned(item)
     if case .style(let choice) = item.look, style.shows(choice) {
       Image(systemName: "checkmark.circle.fill")
         .font(IconStyle.font)
@@ -367,7 +367,7 @@ struct ShopView: View {
 
   @ViewBuilder private func buttons(_ item: ShopItem) -> some View {
     HStack(spacing: Spacing.hair) {
-      if item.isPlaceable, store.owned(item) > 0 {
+      if item.isPlaceable, checkout.owned(item) > 0 {
         Button {
           onPlace(item)
         } label: {
@@ -445,7 +445,7 @@ struct ShopView: View {
     if case .style(let choice) = item.look, let onTryOn, !style.shows(choice) {
       Button("Try it on in your room", systemImage: "eye") { onTryOn(choice) }
     }
-    if item.isPlaceable, store.owned(item) > 0 {
+    if item.isPlaceable, checkout.owned(item) > 0 {
       Button("Place in your room", systemImage: "hand.point.up.left") { onPlace(item) }
     }
     if !checkout.isOwned(item) {
