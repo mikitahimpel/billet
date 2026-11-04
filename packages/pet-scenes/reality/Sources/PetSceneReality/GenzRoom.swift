@@ -66,10 +66,27 @@ final class GenzRoomScreen {
 }
 
 /// The cat models, each loaded once from its compiled file and cloned into each styled room. A
-/// cat that will not load is replaced by the standard cat, so a room always has one.
+/// cat that will not load is replaced by the standard cat, so a room always has one. Only the
+/// models someone holds stay loaded: each room's and the desk's cat, and the adoption's cats
+/// while it shows.
 @MainActor
 final class GenzCatSource {
   private var loading: [CatModel: Task<Entity?, Never>] = [:]
+  private var held: [ObjectIdentifier: Set<CatModel>] = [:]
+
+  /// The models loaded or loading now.
+  var loaded: Set<CatModel> { Set(loading.keys) }
+
+  /// Keeps the models for `choices` loaded for `owner`, in place of what it held before, and lets
+  /// go of every model nobody holds. A cat already placed is a copy and stays where it is.
+  func hold(_ choices: [CatChoice], for owner: AnyObject) {
+    let key = ObjectIdentifier(owner)
+    held[key] = choices.isEmpty ? nil : Set(choices.map(\.model))
+    let kept = held.values.reduce(into: Set<CatModel>()) { $0.formUnion($1) }
+    for model in loading.keys where !kept.contains(model) {
+      loading[model] = nil
+    }
+  }
 
   /// A fresh copy of the model for `choice`, and the choice it really shows.
   func cat(_ choice: CatChoice = .standard) async -> (Entity, CatChoice)? {
@@ -103,6 +120,14 @@ final class GenzRoomCache {
 
   nonisolated init(suite: String? = nil) {
     self.suite = suite
+  }
+
+  /// Lets go of the room for `key` once no view shows it, with its cat, so a set of furniture
+  /// left for another stops holding its meshes. Asked for again, it is built afresh.
+  func release(_ key: GenzLayout.Key) {
+    guard let room = rooms[key], !room.isOnScreen else { return }
+    rooms[key] = nil
+    cats.hold([], for: room)
   }
 
   func room(_ layout: GenzLayout) -> GenzRoom {
@@ -462,6 +487,7 @@ final class GenzRoom: CatPlayStage {
 
   private func placeCat() async {
     let wanted = catChoice
+    cats.hold([wanted], for: self)
     guard let (model, shown) = await cats.cat(wanted) else {
       Self.log.error("No cat for \(String(describing: wanted), privacy: .public)")
       return
