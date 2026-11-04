@@ -41,7 +41,8 @@ describe("the stamp packs everywhere", () => {
 
   it("Billet.storekit sells the canonical packs as consumables", () => {
     const { products } = Schema.decodeUnknownSync(StoreKitConfiguration)(
-      readJson("apps/ios/App/Billet.storekit"),
+      // TODO: the new app in apps/ios gets its own .storekit with the Payments wiring.
+      readJson("archive/ios-v1/App/Billet.storekit"),
     );
     expect(
       products

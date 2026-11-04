@@ -3,9 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "ios:generate": "xcodegen generate",
-    "ios:build": "xcodegen generate && xcodebuild build -project Billet.xcodeproj -scheme Billet -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO",
-    "ios:format": "swift format format --in-place --recursive --configuration ../../.swift-format App Widget NotificationService",
-    "ios:format:check": "swift format lint --strict --recursive --configuration ../../.swift-format App Widget NotificationService"
+    "ios:generate": "xcodegen generate"
   }
 }

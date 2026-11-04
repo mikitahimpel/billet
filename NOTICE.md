@@ -75,3 +75,14 @@ it does. No outside model or texture is used.
   backdrop are ported from `Nooki/Scene/DioramaScene.swift` and `HomeView.swift` in
   [nexishq/nooki-ios](https://github.com/nexishq/nooki-ios) at 6b968d4, with its author's permission.
   It ships no files from that project; every shape is built in code.
+
+## The iOS app
+
+The iOS app in `apps/ios` is Nooki by Ilya ([nexishq/nooki-ios](https://github.com/nexishq/nooki-ios)),
+imported with its author's permission, including its publication in this repository, from commit
+`0deb4a25ebcef528ee32d0b796c1d59e8f359730`. Its code, scenes, cats, rooms, shop items, icon and
+tools are his. Changes made for billet: the Billet name, bundle IDs, app group, team and build
+number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats packed from that
+commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
+Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
+is kept, unbuilt, in `archive/ios-v1`.

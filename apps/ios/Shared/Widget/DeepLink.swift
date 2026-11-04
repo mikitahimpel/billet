@@ -1,0 +1,39 @@
+import Foundation
+
+/// Where a tap on a widget lands in the app, as a nooki:// URL.
+enum DeepLink: Hashable {
+    case room, moments, us, calendar, dates, newNote
+    case list(UUID)
+
+    static let scheme = "nooki"
+
+    var url: URL {
+        let path = switch self {
+        case .room: "room"
+        case .moments: "moments"
+        case .us: "us"
+        case .calendar: "us/calendar"
+        case .dates: "us/dates"
+        case .newNote: "notes/new"
+        case .list(let id): "us/list/\(id.uuidString)"
+        }
+        return URL(string: "\(Self.scheme)://\(path)")!
+    }
+
+    init?(url: URL) {
+        guard url.scheme == Self.scheme, let host = url.host() else { return nil }
+        let parts = [host] + url.pathComponents.filter { $0 != "/" }
+        switch parts {
+        case ["room"]: self = .room
+        case ["moments"]: self = .moments
+        case ["us"]: self = .us
+        case ["us", "calendar"]: self = .calendar
+        case ["us", "dates"]: self = .dates
+        case ["notes", "new"]: self = .newNote
+        case let p where p.count == 3 && p[0] == "us" && p[1] == "list":
+            guard let id = UUID(uuidString: p[2]) else { return nil }
+            self = .list(id)
+        default: return nil
+        }
+    }
+}

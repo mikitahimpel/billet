@@ -3,165 +3,90 @@ options:
   bundleIdPrefix: com.mikitahimpel
   deploymentTarget:
     iOS: "18.0"
-  createIntermediateGroups: true
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: 2666YPBJTB
+    CODE_SIGN_STYLE: Automatic
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "6"
-    GENERATE_INFOPLIST_FILE: YES
-    # "demo" (the demo room and fake partner) or "real" (the backend at BILLET_API_BASE_URL).
-    # Demo is the default; pass BILLET_BACKEND=real BILLET_API_BASE_URL=https://... to xcodebuild.
-    BILLET_BACKEND: demo
-    BILLET_API_BASE_URL: ""
-    # Where "Update billet" sends a build the service no longer accepts: an App Store or https
-    # link. Empty opens the TestFlight app.
-    BILLET_UPDATE_URL: ""
-    # Which store the app carries: "mock" (the default: fake store, dev server credits) or
-    # "storekit" (Apple's). Set it in the ENVIRONMENT, not as an xcodebuild argument, because
-    # Package.swift reads the same variable to link only that implementation:
-    #   BILLET_PAYMENTS=storekit xcodebuild ...   (docs/payments.md)
-    BILLET_PAYMENTS_MODE: $(BILLET_PAYMENTS:default=mock)
-    # "testflight" (the default) or "appstore". An App Store build refuses the mock store.
-    BILLET_DISTRIBUTION_MODE: $(BILLET_DISTRIBUTION:default=testflight)
-  configs:
-    # Release only: CI and Simulator builds are Debug with CODE_SIGNING_ALLOWED=NO.
-    Release:
-      DEVELOPMENT_TEAM: 2666YPBJTB
-      CODE_SIGN_STYLE: Automatic
-packages:
-  Billet:
-    path: ../../packages/ios
-  # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
-  PetSceneReality:
-    path: ../../packages/pet-scenes/reality
+    CURRENT_PROJECT_VERSION: "23"
 targets:
   Billet:
     type: application
     platform: iOS
+    # Shared: stores, palette and intents the widget extension compiles too.
     sources:
-      - path: App
-        excludes: [Billet.storekit]
-    dependencies:
-      - package: Billet
-        products:
-          [
-            FeatureHome,
-            Ink,
-            Labs,
-            Payments,
-            PaymentsLive,
-            Persistence,
-            PetScene,
-            PetSceneCatalog,
-            Transport,
-            WidgetBridge,
-          ]
-      - package: PetSceneReality
-      - target: BilletWidget
-      - target: BilletNotificationService
-    entitlements:
-      path: App/Billet.entitlements
+      - path: Nooki
+      - path: Shared
+    # The launch screen is the splash's own dark warm color (Assets LaunchBackground), see LaunchSplash; the rest
+    # of Info.plist is generated from the INFOPLIST_KEY_ settings below.
+    info:
+      path: Nooki/Info.plist
       properties:
-        aps-environment: development
-        com.apple.developer.applesignin: [Default]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+    dependencies:
+      - target: NookiWidgets
+    entitlements:
+      path: Nooki/Nooki.entitlements
+      properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
-        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
         TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_FILE: App/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Billet
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # The other icons people can pick in Us → App icon (FeatureSettings/AppIconSection.swift).
-        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIconAsleep AppIconLetter AppIconNight AppIconHeartWindow
-        INFOPLIST_KEY_CFBundleDisplayName: billet
-        INFOPLIST_KEY_UIUserInterfaceStyle: Dark
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "billet saves your wallpapers and Sunday posts to Photos."
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) DISTRIBUTION_$(BILLET_DISTRIBUTION_MODE:upper)
-  BilletWidget:
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  NookiWidgets:
     type: app-extension
     platform: iOS
-    sources: [Widget]
-    dependencies:
-      - package: Billet
-        products: [DesignSystem, Ink, Persistence, Pet, Surfaces, WidgetBridge]
-    entitlements:
-      path: Widget/BilletWidget.entitlements
-      properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
-        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+    sources: [NookiWidgets, Shared]
     info:
-      path: Widget/Info.plist
+      path: NookiWidgets/Info.plist
       properties:
+        CFBundleDisplayName: Billet
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: NookiWidgets/NookiWidgets.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
-        TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_KEY_CFBundleDisplayName: billet
-  BilletNotificationService:
-    type: app-extension
-    platform: iOS
-    sources: [NotificationService]
-    dependencies:
-      - package: Billet
-        product: Delivery
-    entitlements:
-      path: NotificationService/BilletNotificationService.entitlements
-      properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
-        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
-    info:
-      path: NotificationService/Info.plist
-      properties:
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.usernotifications.service
-          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
-        TARGETED_DEVICE_FAMILY: "1"
-        INFOPLIST_KEY_CFBundleDisplayName: billet
-  # StoreKit testing on the Simulator: buys each stamp pack from Billet.storekit with
-  # StoreKitTest, hosted in the app. Run with BILLET_PAYMENTS=storekit (docs/payments.md).
-  BilletStoreKitTests:
+        # Extensions keep Swift's default isolation; Shared types that cross into App Intents are marked nonisolated.
+        SKIP_INSTALL: YES
+  NookiTests:
     type: bundle.unit-test
     platform: iOS
-    sources:
-      - path: StoreKitTests
-      - path: App/Billet.storekit
-        buildPhase: resources
+    sources: [NookiTests]
     dependencies:
       - target: Billet
-      - package: Billet
-        products: [Payments, PaymentsStoreKit]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.storekit-tests
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Billet.app/Billet
-        BUNDLE_LOADER: $(TEST_HOST)
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
         GENERATE_INFOPLIST_FILE: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
 schemes:
   Billet:
     build:
       targets:
         Billet: all
     run:
-      # Xcode's local store for Run from Xcode. Only a StoreKit build asks it for anything.
-      storeKitConfiguration: App/Billet.storekit
-  BilletStoreKitTests:
-    build:
-      targets:
-        Billet: all
-        BilletStoreKitTests: [test]
+      config: Debug
     test:
-      targets: [BilletStoreKitTests]
+      config: Debug
+      targets: [NookiTests]
+    archive:
+      config: Release

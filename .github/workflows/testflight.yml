@@ -80,6 +80,9 @@ jobs:
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
 
+      - name: Metal Toolchain
+        run: .github/scripts/metal-toolchain.sh
+
       # Pinned release, verified by checksum, so project generation cannot drift.
       - name: Install XcodeGen
         env:
@@ -147,14 +150,10 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
-      # BILLET_PAYMENTS is read from the environment by both Package.swift and the app target,
-      # so it must be set here and not as an xcodebuild argument.
+      # TODO: the payments input, BILLET_PAYMENTS and the demo host come back with the server wiring.
       - name: Archive
         env:
-          BILLET_DEMO_HOST: ${{ secrets.DEMO_HOST }}
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
-          BILLET_PAYMENTS: ${{ inputs.payments || 'mock' }}
-          BILLET_DISTRIBUTION: testflight
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e
@@ -173,9 +172,6 @@ jobs:
           exit $status
 
       - name: Check the archive
-        env:
-          DEMO_HOST: ${{ secrets.DEMO_HOST }}
-          PAYMENTS: ${{ inputs.payments || 'mock' }}
         run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
 
       - name: Upload to TestFlight

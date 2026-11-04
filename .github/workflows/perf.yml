@@ -82,10 +82,12 @@ env:
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
   ab:
-    if: >-
-      (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'ab' || inputs.jobs == 'all'))
-      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
-      && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
+    if: false
+    # was: >-
+    #  (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'ab' || inputs.jobs == 'all'))
+    #  || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+    #  && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
     runs-on: xcode-27
     timeout-minutes: 90
     env:
@@ -163,11 +165,13 @@ jobs:
   shots:
     # After the A/B, whether it ran or not, so the run holds one runner at a time.
     needs: ab
-    if: >-
-      !cancelled() && (
-      (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'shots' || inputs.jobs == 'all'))
-      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
-      && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
+    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
+    if: false
+    # was: >-
+    #  !cancelled() && (
+    #  (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'shots' || inputs.jobs == 'all'))
+    #  || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+    #  && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
     runs-on: xcode-27
     timeout-minutes: 50
     strategy:
@@ -236,9 +240,11 @@ jobs:
     # What each part of the room costs to draw on a small and a large screen: one build, each part
     # switched off and back on in turn within a launch. After the other jobs, on one runner.
     needs: [ab, shots]
-    if: >-
-      !cancelled() && github.event_name == 'workflow_dispatch'
-      && (inputs.jobs == 'cost' || inputs.jobs == 'all')
+    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
+    if: false
+    # was: >-
+    #  !cancelled() && github.event_name == 'workflow_dispatch'
+    #  && (inputs.jobs == 'cost' || inputs.jobs == 'all')
     runs-on: xcode-27
     timeout-minutes: 60
     strategy:
@@ -309,9 +315,11 @@ jobs:
     # room is stepped and drawn, and the process's CPU a second, the nearest a Simulator comes to
     # energy. After the other jobs, on one runner.
     needs: [ab, shots, cost]
-    if: >-
-      !cancelled() && github.event_name == 'workflow_dispatch'
-      && (inputs.jobs == 'steady' || inputs.jobs == 'all')
+    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
+    if: false
+    # was: >-
+    #  !cancelled() && github.event_name == 'workflow_dispatch'
+    #  && (inputs.jobs == 'steady' || inputs.jobs == 'all')
     runs-on: xcode-27
     timeout-minutes: 90
     strategy:
