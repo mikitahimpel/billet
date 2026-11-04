@@ -108,7 +108,7 @@ actor FakePartnerRoom {
     switch signal {
     case .adventDoor:
       break
-    case .gift(let id, _):
+    case .gift(let id, _, _):
       after(pace.giftOpened) { $0.emit(.giftOpened(id)) }
     case .giftOpened:
       break
@@ -272,7 +272,7 @@ actor FakePartnerRoom {
 
   private func sendGift() {
     let items = ["treat-milk", "furniture-yarn", "treat-cookie", "furniture-lantern"]
-    emit(.gift(id: UUID(), item: items[gifted % items.count]))
+    emit(.gift(id: UUID(), item: items[gifted % items.count], note: nil))
     gifted += 1
   }
 

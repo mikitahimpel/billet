@@ -19,6 +19,7 @@ struct ShopTab: View {
   var body: some View {
     ShopView(
       store: session.shop, checkout: session.checkout, style: session.play.roomStyle,
+      context: session.shopContext,
       thumbnail: { [scene] item, side, scale in
         await scene.shopThumbnail(item, side: side, scale: scale)
       },

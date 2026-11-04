@@ -27,7 +27,10 @@ export interface TopDetails {
 export const topNames: ReadonlyArray<ClientEventName> = [
   "CatChosen",
   "ShopItemBought",
+  "ShopBundleBought",
   "ShopItemViewed",
+  "ShopOfferViewed",
+  "ShopGiftSent",
   "RoomItemPlaced",
   "CatPlayed",
   "TrickDone",

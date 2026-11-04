@@ -211,6 +211,17 @@ extension ClientEvent {
     case .shopItemViewed(let item): self.init(.shopItemViewed, detail: item)
     case .shopItemBought(let item, let price):
       self.init(.shopItemBought, detail: item, value: price)
+    case .shopOfferViewed(let offer): self.init(.shopOfferViewed, detail: offer)
+    case .shopBundleBought(let bundle, let price):
+      self.init(.shopBundleBought, detail: bundle, value: price)
+    case .shopPurchaseUndone(let id, let stamps):
+      self.init(.shopPurchaseUndone, detail: id, value: stamps)
+    case .shopDailyGiftClaimed(.stamps(let stamps)):
+      self.init(.shopDailyGiftClaimed, detail: "stamps", value: stamps)
+    case .shopDailyGiftClaimed(.item(let item)):
+      self.init(.shopDailyGiftClaimed, detail: item, value: 0)
+    case .shopGiftSent(let item, let price):
+      self.init(.shopGiftSent, detail: item, value: price)
     case .streakOpened: self.init(.streakOpened)
     case .streakMilestoneSeen(let stage): self.init(.streakMilestoneSeen, detail: stage.eventID)
     case .widgetButtonTapped(.pet): self.init(.widgetButtonTapped, detail: "pet")

@@ -26,7 +26,18 @@ final class PairSession {
   @ObservationIgnored private(set) lazy var checkout = ShopCheckout(
     store: shop, renovator: renovator,
     style: { [weak self] in self?.play.roomStyle ?? .standard },
-    restyle: { [weak self] in self?.restyle($0) })
+    restyle: { [weak self] in self?.restyle($0) },
+    send: { [weak self] item, note in self?.wrap(item, note: note) })
+  /// Where packs of stamps would be bought. None are for sale yet.
+  @ObservationIgnored let stampPacks: any StampPackSource = NoStampPacks()
+
+  /// What the shop needs from the pair: the room's code seeds its offers, so both phones show
+  /// the same.
+  var shopContext: ShopView.Context {
+    ShopView.Context(
+      pair: room.code, stampPacks: stampPacks,
+      showsStampPacks: labs.isOn(LabExperiment.stampPacks))
+  }
   let trips: CatTripController
   /// True when the partner is the scripted one from Labs.
   let isFakePartner: Bool
@@ -234,12 +245,12 @@ final class PairSession {
     if out { lived(.sleep) }
   }
 
-  /// Wraps `item` from the closet for the partner's doormat.
-  func wrap(_ item: ShopItem) {
+  /// Wraps `item` from the closet for the partner's doormat, with a note if there is one.
+  func wrap(_ item: ShopItem, note: String? = nil) {
     guard (try? shop.give(item, transaction: shop.newTransaction())) != nil else { return }
-    let gift = Gift(itemID: item.id, direction: .outgoing)
+    let gift = Gift(itemID: item.id, direction: .outgoing, note: note)
     gifts.add(gift)
-    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id)) }
+    Task { [delivery] in await delivery.signal(.gift(id: gift.id, item: item.id, note: note)) }
   }
 
   /// Opens a wrapped gift: the item goes into the closet.
@@ -474,8 +485,8 @@ final class PairSession {
       sealed.seal(SealedNote(id: id, strokes: strokes, opensAt: opensAt, direction: .incoming))
     case .adventDoor(let number, let strokes):
       advent.partnerFilled(number, strokes: strokes)
-    case .gift(let id, let item):
-      gifts.add(Gift(id: id, itemID: item, direction: .incoming))
+    case .gift(let id, let item, let note):
+      gifts.add(Gift(id: id, itemID: item, direction: .incoming, note: note))
     case .giftOpened(let id):
       gifts.partnerOpened(id)
     case .partnerGlow(let glow):
