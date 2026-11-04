@@ -73,6 +73,9 @@ struct DecorPlan: Equatable, Sendable {
   var pieces: [String: DecorBox] = [:]
   /// Pieces that lie flat and so overlap anything.
   var flat: Set<String> = []
+  /// Pieces that only slide along the surface's width, keeping their depth and turn, such as a
+  /// throw whose end hangs over the seat's front edge.
+  var slidesOnly: Set<String> = []
 
   /// `point` on the nearest grid line crossing.
   func snapped(_ point: SIMD2<Float>) -> SIMD2<Float> {
@@ -109,8 +112,14 @@ struct DecorPlan: Equatable, Sendable {
   func candidate(for name: String, at point: SIMD2<Float>, yaw: Float) -> (box: DecorBox, fit: Fit)?
   {
     guard var box = pieces[name] else { return nil }
-    box.yaw = snapped(yaw: yaw)
-    box.centre = inside(snapped(point), reach: box.reach)
+    if slidesOnly.contains(name) {
+      let depth = box.centre.y
+      box.centre = inside(SIMD2(snapped(point).x, depth), reach: box.reach)
+      box.centre.y = depth
+    } else {
+      box.yaw = snapped(yaw: yaw)
+      box.centre = inside(snapped(point), reach: box.reach)
+    }
     return (box, fit(box, for: name))
   }
 

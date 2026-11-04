@@ -10,8 +10,9 @@ import simd
 struct DecorTouch {
   let session: DecorSession
   let renovator: RoomRenovator?
-  /// The point on the plan's floor under a point in the view.
-  let floor: (CGPoint) -> SIMD2<Float>?
+  /// The point under a point in the view on the surface the piece named stands on, in that
+  /// surface's plan.
+  let floor: (CGPoint, String) -> SIMD2<Float>?
   /// A footprint on the plan's floor in the shop's metres, and back.
   var toShop: (DecorBox) -> (x: Double, z: Double, yaw: Double) = {
     (Double($0.centre.x), Double($0.centre.y), Double($0.yaw))
@@ -27,7 +28,9 @@ struct DecorTouch {
     -> Bool
   {
     if !session.isDragging {
-      guard let name = session.piece(containing: entity), let point = floor(start) else {
+      guard let name = session.piece(containing: entity),
+        let point = floor(start, name)
+      else {
         return false
       }
       if !session.isOn { enter() }
@@ -35,7 +38,9 @@ struct DecorTouch {
       if session.selected != name { session.select(name: name) }
       session.beginDrag(at: point)
     }
-    if let point = floor(location) { session.drag(to: point) }
+    if let selected = session.selected, let point = floor(location, selected) {
+      session.drag(to: point)
+    }
     return true
   }
 
@@ -75,7 +80,7 @@ struct DecorTouch {
   /// Sends the piece picked up back to the closet.
   func putAway() {
     guard let selected = session.selected, let piece = session.pieces[selected],
-      let id = piece.placement, let box = session.plan.pieces[selected],
+      let id = piece.placement, let box = session.plan(of: selected)?.pieces[selected],
       let placement = renovator?.placement(id)
     else { return }
     session.deselect()

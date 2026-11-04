@@ -18,6 +18,8 @@ struct DecorStatus: Equatable {
   var canPutAway = false
   /// Where the piece picked up would go is taken.
   var isBlocked = false
+  /// The piece picked up can be turned; a throw hanging over the seat's edge only slides.
+  var canTurn = true
 
   var hasSelection: Bool { selected != nil }
 
@@ -28,6 +30,7 @@ struct DecorStatus: Equatable {
     canUndo = session.history.canUndo
     canPutAway = session.selected.flatMap { session.pieces[$0]?.placement } != nil
     isBlocked = session.candidate.map { !$0.fit.isFree } ?? false
+    canTurn = session.selected.map(session.canTurn) ?? true
   }
 
   init() {}
@@ -53,6 +56,8 @@ struct DecorControls: View {
   let onPutAway: () -> Void
   /// Opens the closet to add furniture, or `nil` when the room takes none.
   var onAddItems: (() -> Void)?
+  /// Puts every piece back where the room first had it, or `nil` when the room can't.
+  var onReset: (() -> Void)?
 
   /// Whether the drag-and-twist hint has been shown once already.
   @AppStorage("decorGestureHintShown") private var hintShown = false
@@ -93,6 +98,7 @@ struct DecorControls: View {
         IconButton("arrow.uturn.backward", label: "Undo", action: onUndo)
           .disabled(!status.canUndo)
           .accessibilityIdentifier("decorUndo")
+        if let onReset { more(onReset) }
         Spacer(minLength: 0)
         Button(action: onDone) {
           Text("Done")
@@ -107,6 +113,25 @@ struct DecorControls: View {
         .accessibilityIdentifier("decorDone")
       }
     }
+  }
+
+  /// A glass circle holding what is done less often, behind one more tap: putting the room back.
+  private func more(_ onReset: @escaping () -> Void) -> some View {
+    Menu {
+      Button("Reset layout", systemImage: "arrow.counterclockwise", role: .destructive) {
+        onReset()
+      }
+      .accessibilityIdentifier("decorReset")
+    } label: {
+      Image(systemName: "ellipsis")
+        .font(IconStyle.font)
+        .foregroundStyle(Palette.paper.color)
+        .frame(width: Target.minimum, height: Target.minimum)
+        .contentShape(.circle)
+    }
+    .billetButton(.secondary)
+    .accessibilityLabel("More")
+    .accessibilityIdentifier("decorMore")
   }
 
   /// The first time a piece is picked up, how to move it, fading after a few seconds.
@@ -167,7 +192,9 @@ struct DecorControls: View {
         .fill(Palette.paper.color.opacity(0.22))
         .frame(width: 1, height: Spacing.medium + Spacing.hair)
         .accessibilityHidden(true)
-      tool("Turn 90°", systemImage: "arrow.clockwise", id: "decorRotate", action: onRotate)
+      if status.canTurn {
+        tool("Turn 90°", systemImage: "arrow.clockwise", id: "decorRotate", action: onRotate)
+      }
       if status.canPutAway {
         tool("Put away", systemImage: "tray.and.arrow.down", id: "decorPutAway", action: onPutAway)
       }
