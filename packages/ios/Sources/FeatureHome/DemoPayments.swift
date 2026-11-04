@@ -17,6 +17,31 @@ public struct DemoPayments: Sendable {
   }
 }
 
+/// The demo app's stamp packs: the build's store over the demo server's purchase routes, the
+/// model the shop uses, and the room purchases are for. Built once, by the app at launch, since a
+/// store listens for transactions for as long as it lives.
+@MainActor
+public final class DemoPaymentsSetup {
+  let stampShop: StampShop
+  let labs: (@MainActor @Sendable () -> AnyView)?
+  let caller: DemoPaymentsCaller
+
+  /// `nil` without a demo host: there is no server to credit purchases.
+  public init?(host: String, make: (PaymentsServer) -> DemoPayments) {
+    guard let baseURL = ServiceStatusModel.demoBaseURL(host: host) else { return nil }
+    let caller = DemoPaymentsCaller()
+    let built = make(
+      .live(
+        .live(
+          http: .urlSession(
+            baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers),
+          caller: .demoRoom { caller.current() })))
+    self.caller = caller
+    stampShop = StampShop(payments: built.payments)
+    labs = built.labs
+  }
+}
+
 /// The room the purchase routes are called for. Demo rooms have no session, so the dev server
 /// takes the room code instead (`X-Billet-Demo-Room`).
 final class DemoPaymentsCaller: Sendable {
