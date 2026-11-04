@@ -249,6 +249,8 @@ final class GenzRoom: CatPlayStage {
   var gazeUntil = 0.0
   private var building: Task<Void, Never>?
   private let frames = FrameClock()
+  /// When a finger last turned, zoomed or touched the room, on the room's clock.
+  var lastTouchClock: TimeInterval = -.infinity
   var viewSize = CGSize(width: 393, height: 852)
   var clock = 0.0
   private(set) var openedClock: Double?
@@ -687,6 +689,7 @@ final class GenzRoom: CatPlayStage {
   /// Starts stepping the room, after a few frames' settling, for a view that has just added it.
   func startUpdates() {
     settlingFrames = 4
+    PerfRenderSystem.registerOnce()
     frames.isPaused = !isOnScreen
     frames.run { [weak self] delta in self?.tick(delta) }
   }
@@ -702,6 +705,7 @@ final class GenzRoom: CatPlayStage {
   // MARK: - Camera and touch
 
   func orbit(byX deltaX: Float, y deltaY: Float) {
+    lastTouchClock = clock
     camera.drag(yaw: -deltaX * Self.orbitPerPoint, pitch: deltaY * Self.orbitPerPoint)
     aimLens()
   }
@@ -713,6 +717,7 @@ final class GenzRoom: CatPlayStage {
   }
 
   func zoom(by scale: Float) {
+    lastTouchClock = clock
     camera.zoom(by: scale)
     aimLens()
   }
@@ -723,6 +728,7 @@ final class GenzRoom: CatPlayStage {
 
   /// What a tap on `entity` does, and the event to report, if any.
   func tap(_ entity: Entity, at time: TimeInterval) -> PetSceneEvent? {
+    lastTouchClock = clock
     if tapTimer.isDoubleTap(at: time) {
       camera.goHome(animated: !reduceMotion)
       return nil
@@ -856,6 +862,18 @@ final class GenzRoom: CatPlayStage {
     applyCat()
     reportTouch()
     applyLevels()
+    pace()
+  }
+
+  /// Draws the room 30 times a second while anything in it moves or a finger is on it, and 15
+  /// once it holds still: the cat asleep or sitting, the camera at rest, nobody touching.
+  private func pace() {
+    ScenePerf.count("steps")
+    let isStill =
+      opening == nil && camera.isAtRest && trip == nil && !decor.isMoving
+      && liveInteraction == nil && clock - lastTouchClock > FramePace.stillAfter
+      && Date.now > screen.busyUntil
+    frames.rate = FramePace.shared.rate(isStill: isStill)
   }
 
   /// Each flame sways and stretches a little, out of step with the others.

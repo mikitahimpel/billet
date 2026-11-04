@@ -133,11 +133,14 @@ struct GenzRoomView: View {
       // A room with no outside stands on the Nooki project's warm backdrop, which takes the place
       // of the haze and the vignette, so it is never left white or black.
       if !outside {
-        NookiCabinBackdrop(isPaused: !isOnScreen || reduceMotion, light: look.key.boost)
+        NookiCabinBackdrop(
+          isPaused: !isOnScreen || reduceMotion || FramePace.shared.isHot, light: look.key.boost)
       }
       if isOpen, outside, parts.shows("layers") { layer(behind, room: room) }
       if isOpen, outside, parts.shows("sky") { theirSky }
-      if isOpen, outside, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+      if isOpen, outside, parts.shows("haze"), !FramePace.shared.isHot {
+        RoomHaze(look: look, screen: room.screen)
+      }
       stage(room)
       if isOpen, outside, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
