@@ -208,10 +208,10 @@ struct ShopCheckoutTests {
   // MARK: not enough stamps
 
   @Test func shortOfStampsSaysHowManyMoreAndChangesNothing() {
-    let (store, checkout, room) = shop(stamps: armchair.price - 7)
-    #expect(checkout.shortfall(for: armchair) == 7)
-    #expect(checkout.buy(armchair) == .short(by: 7))
-    #expect(store.stamps == armchair.price - 7)
+    let (store, checkout, room) = shop(stamps: 5)
+    #expect(checkout.shortfall(for: armchair) == armchair.price - 5)
+    #expect(checkout.buy(armchair) == .short(by: armchair.price - 5))
+    #expect(store.stamps == 5)
     #expect(store.state.layout.placements.isEmpty)
     #expect(checkout.latest == nil)
     #expect(checkout.buy(pinkDusk) == .short(by: pinkDusk.price - store.stamps))

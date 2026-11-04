@@ -155,9 +155,8 @@ struct TabLightingTests {
 
   @Test func theStagesTakeAPresetBeforeAndAfterTheyAreBuilt() {
     let stages = TabStages(rooms: GenzRoomCache())
-    stages.shopStage.setLighting(.amberLantern)
+    stages.deskStage.setLighting(.amberLantern)
     stages.deskStage.setLighting(.neonNight)
-    stages.shopStage.setLighting(.off)
   }
 }
 

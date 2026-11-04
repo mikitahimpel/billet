@@ -28,14 +28,14 @@ import Testing
   }
 
   @Test func aStillIsNeverLargerThanTheCap() async throws {
-    let image = try #require(
-      await NookiShopThumbnails(folder: nil, makeStage: { nil }).image(
-        of: try view, side: 400, scale: 3))
+    let item = try view
+    let thumbnails = NookiShopThumbnails(folder: nil, makeStage: { nil })
+    let image = try #require(await thumbnails.image(of: item, side: 400, scale: 3))
     #expect(image.width == NookiShopThumbnails.largest)
   }
 
   @Test func withoutARendererAPieceHasNoStill() async throws {
-    let piece = try #require(ShopCatalog.standard.items.first(where: \.isPlaceable))
+    let piece = try #require(ShopCatalog.standard.items.first { $0.isPlaceable })
     let thumbnails = NookiShopThumbnails(folder: nil, makeStage: { nil })
     #expect(await thumbnails.image(of: piece, side: 60, scale: 2) == nil)
   }
