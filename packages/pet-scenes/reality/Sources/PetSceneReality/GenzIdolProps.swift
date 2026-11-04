@@ -74,15 +74,16 @@ extension GenzKit {
         continue
       }
       model.removeFromParent()
-      idolModels[prop] = matte(model)
+      idolModels[prop] = matte(model, glows: prop.glows)
     }
   }
 
   static let idolFile = "IdolProps"
   private static let idolLog = Logger(subsystem: "com.mikitahimpel.billet", category: "IdolProps")
 
-  /// The model with every material made the room's matte: the baked colour, no shine.
-  private func matte(_ model: Entity) -> Entity {
+  /// The model with every material made the room's matte: the baked colour, no shine. One that
+  /// glows also gives off its baked colour, so it stays lit when the room's lights are low.
+  private func matte(_ model: Entity, glows: Bool) -> Entity {
     SceneParts.visit(model) { entity in
       guard let part = entity as? ModelEntity, var component = part.model else { return }
       component.materials = component.materials.map { material in
@@ -91,6 +92,10 @@ extension GenzKit {
         material.baseColor = lit.baseColor
         material.roughness = 0.9
         material.metallic = 0.0
+        if glows {
+          material.emissiveColor = .init(texture: lit.baseColor.texture)
+          material.emissiveIntensity = 0.8
+        }
         return material
       }
       part.model = component
