@@ -142,6 +142,46 @@ import Testing
     }
   }
 
+  @Test func aMoveAndAResetAreToldToThePartner() throws {
+    let (room, holders) = try room()
+    var told: [RoomArrangement] = []
+    room.onArranged = { told.append($0) }
+    let pouf = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+    let name = try name(.knitPouf, in: room)
+    room.decor.select(holders[pouf])
+    room.decor.beginDrag(at: [3.0, 3.35])
+    room.decor.drag(to: [3.0, 5.0])
+    room.decor.endDrag()
+    #expect(told.last?.room == "windowSeat.cosyNook")
+    #expect(told.last?.spots[name] == PieceSpot(x: 3, z: 5, yaw: 0))
+    room.resetDecor()
+    #expect(told.count == 2, "a reset is told once")
+    #expect(told.last?.spots.isEmpty == true)
+  }
+
+  @Test func thePartnersArrangementMovesThePiecesWithoutTellingItBack() throws {
+    let (room, holders) = try room()
+    var told: [RoomArrangement] = []
+    room.onArranged = { told.append($0) }
+    let pouf = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+    let name = try name(.knitPouf, in: room)
+    room.arrange([name: PieceSpot(x: 3, z: 5, yaw: 0)])
+    #expect(holders[pouf].position.z == 5)
+    #expect(room.spots.load()[name]?.z == 5)
+    #expect(room.layout.pieces[pouf].centre.y == 5, "the cat's map follows")
+    room.arrange([:])
+    #expect(abs(holders[pouf].position.z - 3.35) < 0.001)
+    #expect(room.spots.load().isEmpty)
+    #expect(told.isEmpty)
+  }
+
+  @Test func anArrangementBeforeTheRoomIsBuiltWaitsForIt() throws {
+    let layout = GenzLayout.of(.cosyNook)
+    let room = GenzRoomCache(suite: suite).room(layout)
+    room.arrange(["knitPouf-3": PieceSpot(x: 3, z: 5, yaw: 0)])
+    #expect(room.spots.load()["knitPouf-3"]?.z == 5)
+  }
+
   @Test func aMovedPieceIsWhereTheRoomOpensNextTime() throws {
     let (room, holders) = try room()
     let pouf = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .knitPouf })

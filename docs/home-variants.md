@@ -196,6 +196,12 @@ surface:
 defaults; the key keeps the room's name so places saved before stay). A piece on a top is kept
 in its base's space, so it stays on the table wherever the table goes.
 
+**Shared with the partner:** each move and each reset sends the room's arrangement as an
+`arrange` play (`room` such as `windowSeat.cosyNook`, `spots` of moved pieces as `[x, z, yaw]`).
+The pair's room keeps the last one per room and replays them on connect, so both rooms stand
+their furniture the same. A partner's arrangement moves pieces straight to their places; a piece
+picked up at that moment stays in hand.
+
 **Code:**
 - `DecorPlan.swift` is the placement model: grid and turn snapping, bounds, turned-rectangle
   collision, open spots and undo history. `DecorPlanTests` cover it.

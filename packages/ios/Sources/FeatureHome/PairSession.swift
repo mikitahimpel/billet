@@ -323,6 +323,13 @@ final class PairSession {
     Task { [delivery] in await delivery.switchLight(light) }
   }
 
+  /// Arranges a room's furniture here at once and tells the room, which tells the partner.
+  func arrange(_ arrangement: RoomArrangement) {
+    guard play.arrangements[arrangement.room] != arrangement.spots else { return }
+    play.arrange(arrangement)
+    Task { [delivery] in await delivery.arrange(arrangement) }
+  }
+
   /// Names the cat here at once and tells the room. If the partner named it first, the room's
   /// name replaces this one.
   func nameCat(_ raw: String) {
@@ -471,6 +478,8 @@ final class PairSession {
       play.named(name)
     case .roomLight(let light):
       play.light(light)
+    case .roomArranged(let arrangement):
+      play.arrange(arrangement)
     case .dailyPrompts(let prompts):
       daily.promptsReceived(prompts)
     case .daily(let entry):
