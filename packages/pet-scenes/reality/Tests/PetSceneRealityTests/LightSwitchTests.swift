@@ -88,6 +88,19 @@ struct LightSwitchRoomTests {
     }
   }
 
+  @Test func nothingAnySetStandsInTheCornerHidesThePlate() {
+    let bottom = GenzLightSwitch.plate.z - GenzLightSwitch.plateSize.y / 2
+    let underPlate = SIMD2(GenzLightSwitch.plate.x, 0.3)
+    for furniture in RoomFurniture.allCases {
+      for placement in GenzLayout.of(furniture).pieces
+      where GenzRoom.box(of: placement).contains(underPlate) {
+        #expect(
+          placement.centre.z + placement.piece.kind.size.z < bottom,
+          "\(furniture): \(placement.piece.kind)")
+      }
+    }
+  }
+
   @Test func aTapOnThePlateCyclesTheLightAndTellsTheHost() async throws {
     let layout = GenzLayout.of(.original)
     let room = GenzRoomCache(suite: "light-switch-\(UUID())").room(layout)
@@ -116,6 +129,8 @@ struct LightSwitchRoomTests {
     #expect(room.look == .moonlight)
     #expect(room.screen.look == .moonlight)
     #expect(room.lightSwitch.lampLevel == 0)
+    #expect(room.screen.ledLevel == 0)
+    #expect(room.screen.state(for: .windowBloom, at: .now).ledLevel == 0)
     room.setRoomLight(.on)
     #expect(room.look == .amberLantern)
   }

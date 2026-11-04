@@ -34,6 +34,8 @@ final class GenzRoomScreen {
   var look = LightingLook.off
   /// Counts up each time the switch on the wall is pressed here, for its click.
   var switchPresses = 0
+  /// How bright the LED strip's glow is as the switch has it, from 0 to 1.
+  var ledLevel = 1.0
 
   func time(at date: Date) -> Double {
     openedAt.map { date.timeIntervalSince($0) } ?? 0
@@ -46,7 +48,7 @@ final class GenzRoomScreen {
       time: time(at: date), parallax: followsCamera ? parallax : .zero,
       outline: followsCamera ? outlines[slot] ?? [] : [],
       warmth: GenzOpening.warmth(sinceLanding: landedAt.map { date.timeIntervalSince($0) }),
-      lampOn: lampOn)
+      lampOn: lampOn, ledLevel: ledLevel)
   }
 
   func viewState(at date: Date) -> WindowViewState {

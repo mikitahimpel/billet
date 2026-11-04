@@ -7,6 +7,7 @@ struct GenzLightSwitch {
   struct Fade {
     var from: LightingLook
     var lampFrom: Float
+    var ledFrom: Float
     var start: Double
     var length: Double
   }
@@ -15,6 +16,8 @@ struct GenzLightSwitch {
   var fade: Fade?
   /// How bright the lamp is as the switch has it, from 0 (out) to 1, part way through a fade.
   var lampLevel: Float = 1
+  /// How bright the LED strip's glow round the window is, the same way.
+  var ledLevel: Float = 1
   /// The rocker on the plate, which tips with the switch, and the small light that finds the
   /// switch in the dark.
   var rocker: ModelEntity?
@@ -28,6 +31,15 @@ struct GenzLightSwitch {
     case .on: 1
     case .cosy: 0.45
     case .off: 0
+    }
+  }
+
+  /// How bright the LED strip's glow is with the switch at `light`: only the room's full light
+  /// runs the strip.
+  static func ledLevel(_ light: RoomLight) -> Float {
+    switch light {
+    case .on: 1
+    case .cosy, .off: 0
     }
   }
 
@@ -52,9 +64,10 @@ struct GenzLightSwitch {
     return Float(1 - pow(1 - t, 3))
   }
 
-  /// The plate on the back wall in the strip left of the window, at shoulder height: its middle
-  /// in room units. The rest of the walls fall outside the view from home on a phone.
-  static let plate = GenzRoomPoint(0.27, 0, 2.55)
+  /// The plate on the back wall in the strip left of the window: its middle in room units. The
+  /// rest of the walls fall outside the view from home on a phone, and it hangs high enough to
+  /// show over the tallest piece any set stands in that corner, the bookshelf.
+  static let plate = GenzRoomPoint(0.27, 0, 3.95)
   /// The plate's size along the wall and up it, and how far it stands out. Narrow enough to keep
   /// clear of the LED strip round the window.
   static let plateSize = SIMD2<Float>(0.34, 0.56)
@@ -123,7 +136,7 @@ extension GenzRoom {
   func relight(animated: Bool) {
     if animated {
       lightSwitch.fade = GenzLightSwitch.Fade(
-        from: look, lampFrom: lightSwitch.lampLevel, start: clock,
+        from: look, lampFrom: lightSwitch.lampLevel, ledFrom: lightSwitch.ledLevel, start: clock,
         length: reduceMotion ? GenzLightSwitch.reducedFadeLength : GenzLightSwitch.fadeLength)
       lightSwitch.fillStep = 0
       stepSwitch()
@@ -131,6 +144,8 @@ extension GenzRoom {
     }
     lightSwitch.fade = nil
     lightSwitch.lampLevel = GenzLightSwitch.lampLevel(lightSwitch.light)
+    lightSwitch.ledLevel = GenzLightSwitch.ledLevel(lightSwitch.light)
+    screen.ledLevel = Double(lightSwitch.ledLevel)
     let target = LightingLook.switched(preset, to: lightSwitch.light)
     guard target != look else { return }
     setLook(target)
@@ -145,6 +160,9 @@ extension GenzRoom {
     let progress = GenzLightSwitch.progress(clock - fade.start, length: fade.length)
     let lampTarget = GenzLightSwitch.lampLevel(lightSwitch.light)
     lightSwitch.lampLevel = fade.lampFrom + (lampTarget - fade.lampFrom) * progress
+    let ledTarget = GenzLightSwitch.ledLevel(lightSwitch.light)
+    lightSwitch.ledLevel = fade.ledFrom + (ledTarget - fade.ledFrom) * progress
+    screen.ledLevel = Double(lightSwitch.ledLevel)
     setLook(
       LightingLook.mix(
         fade.from, target, by: progress, ownLED: layout.ledColour.rgb, ownOutside: outsideColour.rgb
