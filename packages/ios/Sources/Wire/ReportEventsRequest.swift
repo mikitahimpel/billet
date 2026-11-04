@@ -47,6 +47,16 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case shopItemViewed = "ShopItemViewed"
   /// An item was bought with stamps (detail: the item; value: its price in stamps).
   case shopItemBought = "ShopItemBought"
+  /// One of the shop's offers came on screen (detail: the bundle or deal).
+  case shopOfferViewed = "ShopOfferViewed"
+  /// A bundle was bought (detail: the bundle; value: its price in stamps).
+  case shopBundleBought = "ShopBundleBought"
+  /// A purchase was taken back (detail: the item or bundle; value: the stamps given back).
+  case shopPurchaseUndone = "ShopPurchaseUndone"
+  /// The day's free gift was taken (detail: `stamps` or the item; value: stamps).
+  case shopDailyGiftClaimed = "ShopDailyGiftClaimed"
+  /// Something was bought for the partner (detail: the item; value: its price in stamps).
+  case shopGiftSent = "ShopGiftSent"
 
   /// The streak's flame scene was opened.
   case streakOpened = "StreakOpened"
@@ -97,9 +107,10 @@ extension ClientEventName {
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)
     case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
-      .roomItemPutAway, .shopItemViewed, .streakMilestoneSeen:
+      .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen:
       ClientEventRule(detail: .id, required: true)
-    case .shopItemBought:
+    case .shopItemBought, .shopBundleBought, .shopPurchaseUndone, .shopDailyGiftClaimed,
+      .shopGiftSent:
       ClientEventRule(detail: .id, required: true, value: true)
     case .catFed:
       ClientEventRule(detail: .oneOf(["treat", "food"]), required: true)

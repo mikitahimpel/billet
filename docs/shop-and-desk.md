@@ -10,6 +10,47 @@ filling its tab. The desk is a Labs switch, so it can be A/B tested against the 
 
 ## The shop
 
+The shop is laid out like a good game store, for two people rather than a casino. From the top:
+
+1. **This week**: one bundle, its pieces fanned out on a warm plate, its name and a line on what it
+   makes of the room, a **−N%** value tag, the sum of its parts struck through beside its price,
+   and a timer to Monday 00:00 UTC, when the next one comes.
+2. **A gift for today**: free, one tap, once a day per phone. Some stamps (10, 15 or 20) or, one
+   day in four, a treat for the cat. The box wobbles until it is opened and bursts into stamps when
+   it is; then it counts down to the next one.
+3. **Today's deals**: three items at 20, 25 or 30 % off, in a row that scrolls sideways, with the
+   usual price struck through and a timer to 00:00 UTC.
+4. **Bundles**: the other sets (Rainy evening, Reading nook, Green corner, Cat heaven) and, until it
+   is bought once, the starter **Make it yours** at 40 % off. A bundle charges only for what is
+   still to get: a view or curtains already owned are left out of its price and its struck sum.
+5. **For your cat**: treats, toys and beds, each with a line on what the cat does with it. A long
+   press shows the cat beside the thing, hearts rising, its reaction in a bubble.
+6. **Furniture**, **Decor** and **Window views**, as before.
+
+The week's bundle, the deals and the gift follow from the pair's room code and the UTC day or week
+(`ShopOffers`, seeded with `StableRandom`), so both phones show the same without asking a server,
+and each timer runs to a real change. Nothing runs out, nothing says "only N left", and a timer
+never restarts on reopening.
+
+**Giving.** A long press on a piece or a treat offers **Give to your partner**: a sheet with the
+item, an optional note (80 characters) and its price, one tap. It is paid at once and can be taken
+back for 5 seconds like any purchase; after that it is wrapped and sent, and lands on the partner's
+doormat with the note (Labs → Wrapped delivery shows the doormat). The room passes a gift to the
+partner at once, or keeps it (up to 20) until they connect (`gift` and `gift-opened` play frames in
+`DemoRoom`).
+
+**Stamps.** Tapping the balance, or **Where stamps come from** under "N more", opens a sheet that
+says how stamps come: a gift to start, the gift every day, and packs later. With Labs → Stamp packs
+on, a row of packs sits below it; until a `StampPackSource` sells any it is a placeholder whose
+button does nothing. Real money comes through that protocol only, never through StoreKit in the
+shop (billet-pay's `StampShop` conforms to it).
+
+**Counting.** `ShopOpened`, `ShopOfferViewed` (once per offer per visit), `ShopItemBought`,
+`ShopBundleBought`, `ShopGiftSent`, `ShopPurchaseUndone` and `ShopDailyGiftClaimed`, as in
+`docs/analytics.md`. The admin's "most chosen" shows bundles bought, offers seen and gifts.
+
+The shelves:
+
 - Four shelves of cards, two to a row (one at accessibility text sizes): **Furniture** (big pieces
   for the floor), **Decor** (things for a shelf, the seat or the wall), **Window views** (the paid
   views of the Style tab) and **Cat items** (treats, toys, beds, climbing things). Wall and floor
@@ -53,7 +94,8 @@ filling its tab. The desk is a Labs switch, so it can be A/B tested against the 
 
 ## Code
 
-- `Pet`: `ShopCheckout` (one-tap buy, undo, the shortfall),
+- `Pet`: `ShopCheckout` (one-tap buy of an item, a deal, a bundle or a gift; undo; the
+  shortfall), `ShopOffers` (the rotation), `ShopBundle`, `DailyGift`, `StampPackSource`,
   `ShopItem.Shelf`, `ShopState.undoBuy`.
 - `PetScene`: `shopThumbnail(_:side:scale:)` for the stills, `makeDeskScene(state:onEvent:)` with
   `DeskSceneState` and its events in `PetScene/PetSceneTabs.swift`. A scene without them returns
@@ -61,7 +103,9 @@ filling its tab. The desk is a Labs switch, so it can be A/B tested against the 
 - `PetSceneReality`: `NookiShopThumbnails`, `TabStage.swift` (the shared camera, mount rule, glow
   overlay and the `TabStages` cache), `DeskStage`, `DeskLayout` (with `CatVisit`),
   `TabScenes.swift` (the SwiftUI views).
-- `FeatureHome`: `ShopView` (the grid, kept out of `Pet` so the widget does not link it), `ShopTab`,
+- `FeatureHome`: `ShopView` (the store, kept out of `Pet` so the widget does not link it),
+  `ShopOfferViews` (banner, deal and bundle cards, the daily gift), `ShopSheets` (stamps, giving),
+  `ShopTab`,
   `DeskTab`, wired in `AppShellView`.
 
 ## Rendering

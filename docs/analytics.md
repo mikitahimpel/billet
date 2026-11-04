@@ -28,6 +28,11 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `ShopOpened` | none | | Is the shop found? |
 | `ShopItemViewed` | the item's id | | Which items draw a look? |
 | `ShopItemBought` | the item's id | price in stamps | What do people spend their stamps on? |
+| `ShopOfferViewed` | the bundle's id, or the deal's item | | Which offers are seen: the week's bundle, the day's deals, the other bundles? |
+| `ShopBundleBought` | the bundle's id | price in stamps | Which bundles sell? |
+| `ShopPurchaseUndone` | the item's or bundle's id | stamps given back | What do people take back within the five seconds? |
+| `ShopDailyGiftClaimed` | `stamps` or the treat's id | stamps given | Does the free gift bring people back each day? |
+| `ShopGiftSent` | the item's id | price in stamps | What do people buy for each other? (Never the note.) |
 | `StreakOpened` | none | | Is the streak's flame looked at? |
 | `StreakMilestoneSeen` | the milestone's id | | How far do streaks get? |
 | `WidgetAdded` | the widget kind, when known | | Which widgets are added? Once per kind. |

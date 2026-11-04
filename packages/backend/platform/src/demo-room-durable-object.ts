@@ -1,7 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import {
+  MAX_QUEUED_GIFTS,
   MAX_QUEUED_PETS,
   adoptFrame,
+  giftFrame,
   type AdoptFrame,
   isTime,
   keepFirstName,
@@ -10,6 +12,7 @@ import {
   type LifeEvent,
   recordReaction,
   recordTreat,
+  type QueuedGift,
   type QueuedPet,
   type Reactions,
   type RoomStyle,
@@ -291,6 +294,10 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
           );
           await this.broadcastReactions();
         }
+      } else if (play.kind === "gift" || play.kind === "gift-opened") {
+        const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
+        const partner = devices.find((d) => d !== sender);
+        if (partner !== undefined) await this.relayGift({ ...play, from: sender, to: partner });
       } else if (play.kind === "pet") {
         const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
         const partner = devices.find((d) => d !== sender);
@@ -506,6 +513,17 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     target?.send(JSON.stringify(adoptFrame(play)));
   }
 
+  /** Hands a gift to the partner now, or keeps it until they connect. */
+  private async relayGift(gift: QueuedGift): Promise<void> {
+    const [target] = this.ctx.getWebSockets(gift.to);
+    if (target !== undefined) {
+      target.send(JSON.stringify(giftFrame(gift)));
+      return;
+    }
+    const queue = (await this.ctx.storage.get<QueuedGift[]>("gifts")) ?? [];
+    await this.ctx.storage.put("gifts", [...queue, gift].slice(-MAX_QUEUED_GIFTS));
+  }
+
   private async relayPet(pet: QueuedPet): Promise<void> {
     const [target] = this.ctx.getWebSockets(pet.to);
     if (target !== undefined) {
@@ -544,6 +562,15 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     }
     const adopted = await this.ctx.storage.get<AdoptFrame>("adopted");
     if (adopted !== undefined) socket.send(JSON.stringify(adoptFrame(adopted)));
+    const gifts = (await this.ctx.storage.get<QueuedGift[]>("gifts")) ?? [];
+    const giftsForMe = gifts.filter((g) => g.to === device);
+    if (giftsForMe.length > 0) {
+      await this.ctx.storage.put(
+        "gifts",
+        gifts.filter((g) => g.to !== device),
+      );
+      for (const gift of giftsForMe) socket.send(JSON.stringify(giftFrame(gift)));
+    }
     const queue = (await this.ctx.storage.get<QueuedPet[]>("pets")) ?? [];
     const mine = queue.filter((p) => p.to === device);
     if (mine.length === 0) return;

@@ -10,6 +10,9 @@ export const MAX_TREAT_DAYS = 90;
 export const MAX_REACTIONS = 200;
 export const MAX_NAME_LENGTH = 24;
 export const MAX_LIFE_EVENTS = 400;
+/** The most gifts kept for a partner who is away, and the longest note one carries. */
+export const MAX_QUEUED_GIFTS = 20;
+export const MAX_GIFT_MESSAGE = 80;
 
 /**
  * Plays that only the cat's life counts, with nothing but who did it and when. A shoo sends the
@@ -27,7 +30,9 @@ export type PlayKind =
   | "light"
   | "style"
   | "arrange"
-  | "daily";
+  | "daily"
+  | "gift"
+  | "gift-opened";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -155,6 +160,26 @@ export interface DailyFrame {
   readonly ink: string;
 }
 
+/**
+ * An item bought or taken from the closet for the partner, with a short note. The room only
+ * passes it on: the item is a shop id, and the note is the sender's own words.
+ */
+export interface GiftFrame {
+  readonly id: string;
+  readonly kind: "gift";
+  readonly at: string;
+  readonly item: string;
+  readonly message?: string;
+}
+
+/** The partner unwrapped the gift `gift`. */
+export interface GiftOpenedFrame {
+  readonly id: string;
+  readonly kind: "gift-opened";
+  readonly at: string;
+  readonly gift: string;
+}
+
 export type AnyPlayFrame =
   | PlayFrame
   | NameFrame
@@ -164,7 +189,9 @@ export type AnyPlayFrame =
   | LightFrame
   | StyleFrame
   | ArrangeFrame
-  | DailyFrame;
+  | DailyFrame
+  | GiftFrame
+  | GiftOpenedFrame;
 
 const isRoomLight = (value: unknown): value is RoomLight =>
   typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
@@ -198,6 +225,35 @@ export type Reactions = Readonly<Record<string, Reaction>>;
 
 /** Calendar day (`YYYY-MM-DD`) mapped to the devices that gave a treat that day. */
 export type TreatDays = Readonly<Record<string, readonly string[]>>;
+
+/** A gift, or word of one opened, waiting for the partner it is for. */
+export type QueuedGift = (GiftFrame | GiftOpenedFrame) & {
+  readonly from: string;
+  readonly to: string;
+};
+
+/** What the partner's phone receives for a gift or its opening. */
+export const giftFrame = (gift: QueuedGift): Readonly<Record<string, unknown>> =>
+  gift.kind === "gift"
+    ? {
+        type: "gift",
+        id: gift.id,
+        item: gift.item,
+        ...(gift.message === undefined ? {} : { message: gift.message }),
+      }
+    : { type: "gift-opened", id: gift.gift };
+
+const SHOP_ID = /^[A-Za-z0-9._-]{1,64}$/;
+
+/** A gift's note: trimmed, one to `MAX_GIFT_MESSAGE` characters, no control characters. */
+export const parseGiftMessage = (value: unknown): string | undefined | null => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") return null;
+  const message = value.trim();
+  if (message.length === 0) return undefined;
+  if ([...message].length > MAX_GIFT_MESSAGE || /\p{Cc}/u.test(message)) return null;
+  return message;
+};
 
 export interface QueuedPet extends PlayFrame {
   readonly kind: "pet";
@@ -259,6 +315,20 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
         return undefined;
       }
       return { id, kind, at, ink };
+    }
+    case "gift": {
+      const { item } = frame;
+      if (typeof item !== "string" || !SHOP_ID.test(item)) return undefined;
+      const message = parseGiftMessage(frame["message"]);
+      if (message === null) return undefined;
+      return message === undefined
+        ? { id: id.toLowerCase(), kind, at, item }
+        : { id: id.toLowerCase(), kind, at, item, message };
+    }
+    case "gift-opened": {
+      const { gift } = frame;
+      if (typeof gift !== "string" || !UUID.test(gift)) return undefined;
+      return { id, kind, at, gift: gift.toLowerCase() };
     }
     case "react": {
       const { note, reaction } = frame;

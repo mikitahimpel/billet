@@ -40,8 +40,8 @@ public struct NoteDelivery: Sendable {
     /// The colour of the partner's lamp. Only the fake partner says this for now: the room has no
     /// frame for it.
     case partnerGlow(PartnerGlow)
-    /// A wrapped gift on this phone's doormat. Only the fake partner sends these for now.
-    case gift(id: UUID, item: String)
+    /// A wrapped gift on this phone's doormat, with the note it came with.
+    case gift(id: UUID, item: String, note: String?)
     /// The partner unwrapped a gift this phone sent.
     case giftOpened(UUID)
     /// The partner drew behind advent door `number` for this phone. Only the fake partner does.
@@ -139,6 +139,14 @@ public struct NoteDelivery: Sendable {
       adopt: { await socket.adopt($0) },
       react: { await socket.react(to: $0, $1) },
       drawDaily: { await socket.drawDaily($0, at: $1) },
+      signal: { signal in
+        switch signal {
+        case .gift(let id, let item, let note): await socket.gift(id: id, item: item, note: note)
+        case .giftOpened(let id): await socket.giftOpened(id)
+        // The room has no frame for these: only the fake partner answers them.
+        case .lamp, .adventDoor: break
+        }
+      },
       updates: {
         AsyncStream { continuation in
           let connection = Task {

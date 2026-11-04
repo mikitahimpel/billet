@@ -43,12 +43,30 @@ public struct ShopState: Codable, Hashable, Sendable {
 
   /// Pays for `item` and puts it in the closet. Nothing changes if it cannot be paid for.
   public mutating func buy(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
+    try buy([item], price: item.price, transaction: transaction)
+  }
+
+  /// Pays `price` for `items` together, such as a deal or a bundle, and puts them in the closet.
+  /// `bundle` names the bundle they were bought as, so ``hasBought(bundle:)`` can tell. Nothing
+  /// changes if they cannot be paid for or one of them can only be owned once and is.
+  public mutating func buy(
+    _ items: [ShopItem], price: Int, transaction: String, bundle: String? = nil
+  ) throws(ShopError) -> ShopOutcome {
     guard !applied.contains(transaction) else { return .duplicate }
-    if item.ownsAtMostOne, owns(item) { throw .alreadyOwned }
-    _ = try wallet.debit(item.price, id: Self.spendID(transaction))
-    closet.add(item.id)
+    guard !items.isEmpty, price >= 0 else { throw .wrongKind }
+    for item in items where item.ownsAtMostOne && owns(item) { throw .alreadyOwned }
+    let unique = Set(items.filter(\.ownsAtMostOne).map(\.id))
+    guard unique.count == items.filter(\.ownsAtMostOne).count else { throw .alreadyOwned }
+    _ = try wallet.debit(price, id: Self.spendID(transaction))
+    for item in items { closet.add(item.id) }
     applied.insert(transaction)
+    if let bundle { applied.insert(Self.bundleID(bundle)) }
     return .applied
+  }
+
+  /// Whether the bundle `id` was bought and not taken back.
+  public func hasBought(bundle id: String) -> Bool {
+    applied.contains(Self.bundleID(id))
   }
 
   /// Takes back the purchase made under `transaction`: the item leaves the room and the closet,
@@ -57,6 +75,16 @@ public struct ShopState: Codable, Hashable, Sendable {
   public mutating func undoBuy(
     _ item: ShopItem, transaction: String, placement: RoomLayout.Placement.ID? = nil
   ) throws(ShopError) -> ShopOutcome {
+    try undoBuy([item], transaction: transaction, placements: placement.map { [$0] } ?? [])
+  }
+
+  /// Takes back the purchase of `items` made under `transaction`, as
+  /// ``undoBuy(_:transaction:placement:)`` does for one, `placements` being where any of them
+  /// were stood. A bundle it was bought as counts as not bought again.
+  public mutating func undoBuy(
+    _ items: [ShopItem], transaction: String, placements: [RoomLayout.Placement.ID],
+    bundle: String? = nil
+  ) throws(ShopError) -> ShopOutcome {
     let undo = Self.undoID(transaction)
     guard !applied.contains(undo) else { return .duplicate }
     let spendID = Self.spendID(transaction)
@@ -64,17 +92,39 @@ public struct ShopState: Codable, Hashable, Sendable {
       let spent = wallet.entries.first(where: { $0.id == spendID })
     else { throw .unknownPurchase }
     var next = self
-    if let placement, next.layout.placements.contains(where: { $0.id == placement }) {
+    for placement in placements
+    where next.layout.placements.contains(where: { $0.id == placement }) {
       let removed = try next.layout.remove(placement)
       next.closet.add(removed.item)
     }
-    try next.closet.take(item.id)
+    for item in items { try next.closet.take(item.id) }
     _ = next.wallet.credit(-spent.amount, as: .refund, id: Self.refundID(transaction))
     next.applied.insert(undo)
+    if let bundle { next.applied.remove(Self.bundleID(bundle)) }
     self = next
     return .applied
   }
 
+  /// Takes the day's free gift, stamps or an item, under the gift's own ID, once.
+  public mutating func claim(_ gift: DailyGift, catalog: ShopCatalog) -> ShopOutcome {
+    guard !hasClaimed(gift) else { return .duplicate }
+    switch gift.reward {
+    case .stamps(let amount):
+      return wallet.credit(amount, as: .grant, id: gift.id)
+    case .item(let id):
+      guard let item = catalog.item(id), !item.ownsAtMostOne else { return .duplicate }
+      closet.add(item.id)
+      applied.insert(gift.id)
+      return .applied
+    }
+  }
+
+  /// Whether the day's gift has been taken.
+  public func hasClaimed(_ gift: DailyGift) -> Bool {
+    wallet.hasEntry(gift.id) || applied.contains(gift.id)
+  }
+
+  static func bundleID(_ bundle: String) -> String { "bundle:\(bundle)" }
   static func undoID(_ transaction: String) -> String { "undo:\(transaction)" }
   static func refundID(_ transaction: String) -> String { "refund:\(transaction)" }
 

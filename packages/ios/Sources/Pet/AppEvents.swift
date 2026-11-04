@@ -42,6 +42,16 @@ public enum AppEvent: Hashable, Sendable {
   case shopItemViewed(ShopItem.ID)
   /// Bought for `price` stamps.
   case shopItemBought(ShopItem.ID, price: Int)
+  /// One of the shop's offers came on screen: a bundle's id, or a deal's item.
+  case shopOfferViewed(String)
+  /// A bundle bought for `price` stamps.
+  case shopBundleBought(String, price: Int)
+  /// A purchase, of an item or a bundle by id, taken back, giving `stamps` back.
+  case shopPurchaseUndone(String, stamps: Int)
+  /// The day's free gift taken: so many stamps, or an item.
+  case shopDailyGiftClaimed(DailyGift.Reward)
+  /// An item bought for the partner for `price` stamps.
+  case shopGiftSent(ShopItem.ID, price: Int)
   case streakOpened
   case streakMilestoneSeen(FlameStage)
   case widgetButtonTapped(WidgetButton)

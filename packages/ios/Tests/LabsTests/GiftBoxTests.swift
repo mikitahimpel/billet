@@ -69,4 +69,19 @@ import Testing
     #expect(GiftBoxStore(defaults: defaults).box.waiting.isEmpty)
     #expect(store.lastUnwrapped == gift.id)
   }
+
+  @Test func aGiftSavedBeforeNotesStillLoadsWithoutOne() throws {
+    let old =
+      #"{"id":"0D4C9E3A-1D2B-4C5E-9F60-7A8B9C0D1E2F","itemID":"treat-fish","#
+      + #""direction":"incoming","state":"wrapped"}"#
+    let gift = try JSONDecoder().decode(Gift.self, from: Data(old.utf8))
+    #expect(gift.note == nil)
+    #expect(gift.itemID == "treat-fish")
+  }
+
+  @Test func aNoteTravelsWithItsGift() throws {
+    let gift = Gift(itemID: "furniture-mouse", direction: .outgoing, note: "for the little one")
+    let copy = try JSONDecoder().decode(Gift.self, from: JSONEncoder().encode(gift))
+    #expect(copy == gift)
+  }
 }

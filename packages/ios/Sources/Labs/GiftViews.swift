@@ -99,7 +99,8 @@ public struct GiftSection: View {
       ListRow(
         "\(name(gift)) is in your closet",
         subtitle: gift.id == gifts.lastUnwrapped
-          ? "\(catName ?? "The cat") is already sitting in the box." : "From your partner."
+          ? "\(catName ?? "The cat") is already sitting in the box."
+          : gift.note.map { "From your partner: \u{201C}\($0)\u{201D}" } ?? "From your partner."
       ) {
         GiftBoxArt(open: true)
       } trailing: {

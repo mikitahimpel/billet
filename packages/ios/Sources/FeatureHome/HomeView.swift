@@ -120,7 +120,7 @@ struct HomeView: View {
       .modifier(
         HomeShop(
           shop: session.shop, renovator: session.renovator, checkout: session.checkout,
-          style: session.play.roomStyle, scene: scene,
+          style: session.play.roomStyle, context: session.shopContext, scene: scene,
           showsButtons: !variant.isFullBleed && !isRenovating && !usesStyledHome,
           sheet: $shopSheet)
       )
