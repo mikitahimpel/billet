@@ -173,6 +173,8 @@ struct CatFooting {
   var base = SIMD3<Float>.zero
   /// Measured tops by piece index, for the pieces the cat stands on.
   var tops: [Int: GenzHeightField] = [:]
+  /// The pieces among ``tops`` that lie on a level and raise the cat walking over them.
+  var walkOver: [Int] = []
   /// The level the cat is on (``GenzCatLevel``).
   var level = GenzCatLevel.homeID
   var height: GenzSpring?
@@ -212,21 +214,28 @@ extension GenzRoom {
       tops[index] = GenzHeightField.of(pieceHolders[index])
     }
     footing.tops = tops
+    footing.walkOver = tops.keys.sorted().filter {
+      layout.pieces[$0].piece.kind.catWalksOver || layout.pieces[$0].piece.kind.catSitsOnTop
+    }
   }
 
   /// How high the surface under `point` is on `level`: the level's top as built where the cat's
   /// paws are, raised by anything it walks over there (a rug, the cardigan, a throw).
   func groundHeight(at point: SIMD2<Float>, on level: Int) -> Float {
+    groundHeight(at: point, on: level, home: layout.homeLevelPiece)
+  }
+
+  /// ``groundHeight(at:on:)`` with the piece the cat's own top is on already found.
+  private func groundHeight(at point: SIMD2<Float>, on level: Int, home: Int?) -> Float {
     let base: Float
     switch level {
     case GenzCatLevel.floorID: base = 0
     case GenzCatLevel.homeID:
-      base = layout.homeLevelPiece.flatMap { top(of: $0, at: point) } ?? layout.cat.spot.scene.y
+      base = home.flatMap { top(of: $0, at: point) } ?? layout.cat.spot.scene.y
     default: base = top(of: level, at: point) ?? layout.catLevel(level)?.top ?? 0
     }
     var height = base
-    for (index, placement) in layout.pieces.enumerated()
-    where placement.piece.kind.catWalksOver || placement.piece.kind.catSitsOnTop {
+    for index in footing.walkOver {
       guard let over = top(of: index, at: point),
         over > base - 0.02, over < base + Self.walkOverRise
       else { continue }
@@ -252,16 +261,20 @@ extension GenzRoom {
   /// Where the cat's paws are on the surface: under the middle of its body, and for a standing
   /// cat under its shoulders and hips too. In a dished bed, only the middle.
   func pawPoints(at point: SIMD2<Float>, heading: Float, base: CatBase) -> [SIMD2<Float>] {
-    let kind = layout.catLevel(footing.level)?.kind
-    guard base == .stand, kind != .bed else { return [point] }
+    let inBed =
+      layout.pieces.indices.contains(footing.level)
+      && layout.pieces[footing.level].piece.kind.catLevel == .bed
+    guard base == .stand, !inBed else { return [point] }
     let forward = SIMD2(-sin(heading), -cos(heading)) * layout.cat.length * 0.25
     return [point, point + forward, point - forward]
   }
 
   /// The surface's height under the cat now.
   func groundUnderCat(base: CatBase) -> Float {
-    pawPoints(at: catSpot, heading: bodyHeading, base: base)
-      .map { groundHeight(at: $0, on: footing.level) }.max() ?? layout.cat.spot.scene.y
+    let home = layout.homeLevelPiece
+    return pawPoints(at: catSpot, heading: bodyHeading, base: base)
+      .map { groundHeight(at: $0, on: footing.level, home: home) }.max()
+      ?? layout.cat.spot.scene.y
   }
 
   /// Stands the cat on what is under it, after the frame has put it where it is: its holder
