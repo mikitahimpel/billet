@@ -95,6 +95,11 @@ public struct SettingsView: View {
       SettingsHeading("Pair")
       SettingsGroup {
         SettingsRow("Partner", value: partnerStatus)
+        if isFakePartner {
+          ListDivider()
+          SettingsRow("Fake partner", value: "Scripted replies, on this phone only")
+            .accessibilityIdentifier("settings.fakePartner")
+        }
         ListDivider()
         SettingsRow("Cat", value: catName ?? "Not named yet")
         if let temperament = labs?.temperamentRecord?.temperament {
