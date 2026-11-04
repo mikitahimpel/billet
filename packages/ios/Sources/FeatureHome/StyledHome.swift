@@ -132,7 +132,7 @@ struct StyledHome: View {
       .frame(height: Target.minimum)
       .floatingGlass()
       .overlay(alignment: .topTrailing) {
-        if isFakePartner { demoDot.offset(x: -Spacing.hair, y: Spacing.hair) }
+        if isFakePartner { demoDot }
       }
   }
 
@@ -146,8 +146,8 @@ struct StyledHome: View {
       .accessibilityIdentifier("fakePartnerNotice")
   }
 
-  /// The size of the demo dot, the same as the paw's need dot.
-  private static let dot: CGFloat = 9
+  /// The size of the demo dot, which sits on the chip's corner like a badge.
+  private static let dot: CGFloat = 10
 
   @ViewBuilder private var streakChip: some View {
     if let flame {

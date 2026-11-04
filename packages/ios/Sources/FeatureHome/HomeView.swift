@@ -163,10 +163,13 @@ struct HomeView: View {
         for event in RoomLayoutEvents.between(old.layout, new.layout) { events(event) }
       }
       .overlay {
-        HomeLifeLayer(
-          session: session, scene: scene, ringsOpen: $ringsOpen,
-          onFeed: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
-          onPet: pet)
+        // Decorating keeps the room to its own controls, so the need chips step aside.
+        if !isRenovating {
+          HomeLifeLayer(
+            session: session, scene: scene, ringsOpen: $ringsOpen,
+            onFeed: { giveTreat(on: TreatDay.key(for: .now, calendar: .current)) },
+            onPet: pet)
+        }
       }
       .overlay(alignment: .topLeading) {
         VStack(alignment: .leading, spacing: Spacing.small) {
