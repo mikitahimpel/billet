@@ -41,10 +41,11 @@ store's names and its `BilletPayments` Info.plist value.
 BILLET_PAYMENTS=mock     xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet ...
 BILLET_PAYMENTS=storekit xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet ...
 
-# StoreKit purchases on a Simulator, from Billet.storekit (also run by ios.yml)
+# StoreKit purchases on a Simulator, from Billet.storekit (also run by ios.yml). Use a
+# runtime before iOS 26.5: its Simulators don't load .storekit files from xcodebuild test.
 (cd apps/ios && xcodegen generate)
 BILLET_PAYMENTS=storekit xcodebuild test -project apps/ios/Billet.xcodeproj \
-  -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17'
+  -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'
 
 # TestFlight
 gh workflow run testflight.yml --ref main                       # mock (the default)
