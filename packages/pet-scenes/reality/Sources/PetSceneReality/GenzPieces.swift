@@ -45,32 +45,6 @@ struct GenzPiece: Hashable, Sendable {
     case idolStringLights
     case idolRug
     case idolCatBed
-    case idolDesk
-    case idolArmchair
-    case idolFloorCushionTerracotta
-    case idolFloorCushionSage
-    case idolWallShelf
-    case idolFrameCat
-    case idolFrameLandscape
-    case idolPosterMoon
-    case idolPosterPlants
-    case idolClock
-    case idolMirror
-    case idolFishTank
-    case idolCatTree
-    case idolScratchPost
-    case idolFiddleFig
-    case idolPothos
-    case idolSucculents
-    case idolGuitar
-    case idolTeaSet
-    case idolRadio
-    case idolGlobe
-    case idolLavaLamp
-    case idolNeonHeart
-    case idolBeanBagSage
-    case idolBeanBagTerracotta
-    case idolYarnBasket
   }
 
   var kind: Kind
@@ -117,12 +91,7 @@ extension GenzPiece.Kind {
     case .cardigan: ["knit", "buttons"]
     case .candles: ["wax", "dish"]
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       []
     }
   }
@@ -155,12 +124,7 @@ extension GenzPiece.Kind {
     case .cardigan: [GenzColour(0xD49A86), GenzColour(0xF1E6D6)]
     case .candles: [GenzColour(0xF3E8D6), GenzColour(0xC46E4A)]
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       []
     }
   }
@@ -193,12 +157,7 @@ extension GenzPiece.Kind {
     case .cardigan: "Cardigan"
     case .candles: "Candles"
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       idol?.title ?? ""
     }
   }
@@ -232,12 +191,7 @@ extension GenzPiece.Kind {
     case .cardigan: GenzRoomPoint(1.4, 1.25, 0.2)
     case .candles: GenzRoomPoint(0.5, 0.4, 0.3)
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       idol.map { prop in
         let size = prop.metres * GenzRoomPoint.perMetre
         return GenzRoomPoint(size.x, size.y, size.z)
@@ -301,12 +255,7 @@ extension GenzKit {
     case .cardigan: parts = cardigan(piece)
     case .candles: parts = candles(piece)
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       parts = piece.kind.idol.map(idolParts) ?? []
     }
     for part in parts { root.addChild(part) }

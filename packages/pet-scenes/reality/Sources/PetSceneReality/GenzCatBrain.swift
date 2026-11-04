@@ -85,12 +85,7 @@ extension GenzRoom {
       .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
-      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed, .idolDesk,
-      .idolArmchair, .idolFloorCushionTerracotta, .idolFloorCushionSage, .idolWallShelf,
-      .idolFrameCat, .idolFrameLandscape, .idolPosterMoon, .idolPosterPlants, .idolClock,
-      .idolMirror, .idolFishTank, .idolCatTree, .idolScratchPost, .idolFiddleFig, .idolPothos,
-      .idolSucculents, .idolGuitar, .idolTeaSet, .idolRadio, .idolGlobe, .idolLavaLamp,
-      .idolNeonHeart, .idolBeanBagSage, .idolBeanBagTerracotta, .idolYarnBasket:
+      .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       kind.idol?.affordance
     }
   }

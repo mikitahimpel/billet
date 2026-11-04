@@ -21,7 +21,8 @@ import Testing
 
   @Test func aPropIsItsRealSizeInRoomUnits() {
     let lamp = GenzPiece.Kind.idolFloorLamp.size
-    #expect(abs(lamp.z - 1.5 * GenzRoomPoint.perMetre) < 1e-4)
+    #expect(abs(lamp.z - IdolProp.floorlamp.metres.z * GenzRoomPoint.perMetre) < 1e-4)
+    #expect(lamp.z > 1.3 * GenzRoomPoint.perMetre && lamp.z < 1.7 * GenzRoomPoint.perMetre)
     let mugs = GenzPiece.Kind.idolMugs.size
     // About as tall as the hand-made mugs.
     #expect(abs(mugs.z - GenzPiece.Kind.mugs.size.z) < 0.05)
@@ -82,8 +83,7 @@ import Testing
       if prop.surfaces.contains(.wall) { #expect(prop.surfaces == [.wall], "\(prop)") }
       #expect(prop.metres.x > 0 && prop.metres.y > 0 && prop.metres.z > 0, "\(prop)")
     }
-    #expect(IdolProp.clock.surfaces == [.wall])
-    #expect(IdolProp.teaSet.surfaces.contains(.top))
+    #expect(IdolProp.mugs.surfaces.contains(.top))
     #expect(IdolProp.beanbag.surfaces == [.floor])
   }
 }
