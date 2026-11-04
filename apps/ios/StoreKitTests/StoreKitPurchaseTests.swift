@@ -17,6 +17,20 @@ final class StoreKitPurchaseTests: XCTestCase {
     session.clearTransactions()
   }
 
+  /// The packs once the test store serves them. A fresh Simulator's StoreKit daemon can answer
+  /// empty for a while after the session loads its configuration, so this asks again for up to a
+  /// minute before failing.
+  private func loadPacks(_ payments: StoreKitPayments) async throws -> [StampPack] {
+    let deadline = ContinuousClock.now + .seconds(60)
+    while true {
+      let packs = (try? await payments.products()) ?? []
+      if packs.count == StampPackCatalog.standard.packs.count || ContinuousClock.now > deadline {
+        return packs
+      }
+      try await Task.sleep(for: .seconds(2))
+    }
+  }
+
   private final class Recorder: Sendable {
     let sent = Mutex<[String]>([])
     let failNext = Mutex(false)
@@ -58,7 +72,7 @@ final class StoreKitPurchaseTests: XCTestCase {
 
   func testTheStoreSellsEveryPackInTheCatalogue() async throws {
     let payments = StoreKitPayments(server: Recorder().server)
-    let packs = try await payments.products()
+    let packs = try await loadPacks(payments)
     XCTAssertEqual(packs.map(\.id), StampPackCatalog.standard.productIDs)
     XCTAssertEqual(packs.map(\.stamps), [100, 550, 1200])
     XCTAssertEqual(packs.map(\.displayPrice).count, 3)
@@ -67,7 +81,9 @@ final class StoreKitPurchaseTests: XCTestCase {
   func testAPurchaseSendsTheSignedTransactionAndIsCredited() async throws {
     let recorder = Recorder()
     let payments = StoreKitPayments(server: recorder.server)
-    for pack in try await payments.products() {
+    let packs = try await loadPacks(payments)
+    XCTAssertEqual(packs.count, 3)
+    for pack in packs {
       let result = try await payments.purchase(pack)
       guard case .purchased(let credit) = result else {
         return XCTFail("\(pack.id): expected a purchase, got \(result)")
@@ -91,7 +107,8 @@ final class StoreKitPurchaseTests: XCTestCase {
     let recorder = Recorder()
     recorder.failNext.withLock { $0 = true }
     let payments = StoreKitPayments(server: recorder.server)
-    let pack = try await payments.products()[0]
+    let loaded = try await loadPacks(payments)
+    let pack = try XCTUnwrap(loaded.first)
     do {
       _ = try await payments.purchase(pack)
       XCTFail("the server was down, so the purchase should have failed")
@@ -110,7 +127,8 @@ final class StoreKitPurchaseTests: XCTestCase {
     session.failTransactionsEnabled = true
     session.failureError = .unknown
     let payments = StoreKitPayments(server: Recorder().server)
-    let pack = try await payments.products()[0]
+    let loaded = try await loadPacks(payments)
+    let pack = try XCTUnwrap(loaded.first)
     do {
       _ = try await payments.purchase(pack)
       XCTFail("expected a failure")
