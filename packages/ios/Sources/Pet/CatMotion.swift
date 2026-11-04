@@ -62,6 +62,10 @@ extension CatModel {
     case .siamese:
       CatMotion(tempo: 1.0, signature: [.yawn, .lickLips], temperament: .diva)
     case .idolIlya: CatMotion(tempo: 1, signature: [.slowBlink, .headTilt], temperament: .cuddler)
+    // Ilya's own Mochi blinks slowly, glances round, yawns and flicks her tail while she sits.
+    case .mochi:
+      CatMotion(
+        tempo: 1, signature: [.slowBlink, .look, .yawn, .tailFlick], temperament: .cuddler, every: 9)
     }
   }
 }

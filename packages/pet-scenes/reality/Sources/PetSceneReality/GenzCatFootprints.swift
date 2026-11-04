@@ -87,6 +87,11 @@ extension CatModel {
         GenzCatShape(back: 0.48, front: 0.64, half: 0.29),
         GenzCatShape(back: 0.42, front: 0.7, half: 0.48)
       )
+    case .mochi:
+      (
+        GenzCatShape(back: 0.45, front: 0.7, half: 0.28),
+        GenzCatShape(back: 0.38, front: 0.77, half: 0.48)
+      )
     case .mooCat:
       (
         GenzCatShape(back: 0.37, front: 0.72, half: 0.23),

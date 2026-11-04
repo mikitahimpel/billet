@@ -25,6 +25,13 @@ nexishq/idol-scenes. See [docs/idol-splats.md](docs/idol-splats.md).
 `Cat_idolIlya`: Cat by Ilya (nexishq), used with permission. Made by the same pipeline from his
 illustration in nexishq/idol-scenes.
 
+`Cat_mochi`: Mochi by Ilya (nexishq), used with his permission. It is made from his standing Mochi
+splat (`MochiStanding.ply` in [nexishq/nooki-ios](https://github.com/nexishq/nooki-ios) at 9cec8bb,
+the same file as `assets/cat-standing.ply` in nexishq/idol-scenes at 2d171b1), which he generated
+with Idol from his own illustration. billet turned the splat into a mesh, baked its colour, put it
+on billet's cat skeleton and gave its painted eyes lids; no file from his repositories ships as
+is.
+
 The cats in the room's style (`Cat_gingerChonk` and the others made with it) were generated on a
 PC: each starts from a picture made by FLUX.2-klein-4B (Black Forest Labs, Apache License 2.0)
 from a text prompt, with renders of billet's own room and detailed cat as style references. Idol
