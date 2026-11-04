@@ -17,6 +17,7 @@ struct HomeView: View {
   /// False while the shell shows another tab, so the room pauses and a new room waits to mount.
   @Environment(\.petSceneOnScreen) private var tabShown
   @Environment(\.dynamicTypeSize) private var typeSize
+  @Environment(\.appEvents) private var events
   @State private var hungImage: CGImage?
   /// What the card that opened the canvas asked for, in place of the day's usual prompt.
   @State private var cardPrompt: String?
@@ -41,6 +42,8 @@ struct HomeView: View {
   @State private var ringsOpen = false
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
+  /// The toy this phone's touch is moving now, for counting a game with it.
+  @State private var touchingToy: CatToy?
   /// The partner's meal or game being shown, for a few seconds.
   @State private var shownCare: CatCareNotice?
 
@@ -59,6 +62,10 @@ struct HomeView: View {
   private var delivery: Int { store.state.pet.world.delivery }
 
   private var isRenovating: Bool { session.renovator.isRenovating }
+
+  private var roomWatch: RoomWatch {
+    RoomWatch(shop: ObjectIdentifier(session.shop), layout: session.shop.state.layout)
+  }
 
   /// Long enough to see the note set off before the system prompt covers it.
   private static let askAfterSending = Duration.seconds(2)
@@ -111,7 +118,17 @@ struct HomeView: View {
         await session.brain.run()
       }
       .onChange(of: session.shop.state.treatsUsed) { old, new in
-        if new > old { session.fed() }
+        guard new > old else { return }
+        session.fed()
+        events(.catFed(.food))
+      }
+      .onChange(of: isRenovating) { _, renovating in
+        if renovating { events(.decoratingOpened) }
+      }
+      .onChange(of: roomWatch) { old, new in
+        // Another session's shop is another room, not a change to this one.
+        guard old.shop == new.shop else { return }
+        for event in RoomLayoutEvents.between(old.layout, new.layout) { events(event) }
       }
       .overlay {
         HomeLifeLayer(
@@ -384,8 +401,13 @@ struct HomeView: View {
     if let treat {
       _ = try? session.shop.use(treat, transaction: session.shop.newTransaction())
     } else {
-      session.giveTreat(on: day)
+      giveDaysTreat(on: day)
     }
+  }
+
+  private func giveDaysTreat(on day: String) {
+    session.giveTreat(on: day)
+    events(.catFed(.treat))
   }
 
   private var homeBackdrop: some View {
@@ -714,6 +736,7 @@ struct HomeView: View {
   private func pet() {
     session.pet()
     petBounce.toggle()
+    events(.catPetted)
   }
 
   private func handle(_ event: PetSceneEvent) {
@@ -723,12 +746,18 @@ struct HomeView: View {
     }
     switch event {
     case .petted: pet()
-    case .played: session.played()
-    case .fed: session.fed()
+    case .played:
+      session.played()
+      events(.catPlayed(touchingToy))
+    case .fed:
+      session.fed()
+      events(.catFed(.food))
     case .shooed: session.shooed()
     case .noteOpened: onOpenNotes()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
-    case .touching(let interaction): session.brain.setLive(interaction)
+    case .touching(let interaction):
+      session.brain.setLive(interaction)
+      if case .toy(let toy) = interaction { touchingToy = toy } else { touchingToy = nil }
     case .lightSwitched(let light): session.switchLight(light)
     case .deliveryFinished, .settled: break
     }
@@ -774,7 +803,7 @@ struct HomeView: View {
       TreatPanel(
         status: session.play.status(on: day),
         streak: session.streak(today: day, calendar: calendar),
-        onGive: { session.giveTreat(on: day) }
+        onGive: { giveDaysTreat(on: day) }
       )
     }
   }
@@ -872,6 +901,12 @@ extension PetPlayState.Treat {
     case .fed: self = .fed
     }
   }
+}
+
+/// The room as one shop holds it, so a change of layout is told apart from a change of shop.
+private struct RoomWatch: Equatable {
+  let shop: ObjectIdentifier
+  let layout: RoomLayout
 }
 
 /// What the cat's nudge is planned from, so it is planned again when either changes.

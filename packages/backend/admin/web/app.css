@@ -1535,6 +1535,47 @@ input[type="checkbox"] {
   transform: translateX(22px);
 }
 
+.switch.calm input:checked {
+  background: var(--accent-fill);
+}
+
+.analytics-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+}
+
+.analytics-row .hint {
+  margin-top: var(--s1);
+}
+
+.tops {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.top-list {
+  margin: 0;
+  padding: var(--s2) var(--s4);
+  list-style: none;
+}
+
+.top-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.top-list li:last-child {
+  border-bottom: 0;
+}
+
+.top-count {
+  flex: none;
+}
+
 .preview {
   display: grid;
   place-items: start center;

@@ -24,9 +24,9 @@ public struct APIClient: Sendable {
   public var flags: @Sendable () async throws(TransportError) -> FlagsResponse
   /// Maintenance, the oldest build that may run, and a notice. Needs no session.
   public var status: @Sendable () async throws(TransportError) -> StatusResponse
-  /// Counts a few named things the app did. Names only; the server stamps the time.
-  public var reportEvents:
-    @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
+  /// Counts a few things the app did: names, with a catalogue id or a price for some. The server
+  /// stamps the time.
+  public var reportEvents: @Sendable (_ events: [ClientEvent]) async throws(TransportError) -> Void
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -53,7 +53,7 @@ public struct APIClient: Sendable {
     flags: @escaping @Sendable () async throws(TransportError) -> FlagsResponse,
     status: @escaping @Sendable () async throws(TransportError) -> StatusResponse,
     reportEvents:
-      @escaping @Sendable (_ events: [ClientEventName]) async throws(TransportError) -> Void
+      @escaping @Sendable (_ events: [ClientEvent]) async throws(TransportError) -> Void
   ) {
     self.authChallenge = authChallenge
     self.signInWithApple = signInWithApple
