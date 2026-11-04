@@ -17,7 +17,7 @@ struct TabBar: View {
                     item(.us, "Us", "heart")
                 }
                 .padding(6)
-                .glass(.capsule, tint: Ink.glassTint, interactive: true)
+                .glass(.capsule, tint: Ink.glassTint, clear: true, interactive: true)
 
                 AddButton(state: state)
             }
