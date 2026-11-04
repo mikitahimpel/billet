@@ -12,12 +12,13 @@ import {
   type AccessIdentity,
   type AdminIdentity,
 } from "@billet/backend-admin/access";
-import { adminCss, adminHtml, adminJs } from "@billet/backend-admin/admin-assets";
+import { adminCss, adminHtml, adminJs, adminLibJs } from "@billet/backend-admin/admin-assets";
 import {
   AdminRoutes,
   agentApiPrefix,
   AgentRoutes,
   CurrentAdmin,
+  PanelEnvironment,
 } from "@billet/backend-admin/admin-routes";
 import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsService } from "@billet/backend-flags/flags-service";
@@ -146,9 +147,11 @@ const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
 const adminLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, admin: AdminIdentity) =>
   AdminRoutes.pipe(
     Layer.provide(
-      Layer.mergeAll(FlagsService.layer, Layer.succeed(CurrentAdmin, admin)).pipe(
-        Layer.provideMerge(dataLayer(env, experiments)),
-      ),
+      Layer.mergeAll(
+        FlagsService.layer,
+        Layer.succeed(CurrentAdmin, admin),
+        Layer.succeed(PanelEnvironment, { name: env.STAGE || "unknown" }),
+      ).pipe(Layer.provideMerge(dataLayer(env, experiments))),
     ),
   );
 
@@ -201,6 +204,7 @@ export const respondAdmin = async (
     if (pathname === "/admin" || pathname === "/admin/") return asset(adminHtml, "text/html");
     if (pathname === "/admin/app.css") return asset(adminCss, "text/css");
     if (pathname === "/admin/app.js") return asset(adminJs, "text/javascript");
+    if (pathname === "/admin/lib.js") return asset(adminLibJs, "text/javascript");
   }
   if (!pathname.startsWith("/admin/api/")) {
     return withSecurity(new Response("Not found", { status: 404 }));

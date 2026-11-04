@@ -12,10 +12,10 @@ name: iOS perf
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
 #
-# Mac runners are few and pull request checks come first: across the whole repository only one perf
-# run goes at a time, its jobs one after another on a single runner, each with a time limit. A run
-# started while another goes waits (only the newest waiting run is kept). Start runs when the
-# checks queue is quiet, and cancel one that is in the way: gh run cancel <id>.
+# Mac runners are few and pull request checks come first: a perf run's jobs go one after another
+# on a single runner, each with a time limit. Runs for different branches can go side by side, so
+# start one only when you need numbers, when the checks queue is quiet, and cancel one that is in
+# the way: gh run cancel <id>.
 on:
   workflow_dispatch:
     inputs:
@@ -45,15 +45,17 @@ on:
   pull_request:
     types: [labeled, synchronize, reopened]
 
-# A pull request event that runs nothing (no `perf` label, or another label added) still starts
-# this workflow, only to skip its jobs: it goes in a group of its own, so it cannot push a waiting
-# perf run out of the queue.
+# GitHub keeps only the newest waiting run of a group and cancels the rest, so one shared group lost
+# runs whenever two agents asked at once. Each started run is its own group; a pull request is one
+# group, where a new push replaces the run before it. An event that runs nothing (no `perf` label,
+# or another label added) is a group of its own, so it cannot cancel that run.
 concurrency:
   group: >-
-    ${{ github.event_name == 'pull_request' && !(contains(github.event.pull_request.labels.*.name, 'perf')
-    && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
-    && format('ios-perf-skip-{0}', github.run_id) || 'ios-perf' }}
-  cancel-in-progress: false
+    ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+    && (github.event.action != 'labeled' || github.event.label.name == 'perf')
+    && format('ios-perf-pr-{0}', github.event.pull_request.number)
+    || format('ios-perf-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read

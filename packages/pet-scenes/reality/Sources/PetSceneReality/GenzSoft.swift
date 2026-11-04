@@ -147,6 +147,34 @@ extension GenzKit {
     }
   }
 
+  /// A flattened tube along `path`, like a sleeve lying slack: at each point it is `widths` across
+  /// and `thicknesses` through, the thin side facing up where it lies flat and out where it hangs.
+  /// Open at its ends; a thickness near zero pinches an end shut.
+  func flatTube(
+    _ name: String, _ path: [SIMD3<Float>], widths: [Float], thicknesses: [Float], sides: Int = 12
+  ) -> MeshResource {
+    cached("flat tube \(name)") {
+      var mesh = GenzSmooth()
+      let frames = Self.frames(along: path)
+      let last = Float(path.count - 1)
+      mesh.grid(columns: sides, rows: path.count - 1) { u, v in
+        let position = v * last
+        let index = min(Int(position), path.count - 2)
+        let share = position - Float(index)
+        func blend(_ values: [Float]) -> Float {
+          values[index] * (1 - share) + values[index + 1] * share
+        }
+        let centre: SIMD3<Float> = path[index] * (1 - share) + path[index + 1] * share
+        let frame = frames[share < 0.5 ? index : index + 1]
+        let angle: Float = u * 2 * .pi
+        let through: Float = cos(angle) * blend(thicknesses) / 2
+        let across: Float = sin(angle) * blend(widths) / 2
+        return centre + frame.0 * through + frame.1 * across
+      }
+      return mesh.mesh(name)
+    }
+  }
+
   /// Two directions across the path at each point, turning as little as possible along it.
   private static func frames(along path: [SIMD3<Float>]) -> [(SIMD3<Float>, SIMD3<Float>)] {
     var frames: [(SIMD3<Float>, SIMD3<Float>)] = []

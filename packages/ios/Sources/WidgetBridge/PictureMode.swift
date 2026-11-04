@@ -5,7 +5,6 @@ public enum PictureMode: String, CaseIterable, Sendable {
   case nudge
   case partnerDrawing
   case partnerWindow
-  case catMood
   case streak
   case daysTogether
   case timeOfDay
@@ -16,7 +15,6 @@ public enum PictureMode: String, CaseIterable, Sendable {
     case .nudge: .nudge
     case .partnerDrawing: .partnerDrawing
     case .partnerWindow: .partnerWindow
-    case .catMood: .catMood
     case .streak: .streak
     case .daysTogether: .daysTogether
     case .timeOfDay: .timeOfDay
@@ -91,7 +89,7 @@ public enum PicturePlan {
       guard inputs.features.isOn(mode.feature) else { return false }
       switch mode {
       case .partnerDrawing: return inputs.hasDrawing
-      case .partnerWindow, .catMood: return snapshot != nil
+      case .partnerWindow: return snapshot != nil
       case .streak: return (snapshot?.streak ?? 0) > 0
       case .daysTogether: return snapshot?.pairedSince != nil
       case .timeOfDay: return true

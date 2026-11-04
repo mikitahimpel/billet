@@ -54,7 +54,7 @@ import Testing
       ])
     #expect(
       Experiments.homeLayout.variants == [
-        "classic", "immersive", "cinematic", "living-window", "night-and-day",
+        "classic", "immersive", "living-window", "night-and-day",
       ])
     #expect(Experiments.shopkeeper.variants == ["teddy", "human"])
   }
