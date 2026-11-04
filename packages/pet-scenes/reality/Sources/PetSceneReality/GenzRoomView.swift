@@ -130,10 +130,14 @@ struct GenzRoomView: View {
     let isOpen = room.screen.openedAt != nil
     let outside = layout.hasOutside
     ZStack {
-      if !outside { NookiCabinBackdrop(isPaused: !isOnScreen || reduceMotion) }
+      // A room with no outside stands on the Nooki project's warm backdrop, which takes the place
+      // of the haze and the vignette, so it is never left white or black.
+      if !outside {
+        NookiCabinBackdrop(isPaused: !isOnScreen || reduceMotion, light: look.key.boost)
+      }
       if isOpen, outside, parts.shows("layers") { layer(behind, room: room) }
       if isOpen, outside, parts.shows("sky") { theirSky }
-      if isOpen, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+      if isOpen, outside, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
       stage(room)
       if isOpen, outside, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
@@ -152,7 +156,7 @@ struct GenzRoomView: View {
       }
       if isOpen, parts.shows("grade") {
         GlowGrade(look: look)
-        GlowVignette(look: look)
+        if outside { GlowVignette(look: look) }
       }
       CatPurrOverlay(purr: room.purr)
       BowlHint(

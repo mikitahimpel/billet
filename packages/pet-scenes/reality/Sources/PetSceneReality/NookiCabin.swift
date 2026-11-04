@@ -387,6 +387,12 @@ struct CabinClay {
 /// room is off screen or motion is reduced.
 struct NookiCabinBackdrop: View {
   let isPaused: Bool
+  /// How brightly the room is lit, as its look's key boost: 0 with the lights out, 1 or more
+  /// with them on. The backdrop dims with the room, but only so far, so it stays warm.
+  var light: Float = 1
+
+  /// How bright the backdrop is with the room lit `light`.
+  static func brightness(_ light: Float) -> Double { 0.7 + 0.3 * Double(min(max(light, 0), 1)) }
 
   var body: some View {
     ZStack {
@@ -395,7 +401,8 @@ struct NookiCabinBackdrop: View {
           Color(red: 0.957, green: 0.749, blue: 0.494),
           Color(red: 0.702, green: 0.431, blue: 0.227),
           Color(red: 0.290, green: 0.173, blue: 0.106),
-          Color(red: 0.141, green: 0.082, blue: 0.051),
+          // Lighter than the Nooki project's last stop, so dimmed corners stay brown.
+          Color(red: 0.227, green: 0.141, blue: 0.086),
         ],
         center: UnitPoint(x: 0.5, y: 0.48), startRadius: 10, endRadius: 520)
       TimelineView(.animation(minimumInterval: 1.0 / 6, paused: isPaused)) { context in
@@ -419,6 +426,8 @@ struct NookiCabinBackdrop: View {
         }
       }
     }
+    .colorMultiply(Color(white: Self.brightness(light)))
+    .animation(.easeInOut(duration: 0.6), value: light)
     .ignoresSafeArea()
     .allowsHitTesting(false)
     .accessibilityHidden(true)

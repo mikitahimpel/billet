@@ -97,4 +97,16 @@ import simd
     #expect(room.root.findEntity(named: GenzRoom.noteName) != nil)
     #expect(room.street == nil)
   }
+
+  /// The backdrop dims with the lights but stays warm under every preset and switch position.
+  @Test func theBackdropDimsButNeverGoesDark() {
+    let looks = RoomLighting.allCases.map(LightingLook.of) + [LightingLook.cosy, .moonlight]
+    for look in looks {
+      let brightness = NookiCabinBackdrop.brightness(look.key.boost)
+      #expect(brightness >= 0.7 && brightness <= 1)
+    }
+    #expect(
+      NookiCabinBackdrop.brightness(LightingLook.moonlight.key.boost)
+        < NookiCabinBackdrop.brightness(LightingLook.amberLantern.key.boost))
+  }
 }
