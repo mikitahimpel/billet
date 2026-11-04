@@ -81,7 +81,7 @@ public struct ClosetView: View {
   private var list: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.large) {
-        ForEach(ShopItem.Category.allCases, id: \.self) { category in
+        ForEach(ShopItem.Category.shelves, id: \.self) { category in
           let owned = ownedItems(in: category)
           let placed = placedItems(in: category)
           if !owned.isEmpty || !placed.isEmpty {
@@ -161,6 +161,7 @@ public struct ClosetView: View {
     case .furniture: "Place"
     case .material: "Use"
     case .treat: "Give"
+    case .style: "Use"
     }
   }
 
@@ -175,6 +176,9 @@ public struct ClosetView: View {
         try store.use(item, transaction: store.newTransaction())
         used += 1
       }
+    case .style:
+      // Styles are chosen in the Style tab; the closet never lists them.
+      break
     }
   }
 

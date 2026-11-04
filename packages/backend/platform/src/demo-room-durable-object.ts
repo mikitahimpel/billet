@@ -12,6 +12,7 @@ import {
   recordTreat,
   type QueuedPet,
   type Reactions,
+  type RoomStyle,
   type TreatDays,
   dayOf,
   type DailyFrame,
@@ -213,8 +214,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * name is the first one given, unless renamed, when the last one wins. A move in choosing the
    * cat is relayed to the partner live; the latest pick of each phone and the adoption are kept
    * and replayed when the partner connects. The room's light switch is the last press from either
-   * phone, sent to both and replayed on connect, and so is where each room's furniture stands,
-   * room by room, for a few rooms. A reaction is accepted only from the receiver of that note, and
+   * phone, sent to both and replayed on connect, and so are the room's style and where each room's
+   * furniture stands, room by room, for a few rooms. A reaction is accepted only from the receiver of that note, and
    * the whole table goes to both sockets.
    */
   private async handlePlay(
@@ -246,6 +247,9 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       } else if (play.kind === "light") {
         await this.ctx.storage.put("roomLight", play.light);
         this.broadcast({ type: "light", light: play.light });
+      } else if (play.kind === "style") {
+        await this.ctx.storage.put("roomStyle", play.style);
+        this.broadcast({ type: "style", style: play.style });
       } else if (play.kind === "arrange") {
         const key = `${ARRANGEMENT_PREFIX}${play.room}`;
         const known = await this.ctx.storage.list({ prefix: ARRANGEMENT_PREFIX });
@@ -492,6 +496,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     if (name !== undefined) socket.send(JSON.stringify({ type: "name", name }));
     const light = await this.ctx.storage.get<string>("roomLight");
     if (light !== undefined) socket.send(JSON.stringify({ type: "light", light }));
+    const style = await this.ctx.storage.get<RoomStyle>("roomStyle");
+    if (style !== undefined) socket.send(JSON.stringify({ type: "style", style }));
     const arrangements = await this.ctx.storage.list<Record<string, PieceSpot>>({
       prefix: ARRANGEMENT_PREFIX,
     });

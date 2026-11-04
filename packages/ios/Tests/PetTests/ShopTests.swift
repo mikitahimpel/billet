@@ -21,7 +21,7 @@ struct ShopTests {
   @Test func catalogHasUniqueIDsAndThreeSections() {
     let ids = catalog.items.map(\.id)
     #expect(Set(ids).count == ids.count)
-    for category in ShopItem.Category.allCases {
+    for category in ShopItem.Category.shelves {
       #expect(!catalog.items(in: category).isEmpty)
     }
     #expect(catalog.items.allSatisfy { $0.price > 0 })

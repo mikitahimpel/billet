@@ -39,6 +39,8 @@ actor LiveDelivery {
     var holding: Bool?
     /// For a `light` play: where the switch now stands.
     var light: String?
+    /// For a `style` play: how the room is now done up.
+    var style: RoomStyle?
     /// For an `arrange` play: the room, and where its moved pieces stand.
     var room: String?
     var spots: [String: PieceSpot]?
@@ -62,6 +64,7 @@ actor LiveDelivery {
     let cat: String?
     let holding: Bool?
     let light: String?
+    let style: RoomStyle?
     let room: String?
     let spots: [String: PieceSpot]?
     let day: String?
@@ -190,6 +193,17 @@ actor LiveDelivery {
     var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "light", at: at)
     frame.light = light.rawValue
     treatOutbox.removeAll { $0.kind == "light" }
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// A change of the room's style waits for the ack and is sent again after a reconnect. Only
+  /// the latest is kept: it holds the whole style.
+  func restyle(_ style: RoomStyle) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "style", at: at)
+    frame.style = style
+    treatOutbox.removeAll { $0.kind == "style" }
     treatOutbox.append(frame)
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
@@ -342,6 +356,8 @@ actor LiveDelivery {
       if let light = frame.light.flatMap(RoomLight.init(rawValue:)) {
         updates.yield(.roomLight(light))
       }
+    case "style":
+      if let style = frame.style { updates.yield(.roomStyle(style)) }
     case "arrange":
       if let room = frame.room, let spots = frame.spots {
         updates.yield(.roomArranged(RoomArrangement(room: room, spots: spots)))

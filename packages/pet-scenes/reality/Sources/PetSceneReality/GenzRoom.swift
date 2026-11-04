@@ -241,6 +241,10 @@ final class GenzRoom: CatPlayStage {
   private(set) var preset = LightingLook.off
   /// The switch on the wall, its fade and its plate.
   var lightSwitch = GenzLightSwitch()
+  /// What dresses the walls, the floor and the window as the pair's style says, once built.
+  private(set) var styler: GenzRoomStyler?
+  /// The style to show, kept until the room is built.
+  private(set) var style = RoomStyle.standard
   /// Called when an opening asked for through ``flyIn(_:)`` starts, once the room is built and on
   /// screen.
   var onOpeningStarted: (() -> Void)?
@@ -313,6 +317,10 @@ final class GenzRoom: CatPlayStage {
     for part in layout.shell(kit) { shell.addChild(part) }
     kit.merge(shell, key: "shell")
     room.addChild(shell)
+    let styler = GenzRoomStyler(kit: kit)
+    room.addChild(styler.root)
+    styler.apply(style, animated: false)
+    self.styler = styler
     if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
     pieceHolders = holders
@@ -748,6 +756,7 @@ final class GenzRoom: CatPlayStage {
   private func tick(_ delta: TimeInterval) {
     guard isOnScreen, isBuilt else { return }
     clock += delta
+    styler?.step(Float(delta))
     if settlingFrames > 0 {
       settlingFrames -= 1
       if settlingFrames == 0 {
@@ -878,6 +887,16 @@ final class GenzRoom: CatPlayStage {
     guard preset != self.preset else { return }
     self.preset = preset
     relight(animated: false)
+  }
+
+  /// Does the room up as `style` says. The curtains draw across when `animated`; the rest
+  /// changes at once. The fairy lights take the style's colour.
+  func setStyle(_ style: RoomStyle, animated: Bool = true) {
+    guard style != self.style || styler?.style != style else { return }
+    let fairyChanged = style.fairy != self.style.fairy
+    self.style = style
+    styler?.apply(style, animated: animated && isOnScreen)
+    if fairyChanged { relight(animated: animated && isOnScreen) }
   }
 
   /// Shows `look` from the next time the room's lights are applied.

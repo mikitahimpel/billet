@@ -146,7 +146,7 @@ extension GenzRoom {
     lightSwitch.lampLevel = GenzLightSwitch.lampLevel(lightSwitch.light)
     lightSwitch.ledLevel = GenzLightSwitch.ledLevel(lightSwitch.light)
     screen.ledLevel = Double(lightSwitch.ledLevel)
-    let target = LightingLook.switched(preset, to: lightSwitch.light)
+    let target = LightingLook.switched(preset, to: lightSwitch.light).tinted(style.fairy)
     guard target != look else { return }
     setLook(target)
     applyLook()
@@ -156,7 +156,7 @@ extension GenzRoom {
   /// light's colours are remade at each quarter, as remaking them costs more than a frame's share.
   func stepSwitch() {
     guard let fade = lightSwitch.fade else { return }
-    let target = LightingLook.switched(preset, to: lightSwitch.light)
+    let target = LightingLook.switched(preset, to: lightSwitch.light).tinted(style.fairy)
     let progress = GenzLightSwitch.progress(clock - fade.start, length: fade.length)
     let lampTarget = GenzLightSwitch.lampLevel(lightSwitch.light)
     lightSwitch.lampLevel = fade.lampFrom + (lampTarget - fade.lampFrom) * progress

@@ -58,6 +58,8 @@ struct DecorControls: View {
   var onAddItems: (() -> Void)?
   /// Puts every piece back where the room first had it, or `nil` when the room can't.
   var onReset: (() -> Void)?
+  /// Opens the Style tab, or `nil` when the room has none.
+  var onStyle: (() -> Void)?
 
   /// Whether the drag-and-twist hint has been shown once already.
   @AppStorage("decorGestureHintShown") private var hintShown = false
@@ -82,7 +84,7 @@ struct DecorControls: View {
 
   /// The window's safe area. The rooms are drawn edge to edge and their hosts let them ignore the
   /// safe area, so the controls keep clear of the status bar and the home indicator themselves.
-  private static var windowInsets: (top: CGFloat, bottom: CGFloat) {
+  static var windowInsets: (top: CGFloat, bottom: CGFloat) {
     #if os(iOS)
       let window = UIApplication.shared.connectedScenes
         .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first
@@ -158,17 +160,15 @@ struct DecorControls: View {
     if status.hasSelection {
       toolbar
         .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
-    } else if let onAddItems {
-      Button(action: onAddItems) {
-        Label("Add items", systemImage: "plus")
-          .billetType(.action)
-          .foregroundStyle(Palette.paper.color)
-          .padding(.horizontal, Spacing.medium)
-          .frame(height: Target.minimum)
-          .contentShape(.capsule)
+    } else if onAddItems != nil || onStyle != nil {
+      HStack(spacing: Spacing.small) {
+        if let onAddItems {
+          wide("Add items", systemImage: "plus", id: "decorAddItems", action: onAddItems)
+        }
+        if let onStyle {
+          wide("Style", systemImage: "paintbrush.pointed", id: "decorStyle", action: onStyle)
+        }
       }
-      .billetButton(.secondary)
-      .accessibilityIdentifier("decorAddItems")
       .transition(.opacity)
     } else {
       Text("Tap a piece to move it")
@@ -180,6 +180,22 @@ struct DecorControls: View {
         .accessibilityIdentifier("decorIdleHint")
         .transition(.opacity)
     }
+  }
+
+  /// A glass capsule for one of the ways to change the room when nothing is picked up.
+  private func wide(
+    _ title: String, systemImage: String, id: String, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Label(title, systemImage: systemImage)
+        .billetType(.action)
+        .foregroundStyle(Palette.paper.color)
+        .padding(.horizontal, Spacing.medium)
+        .frame(height: Target.minimum)
+        .contentShape(.capsule)
+    }
+    .billetButton(.secondary)
+    .accessibilityIdentifier(id)
   }
 
   /// The piece picked up, by name, with Turn 90° and, for closet furniture, Put away.

@@ -17,6 +17,8 @@ public struct PairPlay: Equatable, Sendable {
   public private(set) var catName: String?
   /// Where the room's light switch stands. The room keeps the last press from either partner.
   public private(set) var roomLight = RoomLight.standard
+  /// How the pair has done up the room. The room keeps the last change from either partner.
+  public private(set) var roomStyle = RoomStyle.standard
   /// Where each room's furniture stands, by room. The room keeps the last arrangement from either
   /// partner.
   public private(set) var arrangements: [String: [String: PieceSpot]] = [:]
@@ -28,6 +30,8 @@ public struct PairPlay: Equatable, Sendable {
     public var catName: String?
     /// Missing from what older releases saved, which read as ``RoomLight/standard``.
     public var roomLight: RoomLight?
+    /// Missing from what older releases saved, which read as ``RoomStyle/standard``.
+    public var roomStyle: RoomStyle?
     /// Missing from what older releases saved, which read as every room as it came.
     public var arrangements: [String: [String: PieceSpot]]?
   }
@@ -35,6 +39,7 @@ public struct PairPlay: Equatable, Sendable {
   public var saved: Saved {
     Saved(
       ledger: ledger, reactions: reactions, catName: catName, roomLight: roomLight,
+      roomStyle: roomStyle,
       arrangements: arrangements)
   }
 
@@ -45,6 +50,7 @@ public struct PairPlay: Equatable, Sendable {
       reactions = saved.reactions
       catName = saved.catName
       roomLight = saved.roomLight ?? .standard
+      roomStyle = saved.roomStyle ?? .standard
       arrangements = saved.arrangements ?? [:]
     }
   }
@@ -92,6 +98,11 @@ public struct PairPlay: Equatable, Sendable {
   /// Sets the room's light, from this phone's switch or from the room's report.
   public mutating func light(_ light: RoomLight) {
     roomLight = light
+  }
+
+  /// Sets how the room is done up, from this phone's Style tab or from the room's report.
+  public mutating func style(_ style: RoomStyle) {
+    roomStyle = style
   }
 
   /// Sets where a room's furniture stands, from this phone's decorating or from the room's report.
