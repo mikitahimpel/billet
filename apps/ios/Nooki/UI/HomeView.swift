@@ -29,6 +29,7 @@ struct HomeView: View {
                 }
                 .opacity(showsRoom ? 1 : 0)
                 .allowsHitTesting(showsRoom)
+                .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }
 
@@ -276,5 +277,24 @@ private struct WarmBackdrop: View {
             }
         }
         .ignoresSafeArea()
+    }
+}
+
+/// Under the UI tests (`-uitestRoomTaps YES`), counts every tap that reaches the room and reports it as the room's
+/// accessibility value, so a test can tell that a tap on the tab bar never fell through. Off otherwise.
+private struct RoomTapCounter: ViewModifier {
+    @State private var taps = 0
+    private let counts = UserDefaults.standard.bool(forKey: "uitestRoomTaps")
+
+    func body(content: Content) -> some View {
+        if counts {
+            content
+                .simultaneousGesture(TapGesture().onEnded { taps += 1 })
+                .accessibilityElement()
+                .accessibilityIdentifier("room")
+                .accessibilityValue("\(taps)")
+        } else {
+            content
+        }
     }
 }
