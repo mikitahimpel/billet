@@ -78,7 +78,7 @@ extension GenzRoom {
     case .daybed, .quiltedDaybed, .catBed: .bed
     case .milkCrate, .bookCrate: .box
     case .bookshelf, .wallShelves: .shelf
-    case .cardigan: .soft
+    case .cardigan, .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall, .blanket: .soft
     case .mugs, .phoneOnCharger, .candles: .smallItem
     case .roundRug, .patternRug: .rug
     case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,

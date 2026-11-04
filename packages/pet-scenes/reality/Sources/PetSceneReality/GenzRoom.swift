@@ -123,7 +123,8 @@ final class GenzRoom: CatPlayStage {
   /// so it never shares a plane with one or hides under it.
   static let markerHeight: Float = 0.08
 
-  let layout: GenzLayout
+  /// The room as it stands, with its pieces where decorating last left them.
+  var layout: GenzLayout
   let root = Entity()
   let screen = GenzRoomScreen()
   private(set) var camera: GenzCamera
@@ -694,7 +695,7 @@ final class GenzRoom: CatPlayStage {
       }
       lights.bulbs = look.fairy.shown ? (glow?.bulbPoints ?? []).compactMap(project) : []
       lights.led = GlowSpots.along(layout.led, every: 0.7).compactMap(project)
-      lights.lamp = project(layout.lamp.at)
+      lights.lamp = project(lampPoint)
       lights.pool = project(GenzGlow.pool(layout))
     }
     if screen.lights != lights { screen.lights = lights }
