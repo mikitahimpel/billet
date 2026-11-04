@@ -1,12 +1,17 @@
 import { Schema } from "effect";
 import { NoteId, UserId } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
+import { NoteText, PaperColor } from "@billet/contracts-domain/note";
 
 const fields = {
   noteId: NoteId,
   author: UserId,
-  /** Absent for photos, which have no vector rendition. */
+  /** Present for drawings only: photos and text notes have no vector rendition. */
   compact: Schema.optionalKey(CompactStrokes),
+  /** Present for text notes only, so a widget can show the words without a fetch. */
+  text: Schema.optionalKey(NoteText),
+  /** The note's paper, when the sender chose one. */
+  paper: Schema.optionalKey(PaperColor),
 };
 
 /**

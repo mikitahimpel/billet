@@ -134,7 +134,11 @@ export class NotesService extends Context.Service<
         if (request._tag === "Drawing" && !compactFits(request.compact)) {
           return yield* Effect.fail(new InvalidNote());
         }
-        if (!belongsTo(pairId, request.image) || !(yield* media.has(request.image))) {
+        // A text note carries its words; drawings and photos point at an image already uploaded.
+        if (
+          request._tag !== "Text" &&
+          (!belongsTo(pairId, request.image) || !(yield* media.has(request.image)))
+        ) {
           return yield* Effect.fail(new NotesNotFound());
         }
 

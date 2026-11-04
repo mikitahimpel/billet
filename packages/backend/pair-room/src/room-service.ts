@@ -1,6 +1,6 @@
 import { Clock, Context, Effect, Layer, Option, Semaphore } from "effect";
 import type { EpochMillis, NoteId, UserId } from "@billet/contracts-domain/ids";
-import type { Note } from "@billet/contracts-domain/note";
+import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { decide } from "./decide.ts";
 import { NoteIdSource } from "./note-id-source.ts";
@@ -20,15 +20,27 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
     }
   });
 
+// `paper` is an optional key: a note without one carries no `paper` at all, never `undefined`.
+const paperOf = (request: { readonly paper?: PaperColor }) =>
+  request.paper === undefined ? {} : { paper: request.paper };
+
 const stamped = (
   request: SendNoteRequest,
   server: { readonly id: NoteId; readonly author: UserId; readonly sentAt: EpochMillis },
 ): Note => {
   switch (request._tag) {
     case "Drawing":
-      return { _tag: "Drawing", compact: request.compact, image: request.image, ...server };
+      return {
+        _tag: "Drawing",
+        compact: request.compact,
+        image: request.image,
+        ...paperOf(request),
+        ...server,
+      };
     case "Photo":
       return { _tag: "Photo", image: request.image, ...server };
+    case "Text":
+      return { _tag: "Text", text: request.text, ...paperOf(request), ...server };
   }
 };
 
