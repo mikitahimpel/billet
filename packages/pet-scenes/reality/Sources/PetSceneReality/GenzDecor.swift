@@ -111,7 +111,7 @@ extension GenzRoom {
     let half = Self.footprint(of: kind)
     decor.register(
       name, holder: holder, half: half, isFlat: Self.isFlat(kind), surface: surface,
-      slidesOnly: Self.hangsOverTheEdge(kind))
+      slidesOnly: Self.slidesOnly(kind))
     if let spot = stored[name] {
       decor.place(name, at: DecorBox(centre: [spot.x, spot.z], half: half, yaw: spot.yaw))
       moveInLayout(name)
@@ -135,9 +135,11 @@ extension GenzRoom {
     }
   }
 
-  /// Whether the piece hangs over the seat's front edge, and so only slides along it.
-  static func hangsOverTheEdge(_ kind: GenzPiece.Kind) -> Bool {
-    kind == .blanket || kind == .cardigan
+  /// Whether the piece only slides along the seat, keeping its depth and how it faces: a pillow
+  /// leaning on the backrest, or a throw hanging over the front edge. The camera looks across the
+  /// room at an angle, so a sideways drag on screen would otherwise push them off the seat.
+  static func slidesOnly(_ kind: GenzPiece.Kind) -> Bool {
+    kind.isPillow || kind == .blanket || kind == .cardigan
   }
 
   /// Where the cat's body lies now, as a footprint on the floor plane, round whichever way it

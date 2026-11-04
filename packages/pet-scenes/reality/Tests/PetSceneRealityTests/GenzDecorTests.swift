@@ -74,16 +74,21 @@ import Testing
       "the cat's obstacles follow it")
   }
 
-  @Test func theBigPillowSlidesLeftTowardsTheThrow() throws {
+  /// The camera looks across the room at an angle, so a sideways drag on screen also moves the
+  /// finger towards the window; the pillow still only slides along the backrest.
+  @Test func theBigPillowSlidesLeftAlongTheBackrestTowardsTheThrow() throws {
     let (room, holders) = try room()
     let pillow = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .pillowLarge })
     let name = try name(.pillowLarge, in: room)
     let start = try #require(room.decor.plan(of: name)?.pieces[name])
+    #expect(!room.decor.canTurn(name))
     room.decor.select(holders[pillow])
     room.decor.beginDrag(at: start.centre)
-    room.decor.drag(to: start.centre - [0.6, 0])
+    room.decor.drag(to: start.centre - [0.6, 0.3])
     let candidate = try #require(room.decor.candidate)
     #expect(candidate.fit == .free, "\(candidate.fit) at \(candidate.box.centre)")
+    #expect(candidate.box.centre.y == start.centre.y)
+    #expect(candidate.box.centre.x < start.centre.x - 0.3)
   }
 
   @Test func theThrowOnlySlidesAlongTheSeatsEdge() throws {
