@@ -1,0 +1,86 @@
+{
+  "about": "Mochi on all four legs (cat-standing.ply): front -Z, up +Y, paws on y = 0, meters. Bones are segments from head to tail; a bone with a part belongs to it, the rest share whatever the parts leave. `eyes` is the point between the eyes, where she looks from.",
+  "eyes": [0, 0.195, -0.15],
+  "bones": [
+    { "name": "hips", "head": [0, 0.11, -0.01], "tail": [0, 0.12, 0.09] },
+    { "name": "chest", "head": [0, 0.11, -0.01], "tail": [0, 0.13, -0.09] },
+    { "name": "head", "parent": "chest", "head": [0, 0.15, -0.087], "tail": [0, 0.18, -0.158], "part": "head" },
+    { "name": "earLeft", "parent": "head", "head": [0.037, 0.237, -0.12], "tail": [0.056, 0.26, -0.12], "part": "earLeft" },
+    { "name": "earRight", "parent": "head", "head": [-0.037, 0.237, -0.113], "tail": [-0.056, 0.26, -0.113], "part": "earRight" },
+    { "name": "tail0", "parent": "hips", "head": [0, 0.155, 0.115], "tail": [0, 0.185, 0.148], "part": "tail" },
+    { "name": "tail1", "parent": "tail0", "head": [0, 0.185, 0.148], "tail": [0, 0.22, 0.15], "part": "tail" },
+    { "name": "tail2", "parent": "tail1", "head": [0, 0.22, 0.15], "tail": [0, 0.255, 0.128], "part": "tail" },
+    { "name": "leftHindUpper", "parent": "hips", "head": [0.042, 0.11, 0.05], "tail": [0.04, 0.05, 0.07], "part": "leftHind" },
+    { "name": "leftHindLower", "parent": "leftHindUpper", "head": [0.04, 0.05, 0.07], "tail": [0.038, 0.012, 0.058], "part": "leftHind" },
+    { "name": "leftForeUpper", "parent": "chest", "head": [0.036, 0.11, -0.08], "tail": [0.035, 0.055, -0.093], "part": "leftFore" },
+    { "name": "leftForeLower", "parent": "leftForeUpper", "head": [0.035, 0.055, -0.093], "tail": [0.033, 0.012, -0.124], "part": "leftFore" },
+    { "name": "rightHindUpper", "parent": "hips", "head": [-0.042, 0.11, 0.05], "tail": [-0.038, 0.05, 0.07], "part": "rightHind" },
+    { "name": "rightHindLower", "parent": "rightHindUpper", "head": [-0.038, 0.05, 0.07], "tail": [-0.038, 0.012, 0.057], "part": "rightHind" },
+    { "name": "rightForeUpper", "parent": "chest", "head": [-0.036, 0.11, -0.08], "tail": [-0.035, 0.055, -0.093], "part": "rightFore" },
+    { "name": "rightForeLower", "parent": "rightForeUpper", "head": [-0.035, 0.055, -0.093], "tail": [-0.033, 0.012, -0.124], "part": "rightFore" },
+    { "name": "lidLeft", "parent": "head", "head": [0.027, 0.193, -0.146], "tail": [0.027, 0.2055, -0.158], "part": "lidLeft" },
+    { "name": "lidLeftLow", "parent": "head", "head": [0.027, 0.193, -0.146], "tail": [0.027, 0.1795, -0.158], "part": "lidLeftLow" },
+    { "name": "lidRight", "parent": "head", "head": [-0.0275, 0.193, -0.145], "tail": [-0.0275, 0.2055, -0.157], "part": "lidRight" },
+    { "name": "lidRightLow", "parent": "head", "head": [-0.0275, 0.193, -0.145], "tail": [-0.0275, 0.1795, -0.157], "part": "lidRightLow" }
+  ],
+  "parts": {
+    "lidLeft": [
+      { "normal": [0, 1, 0], "point": [0.01, 0.1995, -0.058], "soft": 0.002 },
+      { "center": [0.027, 0.1995, -0.158], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.152], "soft": 0.004 }
+    ],
+    "lidLeftLow": [
+      { "normal": [0, -1, 0], "point": [0.01, 0.1855, -0.058], "soft": 0.002 },
+      { "center": [0.027, 0.1855, -0.158], "radii": [0.012, 0.012, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.152], "soft": 0.004 }
+    ],
+    "lidRight": [
+      { "normal": [0, 1, 0], "point": [0.01, 0.1995, -0.058], "soft": 0.002 },
+      { "center": [-0.0275, 0.1995, -0.157], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.151], "soft": 0.004 }
+    ],
+    "lidRightLow": [
+      { "normal": [0, -1, 0], "point": [0.01, 0.1855, -0.058], "soft": 0.002 },
+      { "center": [-0.0275, 0.1855, -0.157], "radii": [0.012, 0.012, 0.03], "soft": 0.8 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.151], "soft": 0.004 }
+    ],
+    "leftHind": [
+      { "normal": [0, -1, 0], "point": [0, 0.0875, 0], "soft": 0.025 },
+      { "normal": [1, 0, 0], "point": [0.014, 0, 0], "soft": 0.008 },
+      { "normal": [0, 0, 1], "point": [0, 0, 0.0275], "soft": 0.015 }
+    ],
+    "leftFore": [
+      { "normal": [0, -1, 0], "point": [0, 0.0875, 0], "soft": 0.025 },
+      { "normal": [1, 0, 0], "point": [0.01, 0, 0], "soft": 0.008 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.0425], "soft": 0.015 }
+    ],
+    "rightHind": [
+      { "normal": [0, -1, 0], "point": [0, 0.0875, 0], "soft": 0.025 },
+      { "normal": [-1, 0, 0], "point": [-0.014, 0, 0], "soft": 0.008 },
+      { "normal": [0, 0, 1], "point": [0, 0, 0.0275], "soft": 0.015 }
+    ],
+    "rightFore": [
+      { "normal": [0, -1, 0], "point": [0, 0.0875, 0], "soft": 0.025 },
+      { "normal": [-1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.008 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.0425], "soft": 0.015 }
+    ],
+    "earLeft": [
+      { "normal": [0.6, 0.8, 0], "point": [0.0495, 0.236, -0.058], "soft": 0.01 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.091], "soft": 0.01 },
+      { "normal": [0, 0, 1], "point": [0.01, 0, -0.146], "soft": 0.01 }
+    ],
+    "earRight": [
+      { "normal": [-0.6, 0.8, 0], "point": [-0.0495, 0.236, -0.058], "soft": 0.01 },
+      { "normal": [0, 0, -1], "point": [0.01, 0, -0.088], "soft": 0.01 },
+      { "normal": [0, 0, 1], "point": [0.01, 0, -0.14], "soft": 0.01 }
+    ],
+    "head": [
+      { "normal": [0, 1, -0.3], "point": [0.01, 0.139, -0.095], "soft": 0.012 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.03], "soft": 0.02 }
+    ],
+    "tail": [
+      { "normal": [0, 1, 0], "point": [0, 0.155, 0], "soft": 0.02 },
+      { "normal": [0, 0, 1], "point": [0, 0, 0.095], "soft": 0.02 }
+    ]
+  }
+}
