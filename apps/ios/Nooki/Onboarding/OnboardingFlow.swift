@@ -16,7 +16,7 @@ enum CatProfile {
     }
 }
 
-/// The first launch: a welcome over the room, the server's questions, the cat's name, an invite for the partner,
+/// The first launch: a welcome over the room, the server's questions, the cat's coat and name, an invite for the partner,
 /// then home. Every step can be skipped. Answers are queued in a file and sent when the server can be reached
 /// (`AnswerQueue`); the questions come from the server, or from the copy in the app when it can't be reached.
 @MainActor
@@ -25,11 +25,13 @@ final class OnboardingFlow {
     enum Page: Hashable {
         case welcome
         case question(OnboardingStep)
+        case catCoat
         case catName
         case invite
     }
 
     static let doneKey = "onboardingDone"
+    static let catCoatStep: OnboardingStepId = "cat_coat"
     static let catNameStep: OnboardingStepId = "cat_name"
     static let inviteStep: OnboardingStepId = "invite_partner"
     static let inviteSent: OnboardingOptionId = "sent"
@@ -43,6 +45,9 @@ final class OnboardingFlow {
     var values: [OnboardingStepId: Int] = [:]
     var texts: [OnboardingStepId: String] = [:]
     var catName = ""
+    var coat: CatCoat
+    /// The coat the room's cat wears; it changes once the picked coat is confirmed.
+    private(set) var wornCoat: CatCoat
     /// The share sheet with the invite was opened.
     var invited = false
 
@@ -52,6 +57,7 @@ final class OnboardingFlow {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let canInvite: Bool
     @ObservationIgnored private let now: () -> Date
+    @ObservationIgnored private let coatChanged: () -> Void
     @ObservationIgnored private var events: [ClientEvent] = []
     @ObservationIgnored private var viewed: Set<OnboardingStepId> = []
     @ObservationIgnored private var sending = false
@@ -63,8 +69,12 @@ final class OnboardingFlow {
         defaults: UserDefaults = .standard,
         canInvite: Bool,
         bundled: OnboardingResponse = BundledOnboarding.load(),
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        coatChanged: @escaping () -> Void = {}
     ) {
+        self.coatChanged = coatChanged
+        coat = CatCoat.current(in: defaults)
+        wornCoat = CatCoat.current(in: defaults)
         self.client = client
         self.report = report
         self.queue = queue
@@ -76,7 +86,7 @@ final class OnboardingFlow {
     }
 
     var pages: [Page] {
-        [.welcome] + catalogue.steps.map(Page.question) + [.catName] + (canInvite ? [.invite] : [])
+        [.welcome] + catalogue.steps.map(Page.question) + [.catCoat, .catName] + (canInvite ? [.invite] : [])
     }
 
     var page: Page { pages[min(index, pages.count - 1)] }
@@ -126,6 +136,8 @@ final class OnboardingFlow {
         switch page {
         case .welcome, .invite:
             return nil
+        case .catCoat:
+            return .single(option: OnboardingOptionId(coat.rawValue))
         case .question(let step):
             return Self.answer(to: step, picks: picks[step.id] ?? [], value: values[step.id], text: texts[step.id])
         case .catName:
@@ -152,6 +164,7 @@ final class OnboardingFlow {
         switch page {
         case .welcome: nil
         case .question(let step): step.id
+        case .catCoat: Self.catCoatStep
         case .catName: Self.catNameStep
         case .invite: Self.inviteStep
         }
@@ -166,7 +179,7 @@ final class OnboardingFlow {
             case .range(let s): s.skippable
             case .text(let s): s.skippable
             }
-        case .catName, .invite: true
+        case .catCoat, .catName, .invite: true
         }
     }
 
@@ -180,6 +193,10 @@ final class OnboardingFlow {
             advance()
         case .invite:
             record(invited ? .single(option: Self.inviteSent) : .skipped)
+            advance()
+        case .catCoat:
+            wear(coat)
+            record(answer ?? .skipped)
             advance()
         case .catName:
             let answer = answer
@@ -200,6 +217,10 @@ final class OnboardingFlow {
     func skip() {
         guard canSkip else { return }
         if page == .catName { defaults.removeObject(forKey: CatProfile.nameKey) }
+        if page == .catCoat {
+            coat = .grey
+            wear(.grey)
+        }
         record(.skipped)
         advance()
     }
@@ -214,6 +235,13 @@ final class OnboardingFlow {
         guard let stepId, viewed.insert(stepId).inserted else { return }
         events.append(ClientEvent(.onboardingStepViewed, detail: stepId.rawValue))
         Task { await send() }
+    }
+
+    private func wear(_ coat: CatCoat) {
+        defaults.set(coat.rawValue, forKey: CatCoat.key)
+        guard coat != wornCoat else { return }
+        coatChanged()
+        wornCoat = coat
     }
 
     private func advance() {

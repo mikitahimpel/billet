@@ -14,7 +14,8 @@ struct NookiApp: App {
             client: session?.onboarding ?? .offline,
             report: session?.api.reportEvents ?? { (_) async throws(TransportError) in throw .network("offline") },
             queue: AnswerQueue(),
-            canInvite: session.map { !$0.isPaired } ?? false))
+            canInvite: session.map { !$0.isPaired } ?? false,
+            coatChanged: { CatRoom.forgetMochi() }))
     }
 
     var body: some Scene {
@@ -24,6 +25,8 @@ struct NookiApp: App {
                 Color.black
             } else {
                 HomeView()
+                    // A new coat loads Mochi again, so the room is built anew around her.
+                    .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
                     .overlay {

@@ -103,6 +103,8 @@ struct OnboardingView: View {
             EmptyView()
         case .question(let step):
             question(step)
+        case .catCoat:
+            catCoat
         case .catName:
             catName
         case .invite:
@@ -115,7 +117,7 @@ struct OnboardingView: View {
             switch flow.page {
             case .invite:
                 primaryButton(flow.invited ? "Continue" : "I'll invite them later") { flow.continueTapped() }
-            case .catName:
+            case .catName, .catCoat:
                 primaryButton("Continue") { flow.continueTapped() }
             default:
                 primaryButton("Continue") { flow.continueTapped() }
@@ -166,6 +168,64 @@ struct OnboardingView: View {
 
     private func textBinding(_ field: OnboardingTextStep) -> Binding<String> {
         Binding { flow.texts[field.id] ?? "" } set: { flow.texts[field.id] = String($0.prefix(field.maxLength)) }
+    }
+
+    // MARK: Coat
+
+    @ViewBuilder private var catCoat: some View {
+        bubble("Which one am I?")
+        heading("Choose your cat", "Swipe to see every coat.")
+        ScrollView(.horizontal) {
+            HStack(spacing: 14) {
+                ForEach(CatCoat.allCases, id: \.self) { coat in
+                    coatCard(coat)
+                        .containerRelativeFrame(.horizontal, count: 4, span: 3, spacing: 14)
+                        .scrollTransition(axis: .horizontal) { card, phase in
+                            card.scaleEffect(phase.isIdentity ? 1 : 0.88).opacity(phase.isIdentity ? 1 : 0.6)
+                        }
+                        .id(coat)
+                        .onTapGesture { withAnimation(.spring(duration: 0.35)) { flow.coat = coat } }
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: Binding { Optional(flow.coat) } set: { if let coat = $0 { flow.coat = coat } },
+                        anchor: .center)
+        .contentMargins(.horizontal, 32, for: .scrollContent)
+        .padding(.horizontal, -24)
+        HStack(spacing: 8) {
+            ForEach(CatCoat.allCases, id: \.self) { coat in
+                Capsule()
+                    .fill(coat == flow.coat ? Color.honey : Ink.hairline)
+                    .frame(width: coat == flow.coat ? 20 : 8, height: 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(duration: 0.3), value: flow.coat)
+    }
+
+    private func coatCard(_ coat: CatCoat) -> some View {
+        let picked = coat == flow.coat
+        return VStack(spacing: 10) {
+            Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: 280)
+                .padding(.top, 18)
+            Text(coat.title)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(Ink.heroInk)
+                .padding(.bottom, 16)
+        }
+        .frame(maxWidth: .infinity)
+        .background(RadialGradient(colors: [Color(hex: 0xFFF4E4), Color(hex: 0xF2C08A)], center: .init(x: 0.5, y: 0.35),
+                                   startRadius: 10, endRadius: 260),
+                    in: .rect(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).stroke(picked ? Color.honey : .clear, lineWidth: 3))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(picked ? [.isButton, .isSelected] : .isButton)
     }
 
     // MARK: Cat name

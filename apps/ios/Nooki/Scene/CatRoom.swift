@@ -210,6 +210,9 @@ class CatRoom {
         }
     }
 
+    /// Loads Mochi again the next time a room is built, after her coat changed.
+    static func forgetMochi() { mochi = nil }
+
     /// Mochi's two rigs, shared by every room.
     private static var mochi: Task<(standing: CatRig, seated: CatRig), any Error>?
 
@@ -224,7 +227,9 @@ class CatRoom {
             if !drawn {
                 for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
                     do {
-                        try rig.wear(try await Entity(named: file, in: .main))
+                        let model = try await Entity(named: file, in: .main)
+                        await CatCoat.current().dress(model, model: file)
+                        try rig.wear(model)
                     } catch {
                         print("\(file) failed to load: \(error)")
                     }
