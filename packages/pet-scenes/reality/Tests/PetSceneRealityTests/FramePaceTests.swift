@@ -18,6 +18,7 @@ import Testing
     #expect(pace.rate(isStill: true) == FramePace.still)
     #expect(FramePace.still < FramePace.moving)
     #expect(FramePace.hot < FramePace.moving)
+    #expect(pace.rate(isStill: false, isCovered: true) == FramePace.covered)
   }
 
   @Test func uncappedDrawsAtTheDisplaysRate() {

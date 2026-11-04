@@ -110,6 +110,7 @@ struct HomeView: View {
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
       .environment(\.petSceneFurniture, session.labs.furniture)
+      .environment(\.petSceneRoom, session.labs.homeRoom)
       .environment(\.petSceneIdolProps, session.labs.isOn(LabExperiment.idolProps))
       .onChange(of: session.labs.isOn(LabExperiment.idolProps), initial: true) { _, isOn in
         session.shop.showsIdolProps = isOn

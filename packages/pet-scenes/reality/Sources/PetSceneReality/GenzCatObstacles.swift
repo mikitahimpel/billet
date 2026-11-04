@@ -86,7 +86,9 @@ extension GenzLayout {
     for placement in pieces {
       let size = placement.piece.kind.size
       let centre = SIMD2(placement.centre.x, placement.centre.y)
+      // A bed on the cat's own floor is one it walks into, not round.
       if abs(placement.centre.z - ground) < 0.15, size.z >= 0.1,
+        GenzRoom.affordanceKind(placement.piece.kind) != .bed,
         centre == simd_clamp(centre, surface.min, surface.max)
       {
         // A generated prop's box is its model's bounds; a round one fills less of it.

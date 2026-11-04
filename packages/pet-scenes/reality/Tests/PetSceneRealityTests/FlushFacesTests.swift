@@ -28,9 +28,12 @@ import Testing
     return eyes
   }
 
-  @Test(arguments: RoomFurniture.allCases)
-  func theRoomHasNoFlushFaces(_ furniture: RoomFurniture) async throws {
-    let layout = GenzLayout.of(furniture)
+  @Test(
+    arguments: RoomFurniture.allCases.map { GenzLayout.Key(furniture: $0) } + [
+      GenzLayout.Key(furniture: .original, room: .nookiCabin)
+    ])
+  func theRoomHasNoFlushFaces(_ key: GenzLayout.Key) async throws {
+    let layout = GenzLayout.of(key)
     let room = GenzRoom(
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "flush-\(UUID())")!, key: layout.key))

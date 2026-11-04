@@ -130,6 +130,8 @@ print -r -- '{"fakePartner":true,"notesDesk":true}' > $containers/widget-feature
 print -r -- '"windowSeat"' > $containers/room-style.json
 print -r -- '"amberLantern"' > $containers/room-lighting.json
 print -r -- '"cosyNook"' > $containers/room-furniture.json
+# Window Seat unless the run asks for another room (PERF_ROOM, Labs > Room).
+print -r -- "\"${PERF_ROOM:-windowSeat}\"" > $containers/home-room.json
 
 # One run of the app with a script. Prints screenshots when the run asks for them.
 run() {
