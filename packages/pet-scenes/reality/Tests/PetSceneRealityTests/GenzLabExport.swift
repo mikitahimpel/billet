@@ -6,6 +6,7 @@
   import Foundation
   import Pet
   import RealityKit
+  import SwiftUI
   import Testing
 
   @testable import PetSceneReality
@@ -42,6 +43,23 @@
         }
         try writer.data().write(to: directory.appending(path: "room-\(furniture).glb"))
 
+        // The note's paper as the room draws it before the pair has drawn anything, and the flat
+        // street the app paints behind the window: the room's textures don't read back from
+        // RealityKit, so both are drawn again here the way the app draws them.
+        let panel = layout.note
+        if let note = GenzTextures.note(
+          drawing: nil, paper: layout.paper, aspect: CGFloat(panel.height / panel.width),
+          corners: true)
+        {
+          try Self.png(note).write(to: directory.appending(path: "note-\(furniture).png"))
+        }
+        let window = layout.window.map(\.scene)
+        let (across, down) = Self.windowEdges(window)
+        let viewState = room.screen.viewState(at: .now)
+        if let street = await Self.street(viewState, aspect: CGFloat(down / across)) {
+          try Self.png(street).write(to: directory.appending(path: "street-\(furniture).png"))
+        }
+
         var presets: [String: Any] = [:]
         defer { room.setOnScreen(false, in: UUID()) }
         for preset in RoomLighting.allCases {
@@ -69,11 +87,68 @@
             "exponent": layout.ambient.exponent,
           ],
           "lights": presets,
+          "note": ["name": GenzRoom.noteName, "image": "note-\(furniture).png"],
+          "window": [
+            "corners": window.map(\.array), "image": "street-\(furniture).png",
+            "view": String(describing: viewState.view), "hour": String(describing: viewState.hour),
+          ],
         ]
         let json = try JSONSerialization.data(
           withJSONObject: info, options: [.prettyPrinted, .sortedKeys])
         try json.write(to: directory.appending(path: "lights-\(furniture).json"))
       }
+    }
+
+    /// The window's width and height in scene units: of its first two edges, the level one is
+    /// across.
+    private static func windowEdges(_ corners: [SIMD3<Float>]) -> (Float, Float) {
+      guard corners.count == 4 else { return (1, 1) }
+      let a = corners[1] - corners[0]
+      let b = corners[2] - corners[1]
+      return abs(a.y) < abs(b.y) ? (simd_length(a), simd_length(b)) : (simd_length(b), simd_length(a))
+    }
+
+    /// The flat window view as the app paints it behind the room, filling an image the window's
+    /// shape, as ViewThumbnail draws a shop thumbnail.
+    private static func street(_ state: WindowViewState, aspect: CGFloat) async -> CGImage? {
+      let width: CGFloat = 640
+      let height = (width * aspect).rounded()
+      let corners = [
+        CGPoint(x: 0, y: 0), CGPoint(x: width, y: 0), CGPoint(x: width, y: height),
+        CGPoint(x: 0, y: height),
+      ]
+      var shown = state
+      shown.window = corners
+      shown.home = corners
+      shown.inDepth = false
+      let plates = ViewPlateCache()
+      let content = NativeWindowView(state: shown, plates: plates)
+        .frame(width: width, height: height)
+        .environment(\.displayScale, 2)
+      func snapshot() -> CGImage? {
+        let renderer = ImageRenderer(content: content)
+        renderer.scale = 2
+        renderer.proposedSize = ProposedViewSize(width: width, height: height)
+        return renderer.cgImage
+      }
+      // The first pass asks for the plates; they are painted on the next turns of the main actor.
+      _ = snapshot()
+      let deadline = ContinuousClock.now + .seconds(5)
+      while !plates.isIdle, ContinuousClock.now < deadline {
+        try? await Task.sleep(for: .milliseconds(16))
+      }
+      return snapshot()
+    }
+
+    private static func png(_ image: CGImage) throws -> Data {
+      let out = NSMutableData()
+      guard
+        let destination = CGImageDestinationCreateWithData(
+          out, UTType.png.identifier as CFString, 1, nil)
+      else { throw CocoaError(.fileWriteUnknown) }
+      CGImageDestinationAddImage(destination, image, nil)
+      guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
+      return out as Data
     }
 
     private static func lights(in entity: Entity, root: Entity, into out: inout [[String: Any]]) {
