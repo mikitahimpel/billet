@@ -13,12 +13,15 @@ public enum SignInFailure: Equatable, Sendable {
   case unavailable
   /// The session could not be saved on this device.
   case storage
+  /// Linking only: this Apple ID already has its own account.
+  case appleIdInUse
 
   public init(_ error: TransportError) {
     switch error {
     case .api(.unauthorized), .api(.invalidRequest): self = .rejected
+    case .api(.appleIdInUse): self = .appleIdInUse
     case .api(.unavailable), .api(.notFound), .api(.invalidInvite), .api(.alreadyPaired),
-      .api(.appleIdInUse), .network, .status, .maintenance, .encoding, .decoding:
+      .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }
   }
@@ -118,15 +121,30 @@ public enum SignInMachine: Machine {
   }
 }
 
+/// What the Apple identity token is for.
+public enum SignInPurpose: Equatable, Sendable {
+  /// Sign in to the account linked to this Apple ID, or open one, and save its session.
+  case signIn
+  /// Link the account already signed in on this phone. Its session stays as it is.
+  case link
+}
+
 extension SignInMachine {
   public static func run(
-    _ output: Output, api: APIClient, accounts: AccountStore
+    _ output: Output, api: APIClient, accounts: AccountStore, purpose: SignInPurpose = .signIn
   ) async -> Event? {
     switch output {
     case .fetchNonce(let request):
       do {
         let challenge = try await api.authChallenge()
         return .nonceFetched(challenge.nonce.rawValue, request: request)
+      } catch {
+        return .failed(SignInFailure(error), request: request)
+      }
+    case .exchange(let identityToken, let request) where purpose == .link:
+      do {
+        _ = try await api.linkApple(SignInWithAppleRequest(identityToken: identityToken))
+        return .sessionSaved(request: request)
       } catch {
         return .failed(SignInFailure(error), request: request)
       }

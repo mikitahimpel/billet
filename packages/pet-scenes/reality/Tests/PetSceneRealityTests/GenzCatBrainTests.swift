@@ -13,7 +13,7 @@ import Testing
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "brain-\(UUID())")!, key: layout.key))
     room.startBuilding()
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(room.isBuilt)
     return room

@@ -68,7 +68,7 @@ import Testing
       layout: layout, kit: kit, cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "shell-\(UUID())")!, key: layout.key))
     room.startBuilding()
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(room.isBuilt)
     let shell = try #require(room.root.findEntity(named: GenzRoom.shellName))

@@ -11,9 +11,9 @@ public final class SignInModel {
 
   public var state: SignInMachine.State { store.state }
 
-  public init(api: APIClient, accounts: AccountStore) {
+  public init(api: APIClient, accounts: AccountStore, purpose: SignInPurpose = .signIn) {
     store = Store<SignInMachine>(initial: .idle) { output in
-      await SignInMachine.run(output, api: api, accounts: accounts)
+      await SignInMachine.run(output, api: api, accounts: accounts, purpose: purpose)
     }
   }
 

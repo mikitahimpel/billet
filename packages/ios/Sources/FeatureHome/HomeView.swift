@@ -3,6 +3,7 @@ import CoreGraphics
 import DesignSystem
 import FeatureCanvas
 import FeatureInbox
+import FeatureSettings
 import Foundation
 import Ink
 import Labs
@@ -58,6 +59,8 @@ struct HomeView: View {
   let scene: (any PetScene)?
   let onChangeCode: () -> Void
   let onOpenNotes: () -> Void
+  /// Opens "Us" from the two avatars at the top left, or `nil` for no avatars.
+  var onOpenUs: (() -> Void)?
 
   private var store: Store<HomeMachine> { session.store }
 
@@ -269,6 +272,7 @@ struct HomeView: View {
   @ViewBuilder private var home: some View {
     if variant.isFullBleed, let scene {
       fullBleedHome(scene)
+        .overlay(alignment: .topLeading) { cornerUsButton }
         .overlay { nightOverlay }
         .overlay(alignment: .top) {
           if !isRenovating { roomStatus(problemsOnly: true) }
@@ -281,6 +285,7 @@ struct HomeView: View {
         }
     } else {
       classicHome
+        .overlay(alignment: .topLeading) { cornerUsButton }
     }
   }
 
@@ -305,7 +310,30 @@ struct HomeView: View {
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
       flame: flameHost(scene: scene),
-      mood: catMood)
+      mood: catMood,
+      leading: onOpenUs == nil ? nil : AnyView(usButton))
+  }
+
+  /// The two of us, the way into "Us".
+  private var usButton: some View {
+    Button {
+      onOpenUs?()
+    } label: {
+      PairAvatars()
+        .frame(minWidth: Target.minimum, minHeight: Target.minimum)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityHint("Opens Us")
+  }
+
+  /// The avatars in the corner, for the layouts with no top row of their own.
+  @ViewBuilder private var cornerUsButton: some View {
+    if onOpenUs != nil, !isRenovating {
+      usButton
+        .padding(.leading, Spacing.medium)
+        .padding(.top, Spacing.small)
+    }
   }
 
   /// The cat's needs and how it feels, for the paw by the streak and the drawer.

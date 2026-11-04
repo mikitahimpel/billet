@@ -1,6 +1,7 @@
 import BilletKit
 import Persistence
 import Transport
+import Wire
 
 /// What the user can end from Settings.
 public enum AccountAction: Equatable, Sendable {
@@ -8,12 +9,26 @@ public enum AccountAction: Equatable, Sendable {
   case unpair
   /// Forgets the account on this phone.
   case signOut
+  /// Deletes the account and everything it owns, on every phone. The partner keeps the cat.
+  case deleteAccount
 }
 
 public enum AccountFailure: Equatable, Sendable {
   case unavailable
   case storage
+  /// The user closed the Sign in with Apple sheet a linked account needs; nothing was deleted.
+  case appleCancelled
 }
+
+/// What a fresh Sign in with Apple gave, for deleting a linked account: Apple asks the app to
+/// revoke its token, and the server needs this code to do that.
+public enum AppleReauthorization: Equatable, Sendable {
+  case code(String)
+  case cancelled
+}
+
+/// Asks the user to sign in with Apple again and returns the authorization code.
+public typealias AppleReauthorizer = @MainActor @Sendable () async -> AppleReauthorization
 
 /// Unpair and sign out, each behind a confirmation.
 ///
@@ -96,7 +111,8 @@ public enum AccountMachine: Machine {
 
 extension AccountMachine {
   public static func run(
-    _ output: Output, api: APIClient, accounts: AccountStore
+    _ output: Output, api: APIClient, accounts: AccountStore, keys: AccountKeyStore,
+    reauthorize: AppleReauthorizer
   ) async -> Event? {
     switch output {
     case .perform(.unpair, let request):
@@ -122,6 +138,55 @@ extension AccountMachine {
       } catch {
         return .failed(.storage, request: request)
       }
+
+    case .perform(.deleteAccount, let request):
+      return await deleteAccount(
+        request: request, api: api, accounts: accounts, keys: keys, reauthorize: reauthorize)
+    }
+  }
+
+  /// A linked account first signs in with Apple again, for the code that revokes the app's Apple
+  /// token. A retry after the server already deleted the account finds the session gone, and only
+  /// the phone's forgetting is left.
+  private static func deleteAccount(
+    request: Int, api: APIClient, accounts: AccountStore, keys: AccountKeyStore,
+    reauthorize: AppleReauthorizer
+  ) async -> Event {
+    let linked: Bool
+    do {
+      linked = try await api.account().linked
+    } catch .api(.unauthorized) {
+      return forget(request: request, accounts: accounts, keys: keys)
+    } catch {
+      return .failed(.unavailable, request: request)
+    }
+
+    var body = DeleteAccountRequest()
+    if linked {
+      switch await reauthorize() {
+      case .code(let code): body = DeleteAccountRequest(appleAuthorizationCode: code)
+      case .cancelled: return .failed(.appleCancelled, request: request)
+      }
+    }
+
+    do {
+      try await api.deleteAccount(body)
+    } catch .api(.unauthorized) {
+      // The server took it, and the answer was lost before this retry.
+    } catch {
+      return .failed(.unavailable, request: request)
+    }
+    return forget(request: request, accounts: accounts, keys: keys)
+  }
+
+  /// The phone forgets the session and the iCloud key, so no phone signs in to the old account.
+  private static func forget(request: Int, accounts: AccountStore, keys: AccountKeyStore) -> Event {
+    do {
+      try keys.clear()
+      try accounts.clear()
+      return .succeeded(request: request)
+    } catch {
+      return .failed(.storage, request: request)
     }
   }
 }

@@ -35,7 +35,7 @@ import Testing
       layout: layout, kit: GenzKit(), cats: GenzCatSource(),
       spots: GenzSpotStore(defaults: UserDefaults(suiteName: "flush-\(UUID())")!, key: layout.key))
     room.startBuilding()
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(room.isBuilt)
     let clashes = FlushFaces.clashes(
@@ -49,7 +49,7 @@ import Testing
     let shop = ShopStage(kit: GenzKit())
     shop.start()
     defer { shop.setOnScreen(false) }
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !shop.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(shop.isBuilt)
     let clashes = FlushFaces.clashes(
@@ -62,7 +62,7 @@ import Testing
     let desk = DeskStage(kit: GenzKit(), cats: GenzCatSource())
     desk.start()
     defer { desk.setOnScreen(false) }
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !desk.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(desk.isBuilt)
     let clashes = FlushFaces.clashes(

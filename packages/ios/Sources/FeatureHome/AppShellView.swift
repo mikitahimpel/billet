@@ -8,8 +8,9 @@ import PetScene
 import SwiftUI
 import WidgetBridge
 
-/// The tabs of a paired device: Home, the Shop when the chosen scene has one, Notes and Settings.
-/// Drawing is opened from Home or the Notes desk and is not a tab.
+/// The tabs of a paired device: Home, Notes and the Shop when the chosen scene has one. "Us" opens
+/// from the two avatars at the top left of Home. Drawing is opened from Home or the Notes desk and
+/// is not a tab.
 ///
 /// A native `TabView`, so iOS 26 gives it Liquid Glass and content runs on under it.
 struct AppShellView: View {
@@ -17,7 +18,6 @@ struct AppShellView: View {
     case home
     case shop
     case notes
-    case settings
   }
 
   let session: PairSession
@@ -52,6 +52,7 @@ struct AppShellView: View {
   @Environment(\.appEvents) private var events
   @State private var destination = Destination.home
   @State private var replayingOnboarding = false
+  @State private var showsUs = false
 
   /// Everything the widgets show that can change while the app is open.
   private struct PublishKey: Hashable {
@@ -127,23 +128,11 @@ struct AppShellView: View {
           widgetFeatures: widgetFeatures,
           scene: selectedScene,
           onChangeCode: onChangeCode,
-          onOpenNotes: { destination = .notes }
+          onOpenNotes: { destination = .notes },
+          onOpenUs: { showsUs = true }
         )
         .tabEntrance(destination == .home)
         .environment(\.petSceneOnScreen, shellShown && destination == .home)
-      }
-      if let shopScene {
-        Tab("Shop", systemImage: "bag", value: .shop) {
-          ShopTab(
-            shop: session.shop, renovator: session.renovator, scene: shopScene,
-            keeper: labs.shopkeeper, onShowRoom: { destination = .home }
-          )
-          .tabEntrance(destination == .shop)
-          .environment(\.petSceneOnScreen, shellShown && destination == .shop)
-          .environment(\.petSceneLighting, labs.lighting)
-          .environment(\.petSceneWindowView, labs.windowView)
-          .modifier(ShopDayLight(followsDay: labs.homeVariant == .nightAndDay))
-        }
       }
       Tab("Notes", systemImage: "note.text", value: .notes) {
         Group {
@@ -160,21 +149,18 @@ struct AppShellView: View {
         .environment(\.petSceneOnScreen, shellShown && destination == .notes)
         .environment(\.petSceneLighting, labs.lighting)
       }
-      Tab("Settings", systemImage: "gearshape", value: .settings) {
-        SettingsView(
-          code: session.isFakePartner ? nil : session.room.code,
-          labs: labs,
-          partnerStatus: line.text,
-          catName: session.play.catName,
-          habits: session.brain.upbringing.habits,
-          scenes: scenes,
-          selectedSceneID: $selectedSceneID,
-          widgetFeatures: widgetFeatures,
-          isFakePartner: session.isFakePartner,
-          onReplayOnboarding: { replayingOnboarding = true },
-          onLogOut: onLogOut
-        )
-        .tabEntrance(destination == .settings)
+      if let shopScene {
+        Tab("Shop", systemImage: "bag", value: .shop) {
+          ShopTab(
+            shop: session.shop, renovator: session.renovator, scene: shopScene,
+            keeper: labs.shopkeeper, onShowRoom: { destination = .home }
+          )
+          .tabEntrance(destination == .shop)
+          .environment(\.petSceneOnScreen, shellShown && destination == .shop)
+          .environment(\.petSceneLighting, labs.lighting)
+          .environment(\.petSceneWindowView, labs.windowView)
+          .modifier(ShopDayLight(followsDay: labs.homeVariant == .nightAndDay))
+        }
       }
     }
     .background {
@@ -211,6 +197,7 @@ struct AppShellView: View {
     }
     .task { if ScenePerf.isOn { drivePerf() } }
     .tint(Palette.gold.color)
+    .sheet(isPresented: $showsUs) { us }
     #if os(iOS)
       .fullScreenCover(isPresented: $replayingOnboarding) {
         OnboardingReplay(scenes: scenes, lighting: labs.lighting) { replayingOnboarding = false }
@@ -242,7 +229,6 @@ struct AppShellView: View {
       switch name {
       case "shop": destination.wrappedValue = .shop
       case "notes": destination.wrappedValue = .notes
-      case "settings": destination.wrappedValue = .settings
       default: destination.wrappedValue = .home
       }
     }
@@ -252,6 +238,27 @@ struct AppShellView: View {
 }
 
 extension AppShellView {
+  fileprivate var us: some View {
+    UsView(
+      code: session.isFakePartner ? nil : session.room.code,
+      labs: labs,
+      partnerStatus: line.text,
+      catName: session.play.catName,
+      habits: session.brain.upbringing.habits,
+      streak: streak,
+      scenes: scenes,
+      widgetFeatures: widgetFeatures,
+      isFakePartner: session.isFakePartner,
+      onRenameCat: session.play.catName == nil ? nil : { session.renameCat($0) },
+      onReplayOnboarding: {
+        showsUs = false
+        replayingOnboarding = true
+      },
+      onUnpair: onLogOut
+    )
+    .presentationDragIndicator(.visible)
+  }
+
   /// Every note in a list, the way Notes has always shown them.
   fileprivate var notesList: some View {
     NotesView(

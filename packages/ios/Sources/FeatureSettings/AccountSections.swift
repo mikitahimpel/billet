@@ -1,9 +1,9 @@
 import DesignSystem
 import SwiftUI
 
-/// Settings of a signed-in account: the delivery check, unpair and sign out. `onFinished` is called
-/// with what finished so the app can move to the screen that follows.
-public struct AccountSettingsView: View {
+/// The signed-in account's part of "Us": the delivery check, unpair and delete. `onFinished` is
+/// called with what finished so the app can move to the screen that follows.
+public struct AccountSections: View {
   private let model: AccountModel
   private let onFinished: (AccountAction) -> Void
 
@@ -13,12 +13,10 @@ public struct AccountSettingsView: View {
   }
 
   public var body: some View {
-    ScreenScaffold("Settings") {
-      VStack(alignment: .leading, spacing: Spacing.large) {
-        healthSection
-        accountSection
-        failure
-      }
+    VStack(alignment: .leading, spacing: Spacing.large) {
+      healthSection
+      accountSection
+      failure
     }
     .task { await model.checkHealth() }
     .onChange(of: model.state) { _, state in
@@ -57,11 +55,12 @@ public struct AccountSettingsView: View {
 
   private var accountSection: some View {
     VStack(alignment: .leading, spacing: Spacing.small) {
-      SettingsHeading("Account")
+      SettingsHeading("Pair")
       SettingsGroup {
         SettingsLink("Unpair") { model.request(.unpair) }
         ListDivider()
-        SettingsLink("Sign out") { model.request(.signOut) }
+        SettingsLink("Delete account") { model.request(.deleteAccount) }
+          .accessibilityIdentifier("deleteAccount")
       }
     }
   }
@@ -109,6 +108,12 @@ public struct AccountSettingsView: View {
         title: "Sign out?",
         message: "This phone forgets your account. Sign in again to carry on.",
         button: "Sign out")
+    case .deleteAccount:
+      Confirmation(
+        title: "Delete your account?",
+        message:
+          "Your notes and pictures are deleted for good, on every phone. Your partner keeps the cat and their own notes, and we'll let them know gently. This can't be undone.",
+        button: "Delete account")
     }
   }
 
@@ -117,6 +122,9 @@ public struct AccountSettingsView: View {
     case (.unavailable, _): "Billet can't be reached right now. Try again in a moment."
     case (.storage, .unpair): "You're unpaired, but this phone couldn't save that. Try again."
     case (.storage, .signOut): "This phone couldn't forget your account. Try again."
+    case (.storage, .deleteAccount):
+      "Your account is deleted, but this phone couldn't forget it. Try again."
+    case (.appleCancelled, _): "Nothing was deleted. Sign in with Apple to confirm it's you."
     }
   }
 }

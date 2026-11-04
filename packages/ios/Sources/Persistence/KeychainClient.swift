@@ -12,11 +12,17 @@ public struct KeychainItemKey: Hashable, Sendable {
   public var account: String
   /// The shared Keychain access group. `nil` uses the app's default group.
   public var accessGroup: String?
+  /// Kept in the iCloud Keychain, so the user's other phones have it too. Otherwise the item
+  /// never leaves this device.
+  public var synchronizable: Bool
 
-  public init(service: String, account: String, accessGroup: String?) {
+  public init(
+    service: String, account: String, accessGroup: String?, synchronizable: Bool = false
+  ) {
     self.service = service
     self.account = account
     self.accessGroup = accessGroup
+    self.synchronizable = synchronizable
   }
 }
 

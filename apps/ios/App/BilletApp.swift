@@ -96,7 +96,8 @@ enum RealBackend {
     let api = APIClient.live(
       http: http.reportingMaintenance { status in await serviceStatus.received(status) },
       token: { (try? accounts.load())?.token })
+    let keys = AccountKeyStore.keychain(client: .security, service: "com.mikitahimpel.billet")
     return RealAppModel(
-      api: api, accounts: accounts, baseURL: baseURL, serviceStatus: serviceStatus)
+      api: api, accounts: accounts, keys: keys, baseURL: baseURL, serviceStatus: serviceStatus)
   }
 }

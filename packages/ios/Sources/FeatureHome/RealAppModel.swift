@@ -35,7 +35,21 @@ public final class RealAppModel {
   public let api: APIClient
   private let baseURL: URL
   public let accounts: AccountStore
-  public private(set) var signIn: SignInModel
+  /// The anonymous account's key in the iCloud Keychain.
+  public let keys: AccountKeyStore
+  @ObservationIgnored private let reauthorize: AppleReauthorizer
+  /// Opens or restores the account from the iCloud key, with no question asked.
+  public private(set) var anonymous: AnonymousSignInModel
+  /// Whether the account can also be recovered with Sign in with Apple; `nil` until the server
+  /// has said.
+  public private(set) var linked: Bool?
+  /// The partner left and the user hasn't been told yet. The pair has already ended.
+  public private(set) var partnerLeft: PartnerLeft?
+  /// Links this account to Sign in with Apple, from "Us" or the save-your-cat card.
+  public private(set) var link: SignInModel
+  /// When the save-your-cat card was last closed, and since when the app has been used.
+  public private(set) var savePrompt: SaveAccountPrompt?
+  @ObservationIgnored private let savePromptStore: SaveAccountPromptStore?
   public private(set) var pairing: PairingModel
   /// The saved Labs choices and the server's test variants for this pair.
   public let labs: WidgetFeaturesModel
@@ -47,9 +61,12 @@ public final class RealAppModel {
   @ObservationIgnored private var cachedHistory: HistoryModel?
   @ObservationIgnored private var cachedAccount: AccountModel?
   @ObservationIgnored private var cachedLive: LiveRoom?
+  @ObservationIgnored private let noticeStorage: AppGroupStorage?
+  private static let seenNoticeFile = "partner-left-seen.json"
 
   public init(
-    api: APIClient, accounts: AccountStore, baseURL: URL,
+    api: APIClient, accounts: AccountStore, keys: AccountKeyStore, baseURL: URL,
+    reauthorize: @escaping AppleReauthorizer = { await AppleReauthorization.system() },
     labs: WidgetFeaturesModel = WidgetFeaturesModel(store: .appGroup()),
     eventStorage: AppGroupStorage? = try? .appGroup(identifier: AppGroupStorage.billetIdentifier),
     widgetKinds: (@MainActor () async -> Set<String>)? = nil,
@@ -70,14 +87,35 @@ public final class RealAppModel {
     self.widgetKinds = widgetKinds ?? { await WidgetPresence.kinds() }
     self.baseURL = baseURL
     self.accounts = accounts
+    self.keys = keys
+    self.reauthorize = reauthorize
     stage = RealStage((try? accounts.load()) ?? nil)
-    signIn = SignInModel(api: api, accounts: accounts)
+    anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
+    link = SignInModel(api: api, accounts: accounts, purpose: .link)
     pairing = PairingModel(api: api)
+    noticeStorage = eventStorage
+    savePromptStore = eventStorage.map(SaveAccountPromptStore.storage)
+    savePrompt = savePromptStore?.load(.now)
+  }
+
+  /// Whether Home offers to save the cat and notes with Sign in with Apple: only once the server
+  /// has said the account isn't linked, and after a week or a few notes.
+  public func offersSaveAccount(notesSent: Int, now: Date = .now) -> Bool {
+    guard let linked, let savePrompt else { return false }
+    return savePrompt.isOffered(linked: linked, notesSent: notesSent, now: now)
+  }
+
+  /// The card was closed; it stays away for a while.
+  public func dismissSaveAccount(now: Date = .now) {
+    guard let dismissed = savePrompt?.dismissed(at: now) else { return }
+    savePrompt = dismissed
+    savePromptStore?.save(dismissed)
   }
 
   /// The app came to the front with a paired account: learn which test variants the pair is in
   /// and count what happened. Neither can fail the screen; a failure keeps what was held.
   public func becameActive() async {
+    await refreshAccount()
     reporter.appOpened()
     if let status = await flags.refresh() { serviceStatus.received(status) }
     reporter.widgetsAdded(kinds: await widgetKinds())
@@ -108,6 +146,32 @@ public final class RealAppModel {
     }
     cachedHistory?.refresh()
     await reporter.flush()
+  }
+
+  /// Asks the server about the account: whether it is linked, and whether the partner left. A
+  /// partner who left ends the pair here too, and the notice waits for ``partnerLeftSeen()``.
+  public func refreshAccount() async {
+    guard stage != .signedOut, let account = try? await api.account() else { return }
+    linked = account.linked
+    guard let left = account.partnerLeft else { return }
+    if stage == .paired {
+      try? accounts.setPaired(false, nil)
+      finished(.unpair)
+    }
+    let seen = try? noticeStorage?.readJSON(Int.self, named: Self.seenNoticeFile)
+    if seen != left.at { partnerLeft = left }
+  }
+
+  /// The user has read that their partner left; it isn't shown again.
+  public func partnerLeftSeen() {
+    if let partnerLeft { try? noticeStorage?.writeJSON(partnerLeft.at, named: Self.seenNoticeFile) }
+    partnerLeft = nil
+  }
+
+  /// The account is now linked to an Apple ID.
+  public func linkedApple() {
+    linked = true
+    link = SignInModel(api: api, accounts: accounts, purpose: .link)
   }
 
   public func signedIn() {
@@ -144,7 +208,9 @@ public final class RealAppModel {
   /// The settings of the signed-in account, kept for as long as the account stays signed in.
   public func account() -> AccountModel {
     if let cachedAccount { return cachedAccount }
-    let model = AccountModel(api: api, accounts: accounts, health: .system(api: api))
+    let model = AccountModel(
+      api: api, accounts: accounts, keys: keys, health: .system(api: api),
+      reauthorize: reauthorize)
     cachedAccount = model
     return model
   }
@@ -157,13 +223,15 @@ public final class RealAppModel {
     cachedAccount = nil
     // The variants belong to the pair, and what is waiting to be counted to the account.
     flags.forget()
-    if action == .signOut { reporter.discard() }
+    if action != .unpair { reporter.discard() }
     pairing = PairingModel(api: api)
     switch action {
     case .unpair:
       stage = .unpaired
-    case .signOut:
-      signIn = SignInModel(api: api, accounts: accounts)
+    case .signOut, .deleteAccount:
+      link = SignInModel(api: api, accounts: accounts, purpose: .link)
+      anonymous = AnonymousSignInModel(api: api, keys: keys, accounts: accounts)
+      linked = nil
       stage = .signedOut
     }
   }

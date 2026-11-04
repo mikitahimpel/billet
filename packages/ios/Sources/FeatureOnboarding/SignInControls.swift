@@ -85,12 +85,13 @@ public struct SignInControls: View {
 
 extension SignInFailure {
   /// What the screen tells the user.
-  var message: String {
+  public var message: String {
     switch self {
     case .appleRefused: "Apple couldn't sign you in. Try again."
     case .rejected: "Billet didn't accept that sign-in. Try again."
     case .unavailable: "Billet can't be reached right now. Try again in a moment."
     case .storage: "Billet couldn't save your sign-in on this phone. Try again."
+    case .appleIdInUse: "This Apple ID already has its own cat and notes."
     }
   }
 }

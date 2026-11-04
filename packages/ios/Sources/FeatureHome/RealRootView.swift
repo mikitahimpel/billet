@@ -60,16 +60,19 @@ public struct RealRootView: View {
   private var stages: some View {
     Group {
       switch model.stage {
-      case .signedOut:
-        CinematicOnboardingView(
-          scenes: scenes, lighting: lighting, memory: OnboardingMemory.thisLaunch
+      case .signedOut, .unpaired:
+        // One view for both, so the first-launch scene plays on while the account is made.
+        RealOnboardingPairing(
+          model: model.pairing, scenes: scenes, lighting: lighting,
+          signInFailure: anonymousFailure?.message
         ) {
-          SignInControls(model: model.signIn) { model.signedIn() }
-        }
-      case .unpaired:
-        RealOnboardingPairing(model: model.pairing, scenes: scenes, lighting: lighting) {
           model.paired()
         }
+        .task(id: model.stage) {
+          guard model.stage == .signedOut else { return }
+          model.anonymous.appeared()
+        }
+        .task(id: model.anonymous.state) { await signInSettled(model.anonymous.state) }
       case .paired:
         RealPairedView(model: model)
       }
@@ -77,32 +80,88 @@ public struct RealRootView: View {
     .preferredColorScheme(.dark)
     .tint(Palette.gold.color)
     .calmAnimation(value: model.stage)
+    .alert("Your partner has left billet", isPresented: partnerLeftShown) {
+      Button("OK") { model.partnerLeftSeen() }
+    } message: {
+      Text(Self.partnerLeftMessage)
+    }
+  }
+
+  static let partnerLeftMessage =
+    "They deleted their account, so your pair has ended. The cat stays with you, and you can "
+    + "pair again whenever you like."
+
+  private var anonymousFailure: SignInFailure? {
+    if case .failed(let failure, _) = model.anonymous.state { failure } else { nil }
+  }
+
+  /// A saved session moves on to pairing; a failure tries again after a moment, with no tap.
+  private func signInSettled(_ state: AnonymousSignInMachine.State) async {
+    switch state {
+    case .signedIn:
+      if model.stage == .signedOut { model.signedIn() }
+    case .failed:
+      try? await Task.sleep(for: Self.retrySignInAfter)
+      if !Task.isCancelled { model.anonymous.retry() }
+    case .idle, .signingIn:
+      break
+    }
+  }
+
+  private static let retrySignInAfter = Duration.seconds(5)
+
+  private var partnerLeftShown: Binding<Bool> {
+    Binding(
+      get: { model.partnerLeft != nil },
+      set: { shown in if !shown { model.partnerLeftSeen() } })
   }
 }
 
-/// The screens of a paired account: the notes, with the partner's live drawing above them, and
-/// the account settings.
+/// The paired screen of the real backend: the notes, with the partner's live drawing above them.
+/// The two avatars at the top left open "Us", and the save-your-cat card comes up when it is due.
 struct RealPairedView: View {
   let model: RealAppModel
 
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.appEvents) private var events
   @State private var room: LiveRoom?
+  @State private var showsUs = false
 
   var body: some View {
-    TabView {
-      Tab("Notes", systemImage: "tray") {
-        VStack(spacing: 0) {
-          if let room { LivePartnerView(room: room) }
-          HistoryView(model: model.history()) { events(.noteOpened(.app)) }
+    let history = model.history()
+    VStack(spacing: 0) {
+      if let room { LivePartnerView(room: room) }
+      HistoryView(model: history) { events(.noteOpened(.app)) }
+    }
+    .safeAreaInset(edge: .top, spacing: Spacing.small) {
+      VStack(alignment: .leading, spacing: Spacing.small) {
+        Button {
+          showsUs = true
+        } label: {
+          PairAvatars()
+            .frame(minWidth: Target.minimum, minHeight: Target.minimum, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        if model.offersSaveAccount(notesSent: notesSent(history)) {
+          SaveAccountCard(
+            model: model.link, onLinked: { model.linkedApple() },
+            onClose: { model.dismissSaveAccount() }
+          )
+          .transition(.opacity)
         }
       }
-      Tab("Settings", systemImage: "gearshape") {
-        AccountSettingsView(model: model.account()) { model.finished($0) }
+      .padding(.horizontal, Spacing.medium)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .sheet(isPresented: $showsUs) {
+      RealUsView(model: model) { action in
+        showsUs = false
+        model.finished(action)
       }
+      .presentationDragIndicator(.visible)
     }
     .task(id: scenePhase == .active) {
-      let history = model.history()
       if scenePhase == .active {
         Task { await model.becameActive() }
         history.refresh()
@@ -113,6 +172,32 @@ struct RealPairedView: View {
       } else {
         room?.disconnect()
       }
+    }
+  }
+
+  private func notesSent(_ history: HistoryModel) -> Int {
+    history.records.count { $0.direction == .sent }
+  }
+}
+
+/// "Us" for the real backend: the two of us, the cat's place, where the account is saved,
+/// notifications, the pair and deleting the account, and about.
+struct RealUsView: View {
+  let model: RealAppModel
+  let onFinished: (AccountAction) -> Void
+
+  var body: some View {
+    ScreenScaffold("Us") {
+      UsHeader(
+        me: PairAvatars.me, partner: PairAvatars.partner, catName: nil, daysTogether: nil,
+        streak: 0)
+      CatCharacterSection(catName: nil)
+      AccountSavedSection(linked: model.linked == true) {
+        SignInControls(model: model.link) { model.linkedApple() }
+      }
+      NotificationsSection()
+      AccountSections(model: model.account(), onFinished: onFinished)
+      AboutSection()
     }
   }
 }

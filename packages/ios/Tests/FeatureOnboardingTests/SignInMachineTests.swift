@@ -57,13 +57,14 @@ import Wire
     (.api(.unavailable), .unavailable),
     (.network("x"), .unavailable),
     (.decoding, .unavailable),
+    (.api(.appleIdInUse), .appleIdInUse),
   ])
   func failuresMapToWhatTheUserCanDo(error: TransportError, failure: SignInFailure) {
     #expect(SignInFailure(error) == failure)
   }
 
   @Test func eachFailureHasItsOwnWords() {
-    let all: [SignInFailure] = [.appleRefused, .rejected, .unavailable, .storage]
+    let all: [SignInFailure] = [.appleRefused, .rejected, .unavailable, .storage, .appleIdInUse]
     #expect(Set(all.map(\.message)).count == all.count)
   }
 }
@@ -140,6 +141,33 @@ import Wire
     model.appleCompleted(identityToken: "jwt")
     await model.settled()
     #expect(model.state == .failed(.storage, request: 2))
+  }
+
+  @Test func linkingKeepsTheSessionThisPhoneHas() async {
+    let memory = Memory()
+    try? memory.store.save("kept", AccountRecord(userID: "u1", deviceID: "d1", expiresAt: 5))
+    var api = Self.api(sign: { () throws(TransportError) in throw .api(.unauthorized) })
+    api.linkApple = { (_) async throws(TransportError) in
+      AccountResponse(userId: UserId("u1"), linked: true)
+    }
+    let model = SignInModel(api: api, accounts: memory.store, purpose: .link)
+    model.appeared()
+    await model.settled()
+    model.appleCompleted(identityToken: "jwt")
+    await model.settled()
+    #expect(model.state == .signedIn)
+    #expect(memory.value?.0 == "kept")
+  }
+
+  @Test func linkingAnAppleIdThatHasAnAccountSaysSo() async {
+    var api = Self.api(sign: { Self.session })
+    api.linkApple = { (_) async throws(TransportError) in throw .api(.appleIdInUse) }
+    let model = SignInModel(api: api, accounts: Memory().store, purpose: .link)
+    model.appeared()
+    await model.settled()
+    model.appleCompleted(identityToken: "jwt")
+    await model.settled()
+    #expect(model.state == .failed(.appleIdInUse, request: 2))
   }
 
   @Test func theNonceIsFetchedAgainOnRetry() async {

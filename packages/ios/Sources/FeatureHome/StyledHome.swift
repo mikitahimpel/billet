@@ -33,6 +33,8 @@ struct StyledHome: View {
   var flame: StreakFlameHost?
   /// The cat's needs and mood, for the paw by the streak, or nil to leave it out.
   var mood: CatNeedsSnapshot?
+  /// First in the top row, before the streak: the way into "Us".
+  var leading: AnyView?
 
   @State private var latestDrawing: CGImage?
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
@@ -99,6 +101,7 @@ struct StyledHome: View {
 
   private var header: some View {
     HStack(spacing: Spacing.small) {
+      if let leading { leading }
       streakChip
       if let mood {
         CatMoodChip(mood) { isMoodOpen = true }
