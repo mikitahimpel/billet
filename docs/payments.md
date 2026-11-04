@@ -42,7 +42,8 @@ BILLET_PAYMENTS=mock     xcodebuild build -project apps/ios/Billet.xcodeproj -sc
 BILLET_PAYMENTS=storekit xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet ...
 
 # StoreKit purchases on a Simulator, from Billet.storekit (also run by ios.yml). Use a
-# runtime before iOS 26.5: its Simulators don't load .storekit files from xcodebuild test.
+# runtime before iOS 26.3: 26.4 and 26.5 Simulators don't load .storekit files from
+# xcodebuild test (ios.yml picks the newest one before 26.3).
 (cd apps/ios && xcodegen generate)
 BILLET_PAYMENTS=storekit xcodebuild test -project apps/ios/Billet.xcodeproj \
   -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'
