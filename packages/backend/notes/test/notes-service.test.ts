@@ -187,6 +187,34 @@ describe("sendNote", () => {
     );
   });
 
+  it("stores a text note with no image, its paper kept and the server's fields stamped", async () => {
+    const { layer } = world();
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const sent = yield* notes.sendNote(
+          ana,
+          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi 💛", paper: "blush" }),
+        );
+        const bare = yield* notes.sendNote(
+          ben,
+          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hey" }),
+        );
+        return { sent, bare, history: yield* notes.history(ben, 0, 10) };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { sent, bare, history } = outcome.value;
+      expect(sent).toMatchObject({ _tag: "Text", author: ana, text: "hi 💛", paper: "blush" });
+      expect(bare).toMatchObject({ _tag: "Text", author: ben, text: "hey" });
+      expect(bare).not.toHaveProperty("paper");
+      expect(history).toEqual([
+        { seq: 1, note: sent },
+        { seq: 2, note: bare },
+      ]);
+    }
+  });
+
   it("takes a compact rendition at the budget and refuses one byte more", async () => {
     const { layer } = world();
     const send = (size: number) =>
