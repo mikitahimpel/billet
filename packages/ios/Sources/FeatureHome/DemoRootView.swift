@@ -38,6 +38,7 @@ public struct DemoRootView: View {
     serviceStatus: ServiceStatusModel, updateLink: UpdateLink
   ) {
     self.host = host
+    DemoRoom.saveHost(host)
     self.scenes = scenes
     _selectedSceneID = selectedSceneID
     _serviceStatus = State(initialValue: serviceStatus)

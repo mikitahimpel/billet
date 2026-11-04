@@ -62,6 +62,7 @@ struct AppShellView: View {
     let noteCount: Int
     let active: Bool
     let life: LifeLog?
+    let partnerCare: PartnerCare?
   }
 
   /// When the app may be able to carry out what widgets queued: it is open, or the room changed.
@@ -75,7 +76,13 @@ struct AppShellView: View {
       ledger: session.play.ledger, catName: session.play.catName, status: session.status,
       latestNote: session.notes.first?.id,
       noteCount: session.notes.count, active: scenePhase == .active,
-      life: session.life.log)
+      life: session.life.log,
+      partnerCare: partnerCare)
+  }
+
+  /// The partner's latest pet or meal, which the note widget mentions.
+  private var partnerCare: PartnerCare? {
+    PartnerCare.latest(in: session.life.log.all, me: session.life.me)
   }
 
   private var line: ConnectionLine {
@@ -228,7 +235,8 @@ struct AppShellView: View {
         publisher.publish(
           play: session.play, notes: session.notes,
           partnerHere: scenePhase == .active && session.status == .partnerHere,
-          life: session.life.widgetLife)
+          life: session.life.widgetLife,
+          partnerCare: partnerCare)
         try? await Task.sleep(for: WidgetPublisher.refresh)
       }
     }

@@ -12,6 +12,8 @@ export interface WorkerEnv {
    * Optional so a Worker without it still serves; then events are only counted in D1.
    */
   readonly EVENTS?: AnalyticsEngineDataset;
+  /** The Alchemy stage this Worker was deployed as (`dev`, `prod`). Shown in the admin panel. */
+  readonly STAGE?: string;
   /** One `PairRoom` Durable Object per couple. */
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
   /**

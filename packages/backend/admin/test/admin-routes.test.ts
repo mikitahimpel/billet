@@ -14,8 +14,8 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
-import type { DetailRow } from "../src/admin-in-app.ts";
-import { adminApi, AdminRoutes, CurrentAdmin } from "../src/admin-routes.ts";
+import type { DetailRow } from "../src/admin-top-details.ts";
+import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
 
@@ -53,7 +53,11 @@ const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
     AdminRoutes.pipe(
       Layer.provide(
-        Layer.mergeAll(FlagsService.layer, Layer.succeed(CurrentAdmin, { email })).pipe(
+        Layer.mergeAll(
+          FlagsService.layer,
+          Layer.succeed(CurrentAdmin, { email }),
+          Layer.succeed(PanelEnvironment, { name: "dev" }),
+        ).pipe(
           Layer.provideMerge(
             Layer.mergeAll(
               Layer.succeed(PairingRepository, pairing.repository),
@@ -125,7 +129,10 @@ beforeEach(() => {
 
 describe("the admin API", () => {
   it("says who is signed in through Access", async () => {
-    expect(await call(adminApi.me)).toEqual({ status: 200, body: { email: "owner@example.com" } });
+    expect(await call(adminApi.me)).toEqual({
+      status: 200,
+      body: { email: "owner@example.com", environment: "dev" },
+    });
   });
 
   it("lists every registry entry with its live configuration, never edited yet", async () => {
@@ -245,23 +252,53 @@ describe("the admin API", () => {
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
   });
 
-  it("adds what people do in the app, with the most chosen things", async () => {
-    events.push({
-      pairId: "p1",
-      userId: "u1",
-      name: "CatChosen",
-      day: today,
-      count: 1,
-      firstAt: 4,
-    });
-    details.push({ name: "CatChosen", detail: "tabby", day: today, count: 1, total: 0 });
-    const { body } = await call(adminApi.overview);
-    const chosen = body.inApp.events.find(({ name }: { name: string }) => name === "CatChosen");
-    expect(chosen).toMatchObject({ pairs7d: 1 });
-    expect(chosen.daily.at(-1)).toBe(1);
-    expect(body.inApp.top.find(({ name }: { name: string }) => name === "CatChosen").items).toEqual(
-      [{ detail: "tabby", count: 1 }],
+  it("builds the overview over 7 or 90 days, and refuses any other range", async () => {
+    events.push(
+      { pairId: "p1", userId: "u1", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "NoteSent", day: today, count: 4, firstAt: 3 },
     );
+    const week = await call(`${adminApi.overview}?days=7`);
+    expect(week.status).toBe(200);
+    expect(week.body.daily).toHaveLength(7);
+    expect(week.body.range).toMatchObject({ days: 7, to: today });
+    expect(week.body.stats.newPairs).toMatchObject({ current: 1, previous: 0 });
+    expect((await call(`${adminApi.overview}?days=90`)).body.stats.dau.series).toHaveLength(90);
+    expect((await call(`${adminApi.overview}?days=8`)).status).toBe(400);
+  });
+
+  it("counts each event in the app over the range", async () => {
+    events.push(
+      { pairId: "p1", userId: "u1", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "NoteSent", day: today, count: 4, firstAt: 3 },
+    );
+    const { status, body } = await call(`${adminApi.appEvents}?days=7`);
+    expect(status).toBe(200);
+    expect(body.days).toHaveLength(7);
+    const noteSent = body.events.find(({ name }: { name: string }) => name === "NoteSent");
+    expect(noteSent).toMatchObject({ source: "server", total: 4, pairs7d: 1, lastDay: today });
+    const widget = body.events.find(({ name }: { name: string }) => name === "WidgetAdded");
+    expect(widget).toMatchObject({ total: 0, firstDay: null, lastDay: null });
+    expect((await call(`${adminApi.appEvents}?days=1`)).status).toBe(400);
+  });
+
+  it("ranks the most chosen things over the range, with stamps spent on bought ones", async () => {
+    details.push(
+      { name: "CatChosen", detail: "tabby", day: today, count: 2, total: 0 },
+      { name: "CatChosen", detail: "idolIlya", day: today, count: 5, total: 0 },
+      { name: "CatChosen", detail: "hero", day: "2020-01-01", count: 50, total: 0 },
+      { name: "ShopItemBought", detail: "lamp", day: today, count: 2, total: 60 },
+    );
+    const { body } = await call(`${adminApi.appEvents}?days=7`);
+    const top = (name: string) =>
+      body.top.find((entry: { name: string }) => entry.name === name).items;
+    expect(top("CatChosen")).toEqual([
+      { detail: "idolIlya", count: 5 },
+      { detail: "tabby", count: 2 },
+    ]);
+    expect(top("ShopItemBought")).toEqual([{ detail: "lamp", count: 2, total: 60 }]);
+    expect(top("TrickDone")).toEqual([]);
   });
 
   describe("pairs", () => {

@@ -52,9 +52,10 @@ is needed, a word outside a closed list, and a value anywhere but a price.
 - **Analytics Engine** (`EVENTS`): one row per event, with the detail as `blob6` and the value as
   `double2`. See [experiments.md](experiments.md#analytics-engine).
 
-The admin Overview's "In the app" block reads the two D1 tables: daily counts per event for 14 days,
-how many pairs did each at least once in the last 7 days, and the five most chosen things per name
-over 30 days (with the stamps spent, for purchases).
+The admin panel's "In the app" page (`GET /admin/api/app-events`) reads the two D1 tables. For
+each event it shows the daily counts over the chosen range (7, 30 or 90 days), how many pairs did
+it at least once in the last 7 days, and how many people did it. Under "Most chosen" it shows the
+five most chosen things per name over the same range, with the stamps spent for purchases.
 
 ## On the phone
 

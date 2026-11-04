@@ -20,18 +20,30 @@ import { utcDay } from "@billet/backend-metrics/metrics";
 import { AppStatus } from "@billet/contracts-http-api/status";
 import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
+import { buildAppEvents } from "./admin-app-events.ts";
 import { buildOverview } from "./admin-overview.ts";
 import { AppStatusStore } from "./app-status-store.ts";
+import { verdictOf } from "./experiment-verdict.ts";
 
 /** Who is using the panel, as Cloudflare Access verified them. Every change is logged under it. */
 export class CurrentAdmin extends Context.Service<CurrentAdmin, AdminIdentity>()(
   "@billet/backend-admin/CurrentAdmin",
 ) {}
 
+/**
+ * Which deployment the panel belongs to (the Alchemy stage: `dev`, `prod`), shown in its top bar
+ * so a change is never made on the wrong one by mistake.
+ */
+export class PanelEnvironment extends Context.Service<
+  PanelEnvironment,
+  { readonly name: string }
+>()("@billet/backend-admin/PanelEnvironment") {}
+
 /** The admin API paths, under `/admin/api`. */
 export const adminApi = {
   me: "/admin/api/me",
   overview: "/admin/api/overview",
+  appEvents: "/admin/api/app-events",
   flags: "/admin/api/flags",
   flag: "/admin/api/flags/:key",
   experiments: "/admin/api/experiments",
@@ -103,6 +115,9 @@ const StatusHistoryQuery = Schema.Struct({
     Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 200 })),
   ),
 });
+const RangeQuery = Schema.Struct({
+  days: Schema.optional(Schema.Literals(["7", "30", "90"])),
+});
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
 const KeyParams = Schema.Struct({ key: ExperimentKey });
@@ -166,14 +181,33 @@ const readHandlers = Effect.gen(function* () {
   };
 
   const overview = Effect.gen(function* () {
-    const [events, rows, users, details] = yield* Effect.all([
+    const { days } = yield* HttpServerRequest.schemaSearchParams(RangeQuery);
+    const [events, rows, users] = yield* Effect.all([
       data.events,
       data.assignments,
       data.userCount,
-      data.details,
     ]);
-    const today = utcDay(yield* Clock.currentTimeMillis);
-    return respondJson(buildOverview(events, rows, users, today, 30, details));
+    return respondJson(
+      buildOverview(
+        events,
+        rows,
+        users,
+        utcDay(yield* Clock.currentTimeMillis),
+        Number(days ?? 30),
+      ),
+    );
+  }).pipe(guarded);
+
+  const appEvents = Effect.gen(function* () {
+    const { days } = yield* HttpServerRequest.schemaSearchParams(RangeQuery);
+    return respondJson(
+      buildAppEvents(
+        yield* data.events,
+        utcDay(yield* Clock.currentTimeMillis),
+        Number(days ?? 30),
+        yield* data.details,
+      ),
+    );
   }).pipe(guarded);
 
   const flagList = Effect.gen(function* () {
@@ -190,7 +224,13 @@ const readHandlers = Effect.gen(function* () {
         return {
           ...item,
           results:
-            result === undefined ? null : { variants: result.variants, caution: result.caution },
+            result === undefined
+              ? null
+              : {
+                  variants: result.variants,
+                  caution: result.caution,
+                  verdict: verdictOf(result.variants),
+                },
         };
       }),
     });
@@ -254,6 +294,7 @@ const readHandlers = Effect.gen(function* () {
     items,
     entryOf,
     overview,
+    appEvents,
     flagList,
     experiments,
     history,
@@ -271,6 +312,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const { flags, configs, appStatus, entryOf, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
+    const environment = yield* PanelEnvironment;
 
     const save = (
       key: ExperimentKey,
@@ -298,9 +340,10 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add(
       "GET",
       adminApi.me,
-      Effect.sync(() => respondJson({ email: admin.email })),
+      Effect.sync(() => respondJson({ email: admin.email, environment: environment.name })),
     );
     yield* router.add("GET", adminApi.overview, reads.overview);
+    yield* router.add("GET", adminApi.appEvents, reads.appEvents);
     yield* router.add("GET", adminApi.flags, reads.flagList);
     yield* router.add("GET", adminApi.experiments, reads.experiments);
     yield* router.add("GET", adminApi.history, reads.history);

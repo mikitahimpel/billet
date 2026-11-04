@@ -138,18 +138,6 @@ export const defineExperiments = (
  * Variant ids are the app's case names in kebab-case.
  */
 export const registry: ReadonlyArray<Experiment> = defineExperiments([
-  // The first planned test (decisions.md, 2026-11-02). Draft until the owner starts it.
-  {
-    key: "home-direction",
-    kind: "experiment",
-    description:
-      "Which room Home shows: Window Seat (a daybed under a deep window) or Sunset Lamp. Primary metric: both partners sent a note on day 7.",
-    variants: { "window-seat": 50, "sunset-lamp": 50 },
-    default: "window-seat",
-    exposure: 100,
-    status: "draft",
-    killed: false,
-  },
   // Labs settings the owner can roll out remotely. Each is a complete, reviewed choice in the
   // app; a Labs choice on the phone still wins. Draft: nothing changes until the owner starts one.
   {
@@ -194,7 +182,6 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     variants: {
       classic: 1,
       immersive: 0,
-      cinematic: 0,
       "living-window": 0,
       "night-and-day": 0,
     },

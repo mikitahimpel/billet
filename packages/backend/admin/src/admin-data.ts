@@ -1,7 +1,7 @@
 import { Context, Data, type Effect } from "effect";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { EventRow, FlagRow } from "@billet/backend-metrics/funnel";
-import type { DetailRow } from "./admin-in-app.ts";
+import type { DetailRow } from "./admin-top-details.ts";
 
 /** A read failed. The panel answers 503; `reason` is a fixed label. */
 export class AdminUnavailable extends Data.TaggedError("AdminUnavailable")<{

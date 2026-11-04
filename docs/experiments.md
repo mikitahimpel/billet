@@ -107,12 +107,13 @@ all its weight on today's standard value, so starting one changes nothing until 
 | --- | --- | --- |
 | `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
 | `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk` |
-| `home-layout` | Home | `classic`, `immersive`, `cinematic`, `living-window`, `night-and-day` |
+| `home-layout` | Home | `classic`, `immersive`, `living-window`, `night-and-day` |
 | `shopkeeper` | Shopkeeper | `teddy`, `human` |
 
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
-tester tools or not yet complete and reviewable). The app no longer reads `home-direction`: there
-is one room, so the key stays in the registry only so old answers still parse.
+tester tools or not yet complete and reviewable). `home-direction` (Window Seat or Sunset Lamp) is
+gone: there is one room. A saved configuration or assignment under a key the registry no longer has
+is ignored, so nothing needs cleaning up.
 
 ## On the phone
 

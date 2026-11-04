@@ -5,13 +5,21 @@ served by the `Api` Worker under `/admin` and protected by Cloudflare Access (Ze
 
 ## What it has
 
+A left sidebar with the pages below; a top bar with the stage the Worker was deployed as (`DEV`
+in amber, `PROD` in red, from the `STAGE` binding Alchemy sets), when the page's data was loaded
+(with a reload button) and the signed-in Access email. Tables can be sorted by any column, searched
+and filtered, and a row opens its detail page. Times read "3 days ago", with the exact time on
+hover.
+
 | Page | Shows | Changes |
 | --- | --- | --- |
-| Overview | DAU and WAU (people who opened the app or sent a note), pairs created per day, pair completion (inviters who ended up in a pair), notes per pair per day, D1/D7/D30 retention (both partners active), the funnel installed → signed in → paired → first note → second day | nothing |
-| Experiments | each `experiment` with its status, exposure and variants, and per variant: pairs, the north star (both sent a note on day 7) with a 95% Wilson interval, median time to first note, and the small-numbers caution | start, stop, kill, unkill |
-| Flags | every registry entry (experiments and remote flags), its live configuration and version, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
-| Maintenance | maintenance on or off, its message and "back around" time, the minimum build, the notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it; works while D1 is down |
+| Overview | for the last 7, 30 or 90 days against the same span before it: daily active (mean per day), weekly active (on the last day), new pairs, pair completion (inviters whose first invite fell in the range and are now in a pair), notes per pair per day (notes over the days each pair existed), D1/D7 retention (pairs formed in the range, both partners active on day N), each with its change and a sparkline or its 95% interval; active people and notes per day; the funnel installed → signed in → paired → first note → second day (all time) with each step's conversion from the one before | nothing |
+| In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
+| Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's | start, stop, kill, unkill, each after a confirmation |
+| Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
+| Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
+| Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
 before sign-in. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
@@ -91,7 +99,7 @@ a Cloudflare Access **service token**. They can't change anything.
 
 | Route (`GET /admin/api/agent/...`) | Same as the panel's |
 | --- | --- |
-| `overview` | Overview |
+| `overview[?days=7\|30\|90]` | Overview (30 days by default) |
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
@@ -99,6 +107,8 @@ a Cloudflare Access **service token**. They can't change anything.
 | `status` | Maintenance: the current service status, version, who set it |
 | `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |
 
+- The answers carry the same fields as the panel's, so the Overview's `range` and `stats` and an
+  experiment's `results.verdict` are there too. Routes and access are as before.
 - The Worker serves these only to a token whose `common_name` is set and whose audience is the
   agent application's AUD. Only `GET`; every write route, the page and the panel's own API answer
   `403` to a service token. Changes stay with the owner's email.
