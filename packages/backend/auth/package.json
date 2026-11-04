@@ -24,6 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@billet/backend-observability": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
     "effect": "catalog:"

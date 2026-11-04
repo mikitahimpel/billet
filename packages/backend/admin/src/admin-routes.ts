@@ -99,7 +99,7 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
         case "NotFound":
           return fail(404, "not-found");
         default:
-          return Effect.logError("admin request failed", tag || "unknown").pipe(
+          return Effect.logError("admin request failed", error).pipe(
             Effect.andThen(fail(503, "unavailable")),
           );
       }

@@ -11,6 +11,8 @@ export class AuthRejected extends Data.TaggedError("AuthRejected")<{
 /** A dependency failed, so nothing was granted. The client can retry; `reason` is a fixed label. */
 export class AuthUnavailable extends Data.TaggedError("AuthUnavailable")<{
   readonly reason: string;
+  /** What failed underneath, for the one log line at the edge. Never sent to the client. */
+  readonly cause?: unknown;
 }> {}
 
 /** The Apple ID is already linked to another account, so it can't be linked to the caller's. */

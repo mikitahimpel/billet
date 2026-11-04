@@ -330,11 +330,14 @@ extension GenzLayout {
   /// The way from `start` on level `from` to `goal` on level `to`: walks round what is in the way
   /// on each level and jumps between them, through as few levels as it can. A goal on a level the
   /// cat can't get to is replaced by the nearest it can on its own level. Empty when it is there.
-  func catWay(from start: SIMD2<Float>, on from: Int, to goal: SIMD2<Float>, on to: Int)
-    -> [GenzCatWay]
-  {
+  func catWay(
+    from start: SIMD2<Float>, on from: Int, to goal: SIMD2<Float>, on to: Int,
+    cache: GenzCatWayCache? = nil
+  ) -> [GenzCatWay] {
     if from == to {
-      return catRoute(from: start, to: goal, on: from).map { .walk(to: $0, level: from) }
+      return catRoute(from: start, to: goal, on: from, cache: cache).map {
+        .walk(to: $0, level: from)
+      }
     }
     let levels = catLevels
     guard levels.contains(where: { $0.id == from }), levels.contains(where: { $0.id == to }) else {
@@ -342,7 +345,7 @@ extension GenzLayout {
     }
     // Fewest jumps first, then the shortest way: a search over the levels, each jump found
     // once.
-    var jumps: [Int: [GenzCatJump]] = [:]
+    var jumps: [Int: [GenzCatJump]] = cache?.jumps(self) ?? [:]
     func edges(_ id: Int) -> [GenzCatJump] {
       if let known = jumps[id] { return known }
       guard let level = levels.first(where: { $0.id == id }) else { return [] }
@@ -379,12 +382,16 @@ extension GenzLayout {
     var position = start
     var level = from
     for jump in chain {
-      out += catRoute(from: position, to: jump.from, on: level).map { .walk(to: $0, level: level) }
+      out += catRoute(from: position, to: jump.from, on: level, cache: cache).map {
+        .walk(to: $0, level: level)
+      }
       out.append(.jump(jump))
       position = jump.to
       level = jump.toLevel
     }
-    out += catRoute(from: position, to: goal, on: level).map { .walk(to: $0, level: level) }
+    out += catRoute(from: position, to: goal, on: level, cache: cache).map {
+      .walk(to: $0, level: level)
+    }
     return out
   }
 }

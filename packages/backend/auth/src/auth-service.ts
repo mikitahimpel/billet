@@ -16,6 +16,7 @@ import { AppleIdInUse, AuthRejected, type AuthUnavailable } from "./auth-error.t
 import { AuthEngine, type IssuedSession, type VerifiedApple } from "./auth-engine.ts";
 import { AuthRepository, type TokenHash } from "./auth-repository.ts";
 import { IdentityVerifier } from "./identity-verifier.ts";
+import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** Long enough to fetch a nonce, show the Apple sheet and post the result. */
 export const challengeLifetime = Duration.minutes(10);
@@ -123,7 +124,7 @@ export class AuthService extends Context.Service<
       });
 
       /** A fully verified Apple token whose nonce this server issued and nobody has used yet. */
-      const verifyApple = Effect.fnUntraced(function* (
+      const verifyApple = Effect.fn("AuthService.verifyApple")(function* (
         identityToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<VerifiedApple, AuthRejected | AuthUnavailable> {
         const identity = yield* verifier.verify(identityToken);
@@ -136,7 +137,7 @@ export class AuthService extends Context.Service<
         return { identityToken, subject: identity.subject, nonce: identity.nonce };
       });
 
-      const signInAnonymously = Effect.fnUntraced(function* (
+      const signInAnonymously = Effect.fn("AuthService.signInAnonymously")(function* (
         accountKey: Redacted.Redacted<string>,
       ): Effect.fn.Return<SessionResponse, AuthRejected | AuthUnavailable> {
         const raw = Redacted.value(accountKey);
@@ -163,7 +164,7 @@ export class AuthService extends Context.Service<
         return toResponse(yield* engine.startSession(winner.value));
       });
 
-      const signInWithApple = Effect.fnUntraced(function* (
+      const signInWithApple = Effect.fn("AuthService.signInWithApple")(function* (
         identityToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<SessionResponse, AuthRejected | AuthUnavailable> {
         const session = yield* engine.signInWithApple(yield* verifyApple(identityToken));
@@ -179,7 +180,7 @@ export class AuthService extends Context.Service<
         return { ...session.value, sessionHash: yield* hash(raw) };
       });
 
-      const linkApple = Effect.fnUntraced(function* (
+      const linkApple = Effect.fn("AuthService.linkApple")(function* (
         sessionToken: Redacted.Redacted<string>,
         identityToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<AccountResponse, AppleIdInUse | AuthRejected | AuthUnavailable> {
@@ -190,14 +191,15 @@ export class AuthService extends Context.Service<
         return { userId, linked: true };
       });
 
-      const authenticate = Effect.fnUntraced(function* (
+      const authenticate = Effect.fn("AuthService.authenticate")(function* (
         sessionToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<Principal, AuthRejected | AuthUnavailable> {
         const { userId, deviceId, sessionHash } = yield* liveSession(sessionToken);
+        yield* annotateRefs({ user: userId });
         return { userId, deviceId, sessionHash };
       });
 
-      const account = Effect.fnUntraced(function* (
+      const account = Effect.fn("AuthService.account")(function* (
         sessionToken: Redacted.Redacted<string>,
       ): Effect.fn.Return<AccountResponse, AuthRejected | AuthUnavailable> {
         const { userId, linked } = yield* liveSession(sessionToken);
@@ -208,7 +210,7 @@ export class AuthService extends Context.Service<
         });
       });
 
-      const registerPushToken = Effect.fnUntraced(function* (
+      const registerPushToken = Effect.fn("AuthService.registerPushToken")(function* (
         principal: Principal,
         request: RegisterPushTokenRequest,
       ): Effect.fn.Return<void, AuthUnavailable> {

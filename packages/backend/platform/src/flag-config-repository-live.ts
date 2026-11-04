@@ -17,6 +17,7 @@ import {
 } from "@billet/backend-flags/flag-config-repository";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
 import { flagChanges, flagConfigs, pairFlagOverrides } from "./directory-schema.ts";
+import { spanMethods } from "@billet/backend-observability/span-methods";
 
 /** A `flag_configs` row as stored: the configuration is JSON text. */
 export const FlagConfigRow = Schema.Struct({
@@ -52,7 +53,8 @@ export const flagConfigCacheUrl = "https://flag-configs.billet.invalid/v1";
 export const flagConfigCacheSeconds = 30;
 
 // A storage error can quote bound values, so nothing from it survives this label.
-const unavailable = () => new FlagsUnavailable({ reason: "directory-unavailable" });
+const unavailable = (cause: unknown) =>
+  new FlagsUnavailable({ reason: "directory-unavailable", cause });
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
 const decodeConfigs = Schema.decodeUnknownEffect(Schema.Array(FlagConfigRow));
@@ -134,161 +136,163 @@ const makeRepository = (
       after: json(change.after),
     });
 
-  return FlagConfigRepository.of({
-    all: Effect.gen(function* () {
-      const hit = yield* cached;
-      if (hit !== undefined) return hit;
-      const rows = yield* fromDatabase;
-      yield* remember(rows);
-      return rows;
-    }),
+  return FlagConfigRepository.of(
+    spanMethods("FlagConfigRepository", {
+      all: Effect.gen(function* () {
+        const hit = yield* cached;
+        if (hit !== undefined) return hit;
+        const rows = yield* fromDatabase;
+        yield* remember(rows);
+        return rows;
+      }),
 
-    save: ({ key, config, expectedVersion, action, by, at }) =>
-      Effect.gen(function* () {
-        const before = yield* guarded(
-          db
-            .select()
-            .from(flagConfigs)
-            .where(eq(flagConfigs.key, key))
-            .pipe(Effect.flatMap(decodeConfigs)),
-        );
-        const current = before[0]?.version ?? 0;
-        if (current !== expectedVersion) return yield* new FlagConfigConflict({ current });
-        const text = encodeConfig(config);
-        const next = expectedVersion + 1;
-        // The update and the history line succeed together or not at all. The version check is
-        // repeated inside the batch, so of two saves from one version only one lands.
-        const results = yield* guarded(
-          atomically(db, [
-            statement(
-              `INSERT INTO flag_configs (key, config, version, updated_at, updated_by)
+      save: ({ key, config, expectedVersion, action, by, at }) =>
+        Effect.gen(function* () {
+          const before = yield* guarded(
+            db
+              .select()
+              .from(flagConfigs)
+              .where(eq(flagConfigs.key, key))
+              .pipe(Effect.flatMap(decodeConfigs)),
+          );
+          const current = before[0]?.version ?? 0;
+          if (current !== expectedVersion) return yield* new FlagConfigConflict({ current });
+          const text = encodeConfig(config);
+          const next = expectedVersion + 1;
+          // The update and the history line succeed together or not at all. The version check is
+          // repeated inside the batch, so of two saves from one version only one lands.
+          const results = yield* guarded(
+            atomically(db, [
+              statement(
+                `INSERT INTO flag_configs (key, config, version, updated_at, updated_by)
                VALUES (?, ?, ?, ?, ?)
                ON CONFLICT (key) DO UPDATE SET config = excluded.config, version = excluded.version,
                  updated_at = excluded.updated_at, updated_by = excluded.updated_by
                WHERE flag_configs.version = ?`,
-              [key, text, next, at, by, expectedVersion],
-            ),
-            statement(
-              `INSERT INTO flag_changes (key, at, by, action, pair_id, before, after)
+                [key, text, next, at, by, expectedVersion],
+              ),
+              statement(
+                `INSERT INTO flag_changes (key, at, by, action, pair_id, before, after)
                SELECT ?, ?, ?, ?, NULL, ?, ?
                WHERE EXISTS (SELECT 1 FROM flag_configs WHERE key = ? AND version = ?
                  AND updated_at = ? AND updated_by = ? AND config = ?)`,
-              [key, at, by, action, json(before[0]?.config), text, key, next, at, by, text],
-            ),
-            statement(
-              "SELECT key, config, version, updated_at, updated_by FROM flag_configs WHERE key = ?",
-              [key],
-            ),
-          ]),
-        );
-        const [row] = yield* guarded(decodeBatchRow(results[2]));
-        if (
-          row === undefined ||
-          row.version !== next ||
-          row.updated_at !== at ||
-          row.updated_by !== by
-        ) {
-          return yield* new FlagConfigConflict({ current: row?.version ?? 0 });
-        }
-        yield* forget;
-        return {
-          key: row.key,
-          config: row.config,
-          version: row.version,
-          updatedAt: row.updated_at,
-          updatedBy: row.updated_by,
-        };
-      }),
+                [key, at, by, action, json(before[0]?.config), text, key, next, at, by, text],
+              ),
+              statement(
+                "SELECT key, config, version, updated_at, updated_by FROM flag_configs WHERE key = ?",
+                [key],
+              ),
+            ]),
+          );
+          const [row] = yield* guarded(decodeBatchRow(results[2]));
+          if (
+            row === undefined ||
+            row.version !== next ||
+            row.updated_at !== at ||
+            row.updated_by !== by
+          ) {
+            return yield* new FlagConfigConflict({ current: row?.version ?? 0 });
+          }
+          yield* forget;
+          return {
+            key: row.key,
+            config: row.config,
+            version: row.version,
+            updatedAt: row.updated_at,
+            updatedBy: row.updated_by,
+          };
+        }),
 
-    history: (key, limit) =>
-      guarded(
-        db
-          .select()
-          .from(flagChanges)
-          .where(key === undefined ? undefined : eq(flagChanges.key, key))
-          .orderBy(desc(flagChanges.id))
-          .limit(limit)
-          .pipe(
-            Effect.flatMap(decodeChanges),
-            Effect.map((rows) =>
-              rows.map(({ pairId, ...rest }) => (pairId === null ? rest : { ...rest, pairId })),
+      history: (key, limit) =>
+        guarded(
+          db
+            .select()
+            .from(flagChanges)
+            .where(key === undefined ? undefined : eq(flagChanges.key, key))
+            .orderBy(desc(flagChanges.id))
+            .limit(limit)
+            .pipe(
+              Effect.flatMap(decodeChanges),
+              Effect.map((rows) =>
+                rows.map(({ pairId, ...rest }) => (pairId === null ? rest : { ...rest, pairId })),
+              ),
             ),
-          ),
-      ),
+        ),
 
-    overridesOf: (pairId) =>
-      guarded(
-        db
-          .select()
-          .from(pairFlagOverrides)
-          .where(eq(pairFlagOverrides.pairId, pairId))
-          .orderBy(asc(pairFlagOverrides.experimentKey))
-          .pipe(Effect.flatMap(decodeOverrides)),
-      ),
-
-    setOverride: (override) =>
-      Effect.gen(function* () {
-        const before = yield* guarded(
+      overridesOf: (pairId) =>
+        guarded(
           db
             .select()
             .from(pairFlagOverrides)
-            .where(
-              and(
-                eq(pairFlagOverrides.pairId, override.pairId),
-                eq(pairFlagOverrides.experimentKey, override.experimentKey),
-              ),
-            )
+            .where(eq(pairFlagOverrides.pairId, pairId))
+            .orderBy(asc(pairFlagOverrides.experimentKey))
             .pipe(Effect.flatMap(decodeOverrides)),
-        );
-        yield* guarded(
-          atomically(db, [
-            db
-              .insert(pairFlagOverrides)
-              .values(override)
-              .onConflictDoUpdate({
-                target: [pairFlagOverrides.pairId, pairFlagOverrides.experimentKey],
-                set: { variant: override.variant, setAt: override.setAt, setBy: override.setBy },
-              }),
-            logChange({
-              key: override.experimentKey,
-              at: override.setAt,
-              by: override.setBy,
-              action: "override",
-              pairId: override.pairId,
-              before: before[0] === undefined ? null : { variant: before[0].variant },
-              after: { variant: override.variant },
-            }),
-          ]),
-        );
-      }),
+        ),
 
-    clearOverride: ({ pairId, experimentKey, by, at }) =>
-      Effect.gen(function* () {
-        const where = and(
-          eq(pairFlagOverrides.pairId, pairId),
-          eq(pairFlagOverrides.experimentKey, experimentKey),
-        );
-        const before = yield* guarded(
-          db.select().from(pairFlagOverrides).where(where).pipe(Effect.flatMap(decodeOverrides)),
-        );
-        const existing = before[0];
-        if (existing === undefined) return;
-        yield* guarded(
-          atomically(db, [
-            db.delete(pairFlagOverrides).where(where),
-            logChange({
-              key: experimentKey,
-              at,
-              by,
-              action: "clear-override",
-              pairId,
-              before: { variant: existing.variant },
-              after: null,
-            }),
-          ]),
-        );
-      }),
-  });
+      setOverride: (override) =>
+        Effect.gen(function* () {
+          const before = yield* guarded(
+            db
+              .select()
+              .from(pairFlagOverrides)
+              .where(
+                and(
+                  eq(pairFlagOverrides.pairId, override.pairId),
+                  eq(pairFlagOverrides.experimentKey, override.experimentKey),
+                ),
+              )
+              .pipe(Effect.flatMap(decodeOverrides)),
+          );
+          yield* guarded(
+            atomically(db, [
+              db
+                .insert(pairFlagOverrides)
+                .values(override)
+                .onConflictDoUpdate({
+                  target: [pairFlagOverrides.pairId, pairFlagOverrides.experimentKey],
+                  set: { variant: override.variant, setAt: override.setAt, setBy: override.setBy },
+                }),
+              logChange({
+                key: override.experimentKey,
+                at: override.setAt,
+                by: override.setBy,
+                action: "override",
+                pairId: override.pairId,
+                before: before[0] === undefined ? null : { variant: before[0].variant },
+                after: { variant: override.variant },
+              }),
+            ]),
+          );
+        }),
+
+      clearOverride: ({ pairId, experimentKey, by, at }) =>
+        Effect.gen(function* () {
+          const where = and(
+            eq(pairFlagOverrides.pairId, pairId),
+            eq(pairFlagOverrides.experimentKey, experimentKey),
+          );
+          const before = yield* guarded(
+            db.select().from(pairFlagOverrides).where(where).pipe(Effect.flatMap(decodeOverrides)),
+          );
+          const existing = before[0];
+          if (existing === undefined) return;
+          yield* guarded(
+            atomically(db, [
+              db.delete(pairFlagOverrides).where(where),
+              logChange({
+                key: experimentKey,
+                at,
+                by,
+                action: "clear-override",
+                pairId,
+                before: { variant: existing.variant },
+                after: null,
+              }),
+            ]),
+          );
+        }),
+    }),
+  );
 };
 
 /**

@@ -25,6 +25,8 @@ export class AppStatusConflict extends Data.TaggedError("AppStatusConflict")<{
 /** The store could not be read or written. `reason` is a fixed label. */
 export class AppStatusUnavailable extends Data.TaggedError("AppStatusUnavailable")<{
   readonly reason: string;
+  /** What failed underneath, for the one log line at the edge. Never sent to the client. */
+  readonly cause?: unknown;
 }> {}
 
 /**

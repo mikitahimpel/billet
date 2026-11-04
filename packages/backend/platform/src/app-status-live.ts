@@ -7,6 +7,7 @@ import {
   type StoredAppStatus,
 } from "@billet/backend-admin/app-status-store";
 import { AppStatus, normalStatus } from "@billet/contracts-http-api/status";
+import { logLine } from "./observability.ts";
 
 /**
  * The service status lives in Workers KV, not D1: maintenance has to be switched on, and served,
@@ -54,16 +55,16 @@ export const readServedStatus = async (kv: KVNamespace | undefined): Promise<App
     if (raw === null) return normalStatus;
     const stored = decodeStored(raw);
     if (stored._tag === "Some") return stored.value.status;
-    console.warn("app status unreadable");
+    logLine("warn", "app status unreadable");
     return normalStatus;
   } catch {
-    console.warn("app status unavailable");
+    logLine("warn", "app status unavailable");
     return normalStatus;
   }
 };
 
 const attempt = <A>(reason: string, run: () => Promise<A>) =>
-  Effect.tryPromise({ try: run, catch: () => new AppStatusUnavailable({ reason }) });
+  Effect.tryPromise({ try: run, catch: (cause) => new AppStatusUnavailable({ reason, cause }) });
 
 /**
  * The admin panel's view: read without the location cache, so a save shows at once. KV has no

@@ -50,8 +50,8 @@ export const respondFailures = <R>(
         Effect.logInfo("auth rejected", reason).pipe(
           Effect.andThen(respondError(ApiError.cases.Unauthorized.make({}), { status: 401 })),
         ),
-      AuthUnavailable: ({ reason }) =>
-        Effect.logError("auth unavailable", reason).pipe(
+      AuthUnavailable: (error) =>
+        Effect.logError("auth unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
         ),
     }),
