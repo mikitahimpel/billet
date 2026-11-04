@@ -15,15 +15,21 @@ public struct PairPlay: Equatable, Sendable {
   public private(set) var reactions: [UUID: Reaction] = [:]
   /// The name the pair gave the cat, once either of them has chosen one.
   public private(set) var catName: String?
+  /// Where the room's light switch stands. The room keeps the last press from either partner.
+  public private(set) var roomLight = RoomLight.standard
 
   /// What outlasts a launch for a pair with no room to ask.
   public struct Saved: Codable, Equatable, Sendable {
     public var ledger: TreatLedger
     public var reactions: [UUID: Reaction]
     public var catName: String?
+    /// Missing from what older releases saved, which read as ``RoomLight/standard``.
+    public var roomLight: RoomLight?
   }
 
-  public var saved: Saved { Saved(ledger: ledger, reactions: reactions, catName: catName) }
+  public var saved: Saved {
+    Saved(ledger: ledger, reactions: reactions, catName: catName, roomLight: roomLight)
+  }
 
   public init(device: String, saved: Saved? = nil) {
     self.device = device
@@ -31,6 +37,7 @@ public struct PairPlay: Equatable, Sendable {
       ledger = saved.ledger
       reactions = saved.reactions
       catName = saved.catName
+      roomLight = saved.roomLight ?? .standard
     }
   }
 
@@ -72,6 +79,11 @@ public struct PairPlay: Equatable, Sendable {
   /// Takes the name the room reports. The room keeps the first name, so it overrides a local one.
   public mutating func named(_ name: String) {
     catName = name
+  }
+
+  /// Sets the room's light, from this phone's switch or from the room's report.
+  public mutating func light(_ light: RoomLight) {
+    roomLight = light
   }
 
   public mutating func treatsReceived(_ days: [String: Set<String>]) {

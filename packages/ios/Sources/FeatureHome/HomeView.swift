@@ -758,6 +758,7 @@ struct HomeView: View {
     case .touching(let interaction):
       session.brain.setLive(interaction)
       if case .toy(let toy) = interaction { touchingToy = toy } else { touchingToy = nil }
+    case .lightSwitched(let light): session.switchLight(light)
     case .deliveryFinished, .settled: break
     }
   }
@@ -777,7 +778,8 @@ struct HomeView: View {
       life: session.life.drive,
       lifeNeeds: session.life.state.needs,
       brain: session.brain.frame,
-      brainSpeed: session.life.speed
+      brainSpeed: session.life.speed,
+      light: session.play.roomLight
     )
   }
 

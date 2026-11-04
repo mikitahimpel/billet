@@ -99,7 +99,7 @@ struct GenzRoomView: View {
 
   var body: some View {
     let room = room
-    let look = LightingLook.of(lighting)
+    let look = room.screen.look
     let parts = RoomCostSwitches.shared
     ZStack {
       if parts.shows("layers") { layer(behind, room: room) }
@@ -126,6 +126,8 @@ struct GenzRoomView: View {
     .ignoresSafeArea()
     .overlay { decorControls(room) }
     .sensoryFeedback(trigger: decorStatus, Self.gripFeedback)
+    .sensoryFeedback(.impact(flexibility: .rigid, intensity: 1), trigger: room.screen.switchPresses)
+    .onChange(of: room.screen.switchPresses) { SwitchClick.play() }
     .modifier(GenzDecorFeeds(view: self, room: room))
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
@@ -262,9 +264,6 @@ struct GenzRoomView: View {
         room.followBrain(brain, speed: play.brainSpeed)
       }
       .onChange(of: play.lifeNeeds, initial: true) { _, needs in room.showLife(needs) }
-      .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
-      .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
-      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
       .onAppear {
         room.report = onEvent
       }
@@ -272,6 +271,7 @@ struct GenzRoomView: View {
       .accessibilityLabel("Window seat at night")
       .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
       .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
+      .accessibilityAction(named: Text("Press the light switch")) { onEvent(room.pressSwitch()) }
       .accessibilityAction(named: "Open the note") {
         onEvent(.noteOpened(delivery: world.delivery))
       }
@@ -299,6 +299,7 @@ struct GenzRoomView: View {
     room.setFollowsTilt(followsTilt)
     room.setCat(cat)
     room.setLighting(lighting)
+    room.setRoomLight(play.light, animated: false)
     room.setWindowView(windowView)
     room.setOnScreen(isOnScreen, in: viewID)
   }
@@ -328,6 +329,10 @@ struct GenzRoomView: View {
         renovator?.isRenovating = isOn
       }
       .onChange(of: layout.key) { isDecorating = false }
+      .onChange(of: cat, initial: true) { _, cat in room.setCat(cat) }
+      .onChange(of: lighting, initial: true) { _, lighting in room.setLighting(lighting) }
+      .onChange(of: play.light, initial: true) { _, light in room.setRoomLight(light) }
+      .onChange(of: windowView, initial: true) { _, choice in room.setWindowView(choice) }
   }
 
   @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
