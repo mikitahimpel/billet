@@ -37,6 +37,9 @@ on:
       costs:
         description: Cost runs per size (each part of the room switched off in turn), for jobs=cost or all
         default: "2"
+      switches:
+        description: Parts a cost run switches, comma-separated (empty = all)
+        default: ""
       jobs:
         description: What to run (both = ab and shots)
         type: choice
@@ -240,6 +243,7 @@ jobs:
             model: "iPhone 17 Pro Max"
     env:
       COSTS: ${{ inputs.costs || '2' }}
+      PERF_SWITCHES: ${{ inputs.switches }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
