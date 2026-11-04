@@ -3,8 +3,10 @@ import Foundation
 /// Which cat lives in the room. The raw value is what gets stored, so it stays stable. A stored
 /// value that is no longer a case (a removed cat) decodes as the standard choice.
 public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
+  /// A soft-matte ginger tabby, the room's own cat, by Idol from a FLUX.2-klein picture of the
+  /// c1B concept. The standard cat, first so the picker lists it at the top.
+  case marmalade
   /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
-  /// First, so the picker lists it at the top.
   case gingerChonk
   /// Ilya's (nexishq) grey tabby, made by Idol from his illustration and used with his permission.
   case idolIlya
@@ -60,6 +62,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .hero: "Hero"
     case .idolGinger: "Idol ginger"
     case .splatGinger: "Splat ginger"
+    case .marmalade: "Marmalade"
     case .mooCat: "Moo"
     case .fluffyWhite: "Fluffy white"
     case .britishGrey: "British grey"
@@ -87,6 +90,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .hero: "Chunky and plush, big glossy eyes, 26 clips."
     case .idolGinger: "Made by Idol from a picture of the tabby."
     case .splatGinger: "Idol's ginger as a soft Gaussian splat."
+    case .marmalade: "A soft ginger tabby who keeps the window seat warm."
     case .mooCat: "Black and white like a cow, and a bit of a clown."
     case .fluffyWhite: "Long white fur, kept spotless."
     case .britishGrey: "A blue British shorthair, slow and serene."
@@ -110,7 +114,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// into its body (Ilya's) dozes in its loaf instead, set in its clip table.
   public var isListed: Bool {
     switch self {
-    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger,
+    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade,
       .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico,
       .ragdoll, .maineCoon, .voidCat, .siamese, .splatGinger, .idolCalico, .idolGreyTabby:
       true
@@ -121,7 +125,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// the cat files; elsewhere its mesh shows. Nil for a cat that is only a mesh.
   public var splatBody: String? {
     switch self {
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .mooCat, .fluffyWhite,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat, .fluffyWhite,
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
@@ -139,7 +143,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   public var mesh: CatModel {
     switch self {
     case .splatGinger: .idolGinger
-    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .mooCat, .fluffyWhite,
+    case .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .marmalade, .mooCat, .fluffyWhite,
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
@@ -155,7 +159,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     switch self {
     case .detailed, .detailedKitten, .detailedFluffy, .hero: [.natural, .greyWhite, .black]
     // Idol bakes the coat it saw into the texture; another coat is another Idol cat.
-    case .idolGinger, .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal,
+    case .idolGinger, .marmalade, .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal,
       .calico, .ragdoll, .maineCoon, .voidCat, .siamese, .gingerChonk, .idolIlya,
       .idolCalico,
       .idolGreyTabby,
@@ -186,7 +190,7 @@ public struct CatChoice: Codable, Hashable, Sendable {
   public var coat: CatCoat
 
   /// What a room shows before anyone chooses, and what a stored choice of a removed cat becomes.
-  public static let standard = CatChoice(model: .detailed, coat: .natural)
+  public static let standard = CatChoice(model: .marmalade, coat: .natural)
 
   public init(model: CatModel, coat: CatCoat = .natural) {
     self.model = model
