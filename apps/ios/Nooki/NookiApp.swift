@@ -4,7 +4,7 @@ import SwiftUI
 struct NookiApp: App {
     /// Nil when the build has no server; the app then keeps everything on the phone.
     @State private var session: ServerSession? =
-        isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
+        NookiApp.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
 
     var body: some Scene {
         WindowGroup {
