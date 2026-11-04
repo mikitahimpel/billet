@@ -182,6 +182,34 @@ import Testing
     #expect(room.spots.load()["knitPouf-3"]?.z == 5)
   }
 
+  @Test func aBadSavedSpotLeavesThePieceWhereTheRoomPutIt() throws {
+    let layout = GenzLayout.of(.cosyNook)
+    let pouf = try #require(layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+    let lamp = try #require(layout.pieces.firstIndex { $0.piece.kind == .pleatedLamp })
+    let poufName = GenzRoom.decorName(layout.pieces[pouf], index: pouf)
+    let lampName = GenzRoom.decorName(layout.pieces[lamp], index: lamp)
+    GenzRoomCache(suite: suite).room(layout).spots.save([
+      poufName: NookiSpot(x: .nan, z: 5, yaw: 0),
+      lampName: NookiSpot(x: 140, z: -90, yaw: 0),
+    ])
+    let (room, holders) = try room()
+    #expect(abs(holders[pouf].position.x - 3) < 0.001)
+    #expect(abs(holders[pouf].position.z - 3.35) < 0.001)
+    #expect(room.layout.pieces[pouf].centre.x == 3, "the cat's map keeps it at home")
+    #expect(abs(holders[lamp].position.x) < 2, "the lamp stays on its table")
+  }
+
+  @Test func aBadArrangedSpotIsIgnored() throws {
+    let (room, holders) = try room()
+    let pouf = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+    let name = try name(.knitPouf, in: room)
+    room.arrange([name: PieceSpot(x: 3, z: .infinity, yaw: 0)])
+    #expect(abs(holders[pouf].position.z - 3.35) < 0.001)
+    room.arrange([name: PieceSpot(x: 300, z: 5, yaw: 0)])
+    #expect(abs(holders[pouf].position.x - 3) < 0.001)
+    #expect(room.spots.load()[name] == nil)
+  }
+
   @Test func aMovedPieceIsWhereTheRoomOpensNextTime() throws {
     let (room, holders) = try room()
     let pouf = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .knitPouf })

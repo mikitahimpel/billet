@@ -122,27 +122,31 @@ struct GenzRoomView: View {
     let room = room
     let look = room.screen.look
     let parts = RoomCostSwitches.shared
+    // Until the room is built and its opening has begun, only the dark stage shows: the window's
+    // layers and the lights' glows are placed by a camera that is still out at the opening's
+    // start, so drawn over an empty room they float about the screen.
+    let isOpen = room.screen.openedAt != nil
     ZStack {
-      if parts.shows("layers") { layer(behind, room: room) }
-      if parts.shows("sky") { theirSky }
-      if parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
+      if isOpen, parts.shows("layers") { layer(behind, room: room) }
+      if isOpen, parts.shows("sky") { theirSky }
+      if isOpen, parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
       stage(room)
-      if parts.shows("layers") {
+      if isOpen, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
       }
-      if noteUnread, !isDecorating {
+      if isOpen, noteUnread, !isDecorating {
         NoteBeacon(
           outline: room.screen.outlines[.windowBacklight] ?? [],
           isPaused: !isOnScreen || reduceMotion
         )
         .transition(.opacity)
       }
-      if parts.shows("halos") {
+      if isOpen, parts.shows("halos") {
         GlowLights(
           look: look, screen: room.screen,
           isPaused: !isOnScreen || reduceMotion)
       }
-      if parts.shows("grade") {
+      if isOpen, parts.shows("grade") {
         GlowGrade(look: look)
         GlowVignette(look: look)
       }
@@ -152,6 +156,9 @@ struct GenzRoomView: View {
       CatSayOverlay(say: room.say) { room.screen.cat }
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
+      if isOpen, !isDecorating {
+        LightSwitchSpot(screen: room.screen) { onEvent(room.pressSwitch()) }
+      }
     }
     .ignoresSafeArea()
     .overlay { decorControls(room) }

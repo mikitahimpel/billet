@@ -37,6 +37,8 @@ struct StyledHome: View {
   var onAnswer: ((PetNeed) -> Void)?
   /// First in the top row, before the streak: the way into "Us".
   var leading: AnyView?
+  /// Last in the top row, at the far edge: the closet.
+  var trailing: AnyView?
 
   @State private var latestDrawing: CGImage?
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
@@ -87,6 +89,11 @@ struct StyledHome: View {
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
     .needsSheet(isPresented: $isMoodOpen, mood: mood) { onAnswer?($0) }
+    .task {
+      guard let delay = ShotHooks.openNeeds else { return }
+      try? await Task.sleep(for: delay)
+      isMoodOpen = true
+    }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
         flame.view(flameState) { isFlameOpen = false }
@@ -94,29 +101,53 @@ struct StyledHome: View {
     }
   }
 
+  /// One row of glass chips, all one height on one line, at the same side margins as the cards
+  /// under it.
   private var header: some View {
-    HStack(spacing: Spacing.small) {
-      if let leading { leading }
-      streakChip
-      if let mood {
-        CatMoodChip(mood) { isMoodOpen = true }
+    GlassGroup {
+      HStack(spacing: Spacing.small) {
+        if let leading { usChip(leading) }
+        streakChip
+        if let mood {
+          CatMoodChip(mood) { isMoodOpen = true }
+        }
+        if let onDecorate {
+          IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
+            .accessibilityIdentifier("styledDecorateButton")
+        }
+        Spacer(minLength: 0)
+        if let trailing { trailing }
       }
-      if let onDecorate {
-        IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
-          .accessibilityIdentifier("styledDecorateButton")
-      }
-      Spacer(minLength: 0)
+      .frame(height: Target.minimum)
     }
     .padding(.top, Spacing.small)
     .padding(.horizontal, Spacing.medium)
-    .overlay(alignment: .bottomLeading) {
-      if isFakePartner {
-        demoPill
-          .padding(.leading, Spacing.medium)
-          .alignmentGuide(.bottom) { $0[.top] - Spacing.small }
-      }
-    }
   }
+
+  /// The way into "Us" as a chip like the others. While the partner is scripted, a gold dot on
+  /// it says so, so nobody takes the replies for a person.
+  private func usChip(_ avatars: AnyView) -> some View {
+    avatars
+      .padding(.horizontal, Spacing.small)
+      .frame(height: Target.minimum)
+      .floatingGlass()
+      .overlay(alignment: .topTrailing) {
+        if isFakePartner { demoDot }
+      }
+  }
+
+  private var demoDot: some View {
+    Circle()
+      .fill(Palette.gold.color)
+      .frame(width: Self.dot, height: Self.dot)
+      .overlay(Circle().stroke(Palette.pageDeep.color.opacity(0.55), lineWidth: 1.5))
+      .accessibilityElement()
+      .accessibilityLabel("Demo: a fake partner with scripted replies, on this phone only")
+      .accessibilityIdentifier("fakePartnerNotice")
+  }
+
+  /// The size of the demo dot, which sits on the chip's corner like a badge.
+  private static let dot: CGFloat = 10
 
   @ViewBuilder private var streakChip: some View {
     if let flame {
@@ -158,19 +189,6 @@ struct StyledHome: View {
     .padding(.leading, Spacing.medium - Spacing.hair)
     .padding(.trailing, Spacing.medium)
     .frame(minHeight: Target.minimum)
-  }
-
-  /// "Demo" under the top bar while the partner is scripted, so nobody takes the replies for a
-  /// person. Small and not a control, so it takes no room from the bar's buttons.
-  private var demoPill: some View {
-    Text("Demo")
-      .billetType(.caption)
-      .foregroundStyle(Palette.paper.color)
-      .padding(.horizontal, Spacing.small + Spacing.hair)
-      .padding(.vertical, Spacing.hair)
-      .floatingGlass()
-      .accessibilityLabel("Fake partner: scripted replies, on this phone only")
-      .accessibilityIdentifier("fakePartnerNotice")
   }
 
   /// Says a note has just come, for a moment, over the bottom of the room. Tapping it opens the

@@ -25,7 +25,7 @@ public struct Sparkle: Shape {
 
 /// The shared ground of every screen, in the ground chosen in Labs (``EveningGround``): a sky
 /// falling to the page's foot, the warm light it is lit by, and a little life of its own that
-/// holds still when Reduce Motion is on.
+/// holds still when Reduce Motion is on. Sheets have their own still ground, ``SheetGround``.
 public struct EveningBackground: View {
   @Environment(\.eveningGround) private var ground
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -46,9 +46,13 @@ public struct EveningBackground: View {
           endPoint: .bottom
         )
         light(size)
-        TimelineView(.animation(minimumInterval: 1 / 24, paused: reduceMotion)) { timeline in
-          let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-          EveningLife(ground: ground, size: size, time: time)
+        if reduceMotion {
+          EveningLife(ground: ground, size: size, time: 0)
+        } else {
+          TimelineView(.animation(minimumInterval: 1 / 24)) { timeline in
+            EveningLife(
+              ground: ground, size: size, time: timeline.date.timeIntervalSinceReferenceDate)
+          }
         }
       }
     }
@@ -208,32 +212,69 @@ extension View {
   }
 }
 
-/// The frame of a tab: the evening behind, one title, and content that scrolls under the glass.
+/// The frame of a tab or a sheet: one title and content that scrolls. A tab has the evening behind
+/// it. In a sheet (``View/billetSheet(_:)``) the sheet's ground shows through instead, the title
+/// carries the close button, and the content fades out before it reaches the grabber rather than
+/// scrolling under it.
 public struct ScreenScaffold<Content: View>: View {
   private let title: String
+  private let closes: Bool
   private let content: Content
 
-  public init(_ title: String, @ViewBuilder content: () -> Content) {
+  @Environment(\.isInSheet) private var isInSheet
+
+  /// - Parameter closes: In a sheet, whether the title carries a close button; a screen pushed
+  ///   inside a sheet goes back with the navigation bar instead.
+  public init(_ title: String, closes: Bool = true, @ViewBuilder content: () -> Content) {
     self.title = title
+    self.closes = closes
     self.content = content()
   }
 
+  /// The band at the top of a sheet that holds its grabber, where content fades out.
+  static var grabberBand: CGFloat { Spacing.large }
+
   public var body: some View {
-    ZStack {
-      EveningBackground()
-      ScrollView {
-        VStack(alignment: .leading, spacing: Spacing.large) {
-          Text(title)
-            .billetType(.title)
-            .foregroundStyle(Palette.paper.color)
-            .accessibilityAddTraits(.isHeader)
-          content
+    if isInSheet {
+      scroll
+        .contentMargins(.top, Self.grabberBand, for: .scrollContent)
+        .mask {
+          VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)
+              .frame(height: Self.grabberBand)
+            Color.black
+          }
+          .ignoresSafeArea()
         }
-        .padding(.horizontal, Spacing.medium)
-        .padding(.vertical, Spacing.small)
-        .frame(maxWidth: .infinity, alignment: .leading)
+    } else {
+      ZStack {
+        EveningBackground()
+        scroll
       }
-      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
+
+  private var scroll: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.large) {
+        heading
+        content
+      }
+      .padding(.horizontal, Spacing.medium)
+      .padding(.vertical, Spacing.small)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .scrollBounceBehavior(.basedOnSize)
+  }
+
+  @ViewBuilder private var heading: some View {
+    if isInSheet, closes {
+      SheetHeader(title)
+    } else {
+      Text(title)
+        .billetType(.title)
+        .foregroundStyle(Palette.paper.color)
+        .accessibilityAddTraits(.isHeader)
     }
   }
 }

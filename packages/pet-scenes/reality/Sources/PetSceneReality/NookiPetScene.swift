@@ -6,7 +6,9 @@ import SwiftUI
 /// Nooki: the cat in its Window Seat room, with the shop, the desk and the first launch as 3D
 /// stages of their own.
 public struct NookiPetScene: PetScene {
-  public let id = "nooki"
+  /// The scene's stable ID, for code that needs it without making a scene.
+  public static let sceneID = "nooki"
+  public let id = NookiPetScene.sceneID
   public let title = "Nooki"
 
   private let rooms: GenzRoomCache

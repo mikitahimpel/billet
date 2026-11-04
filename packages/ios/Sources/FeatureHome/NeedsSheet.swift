@@ -39,9 +39,7 @@ private struct NeedsSheet: View {
         height = $0
       }
       .frame(maxHeight: .infinity, alignment: .top)
-      .presentationDetents([.height(height)])
-      .presentationBackground(.ultraThinMaterial)
-      .presentationDragIndicator(.visible)
-      .preferredColorScheme(.dark)
+      // The app's one sheet look, but no title row: the card's first line names the cat.
+      .billetSheet([.height(height)])
   }
 }

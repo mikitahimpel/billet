@@ -38,6 +38,10 @@ final class GenzRoomScreen {
   var look = LightingLook.off
   /// Counts up each time the switch on the wall is pressed here, for its click.
   var switchPresses = 0
+  /// Where the switch on the wall stands, for what VoiceOver says of it.
+  var roomLight = RoomLight.standard
+  /// The switch plate's middle in the view, or `nil` while it is off screen.
+  var lightSwitch: CGPoint?
   /// How bright the LED strip's glow is as the switch has it, from 0 to 1.
   var ledLevel = 1.0
 
@@ -216,7 +220,7 @@ final class GenzRoom: CatPlayStage {
   private let frames = FrameClock()
   var viewSize = CGSize(width: 393, height: 852)
   var clock = 0.0
-  private var openedClock: Double?
+  private(set) var openedClock: Double?
   private var noteClock = 0.0
   private var landedClock: Double?
   var petClock: Double?
@@ -314,18 +318,22 @@ final class GenzRoom: CatPlayStage {
   }
 
   private func build() async {
+    NookiTrace.mark("styled room building")
     await kit.makeTextures()
+    NookiTrace.mark("styled room textures")
     let shell = Entity()
     shell.name = Self.shellName
     for part in layout.shell(kit) { shell.addChild(part) }
     kit.merge(shell, key: "shell")
     room.addChild(shell)
+    NookiTrace.mark("styled room shell")
     let styler = GenzRoomStyler(kit: kit)
     room.addChild(styler.root)
     styler.apply(style, animated: false)
     self.styler = styler
     if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
+    NookiTrace.mark("styled room pieces")
     pieceHolders = holders
     arrangeDecor(holders)
     buildLED()
@@ -752,6 +760,8 @@ final class GenzRoom: CatPlayStage {
       camera.project($0.bowl.position(relativeTo: room), in: viewSize)
     }
     if screen.bowl != bowl { screen.bowl = bowl }
+    let plate = project(GenzLightSwitch.plate)
+    if screen.lightSwitch != plate { screen.lightSwitch = plate }
     let parallax = CGSize(
       width: -CGFloat(camera.turn) * Self.parallaxPoints,
       height: CGFloat(camera.pitch - layout.camera.pitch) * Self.parallaxPoints)
@@ -790,6 +800,7 @@ final class GenzRoom: CatPlayStage {
     stepFlames()
     stepDecor(Float(delta))
     stepSwitch()
+    stepSwitchPlate()
     applyCat()
     reportTouch()
     applyLevels()
