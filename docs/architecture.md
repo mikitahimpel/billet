@@ -21,9 +21,16 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 ### PairRoom: one Durable Object per couple
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
-streak, presence and in-progress strokes in its own SQLite database, and it uses hibernatable
+streak and presence in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.
+
+Live drawing on the shared canvas streams over the room's socket: `StrokeBegin`, then
+`StrokePoints` batches (at most 64 points, sent every 30 to 50 ms), then `StrokeEnd`, plus `Clear`
+for both partners. The room relays these to the partner and does not store them. It remembers
+which strokes each socket has open on the socket's attachment, so when a phone leaves mid-stroke
+the partner gets `StrokeDropped` for each. Each socket may send 60 frames a second; the room drops
+the rest.
 
 ### D1: the cross-couple directory
 
