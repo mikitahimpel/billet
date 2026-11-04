@@ -11,7 +11,7 @@ import UIKit
 /// cycle (lights, glows, ambient and the town picture in the window). Runs only when `NOOKI_LAB_EXPORT` names a
 /// directory to write into (`TEST_RUNNER_NOOKI_LAB_EXPORT` through xcodebuild).
 @Suite struct NookiLabExport {
-    private static let directory = ProcessInfo.processInfo.environment["NOOKI_LAB_EXPORT"]
+    private nonisolated static let directory = ProcessInfo.processInfo.environment["NOOKI_LAB_EXPORT"]
 
     @Test(.enabled(if: directory != nil), .timeLimit(.minutes(5)))
     func export() async throws {
@@ -324,8 +324,6 @@ private struct GLBWriter {
         } else if let simple = material as? SimpleMaterial {
             kind = "simple"
             colour = simple.color.tint
-            roughness = simple.roughness.scale
-            metallic = simple.metallic.scale
         } else if let flat = material as? UnlitMaterial {
             kind = "unlit"
             colour = flat.color.tint
