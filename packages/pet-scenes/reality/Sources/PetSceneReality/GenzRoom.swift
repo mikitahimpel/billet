@@ -190,6 +190,8 @@ final class GenzRoom: CatPlayStage {
   /// The lamp's extra warmth from Loved, in steps, so the light changes only now and then.
   private var lifeWarmth: Float = 0
   private var catChoice = CatChoice.standard
+  /// How the cat on show moves, from its model.
+  private(set) var motion = CatMotion.even
   private var catModel: Entity?
   private var catLoad: Task<Void, Never>?
   var gazePoint: SIMD3<Float>?
@@ -435,6 +437,7 @@ final class GenzRoom: CatPlayStage {
     catModel?.removeFromParent()
     catModel = model
     self.rig = rig
+    motion = shown.model.motion
     behaviour = CatBehaviour(clips: rig?.info ?? [:], seed: UInt64.random(in: 1...UInt64.max))
     behaviour.follow(life)
     rig?.play(rig?.info[action] != nil ? action : .sleep, blend: 0)
@@ -1008,7 +1011,7 @@ final class GenzRoom: CatPlayStage {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
-      rate = Float(brainBody.frame?.tempo ?? 1)
+      rate = Float((brainBody.frame?.tempo ?? 1) * motion.tempo)
       if pose.action == .walk { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }
