@@ -13,8 +13,14 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "23"
 packages:
-  BilletPackages:
-    path: ../../packages/ios
+  BilletContracts:
+    path: ../../packages/ios/contracts
+  BilletCore:
+    path: ../../packages/ios/core
+  BilletPet:
+    path: ../../packages/ios/pet
+  BilletFeatures:
+    path: ../../packages/ios/features
 targets:
   Billet:
     type: application
@@ -40,8 +46,14 @@ targets:
             CFBundleURLSchemes: [nooki]
     dependencies:
       - target: NookiWidgets
-      - package: BilletPackages
-        products: [FeatureOnboarding, FeaturePairing, Persistence, Pet, Transport, Wire]
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Persistence, Transport]
+      - package: BilletPet
+        products: [Pet]
+      - package: BilletFeatures
+        products: [FeatureOnboarding, FeaturePairing]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:

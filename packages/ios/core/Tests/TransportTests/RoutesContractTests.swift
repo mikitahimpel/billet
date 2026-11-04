@@ -10,6 +10,7 @@ import Testing
     let file = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appending(path: "packages/contracts/http-api/src/routes.ts")
     let source = try String(contentsOf: file, encoding: .utf8)
     let pattern = #/(\w+): route\("(GET|POST|PUT|DELETE)", "([^"]+)"\)/#
@@ -56,6 +57,7 @@ import Testing
     let file = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appending(path: "packages/contracts/realtime/src/socket-route.ts")
     let source = try String(contentsOf: file, encoding: .utf8)
     #expect(source.contains(#"{ method: "GET", path: "\#(Routes.socket.path)" }"#))
@@ -65,6 +67,7 @@ import Testing
     let file = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appending(path: "packages/contracts/http-api/src/routes.ts")
     let source = try String(contentsOf: file, encoding: .utf8)
     #expect(
@@ -76,6 +79,7 @@ import Testing
     let file = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appending(path: "packages/contracts/http-api/src/routes.ts")
     let source = try String(contentsOf: file, encoding: .utf8)
     #expect(source.contains(#"appVersion: "\#(Routes.appVersionHeader.lowercased())""#))

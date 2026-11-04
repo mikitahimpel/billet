@@ -13,7 +13,7 @@ The canonical list is `stampPacks` in `@billet/contracts-domain/stamp-packs`:
 | `com.mikitahimpel.billet.stamps.550` | 550 | 4.99 |
 | `com.mikitahimpel.billet.stamps.1200` | 1200 | 9.99 |
 
-The app's copy (`packages/ios/Sources/Payments/Resources/stamp-packs.json`) and the Xcode StoreKit
+The app's copy (`packages/ios/payments/Sources/Payments/Resources/stamp-packs.json`) and the Xcode StoreKit
 configuration (`apps/ios/App/Billet.storekit`) must sell exactly these. A test in
 `contracts-fixtures` (`stamp-packs-sync.test.ts`) fails if an id, a number of stamps or a price
 differs, or if a StoreKit product is not a consumable.

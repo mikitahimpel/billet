@@ -8,7 +8,7 @@ twos, and two wisps cross to form one heart.
 ![The corrected board](design/little-house-board.png)
 
 The board's source is [design/little-house.dc.html](design/little-house.dc.html). The code in
-`packages/ios/Sources/DesignSystem` is the source of truth: where they differ, the code wins.
+`packages/ios/core/Sources/DesignSystem` is the source of truth: where they differ, the code wins.
 
 ## Principles
 

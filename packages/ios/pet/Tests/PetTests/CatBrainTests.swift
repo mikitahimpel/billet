@@ -427,7 +427,7 @@ struct CatBrainTests {
   @Test func theDocIsDrawnFromTheChart() throws {
     let doc = URL(filePath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-      .appending(path: "../../docs/cat-brain.md").standardized
+      .appending(path: "../../../docs/cat-brain.md").standardized
     var text = try String(contentsOf: doc, encoding: .utf8)
     // `BILLET_EXPORT_BRAIN=1 swift test --filter theDocIsDrawnFromTheChart` writes it again.
     if ProcessInfo.processInfo.environment["BILLET_EXPORT_BRAIN"] == "1",
