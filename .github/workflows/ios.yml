@@ -89,4 +89,4 @@ jobs:
           xcodebuild test -project apps/ios/Billet.xcodeproj -scheme BilletStoreKitTests \
             -destination 'platform=iOS Simulator,name=iPhone 17,OS=latest' -derivedDataPath "$RUNNER_TEMP/storekit" \
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/storekit.log" \
-            | grep -E 'error:|Test Case .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)'
+            | grep -E 'error:|Test Case .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)|StoreKitPurchaseTests:'

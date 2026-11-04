@@ -1,5 +1,6 @@
 import Payments
 import PaymentsStoreKit
+import StoreKit
 import StoreKitTest
 import Synchronization
 import XCTest
@@ -23,8 +24,24 @@ final class StoreKitPurchaseTests: XCTestCase {
   private func loadPacks(_ payments: StoreKitPayments) async throws -> [StampPack] {
     let deadline = ContinuousClock.now + .seconds(60)
     while true {
-      let packs = (try? await payments.products()) ?? []
+      let packs: [StampPack]
+      do {
+        packs = try await payments.products()
+      } catch {
+        print("StoreKitPurchaseTests: products() threw \(error)")
+        packs = []
+      }
       if packs.count == StampPackCatalog.standard.packs.count || ContinuousClock.now > deadline {
+        if packs.isEmpty {
+          // What StoreKit itself answers, for a run where the test store serves nothing.
+          do {
+            let raw = try await Product.products(for: StampPackCatalog.standard.productIDs)
+            print("StoreKitPurchaseTests: Product.products returned \(raw.count)")
+          } catch {
+            print("StoreKitPurchaseTests: Product.products threw \(error)")
+          }
+          print("StoreKitPurchaseTests: storefront \(String(describing: await Storefront.current))")
+        }
         return packs
       }
       try await Task.sleep(for: .seconds(2))
