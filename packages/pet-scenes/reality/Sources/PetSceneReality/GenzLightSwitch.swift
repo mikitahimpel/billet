@@ -132,6 +132,9 @@ struct GenzLightSwitch {
   /// clear of the LED strip round the window.
   static let plateSize = SIMD2<Float>(0.42, 0.68)
   static let plateDepth: Float = 0.06
+  /// How far the shadow's nearest layer stands off the wall: in front of a style's wall skin (`GenzRoomStyler.lift`), and
+  /// each layer far enough from the next that none flickers against another.
+  static let shadowLift: Float = 0.016
   /// How much bigger than the plate a finger may land and still press it.
   static let reach = SIMD2<Float>(1.0, 1.4)
 }
@@ -155,7 +158,7 @@ extension GenzRoom {
         kit.part(
           kit.plane(width: size.x + grow, height: size.y + grow),
           kit.glow(GenzColour(0x1A120A), opacity: 0.16),
-          at: [0, -0.04, 0.004 + Float(index) * 0.002]))
+          at: [0, -0.04, GenzLightSwitch.shadowLift + Float(index) * 0.006]))
     }
     plate.addChild(
       kit.part(
