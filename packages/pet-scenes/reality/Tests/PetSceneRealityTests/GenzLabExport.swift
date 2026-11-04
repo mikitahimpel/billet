@@ -5,6 +5,7 @@
   import UniformTypeIdentifiers
   import Foundation
   import Pet
+  import PetScene
   import RealityKit
   import SwiftUI
   import Testing
