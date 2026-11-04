@@ -8,6 +8,8 @@ struct OnboardingView: View {
     @Bindable var flow: OnboardingFlow
     /// The invite comes from the pairing on the server; nil in a build without one.
     let pairing: PairingModel?
+    /// The invite needs the account; until the sign-in finishes the page waits for it.
+    var signedIn = false
 
     private let language = Locale.current.language.languageCode?.identifier
 
@@ -26,8 +28,8 @@ struct OnboardingView: View {
         .animation(.spring(duration: 0.35), value: flow.index)
         .task { await flow.load() }
         .onChange(of: flow.index, initial: true) { flow.appeared() }
-        .task(id: flow.page) {
-            guard flow.page == .invite, let pairing, case .choosing(nil, _) = pairing.state else { return }
+        .task(id: [flow.page == .invite, signedIn]) {
+            guard flow.page == .invite, signedIn, let pairing, case .choosing(nil, _) = pairing.state else { return }
             pairing.createInvite()
         }
         .preferredColorScheme(.dark)
@@ -135,11 +137,6 @@ struct OnboardingView: View {
         switch step {
         case .single(let choice), .multi(let choice):
             heading(choice.title, choice.subtitle)
-            if case .multi = step {
-                Text("Pick all that fit")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Ink.secondary)
-            }
             VStack(spacing: 10) {
                 ForEach(choice.options, id: \.id) { option in
                     optionCard(option, multi: step.isMulti, picked: flow.picks[choice.id]?.contains(option.id) ?? false) {
@@ -175,6 +172,20 @@ struct OnboardingView: View {
     @ViewBuilder private var catCoat: some View {
         bubble("Which one am I?")
         heading("Choose your cat", "Swipe to see every coat.")
+        ScrollViewReader { proxy in coatCarousel.onAppear { proxy.scrollTo(flow.coat, anchor: .center) } }
+        HStack(spacing: 8) {
+            ForEach(CatCoat.allCases, id: \.self) { coat in
+                Capsule()
+                    .fill(coat == flow.coat ? Color.honey : Ink.hairline)
+                    .frame(width: coat == flow.coat ? 20 : 8, height: 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(duration: 0.3), value: flow.coat)
+    }
+
+    /// One card per coat; the one in the middle is the pick, and it opens on the coat picked before.
+    private var coatCarousel: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 14) {
                 ForEach(CatCoat.allCases, id: \.self) { coat in
@@ -195,15 +206,6 @@ struct OnboardingView: View {
                         anchor: .center)
         .contentMargins(.horizontal, 32, for: .scrollContent)
         .padding(.horizontal, -24)
-        HStack(spacing: 8) {
-            ForEach(CatCoat.allCases, id: \.self) { coat in
-                Capsule()
-                    .fill(coat == flow.coat ? Color.honey : Ink.hairline)
-                    .frame(width: coat == flow.coat ? 20 : 8, height: 8)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .animation(.spring(duration: 0.3), value: flow.coat)
     }
 
     private func coatCard(_ coat: CatCoat) -> some View {
@@ -281,6 +283,8 @@ struct OnboardingView: View {
                 .background(Ink.card, in: .rect(cornerRadius: 24))
             case .creating, .claiming:
                 ProgressView().controlSize(.large).frame(maxWidth: .infinity, minHeight: 160)
+            case .choosing(nil, _) where !signedIn:
+                ProgressView("Connecting…").controlSize(.large).frame(maxWidth: .infinity, minHeight: 160)
             case .choosing(let failure, _):
                 if let failure {
                     Text(PairingCopy.message(for: failure))

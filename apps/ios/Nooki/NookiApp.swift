@@ -31,7 +31,7 @@ struct NookiApp: App {
                     .environment(session)
                     .overlay {
                         if !onboarding.isFinished {
-                            OnboardingView(flow: onboarding, pairing: session?.pairing)
+                            OnboardingView(flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false)
                                 .transition(.opacity)
                         }
                     }
