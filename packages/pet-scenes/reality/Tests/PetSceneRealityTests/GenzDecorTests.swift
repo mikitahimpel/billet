@@ -32,14 +32,91 @@ import Testing
     return GenzRoom.decorName(room.layout.pieces[index], index: index)
   }
 
-  @Test func floorFurnitureMovesButTheCatsSeatAndTheLampsTableStay() throws {
+  @Test func everythingMovesButTheCatsSeat() throws {
     let (room, _) = try room()
-    for kind: GenzPiece.Kind in [.bookshelf, .knitPouf, .catBed, .leafyPlant, .patternRug] {
-      #expect(room.decor.pieces[try name(kind, in: room)] != nil, "\(kind) moves")
+    let floor: [GenzPiece.Kind] = [
+      .bookshelf, .knitPouf, .catBed, .leafyPlant, .snakePlant, .patternRug, .sideTable,
+    ]
+    for kind in floor {
+      #expect(room.decor.surface(of: try name(kind, in: room)) == DecorSession.floor, "\(kind)")
     }
+    let seat: [GenzPiece.Kind] = [
+      .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall, .blanket, .mugs, .cardigan,
+      .phoneOnCharger,
+    ]
+    for kind in seat {
+      #expect(room.decor.surface(of: try name(kind, in: room)) == GenzRoom.seatSurface, "\(kind)")
+    }
+    let table = GenzRoom.topSurface(try name(.sideTable, in: room))
+    for kind: GenzPiece.Kind in [.pleatedLamp, .candles] {
+      #expect(room.decor.surface(of: try name(kind, in: room)) == table, "\(kind)")
+    }
+    #expect(room.decor.pieces[try name(.windowBench, in: room)] == nil)
     #expect(room.decor.plan.fixed[try name(.windowBench, in: room)] != nil)
-    #expect(room.decor.plan.fixed[try name(.sideTable, in: room)] != nil)
     #expect(room.decor.plan.flat.contains(try name(.patternRug, in: room)))
+  }
+
+  @Test func aPillowSlidesAlongTheSeatAndTheCatGoesRoundItThere() throws {
+    let (room, holders) = try room()
+    let pillow = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .pillowSmall })
+    let name = try name(.pillowSmall, in: room)
+    let start = try #require(room.decor.plan(of: name)?.pieces[name])
+    #expect(room.decor.select(holders[pillow]))
+    room.decor.beginDrag(at: start.centre)
+    room.decor.drag(to: start.centre + [0.9, 0])
+    room.decor.endDrag()
+    let moved = try #require(room.decor.plan(of: name)?.pieces[name])
+    #expect(moved.centre.x > start.centre.x + 0.5)
+    #expect(abs(holders[pillow].position.y - 1.28) < 0.001, "it stays on the seat")
+    #expect(abs(room.layout.pieces[pillow].centre.x - moved.centre.x) < 0.001)
+    #expect(
+      room.layout.catObstacles.contains { abs($0.box.centre.x - moved.centre.x) < 0.001 },
+      "the cat's obstacles follow it")
+  }
+
+  /// The camera looks across the room at an angle, so a sideways drag on screen also moves the
+  /// finger towards the window; the pillow still only slides along the backrest.
+  @Test func theBigPillowSlidesLeftAlongTheBackrestTowardsTheThrow() throws {
+    let (room, holders) = try room()
+    let pillow = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .pillowLarge })
+    let name = try name(.pillowLarge, in: room)
+    let start = try #require(room.decor.plan(of: name)?.pieces[name])
+    #expect(!room.decor.canTurn(name))
+    room.decor.select(holders[pillow])
+    room.decor.beginDrag(at: start.centre)
+    room.decor.drag(to: start.centre - [0.6, 0.3])
+    let candidate = try #require(room.decor.candidate)
+    #expect(candidate.fit == .free, "\(candidate.fit) at \(candidate.box.centre)")
+    #expect(candidate.box.centre.y == start.centre.y)
+    #expect(candidate.box.centre.x < start.centre.x - 0.3)
+  }
+
+  @Test func theThrowOnlySlidesAlongTheSeatsEdge() throws {
+    let (room, holders) = try room()
+    let blanket = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .blanket })
+    let name = try name(.blanket, in: room)
+    let start = try #require(room.decor.plan(of: name)?.pieces[name])
+    #expect(!room.decor.canTurn(name))
+    room.decor.select(holders[blanket])
+    room.decor.beginDrag(at: start.centre)
+    room.decor.drag(to: start.centre + [0.6, -0.6])
+    let candidate = try #require(room.decor.candidate)
+    #expect(candidate.box.centre.y == start.centre.y)
+    #expect(candidate.box.yaw == start.yaw)
+  }
+
+  @Test func theLampRidesOnItsTableAndItsLightFollows() throws {
+    let (room, holders) = try room()
+    let table = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .sideTable })
+    let lamp = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .pleatedLamp })
+    let before = holders[lamp].position(relativeTo: room.room)
+    room.decor.select(holders[table])
+    room.decor.beginDrag(at: [1.12, 2.4])
+    room.decor.drag(to: [2.12, 2.9])
+    room.decor.endDrag()
+    for _ in 0..<60 { room.decor.step(1 / 30, reduceMotion: true) }
+    let after = holders[lamp].position(relativeTo: room.room)
+    #expect(simd_distance(after, before) > 0.9)
   }
 
   @Test func whatStandsOnAPieceRidesOnIt() throws {
@@ -81,5 +158,6 @@ import Testing
 
     again.resetDecor()
     #expect(again.spots.load().isEmpty)
+    #expect(again.decor.plan.pieces[name]?.centre == [3, 3.35])
   }
 }

@@ -342,7 +342,8 @@ struct GenzRoomView: View {
       // The room draws none of the shop's furniture, so it offers no closet to add from.
       DecorControls(
         status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
-        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() })
+        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() },
+        onReset: { room.resetDecor() })
     }
   }
 
@@ -357,7 +358,8 @@ struct GenzRoomView: View {
 
   private func touch(_ room: GenzRoom) -> DecorTouch {
     DecorTouch(
-      session: room.decor, renovator: nil, floor: { [room] point in room.floorPoint(under: point) })
+      session: room.decor, renovator: nil,
+      floor: { [room] point, name in room.surfacePoint(under: point, for: name) })
   }
 
   /// While decorating, a finger on a piece picks it up, and the piece follows it until let go.

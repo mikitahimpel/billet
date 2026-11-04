@@ -12,6 +12,9 @@ struct GenzSoftPart: Hashable, Sendable {
 }
 
 extension GenzPiece.Kind {
+  /// A pillow or throw on the seat: the cat lies beside it rather than keeping well clear.
+  var isSoftSeatThing: Bool { isPillow || self == .blanket }
+
   /// The soft parts the cat goes round on this piece's top. Each is a little larger than the
   /// part as built, for the turn some of them are given and their stuffed bulge.
   var softParts: [GenzSoftPart] {
@@ -21,14 +24,6 @@ extension GenzPiece.Kind {
       GenzSoftPart(min: [x0, y0], max: [x1, y1], bottom: z0, top: z1)
     }
     switch self {
-    case .windowBench:
-      // The four pillows leaning back on the glass (GenzSeatPieces.pillows), and the throw
-      // folded three deep at the left end (foldedThrow).
-      return [
-        part(0.79, 2.11, 0, 0.7, 1.28, 2.35), part(2.04, 3.2, 0, 0.7, 1.28, 2.25),
-        part(3.13, 4.19, 0, 0.7, 1.28, 2.2), part(4.06, 4.94, 0, 0.7, 1.28, 2.05),
-        part(0.15, 1.6, 0.78, 1.62, 1.3, 1.6),
-      ]
     case .quiltedDaybed:
       return [
         part(0.25, 1.7, 0, 0.85, 0.78, 1.32), part(1.7, 3.0, 0, 0.85, 0.78, 1.32),
@@ -100,7 +95,8 @@ extension GenzLayout {
           GenzCatObstacle(
             box: DecorBox(
               centre: centre, half: [size.x / 2, size.y / 2] * share, yaw: placement.yaw),
-            top: placement.centre.z + size.z, sitOnTop: placement.piece.kind.catSitsOnTop))
+            top: placement.centre.z + size.z, sitOnTop: placement.piece.kind.catSitsOnTop,
+            builtIn: placement.piece.kind.isSoftSeatThing))
       }
       let axes = DecorBox.axes(placement.yaw)
       for part in placement.piece.kind.softParts {

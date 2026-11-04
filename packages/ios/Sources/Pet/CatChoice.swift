@@ -74,17 +74,12 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// Whether the cat picker offers it. Ilya's cat sinks its head into its body as it sleeps, which
-  /// every Idol cat with its big head does; it comes back once it is remade in the room's style. A
-  /// pet that already has it keeps it.
+  /// Whether the cat picker offers it. Every cat is offered: one whose sleep would sink its head
+  /// into its body (Ilya's) dozes in its loaf instead, set in its clip table.
   public var isListed: Bool {
     switch self {
-    case .idolIlya: false
-    case .gingerChonk, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger, .ragdoll,
-      .maineCoon,
-      .voidCat,
-      .siamese,
-      .splatGinger, .idolCalico, .idolGreyTabby:
+    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger,
+      .ragdoll, .maineCoon, .voidCat, .siamese, .splatGinger, .idolCalico, .idolGreyTabby:
       true
     }
   }

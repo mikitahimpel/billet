@@ -178,19 +178,28 @@ treat.
   and never again (`decorGestureHintShown` in the app's defaults).
 - A soft haptic tap as a piece is picked up, and a lighter one as it is set down.
 
-**What moves:**
-- Every piece standing on the floor can be moved. What stands on a piece rides with it, such as
-  the record player on its crate.
-- Two pieces stay put, because the cat's walks and the lamp's glow are laid out around them:
-  - the piece the cat lives on (the window seat or the bed);
-  - the table under the lamp.
-- Places are kept per furniture set (`genz.spots.windowSeat.<furniture>` in the app's
-  defaults; the key keeps the room's name so places saved before stay).
+**What moves:** everything but the window and the seat the cat lives on, each piece on its own
+surface:
+- **Floor:** the rug, pouf, plants, bookshelf, cat bed, side table, and the crate and speaker.
+- **Seat:** the four pillows, the throw, the mugs, the cardigan and the phone, along the seat's
+  top. The throw and the cardigan hang over its front edge, so they only slide along it and
+  don't turn (no Turn 90°). The cat lying there blocks a piece like anything else.
+- **Tops:** what stands on a piece moves on that piece's top and rides with it: the lamp and
+  candles on the side table, the record player on its crate. The lamp's light and its glow
+  follow the bulb wherever the table goes.
+- Pieces hung on the wall (shelves, polaroids, string lights) don't move yet.
+- The cat's walks on the seat go round pillows, mugs and the rest where they now stand.
+
+**Reset layout:** the ⋯ button next to undo puts every piece back where the room first had it.
+
+**Saved:** places are kept per furniture set (`genz.spots.windowSeat.<furniture>` in the app's
+defaults; the key keeps the room's name so places saved before stay). A piece on a top is kept
+in its base's space, so it stays on the table wherever the table goes.
 
 **Code:**
 - `DecorPlan.swift` is the placement model: grid and turn snapping, bounds, turned-rectangle
   collision, open spots and undo history. `DecorPlanTests` cover it.
-- `DecorSession` moves pieces in one room.
+- `DecorSession` moves pieces in one room, one `DecorPlan` per surface.
 - `DecorTouch` maps fingers and the controls onto it.
 - `DecorControls` is the SwiftUI overlay.
 

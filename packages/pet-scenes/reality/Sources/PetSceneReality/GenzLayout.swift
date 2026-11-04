@@ -201,8 +201,10 @@ extension GenzLayout {
     let high = simd_max(surface.max - margin, low)
     let spot = clearOfClutter(simd_clamp(point, low, high), within: low, high)
     let obstacles = catObstacles
+    let clutter = catClutter
     func fits(_ at: SIMD2<Float>) -> Bool {
-      catClearHeading(at: at, want: 0, obstacles: obstacles) != nil
+      !clutter.contains { $0.contains(at) }
+        && catClearHeading(at: at, want: 0, obstacles: obstacles) != nil
     }
     guard !obstacles.isEmpty, !fits(spot) else { return spot }
     // Out from it a ring of 8 cm at a time, the nearest fit in the first ring with one.

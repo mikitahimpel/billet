@@ -168,9 +168,11 @@ import Testing
     #expect(GenzOpening.warmth(sinceLanding: 10) == 0)
   }
 
+  /// Up to three; a pillow or a throw is one fabric, so it has the one.
   @Test(arguments: GenzPiece.Kind.allCases.filter { $0.idol == nil })
-  func everyPieceHasTwoOrThreeColourSlots(_ kind: GenzPiece.Kind) {
-    #expect((2...3).contains(kind.slotNames.count))
+  func everyPieceHasOneToThreeColourSlots(_ kind: GenzPiece.Kind) {
+    #expect((1...3).contains(kind.slotNames.count))
+    #expect(kind.slotNames.count >= 2 || kind.isSoftSeatThing)
     #expect(kind.standardSlots.count == kind.slotNames.count)
     #expect(!kind.title.isEmpty)
   }

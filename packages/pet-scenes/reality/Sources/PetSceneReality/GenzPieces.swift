@@ -33,6 +33,11 @@ struct GenzPiece: Hashable, Sendable {
     case stringLights
     case cardigan
     case candles
+    case pillowLarge
+    case pillowLinen
+    case pillowSquare
+    case pillowSmall
+    case blanket
     // Generated (FLUX.2-klein → Idol), each one model with its colour baked on: see IdolProp.
     case idolBeanBag
     case idolFloorLamp
@@ -93,6 +98,8 @@ extension GenzPiece.Kind {
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
       .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       []
+    case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall: ["fabric"]
+    case .blanket: ["knit"]
     }
   }
 
@@ -126,8 +133,27 @@ extension GenzPiece.Kind {
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
       .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       []
+    case .pillowLarge: [GenzColour(0xEADCC6).shaded(0.35)]
+    case .pillowLinen: [GenzColour(0xC2603F)]
+    case .pillowSquare: [GenzColour(0x8FA67E)]
+    case .pillowSmall: [GenzColour(0xD9A441)]
+    case .blanket: [GenzColour(0xD9A441)]
     }
   }
+
+  /// A pillow's shape: its width and height standing up, whether it is knitted or linen, and how
+  /// far it leans over to one side. Zero for anything that is not a pillow.
+  var pillow: (width: Float, height: Float, knit: Bool, roll: Float) {
+    switch self {
+    case .pillowLarge: (1.2, 1.0, true, 0.07)
+    case .pillowLinen: (1.05, 0.9, false, -0.05)
+    case .pillowSquare: (0.95, 0.84, false, 0.09)
+    case .pillowSmall: (0.74, 0.68, true, -0.12)
+    default: (0, 0, false, 0)
+    }
+  }
+
+  var isPillow: Bool { pillow.width > 0 }
 
   var title: String {
     switch self {
@@ -159,6 +185,11 @@ extension GenzPiece.Kind {
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
       .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       idol?.title ?? ""
+    case .pillowLarge: "Big knit pillow"
+    case .pillowLinen: "Linen pillow"
+    case .pillowSquare: "Square pillow"
+    case .pillowSmall: "Small knit pillow"
+    case .blanket: "Blanket"
     }
   }
 
@@ -196,6 +227,9 @@ extension GenzPiece.Kind {
         let size = prop.metres * GenzRoomPoint.perMetre
         return GenzRoomPoint(size.x, size.y, size.z)
       } ?? GenzRoomPoint(1, 1, 1)
+    case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall:
+      GenzRoomPoint(pillow.width + 0.12, 0.7, pillow.height + 0.07)
+    case .blanket: GenzRoomPoint(1.3, 0.84, 0.3)
     }
   }
 }
@@ -257,6 +291,8 @@ extension GenzKit {
     case .idolBeanBag, .idolFloorLamp, .idolThrow, .idolMonstera, .idolCactus, .idolBooks,
       .idolRecordPlayer, .idolMugs, .idolStringLights, .idolRug, .idolCatBed:
       parts = piece.kind.idol.map(idolParts) ?? []
+    case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall: parts = pillow(piece)
+    case .blanket: parts = blanket(piece)
     }
     for part in parts { root.addChild(part) }
     return root
