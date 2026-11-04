@@ -1,7 +1,8 @@
 """Paints the far cards of the 3D night street into one texture, in the flat views' night palette:
 the roofline of the next street over (with a few lit windows and its trees), then the far hills,
 the town at their foot, the city's towers with lit floors, the water tower and the radio mast.
-Also a glow sprite for the lamps and the far ground's fade to the horizon.
+Also a glow sprite for the lamps, the far ground's fade to the horizon, the night sky's gradient
+behind everything and a star.
 
 Reads the layout make_street_view.py wrote; each card is painted in its own world units, so a
 window is the same size on screen wherever its card stands.
@@ -34,6 +35,8 @@ SS = 2  # painted at twice the size, then halved, for smooth edges
 
 FAR, MIDDLE, HORIZON, STREET = 0x20365A, 0x14233D, 0x3A5A86, 0x0E1A2E
 LAMP, LAMP_CORE = 0xFFC36B, 0xFFE2B0
+# The flat views' night sky (ViewLook, night): its middle; the horizon is HORIZON.
+SKY_MIDDLE = 0x162846
 
 
 def rgb(h, a=255):
@@ -48,6 +51,20 @@ def mixed(a, b, t):
 
 def lit(h, s):
     return mixed(h, 0xFFFFFF if s >= 0 else 0x000000, abs(s))
+
+
+# The sky's colour by height in units, from the top of its wall to below the horizon, which sits
+# at the far card's foot as the flat view's does at its hills.
+# Through the glass and the room's grade the sky reads a good deal darker than it is painted, and
+# a camera pulled in close looks up through the window, so the sky never goes darker than the flat
+# view's middle and is mostly towards its horizon, as the flat view's window shows it.
+SKY_STOPS = [
+    (240.0, mixed(SKY_MIDDLE, HORIZON, 0.3)),
+    (100.0, mixed(SKY_MIDDLE, HORIZON, 0.6)),
+    (30.0, mixed(SKY_MIDDLE, HORIZON, 0.85)),
+    (-5.0, HORIZON),
+    (-60.0, mixed(HORIZON, STREET, 0.6)),
+]
 
 
 class Card:
@@ -280,6 +297,35 @@ def ground(draw, px):
         draw.line([(x, y + j), (x + w, y + j)], fill=rgb(mixed(far, near, (j / h) ** 0.6)))
 
 
+def sky(draw, card):
+    """The sky's gradient down the strip: its rows run evenly from the wall's top to its foot."""
+    x, y, w, h = [v * SS for v in card["px"]]
+    z1, z0 = card["z1"], card["z0"]
+    for j in range(h):
+        z = z1 + (z0 - z1) * (j + 0.5) / h
+        for (za, ca), (zb, cb) in zip(SKY_STOPS, SKY_STOPS[1:]):
+            if zb <= z <= za:
+                t = (za - z) / (za - zb)
+                colour = mixed(ca, cb, t * t * (3 - 2 * t))
+                break
+        else:
+            colour = SKY_STOPS[0][1] if z > SKY_STOPS[0][0] else SKY_STOPS[-1][1]
+        draw.line([(x, y + j), (x + w - 1, y + j)], fill=rgb(colour))
+
+
+def star(image, px):
+    """A soft white point, as the flat view's stars are."""
+    x, y, w, h = [v * SS for v in px]
+    sprite = Image.new("RGBA", (w, h))
+    pixels = sprite.load()
+    for j in range(h):
+        for i in range(w):
+            d = math.hypot((i + 0.5) / w * 2 - 1, (j + 0.5) / h * 2 - 1)
+            a = max(0.0, 1 - d) ** 2.6
+            pixels[i, j] = (0xEE, 0xF2, 0xF7, int(255 * 0.9 * a))
+    image.alpha_composite(sprite, (x, y))
+
+
 def fade_edges(image):
     """Each card fades out over its outer tenth on either side, into the sky behind."""
     alpha = image.getchannel("A")
@@ -329,9 +375,13 @@ def main():
                 skyline(Card(draw, card))
         elif name == "ground":
             ground(draw, card["px"])
+        elif name == "sky":
+            sky(draw, card)
     for card in INFO["cards"]:
         if card["name"] == "glow":
             glow(image, card["px"])
+        elif card["name"] == "star":
+            star(image, card["px"])
     fade_edges(image)
     image = image.resize(SIZE, Image.LANCZOS)
     bleed(image).save(OUT / "street-cards.png", optimize=True)
