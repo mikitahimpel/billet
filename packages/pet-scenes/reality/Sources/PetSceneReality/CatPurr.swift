@@ -18,6 +18,10 @@ final class CatPurr {
   static let heartLife: TimeInterval = 1.4
 
   private(set) var isPurring = false
+  /// Whether the cat purrs on its own, happy and close, with no finger on it.
+  var brainPurring = false
+  /// Either purr, for the haptic.
+  var purrs: Bool { isPurring || brainPurring }
   private(set) var hearts: [Heart] = []
   /// How strong the purr under the finger is, from 0 to 1: the chin purrs hardest.
   var strength = 0.5
@@ -98,15 +102,16 @@ struct CatPurrOverlay: View {
     .accessibilityHidden(true)
     .sensoryFeedback(trigger: pulse) { _, _ in .impact(flexibility: .soft, intensity: pulseLevel) }
     .sensoryFeedback(trigger: beat) { _, _ in beatFeedback }
-    .task(id: purr.isPurring) {
+    .task(id: purr.purrs) {
       // A purr rumbles in breaths: a lighter flutter breathing in, a fuller one breathing out,
       // as strong as the spot under the finger makes it.
       var start = ContinuousClock.now
-      while purr.isPurring, !Task.isCancelled {
+      while purr.purrs, !Task.isCancelled {
         let into = (ContinuousClock.now - start) / CatPurrOverlay.breath
         if into >= 1 { start = .now }
         let breathingIn = into.truncatingRemainder(dividingBy: 1) < 0.45
-        pulseLevel = purr.strength * (breathingIn ? 0.5 : 0.85)
+        let strength = purr.isPurring ? purr.strength : 0.35
+        pulseLevel = strength * (breathingIn ? 0.5 : 0.85)
         pulse += 1
         try? await Task.sleep(for: .milliseconds(breathingIn ? 85 : 65))
       }

@@ -1,7 +1,6 @@
 import CoreGraphics
 import DesignSystem
 import Foundation
-import ImageIO
 import Pet
 import SwiftUI
 import WidgetBridge
@@ -11,21 +10,14 @@ import WidgetKit
 public struct PictureContext: Sendable {
   public var snapshot: WidgetSnapshot?
   public var drawing: CGImage?
-  /// Encoded still of the sleeping cat, if the app has published one.
-  public var catPose: Data?
-  /// Encoded still of the cat sitting up, shown for an awake mood while its needs are on.
-  public var catAwakePose: Data?
   public var now: Date
   public var calendar: Calendar
 
   public init(
-    snapshot: WidgetSnapshot?, drawing: CGImage?, catPose: Data? = nil,
-    catAwakePose: Data? = nil, now: Date, calendar: Calendar
+    snapshot: WidgetSnapshot?, drawing: CGImage?, now: Date, calendar: Calendar
   ) {
     self.snapshot = snapshot
     self.drawing = drawing
-    self.catPose = catPose
-    self.catAwakePose = catAwakePose
     self.now = now
     self.calendar = calendar
   }
@@ -171,10 +163,6 @@ public struct PictureView: View {
       HouseAtWindow(lit: context.phase == .night || context.phase == .dusk)
     case .partnerWindow:
       HouseAtWindow(lit: context.partnerHere)
-    case .catMood:
-      CatMoodArt(
-        symbol: caption.symbol, pose: moodPose,
-        thought: context.snapshot?.life?.thought(at: context.now).map(Self.thoughtSymbol))
     case .streak:
       // The flame stands behind the plate, so the number still reads first.
       ZStack(alignment: .bottom) {
@@ -185,26 +173,6 @@ public struct PictureView: View {
       HousePlate(caption.number ?? 0, scale: layout == .small ? 1 : 1.5)
     case .partnerDrawing:
       EmptyView()
-    }
-  }
-
-  private var mood: CatMood? {
-    context.snapshot.map { CatMood(snapshot: $0, now: context.now, calendar: context.calendar) }
-  }
-
-  /// The still for the mood: asleep, or, while the cat's needs are on, sitting up.
-  private var moodPose: Data? {
-    if mood == .sleepy { return context.catPose }
-    return context.snapshot?.life == nil ? nil : context.catAwakePose
-  }
-
-  /// What the cat thinks of in the widget's bubble, as in the app.
-  static func thoughtSymbol(_ need: PetNeed) -> String {
-    switch need {
-    case .full: "fish.fill"
-    case .rested: "zzz"
-    case .loved: "heart.fill"
-    case .playful: "tennisball.fill"
     }
   }
 
@@ -290,48 +258,6 @@ struct HouseAtWindow: View {
       .frame(width: geometry.size.width, height: geometry.size.height)
     }
     .aspectRatio(1, contentMode: .fit)
-  }
-}
-
-private struct CatMoodArt: View {
-  let symbol: String
-  let pose: Data?
-  var thought: String?
-
-  var body: some View {
-    art.overlay(alignment: .topTrailing) {
-      if let thought {
-        Image(systemName: thought)
-          .font(.system(size: 13, weight: .semibold, design: .rounded))
-          .foregroundStyle(Palette.clay.color)
-          .padding(7)
-          .background(Palette.paper.color, in: Circle())
-          .widgetAccentable()
-          .accessibilityHidden(true)
-      }
-    }
-  }
-
-  @ViewBuilder private var art: some View {
-    if let image = Self.decode(pose) {
-      Image(decorative: image, scale: 1)
-        .resizable()
-        .scaledToFit()
-    } else {
-      Image(systemName: symbol)
-        .resizable()
-        .scaledToFit()
-        .foregroundStyle(Palette.gold.color)
-        .padding(Spacing.large)
-        .widgetAccentable()
-    }
-  }
-
-  private static func decode(_ data: Data?) -> CGImage? {
-    guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else {
-      return nil
-    }
-    return CGImageSourceCreateImageAtIndex(source, 0, nil)
   }
 }
 

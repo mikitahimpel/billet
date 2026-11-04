@@ -25,7 +25,7 @@ let library: [(name: String, dependencies: [String])] = [
   ("PetSceneCatalog", ["Persistence", "Pet", "PetScene"]),
   // Shared by the app, the widget and the settings screen: flags, the published snapshot, the
   // picture rules and the queue of actions taken outside the app.
-  ("WidgetBridge", ["DesignSystem", "Persistence", "Pet"]),
+  ("WidgetBridge", ["DesignSystem", "Delivery", "Persistence", "Pet"]),
   (
     "Labs",
     ["Domain", "Wire", "Ink", "DesignSystem", "Persistence", "Pet", "WidgetBridge", "FeatureInbox"]
@@ -103,7 +103,8 @@ let testTargets: [Target] = [
   .testTarget(
     name: "FeatureInboxTests",
     dependencies: ["FeatureInbox", "Persistence", "Transport", "Wire"]),
-  .testTarget(name: "WidgetBridgeTests", dependencies: ["Persistence", "Pet", "WidgetBridge"]),
+  .testTarget(
+    name: "WidgetBridgeTests", dependencies: ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
   .testTarget(name: "PetTests", dependencies: ["BilletKit", "Pet"]),
   .testTarget(
     name: "LabsTests",

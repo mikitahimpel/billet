@@ -21,7 +21,6 @@ struct PetSpeciesTests {
     #expect(CatModel.allCases.contains(.hero))
     #expect(CatChoice.standard.model != .hero)
     #expect(CatModel.hero.coats == [.natural, .greyWhite, .black])
-    #expect(CatModel.hero.paintsCoatTextures)
   }
 
   @Test func theHerosBigHeadHoldsANoteFurtherOut() {

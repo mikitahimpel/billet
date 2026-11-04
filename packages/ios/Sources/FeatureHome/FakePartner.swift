@@ -8,8 +8,6 @@ import Wire
 struct FakePartnerPace: Sendable {
   /// Before the partner shows as here.
   var arrival: Duration
-  /// After a note is sent, before the partner opens it.
-  var open: Duration
   /// After a note is sent, before the partner reacts to it.
   var reaction: Duration
   /// After a note is sent, before the partner draws one back.
@@ -20,8 +18,6 @@ struct FakePartnerPace: Sendable {
   var treatBack: Duration
   /// How long a sealed note from the partner stays closed. Short, so it can be watched opening.
   var sealedFor: Duration
-  /// How long the partner keeps a finger on the cat.
-  var holdFor: Duration
   /// The advent doors the partner has already filled when it arrives.
   var adventDoors: [Int]
   /// After a gift is wrapped, before the partner unwraps it.
@@ -32,9 +28,9 @@ struct FakePartnerPace: Sendable {
   var idle: [Duration]
 
   static let calm = FakePartnerPace(
-    arrival: .seconds(1), open: .seconds(3), reaction: .seconds(5), reply: .seconds(12),
+    arrival: .seconds(1), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
-    treatBack: .seconds(5), sealedFor: .seconds(90), holdFor: .seconds(10),
+    treatBack: .seconds(5), sealedFor: .seconds(90),
     adventDoors: [3, 9, 15, 21], giftOpened: .seconds(6), lampFollows: .seconds(8),
     idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
 }
@@ -83,7 +79,6 @@ actor FakePartnerRoom {
   }
 
   func noteSent(_ id: UUID) {
-    after(pace.open) { $0.emit(.noteOpened(id)) }
     after(pace.reaction) { $0.react(to: id) }
     after(pace.reply) { $0.drawNote() }
   }
@@ -205,9 +200,7 @@ actor FakePartnerRoom {
     case 1: petCat()
     case 2: giveTreat()
     case 3: sealNote()
-    case 4:
-      holdCat()
-      playWithCat()
+    case 4: playWithCat()
     case 5: changeLamp()
     default: sendGift()
     }
@@ -257,11 +250,6 @@ actor FakePartnerRoom {
 
   private func emitGlow() {
     emit(.partnerGlow(PartnerGlow(colour: colour, lampOn: lampOn, timeZoneID: Self.timeZoneID)))
-  }
-
-  private func holdCat() {
-    emit(.partnerHolding(true))
-    after(pace.holdFor) { $0.emit(.partnerHolding(false)) }
   }
 
   private func sealNote() {

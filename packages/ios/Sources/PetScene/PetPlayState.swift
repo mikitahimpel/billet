@@ -19,9 +19,6 @@ public struct PetPlayState: Hashable, Sendable {
   /// Counts up each time the pair gives the cat a treat from the closet, and `lastTreat` is which.
   public var treatsUsed: Int
   public var lastTreat: ShopItem.ID?
-  /// True while the cat is away with the partner. A scene can leave its place empty; the host
-  /// shows the empty cushion over scenes that do not.
-  public var catAway: Bool
   /// What the pet's needs ask of its behaviour, or nil when its life is not switched on.
   public var life: LifeDrive?
   /// The needs for a scene to show in the room itself: the bowl, a toy, the lamp's warmth. Nil
@@ -39,7 +36,7 @@ public struct PetPlayState: Hashable, Sendable {
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
-    catAway: Bool = false, life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
+    life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
     brain: CatBrainFrame? = nil, brainSpeed: Double = 1, light: RoomLight = .standard
   ) {
     self.treat = treat
@@ -48,7 +45,6 @@ public struct PetPlayState: Hashable, Sendable {
     self.room = room
     self.treatsUsed = treatsUsed
     self.lastTreat = lastTreat
-    self.catAway = catAway
     self.life = life
     self.lifeNeeds = lifeNeeds
     self.brain = brain

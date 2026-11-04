@@ -26,8 +26,6 @@ final class PairSession {
   let isFakePartner: Bool
   /// The lab switches. Each experiment checks its own.
   let labs: WidgetFeaturesModel
-  /// The notes hung in frames, for the "framed notes" experiment.
-  let frames: FramedNotes
   /// Notes held back until a set time, for the "sealed note" experiment.
   let sealed: SealedBoxStore
   /// The porch light, for the experiment that lets the streak wait.
@@ -58,11 +56,11 @@ final class PairSession {
   private(set) var reactionsSeen = 0
   private(set) var lastReaction: Reaction?
   /// The cat's trip with the last note this device sent, for the "cat came back" experiment.
-  private(set) var catReturn = CatReturn()
   /// Both fingers on the cat, for the "two wisps" experiment.
-  private(set) var hold = TogetherHold()
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
+  /// The partner's latest meal or game for the cat, to show for a moment.
+  private(set) var careNotice: CatCareNotice?
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
@@ -100,7 +98,6 @@ final class PairSession {
     self.playStorage = playStorage
     self.isFakePartner = isFakePartner
     self.labs = labs
-    frames = FramedNotes(key: isFakePartner ? "labs.framedNotes.fake" : "labs.framedNotes")
     advent = AdventStore(
       year: Calendar.current.component(.year, from: .now),
       key: isFakePartner ? "labs.advent.fake" : "labs.advent")
@@ -122,8 +119,8 @@ final class PairSession {
     self.trips = trips
     play = PairPlay(device: room.device, saved: playStorage?.load())
     let porch = porch
-    life.frozen = { [labs] in
-      guard labs.isOn(LabExperiment.porchLight), let light = porch.light else { return [] }
+    life.frozen = {
+      guard let light = porch.light else { return [] }
       return [DateInterval(start: light.from, end: light.ends(calendar: .current))]
     }
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
@@ -160,7 +157,6 @@ final class PairSession {
       notes = (notes.filter { !storedIDs.contains($0.id) } + stored)
         .sorted { $0.date > $1.date }
       notesFailedToLoad = false
-      frames.prune(keeping: notes)
     } catch {
       notesFailedToLoad = true
     }
@@ -203,8 +199,7 @@ final class PairSession {
 
   /// The shared streak on `day`, counting through the nights the porch light covers.
   func streak(today day: String, calendar: Calendar) -> Int {
-    let paused =
-      labs.isOn(LabExperiment.porchLight) ? porch.covered(now: now(), calendar: calendar) : []
+    let paused = porch.covered(now: now(), calendar: calendar)
     return play.ledger.streak(today: day, calendar: calendar, paused: paused)
   }
 
@@ -230,16 +225,10 @@ final class PairSession {
     Task { [delivery] in await delivery.signal(.giftOpened(id: id)) }
   }
 
-  /// This phone's finger went down on the cat, or came up.
-  func holdChanged(_ holding: Bool) {
-    hold.iHold(holding, at: now())
-  }
-
   private func dispatch(_ strokes: [Stroke], id: UUID) {
     // The note carries its own event to the room, under the note's ID.
     life.record(.note, id: id)
     store.send(.drawingSent(strokes, id: id))
-    catReturn.sent(id)
     keep(strokes, .sent, id: id)
   }
 
@@ -427,14 +416,11 @@ final class PairSession {
       gifts.partnerOpened(id)
     case .partnerGlow(let glow):
       lamp.partnerGlows(glow)
-    case .partnerHolding(let holding):
-      hold.partnerHolds(holding, at: now())
-    case .noteOpened(let id):
-      catReturn.opened(id, at: now())
     case .partnerPetted:
       play.petReceived()
     case .life(let events):
       life.receive(events)
+      notePartnerCare(events)
     case .treats(let days):
       applyTreat { $0.treatsReceived(days) }
     case .catName(let name):
@@ -450,6 +436,19 @@ final class PairSession {
     }
   }
 
+  /// Remembers the partner's newest meal or game, if it is fresh: an old one sent again on a
+  /// reconnect is not news.
+  private func notePartnerCare(_ events: [LifeEvent]) {
+    let current = now()
+    let fresh = events.filter { event in
+      event.by != life.me && CatCareNotice.shows(event.kind)
+        && abs(event.at.timeIntervalSince(current)) < CatCareNotice.freshFor
+        && event.id != careNotice?.id
+    }
+    guard let newest = fresh.max(by: { $0.at < $1.at }) else { return }
+    careNotice = CatCareNotice(id: newest.id, kind: newest.kind)
+  }
+
   private func keep(_ strokes: [Stroke], _ direction: NoteRecord.Direction, id: UUID) {
     let note = NoteRecord(id: id, direction: direction, date: now(), strokes: strokes)
     // Shown straight away: a failed save costs the note after a restart, not on screen.
@@ -458,6 +457,34 @@ final class PairSession {
     lastSave = Task { [archive] in
       await previous?.value
       _ = try? await archive.add(note)
+    }
+  }
+}
+
+/// The partner fed or played with the cat on their phone.
+struct CatCareNotice: Hashable, Sendable {
+  let id: UUID
+  let kind: LifeEvent.Kind
+
+  /// How old an event can be and still be shown, in seconds.
+  static let freshFor: TimeInterval = 180
+
+  /// Meals and games show; pets have their own hand over the cat, and notes their own arrival.
+  static func shows(_ kind: LifeEvent.Kind) -> Bool {
+    switch kind {
+    case .feed, .play: true
+    case .pet, .note, .sleep, .shoo: false
+    }
+  }
+
+  /// "Your partner fed Mochi 🐟".
+  func line(catName: String?) -> String {
+    let cat = catName ?? "the cat"
+    switch kind {
+    case .feed: return "Your partner fed \(cat) 🐟"
+    case .play: return "Your partner played with \(cat) 🧶"
+    case .pet: return "Your partner petted \(cat) 💛"
+    case .note, .sleep, .shoo: return "Your partner looked in on \(cat)"
     }
   }
 }

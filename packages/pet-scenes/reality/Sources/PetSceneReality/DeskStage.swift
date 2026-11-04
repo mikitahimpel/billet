@@ -636,7 +636,7 @@ final class DeskStage: RehearsedStage {
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(
       model: model, clips: CatCatalog.clips(shown.model), anatomy: shown.model.anatomy)
-    if let palette = CatCatalog.palette(shown.model, coat: shown.coat) { rig?.paint(palette) }
+    if let palette = CatCatalog.coatTexture(shown.model, coat: shown.coat) { rig?.paint(palette) }
     for child in Array(catHolder.children) { child.removeFromParent() }
     catHolder.addChild(model)
     if let receiver { SceneParts.visit(model) { $0.components.set(receiver) } }

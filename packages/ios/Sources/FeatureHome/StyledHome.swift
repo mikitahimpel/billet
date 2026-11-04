@@ -3,6 +3,7 @@ import DesignSystem
 import FeatureInbox
 import Foundation
 import Ink
+import Labs
 import Pet
 import PetScene
 import SwiftUI
@@ -27,12 +28,15 @@ struct StyledHome: View {
   var onDecorate: (() -> Void)?
   /// Opens the streak's flame, or `nil` when the chip only shows the count.
   var flame: StreakFlameHost?
+  /// The cat's needs and mood, for the paw by the streak, or nil to leave it out.
+  var mood: CatNeedsSnapshot?
 
   @State private var latestDrawing: CGImage?
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
   /// zooms closed.
   @State private var flameState: FlameSceneState?
   @State private var isFlameOpen = false
+  @State private var isMoodOpen = false
   @Namespace private var zoom
 
   private var latestReceived: NoteRecord? {
@@ -62,6 +66,14 @@ struct StyledHome: View {
       }
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
+    .sheet(isPresented: $isMoodOpen) {
+      if let mood {
+        CatNeedsCard(mood)
+          .presentationDetents([.height(250)])
+          .presentationBackground(Self.ground)
+          .preferredColorScheme(.dark)
+      }
+    }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
         flame.view(flameState) { isFlameOpen = false }
@@ -72,6 +84,9 @@ struct StyledHome: View {
   private var header: some View {
     HStack(spacing: Spacing.small) {
       streakChip
+      if let mood {
+        CatMoodChip(mood) { isMoodOpen = true }
+      }
       if let onDecorate {
         IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
           .accessibilityIdentifier("styledDecorateButton")

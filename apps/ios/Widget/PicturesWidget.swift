@@ -18,20 +18,15 @@ struct PictureProvider: TimelineProvider {
   private struct Loaded {
     let inputs: PicturePlan.Inputs
     let drawing: CGImage?
-    let pose: Data?
-    let awakePose: Data?
   }
 
   private func load() -> Loaded {
     let features = WidgetFeaturesStore.appGroup()?.load() ?? WidgetFeatures()
     let snapshot = WidgetSnapshotStore.appGroup()?.load()
     let drawing = LatestNoteView.loadLatest()
-    let storage = try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier)
-    let pose = (try? storage?.read(PetPose.sleeping.fileName)) ?? nil
-    let awakePose = (try? storage?.read(PetPose.proud.fileName)) ?? nil
     let inputs = PicturePlan.Inputs(
       features: features, snapshot: snapshot, hasDrawing: drawing != nil, calendar: .current)
-    return Loaded(inputs: inputs, drawing: drawing, pose: pose, awakePose: awakePose)
+    return Loaded(inputs: inputs, drawing: drawing)
   }
 
   private func entry(_ loaded: Loaded, at date: Date) -> PictureEntry {
@@ -39,8 +34,8 @@ struct PictureProvider: TimelineProvider {
       date: date,
       choice: PicturePlan.choice(loaded.inputs, at: date),
       context: PictureContext(
-        snapshot: loaded.inputs.snapshot, drawing: loaded.drawing, catPose: loaded.pose,
-        catAwakePose: loaded.awakePose, now: date, calendar: loaded.inputs.calendar))
+        snapshot: loaded.inputs.snapshot, drawing: loaded.drawing, now: date,
+        calendar: loaded.inputs.calendar))
   }
 
   func placeholder(in context: Context) -> PictureEntry {

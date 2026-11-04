@@ -14,7 +14,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
-import { adminApi, AdminRoutes, CurrentAdmin } from "../src/admin-routes.ts";
+import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
 
@@ -51,7 +51,11 @@ const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
     AdminRoutes.pipe(
       Layer.provide(
-        Layer.mergeAll(FlagsService.layer, Layer.succeed(CurrentAdmin, { email })).pipe(
+        Layer.mergeAll(
+          FlagsService.layer,
+          Layer.succeed(CurrentAdmin, { email }),
+          Layer.succeed(PanelEnvironment, { name: "dev" }),
+        ).pipe(
           Layer.provideMerge(
             Layer.mergeAll(
               Layer.succeed(PairingRepository, pairing.repository),
@@ -121,7 +125,10 @@ beforeEach(() => {
 
 describe("the admin API", () => {
   it("says who is signed in through Access", async () => {
-    expect(await call(adminApi.me)).toEqual({ status: 200, body: { email: "owner@example.com" } });
+    expect(await call(adminApi.me)).toEqual({
+      status: 200,
+      body: { email: "owner@example.com", environment: "dev" },
+    });
   });
 
   it("lists every registry entry with its live configuration, never edited yet", async () => {
@@ -239,6 +246,37 @@ describe("the admin API", () => {
       0,
     ]);
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
+  });
+
+  it("builds the overview over 7 or 90 days, and refuses any other range", async () => {
+    events.push(
+      { pairId: "p1", userId: "u1", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "NoteSent", day: today, count: 4, firstAt: 3 },
+    );
+    const week = await call(`${adminApi.overview}?days=7`);
+    expect(week.status).toBe(200);
+    expect(week.body.daily).toHaveLength(7);
+    expect(week.body.range).toMatchObject({ days: 7, to: today });
+    expect(week.body.stats.newPairs).toMatchObject({ current: 1, previous: 0 });
+    expect((await call(`${adminApi.overview}?days=90`)).body.stats.dau.series).toHaveLength(90);
+    expect((await call(`${adminApi.overview}?days=8`)).status).toBe(400);
+  });
+
+  it("counts each event in the app over the range", async () => {
+    events.push(
+      { pairId: "p1", userId: "u1", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "PairClaimed", day: today, count: 1, firstAt: 2 },
+      { pairId: "p1", userId: "u2", name: "NoteSent", day: today, count: 4, firstAt: 3 },
+    );
+    const { status, body } = await call(`${adminApi.appEvents}?days=7`);
+    expect(status).toBe(200);
+    expect(body.days).toHaveLength(7);
+    const noteSent = body.events.find(({ name }: { name: string }) => name === "NoteSent");
+    expect(noteSent).toMatchObject({ source: "server", total: 4, pairs7d: 1, lastDay: today });
+    const widget = body.events.find(({ name }: { name: string }) => name === "WidgetAdded");
+    expect(widget).toMatchObject({ total: 0, firstDay: null, lastDay: null });
+    expect((await call(`${adminApi.appEvents}?days=1`)).status).toBe(400);
   });
 
   describe("pairs", () => {

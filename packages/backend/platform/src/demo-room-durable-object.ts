@@ -29,6 +29,13 @@ export interface DemoRoomEnv {
 }
 
 const NOTE_PATH = /^\/demo\/rooms\/[^/]+\/notes\/([^/]+)$/;
+const PLAYS_PATH = /^\/demo\/rooms\/[^/]+\/plays$/;
+/** The most plays one `POST .../plays` may carry: a widget's treat is a treat and a feed. */
+export const MAX_POSTED_PLAYS = 2;
+/** The largest body `POST .../plays` reads: two small play frames. */
+export const MAX_POSTED_BYTES = 2048;
+/** What a widget may post without a socket: small things done for the cat. */
+const POSTABLE_KINDS: ReadonlySet<unknown> = new Set(["pet", "treat", "feed"]);
 const TOKEN = /^[0-9a-fA-F]{32,200}$/;
 
 interface QueuedNote {
@@ -71,6 +78,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     const url = new URL(request.url);
     const noteMatch = NOTE_PATH.exec(url.pathname);
     if (noteMatch !== null) return this.readNote(id, (noteMatch[1] ?? "").toLowerCase());
+    if (PLAYS_PATH.test(url.pathname)) return this.postPlays(id, request);
     if (request.headers.get("Upgrade") !== "websocket") return new Response(null, { status: 426 });
     const code = request.headers.get(CODE_HEADER);
     if (code !== null) await this.ctx.storage.put("code", code);
@@ -119,7 +127,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       return;
     }
     if (frame["type"] === "play") {
-      await this.handlePlay(socket, sender, frame);
+      const acked = await this.handlePlay(sender, frame);
+      if (acked !== undefined) socket.send(JSON.stringify({ type: "ack", id: acked }));
       return;
     }
     if (frame["type"] !== "note") return;
@@ -175,12 +184,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * the whole table goes to both sockets.
    */
   private async handlePlay(
-    socket: WebSocket,
     sender: string,
     frame: Readonly<Record<string, unknown>>,
-  ): Promise<void> {
+  ): Promise<string | undefined> {
     const play = parsePlay(frame);
-    if (play === undefined) return;
+    if (play === undefined) return undefined;
     const seen = (await this.ctx.storage.get<string[]>("seen")) ?? [];
     if (!seen.includes(play.id)) {
       await this.ctx.storage.put("seen", [...seen, play.id].slice(-200));
@@ -238,7 +246,37 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         });
       }
     }
-    socket.send(JSON.stringify({ type: "ack", id: play.id }));
+    return play.id;
+  }
+
+  /**
+   * A pet, a treat or a feed sent without a socket, as a home-screen widget does. It goes the way
+   * the same play from a socket goes, but the sender's queued notes and pets stay queued and no
+   * presence is announced: a widget is not the app. `204` once every play was taken.
+   */
+  private async postPlays(device: string, request: Request): Promise<Response> {
+    const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
+    if (!devices.includes(device)) return new Response(null, { status: 404 });
+    const text = await request.text();
+    if (new TextEncoder().encode(text).length > MAX_POSTED_BYTES) {
+      return new Response(null, { status: 413 });
+    }
+    let body: unknown;
+    try {
+      body = JSON.parse(text);
+    } catch {
+      return new Response(null, { status: 400 });
+    }
+    if (!Array.isArray(body) || body.length === 0 || body.length > MAX_POSTED_PLAYS) {
+      return new Response(null, { status: 400 });
+    }
+    const frames: Array<Readonly<Record<string, unknown>>> = body.filter(isRecord);
+    const valid = frames.every(
+      (frame) => POSTABLE_KINDS.has(frame["kind"]) && parsePlay(frame) !== undefined,
+    );
+    if (frames.length !== body.length || !valid) return new Response(null, { status: 400 });
+    for (const frame of frames) await this.handlePlay(device, frame);
+    return new Response(null, { status: 204 });
   }
 
   /** Keeps `event` in the cat's life and sends it to both sockets, so both phones fold it. */

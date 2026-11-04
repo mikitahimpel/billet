@@ -48,12 +48,9 @@ import Testing
     }
   }
 
-  @Test func lockScreenNeedsItsOwnFlagToo() {
+  @Test func theLockScreenFollowsTheButtonFlags() {
     var features = WidgetFeatures()
-    features.set(.lockScreenButtons, on: false)
-    #expect(decide(.pet, .lockScreen, features: features) == .failure(.off))
-    #expect((try? decide(.pet, .home, features: features).get()) != nil)
-    features.set(.lockScreenButtons, on: true)
+    #expect((try? decide(.pet, .lockScreen, features: features).get()) != nil)
     features.set(.buttonPet, on: false)
     #expect(decide(.pet, .lockScreen, features: features) == .failure(.off))
   }
@@ -85,17 +82,11 @@ import Testing
         == .failure(.duplicate))
   }
 
-  @Test(arguments: [
-    (WidgetActionKind.pet, WidgetFeature.controlPet),
-    (.heart, .controlHeart),
-    (.openCanvas, .controlCanvas),
-  ])
-  func eachControlChecksItsOwnFlag(_ kind: WidgetActionKind, _ flag: WidgetFeature) {
+  /// A control is on once it is added in iOS; the button flags on the Home Screen do not switch
+  /// it.
+  @Test(arguments: [WidgetActionKind.pet, .heart, .openCanvas])
+  func aControlNeedsNoFlag(_ kind: WidgetActionKind) {
     #expect(decide(kind, .control).isSuccess)
-    var features = WidgetFeatures()
-    features.set(flag, on: false)
-    #expect(decide(kind, .control, features: features) == .failure(.off))
-    // The button flags on the Home Screen do not switch the controls.
     var buttons = WidgetFeatures()
     for button in [WidgetFeature.buttonPet, .buttonHeart, .buttonTreat] {
       buttons.set(button, on: false)
@@ -183,8 +174,7 @@ extension Result {
     #expect(ActionButtonState.kinds(features: features, surface: .home) == [.treat, .pet, .heart])
     features.set(.buttonPet, on: false)
     #expect(ActionButtonState.kinds(features: features, surface: .home) == [.treat, .heart])
-    features.set(.lockScreenButtons, on: false)
-    #expect(ActionButtonState.kinds(features: features, surface: .lockScreen).isEmpty)
+    #expect(ActionButtonState.kinds(features: features, surface: .lockScreen) == [.treat, .heart])
   }
 }
 

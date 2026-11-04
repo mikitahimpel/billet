@@ -9,8 +9,6 @@ import WidgetKit
 
 struct BedsideEntry: TimelineEntry {
   let date: Date
-  /// False when the Labs switch is off, so the widget says so instead of showing the house.
-  let enabled: Bool
   let pose: UIImage?
   let note: CGImage?
 }
@@ -19,16 +17,15 @@ struct BedsideEntry: TimelineEntry {
 /// standing on a bedside table in StandBy.
 struct BedsideProvider: TimelineProvider {
   private func entry() -> BedsideEntry {
-    let features = WidgetFeaturesStore.appGroup()?.load() ?? WidgetFeatures()
     let storage = try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier)
     let data = try? storage?.read(PetPose.sleeping.fileName)
     return BedsideEntry(
-      date: .now, enabled: features.isOn(LabExperiment.bedsideHouse),
+      date: .now,
       pose: data.flatMap(UIImage.init(data:)), note: NoteImage.loadLatest())
   }
 
   func placeholder(in context: Context) -> BedsideEntry {
-    BedsideEntry(date: .now, enabled: true, pose: nil, note: nil)
+    BedsideEntry(date: .now, pose: nil, note: nil)
   }
 
   func getSnapshot(in context: Context, completion: @escaping (BedsideEntry) -> Void) {
@@ -45,42 +42,32 @@ struct BedsideView: View {
   let entry: BedsideEntry
 
   var body: some View {
-    Group {
-      if !entry.enabled {
-        Text("Switched off in billet's Labs")
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
-          .multilineTextAlignment(.center)
-          .padding(Spacing.medium)
+    ZStack(alignment: .bottomTrailing) {
+      if let pose = entry.pose {
+        Image(uiImage: pose)
+          .resizable()
+          .scaledToFill()
+          .accessibilityLabel("Your pet, asleep")
       } else {
-        ZStack(alignment: .bottomTrailing) {
-          if let pose = entry.pose {
-            Image(uiImage: pose)
-              .resizable()
-              .scaledToFill()
-              .accessibilityLabel("Your pet, asleep")
-          } else {
-            Text(verbatim: "billet")
-              .billetType(.heading)
-              .foregroundStyle(Palette.paper.color)
-              .frame(maxWidth: .infinity, maxHeight: .infinity)
-          }
-          if let note = entry.note {
-            Image(decorative: NoteImage.trimmedToInk(note), scale: 1)
-              .resizable()
-              .scaledToFit()
-              .padding(Spacing.hair)
-              .frame(width: 54, height: 54)
-              .background(
-                renderingMode == .fullColor
-                  ? Palette.paper.color : Palette.paper.color.opacity(0.9),
-                in: .rect(cornerRadius: Radius.paper)
-              )
-              .padding(Spacing.small)
-              .widgetAccentable()
-              .accessibilityLabel("Your partner's latest drawing")
-          }
-        }
+        Text(verbatim: "billet")
+          .billetType(.heading)
+          .foregroundStyle(Palette.paper.color)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      }
+      if let note = entry.note {
+        Image(decorative: NoteImage.trimmedToInk(note), scale: 1)
+          .resizable()
+          .scaledToFit()
+          .padding(Spacing.hair)
+          .frame(width: 54, height: 54)
+          .background(
+            renderingMode == .fullColor
+              ? Palette.paper.color : Palette.paper.color.opacity(0.9),
+            in: .rect(cornerRadius: Radius.paper)
+          )
+          .padding(Spacing.small)
+          .widgetAccentable()
+          .accessibilityLabel("Your partner's latest drawing")
       }
     }
     .containerBackground(for: .widget) { Palette.skyNight.color }
