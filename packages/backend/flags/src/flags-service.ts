@@ -176,7 +176,7 @@ export class FlagsService extends Context.Service<
       const listed = (decisions: ReadonlyArray<FlagDecision>): FlagsResponse["flags"] =>
         decisions.flatMap(({ key, variant }) => (variant === undefined ? [] : [{ key, variant }]));
 
-      const flagsFor = Effect.fnUntraced(function* (
+      const flagsFor = Effect.fn("FlagsService.flagsFor")(function* (
         userId: UserId,
         caller: CallerContext,
       ): Effect.fn.Return<FlagsResponse, FlagsUnavailable> {

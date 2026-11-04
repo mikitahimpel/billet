@@ -11,6 +11,7 @@ import type { CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
 import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
+import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** Long enough to send a code to someone who is asleep, short enough that a leaked one goes stale. */
 export const inviteLifetime = Duration.hours(24);
@@ -58,9 +59,10 @@ export class PairingService extends Context.Service<
         decodeInviteCode(Array.from(bytes, (byte) => inviteCodeAlphabet[byte & 31]).join("")),
       );
 
-      const createInvite = Effect.fnUntraced(function* (
+      const createInvite = Effect.fn("PairingService.createInvite")(function* (
         ownerId: UserId,
       ): Effect.fn.Return<CreateInviteResponse, AlreadyPaired | PairingUnavailable> {
+        yield* annotateRefs({ user: ownerId });
         const code = yield* newCode;
         const createdAt = yield* Clock.currentTimeMillis;
         const expiresAt = createdAt + Duration.toMillis(inviteLifetime);
@@ -74,11 +76,12 @@ export class PairingService extends Context.Service<
         return { code, expiresAt };
       });
 
-      const claimInvite = Effect.fnUntraced(function* (
+      const claimInvite = Effect.fn("PairingService.claimInvite")(function* (
         claimerId: UserId,
         code: InviteCode,
       ): Effect.fn.Return<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable> {
         const pairId = decodePairId(yield* random.uuidV4());
+        yield* annotateRefs({ user: claimerId, pair: pairId });
         yield* repository.claimInvite({
           codeHash: yield* hash(code),
           claimerId,

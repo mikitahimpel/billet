@@ -35,6 +35,8 @@ import {
   type DailyDrawing,
   type Reminded,
 } from "./daily-drawing.ts";
+import { opaqueRef } from "@billet/backend-observability/opaque-ref";
+import { traced } from "./observability.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
@@ -98,12 +100,19 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     return Date.now();
   }
 
+  /** Names the room in spans by the ref of its id, never by its code. */
+  private readonly spanAttributes = { "room.ref": opaqueRef(this.ctx.id.toString()) };
+
   protected apnsCredentials(): Promise<ApnsCredentials | undefined> {
     const { APNS_KEY: key, APNS_KEY_ID: keyId } = this.env;
     return Promise.resolve(key === undefined || keyId === undefined ? undefined : { key, keyId });
   }
 
-  override async fetch(request: Request): Promise<Response> {
+  override fetch(request: Request): Promise<Response> {
+    return traced("DemoRoom.fetch", this.spanAttributes, () => this.respond(request));
+  }
+
+  private async respond(request: Request): Promise<Response> {
     const device = request.headers.get(DEVICE_HEADER);
     if (device === null || !UUID.test(device)) return new Response(null, { status: 400 });
     const id = device.toLowerCase();
@@ -160,11 +169,26 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
       return;
     }
     if (frame["type"] === "play") {
-      const acked = await this.handlePlay(sender, frame);
+      const acked = await traced(
+        "DemoRoom.play",
+        { ...this.spanAttributes, "play.kind": String(frame["kind"] ?? "unknown") },
+        () => this.handlePlay(sender, frame),
+      );
       if (acked !== undefined) socket.send(JSON.stringify({ type: "ack", id: acked }));
       return;
     }
     if (frame["type"] !== "note") return;
+    await traced("DemoRoom.note", this.spanAttributes, () =>
+      this.handleNote(socket, sender, frame),
+    );
+  }
+
+  /** A note: stored once, queued for the partner, and acked; a repeat is only acked. */
+  private async handleNote(
+    socket: WebSocket,
+    sender: string,
+    frame: Readonly<Record<string, unknown>>,
+  ): Promise<void> {
     const { id, ink } = frame;
     if (typeof id !== "string" || !UUID.test(id) || typeof ink !== "string") return;
 
@@ -429,7 +453,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * drawn its day, in its evening and never in quiet hours. A phone with no push token is still
    * counted as reminded, so a token that arrives later does not bring a late-night push.
    */
-  override async alarm(): Promise<void> {
+  override alarm(): Promise<void> {
+    return traced("DemoRoom.alarm", this.spanAttributes, () => this.remind());
+  }
+
+  private async remind(): Promise<void> {
     const now = this.clock();
     const inputs = await this.reminderInputs();
     const due = dueReminders(now, inputs);
@@ -561,7 +589,11 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     return note;
   }
 
-  private async alertPartner(note: QueuedNote): Promise<void> {
+  private alertPartner(note: QueuedNote): Promise<void> {
+    return traced("DemoRoom.alertPartner", this.spanAttributes, () => this.sendAlert(note));
+  }
+
+  private async sendAlert(note: QueuedNote): Promise<void> {
     const credentials = await this.apnsCredentials();
     if (credentials === undefined) return;
     const tokens = (await this.ctx.storage.get<Record<string, string>>("tokens")) ?? {};
