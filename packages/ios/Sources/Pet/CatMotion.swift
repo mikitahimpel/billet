@@ -36,14 +36,14 @@ extension CatModel {
     case .gingerChonk:
       CatMotion(tempo: 0.85, signature: [.yawn, .slowBlink], temperament: .sleepyhead)
     case .ragdoll:
-      CatMotion(tempo: 0.82, signature: [.slowBlink, .knead], temperament: .cuddler)
+      CatMotion(tempo: 0.82, signature: [.slowBlink, .lickLips], temperament: .cuddler)
     case .maineCoon:
-      CatMotion(tempo: 0.86, signature: [.knead, .look], temperament: .cuddler)
+      CatMotion(tempo: 0.86, signature: [.groom, .headTilt], temperament: .cuddler)
     case .voidCat:
       CatMotion(tempo: 1.1, signature: [.headTilt, .perk], temperament: .explorer)
     case .siamese:
-      CatMotion(tempo: 1.0, signature: [.yawn, .lookUp], temperament: .diva)
-    case .idolIlya: CatMotion(tempo: 1, signature: [.happy, .headTilt], temperament: .cuddler)
+      CatMotion(tempo: 1.0, signature: [.yawn, .lickLips], temperament: .diva)
+    case .idolIlya: CatMotion(tempo: 1, signature: [.slowBlink, .headTilt], temperament: .cuddler)
     }
   }
 }
