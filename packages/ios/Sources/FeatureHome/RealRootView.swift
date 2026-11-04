@@ -159,7 +159,7 @@ struct RealPairedView: View {
         showsUs = false
         model.finished(action)
       }
-      .presentationDragIndicator(.visible)
+      .billetSheet()
     }
     .task(id: scenePhase == .active) {
       if scenePhase == .active {
@@ -187,7 +187,7 @@ struct RealUsView: View {
   let onFinished: (AccountAction) -> Void
 
   var body: some View {
-    ScreenScaffold("Us", isSheet: true) {
+    ScreenScaffold("Us") {
       UsHeader(
         me: PairAvatars.me, partner: PairAvatars.partner, catName: nil, daysTogether: nil,
         streak: 0)

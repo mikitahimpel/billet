@@ -256,7 +256,7 @@ extension AppShellView {
       },
       onUnpair: onLogOut
     )
-    .presentationDragIndicator(.visible)
+    .billetSheet()
   }
 
   /// Every note in a list, the way Notes has always shown them.

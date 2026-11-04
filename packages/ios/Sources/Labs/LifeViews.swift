@@ -232,15 +232,19 @@ public struct CatNeedsSnapshot: Hashable, Sendable {
 /// paw chip and gone again with a swipe; nothing of it stays on Home.
 public struct CatNeedsCard: View {
   private let snapshot: CatNeedsSnapshot
+  private let isNamed: Bool
 
-  public init(_ snapshot: CatNeedsSnapshot) {
+  /// - Parameter isNamed: Whether the card stands alone, its mood line starting with the cat's
+  ///   name and its own margins around it. A sheet titled with the name leaves out both.
+  public init(_ snapshot: CatNeedsSnapshot, isNamed: Bool = true) {
     self.snapshot = snapshot
+    self.isNamed = isNamed
   }
 
   public var body: some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
       VStack(alignment: .leading, spacing: Spacing.hair) {
-        Text("\(snapshot.name) · \(snapshot.feeling.words)")
+        Text(isNamed ? "\(snapshot.name) · \(snapshot.feeling.words)" : snapshot.feeling.words)
           .billetType(.heading)
           .foregroundStyle(Palette.paper.color)
         Text("Wants: \(snapshot.feeling.wants)")
@@ -253,7 +257,7 @@ public struct CatNeedsCard: View {
         }
       }
     }
-    .padding(Spacing.medium)
+    .padding(isNamed ? Spacing.medium : 0)
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Self.spoken(snapshot))

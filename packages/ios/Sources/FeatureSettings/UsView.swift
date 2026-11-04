@@ -74,9 +74,11 @@ public struct UsView<Account: View>: View {
     NavigationStack {
       us
         .hidesNavigationBar()
+        .containerBackground(.clear, for: .navigation)
         .navigationDestination(isPresented: $labsOpen) {
           if let labs {
-            ScreenScaffold("Labs", isSheet: true) { labContent(labs) }
+            ScreenScaffold("Labs", closes: false) { labContent(labs) }
+              .containerBackground(.clear, for: .navigation)
           }
         }
     }
@@ -84,7 +86,7 @@ public struct UsView<Account: View>: View {
   }
 
   private var us: some View {
-    ScreenScaffold("Us", isSheet: true) {
+    ScreenScaffold("Us") {
       UsHeader(
         me: PairAvatars.me, partner: PairAvatars.partner, catName: catName,
         daysTogether: daysTogether, streak: streak)
@@ -300,37 +302,6 @@ extension View {
     #else
       self
     #endif
-  }
-}
-
-/// Rows sharing one card.
-struct SettingsGroup<Rows: View>: View {
-  private let rows: Rows
-
-  init(@ViewBuilder rows: () -> Rows) {
-    self.rows = rows()
-  }
-
-  var body: some View {
-    VStack(spacing: 0) { rows }
-      .frame(maxWidth: .infinity)
-      .card()
-  }
-}
-
-struct SettingsHeading: View {
-  private let title: String
-
-  init(_ title: String) {
-    self.title = title
-  }
-
-  var body: some View {
-    Text(title)
-      .billetType(.label)
-      .foregroundStyle(Palette.muted.color)
-      .padding(.horizontal, Spacing.medium)
-      .accessibilityAddTraits(.isHeader)
   }
 }
 

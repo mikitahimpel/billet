@@ -116,7 +116,8 @@ struct HomeView: View {
       .modifier(
         HomeShop(
           shop: session.shop, renovator: session.renovator, scene: scene,
-          showsButtons: !variant.isFullBleed && !isRenovating, sheet: $shopSheet)
+          showsButtons: !variant.isFullBleed && !isRenovating && !usesStyledHome,
+          sheet: $shopSheet)
       )
       .task(id: latestReceivedNote?.id) {
         latestDrawing = latestReceivedNote.flatMap { NoteImage.cgImage(of: $0.strokes) }
@@ -269,6 +270,11 @@ struct HomeView: View {
     onOpenNotes()
   }
 
+  /// Whether Home is the room with its row of chips on top, which then holds the closet too.
+  private var usesStyledHome: Bool {
+    !variant.isFullBleed && scene != nil && !typeSize.isAccessibilitySize
+  }
+
   @ViewBuilder private var home: some View {
     if variant.isFullBleed, let scene {
       fullBleedHome(scene)
@@ -311,7 +317,9 @@ struct HomeView: View {
       onDecorate: { session.renovator.requestOpen() },
       flame: flameHost(scene: scene),
       mood: catMood,
-      leading: onOpenUs == nil ? nil : AnyView(usButton))
+      leading: onOpenUs == nil ? nil : AnyView(usButton),
+      trailing: scene.hasShop
+        ? AnyView(IconButton("archivebox.fill", label: "Closet") { openShop(.closet) }) : nil)
   }
 
   /// The two of us, the way into "Us".
@@ -618,33 +626,20 @@ struct HomeView: View {
     .card()
     .accessibilityIdentifier("labsDrawer")
     .sheet(isPresented: $labsOpen) {
-      ZStack(alignment: .topTrailing) {
-        EveningBackground(isStill: true)
-        ScrollView {
-          VStack(spacing: Spacing.small) {
-            Text("Labs")
-              .billetType(.heading)
-              .foregroundStyle(Palette.paper.color)
-              .padding(.top, Spacing.medium)
-            todaysWordCard
-            giftCards
-            adventCard
-            onThisDayCard
-            sundayPostCard
-            sealedNoteCards
-            lampColourCard
-            nextVisitCard
-            porchLightCard
-          }
-          .padding(.horizontal, Spacing.medium)
-          .padding(.bottom, Spacing.large)
+      ScreenScaffold("Labs") {
+        VStack(spacing: Spacing.small) {
+          todaysWordCard
+          giftCards
+          adventCard
+          onThisDayCard
+          sundayPostCard
+          sealedNoteCards
+          lampColourCard
+          nextVisitCard
+          porchLightCard
         }
-        .scrollBounceBehavior(.basedOnSize)
-        IconButton("xmark", label: "Close Labs") { labsOpen = false }
-          .padding(Spacing.medium)
       }
-      .presentationDetents([.medium, .large])
-      .preferredColorScheme(.dark)
+      .billetSheet([.medium, .large])
     }
   }
 
@@ -756,6 +751,9 @@ struct HomeView: View {
     drawingDaily = false
   }
 
+  /// Where a card under the top row starts: the row's margin and height, then one small gap.
+  static let underTopRow = Spacing.small + Target.minimum + Spacing.small
+
   /// Today's prompt, until today is drawn. Hidden while decorating or while a reveal shows.
   @ViewBuilder private var dailyCard: some View {
     if !isRenovating, dailyReveal == nil, !session.hasDrawnDaily(),
@@ -767,7 +765,7 @@ struct HomeView: View {
         store.send(.canvasOpened)
       }
       .padding(.horizontal, Spacing.medium)
-      .padding(.top, Spacing.page + Spacing.small)
+      .padding(.top, Self.underTopRow)
       .transition(.move(edge: .top).combined(with: .opacity))
     }
   }
@@ -815,16 +813,11 @@ struct HomeView: View {
       .card()
       .transition(.opacity)
       .sheet(isPresented: $namingCat) {
-        ZStack {
-          EveningBackground()
-          NamePanel {
-            session.nameCat($0)
-            namingCat = false
-          }
-          .padding(.horizontal, Spacing.medium)
+        NamePanel {
+          session.nameCat($0)
+          namingCat = false
         }
-        .presentationDetents([.medium])
-        .preferredColorScheme(.dark)
+        .billetSheet([.medium])
       }
     }
   }

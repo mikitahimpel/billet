@@ -58,7 +58,6 @@ public struct ShopView<Preview: View>: View {
 
   public var body: some View {
     ZStack {
-      EveningBackground()
       VStack(spacing: Spacing.small) {
         header
         shelves
@@ -71,31 +70,10 @@ public struct ShopView<Preview: View>: View {
     .sensoryFeedback(.success, trigger: bought)
   }
 
-  /// The title, then the balance and the buttons. At large text sizes the row is too narrow for
-  /// all of them, so the title takes a line of its own.
   private var header: some View {
-    ViewThatFits(in: .horizontal) {
-      HStack(spacing: Spacing.small) {
-        shopTitle
-        Spacer(minLength: Spacing.small)
-        headerControls
-      }
-      VStack(alignment: .leading, spacing: Spacing.small) {
-        shopTitle
-        HStack(spacing: Spacing.small) {
-          headerControls
-        }
-      }
-    }
-    .padding(.horizontal, Spacing.medium)
-    .padding(.top, Spacing.small)
-  }
-
-  private var shopTitle: some View {
-    Text("Shop")
-      .billetType(.title)
-      .foregroundStyle(Palette.paper.color)
-      .accessibilityAddTraits(.isHeader)
+    SheetHeader("Shop", onClose: onClose) { headerControls }
+      .padding(.horizontal, Spacing.medium)
+      .padding(.top, Spacing.large)
   }
 
   @ViewBuilder private var headerControls: some View {
@@ -109,7 +87,6 @@ public struct ShopView<Preview: View>: View {
       } action: {
         closetCentre = $0
       }
-    IconButton("xmark", label: "Close", action: onClose)
   }
 
   @ViewBuilder private var closetBadge: some View {
