@@ -6,13 +6,16 @@ import RealityKit
 /// How often the scenes may draw. A phone that draws a room at the display's rate while nothing in
 /// it changes runs hot for nothing, and once hot it slows down and stutters. So a scene draws at
 /// most 30 times a second, a room 15 once it is still and nobody touches it, and every scene 20 at
-/// most while the device is hot, when the room also leaves out its haze.
+/// most while the device is hot, when the room also leaves out its haze. Under a sheet a room draws
+/// 10 times a second.
 @MainActor @Observable
 final class FramePace {
   static let shared = FramePace()
 
   /// While something moves: the camera, the cat, a finger, the opening.
   nonisolated static let moving: Float = 30
+  /// While a sheet covers the room.
+  nonisolated static let covered: Float = 10
   /// While the room holds still and nobody touches it.
   nonisolated static let still: Float = 15
   /// The most while the device is hot.
@@ -39,10 +42,11 @@ final class FramePace {
     state == .serious || state == .critical
   }
 
-  /// The frames a second for a scene, or nil for the display's own rate.
-  func rate(isStill: Bool) -> Float? {
+  /// The frames a second for a scene, or nil for the display's own rate. Under a sheet it draws
+  /// at the gentlest pace, whatever moves in it.
+  func rate(isStill: Bool, isCovered: Bool = false) -> Float? {
     guard isCapped else { return nil }
-    let rate = isStill ? Self.still : Self.moving
+    let rate = isCovered ? Self.covered : isStill ? Self.still : Self.moving
     return isHot ? min(rate, Self.hot) : rate
   }
 
