@@ -102,6 +102,26 @@ server ships before an app that sells a new item.
 - Later, `Purchase` adds `purchase:<store transaction id>` once the owner decides what is sold.
   The one `grant:demo` entry stays room-written.
 
+## 4a. Drawing of the day (built in the demo room)
+
+Unlike the rest of this note, this one exists in `DemoRoom` (`src/daily-drawing.ts`).
+
+- Up: `play { kind: "daily", id, at, ink }`. The day is the sender's calendar day of `at`, and an
+  `at` more than 36 hours from the room's clock is ignored. The first drawing of a day stays: a
+  second one changes nothing, so nobody can look at the partner's and draw again.
+- Down, on connect: `daily-prompts { prompts: { day: { id, text } } }` for the three dates a phone
+  may be living (UTC−12 to UTC+14), then one `daily` frame for each of the last 7 drawn days.
+- Down, on each drawing, to each socket: `daily { day, prompt, mine, theirsDrawn, theirs }`.
+  `theirs` is the partner's `{ id, ink, at }` only once `mine` is set: the reveal rule is the
+  room's.
+- Prompts: 74 (50 for any day, 6 per season), each pair walking its own seeded order of the
+  season's set, so none repeats until the set has had its turn.
+- Streak: a day counts when both gave the treat or both drew (`TreatLedger.streak(…alsoShared:)`
+  on the phone).
+- Evening reminder: the room's alarm sends one alert a day to a phone that has not drawn its day,
+  from 19:00 its local time (from the offset its frames carry) and never in quiet hours, 22:00 to
+  08:00.
+
 ## 5. Labs actions
 
 Taken from the `labs:` build-status lines. Each says what the experiment does locally today and

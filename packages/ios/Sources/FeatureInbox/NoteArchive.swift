@@ -7,7 +7,8 @@ public actor NoteArchive {
   /// Oldest notes fall off past this, which keeps the rewrite on each new note small.
   public static let limit = 200
 
-  private let storage: AppGroupStorage
+  /// Where the notes are kept, which the drawing of the day shares.
+  public nonisolated let storage: AppGroupStorage
   private var loaded: [NoteRecord]?
 
   public init(storage: AppGroupStorage) {
