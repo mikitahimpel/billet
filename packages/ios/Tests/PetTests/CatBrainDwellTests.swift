@@ -34,49 +34,52 @@ struct CatBrainDwellTests {
     var description: String { "\(what) for \(String(format: "%.2f", end - start)) s" }
   }
 
-  /// Each run of the same `key` in the frames from `from` for `minutes`, with whether a person's
-  /// event fell inside it or at its end.
-  static func runs<Key: Equatable>(
-    _ events: [LifeEvent], _ type: CatTemperament?, from: Double, minutes: Double,
-    key: (CatBrainFrame) -> Key, name: (Key) -> String
-  ) -> [(run: Run, touched: Bool)] {
+  /// The runs of each thing the brain asks for (its step, the clip, the touch it answers) in
+  /// one pass over the frames from `from` for `minutes`, with whether a person's event fell
+  /// inside a run or at its end. The first run started before the window and the last goes on
+  /// after it, so neither counts.
+  static func runs(
+    _ events: [LifeEvent], _ type: CatTemperament?, from: Double, minutes: Double
+  ) -> [String: [(run: Run, touched: Bool)]] {
     var runner = CatBrainRunner(
       events: events, now: Day.at(from), context: Day.context, seed: 11, temperament: type,
       room: Day.room)
     let times = events.map(\.at.timeIntervalSince1970)
-    var out: [(Run, Bool)] = []
+    func keys(_ frame: CatBrainFrame) -> [String: String] {
+      [
+        "step": "\(frame.stack.step.rawValue)@\(frame.stepStart)",
+        "clip": frame.action.rawValue,
+        "touch": String(describing: frame.stack.interaction),
+      ]
+    }
+    var out: [String: [(Run, Bool)]] = [:]
+    var held: [String: (value: String, start: Double, first: Bool)] = [:]
     var t = Day.at(from)
     let end = t + minutes * 60
-    var current: (key: Key, start: Double)?
     while t < end {
       runner.advance(to: t)
-      let now = key(runner.frame)
-      if let held = current, held.key != now {
-        let touched = times.contains { $0 >= held.start - tick && $0 <= t + tick }
-        out.append((Run(what: name(held.key), start: held.start, end: t), touched))
-        current = (now, t)
-      } else if current == nil {
-        current = (now, t)
+      for (kind, now) in keys(runner.frame) {
+        guard let was = held[kind] else {
+          held[kind] = (now, t, true)
+          continue
+        }
+        guard was.value != now else { continue }
+        if !was.first {
+          let touched = times.contains { $0 >= was.start - tick && $0 <= t + tick }
+          out[kind, default: []].append((Run(what: was.value, start: was.start, end: t), touched))
+        }
+        held[kind] = (now, t, false)
       }
       t += tick
     }
-    // The first run started before the window and the last goes on after it.
-    return Array(out.dropFirst())
+    return out
   }
 
   @Test(arguments: CatFeelingTests.types)
   func noStepClipOrTouchFlickers(_ type: CatTemperament?) {
     for (name, events) in Self.days {
       for from in Self.windows {
-        let steps = Self.runs(
-          events, type, from: from, minutes: 30,
-          key: { [$0.stack.step.rawValue, "\($0.stepStart)"] }, name: { $0[0] })
-        let clips = Self.runs(
-          events, type, from: from, minutes: 30, key: \.action, name: \.rawValue)
-        let touches = Self.runs(
-          events, type, from: from, minutes: 30, key: \.stack.interaction,
-          name: { String(describing: $0) })
-        for (kind, runs) in [("step", steps), ("clip", clips), ("touch", touches)] {
+        for (kind, runs) in Self.runs(events, type, from: from, minutes: 30) {
           let short = runs.filter { !$0.touched && $0.run.end - $0.run.start < Self.minimumDwell }
           #expect(
             short.isEmpty,
