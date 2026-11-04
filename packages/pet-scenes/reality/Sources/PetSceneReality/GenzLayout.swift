@@ -71,6 +71,8 @@ struct GenzLayout {
   var sunFrom = GenzRoomPoint(9, -6, 2.6)
   /// The middle of the light switch's plate, on the back wall.
   var switchPlate = GenzLightSwitch.plate
+  /// Where the cat's bowl stands, when not beside the cat's place.
+  var bowl: GenzRoomPoint? = nil
   /// Lights of the room's own beyond the lamp, such as a candle's or a window's, already placed.
   var ownLights: (@MainActor () -> [GenzOwnLight])? = nil
 

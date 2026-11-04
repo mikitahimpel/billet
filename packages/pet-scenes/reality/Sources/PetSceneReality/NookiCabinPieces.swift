@@ -20,30 +20,31 @@ extension GenzKit {
 
   func cabinRug(_ piece: GenzPiece) -> [Entity] {
     var c = cabinClay(piece)
-    c.cylinder(0.006, 0.33, slotHex(piece, 0), at: [0, 0.002, 0])
-    c.cylinder(0.008, 0.31, slotHex(piece, 1), at: [0, 0.005, 0])
+    // Thinner than the Nooki project's, so toys lying on it are on top of it.
+    c.cylinder(0.002, 0.33, slotHex(piece, 0), at: [0, 0.001, 0])
+    c.cylinder(0.002, 0.31, slotHex(piece, 1), at: [0, 0.002, 0])
     return c.parts
   }
 
-  /// A round donut bed: a soft base, a lumpy ring of plush and tufts on the rim. Its base is lower
-  /// than the Nooki project's, so a cat lying in it on the floor shows over the rim.
+  /// A round donut bed: a soft base, a lumpy ring of plush and tufts on the rim. It is lower than
+  /// the Nooki project's, so a cat lying in it on the floor shows over the rim.
   func cabinBed(_ piece: GenzPiece) -> [Entity] {
     var c = cabinClay(piece)
     let (plush, shade) = (slotHex(piece, 0), slotHex(piece, 1))
     c.cylinder(0.03, 0.19, shade, at: [0, 0.015, 0])
-    c.cylinder(0.012, 0.15, plush, at: [0, 0.024, 0])
+    c.cylinder(0.012, 0.15, plush, at: [0, 0.028, 0])
     let lumps = 24
     for i in 0..<lumps {
       let a = Float(i) / Float(lumps) * 2 * .pi
       let wobble = 1 + 0.06 * sin(Float(i) * 2.7)
       c.sphere(
-        0.06 * wobble, i.isMultiple(of: 2) ? plush : shade,
-        at: [cos(a) * 0.165, 0.06, sin(a) * 0.165], scale: [1, 0.82, 1])
+        0.05 * wobble, i.isMultiple(of: 2) ? plush : shade,
+        at: [cos(a) * 0.17, 0.048, sin(a) * 0.17], scale: [1, 0.82, 1])
     }
     for i in 0..<40 {
       let a = Float(i) / 40 * 2 * .pi + 0.08
-      let r: Float = 0.165 + 0.02 * sin(Float(i) * 5.1)
-      c.sphere(0.022, plush, at: [cos(a) * r, 0.103 + 0.008 * sin(Float(i) * 3.3), sin(a) * r])
+      let r: Float = 0.17 + 0.02 * sin(Float(i) * 5.1)
+      c.sphere(0.02, plush, at: [cos(a) * r, 0.084 + 0.008 * sin(Float(i) * 3.3), sin(a) * r])
     }
     return c.parts
   }

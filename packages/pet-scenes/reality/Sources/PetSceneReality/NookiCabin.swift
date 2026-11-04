@@ -84,9 +84,9 @@ extension GenzLayout {
     return GenzLayout(
       // The Nooki project's camera looks down along (1, 0.82, 1) with a narrow lens, from 5.9 m.
       camera: GenzCamera.Home(
-        target: room(-0.02, 0.2, 0.02).scene, yaw: .pi / 4, pitch: 0.525, distance: 35,
+        target: room(0.02, 0.18, 0.02).scene, yaw: .pi / 4, pitch: 0.525, distance: 42,
         fieldOfView: 22, yawLimits: 0.035...1.535, pitchLimits: 0.35...0.85,
-        zoomLimits: 0.5...1.25),
+        zoomLimits: 0.45...1.15),
       pieces: [
         place(.cabinRug, 0, 0.04),
         place(.cabinBed, 0.06, -0.04),
@@ -98,7 +98,7 @@ extension GenzLayout {
         place(.cabinBooks, 0.2, 0.4),
       ],
       // In the bed, turned to look out between the camera and the window.
-      cat: (room(0.06, NookiCabin.plankTop, -0.03), 3.9, 1.25),
+      cat: (room(0.06, NookiCabin.plankTop, -0.03), 3.9, 1.5),
       note: Panel(
         centre: room(noteAt.x, noteAt.y, noteAt.z),
         width: NookiCabin.note.width * scale, height: NookiCabin.note.height * scale),
@@ -119,11 +119,13 @@ extension GenzLayout {
       catTop: ([0.35, 0.35], [5.65, 5.65]),
       room: .nookiCabin,
       // The Nooki project's warm two-tone sky, cream over toffee.
-      ambient: GenzAmbient(top: GenzColour(0xFFE7C4), bottom: GenzColour(0xB97A45), exponent: 0.4),
+      ambient: GenzAmbient(top: GenzColour(0xFFE7C4), bottom: GenzColour(0xB97A45), exponent: -0.4),
       // The cabin hangs its own fairy lights, lit always.
       ownFairyHooks: [],
       sunFrom: room(1.4, 2.2, 0.9),
       switchPlate: room(0.06, 0.42, -0.5),
+      // On the floor in front of the bed, clear of its rim and its shadow.
+      bowl: room(-0.2, NookiCabin.plankTop, 0.2),
       ownLights: NookiCabin.lights)
   }()
 }
@@ -162,9 +164,9 @@ extension NookiCabin {
     flame.attenuationFalloffExponent = 2
     candle.components.set(flame)
     return [
-      GenzOwnLight(entity: sun, intensity: 900),
-      GenzOwnLight(entity: window, intensity: 1_800 * area * 0.6),
-      GenzOwnLight(entity: candle, intensity: 450 * area * 0.6, flicker: 0.15),
+      GenzOwnLight(entity: sun, intensity: 800),
+      GenzOwnLight(entity: window, intensity: 1_800 * area * 0.35),
+      GenzOwnLight(entity: candle, intensity: 450 * area * 0.35, flicker: 0.15),
     ]
   }
 
@@ -192,8 +194,9 @@ extension NookiCabin {
 
   private static func buildWalls(_ c: inout CabinClay) {
     let h = wallHeight
-    c.box(0.05, h, 1.06, r: 0.01, Tone.wall, at: [-0.525, h / 2, -0.03])
-    c.box(1.06, h, 0.05, r: 0.01, Tone.wall, at: [-0.03, h / 2, -0.525])
+    // The walls reach down into the floor, so their foot never meets its top edge.
+    c.box(0.05, h + 0.02, 1.06, r: 0.01, Tone.wall, at: [-0.525, (h - 0.02) / 2, -0.03])
+    c.box(1.06, h + 0.02, 0.05, r: 0.01, Tone.wall, at: [-0.03, (h - 0.02) / 2, -0.525])
     c.box(0.014, 0.05, 1.0, r: 0.004, Tone.wood, at: [-0.493, 0.025, 0])
     c.box(1.0, 0.05, 0.014, r: 0.004, Tone.wood, at: [0, 0.025, -0.493])
     for (x, z) in [(-0.535, 0.52), (-0.535, -0.535), (0.52, -0.535)] as [(Float, Float)] {
@@ -272,7 +275,7 @@ extension NookiCabin {
         0.066, 0.08, 0.004, r: 0.002, 0xFFFBF3, at: card + turn.act([0, -0.04, 0.002]), turn: turn)
       c.box(0.012, 0.018, 0.008, r: 0.002, Tone.woodLight, at: card + [0, 0, 0.004], turn: turn)
       c.box(
-        0.056, 0.056, 0.001, r: 0, prints[slot], at: card + turn.act([0, -0.033, 0.0045]),
+        0.056, 0.056, 0.001, r: 0, prints[slot], at: card + turn.act([0, -0.033, 0.0049]),
         turn: turn)
     }
     // The note's frame and peg; the room hangs the note itself in front.

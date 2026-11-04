@@ -358,6 +358,9 @@ final class GenzRoom: CatPlayStage {
     props.roomHasYarn = true
     props.show(lifeNeeds)
     room.addChild(props.root)
+    if let bowl = layout.bowl {
+      props.bowl.position = props.root.convert(position: bowl.scene, from: room)
+    }
     lifeProps = props
     let glow = GenzGlow(layout: layout, kit: kit)
     catShadow = glow.shadeCat(in: catHolder, length: length)

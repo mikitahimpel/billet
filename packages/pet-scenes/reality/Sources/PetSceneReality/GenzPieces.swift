@@ -314,10 +314,10 @@ extension GenzPiece.Kind {
     case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall:
       GenzRoomPoint(pillow.width + 0.12, 0.7, pillow.height + 0.07)
     case .blanket: GenzRoomPoint(1.3, 0.84, 0.3)
-    case .cabinRug: GenzRoomPoint(3.96, 3.96, 0.06)
-    case .cabinBed: GenzRoomPoint(2.15, 2.15, 0.55)
+    case .cabinRug: GenzRoomPoint(3.96, 3.96, 0.02)
+    case .cabinBed: GenzRoomPoint(2.15, 2.15, 0.45)
     case .cabinCatTree: GenzRoomPoint(1.24, 1.24, 2.3)
-    case .cabinNightstand: GenzRoomPoint(1.5, 1.32, 2.0)
+    case .cabinNightstand: GenzRoomPoint(1.32, 1.32, 2.0)
     case .cabinPlant: GenzRoomPoint(1.2, 1.2, 1.85)
     case .cabinBasket: GenzRoomPoint(1.0, 1.0, 0.71)
     case .cabinStoolLamp: GenzRoomPoint(0.7, 0.7, 1.66)
