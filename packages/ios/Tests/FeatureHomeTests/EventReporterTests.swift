@@ -359,6 +359,7 @@ import Wire
     RealAppModel(
       api: server.api,
       accounts: AccountStore(load: { nil }, save: { _, _ in }, setPaired: { _, _ in }, clear: {}),
+      keys: AccountKeyStore(loadOrCreate: { "k" }, clear: {}),
       baseURL: URL(fileURLWithPath: "/"),
       labs: WidgetFeaturesModel(store: nil),
       eventStorage: storage(),

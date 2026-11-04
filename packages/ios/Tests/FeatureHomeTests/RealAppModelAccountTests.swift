@@ -43,7 +43,7 @@ import Wire
     return RealAppModel(
       api: api, accounts: saved.store, keys: keys,
       baseURL: URL(string: "https://billet.test")!, reauthorize: { .cancelled },
-      labs: WidgetFeaturesModel(store: nil), eventStorage: storage, hasWidget: { false })
+      labs: WidgetFeaturesModel(store: nil), eventStorage: storage)
   }
 
   static func storage() -> AppGroupStorage {
