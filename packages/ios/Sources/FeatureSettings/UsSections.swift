@@ -243,16 +243,40 @@ public struct AboutSection: View {
   }
 }
 
-/// Where this build came from: Labs show only in builds for testing, a debug build or TestFlight.
+/// Where this build came from: Labs show in builds for testing, a debug build or TestFlight, and
+/// are hidden only where StoreKit confirms the App Store.
 public enum BuildChannel {
   public static func isForTesting() async -> Bool {
     #if DEBUG
       return true
     #else
-      guard let transaction = try? await AppTransaction.shared else { return false }
-      switch transaction {
-      case .verified(let app), .unverified(let app, _): return app.environment != .production
-      }
+      return isForTesting(environment: await environment())
     #endif
+  }
+
+  /// Only a confirmed App Store build is not for testing. TestFlight reports `.sandbox`, Xcode
+  /// `.xcode`, and `nil` (StoreKit failed or did not answer) counts as testing, so a TestFlight
+  /// build never loses Labs to a StoreKit hiccup.
+  static func isForTesting(environment: AppStore.Environment?) -> Bool {
+    environment != .production
+  }
+
+  /// The environment `AppTransaction` reports, or `nil` if it fails or takes over three seconds.
+  private static func environment() async -> AppStore.Environment? {
+    await withTaskGroup(of: AppStore.Environment?.self) { group in
+      group.addTask {
+        switch try? await AppTransaction.shared {
+        case .verified(let app), .unverified(let app, _): app.environment
+        case nil: nil
+        }
+      }
+      group.addTask {
+        try? await Task.sleep(for: .seconds(3))
+        return nil
+      }
+      let first = await group.next() ?? nil
+      group.cancelAll()
+      return first
+    }
   }
 }

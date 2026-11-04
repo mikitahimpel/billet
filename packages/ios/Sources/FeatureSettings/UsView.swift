@@ -6,7 +6,7 @@ import SwiftUI
 import WidgetBridge
 
 /// "Us", opened from the two avatars on Home: the two of us and the cat, its character, where the
-/// account is saved, notifications and widgets, the pair, and about. Labs come last, and only in
+/// account is saved, notifications, the app icon and widgets, the pair, and about. Labs come last, and only in
 /// builds for testing.
 public struct UsView<Account: View>: View {
   private let code: String?
@@ -69,7 +69,23 @@ public struct UsView<Account: View>: View {
     self.account = account()
   }
 
+  /// Labs is pushed inside the sheet rather than stacked as a second sheet on top of it.
   public var body: some View {
+    NavigationStack {
+      us
+        .hidesNavigationBar()
+        .showsSheetGround()
+        .navigationDestination(isPresented: $labsOpen) {
+          if let labs {
+            ScreenScaffold("Labs", closes: false) { labContent(labs) }
+              .showsSheetGround()
+          }
+        }
+    }
+    .tint(Palette.paper.color)
+  }
+
+  private var us: some View {
     ScreenScaffold("Us") {
       UsHeader(
         me: PairAvatars.me, partner: PairAvatars.partner, catName: catName,
@@ -77,6 +93,7 @@ public struct UsView<Account: View>: View {
       CatCharacterSection(catName: catName, card: characterCard)
       account
       NotificationsSection()
+      AppIconSection()
       if let widgetFeatures {
         widgetSection(widgetFeatures)
       }
@@ -87,12 +104,6 @@ public struct UsView<Account: View>: View {
           SettingsLink("Labs") { labsOpen = true }
             .accessibilityIdentifier("us.labs")
         }
-      }
-    }
-    .sheet(isPresented: $labsOpen) {
-      if let labs {
-        ScreenScaffold("Labs") { labContent(labs) }
-          .presentationDragIndicator(.visible)
       }
     }
     .task { showsLabs = await BuildChannel.isForTesting() }
@@ -284,34 +295,23 @@ extension UsView where Account == EmptyView {
   }
 }
 
-/// Rows sharing one card.
-struct SettingsGroup<Rows: View>: View {
-  private let rows: Rows
-
-  init(@ViewBuilder rows: () -> Rows) {
-    self.rows = rows()
+extension View {
+  /// Lets the sheet's ground show through the navigation stack, which is opaque by default.
+  fileprivate func showsSheetGround() -> some View {
+    #if os(iOS)
+      containerBackground(.clear, for: .navigation)
+    #else
+      self
+    #endif
   }
 
-  var body: some View {
-    VStack(spacing: 0) { rows }
-      .frame(maxWidth: .infinity)
-      .card()
-  }
-}
-
-struct SettingsHeading: View {
-  private let title: String
-
-  init(_ title: String) {
-    self.title = title
-  }
-
-  var body: some View {
-    Text(title)
-      .billetType(.label)
-      .foregroundStyle(Palette.muted.color)
-      .padding(.horizontal, Spacing.medium)
-      .accessibilityAddTraits(.isHeader)
+  /// The sheet's own title and grabber stand in for a navigation bar on the first screen.
+  fileprivate func hidesNavigationBar() -> some View {
+    #if os(iOS)
+      toolbar(.hidden, for: .navigationBar)
+    #else
+      self
+    #endif
   }
 }
 

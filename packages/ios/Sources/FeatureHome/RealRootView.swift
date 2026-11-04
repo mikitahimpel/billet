@@ -159,7 +159,7 @@ struct RealPairedView: View {
         showsUs = false
         model.finished(action)
       }
-      .presentationDragIndicator(.visible)
+      .billetSheet()
     }
     .task(id: scenePhase == .active) {
       if scenePhase == .active {
@@ -181,7 +181,7 @@ struct RealPairedView: View {
 }
 
 /// "Us" for the real backend: the two of us, the cat's place, where the account is saved,
-/// notifications, the pair and deleting the account, and about.
+/// notifications, the app icon, the pair and deleting the account, and about.
 struct RealUsView: View {
   let model: RealAppModel
   let onFinished: (AccountAction) -> Void
@@ -196,6 +196,7 @@ struct RealUsView: View {
         SignInControls(model: model.link) { model.linkedApple() }
       }
       NotificationsSection()
+      AppIconSection()
       AccountSections(model: model.account(), onFinished: onFinished)
       AboutSection()
     }
