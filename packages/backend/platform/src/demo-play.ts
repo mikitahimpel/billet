@@ -1,6 +1,6 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
-// shooing and putting the cat to bed, naming the cat, reacting to a note, and choosing the cat
-// together.
+// shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
+// together, and the room's light switch.
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -13,7 +13,15 @@ export const MAX_LIFE_EVENTS = 400;
  * cat off where it sat, so it learns to stay off.
  */
 export type LifePlayKind = "feed" | "play" | "sleep" | "shoo";
-export type PlayKind = "pet" | "treat" | LifePlayKind | "name" | "rename" | "react" | "adopt";
+export type PlayKind =
+  | "pet"
+  | "treat"
+  | LifePlayKind
+  | "name"
+  | "rename"
+  | "react"
+  | "adopt"
+  | "light";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -55,6 +63,18 @@ export interface RenameFrame {
   readonly name: string;
 }
 
+/** Where the light switch on the room's wall stands, as the phones name it. */
+export const ROOM_LIGHTS = ["on", "cosy", "off"] as const;
+export type RoomLight = (typeof ROOM_LIGHTS)[number];
+
+/** A press of the room's light switch: the last one from either phone wins. */
+export interface LightFrame {
+  readonly id: string;
+  readonly kind: "light";
+  readonly at: string;
+  readonly light: RoomLight;
+}
+
 /** The cats a pair chooses between, as the phones name them. */
 export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
 export type AdoptionCat = (typeof ADOPTION_CATS)[number];
@@ -71,7 +91,16 @@ export type AdoptFrame = {
   readonly at: string;
 } & AdoptMove;
 
-export type AnyPlayFrame = PlayFrame | NameFrame | RenameFrame | ReactFrame | AdoptFrame;
+export type AnyPlayFrame =
+  | PlayFrame
+  | NameFrame
+  | RenameFrame
+  | ReactFrame
+  | AdoptFrame
+  | LightFrame;
+
+const isRoomLight = (value: unknown): value is RoomLight =>
+  typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
 
 /** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
@@ -121,6 +150,10 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     }
     case "adopt":
       return parseAdopt(id, at, frame);
+    case "light": {
+      const { light } = frame;
+      return isRoomLight(light) ? { id, kind, at, light } : undefined;
+    }
     case "react": {
       const { note, reaction } = frame;
       if (typeof note !== "string" || !UUID.test(note)) return undefined;
