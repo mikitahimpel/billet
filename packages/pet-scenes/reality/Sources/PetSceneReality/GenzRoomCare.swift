@@ -227,6 +227,10 @@ extension GenzRoom {
   func dropCat() {
     guard let spot = toys.liftedAt else { return }
     toys.liftedAt = nil
+    // Put down on its own top, wherever it was picked up from.
+    footing.level = layout.catHomeLevel
+    brainBody.jump = nil
+    brainBody.goalFor = nil
     let eye = SIMD2(camera.position.x, camera.position.z)
     perch = (layout.onCatSurface(spot), CatTrip.heading(from: spot, to: eye))
     let height = catHolder.position.y
@@ -357,7 +361,8 @@ extension GenzRoom {
   /// the room or being held.
   var isFreeToPlay: Bool {
     hasCat && world.activity == .sleeping && opening == nil && tripKind != .delivery
-      && tripKind != .greeting && !isHoldingCat
+      && tripKind != .greeting && !isHoldingCat && footing.level == layout.catHomeLevel
+      && brainBody.jump == nil
   }
 
   /// Ends a game in progress, leaving the cat where it is.
