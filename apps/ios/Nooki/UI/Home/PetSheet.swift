@@ -140,7 +140,7 @@ private struct PetPortrait: View {
 
     var body: some View {
         Group {
-            if let image = UIImage(named: "MochiPortrait") {
+            if let image = UIImage(named: CatCoat.current().avatar) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 Image(systemName: "cat.fill").font(.system(size: size * 0.45)).foregroundStyle(.white)

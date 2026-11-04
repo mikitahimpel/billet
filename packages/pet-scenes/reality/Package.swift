@@ -7,14 +7,14 @@ let package = Package(
   name: "PetSceneReality",
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: [.library(name: "PetSceneReality", targets: ["PetSceneReality"])],
-  dependencies: [.package(path: "../../ios")],
+  dependencies: [.package(path: "../../ios/core"), .package(path: "../../ios/pet")],
   targets: [
     .target(
       name: "PetSceneReality",
       dependencies: [
-        .product(name: "DesignSystem", package: "ios"),
-        .product(name: "Pet", package: "ios"),
-        .product(name: "PetScene", package: "ios"),
+        .product(name: "DesignSystem", package: "core"),
+        .product(name: "Pet", package: "pet"),
+        .product(name: "PetScene", package: "pet"),
       ],
       resources: [
         .copy("Resources/Cats"),
@@ -31,8 +31,8 @@ let package = Package(
       name: "PetSceneRealityTests",
       dependencies: [
         "PetSceneReality",
-        .product(name: "Pet", package: "ios"),
-        .product(name: "PetScene", package: "ios"),
+        .product(name: "Pet", package: "pet"),
+        .product(name: "PetScene", package: "pet"),
       ]
     ),
   ],

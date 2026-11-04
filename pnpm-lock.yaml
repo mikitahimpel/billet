@@ -775,13 +775,45 @@ importers:
         specifier: 'catalog:'
         version: 7.0.2
 
-  packages/ios: {}
+  packages/ios/contracts: {}
+
+  packages/ios/core:
+    dependencies:
+      '@billet/ios-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+
+  packages/ios/features:
+    dependencies:
+      '@billet/ios-contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@billet/ios-core':
+        specifier: workspace:*
+        version: link:../core
+      '@billet/ios-payments':
+        specifier: workspace:*
+        version: link:../payments
+      '@billet/ios-pet':
+        specifier: workspace:*
+        version: link:../pet
+
+  packages/ios/payments: {}
+
+  packages/ios/pet:
+    dependencies:
+      '@billet/ios-core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/pet-scenes/reality:
     dependencies:
-      '@billet/ios':
+      '@billet/ios-core':
         specifier: workspace:*
-        version: link:../../ios
+        version: link:../../ios/core
+      '@billet/ios-pet':
+        specifier: workspace:*
+        version: link:../../ios/pet
 
 packages:
 
