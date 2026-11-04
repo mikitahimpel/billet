@@ -13,6 +13,13 @@ extension View {
     }
 }
 
+extension View {
+    /// The see-through, honey-tinted glass for controls that float over the room: the tab bar and the chips.
+    func warmGlass<S: Shape>(_ shape: S, interactive: Bool = false) -> some View {
+        glass(shape, tint: Ink.glassTint, clear: true, interactive: interactive)
+    }
+}
+
 /// GlassEffectContainer from iOS 26; earlier systems show the content as is.
 struct GlassGroup<Content: View>: View {
     let spacing: CGFloat
