@@ -53,7 +53,7 @@ filling its tab. The desk is a Labs switch, so it can be A/B tested against the 
 
 ## Code
 
-- `Pet`: `ShopView` (the grid), `ShopCheckout` (one-tap buy, undo, the shortfall),
+- `Pet`: `ShopCheckout` (one-tap buy, undo, the shortfall),
   `ShopItem.Shelf`, `ShopState.undoBuy`.
 - `PetScene`: `shopThumbnail(_:side:scale:)` for the stills, `makeDeskScene(state:onEvent:)` with
   `DeskSceneState` and its events in `PetScene/PetSceneTabs.swift`. A scene without them returns
@@ -61,7 +61,8 @@ filling its tab. The desk is a Labs switch, so it can be A/B tested against the 
 - `PetSceneReality`: `NookiShopThumbnails`, `TabStage.swift` (the shared camera, mount rule, glow
   overlay and the `TabStages` cache), `DeskStage`, `DeskLayout` (with `CatVisit`),
   `TabScenes.swift` (the SwiftUI views).
-- `FeatureHome`: `ShopTab`, `DeskTab`, wired in `AppShellView`.
+- `FeatureHome`: `ShopView` (the grid, kept out of `Pet` so the widget does not link it), `ShopTab`,
+  `DeskTab`, wired in `AppShellView`.
 
 ## Rendering
 

@@ -1,5 +1,6 @@
 import CoreGraphics
 import DesignSystem
+import Pet
 import SwiftUI
 
 /// The shop: a grid of cards on four shelves (furniture, decor, window views and things for the
@@ -7,9 +8,9 @@ import SwiftUI
 /// the purchase can be taken back. A long press looks closer, and tries a window view on.
 ///
 /// In a tab it has the evening behind it; in a sheet (``View/billetSheet(_:)``) the sheet's ground.
-public struct ShopView: View {
+struct ShopView: View {
   /// Makes a still picture of an item, `side` points square at `scale` pixels a point.
-  public typealias Thumbnail =
+  typealias Thumbnail =
     @MainActor (ShopItem, _ side: CGFloat, _ scale: CGFloat) async ->
     CGImage?
 
@@ -42,7 +43,7 @@ public struct ShopView: View {
   ///   - onTryOn: Shows the room with a window view tried on; `nil` when there is no room to try
   ///     it in.
   ///   - onClose: Closes the shop, in a sheet.
-  public init(
+  init(
     store: ShopStore,
     checkout: ShopCheckout,
     style: RoomStyle,
@@ -62,7 +63,7 @@ public struct ShopView: View {
     self.onClose = onClose
   }
 
-  public var body: some View {
+  var body: some View {
     ZStack {
       if !isInSheet { EveningBackground() }
       ScrollView {
@@ -504,15 +505,15 @@ private struct ShopItemCloser: View {
 }
 
 /// The flat picture of an item, while its still is being made or where the scene has none.
-public struct ShopItemGlyph: View {
+struct ShopItemGlyph: View {
   private let item: ShopItem
   @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat = 40
 
-  public init(item: ShopItem) {
+  init(item: ShopItem) {
     self.item = item
   }
 
-  public var body: some View {
+  var body: some View {
     Image(systemName: item.symbol)
       .font(.system(size: size))
       .foregroundStyle(item.tint.color)
@@ -520,14 +521,14 @@ public struct ShopItemGlyph: View {
 }
 
 /// The wallet balance, as a plate with a stamp.
-public struct StampPlate: View {
+struct StampPlate: View {
   private let balance: Int
 
-  public init(balance: Int) {
+  init(balance: Int) {
     self.balance = balance
   }
 
-  public var body: some View {
+  var body: some View {
     HStack(spacing: Spacing.hair) {
       Image(systemName: "seal.fill")
         .font(IconStyle.font)
