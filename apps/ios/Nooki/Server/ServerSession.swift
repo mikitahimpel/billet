@@ -1,3 +1,5 @@
+import FeatureCanvas
+import Foundation
 import FeatureOnboarding
 import FeaturePairing
 import Observation
@@ -28,6 +30,20 @@ final class ServerSession {
     var api: APIClient { backend.api }
 
     var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
+
+    /// The pair's room socket for the shared canvas; nil until this account has a partner.
+    ///
+    /// The socket resumes after the last note `seq` it saw, kept on this phone, so opening the canvas does not replay
+    /// the couple's whole history every time.
+    func liveRoom(defaults: UserDefaults = .standard) -> LiveRoom? {
+        guard isPaired else { return nil }
+        let accounts = backend.accounts
+        let key = "draw.lastNoteSeq"
+        let lastSeq = defaults.object(forKey: key) as? Int
+        return LiveRoom.live(
+            baseURL: backend.baseURL, token: { (try? accounts.load())?.token }, lastSeq: lastSeq,
+            onNote: { seq, _ in defaults.set(seq, forKey: key) })
+    }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.
     func pairingFinished() {

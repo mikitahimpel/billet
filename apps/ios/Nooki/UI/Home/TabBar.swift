@@ -79,6 +79,10 @@ struct AddButton: View {
                 Label("Moment", systemImage: "photo.badge.plus")
                 Text("Photo for the wall · +10")
             }
+            Button { state.drawing = true } label: {
+                Label("Draw", systemImage: "scribble.variable")
+                Text("On \(state.otherPartner)'s lock screen")
+            }
             Button { state.composingNote = .write } label: {
                 Label("Note", systemImage: "note.text")
                 Text("On the board · +5")

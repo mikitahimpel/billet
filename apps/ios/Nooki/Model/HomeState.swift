@@ -126,6 +126,9 @@ final class HomeState {
     /// The open note composer; the Add menu and the new-note deep link set it.
     var composingNote: NoteComposer.Mode?
 
+    /// The lock-screen drawing is open; the Add menu's Draw and a drawing widget's tap set it.
+    var drawing = false
+
     /// The card the couple tapped on the board, opened as a sheet.
     var openedPin: PinRoute?
     var momentsMode: MomentsMode = .photos
@@ -220,6 +223,7 @@ final class HomeState {
         case .newNote:
             tab = .moments
             composingNote = .write
+        case .draw: drawing = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
         }
     }
