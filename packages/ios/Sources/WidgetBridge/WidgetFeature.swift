@@ -12,19 +12,13 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
   case buttonTreat
   case buttonPet
   case buttonHeart
-  case lockScreenButtons
-  case controlPet
-  case controlHeart
-  case controlCanvas
   case liveActivity
-  case canvasShortcut
   case questionCard
   case doodleCard
 
   public enum Group: CaseIterable, Sendable {
     case pictures
     case buttons
-    case controls
     case liveActivity
     case canvas
 
@@ -32,7 +26,6 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
       switch self {
       case .pictures: "Pictures"
       case .buttons: "Buttons"
-      case .controls: "Controls"
       case .liveActivity: "Live Activity"
       case .canvas: "Canvas"
       }
@@ -44,13 +37,11 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .partnerDrawing, .streak, .timeOfDay, .partnerWindow, .daysTogether, .nudge,
       .rotatePictures:
       .pictures
-    case .buttonTreat, .buttonPet, .buttonHeart, .lockScreenButtons:
+    case .buttonTreat, .buttonPet, .buttonHeart:
       .buttons
-    case .controlPet, .controlHeart, .controlCanvas:
-      .controls
     case .liveActivity:
       .liveActivity
-    case .canvasShortcut, .questionCard, .doodleCard:
+    case .questionCard, .doodleCard:
       .canvas
     }
   }
@@ -67,12 +58,7 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .buttonTreat: "Give today's treat"
     case .buttonPet: "Pet the cat"
     case .buttonHeart: "Send a heart"
-    case .lockScreenButtons: "Buttons on the Lock Screen"
-    case .controlPet: "Control: pet the cat"
-    case .controlHeart: "Control: send a heart"
-    case .controlCanvas: "Control: draw a note"
     case .liveActivity: "The cat is on its way"
-    case .canvasShortcut: "Draw from a shortcut"
     case .questionCard: "Today's question"
     case .doodleCard: "Doodle prompt"
     }
@@ -90,12 +76,7 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .buttonTreat: "A button on the Home Screen widget."
     case .buttonPet: "A button on the Home Screen widget."
     case .buttonHeart: "Answers your partner's newest note."
-    case .lockScreenButtons: "Let the buttons run from Lock Screen widgets too."
-    case .controlPet: "For the Lock Screen and Control Center."
-    case .controlHeart: "For the Lock Screen and Control Center."
-    case .controlCanvas: "Opens billet straight on the canvas."
     case .liveActivity: "Shows the cat carrying a note on the Lock Screen, with a heart button."
-    case .canvasShortcut: "A Shortcuts action that opens billet straight on the canvas."
     case .questionCard: "A question to answer with a drawing, on Home."
     case .doodleCard: "Something small to doodle, on Home."
     }

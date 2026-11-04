@@ -440,9 +440,8 @@ struct HomeView: View {
       latestReceived
       treatPanel
       promptCards
-      if LabExperiment.allCases.contains(where: { $0.hasHomeCard && session.labs.isOn($0) }) {
-        labsDrawer
-      }
+      // The porch light is always there, so the sheet always has a card.
+      labsDrawer
     }
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
@@ -533,10 +532,8 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var porchLightCard: some View {
-    if session.labs.isOn(LabExperiment.porchLight) {
-      PorchLightSection(store: session.porch)
-    }
+  private var porchLightCard: some View {
+    PorchLightSection(store: session.porch)
   }
 
   @ViewBuilder private var sealedNoteCards: some View {

@@ -48,9 +48,10 @@ import Testing
     #expect(changes == 0)
   }
 
-  @Test func theNotesDeskIsALabsSwitchThatStartsOn() {
-    #expect(LabExperiment.notesDesk.defaultOn)
-    #expect(!LabExperiment.allCases.map(\.rawValue).contains("shopScene"))
-    #expect(LabExperiment.notesDesk.group == .notes)
+  @Test func theNotesDeskAndTheShopAreNoLongerSwitches() {
+    let keys = LabExperiment.allCases.map(\.rawValue)
+    #expect(!keys.contains("notesDesk"))
+    #expect(!keys.contains("shopScene"))
+    #expect(WidgetFeatures.retiredKeys.contains("notesDesk"))
   }
 }

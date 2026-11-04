@@ -117,8 +117,8 @@ final class PairSession {
     self.trips = trips
     play = PairPlay(device: room.device, saved: playStorage?.load())
     let porch = porch
-    life.frozen = { [labs] in
-      guard labs.isOn(LabExperiment.porchLight), let light = porch.light else { return [] }
+    life.frozen = {
+      guard let light = porch.light else { return [] }
       return [DateInterval(start: light.from, end: light.ends(calendar: .current))]
     }
     store = Store(initial: HomeMachine.State()) { await HomeRunner.run($0, delivery: delivery) }
@@ -197,8 +197,7 @@ final class PairSession {
 
   /// The shared streak on `day`, counting through the nights the porch light covers.
   func streak(today day: String, calendar: Calendar) -> Int {
-    let paused =
-      labs.isOn(LabExperiment.porchLight) ? porch.covered(now: now(), calendar: calendar) : []
+    let paused = porch.covered(now: now(), calendar: calendar)
     return play.ledger.streak(today: day, calendar: calendar, paused: paused)
   }
 

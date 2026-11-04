@@ -50,6 +50,10 @@ extension WidgetFeatures: Codable {
     "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
     "catChases", "cinematicOnboarding", retiredCatMood, "seasons", "framedNotes", "overnightStay",
     "catCameBack", "twoWisps", "theirSky",
+    // Always on: what they switched is chosen in iOS (adding the widget, control or shortcut) or
+    // has no reason to be off.
+    "notesDesk", "shelfBoard", "drawnReplay", "wallpaperShortcut", "porchLight", "bedsideHouse",
+    "lockScreenButtons", "controlPet", "controlHeart", "controlCanvas", "canvasShortcut",
   ]
 
   /// The key of the cat-mood picture, which is gone. When it was the only picture on, the
