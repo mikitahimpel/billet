@@ -23,6 +23,8 @@ final class GenzRoomScreen {
   var lights = GlowSpots()
   /// Just above the cat, or `nil` before the room has been fitted.
   var cat: CGPoint?
+  /// The middle of the cat's bowl, or `nil` before the room has been fitted.
+  var bowl: CGPoint?
   var parallax = CGSize.zero
   /// The window's opening as the camera sees it now, and as it sees it from its home place.
   var window: [CGPoint] = []
@@ -789,6 +791,10 @@ final class GenzRoom: CatPlayStage {
     if screen.homeWindow != homeWindow { screen.homeWindow = homeWindow }
     let cat = camera.project(catHolder.position + [0, layout.cat.length * 0.55, 0], in: viewSize)
     if screen.cat != cat { screen.cat = cat }
+    let bowl = lifeProps.flatMap {
+      camera.project($0.bowl.position(relativeTo: room), in: viewSize)
+    }
+    if screen.bowl != bowl { screen.bowl = bowl }
     let plate = project(GenzLightSwitch.plate)
     if screen.lightSwitch != plate { screen.lightSwitch = plate }
     let parallax = CGSize(

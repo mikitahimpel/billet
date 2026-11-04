@@ -122,6 +122,19 @@ struct CatFeelingTests {
     #expect(starving.allSatisfy { $0.1.stack.step != .eat })
   }
 
+  @Test func aHungryCatWaitsByTheBowlFacingYouRatherThanBegging() throws {
+    // Fed until the morning, then not: hungry for a while before it is hangry.
+    var events = Self.series(.feed, 8, from: -24, every: 3, 10)
+    events += Self.series(.pet, 12, from: -20, every: 2, 11)
+    events += Self.series(.play, 8, from: -16, every: 3, 12)
+    let hungry: [CatActivityStep] = Self.day(events).compactMap { _, frame in
+      frame.feeling == .hungry ? frame.stack.step : nil
+    }
+    try #require(hungry.count > 10)
+    #expect(!hungry.contains(.beg))
+    #expect(hungry.contains(.waitByBowl))
+  }
+
   @Test func aTantrumYowlsAndMeows() {
     let frames = Self.day(Self.starving).map(\.1)
     let voices = Set(frames.compactMap(\.voice))
