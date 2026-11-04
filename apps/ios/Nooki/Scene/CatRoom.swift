@@ -1,3 +1,4 @@
+import Pet
 import RealityKit
 import SwiftUI
 
@@ -27,6 +28,11 @@ class CatRoom {
     private var catBody = Entity()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
+    /// Mochi's brain in this room, once she has loaded.
+    private(set) var director: CatDirector?
+    /// The cat's life on this phone and where its changes are reported, shared by every room.
+    static let catEvents: CatEventSource = LocalCatEvents()
+    static let catAnalytics: CatAnalytics = NoCatAnalytics()
     /// Height above the cat's origin where the speech bubble anchors.
     private var catHeadTop: Float = 0.12
     var iblReceiver: ImageBasedLightReceiverComponent?
@@ -119,6 +125,27 @@ class CatRoom {
     func purr() {
         purrStart = time
         walker?.pet()
+        director?.petted()
+    }
+
+    /// The app came to the front.
+    func appOpened() {
+        director?.appOpened()
+    }
+
+    /// The places in this room the brain may send Mochi to, besides her bed; a room with a route offers its far end.
+    var catSpots: [NookiSpot: CatWalker.Destination] {
+        walker?.main.map { [.tree: $0] } ?? [:]
+    }
+
+    /// A round obstacle on the floor her walks go around, in the pivot's floor plane.
+    var catKeepOut: (center: SIMD2<Float>, radius: Float)? { nil }
+
+    /// Where the camera is from the room's middle, in the pivot's space, along the floor.
+    private var cameraDirection: SIMD3<Float> {
+        var d = simd_quatf.y(-yaw).act(framing.direction)
+        d.y = 0
+        return simd_normalize(d)
     }
 
     /// Makes Mochi follow a finger dragged `offset` points from her head on screen, or stop with nil.
@@ -164,6 +191,8 @@ class CatRoom {
         yaw += (targetYaw - yaw) * min(1, dt * 8)
         pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
 
+        director?.paused = isShowcasing
+        director?.update(dt)
         walker?.update(dt)
 
         // A quick squash-and-stretch after a tap while her mesh is still loading; posed, she leans into the pet
@@ -183,7 +212,7 @@ class CatRoom {
     /// (Cat.usdz, CatStanding.usdz). Both are loaded once in the background and shared by the rooms (see `adoptCat`).
     func buildCat(at: SIMD3<Float>, rests: [Float], route: [CatWalker.Waypoint] = [], scale: Float, wandering: Bool) {
         Task {
-            let mochi: (standing: CatRig, seated: CatRig)
+            let mochi: Mochi
             do {
                 mochi = try await Self.loadMochi()
             } catch {
@@ -203,8 +232,13 @@ class CatRoom {
             ]))
             catGroup.components.set(InputTargetComponent())
 
-            walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, scale: scale,
-                               rests: rests, route: route, wandering: wandering)
+            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: mochi.bodies,
+                                   scale: scale, rests: rests, route: route, wandering: wandering)
+            walker.keepOut = catKeepOut
+            self.walker = walker
+            director = CatDirector(walker: walker, spots: catSpots, source: Self.catEvents, analytics: Self.catAnalytics,
+                                   cameraDirection: { [unowned self] in cameraDirection })
+            director?.appOpened()
             catHeadTop = 0.3 * scale
             if subscription != nil { adoptCat() }
         }
@@ -213,10 +247,17 @@ class CatRoom {
     /// Loads Mochi again the next time a room is built, after her coat changed.
     static func forgetMochi() { mochi = nil }
 
-    /// Mochi's two rigs, shared by every room.
-    private static var mochi: Task<(standing: CatRig, seated: CatRig), any Error>?
+    /// Mochi's rigs: standing, sitting, and lying where splats are drawn (the meshes have no lying bodies).
+    private struct Mochi {
+        let standing: CatRig
+        let seated: CatRig
+        let bodies: [NookiRestPose: CatRig]
+    }
 
-    private static func loadMochi() async throws -> (standing: CatRig, seated: CatRig) {
+    /// Mochi's rigs, shared by every room.
+    private static var mochi: Task<Mochi, any Error>?
+
+    private static func loadMochi() async throws -> Mochi {
         if let mochi { return try await mochi.value }
         let task = Task {
             let drawn = SplatLoader.isSupported
@@ -227,6 +268,18 @@ class CatRoom {
                         try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
+            var bodies: [NookiRestPose: CatRig] = [:]
+            // The lying bodies have no other coats yet, so a cat in another coat stays up rather than turn grey.
+            if drawn, CatCoat.current() == .grey {
+                for (pose, name) in [(NookiRestPose.loaf, "MochiLoaf"), (.sleep, "MochiSleep")] {
+                    do {
+                        let file = try await Task.detached { try CatRig.Files(named: name, drawn: true) }.value
+                        bodies[pose] = try CatRig(file)
+                    } catch {
+                        print("\(name) failed to load: \(error)")
+                    }
+                }
+            }
             if !drawn {
                 for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
                     do {
@@ -238,11 +291,11 @@ class CatRoom {
                     }
                 }
             }
-            for entity in [standing.entity, seated.entity].compactMap({ $0 }) {
+            for entity in ([standing.entity, seated.entity] + bodies.values.map(\.entity)).compactMap({ $0 }) {
                 entity.components.set(GroundingShadowComponent(castsShadow: true))
                 entity.forEachDescendant { $0.components.set(GroundingShadowComponent(castsShadow: true)) }
             }
-            return (standing: standing, seated: seated)
+            return Mochi(standing: standing, seated: seated, bodies: bodies)
         }
         mochi = task
         return try await task.value
@@ -251,7 +304,7 @@ class CatRoom {
     /// Moves Mochi into this room, lit by its ambient light and posed as this room's walker last left her.
     private func adoptCat() {
         guard let walker else { return }
-        for rig in [walker.standing, walker.seated] {
+        for rig in [walker.standing, walker.seated] + walker.bodies.values {
             guard let entity = rig.entity, entity.parent !== catModel else { continue }
             catModel.addChild(entity)
             if let iblReceiver {

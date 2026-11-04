@@ -109,6 +109,13 @@ final class CatBehavior {
     private(set) var mood = Mood()
     /// Set by whoever moves her: asleep in a loaf, she gets her energy back.
     var napping = false
+    /// Set when a brain decides how sleepy she is and when she yawns and grooms, in place of her own timers.
+    var directed = false
+    /// How sleepy the brain says she is, from 0 awake to 1 asleep; she eases into it.
+    var sleepiness: Float = 0
+    private var sleepy: Float = 0
+    /// A heading for her glances to favour, relative to her body, or nil to look about freely.
+    var focus: Float?
     private(set) var drowse: Float = 0
     private(set) var blink: Float = 0
     private(set) var state: Values
@@ -182,7 +189,8 @@ final class CatBehavior {
         // more often and wider.
         if t > nextGlance {
             let reach = 0.6 + 0.6 * mood.energy
-            glance = (random(-0.45, 0.45) * reach, random(-0.075, 0.175),
+            let toward = focus.flatMap { Float.random(in: 0..<1) < 0.7 ? $0 + random(-0.12, 0.12) : nil }
+            glance = (toward ?? random(-0.45, 0.45) * reach, random(-0.075, 0.175),
                       Float.random(in: 0..<1) < 0.3 ? random(-0.25, 0.25) : 0)
             nextGlance = t + random(2, 5) * lerp(1.8, 0.8, mood.energy) * (1 - 0.4 * mood.interest)
         }
@@ -231,20 +239,23 @@ final class CatBehavior {
 
         // Yawn: the head tips back and over with the ears folding, then comes back; tired, she yawns more.
         if t > nextYawn {
-            if left > 4 { yawnStart = t }
+            if left > 4 && !directed { yawnStart = t }
             nextYawn = t + random(40, 90) * lerp(0.6, 1.4, mood.energy)
         }
         let yawn = pow(bump(t, yawnStart, 2.4), 1.5)
 
         // Energy drains at rest and comes back with a nap; low, it makes her drowsy, unless something is going on.
         mood.energy = min(max(mood.energy + dt * (napping ? 1 / 200 : -1 / 150), 0), 1)
-        var drowse = (1 - smoothstep(mood.energy, 0.1, 0.35)) * (1 - heard) * (1 - near)
+        sleepy += (sleepiness - sleepy) * (1 - exp(-dt * 0.8))
+        let tired = directed ? min(sleepy, 0.85) : 1 - smoothstep(mood.energy, 0.1, 0.35)
+        var drowse = tired * (1 - heard) * (1 - near)
         if let doze {
             let u = t - doze.start
             drowse = max(drowse, smoothstep(u, 0, 1.5) * (1 - smoothstep(u, doze.length - 1, doze.length)))
         }
         self.drowse = drowse
-        let asleep = doze.map { smoothstep(t - $0.start, 1, 2.5) * (1 - smoothstep(t - $0.start, $0.length - 1.2, $0.length)) } ?? 0
+        let dozing = doze.map { smoothstep(t - $0.start, 1, 2.5) * (1 - smoothstep(t - $0.start, $0.length - 1.2, $0.length)) } ?? 0
+        let asleep = max(dozing, directed ? smoothstep(sleepy, 0.7, 0.95) : 0)
 
         // Every 10-20 s she settles her weight a little differently, leaning to a side or forward, and holds it; her chest
         // turns a little after her head.
@@ -262,7 +273,7 @@ final class CatBehavior {
         // Grooming: every minute or so, awake and left alone, she washes her chest in short licks, head down and to a
         // side, eyes half shut.
         if t > nextGroom {
-            if left > 8 && drowse < 0.3 { groom = (t, random(3, 5.5), Bool.random() ? -1 : 1) }
+            if left > 8 && drowse < 0.3 && !directed { groom = (t, random(3, 5.5), Bool.random() ? -1 : 1) }
             nextGroom = t + random(40, 90)
         }
         let washing = groom.map { near > 0 ? 0 : hold(t, $0.start, $0.length) } ?? 0
