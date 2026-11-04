@@ -3,20 +3,79 @@ import Pet
 import simd
 
 extension GenzLayout {
-  /// The levels the cat can get to from `start` by jumping, `start` among them.
-  func catReachableLevels(from start: Int) -> Set<Int> {
+  /// Every jump the cat can make between the room's levels, by the level it leaves.
+  func catJumps() -> [Int: [GenzCatJump]] {
     let levels = catLevels
+    var out: [Int: [GenzCatJump]] = [:]
+    for level in levels {
+      out[level.id] = levels.filter { $0.id != level.id }.compactMap {
+        catJump(from: level, to: $0)
+      }
+    }
+    return out
+  }
+
+  /// The levels the cat can get to from `start` by jumping, `start` among them.
+  func catReachableLevels(from start: Int, jumps: [Int: [GenzCatJump]]? = nil) -> Set<Int> {
+    let jumps = jumps ?? catJumps()
     var reached: Set<Int> = [start]
     var frontier = [start]
     while let current = frontier.popLast() {
-      guard let here = levels.first(where: { $0.id == current }) else { continue }
-      for other in levels where !reached.contains(other.id) {
-        guard catJump(from: here, to: other) != nil else { continue }
-        reached.insert(other.id)
-        frontier.append(other.id)
+      for jump in jumps[current] ?? [] where !reached.contains(jump.toLevel) {
+        reached.insert(jump.toLevel)
+        frontier.append(jump.toLevel)
       }
     }
     return reached
+  }
+}
+
+/// What working out the cat's ways in a room keeps from one plan to the next: the jumps between
+/// its levels, and which steps of each level's route grid the walking body fits along. Both hold
+/// for where the pieces are and the cat's size, and are dropped when either changes.
+@MainActor
+final class GenzCatWayCache {
+  /// One level's route grid: where it starts and how many cells it has each way.
+  struct Grid: Hashable {
+    let level: Int
+    let low: SIMD2<Float>
+    let columns: Int
+    let rows: Int
+  }
+
+  private var key: (pieces: [GenzLayout.Placement], standing: GenzCatShape, resting: GenzCatShape)?
+  private var jumps: [Int: [GenzCatJump]]?
+  /// For each cell of a grid, its eight steps: 0 not yet checked, 1 clear, 2 blocked.
+  private var steps: [Grid: [UInt8]] = [:]
+
+  func jumps(_ layout: GenzLayout) -> [Int: [GenzCatJump]] {
+    check(layout)
+    if let jumps { return jumps }
+    let found = layout.catJumps()
+    jumps = found
+    return found
+  }
+
+  func steps(_ layout: GenzLayout, on grid: Grid) -> [UInt8] {
+    check(layout)
+    return steps[grid] ?? [UInt8](repeating: 0, count: grid.columns * grid.rows * 8)
+  }
+
+  func keep(_ found: [UInt8], on grid: Grid) {
+    // A grid reaching past its level (a cat set down off it) is one of many: kept few.
+    if steps[grid] == nil, steps.count >= 8 { steps = [:] }
+    steps[grid] = found
+  }
+
+  private func check(_ layout: GenzLayout) {
+    if let key, key.pieces == layout.pieces, key.standing == layout.catBody.standing,
+      key.resting == layout.catBody.resting
+    {
+      return
+    }
+    key = (layout.pieces, layout.catBody.standing, layout.catBody.resting)
+    jumps = nil
+    steps = [:]
   }
 }
 
@@ -31,7 +90,8 @@ extension GenzRoom {
     if base != .stand {
       goal = layout.catRestSpot(near: goal, on: level, heading: headingFor(frame) ?? bodyHeading)
     }
-    var ways = layout.catWay(from: catSpot, on: footing.level, to: goal, on: level)
+    var ways = layout.catWay(
+      from: catSpot, on: footing.level, to: goal, on: level, cache: wayCache)
     // Somewhere it cannot get to without going through something: as near as it gets.
     var end = catSpot
     var endLevel = footing.level
@@ -214,7 +274,8 @@ extension GenzRoom {
     }
     if !goingHome {
       let spot = layout.onCatSurface(self.home)
-      brainBody.ways = layout.catWay(from: catSpot, on: footing.level, to: spot, on: home)
+      brainBody.ways = layout.catWay(
+        from: catSpot, on: footing.level, to: spot, on: home, cache: wayCache)
       if brainBody.ways.isEmpty {
         // No way back up from here: the trip is let go rather than glide.
         pendingTrip = nil

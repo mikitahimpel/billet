@@ -135,7 +135,10 @@ extension GenzLayout {
       shape?.spine(at: point, heading: heading, length: cat.length)
       ?? GenzCatBody.spine(at: point, heading: heading, length: cat.length)
     let feet = (ground ?? cat.spot.z) + height
+    // Nothing further from its middle than its body reaches can touch it.
+    let reach = radius + spine.reduce(0) { max($0, simd_distance($1, point)) }
     for obstacle in obstacles ?? catObstacles where feet < obstacle.top - 0.06 {
+      guard obstacle.box.distance(to: point) < reach else { continue }
       if spine.contains(where: { obstacle.box.distance(to: $0) < radius }) { return false }
     }
     return true
@@ -217,7 +220,10 @@ extension GenzLayout {
 
   /// ``catRoute(from:to:)`` on `level`: the cat's own top, the floor or another piece's top,
   /// keeping the walking body (``catBody``) clear of what stands there.
-  func catRoute(from start: SIMD2<Float>, to goal: SIMD2<Float>, on level: Int) -> [SIMD2<Float>] {
+  func catRoute(
+    from start: SIMD2<Float>, to goal: SIMD2<Float>, on level: Int,
+    cache: GenzCatWayCache? = nil
+  ) -> [SIMD2<Float>] {
     guard simd_distance(start, goal) > 1e-4 else { return [] }
     let isHome = level == GenzCatLevel.homeID || (level == catHomeLevel && catSurface == nil)
     let blocking = (isHome ? catObstacles : catObstacles(on: level)).filter { !$0.sitOnTop }
@@ -266,6 +272,16 @@ extension GenzLayout {
       !blocking.contains { $0.box.distance(to: point(i)) < margin }
     }
     let startIndex = index(start)
+    // Which steps between cells are clear, as far as earlier routes on this grid found out.
+    let grid = GenzCatWayCache.Grid(level: level, low: low, columns: columns, rows: rows)
+    var known = cache?.steps(self, on: grid) ?? []
+    defer { cache?.keep(known, on: grid) }
+    func step(_ cell: Int, _ move: Int, to next: Int) -> Bool {
+      guard !known.isEmpty else { return clear(point(cell), point(next)) }
+      let slot = cell * 8 + move
+      if known[slot] == 0 { known[slot] = clear(point(cell), point(next)) ? 1 : 2 }
+      return known[slot] == 1
+    }
     // A body already in something (a cat set down there) walks straight out of it.
     let stuck = !Self.turns.contains { heading in
       catBodyIsClear(
@@ -296,7 +312,7 @@ extension GenzLayout {
       if distance < nearest.distance { nearest = (current, distance) }
       let c = current % columns
       let r = current / columns
-      for (dc, dr) in moves {
+      for (move, (dc, dr)) in moves.enumerated() {
         let nc = c + dc
         let nr = r + dr
         guard nc >= 0, nc < columns, nr >= 0, nr < rows else { continue }
@@ -304,7 +320,10 @@ extension GenzLayout {
         guard !done[next], open[next] else { continue }
         let total = cost[current] + cell * (dc != 0 && dr != 0 ? 1.4142 : 1)
         guard total < cost[next] else { continue }
-        guard (current == startIndex && stuck) || clear(leaving, point(next)) else { continue }
+        let fits =
+          current == startIndex
+          ? stuck || clear(leaving, point(next)) : step(current, move, to: next)
+        guard fits else { continue }
         cost[next] = total
         from[next] = current
         frontier.push(next, total + simd_distance(point(next), goal))

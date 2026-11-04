@@ -124,7 +124,7 @@ extension GenzRoom {
         && spot.x <= surface.max.x + margin && spot.y >= surface.min.y - margin
         && spot.y <= surface.max.y + margin
     }
-    let reach = layout.catReachableLevels(from: layout.catHomeLevel)
+    let reach = layout.catReachableLevels(from: layout.catHomeLevel, jumps: wayCache.jumps(layout))
     for (index, placement) in layout.pieces.enumerated() {
       guard let kind = Self.affordanceKind(placement.piece.kind) else { continue }
       let name = Self.decorName(placement, index: index)

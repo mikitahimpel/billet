@@ -129,6 +129,33 @@ import simd
     #expect(Self.turnFits(layout, moved))
   }
 
+  /// Ways worked out with what earlier ones found kept are the ways worked out afresh, and a
+  /// piece moved makes the room work them out again.
+  @Test(.timeLimit(.minutes(2))) func keptWaysAreTheWaysFoundAfresh() throws {
+    var layout = Self.layouts[0]
+    let floor = try #require(layout.catLevel(GenzCatLevel.floorID))
+    let cache = GenzCatWayCache()
+    func check(_ layout: GenzLayout) throws {
+      let obstacles = layout.catObstacles(on: floor.id)
+      let ends: [SIMD2<Float>] = [[1.0, 5.4], [6.8, 3.3], [4.0, 5.5], [2.2, 2.2], [6.0, 2.0]]
+      let spots = ends.compactMap { layout.catSpot(near: $0, on: floor, obstacles: obstacles) }
+      #expect(spots.count >= 4)
+      for a in spots {
+        for b in spots where a != b {
+          #expect(
+            layout.catRoute(from: a, to: b, on: floor.id, cache: cache)
+              == layout.catRoute(from: a, to: b, on: floor.id), "\(a) to \(b)")
+        }
+      }
+      #expect(cache.jumps(layout) == layout.catJumps())
+    }
+    try check(layout)
+    let pouf = try #require(layout.pieces.firstIndex { $0.piece.kind == .knitPouf })
+    layout.pieces[pouf].centre.x = 5.4
+    layout.pieces[pouf].centre.y = 3.1
+    try check(layout)
+  }
+
   /// On the floor, the cat goes round the pouf, the plants and the bookshelf, not through them.
   @Test(.timeLimit(.minutes(2))) func onTheFloorItGoesRoundTheFurniture() throws {
     for layout in Self.layouts {
