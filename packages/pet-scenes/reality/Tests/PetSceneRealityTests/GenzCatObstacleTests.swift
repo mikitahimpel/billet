@@ -13,14 +13,13 @@ import simd
 /// stages other tests are loading on it.
 @MainActor
 @Suite struct GenzCatObstacleTests {
-  /// Every room the cat lives on a piece of furniture in.
+  /// Every room the cat lives on a piece of furniture in, and one with the generated props: the
+  /// walks are slow, and the cosy nook has the props the cat walks round and lies on (the throw
+  /// and the books on the seat). ``GenzCatPathTests`` checks the retro den's.
   private var layouts: [(String, GenzLayout)] {
     RoomFurniture.allCases.map { furniture in
       ("windowSeat \(furniture)", GenzLayout.of(furniture))
-    }
-      + [RoomFurniture.cosyNook, .retroDen].map { furniture in
-        ("windowSeat \(furniture) idol", GenzLayout.of(furniture, idolProps: true))
-      }
+    } + [("windowSeat cosyNook idol", GenzLayout.of(.cosyNook, idolProps: true))]
   }
 
   /// The spots the brain sends the cat to, as `GenzRoom.resolve` works them out: home, a grid of

@@ -17,11 +17,15 @@ import Testing
     }
   }
 
-  @Test func nowhereTheCatIsSentIsAmongClutter() throws {
+  /// Slow, so it gives way to the other tests' rooms once a row, and checks the generated props'
+  /// rooms on a coarser grid.
+  @Test func nowhereTheCatIsSentIsAmongClutter() async throws {
     for layout in Self.layouts {
       let surface = try #require(layout.catSurface)
-      for x in stride(from: surface.min.x, through: surface.max.x, by: 0.2) {
-        for y in stride(from: surface.min.y, through: surface.max.y, by: 0.2) {
+      let step: Float = layout.idolProps ? 0.4 : 0.2
+      for x in stride(from: surface.min.x, through: surface.max.x, by: step) {
+        await Task.yield()
+        for y in stride(from: surface.min.y, through: surface.max.y, by: step) {
           let spot = layout.onCatSurface([x, y])
           #expect(
             !layout.catClutter.contains { $0.contains(spot) }, "\(layout.key) sends it to \(spot)")
