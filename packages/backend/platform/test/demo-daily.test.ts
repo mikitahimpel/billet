@@ -280,6 +280,10 @@ describe("daily drawing in the room", () => {
 });
 
 describe("daily reminder alarm", () => {
+  // The room runs on a clock the test sets, but workerd fires a Durable Object's alarm on the real
+  // one. A day far in the future keeps every alarm the room schedules in the real future, so only
+  // the test runs it. A past day lets the alarm fire by itself, before the test's drawing is in.
+  const DAY = "2099-11-04";
   const token = "cd".repeat(32);
 
   const room = (code: string) => CLOCK_DEMO_ROOM.get(CLOCK_DEMO_ROOM.idFromName(code));
@@ -292,13 +296,13 @@ describe("daily reminder alarm", () => {
   it("reminds the one who has not drawn, in their evening, once", async () => {
     const code = "DAYARM2345";
     // 19:30 in Berlin, where both phones write their times.
-    const evening = Date.parse("2026-11-04T18:30:00Z");
+    const evening = Date.parse(`${DAY}T18:30:00Z`);
     await runInDurableObject(room(code), (instance) => instance.setNow(evening));
     const rooms = CLOCK_DEMO_ROOM as unknown as Rooms;
     const a = await connect(code, alice, rooms);
     const b = await connect(code, bob, rooms);
     b.socket.send(JSON.stringify({ type: "push-token", token }));
-    const at = "2026-11-04T19:30:00+01:00";
+    const at = `${DAY}T19:30:00+01:00`;
     await b.sendAcked({ type: "play", kind: "pet", id: uuid(40), at });
     await a.sendAcked({ type: "play", kind: "daily", id: uuid(41), at, ink: "ALICE" });
 
@@ -309,7 +313,7 @@ describe("daily reminder alarm", () => {
     expect(body.aps.alert.body).toBe(
       "The cat is holding a drawing for you. Draw yours to see it 🎨",
     );
-    expect(body.daily).toBe("2026-11-04");
+    expect(body.daily).toBe(DAY);
 
     // The alarm for the next evening may run early in a test; it must not remind twice today.
     await runDurableObjectAlarm(room(code));
@@ -318,13 +322,13 @@ describe("daily reminder alarm", () => {
 
   it("sends nothing in quiet hours", async () => {
     const code = "DAYQTE2345";
-    const late = Date.parse("2026-11-04T21:45:00Z");
+    const late = Date.parse(`${DAY}T21:45:00Z`);
     await runInDurableObject(room(code), (instance) => instance.setNow(late));
     const rooms = CLOCK_DEMO_ROOM as unknown as Rooms;
     const a = await connect(code, alice, rooms);
     const b = await connect(code, bob, rooms);
     b.socket.send(JSON.stringify({ type: "push-token", token }));
-    const at = "2026-11-04T22:45:00+01:00";
+    const at = `${DAY}T22:45:00+01:00`;
     await a.sendAcked({ type: "play", kind: "pet", id: uuid(50), at });
     await b.sendAcked({ type: "play", kind: "pet", id: uuid(51), at });
     await runInDurableObject(room(code), (instance) => instance.alarm());

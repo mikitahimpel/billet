@@ -12,6 +12,7 @@ struct HomeView: View {
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(AppSettings.brainCardKey) private var brainCard = false
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -68,6 +69,16 @@ struct HomeView: View {
                     .transition(.opacity.combined(with: .offset(y: 12)))
             }
         }
+        .overlay(alignment: .topLeading) {
+            if brainCard && state.tab == .world {
+                // The brain starts once Mochi has loaded, after this view has drawn; look again now and then.
+                TimelineView(.periodic(from: .now, by: 1)) { _ in
+                    if let director = scene?.director { BrainCard(director: director) }
+                }
+                .padding(.leading, 16)
+                .padding(.top, 120)
+            }
+        }
         // Over the room rather than in place of it: RealityKit keeps drawing underneath, so the room is already
         // warmed up and whole when the splash lifts.
         .overlay {
@@ -103,7 +114,9 @@ struct HomeView: View {
         .onChange(of: state.petPulse) { scene?.purr() }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
-            case .active: state.refresh()
+            case .active:
+                state.refresh()
+                scene?.appOpened()
             case .background: state.didEnterBackground()
             default: break
             }
