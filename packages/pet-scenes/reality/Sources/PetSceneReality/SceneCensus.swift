@@ -1,4 +1,5 @@
 import Foundation
+import Metal
 import PetScene
 import RealityKit
 
@@ -17,14 +18,18 @@ enum SceneCensus {
     var triangles = 0
     var skinned = 0
     var meshes = Set<ObjectIdentifier>()
-    var textures: [ObjectIdentifier: Int] = [:]
+    /// Bytes of each texture's top level.
+    var textures: [ObjectIdentifier: Double] = [:]
+    var formats = Set<String>()
     var lights = 0
     var shadowLights = 0
     var heaviest: [(name: String, triangles: Int)] = []
 
     func addTexture(_ texture: TextureResource?) {
       guard let texture else { return }
-      textures[ObjectIdentifier(texture)] = texture.width * texture.height
+      textures[ObjectIdentifier(texture)] =
+        Double(texture.width * texture.height) * bytesPerPixel(texture.pixelFormat)
+      formats.insert(String(describing: texture.pixelFormat.rawValue))
     }
 
     func visit(_ entity: Entity, casts inherited: Bool) {
@@ -71,13 +76,14 @@ enum SceneCensus {
     visit(root, casts: true)
     let top = heaviest.sorted { $0.triangles > $1.triangles }.prefix(8)
       .map { "\($0.name):\($0.triangles)" }.joined(separator: ",")
-    // As RGBA8 with a full mip chain.
-    let textureMB = Double(textures.values.reduce(0, +)) * 4 * 4 / 3 / 1_048_576
+    // With a full mip chain.
+    let textureMB = textures.values.reduce(0, +) * 4 / 3 / 1_048_576
     return
       "entities=\(entities) models=\(models) meshes=\(meshes.count) parts=\(parts) "
       + "shadowParts=\(shadowLights > 0 ? casterParts : 0) tris=\(triangles) "
       + "skinnedParts=\(skinned) textures=\(textures.count) "
-      + "textureMB=\(ScenePerf.format(textureMB)) lights=\(lights) shadowLights=\(shadowLights) "
+      + "textureMB=\(ScenePerf.format(textureMB)) "
+      + "textureFormats=\(formats.sorted().joined(separator: ",")) lights=\(lights) shadowLights=\(shadowLights) "
       + "heaviest=\(top)"
   }
 
@@ -91,5 +97,23 @@ enum SceneCensus {
       ? String(format: "%.1fx%.1fx%.1f@%.1f/%.1f/%.1f", size.x, size.y, size.z, at.x, at.y, at.z)
       : names.joined(separator: "/")
     return name.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: ",", with: "_")
+  }
+
+  /// How many bytes a pixel of `format` takes on the GPU: a compressed block's bytes over its
+  /// pixels, and 4 (RGBA8) for any format not named here.
+  static func bytesPerPixel(_ format: MTLPixelFormat) -> Double {
+    switch format {
+    case .astc_4x4_srgb, .astc_4x4_ldr, .astc_4x4_hdr, .bc7_rgbaUnorm, .bc7_rgbaUnorm_srgb,
+      .bc3_rgba, .bc3_rgba_srgb:
+      1
+    case .astc_6x6_srgb, .astc_6x6_ldr, .astc_6x6_hdr: 16.0 / 36
+    case .astc_8x8_srgb, .astc_8x8_ldr, .astc_8x8_hdr: 16.0 / 64
+    case .bc1_rgba, .bc1_rgba_srgb: 0.5
+    case .r8Unorm, .a8Unorm: 1
+    case .rg8Unorm, .r16Float: 2
+    case .rgba16Float: 8
+    case .rgba32Float: 16
+    default: 4
+    }
   }
 }
