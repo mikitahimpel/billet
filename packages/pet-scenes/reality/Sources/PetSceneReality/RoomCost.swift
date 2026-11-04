@@ -18,6 +18,7 @@ final class RoomCostSwitches {
   /// The flat ones: the layers drawn over the room, its haze, halos, colour grade and sky.
   static let names = [
     "shadows", "lights", "transparent", "cat", "layers", "haze", "halos", "grade", "sky",
+    "idolProps",
   ]
 
   /// Switches `name` on or off in `root`; `all` switches every part.
@@ -62,6 +63,9 @@ final class RoomCostSwitches {
       }
     case "transparent":
       for entity in everything(under: root) where isSeeThrough(entity) { hide(entity) }
+    case "idolProps":
+      let names = Set(IdolProp.allCases.map(\.modelName))
+      for entity in everything(under: root) where names.contains(entity.name) { hide(entity) }
     case "cat":
       hide(cat)
     default:
