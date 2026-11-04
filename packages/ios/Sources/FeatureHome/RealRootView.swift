@@ -187,7 +187,7 @@ struct RealUsView: View {
   let onFinished: (AccountAction) -> Void
 
   var body: some View {
-    ScreenScaffold("Us", isSheet: true) {
+    ScreenScaffold("Us") {
       UsHeader(
         me: PairAvatars.me, partner: PairAvatars.partner, catName: nil, daysTogether: nil,
         streak: 0)
