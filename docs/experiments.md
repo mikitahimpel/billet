@@ -150,8 +150,11 @@ the mapping (every variant has a screen; an unknown one has none), then add the 
 First-party only: counts kept on our own backend, no third-party SDK, nothing sent anywhere else.
 
 **What is recorded.** One row per person, event name and UTC day in `pair_events` (D1): the pair
-(empty before pairing), the person, the name, the day, how many times, and the first and last
-moment. Nothing else: no note, image, stroke, text, device, address or place. The names are a closed
+(empty before pairing), the person, the name, the day, how many times, the first and last moment,
+and for what the app reports, the build and system it sent with its latest report that day
+(`app_version`, `os`: the same values Analytics Engine gets, in the same shapes; null for what the
+server records itself, and for rows from before 2026-11-04). Nothing else: no note, image, stroke,
+text, device, address or place. The names are a closed
 list in `packages/contracts/domain/src/metrics.ts`:
 
 | Name | Who records it | When |

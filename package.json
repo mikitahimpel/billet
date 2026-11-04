@@ -15,6 +15,7 @@
     "typecheck:root": "tsc --noEmit -p tsconfig.json",
     "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' --ignore-pattern 'tools/cat-gen/**' .",
     "metrics:report": "pnpm --filter @billet/backend-metrics metrics:report",
+    "admin:seed": "node packages/backend/admin/scripts/seed.ts",
     "db:generate": "pnpm --filter @billet/backend-platform db:generate"
   },
   "devDependencies": {

@@ -25,16 +25,21 @@ const makeMetricsRepository = (db: DirectoryDatabase): MetricsRepository["Servic
   MetricsRepository.of(
     spanMethods("MetricsRepository", {
       // One statement per table: the add happens in the database, so two at once both count.
-      record: ({ pairId, userId, name, at, detail, value }) => {
+      record: ({ pairId, userId, name, at, detail, value, client }) => {
         const day = dayOf(at);
+        const appVersion = client?.appVersion ?? null;
+        const os = client?.os ?? null;
         const person = db
           .insert(pairEvents)
-          .values({ pairId, userId, name, day, count: 1, firstAt: at, lastAt: at })
+          .values({ pairId, userId, name, day, count: 1, firstAt: at, lastAt: at, appVersion, os })
           .onConflictDoUpdate({
             target: [pairEvents.pairId, pairEvents.userId, pairEvents.name, pairEvents.day],
             set: {
               count: sql`${pairEvents.count} + 1`,
               lastAt: sql`max(${pairEvents.lastAt}, ${at})`,
+              // The day's latest report wins; a report without them keeps what is there.
+              appVersion: sql`coalesce(excluded.app_version, ${pairEvents.appVersion})`,
+              os: sql`coalesce(excluded.os, ${pairEvents.os})`,
             },
           });
         if (detail === undefined) return guarded(person).pipe(Effect.asVoid);

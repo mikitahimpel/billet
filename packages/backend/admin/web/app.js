@@ -2843,11 +2843,179 @@ async function renderOnboarding() {
   ];
 }
 
+/* ---------- Retention ---------- */
+
+const RETENTION_MODES = [
+  ["both", "Both active", "Both partners opened the app or sent a note on day N."],
+  ["either", "Either active", "At least one partner opened the app or sent a note on day N."],
+  ["bothNote", "Both sent a note", "Both partners sent a note on day N: the north star at day 7."],
+];
+
+/** `#/retention/<mode>/<key=variant or ->/<build or ->`. */
+const retentionHref = (mode, variant, version) =>
+  `#/retention/${mode}/${enc(variant || "-")}/${enc(version || "-")}`;
+
+function retentionCell(cell, max) {
+  if (cell.state === "pending")
+    return h(
+      "td",
+      { class: "heat pending", title: "No pair of this week has reached this day yet" },
+      "",
+    );
+  if (cell.state === "too-few")
+    return h(
+      "td",
+      { class: "heat few", title: "Fewer than 5 pairs: no number is shown" },
+      "too few",
+    );
+  const level = max > 0 ? cell.share / max : 0;
+  return h(
+    "td",
+    {
+      class: `heat${level > 0.6 ? " hot" : ""}${cell.partial ? " partial" : ""}`,
+      style: { "--heat": level.toFixed(3) },
+      title: `${cell.count} of ${cell.of} pairs · 95% interval ${fmtPct(cell.low, 0)}–${fmtPct(cell.high, 0)}${
+        cell.partial ? " · some pairs of this week are still too young" : ""
+      }`,
+    },
+    fmtPct(cell.share, 0),
+  );
+}
+
+async function renderRetention([modeArg, variantArg, versionArg]) {
+  const mode = RETENTION_MODES.some(([m]) => m === modeArg) ? modeArg : "both";
+  const variant = variantArg && variantArg !== "-" ? variantArg : "";
+  const version = versionArg && versionArg !== "-" ? versionArg : "";
+  const query = new URLSearchParams();
+  if (variant) query.set("variant", variant);
+  if (version) query.set("version", version);
+  const grid = await api(`/retention${query.size ? `?${query}` : ""}`);
+  const [, modeLabel, modeHelp] = RETENTION_MODES.find(([m]) => m === mode);
+
+  const values = grid.rows.flatMap((row) =>
+    row.cells[mode].filter((c) => c.state === "value").map((c) => c.share),
+  );
+  const max = values.length ? Math.max(...values) : 0;
+
+  const modePicker = h(
+    "nav",
+    { class: "seg", "aria-label": "What counts as retained" },
+    RETENTION_MODES.map(([m, label]) =>
+      h("a", {
+        href: retentionHref(m, variant, version),
+        "aria-current": m === mode ? "true" : null,
+        text: label,
+      }),
+    ),
+  );
+  const filter = (label, value, options, toHref) => {
+    const id = fid();
+    return h(
+      "label",
+      { class: "inline-field", for: id },
+      h("span", { text: label }),
+      h(
+        "select",
+        { id, onchange: (e) => (location.hash = toHref(e.target.value)) },
+        h("option", { value: "", text: "All", selected: !value }),
+        options.map(([v, text]) => h("option", { value: v, text, selected: v === value })),
+      ),
+    );
+  };
+  const filters = h(
+    "div",
+    { class: "filters" },
+    filter(
+      "Variant",
+      variant,
+      grid.options.variants.map(({ key, variant: v }) => [`${key}=${v}`, `${key}: ${v}`]),
+      (v) => retentionHref(mode, v, version),
+    ),
+    filter(
+      "Build when paired",
+      version,
+      grid.options.appVersions.map((v) => [v, v === "unknown" ? "unknown (no report)" : v]),
+      (v) => retentionHref(mode, variant, v),
+    ),
+  );
+
+  const table = h(
+    "div",
+    { class: "box table-wrap" },
+    h(
+      "table",
+      { class: "retention" },
+      h("caption", { class: "sr-only", text: `Retention by week paired: ${modeLabel}` }),
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", { scope: "col", text: "Week paired" }),
+          h("th", { scope: "col", class: "num", text: "Pairs" }),
+          grid.days.map((d) => h("th", { scope: "col", class: "num", text: `Day ${d}` })),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        grid.rows.map((row) =>
+          h(
+            "tr",
+            { class: row.week === "all" ? "total" : null },
+            h("th", {
+              scope: "row",
+              text: row.week === "all" ? "All weeks" : `${fmtDay(row.week)} week`,
+            }),
+            h("td", { class: "num", text: row.pairs == null ? "too few" : fmtNum(row.pairs, 0) }),
+            row.cells[mode].map((cell) => retentionCell(cell, max)),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  const anyPairs = grid.rows.some((row) => row.pairs != null);
+  return [
+    pageHead(
+      "Retention",
+      "Pairs by the week they formed (UTC, from Monday), and the share retained N days after. Day 0 is the day they paired.",
+      modePicker,
+    ),
+    filters,
+    anyPairs
+      ? section(
+          modeLabel,
+          modeHelp,
+          table,
+          h(
+            "p",
+            { class: "heat-legend" },
+            h("span", { class: "key heat-key" }),
+            "stronger colour is a higher share, within this view",
+            h("span", { class: "key pending-key" }),
+            "not reached yet",
+            h("span", { class: "key few-key" }),
+            "under 5 pairs: too few",
+            h("i", { text: "Italic" }),
+            "some pairs of the week are still too young; hover a cell for its count and 95% interval",
+          ),
+        )
+      : empty(
+          "Not enough pairs yet",
+          "A row appears once 5 pairs formed in a week" +
+            (variant || version ? " under these filters." : "."),
+        ),
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
   overview: renderOverview,
   events: renderEvents,
+  retention: renderRetention,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,
