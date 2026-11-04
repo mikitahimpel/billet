@@ -271,6 +271,16 @@ export const eventDetails = sqliteTable(
   ],
 );
 
+// Funnels the owner saved in the admin panel: a name and the definition (steps, window, unit) as
+// JSON, with who saved it (the Cloudflare Access email). Nothing about any pair or person.
+export const adminFunnels = sqliteTable("admin_funnels", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  definition: text("definition").notNull(),
+  createdAt: integer("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+});
+
 // The live configuration of each experiment and remote flag, as the admin panel last saved it.
 // The registry in `backend-flags/experiments` defines the keys and variants; a row here only
 // changes weights, default, exposure, status, kill switch and targeting (JSON in `config`).

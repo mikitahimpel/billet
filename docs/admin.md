@@ -16,6 +16,7 @@ hover.
 | Overview | for the last 7, 30 or 90 days against the same span before it: daily active (mean per day), weekly active (on the last day), new pairs, pair completion (inviters whose first invite fell in the range and are now in a pair), notes per pair per day (notes over the days each pair existed), D1/D7 retention (pairs formed in the range, both partners active on day N), each with its change and a sparkline or its 95% interval; active people and notes per day; the funnel installed → signed in → paired → first note → second day (all time) with each step's conversion from the one before | nothing |
 | In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
 | Retention | pairs by the week they formed (UTC, from Monday), one row per week and one for all weeks, and columns for day 1, 3, 7, 14, 30 and 60 after forming. Three modes: **both active** (both partners opened the app or sent a note on day N), **either active**, and **both sent a note** (the north star at day 7). Filters: an experiment's variant (from `pair_flags`) and the build the pair formed on. Each cell is a share of the week's pairs that have reached that day, coloured from faint to strong within the view; hover shows the count and its 95% Wilson interval. A day no pair of the week has reached is hatched grey, and a share resting on only some of the week's pairs (the others are too young) is in italics. See [below](#retention-grid) | nothing |
+| Funnels | a funnel built from 2 to 6 steps picked from the closed event list, a window (the same UTC day as step 1, within 1 day, within 7 days), counted per pair or per person, for step 1 in the last 7, 30 or 90 days or all time; per step the count, the share of the step before (95% interval on hover), and the median time from the step before; split by an experiment's variants. Saved funnels as chips. See [below](#funnel-builder) | save a funnel under a name, delete one after a confirmation |
 | Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's | start, stop, kill, unkill, each after a confirmation |
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
@@ -26,7 +27,7 @@ hover.
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
 before sign-in.
 
-**Too few.** In the analytics views (Retention so far), any group of fewer than 5 pairs shows "too
+**Too few.** In the analytics views (Retention, Funnels), any group of fewer than 5 pairs shows "too
 few" and no number: the server leaves the count out of the answer, so neither the page nor an agent
 ever sees it. Some users are minors, and a share of 2 pairs says more about those two couples than
 about the app. There are no per-person timelines and no session replay, by design. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
@@ -48,6 +49,32 @@ means is in [experiments.md](experiments.md#what-an-experiment-is).
 - **Checked against SQL.** `packages/backend/platform/test/admin-retention.test.ts` loads the seed
   into a migrated D1 and compares every cell, in every mode, with a hand-written query, and the
   variant and build filters with their own queries.
+
+## Funnel builder
+
+`GET /admin/api/funnel?steps=<a>,<b>[,…]&window=day|1d|7d&unit=pair|person[&range=7|30|90|all][&split=<key>]`,
+built by `buildFunnel` (`packages/backend/admin/src/admin-funnel.ts`) from the same rows as the
+Overview.
+
+- **Steps** are names from the closed list (`metrics.ts`, `analytics.md`), 2 to 6, all different.
+  `AccountDeleted` is not offered: it is written to Analytics Engine only.
+- **A unit enters** at its first step 1 whose day falls in the range (default 90 days). Per pair,
+  the pair's rows after pairing, whichever partner did each step; per person, all their rows.
+- **Each later step** counts at the first moment it happened at or after the step before, and
+  only before the window closes (end of step 1's UTC day, or 24 hours or 7 days after it). The
+  rows keep each day's first and last moment, not every one, so the moment is the row's first
+  when that is not earlier, else its last. A step can be placed later than it was, never
+  earlier, so a conversion is never overstated.
+- **Split** by an experiment key groups units by their stored variant (a person by the pair they
+  joined). Everyone is always the first group.
+- **Too few**: a count, its share and its median are left out when the count or the step before
+  it is under 5.
+- **Saved funnels** (`GET`/`POST /admin/api/funnels`, `DELETE /admin/api/funnels/<id>`) are a name
+  and the definition in `admin_funnels`, with the Access email. Writes need the panel's origin,
+  like every other write; the agent API lists them read-only.
+- **Checked against SQL.** `packages/backend/platform/test/admin-funnel.test.ts` runs four funnels
+  (both units, all three windows, ranges and up to four steps) on the seed and compares each step's
+  count and median with a hand-written query, and a variant split per pair with its own.
 
 ## Seed data
 
@@ -143,6 +170,8 @@ a Cloudflare Access **service token**. They can't change anything.
 | --- | --- |
 | `overview[?days=7\|30\|90]` | Overview (30 days by default) |
 | `retention[?variant=<key>=<variant>&version=<build>]` | Retention |
+| `funnel?steps=…&window=…&unit=…[&range=…&split=…]` | Funnels: one funnel |
+| `funnels` | Funnels: the saved ones, and the event names a step may be |
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |

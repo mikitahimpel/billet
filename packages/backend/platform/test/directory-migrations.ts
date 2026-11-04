@@ -90,6 +90,7 @@ export const resetDirectory = async () => {
       "purchases",
       "stamp_ledger",
       "app_store_notifications",
+      "admin_funnels",
     ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
   );
   // The configurations are cached at the edge; a test starts from the empty table, not the cache.
