@@ -69,8 +69,22 @@ public struct UsView<Account: View>: View {
     self.account = account()
   }
 
+  /// Labs is pushed inside the sheet rather than stacked as a second sheet on top of it.
   public var body: some View {
-    ScreenScaffold("Us") {
+    NavigationStack {
+      us
+        .hidesNavigationBar()
+        .navigationDestination(isPresented: $labsOpen) {
+          if let labs {
+            ScreenScaffold("Labs", isSheet: true) { labContent(labs) }
+          }
+        }
+    }
+    .tint(Palette.paper.color)
+  }
+
+  private var us: some View {
+    ScreenScaffold("Us", isSheet: true) {
       UsHeader(
         me: PairAvatars.me, partner: PairAvatars.partner, catName: catName,
         daysTogether: daysTogether, streak: streak)
@@ -87,12 +101,6 @@ public struct UsView<Account: View>: View {
           SettingsLink("Labs") { labsOpen = true }
             .accessibilityIdentifier("us.labs")
         }
-      }
-    }
-    .sheet(isPresented: $labsOpen) {
-      if let labs {
-        ScreenScaffold("Labs") { labContent(labs) }
-          .presentationDragIndicator(.visible)
       }
     }
     .task { showsLabs = await BuildChannel.isForTesting() }
@@ -281,6 +289,17 @@ extension UsView where Account == EmptyView {
       widgetFeatures: widgetFeatures,
       isFakePartner: isFakePartner, onRenameCat: onRenameCat,
       onReplayOnboarding: onReplayOnboarding, onUnpair: onUnpair, account: { EmptyView() })
+  }
+}
+
+extension View {
+  /// The sheet's own title and grabber stand in for a navigation bar on the first screen.
+  fileprivate func hidesNavigationBar() -> some View {
+    #if os(iOS)
+      toolbar(.hidden, for: .navigationBar)
+    #else
+      self
+    #endif
   }
 }
 
