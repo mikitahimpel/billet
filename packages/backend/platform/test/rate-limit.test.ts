@@ -73,7 +73,9 @@ describe("limitRequest", () => {
     expect(
       await limitRequest(post("/v1/auth/challenge"), broken as unknown as D1Database),
     ).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith("rate limit counter unavailable");
+    expect(warn).toHaveBeenCalledWith(
+      JSON.stringify({ level: "warn", message: "rate limit counter unavailable" }),
+    );
     warn.mockRestore();
   });
 });

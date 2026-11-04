@@ -27,4 +27,14 @@ enum NookiTrace {
   static func catMotion(_ what: String, at clock: Double) {
     motion.debug("\(what, privacy: .public) at \(clock, privacy: .public)")
   }
+
+  private static let footing = Logger(subsystem: "com.mikitahimpel.billet", category: "CatFooting")
+
+  /// What standing the cat on its surface costs: the average and slowest frame of the last few
+  /// seconds, and the slowest way worked out, in microseconds, at info level.
+  static func footingCost(average: Double, slowest: Double, frames: Int, plan: Double) {
+    footing.info(
+      "footing \(average * 1e6, format: .fixed(precision: 1), privacy: .public) us average, \(slowest * 1e6, format: .fixed(precision: 1), privacy: .public) us slowest over \(frames, privacy: .public) frames; slowest plan \(plan * 1e6, format: .fixed(precision: 0), privacy: .public) us"
+    )
+  }
 }

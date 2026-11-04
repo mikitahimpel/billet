@@ -201,14 +201,19 @@ describe("the read-only agent API", () => {
   });
 
   it("logs each read with the token's common_name", async () => {
-    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
     await admin("/admin/api/agent/flags", { token: await signAgent() });
-    expect(info).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(String(info.mock.calls[0]?.[0]))).toEqual({
-      message: "admin agent read",
-      commonName: testAgent,
-      pathname: "/admin/api/agent/flags",
-    });
+    const reads = log.mock.calls
+      .map((call) => JSON.parse(String(call[0])) as Record<string, unknown>)
+      .filter((line) => line["message"] === "admin agent read");
+    expect(reads).toEqual([
+      {
+        level: "info",
+        message: "admin agent read",
+        commonName: testAgent,
+        pathname: "/admin/api/agent/flags",
+      },
+    ]);
   });
 
   it.each([

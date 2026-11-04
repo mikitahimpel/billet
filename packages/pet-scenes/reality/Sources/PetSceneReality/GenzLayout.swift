@@ -7,7 +7,7 @@ import RealityKit
 /// mockups in `docs/genz-rooms.md`, so the room and its drawing can be checked side by side.
 @MainActor
 struct GenzLayout {
-  struct Placement {
+  struct Placement: Equatable {
     var piece: GenzPiece
     /// The middle of the piece's footprint, on the surface it stands on.
     var centre: GenzRoomPoint

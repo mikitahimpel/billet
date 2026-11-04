@@ -1,4 +1,5 @@
-import { Effect, Layer, Option, Redacted } from "effect";
+import { Context, Effect, Layer, Option, Redacted } from "effect";
+import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 import { Digest, SecureRandom } from "effect/crypto";
 import { AccountNotices } from "@billet/backend-auth/account-notices";
 import { AuthService } from "@billet/backend-auth/auth-service";
@@ -9,6 +10,7 @@ import { AuthRepositoryLive } from "./auth-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { ROOM_USER_HEADER } from "./pair-room-durable-object.ts";
+import { Observability } from "./observability.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 const refuse = (status: number) => new Response(null, { status });
@@ -20,6 +22,7 @@ const whoIsAsking = (env: WorkerEnv, token: Redacted.Redacted<string>) =>
     const pairing = yield* PairingRepository;
     const { userId } = yield* auth.authenticate(token);
     const pairId = yield* pairing.findPair(userId);
+    yield* annotateRefs({ user: userId, pair: Option.getOrUndefined(pairId) });
     if (Option.isNone(pairId)) return Option.none();
     const members = yield* pairing.findMembers(pairId.value);
     return Option.some({ userId, pairId: pairId.value, members });
@@ -47,19 +50,28 @@ const whoIsAsking = (env: WorkerEnv, token: Redacted.Redacted<string>) =>
  * to that pair's `PairRoom`. The room opens on the first connection, because pairing commits in D1
  * and never reaches the room. The user header is set here and nowhere else.
  */
-export const respondSocket = async (request: Request, env: WorkerEnv): Promise<Response> => {
+export const respondSocket = async (
+  request: Request,
+  env: WorkerEnv,
+  context: Context.Context<never> = Context.empty(),
+): Promise<Response> => {
   if (request.method !== "GET") return refuse(405);
   if (request.headers.get("Upgrade") !== "websocket") return refuse(426);
   const header = request.headers.get(authorizationHeader);
   if (header === null || !header.startsWith(bearerPrefix)) return refuse(401);
 
-  const found = await Effect.runPromise(
+  const found = await Effect.runPromiseWith(context)(
     whoIsAsking(env, Redacted.make(header.slice(bearerPrefix.length))).pipe(
       Effect.map((asking) => ({ _tag: "Found" as const, asking })),
       Effect.catchTags({
         AuthRejected: () => Effect.succeed({ _tag: "Rejected" as const }),
       }),
-      Effect.catch(() => Effect.succeed({ _tag: "Unavailable" as const })),
+      Effect.catch((error) =>
+        Effect.logError("socket unavailable", error).pipe(
+          Effect.as({ _tag: "Unavailable" as const }),
+        ),
+      ),
+      Effect.provide(Observability),
     ),
   );
   if (found._tag === "Rejected") return refuse(401);

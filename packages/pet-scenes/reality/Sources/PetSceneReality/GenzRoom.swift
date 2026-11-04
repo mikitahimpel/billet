@@ -198,7 +198,12 @@ final class GenzRoom: CatPlayStage {
   var clipGate = CatClipGate()
   /// The rate the clip shown plays at, kept while the gate holds it over another's.
   private var clipRate: Float = 1
+  /// What stands the cat on the surface under it (``stepFooting``).
+  var footing = CatFooting()
+  let wayCache = GenzCatWayCache()
   var trip: CatTrip?
+  /// A trip waiting for the cat to get back up onto its own top.
+  var pendingTrip: (kind: CatTripKind, legs: [CatTrip.Leg])?
   var tripKind: CatTripKind?
   /// A chase the brain asked for, waiting for the cat to be free.
   var chaseWanted = false
@@ -244,8 +249,8 @@ final class GenzRoom: CatPlayStage {
   private var catChoice = CatChoice.standard
   /// How the cat on show moves, from its model.
   private(set) var motion = CatMotion.even
-  private var catModel: Entity?
-  private var catLoad: Task<Void, Never>?
+  private(set) var catModel: Entity?
+  private(set) var catLoad: Task<Void, Never>?
   var gazePoint: SIMD3<Float>?
   var gazeUntil = 0.0
   private var building: Task<Void, Never>?
@@ -371,6 +376,8 @@ final class GenzRoom: CatPlayStage {
     NookiTrace.mark("styled room pieces")
     pieceHolders = holders
     arrangeDecor(holders)
+    measureTops()
+    footing.level = layout.catHomeLevel
     buildLED()
     buildNote()
     await Task.yield()
@@ -523,6 +530,10 @@ final class GenzRoom: CatPlayStage {
     model.scale = .one * scale
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
+    footing.base = model.position
+    footing.table = CatGroundTable.of(shown.model)
+    footing.shown = nil
+    footing.fade = nil
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
     if let palette = CatCatalog.coatTexture(shown.model, coat: shown.coat) { rig?.paint(palette) }
     let action = self.rig?.current ?? .sleep
@@ -1156,7 +1167,7 @@ final class GenzRoom: CatPlayStage {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
-    } else if let pose = stepTrip() {
+    } else if let pose = stepTripHome(step) ?? stepTrip() {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
@@ -1167,6 +1178,7 @@ final class GenzRoom: CatPlayStage {
       rate = Float((brainBody.frame?.tempo ?? 1) * motion.tempo)
       if pose.action == .walk || pose.action == .carry { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
+      if let jumpRate = jumpRate() { rate = jumpRate }
     }
     bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
     if toys.liftedAt == nil { settleDrop() }
@@ -1182,6 +1194,7 @@ final class GenzRoom: CatPlayStage {
     if shown != rig.current { NookiTrace.catMotion("clip \(shown)", at: clock) }
     if shown == beat.action { clipRate = rate }
     rig.play(shown, rate: clipRate)
+    stepFooting(step, rate: clipRate)
     stepNudges()
     let moved = catHolder.position - lastCatPosition
     if lastCatPosition != .zero, simd_length(SIMD2(moved.x, moved.z)) > layout.cat.length * 0.25 {
@@ -1509,7 +1522,14 @@ extension GenzRoom {
     let base = rig?.current.flatMap { rig?.info[$0]?.base } ?? .sleep
     catShadowShape += (Self.catShadowFootprint(base) - catShadowShape) * min(step * 5, 1)
     let length = layout.cat.length
-    let ground = layout.cat.spot.scene.y
+    let ground =
+      toys.liftedAt != nil || dropped != nil
+      ? layout.cat.spot.scene.y
+      : brainBody.jump.map { jump in
+        min(
+          groundHeight(at: jump.jump.from, on: jump.jump.fromLevel),
+          groundHeight(at: jump.jump.to, on: jump.jump.toLevel))
+      } ?? groundUnderCat(base: base)
     let height = max(catHolder.position.y - ground, 0)
     let shrink = 1 - 0.45 * min(height / length, 1)
     catShadow.setPosition(
@@ -1540,7 +1560,7 @@ extension GenzRoom {
     }
     let isFree =
       trip == nil && toys.pursuit == nil && world.activity == .sleeping && !reduceMotion && hasCat
-      && opening == nil
+      && opening == nil && footing.level == layout.catHomeLevel && pendingTrip == nil
     // A sleeping cat does not run up to the glass; the greeting is let go.
     if greetPending, brainBody.frame?.stack.vitality == .asleep { greetPending = false }
     if greetPending, isFree {
@@ -1624,6 +1644,11 @@ extension GenzRoom {
   }
 
   func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
+    guard footing.level == layout.catHomeLevel, brainBody.jump == nil else {
+      // Off its own top: back up there first (``stepTripHome``).
+      pendingTrip = (kind, legs)
+      return
+    }
     let heading = homeHeading
     trip = CatTrip(
       from: home, heading: heading, legs: legs.clear(of: layout, from: home), at: clock)

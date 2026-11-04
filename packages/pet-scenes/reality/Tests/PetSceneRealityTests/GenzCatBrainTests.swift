@@ -26,9 +26,10 @@ import Testing
     for kind in [RoomAffordance.Kind.window, .soft, .smallItem, .bowl, .toy] {
       #expect(found.reachable(kind), "\(kind)")
     }
-    // The cat bed is down on the rug, out of reach of a cat that lives on the seat.
+    // The cat bed is down on the rug: the cat jumps down off the seat to get to it.
     #expect(found.has(.bed))
-    #expect(!found.reachable(.bed))
+    #expect(found.reachable(.bed))
+    #expect(found.reachable(.rug))
     #expect(!found.has(.door))
     // Wherever it sends the cat there, its body keeps out of the pillows.
     try GenzCatObstacleTests.theBrainsTargetsAreClear(in: room)

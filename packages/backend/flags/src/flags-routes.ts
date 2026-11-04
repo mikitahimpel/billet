@@ -18,8 +18,8 @@ const respondFlagsFailures = <R>(
 ) =>
   effect.pipe(
     Effect.catchTags({
-      FlagsUnavailable: ({ reason }) =>
-        Effect.logError("flags unavailable", reason).pipe(
+      FlagsUnavailable: (error) =>
+        Effect.logError("flags unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
         ),
     }),

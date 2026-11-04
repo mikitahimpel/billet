@@ -12,7 +12,8 @@ import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-st
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
-import { logEvent } from "./observability.ts";
+import { Observability, traced } from "./observability.ts";
+import { opaqueRef } from "@billet/backend-observability/opaque-ref";
 import {
   deliveryHealth,
   enqueue,
@@ -71,7 +72,12 @@ export class PairRoom extends DurableObject {
   );
 
   private readonly runtime = this.database.then((database) =>
-    ManagedRuntime.make(PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database)))),
+    ManagedRuntime.make(
+      Layer.mergeAll(
+        PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))),
+        Observability,
+      ),
+    ),
   );
 
   /** The lanes each accepted note is handed to. None until a lane has a sender (#10). */
@@ -86,16 +92,33 @@ export class PairRoom extends DurableObject {
       }
     | undefined = undefined;
 
-  private async run<A>(program: (room: RoomService["Service"]) => Effect.Effect<A>): Promise<A> {
-    return (await this.runtime).runPromise(RoomService.use(program));
+  /** Names this room in spans without naming the pair: the ref of the id it was opened by. */
+  private readonly spanAttributes = {
+    "pair.ref": opaqueRef(this.ctx.id.name ?? this.ctx.id.toString()),
+  };
+
+  /**
+   * Runs one room command. A named command is a root span (`PairRoom.sendNote`) and writes a
+   * `trace` line; reads made per frame (`snapshot`) pass no name, so a drawing does not log.
+   */
+  private async run<A>(
+    program: (room: RoomService["Service"]) => Effect.Effect<A>,
+    name?: string,
+  ): Promise<A> {
+    const effect = RoomService.use(program);
+    return (await this.runtime).runPromise(
+      name === undefined
+        ? effect
+        : effect.pipe(Effect.withSpan(name, { root: true, attributes: this.spanAttributes })),
+    );
   }
 
   open(pairId: PairId, members: readonly [UserId, UserId]): Promise<RoomDecision> {
-    return this.run((room) => room.dispatch({ _tag: "Open", pairId, members }));
+    return this.run((room) => room.dispatch({ _tag: "Open", pairId, members }), "PairRoom.open");
   }
 
   async sendNote(author: UserId, request: SendNoteRequest): Promise<RoomDecision> {
-    const decision = await this.run((room) => room.sendNote(author, request));
+    const decision = await this.run((room) => room.sendNote(author, request), "PairRoom.sendNote");
     if (decision._tag === "Accepted") {
       for (const output of decision.outputs) {
         if (output._tag === "NoteAppended") await this.enqueueDeliveries(output.entry.note.id);
@@ -143,27 +166,36 @@ export class PairRoom extends DurableObject {
   override async alarm(): Promise<void> {
     const sender = this.laneSender;
     if (sender === undefined) return;
-    const deliveries = deliveriesOf(await this.database);
-    const now = Date.now();
-    for (const entry of await Effect.runPromise(deliveries.all)) {
-      if (!isDue(entry, now)) continue;
-      const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
-      const settled = settle(entry, outcome, Date.now());
-      await Effect.runPromise(deliveries.save(settled));
-      // One line per try: summing these per lane gives the delivery success rate.
-      logEvent("log", {
-        event: "delivery",
-        lane: entry.lane,
-        outcome,
-        status: settled.status,
-        attempts: settled.attempts,
-      });
-    }
-    await this.scheduleAlarm();
+    await traced("PairRoom.alarm", this.spanAttributes, async (context) => {
+      const deliveries = deliveriesOf(await this.database);
+      const now = Date.now();
+      for (const entry of await Effect.runPromise(deliveries.all)) {
+        if (!isDue(entry, now)) continue;
+        const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
+        const settled = settle(entry, outcome, Date.now());
+        await Effect.runPromise(deliveries.save(settled));
+        // One line per try: summing these per lane gives the delivery success rate.
+        await Effect.runPromiseWith(context)(
+          Effect.logInfo("delivery").pipe(
+            Effect.annotateLogs({
+              event: "delivery",
+              lane: entry.lane,
+              outcome,
+              status: settled.status,
+              attempts: settled.attempts,
+            }),
+          ),
+        );
+      }
+      await this.scheduleAlarm();
+    });
   }
 
   setPresence(user: UserId, state: PresenceState): Promise<RoomDecision> {
-    return this.run((room) => room.dispatch({ _tag: "SetPresence", user, state }));
+    return this.run(
+      (room) => room.dispatch({ _tag: "SetPresence", user, state }),
+      "PairRoom.setPresence",
+    );
   }
 
   snapshot(): Promise<RoomState> {
@@ -172,7 +204,7 @@ export class PairRoom extends DurableObject {
 
   /** Notes with `seq` above `afterSeq`, in order. */
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {
-    return this.run((room) => room.notesAfter(afterSeq, limit));
+    return this.run((room) => room.notesAfter(afterSeq, limit), "PairRoom.notes");
   }
 
   /**
@@ -181,7 +213,7 @@ export class PairRoom extends DurableObject {
    * Repeating it finds nothing more to delete.
    */
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
-    const forgotten = await this.run((room) => room.forgetAuthor(user));
+    const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
     for (const socket of this.ctx.getWebSockets()) {

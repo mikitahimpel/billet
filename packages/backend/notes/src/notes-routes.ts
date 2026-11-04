@@ -57,8 +57,8 @@ const respondNotesFailures = <R>(
     Effect.catchTags({
       NotesNotFound: () => respondError(ApiError.cases.NotFound.make({}), { status: 404 }),
       InvalidNote: () => respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 }),
-      NotesUnavailable: ({ reason }) =>
-        Effect.logError("notes unavailable", reason).pipe(
+      NotesUnavailable: (error) =>
+        Effect.logError("notes unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
         ),
     }),

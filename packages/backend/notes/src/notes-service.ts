@@ -11,6 +11,7 @@ import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import { InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
 import { PairRooms } from "./pair-rooms.ts";
+import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** The most a compact rendition may take as JSON, matching the iOS encoder's budget. */
 export const compactBudget = 3072;
@@ -82,14 +83,14 @@ export class NotesService extends Context.Service<
           Effect.flatMap(
             Option.match({
               onNone: () => Effect.fail(new NotesNotFound()),
-              onSome: (pairId) => Effect.succeed(pairId),
+              onSome: (pairId) => Effect.as(annotateRefs({ pair: pairId }), pairId),
             }),
           ),
         );
 
       // Pairing commits in D1 and never reaches the room, so a couple's first note opens it. Two
       // first notes at once both open it, and a repeated open is accepted.
-      const openRoom = Effect.fnUntraced(function* (pairId: PairId) {
+      const openRoom = Effect.fn("NotesService.openRoom")(function* (pairId: PairId) {
         const members = yield* pairing
           .findMembers(pairId)
           .pipe(Effect.mapError(directoryUnavailable));
@@ -100,7 +101,7 @@ export class NotesService extends Context.Service<
         yield* rooms.open(pairId, [first, second]);
       });
 
-      const uploadImage = Effect.fnUntraced(function* (
+      const uploadImage = Effect.fn("NotesService.uploadImage")(function* (
         userId: UserId,
         bytes: Uint8Array,
       ): Effect.fn.Return<MediaKey, NotesNotFound | InvalidNote | NotesUnavailable> {
@@ -112,7 +113,7 @@ export class NotesService extends Context.Service<
         return key;
       });
 
-      const readImage = Effect.fnUntraced(function* (
+      const readImage = Effect.fn("NotesService.readImage")(function* (
         userId: UserId,
         key: MediaKey,
       ): Effect.fn.Return<Uint8Array, NotesNotFound | NotesUnavailable> {
@@ -125,7 +126,7 @@ export class NotesService extends Context.Service<
         });
       });
 
-      const sendNote = Effect.fnUntraced(function* (
+      const sendNote = Effect.fn("NotesService.sendNote")(function* (
         userId: UserId,
         request: SendNoteRequest,
       ): Effect.fn.Return<Note, NotesNotFound | InvalidNote | NotesUnavailable> {
@@ -159,7 +160,7 @@ export class NotesService extends Context.Service<
         }
       });
 
-      const history = Effect.fnUntraced(function* (
+      const history = Effect.fn("NotesService.history")(function* (
         userId: UserId,
         afterSeq: number,
         limit: number,

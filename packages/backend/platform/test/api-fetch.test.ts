@@ -13,6 +13,7 @@ import {
 import { limits } from "../src/rate-limit.ts";
 import { clientHeaders, mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { respondApi } from "../src/api-fetch.ts";
+import { opaqueRef } from "@billet/backend-observability/opaque-ref";
 import { FlagConfigRepositoryLive } from "../src/flag-config-repository-live.ts";
 import { FlagConfigRepository } from "@billet/backend-flags/flag-config-repository";
 import { configOf } from "@billet/backend-flags/flag-config";
@@ -365,6 +366,58 @@ describe("the Api Worker", () => {
     const { pairId } = Schema.decodeUnknownSync(ClaimInviteResponse)(await response.json());
     expect(await pairRows()).toEqual([{ pair_id: pairId }, { pair_id: pairId }]);
     expect(await env.DB.prepare("SELECT * FROM invites").first()).toBeNull();
+  });
+
+  it("traces a request: one trace line with the route, its service and repository spans, and refs", async () => {
+    const owner = await signedInAs("subject-owner");
+    const claimer = await signedInAs("subject-claimer");
+    const code = await inviteFrom(owner);
+    const lines: Array<Record<string, unknown>> = [];
+    const raw: Array<string> = [];
+    const log = vi.spyOn(console, "log").mockImplementation((line: string) => {
+      raw.push(line);
+      lines.push(JSON.parse(line) as Record<string, unknown>);
+    });
+    const response = await call("/v1/invites/claim", {
+      ...json({ code }, "POST", claimer),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${claimer}`,
+        "cf-ray": "8d2f0a1b2c3d4e5f-LHR",
+      },
+    });
+    log.mockRestore();
+    expect(response.status).toBe(200);
+    const { pairId } = Schema.decodeUnknownSync(ClaimInviteResponse)(await response.json());
+
+    const trace = lines.find(
+      (line) => line["message"] === "trace" && line["span"] === "http.request",
+    );
+    expect(trace).toMatchObject({
+      status: "ok",
+      attributes: {
+        "http.route": "POST /v1/invites/claim",
+        "http.response.status_code": 200,
+        "request.id": "8d2f0a1b2c3d4e5f-LHR",
+        "pair.ref": opaqueRef(pairId),
+      },
+    });
+    const spans = (trace?.["spans"] ?? []) as ReadonlyArray<Record<string, unknown>>;
+    const names = spans.map((span) => span["name"]);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "AuthService.authenticate",
+        "AuthEngine.findSession",
+        "PairingService.claimInvite",
+        "PairingRepository.claimInvite",
+      ]),
+    );
+    for (const span of spans) expect(span["spanId"]).toMatch(/^[0-9a-f]{16}$/);
+    // The router's own server span would carry the raw URL; the request span replaces it.
+    expect(names).not.toContain("POST");
+    expect(JSON.stringify(trace)).not.toContain("url.");
+    const output = raw.join("\n");
+    for (const secret of [claimer, code, pairId]) expect(output).not.toContain(secret);
   });
 
   it("answers one success to two concurrent claims of one code", async () => {

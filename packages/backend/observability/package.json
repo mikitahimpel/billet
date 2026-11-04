@@ -1,0 +1,33 @@
+{
+  "name": "@billet/backend-observability",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./json-logger": "./src/json-logger.ts",
+    "./observability-layer": "./src/observability-layer.ts",
+    "./opaque-ref": "./src/opaque-ref.ts",
+    "./redact": "./src/redact.ts",
+    "./span-methods": "./src/span-methods.ts",
+    "./test/plain-exit": "./test/plain-exit.ts",
+    "./trace-log-tracer": "./src/trace-log-tracer.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
