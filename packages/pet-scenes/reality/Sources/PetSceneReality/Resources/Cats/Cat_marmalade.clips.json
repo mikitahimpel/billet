@@ -35,6 +35,12 @@
   "trimEnd": 23.5,
   "trimStart": 19.5
  },
+ "grab": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 75.4,
+  "trimStart": 73.6
+ },
  "groom": {
   "base": "sit",
   "loops": false,

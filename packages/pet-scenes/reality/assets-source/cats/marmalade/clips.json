@@ -183,6 +183,14 @@
   "trimStart": 71.2667,
   "trimEnd": 73.2667
  },
+ "grab": {
+  "first": 2209,
+  "last": 2263,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 73.6,
+  "trimEnd": 75.4
+ },
  "dangle": {
   "first": 2273,
   "last": 2363,

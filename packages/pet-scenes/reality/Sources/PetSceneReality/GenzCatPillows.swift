@@ -32,8 +32,8 @@ struct GenzCatShape: Equatable, Sendable {
   }
 
   /// The widest of the made cats', for a cat the room has no measure of.
-  static let widestStanding = GenzCatShape(back: 0.47, front: 0.97, half: 0.48)
-  static let widestResting = GenzCatShape(back: 0.49, front: 1.17, half: 0.7)
+  static let widestStanding = GenzCatShape(back: 0.48, front: 0.97, half: 0.48)
+  static let widestResting = GenzCatShape(back: 0.42, front: 1.17, half: 0.7)
 }
 
 extension GenzLayout {
