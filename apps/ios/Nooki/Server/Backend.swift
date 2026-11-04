@@ -12,6 +12,7 @@ struct Backend {
     let api: APIClient
     let accounts: AccountStore
     let keys: AccountKeyStore
+    var onboarding: OnboardingClient = .offline
 
     static let infoKey = "BilletAPIHost"
     /// The Keychain service of the session token and the account key; the same as billet's first app, so a phone
@@ -35,8 +36,11 @@ struct Backend {
             ?? .directory(URL.applicationSupportDirectory.appending(path: "Account"))
         let accounts = AccountStore.live(tokens: tokens, storage: storage)
         let http = HTTPService.urlSession(baseURL: baseURL, session: .shared, headers: ClientInfo.current().headers)
-        let api = APIClient.live(http: http, token: { (try? accounts.load())?.token })
+        let token: @Sendable () async -> String? = { (try? accounts.load())?.token }
+        let api = APIClient.live(http: http, token: token)
         let keys = AccountKeyStore.keychain(client: .security, service: keychainService)
-        return Backend(baseURL: baseURL, api: api, accounts: accounts, keys: keys)
+        return Backend(
+            baseURL: baseURL, api: api, accounts: accounts, keys: keys,
+            onboarding: .live(http: http, token: token))
     }
 }
