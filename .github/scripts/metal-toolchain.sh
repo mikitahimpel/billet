@@ -7,4 +7,5 @@ if xcrun metal -v > /dev/null 2>&1; then
 else
   xcodebuild -downloadComponent MetalToolchain
 fi
-xcrun metal -v 2>&1 | head -n 1
+version=$(xcrun metal -v 2>&1)
+echo "${version%%$'\n'*}"

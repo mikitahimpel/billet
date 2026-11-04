@@ -14,6 +14,7 @@ on:
       - .swift-format
       - .github/workflows/ios.yml
       - .github/scripts/metal-toolchain.sh
+      - archive/ios-v1/**
   push:
     branches: [main]
     paths: *paths
