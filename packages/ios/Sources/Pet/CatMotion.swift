@@ -35,6 +35,8 @@ extension CatModel {
       .even
     case .gingerChonk:
       CatMotion(tempo: 0.85, signature: [.yawn, .slowBlink], temperament: .sleepyhead)
+    case .ragdoll:
+      CatMotion(tempo: 0.82, signature: [.slowBlink, .knead], temperament: .cuddler)
     case .maineCoon:
       CatMotion(tempo: 0.86, signature: [.knead, .look], temperament: .cuddler)
     case .voidCat:
