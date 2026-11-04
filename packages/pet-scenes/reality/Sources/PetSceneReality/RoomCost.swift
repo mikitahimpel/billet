@@ -18,6 +18,7 @@ final class RoomCostSwitches {
   /// The flat ones: the layers drawn over the room, its haze, halos, colour grade and sky.
   static let names = [
     "shadows", "lights", "transparent", "cat", "layers", "haze", "halos", "grade", "sky",
+    "frameCap",
   ]
 
   /// Switches `name` on or off in `root`; `all` switches every part.
@@ -26,6 +27,7 @@ final class RoomCostSwitches {
       for each in Self.names { set(each, isOn: isOn, root: root, cat: cat) }
       return
     }
+    if name == "frameCap" { FramePace.shared.setCapped(isOn) }
     if isOn {
       off.remove(name)
       for step in undo.removeValue(forKey: name) ?? [] { step() }
