@@ -80,80 +80,6 @@ public struct LifeBubble: View {
   }
 }
 
-/// Four soft rings round the cat's portrait, one per need, in warm colours and without numbers.
-public struct LifeRings: View {
-  private let needs: PetNeeds
-  private let portrait: Image?
-  private let name: String
-
-  public init(needs: PetNeeds, portrait: Image?, name: String) {
-    self.needs = needs
-    self.portrait = portrait
-    self.name = name
-  }
-
-  private static let width: CGFloat = 11
-  private static let gap: CGFloat = 4
-
-  public var body: some View {
-    VStack(spacing: Spacing.medium) {
-      ZStack {
-        ForEach(Array(PetNeed.allCases.enumerated()), id: \.element) { index, need in
-          let inset = CGFloat(index) * (Self.width + Self.gap)
-          ring(need).padding(inset)
-        }
-        portraitView
-          .padding(CGFloat(PetNeed.allCases.count) * (Self.width + Self.gap) + Self.gap)
-      }
-      .frame(width: 236, height: 236)
-      HStack(spacing: Spacing.medium) {
-        ForEach(PetNeed.allCases, id: \.self) { need in
-          HStack(spacing: 5) {
-            Circle().fill(need.swatch.color).frame(width: 8, height: 8)
-            Text(need.title).billetType(.label).foregroundStyle(Palette.paper.color)
-          }
-        }
-      }
-    }
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Self.spoken(needs, name: name))
-    .accessibilityIdentifier("lifeRings")
-  }
-
-  private func ring(_ need: PetNeed) -> some View {
-    ZStack {
-      Circle().stroke(need.swatch.color.opacity(0.16), lineWidth: Self.width)
-      Circle()
-        .trim(from: 0, to: max(0.02, min(1, needs[need])))
-        .stroke(
-          need.swatch.color.opacity(0.9),
-          style: StrokeStyle(lineWidth: Self.width, lineCap: .round)
-        )
-        .rotationEffect(.degrees(-90))
-        .shadow(color: need.swatch.color.opacity(0.35), radius: 4)
-    }
-    .padding(Self.width / 2)
-  }
-
-  @ViewBuilder private var portraitView: some View {
-    if let portrait {
-      portrait.resizable().scaledToFill().clipShape(Circle())
-    } else {
-      Circle().fill(Palette.raised.color)
-        .overlay {
-          Image(systemName: "pawprint.fill").font(.system(size: 34))
-            .foregroundStyle(Palette.gold.color)
-        }
-    }
-  }
-
-  /// Words, not numbers: how each need is, for VoiceOver.
-  static func spoken(_ needs: PetNeeds, name: String) -> String {
-    let parts = PetNeed.allCases.map { "\($0.title): \(LifeChips.word(needs[$0]))" }
-    return "\(name). " + parts.joined(separator: ", ")
-  }
-}
-
 /// The four needs as small words that glow when met and fade when not. No numbers, no levels.
 public struct LifeChips: View {
   private let needs: PetNeeds
@@ -222,76 +148,185 @@ public struct CatNeedsSnapshot: Hashable, Sendable {
     self.name = name
   }
 
-  /// The needs in the card's order, with the short names people use.
-  public static let rows: [(need: PetNeed, title: String)] = [
-    (.full, "Food"), (.playful, "Play"), (.loved, "Love"), (.rested, "Sleep"),
-  ]
+  /// The need to answer first: the one behind how the cat feels, if it feels one.
+  public var urgent: PetNeed? {
+    feeling.need
+  }
+
+  /// The four needs, most urgent first: the feeling's need, then from the lowest up. Ties keep
+  /// the card's usual order: food, love, play, sleep.
+  public var ordered: [PetNeed] {
+    let usual: [PetNeed] = [.full, .loved, .playful, .rested]
+    let rest = usual.filter { $0 != urgent }.enumerated().sorted { a, b in
+      let (x, y) = (needs[a.element], needs[b.element])
+      return x == y ? a.offset < b.offset : x < y
+    }.map(\.element)
+    return (urgent.map { [$0] } ?? []) + rest
+  }
+
+  /// One short line in the cat's voice: how it is and what it would like.
+  public var line: String {
+    "\(name) is \(feeling.state). \(feeling.ask)"
+  }
+
+  /// Whether the need's action can be done now: a cat that is already asleep needs no tucking in.
+  public func canAnswer(_ need: PetNeed) -> Bool {
+    !(need == .rested && feeling == .asleep)
+  }
 }
 
-/// A compact card: the mood in words, what the cat wants now, and a bar per need. Shown from the
-/// paw chip and gone again with a swipe; nothing of it stays on Home.
+extension CatFeeling {
+  /// The feeling as the end of "Mochi is …".
+  public var state: String {
+    switch self {
+    case .asleep: "fast asleep"
+    case .hangry: "hangry"
+    case .hungry: "hungry"
+    case .lonely: "sulking"
+    case .bored: "restless"
+    case .sleepy: "sleepy"
+    case .happy: "happy"
+    case .content: "content"
+    }
+  }
+
+  /// What the cat would ask for, in its own words.
+  public var ask: String {
+    switch self {
+    case .asleep: "Shh 💤"
+    case .hangry: "Food, now! 😾"
+    case .hungry: "A treat? 🐟"
+    case .lonely: "A pet, maybe two? 😿"
+    case .bored: "Play with me? 🧶"
+    case .sleepy: "A little nap? 🥱"
+    case .happy: "Just stay a while 😻"
+    case .content: "Say hi? 😺"
+    }
+  }
+}
+
+extension PetNeed {
+  /// The need's short name on the card.
+  public var cardTitle: String {
+    switch self {
+    case .full: "Food"
+    case .rested: "Sleep"
+    case .loved: "Love"
+    case .playful: "Play"
+    }
+  }
+
+  /// The button that fills the need.
+  public var action: String {
+    switch self {
+    case .full: "Feed"
+    case .rested: "Let it nap"
+    case .loved: "Pet"
+    case .playful: "Play"
+    }
+  }
+}
+
+/// What the cat needs and what to do about it: a line in its voice, then one row per need, the
+/// most urgent first, each with a bar and the button that fills it. The room stays in sight
+/// behind it.
 public struct CatNeedsCard: View {
   private let snapshot: CatNeedsSnapshot
-  private let isNamed: Bool
+  private let onAnswer: ((PetNeed) -> Void)?
 
-  /// - Parameter isNamed: Whether the card stands alone, its mood line starting with the cat's
-  ///   name and its own margins around it. A sheet titled with the name leaves out both.
-  public init(_ snapshot: CatNeedsSnapshot, isNamed: Bool = true) {
+  /// - Parameter onAnswer: Does a need's action, or `nil` for a card with no buttons.
+  public init(_ snapshot: CatNeedsSnapshot, onAnswer: ((PetNeed) -> Void)? = nil) {
     self.snapshot = snapshot
-    self.isNamed = isNamed
+    self.onAnswer = onAnswer
   }
 
   public var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.medium) {
-      VStack(alignment: .leading, spacing: Spacing.hair) {
-        Text(isNamed ? "\(snapshot.name) · \(snapshot.feeling.words)" : snapshot.feeling.words)
-          .billetType(.heading)
-          .foregroundStyle(Palette.paper.color)
-        Text("Wants: \(snapshot.feeling.wants)")
-          .billetType(.label)
-          .foregroundStyle(Palette.muted.color)
-      }
-      VStack(spacing: Spacing.small) {
-        ForEach(CatNeedsSnapshot.rows, id: \.need) { row in
-          bar(row.need, title: row.title)
+    VStack(alignment: .leading, spacing: Spacing.small) {
+      Text(snapshot.line)
+        .billetType(.body)
+        .foregroundStyle(Palette.paper.color)
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityIdentifier("catNeedsLine")
+      VStack(spacing: 0) {
+        ForEach(snapshot.ordered, id: \.self) { need in
+          row(need)
+          if need != snapshot.ordered.last { ListDivider() }
         }
       }
+      .frame(maxWidth: .infinity)
+      .card()
     }
-    .padding(isNamed ? Spacing.medium : 0)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Self.spoken(snapshot))
+    .animation(Motion.spring, value: snapshot.ordered)
     .accessibilityIdentifier("catNeedsCard")
   }
 
-  private func bar(_ need: PetNeed, title: String) -> some View {
+  private func row(_ need: PetNeed) -> some View {
     let value = min(max(snapshot.needs[need], 0), 1)
-    let low = value < LifeConfig.standard.lowBelow
-    return HStack(spacing: Spacing.small) {
-      Text(title)
-        .billetType(.label)
-        .foregroundStyle(Palette.paper.color)
-        .frame(width: 48, alignment: .leading)
-      GeometryReader { proxy in
-        ZStack(alignment: .leading) {
-          Capsule().fill(need.swatch.color.opacity(0.18))
-          Capsule()
-            .fill(need.swatch.color.opacity(low ? 0.65 : 0.95))
-            .frame(width: max(8, proxy.size.width * value))
-        }
+    let urgent = need == snapshot.urgent
+    return HStack(spacing: Spacing.medium) {
+      Image(systemName: need.thought)
+        .font(IconStyle.font)
+        .foregroundStyle(need.swatch.color)
+        .frame(width: 28)
+        .accessibilityHidden(true)
+      VStack(alignment: .leading, spacing: Spacing.hair) {
+        Text(need.cardTitle)
+          .billetType(.label)
+          .foregroundStyle(Palette.paper.color)
+        NeedBar(value: value, swatch: need.swatch, low: value < LifeConfig.standard.lowBelow)
       }
-      .frame(height: 10)
-      .calmAnimation(value: value)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("\(need.cardTitle): \(LifeChips.word(value))")
+      if let onAnswer {
+        Button {
+          onAnswer(need)
+        } label: {
+          Text(need.action)
+            .billetType(.action)
+            .lineLimit(1)
+            .foregroundStyle(urgent ? Palette.ink.color : Palette.paper.color)
+            .padding(.horizontal, Spacing.medium)
+            .frame(minHeight: Target.minimum)
+            .contentShape(.capsule)
+        }
+        .billetButton(urgent ? .primary : .secondary)
+        .disabled(!snapshot.canAnswer(need))
+        .accessibilityHint(need.answer)
+        .accessibilityIdentifier("catNeedsAction.\(need.rawValue)")
+      }
     }
+    .padding(.horizontal, Spacing.medium)
+    .padding(.vertical, Spacing.small)
+    .frame(maxWidth: .infinity, minHeight: Target.row, alignment: .leading)
+    .accessibilityIdentifier("catNeedsRow.\(need.rawValue)")
   }
 
-  /// The card for VoiceOver: the mood, what it wants, and each need in a word.
+  /// The card for VoiceOver and tests: the line, then each need in a word.
   static func spoken(_ snapshot: CatNeedsSnapshot) -> String {
-    let needs = CatNeedsSnapshot.rows.map {
-      "\($0.title): \(LifeChips.word(snapshot.needs[$0.need]))"
+    let needs = snapshot.ordered.map { "\($0.cardTitle): \(LifeChips.word(snapshot.needs[$0]))" }
+    return "\(snapshot.line) " + needs.joined(separator: ", ")
+  }
+}
+
+/// How full one need is, as a short bar that warms as it fills.
+private struct NeedBar: View {
+  let value: Double
+  let swatch: Swatch
+  let low: Bool
+
+  var body: some View {
+    GeometryReader { proxy in
+      ZStack(alignment: .leading) {
+        Capsule().fill(swatch.color.opacity(0.18))
+        Capsule()
+          .fill(swatch.color.opacity(low ? 0.65 : 0.95))
+          .frame(width: max(6, proxy.size.width * value))
+      }
     }
-    return "\(snapshot.name) is \(snapshot.feeling.rawValue). Wants: \(snapshot.feeling.wants). "
-      + needs.joined(separator: ", ")
+    .frame(height: 6)
+    .calmAnimation(value: value)
   }
 }
 

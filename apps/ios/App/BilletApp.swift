@@ -51,6 +51,7 @@ struct BilletApp: App {
         defaults: .standard, choiceKey: PetSceneCatalog.choiceKey,
         keptSceneID: NookiPetScene.sceneID, store: store)
     }
+    ScenePerf.mark("app built")
   }
 
   var body: some Scene {

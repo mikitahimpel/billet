@@ -18,6 +18,9 @@ final class GenzLifeProps {
   /// Whether the room has a yarn of its own to play with, so this one stays away.
   var roomHasYarn = false
 
+  /// At most what a finished meal leaves in the bowl, a quarter.
+  static let leftover: Float = 0.3
+
   /// When Playful is below this, the yarn lies out, waiting.
   static let yarnBelow = 0.5
 
@@ -65,6 +68,11 @@ final class GenzLifeProps {
   }
 
   private func apply() {
+    // What is left of a meal shows until the cat is hungry again, then the bowl is empty.
+    if let left = meal, left <= Self.leftover, let needs, needs.full < LifeConfig.standard.lowBelow
+    {
+      meal = nil
+    }
     let fromNeeds = needs.map { Float(max(0.04, min(1, ($0.full - 0.2) / 0.8))) }
     let fill = meal ?? fromNeeds ?? 0.04
     food.scale = [1, max(fill, 0.04), 1]

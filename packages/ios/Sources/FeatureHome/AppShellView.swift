@@ -173,6 +173,7 @@ struct AppShellView: View {
       .allowsHitTesting(false)
       .accessibilityHidden(true)
     }
+    .onAppear { ScenePerf.mark("shell shown") }
     .task {
       try? await Task.sleep(for: Self.prepareDelay)
       preparingScenes = scenes.filter { $0.id != selectedScene?.id }
@@ -221,6 +222,8 @@ struct AppShellView: View {
     }
     ScenePerf.host.setLighting = { labs.setLighting($0) }
     ScenePerf.host.setWindowView = { labs.setWindowView($0) }
+    ScenePerf.host.cat = { labs.cat.model }
+    ScenePerf.host.setCat = { labs.setCat(CatChoice(model: $0)) }
   }
 }
 

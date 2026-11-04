@@ -616,6 +616,7 @@ final class DeskStage: RehearsedStage {
   private func loadCat() {
     guard catChoice != shownCat else { return }
     let wanted = catChoice
+    cats.hold([wanted], for: self)
     catLoad?.cancel()
     catLoad = Task {
       guard let (model, shown) = await cats.cat(wanted), !Task.isCancelled, wanted == catChoice
