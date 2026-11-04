@@ -105,3 +105,11 @@ sheet can let one cat borrow frames for an essential clip (`eye.json`, `{"donors
 ["loaf"]}}`). Ilya's cat has its illustration's big head, which sinks into its body when it curls up
 to sleep (parts +0.049, the crumple the owner saw in build 18). Its sleep and twitch play its loaf,
 which passes, so it dozes sitting up like a loaf.
+
+Idol keeps the lights of the picture it was given: the room-style pictures have a warm key on one
+side and a blue fill on the other, so a white chest bakes in cream, black fur in gold where the key
+caught it, and a grey tabby in brown and blue. The room then lights the cat again. For a coat with
+no hue of its own (white, grey, black, or patches of those), `white_balance.py` takes 85 % of the
+colour out of the baked albedo and keeps its light and dark; with `--black` (the tuxedo) it also
+darkens fur in proportion to how strongly coloured the key made it. Ginger, calico, tortie and
+Bengal coats keep their colour. Void's lamp highlight was flattened the same way before.
