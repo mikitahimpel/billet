@@ -1,6 +1,6 @@
 # TestFlight from GitHub Actions
 
-`.github/workflows/testflight.yml` archives the app on a GitHub macOS runner, checks the archive and
+`.github/workflows/testflight.yml` archives the app on a GitHub `xcode-27` runner (Xcode from `.xcode-version`), checks the archive and
 uploads it to TestFlight. It only runs when started by hand, and each run waits for the repository
 owner's approval before it can read any secret.
 

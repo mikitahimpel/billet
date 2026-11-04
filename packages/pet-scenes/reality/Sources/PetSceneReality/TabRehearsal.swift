@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import PetScene
 import RealityKit
 import SwiftUI

@@ -9,13 +9,14 @@ import RealityKit
 /// The loaded cat stays as it is: its rig plays every clip and the rooms drive it as usual. The
 /// splat body is added beside the skinned mesh, which turns invisible, and every frame the mesh's
 /// joint poses skin the splats on the GPU (`SplatSkinning`). Where splats can't be drawn (an SDK
-/// before iOS 27's, an older system, or a GPU before Apple7) nothing changes and the mesh shows.
+/// before iOS 27's, the iOS Simulator, whose SDK has no splats, an older system, or a GPU before
+/// Apple7) nothing changes and the mesh shows.
 enum SplatCat {
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "SplatCat")
 
   /// Whether this build and device can draw splats.
   static var isAvailable: Bool {
-    #if compiler(>=6.4)
+    #if compiler(>=6.4) && !targetEnvironment(simulator)
       if #available(iOS 27, macOS 27, *) {
         return MTLCreateSystemDefaultDevice()?.supportsFamily(.apple7) ?? false
       }
@@ -27,7 +28,7 @@ enum SplatCat {
   @MainActor @discardableResult
   static func dress(_ cat: Entity, as model: CatModel) -> Bool {
     guard let name = model.splatBody, isAvailable else { return false }
-    #if compiler(>=6.4)
+    #if compiler(>=6.4) && !targetEnvironment(simulator)
       if #available(iOS 27, macOS 27, *) {
         do throws(SplatLoadError) {
           let cloud = try SplatCloud.load(named: name, in: .module)
@@ -41,7 +42,7 @@ enum SplatCat {
   }
 }
 
-#if compiler(>=6.4)
+#if compiler(>=6.4) && !targetEnvironment(simulator)
   /// The splat body of one cat: the skinned mesh it follows and the GPU state that poses it.
   @available(iOS 27, macOS 27, *)
   struct SplatCatBody: Component {

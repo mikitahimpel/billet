@@ -43,7 +43,9 @@ BILLET_PAYMENTS=storekit xcodebuild build -project apps/ios/Billet.xcodeproj -sc
 
 # StoreKit purchases on a Simulator, from Billet.storekit (also run by ios.yml). Use a
 # runtime before iOS 26.3: 26.4 and 26.5 Simulators don't load .storekit files from
-# xcodebuild test (ios.yml picks the newest one before 26.3).
+# xcodebuild test, and on 27.2 the first purchase hangs (ios.yml picks the newest one
+# before 26.3, downloading iOS 26.2 when the runner has none:
+# xcodebuild -downloadPlatform iOS -buildVersion 26.2).
 (cd apps/ios && xcodegen generate)
 BILLET_PAYMENTS=storekit xcodebuild test -project apps/ios/Billet.xcodeproj \
   -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'

@@ -69,6 +69,15 @@ public struct PetSceneDayLight: Hashable, Sendable {
   }
 }
 
+// The opening callbacks use plain keys: `@Entry` warns that a stored closure can't be compared.
+private struct PetSceneOpeningStartedKey: EnvironmentKey {
+  static let defaultValue: (@MainActor () -> Void)? = nil
+}
+
+private struct PetSceneOpeningEndedKey: EnvironmentKey {
+  static let defaultValue: (@MainActor () -> Void)? = nil
+}
+
 extension EnvironmentValues {
   /// Asks the scene to fly its camera in and play its opening. `nil` leaves the camera alone.
   @Entry public var petSceneFlyIn: PetSceneFlyIn? = nil
@@ -97,9 +106,15 @@ extension EnvironmentValues {
   @Entry public var petSceneIdolProps = false
   /// Called when the opening asked for by ``petSceneFlyIn`` starts, which is once the room is
   /// built and on screen: a host covering the room while it loads can uncover it then.
-  @Entry public var petSceneOpeningStarted: (@MainActor () -> Void)? = nil
+  public var petSceneOpeningStarted: (@MainActor () -> Void)? {
+    get { self[PetSceneOpeningStartedKey.self] }
+    set { self[PetSceneOpeningStartedKey.self] = newValue }
+  }
   /// Called when the opening asked for by ``petSceneFlyIn`` is over, played out or skipped.
-  @Entry public var petSceneOpeningEnded: (@MainActor () -> Void)? = nil
+  public var petSceneOpeningEnded: (@MainActor () -> Void)? {
+    get { self[PetSceneOpeningEndedKey.self] }
+    set { self[PetSceneOpeningEndedKey.self] = newValue }
+  }
   /// The newest cue for the cat, from ``CatDirector``.
   @Entry public var petSceneCatCue: CatCueRequest? = nil
   /// Counts the host's asks to fill the cat's bowl, as a tap on it does: each new count fills it

@@ -293,12 +293,12 @@ extension GenzLayout {
             obstacles: low.id == from.id ? fromObstacles : toObstacles, shape: catBody.standing,
             margin: low.kind == .floor ? length * catBody.standing.radius : length * 0.25),
           // Up there it turns as it lands, so a heading it fits in will do.
-          Self.turns.contains { turn in
+          Self.turns.contains(where: { turn in
             catBodyIsClear(
               at: onHigh, heading: turn, ground: high.top,
               obstacles: (high.id == from.id ? fromObstacles : toObstacles).filter { !$0.sitOnTop },
               shape: bodyShape(on: high.id), pad: GenzCatBody.pad)
-          },
+          }),
           simd_distance(lowSpot, onHigh) <= length * Self.catJumpReach
         else { continue }
         let jump =
