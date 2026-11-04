@@ -83,6 +83,13 @@ final class CatDirector {
     private(set) var top: [CatUtilityScore] = []
     private(set) var rest = NookiRestPose.sit
     private(set) var spot = NookiSpot.home
+    /// Set while the Labs tour plays, instead of the brain.
+    private(set) var touring = false
+    /// The hour Labs has set the brain's clock to, nil for the real one.
+    private(set) var forcedHour: Double?
+
+    /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
+    static let tourKey = "labs.catBrainTour"
 
     /// Hours away after which opening the app is a homecoming she greets.
     static let greetAfter: TimeInterval = 3 * 3600
@@ -103,6 +110,7 @@ final class CatDirector {
     @ObservationIgnored private var nextThink = 0.0
     @ObservationIgnored private var nextSeen = 0.0
     @ObservationIgnored var paused = false
+    @ObservationIgnored private var tour: (start: Double, petted: Set<Double>)?
     /// Whether the brain drives her; read a few times a second, so the Labs switch takes effect at once.
     @ObservationIgnored private let enabled: () -> Bool
 
@@ -120,6 +128,7 @@ final class CatDirector {
         script = NookiCatScript(spots: available)
         runner = CatBrainRunner(events: source.events, now: Date.now.timeIntervalSince1970, context: source.context,
                                 seed: source.seed, room: NookiSpot.affordances(available))
+        if defaults.bool(forKey: Self.tourKey) { startTour() }
         source.observe { [weak self] event in
             guard let self else { return false }
             receive(event)
@@ -167,6 +176,59 @@ final class CatDirector {
         nextThink = 0
     }
 
+    // MARK: - Labs
+
+    /// Plays ``CatMindTour/standard`` through the script and walker, then hands her back to the brain.
+    func startTour() {
+        tour = (Date.now.timeIntervalSince1970, [])
+        touring = true
+        lastEvent = "tour"
+        nextThink = 0
+    }
+
+    /// Sets the brain's clock to `hour` today, or back to the real time with nil, starting the brain again from
+    /// this phone's events.
+    func force(hour: Double?) {
+        forcedHour = hour
+        restart(events: source.events, lastEvent: hour.map { String(format: "clock at %02.0f:00", $0) } ?? "real clock")
+    }
+
+    /// Starts the brain again as a cat left alone for `hours`: hungry, lonely, bored and tired.
+    func neglect(hours: Double = 16) {
+        var context = source.context
+        context.born = Date.now.addingTimeInterval(-hours * 3600)
+        restart(events: [], context: context, lastEvent: "alone \(Int(hours)) h")
+    }
+
+    /// A pet from Labs: she leans into it as into a stroke on the room.
+    func pet() {
+        walker.pet()
+        petted()
+    }
+
+    func feed() {
+        source.record(.feed)
+        analytics.coupleEvent("feed")
+    }
+
+    /// Greets as after a long time away.
+    func greet() {
+        live(.greeting, for: 4)
+        lastEvent = "greeting"
+    }
+
+    private func restart(events: [LifeEvent], context: LifeContext? = nil, lastEvent: String) {
+        let now = Date.now.timeIntervalSince1970
+        var context = context ?? source.context
+        if let forcedHour {
+            let local = now.truncatingRemainder(dividingBy: 86400)
+            context.utcOffset = Int(forcedHour * 3600 - local)
+        }
+        runner = CatBrainRunner(events: events, now: now, context: context, seed: source.seed, room: runner.brain.room)
+        self.lastEvent = lastEvent
+        nextThink = 0
+    }
+
     // MARK: - Each frame
 
     func update(_ dt: Float) {
@@ -202,8 +264,23 @@ final class CatDirector {
 
     private func think(_ now: Double) {
         runner.advance(to: now)
-        let frame = runner.frame
-        let mind = CatMind(frame.stack, hour: runner.brain.hour(at: now))
+        var frame = runner.frame
+        var mind = CatMind(frame.stack, hour: runner.brain.hour(at: now))
+        if let tour {
+            if let (stop, start) = CatMindTour.standard.stop(at: now - tour.start) {
+                frame = CatMindTour.frame(stop, start: tour.start + start)
+                mind = CatMind(stop.stack, hour: 12)
+                if stop.pet, !tour.petted.contains(start) {
+                    self.tour?.petted.insert(start)
+                    walker.pet()
+                    lastEvent = "pet (tour)"
+                }
+            } else {
+                self.tour = nil
+                touring = false
+                lastEvent = "tour over"
+            }
+        }
         if mind != self.mind {
             let cause = runner.brain.transitions.last?.cause.rawValue ?? (frame.stack.interaction == nil ? "start" : "touch")
             analytics.catChanged(from: self.mind, to: mind, cause: cause)

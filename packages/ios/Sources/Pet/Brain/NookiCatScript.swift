@@ -11,8 +11,9 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
     case .bed: self = .home
     case .window, .sunbeam: self = .sill
     case .rug, .toy: self = .ball
-    case .shelf, .box, .desk, .smallItem: self = .tree
-    case .soft: self = .basket
+    case .shelf, .desk, .smallItem: self = .tree
+    case .box: self = .basket
+    case .soft: self = .home
     case .bowl: self = .bowl
     case .door: self = .front
     }
@@ -27,7 +28,7 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
         case .tree: RoomAffordance(id: "tree", kind: .shelf)
         case .sill: RoomAffordance(id: "sill", kind: .window)
         case .ball: RoomAffordance(id: "ball", kind: .toy)
-        case .basket: RoomAffordance(id: "basket", kind: .soft)
+        case .basket: RoomAffordance(id: "basket", kind: .box)
         case .bowl: RoomAffordance(id: "bowl", kind: .bowl)
         case .front: nil
         }
@@ -97,6 +98,8 @@ public struct NookiCatScript: Sendable {
   public static let spotDwell = 8.0
 
   public let spots: Set<NookiSpot>
+  /// Where she may rest: her bed and the window seat. The yarn basket and the toys are for play.
+  public static let beds: Set<NookiSpot> = [.home, .sill]
   private var step: (step: CatActivityStep, start: Double)?
   private var look: NookiLook?
   private var drowse: Double?
@@ -108,13 +111,14 @@ public struct NookiCatScript: Sendable {
     self.spots = spots
   }
 
-  /// The rest pose `mind` rests in.
-  public static func rest(_ mind: CatMind) -> NookiRestPose {
+  /// The rest pose `mind` rests in, from `now`: a pet leaves her in the body she is in.
+  public static func rest(_ mind: CatMind, now: NookiRestPose) -> NookiRestPose {
     switch mind {
     case .loaf: .loaf
     case .napping, .deepSleep: .sleep
-    case .idle, .exploring, .playing, .grooming, .eating, .seekingAttention, .beingPetted,
-      .greetingPartner, .sulking:
+    case .beingPetted: now
+    case .idle, .exploring, .playing, .grooming, .eating, .seekingAttention, .greetingPartner,
+      .sulking:
       .sit
     }
   }
@@ -147,6 +151,13 @@ public struct NookiCatScript: Sendable {
     }
   }
 
+  /// Where the cat should be for `target` as `mind`, given that it is at `here`: resting, only in a bed.
+  public func spot(for target: CatTarget, mind: CatMind, here: NookiSpot) -> NookiSpot {
+    let spot = spot(for: target, here: here)
+    guard mind.region == .resting, !Self.beds.contains(spot) else { return spot }
+    return spots.contains(.sill) && spot == .sill ? .sill : .home
+  }
+
   /// Where the cat should be for `target`, given that it is at `here`.
   public func spot(for target: CatTarget, here: NookiSpot) -> NookiSpot {
     let wanted: NookiSpot? =
@@ -166,7 +177,8 @@ public struct NookiCatScript: Sendable {
     case .camera: .camera
     case .window: spots.contains(.sill) ? .window : .around
     case .away: .away
-    case .affordance(let kind): NookiSpot(kind).flatMap { spots.contains($0) ? .spot($0) : nil } ?? .around
+    case .affordance(let kind):
+      NookiSpot(kind).flatMap { spots.contains($0) ? .spot($0) : nil } ?? .around
     }
   }
 
@@ -192,11 +204,12 @@ public struct NookiCatScript: Sendable {
       intents.append(.drowse(drowse))
     }
 
+    guard !body.moving else { return intents }
+    // A step that starts while she walks plays its act once she is still.
     let newStep = step.map { $0.step != frame.stack.step || $0.start != frame.stepStart } ?? true
     step = (frame.stack.step, frame.stepStart)
-    guard !body.moving else { return intents }
 
-    let wanted = spot(for: frame.target, here: body.at)
+    let wanted = spot(for: frame.target, mind: mind, here: body.at)
     if wanted != body.at {
       guard now - arrived >= Self.spotDwell, now - restSince >= body.rest.dwell else {
         return intents
@@ -206,7 +219,7 @@ public struct NookiCatScript: Sendable {
     }
 
     var resting = body.rest
-    let rest = Self.rest(mind)
+    let rest = Self.rest(mind, now: body.rest)
     if rest != body.rest, now - restSince >= body.rest.dwell {
       intents.append(.rest(rest))
       resting = rest

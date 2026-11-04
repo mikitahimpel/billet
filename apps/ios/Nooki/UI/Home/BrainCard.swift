@@ -16,8 +16,54 @@ struct BrainCard: View {
     let director: CatDirector
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            readout.allowsHitTesting(false)
+            controls
+        }
+        .foregroundStyle(.white)
+        .padding(12)
+        .frame(width: 210, alignment: .leading)
+        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Labs controls: a tour of every state, the brain's clock, a neglected cat, and the couple's touches.
+    private var controls: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(director.mind?.path ?? "starting…")
+            HStack(spacing: 6) {
+                chip(director.touring ? "Touring…" : "Tour") { director.startTour() }
+                Menu {
+                    ForEach([7.0, 13, 19, 23], id: \.self) { hour in
+                        Button(String(format: "%02.0f:00", hour)) { director.force(hour: hour) }
+                    }
+                    Button("Real time") { director.force(hour: nil) }
+                } label: {
+                    chipLabel(director.forcedHour.map { String(format: "%02.0f:00", $0) } ?? "Clock")
+                }
+                chip("Alone") { director.neglect() }
+            }
+            HStack(spacing: 6) {
+                chip("Pet") { director.pet() }
+                chip("Feed") { director.feed() }
+                chip("Hello") { director.greet() }
+            }
+        }
+    }
+
+    private func chip(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { chipLabel(title) }.buttonStyle(.plain)
+    }
+
+    private func chipLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .padding(.horizontal, 9)
+            .frame(height: 26)
+            .background(.white.opacity(0.16), in: Capsule())
+    }
+
+    private var readout: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text((director.touring ? "Tour · " : "") + (director.mind?.path ?? "starting…"))
                 .font(.system(size: 14, weight: .bold, design: .rounded))
             Text(director.path)
                 .font(.system(size: 10, design: .monospaced))
@@ -34,11 +80,6 @@ struct BrainCard: View {
                 line(score.group.rawValue, String(format: "%.2f", score.score))
             }
         }
-        .foregroundStyle(.white)
-        .padding(12)
-        .frame(width: 210, alignment: .leading)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .allowsHitTesting(false)
     }
 
     private func bar(_ title: String, _ value: Double) -> some View {
