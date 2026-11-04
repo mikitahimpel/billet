@@ -11,6 +11,8 @@ struct RoomLayerSchedule: TimelineSchedule {
   /// How often the layer changes once the room is settled, or `nil` when it then holds still.
   var steady: TimeInterval?
   var isPaused: Bool
+  var aligned = RoomLayerSchedule.alignsTicks
+  nonisolated(unsafe) static var alignsTicks = true
 
   static let busy: TimeInterval = 1 / 60
 
@@ -18,13 +20,16 @@ struct RoomLayerSchedule: TimelineSchedule {
     var upcoming: Date?
     let busyUntil: Date
     let steady: TimeInterval?
+    var aligned = true
 
     mutating func next() -> Date? {
       guard let date = upcoming else { return nil }
       if date < busyUntil {
         upcoming = date.addingTimeInterval(RoomLayerSchedule.busy)
       } else {
-        upcoming = steady.map { RoomLayerSchedule.tick(after: date, every: $0) }
+        upcoming = steady.map {
+          aligned ? RoomLayerSchedule.tick(after: date, every: $0) : date.addingTimeInterval($0)
+        }
       }
       return date
     }
@@ -44,7 +49,7 @@ struct RoomLayerSchedule: TimelineSchedule {
       return Entries(upcoming: startDate, busyUntil: .distantPast, steady: nil)
     }
     let steady = mode == .lowFrequency ? steady.map { max($0, 1) } : steady
-    return Entries(upcoming: startDate, busyUntil: busyUntil, steady: steady)
+    return Entries(upcoming: startDate, busyUntil: busyUntil, steady: steady, aligned: aligned)
   }
 }
 

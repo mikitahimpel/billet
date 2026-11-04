@@ -200,7 +200,10 @@ struct GenzRoomView: View {
     let isNative = replacementArt == nil && (slot != .windowNight || viewArt == nil)
     let schedule = RoomLayerSchedule(
       busyUntil: isNative ? room.screen.busyUntil : .distantFuture,
-      steady: isNative ? slot.steadyInterval : RoomLayerSchedule.busy,
+      steady: isNative
+        ? (slot == .windowNight && !RoomCostSwitches.shared.shows("view15")
+          ? 1 / 30 : slot.steadyInterval)
+        : RoomLayerSchedule.busy,
       isPaused: !isOnScreen || reduceMotion)
     return TimelineView(schedule) { context in
       let state = room.screen.state(
