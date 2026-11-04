@@ -1,0 +1,275 @@
+{
+ "idle": {
+  "first": 1,
+  "last": 121,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 0.0,
+  "trimEnd": 4.0
+ },
+ "walk": {
+  "first": 131,
+  "last": 161,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 4.3333,
+  "trimEnd": 5.3333
+ },
+ "sit": {
+  "first": 171,
+  "last": 291,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 5.6667,
+  "trimEnd": 9.6667
+ },
+ "sleep": {
+  "first": 301,
+  "last": 481,
+  "loops": true,
+  "base": "sleep",
+  "trimStart": 10.0,
+  "trimEnd": 16.0
+ },
+ "crouchWiggle": {
+  "first": 491,
+  "last": 521,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 16.3333,
+  "trimEnd": 17.3333
+ },
+ "pounce": {
+  "first": 531,
+  "last": 576,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 17.6667,
+  "trimEnd": 19.1667
+ },
+ "eat": {
+  "first": 586,
+  "last": 706,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 19.5,
+  "trimEnd": 23.5
+ },
+ "blink": {
+  "first": 716,
+  "last": 776,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 23.8333,
+  "trimEnd": 25.8333
+ },
+ "look": {
+  "first": 786,
+  "last": 906,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 26.1667,
+  "trimEnd": 30.1667
+ },
+ "tailFlick": {
+  "first": 916,
+  "last": 976,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 30.5,
+  "trimEnd": 32.5
+ },
+ "happy": {
+  "first": 986,
+  "last": 1076,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 32.8333,
+  "trimEnd": 35.8333
+ },
+ "stretch": {
+  "first": 1086,
+  "last": 1176,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 36.1667,
+  "trimEnd": 39.1667
+ },
+ "yawn": {
+  "first": 1186,
+  "last": 1261,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 39.5,
+  "trimEnd": 42.0
+ },
+ "groom": {
+  "first": 1271,
+  "last": 1391,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 42.3333,
+  "trimEnd": 46.3333
+ },
+ "knead": {
+  "first": 1401,
+  "last": 1491,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 46.6667,
+  "trimEnd": 49.6667
+ },
+ "slowBlink": {
+  "first": 1501,
+  "last": 1576,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 50.0,
+  "trimEnd": 52.5
+ },
+ "perk": {
+  "first": 1586,
+  "last": 1646,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 52.8333,
+  "trimEnd": 54.8333
+ },
+ "twitch": {
+  "first": 1656,
+  "last": 1731,
+  "loops": false,
+  "base": "sleep",
+  "trimStart": 55.1667,
+  "trimEnd": 57.6667
+ },
+ "headbutt": {
+  "first": 1923,
+  "last": 1977,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 64.0667,
+  "trimEnd": 65.8667
+ },
+ "reachUp": {
+  "first": 1987,
+  "last": 2053,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 66.2,
+  "trimEnd": 68.4
+ },
+ "sniff": {
+  "first": 2063,
+  "last": 2129,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 68.7333,
+  "trimEnd": 70.9333
+ },
+ "dangle": {
+  "first": 2273,
+  "last": 2363,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 75.7333,
+  "trimEnd": 78.7333
+ },
+ "loaf": {
+  "first": 2373,
+  "last": 2553,
+  "loops": true,
+  "base": "loaf",
+  "trimStart": 79.0667,
+  "trimEnd": 85.0667
+ },
+ "run": {
+  "first": 2563,
+  "last": 2577,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 85.4,
+  "trimEnd": 85.8667
+ },
+ "lieDown": {
+  "first": 2587,
+  "last": 2683,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 86.2,
+  "trimEnd": 89.4,
+  "ends": "sleep"
+ },
+ "groomTail": {
+  "first": 2823,
+  "last": 2949,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 94.0667,
+  "trimEnd": 98.2667
+ },
+ "lickLips": {
+  "first": 2959,
+  "last": 2989,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 98.6,
+  "trimEnd": 99.6
+ },
+ "startle": {
+  "first": 2999,
+  "last": 3041,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 99.9333,
+  "trimEnd": 101.3333
+ },
+ "headTilt": {
+  "first": 3051,
+  "last": 3123,
+  "loops": false,
+  "base": "sit",
+  "trimStart": 101.6667,
+  "trimEnd": 104.0667
+ },
+ "carry": {
+  "first": 3133,
+  "last": 3163,
+  "loops": true,
+  "base": "stand",
+  "trimStart": 104.4,
+  "trimEnd": 105.4
+ },
+ "rubSide": {
+  "first": 3173,
+  "last": 3251,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 105.7333,
+  "trimEnd": 108.3333
+ },
+ "lookUp": {
+  "first": 3261,
+  "last": 3381,
+  "loops": true,
+  "base": "sit",
+  "trimStart": 108.6667,
+  "trimEnd": 112.6667
+ },
+ "jumpUp": {
+  "first": 3391,
+  "last": 3430,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 113.0,
+  "trimEnd": 114.3
+ },
+ "jumpDown": {
+  "first": 3440,
+  "last": 3476,
+  "loops": false,
+  "base": "stand",
+  "trimStart": 114.6333,
+  "trimEnd": 115.8333
+ }
+}

@@ -1,0 +1,219 @@
+{
+ "bat": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 63.7333,
+  "trimStart": 62.3333
+ },
+ "blink": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 25.8333,
+  "trimStart": 23.8333
+ },
+ "carry": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 105.4,
+  "trimStart": 104.4
+ },
+ "crouchWiggle": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 17.3333,
+  "trimStart": 16.3333
+ },
+ "dangle": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 78.7333,
+  "trimStart": 75.7333
+ },
+ "eat": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 23.5,
+  "trimStart": 19.5
+ },
+ "grab": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 75.4,
+  "trimStart": 73.6
+ },
+ "groom": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 46.3333,
+  "trimStart": 42.3333
+ },
+ "groomTail": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 98.2667,
+  "trimStart": 94.0667
+ },
+ "happy": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 35.8333,
+  "trimStart": 32.8333
+ },
+ "headTilt": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 104.0667,
+  "trimStart": 101.6667
+ },
+ "headbutt": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 65.8667,
+  "trimStart": 64.0667
+ },
+ "idle": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 4.0,
+  "trimStart": 0.0
+ },
+ "jumpDown": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 115.8333,
+  "trimStart": 114.6333
+ },
+ "jumpUp": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 114.3,
+  "trimStart": 113.0
+ },
+ "knead": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 49.6667,
+  "trimStart": 46.6667
+ },
+ "lickLips": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 99.6,
+  "trimStart": 98.6
+ },
+ "lieDown": {
+  "base": "stand",
+  "ends": "sleep",
+  "loops": false,
+  "trimEnd": 89.4,
+  "trimStart": 86.2
+ },
+ "look": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 30.1667,
+  "trimStart": 26.1667
+ },
+ "lookUp": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 112.6667,
+  "trimStart": 108.6667
+ },
+ "perk": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 54.8333,
+  "trimStart": 52.8333
+ },
+ "pounce": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 19.1667,
+  "trimStart": 17.6667
+ },
+ "reachUp": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 68.4,
+  "trimStart": 66.2
+ },
+ "rollOver": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 62.0,
+  "trimStart": 58.0
+ },
+ "rubSide": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 108.3333,
+  "trimStart": 105.7333
+ },
+ "run": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 85.8667,
+  "trimStart": 85.4
+ },
+ "sit": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 9.6667,
+  "trimStart": 5.6667
+ },
+ "sleep": {
+  "base": "sleep",
+  "loops": true,
+  "trimEnd": 16.0,
+  "trimStart": 10.0
+ },
+ "slowBlink": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 52.5,
+  "trimStart": 50.0
+ },
+ "sniff": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 70.9333,
+  "trimStart": 68.7333
+ },
+ "stretch": {
+  "base": "stand",
+  "loops": false,
+  "trimEnd": 39.1667,
+  "trimStart": 36.1667
+ },
+ "tailFlick": {
+  "base": "sit",
+  "loops": true,
+  "trimEnd": 32.5,
+  "trimStart": 30.5
+ },
+ "twitch": {
+  "base": "sleep",
+  "loops": false,
+  "trimEnd": 57.6667,
+  "trimStart": 55.1667
+ },
+ "walk": {
+  "base": "stand",
+  "loops": true,
+  "trimEnd": 5.3333,
+  "trimStart": 4.3333
+ },
+ "wave": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 73.2667,
+  "trimStart": 71.2667
+ },
+ "yawn": {
+  "base": "sit",
+  "loops": false,
+  "trimEnd": 42.0,
+  "trimStart": 39.5
+ }
+}
