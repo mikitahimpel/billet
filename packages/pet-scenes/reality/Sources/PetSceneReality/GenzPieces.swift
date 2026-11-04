@@ -72,6 +72,15 @@ struct GenzPiece: Hashable, Sendable {
     case idolBeanBagSage
     case idolBeanBagTerracotta
     case idolYarnBasket
+    // The Nooki cabin's furniture.
+    case cabinRug
+    case cabinBed
+    case cabinCatTree
+    case cabinNightstand
+    case cabinPlant
+    case cabinBasket
+    case cabinStoolLamp
+    case cabinBooks
   }
 
   var kind: Kind
@@ -126,6 +135,14 @@ extension GenzPiece.Kind {
       []
     case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall: ["fabric"]
     case .blanket: ["knit"]
+    case .cabinRug: ["edge", "middle"]
+    case .cabinBed: ["plush", "shade"]
+    case .cabinCatTree: ["rope", "carpet", "toy"]
+    case .cabinNightstand: ["wood", "drawers", "plant"]
+    case .cabinPlant: ["pot", "leaf", "dark leaf"]
+    case .cabinBasket: ["wicker", "yarn", "more yarn"]
+    case .cabinStoolLamp: ["wood", "shade"]
+    case .cabinBooks: ["lower", "upper"]
     }
   }
 
@@ -168,6 +185,27 @@ extension GenzPiece.Kind {
     case .pillowSquare: [GenzColour(0x8FA67E)]
     case .pillowSmall: [GenzColour(0xD9A441)]
     case .blanket: [GenzColour(0xD9A441)]
+    case .cabinRug: [GenzColour(NookiCabin.Tone.rugEdge), GenzColour(NookiCabin.Tone.rug)]
+    case .cabinBed: [GenzColour(NookiCabin.Tone.plush), GenzColour(NookiCabin.Tone.plushShade)]
+    case .cabinCatTree:
+      [
+        GenzColour(0xD9B98C), GenzColour(NookiCabin.Tone.plushShade),
+        GenzColour(NookiCabin.Tone.blanket),
+      ]
+    case .cabinNightstand:
+      [
+        GenzColour(NookiCabin.Tone.wood), GenzColour(NookiCabin.Tone.woodLight),
+        GenzColour(NookiCabin.Tone.leaf),
+      ]
+    case .cabinPlant:
+      [
+        GenzColour(NookiCabin.Tone.pot), GenzColour(NookiCabin.Tone.leaf),
+        GenzColour(NookiCabin.Tone.leafDark),
+      ]
+    case .cabinBasket:
+      [GenzColour(0xC9A06A), GenzColour(NookiCabin.Tone.blanket), GenzColour(0x9DB08A)]
+    case .cabinStoolLamp: [GenzColour(NookiCabin.Tone.wood), GenzColour(0xFFE2AE)]
+    case .cabinBooks: [GenzColour(0x7C9A7E), GenzColour(0xE3B45C)]
     }
   }
 
@@ -224,6 +262,14 @@ extension GenzPiece.Kind {
     case .pillowSquare: "Square pillow"
     case .pillowSmall: "Small knit pillow"
     case .blanket: "Blanket"
+    case .cabinRug: "Round rug"
+    case .cabinBed: "Plush cat bed"
+    case .cabinCatTree: "Cat tree"
+    case .cabinNightstand: "Nightstand"
+    case .cabinPlant: "Tall plant"
+    case .cabinBasket: "Yarn basket"
+    case .cabinStoolLamp: "Stool lamp"
+    case .cabinBooks: "Books"
     }
   }
 
@@ -268,6 +314,14 @@ extension GenzPiece.Kind {
     case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall:
       GenzRoomPoint(pillow.width + 0.12, 0.7, pillow.height + 0.07)
     case .blanket: GenzRoomPoint(1.3, 0.84, 0.3)
+    case .cabinRug: GenzRoomPoint(3.96, 3.96, 0.03)
+    case .cabinBed: GenzRoomPoint(2.15, 2.15, 0.45)
+    case .cabinCatTree: GenzRoomPoint(1.24, 1.24, 2.3)
+    case .cabinNightstand: GenzRoomPoint(1.32, 1.32, 2.0)
+    case .cabinPlant: GenzRoomPoint(1.2, 1.2, 1.85)
+    case .cabinBasket: GenzRoomPoint(1.0, 1.0, 0.71)
+    case .cabinStoolLamp: GenzRoomPoint(0.7, 0.7, 1.66)
+    case .cabinBooks: GenzRoomPoint(0.8, 0.7, 0.28)
     }
   }
 }
@@ -335,6 +389,14 @@ extension GenzKit {
       parts = piece.kind.idol.map(idolParts) ?? []
     case .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall: parts = pillow(piece)
     case .blanket: parts = blanket(piece)
+    case .cabinRug: parts = cabinRug(piece)
+    case .cabinBed: parts = cabinBed(piece)
+    case .cabinCatTree: parts = cabinCatTree(piece)
+    case .cabinNightstand: parts = cabinNightstand(piece)
+    case .cabinPlant: parts = cabinPlant(piece)
+    case .cabinBasket: parts = cabinBasket(piece)
+    case .cabinStoolLamp: parts = cabinStoolLamp(piece)
+    case .cabinBooks: parts = cabinBooks(piece)
     }
     for part in parts { root.addChild(part) }
     return root

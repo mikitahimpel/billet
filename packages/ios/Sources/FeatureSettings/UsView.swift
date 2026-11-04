@@ -203,6 +203,7 @@ public struct UsView<Account: View>: View {
       EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: \.hasRoom) {
+        HomeRoomPicker(model: model)
         WindowViewPicker(model: model)
         LightingPicker(model: model)
         FurniturePicker(model: model)

@@ -61,22 +61,59 @@ struct GenzLayout {
   var furniture = RoomFurniture.original
   /// Whether the generated props stand in for the hand-made ones (``withIdolProps()``).
   var idolProps = false
+  /// Which room this is. Window Seat has a street outside its window, a style the pair can dress
+  /// it in and the flat layers that go with them; the Nooki cabin has none of these.
+  var room = HomeRoom.windowSeat
+  /// The ambient light from above and below, and its strength.
+  var ambient = GenzAmbient.windowSeat
+  /// The hooks each string of fairy lights hangs from, in order, for the lighting presets; nil
+  /// for Window Seat's.
+  var ownFairyHooks: [[GenzRoomPoint]]? = nil
+  /// Where the low sun of a lighting preset comes from.
+  var sunFrom = GenzRoomPoint(9, -6, 2.6)
+  /// The middle of the light switch's plate, on the back wall.
+  var switchPlate = GenzLightSwitch.plate
+  /// Where the cat's bowl stands, when not beside the cat's place.
+  var bowl: GenzRoomPoint? = nil
+  /// Lights of the room's own beyond the lamp, such as a candle's or a window's, already placed.
+  var ownLights: (@MainActor () -> [GenzOwnLight])? = nil
 
-  /// What tells one room from another: its furniture, and which props it shows.
+  /// What tells one room from another: the room, its furniture, and which props it shows.
   struct Key: Hashable {
     var furniture: RoomFurniture
     var idolProps = false
+    var room = HomeRoom.windowSeat
   }
 
-  var key: Key { Key(furniture: furniture, idolProps: idolProps) }
+  var key: Key { Key(furniture: furniture, idolProps: idolProps, room: room) }
 
-  /// The room furnished with `furniture`, with the generated props for `idolProps`.
-  static func of(_ furniture: RoomFurniture, idolProps: Bool = false) -> GenzLayout {
-    let layout = windowSeat.furnished(furniture)
-    return idolProps ? layout.withIdolProps() : layout
+  var fairyHooks: [[GenzRoomPoint]] { ownFairyHooks ?? GenzGlow.seatFairyHooks }
+
+  /// Whether the room has a street outside, with a style, a view and the flat layers they need.
+  var hasOutside: Bool {
+    switch room {
+    case .windowSeat: true
+    case .nookiCabin: false
+    }
   }
 
-  static func of(_ key: Key) -> GenzLayout { of(key.furniture, idolProps: key.idolProps) }
+  /// The room furnished with `furniture`, with the generated props for `idolProps`. The Nooki
+  /// cabin has its own furniture, so it takes neither.
+  static func of(
+    _ furniture: RoomFurniture, idolProps: Bool = false, room: HomeRoom = .windowSeat
+  ) -> GenzLayout {
+    switch room {
+    case .windowSeat:
+      let layout = windowSeat.furnished(furniture)
+      return idolProps ? layout.withIdolProps() : layout
+    case .nookiCabin:
+      return nookiCabin
+    }
+  }
+
+  static func of(_ key: Key) -> GenzLayout {
+    of(key.furniture, idolProps: key.idolProps, room: key.room)
+  }
 
   /// How thick a window's sill is. The wall under the window stops at the sill's underside, so
   /// the two never show a top in the same plane.
@@ -229,4 +266,14 @@ extension GenzLayout {
     }
     return spot
   }
+}
+
+/// A room's ambient light: a sky colour over a ground colour, and its strength as a power of two.
+struct GenzAmbient {
+  var top: GenzColour
+  var bottom: GenzColour
+  var exponent: Float
+
+  static let windowSeat = GenzAmbient(
+    top: GenzColour(0xC8D4E8), bottom: GenzColour(0x8090A8), exponent: 1.6)
 }

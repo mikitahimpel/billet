@@ -147,7 +147,7 @@ extension GenzRoom {
   func buildSwitchPlate() {
     let plate = Entity()
     plate.name = Self.switchName
-    let at = GenzLightSwitch.plate
+    let at = layout.switchPlate
     plate.position = at.scene
     let size = GenzLightSwitch.plateSize
     let depth = GenzLightSwitch.plateDepth

@@ -15,6 +15,7 @@ struct SleepingRoom: View {
       .environment(\.petSceneWindowView, labs.windowView)
       .environment(\.petSceneLighting, labs.lighting)
       .environment(\.petSceneFurniture, labs.furniture)
+      .environment(\.petSceneRoom, labs.homeRoom)
       .environment(\.petSceneIdolProps, labs.isOn(LabExperiment.idolProps))
       .environment(\.petSceneShowsControls, false)
   }

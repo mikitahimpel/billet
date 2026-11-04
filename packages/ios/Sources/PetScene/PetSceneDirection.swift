@@ -91,6 +91,8 @@ extension EnvironmentValues {
   @Entry public var petSceneLighting = RoomLighting.off
   /// Which furniture fills the styled rooms. A host that sets nothing gets the first pieces.
   @Entry public var petSceneFurniture = RoomFurniture.original
+  /// Which room the scene shows the cat in. A host that sets nothing gets Window Seat.
+  @Entry public var petSceneRoom = HomeRoom.standard
   /// Whether the styled rooms show the generated (Idol) props in place of their hand-made ones.
   @Entry public var petSceneIdolProps = false
   /// Called when the opening asked for by ``petSceneFlyIn`` starts, which is once the room is

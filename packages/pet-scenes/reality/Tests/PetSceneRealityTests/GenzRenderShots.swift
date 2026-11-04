@@ -4,7 +4,6 @@
   import ImageIO
   import Metal
   import Pet
-  import Pet
   import RealityKit
   import Testing
   import UniformTypeIdentifiers
@@ -76,6 +75,65 @@
         try Self.write(
           image,
           to: folder.appendingPathComponent("\(label)-detail-\(name).png"))
+      }
+    }
+
+    /// The Nooki cabin as the app builds and lights it, with its cat, once its opening is over:
+    /// from home, the ends of its orbit, close and far. Runs when `GENZ_SHOTS` names a folder and
+    /// `GENZ_ROOM` is `nookiCabin`.
+    @Test(
+      .enabled(
+        if: ProcessInfo.processInfo.environment["GENZ_SHOTS"] != nil
+          && ProcessInfo.processInfo.environment["GENZ_ROOM"] == HomeRoom.nookiCabin.rawValue))
+    func cabinAsTheAppLightsIt() async throws {
+      let folder = URL(
+        fileURLWithPath: try #require(ProcessInfo.processInfo.environment["GENZ_SHOTS"]))
+      try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+      let lighting =
+        ProcessInfo.processInfo.environment["GENZ_LIGHTING"].flatMap(RoomLighting.init(rawValue:))
+        ?? .standard
+      let room = GenzRoomCache(suite: "cabin-shots-\(UUID())").room(.nookiCabin)
+      room.fit(to: CGSize(width: 393, height: 852))
+      room.setLighting(lighting)
+      room.setOnScreen(true, in: UUID())
+      room.startUpdates()
+      room.startBuilding()
+      let deadline = Date.now.addingTimeInterval(60)
+      while !room.isBuilt || !room.hasCat, Date.now < deadline {
+        try await Task.sleep(for: .milliseconds(20))
+      }
+      try #require(room.isBuilt)
+      // The opening brings the lights up.
+      try await Task.sleep(for: .seconds(GenzOpening.length + 1))
+      let renderer = try RealityRenderer()
+      renderer.entities.append(room.root)
+      try SceneCensus.of(room.root).write(
+        to: folder.appendingPathComponent("nookiCabin-census.txt"), atomically: true,
+        encoding: .utf8)
+      let lens = PerspectiveCamera()
+      let home = room.layout.camera
+      lens.camera.fieldOfViewInDegrees = home.fieldOfView
+      lens.camera.near = GenzRoom.nearClip
+      lens.camera.far = GenzRoom.farClip
+      renderer.entities.append(lens)
+      renderer.activeCamera = lens
+      let views: [(String, Float, Float, Float)] = [
+        ("home", 0, 0, 1),
+        ("left", home.yawLimits.lowerBound - home.yaw, 0, 1),
+        ("right", home.yawLimits.upperBound - home.yaw, 0, 1),
+        ("low", 0, home.pitchLimits.lowerBound - home.pitch, 1),
+        ("close", 0, 0, home.zoomLimits.lowerBound),
+        ("far", 0, 0, home.zoomLimits.upperBound),
+      ]
+      for (name, yaw, pitch, zoom) in views {
+        var camera = GenzCamera(home: home)
+        camera.fit(to: [393, 852])
+        camera.drag(yaw: yaw, pitch: pitch)
+        camera.zoom(by: 1 / zoom)
+        lens.look(at: camera.target, from: camera.position, relativeTo: nil)
+        let image = try await Self.render(renderer, width: 786, height: 1704)
+        try Self.write(
+          image, to: folder.appendingPathComponent("nookiCabin-\(lighting.rawValue)-\(name).png"))
       }
     }
 

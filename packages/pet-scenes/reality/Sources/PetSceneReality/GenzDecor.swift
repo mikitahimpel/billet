@@ -13,7 +13,10 @@ struct GenzSpotStore {
   var room: String { Self.room(key) }
 
   static func room(_ key: GenzLayout.Key) -> String {
-    "windowSeat.\(key.furniture.rawValue)\(key.idolProps ? ".idol" : "")"
+    switch key.room {
+    case .windowSeat: "windowSeat.\(key.furniture.rawValue)\(key.idolProps ? ".idol" : "")"
+    case .nookiCabin: "nookiCabin"
+    }
   }
 
   private var storageKey: String { "genz.spots.\(room)" }
