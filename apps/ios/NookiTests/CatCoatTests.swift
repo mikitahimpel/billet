@@ -4,7 +4,8 @@ import Testing
 @testable import Billet
 
 struct CatCoatTests {
-    /// sha256 of billet-gpu's coat PLYs (coats/SHA256SUMS, lying ones from coats/brain), which Ilya's PLY plus the shipped colours must rebuild.
+    /// sha256 of billet-gpu's coat PLYs (coats/SHA256SUMS; the lying ones from coats/brain), which the original PLY
+    /// plus the shipped colours must rebuild.
     static let expected: [String: String] = [
         "Mochi-ginger": "41a838b2b7508d7dbdf71a8bcbdab1dbcf2cd7e038d7a18e9853a07df7a8c114",
         "MochiStanding-ginger": "a11409cbd072d4a9855708e6e507e64d60d84906f226d2d1759bc8e0e0d0d761",
