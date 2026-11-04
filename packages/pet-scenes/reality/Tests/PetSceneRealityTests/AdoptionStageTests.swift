@@ -9,13 +9,32 @@ import Testing
 @MainActor
 struct AdoptionStageTests {
   @Test func aCatFadesOntoItsCushionAndEndsOpaque() async {
-    let stage = AdoptionStage(kit: GenzKit(), cats: GenzCatSource())
+    // The model is read from disk before the stage starts, held so the stage finds it loaded:
+    // a busy runner can take a minute over that read, and how long it takes is not what this
+    // test is about. It only reports the time.
+    let cats = GenzCatSource()
+    let holder = NSObject()
+    cats.hold([.standard], for: holder)
+    let loading = ContinuousClock.now
+    guard await cats.cat(.standard) != nil else {
+      Issue.record("the standard cat's model did not load")
+      return
+    }
+    print("AdoptionStageTests: the cat's model loaded in \(ContinuousClock.now - loading)")
+
+    let stage = AdoptionStage(kit: GenzKit(), cats: cats)
     stage.setOnScreen(true)
     stage.begin(AdoptionSceneState(cats: [.standard]))
     stage.start()
-    defer { stage.setOnScreen(false) }
+    defer {
+      stage.setOnScreen(false)
+      withExtendedLifetime(holder) {}
+    }
 
-    let deadline = ContinuousClock.now + .seconds(60)
+    // With the model loaded, placing it takes a few frames; the ceiling is only for a stage that
+    // never places it at all.
+    let placing = ContinuousClock.now
+    let deadline = placing + .seconds(120)
     var seat: Entity? {
       stage.root.findEntity(named: AdoptionStage.catPrefix + "0")?.children
         .first { $0.name == AdoptionStage.seatName }
@@ -24,9 +43,10 @@ struct AdoptionStageTests {
       try? await Task.sleep(for: .milliseconds(20))
     }
     guard let placed = seat, !placed.children.isEmpty else {
-      Issue.record("the cat never arrived")
+      Issue.record("the cat was never placed, though its model had loaded")
       return
     }
+    print("AdoptionStageTests: the cat was placed in \(ContinuousClock.now - placing)")
 
     var opacities: [Float] = []
     // Later than any frame the stage's own timer has fired, so every hand-fired step counts.
