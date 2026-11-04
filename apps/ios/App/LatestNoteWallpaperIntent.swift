@@ -16,13 +16,11 @@ struct LatestNoteWallpaperIntent: AppIntent {
   static let openAppWhenRun = false
 
   enum Failure: Error, CustomLocalizedStringResourceConvertible {
-    case switchedOff
     case noNote
     case notDrawn
 
     var localizedStringResource: LocalizedStringResource {
       switch self {
-      case .switchedOff: "The wallpaper shortcut is switched off in billet's Labs."
       case .noNote: "There is no note from your partner yet."
       case .notDrawn: "The wallpaper could not be drawn."
       }
@@ -30,8 +28,6 @@ struct LatestNoteWallpaperIntent: AppIntent {
   }
 
   func perform() async throws -> some IntentResult & ReturnsValue<IntentFile> {
-    let features = WidgetFeaturesStore.appGroup()?.load() ?? WidgetFeatures()
-    guard features.isOn(LabExperiment.wallpaperShortcut) else { throw Failure.switchedOff }
     guard let note = NoteImage.loadLatest() else { throw Failure.noNote }
     guard let wallpaper = WallpaperImage.render(note: note),
       let data = Self.png(wallpaper)

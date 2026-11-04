@@ -100,10 +100,10 @@ struct AppShellView: View {
     return scene
   }
 
-  /// The scene Notes shows as a desk, when the desk is on and the chosen scene has one. At
-  /// accessibility text sizes Notes stays the list.
+  /// The scene Notes shows as a desk, when the chosen scene has one. At accessibility text sizes
+  /// Notes stays the list.
   private var deskScene: (any PetScene)? {
-    guard labs.isOn(LabExperiment.notesDesk), !typeSize.isAccessibilitySize,
+    guard !typeSize.isAccessibilitySize,
       let scene = selectedScene,
       scene.makeDeskScene(state: DeskSceneState(notes: []), onEvent: { _ in }) != nil
     else { return nil }
@@ -111,21 +111,11 @@ struct AppShellView: View {
   }
 
   private var detailDrawing: ((NoteRecord) -> AnyView)? {
-    labs.isOn(LabExperiment.drawnReplay)
-      ? { AnyView(ReplayDrawing(strokes: $0.strokes)) } : nil
+    { AnyView(ReplayDrawing(strokes: $0.strokes)) }
   }
 
   private var detailActions: ((NoteRecord) -> AnyView)? {
-    let frames = labs.isOn(LabExperiment.framedNotes)
-    let wallpaper = labs.isOn(LabExperiment.wallpaperShortcut)
-    guard frames || wallpaper else { return nil }
-    return { note in
-      AnyView(
-        VStack(spacing: Spacing.small) {
-          if frames { FrameNoteButton(note: note, framed: session.frames) }
-          if wallpaper { WallpaperShareButton(note: note) }
-        })
-    }
+    { note in AnyView(WallpaperShareButton(note: note)) }
   }
 
   var body: some View {
@@ -268,13 +258,12 @@ extension AppShellView {
       onReact: { session.react(to: $0, $1) },
       detailDrawing: detailDrawing,
       detailActions: detailActions,
-      board: labs.isOn(LabExperiment.shelfBoard)
-        ? { board in
-          AnyView(
-            ShelfBoardView(
-              notes: board.notes, reactions: board.reactions, streak: streak,
-              detail: board.detail, onClose: board.close))
-        } : nil,
+      board: { board in
+        AnyView(
+          ShelfBoardView(
+            notes: board.notes, reactions: board.reactions, streak: streak,
+            detail: board.detail, onClose: board.close))
+      },
       onOpen: { events(.noteOpened(.app)) }
     )
   }
