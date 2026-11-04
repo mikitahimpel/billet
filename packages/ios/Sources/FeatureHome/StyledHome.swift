@@ -3,6 +3,7 @@ import DesignSystem
 import FeatureInbox
 import Foundation
 import Ink
+import Labs
 import Pet
 import PetScene
 import SwiftUI
@@ -30,6 +31,8 @@ struct StyledHome: View {
   var onDecorate: (() -> Void)?
   /// Opens the streak's flame, or `nil` when the chip only shows the count.
   var flame: StreakFlameHost?
+  /// The cat's needs and mood, for the paw by the streak, or nil to leave it out.
+  var mood: CatNeedsSnapshot?
 
   @State private var latestDrawing: CGImage?
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
@@ -39,6 +42,7 @@ struct StyledHome: View {
   /// The note the toast is telling about, while it shows.
   @State private var toastNote: UUID?
   @State private var arrivals = NoteArrivals()
+  @State private var isMoodOpen = false
   @Namespace private var zoom
 
   private var latestReceived: NoteRecord? {
@@ -78,6 +82,14 @@ struct StyledHome: View {
       }
       latestDrawing = NoteImage.cgImage(of: note.strokes)
     }
+    .sheet(isPresented: $isMoodOpen) {
+      if let mood {
+        CatNeedsCard(mood)
+          .presentationDetents([.height(250)])
+          .presentationBackground(Self.ground)
+          .preferredColorScheme(.dark)
+      }
+    }
     .flameCover(isPresented: $isFlameOpen, source: Self.streakSource, in: zoom) {
       if let flame, let flameState {
         flame.view(flameState) { isFlameOpen = false }
@@ -88,15 +100,24 @@ struct StyledHome: View {
   private var header: some View {
     HStack(spacing: Spacing.small) {
       streakChip
+      if let mood {
+        CatMoodChip(mood) { isMoodOpen = true }
+      }
       if let onDecorate {
         IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
           .accessibilityIdentifier("styledDecorateButton")
       }
-      if isFakePartner { demoPill }
       Spacer(minLength: 0)
     }
     .padding(.top, Spacing.small)
     .padding(.horizontal, Spacing.medium)
+    .overlay(alignment: .bottomLeading) {
+      if isFakePartner {
+        demoPill
+          .padding(.leading, Spacing.medium)
+          .alignmentGuide(.bottom) { $0[.top] - Spacing.small }
+      }
+    }
   }
 
   @ViewBuilder private var streakChip: some View {
@@ -141,13 +162,14 @@ struct StyledHome: View {
     .frame(minHeight: Target.minimum)
   }
 
-  /// "Demo" while the partner is scripted, so nobody takes the replies for a person.
+  /// "Demo" under the top bar while the partner is scripted, so nobody takes the replies for a
+  /// person. Small and not a control, so it takes no room from the bar's buttons.
   private var demoPill: some View {
     Text("Demo")
-      .billetType(.label)
+      .billetType(.caption)
       .foregroundStyle(Palette.paper.color)
-      .padding(.horizontal, Spacing.medium)
-      .frame(minHeight: Target.minimum)
+      .padding(.horizontal, Spacing.small + Spacing.hair)
+      .padding(.vertical, Spacing.hair)
       .floatingGlass()
       .accessibilityLabel("Fake partner: scripted replies, on this phone only")
       .accessibilityIdentifier("fakePartnerNotice")

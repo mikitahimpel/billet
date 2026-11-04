@@ -54,6 +54,8 @@ public struct BrainDebugOverlay: View {
   }
 
   @ViewBuilder private var details: some View {
+    section("Needs")
+    line(Self.needs(life.state.needs, feeling: brain.frame?.feeling), Palette.paper)
     section("Scores")
     ForEach(Self.top(brain.scores), id: \.group) { score in
       line(Self.describe(score), Palette.paper)
@@ -91,6 +93,14 @@ public struct BrainDebugOverlay: View {
       parts.append("toys " + brain.recentToys.map(\.rawValue).joined(separator: ","))
     }
     return parts.isEmpty ? "no memories yet" : parts.joined(separator: " · ")
+  }
+
+  /// The four needs and the feeling they make, such as `F0.31 P0.62 L0.48 S0.80 → hungry`.
+  static func needs(_ needs: PetNeeds, feeling: CatFeeling?) -> String {
+    func f(_ v: Double) -> String { String(format: "%.2f", v) }
+    let values =
+      "F\(f(needs.full)) P\(f(needs.playful)) L\(f(needs.loved)) S\(f(needs.rested))"
+    return feeling.map { "\(values) → \($0.rawValue)" } ?? values
   }
 
   static func top(_ scores: [CatUtilityScore]) -> [CatUtilityScore] {

@@ -136,18 +136,9 @@ public enum WidgetActionRequest {
         case .heart: .buttonHeart
         case .openCanvas: nil
         }
-      return [button].compactMap { $0 } + (surface == .lockScreen ? [.lockScreenButtons] : [])
-    case .control:
-      switch kind {
-      case .pet: return [.controlPet]
-      case .heart: return [.controlHeart]
-      case .openCanvas: return [.controlCanvas]
-      case .treat: return []
-      }
-    case .liveActivity:
+      return [button].compactMap { $0 }
+    case .control, .liveActivity, .shortcut:
       return []
-    case .shortcut:
-      return kind == .openCanvas ? [.canvasShortcut] : []
     }
   }
 

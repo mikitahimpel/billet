@@ -1,5 +1,7 @@
 import AppIntents
+import Delivery
 import Foundation
+import Pet
 
 #if canImport(WidgetKit)
   import WidgetKit
@@ -79,6 +81,62 @@ public struct SendHeartIntent: AppIntent {
 
   public func perform() async throws -> some IntentResult {
     ActionSubmission.submit(.heart, at: surface)
+    return .result()
+  }
+}
+
+/// The note widget's one button: a pet or a treat, whichever the cat needs. It runs without
+/// opening the app, tells the room straight away, and hands the care to the app's queue when the
+/// room cannot be reached.
+public enum CatCareSubmission {
+  @discardableResult
+  public static func submit(now: Date = .now, calendar: Calendar = .current) async -> Bool {
+    let snapshots = WidgetSnapshotStore.appGroup()
+    let records = CatCareStore.appGroup()
+    let snapshot = snapshots?.load()
+    let decision = CatCareRequest.decide(
+      snapshot: snapshot, last: records?.load(), now: now, calendar: calendar)
+    guard case .success(let care) = decision, let snapshot, let records,
+      (try? records.save(CatCareRecord(care: care, at: now))) != nil
+    else { return false }
+
+    let current = snapshot.current(now: now, calendar: calendar)
+    let plays = care.plays(treat: current.treat).map { (id: UUID(), kind: $0) }
+    let room = DemoRoom.saved()
+    try? snapshots?.save(
+      CatCareRequest.applied(
+        plays, by: room?.device, to: snapshot, now: now, calendar: calendar))
+    reload()
+
+    let at = TreatDay.timestamp(for: now, calendar: calendar)
+    let frames = plays.map { RoomPlay(id: $0.id, kind: $0.kind.rawValue, at: at) }
+    if let room, let host = DemoRoom.host(), await room.post(frames, host: host) {
+      return true
+    }
+    let action = WidgetAction(
+      kind: care.action, at: now, day: TreatDay.key(for: now, calendar: calendar))
+    try? ActionQueue.appGroup()?.enqueue(action)
+    reload()
+    return true
+  }
+
+  private static func reload() {
+    #if canImport(WidgetKit)
+      WidgetCenter.shared.reloadAllTimelines()
+    #endif
+  }
+}
+
+public struct CareForCatIntent: AppIntent {
+  public static let title: LocalizedStringResource = "Care for the cat"
+  public static let description = IntentDescription(
+    "Pets the cat, or gives it a treat when it is hungry. Your partner sees it.")
+  public static let isDiscoverable = false
+
+  public init() {}
+
+  public func perform() async throws -> some IntentResult {
+    await CatCareSubmission.submit()
     return .result()
   }
 }

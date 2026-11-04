@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 
 const root = new URL("../", import.meta.url);
 const read = (name) => readFile(new URL(`web/${name}`, root), "utf8");
-const [html, css, js] = await Promise.all([read("index.html"), read("app.css"), read("app.js")]);
+const [html, css, js, lib] = await Promise.all(
+  ["index.html", "app.css", "app.js", "lib.js"].map(read),
+);
 
 const out = fileURLToPath(new URL("src/admin-assets.ts", root));
 await writeFile(
@@ -13,6 +15,7 @@ await writeFile(
     `export const adminHtml = ${JSON.stringify(html)};`,
     `export const adminCss = ${JSON.stringify(css)};`,
     `export const adminJs = ${JSON.stringify(js)};`,
+    `export const adminLibJs = ${JSON.stringify(lib)};`,
     "",
   ].join("\n"),
 );
