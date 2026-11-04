@@ -24,6 +24,7 @@
   "dependencies": {
     "@billet/backend-flags": "workspace:*",
     "@billet/backend-metrics": "workspace:*",
+    "@billet/backend-onboarding": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
     "effect": "catalog:"

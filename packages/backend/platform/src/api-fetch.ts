@@ -14,6 +14,9 @@ import type { AppStatus } from "@billet/contracts-http-api/status";
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { NotesRoutes } from "@billet/backend-notes/notes-routes";
+import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
+import { OnboardingRoutes } from "@billet/backend-onboarding/onboarding-routes";
+import { OnboardingService } from "@billet/backend-onboarding/onboarding-service";
 import { NotesService } from "@billet/backend-notes/notes-service";
 import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
@@ -27,6 +30,7 @@ import { EventSinkLive } from "./event-sink-live.ts";
 import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairVariantsLive } from "./pair-variants-live.ts";
+import { OnboardingRepositoryLive } from "./onboarding-repository-live.ts";
 import { AccountNoticesLive, AccountRepositoryLive } from "./account-repository-live.ts";
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AppleTokenRevokerLive, signInWithAppleKeyOf } from "./apple-token-revoker-live.ts";
@@ -56,6 +60,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     FlagsRoutes,
     MetricsRoutes,
     PaymentsRoutes,
+    OnboardingRoutes,
   ).pipe(
     Layer.provide(
       Layer.mergeAll(
@@ -71,6 +76,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ServiceStatus.with(status),
         PaymentsService.layer,
         payments,
+        OnboardingService.layer,
       ),
     ),
     Layer.provide(
@@ -85,6 +91,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         payments,
         FlagsRepositoryLive(env.DB),
         FlagConfigRepositoryLive(env.DB, caches.default),
+        OnboardingRepositoryLive(env.DB),
+        OnboardingCatalogue.seed,
         Metrics.layer.pipe(Layer.provide(MetricsRepositoryLive(env.DB))),
         Experiments.with(experiments),
         EventSinkLive(env.EVENTS),

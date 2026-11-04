@@ -18,6 +18,8 @@ import { pairHashOf } from "@billet/backend-metrics/analytics";
 import { buildReport } from "@billet/backend-metrics/funnel";
 import { utcDay } from "@billet/backend-metrics/metrics";
 import { AppStatus } from "@billet/contracts-http-api/status";
+import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
+import { buildOnboardingStats } from "@billet/backend-onboarding/onboarding-stats";
 import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
@@ -54,6 +56,7 @@ export const adminApi = {
   status: "/admin/api/status",
   statusHistory: "/admin/api/status/history",
   purchases: "/admin/api/purchases",
+  onboarding: "/admin/api/onboarding",
 } as const;
 
 /** The read-only API for agents' service tokens, under `/admin/api/agent`. GET only. */
@@ -67,6 +70,7 @@ export const agentApi = {
   status: "/admin/api/agent/status",
   statusHistory: "/admin/api/agent/status-history",
   purchases: "/admin/api/agent/purchases",
+  onboarding: "/admin/api/agent/onboarding",
 } as const;
 
 // Absent values go out as `null`, so the page never has to tell `undefined` from a missing field.
@@ -173,6 +177,7 @@ const readHandlers = Effect.gen(function* () {
   const data = yield* AdminData;
   const digest = yield* Digest.Digest;
   const appStatus = yield* AppStatusStore;
+  const catalogue = yield* OnboardingCatalogue;
 
   const items = Effect.gen(function* () {
     const stored = new Map((yield* configs.all).map((row) => [row.key, row]));
@@ -300,7 +305,14 @@ const readHandlers = Effect.gen(function* () {
     return respondJson(yield* data.purchases(limit ?? 200));
   }).pipe(guarded);
 
+  // Per-step answer counts and skip rates, served steps first, then the app's own.
+  const onboarding = Effect.gen(function* () {
+    const { rows, accounts } = yield* data.onboarding;
+    return respondJson(buildOnboardingStats(catalogue.current, catalogue.native, rows, accounts));
+  }).pipe(guarded);
+
   return {
+    onboarding,
     flags,
     configs,
     appStatus,
@@ -365,6 +377,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.status, reads.status);
     yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", adminApi.purchases, reads.purchases);
+    yield* router.add("GET", adminApi.onboarding, reads.onboarding);
 
     // Maintenance, the minimum build and the notice. Saved whole, with the version read, so two
     // tabs can't overwrite each other unseen; every save is kept in the history with the email.
@@ -464,5 +477,6 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.status, reads.status);
     yield* router.add("GET", agentApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", agentApi.purchases, reads.purchases);
+    yield* router.add("GET", agentApi.onboarding, reads.onboarding);
   }),
 ).pipe(Layer.orDie);

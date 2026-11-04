@@ -55,6 +55,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/flags",
       },
+      "getOnboarding": {
+        "method": "GET",
+        "path": "/v1/onboarding",
+      },
       "getStamps": {
         "method": "GET",
         "path": "/v1/stamps",
@@ -82,6 +86,10 @@ it("pins the routes that clients call", () => {
       "reportEvents": {
         "method": "POST",
         "path": "/v1/events",
+      },
+      "saveOnboardingAnswer": {
+        "method": "POST",
+        "path": "/v1/onboarding/answers",
       },
       "sendNote": {
         "method": "POST",

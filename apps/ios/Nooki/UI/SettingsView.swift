@@ -12,13 +12,16 @@ struct SettingsView: View {
     var erase: () -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(AnonymousSignInModel.self) private var signIn: AnonymousSignInModel?
+    @Environment(ServerSession.self) private var session: ServerSession?
     @Environment(\.requestReview) private var requestReview
     @AppStorage(AppSettings.hapticsKey) private var haptics = true
     @AppStorage(WindowChoice.key) private var windowView = WindowChoice.suburbia
     @AppStorage(WindowChoice.weatherKey) private var windowWeather = ViewWeather.clear
+    @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @State private var editingProfile = false
     @State private var confirmingErase = false
+    @State private var pairing = false
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -42,9 +45,16 @@ struct SettingsView: View {
                 }
                 .listRowBackground(rowBackground)
 
-                if let signIn {
+                if let session {
                     Section("Account") {
-                        AccountRow(state: signIn.state, retry: signIn.retry)
+                        AccountRow(state: session.signIn.state, retry: session.signIn.retry)
+                        if session.isPaired {
+                            row("Paired with your partner", symbol: "heart.fill", tint: .blush)
+                        } else if session.signIn.state == .signedIn {
+                            Button { pairing = true } label: {
+                                row("Pair with your partner", symbol: "heart.circle.fill", tint: .blush)
+                            }
+                        }
                     }
                     .listRowBackground(rowBackground)
                 }
@@ -82,11 +92,22 @@ struct SettingsView: View {
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text(signIn == nil
+                    Text(session == nil
                          ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
                            + "are saved only on this phone."
                          : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
                            + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
+                }
+                .listRowBackground(rowBackground)
+
+                Section {
+                    Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
+                    Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
+                } header: {
+                    Text("Labs")
+                } footer: {
+                    Text("With the brain off, Mochi lives on her own timers as Ilya made her. The card shows what the "
+                         + "brain has her doing and why: her state, needs and the last thing she heard.")
                 }
                 .listRowBackground(rowBackground)
 
@@ -120,6 +141,13 @@ struct SettingsView: View {
         }
         .tint(Color(hex: 0xFFC27A))
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $pairing) {
+            if let session {
+                PairingSheet(model: session.pairing) { session.pairingFinished() }
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
+            }
+        }
         .sheet(isPresented: $editingProfile) {
             ProfileSheet(profile: state.profile)
                 .presentationBackground(Ink.sheet)

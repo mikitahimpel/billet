@@ -1,0 +1,27 @@
+{
+  "_tag": "Multi",
+  "id": "goals",
+  "options": [
+    {
+      "emoji": "📱",
+      "id": "widgets",
+      "label": {
+        "en": "Use widgets",
+        "ru": "Пользоваться виджетами"
+      }
+    },
+    {
+      "exclusive": true,
+      "id": "just-exploring",
+      "label": {
+        "en": "Just exploring",
+        "ru": "Просто смотрю"
+      }
+    }
+  ],
+  "skippable": true,
+  "title": {
+    "en": "What do you want to do together?",
+    "ru": "Что вы хотите делать вместе?"
+  }
+}

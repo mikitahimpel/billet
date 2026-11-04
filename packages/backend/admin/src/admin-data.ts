@@ -1,6 +1,7 @@
 import { Context, Data, type Effect } from "effect";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { EventRow, FlagRow } from "@billet/backend-metrics/funnel";
+import type { OnboardingCountRow } from "@billet/backend-onboarding/onboarding-stats";
 import type { DetailRow } from "./admin-top-details.ts";
 
 /** A read failed. The panel answers 503; `reason` is a fixed label. */
@@ -50,7 +51,8 @@ export interface NotificationRow {
 
 /**
  * What the panel reads from the directory, besides the flags services. Read-only. It never reads a
- * note, an image, an Apple subject or a push token: counts, pair ids, purchases and dates only.
+ * note, an image, an Apple subject, a push token or a typed onboarding answer: counts, pair ids,
+ * purchases, picked option ids and dates only.
  */
 export class AdminData extends Context.Service<
   AdminData,
@@ -69,6 +71,13 @@ export class AdminData extends Context.Service<
         readonly ledger: ReadonlyArray<StampEntryRow>;
         readonly notifications: ReadonlyArray<NotificationRow>;
       },
+      AdminUnavailable
+    >;
+    /**
+     * Every `onboarding_answers` row without its typed text, and how many accounts have one.
+     */
+    readonly onboarding: Effect.Effect<
+      { readonly rows: ReadonlyArray<OnboardingCountRow>; readonly accounts: number },
       AdminUnavailable
     >;
     /** How many accounts are in the pair now, and when the first joined it. */

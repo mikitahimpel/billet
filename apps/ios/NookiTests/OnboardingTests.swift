@@ -1,0 +1,188 @@
+import Foundation
+import Synchronization
+import Testing
+import Transport
+import Wire
+@testable import Billet
+
+/// What the fake server was sent.
+private final class Sent: Sendable {
+    let answers = Mutex<[SaveOnboardingAnswerRequest]>([])
+    let events = Mutex<[ClientEvent]>([])
+    /// The error each save fails with, if any.
+    let failure = Mutex<TransportError?>(nil)
+}
+
+private func text(_ en: String) -> LocalizedText { LocalizedText(en: en, ru: en) }
+
+private let goals = OnboardingStep.multi(OnboardingChoiceStep(
+    id: "goals", title: text("Goals"),
+    options: [
+        OnboardingOption(id: "closer", label: text("Closer")),
+        OnboardingOption(id: "fun", label: text("Fun")),
+        OnboardingOption(id: "exploring", label: text("Just exploring"), exclusive: true),
+    ]))
+private let age = OnboardingStep.single(OnboardingChoiceStep(
+    id: "age", title: text("Age"),
+    options: [OnboardingOption(id: "a", label: text("A")), OnboardingOption(id: "b", label: text("B"))]))
+private let catalogue = OnboardingResponse(version: "v1", steps: [age, goals])
+
+@MainActor
+private func makeFlow(
+    sent: Sent = Sent(), server: OnboardingResponse? = nil, canInvite: Bool = true
+) -> (OnboardingFlow, UserDefaults, URL) {
+    let suite = "onboarding-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    let file = URL.temporaryDirectory.appending(path: "\(suite)/answers.json")
+    let client = OnboardingClient(
+        fetch: { () async throws(TransportError) in
+            guard let server else { throw .network("offline") }
+            return server
+        },
+        save: { [sent] (request) async throws(TransportError) in
+            if let failure = sent.failure.withLock({ $0 }) { throw failure }
+            sent.answers.withLock { $0.append(request) }
+        })
+    let flow = OnboardingFlow(
+        client: client,
+        report: { [sent] (events) async throws(TransportError) in sent.events.withLock { $0.append(contentsOf: events) } },
+        queue: AnswerQueue(file: file), defaults: defaults, canInvite: canInvite, bundled: catalogue,
+        now: { Date(timeIntervalSince1970: 1_000) })
+    return (flow, defaults, file)
+}
+
+/// Lets the flow's background sends run until `done`, or gives up after a while.
+@MainActor
+private func settle(_ done: () -> Bool) async {
+    for _ in 0..<200 where !done() { await Task.yield() }
+}
+
+@MainActor
+struct OnboardingFlowTests {
+    @Test func walksWelcomeQuestionsNameAndInvite() {
+        let (flow, _, _) = makeFlow()
+        #expect(flow.pages == [.welcome, .question(age), .question(goals), .catName, .invite])
+        #expect(makeFlow(canInvite: false).0.pages.last == .catName)
+    }
+
+    @Test func everyStepCanBeSkippedAndTheLastOneFinishes() async {
+        let sent = Sent()
+        let (flow, defaults, _) = makeFlow(sent: sent)
+        flow.start()
+        for _ in 0..<4 { flow.skip() }
+        #expect(flow.isFinished)
+        #expect(defaults.bool(forKey: OnboardingFlow.doneKey))
+        await settle { sent.answers.withLock { $0.count } == 4 }
+        let answers = sent.answers.withLock { $0 }
+        #expect(answers.map(\.stepId) == ["age", "goals", "cat_name", "invite_partner"])
+        #expect(answers.allSatisfy { $0.answer == .skipped && $0.answeredAt == 1_000_000 && $0.version == "v1" })
+        #expect(sent.events.withLock { $0 }.contains(ClientEvent(.onboardingStepSkipped, detail: "goals")))
+    }
+
+    @Test func continueNeedsAnAnswer() {
+        let (flow, _, _) = makeFlow()
+        flow.start()
+        flow.continueTapped()
+        #expect(flow.page == .question(age))
+        flow.toggle(OnboardingOption(id: "b", label: text("B")), in: age)
+        #expect(flow.answer == .single(option: "b"))
+        flow.continueTapped()
+        #expect(flow.page == .question(goals))
+    }
+
+    @Test func anExclusiveOptionClearsTheOthers() {
+        let (flow, _, _) = makeFlow()
+        guard case .multi(let choice) = goals else { return }
+        flow.toggle(choice.options[0], in: goals)
+        flow.toggle(choice.options[1], in: goals)
+        #expect(flow.picks["goals"] == ["closer", "fun"])
+        flow.toggle(choice.options[2], in: goals)
+        #expect(flow.picks["goals"] == ["exploring"])
+        flow.toggle(choice.options[0], in: goals)
+        #expect(flow.picks["goals"] == ["closer"])
+    }
+
+    @Test func theNamedCatKeepsItsNameAndASkippedOneStaysMochi() {
+        let (flow, defaults, _) = makeFlow()
+        flow.start()
+        flow.skip()
+        flow.skip()
+        flow.catName = "  Tofu "
+        flow.continueTapped()
+        #expect(CatProfile.name(in: defaults) == "Tofu")
+        flow.back()
+        flow.skip()
+        #expect(CatProfile.name(in: defaults) == "Mochi")
+    }
+
+    @Test func theServerQuestionsReplaceTheBundledOnesOnlyBeforeTheFirstQuestion() async {
+        let server = OnboardingResponse(version: "v2", steps: [goals])
+        let (fresh, _, _) = makeFlow(server: server)
+        await fresh.load()
+        #expect(fresh.catalogue == server)
+
+        let (started, _, _) = makeFlow(server: server)
+        started.start()
+        await started.load()
+        #expect(started.catalogue == catalogue)
+    }
+
+    @Test func aRangeStartsInTheMiddleOnAStep() {
+        let range = OnboardingRangeStep(id: "r", title: text("R"), min: 0, max: 10, step: 3)
+        #expect(OnboardingFlow.initialValue(range) == 3)
+        #expect(OnboardingFlow.answer(to: .range(range), picks: [], value: nil, text: nil) == .range(value: 3))
+    }
+}
+
+@MainActor
+struct AnswerQueueTests {
+    private func request(_ step: OnboardingStepId, _ answer: OnboardingAnswer = .skipped) -> SaveOnboardingAnswerRequest {
+        SaveOnboardingAnswerRequest(version: "v1", stepId: step, answer: answer, answeredAt: 1)
+    }
+
+    private func client(_ sent: Sent) -> OnboardingClient {
+        OnboardingClient(
+            fetch: { () async throws(TransportError) in throw .network("offline") },
+            save: { [sent] (request) async throws(TransportError) in
+                if let failure = sent.failure.withLock({ $0 }) { throw failure }
+                sent.answers.withLock { $0.append(request) }
+            })
+    }
+
+    @Test func anOfflineAnswerWaitsAcrossLaunches() async {
+        let file = URL.temporaryDirectory.appending(path: "queue-\(UUID().uuidString)/answers.json")
+        let sent = Sent()
+        sent.failure.withLock { $0 = .network("offline") }
+        let queue = AnswerQueue(file: file)
+        queue.add(request("age"))
+        #expect(await queue.flush(with: client(sent)) == false)
+
+        sent.failure.withLock { $0 = nil }
+        let relaunched = AnswerQueue(file: file)
+        #expect(relaunched.pending.map(\.stepId) == ["age"])
+        #expect(await relaunched.flush(with: client(sent)))
+        #expect(relaunched.pending.isEmpty)
+        #expect(AnswerQueue(file: file).pending.isEmpty)
+    }
+
+    @Test func anAnswerTheServerRefusesIsDropped() async {
+        let sent = Sent()
+        sent.failure.withLock { $0 = .api(.invalidRequest) }
+        let queue = AnswerQueue(file: URL.temporaryDirectory.appending(path: "queue-\(UUID().uuidString)/a.json"))
+        queue.add(request("gone"))
+        #expect(await queue.flush(with: client(sent)))
+        #expect(queue.pending.isEmpty)
+    }
+
+    @Test func onlyTheLatestAnswerToAStepWaits() {
+        let queue = AnswerQueue(file: URL.temporaryDirectory.appending(path: "queue-\(UUID().uuidString)/a.json"))
+        queue.add(request("age"))
+        queue.add(request("age", .single(option: "b")))
+        #expect(queue.pending == [request("age", .single(option: "b"))])
+    }
+
+    @Test func theBundledQuestionsDecode() {
+        let bundled = BundledOnboarding.load(from: .main)
+        #expect(bundled.steps.count >= 1)
+    }
+}

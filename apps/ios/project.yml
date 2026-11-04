@@ -42,7 +42,7 @@ targets:
       - target: NookiWidgets
       - target: WindowViews
       - package: BilletPackages
-        products: [FeatureOnboarding, Persistence, Pet, Transport, Wire]
+        products: [FeatureOnboarding, FeaturePairing, Persistence, Pet, Transport, Wire]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:

@@ -363,3 +363,26 @@ export const appStoreNotifications = sqliteTable(
   },
   (table) => [index("app_store_notifications_received_at_index").on(table.receivedAt)],
 );
+
+// One row per account and onboarding step: the answer, or a skip (`kind` = `Skipped`). Picks are a
+// JSON array of option ids, so the admin panel counts them without reading `text`, the one column
+// a person typed. A save keeps the row with the later `answered_at`. Deleted with the account.
+export const onboardingAnswers = sqliteTable(
+  "onboarding_answers",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    stepId: text("step_id").notNull(),
+    version: text("version").notNull(),
+    kind: text("kind").notNull(),
+    optionIds: text("option_ids"),
+    value: integer("value"),
+    text: text("text"),
+    answeredAt: integer("answered_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.stepId] }),
+    index("onboarding_answers_step_index").on(table.stepId),
+  ],
+);

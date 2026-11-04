@@ -27,6 +27,7 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
+import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { resetDirectory } from "./directory-migrations.ts";
 import { PurchaseResponse, StampsResponse } from "@billet/contracts-http-api/purchase";
 import {
@@ -196,6 +197,12 @@ const sendText = (
   note: { readonly text: string; readonly paper?: string },
   key: string = crypto.randomUUID(),
 ) => call("/v1/notes", json({ _tag: "Text", key, ...note }, "POST", token));
+
+const saveAnswer = (token: string, stepId: string, answer: unknown, answeredAt = 1_000) =>
+  call(
+    "/v1/onboarding/answers",
+    json({ version: "2026-11-04", stepId, answer, answeredAt }, "POST", token),
+  );
 
 const sentPhoto = async (token: string) => {
   const response = await sendPhoto(token, await uploaded(token));
@@ -566,6 +573,10 @@ describe("deleting an account", () => {
     );
 
     const anaNote = await sentPhoto(ana.sessionToken);
+    expect((await saveAnswer(ana.sessionToken, "name", { _tag: "Text", text: "Ana" })).status).toBe(
+      204,
+    );
+    expect((await saveAnswer(ben, "age", { _tag: "Skipped" })).status).toBe(204);
     const benNote = await sentPhoto(ben);
     const anaUnsent = await uploaded(ana.sessionToken);
 
@@ -583,6 +594,7 @@ describe("deleting an account", () => {
       ["pair_members", "user_id"],
       ["invites", "owner_id"],
       ["pair_events", "user_id"],
+      ["onboarding_answers", "user_id"],
     ] as const) {
       expect(
         await count(`SELECT COUNT(*) AS n FROM ${table} WHERE ${column} = ?`, ana.userId),
@@ -914,6 +926,71 @@ describe("notes", () => {
     const again = await sendText(owner, { text: "once" }, key);
     expect(await again.json()).toEqual(await first.json());
     expect(await historyFor(owner)).toHaveLength(1);
+  });
+});
+
+describe("onboarding", () => {
+  const anonymous = async (letter: string) => {
+    const opened = await call("/v1/auth/anonymous", json({ accountKey: letter.repeat(43) }));
+    expect(opened.status).toBe(200);
+    return Schema.decodeUnknownSync(SessionResponse)(await opened.json());
+  };
+  const rowsOf = async (userId: string) =>
+    (
+      await env.DB.prepare(
+        "SELECT step_id, kind, option_ids, text, answered_at FROM onboarding_answers WHERE user_id = ? ORDER BY step_id",
+      )
+        .bind(userId)
+        .all()
+    ).results;
+
+  it("serves the questions to the anonymous account from first launch", async () => {
+    const { sessionToken } = await anonymous("o");
+    const response = await call("/v1/onboarding", { method: "GET", headers: bearer(sessionToken) });
+    expect(response.status).toBe(200);
+    const body = Schema.decodeUnknownSync(OnboardingResponse)(await response.json());
+    expect(body.steps.map((step) => step.id)).toEqual(["age", "pronouns", "name", "goals"]);
+    expect((await call("/v1/onboarding", { method: "GET" })).status).toBe(401);
+  });
+
+  it("stores each step once, a skip too, and keeps the later of two answers", async () => {
+    const { sessionToken, userId } = await anonymous("p");
+    const save = (stepId: string, answer: unknown, at?: number) =>
+      saveAnswer(sessionToken, stepId, answer, at).then((response) => response.status);
+    expect(await save("age", { _tag: "Single", option: "age-25-34" })).toBe(204);
+    expect(await save("goals", { _tag: "Multi", options: ["widgets", "raise-pet"] })).toBe(204);
+    expect(await save("pronouns", { _tag: "Skipped" })).toBe(204);
+    expect(await save("cat_coat", { _tag: "Single", option: "grey" })).toBe(204);
+    expect(await save("cat_name", { _tag: "Text", text: "Biscuit" }, 2_000)).toBe(204);
+    // A queued older retry arrives late and changes nothing.
+    expect(await save("cat_name", { _tag: "Skipped" }, 1_500)).toBe(204);
+    expect(await save("age", { _tag: "Single", option: "age-99" })).toBe(400);
+
+    expect(await rowsOf(userId)).toEqual([
+      {
+        step_id: "age",
+        kind: "Single",
+        option_ids: '["age-25-34"]',
+        text: null,
+        answered_at: 1_000,
+      },
+      {
+        step_id: "cat_coat",
+        kind: "Single",
+        option_ids: '["grey"]',
+        text: null,
+        answered_at: 1_000,
+      },
+      { step_id: "cat_name", kind: "Text", option_ids: null, text: "Biscuit", answered_at: 2_000 },
+      {
+        step_id: "goals",
+        kind: "Multi",
+        option_ids: '["widgets","raise-pet"]',
+        text: null,
+        answered_at: 1_000,
+      },
+      { step_id: "pronouns", kind: "Skipped", option_ids: null, text: null, answered_at: 1_000 },
+    ]);
   });
 });
 
