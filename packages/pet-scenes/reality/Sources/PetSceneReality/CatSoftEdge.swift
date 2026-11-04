@@ -11,7 +11,7 @@ enum CatSoftEdge {
   static let sheen: Float = 0.5
 
   /// Gives `cat`'s coat the sheen when its model wants a soft edge.
-  static func dress(_ cat: Entity, as model: CatModel) {
+  @MainActor static func dress(_ cat: Entity, as model: CatModel) {
     guard model.softEdge else { return }
     let tint = PhysicallyBasedMaterial.SheenColor(tint: .init(white: CGFloat(sheen), alpha: 1))
     SceneParts.visit(cat) { node in
