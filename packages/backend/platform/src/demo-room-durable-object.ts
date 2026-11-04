@@ -179,7 +179,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
    * once per device per day, and the whole ledger goes to both sockets so phones agree. The cat's
    * name is the first one given, unless renamed, when the last one wins. A move in choosing the
    * cat is relayed to the partner live; the latest pick of each phone and the adoption are kept
-   * and replayed when the partner connects. A reaction is accepted only from the receiver of that note, and
+   * and replayed when the partner connects. The room's light switch is the last press from either
+   * phone, sent to both and replayed on connect. A reaction is accepted only from the receiver of that note, and
    * the whole table goes to both sockets.
    */
   private async handlePlay(
@@ -205,6 +206,9 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         this.broadcast({ type: "name", name: play.name });
       } else if (play.kind === "adopt") {
         await this.relayAdopt(sender, play);
+      } else if (play.kind === "light") {
+        await this.ctx.storage.put("roomLight", play.light);
+        this.broadcast({ type: "light", light: play.light });
       } else if (play.kind === "react") {
         const senders = (await this.ctx.storage.get<Record<string, string>>("noteFrom")) ?? {};
         const author = senders[play.note];
@@ -313,6 +317,8 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     socket.send(JSON.stringify({ type: "treats", days }));
     const name = await this.ctx.storage.get<string>("catName");
     if (name !== undefined) socket.send(JSON.stringify({ type: "name", name }));
+    const light = await this.ctx.storage.get<string>("roomLight");
+    if (light !== undefined) socket.send(JSON.stringify({ type: "light", light }));
     const reactions = (await this.ctx.storage.get<Reactions>("reactions")) ?? {};
     if (Object.keys(reactions).length > 0) {
       socket.send(JSON.stringify({ type: "reactions", reactions }));

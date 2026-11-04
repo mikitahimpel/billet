@@ -213,6 +213,8 @@ public struct CatBehaviour: Sendable {
   /// Seconds of plain sleep between twitches.
   static let sleepBetweenTwitches = 4.0...7.0
   static let awakeSpell = 22.0...40.0
+  /// How many times longer a nap runs while the room's light is out.
+  static let darkNap = 3.0
   /// Seconds between one-shots, resting in the sitting or standing loop.
   static let rest = 1.5...4.0
   /// How long a loop that stands in for a one-shot is held.
@@ -233,6 +235,8 @@ public struct CatBehaviour: Sendable {
   private var queue: [(CatAction, Double)] = []
   private var started = false
   private var drive = LifeDrive()
+  /// The room's light is out, so naps run long and awake spells short.
+  private var isDark = false
 
   public init(clips: [CatAction: CatClipInfo], seed: UInt64 = 1) {
     self.clips = clips
@@ -287,6 +291,32 @@ public struct CatBehaviour: Sendable {
     queue.removeAll()
     let shown = playable(action)
     queue.append((shown, seconds ?? length(of: shown)))
+    until = now
+    asleepUntil = nil
+    awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
+  }
+
+  /// The room's light went out: the cat yawns, settles and falls asleep, and while it stays dark
+  /// it naps longer and stays up for less.
+  public mutating func lightsOut(at now: Double) {
+    started = true
+    isDark = true
+    queue.removeAll()
+    if let yawn = available(.yawn) { queue.append((yawn, length(of: yawn))) }
+    if let down = available(.lieDown) { queue.append((down, length(of: down))) }
+    until = now
+    awakeUntil = now
+  }
+
+  /// The room's light came back: a sleeping cat blinks at it and stretches; an awake one blinks.
+  public mutating func lightsOn(at now: Double) {
+    started = true
+    isDark = false
+    let wasAsleep = !isAwake(at: now)
+    queue.removeAll()
+    let blink = available(.slowBlink) ?? available(.blink) ?? available(.perk) ?? resting
+    queue.append((blink, length(of: blink)))
+    if wasAsleep, let stretch = available(.stretch) { queue.append((stretch, length(of: stretch))) }
     until = now
     asleepUntil = nil
     awakeUntil = max(awakeUntil ?? now, now + Self.awakeSpell.lowerBound)
@@ -380,7 +410,8 @@ public struct CatBehaviour: Sendable {
     }
     if mode == .free, let awakeUntil, now >= awakeUntil, has(.sleep) {
       self.awakeUntil = nil
-      asleepUntil = now + random.next(in: has(.twitch) ? Self.nap : Self.stillNap)
+      asleepUntil =
+        now + random.next(in: has(.twitch) ? Self.nap : Self.stillNap) * (isDark ? Self.darkNap : 1)
       play(.sleep, for: random.next(in: Self.sleepBetweenTwitches), at: now)
       return
     }
@@ -454,7 +485,7 @@ public struct CatBehaviour: Sendable {
   private var resting: CatAction { has(.sit) ? .sit : .idle }
 
   /// A tired pet stays up for less.
-  private var awakeShare: Double { drive.focus == .rested ? 0.5 : 1 }
+  private var awakeShare: Double { (drive.focus == .rested ? 0.5 : 1) * (isDark ? 0.3 : 1) }
 
   private func available(_ action: CatAction) -> CatAction? { has(action) ? action : nil }
 

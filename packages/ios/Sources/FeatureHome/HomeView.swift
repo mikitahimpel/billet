@@ -743,6 +743,7 @@ struct HomeView: View {
     case .noteOpened: openLatestNote()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
     case .touching(let interaction): session.brain.setLive(interaction)
+    case .lightSwitched(let light): session.switchLight(light)
     case .deliveryFinished, .settled: break
     }
   }
@@ -762,7 +763,8 @@ struct HomeView: View {
       life: session.life.drive,
       lifeNeeds: session.life.state.needs,
       brain: session.brain.frame,
-      brainSpeed: session.life.speed
+      brainSpeed: session.life.speed,
+      light: session.play.roomLight
     )
   }
 

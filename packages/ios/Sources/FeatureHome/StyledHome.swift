@@ -201,6 +201,9 @@ struct StyledHome: View {
     .accessibilityIdentifier("newNoteToast")
   }
 
+  /// The room's own night colour, behind the cat's mood sheet.
+  static let ground = Color(red: 0.047, green: 0.075, blue: 0.125)
+
   static let toastText = "New note from your partner"
   /// How long the toast stays.
   static let toastHold = Duration.milliseconds(3_500)
