@@ -1,0 +1,228 @@
+import FeaturePairing
+import SwiftUI
+
+/// Pairs this phone with the partner's: one shows a code, the other types it in. Whoever shows the code waits here
+/// while the sheet checks every few seconds whether it was claimed.
+struct PairingSheet: View {
+    let model: PairingModel
+    /// Called once when the pairing is done and the user taps Done.
+    var finished: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var code = ""
+    @FocusState private var typing: Bool
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    content
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+            }
+            .scrollIndicators(.hidden)
+            .navigationTitle("Pair with your partner")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if !isPaired {
+                        Button("Cancel") {
+                            model.cancel()
+                            dismiss()
+                        }
+                    }
+                }
+            }
+        }
+        .tint(Color(hex: 0xFFC27A))
+        .preferredColorScheme(.dark)
+        .interactiveDismissDisabled(isPaired)
+        .task(id: waitingCode) {
+            guard waitingCode != nil else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: PairingModel.checkEvery)
+                model.tick()
+            }
+        }
+    }
+
+    @ViewBuilder private var content: some View {
+        switch model.state {
+        case .choosing(let failure, _):
+            if let failure {
+                Text(PairingCopy.message(for: failure))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color(hex: 0xFF8A7A))
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+            }
+            showCard
+            enterCard
+        case .creating, .claiming:
+            ProgressView()
+                .controlSize(.large)
+                .frame(maxWidth: .infinity, minHeight: 260)
+        case .waiting(let code, let expiresAt, _):
+            waitingCard(code: code, expiresAt: expiresAt)
+        case .paired:
+            pairedCard
+        }
+    }
+
+    private var showCard: some View {
+        card {
+            Image(systemName: "qrcode")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xFFC27A))
+            Text("Show my code")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(Ink.primary)
+            Text("Your partner types it into Nooki on their phone.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(Ink.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                typing = false
+                model.createInvite()
+            } label: {
+                Text("Get a code").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+    }
+
+    private var enterCard: some View {
+        card {
+            Image(systemName: "keyboard")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xFFB3C1))
+            Text("I have their code")
+                .font(.system(size: 20, weight: .semibold, design: .rounded))
+                .foregroundStyle(Ink.primary)
+            TextField("Code", text: $code)
+                .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                .multilineTextAlignment(.center)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .focused($typing)
+                .submitLabel(.join)
+                .onSubmit(submit)
+                .padding(.vertical, 12)
+                .background(Ink.card, in: .rect(cornerRadius: 14))
+            Button(action: submit) {
+                Text("Pair").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+    }
+
+    private func waitingCard(code: String, expiresAt: Int) -> some View {
+        card {
+            Text("Your code")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Ink.secondary)
+            Text(PairingCopy.spaced(code))
+                .font(.system(size: 40, weight: .bold, design: .monospaced))
+                .foregroundStyle(Ink.primary)
+                .textSelection(.enabled)
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(PairingCopy.expiry(expiresAt: expiresAt, now: context.date))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(Ink.secondary)
+                    .monospacedDigit()
+            }
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Waiting for your partner…")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Ink.primary)
+            }
+            .padding(.top, 4)
+            ShareLink(item: "Pair with me on Nooki: \(code)") {
+                Label("Send the code", systemImage: "square.and.arrow.up")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
+    }
+
+    private var pairedCard: some View {
+        card {
+            Image(systemName: "heart.fill")
+                .font(.system(size: 46))
+                .foregroundStyle(Color(hex: 0xFFB3C1))
+                .symbolEffect(.bounce, options: .nonRepeating)
+            Text("You're paired!")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(Ink.primary)
+            Text("Notes you pin now reach your partner's Nooki.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Ink.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                finished()
+                dismiss()
+            } label: {
+                Text("Done").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+    }
+
+    private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(spacing: 12, content: content)
+            .padding(20)
+            .frame(maxWidth: .infinity)
+            .background(Ink.card, in: .rect(cornerRadius: 24, style: .continuous))
+    }
+
+    private var isPaired: Bool {
+        if case .paired = model.state { true } else { false }
+    }
+
+    private var waitingCode: String? {
+        if case .waiting(let code, _, _) = model.state { code } else { nil }
+    }
+
+    private func submit() {
+        typing = false
+        model.submit(code: code)
+    }
+}
+
+/// The words the pairing sheet uses, kept apart so they can be tested.
+enum PairingCopy {
+    static func message(for failure: PairingFailure) -> String {
+        switch failure {
+        case .invalidCode: "That code isn't working. It may be mistyped, expired, already used or your own."
+        case .alreadyPaired: "You already have a partner."
+        case .signedOut: "This phone was signed out. Open Nooki again to sign back in."
+        case .unavailable: "Nooki can't reach its server right now. Try again in a moment."
+        }
+    }
+
+    /// The code in groups of four, easier to read aloud: "ABCD EFGH".
+    static func spaced(_ code: String) -> String {
+        var out = ""
+        for (index, character) in code.enumerated() {
+            if index > 0, index.isMultiple(of: 4) { out.append(" ") }
+            out.append(character)
+        }
+        return out
+    }
+
+    /// "Expires in 9:41", or that it has expired. `expiresAt` is epoch milliseconds.
+    static func expiry(expiresAt: Int, now: Date) -> String {
+        let seconds = Int((Double(expiresAt) / 1000 - now.timeIntervalSince1970).rounded(.down))
+        guard seconds > 0 else { return "This code has expired" }
+        return "Expires in \(seconds / 60):" + String(format: "%02d", seconds % 60)
+    }
+}

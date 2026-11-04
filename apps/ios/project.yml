@@ -41,7 +41,7 @@ targets:
     dependencies:
       - target: NookiWidgets
       - package: BilletPackages
-        products: [FeatureOnboarding, Persistence, Transport, Wire, Pet]
+        products: [FeatureOnboarding, FeaturePairing, Persistence, Pet, Transport, Wire]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
