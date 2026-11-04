@@ -6,5 +6,9 @@
 	<array>
 		<string>group.com.mikitahimpel.billet</string>
 	</array>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)com.mikitahimpel.billet</string>
+	</array>
 </dict>
 </plist>
