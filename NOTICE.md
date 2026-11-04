@@ -53,6 +53,18 @@ for billet in Blender from code alone (`packages/pet-scenes/reality/scripts/make
 outside model or texture is used. The windowsill, candles and fairy lights around it are built in
 Swift at run time.
 
+## Night street in 3D
+
+`packages/pet-scenes/reality/Sources/PetSceneReality/Resources/StreetView` (the street outside
+Window Seat's window behind Labs' "3D view") is made for billet from code alone: modelled and
+light-baked in Blender by `packages/pet-scenes/reality/scripts/make_street_view.py`, its far
+roofline card painted by `paint_street_cards.py`. The far skyline
+(`packages/pet-scenes/reality/assets-source/street/skyline.png`, keyed and tiled into
+`street-cards.png`) was generated for billet from a text prompt with
+[FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) (Black Forest Labs,
+Apache License 2.0) on the owner's PC. The model does not ship in the app; only the image made with
+it does. No outside model or texture is used.
+
 ## Project assets
 
 - `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.

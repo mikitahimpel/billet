@@ -14,7 +14,7 @@ import Pet
 /// of it. `-perf.script views` shows each window view from the room's own camera, then through the
 /// shop window, and asks for a screenshot of each. `-perf.script cost` orbits and holds the room
 /// with everything, then with each of its switches off, in pairs, to show what each part costs to
-/// draw. Every result is one line on standard error that starts with `PERF`, read by
+/// draw; `-perf.switches a,b` keeps it to those switches. Every result is one line on standard error that starts with `PERF`, read by
 /// `apps/ios/scripts/perf/measure.sh`.
 @MainActor
 public enum ScenePerf {
@@ -22,6 +22,10 @@ public enum ScenePerf {
   public nonisolated static let script: String? = UserDefaults.standard.string(
     forKey: "perf.script")
   public nonisolated static var isOn: Bool { script != nil }
+  /// The switches a `cost` run turns, or `nil` for all of them.
+  nonisolated static let onlySwitches: Set<String>? = UserDefaults.standard.string(
+    forKey: "perf.switches"
+  ).map { Set($0.split(separator: ",").map(String.init)) }
 
   /// What the shown room or tab scene lets a run do with it.
   public struct Scene {
@@ -158,7 +162,7 @@ public enum ScenePerf {
   /// the room held still, then orbiting, with the part and without it.
   private static func cost() async {
     guard let scene else { return }
-    for name in scene.switches {
+    for name in scene.switches where onlySwitches?.contains(name) ?? true {
       for isOn in [true, false] {
         scene.setSwitch(name, isOn)
         await pause(1)

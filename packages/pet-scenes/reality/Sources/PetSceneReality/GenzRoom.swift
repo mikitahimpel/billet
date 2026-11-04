@@ -30,6 +30,8 @@ final class GenzRoomScreen {
   /// What the window looks out on, and the hour it is lit for.
   var windowView = WindowViewChoice.standard
   var viewHour = ViewHour.night
+  /// Whether the street outside is drawn in 3D through the window, leaving the flat view its sky.
+  var viewInDepth = false
   /// The light the flat layers draw: the preset as the switch has it, part way through a fade.
   var look = LightingLook.off
   /// Counts up each time the switch on the wall is pressed here, for its click.
@@ -55,7 +57,7 @@ final class GenzRoomScreen {
     WindowViewState(
       view: windowView.view, weather: windowView.shownWeather, hour: viewHour,
       time: time(at: date), now: date.timeIntervalSinceReferenceDate, window: window,
-      home: homeWindow, lampOn: lampOn)
+      home: homeWindow, lampOn: lampOn, inDepth: viewInDepth)
   }
 }
 
@@ -246,6 +248,11 @@ final class GenzRoom: CatPlayStage {
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
   private var viewRecipe: any ViewRecipe = ViewRecipes.recipe(for: .standard)
+  /// Whether a view has been shown yet: the first one is applied even when it is the standard.
+  private var viewShown = false
+  /// The 3D street outside, while Labs shows it, and its load.
+  var street: Street3D?
+  var streetLoad: Task<Void, Never>?
   /// The last thing outside the cat pawed at, so each drop is pawed at once.
   private var pawedAt: Int64?
   /// Whether the cat's gaze is on something outside rather than a finger.
@@ -613,6 +620,7 @@ final class GenzRoom: CatPlayStage {
     viewSize = size
     camera.fit(to: SIMD2(Float(size.width), Float(size.height)))
     aimLens()
+    placeStreet()
   }
 
   // MARK: - Camera and touch
@@ -756,6 +764,7 @@ final class GenzRoom: CatPlayStage {
     }
     stepMoments()
     stepView()
+    street?.update(now: Date().timeIntervalSinceReferenceDate, reduceMotion: reduceMotion)
     stepFlames()
     stepDecor(Float(delta))
     stepSwitch()
@@ -934,7 +943,8 @@ final class GenzRoom: CatPlayStage {
 
   /// Shows `choice` through the window: its view, weather and hour.
   func setWindowView(_ choice: WindowViewChoice) {
-    guard choice != screen.windowView else { return }
+    guard choice != screen.windowView || !viewShown else { return }
+    viewShown = true
     screen.windowView = choice
     viewRecipe = ViewRecipes.recipe(for: choice.view)
     applyViewHour()
@@ -944,6 +954,8 @@ final class GenzRoom: CatPlayStage {
   private func applyViewHour() {
     let hour = screen.windowView.shownHour(room: dayLight?.here)
     if screen.viewHour != hour { screen.viewHour = hour }
+    showStreet(
+      screen.windowView.showsInDepth(weather: screen.windowView.shownWeather, hour: hour))
   }
 
   /// The cat follows what moves outside with its head, and paws at a drop running down the glass

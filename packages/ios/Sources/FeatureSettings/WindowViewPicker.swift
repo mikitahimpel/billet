@@ -5,7 +5,8 @@ import WidgetBridge
 
 /// What the styled rooms' window looks out on: following the pair's test, or one row per view
 /// with a check on the chosen one, then its weather and hour. "As made" leaves the weather to the
-/// view and the hour to the room. Saved with the Labs flags; the window changes without a restart.
+/// view and the hour to the room, and the 3D switch. Saved with the Labs flags; the window changes
+/// without a restart.
 struct WindowViewPicker: View {
   let model: WidgetFeaturesModel
 
@@ -24,6 +25,20 @@ struct WindowViewPicker: View {
           ListDivider()
           row(view)
         }
+        ListDivider()
+        ToggleRow(
+          "3D view",
+          subtitle:
+            "The suburb at night in 3D, with true depth as the room turns. Clear nights only.",
+          isOn: Binding(
+            get: { model.windowView.inDepth },
+            set: { inDepth in
+              var choice = model.windowView
+              choice.inDepth = inDepth
+              model.setWindowView(choice)
+            })
+        )
+        .accessibilityIdentifier("view-inDepth")
         ListDivider()
         chips(
           "Weather", options: ViewWeather.allCases, chosen: model.windowView.weather,

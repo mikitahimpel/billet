@@ -11,6 +11,7 @@
 # --sweep       one `-perf.script sweep` run, saving a screenshot at each held pose
 # --views       one `-perf.script views` run: a screenshot of every window view, in Home and Shop
 # --cost N      runs of `-perf.script cost`: each part of the room switched off in turn (default 0)
+#               PERF_SWITCHES=a,b keeps them to those parts
 # --build-only  build, then stop
 #
 # Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
@@ -136,7 +137,9 @@ run() {
   rm -rf $containers/perf-shots
   xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
   python3 -c 'import time; time.sleep(1.5)'
-  xcrun simctl launch --console-pty $udid $bundle -perf.script $script > $log 2>&1 &
+  local only=()
+  [[ -n ${PERF_SWITCHES:-} ]] && only=(-perf.switches $PERF_SWITCHES)
+  xcrun simctl launch --console-pty $udid $bundle -perf.script $script $only > $log 2>&1 &
   local pid=$! started=$SECONDS
   while ! grep -q '^PERF done' $log 2>/dev/null; do
     if grep -q '^PERF shot' $log 2>/dev/null; then

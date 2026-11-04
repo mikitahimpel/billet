@@ -23,6 +23,7 @@ let package = Package(
         .copy("Resources/Room.reality"),
         .copy("Resources/IdolProps.reality"),
         .copy("Resources/Room.usdz"),
+        .copy("Resources/StreetView"),
         .copy("Resources/pose-sleeping.png"),
         .copy("Resources/pose-proud.png"),
       ]
