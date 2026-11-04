@@ -174,7 +174,7 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
   public static let standard = WindowViewChoice(view: .standard, inDepth: true)
 
   public init(
-    view: WindowView, weather: ViewWeather? = nil, hour: ViewHour? = nil, inDepth: Bool = false
+    view: WindowView, weather: ViewWeather? = nil, hour: ViewHour? = nil, inDepth: Bool = true
   ) {
     self.view = view
     self.weather = weather
@@ -197,7 +197,7 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
     view = WindowView(rawValue: raw) ?? .standard
     weather = try? container.decodeIfPresent(ViewWeather.self, forKey: .weather)
     hour = try? container.decodeIfPresent(ViewHour.self, forKey: .hour)
-    inDepth = (try? container.decodeIfPresent(Bool.self, forKey: .inDepth)) ?? false
+    inDepth = (try? container.decodeIfPresent(Bool.self, forKey: .inDepth)) ?? true
   }
 
   /// Whether the view is shown in 3D in `weather` at `hour`: only the suburb has a 3D street so
