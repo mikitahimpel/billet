@@ -18,6 +18,14 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter
 
 OUT = Path(sys.argv[1])
+# A FLUX skyline (assets-source/street/skyline.png) takes the far card's place when present.
+FLUX_SKYLINE = Path(__file__).resolve().parent.parent / "assets-source" / "street" / "skyline.png"
+# The rows of it that hold the skyline: from above the mast's light to the near hills.
+FLUX_BAND = (330, 700)
+# Where the towers stand, in units across the far card from straight out: right of the note.
+FLUX_TOWERS_AT = 30.0
+# The share of its width a mirrored tile keeps: everything left of the mast.
+FLUX_MIRROR_KEEP = 0.76
 INFO = json.loads((OUT / "cards.json").read_text())
 SIZE = (4096, 1024)
 SS = 2  # painted at twice the size, then halved, for smooth edges
@@ -177,6 +185,72 @@ def skyline(card):
     card.rect(card["x0"], card["z0"], card["x1"], ground - 1.5, rgb(lit(far, -0.02)))
 
 
+def flux_skyline(image, card):
+    """The FLUX skyline on the far card: its sky keyed out against the sky's own gradient, the
+    band tiled across the card, every other tile mirrored so the hills run on."""
+    src = Image.open(FLUX_SKYLINE).convert("RGB")
+    w, h = src.size
+    px = src.load()
+    lum = lambda c: 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    # The sky's brightness row by row, fitted on the empty top rows and carried down.
+    top = FLUX_BAND[0] - 20
+    rows = [sum(lum(px[x, y]) for x in range(0, w, 4)) / (w / 4) for y in range(top)]
+    n = len(rows)
+    mean_y, mean_l = (n - 1) / 2, sum(rows) / n
+    slope = sum((y - mean_y) * (l - mean_l) for y, l in enumerate(rows)) / sum((y - mean_y) ** 2 for y in range(n))
+    sky = lambda y: mean_l + slope * (y - mean_y)
+    y0, y1 = FLUX_BAND
+    band = Image.new("RGBA", (w, y1 - y0))
+    out = band.load()
+    for y in range(y0, y1):
+        expected = sky(y)
+        solid = [False] * w
+        for x in range(w):
+            r, g, b = px[x, y]
+            dark = (expected - lum((r, g, b))) / max(expected * 0.22, 1)
+            warm = r > b + 40 or r > 150
+            a = 1.0 if warm else min(max(dark, 0.0), 1.0)
+            out[x, y - y0] = (r, g, b, int(255 * a))
+    # Below the first solid row of a column it is all hill: fill any gaps keying left there.
+    alpha = band.getchannel("A").load()
+    for x in range(w):
+        seen = False
+        for y in range(y1 - y0):
+            if seen:
+                alpha[x, y] = 255
+            elif alpha[x, y] > 240 and y + 6 < y1 - y0 and all(alpha[x, y + k] > 200 for k in range(1, 6)):
+                seen = True
+    band.putalpha(band.getchannel("A"))
+    cx, cy, cw, ch = card.ox, card.oy, int(card.w), int(card.h)
+    tile_w = int(w * ch / (y1 - y0))
+    tile = band.resize((tile_w, ch), Image.LANCZOS)
+    # Mirrored tiles leave out the mast, so two never stand side by side at a seam.
+    keep = int(tile_w * FLUX_MIRROR_KEEP)
+    mirrored = tile.crop((0, 0, keep, ch)).transpose(Image.FLIP_LEFT_RIGHT)
+    # The source's towers are about at 0.7 of its width; put them at FLUX_TOWERS_AT.
+    towers_px = (FLUX_TOWERS_AT - card["x0"]) / (card["x1"] - card["x0"]) * cw
+    start = int(towers_px - 0.7 * tile_w)
+    k0 = -((start + tile_w - 1) // tile_w) - 1
+    strip = Image.new("RGBA", (cw, ch))
+    # Tiles left of the towers' tile, then right of it: plain at even steps, mirrored at odd.
+    pieces = {0: (start, tile)}
+    x = start
+    for k in range(1, cw // keep + 3):
+        piece = mirrored if k % 2 else tile
+        x -= piece.width
+        pieces[-k] = (x, piece)
+    x = start + tile_w
+    for k in range(1, cw // keep + 3):
+        piece = mirrored if k % 2 else tile
+        pieces[k] = (x, piece)
+        x += piece.width
+    for x, piece in pieces.values():
+        if x + piece.width < 0 or x > cw:
+            continue
+        strip.alpha_composite(piece, (max(x, 0), 0), (max(-x, 0), 0))
+    image.alpha_composite(strip, (int(cx), int(cy)))
+
+
 def glow(image, px):
     x, y, w, h = [v * SS for v in px]
     r, g, b, _ = rgb(LAMP_CORE)
@@ -223,7 +297,10 @@ def main():
         if name == "roofline":
             roofline(Card(draw, card))
         elif name == "skyline":
-            skyline(Card(draw, card))
+            if FLUX_SKYLINE.exists():
+                flux_skyline(image, Card(draw, card))
+            else:
+                skyline(Card(draw, card))
         elif name == "ground":
             ground(draw, card["px"])
     for card in INFO["cards"]:

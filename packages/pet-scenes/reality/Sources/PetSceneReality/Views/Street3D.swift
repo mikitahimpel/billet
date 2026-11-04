@@ -48,7 +48,7 @@ final class Street3D {
     atlas.color = .init(tint: .white, texture: .init(assets.atlas))
     var cards = UnlitMaterial()
     cards.color = .init(tint: .white, texture: .init(assets.cardTexture))
-    cards.blending = .transparent(opacity: 1)
+    cards.blending = .transparent(opacity: .init(scale: 1))
     let street = ModelEntity(mesh: assets.street, materials: [atlas])
     let far = ModelEntity(mesh: assets.cards, materials: [cards])
     car.model = ModelComponent(mesh: assets.car, materials: [atlas])
@@ -130,7 +130,7 @@ final class Street3D {
     }
     do {
       let meshes = try StreetMeshFile(data)
-      func mesh(_ name: String) throws -> MeshResource {
+      func mesh(_ name: String) async throws -> MeshResource {
         guard let part = meshes.parts[name] else { throw StreetMeshFile.Failure.missing(name) }
         var descriptor = MeshDescriptor(name: "street-\(name)")
         descriptor.positions = MeshBuffer(part.positions)

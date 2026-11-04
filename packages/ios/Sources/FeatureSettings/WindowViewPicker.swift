@@ -28,7 +28,8 @@ struct WindowViewPicker: View {
         ListDivider()
         ToggleRow(
           "3D view",
-          subtitle: "The suburb at night in 3D, with true depth as the room turns. Clear nights only.",
+          subtitle:
+            "The suburb at night in 3D, with true depth as the room turns. Clear nights only.",
           isOn: Binding(
             get: { model.windowView.inDepth },
             set: { inDepth in

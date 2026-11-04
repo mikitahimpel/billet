@@ -64,7 +64,8 @@ import Testing
     #expect(!deep.showsInDepth(weather: .clear, hour: .day))
     #expect(!WindowViewChoice(view: .suburbNight).showsInDepth(weather: .clear, hour: .night))
     #expect(
-      !WindowViewChoice(view: .fireEscape, inDepth: true).showsInDepth(weather: .clear, hour: .night))
+      !WindowViewChoice(view: .fireEscape, inDepth: true).showsInDepth(
+        weather: .clear, hour: .night))
   }
 
   // MARK: - Rhythm
