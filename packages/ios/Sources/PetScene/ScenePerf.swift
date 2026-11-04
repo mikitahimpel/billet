@@ -95,6 +95,14 @@ public enum ScenePerf {
     emit("mark \(name.replacingOccurrences(of: " ", with: "_")) t=\(format(at))")
   }
 
+  /// A moment inside a scene's own work, such as a room's textures being made: on the run's output
+  /// as `mark trace.<name>`, but never one a script waits for.
+  public static func trace(_ name: String) {
+    guard let recorder else { return }
+    let at = format(recorder.sinceLaunch)
+    emit("mark trace.\(name.replacingOccurrences(of: " ", with: "_")) t=\(at)")
+  }
+
   /// Counts one `name` in the phase being recorded, such as a room's step or a scene's update.
   /// Each count is reported a second, as `steps=` and `renders=` on the phase's line.
   public static func count(_ name: String) {

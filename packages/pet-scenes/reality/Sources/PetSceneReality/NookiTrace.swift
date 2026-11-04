@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import PetScene
 
 /// Signposts for the room's load and its cost per frame, for Instruments.
 enum NookiTrace {
@@ -8,9 +9,11 @@ enum NookiTrace {
   private static let log = Logger(subsystem: "com.mikitahimpel.billet", category: "NookiScene")
 
   /// One moment of the load. Also logged at debug level with the system uptime, so the time
-  /// between two moments can be read from a log stream without Instruments.
-  static func mark(_ name: StaticString) {
+  /// between two moments can be read from a log stream without Instruments, and in a measuring
+  /// run on its output.
+  @MainActor static func mark(_ name: StaticString) {
     signposter.emitEvent(name)
+    ScenePerf.trace(String(describing: name))
     let uptime = ProcessInfo.processInfo.systemUptime
     log.debug("mark \(String(describing: name), privacy: .public) at \(uptime, privacy: .public)")
   }
