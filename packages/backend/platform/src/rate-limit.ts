@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { logLine } from "./observability.ts";
 
 /** What a `rate_limits` row holds. A test fails if the table's columns differ. */
 export const StoredRateLimit = Schema.Struct({
@@ -71,7 +72,7 @@ export const limitRequest = async (
     if (count <= limits[group]) return undefined;
     return tooManyRequests(Math.max(1, Math.ceil((windowStart + windowMillis - now) / 1000)));
   } catch {
-    console.warn("rate limit counter unavailable");
+    logLine("warn", "rate limit counter unavailable");
     return undefined;
   }
 };

@@ -11,6 +11,7 @@ import { AccountDeletion } from "../src/account-deletion.ts";
 import { AccountUnavailable } from "../src/account-error.ts";
 import { AccountRepository, type Erasure } from "../src/account-repository.ts";
 import { AppleTokenRevoker } from "../src/apple-token-revoker.ts";
+import { plainExit } from "@billet/backend-observability/test/plain-exit";
 
 const ana = user("ana");
 const ben = user("ben");
@@ -72,9 +73,9 @@ const setup = (options: { readonly pairs?: ReadonlyArray<PairId> } = {}) => {
     code: Option.Option<string>,
     rooms?: Partial<PairRooms["Service"]>,
   ): Promise<Exit.Exit<void, AccountUnavailable>> =>
-    AccountDeletion.use((service) =>
-      service.deleteAccount(ana, Option.map(code, Redacted.make)),
-    ).pipe(Effect.provide(deletion(rooms)), Effect.runPromiseExit);
+    AccountDeletion.use((service) => service.deleteAccount(ana, Option.map(code, Redacted.make)))
+      .pipe(Effect.provide(deletion(rooms)), Effect.runPromiseExit)
+      .then(plainExit);
 
   return { world, erased, revoked, send, upload, history, run };
 };

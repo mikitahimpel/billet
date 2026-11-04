@@ -13,6 +13,7 @@ import { AuthService, challengeLifetime, sessionLifetime } from "../src/auth-ser
 import { IdentityVerifier } from "../src/identity-verifier.ts";
 import { makeInMemoryAuthEngine } from "./in-memory-auth-engine.ts";
 import { makeInMemoryAuthRepository } from "./in-memory-auth-repository.ts";
+import { plainExit } from "@billet/backend-observability/test/plain-exit";
 
 const startMillis = 1_800_000_000_000;
 
@@ -66,7 +67,7 @@ const setup = (
         Effect.andThen(program),
         Effect.provide(Layer.merge(auth, TestClock.layer())),
       ),
-    );
+    ).then(plainExit);
   return { memory, users, run };
 };
 
@@ -186,7 +187,7 @@ describe("AuthService sign-in", () => {
         }),
       ),
     );
-    expect(exit).toEqual(rejected("fake-rejected"));
+    expect(plainExit(exit)).toEqual(rejected("fake-rejected"));
     expect(retried.sessionToken).toBeDefined();
     expect(await Effect.runPromise(users.userCount)).toBe(1);
   });

@@ -9,4 +9,6 @@ export class AlreadyPaired extends Data.TaggedError("AlreadyPaired") {}
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class PairingUnavailable extends Data.TaggedError("PairingUnavailable")<{
   readonly reason: string;
+  /** What failed underneath, for the one log line at the edge. Never sent to the client. */
+  readonly cause?: unknown;
 }> {}

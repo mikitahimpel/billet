@@ -18,6 +18,7 @@ import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { SessionToken } from "@billet/contracts-http-api/auth";
 import { D1Dialect } from "./d1-kysely-dialect.ts";
 import { hashSessionTokens, sha256Hex } from "./hashed-session-tokens.ts";
+import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const IssuedRow = Schema.Struct({
   token: SessionToken,
@@ -28,7 +29,8 @@ const IssuedRow = Schema.Struct({
 const decodeIssued = Schema.decodeUnknownSync(IssuedRow);
 
 /** A failure inside Better Auth can quote a token or a bound value, so none of it survives. */
-const unavailable = () => new AuthUnavailable({ reason: "auth-engine-unavailable" });
+const unavailable = (cause?: unknown) =>
+  new AuthUnavailable({ reason: "auth-engine-unavailable", cause });
 
 const attempt = <A>(run: () => Promise<A>) => Effect.tryPromise({ try: run, catch: unavailable });
 
@@ -257,96 +259,98 @@ export const BetterAuthEngineLive = (db: D1Database): Layer.Layer<AuthEngine> =>
       }),
     );
 
-    return AuthEngine.of({
-      signInAnonymous: attempt(() => auth.api.signInAnonymous()).pipe(
-        Effect.flatMap((result) => (result === null ? unavailable() : issued(result.token))),
-      ),
-
-      startSession: (userId) =>
-        Effect.gen(function* () {
-          const context = yield* attempt(() => auth.$context);
-          const user = yield* attempt(() => context.internalAdapter.findUserById(userId));
-          if (user === null) return yield* new AuthRejected({ reason: "user-gone" });
-          const session = yield* attempt(() => context.internalAdapter.createSession(userId));
-          return yield* issued(session.token);
-        }),
-
-      // Two first sign-ins with one Apple ID at once both open a user, and the second link fails
-      // on the unique index. Trying again finds the first one's link and signs in to that user.
-      signInWithApple: (apple) =>
-        trusting(apple, (token) =>
-          auth.api.signInSocial({
-            body: { provider: "apple", idToken: { token, nonce: apple.nonce } },
-          }),
-        ).pipe(
-          Effect.retry({ times: 1 }),
-          Effect.flatMap((result) =>
-            "token" in result && typeof result.token === "string"
-              ? issued(result.token)
-              : unavailable(),
-          ),
+    return AuthEngine.of(
+      spanMethods("AuthEngine", {
+        signInAnonymous: attempt(() => auth.api.signInAnonymous()).pipe(
+          Effect.flatMap((result) => (result === null ? unavailable() : issued(result.token))),
         ),
 
-      linkApple: (sessionToken, apple) =>
-        trusting(apple, (token) =>
-          auth.api
-            .linkSocialAccount({
-              headers: bearerHeaders(Redacted.value(sessionToken)),
+        startSession: (userId) =>
+          Effect.gen(function* () {
+            const context = yield* attempt(() => auth.$context);
+            const user = yield* attempt(() => context.internalAdapter.findUserById(userId));
+            if (user === null) return yield* new AuthRejected({ reason: "user-gone" });
+            const session = yield* attempt(() => context.internalAdapter.createSession(userId));
+            return yield* issued(session.token);
+          }),
+
+        // Two first sign-ins with one Apple ID at once both open a user, and the second link fails
+        // on the unique index. Trying again finds the first one's link and signs in to that user.
+        signInWithApple: (apple) =>
+          trusting(apple, (token) =>
+            auth.api.signInSocial({
               body: { provider: "apple", idToken: { token, nonce: apple.nonce } },
-            })
-            .then(
-              (): LinkOutcome | "lost" => "linked",
-              (error: unknown): LinkOutcome | "lost" => {
-                const code = errorCode(error);
-                if (code === "SOCIAL_ACCOUNT_ALREADY_LINKED") return "in-use";
-                // Another link of this Apple ID won a race for the unique index.
-                if (code === "LINKING_FAILED") return "lost";
-                throw error;
-              },
+            }),
+          ).pipe(
+            Effect.retry({ times: 1 }),
+            Effect.flatMap((result) =>
+              "token" in result && typeof result.token === "string"
+                ? issued(result.token)
+                : unavailable(),
             ),
-        ).pipe(
-          Effect.flatMap((outcome) =>
-            outcome !== "lost"
-              ? Effect.succeed(outcome)
-              : Effect.gen(function* () {
-                  // Linked after all if the winner was this same user on another of its phones.
-                  const owner = yield* appleOwner(apple.subject);
-                  const caller = yield* callerOf(sessionToken);
-                  return owner !== undefined && owner === caller ? "linked" : "in-use";
-                }),
           ),
-        ),
 
-      findSession: (sessionToken) =>
-        attempt(() =>
-          auth.api.getSession({
-            headers: bearerHeaders(Redacted.value(sessionToken)),
-            query: { disableCookieCache: true },
-          }),
-        ).pipe(
-          Effect.flatMap((found) =>
-            found === null
-              ? Effect.succeedNone
-              : Effect.try({ try: () => live(found), catch: unavailable }).pipe(
-                  Effect.map(({ user, session }) =>
-                    Option.some({
-                      userId: user.id,
-                      deviceId: session.deviceId,
-                      linked: user.isAnonymous !== true,
-                    }),
+        linkApple: (sessionToken, apple) =>
+          trusting(apple, (token) =>
+            auth.api
+              .linkSocialAccount({
+                headers: bearerHeaders(Redacted.value(sessionToken)),
+                body: { provider: "apple", idToken: { token, nonce: apple.nonce } },
+              })
+              .then(
+                (): LinkOutcome | "lost" => "linked",
+                (error: unknown): LinkOutcome | "lost" => {
+                  const code = errorCode(error);
+                  if (code === "SOCIAL_ACCOUNT_ALREADY_LINKED") return "in-use";
+                  // Another link of this Apple ID won a race for the unique index.
+                  if (code === "LINKING_FAILED") return "lost";
+                  throw error;
+                },
+              ),
+          ).pipe(
+            Effect.flatMap((outcome) =>
+              outcome !== "lost"
+                ? Effect.succeed(outcome)
+                : Effect.gen(function* () {
+                    // Linked after all if the winner was this same user on another of its phones.
+                    const owner = yield* appleOwner(apple.subject);
+                    const caller = yield* callerOf(sessionToken);
+                    return owner !== undefined && owner === caller ? "linked" : "in-use";
+                  }),
+            ),
+          ),
+
+        findSession: (sessionToken) =>
+          attempt(() =>
+            auth.api.getSession({
+              headers: bearerHeaders(Redacted.value(sessionToken)),
+              query: { disableCookieCache: true },
+            }),
+          ).pipe(
+            Effect.flatMap((found) =>
+              found === null
+                ? Effect.succeedNone
+                : Effect.try({ try: () => live(found), catch: unavailable }).pipe(
+                    Effect.map(({ user, session }) =>
+                      Option.some({
+                        userId: user.id,
+                        deviceId: session.deviceId,
+                        linked: user.isAnonymous !== true,
+                      }),
+                    ),
                   ),
-                ),
+            ),
           ),
-        ),
 
-      endSession: (sessionHash) =>
-        attempt(() =>
-          db
-            .prepare(
-              "DELETE FROM devices WHERE id IN (SELECT device_id FROM auth_session WHERE token = ?)",
-            )
-            .bind(sessionHash)
-            .run(),
-        ).pipe(Effect.asVoid),
-    });
+        endSession: (sessionHash) =>
+          attempt(() =>
+            db
+              .prepare(
+                "DELETE FROM devices WHERE id IN (SELECT device_id FROM auth_session WHERE token = ?)",
+              )
+              .bind(sessionHash)
+              .run(),
+          ).pipe(Effect.asVoid),
+      }),
+    );
   });

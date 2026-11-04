@@ -10,6 +10,7 @@ import { InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error
 import { compactBudget, NotesService } from "../src/notes-service.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 import { makeWorld, pair, user } from "./fake-world.ts";
+import { plainExit } from "@billet/backend-observability/test/plain-exit";
 
 const ana = user("ana");
 const ben = user("ben");
@@ -35,7 +36,7 @@ const run = <A, E>(
     Effect.exit(
       NotesService.use(use).pipe(Effect.provide(NotesService.layer.pipe(Layer.provide(layer)))),
     ),
-  );
+  ).then(plainExit);
 
 const failed = (error: unknown) => Exit.fail(error);
 
@@ -175,8 +176,8 @@ describe("sendNote", () => {
         const theirs = yield* notes.uploadImage(cal, png);
         const ghost = Schema.decodeSync(MediaKey)(`${mediaPrefix(pairA)}notes/ghost.png`);
         return [
-          yield* Effect.exit(notes.sendNote(ana, photo(theirs))),
-          yield* Effect.exit(notes.sendNote(ana, photo(ghost))),
+          plainExit(yield* Effect.exit(notes.sendNote(ana, photo(theirs)))),
+          plainExit(yield* Effect.exit(notes.sendNote(ana, photo(ghost)))),
           yield* notes.history(ana, 0, 10),
         ];
       }),

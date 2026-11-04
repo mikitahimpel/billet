@@ -145,7 +145,7 @@ describe("delivery lanes", () => {
       spy.mockRestore();
     }
     const tries = lines.filter((line) => line["event"] === "delivery");
-    expect(tries).toEqual([
+    expect(tries).toMatchObject([
       { event: "delivery", lane: "AlertPush", outcome: "Retry", status: "pending", attempts: 1 },
       {
         event: "delivery",

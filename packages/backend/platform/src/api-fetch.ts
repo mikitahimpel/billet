@@ -1,4 +1,4 @@
-import { Layer } from "effect";
+import { type Context, Layer } from "effect";
 import { Digest, SecureRandom, Signature } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { socketRoute } from "@billet/contracts-realtime/socket-route";
@@ -39,7 +39,7 @@ import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { PaymentsRepositoryLive } from "./payments-repository-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
-import { withRequestLog } from "./observability.ts";
+import { withRequestSpan } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
 import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
@@ -113,10 +113,12 @@ export const respondApi = (
 ): Promise<Response> => {
   const { pathname } = new URL(request.url);
   if (pathname.startsWith("/v1/")) {
-    return withRequestLog(request, () => routeApi(request, env, ctx, experiments));
+    return withRequestSpan(request, (context) => routeApi(request, env, ctx, experiments, context));
   }
   if (isAdminPath(pathname)) {
-    return withRequestLog(request, () => respondAdmin(request, env, ctx, { experiments }));
+    return withRequestSpan(request, (context) =>
+      respondAdmin(request, env, ctx, { experiments, context }),
+    );
   }
   return Promise.resolve(respondPlaceholder());
 };
@@ -126,6 +128,7 @@ const routeApi = async (
   env: WorkerEnv,
   ctx: ExecutionContext,
   experiments: ReadonlyArray<Experiment>,
+  context: Context.Context<never>,
 ): Promise<Response> => {
   // The service status comes first, from KV: `/v1/status` and the maintenance 503 must answer
   // while D1 or the rest of the API is down, so nothing before this may touch the database.
@@ -133,7 +136,8 @@ const routeApi = async (
   const gated = gateRequest(request, status, Date.now());
   if (gated !== undefined) return gated;
 
-  if (new URL(request.url).pathname === socketRoute.path) return respondSocket(request, env);
+  if (new URL(request.url).pathname === socketRoute.path)
+    return respondSocket(request, env, context);
 
   const limited = await limitRequest(request, env.DB);
   if (limited !== undefined) return limited;
@@ -142,7 +146,7 @@ const routeApi = async (
     disableLogger: true,
   });
   try {
-    return await handler(request);
+    return await handler(request, context);
   } finally {
     ctx.waitUntil(dispose());
   }

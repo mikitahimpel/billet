@@ -6,6 +6,8 @@ import type { DetailRow } from "./admin-top-details.ts";
 /** A read failed. The panel answers 503; `reason` is a fixed label. */
 export class AdminUnavailable extends Data.TaggedError("AdminUnavailable")<{
   readonly reason: string;
+  /** What failed underneath, for the one log line at the edge. Never sent to the client. */
+  readonly cause?: unknown;
 }> {}
 
 /** A stamp-pack purchase, as the panel lists it. `ownerId` is a pair id or `demo:<code>`. */

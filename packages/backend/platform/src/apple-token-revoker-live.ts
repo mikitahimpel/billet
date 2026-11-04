@@ -2,6 +2,7 @@ import { Effect, Layer, Redacted } from "effect";
 import { AppleTokenRevoker, type RevokeOutcome } from "@billet/backend-account/apple-token-revoker";
 import { appleAudience } from "@billet/backend-auth/apple-identity-verifier";
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
+import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const appleOrigin = "https://appleid.apple.com";
 /** Apple accepts a client secret for up to six months; this one lives for one request. */
@@ -74,14 +75,17 @@ export const AppleTokenRevokerLive = (
   key: SignInWithAppleKey | undefined,
   send: AppleFetch = fetch,
 ): Layer.Layer<AppleTokenRevoker> =>
-  Layer.succeed(AppleTokenRevoker, {
-    revoke: (code) =>
-      key === undefined
-        ? Effect.succeed("not-configured")
-        : Effect.tryPromise(() => revokeAppleToken(key, code, send)).pipe(
-            Effect.orElseSucceed((): RevokeOutcome => "failed"),
-          ),
-  });
+  Layer.succeed(
+    AppleTokenRevoker,
+    spanMethods("AppleTokenRevoker", {
+      revoke: (code) =>
+        key === undefined
+          ? Effect.succeed("not-configured")
+          : Effect.tryPromise(() => revokeAppleToken(key, code, send)).pipe(
+              Effect.orElseSucceed((): RevokeOutcome => "failed"),
+            ),
+    }),
+  );
 
 /** The key from the Worker's secrets, if both are set. */
 export const signInWithAppleKeyOf = (env: {

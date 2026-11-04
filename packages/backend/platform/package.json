@@ -46,6 +46,7 @@
     "@billet/backend-flags": "workspace:*",
     "@billet/backend-metrics": "workspace:*",
     "@billet/backend-notes": "workspace:*",
+    "@billet/backend-observability": "workspace:*",
     "@billet/backend-pair-room": "workspace:*",
     "@billet/backend-pairing": "workspace:*",
     "@billet/backend-payments": "workspace:*",
