@@ -34,13 +34,16 @@ public struct PetPlayState: Hashable, Sendable {
   public var light: RoomLight
   /// How the room is done up, the same in both partners' rooms.
   public var style: RoomStyle
+  /// Where each room's furniture stands, by room and piece, the same in both partners' rooms.
+  public var arrangements: [String: [String: PieceSpot]]
 
   public init(
     treat: Treat = .neither, streak: Int = 0, petsReceived: Int = 0,
     room: RoomLayout = RoomLayout(), treatsUsed: Int = 0, lastTreat: ShopItem.ID? = nil,
     life: LifeDrive? = nil, lifeNeeds: PetNeeds? = nil,
     brain: CatBrainFrame? = nil, brainSpeed: Double = 1, light: RoomLight = .standard,
-    style: RoomStyle = .standard
+    style: RoomStyle = .standard,
+    arrangements: [String: [String: PieceSpot]] = [:]
   ) {
     self.treat = treat
     self.streak = streak
@@ -54,5 +57,6 @@ public struct PetPlayState: Hashable, Sendable {
     self.brainSpeed = brainSpeed
     self.light = light
     self.style = style
+    self.arrangements = arrangements
   }
 }

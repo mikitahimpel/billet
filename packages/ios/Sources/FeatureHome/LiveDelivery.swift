@@ -41,6 +41,9 @@ actor LiveDelivery {
     var light: String?
     /// For a `style` play: how the room is now done up.
     var style: RoomStyle?
+    /// For an `arrange` play: the room, and where its moved pieces stand.
+    var room: String?
+    var spots: [String: PieceSpot]?
     /// For a `daily` play: the drawing of the day.
     var ink: String?
   }
@@ -62,6 +65,8 @@ actor LiveDelivery {
     let holding: Bool?
     let light: String?
     let style: RoomStyle?
+    let room: String?
+    let spots: [String: PieceSpot]?
     let day: String?
     let prompt: PromptFrame?
     let prompts: [String: PromptFrame]?
@@ -199,6 +204,18 @@ actor LiveDelivery {
     var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "style", at: at)
     frame.style = style
     treatOutbox.removeAll { $0.kind == "style" }
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// Where a room's furniture now stands waits for the ack and is sent again after a reconnect.
+  /// Only the latest arrangement of each room is kept: an earlier one no longer matters.
+  func arrange(_ arrangement: RoomArrangement) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "arrange", at: at)
+    frame.room = arrangement.room
+    frame.spots = arrangement.spots
+    treatOutbox.removeAll { $0.kind == "arrange" && $0.room == arrangement.room }
     treatOutbox.append(frame)
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
@@ -341,6 +358,10 @@ actor LiveDelivery {
       }
     case "style":
       if let style = frame.style { updates.yield(.roomStyle(style)) }
+    case "arrange":
+      if let room = frame.room, let spots = frame.spots {
+        updates.yield(.roomArranged(RoomArrangement(room: room, spots: spots)))
+      }
     case "daily-prompts":
       updates.yield(.dailyPrompts((frame.prompts ?? [:]).mapValues(\.prompt)))
     case "daily":

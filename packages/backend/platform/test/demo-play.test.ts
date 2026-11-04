@@ -143,6 +143,38 @@ describe("play frame parsing", () => {
     }
   });
 
+  it("accepts where a room's furniture stands, and nothing out of reach or misshapen", () => {
+    const at = "2026-11-04T03:50:00+01:00";
+    const room = "windowSeat.cosyNook";
+    const spots = { "knitPouf-3": [3, 5, 0], "pillowLarge-12": [1.2, 1.32, 0] };
+    expect(parsePlay({ id: uuid(1), kind: "arrange", at, room, spots })).toEqual({
+      id: uuid(1),
+      kind: "arrange",
+      at,
+      room,
+      spots,
+    });
+    expect(parsePlay({ id: uuid(1), kind: "arrange", at, room, spots: {} })).toMatchObject({
+      spots: {},
+    });
+    const bad = [
+      { room: "window seat", spots },
+      { room, spots: { "knitPouf-3": [3, 5] } },
+      { room, spots: { "knitPouf-3": [3, 500, 0] } },
+      { room, spots: { "knitPouf-3": [3, "5", 0] } },
+      { room, spots: { "a/b": [3, 5, 0] } },
+      { room, spots: [[3, 5, 0]] },
+      {
+        room,
+        spots: Object.fromEntries(Array.from({ length: 81 }, (_, i) => [`p-${i}`, [0, 0, 0]])),
+      },
+      { room },
+    ];
+    for (const frame of bad) {
+      expect(parsePlay({ id: uuid(1), kind: "arrange", at, ...frame })).toBeUndefined();
+    }
+  });
+
   it("rejects an unknown kind, a bad id, or a time without an offset", () => {
     const at = "2026-11-01T10:00:00Z";
     expect(parsePlay({ id: uuid(1), kind: "coin", at })).toBeUndefined();
@@ -664,6 +696,31 @@ describe("choosing the cat together", () => {
     expect(ofType(later.frames, "style").at(-1)).toEqual({
       type: "style",
       style: { wall: "rose", floor: "tiles" },
+    });
+  });
+
+  it("keeps each room's last arrangement from either phone and replays them all", async () => {
+    const a = await connect("PAWSHERD57", alice);
+    const b = await connect("PAWSHERD57", bob);
+    const arrange = (id: string, room: string, spots: Frame) =>
+      JSON.stringify({ type: "play", id, kind: "arrange", at, room, spots });
+    const moved = (x: Frame, room: string) => x["room"] === room;
+    await a.sendAcked(
+      arrange(uuid(61), "windowSeat.cosyNook", { "knitPouf-3": [3, 5, 0] }),
+      uuid(61),
+    );
+    await b.waitFor((f) => ofType(f, "arrange").some((x) => moved(x, "windowSeat.cosyNook")), "it");
+    await b.sendAcked(arrange(uuid(62), "windowSeat.cosyNook", {}), uuid(62));
+    await b.sendAcked(arrange(uuid(63), "windowSeat.retroDen", { "rug-1": [2, 3, 1.5] }), uuid(63));
+    await a.waitFor((f) => ofType(f, "arrange").some((x) => moved(x, "windowSeat.retroDen")), "it");
+    await leave(b, a);
+    const later = await connect("PAWSHERD57", alice);
+    const replayed = ofType(later.frames, "arrange");
+    expect(replayed).toContainEqual({ type: "arrange", room: "windowSeat.cosyNook", spots: {} });
+    expect(replayed).toContainEqual({
+      type: "arrange",
+      room: "windowSeat.retroDen",
+      spots: { "rug-1": [2, 3, 1.5] },
     });
   });
 

@@ -279,6 +279,11 @@ final class GenzRoom: CatPlayStage {
   let spots: GenzSpotStore
   /// The bulb the lamp light shines from, which moves with the lamp's table.
   var lampBulb: Entity?
+  /// Told where the room's furniture stands each time this phone moves a piece or resets the
+  /// room, so the partner's room can follow.
+  var onArranged: ((RoomArrangement) -> Void)?
+  /// Set while a reset or the partner's arrangement moves pieces, which are not this phone's moves.
+  var isRearranging = false
 
   init(layout: GenzLayout, kit: GenzKit, cats: GenzCatSource, spots: GenzSpotStore) {
     self.layout = layout

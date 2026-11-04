@@ -839,6 +839,7 @@ struct HomeView: View {
       if case .toy(let toy) = interaction { touchingToy = toy } else { touchingToy = nil }
     case .lightSwitched(let light): session.switchLight(light)
     case .styled(let style): session.restyle(style)
+    case .roomArranged(let arrangement): session.arrange(arrangement)
     case .deliveryFinished, .settled: break
     }
   }
@@ -860,7 +861,8 @@ struct HomeView: View {
       brain: session.brain.frame,
       brainSpeed: session.life.speed,
       light: session.play.roomLight,
-      style: session.play.roomStyle
+      style: session.play.roomStyle,
+      arrangements: session.play.arrangements
     )
   }
 

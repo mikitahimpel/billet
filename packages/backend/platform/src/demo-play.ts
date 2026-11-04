@@ -1,6 +1,7 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
 // shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, the room's light switch, how the room is done up, and the drawing of the day.
+// together, the room's light switch, how the room is done up, where its furniture stands, and
+// the drawing of the day.
 
 import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
@@ -25,6 +26,7 @@ export type PlayKind =
   | "adopt"
   | "light"
   | "style"
+  | "arrange"
   | "daily";
 export type Reaction = "heart" | "stamp";
 
@@ -111,6 +113,25 @@ export const parseStyle = (value: unknown): RoomStyle | undefined => {
 };
 
 /** The cats a pair chooses between, as the phones name them. */
+export const MAX_ARRANGED_PIECES = 80;
+/** How far from the room's middle, in room units, a moved piece can stand. */
+export const MAX_ARRANGED_REACH = 20;
+
+/** Where a moved piece stands: across, into the room, and the way it faces, in radians. */
+export type PieceSpot = readonly [x: number, z: number, yaw: number];
+
+/**
+ * Where the furniture of one room stands, by piece; a piece missing from `spots` stands where the
+ * room first put it. The last arrangement from either phone wins, room by room.
+ */
+export interface ArrangeFrame {
+  readonly id: string;
+  readonly kind: "arrange";
+  readonly at: string;
+  readonly room: string;
+  readonly spots: Readonly<Record<string, PieceSpot>>;
+}
+
 export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
 export type AdoptionCat = (typeof ADOPTION_CATS)[number];
 
@@ -142,10 +163,35 @@ export type AnyPlayFrame =
   | AdoptFrame
   | LightFrame
   | StyleFrame
+  | ArrangeFrame
   | DailyFrame;
 
 const isRoomLight = (value: unknown): value is RoomLight =>
   typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
+
+const ARRANGE_NAME = /^[A-Za-z0-9._-]{1,64}$/;
+
+const isReach = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= MAX_ARRANGED_REACH;
+
+/** A room's arrangement as a phone sent it, or undefined if any part of it is not a spot. */
+export const parseArrangement = (
+  room: unknown,
+  spots: unknown,
+): { room: string; spots: Record<string, PieceSpot> } | undefined => {
+  if (typeof room !== "string" || !ARRANGE_NAME.test(room)) return undefined;
+  if (typeof spots !== "object" || spots === null || Array.isArray(spots)) return undefined;
+  const entries = Object.entries(spots);
+  if (entries.length > MAX_ARRANGED_PIECES) return undefined;
+  const parsed: Record<string, PieceSpot> = {};
+  for (const [name, spot] of entries) {
+    if (!ARRANGE_NAME.test(name) || !Array.isArray(spot) || spot.length !== 3) return undefined;
+    const [x, z, yaw] = spot as unknown[];
+    if (!isReach(x) || !isReach(z) || !isReach(yaw)) return undefined;
+    parsed[name] = [x, z, yaw];
+  }
+  return { room, spots: parsed };
+};
 
 /** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
@@ -202,6 +248,10 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "style": {
       const style = parseStyle(frame["style"]);
       return style ? { id, kind, at, style } : undefined;
+    }
+    case "arrange": {
+      const arrangement = parseArrangement(frame["room"], frame["spots"]);
+      return arrangement === undefined ? undefined : { id, kind, at, ...arrangement };
     }
     case "daily": {
       const { ink } = frame;
