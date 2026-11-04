@@ -9,7 +9,8 @@ import SwiftUI
 /// In a tab it has the evening behind it; in a sheet (``View/billetSheet(_:)``) the sheet's ground.
 public struct ShopView: View {
   /// Makes a still picture of an item, `side` points square at `scale` pixels a point.
-  public typealias Thumbnail = @MainActor (ShopItem, _ side: CGFloat, _ scale: CGFloat) async ->
+  public typealias Thumbnail =
+    @MainActor (ShopItem, _ side: CGFloat, _ scale: CGFloat) async ->
     CGImage?
 
   /// What the strip at the foot says.
@@ -248,7 +249,8 @@ public struct ShopView: View {
       .accessibilityLabel(
         short > 0
           ? "\(item.name), \(item.price) stamps. You need \(short) more."
-          : "Buy \(item.name) for \(item.price) stamps")
+          : "Buy \(item.name) for \(item.price) stamps"
+      )
       .accessibilityIdentifier("shopBuy-\(item.id)")
     }
   }

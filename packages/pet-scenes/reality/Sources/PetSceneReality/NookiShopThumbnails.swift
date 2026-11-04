@@ -219,7 +219,9 @@ final class ThumbnailStage {
   func draw(_ item: ShopItem, pixels: Int) async -> CGImage? {
     if !hasAmbient {
       hasAmbient = true
-      if let ambient = await SceneParts.ambientEnvironment() { renderer.lighting.resource = ambient }
+      if let ambient = await SceneParts.ambientEnvironment() {
+        renderer.lighting.resource = ambient
+      }
     }
     guard let entity = await model(item) else { return nil }
     for child in Array(holder.children) { child.removeFromParent() }

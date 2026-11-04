@@ -23,7 +23,8 @@ struct ShopTab: View {
         await scene.shopThumbnail(item, side: side, scale: scale)
       },
       onPlace: { _ in inRoom { session.renovator.requestOpen() } },
-      onTryOn: scene.hasRoom ? { choice in inRoom { session.renovator.requestTryOn(choice) } } : nil,
+      onTryOn: scene.hasRoom
+        ? { choice in inRoom { session.renovator.requestTryOn(choice) } } : nil,
       onOpenCloset: { showsCloset = true }
     )
     .sheet(isPresented: $showsCloset) {

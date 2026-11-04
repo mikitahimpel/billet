@@ -165,7 +165,7 @@ struct AppShellView: View {
         }
         if rehearsesTabs, destination == .home, let scene = selectedScene {
           scene.makeTabRehearsal(desk: deskScene != nil)
-          .environment(\.petSceneLighting, labs.lighting)
+            .environment(\.petSceneLighting, labs.lighting)
         }
       }
       .frame(width: 1, height: 1)

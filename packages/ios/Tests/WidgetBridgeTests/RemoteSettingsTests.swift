@@ -202,8 +202,11 @@ import Testing
 
   /// The 3D shop had a keeper chosen in Labs or by the server; a phone that still has either loads
   /// as if it never had.
+  @Test func aKeeperFromTheOld3DShopIsIgnored() throws {
     let storage = storage()
+    try storage.write("shopkeeper.json", Data(#""human""#.utf8))
     let (model, _) = model(storage)
+    model.setRemote(flags(everything.merging(["shopkeeper": "human"]) { $1 }))
     #expect(model.lighting == .candle)
     #expect(model.homeVariant == .immersive)
   }

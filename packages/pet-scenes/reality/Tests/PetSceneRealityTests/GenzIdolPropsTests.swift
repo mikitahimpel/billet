@@ -82,7 +82,8 @@ import Testing
   @Test func eachPropIsOnTheShelfItsSurfacesSay() throws {
     let cats: Set<IdolProp> = [.catbed, .catTree, .scratchPost]
     for prop in IdolProp.allCases {
-      let item = try #require(ShopCatalog.standard.withIdolProps.item("furniture-idol-\(prop.rawValue)"))
+      let item = try #require(
+        ShopCatalog.standard.withIdolProps.item("furniture-idol-\(prop.rawValue)"))
       let expected: ShopItem.Shelf =
         cats.contains(prop) ? .cat : prop.surfaces == [.floor] ? .furniture : .decor
       #expect(item.shelf == expected, "\(prop)")
