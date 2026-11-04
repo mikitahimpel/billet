@@ -17,6 +17,8 @@ public struct PairPlay: Equatable, Sendable {
   public private(set) var catName: String?
   /// Where the room's light switch stands. The room keeps the last press from either partner.
   public private(set) var roomLight = RoomLight.standard
+  /// How the pair has done up the room. The room keeps the last change from either partner.
+  public private(set) var roomStyle = RoomStyle.standard
 
   /// What outlasts a launch for a pair with no room to ask.
   public struct Saved: Codable, Equatable, Sendable {
@@ -25,10 +27,14 @@ public struct PairPlay: Equatable, Sendable {
     public var catName: String?
     /// Missing from what older releases saved, which read as ``RoomLight/standard``.
     public var roomLight: RoomLight?
+    /// Missing from what older releases saved, which read as ``RoomStyle/standard``.
+    public var roomStyle: RoomStyle?
   }
 
   public var saved: Saved {
-    Saved(ledger: ledger, reactions: reactions, catName: catName, roomLight: roomLight)
+    Saved(
+      ledger: ledger, reactions: reactions, catName: catName, roomLight: roomLight,
+      roomStyle: roomStyle)
   }
 
   public init(device: String, saved: Saved? = nil) {
@@ -38,6 +44,7 @@ public struct PairPlay: Equatable, Sendable {
       reactions = saved.reactions
       catName = saved.catName
       roomLight = saved.roomLight ?? .standard
+      roomStyle = saved.roomStyle ?? .standard
     }
   }
 
@@ -84,6 +91,11 @@ public struct PairPlay: Equatable, Sendable {
   /// Sets the room's light, from this phone's switch or from the room's report.
   public mutating func light(_ light: RoomLight) {
     roomLight = light
+  }
+
+  /// Sets how the room is done up, from this phone's Style tab or from the room's report.
+  public mutating func style(_ style: RoomStyle) {
+    roomStyle = style
   }
 
   public mutating func treatsReceived(_ days: [String: Set<String>]) {

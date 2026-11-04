@@ -1,6 +1,6 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
 // shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, and the room's light switch.
+// together, the room's light switch, and how the room is done up.
 
 export const MAX_QUEUED_PETS = 10;
 export const MAX_TREAT_DAYS = 90;
@@ -21,7 +21,8 @@ export type PlayKind =
   | "rename"
   | "react"
   | "adopt"
-  | "light";
+  | "light"
+  | "style";
 export type Reaction = "heart" | "stamp";
 
 /** A pet, a treat or a life play: nothing but who did it and when. */
@@ -75,6 +76,37 @@ export interface LightFrame {
   readonly light: RoomLight;
 }
 
+/**
+ * How the room is done up, part by part, as the phones name each choice. The room keeps whatever
+ * names it is sent, so a phone with newer choices needs no new room; a phone reads a name it
+ * doesn't know as that part's standard look.
+ */
+export const ROOM_STYLE_PARTS = ["wall", "floor", "curtains", "drape", "view", "fairy"] as const;
+export type RoomStylePart = (typeof ROOM_STYLE_PARTS)[number];
+export type RoomStyle = Readonly<Partial<Record<RoomStylePart, string>>>;
+
+/** A change of the room's style: the last one from either phone wins, whole. */
+export interface StyleFrame {
+  readonly id: string;
+  readonly kind: "style";
+  readonly at: string;
+  readonly style: RoomStyle;
+}
+
+const STYLE_NAME = /^[A-Za-z]{1,32}$/;
+
+/** `value` as a room style, or undefined unless it is an object of known parts given by name. */
+export const parseStyle = (value: unknown): RoomStyle | undefined => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const style: Partial<Record<RoomStylePart, string>> = {};
+  for (const [key, name] of Object.entries(value)) {
+    if (!(ROOM_STYLE_PARTS as readonly string[]).includes(key)) return undefined;
+    if (typeof name !== "string" || !STYLE_NAME.test(name)) return undefined;
+    style[key as RoomStylePart] = name;
+  }
+  return style;
+};
+
 /** The cats a pair chooses between, as the phones name them. */
 export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
 export type AdoptionCat = (typeof ADOPTION_CATS)[number];
@@ -97,7 +129,8 @@ export type AnyPlayFrame =
   | RenameFrame
   | ReactFrame
   | AdoptFrame
-  | LightFrame;
+  | LightFrame
+  | StyleFrame;
 
 const isRoomLight = (value: unknown): value is RoomLight =>
   typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
@@ -153,6 +186,10 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     case "light": {
       const { light } = frame;
       return isRoomLight(light) ? { id, kind, at, light } : undefined;
+    }
+    case "style": {
+      const style = parseStyle(frame["style"]);
+      return style ? { id, kind, at, style } : undefined;
     }
     case "react": {
       const { note, reaction } = frame;

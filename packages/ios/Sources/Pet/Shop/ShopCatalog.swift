@@ -14,6 +14,12 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     case materials
     case furniture
     case treats
+    /// Paints, floors, curtains, views and fairy lights for the Style tab. They are bought there,
+    /// so the catalog's shelves hold none; ``RoomStyleItem/shopItem`` makes each one.
+    case style
+
+    /// The categories the shop and the closet show as shelves.
+    public static let shelves: [Category] = [.materials, .furniture, .treats]
   }
 
   /// Where a piece of furniture stands.
@@ -45,6 +51,8 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     case furniture(model: String, fit: Fit, size: Double, mount: Mount)
     case material(surface: RoomSurface, tone: Tone)
     case treat(shape: TreatShape)
+    /// A choice in the Style tab, unlocked for good once bought.
+    case style(RoomStyleItem)
   }
 
   public let id: ID
@@ -64,14 +72,15 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     case .furniture: .furniture
     case .material: .materials
     case .treat: .treats
+    case .style: .style
     }
   }
 
   /// A treat is used up by use. Everything else stays.
   public var isConsumable: Bool { category == .treats }
 
-  /// A material is a permanent unlock, so one copy is all there is to own.
-  public var ownsAtMostOne: Bool { category == .materials }
+  /// A material or a style is a permanent unlock, so one copy is all there is to own.
+  public var ownsAtMostOne: Bool { category == .materials || category == .style }
 }
 
 /// Everything for sale. Static and local: it ships with the app.

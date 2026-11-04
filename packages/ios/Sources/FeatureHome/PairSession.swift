@@ -279,6 +279,13 @@ final class PairSession {
     Task { [delivery] in await delivery.switchLight(light) }
   }
 
+  /// Does up the room here at once and tells the room, which tells the partner.
+  func restyle(_ style: RoomStyle) {
+    guard style != play.roomStyle else { return }
+    play.style(style)
+    Task { [delivery] in await delivery.restyle(style) }
+  }
+
   /// Names the cat here at once and tells the room. If the partner named it first, the room's
   /// name replaces this one.
   func nameCat(_ raw: String) {
@@ -427,6 +434,8 @@ final class PairSession {
       play.named(name)
     case .roomLight(let light):
       play.light(light)
+    case .roomStyle(let style):
+      play.style(style)
     case .partnerAdoption(let move):
       if let onAdoption {
         onAdoption(move)

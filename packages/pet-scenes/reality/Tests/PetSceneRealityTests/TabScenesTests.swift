@@ -22,6 +22,7 @@ struct ShopLayoutTests {
       case .furniture: #expect(slot.stand == .shelf)
       case .treats: #expect(slot.stand == .counter)
       case .materials: #expect(slot.stand == .table)
+      case .style: Issue.record("a style on the shop's shelves: \(slot.item)")
       case nil: Issue.record("unknown item \(slot.item)")
       }
     }

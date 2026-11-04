@@ -27,6 +27,8 @@ public struct NoteDelivery: Sendable {
     case catName(String)
     /// Where the room's light switch stands, from either partner's last press.
     case roomLight(RoomLight)
+    /// How the room is done up, from either partner's last change.
+    case roomStyle(RoomStyle)
     /// The room's table of reactions: note to the reaction its receiver sent.
     case reactions([UUID: Reaction])
     /// A note from the partner that stays closed until `opensAt`. Only the fake partner sends
@@ -61,6 +63,8 @@ public struct NoteDelivery: Sendable {
   /// Tells the room where this phone's light switch now stands: the last press wins on both
   /// phones.
   public var switchLight: @Sendable (RoomLight) async -> Void
+  /// Tells the room how this phone has done it up: the last change wins on both phones.
+  public var restyle: @Sendable (RoomStyle) async -> Void
   /// Tells the partner this phone's move while the pair chooses its cat.
   public var adopt: @Sendable (AdoptionMove) async -> Void
   /// Sends a reaction to a note the partner sent.
@@ -80,6 +84,7 @@ public struct NoteDelivery: Sendable {
     nameCat: @escaping @Sendable (String) async -> Void = { _ in },
     renameCat: @escaping @Sendable (String) async -> Void = { _ in },
     switchLight: @escaping @Sendable (RoomLight) async -> Void = { _ in },
+    restyle: @escaping @Sendable (RoomStyle) async -> Void = { _ in },
     adopt: @escaping @Sendable (AdoptionMove) async -> Void = { _ in },
     react: @escaping @Sendable (UUID, Reaction) async -> Void = { _, _ in },
     signal: @escaping @Sendable (LabSignal) async -> Void = { _ in },
@@ -92,6 +97,7 @@ public struct NoteDelivery: Sendable {
     self.nameCat = nameCat
     self.renameCat = renameCat
     self.switchLight = switchLight
+    self.restyle = restyle
     self.adopt = adopt
     self.react = react
     self.signal = signal
@@ -111,6 +117,7 @@ public struct NoteDelivery: Sendable {
       nameCat: { await socket.nameCat($0) },
       renameCat: { await socket.renameCat($0) },
       switchLight: { await socket.switchLight($0) },
+      restyle: { await socket.restyle($0) },
       adopt: { await socket.adopt($0) },
       react: { await socket.react(to: $0, $1) },
       updates: {

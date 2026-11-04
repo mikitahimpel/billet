@@ -140,6 +140,11 @@ actor FakePartnerRoom {
     emit(.roomLight(light))
   }
 
+  /// The room keeps the last change of style and tells both phones.
+  func restyled(_ style: RoomStyle) {
+    emit(.roomStyle(style))
+  }
+
   /// The room confirms a name after a moment, as the real one does.
   func catNamed(_ name: String) {
     after(pace.petBack) { $0.emit(.catName(name)) }
@@ -279,6 +284,7 @@ extension NoteDelivery {
       nameCat: { await room.catNamed($0) },
       renameCat: { await room.catRenamed($0) },
       switchLight: { await room.lightSwitched($0) },
+      restyle: { await room.restyled($0) },
       adopt: { await room.adopted($0) },
       react: { _, _ in },
       signal: { await room.signalled($0) },

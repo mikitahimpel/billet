@@ -45,6 +45,7 @@ final class NookiShopModels {
     case .furniture: nil
     case .material(let surface, let tone): Self.swatch(surface, tone.swatch)
     case .treat(let shape): Self.treat(shape)
+    case .style: nil
     }
   }
 

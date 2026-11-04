@@ -205,6 +205,7 @@ private struct ShopOffer: View {
     switch item.look {
     case .furniture: "For your room"
     case .treat: "A treat for your cat"
+    case .style: "For your room's style"
     case .material(let surface, _):
       switch surface {
       case .wall: "Paint for your walls"

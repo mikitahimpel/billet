@@ -115,6 +115,34 @@ describe("play frame parsing", () => {
     expect(parsePlay({ id: uuid(1), kind: "light", at })).toBeUndefined();
   });
 
+  it("accepts a room style of known parts given by name, and nothing else", () => {
+    const at = "2026-11-04T22:15:00+01:00";
+    const style = { wall: "sage", floor: "herringbone", curtains: "linen", drape: "half" };
+    expect(parsePlay({ id: uuid(1), kind: "style", at, style })).toEqual({
+      id: uuid(1),
+      kind: "style",
+      at,
+      style,
+    });
+    expect(parsePlay({ id: uuid(1), kind: "style", at, style: {} })).toEqual({
+      id: uuid(1),
+      kind: "style",
+      at,
+      style: {},
+    });
+    for (const bad of [
+      undefined,
+      "sage",
+      ["sage"],
+      { ceiling: "sage" },
+      { wall: 3 },
+      { wall: "sage; drop" },
+      { wall: "x".repeat(33) },
+    ]) {
+      expect(parsePlay({ id: uuid(1), kind: "style", at, style: bad })).toBeUndefined();
+    }
+  });
+
   it("rejects an unknown kind, a bad id, or a time without an offset", () => {
     const at = "2026-11-01T10:00:00Z";
     expect(parsePlay({ id: uuid(1), kind: "coin", at })).toBeUndefined();
@@ -614,6 +642,29 @@ describe("choosing the cat together", () => {
     await leave(b, a);
     const later = await connect("PAWSDARK56", alice);
     expect(ofType(later.frames, "light").at(-1)).toEqual({ type: "light", light: "off" });
+  });
+
+  it("keeps the last style from either phone, whole, and replays it", async () => {
+    const a = await connect("PAWSDECK57", alice);
+    const b = await connect("PAWSDECK57", bob);
+    const restyle = (id: string, style: Record<string, string>) =>
+      JSON.stringify({ type: "play", id, kind: "style", at, style });
+    await a.sendAcked(restyle(uuid(61), { wall: "sage", fairy: "ice" }), uuid(61));
+    await b.waitFor(
+      (f) => ofType(f, "style").some((x) => JSON.stringify(x["style"]).includes("sage")),
+      "the style",
+    );
+    await b.sendAcked(restyle(uuid(62), { wall: "rose", floor: "tiles" }), uuid(62));
+    await a.waitFor(
+      (f) => ofType(f, "style").some((x) => JSON.stringify(x["style"]).includes("rose")),
+      "the style",
+    );
+    await leave(b, a);
+    const later = await connect("PAWSDECK57", alice);
+    expect(ofType(later.frames, "style").at(-1)).toEqual({
+      type: "style",
+      style: { wall: "rose", floor: "tiles" },
+    });
   });
 
   it("renames the cat over its first name, the last one winning", async () => {

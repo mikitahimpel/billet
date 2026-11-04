@@ -73,6 +73,21 @@ public final class RoomRenovator: RoomRenovating {
     try? store.move(placement: id, x: x, z: z, yaw: yaw ?? placement.yaw)
   }
 
+  /// The stamps there are to spend on unlocking styles.
+  public var stamps: Int { store.stamps }
+
+  /// Whether `item` can be chosen in the Style tab: it is free, or it has been unlocked.
+  public func hasUnlocked(_ item: RoomStyleItem) -> Bool {
+    guard let shopItem = item.shopItem else { return true }
+    return store.state.owns(shopItem)
+  }
+
+  /// Pays for `item` so it can be chosen from now on. A free or unlocked one costs nothing.
+  public func unlock(_ item: RoomStyleItem) throws(ShopError) {
+    guard let shopItem = item.shopItem, !hasUnlocked(item) else { return }
+    try store.buy(shopItem, transaction: store.newTransaction())
+  }
+
   /// The pieces of furniture waiting in the closet, in the catalog's order.
   public var closetFurniture: [ShopItem] {
     store.catalog.items(in: .furniture).filter { store.owned($0) > 0 }
