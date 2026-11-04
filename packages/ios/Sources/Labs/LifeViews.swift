@@ -233,6 +233,14 @@ extension PetNeed {
 public struct CatNeedsCard: View {
   private let snapshot: CatNeedsSnapshot
   private let onAnswer: ((PetNeed) -> Void)?
+  /// The order the rows had when the card opened, kept while it shows so a row never moves under
+  /// a finger; the bars and the line still follow the cat.
+  @State private var openedOrder: [PetNeed]?
+
+  private var order: [PetNeed] { openedOrder ?? snapshot.ordered }
+
+  /// One width for every action, the widest's, so the bars beside them are all as long.
+  @ScaledMetric(relativeTo: .body) private var actionWidth: CGFloat = 116
 
   /// - Parameter onAnswer: Does a need's action, or `nil` for a card with no buttons.
   public init(_ snapshot: CatNeedsSnapshot, onAnswer: ((PetNeed) -> Void)? = nil) {
@@ -244,20 +252,21 @@ public struct CatNeedsCard: View {
     VStack(alignment: .leading, spacing: Spacing.small) {
       Text(snapshot.line)
         .billetType(.body)
+        .contentTransition(.opacity)
         .foregroundStyle(Palette.paper.color)
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityIdentifier("catNeedsLine")
       VStack(spacing: 0) {
-        ForEach(snapshot.ordered, id: \.self) { need in
+        ForEach(order, id: \.self) { need in
           row(need)
-          if need != snapshot.ordered.last { ListDivider() }
+          if need != order.last { ListDivider() }
         }
       }
       .frame(maxWidth: .infinity)
       .card()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .animation(Motion.spring, value: snapshot.ordered)
+    .onAppear { openedOrder = snapshot.ordered }
     .accessibilityIdentifier("catNeedsCard")
   }
 
@@ -280,19 +289,24 @@ public struct CatNeedsCard: View {
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("\(need.cardTitle): \(LifeChips.word(value))")
       if let onAnswer {
+        let can = snapshot.canAnswer(need)
         Button {
           onAnswer(need)
         } label: {
           Text(need.action)
             .billetType(.action)
             .lineLimit(1)
-            .foregroundStyle(urgent ? Palette.ink.color : Palette.paper.color)
-            .padding(.horizontal, Spacing.medium)
+            .minimumScaleFactor(0.8)
+            .foregroundStyle(
+              !can ? Palette.muted.color : urgent ? Palette.ink.color : Palette.paper.color
+            )
+            .padding(.horizontal, Spacing.small)
+            .frame(width: actionWidth)
             .frame(minHeight: Target.minimum)
             .contentShape(.capsule)
         }
         .billetButton(urgent ? .primary : .secondary)
-        .disabled(!snapshot.canAnswer(need))
+        .disabled(!can)
         .accessibilityHint(need.answer)
         .accessibilityIdentifier("catNeedsAction.\(need.rawValue)")
       }
