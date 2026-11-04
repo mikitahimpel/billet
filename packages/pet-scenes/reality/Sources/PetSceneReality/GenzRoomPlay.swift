@@ -109,6 +109,7 @@ extension GenzRoom {
 
   /// What a finger at `point` is on: the cat, a toy, or nothing the cat cares about.
   func touchTarget(at point: CGPoint) -> CatTouchTarget {
+    lastTouchClock = clock
     if isOverCat(point) { return .cat }
     var nearest: (toy: CatToy, distance: CGFloat)?
     for toy in CatToy.allCases {
@@ -129,6 +130,7 @@ extension GenzRoom {
   /// as drawn. A drag gets no reach around them, unlike a tap, so a swipe beside a toy turns the
   /// room.
   func dragTarget(at point: CGPoint) -> CatTouchTarget {
+    lastTouchClock = clock
     if isOverCat(point) { return .cat }
     for toy in CatToy.allCases where isOnShape(toys.entities[toy], point) { return .toy(toy) }
     if isOnShape(toys.treatJar, point) { return .treats }

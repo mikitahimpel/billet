@@ -94,6 +94,12 @@ public enum ScenePerf {
     emit("mark \(name.replacingOccurrences(of: " ", with: "_")) t=\(format(at))")
   }
 
+  /// Counts one `name` in the phase being recorded, such as a room's step or a scene's update.
+  /// Each count is reported a second, as `steps=` and `renders=` on the phase's line.
+  public static func count(_ name: String) {
+    recorder?.counts[name, default: 0] += 1
+  }
+
   /// Where a scene starts drawing: it becomes the one a run drives, and its arrival is marked.
   public static func shown(_ scene: Scene) {
     guard isOn else { return }
@@ -337,6 +343,8 @@ extension ScenePerf {
     private var frame = 0
     private var drive: (@MainActor (Int) -> Void)?
     private var mainCPUAtStart = 0.0
+    var counts: [String: Int] = [:]
+    private var phaseStart = 0.0
     private var processCPUAtStart = 0.0
     private var lastSample = 0.0
     private(set) var peakFootprint = 0.0
@@ -369,6 +377,8 @@ extension ScenePerf {
       self.drive = drive
       mainCPUAtStart = Self.threadCPU()
       processCPUAtStart = Self.processCPU()
+      counts.removeAll()
+      phaseStart = Self.now()
     }
 
     /// The phase's frames as `key=value` pairs, in milliseconds.
@@ -394,7 +404,14 @@ extension ScenePerf {
         + "p99=\(at(0.99)) max=\(longest) hitches=\(hitches) "
         + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process)) "
         + "slow=\(slow.count) slowMs=\(ScenePerf.format(slowLength)) "
-        + "slowBusyMs=\(ScenePerf.format(slowBusy))"
+        + "slowBusyMs=\(ScenePerf.format(slowBusy)) "
+        + "steps=\(perSecond("steps")) renders=\(perSecond("renders"))"
+    }
+
+    /// How many of `name` were counted a second in the phase.
+    private func perSecond(_ name: String) -> String {
+      let seconds = max(Self.now() - phaseStart, 0.001)
+      return ScenePerf.format(Double(counts[name] ?? 0) / seconds)
     }
 
     #if canImport(UIKit)

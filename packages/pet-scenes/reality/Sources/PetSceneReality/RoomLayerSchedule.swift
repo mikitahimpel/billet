@@ -12,7 +12,9 @@ struct RoomLayerSchedule: TimelineSchedule {
   var steady: TimeInterval?
   var isPaused: Bool
 
-  static let busy: TimeInterval = 1 / 60
+  /// How often a layer redraws while everything in it moves, as fast as the room is drawn. Set by
+  /// ``FramePace``.
+  nonisolated(unsafe) static var busy: TimeInterval = 1 / 30
 
   struct Entries: Sequence, IteratorProtocol {
     var upcoming: Date?
