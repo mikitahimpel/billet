@@ -100,5 +100,8 @@ Every clip of every cat is checked before it ships (`qa_cat.py`, `qa_verdict.py`
 
 A failing clip that has stand-ins is left out of that cat's clip table, so the app plays a
 stand-in; one without stand-ins plays a passing clip's frames from the same base pose. A cat whose
-idle, walk, sit or sleep fails, or that hasn't exactly one tail, doesn't ship. Ilya's cat fails its
-sleep and is out of the picker until it is remade in the room's style.
+idle, walk, sit or sleep fails, or that hasn't exactly one tail, doesn't ship. A person looking at the
+sheet can let one cat borrow frames for an essential clip (`eye.json`, `{"donors": {"sleep":
+["loaf"]}}`). Ilya's cat has its illustration's big head, which sinks into its body when it curls up
+to sleep (parts +0.049, the crumple the owner saw in build 18). Its sleep and twitch play its loaf,
+which passes, so it dozes sitting up like a loaf.
