@@ -3,6 +3,7 @@
 #
 #   apps/ios/scripts/perf/measure.sh <label> [--build] [--build-only] [--launches N] [--full N]
 #                                    [--sweep] [--views] [--cost N]
+#                                    [--steady N]
 #
 # --build       generate the project and build Release for the Simulator first
 # --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
@@ -12,6 +13,7 @@
 # --views       one `-perf.script views` run: a screenshot of every window view, in Home and Shop
 # --cost N      runs of `-perf.script cost`: each part of the room switched off in turn (default 0)
 #               PERF_SWITCHES=a,b keeps them to those parts
+# --steady N    runs of `-perf.script steady`: Home left alone, then a minute of it (default 0)
 # --build-only  build, then stop
 #
 # Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
@@ -27,7 +29,7 @@ set -euo pipefail
 
 label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep] [--views] [--cost N]}
 shift
-build=0 build_only=0 launches=7 fulls=3 sweep=0 views=0 costs=0
+build=0 build_only=0 launches=7 fulls=3 sweep=0 views=0 costs=0 steadies=0
 while (($#)); do
   case $1 in
     --build) build=1 ;;
@@ -37,6 +39,7 @@ while (($#)); do
     --sweep) sweep=1 ;;
     --views) views=1 ;;
     --cost) costs=$2; shift ;;
+    --steady) steadies=$2; shift ;;
     *) echo "unknown option $1" >&2; exit 2 ;;
   esac
   shift
@@ -170,6 +173,7 @@ for ((i = 1; i <= fulls; i++)); do run full-$i full; done
 ((sweep)) && run sweep sweep
 ((views)) && run views views
 for ((i = 1; i <= costs; i++)); do run cost-$i cost; done
+for ((i = 1; i <= steadies; i++)); do run steady-$i steady; done
 uptime >> $out/load.txt
 
 du -sk $app | awk '{print $1}' > $out/app-kb.txt

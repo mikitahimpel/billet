@@ -11,7 +11,8 @@ import Pet
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
 /// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled, and
 /// last switches the cat through four models and back, as `-perf.script cats` does alone.
-/// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
+/// `-perf.script steady` leaves Home alone for 20 seconds and then records it for a minute, untouched:
+/// what a phone lying on a table with the app open spends. `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
 /// of it. `-perf.script views` shows each window view from the room's own camera and asks for a
 /// screenshot of each. `-perf.script cost` orbits and holds the room
 /// with everything, then with each of its switches off, in pairs, to show what each part costs to
@@ -94,6 +95,14 @@ public enum ScenePerf {
     emit("mark \(name.replacingOccurrences(of: " ", with: "_")) t=\(format(at))")
   }
 
+  /// A moment inside a scene's own work, such as a room's textures being made: on the run's output
+  /// as `mark trace.<name>`, but never one a script waits for.
+  public static func trace(_ name: String) {
+    guard let recorder else { return }
+    let at = format(recorder.sinceLaunch)
+    emit("mark trace.\(name.replacingOccurrences(of: " ", with: "_")) t=\(at)")
+  }
+
   /// Counts one `name` in the phase being recorded, such as a room's step or a scene's update.
   /// Each count is reported a second, as `steps=` and `renders=` on the phase's line.
   public static func count(_ name: String) {
@@ -130,6 +139,9 @@ public enum ScenePerf {
       await views()
     case "cost":
       await cost()
+    case "steady":
+      await pause(20)
+      await record("steady", seconds: 60)
     default:
       break
     }
@@ -394,6 +406,10 @@ extension ScenePerf {
       }
       let hitches = intervals.filter { $0 > 25 }.count
       let longest = sorted.last.map(ScenePerf.format) ?? "nan"
+      // The whole process's CPU over the phase's wall time, in milliseconds a second: how much a
+      // phone spends on the app, the nearest a Simulator comes to its energy.
+      let seconds = max(Self.now() - phaseStart, 0.001)
+      let cpuPerSecond = (Self.processCPU() - processCPUAtStart) / seconds
       let fps = intervals.isEmpty ? 0 : 1000 * Double(intervals.count) / intervals.reduce(0, +)
       // A slow frame the main thread spent busy is our own work; one it spent idle waited on the
       // renderer or on the rest of the machine.
@@ -404,7 +420,7 @@ extension ScenePerf {
         + "p99=\(at(0.99)) max=\(longest) hitches=\(hitches) "
         + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process)) "
         + "slow=\(slow.count) slowMs=\(ScenePerf.format(slowLength)) "
-        + "slowBusyMs=\(ScenePerf.format(slowBusy)) "
+        + "slowBusyMs=\(ScenePerf.format(slowBusy)) cpuMsPerS=\(ScenePerf.format(cpuPerSecond)) "
         + "steps=\(perSecond("steps")) renders=\(perSecond("renders"))"
     }
 

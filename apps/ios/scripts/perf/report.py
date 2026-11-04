@@ -47,7 +47,8 @@ def parse(log):
 
 
 def first_room(marks):
-    rooms = [t for name, t in marks.items() if name.endswith("room_on_screen") and t is not None]
+    rooms = [t for name, t in marks.items()
+             if name.endswith("room_on_screen") and not name.startswith("trace.") and t is not None]
     return min(rooms) if rooms else None
 
 
@@ -62,7 +63,8 @@ def collect(run_dir):
     launches = sorted(run_dir.glob("launch-*.log"))
     fulls = sorted(run_dir.glob("full-*.log"))
     costs = sorted(run_dir.glob("cost-*.log"))
-    for log in launches + fulls + costs:
+    steadies = sorted(run_dir.glob("steady-*.log"))
+    for log in launches + fulls + costs + steadies:
         run = parse(log)
         if not run["done"]:
             add("failed runs", 1)
@@ -74,6 +76,12 @@ def collect(run_dir):
             # The stages between, in the order a launch reaches them.
             for stage in ("app_built", "root_built", "shell_shown", "home_shown"):
                 add(f"launch: process start to {stage.replace('_', ' ')} (ms)", run["marks"].get(stage))
+            # The room's own build, from its first moment (each mark's first time in the launch).
+            for stage in ("building", "textures", "shell", "pieces", "built", "mounted", "shown",
+                          "on_screen", "cat_placed"):
+                add(f"launch: process start to room {stage.replace('_', ' ')} (ms)",
+                    run["marks"].get(f"trace.styled_room_{stage}" if stage != "cat_placed"
+                                     else "trace.styled_cat_placed"))
             add("launch: memory peak (MB)", run["memory"])
         else:
             add(f"{kind}: memory peak (MB)", run["memory"])
@@ -81,7 +89,7 @@ def collect(run_dir):
             if kind == "launch" and phase != "idle":
                 continue
             for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps", "slow",
-                        "slowMs", "slowBusyMs", "steps", "renders"):
+                        "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders"):
                 add(f"{kind}.{phase}: {key}", number(values.get(key)))
         for timing, samples in run["timings"].items():
             for values in samples:
