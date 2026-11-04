@@ -21,7 +21,7 @@ struct DioramaView: View {
         scene.paused = paused
         scene.onFocusChange = { focused in withAnimation(.easeOut(duration: 0.3)) { photoFocused = focused } }
         let bubble = bubble
-        scene.start(updatesFrom: content, beforeProjecting: { dt in
+        scene.start(updatesFrom: content, viewer: rig.camera, beforeProjecting: { dt in
             rig.update(dt: dt, framing: scene.framing, focusDistance: scene.focusDistance,
                        yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose)
         }) { projected in
@@ -83,8 +83,15 @@ struct DioramaView: View {
                     let start = dragStartYaw ?? scene.currentYaw
                     dragStartYaw = start
                     scene.setYaw(start + Float(value.translation.width) * 0.006)
+                    // She watches the finger, measured from her head where the bubble sits.
+                    if let head = bubble.point {
+                        scene.follow(CGSize(width: value.location.x - head.x, height: value.location.y - head.y))
+                    }
                 }
-                .onEnded { _ in dragStartYaw = nil }
+                .onEnded { _ in
+                    dragStartYaw = nil
+                    scene.follow(nil)
+                }
         )
         .simultaneousGesture(
             MagnifyGesture()
