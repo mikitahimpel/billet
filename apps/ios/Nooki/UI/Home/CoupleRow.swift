@@ -42,6 +42,8 @@ struct CoupleRow: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Ink.secondary)
                 }
+                // The clear glass lets the light cushions through; a soft shadow keeps the lines legible over them.
+                .shadow(color: .black.opacity(0.25), radius: 2)
             }
             .padding(.leading, 5)
             .padding(.trailing, 18)
