@@ -316,6 +316,7 @@ final class GenzRoom: CatPlayStage {
     room.addChild(styler.root)
     styler.apply(style, animated: false)
     self.styler = styler
+    if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
     pieceHolders = holders
     arrangeDecor(holders)

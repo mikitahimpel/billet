@@ -57,16 +57,24 @@ struct GenzLayout {
   var catTop: (min: SIMD2<Float>, max: SIMD2<Float>)? = nil
   /// The set of furniture in the room.
   var furniture = RoomFurniture.original
+  /// Whether the generated props stand in for the hand-made ones (``withIdolProps()``).
+  var idolProps = false
 
-  /// What tells one room from another: its furniture.
-  typealias Key = RoomFurniture
-
-  var key: Key { furniture }
-
-  /// The room furnished with `furniture`.
-  static func of(_ furniture: RoomFurniture) -> GenzLayout {
-    windowSeat.furnished(furniture)
+  /// What tells one room from another: its furniture, and which props it shows.
+  struct Key: Hashable {
+    var furniture: RoomFurniture
+    var idolProps = false
   }
+
+  var key: Key { Key(furniture: furniture, idolProps: idolProps) }
+
+  /// The room furnished with `furniture`, with the generated props for `idolProps`.
+  static func of(_ furniture: RoomFurniture, idolProps: Bool = false) -> GenzLayout {
+    let layout = windowSeat.furnished(furniture)
+    return idolProps ? layout.withIdolProps() : layout
+  }
+
+  static func of(_ key: Key) -> GenzLayout { of(key.furniture, idolProps: key.idolProps) }
 
   /// How thick a window's sill is. The wall under the window stops at the sill's underside, so
   /// the two never show a top in the same plane.

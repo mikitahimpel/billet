@@ -16,6 +16,9 @@ final class GenzKit {
   var mergedMeshes: [String: MeshResource] = [:]
   /// The grain textures, once ``makeTextures()`` has made them.
   var textures: [GenzTexture: (colour: TextureResource, normal: TextureResource?)] = [:]
+  /// The generated props' models, once ``loadIdolProps()`` has read them.
+  var idolModels: [IdolProp: Entity] = [:]
+  var idolPropsTried = false
 
   private struct GlowKey: Hashable {
     let colour: GenzColour
