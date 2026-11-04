@@ -25,8 +25,8 @@ final class GenzLifeProps {
   static let yarnBelow = 0.5
 
   init(kit: GenzKit, catLength length: Float) {
-    let radius = length * 0.2
-    let height = length * 0.09
+    let radius = length * 0.26
+    let height = length * 0.11
     foodHeight = height * 0.8
     let bowl = ModelEntity(
       mesh: LowPoly.cylinder(height: height, radius: radius),
