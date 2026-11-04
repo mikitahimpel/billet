@@ -11,6 +11,10 @@ on:
         description: Build number to upload as (empty picks the next one)
         required: false
         default: ""
+      commit:
+        description: A commit on main to build instead of main's newest (empty builds the newest)
+        required: false
+        default: ""
 
 concurrency:
   group: testflight
@@ -49,6 +53,23 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      # A hotfix can be built from an earlier commit on main, never from anything off it.
+      - name: Check out the commit asked for
+        if: inputs.commit != ''
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          if ! printf '%s' "$COMMIT" | grep -qE '^[0-9a-f]{7,40}$'; then
+            echo "::error::The commit input must be a commit hash, not '$COMMIT'"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$COMMIT" HEAD; then
+            echo "::error::$COMMIT is not on main"
+            exit 1
+          fi
+          git checkout -q --detach "$COMMIT"
+          git log --oneline -1
 
       - name: Select Xcode from .xcode-version
         run: |
