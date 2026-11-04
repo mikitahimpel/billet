@@ -235,6 +235,8 @@ struct AppShellView: View {
     }
     ScenePerf.host.setLighting = { labs.setLighting($0) }
     ScenePerf.host.setWindowView = { labs.setWindowView($0) }
+    ScenePerf.host.cat = { labs.cat.model }
+    ScenePerf.host.setCat = { labs.setCat(CatChoice(model: $0)) }
   }
 }
 
