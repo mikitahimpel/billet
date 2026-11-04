@@ -104,6 +104,7 @@ extension ShopItem {
     case .furniture(_, _, _, let mount): mount == .wall ? "Hangs on the wall" : "Stands in the room"
     case .material(let surface, _): surface == .wall ? "Paints the walls" : "Covers the floor"
     case .treat: "Used up when given"
+    case .style(.view): "A view through your window"
     case .style: "Chosen in the Style tab"
     }
   }

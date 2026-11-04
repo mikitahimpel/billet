@@ -174,9 +174,12 @@ struct ShopView: View {
         .foregroundStyle(Palette.paper.color)
         .lineLimit(2, reservesSpace: true)
         .fixedSize(horizontal: false, vertical: true)
+      Spacer(minLength: 0)
       buttons(item)
     }
     .padding(Spacing.small)
+    // Cards in a row are as tall as the tallest, their buttons on one line.
+    .frame(maxHeight: .infinity, alignment: .top)
     .card()
     .modifier(CardPreviewShape())
     .contextMenu {
