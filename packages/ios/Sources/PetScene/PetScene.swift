@@ -86,7 +86,7 @@ public protocol PetScene {
     onEvent: @escaping @MainActor (PetSceneEvent) -> Void
   ) -> AnyView
 
-  /// True when the scene draws what the shop puts in the room and previews its items.
+  /// True when the scene draws what the shop puts in the room and pictures its items.
   var hasShop: Bool { get }
 
   /// True when the scene shows a furnished room, which Labs can light, furnish and give a view.
@@ -96,10 +96,10 @@ public protocol PetScene {
   /// scene with one cat.
   var cats: [CatModel] { get }
 
-  /// A live 3D preview of `item` that turns slowly, or `nil` when the scene has none. The host
-  /// keeps one preview view alive and hands it a new item, so the view must swap models rather
-  /// than rebuild.
-  func makeShopPreview(item: ShopItem) -> AnyView?
+  /// A still picture of `item` for the shop's grid, `side` points square at `scale` pixels a
+  /// point, on a clear background, or `nil` when the scene has none. Made once and kept, so asking
+  /// again is cheap.
+  func shopThumbnail(_ item: ShopItem, side: CGFloat, scale: CGFloat) async -> CGImage?
 
   /// PNG data for a pose, or `nil` when the scene has none.
   func posePNG(_ pose: PetPose) -> Data?
@@ -109,20 +109,13 @@ public protocol PetScene {
   func makePreparationView() -> AnyView?
 
   /// A view the host keeps out of sight while Home shows, after Home's room has settled, which
-  /// draws the shop, stocked as `shop`, and the desk once so that opening their tab does not wait
-  /// on the renderer. The host takes it down when another tab is chosen. `nil` when the scene has
-  /// none.
-  func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView?
-
-  /// The shop as a 3D room with a keeper behind the counter, or `nil` when the scene has none.
-  /// `state` changes while the view stays alive. The view mounts its renderer only once
-  /// ``EnvironmentValues/petSceneOnScreen`` is true, so a host keeps it in a tab.
-  func makeShopScene(
-    state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
-  ) -> AnyView?
+  /// draws the desk once so that opening its tab does not wait on the renderer. The host takes it
+  /// down when another tab is chosen. `nil` when the scene has none.
+  func makeTabRehearsal(desk: Bool) -> AnyView?
 
   /// The notes as a desk with paper under a board of pinned notes, or `nil` when the scene has
-  /// none. Mounts like ``makeShopScene(state:onEvent:)``.
+  /// none. `state` changes while the view stays alive. The view mounts its renderer only once
+  /// ``EnvironmentValues/petSceneOnScreen`` is true, so a host keeps it in a tab.
   func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void
   ) -> AnyView?
@@ -153,7 +146,9 @@ extension PetScene {
   public var hasShop: Bool { false }
   public var hasRoom: Bool { false }
   public var cats: [CatModel] { [] }
-  public func makeShopPreview(item: ShopItem) -> AnyView? { nil }
+  public func shopThumbnail(_ item: ShopItem, side: CGFloat, scale: CGFloat) async -> CGImage? {
+    nil
+  }
 
   public func makeView(
     world: PetWorld,
@@ -163,11 +158,7 @@ extension PetScene {
     makeView(world: world, onEvent: onEvent)
   }
   public func makePreparationView() -> AnyView? { nil }
-  public func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView? { nil }
-
-  public func makeShopScene(
-    state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
-  ) -> AnyView? { nil }
+  public func makeTabRehearsal(desk: Bool) -> AnyView? { nil }
 
   public func makeDeskScene(
     state: DeskSceneState, onEvent: @escaping @MainActor (DeskSceneEvent) -> Void

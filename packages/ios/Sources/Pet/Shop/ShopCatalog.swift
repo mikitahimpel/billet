@@ -22,6 +22,18 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     public static let shelves: [Category] = [.materials, .furniture, .treats]
   }
 
+  /// The groups the Shop tab shows its grid in, in order.
+  public enum Shelf: String, Hashable, Sendable, CaseIterable {
+    /// Big pieces that stand on the floor.
+    case furniture
+    /// Small things for a table top or the seat, and things hung on a wall.
+    case decor
+    /// Views through the window.
+    case views
+    /// Treats, toys, beds and climbing things for the cat.
+    case cat
+  }
+
   /// Where a piece of furniture stands.
   public enum Mount: String, Codable, Hashable, Sendable {
     case floor
@@ -76,6 +88,29 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     }
   }
 
+  /// The Shop tab's group for it, or `nil` when the tab does not sell it: wall and floor paints and
+  /// the room's other styles are chosen in the Style tab.
+  public var shelf: Shelf? {
+    switch look {
+    case .furniture:
+      if ShopCatalog.catPieces.contains(id) {
+        .cat
+      } else if ShopCatalog.decorPieces.contains(id) {
+        .decor
+      } else {
+        .furniture
+      }
+    case .treat: .cat
+    case .style(.view): .views
+    case .material, .style: nil
+    }
+  }
+
+  /// Whether buying it stands it in the room.
+  public var isPlaceable: Bool {
+    if case .furniture = look { true } else { false }
+  }
+
   /// A treat is used up by use. Everything else stays.
   public var isConsumable: Bool { category == .treats }
 
@@ -98,6 +133,37 @@ public struct ShopCatalog: Codable, Hashable, Sendable {
   public func items(in category: ShopItem.Category) -> [ShopItem] {
     items.filter { $0.category == category }
   }
+
+  /// What the Shop tab shows on `shelf`. Window views are style choices, so they come from
+  /// ``RoomStyleItem`` rather than this catalogue's items.
+  public func items(on shelf: ShopItem.Shelf) -> [ShopItem] {
+    switch shelf {
+    case .views:
+      RoomStyleItem.all.compactMap { style in
+        if case .view = style { style.shopItem } else { nil }
+      }
+    case .furniture, .decor, .cat:
+      items.filter { $0.shelf == shelf }
+    }
+  }
+
+  /// Pieces for the cat rather than the room, by ID.
+  static let catPieces: Set<ShopItem.ID> = [
+    "furniture-donutbed", "furniture-tower", "furniture-yarn", "furniture-mouse",
+    "furniture-idol-catbed", "furniture-idol-cattree", "furniture-idol-scratchpost",
+  ]
+
+  /// Small pieces for a top or the seat, and pieces hung on a wall, by ID. Everything else of the
+  /// furniture stands on the floor.
+  static let decorPieces: Set<ShopItem.ID> = [
+    "furniture-lantern", "furniture-print",
+    "furniture-idol-throwblanket", "furniture-idol-cactus", "furniture-idol-books",
+    "furniture-idol-recordplayer", "furniture-idol-mugs", "furniture-idol-stringlights",
+    "furniture-idol-pothos", "furniture-idol-succulents", "furniture-idol-teaset",
+    "furniture-idol-radio", "furniture-idol-globe", "furniture-idol-lavalamp",
+    "furniture-idol-yarnbasket", "furniture-idol-clock", "furniture-idol-frame_landscape",
+    "furniture-idol-poster_moon", "furniture-idol-neonheart",
+  ]
 
   public static let standard = ShopCatalog(items: materials + furniture + treats)
 

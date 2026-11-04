@@ -115,7 +115,8 @@ struct HomeView: View {
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(
         HomeShop(
-          shop: session.shop, renovator: session.renovator, scene: scene,
+          shop: session.shop, renovator: session.renovator, checkout: session.checkout,
+          style: session.play.roomStyle, scene: scene,
           showsButtons: !variant.isFullBleed && !isRenovating && !usesStyledHome,
           sheet: $shopSheet)
       )

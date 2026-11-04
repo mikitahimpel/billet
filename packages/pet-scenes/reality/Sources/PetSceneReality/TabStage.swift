@@ -5,7 +5,7 @@ import PetScene
 import RealityKit
 import SwiftUI
 
-/// A 3D scene that fills a tab of its own, the shop or the desk: built in code from the styled
+/// A 3D scene that fills a tab of its own, such as the desk: built in code from the styled
 /// rooms' shared meshes and materials, stepped from the display, and lit warm.
 @MainActor
 protocol TabStage: AnyObject {
@@ -199,7 +199,6 @@ enum TabLook {
 @MainActor
 final class TabStages {
   private let rooms: GenzRoomCache
-  private var shop: ShopStage?
   private var desk: DeskStage?
   private var onboarding: OnboardingStage?
   private var adoption: AdoptionStage?
@@ -213,13 +212,6 @@ final class TabStages {
   /// True the first time it is asked for `stage`, which ``TabRehearsal`` then draws; once a launch.
   func claimRehearsal(of stage: any TabStage) -> Bool {
     rehearsed.insert(ObjectIdentifier(stage)).inserted
-  }
-
-  var shopStage: ShopStage {
-    if let shop { return shop }
-    let made = ShopStage(kit: rooms.kit)
-    shop = made
-    return made
   }
 
   var deskStage: DeskStage {

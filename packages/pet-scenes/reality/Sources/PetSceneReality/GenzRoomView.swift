@@ -373,6 +373,13 @@ struct GenzRoomView: View {
       }
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
+      // The shop asks for a window view to be tried on: the Style tab opens with it on.
+      .onChange(of: renovator?.tryOnRequest) { _, request in
+        guard isShown, let request else { return }
+        isDecorating = true
+        isStyling = true
+        tryingStyle = renovator?.hasUnlocked(request.item) == true ? nil : request.item
+      }
       .onChange(of: isDecorating, initial: true) { _, isOn in
         if !isOn {
           isStyling = false

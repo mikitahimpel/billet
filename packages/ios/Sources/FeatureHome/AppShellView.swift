@@ -34,8 +34,8 @@ struct AppShellView: View {
 
   /// Long enough for launch to have settled, so that preparing scenes cannot delay it.
   private static let prepareDelay = Duration.seconds(1)
-  /// Set once Home has shown for a while, after its room's opening, so that drawing the shop and
-  /// the desk out of sight never shares the first frames with it.
+  /// Set once Home has shown for a while, after its room's opening, so that drawing the desk
+  /// out of sight never shares the first frames with it.
   @State private var rehearsesTabs = false
   private static let rehearseDelay = Duration.seconds(6)
   /// Above zero, because SwiftUI stops drawing a view that is fully transparent.
@@ -151,15 +151,9 @@ struct AppShellView: View {
       }
       if let shopScene {
         Tab("Shop", systemImage: "bag", value: .shop) {
-          ShopTab(
-            shop: session.shop, renovator: session.renovator, scene: shopScene,
-            keeper: labs.shopkeeper, onShowRoom: { destination = .home }
-          )
-          .tabEntrance(destination == .shop)
-          .environment(\.petSceneOnScreen, shellShown && destination == .shop)
-          .environment(\.petSceneLighting, labs.lighting)
-          .environment(\.petSceneWindowView, labs.windowView)
-          .modifier(ShopDayLight(followsDay: labs.homeVariant == .nightAndDay))
+          ShopTab(session: session, scene: shopScene, onShowRoom: { destination = .home })
+            .tabEntrance(destination == .shop)
+            .environment(\.petSceneOnScreen, shellShown && destination == .shop)
         }
       }
     }
@@ -170,14 +164,7 @@ struct AppShellView: View {
           scene.makePreparationView()
         }
         if rehearsesTabs, destination == .home, let scene = selectedScene {
-          scene.makeTabRehearsal(
-            shop: shopScene == nil
-              ? nil
-              : ShopSceneState(
-                items: session.shop.catalog.items, keeper: labs.shopkeeper, purchases: 0,
-                focused: nil, owned: []),
-            desk: deskScene != nil
-          )
+          scene.makeTabRehearsal(desk: deskScene != nil)
           .environment(\.petSceneLighting, labs.lighting)
         }
       }
@@ -313,20 +300,5 @@ private struct WarmTabBarFallback: ViewModifier {
     #else
       content
     #endif
-  }
-}
-
-/// The time of day for the shop window, as the room's: the hour here when Home follows it.
-private struct ShopDayLight: ViewModifier {
-  let followsDay: Bool
-
-  func body(content: Content) -> some View {
-    TimelineView(.everyMinute) { context in
-      content.environment(
-        \.petSceneDayLight,
-        followsDay
-          ? PetSceneDayLight(here: DayLight.at(context.date, in: .current), theirs: nil) : nil
-      )
-    }
   }
 }

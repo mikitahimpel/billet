@@ -74,7 +74,7 @@ extension GenzKit {
         continue
       }
       model.removeFromParent()
-      idolModels[prop] = matte(model, glows: prop.glows)
+      idolModels[prop] = Self.matte(model, glows: prop.glows)
     }
   }
 
@@ -83,7 +83,7 @@ extension GenzKit {
 
   /// The model with every material made the room's matte: the baked colour, no shine. One that
   /// glows also gives off its baked colour, so it stays lit when the room's lights are low.
-  private func matte(_ model: Entity, glows: Bool) -> Entity {
+  static func matte(_ model: Entity, glows: Bool) -> Entity {
     SceneParts.visit(model) { entity in
       guard let part = entity as? ModelEntity, var component = part.model else { return }
       component.materials = component.materials.map { material in

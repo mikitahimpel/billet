@@ -21,6 +21,12 @@ final class PairSession {
   let store: Store<HomeMachine>
   let shop: ShopStore
   let renovator: RoomRenovator
+  /// One-tap buying: pieces go into the room, views into the window, and either can be taken back
+  /// for a few seconds.
+  @ObservationIgnored private(set) lazy var checkout = ShopCheckout(
+    store: shop, renovator: renovator,
+    style: { [weak self] in self?.play.roomStyle ?? .standard },
+    restyle: { [weak self] in self?.restyle($0) })
   let trips: CatTripController
   /// True when the partner is the scripted one from Labs.
   let isFakePartner: Bool

@@ -175,27 +175,6 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.remove(Self.windowViewFileName)
   }
 
-  public static let shopkeeperFileName = "shopkeeper.json"
-
-  /// The shopkeeper chosen in Labs, or `nil` when none was or the file cannot be read.
-  public func loadShopkeeperOverride() -> Shopkeeper? {
-    (try? storage.readJSON(Shopkeeper.self, named: Self.shopkeeperFileName)) ?? nil
-  }
-
-  /// The saved shopkeeper, or the standard one when nothing readable is saved.
-  public func loadShopkeeper() -> Shopkeeper {
-    loadShopkeeperOverride() ?? .standard
-  }
-
-  public func saveShopkeeper(_ keeper: Shopkeeper) throws(PersistenceError) {
-    try storage.writeJSON(keeper, named: Self.shopkeeperFileName)
-  }
-
-  /// Forgets the Labs choice, so the shop follows the pair's flag, if one is set.
-  public func clearShopkeeper() throws(PersistenceError) {
-    try storage.remove(Self.shopkeeperFileName)
-  }
-
   public static let homeVariantFileName = "home-variant.json"
 
   /// The layout of Home chosen in Labs, or `nil` when none was or the file cannot be read.
@@ -283,8 +262,6 @@ public final class WidgetFeaturesModel {
   public private(set) var pretendHour: Int?
   /// The lighting chosen in Labs, or `nil` to follow the pair's flag. In its own file.
   public private(set) var lightingOverride: RoomLighting?
-  /// The shopkeeper chosen in Labs, or `nil` to follow the pair's flag. In its own file.
-  public private(set) var shopkeeperOverride: Shopkeeper?
   /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
   /// The temperament saved for the cat, in its own file. See ``temperament(forSeed:)``.
@@ -304,7 +281,6 @@ public final class WidgetFeaturesModel {
     eveningGround = store?.loadEveningGround() ?? .standard
     pretendHour = store?.loadPretendHour()
     lightingOverride = store?.loadLightingOverride()
-    shopkeeperOverride = store?.loadShopkeeperOverride()
     furniture = store?.loadFurniture() ?? .standard
     temperamentRecord = store?.loadTemperament()
   }
@@ -344,11 +320,6 @@ public final class WidgetFeaturesModel {
     homeVariantOverride ?? remote.choice(of: Experiments.homeLayout) ?? .standard
   }
 
-  /// Who keeps the 3D shop.
-  public var shopkeeper: Shopkeeper {
-    shopkeeperOverride ?? remote.choice(of: Experiments.shopkeeper) ?? .standard
-  }
-
   public func setLighting(_ lighting: RoomLighting) {
     guard lightingOverride != lighting else { return }
     lightingOverride = lighting
@@ -366,19 +337,6 @@ public final class WidgetFeaturesModel {
     guard lightingOverride != nil else { return }
     lightingOverride = nil
     try? store?.clearLighting()
-  }
-
-  public func setShopkeeper(_ keeper: Shopkeeper) {
-    guard shopkeeperOverride != keeper else { return }
-    shopkeeperOverride = keeper
-    try? store?.saveShopkeeper(keeper)
-  }
-
-  /// Drops the Labs shopkeeper, so the shop follows the pair's flag.
-  public func followTheShopkeeperTest() {
-    guard shopkeeperOverride != nil else { return }
-    shopkeeperOverride = nil
-    try? store?.clearShopkeeper()
   }
 
   public func setPretendHour(_ hour: Int?) {

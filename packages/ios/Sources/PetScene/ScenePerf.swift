@@ -11,8 +11,8 @@ import Pet
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
 /// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled.
 /// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
-/// of it. `-perf.script views` shows each window view from the room's own camera, then through the
-/// shop window, and asks for a screenshot of each. `-perf.script cost` orbits and holds the room
+/// of it. `-perf.script views` shows each window view from the room's own camera and asks for a
+/// screenshot of each. `-perf.script cost` orbits and holds the room
 /// with everything, then with each of its switches off, in pairs, to show what each part costs to
 /// draw; `-perf.switches a,b` keeps it to those switches. Every result is one line on standard error that starts with `PERF`, read by
 /// `apps/ios/scripts/perf/measure.sh`.
@@ -207,7 +207,7 @@ public enum ScenePerf {
   }
 
   /// Every window view at its own hour and weather from Home's resting camera, with what its frames
-  /// cost, then each through the shop window, and back to the standard one.
+  /// cost, and back to the standard one.
   private static func views() async {
     for view in WindowView.allCases {
       host.setWindowView(WindowViewChoice(view: view))
@@ -216,13 +216,6 @@ public enum ScenePerf {
       await shot("view-\(view.rawValue)-home")
       await record("view.\(view.rawValue)", seconds: 3)
     }
-    await timed("tab.shop", until: "shop on screen") { host.selectTab("shop") }
-    for view in WindowView.allCases {
-      host.setWindowView(WindowViewChoice(view: view))
-      await pause(2.5)
-      await shot("view-\(view.rawValue)-shop")
-    }
-    host.selectTab("home")
     host.setWindowView(.standard)
   }
 

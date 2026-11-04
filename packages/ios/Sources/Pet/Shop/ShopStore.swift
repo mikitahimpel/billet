@@ -50,6 +50,16 @@ public final class ShopStore {
     }
   }
 
+  /// Takes back the purchase made under `transaction`. See ``ShopState/undoBuy(_:transaction:placement:)``.
+  @discardableResult
+  public func undoBuy(
+    _ item: ShopItem, transaction: String, placement: RoomLayout.Placement.ID? = nil
+  ) throws(ShopError) -> ShopOutcome {
+    try change { (state: inout ShopState) throws(ShopError) in
+      try state.undoBuy(item, transaction: transaction, placement: placement)
+    }
+  }
+
   @discardableResult
   public func place(
     _ item: ShopItem, transaction: String, at spot: (x: Double, z: Double)? = nil
