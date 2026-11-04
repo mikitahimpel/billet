@@ -83,6 +83,10 @@ final class OnboardingFlow {
         self.now = now
         catalogue = bundled
         isFinished = defaults.bool(forKey: Self.doneKey)
+        #if DEBUG
+        // For screenshots: `-onboardingPage 3` opens that page (the welcome is 0).
+        index = max(defaults.integer(forKey: "onboardingPage"), 0)
+        #endif
     }
 
     var pages: [Page] {
