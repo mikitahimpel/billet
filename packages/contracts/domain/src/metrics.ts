@@ -50,6 +50,17 @@ export const ClientEventName = Schema.Literals([
   "ShopItemViewed",
   /** An item was bought with stamps (detail: the item; value: its price in stamps). */
   "ShopItemBought",
+  /** One of the shop's offers came on screen: the week's bundle, a deal or a bundle (detail: it). */
+  "ShopOfferViewed",
+  /** A bundle was bought (detail: the bundle; value: its price in stamps). */
+  "ShopBundleBought",
+  /** A purchase was taken back within its few seconds (detail: the item or bundle; value: the
+   * stamps given back). */
+  "ShopPurchaseUndone",
+  /** The shop's free gift of the day was taken (detail: `stamps` or the item; value: stamps). */
+  "ShopDailyGiftClaimed",
+  /** Something was bought for the partner (detail: the item; value: its price in stamps). */
+  "ShopGiftSent",
 
   /** The streak's flame scene was opened. */
   "StreakOpened",
@@ -111,6 +122,11 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   ShopOpened: { detail: "none" },
   ShopItemViewed: { detail: "id", required: true },
   ShopItemBought: { detail: "id", required: true, value: true },
+  ShopOfferViewed: { detail: "id", required: true },
+  ShopBundleBought: { detail: "id", required: true, value: true },
+  ShopPurchaseUndone: { detail: "id", required: true, value: true },
+  ShopDailyGiftClaimed: { detail: "id", required: true, value: true },
+  ShopGiftSent: { detail: "id", required: true, value: true },
   StreakOpened: { detail: "none" },
   StreakMilestoneSeen: { detail: "id", required: true },
   WidgetButtonTapped: { detail: ["pet", "treat"], required: true },
