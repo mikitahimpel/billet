@@ -39,8 +39,11 @@ extension CatModel {
     case .hero:
       // Longer across the floor than the others, with a head 1.27 times the detailed cat's.
       PetAnatomy(length: 0.3192, head: [0.36, 0.44], tail: [0.3, 0.28], mouth: [0.064, 0.025])
-    case .detailed, .detailedKitten, .detailedFluffy, .idolGinger, .idolIlya, .idolCalico,
-      .idolGreyTabby, .splatGinger:
+    case .detailed, .detailedKitten, .detailedFluffy, .idolGinger, .ragdoll, .maineCoon, .voidCat,
+      .siamese,
+      .gingerChonk,
+      .idolIlya,
+      .idolCalico, .idolGreyTabby, .splatGinger:
       .madeCat
     }
   }

@@ -78,3 +78,27 @@ yet: that waits for Xcode 27.
   derivatives (not legal advice).
 - FLUX.2 VAE: from FLUX.2-klein-4B, Apache-2.0. It is the same tensors as FLUX.2-dev's VAE cast to
   bf16 (checked by billet-scenes), so nothing non-commercial is used.
+
+## Cats in the room's style, and the pose QA
+
+From 2026-11-04 new cats start from a picture in the room's style (FLUX.2-klein-4B with renders of
+the room and the detailed cat as style references): adult proportions, a normal-sized head,
+standing square on four paws, one tail. A picture goes to Idol only after a check of tails, legs,
+ears, eyes and body (`cat-style/qa`, plus a look at the sheet). Idol runs on the PC; meshing,
+rigging and QA run on the Mac, one cat at a time (`splat/scripts/make_cat.sh`, checkpointed).
+
+Every clip of every cat is checked before it ships (`qa_cat.py`, `qa_verdict.py`):
+
+- six key frames per clip, and the cross-fade from its middle back to its base pose at 25, 50 and
+  75 %, skinned as RealityKit blends joints;
+- scores against the detailed cat's own score for the same clip: surface pushed inside a body part
+  it doesn't border (head into chest), faces crossing faces far from them at rest, triangles
+  collapsing or blowing up, edges stretching, new folds;
+- one tail: the tail-weighted part of the mesh must be a single piece;
+- the contact sheet from the in-app angles (home, orbit high and low, close-up), failing clips in
+  red, which a person looks over. groomFlank fails by eye on every Idol cat.
+
+A failing clip that has stand-ins is left out of that cat's clip table, so the app plays a
+stand-in; one without stand-ins plays a passing clip's frames from the same base pose. A cat whose
+idle, walk, sit or sleep fails, or that hasn't exactly one tail, doesn't ship. Ilya's cat fails its
+sleep and is out of the picker until it is remade in the room's style.
