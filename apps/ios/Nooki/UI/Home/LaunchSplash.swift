@@ -19,7 +19,7 @@ struct LaunchSplash: View {
                     .scaleEffect(breathing ? 1.04 : 0.98)
                     .shadow(color: Color(hex: 0xF4BF7E).opacity(breathing ? 0.55 : 0.3), radius: breathing ? 34 : 22)
 
-                Text("Billet")
+                Text("Nooki")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .tracking(0.5)

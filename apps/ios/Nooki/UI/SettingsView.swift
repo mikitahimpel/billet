@@ -38,7 +38,7 @@ struct SettingsView: View {
                 .listRowBackground(rowBackground)
 
                 Section("Support") {
-                    Button { requestReview() } label: { row("Rate Billet", symbol: "star.fill", tint: .sun) }
+                    Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }
                 }
                 .listRowBackground(rowBackground)
 
@@ -50,7 +50,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text("Billet has no account and sends nothing anywhere: your profile, moments, lists and dates "
+                    Text("Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
                          + "are saved only on this phone.")
                 }
                 .listRowBackground(rowBackground)

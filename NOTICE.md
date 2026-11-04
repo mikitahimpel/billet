@@ -80,8 +80,8 @@ it does. No outside model or texture is used.
 
 The iOS app in `apps/ios` is Nooki by Ilya ([nexishq/nooki-ios](https://github.com/nexishq/nooki-ios)),
 imported with its author's permission, including its publication in this repository, from commit
-`0deb4a25ebcef528ee32d0b796c1d59e8f359730`. Its code, scenes, cats, rooms, shop items, icon and
-tools are his. Changes made for billet: the Billet name, bundle IDs, app group, team and build
+`61e6a97cb310882d3949224d63a2f9b8e5014a5f`. Its code, scenes, cats, rooms, shop items, icon and
+tools are his. Changes made for billet: bundle IDs, app group, team and build
 number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats packed from that
 commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
 Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app

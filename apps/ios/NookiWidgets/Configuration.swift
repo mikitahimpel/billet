@@ -65,7 +65,7 @@ struct CornerConfiguration: NookiConfiguration {
 }
 
 struct MochiConfiguration: NookiConfiguration {
-    static let title: LocalizedStringResource = "Billet"
+    static let title: LocalizedStringResource = "Nooki"
 
     @Parameter(title: "Next to Mochi", default: .smart) var slot: WidgetSlot
     @Parameter(title: "List") var list: ListEntity?

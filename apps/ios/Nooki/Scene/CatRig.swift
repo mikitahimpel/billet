@@ -26,6 +26,11 @@ nonisolated struct Pose {
     func apply(_ p: SIMD3<Float>) -> SIMD3<Float> {
         q.act(p) + t
     }
+
+    /// `t` of the way from self to `other`.
+    func mix(_ other: Pose, _ t: Float) -> Pose {
+        Pose(q: simd_slerp(q, other.q, t), t: simd_mix(self.t, other.t, SIMD3(repeating: t)))
+    }
 }
 
 /// A <name>.rig.json sidecar from nooki-scene/generate/skin.py: bones in skin order, model space.
@@ -58,6 +63,8 @@ final class CatRig {
     /// Set by whoever animates her each frame, in model space; angles in radians, lids from 0 open to 1 shut.
     /// The whole body pitches nose up (+) and rolls about the spine's middle, rises by `lift` and moves back by `back`;
     /// the spine sags by `bend`, chest and rump both up for positive values, and the rump swings by `wiggle` to her left.
+    /// `chestMove` and `hipsMove` are laid over the result in model space. The head turns on the neck, hung `headSeat`
+    /// of the way from the chest to where the seated skeleton holds it, and then moves by `headShift`.
     /// `feet` are where the paws should be, in `legs` order; a leg that cannot reach stretches toward its paw.
     struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, roll: Float = 0, bend: Float = 0, wiggle: Float = 0
@@ -65,6 +72,9 @@ final class CatRig {
         var headPitch: Float = 0
         var headRoll: Float = 0
         var headShift = SIMD3<Float>.zero
+        var headSeat: Float = 0
+        var chestMove = Pose()
+        var hipsMove = Pose()
         var earLeft: Float = 0
         var earRight: Float = 0
         var earsBack: Float = 0
@@ -188,9 +198,10 @@ final class CatRig {
         var body = Pose.about(spineMid, .x(p.pitch) * .z(p.roll))
         body.t.y += p.lift
         body.t.z += p.back
-        let chestPose = Pose.about(spineMid, .x(p.bend / 2)).under(body)
-        let hipsPose = Pose.about(spineMid, .y(p.wiggle) * .x(-p.bend / 2)).under(body)
-        var headPose = Pose.about(neck, .y(p.headYaw) * .x(p.headPitch) * .z(p.headRoll)).under(chestPose)
+        let chestPose = Pose.about(spineMid, .x(p.bend / 2)).under(body).under(p.chestMove)
+        let hipsPose = Pose.about(spineMid, .y(p.wiggle) * .x(-p.bend / 2)).under(body).under(p.hipsMove)
+        var headPose = Pose.about(neck, .y(p.headYaw) * .x(p.headPitch) * .z(p.headRoll))
+            .under(chestPose.mix(p.chestMove, p.headSeat))
         headPose.t += p.headShift
         self.headPose = headPose
         self.hipsPose = hipsPose
