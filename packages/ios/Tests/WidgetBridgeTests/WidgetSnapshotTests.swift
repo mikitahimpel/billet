@@ -81,24 +81,6 @@ import Testing
     #expect(WidgetSnapshot.Treat(.waitingOnMe) == .waitingOnMe)
     #expect(WidgetSnapshot.Treat(.fed) == .fed)
   }
-
-  @Test func moodFollowsNightPresenceThenTheTreat() {
-    func mood(_ treat: WidgetSnapshot.Treat, here: Bool, hour: Int) -> CatMood {
-      CatMood(
-        snapshot: snapshot(day: 10, hour: hour, treat: treat, here: here), now: date(10, hour),
-        calendar: calendar)
-    }
-    #expect(mood(.fed, here: true, hour: 23) == .sleepy)
-    #expect(mood(.fed, here: true, hour: 3) == .sleepy)
-    #expect(mood(.fed, here: true, hour: 12) == .curious)
-    #expect(mood(.fed, here: false, hour: 12) == .happy)
-    #expect(mood(.waitingOnMe, here: false, hour: 12) == .hungry)
-    #expect(mood(.waitingOnPartner, here: false, hour: 12) == .waiting)
-    #expect(mood(.neither, here: false, hour: 12) == .content)
-    for mood in CatMood.allCases {
-      #expect(!mood.title.isEmpty && !mood.symbol.isEmpty && !mood.line(name: nil).isEmpty)
-    }
-  }
 }
 
 @Suite("Widget life")
@@ -121,28 +103,12 @@ struct WidgetLifeTests {
     #expect(snapshot(events).life?.state(at: later) == phone)
   }
 
-  @Test func moodFollowsTheNeedsWhenTheLifeIsOn() throws {
-    let calendar = Calendar(identifier: .gregorian)
-    let fresh = CatMood(snapshot: snapshot([]), now: Self.noon, calendar: calendar)
-    #expect(fresh == .happy)
-    // Alone for a day and a half: hungry first, since Full falls fastest.
-    let later = Self.noon.addingTimeInterval(36 * 3600)
-    let alone = snapshot([LifeEvent(kind: .pet, by: "a", at: Self.noon)])
-    let mood = CatMood(snapshot: alone, now: later, calendar: calendar)
-    let state = try #require(alone.life?.state(at: later))
-    if state.asleep {
-      #expect(mood == .sleepy)
-    } else {
-      #expect([.hungry, .playful, .lonely].contains(mood))
-      #expect(alone.life?.thought(at: later) != nil)
-    }
-  }
-
   @Test func aSnapshotWithoutALifeStillDecodes() throws {
     let old = Data(
       #"{"treat":"fed","treatDay":"2026-11-02","streak":1,"partnerHere":false,"updatedAt":0}"#.utf8)
     let snapshot = try JSONDecoder().decode(WidgetSnapshot.self, from: old)
     #expect(snapshot.life == nil)
+    #expect(snapshot.partnerCare == nil)
   }
 
   @Test func theLifeRoundTripsThroughTheAppGroupFile() throws {

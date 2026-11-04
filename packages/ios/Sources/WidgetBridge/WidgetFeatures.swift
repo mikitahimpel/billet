@@ -48,12 +48,20 @@ extension WidgetFeatures: Codable {
   /// and the next save leaves it out.
   public static let retiredKeys: Set<String> = [
     "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
-    "catChases", "cinematicOnboarding",
+    "catChases", "cinematicOnboarding", retiredCatMood,
   ]
 
+  /// The key of the cat-mood picture, which is gone. When it was the only picture on, the
+  /// pictures go back to their defaults rather than all off.
+  static let retiredCatMood = "catMood"
+
   public init(from decoder: any Decoder) throws {
-    choices = try decoder.singleValueContainer().decode([String: Bool].self)
-      .filter { !Self.retiredKeys.contains($0.key) }
+    let saved = try decoder.singleValueContainer().decode([String: Bool].self)
+    choices = saved.filter { !Self.retiredKeys.contains($0.key) }
+    let pictures = PictureMode.allCases.map(\.feature)
+    if saved[Self.retiredCatMood] == true, !pictures.contains(where: isOn) {
+      for feature in pictures { choices[feature.rawValue] = nil }
+    }
   }
 
   public func encode(to encoder: any Encoder) throws {

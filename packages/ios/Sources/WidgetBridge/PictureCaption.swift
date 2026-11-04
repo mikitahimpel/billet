@@ -39,16 +39,6 @@ public struct PictureCaption: Equatable, Sendable {
       return PictureCaption(
         headline: "Window's dark", detail: "Your partner is away.", symbol: "moon.fill")
 
-    case .catMood:
-      guard let current else {
-        return PictureCaption(
-          headline: "Cat", detail: "Open billet to meet the cat.", symbol: "pawprint.fill")
-      }
-      let mood = CatMood(snapshot: current, now: now, calendar: calendar)
-      return PictureCaption(
-        headline: current.catName ?? mood.title, detail: mood.line(name: current.catName),
-        symbol: mood.symbol)
-
     case .streak:
       let days = current?.streak ?? 0
       return PictureCaption(

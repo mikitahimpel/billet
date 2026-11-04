@@ -553,7 +553,7 @@ final class AdoptionStage: TabStage {
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
     let rig = CatRig(
       model: model, clips: CatCatalog.clips(choice.model), anatomy: choice.model.anatomy)
-    if let palette = CatCatalog.palette(choice.model, coat: choice.coat) { rig?.paint(palette) }
+    if let palette = CatCatalog.coatTexture(choice.model, coat: choice.coat) { rig?.paint(palette) }
     guard let seat = holders[index].children.first(where: { $0.name == Self.seatName }) else {
       return
     }

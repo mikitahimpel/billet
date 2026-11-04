@@ -44,20 +44,8 @@
  "groom": {
   "base": "sit",
   "loops": false,
-  "trimEnd": 46.3333,
-  "trimStart": 42.3333
- },
- "groomFlank": {
-  "base": "sit",
-  "loops": false,
-  "trimEnd": 93.7333,
-  "trimStart": 89.7333
- },
- "groomTail": {
-  "base": "sit",
-  "loops": false,
-  "trimEnd": 98.2667,
-  "trimStart": 94.0667
+  "trimEnd": 99.6,
+  "trimStart": 98.6
  },
  "happy": {
   "base": "sit",
@@ -106,13 +94,6 @@
   "loops": false,
   "trimEnd": 99.6,
   "trimStart": 98.6
- },
- "lieDown": {
-  "base": "stand",
-  "ends": "sleep",
-  "loops": false,
-  "trimEnd": 89.4,
-  "trimStart": 86.2
  },
  "loaf": {
   "base": "loaf",
