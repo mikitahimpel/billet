@@ -80,6 +80,9 @@ jobs:
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
 
+      - name: Metal Toolchain
+        run: .github/scripts/metal-toolchain.sh
+
       # Pinned release, verified by checksum, so project generation cannot drift.
       - name: Install XcodeGen
         env:
