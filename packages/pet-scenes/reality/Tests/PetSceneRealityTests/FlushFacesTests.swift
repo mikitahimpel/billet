@@ -30,7 +30,7 @@ import Testing
 
   @Test(
     arguments: RoomFurniture.allCases.map { GenzLayout.Key(furniture: $0) } + [
-      GenzLayout.nookiCabin.key
+      GenzLayout.Key(furniture: .original, room: .nookiCabin)
     ])
   func theRoomHasNoFlushFaces(_ key: GenzLayout.Key) async throws {
     let layout = GenzLayout.of(key)
