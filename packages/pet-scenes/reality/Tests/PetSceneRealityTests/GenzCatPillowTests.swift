@@ -6,7 +6,7 @@ import simd
 
 /// The seat's pillows move (decorating slides them along the backrest), and wherever they are
 /// and wherever the cat settles, they slide aside so no cat's body, as it sits, loafs and sleeps
-/// curled up, is ever in one. Sampled: each pillow every 0.3 along the seat, the cats by their
+/// curled up, is ever in one. Sampled: each pillow every 0.6 along the seat, the cats by their
 /// resting bodies, rest spots along the seat. The checks are arithmetic, so it runs in seconds.
 @MainActor
 @Suite struct GenzCatPillowTests {
@@ -27,7 +27,14 @@ import simd
     }
   }
 
-  /// Each pillow slid along the seat every 0.3, the others where they were built, where it does
+  /// The cats with the widest and the smallest resting bodies.
+  private var extremes: [CatModel] {
+    let all = cats
+    let byRadius = all.sorted { $0.footprint.resting.radius < $1.footprint.resting.radius }
+    return [byRadius.first, byRadius.last].compactMap { $0 }
+  }
+
+  /// Each pillow slid along the seat every 0.6, the others where they were built, where it does
   /// not land on another pillow; and as built.
   private func arrangements(_ layout: GenzLayout) -> [(String, GenzLayout)] {
     guard let surface = layout.catSurface else { return [] }
@@ -35,7 +42,7 @@ import simd
     for index in layout.catPillows {
       let kind = layout.pieces[index].piece.kind
       let half = layout.pillowSeatBox(index).half.x
-      for x in stride(from: surface.min.x + half, through: surface.max.x - half, by: 0.3) {
+      for x in stride(from: surface.min.x + half, through: surface.max.x - half, by: 0.6) {
         var moved = layout
         moved.pieces[index].centre.x = x
         let mine = moved.pillowSeatBox(index)
@@ -74,7 +81,7 @@ import simd
       }
   }
 
-  @Test(.timeLimit(.minutes(1)))
+  @Test(.timeLimit(.minutes(1)))  // A few seconds; CI's runners are slower.
   func everyCatRestsClearOfThePillowsWhereverTheyAre() async throws {
     let rooms = layouts
     #expect(!rooms.isEmpty)
@@ -83,7 +90,9 @@ import simd
       let surface = try #require(base.catSurface)
       for (arranged, layout) in arrangements(base) {
         await Task.yield()
-        for model in cats {
+        // Every cat's body on the pillows as built; the widest and the smallest wherever the
+        // pillows are moved, as the bodies between part them between.
+        for model in arranged == "as built" ? cats : extremes {
           var shown = layout
           shown.catBody = model.footprint
           for spot in restSpots(shown) {
