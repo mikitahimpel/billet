@@ -3,7 +3,7 @@
 Ilya's cat splat pipeline from [nexishq/idol-scenes](https://github.com/nexishq/idol-scenes)
 (`generate/`, commit `f12f168dd2f5a3159a3067a3a6e6ff120054d74c`), used with his permission. It
 turns one picture of a cat into a Gaussian splat, binds it to a skeleton, and gives the app
-(`apps/ios`) the files it renders: `<name>.spz`, `<name>.rig.json` and `<name>.skin`.
+(`apps/ios`) the files it renders: `<name>.ply`, `<name>.rig.json` and `<name>.skin`.
 
 `idol-sdk/` is Speridlabs' [Idol](https://huggingface.co/speridlabs/idol) inference code, Apache
 License 2.0 (`idol-sdk/LICENSE`), without its gallery images and Gradio demo.
@@ -24,8 +24,8 @@ License 2.0 (`idol-sdk/LICENSE`), without its gallery images and Gradio demo.
    to four bones and writes `<name>.rig.json` (bones, the point between the eyes, the mount for a
    second pose) and `<name>.skin` (4 bone indices and 4 weights per splat, uint8, in the PLY's
    order). The app's `SkinSplats.metal` moves the splats with these weights every frame.
-5. **spz.** `apps/ios/Tools/ply_to_spz.py` packs the PLY into `.spz` (about a fifth of the size,
-   same splat order, so the `.skin` still fits), which `SplatLoader` reads.
+5. **The app.** `SplatLoader` reads the PLY as it is: its body is already GaussianSplatResource's
+   layout. Mochi's files are checked byte for byte against `apps/ios/nooki-cat.sha256`.
 
 ## Run it
 
@@ -38,9 +38,7 @@ node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-sitting.png --out Mo
   --rig tools/cat-gen/rigs/cat-sit.json
 node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-standing.png --out MochiStanding.ply \
   --height 0.30 --rig tools/cat-gen/rigs/cat-standing.json --match_colors Mochi.ply
-python3 apps/ios/Tools/ply_to_spz.py Mochi.ply apps/ios/Nooki/Resources/Mochi.spz
-python3 apps/ios/Tools/ply_to_spz.py MochiStanding.ply apps/ios/Nooki/Resources/MochiStanding.spz
-cp Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Nooki/Resources/
+cp Mochi.ply MochiStanding.ply Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Nooki/Resources/
 ```
 
 `node tools/cat-gen/splat.mjs nooki` builds every asset of `scenes/nooki.json` into `out/nooki`.

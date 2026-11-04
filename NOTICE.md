@@ -82,8 +82,8 @@ The iOS app in `apps/ios` is Nooki by Ilya ([nexishq/nooki-ios](https://github.c
 imported with its author's permission, including its publication in this repository, from commit
 `61e6a97cb310882d3949224d63a2f9b8e5014a5f`. Its code, scenes, cats, rooms, shop items, icon and
 tools are his. Changes made for billet: bundle IDs, app group, team and build
-number; the splat cats `Mochi.spz` and `MochiStanding.spz` are the same splats packed from that
-commit's PLY files by `apps/ios/Tools/ply_to_spz.py`; the shop thumbnails are resized to 900 px.
+number; the shop thumbnails are resized to 900 px. The cat's files are his, byte for byte
+(`apps/ios/nooki-cat.sha256`, checked in CI).
 Its HTML mockups, research notes, hamster model and portrait are not imported. billet's first app
 is kept, unbuilt, in `archive/ios-v1`.
 
