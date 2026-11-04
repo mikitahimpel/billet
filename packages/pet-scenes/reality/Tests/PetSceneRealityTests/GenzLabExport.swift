@@ -87,6 +87,16 @@
             "exponent": layout.ambient.exponent,
           ],
           "lights": presets,
+          // Every placed piece, for spots the lab's cats walk to: kind, centre (scene units, y up),
+          // yaw, and size as the layout gives it (width, depth, height).
+          "pieces": layout.pieces.map { placement -> [String: Any] in
+            let size = placement.piece.kind.size
+            return [
+              "kind": String(describing: placement.piece.kind),
+              "centre": placement.centre.scene.array, "yaw": placement.yaw,
+              "size": [size.x, size.y, size.z],
+            ]
+          },
           "note": ["name": GenzRoom.noteName, "image": "note-\(furniture).png"],
           "window": [
             "corners": window.map(\.array), "image": "street-\(furniture).png",
