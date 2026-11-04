@@ -1,3 +1,4 @@
+import { ClientEventName, ServerEventName } from "@billet/contracts-domain/metrics";
 import { describe, expect, it } from "vitest";
 import { addDays, type EventRow } from "@billet/backend-metrics/funnel";
 import { buildAppEvents } from "../src/admin-app-events.ts";
@@ -112,15 +113,7 @@ describe("the events in the app", () => {
 
   it("lists every event the contract knows, recorded ones first", () => {
     expect(result.events.map(({ name }) => name).toSorted()).toEqual(
-      [
-        "AppOpened",
-        "InviteCreated",
-        "NoteSent",
-        "OpeningSkipped",
-        "OpeningWatched",
-        "PairClaimed",
-        "WidgetAdded",
-      ].toSorted(),
+      [...ClientEventName.literals, ...ServerEventName.literals].toSorted(),
     );
     expect(result.events.slice(0, 2).map(({ name }) => name)).toEqual([
       "AppOpened",

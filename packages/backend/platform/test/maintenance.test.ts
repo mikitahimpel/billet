@@ -131,6 +131,39 @@ describe("during maintenance", () => {
   });
 });
 
+describe("analytics switched off", () => {
+  const off: AppStatus = { maintenance: { active: false }, analytics: { enabled: false } };
+
+  it("answers reported events with 204 and reads nothing, not even the session", async () => {
+    await setStatus(off);
+    const response = await api(
+      routes.reportEvents.path,
+      { method: routes.reportEvents.method, body: JSON.stringify({ events: ["AppOpened"] }) },
+      { ...env, DB: brokenDatabase },
+    );
+    expect(response.status).toBe(204);
+  });
+
+  it("is in the served status, so the app stops reporting", async () => {
+    await setStatus(off);
+    expect(await (await api(routes.getStatus.path)).json()).toEqual({ status: off });
+  });
+
+  it("leaves the other routes alone", async () => {
+    await setStatus(off);
+    expect((await api(routes.authChallenge.path, { method: "POST" })).status).toBe(200);
+  });
+
+  it("takes events again once switched back on", async () => {
+    await setStatus({ ...off, analytics: { enabled: true } });
+    const response = await api(routes.reportEvents.path, {
+      method: routes.reportEvents.method,
+      body: JSON.stringify({ events: ["AppOpened"] }),
+    });
+    expect(response.status).toBe(401);
+  });
+});
+
 describe("Retry-After", () => {
   const at = Date.parse("2026-11-03T22:00:00Z");
   it.each([

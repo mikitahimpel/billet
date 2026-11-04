@@ -12,6 +12,7 @@ public struct NotesView: View {
   private let detailActions: ((NoteRecord) -> AnyView)?
   private let board: ((NoteBoard) -> AnyView)?
   private let daily: [DailyEntry]?
+  private let onOpen: (() -> Void)?
 
   /// Which notes the list shows.
   enum Filter: Hashable {
@@ -32,6 +33,7 @@ public struct NotesView: View {
   ///   - detailActions: Extra controls shown under a note in the full-screen view.
   ///   - board: Another way to see the notes, reached from the top of the list.
   ///   - daily: The drawing of the day's archive, behind a "Daily" filter. `nil` shows no filter.
+  ///   - onOpen: Called when a note in the list is opened full screen.
   public init(
     notes: [NoteRecord],
     loadFailed: Bool = false,
@@ -40,9 +42,11 @@ public struct NotesView: View {
     detailDrawing: ((NoteRecord) -> AnyView)? = nil,
     detailActions: ((NoteRecord) -> AnyView)? = nil,
     board: ((NoteBoard) -> AnyView)? = nil,
-    daily: [DailyEntry]? = nil
+    daily: [DailyEntry]? = nil,
+    onOpen: (() -> Void)? = nil
   ) {
     self.daily = daily
+    self.onOpen = onOpen
     self.detailDrawing = detailDrawing
     self.detailActions = detailActions
     self.board = board
@@ -139,6 +143,7 @@ public struct NotesView: View {
   @ViewBuilder private func row(_ note: NoteRecord) -> some View {
     let button = Button {
       opened = note
+      onOpen?()
     } label: {
       NoteRow(note: note, reaction: reactions[note.id])
     }

@@ -12,6 +12,8 @@ export interface MetricEvent {
   /** Absent before the person has a partner. */
   readonly pairId?: PairId | undefined;
   readonly name: MetricEventName;
+  readonly detail?: string | undefined;
+  readonly value?: number | undefined;
 }
 
 /**
@@ -30,9 +32,11 @@ export class Metrics extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* MetricsRepository;
       return Metrics.of({
-        record: ({ userId, pairId, name }) =>
+        record: ({ userId, pairId, name, detail, value }) =>
           Clock.currentTimeMillis.pipe(
-            Effect.flatMap((at) => repository.record({ pairId: pairId ?? "", userId, name, at })),
+            Effect.flatMap((at) =>
+              repository.record({ pairId: pairId ?? "", userId, name, at, detail, value }),
+            ),
             Effect.catchCause(() => Effect.logWarning("metric not recorded")),
           ),
       });

@@ -4,17 +4,19 @@ import Foundation
   import WidgetKit
 #endif
 
-/// Whether this phone has a billet widget on a Home Screen, the Lock Screen or StandBy.
+/// The billet widgets this phone has on a Home Screen, the Lock Screen or StandBy.
 enum WidgetPresence {
+  /// The kind of each widget there, as the widget extension names it (`LatestNote`, `Pictures`).
+  /// Empty when there are none or the system cannot say.
   @MainActor
-  static func isInstalled() async -> Bool {
+  static func kinds() async -> Set<String> {
     #if os(iOS) && canImport(WidgetKit)
       guard let configurations = try? await WidgetCenter.shared.currentConfigurations() else {
-        return false
+        return []
       }
-      return !configurations.isEmpty
+      return Set(configurations.map(\.kind))
     #else
-      return false
+      return []
     #endif
   }
 }

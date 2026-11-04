@@ -6,18 +6,21 @@ import SwiftUI
 public struct HistoryView: View {
   private let model: HistoryModel
   private let streak: Int?
+  private let onOpen: (() -> Void)?
 
   @Environment(\.scenePhase) private var scenePhase
 
-  public init(model: HistoryModel, streak: Int? = nil) {
+  /// - Parameter onOpen: Called when a note in the list is opened full screen.
+  public init(model: HistoryModel, streak: Int? = nil, onOpen: (() -> Void)? = nil) {
     self.model = model
     self.streak = streak
+    self.onOpen = onOpen
   }
 
   public var body: some View {
     VStack(spacing: 0) {
       banner
-      NotesView(notes: model.records, loadFailed: false)
+      NotesView(notes: model.records, loadFailed: false, onOpen: onOpen)
     }
     .task(id: scenePhase) {
       if scenePhase == .active { model.refresh() }

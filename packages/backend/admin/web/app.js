@@ -794,6 +794,67 @@ function funnel(stepsIn) {
 
 /* ---------- In the app ---------- */
 
+const TOP_TITLES = {
+  CatChosen: "Cats chosen",
+  ShopItemBought: "Items bought",
+  ShopItemViewed: "Items looked at in the shop",
+  RoomItemPlaced: "Pieces put in the room",
+  CatPlayed: "Toys played with",
+  TrickDone: "Tricks done",
+  TemperamentShown: "Temperaments shown",
+  WidgetAdded: "Widgets added",
+};
+
+/** The most chosen cats, items, toys and the like, one box per event that has any. */
+function mostChosen(top, range) {
+  const shown = (top || []).filter((t) => t.items && t.items.length);
+  const box = (t) =>
+    h(
+      "div",
+      { class: "box" },
+      h(
+        "div",
+        { class: "box-head" },
+        h("h3", { class: "box-title", text: TOP_TITLES[t.name] || t.name }),
+        h("span", { class: "sub mono", text: t.name }),
+      ),
+      h(
+        "ol",
+        { class: "top-list" },
+        t.items.map((it) =>
+          h(
+            "li",
+            null,
+            h("span", { class: "mono", text: it.detail }),
+            h(
+              "span",
+              { class: "top-count" },
+              h("b", { text: fmtNum(it.count) }),
+              it.total != null &&
+                h("span", { class: "sub", text: ` · ${fmtNum(it.total)} stamps` }),
+            ),
+          ),
+        ),
+      ),
+    );
+  return section(
+    "Most chosen",
+    top ? `${range} · times chosen; items bought also show stamps spent` : null,
+    shown.length
+      ? h("div", { class: "grid tops" }, shown.map(box))
+      : h(
+          "div",
+          { class: "box" },
+          top
+            ? empty(
+                "Nothing chosen in this range",
+                "Cats, shop items, room pieces, toys and tricks appear here once apps report them.",
+              )
+            : empty("Not available", "This server doesn't count chosen details yet."),
+        ),
+  );
+}
+
 async function renderEvents([arg, name]) {
   if (arg && !RANGES.includes(Number(arg))) return renderEvent(arg, rangeFrom(name));
   const days = rangeFrom(arg);
@@ -894,6 +955,7 @@ async function renderEvents([arg, name]) {
       { class: "sub", style: { "margin-top": "12px" } },
       "Counts come from D1 (pair_events) by UTC day. An event the app does not send yet shows “not seen yet” until its first report lands.",
     ),
+    mostChosen(e.top, range),
   ];
 }
 
@@ -2019,6 +2081,8 @@ function fromLocalInput(value) {
 
 const clip = (text, n = 60) => (text.length > n ? `${text.slice(0, n - 1)}…` : text);
 const sameMessage = (a, b) => (a?.key ?? null) === (b?.key ?? null) && a?.text === b?.text;
+/** Product analytics is on unless the status says `analytics.enabled: false`. */
+const analyticsOn = (status) => status.analytics?.enabled !== false;
 
 /** What one saved status changed against the one before it, or the whole state without one. */
 function statusSummary(status, prev) {
@@ -2034,6 +2098,8 @@ function statusSummary(status, prev) {
     parts.push(status.minVersion ? `min version ${status.minVersion}` : "min version removed");
   if (prev ? !sameMessage(status.notice, prev.notice) : status.notice)
     parts.push(status.notice ? `notice “${clip(status.notice.text)}”` : "notice removed");
+  if (prev ? analyticsOn(status) !== analyticsOn(prev) : !analyticsOn(status))
+    parts.push(analyticsOn(status) ? "analytics on" : "analytics off");
   return parts.length ? parts.join(" · ") : "Saved with no changes";
 }
 
@@ -2152,6 +2218,14 @@ async function renderMaintenance() {
   });
   const noticeKey = keyInput(st.notice?.key || "notice.default");
   const noticeText = textInput(st.notice?.text || "");
+  const analyticsWasOn = analyticsOn(st);
+  const analytics = h("input", {
+    type: "checkbox",
+    role: "switch",
+    checked: analyticsWasOn,
+    "aria-describedby": "analytics-hint",
+  });
+  const analyticsState = h("span", { class: "sub" });
 
   const readStatus = () => {
     const maintenance = { active: active.checked };
@@ -2163,6 +2237,7 @@ async function renderMaintenance() {
     if (minV.value.trim()) status.minVersion = minV.value.trim();
     const nt = noticeText.value.trim();
     if (nt) status.notice = { key: noticeKey.value.trim(), text: nt };
+    if (!analytics.checked) status.analytics = { enabled: false };
     return status;
   };
 
@@ -2184,9 +2259,19 @@ async function renderMaintenance() {
       : m.active
         ? "Maintenance will turn off"
         : "Running normally";
-    stateSub.textContent = on
-      ? "Every write is refused for everyone: no notes, no pairing, no settings."
-      : "Apps work as usual.";
+    stateSub.textContent = `${
+      on
+        ? "Every write is refused for everyone: no notes, no pairing, no settings."
+        : "Apps work as usual."
+    } ${analytics.checked ? "Product analytics is on." : "Product analytics is off."}`;
+    analyticsState.textContent =
+      analytics.checked === analyticsWasOn
+        ? analyticsWasOn
+          ? "On"
+          : "Off"
+        : analytics.checked
+          ? "Will turn on"
+          : "Will turn off";
     previewSlot.replaceChildren(phonePreview(readStatus()));
   };
 
@@ -2194,7 +2279,13 @@ async function renderMaintenance() {
     save.disabled = true;
     try {
       await api("/status", { method: "PUT", body: { status, expectedVersion: current.version } });
-      toast(status.maintenance.active ? "Saved. Maintenance is on." : "Saved.");
+      toast(
+        status.maintenance.active
+          ? "Saved. Maintenance is on."
+          : analyticsOn(status)
+            ? "Saved."
+            : "Saved. Product analytics is off.",
+      );
       route();
     } catch (err) {
       save.disabled = false;
@@ -2227,21 +2318,42 @@ async function renderMaintenance() {
         if (!form.reportValidity()) return;
         const status = readStatus();
         const diff = diffView(st, status);
-        if (status.maintenance.active !== m.active) {
+        const maintenanceChanged = status.maintenance.active !== m.active;
+        const analyticsOff = analyticsWasOn && !analyticsOn(status);
+        if (maintenanceChanged || analyticsOff) {
+          const turnOn = maintenanceChanged && status.maintenance.active;
+          const turnOff = maintenanceChanged && !status.maintenance.active;
           const ok = await confirmDialog({
-            title: status.maintenance.active
-              ? "Turn maintenance on for everyone?"
-              : "Turn maintenance off?",
+            title: [
+              turnOn && "Turn maintenance on for everyone",
+              turnOff && "Turn maintenance off",
+              analyticsOff && "turn product analytics off",
+            ]
+              .filter(Boolean)
+              .join(" and ")
+              .replace(/^./, (c) => c.toUpperCase())
+              .concat("?"),
             body: [
-              h("p", {
-                text: status.maintenance.active
-                  ? "Every write is refused for all users until you turn it off. Apps show the maintenance screen within about a minute."
-                  : "Apps go back to normal within about a minute.",
-              }),
+              turnOn &&
+                h("p", {
+                  text: "Every write is refused for all users until you turn it off. Apps show the maintenance screen within about a minute.",
+                }),
+              turnOff && h("p", { text: "Apps go back to normal within about a minute." }),
+              analyticsOff &&
+                h("p", {
+                  text: "Apps stop reporting events and drop what they hold; the server drops what still arrives. The “In the app” counts stop until you turn it back on.",
+                }),
               diff && h("div", { style: { "margin-top": "12px" } }, diff),
-            ],
-            confirm: status.maintenance.active ? "Turn maintenance on" : "Turn it off",
-            danger: status.maintenance.active,
+            ].filter(Boolean),
+            confirm:
+              maintenanceChanged && analyticsOff
+                ? "Save both"
+                : turnOn
+                  ? "Turn maintenance on"
+                  : turnOff
+                    ? "Turn it off"
+                    : "Turn analytics off",
+            danger: turnOn || analyticsOff,
           });
           if (!ok) return;
         }
@@ -2294,6 +2406,32 @@ async function renderMaintenance() {
       ),
       field("Notice key", noticeKey),
     ),
+    h(
+      "fieldset",
+      null,
+      h("legend", { text: "Product analytics" }),
+      h(
+        "div",
+        { class: "analytics-row" },
+        h(
+          "div",
+          null,
+          h("b", { text: "Apps report what people do in the app " }),
+          analyticsState,
+          h("p", {
+            class: "hint",
+            id: "analytics-hint",
+            text: "Off: apps stop reporting events and drop what they hold; the server drops what still arrives.",
+          }),
+        ),
+        h(
+          "label",
+          { class: "switch calm" },
+          h("span", { class: "sr-only", text: "Product analytics" }),
+          analytics,
+        ),
+      ),
+    ),
     msg,
     h(
       "div",
@@ -2341,7 +2479,10 @@ async function renderMaintenance() {
     pageHead(
       "Maintenance",
       "What every app is told: maintenance, the oldest build allowed to run, and a notice. Works while D1 is down.",
-      m.active ? pill("bad", "maintenance on") : pill("good", "normal"),
+      [
+        m.active ? pill("bad", "maintenance on") : pill("good", "normal"),
+        analyticsWasOn ? null : pill("warn", "analytics off"),
+      ],
     ),
     notice,
     card,

@@ -10,7 +10,7 @@ Billet is a private app for two people to send each other drawings and photos. T
 - **Devices and sessions:** a random device ID, and a session that keeps you signed in. We keep only a one-way hash of the session token.
 - **Notes:** the drawings and photos you send to your partner, with who sent them and when.
 - **Push token:** an Apple identifier used to notify your device, if you allow notifications.
-- **Usage counts:** how many times each account did a few named things on a given day (made an invite, paired, sent a note, opened the app, added a widget, watched or skipped the opening), and when it first did each that day. This is counting only: it never includes what a note says or shows, and nothing is sent to anyone else. We use it to see whether the app is working for couples.
+- **Usage counts:** how many times each account did a set of named things in the app on a given day, and when it first did each that day. The things are: made an invite, paired, sent a note, opened the app, added a widget, watched or skipped the opening; petted, fed, played with or called the cat, saw a trick or its temperament, chose a cat; opened a note from the widget or in the app; decorated the room (placed, moved or put away a piece); opened the shop, looked at or bought an item; opened the streak or saw a milestone; tapped a widget button; opened the profile; and whether the app offered Sign in with Apple and how it was answered. Some of these carry which thing it was (which cat, which shop item and its price in stamps, which toy, trick or room piece, which widget) as the name of something the app ships, never anything you typed. This is counting only: it never includes what a note says or shows, your name or anything you write, and nothing is sent to anyone else. We use it to see whether the app is working for couples and which parts of it people use. Which things are chosen is also kept as a daily total that is not linked to any account.
 - **App version and system:** each request from the app says which version of Billet it is and which iOS version it runs on (for example "1.2.0, iOS 26.1"). It says nothing about you or your phone beyond that. We use it to see whether a version works, and to show a new variant only to versions that have it.
 - **Test variants:** to compare two versions of a screen, each pair is placed in one version. Both partners always get the same one. We keep which version each pair was given.
 
@@ -22,7 +22,8 @@ Everything above is stored on our backend, which runs on Cloudflare.
 - **Notes are stored.** The drawing (as strokes and as an image) or photo you send is kept in your pair's private storage so that your partner, and you, can see the history and a new device can catch up. Photos and images are kept in a private storage area reachable only by the two accounts in the pair. Notes are kept for as long as the pair exists. There is no automatic expiry.
 - **Accounts and pairing data** (account identifier, devices, hashed sessions, hashed invite codes, the link between the two partners, push tokens) are kept as long as the account exists.
 - **Usage counts and test variants** are kept as long as the account exists, and are not removed when you unpair.
-- **Usage events:** the named things the app reports about itself (opened, widget added, opening watched or skipped) are also written, one by one, to Cloudflare's analytics storage for our backend (Workers Analytics Engine). Each entry holds the event's name, a one-way hash of your pair (never your account, your Apple identifier, your email or your network address), the test variants of your pair, the app version and the iOS version. It holds no location and nothing you draw or write. Cloudflare keeps these entries for three months, then deletes them. They are not shared with anyone else.
+- **Usage events:** the named things above are also written, one by one, to Cloudflare's analytics storage for our backend (Workers Analytics Engine). Each entry holds the event's name, which thing it was when there is one (and a price in stamps for a purchase), a one-way hash of your pair (never your account, your Apple identifier, your email or your network address), the test variants of your pair, the app version and the iOS version. It holds no location and nothing you draw or write. When an account is deleted, an entry saying so is written, with the same hash and nothing else about the account. Cloudflare keeps these entries for three months, then deletes them. They are not shared with anyone else.
+- **Switching it off:** we can switch these usage counts off for everyone at once; the app then stops recording them and deletes the ones it was waiting to send.
 - **Abuse protection:** to limit abuse we count requests per minute against a one-way hash of the caller's network address. The address itself is not stored, and counters older than a minute are removed as new requests arrive.
 - **Logs:** our server logs record the type of request, whether it succeeded and how long it took. They don't contain note content, tokens, codes or addresses.
 
@@ -38,3 +39,17 @@ The app keeps your session, device ID and recent notes on your device to show th
 
 ## Questions and deletion
 You can sign out at any time, and unpairing removes the link between you and your partner. In this test version unpairing doesn't yet delete the notes that were stored, and an in-app way to delete your account doesn't exist yet. To have your account and everything stored for it deleted, or to ask about your data, email gimpelllll@gmail.com.
+
+## App Privacy answers for App Store Connect
+
+Not part of the policy shown to users: the answers to give in App Store Connect > App Privacy, kept here so they stay in step with the policy above.
+
+- **Tracking:** No. Nothing is linked with data from other companies' apps or websites, and nothing is shared with data brokers or ad networks. The app does not show the App Tracking Transparency prompt and does not need to.
+- **Usage Data > Product Interaction:** Collected. Linked to the user (the counts are stored per account). Not used for tracking. Purpose: Analytics only. These are the usage counts and events above.
+- **Identifiers > User ID:** Collected, linked to the user, not used for tracking, for App Functionality (the account behind Sign in with Apple and the session).
+- **Identifiers > Device ID:** Collected, linked to the user, not used for tracking, for App Functionality (the random device ID). It is not the advertising identifier.
+- **User Content > Photos or Videos, Other User Content:** Collected, linked to the user, not used for tracking, for App Functionality (the notes you send).
+- **Diagnostics:** Only what Apple provides through TestFlight and App Store crash reports; the app adds no diagnostics SDK.
+- **Not collected:** contact info (name, email, phone), location, contacts, browsing or search history, purchases (stamps are granted in the app for now; revisit this answer when they can be bought), financial info, health, sensitive info.
+
+Change these answers whenever the list of usage counts or what they carry changes: see `docs/analytics.md`.

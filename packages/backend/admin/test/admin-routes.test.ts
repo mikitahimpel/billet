@@ -14,6 +14,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
+import type { DetailRow } from "../src/admin-top-details.ts";
 import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
@@ -42,6 +43,7 @@ const experiments = defineExperiments([
 
 const today = new Date().toISOString().slice(0, 10);
 const events: Array<EventRow> = [];
+const details: Array<DetailRow> = [];
 const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
@@ -73,6 +75,7 @@ const handlerFor = (email: string) =>
               }),
               Layer.succeed(AdminData, {
                 events: Effect.sync(() => events),
+                details: Effect.sync(() => details),
                 assignments: Effect.succeed([]),
                 userCount: Effect.succeed(3),
                 pair: (pairId) =>
@@ -121,6 +124,7 @@ beforeEach(() => {
   assignments = makeInMemoryFlagsRepository();
   appStatus = makeInMemoryAppStatusStore();
   events.length = 0;
+  details.length = 0;
 });
 
 describe("the admin API", () => {
@@ -277,6 +281,24 @@ describe("the admin API", () => {
     const widget = body.events.find(({ name }: { name: string }) => name === "WidgetAdded");
     expect(widget).toMatchObject({ total: 0, firstDay: null, lastDay: null });
     expect((await call(`${adminApi.appEvents}?days=1`)).status).toBe(400);
+  });
+
+  it("ranks the most chosen things over the range, with stamps spent on bought ones", async () => {
+    details.push(
+      { name: "CatChosen", detail: "tabby", day: today, count: 2, total: 0 },
+      { name: "CatChosen", detail: "idolIlya", day: today, count: 5, total: 0 },
+      { name: "CatChosen", detail: "hero", day: "2020-01-01", count: 50, total: 0 },
+      { name: "ShopItemBought", detail: "lamp", day: today, count: 2, total: 60 },
+    );
+    const { body } = await call(`${adminApi.appEvents}?days=7`);
+    const top = (name: string) =>
+      body.top.find((entry: { name: string }) => entry.name === name).items;
+    expect(top("CatChosen")).toEqual([
+      { detail: "idolIlya", count: 5 },
+      { detail: "tabby", count: 2 },
+    ]);
+    expect(top("ShopItemBought")).toEqual([{ detail: "lamp", count: 2, total: 60 }]);
+    expect(top("TrickDone")).toEqual([]);
   });
 
   describe("pairs", () => {
