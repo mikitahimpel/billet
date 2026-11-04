@@ -35,7 +35,9 @@ public struct DemoRootView: View {
   /// Stamp packs for money, when the build sells them, and the room their purchases are for.
   @State private var stampShop: StampShop?
   private let paymentsLabs: (@MainActor @Sendable () -> AnyView)?
-  private let paymentsCaller = DemoPaymentsCaller()
+  /// Kept in state with ``stampShop``: the purchase client built in the first `init` holds this
+  /// same instance, and a view struct's own properties are rebuilt on every update.
+  @State private var paymentsCaller: DemoPaymentsCaller
 
   /// `serviceStatus` asks the demo Worker at `host` for its status (see
   /// ``ServiceStatusModel/demoBaseURL(host:)``), and `updateLink` is where "Update billet" goes.
@@ -77,7 +79,8 @@ public struct DemoRootView: View {
           fakeArchive: NoteArchive(storage: .directory(Self.fakeNotesDirectory))
         )))
     _onboarding = State(initialValue: OnboardingPairing(paired: _model.wrappedValue.isPaired))
-    let caller = paymentsCaller
+    let caller = DemoPaymentsCaller()
+    _paymentsCaller = State(initialValue: caller)
     let built = ServiceStatusModel.demoBaseURL(host: host).flatMap { baseURL in
       payments?(
         .live(
