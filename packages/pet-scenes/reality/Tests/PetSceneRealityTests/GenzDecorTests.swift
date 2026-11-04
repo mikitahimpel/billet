@@ -74,6 +74,18 @@ import Testing
       "the cat's obstacles follow it")
   }
 
+  @Test func theBigPillowSlidesLeftTowardsTheThrow() throws {
+    let (room, holders) = try room()
+    let pillow = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .pillowLarge })
+    let name = try name(.pillowLarge, in: room)
+    let start = try #require(room.decor.plan(of: name)?.pieces[name])
+    room.decor.select(holders[pillow])
+    room.decor.beginDrag(at: start.centre)
+    room.decor.drag(to: start.centre - [0.6, 0])
+    let candidate = try #require(room.decor.candidate)
+    #expect(candidate.fit == .free, "\(candidate.fit) at \(candidate.box.centre)")
+  }
+
   @Test func theThrowOnlySlidesAlongTheSeatsEdge() throws {
     let (room, holders) = try room()
     let blanket = try #require(room.layout.pieces.firstIndex { $0.piece.kind == .blanket })

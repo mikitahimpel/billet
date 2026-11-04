@@ -150,7 +150,8 @@ extension GenzRoom {
   /// Keeps the layout's record of a piece in the room's space, on the floor or the seat, where
   /// decorating has it, so the cat's walks go round it there.
   func moveInLayout(_ name: String) {
-    guard decor.surface(of: name) == DecorSession.floor || decor.surface(of: name) == Self.seatSurface,
+    let surface = decor.surface(of: name)
+    guard surface == DecorSession.floor || surface == Self.seatSurface,
       let dash = name.lastIndex(of: "-"), let index = Int(name[name.index(after: dash)...]),
       layout.pieces.indices.contains(index),
       let box = decor.plan(of: name)?.pieces[name]

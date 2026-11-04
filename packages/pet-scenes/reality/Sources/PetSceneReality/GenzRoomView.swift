@@ -351,7 +351,8 @@ struct GenzRoomView: View {
 
   private func touch(_ room: GenzRoom) -> DecorTouch {
     DecorTouch(
-      session: room.decor, renovator: nil, floor: { [room] point, name in room.surfacePoint(under: point, for: name) })
+      session: room.decor, renovator: nil,
+      floor: { [room] point, name in room.surfacePoint(under: point, for: name) })
   }
 
   /// While decorating, a finger on a piece picks it up, and the piece follows it until let go.
