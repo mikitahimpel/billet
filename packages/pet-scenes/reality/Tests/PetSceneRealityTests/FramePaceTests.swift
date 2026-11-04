@@ -25,6 +25,6 @@ import Testing
     pace.setCapped(false)
     defer { pace.setCapped(true) }
     #expect(pace.rate(isStill: true) == nil)
-    #expect(RoomLayerSchedule.busy == 1 / 60)
+    #expect(RoomLayerSchedule.busy == 1.0 / 60)
   }
 }
