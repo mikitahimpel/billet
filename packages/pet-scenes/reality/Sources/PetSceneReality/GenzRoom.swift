@@ -230,6 +230,8 @@ final class GenzRoom: CatPlayStage {
   var onOpeningEnded: (() -> Void)?
   private var dayLight: PetSceneDayLight?
   private var viewRecipe: any ViewRecipe = ViewRecipes.recipe(for: .standard)
+  /// Whether a view has been shown yet: the first one is applied even when it is the standard.
+  private var viewShown = false
   /// The 3D street outside, while Labs shows it, and its load.
   var street: Street3D?
   var streetLoad: Task<Void, Never>?
@@ -909,7 +911,8 @@ final class GenzRoom: CatPlayStage {
 
   /// Shows `choice` through the window: its view, weather and hour.
   func setWindowView(_ choice: WindowViewChoice) {
-    guard choice != screen.windowView else { return }
+    guard choice != screen.windowView || !viewShown else { return }
+    viewShown = true
     screen.windowView = choice
     viewRecipe = ViewRecipes.recipe(for: choice.view)
     applyViewHour()
