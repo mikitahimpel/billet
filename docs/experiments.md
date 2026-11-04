@@ -116,7 +116,7 @@ is ignored, so nothing needs cleaning up.
 
 ## On the phone
 
-`packages/ios`, module `WidgetBridge` and `FeatureHome`.
+`packages/ios/features`, modules `WidgetBridge` and `FeatureHome`.
 
 - **What the build contains.** `Experiments` (in `RemoteFlags.swift`) lists each experiment's key and
   the variants this build can show. The server can name only those: any other variant is ignored,

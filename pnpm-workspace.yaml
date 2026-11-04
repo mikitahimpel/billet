@@ -1,7 +1,6 @@
 packages:
   - apps/*
   - packages/*/*
-  - packages/ios
 
 allowBuilds:
   workerd: true

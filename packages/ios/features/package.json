@@ -1,0 +1,17 @@
+{
+  "name": "@billet/ios-features",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "ios:test": "node ../scripts/check-imports.mjs && swift test --explicit-target-dependency-import-check error -Xswiftc -warnings-as-errors",
+    "ios:build": "node ../scripts/check-imports.mjs && swift build --explicit-target-dependency-import-check error -Xswiftc -warnings-as-errors",
+    "ios:format": "swift format format --in-place --recursive --configuration ../../../.swift-format Package.swift Sources Tests",
+    "ios:format:check": "swift format lint --strict --recursive --configuration ../../../.swift-format Package.swift Sources Tests"
+  },
+  "dependencies": {
+    "@billet/ios-contracts": "workspace:*",
+    "@billet/ios-core": "workspace:*",
+    "@billet/ios-payments": "workspace:*",
+    "@billet/ios-pet": "workspace:*"
+  }
+}

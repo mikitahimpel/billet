@@ -74,6 +74,7 @@ import Testing
     let file = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
       .deletingLastPathComponent().deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appending(path: "packages/backend/flags/src/experiments.ts")
     let source = try String(contentsOf: file, encoding: .utf8)
     let registry = try #require(source.firstRange(of: "export const registry")).upperBound

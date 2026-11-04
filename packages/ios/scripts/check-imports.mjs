@@ -1,12 +1,11 @@
-// Fails when a Swift file under Sources/Surfaces imports a Feature target, or any file under
-// Sources imports a graphics engine.
+// Run from one of the Swift packages in packages/ios. Fails when a Swift file under its Sources
+// imports a graphics engine, or, in the features package, when Sources/Surfaces imports a Feature target.
 // docs/architecture.md: Surfaces may import Domain, Ink and DesignSystem, not any feature target.
 // A plain `swift build` does not enforce this (see the PR for #3), so ios:build and ios:test run it.
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 
-const sources = join(dirname(fileURLToPath(import.meta.url)), "..", "Sources");
+const sources = join(process.cwd(), "Sources");
 const surfaces = join(sources, "Surfaces");
 
 const featureTargets = new Set(
@@ -54,7 +53,7 @@ function importViolations(files, describe) {
 const engines = new Set(["RiveRuntime", "RealityKit"]);
 
 const violations = [
-  ...importViolations(swiftFiles(surfaces), (module) =>
+  ...importViolations(existsSync(surfaces) ? swiftFiles(surfaces) : [], (module) =>
     featureTargets.has(module) ? `Surfaces imports ${module}` : undefined,
   ),
   ...importViolations(swiftFiles(sources), (module) =>

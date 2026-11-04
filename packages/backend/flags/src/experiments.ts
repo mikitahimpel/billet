@@ -129,7 +129,7 @@ export const defineExperiments = (
 /**
  * Every experiment and remote flag this server knows: the one place they are defined. The key,
  * kind and variant ids here are fixed, because they must match what the app contains
- * (`Experiments` in packages/ios/Sources/WidgetBridge/RemoteFlags.swift, checked by a Swift test
+ * (`Experiments` in packages/ios/features/Sources/WidgetBridge/RemoteFlags.swift, checked by a Swift test
  * that reads this file). Everything else here is only the starting configuration: the admin
  * panel changes weights, default, exposure, status, kill switch and targeting without a deploy,
  * and stores them in D1 (`flag_configs`). See docs/experiments.md and docs/admin.md.

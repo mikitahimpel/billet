@@ -59,6 +59,7 @@ let roundTrips: [String: RoundTrip] = [
 let fixturesDirectory = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .deletingLastPathComponent().deletingLastPathComponent()
+  .deletingLastPathComponent()
   .appending(path: "packages/contracts/fixtures/golden", directoryHint: .isDirectory)
 
 func fixtureURLs() -> [URL] {
