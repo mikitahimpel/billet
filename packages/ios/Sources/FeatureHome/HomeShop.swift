@@ -17,6 +17,9 @@ struct HomeShop: ViewModifier {
 
   let shop: ShopStore
   let renovator: RoomRenovator
+  let checkout: ShopCheckout
+  /// How the room is done up now.
+  let style: RoomStyle
   let scene: (any PetScene)?
   /// False when Home opens the shop and the closet from somewhere else.
   var showsButtons = true
@@ -45,10 +48,20 @@ struct HomeShop: ViewModifier {
         switch sheet {
         case .shop:
           ShopView(
-            store: shop, onOpenCloset: { self.sheet = .closet }, onClose: { self.sheet = nil }
-          ) { item in
-            scene?.makeShopPreview(item: item) ?? AnyView(EmptyView())
-          }
+            store: shop, checkout: checkout, style: style,
+            thumbnail: { [scene] item, side, scale in
+              await scene?.shopThumbnail(item, side: side, scale: scale)
+            },
+            onPlace: { _ in
+              self.sheet = nil
+              renovator.requestOpen()
+            },
+            onTryOn: { choice in
+              self.sheet = nil
+              renovator.requestTryOn(choice)
+            },
+            onOpenCloset: { self.sheet = .closet }, onClose: { self.sheet = nil }
+          )
           .billetSheet()
           .onAppear { events(.shopOpened) }
         case .closet:

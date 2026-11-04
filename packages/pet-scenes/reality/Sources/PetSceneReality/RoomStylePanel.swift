@@ -16,6 +16,17 @@ enum RoomStyleSection: String, CaseIterable, Hashable {
     }
   }
 
+  /// The section that holds `item`.
+  init(holding item: RoomStyleItem) {
+    switch item {
+    case .wall: self = .walls
+    case .floor: self = .floor
+    case .curtains: self = .curtains
+    case .view: self = .view
+    case .fairy: self = .lights
+    }
+  }
+
   var items: [RoomStyleItem] {
     switch self {
     case .walls: RoomWall.allCases.map(RoomStyleItem.wall)
@@ -89,6 +100,8 @@ struct RoomStylePanel: View {
     .floatingGlass()
     .animation(.snappy(duration: 0.25), value: trying)
     .animation(.snappy(duration: 0.25), value: section)
+    // Opened to try something on, the panel opens on its section.
+    .onAppear { if let trying { section = RoomStyleSection(holding: trying) } }
     .accessibilityElement(children: .contain)
     .accessibilityIdentifier("stylePanel")
   }
@@ -295,7 +308,8 @@ struct RoomStylePanel: View {
     case .notEnoughStamps(let needed, let have):
       let short = max(needed - have, 1)
       return short == 1 ? "1 more stamp needed" : "\(short) more stamps needed"
-    case .unknownItem, .alreadyOwned, .notInCloset, .wrongKind, .roomIsFull, .unknownPlacement:
+    case .unknownItem, .alreadyOwned, .notInCloset, .wrongKind, .roomIsFull, .unknownPlacement,
+      .unknownPurchase:
       return "Couldn't unlock that"
     }
   }

@@ -77,6 +77,19 @@ import Testing
     #expect(GenzPiece.Kind(shopItem: "furniture-idol-nothing") == nil)
   }
 
+  /// The shop's shelves follow where each prop may stand: hung or small things are decor, floor
+  /// things furniture, and beds and climbing things are the cat's.
+  @Test func eachPropIsOnTheShelfItsSurfacesSay() throws {
+    let cats: Set<IdolProp> = [.catbed, .catTree, .scratchPost]
+    for prop in IdolProp.allCases {
+      let item = try #require(
+        ShopCatalog.standard.withIdolProps.item("furniture-idol-\(prop.rawValue)"))
+      let expected: ShopItem.Shelf =
+        cats.contains(prop) ? .cat : prop.surfaces == [.floor] ? .furniture : .decor
+      #expect(item.shelf == expected, "\(prop)")
+    }
+  }
+
   @Test func hungThingsGoOnAWallAndOthersStandSomewhere() {
     for prop in IdolProp.allCases {
       #expect(!prop.surfaces.isEmpty, "\(prop)")

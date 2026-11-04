@@ -11,7 +11,7 @@ protocol RehearsedStage: TabStage {
   func setRehearsing(_ rehearsing: Bool)
 }
 
-/// Draws the shop and the desk once each, out of sight, so that the engine's costly first draw of
+/// Draws the desk once, out of sight, so that the engine's costly first draw of
 /// a scene (its shaders, meshes and textures) happens before anyone opens the tab. Until a scene
 /// has been drawn the renderer shows nothing for a second or more.
 ///
@@ -21,7 +21,6 @@ protocol RehearsedStage: TabStage {
 /// each stage is rehearsed at most once per launch.
 struct TabRehearsal: View {
   let stages: TabStages
-  let shop: ShopSceneState?
   let desk: Bool
 
   @Environment(\.petSceneLighting) private var lighting
@@ -40,18 +39,15 @@ struct TabRehearsal: View {
     .task {
       guard Self.isWanted else { return }
       var queue: [any RehearsedStage] = []
-      if shop != nil { queue.append(stages.shopStage) }
       if desk { queue.append(stages.deskStage) }
       for stage in queue {
         guard !Task.isCancelled else { break }
         // A stage its tab already shows has had its first draw.
         guard stages.claimRehearsal(of: stage), stage.root.scene == nil else { continue }
-        if let shop, let shopStage = stage as? ShopStage { shopStage.show(shop) }
         stage.setLighting(.of(lighting))
         stage.setRehearsing(true)
         await Self.until { stage.isBuilt }
-        // The stock, the keeper and the cat load after the room; their first draws belong here
-        // too.
+        // The notes and the cat load after the room; their first draws belong here too.
         try? await Task.sleep(for: Self.loads)
         let made = stage.root.clone(recursive: true)
         copy?.removeFromParent()

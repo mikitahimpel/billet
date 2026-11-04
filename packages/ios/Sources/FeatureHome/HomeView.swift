@@ -110,6 +110,7 @@ struct HomeView: View {
       .environment(\.petSceneWindowView, session.labs.windowView)
       .environment(\.petSceneLighting, session.labs.lighting)
       .environment(\.petSceneFurniture, session.labs.furniture)
+      .environment(\.petSceneRoom, session.labs.homeRoom)
       .environment(\.petSceneIdolProps, session.labs.isOn(LabExperiment.idolProps))
       .onChange(of: session.labs.isOn(LabExperiment.idolProps), initial: true) { _, isOn in
         session.shop.showsIdolProps = isOn
@@ -118,7 +119,8 @@ struct HomeView: View {
       .sensoryFeedback(.success, trigger: session.treatFalling) { _, falling in falling }
       .modifier(
         HomeShop(
-          shop: session.shop, renovator: session.renovator, scene: scene,
+          shop: session.shop, renovator: session.renovator, checkout: session.checkout,
+          style: session.play.roomStyle, scene: scene,
           showsButtons: !variant.isFullBleed && !isRenovating && !usesStyledHome,
           sheet: $shopSheet)
       )

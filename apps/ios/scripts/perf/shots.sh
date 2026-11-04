@@ -1,7 +1,7 @@
 #!/bin/zsh
 # The standard screenshot set from one Release Simulator build: Home in each room under each
 # lighting preset and at the camera's limits, Shop and the Notes desk (measure.sh --sweep), every
-# window view in Home and through the shop window (--views), then
+# window view in Home (--views), then
 # the first-launch onboarding on a fresh install.
 #
 #   PERF_DERIVED=<derived> [PERF_DEVICE=<name>] [PERF_DEVICE_TYPE=<type id>] shots.sh <label>

@@ -41,6 +41,21 @@ public final class RoomRenovator: RoomRenovating {
     openRequests += 1
   }
 
+  /// A style the host asked the scene to try on in its Style tab, numbered so the same style asked
+  /// for twice is seen twice.
+  public struct TryOn: Hashable, Sendable {
+    public let item: RoomStyleItem
+    public let number: Int
+  }
+
+  /// The latest style asked to be tried on, or `nil` before any was.
+  public private(set) var tryOnRequest: TryOn?
+
+  /// Asks the scene to open its Style tab with `item` tried on, as a tap on its swatch would.
+  public func requestTryOn(_ item: RoomStyleItem) {
+    tryOnRequest = TryOn(item: item, number: (tryOnRequest?.number ?? 0) + 1)
+  }
+
   /// Finds room for a floor piece in the scene's own plan; `nil` from it means the room is full.
   @ObservationIgnored public var openSpot: ((ShopItem) -> (x: Double, z: Double)?)?
 

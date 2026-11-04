@@ -108,11 +108,10 @@ all its weight on today's standard value, so starting one changes nothing until 
 | `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
 | `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk`, `sunset-beach`, `forest-cabin`, `moonlit-peaks`, `neon-street`, `rooftops-dusk`, `autumn-park`, `misty-lake`, `desert-stars` |
 | `home-layout` | Home | `classic`, `immersive`, `living-window`, `night-and-day` |
-| `shopkeeper` | Shopkeeper | `teddy`, `human` |
 
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
 tester tools or not yet complete and reviewable). `home-direction` (Window Seat or Sunset Lamp) is
-gone: there is one room. A saved configuration or assignment under a key the registry no longer has
+gone: there is one room. `shopkeeper` went with the 3D shop. A saved configuration or assignment under a key the registry no longer has
 is ignored, so nothing needs cleaning up.
 
 ## On the phone
@@ -127,8 +126,7 @@ is ignored, so nothing needs cleaning up.
   (`FlagsRefresher`). The answer **replaces** the held copy and is saved in the App Group
   (`remote-flags.json`), so it is there at the next launch and offline. A failed request changes
   nothing. Leaving the pair or signing out forgets it: the variants belong to the pair.
-- **Which one wins.** For each remote setting (lighting, window view, Home layout,
-  shopkeeper): a choice made in Labs on this phone, then the pair's variant, then what the app did
+- **Which one wins.** For each remote setting (lighting, window view, Home layout): a choice made in Labs on this phone, then the pair's variant, then what the app did
   before (the standard value). So offline, on a first launch, with no partner, with
   the experiment switched off or with a variant this build lacks, the screen is the one it always
   was. "Follow the test", the first row of each of those Labs pickers, removes the Labs choice. Testers and the owner use

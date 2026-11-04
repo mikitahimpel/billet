@@ -198,16 +198,6 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
-  {
-    key: "shopkeeper",
-    kind: "flag",
-    description: "Who keeps the 3D shop (Labs > Shopkeeper).",
-    variants: { teddy: 1, human: 0 },
-    default: "teddy",
-    exposure: 100,
-    status: "draft",
-    killed: false,
-  },
 ]);
 
 /** The catalogue a `FlagsService` works from: the registry, or what a test supplies. */

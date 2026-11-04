@@ -86,7 +86,9 @@ extension GenzLayout {
     for placement in pieces {
       let size = placement.piece.kind.size
       let centre = SIMD2(placement.centre.x, placement.centre.y)
+      // A bed on the cat's own floor is one it walks into, not round.
       if abs(placement.centre.z - ground) < 0.15, size.z >= 0.1,
+        GenzRoom.affordanceKind(placement.piece.kind) != .bed,
         centre == simd_clamp(centre, surface.min, surface.max)
       {
         // A generated prop's box is its model's bounds; a round one fills less of it.
@@ -120,13 +122,20 @@ extension GenzLayout {
   /// Whether the cat's body, centred at `point` and facing `heading`, keeps off everything on its
   /// top, except what it is up on: anything no higher than `height` above the top, as the
   /// cardigan is for a cat lying on it.
+  ///
+  /// `ground` is the height of the level it stands on, the cat's own top unless said. `shape` is
+  /// its body for the pose it is in, measured for the cat shown (``catBody``); without one, a
+  /// capsule as wide as the slimmer cats standing.
   func catBodyIsClear(
-    at point: SIMD2<Float>, heading: Float, height: Float = 0,
-    obstacles: [GenzCatObstacle]? = nil, pad: Float = 0
+    at point: SIMD2<Float>, heading: Float, height: Float = 0, ground: Float? = nil,
+    obstacles: [GenzCatObstacle]? = nil, shape: GenzCatShape? = nil, pad: Float = 0
   ) -> Bool {
-    let radius = cat.length * GenzCatBody.radius + pad
-    let spine = GenzCatBody.spine(at: point, heading: heading, length: cat.length)
-    for obstacle in obstacles ?? catObstacles where cat.spot.z + height < obstacle.top - 0.06 {
+    let radius = cat.length * (shape?.radius ?? GenzCatBody.radius) + pad
+    let spine =
+      shape?.spine(at: point, heading: heading, length: cat.length)
+      ?? GenzCatBody.spine(at: point, heading: heading, length: cat.length)
+    let feet = (ground ?? cat.spot.z) + height
+    for obstacle in obstacles ?? catObstacles where feet < obstacle.top - 0.06 {
       if spine.contains(where: { obstacle.box.distance(to: $0) < radius }) { return false }
     }
     return true
@@ -134,7 +143,7 @@ extension GenzLayout {
 
   /// The headings tried for a cat that must turn to fit: every 15 degrees. The body is the same
   /// from either end, so half a turn covers them all.
-  private static let turns = (0..<12).map { Float($0) * .pi / 12 }
+  static let turns = (0..<12).map { Float($0) * .pi / 12 }
 
   /// A heading at `point` the cat can stand in without its body in anything: `want`, or the
   /// nearest of every 15 degrees that keeps clear. Nil when none does.
@@ -203,22 +212,42 @@ extension GenzLayout {
   /// as near to as it can. Empty when the cat is there already or can get no nearer; just `goal`
   /// when the way is clear.
   func catRoute(from start: SIMD2<Float>, to goal: SIMD2<Float>) -> [SIMD2<Float>] {
+    catRoute(from: start, to: goal, on: GenzCatLevel.homeID)
+  }
+
+  /// ``catRoute(from:to:)`` on `level`: the cat's own top, the floor or another piece's top,
+  /// keeping the walking body (``catBody``) clear of what stands there.
+  func catRoute(from start: SIMD2<Float>, to goal: SIMD2<Float>, on level: Int) -> [SIMD2<Float>] {
     guard simd_distance(start, goal) > 1e-4 else { return [] }
-    let blocking = catObstacles.filter { !$0.sitOnTop }
-    guard !blocking.isEmpty, let surface = catSurface else { return [goal] }
+    let isHome = level == GenzCatLevel.homeID || (level == catHomeLevel && catSurface == nil)
+    let blocking = (isHome ? catObstacles : catObstacles(on: level)).filter { !$0.sitOnTop }
+    let ground = isHome ? cat.spot.z : catLevel(level)?.top ?? 0
+    let surface: (min: SIMD2<Float>, max: SIMD2<Float>)
+    if isHome, let home = catSurface {
+      surface = home
+    } else if let box = catLevel(level)?.box {
+      surface = (box.centre - box.reach, box.centre + box.reach)
+    } else {
+      return [goal]
+    }
+    guard !blocking.isEmpty else { return [goal] }
+    // Walking, the body is its standing one; on its own top, where it has always walked between
+    // the pillows, the slimmer capsule it is checked with there.
+    let shape: GenzCatShape? = isHome ? nil : catBody.standing
     func clear(_ from: SIMD2<Float>, _ to: SIMD2<Float>) -> Bool {
       let gap = to - from
       let heading = atan2(-gap.x, -gap.y)
       let steps = max(Int((simd_length(gap) / 0.04).rounded(.up)), 1)
       return (0...steps).allSatisfy {
         catBodyIsClear(
-          at: from + gap * (Float($0) / Float(steps)), heading: heading, obstacles: blocking,
-          pad: GenzCatBody.pad)
+          at: from + gap * (Float($0) / Float(steps)), heading: heading, ground: ground,
+          obstacles: blocking, shape: shape, pad: GenzCatBody.pad)
       }
     }
     if clear(start, goal) { return [goal] }
 
-    let cell: Float = 0.08
+    // The floor is large: a coarser grid keeps the search quick.
+    let cell: Float = isHome ? 0.08 : 0.12
     let low = simd_min(surface.min, simd_min(start, goal))
     let high = simd_max(surface.max, simd_max(start, goal))
     let columns = Int(((high.x - low.x) / cell).rounded(.up)) + 1
@@ -232,13 +261,17 @@ extension GenzLayout {
       return r * columns + c
     }
     // A cell is open when the body fits there facing along whatever is beside it.
-    let margin = cat.length * GenzCatBody.radius
+    let margin = cat.length * (shape?.radius ?? GenzCatBody.radius)
     let open = (0..<(columns * rows)).map { i in
       !blocking.contains { $0.box.distance(to: point(i)) < margin }
     }
     let startIndex = index(start)
     // A body already in something (a cat set down there) walks straight out of it.
-    let stuck = catClearHeading(at: start, want: 0, height: 0, obstacles: blocking) == nil
+    let stuck = !Self.turns.contains { heading in
+      catBodyIsClear(
+        at: start, heading: heading, ground: ground, obstacles: blocking, shape: shape,
+        pad: GenzCatBody.pad)
+    }
 
     // A* over each cell's eight neighbours, each move checked with the body along it, until a
     // cell from which the cat walks straight to the goal.

@@ -5,7 +5,7 @@ import PetScene
 import RealityKit
 import SwiftUI
 
-/// The scene's room, Window Seat, furnished with the set the host asks for.
+/// The scene's room: Window Seat furnished with the set the host asks for, or the Nooki cabin.
 ///
 /// Its RealityView mounts the first time the host shows the scene and then stays: one that mounts
 /// while the host keeps the scene off screen, as a tab out of sight does, never draws.
@@ -17,6 +17,7 @@ struct NookiRoom: View {
 
   @Environment(\.petSceneFurniture) private var furniture
   @Environment(\.petSceneIdolProps) private var idolProps
+  @Environment(\.petSceneRoom) private var homeRoom
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @State private var canMount = false
 
@@ -24,7 +25,8 @@ struct NookiRoom: View {
     ZStack {
       if canMount {
         GenzRoomView(
-          layout: GenzLayout.of(furniture, idolProps: idolProps), world: world, play: play,
+          layout: GenzLayout.of(furniture, idolProps: idolProps, room: homeRoom), world: world,
+          play: play,
           rooms: rooms,
           isShown: true, onEvent: onEvent)
       }
@@ -126,14 +128,21 @@ struct GenzRoomView: View {
     // layers and the lights' glows are placed by a camera that is still out at the opening's
     // start, so drawn over an empty room they float about the screen.
     let isOpen = room.screen.openedAt != nil
+    let outside = layout.hasOutside
     ZStack {
-      if isOpen, parts.shows("layers") { layer(behind, room: room) }
-      if isOpen, parts.shows("sky") { theirSky }
-      if isOpen, parts.shows("haze"), !FramePace.shared.isHot {
+      // A room with no outside stands on the Nooki project's warm backdrop, which takes the place
+      // of the haze and the vignette, so it is never left white or black.
+      if !outside {
+        NookiCabinBackdrop(
+          isPaused: !isOnScreen || reduceMotion || FramePace.shared.isHot, light: look.key.boost)
+      }
+      if isOpen, outside, parts.shows("layers") { layer(behind, room: room) }
+      if isOpen, outside, parts.shows("sky") { theirSky }
+      if isOpen, outside, parts.shows("haze"), !FramePace.shared.isHot {
         RoomHaze(look: look, screen: room.screen)
       }
       stage(room)
-      if isOpen, parts.shows("layers") {
+      if isOpen, outside, parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
       }
       if isOpen, noteUnread, !isDecorating {
@@ -150,7 +159,7 @@ struct GenzRoomView: View {
       }
       if isOpen, parts.shows("grade") {
         GlowGrade(look: look)
-        GlowVignette(look: look)
+        if outside { GlowVignette(look: look) }
       }
       CatPurrOverlay(purr: room.purr)
       BowlHint(
@@ -320,8 +329,8 @@ struct GenzRoomView: View {
     func body(content: Content) -> some View {
       content
         .accessibilityElement()
-        .accessibilityLabel("Window seat at night")
-        .accessibilityValue(view.noteUnread ? "A new note is on the window" : "")
+        .accessibilityLabel(view.layout.hasOutside ? "Window seat at night" : "Nooki cabin")
+        .accessibilityValue(view.noteUnread ? view.unreadValue : "")
         .accessibilityAction(named: "Pet the cat") { view.onEvent(room.petCat()) }
         .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
         .accessibilityAction(named: Text("Press the light switch")) {
@@ -331,6 +340,11 @@ struct GenzRoomView: View {
           view.onEvent(.noteOpened(delivery: view.world.delivery))
         }
     }
+  }
+
+  /// What VoiceOver says of a note not yet opened, where the room shows it.
+  var unreadValue: String {
+    layout.hasOutside ? "A new note is on the window" : "A new note is on the garland"
   }
 
   /// Puts `room` in the RealityView in place of the room it held, and starts its updates.
@@ -382,6 +396,13 @@ struct GenzRoomView: View {
       }
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
+      // The shop asks for a window view to be tried on: the Style tab opens with it on.
+      .onChange(of: renovator?.tryOnRequest) { _, request in
+        guard isShown, let request else { return }
+        isDecorating = true
+        isStyling = true
+        tryingStyle = renovator?.hasUnlocked(request.item) == true ? nil : request.item
+      }
       .onChange(of: isDecorating, initial: true) { _, isOn in
         if !isOn {
           isStyling = false
@@ -421,7 +442,8 @@ struct GenzRoomView: View {
         status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
         onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() },
         onReset: { room.resetDecor() },
-        onStyle: { isStyling = true }
+        // The pair's styles dress Window Seat's walls, floor and window; the cabin keeps its own.
+        onStyle: layout.hasOutside ? { isStyling = true } : nil
       )
       .transition(.opacity)
     }

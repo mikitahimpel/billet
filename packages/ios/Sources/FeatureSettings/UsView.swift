@@ -203,15 +203,13 @@ public struct UsView<Account: View>: View {
       EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: \.hasRoom) {
+        HomeRoomPicker(model: model)
         WindowViewPicker(model: model)
         LightingPicker(model: model)
         FurniturePicker(model: model)
       }
       if let cats = scenes.first(where: { !$0.cats.isEmpty })?.cats {
         CatPicker(model: model, cats: cats)
-      }
-      if scenes.contains(where: { $0.hasShop }) {
-        ShopkeeperPicker(model: model)
       }
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         let experiments = LabExperiment.allCases.filter { $0.group == group }

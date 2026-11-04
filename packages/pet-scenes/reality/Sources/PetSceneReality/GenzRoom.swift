@@ -198,7 +198,11 @@ final class GenzRoom: CatPlayStage {
   var clipGate = CatClipGate()
   /// The rate the clip shown plays at, kept while the gate holds it over another's.
   private var clipRate: Float = 1
+  /// What stands the cat on the surface under it (``stepFooting``).
+  var footing = CatFooting()
   var trip: CatTrip?
+  /// A trip waiting for the cat to get back up onto its own top.
+  var pendingTrip: (kind: CatTripKind, legs: [CatTrip.Leg])?
   var tripKind: CatTripKind?
   /// A chase the brain asked for, waiting for the cat to be free.
   var chaseWanted = false
@@ -244,8 +248,8 @@ final class GenzRoom: CatPlayStage {
   private var catChoice = CatChoice.standard
   /// How the cat on show moves, from its model.
   private(set) var motion = CatMotion.even
-  private var catModel: Entity?
-  private var catLoad: Task<Void, Never>?
+  private(set) var catModel: Entity?
+  private(set) var catLoad: Task<Void, Never>?
   var gazePoint: SIMD3<Float>?
   var gazeUntil = 0.0
   private var building: Task<Void, Never>?
@@ -313,7 +317,6 @@ final class GenzRoom: CatPlayStage {
   static let farClip: Float = 500
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
-  private static let ambientExponent: Float = 1.6
 
   /// The furniture on the floor, which can be picked up and moved while the room is decorated.
   let decor: DecorSession
@@ -358,22 +361,27 @@ final class GenzRoom: CatPlayStage {
     let shell = Entity()
     shell.name = Self.shellName
     for part in layout.shell(kit) { shell.addChild(part) }
-    kit.merge(shell, key: "shell")
+    kit.merge(shell, key: "shell \(layout.room.rawValue)")
     room.addChild(shell)
     NookiTrace.mark("styled room shell")
-    let styler = GenzRoomStyler(kit: kit)
-    room.addChild(styler.root)
-    styler.apply(style, animated: false)
-    self.styler = styler
+    if layout.hasOutside {
+      let styler = GenzRoomStyler(kit: kit)
+      room.addChild(styler.root)
+      styler.apply(style, animated: false)
+      self.styler = styler
+    }
     if layout.pieces.contains(where: { $0.piece.kind.idol != nil }) { await kit.loadIdolProps() }
     let holders = layout.pieces.map(place)
     NookiTrace.mark("styled room pieces")
     pieceHolders = holders
     arrangeDecor(holders)
+    measureTops()
+    footing.level = layout.catHomeLevel
     buildLED()
     buildNote()
     await Task.yield()
     addLighting()
+    addOwnLights()
     buildBackstop()
     buildLightDot()
     buildSwitchPlate()
@@ -392,6 +400,9 @@ final class GenzRoom: CatPlayStage {
     props.roomHasYarn = true
     props.show(lifeNeeds)
     room.addChild(props.root)
+    if let bowl = layout.bowl {
+      props.bowl.position = props.root.convert(position: bowl.scene, from: room)
+    }
     lifeProps = props
     let glow = GenzGlow(layout: layout, kit: kit)
     catShadow = glow.shadeCat(in: catHolder, length: length)
@@ -428,7 +439,7 @@ final class GenzRoom: CatPlayStage {
     let size = placement.piece.kind.size
     room.addChild(holder)
     switch placement.piece.kind {
-    case .thriftLamp, .pleatedLamp:
+    case .thriftLamp, .pleatedLamp, .cabinStoolLamp:
       holder.name = Self.lampName
       SceneParts.makeTappable(
         holder, size: [size.x + 0.3, size.z + 0.3, size.y + 0.3], center: [0, size.z / 2, 0])
@@ -440,7 +451,8 @@ final class GenzRoom: CatPlayStage {
       case Self.bulbGlassName: break
       case Self.flameName: flames.append(model)
       default:
-        let isShaded = [.thriftLamp, .pleatedLamp].contains(placement.piece.kind)
+        let isShaded = [.thriftLamp, .pleatedLamp, .cabinStoolLamp].contains(
+          placement.piece.kind)
         if isShaded, model.model?.materials.first is UnlitMaterial {
           shades.append(model)
         }
@@ -517,6 +529,10 @@ final class GenzRoom: CatPlayStage {
     model.scale = .one * scale
     catScale = scale
     model.position = -[bounds.center.x, bounds.min.y, bounds.center.z] * scale
+    footing.base = model.position
+    footing.table = CatGroundTable.of(shown.model)
+    footing.shown = nil
+    footing.fade = nil
     let rig = CatRig(model: model, clips: CatCatalog.clips(shown.model), anatomy: anatomy)
     if let palette = CatCatalog.coatTexture(shown.model, coat: shown.coat) { rig?.paint(palette) }
     let action = self.rig?.current ?? .sleep
@@ -537,13 +553,15 @@ final class GenzRoom: CatPlayStage {
   // MARK: - Light
 
   private var ambientReceiver: ImageBasedLightReceiverComponent?
+  /// The room's own lights beyond the lamp, from its layout.
+  private var ownLights: [GenzOwnLight] = []
 
   private func addLighting() {
-    if let environment = Self.ambient(top: ambientColours.top, bottom: ambientColours.bottom) {
+    if let environment = Self.ambient(top: layout.ambient.top, bottom: layout.ambient.bottom) {
       let ambient = Entity()
       ambient.components.set(
         ImageBasedLightComponent(
-          source: .single(environment), intensityExponent: Self.ambientExponent))
+          source: .single(environment), intensityExponent: layout.ambient.exponent))
       room.addChild(ambient)
       ambientLight = ambient
       let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ambient)
@@ -572,6 +590,15 @@ final class GenzRoom: CatPlayStage {
     dayLamp.look(at: middle, from: from + [0, 4, 0], relativeTo: room)
     room.addChild(dayLamp)
     applyDayLight()
+  }
+
+  /// Adds the room's own lights, dark until the room opens.
+  private func addOwnLights() {
+    ownLights = layout.ownLights?() ?? []
+    for light in ownLights {
+      light.entity.setLight(intensity: 0)
+      room.addChild(light.entity)
+    }
   }
 
   private static func ambient(top: GenzColour, bottom: GenzColour) -> EnvironmentResource? {
@@ -751,7 +778,7 @@ final class GenzRoom: CatPlayStage {
     isAnnounced = true
     ScenePerf.shown(
       ScenePerf.Scene(
-        name: "windowSeat room",
+        name: "\(layout.room.rawValue) room",
         orbit: { [weak self] in self?.orbit(byX: $0, y: $1) },
         zoom: { [weak self] in self?.zoom(by: $0) },
         release: { [weak self] in self?.endOrbit(velocityX: 0, velocityY: 0) },
@@ -802,7 +829,7 @@ final class GenzRoom: CatPlayStage {
       camera.project($0.bowl.position(relativeTo: room), in: viewSize)
     }
     if screen.bowl != bowl { screen.bowl = bowl }
-    let plate = project(GenzLightSwitch.plate)
+    let plate = project(layout.switchPlate)
     if screen.lightSwitch != plate { screen.lightSwitch = plate }
     let parallax = CGSize(
       width: -CGFloat(camera.turn) * Self.parallaxPoints,
@@ -1008,13 +1035,10 @@ final class GenzRoom: CatPlayStage {
   /// The colour of the light from outside, before a preset changes it.
   let outsideColour = GenzColour(0xFFD9A0)
 
-  /// The room's own ambient light from above and below, before a preset changes it.
-  private let ambientColours = (top: GenzColour(0xC8D4E8), bottom: GenzColour(0x8090A8))
-
   /// Tints the ambient light towards the preset's fill.
   private func applyFill() {
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
-    let own = ambientColours
+    let own = layout.ambient
     let fill = look.fill
     let lit = look.isLit
     if let environment = Self.ambient(
@@ -1052,13 +1076,14 @@ final class GenzRoom: CatPlayStage {
     let hour = screen.windowView.shownHour(room: dayLight?.here)
     if screen.viewHour != hour { screen.viewHour = hour }
     showStreet(
-      screen.windowView.showsInDepth(weather: screen.windowView.shownWeather, hour: hour))
+      layout.hasOutside
+        && screen.windowView.showsInDepth(weather: screen.windowView.shownWeather, hour: hour))
   }
 
   /// The cat follows what moves outside with its head, and paws at a drop running down the glass
   /// beside it when it is up. A finger on the screen comes first.
   private func stepView() {
-    guard trip == nil, !reduceMotion else { return }
+    guard layout.hasOutside, trip == nil, !reduceMotion else { return }
     let look = ViewLook(
       view: screen.windowView.view, hour: screen.viewHour, weather: screen.windowView.shownWeather)
     let moment = ViewMoment(
@@ -1115,7 +1140,7 @@ final class GenzRoom: CatPlayStage {
     dayLamp.isEnabled = look != nil
     guard var ambient = ambientLight?.components[ImageBasedLightComponent.self] else { return }
     ambient.intensityExponent =
-      Self.ambientExponent + Self.ambientShift(look, phase: dayLight?.here.phase)
+      layout.ambient.exponent + Self.ambientShift(look, phase: dayLight?.here.phase)
       + self.look.fill.shift
     ambientLight?.components.set(ambient)
   }
@@ -1141,7 +1166,7 @@ final class GenzRoom: CatPlayStage {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
-    } else if let pose = stepTrip() {
+    } else if let pose = stepTripHome(step) ?? stepTrip() {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
@@ -1152,6 +1177,7 @@ final class GenzRoom: CatPlayStage {
       rate = Float((brainBody.frame?.tempo ?? 1) * motion.tempo)
       if pose.action == .walk || pose.action == .carry { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
+      if let jumpRate = jumpRate() { rate = jumpRate }
     }
     bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
     if toys.liftedAt == nil { settleDrop() }
@@ -1167,6 +1193,7 @@ final class GenzRoom: CatPlayStage {
     if shown != rig.current { NookiTrace.catMotion("clip \(shown)", at: clock) }
     if shown == beat.action { clipRate = rate }
     rig.play(shown, rate: clipRate)
+    stepFooting(step, rate: clipRate)
     stepNudges()
     let moved = catHolder.position - lastCatPosition
     if lastCatPosition != .zero, simd_length(SIMD2(moved.x, moved.z)) > layout.cat.length * 0.25 {
@@ -1281,8 +1308,9 @@ final class GenzRoom: CatPlayStage {
   private func applyWindow(_ time: Double, warmth: Double) {
     let street = GenzOpening.streetLamp(time)
     if changed("street", street) {
-      outsideLight.setLight(intensity: Float(street) * 900)
+      outsideLight.setLight(intensity: layout.hasOutside ? Float(street) * 900 : 0)
     }
+    stepOwnLights(street)
     let led = GenzOpening.windowLED(time)
     if changed("led", led, step: 0.05) { setLED(led) }
     let lamp =
@@ -1300,7 +1328,7 @@ final class GenzRoom: CatPlayStage {
     let lit = GenzOpening.windowNote(clock - noteClock) * (0.85 + 0.15 * street)
     if changed("note", lit, step: 0.02) { setNote(opacity: 1, tint: 0.4 + 0.6 * lit) }
     let car =
-      time > GenzOpening.length
+      time > GenzOpening.length && layout.hasOutside
       ? viewRecipe.headlight(at: Date().timeIntervalSinceReferenceDate) : nil
     let pass = car.map { $0.leftToRight ? $0.progress : 1 - $0.progress }
     if changed("headlight", pass ?? -1, step: 0.004) {
@@ -1312,6 +1340,21 @@ final class GenzRoom: CatPlayStage {
       let fade = pass.map { sin(Float($0) * .pi) } ?? 0
       // Stays in the scene between cars: a light joining and leaving every pass costs a frame.
       headlight.components[SpotLightComponent.self]?.intensity = reduceMotion ? 0 : fade * 160_000
+    }
+  }
+
+  /// Brings the room's own lights up with the light from outside as the room opens, a flame's
+  /// flickering.
+  private func stepOwnLights(_ level: Double) {
+    for (index, light) in ownLights.enumerated() {
+      var flicker: Float = 1
+      if light.flicker > 0, !reduceMotion {
+        let phase = clock * 13 + Double(index) * 2.1
+        flicker = 1 + light.flicker * Float(0.6 * sin(phase) + 0.4 * sin(phase * 0.56 + 1))
+      }
+      let value = Float(level) * flicker
+      guard changed("own \(index)", Double(value), step: 0.01) else { continue }
+      light.entity.setLight(intensity: light.intensity * value)
     }
   }
 
@@ -1478,7 +1521,14 @@ extension GenzRoom {
     let base = rig?.current.flatMap { rig?.info[$0]?.base } ?? .sleep
     catShadowShape += (Self.catShadowFootprint(base) - catShadowShape) * min(step * 5, 1)
     let length = layout.cat.length
-    let ground = layout.cat.spot.scene.y
+    let ground =
+      toys.liftedAt != nil || dropped != nil
+      ? layout.cat.spot.scene.y
+      : brainBody.jump.map { jump in
+        min(
+          groundHeight(at: jump.jump.from, on: jump.jump.fromLevel),
+          groundHeight(at: jump.jump.to, on: jump.jump.toLevel))
+      } ?? groundUnderCat(base: base)
     let height = max(catHolder.position.y - ground, 0)
     let shrink = 1 - 0.45 * min(height / length, 1)
     catShadow.setPosition(
@@ -1509,7 +1559,7 @@ extension GenzRoom {
     }
     let isFree =
       trip == nil && toys.pursuit == nil && world.activity == .sleeping && !reduceMotion && hasCat
-      && opening == nil
+      && opening == nil && footing.level == layout.catHomeLevel && pendingTrip == nil
     // A sleeping cat does not run up to the glass; the greeting is let go.
     if greetPending, brainBody.frame?.stack.vitality == .asleep { greetPending = false }
     if greetPending, isFree {
@@ -1593,6 +1643,11 @@ extension GenzRoom {
   }
 
   func begin(_ kind: CatTripKind, legs: [CatTrip.Leg]) {
+    guard footing.level == layout.catHomeLevel, brainBody.jump == nil else {
+      // Off its own top: back up there first (``stepTripHome``).
+      pendingTrip = (kind, legs)
+      return
+    }
     let heading = homeHeading
     trip = CatTrip(
       from: home, heading: heading, legs: legs.clear(of: layout, from: home), at: clock)

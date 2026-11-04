@@ -3,8 +3,8 @@ import Pet
 import PetScene
 import SwiftUI
 
-/// Nooki: the cat in its Window Seat room, with the shop, the desk and the first launch as 3D
-/// stages of their own.
+/// Nooki: the cat in its Window Seat room, with the desk and the first launch as 3D stages of
+/// their own.
 public struct NookiPetScene: PetScene {
   /// The scene's stable ID, for code that needs it without making a scene.
   public static let sceneID = "nooki"
@@ -13,11 +13,13 @@ public struct NookiPetScene: PetScene {
 
   private let rooms: GenzRoomCache
   private let tabs: TabStages
+  private let thumbnails: NookiShopThumbnails
 
   public init() {
     let rooms = GenzRoomCache()
     self.rooms = rooms
     tabs = TabStages(rooms: rooms)
+    thumbnails = NookiShopThumbnails()
   }
 
   public let handlesTouches = true
@@ -29,8 +31,8 @@ public struct NookiPetScene: PetScene {
     CatModel.allCases.filter { $0.isListed && ($0.splatBody == nil || SplatCat.isAvailable) }
   }
 
-  public func makeShopPreview(item: ShopItem) -> AnyView? {
-    AnyView(NookiShopPreview(item: item))
+  public func shopThumbnail(_ item: ShopItem, side: CGFloat, scale: CGFloat) async -> CGImage? {
+    await thumbnails.image(of: item, side: side, scale: scale)
   }
 
   public func makeView(
@@ -48,14 +50,8 @@ public struct NookiPetScene: PetScene {
     AnyView(NookiRoom(world: world, play: play, rooms: rooms, onEvent: onEvent))
   }
 
-  public func makeTabRehearsal(shop: ShopSceneState?, desk: Bool) -> AnyView? {
-    AnyView(TabRehearsal(stages: tabs, shop: shop, desk: desk))
-  }
-
-  public func makeShopScene(
-    state: ShopSceneState, onEvent: @escaping @MainActor (ShopSceneEvent) -> Void
-  ) -> AnyView? {
-    AnyView(ShopSceneView(state: state, stages: tabs, onEvent: onEvent))
+  public func makeTabRehearsal(desk: Bool) -> AnyView? {
+    desk ? AnyView(TabRehearsal(stages: tabs, desk: desk)) : nil
   }
 
   public func makeDeskScene(

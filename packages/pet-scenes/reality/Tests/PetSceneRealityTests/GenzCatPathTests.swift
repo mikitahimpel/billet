@@ -8,6 +8,7 @@ import Testing
   private static var layouts: [GenzLayout] {
     RoomFurniture.allCases.map { GenzLayout.of($0) }
       + [RoomFurniture.cosyNook, .retroDen].map { GenzLayout.of($0, idolProps: true) }
+      + [GenzLayout.nookiCabin]
   }
 
   @Test func theCatsPlaceIsClearOfWhatStandsOnItsTop() {
