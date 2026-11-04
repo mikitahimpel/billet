@@ -46,12 +46,18 @@ private struct GenzBloomLayer: View {
   let width: CGFloat
   let level: Double
 
+  private static let blur: CGFloat = 5
+
   var body: some View {
     Canvas { context, _ in
       guard state.outline.count > 1, level > 0 else { return }
       var path = Path()
       path.addLines(state.outline)
-      context.addFilter(.blur(radius: 5))
+      // The blur works over everything the context can draw into, so keep that to the strip
+      // and what its glow spreads over.
+      let reach = width / 2 + Self.blur * 3
+      context.clip(to: Path(path.boundingRect.insetBy(dx: -reach, dy: -reach)))
+      context.addFilter(.blur(radius: Self.blur))
       context.stroke(
         path, with: .color(colour.opacity(level)),
         style: StrokeStyle(lineWidth: width, lineCap: .round, lineJoin: .round))

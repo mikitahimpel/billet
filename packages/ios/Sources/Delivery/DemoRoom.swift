@@ -9,6 +9,7 @@ public struct DemoRoom: Hashable, Sendable {
   private static let codeKey = "demo.roomCode"
   private static let deviceKey = "demo.deviceID"
   private static let pushTokenKey = "demo.pushToken"
+  private static let hostKey = "demo.host"
 
   public let code: String
   public let device: String
@@ -76,6 +77,44 @@ public struct DemoRoom: Hashable, Sendable {
     defaults.set(token, forKey: pushTokenKey)
   }
 
+  /// Keeps the room's host where the widget can read it, since only the app's Info.plist has it.
+  public static func saveHost(_ host: String, in defaults: UserDefaults = sharedDefaults) {
+    if host.isEmpty {
+      defaults.removeObject(forKey: hostKey)
+    } else {
+      defaults.set(host, forKey: hostKey)
+    }
+  }
+
+  public static func host(in defaults: UserDefaults = sharedDefaults) -> String? {
+    defaults.string(forKey: hostKey)
+  }
+
+  /// Where a widget posts a pet or a treat without opening the room's socket, which would take the
+  /// app's queued notes.
+  public func playsURL(host: String) -> URL? {
+    let scheme = host.hasPrefix("127.0.0.1") ? "http" : "https"
+    return URL(string: "\(scheme)://\(host)/demo/rooms/\(code)/plays?device=\(device)")
+  }
+
+  /// Posts `plays` to the room and reports whether the room took them all.
+  public func post(
+    _ plays: [RoomPlay], host: String, session: URLSession = .shared
+  ) async -> Bool {
+    guard let url = playsURL(host: host), let body = try? JSONEncoder().encode(plays) else {
+      return false
+    }
+    var request = URLRequest(url: url, timeoutInterval: Self.postTimeout)
+    request.httpMethod = "POST"
+    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    request.httpBody = body
+    guard let (_, response) = try? await session.data(for: request) else { return false }
+    return (response as? HTTPURLResponse)?.statusCode == 204
+  }
+
+  /// A widget's intent has a few seconds; past this it hands the play to the app instead.
+  static let postTimeout: TimeInterval = 8
+
   public func socketURL(host: String) -> URL? {
     let scheme = host.hasPrefix("127.0.0.1") ? "ws" : "wss"
     return URL(string: "\(scheme)://\(host)/demo/rooms/\(code)/socket?device=\(device)")
@@ -104,5 +143,20 @@ public struct DemoRoom: Hashable, Sendable {
       let strokes = try? NoteInk.decode(note.ink)
     else { return false }
     return NoteImage.saveLatest(strokes, to: file)
+  }
+}
+
+/// One play frame as the room reads it: a pet, the day's treat or a meal.
+public struct RoomPlay: Codable, Equatable, Sendable {
+  public var type = "play"
+  public let id: String
+  public let kind: String
+  /// An ISO time with the sender's offset, which sets the treat's day.
+  public let at: String
+
+  public init(id: UUID, kind: String, at: String) {
+    self.id = id.uuidString.lowercased()
+    self.kind = kind
+    self.at = at
   }
 }

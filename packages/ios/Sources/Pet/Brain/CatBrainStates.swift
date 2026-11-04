@@ -30,15 +30,35 @@ public enum CatActivityGroup: String, CaseIterable, Codable, Hashable, Sendable 
 /// The leaf states of the activity region. Each belongs to one group.
 public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   case sit, loaf, lookAround
+  /// Happy and full: it rolls onto its back, belly up, and purrs.
+  case bellyUp
   case wander, sniffObject, inspectFurniture
   case findNapSpot, knead, curl, wake
+  /// Sleepy: a big yawn before it goes to find its spot.
+  case yawn
   case groomPaw, groomFlank, groomTail
   case walkToBowl, eat, lickLips
   /// Mealtime as the pair keeps it: the cat sits by the bowl and looks at you.
   case waitByBowl
+  /// Hungry: it paws at the empty bowl.
+  case pawBowl
+  /// Hungry: it sits up in front of you and begs with a paw, following your finger.
+  case beg
+  /// A tantrum: it arches and yowls at you.
+  case yowl
+  /// A tantrum: it bats the mug off the seat.
+  case knockOff
+  /// A tantrum: it flops over onto its side in despair, tail lashing.
+  case flop
   case stalk, pounce, chase, batObject, zoomies
+  /// Bored: it scratches the cushion.
+  case scratch
   case watchWindow, watchPartnerWindow
   case seekYou, rub, slowBlink, bringToy, waitByDoor
+  /// It carries the toy to you and drops it at your feet.
+  case dropToy
+  /// Lonely: it sits with its back to you, and the first touch is ignored.
+  case sulk
   case pushItem, sitInCardigan, sitOnDesk
   case startle, curiousTilt
   /// A note came: the cat carries it in its mouth to the wall or the glass and tapes it up.
@@ -46,14 +66,14 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
 
   public var group: CatActivityGroup {
     switch self {
-    case .sit, .loaf, .lookAround: .idle
+    case .sit, .loaf, .lookAround, .bellyUp: .idle
     case .wander, .sniffObject, .inspectFurniture: .explore
-    case .findNapSpot, .knead, .curl, .wake: .rest
+    case .findNapSpot, .knead, .curl, .wake, .yawn: .rest
     case .groomPaw, .groomFlank, .groomTail: .groom
-    case .walkToBowl, .eat, .lickLips, .waitByBowl: .eat
-    case .stalk, .pounce, .chase, .batObject, .zoomies: .play
+    case .walkToBowl, .eat, .lickLips, .waitByBowl, .pawBowl, .beg, .yowl, .knockOff, .flop: .eat
+    case .stalk, .pounce, .chase, .batObject, .zoomies, .scratch: .play
     case .watchWindow, .watchPartnerWindow: .watch
-    case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor: .social
+    case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor, .dropToy, .sulk: .social
     case .pushItem, .sitInCardigan, .sitOnDesk: .mischief
     case .startle, .curiousTilt, .carryNote: .react
     }
@@ -63,13 +83,13 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   public var travels: Bool {
     switch self {
     case .wander, .findNapSpot, .walkToBowl, .chase, .zoomies, .seekYou, .bringToy,
-      .inspectFurniture:
+      .inspectFurniture, .dropToy, .beg, .knockOff, .scratch:
       true
     case .sit, .loaf, .lookAround, .sniffObject, .knead, .curl, .wake, .groomPaw, .groomFlank,
       .groomTail, .eat, .lickLips, .stalk, .pounce, .batObject, .watchWindow,
       .watchPartnerWindow, .rub, .slowBlink, .waitByDoor, .waitByBowl, .pushItem, .sitInCardigan,
-      .sitOnDesk,
-      .startle, .curiousTilt, .carryNote:
+      .sitOnDesk, .startle, .curiousTilt, .carryNote, .bellyUp, .yawn, .pawBowl, .yowl, .flop,
+      .sulk:
       false
     }
   }
@@ -135,6 +155,8 @@ public enum CatGaze: Hashable, Sendable {
   case camera
   case window
   case affordance(RoomAffordance.Kind)
+  /// Turned away from whoever holds the phone, as a sulking cat sits.
+  case away
   /// Looking round: a heading offset from ahead, in radians, that changes every few seconds.
   case around(Double)
 }

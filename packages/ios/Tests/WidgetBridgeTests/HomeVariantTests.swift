@@ -42,6 +42,12 @@ import Testing
     #expect(store.loadHomeVariant() == .standard)
   }
 
+  @Test func aSavedCinematicOpeningIsImmersive() throws {
+    let storage = storage()
+    try storage.write(WidgetFeaturesStore.homeVariantFileName, Data(#""cinematic""#.utf8))
+    #expect(WidgetFeaturesStore(storage: storage).loadHomeVariant() == .immersive)
+  }
+
   @Test func theModelSavesTheVariantWithoutTouchingTheFlagsOrTheLight() {
     let storage = storage()
     var changes = 0

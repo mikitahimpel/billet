@@ -13,22 +13,38 @@ public enum CatStatechart {
   /// The scripts a group can play, each a list of steps run in order. Entering a group picks one.
   public static func scripts(_ group: CatActivityGroup) -> [[CatActivityStep]] {
     switch group {
-    case .idle: [[.sit], [.loaf], [.sit, .lookAround], [.lookAround, .sit]]
+    case .idle: [[.sit], [.loaf], [.sit, .lookAround], [.lookAround, .sit], [.bellyUp]]
     case .explore: [[.wander, .sniffObject], [.wander], [.inspectFurniture, .sniffObject]]
-    case .rest: [[.findNapSpot, .knead, .curl, .wake], [.findNapSpot, .curl, .wake]]
+    case .rest:
+      [
+        [.findNapSpot, .knead, .curl, .wake], [.findNapSpot, .curl, .wake],
+        [.yawn, .findNapSpot, .knead, .curl, .wake], [.yawn, .findNapSpot, .curl, .wake],
+      ]
     case .groom:
       [
         [.groomPaw], [.groomPaw, .groomFlank], [.groomFlank, .groomTail],
         [.groomPaw, .groomFlank, .groomTail],
       ]
-    case .eat: [[.walkToBowl, .eat, .lickLips], [.walkToBowl, .waitByBowl]]
+    case .eat:
+      [
+        [.walkToBowl, .eat, .lickLips], [.walkToBowl, .waitByBowl],
+        // Hungry, at an empty bowl: it asks.
+        [.walkToBowl, .pawBowl, .waitByBowl], [.beg],
+        // Hangry: a tantrum.
+        [.yowl, .knockOff], [.walkToBowl, .pawBowl, .yowl], [.flop], [.beg, .yowl],
+        [.knockOff, .flop],
+      ]
     case .play:
       [
         [.stalk, .pounce], [.stalk, .pounce, .chase], [.batObject], [.zoomies], [.chase, .pounce],
+        [.scratch], [.stalk, .pounce, .batObject],
       ]
     case .watch: [[.watchWindow], [.watchPartnerWindow]]
     case .social:
-      [[.seekYou, .rub], [.slowBlink], [.bringToy], [.waitByDoor], [.seekYou, .slowBlink]]
+      [
+        [.seekYou, .rub], [.slowBlink], [.bringToy, .dropToy], [.waitByDoor],
+        [.seekYou, .slowBlink], [.sulk],
+      ]
     case .mischief: [[.pushItem], [.sitInCardigan], [.sitOnDesk]]
     case .react: [[.startle], [.curiousTilt], [.carryNote]]
     }
@@ -100,6 +116,7 @@ public enum CatStatechart {
     case .sit: 8...20
     case .loaf: 20...45
     case .lookAround: 6...12
+    case .bellyUp: 3...5
     case .wander: 3...6
     case .sniffObject: 2...4
     case .inspectFurniture: 4...7
@@ -107,11 +124,20 @@ public enum CatStatechart {
     case .knead: 3...6
     case .curl: 40...120
     case .wake: 2...3
+    case .yawn: 1.5...2.5
     case .groomPaw, .groomFlank: 4...8
     case .groomTail: 4...7
     case .walkToBowl: 2...4
     case .eat: 4...7
     case .lickLips: 1.5...2.5
+    case .pawBowl: 3...5
+    case .beg: 4...7
+    case .yowl: 2...3
+    case .knockOff: 3...4
+    case .flop: 6...10
+    case .scratch: 4...7
+    case .dropToy: 3...4
+    case .sulk: 20...40
     case .stalk: 3...6
     case .pounce: 1...1.5
     case .chase: 3...5
@@ -152,8 +178,15 @@ public enum CatStatechart {
     switch step {
     case .loaf: .loaf
     case .sit, .lookAround, .findNapSpot, .watchWindow, .waitByDoor, .waitByBowl, .sitInCardigan,
-      .sitOnDesk:
+      .sitOnDesk, .dropToy:
       .sit
+    case .bellyUp, .flop: .rollOver
+    case .yawn: .yawn
+    case .pawBowl, .knockOff: .bat
+    case .beg: .wave
+    case .yowl: .startle
+    case .scratch: .reachUp
+    case .sulk: .loaf
     case .wander, .walkToBowl, .bringToy, .inspectFurniture, .sniffObject: .sniff
     case .chase, .seekYou: .perk
     case .zoomies: .happy
@@ -178,7 +211,7 @@ public enum CatStatechart {
   public static func pace(_ step: CatActivityStep) -> Double {
     switch step {
     case .chase, .zoomies: 1
-    case .seekYou: 0.5
+    case .seekYou, .beg: 0.5
     default: 0
     }
   }
@@ -198,7 +231,10 @@ public enum CatStatechart {
     case .sniffObject: return room.reachable(.smallItem) ? .affordance(.smallItem) : roam
     case .inspectFurniture: return inspecting.map(CatTarget.affordance) ?? roam
     case .findNapSpot, .knead, .curl, .wake: return napSpot.map(CatTarget.affordance) ?? .home
-    case .walkToBowl, .eat, .lickLips, .waitByBowl: return spot(.bowl)
+    case .walkToBowl, .eat, .lickLips, .waitByBowl, .pawBowl: return spot(.bowl)
+    case .beg, .dropToy: return .camera
+    case .knockOff: return spot(.smallItem)
+    case .scratch: return spot(.soft)
     case .watchWindow, .watchPartnerWindow: return spot(.window)
     case .seekYou, .rub, .slowBlink: return .camera
     case .bringToy: return spot(.toy)
@@ -207,7 +243,7 @@ public enum CatStatechart {
     case .sitInCardigan: return spot(.soft)
     case .sitOnDesk: return spot(.desk)
     case .sit, .loaf, .lookAround, .groomPaw, .groomFlank, .groomTail, .stalk, .pounce,
-      .batObject, .startle, .curiousTilt, .carryNote:
+      .batObject, .startle, .curiousTilt, .carryNote, .bellyUp, .yawn, .yowl, .flop, .sulk:
       return .stay
     }
   }
@@ -218,12 +254,16 @@ public enum CatStatechart {
     case .lookAround: .around((roll - 0.5) * 2.2)
     case .watchWindow, .watchPartnerWindow: .window
     case .waitByDoor: .window
-    case .seekYou, .rub, .slowBlink, .bringToy, .curiousTilt, .sit, .waitByBowl: .camera
-    case .sniffObject, .pushItem: .affordance(.smallItem)
+    case .seekYou, .rub, .slowBlink, .bringToy, .curiousTilt, .sit, .waitByBowl, .bellyUp, .beg,
+      .yowl, .dropToy:
+      .camera
+    case .sulk: .away
+    case .pawBowl: .affordance(.bowl)
+    case .sniffObject, .pushItem, .knockOff: .affordance(.smallItem)
     case .stalk, .pounce, .batObject: .affordance(.toy)
     case .loaf, .wander, .inspectFurniture, .findNapSpot, .knead, .curl, .wake, .groomPaw,
       .groomFlank, .groomTail, .walkToBowl, .eat, .lickLips, .chase, .zoomies, .sitInCardigan,
-      .sitOnDesk, .startle, .carryNote:
+      .sitOnDesk, .startle, .carryNote, .yawn, .flop, .scratch:
       .ahead
     }
   }

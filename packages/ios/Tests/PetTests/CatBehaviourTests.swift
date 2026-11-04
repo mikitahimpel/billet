@@ -237,15 +237,15 @@ struct CatBehaviourTests {
 @Suite("CatChoice")
 struct CatChoiceTests {
   @Test func coatsOnlyWhereTheModelHasThem() {
-    #expect(CatChoice(model: .detailed, coat: .cream).coat == .natural)
-    #expect(CatChoice(model: .chibi, coat: .black).coat == .black)
+    #expect(CatChoice(model: .idolGinger, coat: .black).coat == .natural)
+    #expect(CatChoice(model: .detailed, coat: .black).coat == .black)
   }
 
   @Test func theDetailedGingerCatIsTheStandard() {
     #expect(CatChoice.standard == CatChoice(model: .detailed, coat: .natural))
   }
 
-  @Test(arguments: ["mochi", "slim", "blocky"])
+  @Test(arguments: ["mochi", "slim", "blocky", "tabby", "plush", "chibi", "kitten", "tuxedo"])
   func aSavedRemovedCatReadsAsTheStandard(model: String) throws {
     let json = Data(#"{"model":"\#(model)","coat":"natural"}"#.utf8)
     #expect(try JSONDecoder().decode(CatChoice.self, from: json) == .standard)
@@ -254,9 +254,18 @@ struct CatChoiceTests {
   @Test func readsUnknownValuesAsTheStandardCat() throws {
     let json = Data(#"{"model":"dragon","coat":"plaid"}"#.utf8)
     #expect(try JSONDecoder().decode(CatChoice.self, from: json) == .standard)
-    let saved = try JSONEncoder().encode(CatChoice(model: .kitten, coat: .cream))
+    let saved = try JSONEncoder().encode(CatChoice(model: .detailedKitten, coat: .black))
     #expect(
       try JSONDecoder().decode(CatChoice.self, from: saved)
-        == CatChoice(model: .kitten, coat: .cream))
+        == CatChoice(model: .detailedKitten, coat: .black))
+  }
+
+  /// The palette-painted cats are gone and with them the coats only they wore.
+  @Test(arguments: ["ginger", "cream"])
+  func aSavedRemovedCoatReadsAsTheOneTheCatWasMadeWith(coat: String) throws {
+    let json = Data(#"{"model":"tuxedo","coat":"\#(coat)"}"#.utf8)
+    #expect(try JSONDecoder().decode(CatChoice.self, from: json) == .standard)
+    let detailed = Data(#"{"model":"detailed","coat":"\#(coat)"}"#.utf8)
+    #expect(try JSONDecoder().decode(CatChoice.self, from: detailed).coat == .natural)
   }
 }

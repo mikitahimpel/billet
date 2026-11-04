@@ -148,7 +148,8 @@ extension GenzKit {
     return parts
   }
 
-  /// A knitted cardigan dropped on the seat, one sleeve hanging over the edge.
+  /// A knitted cardigan dropped on the seat, one sleeve lying across it with its cuff rolled over
+  /// the front edge.
   func cardigan(_ piece: GenzPiece) -> [Entity] {
     let knit = matte(piece.slot(0), .knit, repeats: [4, 4])
     let rib = matte(piece.slot(0).shaded(-0.14), .knit, repeats: [6, 1])
@@ -161,23 +162,37 @@ extension GenzKit {
         stuffed([0.62, 0.09, 0.5], .cloth, repeats: 2), rib,
         at: GenzRoomPoint(0.48, 0.42, 0.09).scene, turn: simd_quatf(angle: -0.2, axis: [0, 1, 0])),
     ]
-    let hanging = [
-      GenzRoomPoint(1.0, 0.55, 0.07), GenzRoomPoint(1.2, 0.85, 0.08),
-      GenzRoomPoint(1.28, 1.12, 0.08),
-      GenzRoomPoint(1.32, 1.3, 0.03), GenzRoomPoint(1.34, 1.38, -0.09),
-      GenzRoomPoint(1.35, 1.39, -0.2),
+    // The sleeve lies flat across the seat, narrowing to the wrist, and only its cuff rolls over
+    // the front edge, so it reads as cloth rather than something hanging off the seat.
+    let sleeve = [
+      GenzRoomPoint(0.98, 0.52, 0.07), GenzRoomPoint(1.08, 0.78, 0.075),
+      GenzRoomPoint(1.16, 1.02, 0.07), GenzRoomPoint(1.22, 1.2, 0.055),
+      GenzRoomPoint(1.25, 1.3, 0.02), GenzRoomPoint(1.27, 1.35, -0.05),
     ].map(\.scene)
-    parts.append(part(tube("cardigan sleeve", hanging, radius: 0.08, sides: 10), knit))
     parts.append(
       part(
-        prism(sides: 10, radius: 0.085, top: 0.085, height: 0.09, turn: 0), rib,
-        at: GenzRoomPoint(1.35, 1.39, -0.28).scene))
+        flatTube(
+          "cardigan sleeve", sleeve, widths: [0.26, 0.25, 0.23, 0.21, 0.2, 0.19],
+          thicknesses: [0.07, 0.07, 0.065, 0.06, 0.06, 0.06]), knit))
+    let cuff = [
+      GenzRoomPoint(1.27, 1.35, -0.05), GenzRoomPoint(1.275, 1.365, -0.1),
+      GenzRoomPoint(1.28, 1.37, -0.13),
+    ].map(\.scene)
+    parts.append(
+      part(
+        flatTube(
+          "cardigan cuff", cuff, widths: [0.2, 0.2, 0.17], thicknesses: [0.065, 0.06, 0.012]),
+        rib))
     let folded = [
       GenzRoomPoint(0.18, 0.3, 0.08), GenzRoomPoint(0.35, 0.62, 0.12),
       GenzRoomPoint(0.7, 0.78, 0.12),
       GenzRoomPoint(0.95, 0.8, 0.09),
     ].map(\.scene)
-    parts.append(part(tube("cardigan arm", folded, radius: 0.075, sides: 10), knit))
+    parts.append(
+      part(
+        flatTube(
+          "cardigan arm", folded, widths: [0.2, 0.21, 0.2, 0.17],
+          thicknesses: [0.07, 0.075, 0.075, 0.03]), knit))
     for index in 0..<4 {
       let along = Float(index) * 0.15
       parts.append(

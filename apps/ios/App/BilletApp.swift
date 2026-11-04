@@ -44,6 +44,7 @@ struct BilletApp: App {
         },
         memory: .defaults(.standard),
         strings: ServiceStatusModel.strings(in: .main)))
+    RetiredLabsMigration.run(defaults: .standard)
     // Before Home reads the scene choice.
     if let store = WidgetFeaturesStore.appGroup() {
       RemovedScenesMigration.run(

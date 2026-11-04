@@ -100,23 +100,32 @@ struct GenzRoomView: View {
   var body: some View {
     let room = room
     let look = LightingLook.of(lighting)
+    let parts = RoomCostSwitches.shared
     ZStack {
-      layer(behind, room: room)
-      theirSky
-      RoomHaze(look: look, screen: room.screen)
+      if parts.shows("layers") { layer(behind, room: room) }
+      if parts.shows("sky") { theirSky }
+      if parts.shows("haze") { RoomHaze(look: look, screen: room.screen) }
       stage(room)
-      ForEach(over, id: \.self) { slot in layer(slot, room: room) }
-      GlowLights(
-        look: look, screen: room.screen,
-        isPaused: !isOnScreen || reduceMotion)
-      GlowGrade(look: look)
-      GlowVignette(look: look)
+      if parts.shows("layers") {
+        ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      }
+      if parts.shows("halos") {
+        GlowLights(
+          look: look, screen: room.screen,
+          isPaused: !isOnScreen || reduceMotion)
+      }
+      if parts.shows("grade") {
+        GlowGrade(look: look)
+        GlowVignette(look: look)
+      }
       CatPurrOverlay(purr: room.purr)
+      CatSayOverlay(say: room.say) { room.screen.cat }
       PartnerTouchOverlay(trigger: play.petsReceived) { room.screen.cat }
       RoomCatAnchor(screen: room.screen)
     }
     .ignoresSafeArea()
     .overlay { decorControls(room) }
+    .sensoryFeedback(trigger: decorStatus, Self.gripFeedback)
     .modifier(GenzDecorFeeds(view: self, room: room))
     .onAppear { isAppeared = true }
     .onDisappear { isAppeared = false }
@@ -167,7 +176,8 @@ struct GenzRoomView: View {
       steady: isNative ? slot.steadyInterval : RoomLayerSchedule.busy,
       isPaused: !isOnScreen || reduceMotion)
     return TimelineView(schedule) { context in
-      let state = room.screen.state(for: slot, at: context.date)
+      let state = room.screen.state(
+        for: slot, at: context.date, followsCamera: !isNative || slot.nativeFollowsCamera)
       if slot == .windowNight, replacementArt?.view(for: slot, state: state) == nil {
         let viewState = room.screen.viewState(at: context.date)
         if let art = viewArt?.view(viewState.view, state: viewState) {
@@ -309,7 +319,7 @@ struct GenzRoomView: View {
     content
       .onAppear {
         let decor = room.decor
-        decor.onChange = { decorStatus = DecorStatus(decor) }
+        decor.onChange = { decorStatus = DecorStatus(decor, title: GenzRoom.title(ofDecorName:)) }
       }
       .onDisappear { renovator?.isRenovating = false }
       .onChange(of: renovator?.openRequests) { if isShown { isDecorating = true } }
@@ -322,10 +332,19 @@ struct GenzRoomView: View {
 
   @ViewBuilder private func decorControls(_ room: GenzRoom) -> some View {
     if isDecorating {
+      // The room draws none of the shop's furniture, so it offers no closet to add from.
       DecorControls(
-        status: decorStatus, closet: [], owned: { _ in 0 }, onUndo: { touch(room).undo() },
-        onDone: { isDecorating = false }, onRotate: { room.decor.rotateStep() },
-        onPutAway: { touch(room).putAway() }, onAdd: { _ in })
+        status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
+        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() })
+    }
+  }
+
+  /// A soft tap as a piece is picked up, and a lighter one as it is set down.
+  private static func gripFeedback(_ old: DecorStatus, _ new: DecorStatus) -> SensoryFeedback? {
+    switch new.grip(from: old) {
+    case .pickUp: .impact(flexibility: .soft, intensity: 0.55)
+    case .drop: .impact(flexibility: .soft, intensity: 0.35)
+    case nil: nil
     }
   }
 
