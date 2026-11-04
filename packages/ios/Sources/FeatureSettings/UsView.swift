@@ -74,11 +74,11 @@ public struct UsView<Account: View>: View {
     NavigationStack {
       us
         .hidesNavigationBar()
-        .containerBackground(.clear, for: .navigation)
+        .showsSheetGround()
         .navigationDestination(isPresented: $labsOpen) {
           if let labs {
             ScreenScaffold("Labs", closes: false) { labContent(labs) }
-              .containerBackground(.clear, for: .navigation)
+              .showsSheetGround()
           }
         }
     }
@@ -295,6 +295,15 @@ extension UsView where Account == EmptyView {
 }
 
 extension View {
+  /// Lets the sheet's ground show through the navigation stack, which is opaque by default.
+  fileprivate func showsSheetGround() -> some View {
+    #if os(iOS)
+      containerBackground(.clear, for: .navigation)
+    #else
+      self
+    #endif
+  }
+
   /// The sheet's own title and grabber stand in for a navigation bar on the first screen.
   fileprivate func hidesNavigationBar() -> some View {
     #if os(iOS)
