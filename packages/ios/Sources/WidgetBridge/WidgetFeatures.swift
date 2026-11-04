@@ -43,12 +43,13 @@ public struct WidgetFeatures: Equatable, Sendable {
 }
 
 extension WidgetFeatures: Codable {
-  /// Keys of switches that are gone, because what they switched is always on now. A stored
-  /// choice under one is dropped on reading, so it never comes back to life if a key is reused,
-  /// and the next save leaves it out.
+  /// Keys of switches that are gone, because what they switched is always on now or was removed.
+  /// A stored choice under one is dropped on reading, so it never comes back to life if a key is
+  /// reused, and the next save leaves it out.
   public static let retiredKeys: Set<String> = [
     "catBrain", "catLife", "lifeInRoom", "catCarriesNote", "catPurrs", "catBats", "catGreets",
-    "catChases", "cinematicOnboarding", retiredCatMood,
+    "catChases", "cinematicOnboarding", retiredCatMood, "seasons", "framedNotes", "overnightStay",
+    "catCameBack", "twoWisps", "theirSky",
   ]
 
   /// The key of the cat-mood picture, which is gone. When it was the only picture on, the

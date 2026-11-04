@@ -54,17 +54,6 @@ struct HomeView: View {
     ConnectionLine(status: session.status, hasConnected: session.hasConnected)
   }
 
-  /// The cat is with the partner: the last note on this device is one it sent.
-  private var catAway: Bool {
-    session.labs.isOn(LabExperiment.overnightStay)
-      && OvernightStay.place(after: session.notes).isAway
-  }
-
-  /// The notes in frames, in the order they were hung.
-  private var framedNotes: [NoteRecord] {
-    session.frames.wall.hung.compactMap { id in session.notes.first { $0.id == id } }
-  }
-
   private var delivery: Int { store.state.pet.world.delivery }
 
   private var isRenovating: Bool { session.renovator.isRenovating }
@@ -411,12 +400,6 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var framedWall: some View {
-    if session.labs.isOn(LabExperiment.framedNotes) {
-      FramedWallView(notes: framedNotes)
-    }
-  }
-
   @ViewBuilder private var petScene: some View {
     if let scene {
       scene.makeView(world: store.state.pet.world, play: playState, onEvent: handle)
@@ -434,27 +417,6 @@ struct HomeView: View {
           }
         }
         .overlay { catReactions }
-        .overlay {
-          // A scene with touches keeps its own controls in the corners the season would fill.
-          if session.labs.isOn(LabExperiment.seasons), !scene.handlesTouches {
-            SeasonOverlay(look: Season.look(on: .now, calendar: .current))
-          }
-        }
-        .overlay(alignment: .topLeading) {
-          if !scene.handlesTouches { framedWall }
-        }
-        .background(alignment: .topLeading) {
-          // A scene with touches keeps its controls in this corner, drawn over the frames.
-          if scene.handlesTouches { framedWall.padding(.top, Spacing.wide) }
-        }
-        .overlay(alignment: .bottomLeading) {
-          if catAway {
-            OvernightStayView()
-              .scaleEffect(0.55, anchor: .bottomLeading)
-              .padding(.leading, Spacing.small)
-              .padding(.bottom, Spacing.small)
-          }
-        }
         .overlay {
           if let hungImage, let wall = scene.noteWall {
             HungNote(drawing: hungImage, wall: wall)
@@ -474,8 +436,6 @@ struct HomeView: View {
           .transition(.opacity)
       }
       if typeSize.isAccessibilitySize { fakePartnerNotice }
-      overnightStayNotice
-      catCameBackNotice
       catNaming
       latestReceived
       treatPanel
@@ -486,19 +446,6 @@ struct HomeView: View {
     }
     .calmAnimation(value: session.notes.isEmpty)
     .calmAnimation(value: session.play.catName)
-    .calmAnimation(value: catAway)
-  }
-
-  /// A TimelineView lets the satchel go away on its own once its twelve hours are up.
-  @ViewBuilder private var catCameBackNotice: some View {
-    if session.labs.isOn(LabExperiment.catCameBack) {
-      TimelineView(.everyMinute) { context in
-        if session.catReturn.isBack(now: context.date) {
-          CatCameBackRow(catName: session.play.catName)
-            .transition(.opacity)
-        }
-      }
-    }
   }
 
   @ViewBuilder private var lampColourCard: some View {
@@ -541,9 +488,7 @@ struct HomeView: View {
             onThisDayCard
             sundayPostCard
             sealedNoteCards
-            twoWispsCard
             lampColourCard
-            theirSkyCard
             nextVisitCard
             porchLightCard
           }
@@ -588,23 +533,9 @@ struct HomeView: View {
     }
   }
 
-  @ViewBuilder private var theirSkyCard: some View {
-    if session.labs.isOn(LabExperiment.theirSky) {
-      TheirSkySection(store: session.lamp)
-    }
-  }
-
   @ViewBuilder private var porchLightCard: some View {
     if session.labs.isOn(LabExperiment.porchLight) {
       PorchLightSection(store: session.porch)
-    }
-  }
-
-  @ViewBuilder private var twoWispsCard: some View {
-    if session.labs.isOn(LabExperiment.twoWisps) {
-      TwoWispsSection(hold: session.hold, catName: session.play.catName) {
-        session.holdChanged($0)
-      }
     }
   }
 
@@ -623,23 +554,6 @@ struct HomeView: View {
   @ViewBuilder private var todaysWordCard: some View {
     if session.labs.isOn(LabExperiment.todaysWord) {
       TodaysWordSection(notes: session.notes) { store.send(.canvasOpened) }
-    }
-  }
-
-  @ViewBuilder private var overnightStayNotice: some View {
-    if catAway {
-      let name = session.play.catName
-      ListRow(
-        OvernightStayCaption.title(catName: name),
-        subtitle: OvernightStayCaption.detail(catName: name)
-      ) {
-        EmptyView()
-      } trailing: {
-        EmptyView()
-      }
-      .card()
-      .transition(.opacity)
-      .accessibilityIdentifier("overnightStayNotice")
     }
   }
 
@@ -787,7 +701,6 @@ struct HomeView: View {
       room: session.shop.state.layout,
       treatsUsed: session.shop.state.treatsUsed,
       lastTreat: session.shop.state.lastTreat,
-      catAway: catAway,
       life: session.life.drive,
       lifeNeeds: session.life.state.needs,
       brain: session.brain.frame,

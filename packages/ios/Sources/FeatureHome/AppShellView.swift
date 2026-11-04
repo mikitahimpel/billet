@@ -115,16 +115,8 @@ struct AppShellView: View {
   }
 
   private var detailActions: ((NoteRecord) -> AnyView)? {
-    let frames = labs.isOn(LabExperiment.framedNotes)
-    let wallpaper = labs.isOn(LabExperiment.wallpaperShortcut)
-    guard frames || wallpaper else { return nil }
-    return { note in
-      AnyView(
-        VStack(spacing: Spacing.small) {
-          if frames { FrameNoteButton(note: note, framed: session.frames) }
-          if wallpaper { WallpaperShareButton(note: note) }
-        })
-    }
+    guard labs.isOn(LabExperiment.wallpaperShortcut) else { return nil }
+    return { note in AnyView(WallpaperShareButton(note: note)) }
   }
 
   var body: some View {
