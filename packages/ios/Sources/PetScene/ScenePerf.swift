@@ -170,7 +170,9 @@ public enum ScenePerf {
   private static func cost() async {
     guard let scene else { return }
     for name in scene.switches where onlySwitches?.contains(name) ?? true {
-      for isOn in [true, false] {
+      // Which side goes first changes from launch to launch: a runner's load often climbs through a
+      // launch, and the side always measured second would always look worse.
+      for isOn in Bool.random() ? [true, false] : [false, true] {
         scene.setSwitch(name, isOn)
         await pause(1)
         let side = isOn ? "on" : "off"
