@@ -133,4 +133,29 @@ import Testing
     #expect(pink.skyMiddle.red - pink.skyMiddle.blue > shared.skyMiddle.red - shared.skyMiddle.blue)
     #expect(ViewLook(view: .suburbNight, hour: .dusk, weather: .clear).palette == shared)
   }
+
+  @Test func theDesertSkyHasFarMoreStarsThanATownsAndTheCitysFewer() {
+    let shared = ViewPalette(hour: .night, weather: .clear)
+    let desert = ViewLook(view: .desertStars, hour: .night, weather: .clear).palette
+    let city = ViewLook(view: .neonStreet, hour: .night, weather: .clear).palette
+    #expect(desert.stars > 2 * shared.stars)
+    #expect(city.stars < shared.stars)
+  }
+
+  @Test func aShootingStarCrossesOnlyAClearDarkSky() {
+    let star = ViewShootingStar(rhythm: ViewRhythm(seed: 5, slot: 20, chance: 1, length: 1...1.4))
+    var seen = 0
+    for step in 0..<4000 {
+      let now = Double(step) * 0.05
+      let night = ViewMoment(
+        look: ViewLook(view: .desertStars, hour: .night, weather: .clear), now: now, time: 10)
+      let day = ViewMoment(
+        look: ViewLook(view: .desertStars, hour: .day, weather: .clear), now: now, time: 10)
+      #expect(star.interest(at: day) == nil)
+      guard let interest = star.interest(at: night) else { continue }
+      seen += 1
+      #expect(interest.point.y < 30)
+    }
+    #expect(seen > 0)
+  }
 }

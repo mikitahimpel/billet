@@ -11,9 +11,11 @@ import Pet
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
 /// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled.
 /// `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
-/// of it. `-perf.script cost` orbits and holds the room with everything, then with each of its
-/// switches off, in pairs, to show what each part costs to draw. Every result is one line on
-/// standard error that starts with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
+/// of it. `-perf.script views` shows each window view from the room's own camera, then through the
+/// shop window, and asks for a screenshot of each. `-perf.script cost` orbits and holds the room
+/// with everything, then with each of its switches off, in pairs, to show what each part costs to
+/// draw. Every result is one line on standard error that starts with `PERF`, read by
+/// `apps/ios/scripts/perf/measure.sh`.
 @MainActor
 public enum ScenePerf {
   /// The script to run, or `nil` when the app runs as usual.
@@ -56,6 +58,7 @@ public enum ScenePerf {
   public struct Host {
     public var selectTab: @MainActor (String) -> Void = { _ in }
     public var setLighting: @MainActor (RoomLighting) -> Void = { _ in }
+    public var setWindowView: @MainActor (WindowViewChoice) -> Void = { _ in }
     public init() {}
   }
 
@@ -107,6 +110,8 @@ public enum ScenePerf {
       await full()
     case "sweep":
       await sweep()
+    case "views":
+      await views()
     case "cost":
       await cost()
     default:
@@ -195,6 +200,26 @@ public enum ScenePerf {
       await shot("tab-\(tab)")
     }
     host.selectTab("home")
+  }
+
+  /// Every window view at its own hour and weather from Home's resting camera, with what its frames
+  /// cost, then each through the shop window, and back to the standard one.
+  private static func views() async {
+    for view in WindowView.allCases {
+      host.setWindowView(WindowViewChoice(view: view))
+      // Long enough for the view's plates to be painted and its lights to come on.
+      await pause(3)
+      await shot("view-\(view.rawValue)-home")
+      await record("view.\(view.rawValue)", seconds: 3)
+    }
+    await timed("tab.shop", until: "shop on screen") { host.selectTab("shop") }
+    for view in WindowView.allCases {
+      host.setWindowView(WindowViewChoice(view: view))
+      await pause(2.5)
+      await shot("view-\(view.rawValue)-shop")
+    }
+    host.selectTab("home")
+    host.setWindowView(.standard)
   }
 
   // MARK: - Steps

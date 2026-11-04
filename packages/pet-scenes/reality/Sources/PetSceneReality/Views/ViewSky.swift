@@ -42,6 +42,7 @@ enum ViewSky {
   ) {
     let count = Int(90 * moment.palette.stars)
     guard count > 0 else { return }
+    let brightness = min(moment.palette.stars, 1)
     let limit = frame.point(CGPoint(x: 0, y: 34)).y
     for index in 0..<count {
       let x = ViewRhythm.hash(index, seed: 1) * Double(size.width + 40) - 20
@@ -53,7 +54,7 @@ enum ViewSky {
       let fade = min(1, (Double(limit) - y) / 80)
       ViewKit.circle(
         context, CGPoint(x: x + Double(frame.origin.x) * 0.02, y: y), r, ViewColour(0xEEF2F7),
-        (0.35 + 0.5 * big) * twinkle * fade * moment.palette.stars)
+        (0.35 + 0.5 * big) * twinkle * fade * brightness)
     }
   }
 

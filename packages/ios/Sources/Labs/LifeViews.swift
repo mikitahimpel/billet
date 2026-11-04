@@ -209,3 +209,121 @@ public struct LifeChips: View {
     }
   }
 }
+
+/// What the needs card shows: the needs, how the cat feels, and its name.
+public struct CatNeedsSnapshot: Hashable, Sendable {
+  public var needs: PetNeeds
+  public var feeling: CatFeeling
+  public var name: String
+
+  public init(needs: PetNeeds, feeling: CatFeeling, name: String) {
+    self.needs = needs
+    self.feeling = feeling
+    self.name = name
+  }
+
+  /// The needs in the card's order, with the short names people use.
+  public static let rows: [(need: PetNeed, title: String)] = [
+    (.full, "Food"), (.playful, "Play"), (.loved, "Love"), (.rested, "Sleep"),
+  ]
+}
+
+/// A compact card: the mood in words, what the cat wants now, and a bar per need. Shown from the
+/// paw chip and gone again with a swipe; nothing of it stays on Home.
+public struct CatNeedsCard: View {
+  private let snapshot: CatNeedsSnapshot
+
+  public init(_ snapshot: CatNeedsSnapshot) {
+    self.snapshot = snapshot
+  }
+
+  public var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.medium) {
+      VStack(alignment: .leading, spacing: Spacing.hair) {
+        Text("\(snapshot.name) · \(snapshot.feeling.words)")
+          .billetType(.heading)
+          .foregroundStyle(Palette.paper.color)
+        Text("Wants: \(snapshot.feeling.wants)")
+          .billetType(.label)
+          .foregroundStyle(Palette.muted.color)
+      }
+      VStack(spacing: Spacing.small) {
+        ForEach(CatNeedsSnapshot.rows, id: \.need) { row in
+          bar(row.need, title: row.title)
+        }
+      }
+    }
+    .padding(Spacing.medium)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Self.spoken(snapshot))
+    .accessibilityIdentifier("catNeedsCard")
+  }
+
+  private func bar(_ need: PetNeed, title: String) -> some View {
+    let value = min(max(snapshot.needs[need], 0), 1)
+    let low = value < LifeConfig.standard.lowBelow
+    return HStack(spacing: Spacing.small) {
+      Text(title)
+        .billetType(.label)
+        .foregroundStyle(Palette.paper.color)
+        .frame(width: 48, alignment: .leading)
+      GeometryReader { proxy in
+        ZStack(alignment: .leading) {
+          Capsule().fill(need.swatch.color.opacity(0.18))
+          Capsule()
+            .fill(need.swatch.color.opacity(low ? 0.65 : 0.95))
+            .frame(width: max(8, proxy.size.width * value))
+        }
+      }
+      .frame(height: 10)
+      .calmAnimation(value: value)
+    }
+  }
+
+  /// The card for VoiceOver: the mood, what it wants, and each need in a word.
+  static func spoken(_ snapshot: CatNeedsSnapshot) -> String {
+    let needs = CatNeedsSnapshot.rows.map {
+      "\($0.title): \(LifeChips.word(snapshot.needs[$0.need]))"
+    }
+    return "\(snapshot.name) is \(snapshot.feeling.rawValue). Wants: \(snapshot.feeling.wants). "
+      + needs.joined(separator: ", ")
+  }
+}
+
+/// The small paw by the streak that opens the needs card. A dot shows when the cat wants
+/// something.
+public struct CatMoodChip: View {
+  private let snapshot: CatNeedsSnapshot
+  private let action: () -> Void
+
+  public init(_ snapshot: CatNeedsSnapshot, action: @escaping () -> Void) {
+    self.snapshot = snapshot
+    self.action = action
+  }
+
+  public var body: some View {
+    Button(action: action) {
+      Image(systemName: "pawprint.fill")
+        .font(IconStyle.font)
+        .foregroundStyle(Palette.paper.color)
+        .frame(width: Target.minimum, height: Target.minimum)
+        .overlay(alignment: .topTrailing) {
+          if snapshot.feeling.isNeedy {
+            Circle()
+              .fill(Palette.clayLit.color)
+              .frame(width: 9, height: 9)
+              .offset(x: -9, y: 9)
+              .transition(.scale.combined(with: .opacity))
+          }
+        }
+        .contentShape(.circle)
+    }
+    .buttonStyle(.plain)
+    .floatingGlass()
+    .calmAnimation(value: snapshot.feeling.isNeedy)
+    .accessibilityLabel("\(snapshot.name): \(snapshot.feeling.rawValue)")
+    .accessibilityHint("Shows what the cat needs")
+    .accessibilityIdentifier("catMoodChip")
+  }
+}

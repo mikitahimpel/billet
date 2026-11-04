@@ -32,6 +32,12 @@ final class GenzRoomScreen {
   var viewHour = ViewHour.night
   /// Whether the street outside is drawn in 3D through the window, leaving the flat view its sky.
   var viewInDepth = false
+  /// The light the flat layers draw: the preset as the switch has it, part way through a fade.
+  var look = LightingLook.off
+  /// Counts up each time the switch on the wall is pressed here, for its click.
+  var switchPresses = 0
+  /// How bright the LED strip's glow is as the switch has it, from 0 to 1.
+  var ledLevel = 1.0
 
   func time(at date: Date) -> Double {
     openedAt.map { date.timeIntervalSince($0) } ?? 0
@@ -44,7 +50,7 @@ final class GenzRoomScreen {
       time: time(at: date), parallax: followsCamera ? parallax : .zero,
       outline: followsCamera ? outlines[slot] ?? [] : [],
       warmth: GenzOpening.warmth(sinceLanding: landedAt.map { date.timeIntervalSince($0) }),
-      lampOn: lampOn)
+      lampOn: lampOn, ledLevel: ledLevel)
   }
 
   func viewState(at date: Date) -> WindowViewState {
@@ -121,6 +127,8 @@ final class GenzRoom: CatPlayStage {
   /// A candle's flame, which flickers.
   static let flameName = "genz-flame"
   static let lightDotName = "genz-light-dot"
+  /// The switch plate on the wall, which cycles the room's light.
+  static let switchName = "genz-light-switch"
   /// How high the decorate marker floats: over the tallest rug (the pattern rug's dots, 56 mm),
   /// so it never shares a plane with one or hides under it.
   static let markerHeight: Float = 0.08
@@ -132,13 +140,16 @@ final class GenzRoom: CatPlayStage {
   private(set) var isBuilt = false
   private(set) var hasCat = false
 
-  private let kit: GenzKit
+  let kit: GenzKit
   private let cats: GenzCatSource
   let room = Entity()
   private let lens = PerspectiveCamera()
   let catHolder = Entity()
   /// The purr and its hearts, for the view to draw.
   let purr = CatPurr()
+  /// What the cat says and the bubble that shows it, and its voice.
+  let say = CatSay()
+  let sounds = CatSounds()
   /// The hands on the cat: petting, play and the cooldowns that keep it from feeling spammy.
   let hands = CatHands()
   /// The toys on the cat's floor, and the game going on with one.
@@ -209,7 +220,7 @@ final class GenzRoom: CatPlayStage {
   var world = PetWorld()
   private var shownDrawing: CGImage?
   private var settlingFrames = 4
-  private var isOnScreen = false
+  private(set) var isOnScreen = false
   private var viewsShowing = Set<UUID>()
   private var lastLevels: [String: Double] = [:]
   var tapTimer = NookiTapTimer()
@@ -221,8 +232,12 @@ final class GenzRoom: CatPlayStage {
   private var ambientLight: Entity?
   private let dayLamp = Entity()
   private(set) var glow: GenzGlow?
-  /// The lighting preset the room is lit with.
+  /// What the room is lit with now: the preset as the switch has it, part way through a fade.
   private(set) var look = LightingLook.off
+  /// The lighting preset the host chose, before the switch changes it.
+  private(set) var preset = LightingLook.off
+  /// The switch on the wall, its fade and its plate.
+  var lightSwitch = GenzLightSwitch()
   /// Called when an opening asked for through ``flyIn(_:)`` starts, once the room is built and on
   /// screen.
   var onOpeningStarted: (() -> Void)?
@@ -299,6 +314,7 @@ final class GenzRoom: CatPlayStage {
     addLighting()
     buildBackstop()
     buildLightDot()
+    buildSwitchPlate()
     buildToys()
     buildCareProps()
     catHolder.name = Self.catName
@@ -638,6 +654,8 @@ final class GenzRoom: CatPlayStage {
       case Self.lampName:
         toggleLamp()
         return nil
+      case Self.switchName:
+        return pressSwitch()
       default: current = found.parent
       }
     }
@@ -744,6 +762,7 @@ final class GenzRoom: CatPlayStage {
     street?.update(now: Date().timeIntervalSinceReferenceDate, reduceMotion: reduceMotion)
     stepFlames()
     stepDecor(Float(delta))
+    stepSwitch()
     applyCat()
     reportTouch()
     applyLevels()
@@ -845,10 +864,15 @@ final class GenzRoom: CatPlayStage {
   /// Lights the room with `lighting`: its fairy lights, sun, rim light and shadows, the lamp as
   /// key light, the ambient fill, and the colours of the LED and the light from outside.
   func setLighting(_ lighting: RoomLighting) {
-    let look = LightingLook.of(lighting)
-    guard look != self.look else { return }
+    let preset = LightingLook.of(lighting)
+    guard preset != self.preset else { return }
+    self.preset = preset
+    relight(animated: false)
+  }
+
+  /// Shows `look` from the next time the room's lights are applied.
+  func setLook(_ look: LightingLook) {
     self.look = look
-    applyLook()
   }
 
   /// How much brighter than its own the lamp shines now: the preset's boost, flickering when the
@@ -860,8 +884,11 @@ final class GenzRoom: CatPlayStage {
     return look.key.boost * (1 - flicker * Float(0.5 + 0.5 * wave))
   }
 
-  private func applyLook() {
+  /// Lights the room as `look` says. The ambient light's colours are remade only when `fill`
+  /// is true, as remaking them costs more than a frame's share.
+  func applyLook(fill: Bool = true) {
     glow?.apply(look)
+    if screen.look != look { screen.look = look }
     updateScreen()
     let lamp = GenzColour.mix(
       GenzColour.mix(layout.lampColour, look.key.colour.genz, by: look.key.warmth),
@@ -871,13 +898,13 @@ final class GenzRoom: CatPlayStage {
     lampLight.components[PointLightComponent.self]?.attenuationRadius = 6 + 3 * soft
     outsideLight.components[DirectionalLightComponent.self]?.color =
       (look.outside?.genz ?? outsideColour).platformColour
-    applyFill()
+    if fill { applyFill() } else { applyDayLight() }
     lastLevels["lamp"] = nil
     lastLevels["led"] = nil
   }
 
   /// The colour of the light from outside, before a preset changes it.
-  private let outsideColour = GenzColour(0xFFD9A0)
+  let outsideColour = GenzColour(0xFFD9A0)
 
   /// The room's own ambient light from above and below, before a preset changes it.
   private let ambientColours = (top: GenzColour(0xC8D4E8), bottom: GenzColour(0x8090A8))
@@ -1021,7 +1048,7 @@ final class GenzRoom: CatPlayStage {
       headingGoal = pose.heading
       // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
       rate = Float(brainBody.frame?.tempo ?? 1)
-      if pose.action == .walk { rate = walkRate(pose.speed) }
+      if pose.action == .walk || pose.action == .carry { rate = walkRate(pose.speed) }
       if pose.action == .run { rate = pose.speed / max(galloping, 0.001) }
     }
     bodyHeading = Self.turn(bodyHeading, towards: headingGoal, step: step)
@@ -1099,6 +1126,8 @@ final class GenzRoom: CatPlayStage {
   func strokeMoved(to point: CGPoint) -> [PetSceneEvent] {
     guard trip == nil else { return [] }
     petClock = clock
+    // A sulking cat keeps its back turned: no lean, no purr, until it forgives.
+    guard brainBody.frame?.stack.step != .sulk else { return [] }
     if purr.touch(at: clock, cat: point) {
       behaviour.react(.roll, at: clock)
       hands.onBackUntil = clock + behaviour.length(of: behaviour.playable(.rollOver), held: 3)
@@ -1143,7 +1172,8 @@ final class GenzRoom: CatPlayStage {
     }
     let led = GenzOpening.windowLED(time)
     if changed("led", led, step: 0.05) { setLED(led) }
-    let lamp = (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0)
+    let lamp =
+      (lampOn ? GenzOpening.eased(time, from: 1.4, length: 0.8) : 0) * Double(lightSwitch.lampLevel)
     let boost = lampBoost
     if changed("lamp", lamp + warmth * 10 + Double(boost) * 100, step: 0.02) {
       lampLight.setLight(intensity: Float(lamp) * 9_000 * Float(1 + 0.3 * warmth) * boost)

@@ -1,6 +1,7 @@
 #!/bin/zsh
 # The standard screenshot set from one Release Simulator build: Home in each room under each
-# lighting preset and at the camera's limits, Shop and the Notes desk (measure.sh --sweep), then
+# lighting preset and at the camera's limits, Shop and the Notes desk (measure.sh --sweep), every
+# window view in Home and through the shop window (--views), then
 # the first-launch onboarding on a fresh install.
 #
 #   PERF_DERIVED=<derived> [PERF_DEVICE=<name>] [PERF_DEVICE_TYPE=<type id>] shots.sh <label>
@@ -25,7 +26,7 @@ trap 'perf_lock_give' EXIT
 
 # The rooms, presets, poses and tabs. measure.sh makes the device if it is missing and signs the
 # app, which the fresh install below then reuses.
-PERF_DERIVED=$derived $here/measure.sh $label --launches 0 --full 0 --sweep
+PERF_DERIVED=$derived $here/measure.sh $label --launches 0 --full 0 --sweep --views
 
 udid=$(xcrun simctl list devices | awk -v n="$device_name" -F '[()]' '$0 ~ "^ +"n" \\(" {print $2; exit}')
 [[ -n $udid ]] || { echo "no device $device_name" >&2; exit 1; }

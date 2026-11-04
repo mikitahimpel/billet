@@ -6,14 +6,11 @@ import WidgetKit
 
 /// Whether a control is switched on in Settings, and has what it needs, read when it is drawn.
 struct ControlAvailability: ControlValueProvider {
-  let feature: WidgetFeature
   let needsNote: Bool
 
   var previewValue: Bool { true }
 
   func currentValue() async throws -> Bool {
-    let features = WidgetFeaturesStore.appGroup()?.load() ?? WidgetFeatures()
-    guard features.isOn(feature) else { return false }
     guard needsNote else { return true }
     return WidgetSnapshotStore.appGroup()?.load()?.latestReceivedNote != nil
   }
@@ -24,7 +21,7 @@ struct PetCatControl: ControlWidget {
 
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(
-      kind: Self.kind, provider: ControlAvailability(feature: .controlPet, needsNote: false)
+      kind: Self.kind, provider: ControlAvailability(needsNote: false)
     ) { available in
       ControlWidgetButton(action: PetCatIntent(surface: .control)) {
         Label("Pet the cat", systemImage: "pawprint.fill")
@@ -41,7 +38,7 @@ struct SendHeartControl: ControlWidget {
 
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(
-      kind: Self.kind, provider: ControlAvailability(feature: .controlHeart, needsNote: true)
+      kind: Self.kind, provider: ControlAvailability(needsNote: true)
     ) { available in
       ControlWidgetButton(action: SendHeartIntent(surface: .control)) {
         Label("Send a heart", systemImage: "heart.fill")
@@ -58,7 +55,7 @@ struct OpenCanvasControl: ControlWidget {
 
   var body: some ControlWidgetConfiguration {
     StaticControlConfiguration(
-      kind: Self.kind, provider: ControlAvailability(feature: .controlCanvas, needsNote: false)
+      kind: Self.kind, provider: ControlAvailability(needsNote: false)
     ) { available in
       ControlWidgetButton(action: OpenCanvasIntent(surface: .control)) {
         Label("Draw a note", systemImage: "pencil.tip")

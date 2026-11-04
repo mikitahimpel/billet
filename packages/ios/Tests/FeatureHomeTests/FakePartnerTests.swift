@@ -10,10 +10,10 @@ import Wire
 struct FakePartnerTests {
   /// Waits a moment instead of a real time, so a test does not run for seconds.
   private static let quick = FakePartnerPace(
-    arrival: .milliseconds(1), open: .milliseconds(5), reaction: .milliseconds(10),
+    arrival: .milliseconds(1), reaction: .milliseconds(10),
     reply: .milliseconds(30),
     petBack: .milliseconds(10), treatBack: .milliseconds(10), sealedFor: .seconds(60),
-    holdFor: .milliseconds(5), adventDoors: [], giftOpened: .milliseconds(10),
+    adventDoors: [], giftOpened: .milliseconds(10),
     lampFollows: .milliseconds(10),
     idle: [])
 
@@ -71,23 +71,22 @@ struct FakePartnerTests {
     #expect(seen == [.status(.connecting), .status(.partnerHere)])
   }
 
-  @Test func aSentNoteIsOpenedThenReactedToThenAnswered() async {
+  @Test func aSentNoteIsReactedToThenAnswered() async {
     let delivery = NoteDelivery.fakePartner(
       device: "me", room: FakePartnerRoom(pace: Self.quick))
     let id = UUID()
-    let seen = await collect(delivery, count: 6) {
+    let seen = await collect(delivery, count: 5) {
       await delivery.deliver([], id)
     }
-    guard seen.count == 6 else {
+    guard seen.count == 5 else {
       Issue.record("saw \(seen)")
       return
     }
-    #expect(seen[3] == .noteOpened(id))
-    #expect(seen[4] == .reactions([id: .heart]))
-    if case .note(let strokes, _) = seen[5] {
+    #expect(seen[3] == .reactions([id: .heart]))
+    if case .note(let strokes, _) = seen[4] {
       #expect(!strokes.isEmpty)
     } else {
-      Issue.record("expected a note, got \(seen[5])")
+      Issue.record("expected a note, got \(seen[4])")
     }
   }
 
@@ -133,6 +132,13 @@ struct FakePartnerTests {
     #expect(seen.last == .catName("Mochi"))
   }
 
+  @Test func theLightSwitchIsEchoedLikeTheRoomDoes() async {
+    let delivery = NoteDelivery.fakePartner(
+      device: "me", room: FakePartnerRoom(pace: Self.quick))
+    let seen = await collect(delivery, count: 4) { await delivery.switchLight(.cosy) }
+    #expect(seen.contains(.roomLight(.cosy)))
+  }
+
   @Test func idleMovesCycleThroughNotesPetsAndTreats() async {
     var pace = Self.quick
     pace.idle = [.milliseconds(1)]
@@ -145,15 +151,13 @@ struct FakePartnerTests {
       case .partnerPetted: "pet"
       case .treats: "treat"
       case .sealedNote: "sealed"
-      case .partnerHolding(let on): on ? "hold" : "let go"
       case .gift: "gift"
       default: "other"
       }
     }
     #expect(
-      kinds.prefix(9) == [
-        "note", "life note", "pet", "life pet", "treat", "life feed", "sealed", "hold",
-        "life play",
+      kinds.prefix(8) == [
+        "note", "life note", "pet", "life pet", "treat", "life feed", "sealed", "life play",
       ])
   }
 
