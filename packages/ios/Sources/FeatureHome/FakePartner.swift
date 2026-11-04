@@ -153,6 +153,11 @@ actor FakePartnerRoom {
     emit(.catName(name))
   }
 
+  /// The room keeps the last press of the switch and tells both phones.
+  func lightSwitched(_ light: RoomLight) {
+    emit(.roomLight(light))
+  }
+
   /// The room confirms a name after a moment, as the real one does.
   func catNamed(_ name: String) {
     after(pace.petBack) { $0.emit(.catName(name)) }
@@ -314,6 +319,7 @@ extension NoteDelivery {
       },
       nameCat: { await room.catNamed($0) },
       renameCat: { await room.catRenamed($0) },
+      switchLight: { await room.lightSwitched($0) },
       adopt: { await room.adopted($0) },
       react: { _, _ in },
       drawDaily: { strokes, at in await room.drewDaily(strokes, day: String(at.prefix(10))) },

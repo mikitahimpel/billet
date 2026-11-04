@@ -1,6 +1,6 @@
 // Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
 // shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, and the drawing of the day.
+// together, the room's light switch, and the drawing of the day.
 
 import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
@@ -23,6 +23,7 @@ export type PlayKind =
   | "rename"
   | "react"
   | "adopt"
+  | "light"
   | "daily";
 export type Reaction = "heart" | "stamp";
 
@@ -65,6 +66,18 @@ export interface RenameFrame {
   readonly name: string;
 }
 
+/** Where the light switch on the room's wall stands, as the phones name it. */
+export const ROOM_LIGHTS = ["on", "cosy", "off"] as const;
+export type RoomLight = (typeof ROOM_LIGHTS)[number];
+
+/** A press of the room's light switch: the last one from either phone wins. */
+export interface LightFrame {
+  readonly id: string;
+  readonly kind: "light";
+  readonly at: string;
+  readonly light: RoomLight;
+}
+
 /** The cats a pair chooses between, as the phones name them. */
 export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
 export type AdoptionCat = (typeof ADOPTION_CATS)[number];
@@ -95,7 +108,12 @@ export type AnyPlayFrame =
   | RenameFrame
   | ReactFrame
   | AdoptFrame
+  | LightFrame
   | DailyFrame;
+
+
+const isRoomLight = (value: unknown): value is RoomLight =>
+  typeof value === "string" && (ROOM_LIGHTS as readonly string[]).includes(value);
 
 /** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
@@ -145,6 +163,10 @@ export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFram
     }
     case "adopt":
       return parseAdopt(id, at, frame);
+    case "light": {
+      const { light } = frame;
+      return isRoomLight(light) ? { id, kind, at, light } : undefined;
+    }
     case "daily": {
       const { ink } = frame;
       if (typeof ink !== "string" || ink.length === 0 || ink.length > MAX_DAILY_INK) {

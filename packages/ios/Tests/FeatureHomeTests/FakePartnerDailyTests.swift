@@ -9,9 +9,9 @@ import Wire
 @Suite("FakePartnerDaily")
 struct FakePartnerDailyTests {
   private static let pace = FakePartnerPace(
-    arrival: .milliseconds(1), open: .seconds(60), reaction: .seconds(60), reply: .seconds(60),
+    arrival: .milliseconds(1), reaction: .seconds(60), reply: .seconds(60),
     petBack: .seconds(60), treatBack: .seconds(60), sealedFor: .seconds(60),
-    holdFor: .seconds(60), adventDoors: [], giftOpened: .seconds(60), lampFollows: .seconds(60),
+    adventDoors: [], giftOpened: .seconds(60), lampFollows: .seconds(60),
     idle: [], dailyDraws: .milliseconds(20))
 
   private let drawing = [Stroke(color: "#000000", width: 0.02, points: [Point(x: 0.5, y: 0.5)])]

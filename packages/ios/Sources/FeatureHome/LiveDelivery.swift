@@ -37,6 +37,8 @@ actor LiveDelivery {
     var move: String?
     var cat: String?
     var holding: Bool?
+    /// For a `light` play: where the switch now stands.
+    var light: String?
     /// For a `daily` play: the drawing of the day.
     var ink: String?
   }
@@ -56,6 +58,7 @@ actor LiveDelivery {
     let move: String?
     let cat: String?
     let holding: Bool?
+    let light: String?
     let day: String?
     let prompt: PromptFrame?
     let prompts: [String: PromptFrame]?
@@ -171,6 +174,17 @@ actor LiveDelivery {
     let at = TreatDay.timestamp(for: .now, calendar: .current)
     let frame = OutgoingPlay(
       id: UUID().uuidString.lowercased(), kind: "rename", at: at, name: name)
+    treatOutbox.append(frame)
+    if let openSocket { await Self.write(frame, to: openSocket) }
+  }
+
+  /// A press of the light switch waits for the ack and is sent again after a reconnect. Only the
+  /// latest press is kept: an earlier one no longer matters.
+  func switchLight(_ light: RoomLight) async {
+    let at = TreatDay.timestamp(for: .now, calendar: .current)
+    var frame = OutgoingPlay(id: UUID().uuidString.lowercased(), kind: "light", at: at)
+    frame.light = light.rawValue
+    treatOutbox.removeAll { $0.kind == "light" }
     treatOutbox.append(frame)
     if let openSocket { await Self.write(frame, to: openSocket) }
   }
@@ -307,6 +321,10 @@ actor LiveDelivery {
       updates.yield(.reactions(table))
     case "name":
       if let name = frame.name { updates.yield(.catName(name)) }
+    case "light":
+      if let light = frame.light.flatMap(RoomLight.init(rawValue:)) {
+        updates.yield(.roomLight(light))
+      }
     case "daily-prompts":
       updates.yield(.dailyPrompts((frame.prompts ?? [:]).mapValues(\.prompt)))
     case "daily":
