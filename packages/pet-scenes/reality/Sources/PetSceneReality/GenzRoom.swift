@@ -625,6 +625,7 @@ final class GenzRoom: CatPlayStage {
   /// Starts stepping the room, after a few frames' settling, for a view that has just added it.
   func startUpdates() {
     settlingFrames = 4
+    PerfRenderSystem.registerOnce()
     frames.isPaused = !isOnScreen
     frames.run { [weak self] delta in self?.tick(delta) }
   }
@@ -756,6 +757,7 @@ final class GenzRoom: CatPlayStage {
 
   private func tick(_ delta: TimeInterval) {
     guard isOnScreen, isBuilt else { return }
+    ScenePerf.count("steps")
     clock += delta
     styler?.step(Float(delta))
     if settlingFrames > 0 {

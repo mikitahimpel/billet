@@ -90,6 +90,11 @@ public enum ScenePerf {
     emit("mark \(name.replacingOccurrences(of: " ", with: "_")) t=\(format(at))")
   }
 
+  /// Counts one `name` in the phase being recorded: a step of the room, a frame RealityKit drew.
+  public static func count(_ name: String) {
+    recorder?.counts[name, default: 0] += 1
+  }
+
   /// Where a scene starts drawing: it becomes the one a run drives, and its arrival is marked.
   public static func shown(_ scene: Scene) {
     guard isOn else { return }
@@ -118,6 +123,9 @@ public enum ScenePerf {
       await views()
     case "cost":
       await cost()
+    case "steady":
+      await pause(20)
+      await record("steady", seconds: 60)
     default:
       break
     }
@@ -321,6 +329,8 @@ extension ScenePerf {
     private var drive: (@MainActor (Int) -> Void)?
     private var mainCPUAtStart = 0.0
     private var processCPUAtStart = 0.0
+    var counts: [String: Int] = [:]
+    private var phaseStart = 0.0
     private var lastSample = 0.0
     private(set) var peakFootprint = 0.0
     #if canImport(UIKit)
@@ -352,6 +362,8 @@ extension ScenePerf {
       self.drive = drive
       mainCPUAtStart = Self.threadCPU()
       processCPUAtStart = Self.processCPU()
+      counts.removeAll()
+      phaseStart = Self.now()
     }
 
     /// The phase's frames as `key=value` pairs, in milliseconds.
@@ -367,6 +379,11 @@ extension ScenePerf {
       }
       let hitches = intervals.filter { $0 > 25 }.count
       let longest = sorted.last.map(ScenePerf.format) ?? "nan"
+      let seconds = max(Self.now() - phaseStart, 0.001)
+      let cpuPerSecond = (Self.processCPU() - processCPUAtStart) / seconds
+      func perSecond(_ name: String) -> String {
+        ScenePerf.format(Double(counts[name] ?? 0) / seconds)
+      }
       let fps = intervals.isEmpty ? 0 : 1000 * Double(intervals.count) / intervals.reduce(0, +)
       // A slow frame the main thread spent busy is our own work; one it spent idle waited on the
       // renderer or on the rest of the machine.
@@ -377,7 +394,8 @@ extension ScenePerf {
         + "p99=\(at(0.99)) max=\(longest) hitches=\(hitches) "
         + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process)) "
         + "slow=\(slow.count) slowMs=\(ScenePerf.format(slowLength)) "
-        + "slowBusyMs=\(ScenePerf.format(slowBusy))"
+        + "slowBusyMs=\(ScenePerf.format(slowBusy)) cpuMsPerS=\(ScenePerf.format(cpuPerSecond)) "
+        + "steps=\(perSecond("steps")) renders=\(perSecond("renders"))"
     }
 
     #if canImport(UIKit)
