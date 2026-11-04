@@ -33,7 +33,7 @@ Secrets live in Proton Pass. Commit only references (`API_KEY=pass://Billet/<ite
 
 ## Admin data
 
-Agents read the admin panel's numbers, experiments, flags, flag history and pairs (by pair id)
+Agents read the admin panel's numbers, experiments, flags, flag history, purchases and pairs (by pair id)
 read-only with `scripts/admin-read.sh <route>`, run as
 `PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags`.
 It prints JSON. Agents never create or change Access credentials, and cannot write through it. See

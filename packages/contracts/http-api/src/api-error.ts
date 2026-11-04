@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-/** Errors named by the auth, pairing and notes flows in the plan. Each can grow fields later. */
+/** Errors named by the auth, pairing, notes and payments flows. Each can grow fields later. */
 export const ApiError = Schema.TaggedUnion({
   Unauthorized: {},
   /** The request body or a parameter failed validation. */
@@ -12,5 +12,11 @@ export const ApiError = Schema.TaggedUnion({
   AlreadyPaired: {},
   /** This Apple ID is already linked to another account, so it can't be linked to the caller's. */
   AppleIdInUse: {},
+  /**
+   * An App Store transaction or notification that can't be honoured: a bad signature or
+   * certificate chain, another app's bundle, an environment this stage doesn't accept, or a
+   * product that isn't a stamp pack. Retrying the same one fails the same way.
+   */
+  InvalidPurchase: {},
 });
 export type ApiError = typeof ApiError.Type;

@@ -27,6 +27,14 @@ import {
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
 import { resetDirectory } from "./directory-migrations.ts";
+import { PurchaseResponse, StampsResponse } from "@billet/contracts-http-api/purchase";
+import {
+  makeChain,
+  makeXcodeChain,
+  notificationPayload,
+  signJws,
+  transactionPayload,
+} from "@billet/backend-payments/test/app-store-signer";
 import { waitFor } from "./demo-wait.ts";
 
 const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
@@ -60,6 +68,15 @@ const identityToken = (nonce: string, overrides?: Record<string, unknown>) =>
       Effect.provide(cryptoLayer),
     ),
   );
+
+/** The Worker as deployed on `stage`, which decides the payments extras. */
+const atStage = async (stage: string | undefined, request: Request) => {
+  const ctx = createExecutionContext();
+  const stageEnv = { ...env, ...(stage === undefined ? {} : { STAGE: stage }) };
+  const response = await respondApi(request, stageEnv, ctx, testExperiments);
+  await waitOnExecutionContext(ctx);
+  return response;
+};
 
 const call = (path: string, init: RequestInit = {}) =>
   exports.default.fetch(new Request(`https://billet.test${path}`, { method: "POST", ...init }));
@@ -865,9 +882,17 @@ describe("routes from the contracts", () => {
     exports.default.fetch(new Request(`https://billet.test${path}`, { method }));
   const concrete = (path: string) => (path.endsWith("*") ? mediaPath("pairs/p/notes/n.png") : path);
 
-  it.each(Object.entries(routes))("%s is served at its method and path", async (_, route) => {
+  // The mock purchase route exists only on the dev stage; the payments tests check the others.
+  const onDev = (method: string, path: string) =>
+    atStage("dev", new Request(`https://billet.test${path}`, { method }));
+
+  it.each(Object.entries(routes))("%s is served at its method and path", async (name, route) => {
     // Whatever the answer is, it is not "no such route".
-    expect((await send(route.method, concrete(route.path))).status).not.toBe(404);
+    const response =
+      name === "mockPurchase"
+        ? await onDev(route.method, route.path)
+        : await send(route.method, concrete(route.path));
+    expect(response.status).not.toBe(404);
   });
 
   it.each(Object.entries(routes))("%s is is not served under another path", async (_, route) => {
@@ -1329,5 +1354,154 @@ describe("metrics", () => {
     } finally {
       await env.DB.prepare("ALTER TABLE pair_events_away RENAME TO pair_events").run();
     }
+  });
+});
+
+describe("payments in the Worker", () => {
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
+    new Request(`https://billet.test${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    });
+  const stampsAt = async (stage: string, headers: Record<string, string>) => {
+    const response = await atStage(
+      stage,
+      new Request("https://billet.test/v1/stamps", { headers }),
+    );
+    expect(response.status).toBe(200);
+    return Schema.decodeUnknownSync(StampsResponse)(await response.json());
+  };
+  const mockBody = (kind: "purchase" | "refund", transactionId: string) => ({
+    productId: "com.mikitahimpel.billet.stamps.550",
+    transactionId,
+    kind,
+  });
+
+  it.each([["prod"], ["stage"], [undefined]])("has no mock purchase route on %s", async (stage) => {
+    const { owner } = await pairOf("subject-mock-a", "subject-mock-b");
+    const response = await atStage(
+      stage,
+      post("/v1/purchases/mock", mockBody("purchase", "mock-1"), bearer(owner)),
+    );
+    expect(response.status).toBe(404);
+    expect(await env.DB.prepare("SELECT * FROM stamp_ledger").all()).toMatchObject({
+      results: [],
+    });
+  });
+
+  it("credits and refunds mock purchases on dev, shared by the pair", async () => {
+    const { owner, claimer, pairId } = await pairOf("subject-mock-a", "subject-mock-b");
+    const transactionId = `mock-${crypto.randomUUID()}`;
+    const bought = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(owner)),
+    );
+    expect(bought.status).toBe(200);
+    expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
+      transactionId,
+      productId: "com.mikitahimpel.billet.stamps.550",
+      stamps: 550,
+      balance: 550,
+      duplicate: false,
+    });
+    expect((await stampsAt("dev", bearer(claimer))).balance).toBe(550);
+
+    const refunded = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("refund", transactionId), bearer(claimer)),
+    );
+    expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
+      stamps: 550,
+      balance: 0,
+    });
+    const { entries } = await stampsAt("dev", bearer(owner));
+    expect(entries.map(({ id, amount }) => [id, amount])).toEqual([
+      [`purchase:${transactionId}`, 550],
+      [`refund:${transactionId}`, -550],
+    ]);
+    const rows = await env.DB.prepare("SELECT owner_id, environment, status FROM purchases").all();
+    expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
+  });
+
+  it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {
+    const demo = { "x-billet-demo-room": "AB2345CDEF" };
+    const transactionId = `mock-${crypto.randomUUID()}`;
+    const response = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", transactionId), demo),
+    );
+    expect(response.status).toBe(200);
+    expect((await stampsAt("dev", demo)).balance).toBe(550);
+    const rows = await env.DB.prepare("SELECT owner_id FROM stamp_ledger").all();
+    expect(rows.results).toEqual([{ owner_id: "demo:AB2345CDEF" }]);
+
+    for (const stage of ["prod", undefined]) {
+      const stamps = await atStage(
+        stage,
+        new Request("https://billet.test/v1/stamps", { headers: demo }),
+      );
+      expect(stamps.status).toBe(401);
+      const purchase = await atStage(
+        stage,
+        post("/v1/purchases", { signedTransaction: "a.b.c" }, demo),
+      );
+      expect(purchase.status).toBe(401);
+    }
+  });
+
+  it("credits an Xcode StoreKit transaction on dev only, once", async () => {
+    const { owner } = await pairOf("subject-xcode-a", "subject-xcode-b");
+    const xcode = await makeXcodeChain();
+    const signedTransaction = await signJws(
+      transactionPayload({ environment: "Xcode", transactionId: "7", originalTransactionId: "7" }),
+      xcode.chain,
+      xcode.leafKey,
+    );
+    const buy = (stage: string) =>
+      atStage(stage, post("/v1/purchases", { signedTransaction }, bearer(owner)));
+
+    const refused = await buy("prod");
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ _tag: "InvalidPurchase" });
+
+    const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
+    expect(first).toMatchObject({
+      transactionId: "7",
+      stamps: 100,
+      balance: 100,
+      duplicate: false,
+    });
+    const again = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
+    expect(again).toMatchObject({ balance: 100, duplicate: true });
+  });
+
+  it("trusts only Apple's root, for transactions and notifications", async () => {
+    const { owner } = await pairOf("subject-root-a", "subject-root-b");
+    const chain = await makeChain();
+    const signedTransaction = await signJws(transactionPayload(), chain.chain, chain.leafKey);
+    const purchase = await atStage(
+      "prod",
+      post("/v1/purchases", { signedTransaction }, bearer(owner)),
+    );
+    expect(purchase.status).toBe(400);
+    const signedPayload = await signJws(
+      notificationPayload("REFUND", signedTransaction),
+      chain.chain,
+      chain.leafKey,
+    );
+    // No session: Apple calls it.
+    const notified = await atStage("prod", post("/v1/appstore/notifications", { signedPayload }));
+    expect(notified.status).toBe(400);
+    expect(await notified.json()).toEqual({ _tag: "InvalidPurchase" });
+  });
+
+  it("answers 404 to a purchase from a caller with no pair", async () => {
+    const token = await signedInAs("subject-alone");
+    const response = await atStage(
+      "dev",
+      new Request("https://billet.test/v1/stamps", { headers: bearer(token) }),
+    );
+    expect(response.status).toBe(404);
   });
 });

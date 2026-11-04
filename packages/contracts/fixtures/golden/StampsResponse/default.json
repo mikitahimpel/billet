@@ -1,0 +1,26 @@
+{
+  "balance": 550,
+  "entries": [
+    {
+      "amount": 100,
+      "at": "2026-11-04T15:00:00.000Z",
+      "id": "purchase:2000000812345678",
+      "kind": "purchase",
+      "productId": "com.mikitahimpel.billet.stamps.100"
+    },
+    {
+      "amount": 550,
+      "at": "2026-11-04T15:05:00.000Z",
+      "id": "purchase:2000000812345679",
+      "kind": "purchase",
+      "productId": "com.mikitahimpel.billet.stamps.550"
+    },
+    {
+      "amount": -100,
+      "at": "2026-11-05T09:30:00.000Z",
+      "id": "refund:2000000812345678",
+      "kind": "refund",
+      "productId": "com.mikitahimpel.billet.stamps.100"
+    }
+  ]
+}

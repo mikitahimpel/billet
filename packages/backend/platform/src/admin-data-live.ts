@@ -1,9 +1,18 @@
-import { asc, count, eq, min } from "drizzle-orm";
+import { asc, count, desc, eq, min } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { AdminData, AdminUnavailable } from "@billet/backend-admin/admin-data";
 import { MetricEventName } from "@billet/contracts-domain/metrics";
 import { openDirectoryDatabase, type DirectoryDatabase } from "./directory-database.ts";
-import { eventDetails, pairEvents, pairFlags, pairMembers, users } from "./directory-schema.ts";
+import {
+  appStoreNotifications,
+  eventDetails,
+  pairEvents,
+  pairFlags,
+  pairMembers,
+  purchases,
+  stampLedger,
+  users,
+} from "./directory-schema.ts";
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const guarded = <A, E>(effect: Effect.Effect<A, E>) =>
@@ -68,6 +77,35 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
         .from(users)
         .pipe(Effect.map((rows) => rows[0]?.total ?? 0)),
     ),
+    purchases: (limit) =>
+      guarded(
+        Effect.all([
+          db.select().from(purchases).orderBy(desc(purchases.createdAt)).limit(limit),
+          db
+            .select({
+              id: stampLedger.id,
+              ownerId: stampLedger.ownerId,
+              kind: stampLedger.kind,
+              amount: stampLedger.amount,
+              productId: stampLedger.productId,
+              at: stampLedger.at,
+            })
+            .from(stampLedger)
+            .orderBy(desc(stampLedger.at), desc(stampLedger.id))
+            .limit(limit),
+          db
+            .select()
+            .from(appStoreNotifications)
+            .orderBy(desc(appStoreNotifications.receivedAt))
+            .limit(limit),
+        ]),
+      ).pipe(
+        Effect.map(([rows, ledger, notifications]) => ({
+          purchases: rows.map((row) => ({ ...row, flagged: row.flagged === 1 })),
+          ledger,
+          notifications,
+        })),
+      ),
     pair: (pairId) =>
       guarded(
         db

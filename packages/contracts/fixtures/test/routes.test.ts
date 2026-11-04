@@ -7,6 +7,10 @@ import { socketRoute } from "@billet/contracts-realtime/socket-route";
 it("pins the routes that clients call", () => {
   expect({ ...routes, socket: socketRoute }).toMatchInlineSnapshot(`
     {
+      "appStoreNotifications": {
+        "method": "POST",
+        "path": "/v1/appstore/notifications",
+      },
       "authAnonymous": {
         "method": "POST",
         "path": "/v1/auth/anonymous",
@@ -51,6 +55,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/flags",
       },
+      "getStamps": {
+        "method": "GET",
+        "path": "/v1/stamps",
+      },
       "getStatus": {
         "method": "GET",
         "path": "/v1/status",
@@ -58,6 +66,14 @@ it("pins the routes that clients call", () => {
       "listNotes": {
         "method": "GET",
         "path": "/v1/notes",
+      },
+      "mockPurchase": {
+        "method": "POST",
+        "path": "/v1/purchases/mock",
+      },
+      "purchase": {
+        "method": "POST",
+        "path": "/v1/purchases",
       },
       "registerPushToken": {
         "method": "PUT",

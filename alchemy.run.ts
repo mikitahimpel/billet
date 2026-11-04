@@ -83,6 +83,7 @@ export default Alchemy.Stack(
         STATUS: status,
         EVENTS: events,
         // Shown in the admin panel's top bar, so the owner always sees which stage they change.
+        // Payments read it too: only `dev` takes Xcode and mock purchases (docs/payments.md).
         STAGE: stage,
         // The Cloudflare Access application in front of /admin (docs/admin.md). Not secret, but
         // kept out of the public repo: they come from the deploy's environment. Empty keeps the

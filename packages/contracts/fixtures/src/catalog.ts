@@ -39,6 +39,13 @@ import {
   CreateInviteResponse,
 } from "@billet/contracts-http-api/invite";
 import {
+  AppStoreNotificationRequest,
+  MockPurchaseRequest,
+  PurchaseRequest,
+  PurchaseResponse,
+  StampsResponse,
+} from "@billet/contracts-http-api/purchase";
+import {
   ListNotesResponse,
   SendNoteRequest,
   SendNoteResponse,
@@ -228,6 +235,73 @@ export const catalog: ReadonlyArray<Fixture> = [
     "invalid-invite": ApiError.cases.InvalidInvite.make({}),
     "already-paired": ApiError.cases.AlreadyPaired.make({}),
     "apple-id-in-use": ApiError.cases.AppleIdInUse.make({}),
+    "invalid-purchase": ApiError.cases.InvalidPurchase.make({}),
+  }),
+  // A JWS's shape only: never signed by anyone.
+  fixture("PurchaseRequest", PurchaseRequest, {
+    default: {
+      signedTransaction: "eyJhbGciOiJFUzI1NiJ9.eyJ0cmFuc2FjdGlvbklkIjoiMSJ9.c2lnbmF0dXJl",
+    },
+  }),
+  fixture("MockPurchaseRequest", MockPurchaseRequest, {
+    purchase: {
+      productId: "com.mikitahimpel.billet.stamps.100",
+      transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+      kind: "purchase",
+    },
+    refund: {
+      productId: "com.mikitahimpel.billet.stamps.100",
+      transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+      kind: "refund",
+    },
+  }),
+  fixture("PurchaseResponse", PurchaseResponse, {
+    default: {
+      transactionId: "2000000812345678",
+      productId: "com.mikitahimpel.billet.stamps.550",
+      stamps: 550,
+      balance: 1234,
+      duplicate: false,
+    },
+    duplicate: {
+      transactionId: "2000000812345678",
+      productId: "com.mikitahimpel.billet.stamps.550",
+      stamps: 550,
+      balance: 1234,
+      duplicate: true,
+    },
+  }),
+  fixture("StampsResponse", StampsResponse, {
+    default: {
+      balance: 550,
+      entries: [
+        {
+          id: "purchase:2000000812345678",
+          kind: "purchase",
+          amount: 100,
+          productId: "com.mikitahimpel.billet.stamps.100",
+          at: "2026-11-04T15:00:00.000Z",
+        },
+        {
+          id: "purchase:2000000812345679",
+          kind: "purchase",
+          amount: 550,
+          productId: "com.mikitahimpel.billet.stamps.550",
+          at: "2026-11-04T15:05:00.000Z",
+        },
+        {
+          id: "refund:2000000812345678",
+          kind: "refund",
+          amount: -100,
+          productId: "com.mikitahimpel.billet.stamps.100",
+          at: "2026-11-05T09:30:00.000Z",
+        },
+      ],
+    },
+    empty: { balance: 0, entries: [] },
+  }),
+  fixture("AppStoreNotificationRequest", AppStoreNotificationRequest, {
+    default: { signedPayload: "eyJhbGciOiJFUzI1NiJ9.eyJub3RpZmljYXRpb25UeXBlIjoiUkVGVU5EIn0.c2ln" },
   }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),

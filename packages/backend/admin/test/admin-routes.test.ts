@@ -78,6 +78,27 @@ const handlerFor = (email: string) =>
                 details: Effect.sync(() => details),
                 assignments: Effect.succeed([]),
                 userCount: Effect.succeed(3),
+                purchases: (limit) =>
+                  Effect.succeed({
+                    purchases: [
+                      {
+                        originalTransactionId: "2000000900000001",
+                        transactionId: "2000000900000001",
+                        ownerId: "pair-1",
+                        productId: "com.mikitahimpel.billet.stamps.100",
+                        stamps: 100,
+                        environment: "Sandbox",
+                        status: "refunded",
+                        refunds: 1,
+                        flagged: true,
+                        purchasedAt: 1_000,
+                        createdAt: 1_000,
+                        updatedAt: 2_000,
+                      },
+                    ].slice(0, limit),
+                    ledger: [],
+                    notifications: [],
+                  }),
                 pair: (pairId) =>
                   Effect.succeed(
                     pairId === "pair-1"
@@ -429,5 +450,18 @@ describe("the maintenance section", () => {
     ["an empty message", { maintenance: { active: true, message: { key: "m", text: "" } } }],
   ])("refuses %s with 400", async (_, status) => {
     expect((await call(adminApi.status, "PUT", { status, expectedVersion: 0 })).status).toBe(400);
+  });
+});
+
+describe("purchases", () => {
+  it("lists purchases, flagged ones marked, read-only", async () => {
+    const listed = await call(adminApi.purchases);
+    expect(listed.status).toBe(200);
+    expect(listed.body.purchases).toEqual([
+      expect.objectContaining({ ownerId: "pair-1", status: "refunded", flagged: true }),
+    ]);
+    expect(listed.body).toMatchObject({ ledger: [], notifications: [] });
+    expect((await call(`${adminApi.purchases}?limit=0`)).status).toBe(400);
+    expect((await call(adminApi.purchases, "POST", {})).status).toBe(404);
   });
 });

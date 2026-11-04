@@ -8,9 +8,47 @@ export class AdminUnavailable extends Data.TaggedError("AdminUnavailable")<{
   readonly reason: string;
 }> {}
 
+/** A stamp-pack purchase, as the panel lists it. `ownerId` is a pair id or `demo:<code>`. */
+export interface PurchaseRow {
+  readonly originalTransactionId: string;
+  readonly transactionId: string;
+  readonly ownerId: string;
+  readonly productId: string;
+  readonly stamps: number;
+  readonly environment: string;
+  readonly status: string;
+  readonly refunds: number;
+  /** A refund took back less than the pack, because the owner had fewer stamps left. */
+  readonly flagged: boolean;
+  readonly purchasedAt: number;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+}
+
+/** One stamp ledger entry. */
+export interface StampEntryRow {
+  readonly id: string;
+  readonly ownerId: string;
+  readonly kind: string;
+  readonly amount: number;
+  readonly productId: string;
+  readonly at: number;
+}
+
+/** One App Store Server Notification, and what was done with it. */
+export interface NotificationRow {
+  readonly notificationUuid: string;
+  readonly type: string;
+  readonly subtype: string | null;
+  readonly environment: string | null;
+  readonly originalTransactionId: string | null;
+  readonly outcome: string;
+  readonly receivedAt: number;
+}
+
 /**
  * What the panel reads from the directory, besides the flags services. Read-only. It never reads a
- * note, an image, an Apple subject or a push token: counts, pair ids and dates only.
+ * note, an image, an Apple subject or a push token: counts, pair ids, purchases and dates only.
  */
 export class AdminData extends Context.Service<
   AdminData,
@@ -22,6 +60,15 @@ export class AdminData extends Context.Service<
     /** Every `pair_flags` row. */
     readonly assignments: Effect.Effect<ReadonlyArray<FlagRow>, AdminUnavailable>;
     readonly userCount: Effect.Effect<number, AdminUnavailable>;
+    /** The newest `limit` purchases, ledger entries and App Store notifications, newest first. */
+    readonly purchases: (limit: number) => Effect.Effect<
+      {
+        readonly purchases: ReadonlyArray<PurchaseRow>;
+        readonly ledger: ReadonlyArray<StampEntryRow>;
+        readonly notifications: ReadonlyArray<NotificationRow>;
+      },
+      AdminUnavailable
+    >;
     /** How many accounts are in the pair now, and when the first joined it. */
     readonly pair: (
       pairId: PairId,
