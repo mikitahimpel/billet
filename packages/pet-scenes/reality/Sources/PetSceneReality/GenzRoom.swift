@@ -780,6 +780,7 @@ final class GenzRoom: CatPlayStage {
     stepMoments()
     stepView()
     street?.update(now: Date().timeIntervalSinceReferenceDate, reduceMotion: reduceMotion)
+    street?.follow(eye: camera.position)
     stepFlames()
     stepDecor(Float(delta))
     stepSwitch()

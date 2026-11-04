@@ -65,6 +65,29 @@ struct Street3DTests {
     #expect(up.y > 0)
   }
 
+  @Test func theStreetTurnsPartWayWithTheCamera() async throws {
+    let assets = try #require(await Street3D.assets())
+    let street = Street3D(assets: assets)
+    let window: [SIMD3<Float>] = [
+      [0.6, 1.3, -0.35], [7, 1.3, -0.35], [7, 5, -0.35], [0.6, 5, -0.35],
+    ]
+    let home = SIMD3<Float>(10.2, 9.8, 19.2)
+    street.place(window: window, eye: home)
+    let origin = SIMD3<Float>(3.8, 3.15, -0.35)
+    let homeOut = simd_normalize(origin - home)
+    #expect(simd_distance(street.out, homeOut) < 1e-4)
+    // Turned high above the window: the street turns most of the way, not all of it.
+    let high = SIMD3<Float>(6, 18, 12)
+    street.follow(eye: high)
+    let highOut = simd_normalize(origin - high)
+    let turned = acos(min(1, simd_dot(street.out, homeOut)))
+    let whole = acos(min(1, simd_dot(highOut, homeOut)))
+    #expect(abs(turned / whole - Street3D.follow) < 0.05)
+    // Back home, it is straight on again.
+    street.follow(eye: home)
+    #expect(simd_distance(street.out, homeOut) < 1e-4)
+  }
+
   @Test func thePassingCarIsOnlyThereDuringAPass() async throws {
     let assets = try #require(await Street3D.assets())
     let street = Street3D(assets: assets)
