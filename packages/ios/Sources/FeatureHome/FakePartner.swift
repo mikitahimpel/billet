@@ -1,4 +1,5 @@
 import DesignSystem
+import FeatureInbox
 import Foundation
 import Labs
 import Pet
@@ -26,13 +27,16 @@ struct FakePartnerPace: Sendable {
   var lampFollows: Duration
   /// Between the things the partner does when nobody has done anything.
   var idle: [Duration]
+  /// After arriving, before the partner draws the day's prompt; after the user draws it, before
+  /// the partner answers with theirs. `nil` leaves the drawing of the day out.
+  var dailyDraws: Duration? = nil
 
   static let calm = FakePartnerPace(
     arrival: .seconds(1), reaction: .seconds(5), reply: .seconds(12),
     petBack: .seconds(2),
     treatBack: .seconds(5), sealedFor: .seconds(90),
     adventDoors: [3, 9, 15, 21], giftOpened: .seconds(6), lampFollows: .seconds(8),
-    idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)])
+    idle: [.seconds(25), .seconds(20), .seconds(35), .seconds(60)], dailyDraws: .seconds(40))
 }
 
 /// FAKE. A partner that lives in this app, so everything can be tried on one phone. It answers
@@ -58,6 +62,9 @@ actor FakePartnerRoom {
   private var reactions: [UUID: Reaction] = [:]
   private var adopter = FakeAdopter()
   private var adopting: Task<Void, Never>?
+  /// The drawing of the day, by day: the user's and the partner's.
+  private var dailyMine: [String: [Stroke]] = [:]
+  private var dailyTheirs: [String: [Stroke]] = [:]
 
   init(
     pace: FakePartnerPace = .calm,
@@ -130,6 +137,17 @@ actor FakePartnerRoom {
     }
   }
 
+  /// The user drew the day's prompt. The partner shows it the way the room does, and draws theirs
+  /// a little later if it has not yet.
+  func drewDaily(_ strokes: [Stroke], day: String) {
+    guard let wait = pace.dailyDraws, dailyMine[day] == nil else { return }
+    dailyMine[day] = strokes
+    emitDaily(day)
+    if dailyTheirs[day] == nil {
+      after(wait / 4) { $0.partnerDrawsDaily(day) }
+    }
+  }
+
   /// A new name is echoed by the room, as the real one does.
   func catRenamed(_ name: String) {
     emit(.catName(name))
@@ -159,6 +177,12 @@ actor FakePartnerRoom {
       // A few doors of the advent calendar, already filled for the user.
       for (index, number) in pace.adventDoors.enumerated() {
         emit(.adventDoor(number, FakePartnerDrawings.drawing(number: index + 1)))
+      }
+      if let wait = pace.dailyDraws {
+        let today = TreatDay.key(for: now(), calendar: .current)
+        emit(.dailyPrompts([today: FakePartnerDaily.prompt(on: today)]))
+        for day in Set(dailyMine.keys).union(dailyTheirs.keys) { emitDaily(day) }
+        after(wait) { $0.partnerDrawsDaily(today) }
       }
       var step = 0
       while !Task.isCancelled, !pace.idle.isEmpty {
@@ -258,6 +282,23 @@ actor FakePartnerRoom {
     drawn += 1
   }
 
+  private func partnerDrawsDaily(_ day: String) {
+    guard dailyTheirs[day] == nil else { return }
+    dailyTheirs[day] = FakePartnerDrawings.drawing(number: drawn)
+    drawn += 1
+    emitDaily(day)
+  }
+
+  /// What the room would send this phone of `day`: the partner's drawing only once the user drew.
+  private func emitDaily(_ day: String) {
+    let mine = dailyMine[day]
+    emit(
+      .daily(
+        DailyEntry(
+          day: day, prompt: FakePartnerDaily.prompt(on: day), mine: mine,
+          theirs: mine == nil ? nil : dailyTheirs[day], theirsDrawn: dailyTheirs[day] != nil)))
+  }
+
   private func giveTreat() {
     let day = TreatDay.key(for: now(), calendar: .current)
     emit(.treats([day: [Self.device]]))
@@ -281,8 +322,24 @@ extension NoteDelivery {
       switchLight: { await room.lightSwitched($0) },
       adopt: { await room.adopted($0) },
       react: { _, _ in },
+      drawDaily: { strokes, at in await room.drewDaily(strokes, day: String(at.prefix(10))) },
       signal: { await room.signalled($0) },
       updates: { room.updates() })
+  }
+}
+
+/// FAKE. The prompts the scripted partner's room chooses from. The real ones come from the room.
+enum FakePartnerDaily {
+  static let prompts = [
+    DailyPromptText(id: "where-you-are", text: "Draw where you are right now"),
+    DailyPromptText(id: "perfect-weekend", text: "Our perfect weekend"),
+    DailyPromptText(id: "how-i-see-you", text: "How I see you today"),
+    DailyPromptText(id: "made-you-smile", text: "Something that made you smile"),
+  ]
+
+  static func prompt(on day: String) -> DailyPromptText {
+    let number = Int(day.replacingOccurrences(of: "-", with: "")) ?? 0
+    return prompts[number % prompts.count]
   }
 }
 
