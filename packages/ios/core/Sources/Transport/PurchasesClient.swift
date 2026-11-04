@@ -57,7 +57,7 @@ public struct PurchasesClient: Sendable {
       stamps: { () async throws(TransportError) in
         try await http.perform(
           HTTPRequest(
-            method: Routes.getStamps.method, path: Routes.getStamps.path,
+            method: Routes.getPurchases.method, path: Routes.getPurchases.path,
             headers: try await identity()),
           as: StampsResponse.self)
       })

@@ -59,9 +59,9 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/onboarding",
       },
-      "getStamps": {
+      "getPurchases": {
         "method": "GET",
-        "path": "/v1/stamps",
+        "path": "/v1/purchases",
       },
       "getStatus": {
         "method": "GET",

@@ -33,7 +33,7 @@ describe("rate limit groups", () => {
     ["/v1/onboarding", undefined],
     ["/v1/purchases", "purchases"],
     ["/v1/purchases/mock", "purchases"],
-    ["/v1/stamps", undefined],
+    ["/v1/purchases", undefined],
     ["/v1/appstore/notifications", undefined],
     ["/v1/notes", undefined],
     ["/", undefined],

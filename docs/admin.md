@@ -22,7 +22,7 @@ hover.
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
-| Purchases | stamp-pack purchases (owner pair or demo room, pack, stamps, environment, status, flagged, dates), the stamp ledger and the App Store notifications with what was done with each, newest first ([payments.md](payments.md#backend)). A flagged purchase is one whose refund found fewer stamps than the pack | nothing |
+| Purchases | coin-pack purchases (owner pair or demo room, pack, coins, environment, status, flagged, dates), the coin ledger and the App Store notifications with what was done with each, newest first ([payments.md](payments.md#backend)). A flagged purchase is one whose refund found fewer stamps than the pack | nothing |
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
@@ -206,7 +206,7 @@ a Cloudflare Access **service token**. They can't change anything.
 | `pairs/<pair id>` | Pairs: one pair by id only, at the panel's detail |
 | `status` | Maintenance: the current service status, version, who set it |
 | `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |
-| `purchases[?limit=<1-1000>]` | Purchases: purchases, stamp ledger and App Store notifications, newest first (default 200) |
+| `purchases[?limit=<1-1000>]` | Purchases: purchases, coin ledger and App Store notifications, newest first (default 200) |
 
 - The answers carry the same fields as the panel's, so the Overview's `range` and `stats` and an
   experiment's `results.verdict` are there too. Routes and access are as before.

@@ -29,7 +29,7 @@ import {
 } from "@billet/contracts-http-api/note";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { resetDirectory } from "./directory-migrations.ts";
-import { PurchaseResponse, StampsResponse } from "@billet/contracts-http-api/purchase";
+import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
 import {
   makeChain,
   makeXcodeChain,
@@ -1573,16 +1573,16 @@ describe("payments in the Worker", () => {
       headers: { "content-type": "application/json", ...headers },
       body: JSON.stringify(body),
     });
-  const stampsAt = async (stage: string, headers: Record<string, string>) => {
+  const purchasesAt = async (stage: string, headers: Record<string, string>) => {
     const response = await atStage(
       stage,
-      new Request("https://billet.test/v1/stamps", { headers }),
+      new Request("https://billet.test/v1/purchases", { headers }),
     );
     expect(response.status).toBe(200);
-    return Schema.decodeUnknownSync(StampsResponse)(await response.json());
+    return Schema.decodeUnknownSync(PurchasesResponse)(await response.json());
   };
   const mockBody = (kind: "purchase" | "refund", transactionId: string) => ({
-    productId: "com.mikitahimpel.billet.stamps.550",
+    productId: "com.mikitahimpel.billet.coins.550",
     transactionId,
     kind,
   });
@@ -1594,7 +1594,7 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", "mock-1"), bearer(owner)),
     );
     expect(response.status).toBe(404);
-    expect(await env.DB.prepare("SELECT * FROM stamp_ledger").all()).toMatchObject({
+    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
       results: [],
     });
   });
@@ -1609,22 +1609,22 @@ describe("payments in the Worker", () => {
     expect(bought.status).toBe(200);
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 550,
       duplicate: false,
     });
-    expect((await stampsAt("dev", bearer(claimer))).balance).toBe(550);
+    expect((await purchasesAt("dev", bearer(claimer))).balance).toBe(550);
 
     const refunded = await atStage(
       "dev",
       post("/v1/purchases/mock", mockBody("refund", transactionId), bearer(claimer)),
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
-      stamps: 550,
+      coins: 550,
       balance: 0,
     });
-    const { entries } = await stampsAt("dev", bearer(owner));
+    const { entries } = await purchasesAt("dev", bearer(owner));
     expect(entries.map(({ id, amount }) => [id, amount])).toEqual([
       [`purchase:${transactionId}`, 550],
       [`refund:${transactionId}`, -550],
@@ -1641,16 +1641,16 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", transactionId), demo),
     );
     expect(response.status).toBe(200);
-    expect((await stampsAt("dev", demo)).balance).toBe(550);
-    const rows = await env.DB.prepare("SELECT owner_id FROM stamp_ledger").all();
+    expect((await purchasesAt("dev", demo)).balance).toBe(550);
+    const rows = await env.DB.prepare("SELECT owner_id FROM coin_ledger").all();
     expect(rows.results).toEqual([{ owner_id: "demo:AB2345CDEF" }]);
 
     for (const stage of ["prod", undefined]) {
-      const stamps = await atStage(
+      const coins = await atStage(
         stage,
-        new Request("https://billet.test/v1/stamps", { headers: demo }),
+        new Request("https://billet.test/v1/purchases", { headers: demo }),
       );
-      expect(stamps.status).toBe(401);
+      expect(coins.status).toBe(401);
       const purchase = await atStage(
         stage,
         post("/v1/purchases", { signedTransaction: "a.b.c" }, demo),
@@ -1677,7 +1677,7 @@ describe("payments in the Worker", () => {
     const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
     expect(first).toMatchObject({
       transactionId: "7",
-      stamps: 100,
+      coins: 100,
       balance: 100,
       duplicate: false,
     });
@@ -1728,7 +1728,7 @@ describe("payments in the Worker", () => {
         );
       }),
     );
-    await env.DB.prepare("ALTER TABLE stamp_ledger RENAME TO stamp_ledger_away").run();
+    await env.DB.prepare("ALTER TABLE coin_ledger RENAME TO coin_ledger_away").run();
     try {
       const down = await atStage(
         "dev",
@@ -1736,7 +1736,7 @@ describe("payments in the Worker", () => {
       );
       expect(down.status).toBe(503);
     } finally {
-      await env.DB.prepare("ALTER TABLE stamp_ledger_away RENAME TO stamp_ledger").run();
+      await env.DB.prepare("ALTER TABLE coin_ledger_away RENAME TO coin_ledger").run();
     }
     try {
       await atStage("dev", post("/v1/purchases", { signedTransaction: fromXcode }, bearer(owner)));
@@ -1758,7 +1758,7 @@ describe("payments in the Worker", () => {
     const token = await signedInAs("subject-alone");
     const response = await atStage(
       "dev",
-      new Request("https://billet.test/v1/stamps", { headers: bearer(token) }),
+      new Request("https://billet.test/v1/purchases", { headers: bearer(token) }),
     );
     expect(response.status).toBe(404);
   });
