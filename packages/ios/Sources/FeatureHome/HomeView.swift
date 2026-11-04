@@ -46,6 +46,8 @@ struct HomeView: View {
   @State private var drawingDaily = false
   /// The day of the drawing of the day whose two sheets are showing.
   @State private var dailyReveal: DailyEntry?
+  /// The newest partner's note opened from Home, so the room stops marking it as new.
+  @AppStorage("home.openedNote") private var openedNoteID = ""
   /// The toy this phone's touch is moving now, for counting a game with it.
   @State private var touchingToy: CatToy?
   /// The partner's meal or game being shown, for a few seconds.
@@ -249,6 +251,17 @@ struct HomeView: View {
     session.notes.first { $0.direction == .received }
   }
 
+  private var isNoteUnread: Bool {
+    guard let note = latestReceivedNote else { return false }
+    return note.id.uuidString != openedNoteID
+  }
+
+  /// Opens the notes from the note in the room, which counts the newest as read.
+  private func openLatestNote() {
+    if let note = latestReceivedNote { openedNoteID = note.id.uuidString }
+    onOpenNotes()
+  }
+
   @ViewBuilder private var home: some View {
     if variant.isFullBleed, let scene {
       fullBleedHome(scene)
@@ -282,7 +295,8 @@ struct HomeView: View {
       notes: session.notes,
       streak: session.streak(today: today, calendar: calendar),
       isFakePartner: session.isFakePartner,
-      onOpenNotes: onOpenNotes,
+      isNoteUnread: isNoteUnread,
+      onOpenNotes: openLatestNote,
       isDecorating: isRenovating,
       isOpening: launchPlaying,
       onDecorate: { session.renovator.requestOpen() },
@@ -814,7 +828,7 @@ struct HomeView: View {
       session.fed()
       events(.catFed(.food))
     case .shooed: session.shooed()
-    case .noteOpened: onOpenNotes()
+    case .noteOpened: openLatestNote()
     case .affordances(let room, let weather): session.brain.setRoom(room, weather: weather)
     case .touching(let interaction):
       session.brain.setLive(interaction)
