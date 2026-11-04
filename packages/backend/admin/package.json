@@ -8,13 +8,16 @@
     "./access": "./src/access.ts",
     "./admin-assets": "./src/admin-assets.ts",
     "./admin-data": "./src/admin-data.ts",
+    "./admin-funnel": "./src/admin-funnel.ts",
     "./admin-overview": "./src/admin-overview.ts",
     "./admin-retention": "./src/admin-retention.ts",
     "./admin-routes": "./src/admin-routes.ts",
     "./app-status-store": "./src/app-status-store.ts",
+    "./funnel-store": "./src/funnel-store.ts",
     "./seed-data": "./src/seed-data.ts",
     "./test/access-tokens": "./test/access-tokens.ts",
-    "./test/in-memory-app-status-store": "./test/in-memory-app-status-store.ts"
+    "./test/in-memory-app-status-store": "./test/in-memory-app-status-store.ts",
+    "./test/in-memory-funnel-store": "./test/in-memory-funnel-store.ts"
   },
   "scripts": {
     "lint": "oxlint .",

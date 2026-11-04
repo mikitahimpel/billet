@@ -23,6 +23,7 @@ import {
 import { Experiments, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { AdminDataLive } from "./admin-data-live.ts";
+import { FunnelStoreLive } from "./funnel-store-live.ts";
 import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
 import { Observability } from "./observability.ts";
 import { AppStatusStoreLive } from "./app-status-live.ts";
@@ -147,6 +148,7 @@ const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
     FlagsRepositoryLive(env.DB),
     FlagConfigRepositoryLive(env.DB, caches.default),
     AdminDataLive(env.DB),
+    FunnelStoreLive(env.DB),
     OnboardingCatalogue.seed,
     Experiments.with(experiments),
     AppStatusStoreLive(env.STATUS),

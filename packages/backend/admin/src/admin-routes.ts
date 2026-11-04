@@ -25,6 +25,15 @@ import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
 import { buildOverview } from "./admin-overview.ts";
 import { buildRetentionGrid } from "./admin-retention.ts";
+import {
+  buildFunnel,
+  FunnelDefinition,
+  funnelEventNames,
+  FunnelRange,
+  FunnelUnit,
+  FunnelWindow,
+} from "./admin-funnel.ts";
+import { FunnelStore } from "./funnel-store.ts";
 import { AppStatusStore } from "./app-status-store.ts";
 import { verdictOf } from "./experiment-verdict.ts";
 
@@ -48,6 +57,9 @@ export const adminApi = {
   overview: "/admin/api/overview",
   appEvents: "/admin/api/app-events",
   retention: "/admin/api/retention",
+  funnel: "/admin/api/funnel",
+  funnels: "/admin/api/funnels",
+  savedFunnel: "/admin/api/funnels/:id",
   flags: "/admin/api/flags",
   flag: "/admin/api/flags/:key",
   experiments: "/admin/api/experiments",
@@ -66,6 +78,8 @@ export const agentApiPrefix = "/admin/api/agent/";
 export const agentApi = {
   overview: "/admin/api/agent/overview",
   retention: "/admin/api/agent/retention",
+  funnel: "/admin/api/agent/funnel",
+  funnels: "/admin/api/agent/funnels",
   experiments: "/admin/api/agent/experiments",
   flags: "/admin/api/agent/flags",
   flagHistory: "/admin/api/agent/flag-history",
@@ -136,6 +150,23 @@ const RetentionQuery = Schema.Struct({
     Schema.String.check(Schema.isPattern(/^(?:unknown|\d{1,4}(?:\.\d{1,4}){0,3}(?:\+\d{1,8})?)$/)),
   ),
 });
+const ExperimentKeyText = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/));
+// `steps` is the names joined by commas; the definition checks each against the closed list.
+const FunnelQuery = Schema.Struct({
+  steps: Schema.String,
+  window: FunnelWindow,
+  unit: FunnelUnit,
+  range: Schema.optional(FunnelRange),
+  split: Schema.optional(ExperimentKeyText),
+});
+const decodeDefinition = Schema.decodeUnknownEffect(FunnelDefinition);
+const SaveFunnelBody = Schema.Struct({
+  name: Schema.String.check(Schema.isTrimmed(), Schema.isMinLength(1), Schema.isMaxLength(80)),
+  definition: FunnelDefinition,
+});
+const FunnelParams = Schema.Struct({
+  id: Schema.String.check(Schema.isPattern(/^[0-9a-f-]{36}$/)),
+});
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
 const KeyParams = Schema.Struct({ key: ExperimentKey });
@@ -189,6 +220,7 @@ const readHandlers = Effect.gen(function* () {
   const data = yield* AdminData;
   const digest = yield* Digest.Digest;
   const appStatus = yield* AppStatusStore;
+  const funnelStore = yield* FunnelStore;
   const catalogue = yield* OnboardingCatalogue;
 
   const items = Effect.gen(function* () {
@@ -244,6 +276,27 @@ const readHandlers = Effect.gen(function* () {
         appVersion: version,
       }),
     );
+  }).pipe(guarded);
+
+  const funnel = Effect.gen(function* () {
+    const query = yield* HttpServerRequest.schemaSearchParams(FunnelQuery);
+    const definition = yield* decodeDefinition({
+      steps: query.steps.split(","),
+      window: query.window,
+      unit: query.unit,
+    });
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(
+      buildFunnel(events, rows, utcDay(yield* Clock.currentTimeMillis), definition, {
+        range: query.range,
+        split: query.split,
+      }),
+    );
+  }).pipe(guarded);
+
+  const savedFunnels = Effect.gen(function* () {
+    // With the names a step may be, so the page offers the closed list and nothing else.
+    return respondJson({ funnels: yield* funnelStore.all, events: funnelEventNames });
   }).pipe(guarded);
 
   const flagList = Effect.gen(function* () {
@@ -345,6 +398,9 @@ const readHandlers = Effect.gen(function* () {
     overview,
     appEvents,
     retention,
+    funnel,
+    savedFunnels,
+    funnelStore,
     flagList,
     experiments,
     history,
@@ -361,7 +417,7 @@ const readHandlers = Effect.gen(function* () {
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const { flags, configs, appStatus, entryOf, ...reads } = yield* readHandlers;
+    const { flags, configs, appStatus, entryOf, funnelStore, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
     const environment = yield* PanelEnvironment;
 
@@ -396,6 +452,35 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.overview, reads.overview);
     yield* router.add("GET", adminApi.appEvents, reads.appEvents);
     yield* router.add("GET", adminApi.retention, reads.retention);
+    yield* router.add("GET", adminApi.funnel, reads.funnel);
+    yield* router.add("GET", adminApi.funnels, reads.savedFunnels);
+
+    // A saved funnel is a definition and a name, never a count. Saved with the Access email.
+    yield* router.add(
+      "POST",
+      adminApi.funnels,
+      Effect.gen(function* () {
+        const body = yield* HttpServerRequest.schemaBodyJson(SaveFunnelBody);
+        const saved = {
+          id: crypto.randomUUID(),
+          name: body.name,
+          definition: body.definition,
+          createdAt: yield* Clock.currentTimeMillis,
+          createdBy: admin.email,
+        };
+        yield* funnelStore.save(saved);
+        return respondJson(saved, 201);
+      }).pipe(guarded),
+    );
+    yield* router.add(
+      "DELETE",
+      adminApi.savedFunnel,
+      Effect.gen(function* () {
+        const { id } = yield* HttpRouter.schemaPathParams(FunnelParams);
+        if (!(yield* funnelStore.remove(id))) return yield* new NotFound();
+        return HttpServerResponse.empty({ status: 204 });
+      }).pipe(guarded),
+    );
     yield* router.add("GET", adminApi.flags, reads.flagList);
     yield* router.add("GET", adminApi.experiments, reads.experiments);
     yield* router.add("GET", adminApi.history, reads.history);
@@ -497,6 +582,8 @@ export const AgentRoutes = HttpRouter.use((router) =>
     const reads = yield* readHandlers;
     yield* router.add("GET", agentApi.overview, reads.overview);
     yield* router.add("GET", agentApi.retention, reads.retention);
+    yield* router.add("GET", agentApi.funnel, reads.funnel);
+    yield* router.add("GET", agentApi.funnels, reads.savedFunnels);
     yield* router.add("GET", agentApi.experiments, reads.experiments);
     yield* router.add("GET", agentApi.flags, reads.flagList);
     yield* router.add("GET", agentApi.flagHistory, reads.history);
