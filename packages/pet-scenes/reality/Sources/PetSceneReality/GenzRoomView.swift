@@ -68,6 +68,7 @@ struct GenzRoomView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.petSceneOnScreen) private var hostShowsScene
   @Environment(\.petSceneDrawing) private var drawing
+  @Environment(\.petSceneNoteUnread) fileprivate var noteUnread
   @Environment(\.petSceneRoomArt) private var replacementArt
   @Environment(\.petSceneCat) private var cat
   @Environment(\.petSceneFlyIn) private var flyIn
@@ -108,6 +109,13 @@ struct GenzRoomView: View {
       stage(room)
       if parts.shows("layers") {
         ForEach(over, id: \.self) { slot in layer(slot, room: room) }
+      }
+      if noteUnread, !isDecorating {
+        NoteBeacon(
+          outline: room.screen.outlines[.windowBacklight] ?? [],
+          isPaused: !isOnScreen || reduceMotion
+        )
+        .transition(.opacity)
       }
       if parts.shows("halos") {
         GlowLights(
@@ -267,14 +275,29 @@ struct GenzRoomView: View {
       .onAppear {
         room.report = onEvent
       }
-      .accessibilityElement()
-      .accessibilityLabel("Window seat at night")
-      .accessibilityAction(named: "Pet the cat") { onEvent(room.petCat()) }
-      .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
-      .accessibilityAction(named: Text("Press the light switch")) { onEvent(room.pressSwitch()) }
-      .accessibilityAction(named: "Open the note") {
-        onEvent(.noteOpened(delivery: world.delivery))
-      }
+      .modifier(GenzRoomAccessibility(view: self, room: room))
+  }
+
+  /// What VoiceOver hears of the room and can do in it. Kept apart from the feeds so each chain
+  /// stays small enough to type-check.
+  fileprivate struct GenzRoomAccessibility: ViewModifier {
+    let view: GenzRoomView
+    let room: GenzRoom
+
+    func body(content: Content) -> some View {
+      content
+        .accessibilityElement()
+        .accessibilityLabel("Window seat at night")
+        .accessibilityValue(view.noteUnread ? "A new note is on the window" : "")
+        .accessibilityAction(named: "Pet the cat") { view.onEvent(room.petCat()) }
+        .accessibilityAction(named: "Turn the lamp on or off") { room.toggleLamp() }
+        .accessibilityAction(named: Text("Press the light switch")) {
+          view.onEvent(room.pressSwitch())
+        }
+        .accessibilityAction(named: "Open the note") {
+          view.onEvent(.noteOpened(delivery: view.world.delivery))
+        }
+    }
   }
 
   /// Puts `room` in the RealityView in place of the room it held, and starts its updates.
@@ -340,7 +363,8 @@ struct GenzRoomView: View {
       // The room draws none of the shop's furniture, so it offers no closet to add from.
       DecorControls(
         status: decorStatus, onUndo: { touch(room).undo() }, onDone: { isDecorating = false },
-        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() })
+        onRotate: { room.decor.rotateStep() }, onPutAway: { touch(room).putAway() },
+        onReset: { room.resetDecor() })
     }
   }
 
@@ -355,7 +379,8 @@ struct GenzRoomView: View {
 
   private func touch(_ room: GenzRoom) -> DecorTouch {
     DecorTouch(
-      session: room.decor, renovator: nil, floor: { [room] point in room.floorPoint(under: point) })
+      session: room.decor, renovator: nil,
+      floor: { [room] point, name in room.surfacePoint(under: point, for: name) })
   }
 
   /// While decorating, a finger on a piece picks it up, and the piece follows it until let go.

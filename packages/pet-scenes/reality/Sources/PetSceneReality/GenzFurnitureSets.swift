@@ -61,6 +61,7 @@ extension GenzLayout {
       Placement(piece: palette.piece(.leafyPlant), centre: GenzRoomPoint(6.85, 2.35, 0)),
       Placement(piece: palette.piece(.catBed), centre: GenzRoomPoint(5.9, 4.35, 0), yaw: -0.3),
     ]
+    pieces += seatSoftThings(palette)
     switch furniture {
     case .original, .cosyNook:
       pieces.append(
@@ -75,6 +76,31 @@ extension GenzLayout {
       ]
     }
     return pieces
+  }
+}
+
+extension GenzLayout {
+  /// The pillows leaning on the window seat's glass and the throw folded at its left end, each a
+  /// piece of its own so it can be moved along the seat. They take the seat's colours.
+  fileprivate static func seatSoftThings(_ palette: GenzFurniturePalette) -> [Placement] {
+    let seat = palette.piece(.windowBench)
+    // The seat's near left corner, which the soft things were laid out from.
+    let corner = GenzRoomPoint(0.6, 0, 1.28)
+    let pillows: [(GenzPiece.Kind, Float, GenzColour?)] = [
+      (.pillowLarge, 1.45, seat.slot(1).shaded(0.35)), (.pillowLinen, 2.62, nil),
+      (.pillowSquare, 3.66, nil), (.pillowSmall, 4.5, seat.slot(2)),
+    ]
+    var out = pillows.map { kind, x, colour in
+      Placement(
+        piece: GenzPiece(kind, slots: colour.map { [$0] }),
+        centre: GenzRoomPoint(corner.x + x, kind.size.y / 2, corner.z))
+    }
+    let blanket = GenzPiece.Kind.blanket.size
+    out.append(
+      Placement(
+        piece: GenzPiece(.blanket, slots: [seat.slot(2)]),
+        centre: GenzRoomPoint(corner.x + 0.22 + blanket.x / 2, 0.8 + blanket.y / 2, 1.32)))
+    return out
   }
 }
 
