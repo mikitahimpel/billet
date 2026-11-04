@@ -21,6 +21,9 @@ const photo = () =>
   SendNoteRequest.cases.Photo.make({
     key: newKey(),
     image: Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png"),
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
   });
 
 /** A room whose lane sender follows `script`; "Delivered" once the script runs out. */

@@ -123,7 +123,28 @@ const drawing = Note.cases.Drawing.make({
   compact,
   image,
 });
+// Stored before photos carried a size and a preview: it must still decode.
 const photo = Note.cases.Photo.make({ id: noteId, author: bob, sentAt: 1_700_000_001_000, image });
+const photoImage = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-2.jpg");
+const photoShape = {
+  image: photoImage,
+  width: 3024,
+  height: 4032,
+  preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+} as const;
+const photoWithCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+  caption: "sunset from the bridge 🌉",
+});
+const photoWithoutCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+});
 const drawingOnPaper = Note.cases.Drawing.make({
   id: noteId,
   author: alice,
@@ -210,6 +231,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     drawing,
     "drawing-on-paper": drawingOnPaper,
     photo,
+    "photo-with-caption": photoWithCaption,
+    "photo-without-caption": photoWithoutCaption,
     text,
     "text-without-paper": plainText,
   }),
@@ -233,7 +256,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       image,
       paper: "blush",
     }),
-    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
+    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, ...photoShape }),
+    "photo-with-caption": SendNoteRequest.cases.Photo.make({
+      key: idempotencyKey,
+      ...photoShape,
+      caption: "sunset from the bridge 🌉",
+    }),
     text: SendNoteRequest.cases.Text.make({
       key: idempotencyKey,
       text: "miss you already 💛",
@@ -441,6 +469,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
     "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
+    "photo-note-received": ServerMessage.cases.NoteReceived.make({
+      seq: 11,
+      note: photoWithCaption,
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

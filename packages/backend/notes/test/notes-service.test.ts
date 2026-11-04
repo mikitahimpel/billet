@@ -21,6 +21,11 @@ const pairA = pair("pair-a");
 const pairB = pair("pair-b");
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]);
+const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+const ascii = (text: string) => [...text].map((character) => character.charCodeAt(0));
+/** An ISO-BMFF file: a box size, then `ftyp` and the major brand. */
+const isoFile = (brand: string) =>
+  Uint8Array.from([0x00, 0x00, 0x00, 0x18, ...ascii("ftyp"), ...ascii(brand), 0, 0, 0, 0]);
 
 const world = () =>
   makeWorld([
@@ -47,7 +52,14 @@ const newKey = () =>
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
 
-const photo = (image: MediaKey) => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = (image: MediaKey) =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 /** Fills up with one-digit points, four bytes a pair, then makes up the rest in the width's digits. */
 const compactOfSize = (size: number): CompactStrokes => {
@@ -74,9 +86,28 @@ describe("uploadImage", () => {
   });
 
   it.each([
+    ["a PNG", png, ".png"],
+    ["a JPEG", jpeg, ".jpg"],
+    ["an iPhone HEIC", isoFile("heic"), ".heic"],
+    ["a generic HEIF", isoFile("mif1"), ".heic"],
+  ])("stores %s under a key with its extension", async (_, bytes, extension) => {
+    const { layer, objects } = world();
+    const outcome = await run(layer, (notes) => notes.uploadImage(ana, bytes));
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      expect(outcome.value.startsWith(`${mediaPrefix(pairA)}notes/`)).toBe(true);
+      expect(outcome.value.endsWith(extension)).toBe(true);
+      expect(objects.get(outcome.value)).toEqual(bytes);
+    }
+  });
+
+  it.each([
     ["empty", new Uint8Array()],
     ["too short for a signature", png.slice(0, 7)],
-    ["some other format", Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0])],
+    ["a JPEG cut short", jpeg.slice(0, 2)],
+    ["a GIF", Uint8Array.from(ascii("GIF89a"))],
+    ["an MP4 video", isoFile("isom")],
+    ["an ISO file cut before its brand", isoFile("heic").slice(0, 10)],
   ])("refuses bytes that are %s", async (_, bytes) => {
     const { layer, objects } = world();
     expect(await run(layer, (notes) => notes.uploadImage(ana, bytes))).toEqual(
@@ -117,6 +148,16 @@ describe("readImage", () => {
     expect(await run(guarded, (notes) => notes.readImage(ana, key))).toEqual(
       failed(new NotesNotFound()),
     );
+  });
+
+  it("gives another couple the 404 of a missing image for a JPEG too", async () => {
+    const { layer } = world();
+    const read = (reader: UserId) =>
+      run(layer, (notes) =>
+        notes.uploadImage(ana, jpeg).pipe(Effect.flatMap((key) => notes.readImage(reader, key))),
+      );
+    expect(await read(ben)).toEqual(Exit.succeed(jpeg));
+    expect(await read(cal)).toEqual(failed(new NotesNotFound()));
   });
 
   it("does not treat a pair id that only starts the same as the same prefix", async () => {
@@ -166,6 +207,33 @@ describe("sendNote", () => {
         { seq: 2, note: second },
       ]);
       expect([first.author, second.author]).toEqual([ana, ben]);
+    }
+  });
+
+  it("stamps a photo with its size, preview and caption, and leaves out a caption not sent", async () => {
+    const { layer } = world();
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const image = yield* notes.uploadImage(ana, jpeg);
+        const captioned = yield* notes.sendNote(
+          ana,
+          SendNoteRequest.cases.Photo.make({ ...photo(image), caption: "the bridge 🌉" }),
+        );
+        const bare = yield* notes.sendNote(ben, photo(image));
+        return { image, captioned, bare };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { image, captioned, bare } = outcome.value;
+      const shape = { _tag: "Photo", image, width: 4032, height: 3024 };
+      expect(captioned).toMatchObject({ ...shape, author: ana, caption: "the bridge 🌉" });
+      expect(bare).toMatchObject({
+        ...shape,
+        author: ben,
+        preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      });
+      expect(bare).not.toHaveProperty("caption");
     }
   });
 

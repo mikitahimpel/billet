@@ -55,7 +55,16 @@ const setup = (options: { readonly pairs?: ReadonlyArray<PairId> } = {}) => {
     NotesService.use((service) =>
       Effect.gen(function* () {
         const image = yield* service.uploadImage(author, png);
-        yield* service.sendNote(author, SendNoteRequest.cases.Photo.make({ key: newKey(), image }));
+        yield* service.sendNote(
+          author,
+          SendNoteRequest.cases.Photo.make({
+            key: newKey(),
+            image,
+            width: 4032,
+            height: 3024,
+            preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+          }),
+        );
         return image;
       }),
     ).pipe(Effect.provide(notes), Effect.runPromise);
@@ -106,7 +115,13 @@ describe("AccountDeletion", () => {
         yield* world.pairRooms.sendNote(
           before,
           ana,
-          SendNoteRequest.cases.Photo.make({ key: newKey(), image }),
+          SendNoteRequest.cases.Photo.make({
+            key: newKey(),
+            image,
+            width: 4032,
+            height: 3024,
+            preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+          }),
         );
       }),
     );

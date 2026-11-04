@@ -38,7 +38,15 @@ const stamped = (
         ...server,
       };
     case "Photo":
-      return { _tag: "Photo", image: request.image, ...server };
+      return {
+        _tag: "Photo",
+        image: request.image,
+        width: request.width,
+        height: request.height,
+        preview: request.preview,
+        ...(request.caption === undefined ? {} : { caption: request.caption }),
+        ...server,
+      };
     case "Text":
       return { _tag: "Text", text: request.text, ...paperOf(request), ...server };
   }

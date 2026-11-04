@@ -4,7 +4,12 @@ import { afterAll, describe, expect, it } from "vitest";
 import { AuthRejected } from "@billet/backend-auth/auth-error";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { DeviceId } from "@billet/contracts-domain/ids";
-import { UploadImageResponse } from "@billet/contracts-http-api/note";
+import {
+  noteTextMaxCharacters,
+  noteTextMaxUnits,
+  photoPreviewMaxLength,
+} from "@billet/contracts-domain/note";
+import { SendNoteResponse, UploadImageResponse } from "@billet/contracts-http-api/note";
 import { NotesUnavailable } from "../src/notes-error.ts";
 import { imageSizeLimit, NotesRoutes } from "../src/notes-routes.ts";
 import { NotesService } from "../src/notes-service.ts";
@@ -38,7 +43,13 @@ const FakeAuth = Layer.succeed(
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]);
 
-const world = makeWorld([[pair("pair-a"), user("ana"), user("ben")]]);
+const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xdb, 0x00, 0x43, 0x00, 0x08]);
+const heic = Uint8Array.from([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x68, 0x65, 0x69, 0x63]);
+
+const world = makeWorld([
+  [pair("pair-a"), user("ana"), user("ben")],
+  [pair("pair-b"), user("cal"), user("dee")],
+]);
 
 const setup = (dependencies: typeof world.layer) =>
   HttpRouter.toWebHandler(
@@ -62,6 +73,9 @@ const request = (path: string, name: string, init: RequestInit = {}) =>
 
 const upload = (name: string, body: BodyInit = png) =>
   handler(request("/v1/media", name, { method: "POST", body }));
+
+const uploadedKey = async (name: string, body: BodyInit) =>
+  Schema.decodeUnknownSync(UploadImageResponse)(await (await upload(name, body)).json()).image;
 
 describe("the media routes", () => {
   it("serves an uploaded PNG, byte for byte, as an image nobody may cache", async () => {
@@ -88,8 +102,44 @@ describe("the media routes", () => {
     expect(world.objects.size).toBe(before);
   });
 
-  it("answers 400 to bytes that aren't a PNG", async () => {
+  it.each([
+    ["a JPEG", jpeg, ".jpg", "image/jpeg"],
+    ["a HEIC", heic, ".heic", "image/heic"],
+  ])("serves %s under its own extension and content type", async (_, bytes, extension, type) => {
+    const image = await uploadedKey("ana", bytes);
+    expect(image.endsWith(extension)).toBe(true);
+
+    const read = await handler(request(`/v1/media/${image}`, "ben"));
+
+    expect(read.status).toBe(200);
+    expect(read.headers.get("content-type")).toBe(type);
+    expect(read.headers.get("cache-control")).toBe("no-store");
+    expect(new Uint8Array(await read.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("answers 400 to a JPEG over the limit, without storing it", async () => {
+    const before = world.objects.size;
+    const oversized = new Uint8Array(Number(imageSizeLimit) + 1);
+    oversized.set(jpeg);
+    expect((await upload("ana", oversized)).status).toBe(400);
+    expect(world.objects.size).toBe(before);
+  });
+
+  it("answers 400 to bytes that aren't a PNG, JPEG or HEIC", async () => {
+    const before = world.objects.size;
     expect((await upload("ana", "hello")).status).toBe(400);
+    expect(
+      (await upload("ana", Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61]))).status,
+    ).toBe(400);
+    expect(world.objects.size).toBe(before);
+  });
+
+  it("answers another couple the 404 of a missing image for a photo", async () => {
+    const image = await uploadedKey("ana", jpeg);
+    const theirs = await handler(request(`/v1/media/${image}`, "cal"));
+    const missing = await handler(request("/v1/media/pairs/pair-a/notes/none.jpg", "ana"));
+    expect([theirs.status, missing.status]).toEqual([404, 404]);
+    expect(await theirs.json()).toEqual(await missing.json());
   });
 
   it("answers 401 to a rejected session", async () => {
@@ -110,6 +160,41 @@ describe("the notes routes", () => {
     const post = (body: string) => handler(request("/v1/notes", "ana", { method: "POST", body }));
     expect((await post(JSON.stringify({ _tag: "Letter" }))).status).toBe(400);
     expect((await post("x".repeat(17 * 1024))).status).toBe(400);
+  });
+
+  const postNote = (name: string, body: unknown) =>
+    handler(request("/v1/notes", name, { method: "POST", body: JSON.stringify(body) }));
+
+  it("takes the largest photo note there can be, under the note size limit", async () => {
+    const image = await uploadedKey("ana", jpeg);
+    // 120 characters, each a letter under three-byte combining marks, to the UTF-16 cap: the most
+    // bytes a caption can take. And a 9 by 9 BlurHash, the longest preview.
+    const character = `a${"\u20d0".repeat(Math.floor(noteTextMaxUnits / noteTextMaxCharacters) - 1)}`;
+    const longest = {
+      caption: character.repeat(noteTextMaxCharacters),
+      preview: `|${"0".repeat(photoPreviewMaxLength - 1)}`,
+    };
+    const response = await postNote("ana", {
+      _tag: "Photo",
+      key: "00000000-0000-4000-8000-00000000f070",
+      image,
+      width: 8192,
+      height: 8192,
+      ...longest,
+    });
+    expect(response.status).toBe(200);
+    const { note } = Schema.decodeUnknownSync(SendNoteResponse)(await response.json());
+    expect(note).toMatchObject({ _tag: "Photo", image, width: 8192, ...longest });
+  });
+
+  it("answers 400 to a photo without its size or preview", async () => {
+    const image = await uploadedKey("ana", jpeg);
+    const key = "00000000-0000-4000-8000-00000000f071";
+    expect((await postNote("ana", { _tag: "Photo", key, image })).status).toBe(400);
+    expect(
+      (await postNote("ana", { _tag: "Photo", key, image, width: 1, height: 1, preview: "x" }))
+        .status,
+    ).toBe(400);
   });
 
   it.each(["?limit=0", "?limit=101", "?limit=-1", "?after=-1", "?after=x"])(
