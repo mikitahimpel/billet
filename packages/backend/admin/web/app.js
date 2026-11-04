@@ -3322,6 +3322,356 @@ async function renderFunnels(args) {
   ];
 }
 
+/* ---------- Trends ---------- */
+
+const TREND_METRICS = [
+  ["count", "Count"],
+  ["people", "Unique people"],
+  ["pairs", "Unique pairs"],
+  ["perPair", "Per pair"],
+];
+const TREND_INTERVALS = [
+  ["day", "By day"],
+  ["week", "By week"],
+];
+const TREND_RANGES = [
+  ["30", "30 days"],
+  ["90", "90 days"],
+  ["180", "180 days"],
+  ["365", "365 days"],
+];
+const TREND_SPLITS = [
+  ["none", "No split"],
+  ["version", "App version"],
+  ["os", "System"],
+  ["variant", "Variant"],
+];
+const SERIES_CLASSES = 8;
+
+/** `#/trends/<event>/<metric>/<interval>/<range>/<split>/<key or ->`. */
+const trendHref = (t) =>
+  `#/trends/${enc(t.event)}/${t.metric}/${t.interval}/${t.range}/${t.split}/${enc(t.key || "-")}`;
+
+function trendFromArgs([event, metric, interval, range, split, key]) {
+  const pick = (value, options, fallback) =>
+    options.some(([v]) => v === value) ? value : fallback;
+  return {
+    event: event || "AppOpened",
+    metric: pick(metric, TREND_METRICS, "count"),
+    interval: pick(interval, TREND_INTERVALS, "day"),
+    range: pick(range, TREND_RANGES, "90"),
+    split: pick(split, TREND_SPLITS, "none"),
+    key: key && key !== "-" ? key : "",
+  };
+}
+
+const fmtTrend = (v, metric) =>
+  v == null ? "too few" : metric === "perPair" ? v.toFixed(2) : fmtNum(v, 0);
+
+/**
+ * A line per group over time, with gaps where a point is "too few". With one group the period
+ * before is a dashed line behind it. Hover or arrow keys read a point.
+ */
+function trendChart(result, colourOf) {
+  const { groups } = result;
+  const metric = result.query.metric;
+  const starts = groups[0]?.points.map((p) => p.start) ?? [];
+  const n = starts.length;
+  const single = groups.length === 1;
+  const values = groups.flatMap((g) =>
+    g.points.flatMap((p) => [p.value, single ? p.previous : null]).filter((v) => v != null),
+  );
+  const max = niceMax(Math.max(0, ...values));
+  const W = 960;
+  const H = 260;
+  const m = { t: 12, r: 12, b: 28, l: 48 };
+  const iw = W - m.l - m.r;
+  const ih = H - m.t - m.b;
+  const x = (i) => m.l + (n <= 1 ? iw / 2 : (i * iw) / (n - 1));
+  const y = (v) => m.t + ih - (max ? (v / max) * ih : 0);
+  const path = (vals) => {
+    let d = "";
+    let pen = false;
+    vals.forEach((v, i) => {
+      if (v == null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      pen = true;
+    });
+    return d;
+  };
+  const axis = s("g", { class: "axis" });
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k;
+    axis.append(
+      s("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: k ? null : "base" }),
+      s("text", {
+        x: m.l - 8,
+        y: y(v) + 4,
+        "text-anchor": "end",
+        text: fmtTrend(v, metric === "perPair" ? "perPair" : "count"),
+      }),
+    );
+  }
+  for (const i of [...new Set([0, Math.floor((n - 1) / 2), n - 1])].filter((i) => i >= 0)) {
+    const anchor = i === 0 ? "start" : i === n - 1 ? "end" : "middle";
+    axis.append(s("text", { x: x(i), y: H - 6, "text-anchor": anchor, text: fmtDay(starts[i]) }));
+  }
+  const lines = s(
+    "g",
+    null,
+    single &&
+      s("path", {
+        class: "mark-line trend-previous",
+        d: path(groups[0].points.map((p) => p.previous)),
+      }),
+    groups.map((g) =>
+      s("path", { class: `mark-line ${colourOf(g.group)}`, d: path(g.points.map((p) => p.value)) }),
+    ),
+  );
+  const cursorLine = s("line", { y1: m.t, y2: m.t + ih });
+  const dots = groups.map((g) => s("circle", { r: 4, class: `trend-dot ${colourOf(g.group)}` }));
+  const cursor = s("g", { class: "cursor", visibility: "hidden" }, cursorLine, dots);
+  const svg = s(
+    "svg",
+    {
+      viewBox: `0 0 ${W} ${H}`,
+      role: "img",
+      tabindex: "0",
+      "aria-label": `${result.query.event}, ${TREND_METRICS.find(([k]) => k === metric)[1].toLowerCase()}, ${groups.length} line${groups.length === 1 ? "" : "s"}. The table below has every value.`,
+    },
+    axis,
+    lines,
+    cursor,
+  );
+  const readout = h("p", {
+    class: "readout",
+    "aria-live": "polite",
+    text: "Hover, or focus the chart and use the arrow keys, to read a point.",
+  });
+  let active = -1;
+  const show = (i) => {
+    if (!n) return;
+    active = Math.max(0, Math.min(n - 1, i));
+    cursor.setAttribute("visibility", "visible");
+    cursorLine.setAttribute("x1", x(active));
+    cursorLine.setAttribute("x2", x(active));
+    groups.forEach((g, j) => {
+      const v = g.points[active].value;
+      dots[j].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) {
+        dots[j].setAttribute("cx", x(active));
+        dots[j].setAttribute("cy", y(v));
+      }
+    });
+    const p0 = groups[0].points[active];
+    readout.textContent = `${result.query.interval === "week" ? "Week of " : ""}${fmtDay(p0.start)}: ${groups
+      .map(
+        (g) =>
+          `${g.group === "all" ? "" : `${g.group} `}${fmtTrend(g.points[active].value, metric)}`,
+      )
+      .join(" · ")}${single ? ` (period before: ${fmtTrend(p0.previous, metric)})` : ""}${
+      p0.source === "analytics-engine" ? " · from Analytics Engine" : ""
+    }`;
+  };
+  svg.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    show(Math.round(((px - m.l) / iw) * (n - 1)));
+  });
+  svg.addEventListener("pointerleave", () => cursor.setAttribute("visibility", "hidden"));
+  svg.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      show(active < 0 ? n - 1 : active + (e.key === "ArrowRight" ? 1 : -1));
+    }
+  });
+  return h("div", { class: "chart trend-chart" }, svg, readout);
+}
+
+async function renderTrends(args) {
+  const t = trendFromArgs(args);
+  if (t.split === "variant" && !t.key) t.split = "none";
+  const query = new URLSearchParams({
+    event: t.event,
+    metric: t.metric,
+    interval: t.interval,
+    range: t.range,
+    split: t.split,
+  });
+  if (t.split === "variant") query.set("key", t.key);
+  // The saved-funnels answer carries the closed event list.
+  const [{ events }, result] = await Promise.all([api("/funnels"), api(`/trends?${query}`)]);
+  const go = (patch) => (location.hash = trendHref({ ...t, ...patch }));
+  const names = result.groups
+    .map((g) => g.group)
+    .filter((g) => g !== "other")
+    .toSorted();
+  // A colour follows the group's name, not its rank: the same build keeps its colour as others
+  // come and go. One line wears the panel's accent; the rest are folded into a grey "other".
+  const colourOf = (group) => {
+    if (group === "other") return "series-other";
+    if (result.groups.length === 1) return "series-accent";
+    return `series-${(names.indexOf(group) % SERIES_CLASSES) + 1}`;
+  };
+  const metricLabel = TREND_METRICS.find(([k]) => k === t.metric)[1];
+
+  const controls = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Event" }),
+      h(
+        "select",
+        { onchange: (e) => go({ event: e.target.value }) },
+        events.map((ev) => h("option", { value: ev, text: ev, selected: ev === t.event })),
+      ),
+    ),
+    segOf("Measure", TREND_METRICS, t.metric, (v) => trendHref({ ...t, metric: v })),
+    segOf("Interval", TREND_INTERVALS, t.interval, (v) => trendHref({ ...t, interval: v })),
+    segOf("Range", TREND_RANGES, t.range, (v) => trendHref({ ...t, range: v })),
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        {
+          onchange: (e) => {
+            const [split, key] = e.target.value.split(":");
+            go({ split, key: key || "" });
+          },
+        },
+        TREND_SPLITS.filter(([v]) => v !== "variant").map(([v, text]) =>
+          h("option", { value: v, text, selected: v === t.split }),
+        ),
+        result.experiments.map((key) =>
+          h("option", {
+            value: `variant:${key}`,
+            text: `Variant of ${key}`,
+            selected: t.split === "variant" && t.key === key,
+          }),
+        ),
+      ),
+    ),
+  );
+
+  const sourceNote = {
+    used: "The last 90 days come from Analytics Engine, older days from D1.",
+    unavailable:
+      "All from D1: Analytics Engine can't be read from the panel (no read token), or didn't answer.",
+    "not-applicable":
+      "All from D1: Analytics Engine has no person, no variant, and none of the names the server records, so it can't answer this.",
+  }[result.engine];
+
+  const legend = h(
+    "p",
+    { class: "legend trend-legend" },
+    result.groups.map((g) =>
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: `swatch ${colourOf(g.group)}`, "aria-hidden": "true" }),
+        g.group === "all" ? metricLabel : g.group,
+      ),
+    ),
+    result.groups.length === 1 &&
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: "swatch series-previous", "aria-hidden": "true" }),
+        "Period before",
+      ),
+  );
+
+  const totals = h(
+    "div",
+    { class: "stats" },
+    result.groups.slice(0, 4).map((g) =>
+      statCard({
+        label: g.group === "all" ? `${metricLabel}, ${t.range} days` : g.group,
+        value: fmtTrend(g.total, t.metric),
+        delta:
+          g.total != null && g.previousTotal != null ? deltaOf(g.total, g.previousTotal) : null,
+        foot: `vs previous ${t.range} days`,
+      }),
+    ),
+  );
+
+  const table = h(
+    "details",
+    { class: "box trend-table" },
+    h("summary", { text: "Every value as a table" }),
+    h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        null,
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: t.interval === "week" ? "Week of" : "Day" }),
+            result.groups.map((g) =>
+              h("th", {
+                scope: "col",
+                class: "num",
+                text: g.group === "all" ? metricLabel : g.group,
+              }),
+            ),
+            result.groups.length === 1 &&
+              h("th", { scope: "col", class: "num", text: "Period before" }),
+            h("th", { scope: "col", text: "Source" }),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          (result.groups[0]?.points ?? []).map((p, i) =>
+            h(
+              "tr",
+              null,
+              h("th", { scope: "row", text: fmtDay(p.start) }),
+              result.groups.map((g) =>
+                h("td", { class: "num", text: fmtTrend(g.points[i].value, t.metric) }),
+              ),
+              result.groups.length === 1 &&
+                h("td", { class: "num", text: fmtTrend(p.previous, t.metric) }),
+              h("td", { text: p.source === "d1" ? "D1" : "Analytics Engine" }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Trends",
+      "Any event over time. Points resting on fewer than 5 pairs (or people, before pairing) show as gaps.",
+    ),
+    controls,
+    result.groups.length === 0
+      ? empty("Nothing yet", `No ${t.event} in this range or the one before.`)
+      : [
+          totals,
+          section(
+            `${t.event}: ${metricLabel.toLowerCase()}`,
+            sourceNote,
+            h("div", { class: "box box-pad" }, legend, trendChart(result, colourOf)),
+            table,
+          ),
+        ],
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -3329,6 +3679,7 @@ const ROUTES = {
   events: renderEvents,
   retention: renderRetention,
   funnels: renderFunnels,
+  trends: renderTrends,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,
