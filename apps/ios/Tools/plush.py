@@ -1,4 +1,4 @@
-"""Shared helpers for the plush pet models (Tools/make_cat.py, Tools/make_hamster.py).
+"""Shared helpers for the plush pet models (Tools/make_cat.py).
 
 Both pets are a single body mesh with a "Coat" vertex color. These helpers turn that into a
 game-ready plush look that RealityKit can show with plain textured PBR:
