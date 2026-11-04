@@ -724,16 +724,19 @@ public struct CatBrain: Sendable {
   /// What a cat at the bowl does, by how hungry it is: a snack from a full bowl, waiting for the
   /// meal it is used to, asking at an empty one, and a tantrum once it is hangry.
   private func eatScripts(at t: Double, feeling: CatFeeling) -> [([CatActivityStep], Double)] {
+    // At the hour it is fed, even a starving cat mostly sits by the bowl: it knows dinner comes.
+    let mealtime = isMealtime(at: t) ? 4.0 : 0
     switch feeling {
     case .hangry:
       let reach = room.reachable(.smallItem) ? 1.0 : 0
       return [
         ([.yowl, .knockOff], 1.6 * reach), ([.walkToBowl, .pawBowl, .yowl], 1.2), ([.flop], 1),
         ([.beg, .yowl], 1), ([.knockOff, .flop], 1.2 * reach),
+        ([.walkToBowl, .waitByBowl], mealtime),
       ]
     case .hungry:
       return [
-        ([.walkToBowl, .waitByBowl], 1.2), ([.walkToBowl, .pawBowl, .waitByBowl], 1),
+        ([.walkToBowl, .waitByBowl], 1.2 + mealtime), ([.walkToBowl, .pawBowl, .waitByBowl], 1),
         ([.beg], 0.8),
       ]
     case .asleep, .lonely, .bored, .sleepy, .happy, .content:

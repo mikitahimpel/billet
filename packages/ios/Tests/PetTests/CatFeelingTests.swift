@@ -116,7 +116,7 @@ struct CatFeelingTests {
       Self.tantrum.contains($0.step) || Self.asking.contains($0.step)
     }
     #expect(raging > 0.04)
-    #expect(needy > 0.12)
+    #expect(needy > 0.08)
     #expect(fed.allSatisfy { !Self.tantrum.contains($0.1.stack.step) })
     // An empty bowl is never eaten from.
     #expect(starving.allSatisfy { $0.1.stack.step != .eat })
@@ -210,7 +210,9 @@ struct CatFeelingTests {
   func everyMoveOfANeedyDayIsLegal(_ type: CatTemperament?) {
     for events in [Self.starving, Self.unloved] {
       var illegal: [CatBrainTransition] = []
-      for transition in Self.fold(events, type, to: 22).transitions {
+      // A day start puts the cat back in its canonical state, whatever it was doing.
+      for transition in Self.fold(events, type, to: 22).transitions
+      where transition.cause != .dayStart {
         let activityOK =
           transition.from.step == transition.to.step
           || CatStatechart.isLegal(
