@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
 const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
 
@@ -54,12 +55,11 @@ describe("PairRoom state", () => {
 
   it("assigns the id, author and time of a note on the server", async () => {
     const room = await openRoom();
-    const before = Date.now();
     await room.sendNote(bob, photo());
     const [entry] = await room.notes(0, 10);
     expect(entry).toMatchObject({ seq: 1, note: { _tag: "Photo", author: bob, image } });
     expect(entry?.note.id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(entry?.note.sentAt).toBeGreaterThanOrEqual(before);
+    expect(entry?.note.sentAt).toBe(testNowOf(env));
   });
 
   it("round-trips a drawing through SQLite", async () => {
@@ -317,13 +317,13 @@ describe("PairRoom realtime across eviction", () => {
     return { socket: webSocket!, frames };
   };
 
-  const until = async (check: () => boolean) => {
-    const end = Date.now() + 4000;
-    while (!check()) {
-      if (Date.now() > end) throw new Error("Never saw the expected frame");
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-  };
+  const until = (check: () => boolean) =>
+    vi.waitFor(
+      () => {
+        if (!check()) throw new Error("Never saw the expected frame");
+      },
+      { timeout: 4000, interval: 5 },
+    );
 
   it("keeps relaying, and keeps each socket's place in the notes, after the object is evicted", async () => {
     const room = await openRoom();

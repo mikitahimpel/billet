@@ -23,6 +23,7 @@ import { parsePlay } from "../src/demo-play.ts";
 import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
 import type { ClockedDemoRoom } from "./demo-worker.ts";
+import { testNowOf } from "./test-now.ts";
 import { waitFor } from "./demo-wait.ts";
 
 type Rooms = DurableObjectNamespace<DemoRoom>;
@@ -221,14 +222,16 @@ const connect = async (code: string, device: string, rooms: Rooms = DEMO_ROOM): 
 const dailyOf = (frames: Frame[], day: string) =>
   frames.filter((f) => f["type"] === "daily" && f["day"] === day).at(-1);
 
-const isoNow = (offsetMs = 0) => new Date(Date.now() + offsetMs).toISOString();
+/** The rooms' instant, `TEST_NOW`, moved by `offsetMs`. */
+const now = testNowOf(env);
+const isoNow = (offsetMs = 0) => new Date(now + offsetMs).toISOString();
 
 describe("daily drawing in the room", () => {
   it("sends the prompts for the live days on connect", async () => {
     const a = await connect("DAYPRM2345", alice);
     const prompts = a.frames.find((f) => f["type"] === "daily-prompts");
     const days = Object.keys((prompts?.["prompts"] ?? {}) as object);
-    expect(days).toEqual([...liveDays(Date.now())]);
+    expect(days).toEqual([...liveDays(now)]);
   });
 
   it("reveals the partner's drawing only after this device has drawn", async () => {

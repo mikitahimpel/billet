@@ -13,7 +13,7 @@ const owner = Schema.decodeSync(StampOwner);
 let counter = 0;
 const purchaseOf = (ownerId: StampOwner, stamps = 100): NewPurchase => {
   counter += 1;
-  const id = `tx-${Date.now()}-${counter}`;
+  const id = `tx-${crypto.randomUUID()}-${counter}`;
   return {
     originalTransactionId: id,
     transactionId: id,

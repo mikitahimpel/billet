@@ -21,7 +21,8 @@ const signed = Effect.gen(function* () {
     aud: appleAudience,
     sub: "subject",
     nonce: "nonce",
-    exp: Math.floor(Date.now() / 1000) + 300,
+    // The check runs on the real clock: a time far ahead of it.
+    exp: Date.UTC(2100, 0, 1) / 1000,
   };
   const token = yield* Jws.sign(new TextEncoder().encode(JSON.stringify(claims)), privateKey);
   return { token, publicJwk: pair.publicKey };

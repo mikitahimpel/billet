@@ -35,16 +35,27 @@ export const strangerKey = await generate("team-1");
 /** The team's published keys, in place of `/cdn-cgi/access/certs`. */
 export const teamKeys: Layer.Layer<Jwks.Jwks> = Jwks.layerLocal({ keys: [teamKey.publicJwk] });
 
-const now = () => Math.floor(Date.now() / 1000);
+/** Seconds since the epoch. */
+const seconds = (ms: number) => Math.floor(ms / 1000);
+
+/**
+ * When the tests say it is: month end, late evening UTC. `access.test.ts` runs the check at this
+ * instant on a fixed clock; the Worker tests run on the real one, so a token's window spans both.
+ */
+export const accessNow = Date.UTC(2026, 9, 31, 22, 42);
+/** Before every clock these tests run on. A token that expired then is expired now. */
+export const longAgo = seconds(Date.UTC(2020, 0, 1));
+/** After every clock these tests run on. */
+export const farAhead = seconds(Date.UTC(2100, 0, 1));
 
 /** Claims as Access issues them for a person, with any field replaced or removed (`undefined`). */
 export const accessClaims = (overrides: Record<string, unknown> = {}) => {
   const claims: Record<string, unknown> = {
     aud: [testAccess.audience],
     email: "owner@example.com",
-    exp: now() + 300,
-    iat: now() - 5,
-    nbf: now() - 5,
+    exp: farAhead,
+    iat: seconds(accessNow) - 5,
+    nbf: seconds(accessNow) - 5,
     iss: `https://${testAccess.teamDomain}`,
     sub: "7335d417-61da-459d-899c-0a01c76a2f94",
     type: "app",
