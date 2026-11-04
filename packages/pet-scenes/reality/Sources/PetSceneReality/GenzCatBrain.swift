@@ -80,7 +80,10 @@ extension GenzRoom {
     case .bookshelf, .wallShelves: .shelf
     case .cardigan, .pillowLarge, .pillowLinen, .pillowSquare, .pillowSmall, .blanket: .soft
     case .mugs, .phoneOnCharger, .candles: .smallItem
-    case .roundRug, .patternRug: .rug
+    case .roundRug, .patternRug, .cabinRug: .rug
+    case .cabinBed: .bed
+    case .cabinBooks: .smallItem
+    case .cabinCatTree, .cabinNightstand, .cabinPlant, .cabinBasket, .cabinStoolLamp: nil
     case .bookStack, .thriftLamp, .snakePlant, .pleatedLamp, .leafyPlant, .polaroids, .recordPlayer,
       .speaker, .windowBench, .sideTable, .knitPouf, .stringLights:
       nil

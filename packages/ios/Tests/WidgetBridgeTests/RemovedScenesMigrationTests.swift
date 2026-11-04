@@ -1,5 +1,6 @@
 import Foundation
 import Persistence
+import Pet
 import Testing
 
 @testable import WidgetBridge
@@ -60,6 +61,16 @@ import Testing
     migrate()
     #expect(savedRoomStyle == nil)
     #expect(defaults.string(forKey: Self.key) == "nooki")
+  }
+
+  @Test(arguments: HomeRoom.allCases)
+  @MainActor func theRoomChosenInLabsIsKept(_ room: HomeRoom) throws {
+    try store.saveHomeRoom(room)
+    try saveRoomStyle("nooki")
+    migrate()
+    migrate()
+    #expect(store.loadHomeRoom() == room)
+    #expect(WidgetFeaturesModel(store: store).homeRoom == room)
   }
 
   @Test func anUnknownSceneIsLeftAlone() {

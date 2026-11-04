@@ -8,6 +8,7 @@ name: iOS perf
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f rounds=4 -f jobs=ab
 #   gh pr edit <n> --add-label perf                               # the same for a pull request
 #   gh workflow run perf.yml --ref <branch> -f jobs=cost          # what each part of the room costs
+#   gh workflow run perf.yml --ref <branch> -f room=nookiCabin    # the same in the Nooki cabin
 #
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
@@ -40,6 +41,11 @@ on:
       switches:
         description: Parts a cost run switches, comma-separated (empty = all)
         default: ""
+      room:
+        description: Room Home shows (Labs > Room)
+        type: choice
+        options: [windowSeat, nookiCabin]
+        default: windowSeat
       jobs:
         description: What to run (both = ab and shots)
         type: choice
@@ -69,6 +75,8 @@ env:
   HEAD_REF: ${{ inputs.head || github.event.pull_request.head.sha || github.sha }}
   # A runner draws slowly, a Pro Max's screen most of all: give each scripted run room to finish.
   PERF_RUN_LIMIT: "1500"
+  # The room Home shows in every run; a pull request measures the standard one.
+  PERF_ROOM: ${{ inputs.room || 'windowSeat' }}
 
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
