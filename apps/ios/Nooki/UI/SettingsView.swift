@@ -1,4 +1,5 @@
 import FeatureOnboarding
+import Pet
 import StoreKit
 import SwiftUI
 
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     @Environment(\.requestReview) private var requestReview
     @AppStorage(AppSettings.hapticsKey) private var haptics = true
+    @AppStorage(WindowChoice.key) private var windowView = WindowChoice.suburbia
+    @AppStorage(WindowChoice.weatherKey) private var windowWeather = ViewWeather.clear
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @State private var editingProfile = false
@@ -55,6 +58,26 @@ struct SettingsView: View {
                     }
                     .listRowBackground(rowBackground)
                 }
+
+                Section {
+                    Picker(selection: $windowView) {
+                        ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
+                    } label: {
+                        row("View", symbol: "window.horizontal", tint: .sky)
+                    }
+                    if windowView == .suburbia {
+                        Picker(selection: $windowWeather) {
+                            ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
+                        } label: {
+                            row("Weather", symbol: "cloud.rain.fill", tint: .sky)
+                        }
+                    }
+                } header: {
+                    Text("Window")
+                } footer: {
+                    Text("What the City room's window looks out on. Suburbia follows the time of day.")
+                }
+                .listRowBackground(rowBackground)
 
                 Section("Support") {
                     Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }

@@ -14,6 +14,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import type { EventRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
+import { makeSeed } from "../src/seed-data.ts";
 import type { DetailRow } from "../src/admin-top-details.ts";
 import { OnboardingCatalogue, seedCatalogue } from "@billet/backend-onboarding/catalogue";
 import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
@@ -281,6 +282,25 @@ describe("the admin API", () => {
       0,
     ]);
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
+  });
+
+  it("serves the retention grid, filtered, and refuses a malformed filter", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const { status, body } = await call(adminApi.retention);
+    expect(status).toBe(200);
+    expect(body.days).toEqual([1, 3, 7, 14, 30, 60]);
+    expect(body.rows.at(-1).week).toBe("all");
+    expect(body.options.appVersions.length).toBeGreaterThan(0);
+    const filtered = await call(
+      `${adminApi.retention}?variant=home-layout%3Dimmersive&version=1.0.0%2B10`,
+    );
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.filter).toEqual({
+      variant: "home-layout=immersive",
+      appVersion: "1.0.0+10",
+    });
+    expect((await call(`${adminApi.retention}?variant=Home+Layout`)).status).toBe(400);
+    expect((await call(`${adminApi.retention}?version=my%20phone`)).status).toBe(400);
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

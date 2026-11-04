@@ -6,7 +6,7 @@ export const makeInMemoryMetricsRepository = () => {
   const rows = new Map<string, StoredMetric>();
   const details = new Map<string, StoredDetail>();
   const repository: MetricsRepository["Service"] = {
-    record: ({ pairId, userId, name, at, detail, value }) =>
+    record: ({ pairId, userId, name, at, detail, value, client }) =>
       Effect.sync(() => {
         const day = new Date(at).toISOString().slice(0, 10);
         const key = [pairId, userId, name, day].join("/");
@@ -14,8 +14,24 @@ export const makeInMemoryMetricsRepository = () => {
         rows.set(
           key,
           existing === undefined
-            ? { pairId, userId, name, day, count: 1, firstAt: at, lastAt: at }
-            : { ...existing, count: existing.count + 1, lastAt: Math.max(existing.lastAt, at) },
+            ? {
+                pairId,
+                userId,
+                name,
+                day,
+                count: 1,
+                firstAt: at,
+                lastAt: at,
+                appVersion: client?.appVersion ?? null,
+                os: client?.os ?? null,
+              }
+            : {
+                ...existing,
+                count: existing.count + 1,
+                lastAt: Math.max(existing.lastAt, at),
+                appVersion: client?.appVersion ?? existing.appVersion,
+                os: client?.os ?? existing.os,
+              },
         );
         if (detail === undefined) return;
         const detailKey = [name, detail, day].join("/");
