@@ -1,5 +1,8 @@
 #if os(macOS)
   import AppKit
+  import ImageIO
+  import Metal
+  import UniformTypeIdentifiers
   import Foundation
   import Pet
   import RealityKit
@@ -110,7 +113,7 @@
   }
 
   /// A minimal glTF 2.0 binary writer: positions, normals, texture coordinates and triangles, with
-  /// each material's colour, roughness, metalness, emission and opacity. Textures are left out.
+  /// each material's colour, roughness, metalness, emission, opacity and base colour texture (as PNG).
   @MainActor
   private struct GLBWriter {
     private var buffer = Data()
@@ -120,6 +123,10 @@
     private var materials: [[String: Any]] = []
     private var nodes: [[String: Any]] = []
     private var pieces: [Int] = []
+    private var textures: [[String: Any]] = []
+    private var images: [[String: Any]] = []
+    private var textureOf: [ObjectIdentifier: Int] = [:]
+    private let device = MTLCreateSystemDefaultDevice()
 
     mutating func addPiece(_ piece: Entity, relativeTo root: Entity) {
       var children: [Int] = []
@@ -148,7 +155,16 @@
     private mutating func addMesh(_ model: ModelComponent) -> Int? {
       let contents = model.mesh.contents
       let firstMaterial = materials.count
-      for material in model.materials { materials.append(Self.material(material)) }
+      for material in model.materials {
+        var out = Self.material(material)
+        if let resource = Self.baseTexture(material), let index = addTexture(resource) {
+          var pbr = out["pbrMetallicRoughness"] as? [String: Any] ?? [:]
+          pbr["baseColorTexture"] = ["index": index]
+          out["pbrMetallicRoughness"] = pbr
+          if Self.isTransparent(material) { out["alphaMode"] = "BLEND" }
+        }
+        materials.append(out)
+      }
       var primitives: [[String: Any]] = []
       for instance in contents.instances {
         guard let source = contents.models[instance.model] else { continue }
@@ -184,6 +200,70 @@
       guard !primitives.isEmpty else { return nil }
       meshes.append(["primitives": primitives])
       return meshes.count - 1
+    }
+
+    private static func baseTexture(_ material: any RealityKit.Material) -> TextureResource? {
+      if let pbr = material as? PhysicallyBasedMaterial { return pbr.baseColor.texture?.resource }
+      if let simple = material as? SimpleMaterial { return simple.color.texture?.resource }
+      if let flat = material as? UnlitMaterial { return flat.color.texture?.resource }
+      return nil
+    }
+
+    private static func isTransparent(_ material: any RealityKit.Material) -> Bool {
+      if let pbr = material as? PhysicallyBasedMaterial, case .transparent = pbr.blending { return true }
+      if let flat = material as? UnlitMaterial, case .transparent = flat.blending { return true }
+      return false
+    }
+
+    /// The texture's pixels as a PNG, read back through Metal; nil when no 8-bit format takes it.
+    private mutating func addTexture(_ resource: TextureResource) -> Int? {
+      let key = ObjectIdentifier(resource)
+      if let index = textureOf[key] { return index }
+      guard let png = png(resource) else { return nil }
+      let view = addView(png, target: nil)
+      images.append(["bufferView": view, "mimeType": "image/png"])
+      textures.append(["source": images.count - 1])
+      textureOf[key] = textures.count - 1
+      return textures.count - 1
+    }
+
+    private func png(_ resource: TextureResource) -> Data? {
+      guard let device else { return nil }
+      let (width, height) = (resource.width, resource.height)
+      let formats: [(MTLPixelFormat, Bool)] = [
+        (.rgba8Unorm_srgb, false), (.bgra8Unorm_srgb, true), (.rgba8Unorm, false), (.bgra8Unorm, true),
+      ]
+      for (format, swap) in formats {
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(
+          pixelFormat: format, width: width, height: height, mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+        descriptor.storageMode = .shared
+        guard let texture = device.makeTexture(descriptor: descriptor) else { continue }
+        do { try resource.copy(to: texture) } catch { continue }
+        var bytes = [UInt8](repeating: 0, count: width * height * 4)
+        texture.getBytes(
+          &bytes, bytesPerRow: width * 4, from: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0)
+        if swap {
+          for i in stride(from: 0, to: bytes.count, by: 4) { bytes.swapAt(i, i + 2) }
+        }
+        guard let provider = CGDataProvider(data: Data(bytes) as CFData),
+          let image = CGImage(
+            width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+            bytesPerRow: width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+            provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)
+        else { continue }
+        let out = NSMutableData()
+        guard
+          let destination = CGImageDestinationCreateWithData(
+            out, UTType.png.identifier as CFString, 1, nil)
+        else { continue }
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { continue }
+        return out as Data
+      }
+      print("GenzLabExport: no readable format for a \(width)x\(height) texture")
+      return nil
     }
 
     private static func material(_ material: any RealityKit.Material) -> [String: Any] {
@@ -231,11 +311,11 @@
       return out
     }
 
-    private mutating func addView(_ bytes: Data, target: Int) -> Int {
+    private mutating func addView(_ bytes: Data, target: Int?) -> Int {
       while buffer.count % 4 != 0 { buffer.append(0) }
-      views.append([
-        "buffer": 0, "byteOffset": buffer.count, "byteLength": bytes.count, "target": target,
-      ])
+      var view: [String: Any] = ["buffer": 0, "byteOffset": buffer.count, "byteLength": bytes.count]
+      if let target { view["target"] = target }
+      views.append(view)
       buffer.append(bytes)
       return views.count - 1
     }
@@ -276,6 +356,8 @@
         "scenes": [["nodes": pieces]],
         "nodes": nodes, "meshes": meshes, "materials": materials, "accessors": accessors,
         "bufferViews": views, "buffers": [["byteLength": padded.count]],
+        "textures": textures, "images": images,
+        "samplers": [[String: Any]](),
       ]
       var text = try JSONSerialization.data(withJSONObject: json)
       while text.count % 4 != 0 { text.append(0x20) }
