@@ -18,7 +18,6 @@ public struct UsView<Account: View>: View {
   private let streak: Int
   private let daysTogether: Int?
   private let scenes: [any PetScene]
-  @Binding private var selectedSceneID: String?
   private let widgetFeatures: WidgetFeaturesModel?
   private let isFakePartner: Bool
   private let onRenameCat: ((String) -> Void)?
@@ -28,6 +27,7 @@ public struct UsView<Account: View>: View {
   private let account: Account
 
   @State private var showsLabs = false
+  @State private var labsOpen = false
   @State private var confirmingUnpair = false
   @State private var unpairing = false
   @State private var unpairError: String?
@@ -46,7 +46,6 @@ public struct UsView<Account: View>: View {
     streak: Int = 0,
     daysTogether: Int? = nil,
     scenes: [any PetScene],
-    selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
     isFakePartner: Bool = false,
     onRenameCat: ((String) -> Void)? = nil,
@@ -64,7 +63,6 @@ public struct UsView<Account: View>: View {
     self.streak = streak
     self.daysTogether = daysTogether
     self.scenes = scenes
-    _selectedSceneID = selectedSceneID
     self.widgetFeatures = widgetFeatures
     self.onRenameCat = onRenameCat
     self.onUnpair = onUnpair
@@ -84,8 +82,17 @@ public struct UsView<Account: View>: View {
       }
       pair
       AboutSection()
-      if showsLabs, let labs {
-        labSection(labs)
+      if showsLabs, labs != nil {
+        SettingsGroup {
+          SettingsLink("Labs") { labsOpen = true }
+            .accessibilityIdentifier("us.labs")
+        }
+      }
+    }
+    .sheet(isPresented: $labsOpen) {
+      if let labs {
+        ScreenScaffold("Labs") { labContent(labs) }
+          .presentationDragIndicator(.visible)
       }
     }
     .task { showsLabs = await BuildChannel.isForTesting() }
@@ -149,13 +156,6 @@ public struct UsView<Account: View>: View {
     }
   }
 
-  private var sceneSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.small) {
-      SettingsHeading("Scene")
-      PetScenePicker(scenes: scenes, selectedSceneID: $selectedSceneID)
-    }
-  }
-
   /// One switch per widget and Lock Screen feature, grouped by what it does.
   private func widgetSection(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
@@ -181,13 +181,9 @@ public struct UsView<Account: View>: View {
     }
   }
 
-  /// The scene, then one switch per experiment, grouped by what it is for.
-  private func labSection(_ model: WidgetFeaturesModel) -> some View {
+  /// The pickers, then one switch per experiment, grouped by what it is for.
+  private func labContent(_ model: WidgetFeaturesModel) -> some View {
     VStack(alignment: .leading, spacing: Spacing.medium) {
-      SettingsHeading("Labs")
-      if scenes.count > 1 {
-        sceneSection
-      }
       EveningGroundPicker(model: model)
       HomeVariantPicker(model: model)
       if scenes.contains(where: \.hasRoom) {
@@ -204,7 +200,7 @@ public struct UsView<Account: View>: View {
       ForEach(LabExperiment.Group.allCases, id: \.self) { group in
         let experiments = LabExperiment.allCases.filter { $0.group == group }
         // The first launch has no switches, only a way to watch it again.
-        let replay = group == .firstLaunch ? onReplayOnboarding : nil
+        let replay = group == .firstLaunch ? replayOnboarding : nil
         if !experiments.isEmpty || replay != nil {
           VStack(alignment: .leading, spacing: Spacing.small) {
             Text(group.title)
@@ -227,6 +223,15 @@ public struct UsView<Account: View>: View {
           }
         }
       }
+    }
+  }
+
+  /// Closes Labs first, so the replay is not covered by it.
+  private var replayOnboarding: (() -> Void)? {
+    guard let onReplayOnboarding else { return nil }
+    return {
+      labsOpen = false
+      onReplayOnboarding()
     }
   }
 
@@ -259,7 +264,6 @@ extension UsView where Account == EmptyView {
     streak: Int = 0,
     daysTogether: Int? = nil,
     scenes: [any PetScene],
-    selectedSceneID: Binding<String?>,
     widgetFeatures: WidgetFeaturesModel? = nil,
     isFakePartner: Bool = false,
     onRenameCat: ((String) -> Void)? = nil,
@@ -269,7 +273,7 @@ extension UsView where Account == EmptyView {
     self.init(
       code: code, labs: labs, partnerStatus: partnerStatus, catName: catName, habits: habits,
       streak: streak, daysTogether: daysTogether, scenes: scenes,
-      selectedSceneID: selectedSceneID, widgetFeatures: widgetFeatures,
+      widgetFeatures: widgetFeatures,
       isFakePartner: isFakePartner, onRenameCat: onRenameCat,
       onReplayOnboarding: onReplayOnboarding, onUnpair: onUnpair, account: { EmptyView() })
   }

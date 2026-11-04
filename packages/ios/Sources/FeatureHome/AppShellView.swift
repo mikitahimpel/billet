@@ -129,9 +129,9 @@ struct AppShellView: View {
           widgetFeatures: widgetFeatures,
           scene: selectedScene,
           onChangeCode: onChangeCode,
-          onOpenNotes: { destination = .notes }
+          onOpenNotes: { destination = .notes },
+          onOpenUs: { showsUs = true }
         )
-        .overlay(alignment: .topLeading) { usButton }
         .tabEntrance(destination == .home)
         .environment(\.petSceneOnScreen, shellShown && destination == .home)
       }
@@ -237,20 +237,6 @@ struct AppShellView: View {
 }
 
 extension AppShellView {
-  /// The two of us at the top left of Home, the way into "Us".
-  fileprivate var usButton: some View {
-    Button {
-      showsUs = true
-    } label: {
-      PairAvatars()
-        .frame(minWidth: Target.minimum, minHeight: Target.minimum, alignment: .leading)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .padding(.leading, Spacing.medium)
-    .padding(.top, Spacing.small)
-  }
-
   fileprivate var us: some View {
     UsView(
       code: session.isFakePartner ? nil : session.room.code,
@@ -260,7 +246,6 @@ extension AppShellView {
       habits: session.brain.upbringing.habits,
       streak: streak,
       scenes: scenes,
-      selectedSceneID: $selectedSceneID,
       widgetFeatures: widgetFeatures,
       isFakePartner: session.isFakePartner,
       onRenameCat: session.play.catName == nil ? nil : { session.renameCat($0) },

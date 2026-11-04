@@ -27,6 +27,8 @@ struct StyledHome: View {
   var onDecorate: (() -> Void)?
   /// Opens the streak's flame, or `nil` when the chip only shows the count.
   var flame: StreakFlameHost?
+  /// First in the top row, before the streak: the way into "Us".
+  var leading: AnyView?
 
   @State private var latestDrawing: CGImage?
   /// What the flame shows, set as it opens so the visit is remembered once, and kept while it
@@ -71,6 +73,7 @@ struct StyledHome: View {
 
   private var header: some View {
     HStack(spacing: Spacing.small) {
+      if let leading { leading }
       streakChip
       if let onDecorate {
         IconButton("sofa.fill", label: "Decorate the room", action: onDecorate)
