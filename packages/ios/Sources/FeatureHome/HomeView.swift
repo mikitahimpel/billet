@@ -42,7 +42,7 @@ struct HomeView: View {
   /// True while the streak's flame covers Home, so the room under it pauses.
   @State private var flameShowing = false
   /// The partner's meal or game being shown, for a few seconds.
-  @State private var shownCare: PartnerCare?
+  @State private var shownCare: CatCareNotice?
 
   let session: PairSession
   let widgetFeatures: WidgetFeaturesModel
@@ -77,7 +77,7 @@ struct HomeView: View {
   var body: some View {
     home
       .overlay(alignment: .top) { partnerCareToast }
-      .task(id: session.partnerCare) { await showPartnerCare() }
+      .task(id: session.careNotice) { await showPartnerCare() }
       .task(id: NudgeInputs(events: session.life.log.all.count, name: session.play.catName)) {
         await CatNudges.plan(
           life: session.life, temperament: session.brain.temperament,
@@ -283,7 +283,7 @@ struct HomeView: View {
   }
 
   private func showPartnerCare() async {
-    guard let care = session.partnerCare else { return }
+    guard let care = session.careNotice else { return }
     withAnimation(Motion.spring) { shownCare = care }
     try? await Task.sleep(for: .seconds(3.5))
     guard !Task.isCancelled else { return }

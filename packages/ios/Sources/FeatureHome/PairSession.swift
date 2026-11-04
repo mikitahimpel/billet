@@ -64,7 +64,7 @@ final class PairSession {
   /// True while the shared treat falls onto the cat.
   private(set) var treatFalling = false
   /// The partner's latest meal or game for the cat, to show for a moment.
-  private(set) var partnerCare: PartnerCare?
+  private(set) var careNotice: CatCareNotice?
 
   /// Called on each status change.
   @ObservationIgnored var onStatus: ((NoteDelivery.Status) -> Void)?
@@ -449,12 +449,12 @@ final class PairSession {
   private func notePartnerCare(_ events: [LifeEvent]) {
     let current = now()
     let fresh = events.filter { event in
-      event.by != life.me && PartnerCare.shows(event.kind)
-        && abs(event.at.timeIntervalSince(current)) < PartnerCare.freshFor
-        && event.id != partnerCare?.id
+      event.by != life.me && CatCareNotice.shows(event.kind)
+        && abs(event.at.timeIntervalSince(current)) < CatCareNotice.freshFor
+        && event.id != careNotice?.id
     }
     guard let newest = fresh.max(by: { $0.at < $1.at }) else { return }
-    partnerCare = PartnerCare(id: newest.id, kind: newest.kind)
+    careNotice = CatCareNotice(id: newest.id, kind: newest.kind)
   }
 
   private func keep(_ strokes: [Stroke], _ direction: NoteRecord.Direction, id: UUID) {
@@ -470,7 +470,7 @@ final class PairSession {
 }
 
 /// The partner fed or played with the cat on their phone.
-struct PartnerCare: Hashable, Sendable {
+struct CatCareNotice: Hashable, Sendable {
   let id: UUID
   let kind: LifeEvent.Kind
 
