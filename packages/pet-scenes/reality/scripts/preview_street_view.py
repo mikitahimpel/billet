@@ -28,7 +28,8 @@ scene.view_settings.view_transform = "Standard"
 world = bpy.data.worlds.new("sky")
 scene.world = world
 world.use_nodes = True
-world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.004, 0.012, 0.035, 1)
+# Black, as the portal is where nothing of the street is drawn, so a gap in the sky shows.
+world.node_tree.nodes["Background"].inputs["Color"].default_value = (0, 0, 0, 1)
 
 
 def scene_to_blender(v):
@@ -122,7 +123,8 @@ eye = target + 19.5 * ZOOM * Vector((flat * math.sin(YAW), math.sin(PITCH), flat
 cam_data = bpy.data.cameras.new("cam")
 cam_data.sensor_fit = "VERTICAL"
 cam_data.angle_y = math.radians(40)
-cam_data.clip_start, cam_data.clip_end = 0.5, 300
+# GenzRoom.nearClip and farClip.
+cam_data.clip_start, cam_data.clip_end = 0.5, 500
 cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
 cam.location = scene_to_blender(eye)

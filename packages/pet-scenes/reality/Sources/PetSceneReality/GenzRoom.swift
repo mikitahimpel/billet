@@ -268,8 +268,9 @@ final class GenzRoom: CatPlayStage {
   /// at most about a hundred off in the opening at full zoom out, so a near plane this far out
   /// keeps the depth fine enough that the rug, shelves and note never shimmer against what they
   /// rest on. The default near plane of a centimetre left too little depth twenty units out.
+  /// The far plane reaches the 3D street's sky, some 450 units out through the window.
   static let nearClip: Float = 0.5
-  static let farClip: Float = 300
+  static let farClip: Float = 500
   private static let petLength = 4.0
   private static let parallaxPoints: CGFloat = 60
   private static let ambientExponent: Float = 1.6

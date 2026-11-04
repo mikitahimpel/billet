@@ -30,6 +30,25 @@ struct Street3DTests {
     #expect(lights == 0)
   }
 
+  @Test func theStreetHasASkyRightRoundWithinTheFarPlane() async throws {
+    let assets = try #require(await Street3D.assets())
+    // In the street's frame: x right, y up, minus z out through the window.
+    let sky = assets.cards.bounds
+    // It reaches well up and far out to either side, so any orbit looks into sky, not black.
+    #expect(sky.max.y >= 200)
+    #expect(sky.min.x <= -420 && sky.max.x >= 420)
+    #expect(sky.min.z <= -239)
+    // And what is seen of it up to a little above the horizon stays inside the room camera's far plane, with
+    // room for the camera standing back from the window.
+    let positions = assets.cards.contents.models.flatMap {
+      $0.parts.flatMap { $0.positions.elements }
+    }
+    let reach = positions.filter { $0.y <= 60 }.map {
+      simd_length(SIMD2($0.x, $0.z))
+    }
+    #expect(try #require(reach.max()) + 40 < GenzRoom.farClip)
+  }
+
   @Test func theStreetIsSeenStraightOnFromTheCameraAtHome() {
     let origin = SIMD3<Float>(3.8, 3.15, -0.35)
     let eye = SIMD3<Float>(10.2, 9.8, 19.2)

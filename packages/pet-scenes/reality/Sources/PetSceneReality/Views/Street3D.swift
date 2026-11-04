@@ -7,8 +7,10 @@ import os
 /// that fills the window's opening, so it never shows past the walls.
 ///
 /// The street is made by `scripts/make_street_view.py`: one mesh of everything that stands still,
-/// one of a car, both on one baked atlas, and the far cards with the lamps' glows on a second
-/// texture. Everything is unlit, so it adds no real-time light: four draws with the portal.
+/// one of a car, both on one baked atlas, and the far cards with the lamps' glows, the stars and
+/// the night sky behind it all on a second texture. The portal draws nothing where the street has
+/// nothing, so the sky is the street's own. Everything is unlit, so it adds no real-time light:
+/// four draws with the portal.
 ///
 /// It is laid out in the view's own frame: x right, y up, and minus z out from the camera's home
 /// place through the window's middle, so at home it is seen straight on, as the flat views are,
