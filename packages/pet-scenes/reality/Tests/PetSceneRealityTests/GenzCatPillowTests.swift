@@ -88,10 +88,13 @@ import simd
           shown.catBody = model.footprint
           for spot in restSpots(shown) {
             for heading in [Float(0), .pi / 2, .pi, -.pi / 2] {
+              // Where the pillows cannot part, the cat settles along the seat where they can.
+              let spot = shown.pillowRoom(near: spot, heading: heading)
+              let nudges = try #require(
+                shown.pillowNudges(clearOf: spot, heading: heading),
+                "\(name), \(arranged): \(model) finds no room near \(spot) facing \(heading)")
               var after = shown
-              for (index, x) in shown.pillowNudges(clearOf: spot, heading: heading) {
-                after.pieces[index].centre.x = x
-              }
+              for (index, x) in nudges { after.pieces[index].centre.x = x }
               checked += 1
               let pillows = after.catPillows.map(after.pillowBox)
               let hit = outline(after, at: spot, heading: heading).first { point in
@@ -135,6 +138,6 @@ import simd
     let surface = try #require(layout.catSurface)
     // Out in front of the pillows, in the seat's middle, facing along it.
     let spot = SIMD2((surface.min.x + surface.max.x) / 2, surface.max.y + layout.cat.length * 2)
-    #expect(layout.pillowNudges(clearOf: spot, heading: .pi / 2).isEmpty)
+    #expect(layout.pillowNudges(clearOf: spot, heading: .pi / 2)?.isEmpty == true)
   }
 }

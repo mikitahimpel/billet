@@ -181,10 +181,21 @@ extension GenzRoom {
   /// Slides the seat's pillows the settled cat's resting body is in aside along the backrest,
   /// easing them there, as a cat settling against them would: after it arrives, when a piece
   /// was moved, or when a bigger cat is shown. Not while decorating, when the pieces are in the
-  /// person's hands.
+  /// person's hands. Where they cannot part, the cat moves along to where they can.
   func nudgePillows(heading: Float) {
     guard brainBody.arrived != nil, !decor.isOn else { return }
-    for (index, x) in layout.pillowNudges(clearOf: catSpot, heading: heading) {
+    guard let nudges = layout.pillowNudges(clearOf: catSpot, heading: heading) else {
+      // No room for the pillows to part here, near the seat's end: it gets up and settles
+      // where there is, and they part there.
+      let room = layout.pillowRoom(near: catSpot, heading: heading)
+      guard room != catSpot else { return }
+      brainBody.route = layout.catRoute(from: catSpot, to: room)
+      brainBody.goal = brainBody.route.last ?? catSpot
+      brainBody.arrived = nil
+      brainBody.rest = nil
+      return
+    }
+    for (index, x) in nudges {
       let name = Self.decorName(layout.pieces[index], index: index)
       guard var box = decor.plan(of: name)?.pieces[name], let holder = decor.rest(of: name)?.holder
       else { continue }
