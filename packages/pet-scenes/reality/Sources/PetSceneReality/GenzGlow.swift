@@ -53,8 +53,8 @@ final class GenzGlow {
     buildCore()
   }
 
-  /// The hooks each string of fairy lights hangs from, in order.
-  static var fairyHooks: [[GenzRoomPoint]] {
+  /// The hooks Window Seat's strings of fairy lights hang from, in order.
+  static var seatFairyHooks: [[GenzRoomPoint]] {
     let top: Float = 5.22
     let back = stride(from: Float(0.25), through: 7.4, by: 1.43).map {
       GenzRoomPoint($0, 0.08, top)
@@ -137,7 +137,7 @@ final class GenzGlow {
     let bulbMesh = LowPoly.sphere(radius: Self.bulbRadius)
     let bulbMaterial = kit.glow(Self.bulbColour)
     let wire = kit.matte(GenzColour(0x2B2622))
-    for (number, hooks) in Self.fairyHooks.enumerated() {
+    for (number, hooks) in layout.fairyHooks.enumerated() {
       let points = Self.string(hooks, spacing: Self.bulbSpacing, sag: Self.sag)
       bulbPoints += points
       let strand = Entity()
@@ -255,7 +255,7 @@ final class GenzGlow {
     sun.components.set(
       DirectionalLightComponent.Shadow(maximumDistance: 16, depthBias: 2))
     let middle = GenzRoomPoint(4, 3, 0.5).scene
-    let from = GenzRoomPoint(9, -6, 2.6).scene
+    let from = layout.sunFrom.scene
     sun.look(at: middle, from: from, relativeTo: nil)
     sun.isEnabled = false
     root.addChild(sun)

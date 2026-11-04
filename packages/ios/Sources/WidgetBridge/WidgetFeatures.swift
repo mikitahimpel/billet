@@ -244,6 +244,19 @@ public struct WidgetFeaturesStore: Sendable {
     try storage.writeJSON(furniture, named: Self.furnitureFileName)
   }
 
+  /// Where the Labs room choice is kept. Not `room-style.json`, which ``RemovedScenesMigration``
+  /// removes on every launch.
+  public static let homeRoomFileName = "home-room.json"
+
+  /// The room chosen in Labs, or the standard one when nothing readable is saved.
+  public func loadHomeRoom() -> HomeRoom {
+    (try? storage.readJSON(HomeRoom.self, named: Self.homeRoomFileName)) ?? .standard
+  }
+
+  public func saveHomeRoom(_ room: HomeRoom) throws(PersistenceError) {
+    try storage.writeJSON(room, named: Self.homeRoomFileName)
+  }
+
   /// Forgets the Labs choice, so the rooms follow the pair's flag, if one is set.
   public func clearLighting() throws(PersistenceError) {
     try storage.remove(Self.lightingFileName)
@@ -287,6 +300,8 @@ public final class WidgetFeaturesModel {
   public private(set) var shopkeeperOverride: Shopkeeper?
   /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
+  /// Which room Home shows. Kept beside the flags, in its own file.
+  public private(set) var homeRoom: HomeRoom
   /// The temperament saved for the cat, in its own file. See ``temperament(forSeed:)``.
   public private(set) var temperamentRecord: CatTemperamentRecord?
 
@@ -306,6 +321,7 @@ public final class WidgetFeaturesModel {
     lightingOverride = store?.loadLightingOverride()
     shopkeeperOverride = store?.loadShopkeeperOverride()
     furniture = store?.loadFurniture() ?? .standard
+    homeRoom = store?.loadHomeRoom() ?? .standard
     temperamentRecord = store?.loadTemperament()
   }
 
@@ -359,6 +375,12 @@ public final class WidgetFeaturesModel {
     guard self.furniture != furniture else { return }
     self.furniture = furniture
     try? store?.saveFurniture(furniture)
+  }
+
+  public func setHomeRoom(_ room: HomeRoom) {
+    guard homeRoom != room else { return }
+    homeRoom = room
+    try? store?.saveHomeRoom(room)
   }
 
   /// Drops the Labs lighting, so the rooms follow the pair's flag.

@@ -68,3 +68,8 @@ it does. No outside model or texture is used.
 ## Project assets
 
 - `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.
+- The Nooki cabin (`packages/pet-scenes/reality/Sources/PetSceneReality/NookiCabin.swift` and
+  `NookiCabinPieces.swift`) comes from the Nooki project: its room, furniture, colours, lights and
+  backdrop are ported from `Nooki/Scene/DioramaScene.swift` and `HomeView.swift` in
+  [nexishq/nooki-ios](https://github.com/nexishq/nooki-ios) at 6b968d4, with its author's permission.
+  It ships no files from that project; every shape is built in code.

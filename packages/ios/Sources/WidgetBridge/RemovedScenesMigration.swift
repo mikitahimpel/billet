@@ -4,8 +4,10 @@ import Foundation
 /// scene, in its Window Seat room.
 ///
 /// A choice of a flat scene (Little House or Rooftop), or no choice at all, becomes the kept
-/// scene. A room picked in Labs (Sunset Lamp, the Nooki diorama, or Window Seat itself) is
-/// forgotten, since Window Seat is the only room. Running it again changes nothing.
+/// scene. A room style picked in Labs while there were three (Sunset Lamp, the Nooki diorama, or
+/// Window Seat itself) is forgotten. The room chosen in Labs now is kept in its own file
+/// (``WidgetFeaturesStore/homeRoomFileName``), which this never touches. Running it again changes
+/// nothing.
 public enum RemovedScenesMigration {
   /// The ids the flat scenes were saved under.
   public static let removedSceneIDs: Set<String> = ["little-house", "rooftop"]

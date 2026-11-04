@@ -6,9 +6,31 @@ received note is taped to the glass and lit from behind. The design is the "genz
 units, so the two can be read side by side.
 
 Earlier builds also had the Nooki diorama and a second styled room, Sunset Lamp, chosen in Labs
-or from a brush button on Home. Both are gone. On the first launch after the update,
-`RemovedScenesMigration` deletes the stored choice (`room-style.json`) and moves anyone on a
-removed scene to the room.
+or from a brush button on Home. Both went in build 20. `RemovedScenesMigration` deletes that old
+choice (`room-style.json`) and moves anyone on a removed scene to the room.
+
+## The Nooki cabin (Labs → Room)
+
+Build 21 brings the Nooki project's latest room back as a second choice in **Settings → Labs →
+Room**; Window Seat stays the default. The choice is `HomeRoom`, kept in `home-room.json`, which
+the migration never touches. The cabin is Ilya's `DioramaScene` (nexishq/nooki-ios 6b968d4) ported
+into a second `GenzLayout` (`NookiCabin.swift`, `NookiCabinPieces.swift`) at 6 room units to his
+metre, so it runs on the same `GenzRoom` as Window Seat: the cat, its brain and trips, the needs
+(bowl, yarn), petting and toys, decorating, the lamp and the light switch all work there.
+
+What differs, through `GenzLayout.hasOutside`: the cabin has no street, view or weather outside, no
+pair style on its walls (the decorate Style tab is hidden), and none of Window Seat's flat layers.
+Behind it is Ilya's amber vignette with drifting bokeh (`NookiCabinBackdrop`, at 6 fps). The note
+hangs as a big polaroid in the middle of the twine garland on the back wall. The cat lives on the
+floor (`catTop` is the whole floor); its home is the plush bed, which it walks into rather than
+round (`catObstacles` skips a bed on the cat's floor). The cabin lights itself: a shadowed sun, the
+round window's spill and a flickering candle (`GenzOwnLight`), with the lamp on the stool as the
+room's lamp. Lighting presets still add their glow, haze and grade.
+
+Not ported: Mochi, Ilya's Gaussian-splat cat (seated only, with no walk or sleep clips, and needing
+iOS 27's splat API), so the cabin shows the cat chosen in Labs; his dust motes (a particle emitter);
+the Moments photos on the garland (billet has no Moments), so its other four polaroids are plain
+prints; and his Shop items, which were never placed in his room.
 
 ## Where the code is
 
