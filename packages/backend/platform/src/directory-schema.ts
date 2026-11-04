@@ -240,6 +240,11 @@ export const pairEvents = sqliteTable(
     count: integer("count").notNull(),
     firstAt: integer("first_at").notNull(),
     lastAt: integer("last_at").notNull(),
+    // The build (`1.2.0+14`) and system (`iOS 26.1`) the app sent with its latest report that day,
+    // as `clientInfoOf` reads the headers. Null for names the server records itself. The same
+    // values Analytics Engine gets; here so the admin can split cohorts by build past its 90 days.
+    appVersion: text("app_version"),
+    os: text("os"),
   },
   (table) => [
     primaryKey({ columns: [table.pairId, table.userId, table.name, table.day] }),

@@ -24,6 +24,7 @@ import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
 import { buildOverview } from "./admin-overview.ts";
+import { buildRetentionGrid } from "./admin-retention.ts";
 import { AppStatusStore } from "./app-status-store.ts";
 import { verdictOf } from "./experiment-verdict.ts";
 
@@ -46,6 +47,7 @@ export const adminApi = {
   me: "/admin/api/me",
   overview: "/admin/api/overview",
   appEvents: "/admin/api/app-events",
+  retention: "/admin/api/retention",
   flags: "/admin/api/flags",
   flag: "/admin/api/flags/:key",
   experiments: "/admin/api/experiments",
@@ -63,6 +65,7 @@ export const adminApi = {
 export const agentApiPrefix = "/admin/api/agent/";
 export const agentApi = {
   overview: "/admin/api/agent/overview",
+  retention: "/admin/api/agent/retention",
   experiments: "/admin/api/agent/experiments",
   flags: "/admin/api/agent/flags",
   flagHistory: "/admin/api/agent/flag-history",
@@ -123,6 +126,15 @@ const StatusHistoryQuery = Schema.Struct({
 });
 const RangeQuery = Schema.Struct({
   days: Schema.optional(Schema.Literals(["7", "30", "90"])),
+});
+// `key=variant` from the registry's alphabet, and a build as the app sends it (or `unknown`).
+const RetentionQuery = Schema.Struct({
+  variant: Schema.optional(
+    Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*=[a-z0-9]+(?:-[a-z0-9]+)*$/)),
+  ),
+  version: Schema.optional(
+    Schema.String.check(Schema.isPattern(/^(?:unknown|\d{1,4}(?:\.\d{1,4}){0,3}(?:\+\d{1,8})?)$/)),
+  ),
 });
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
@@ -219,6 +231,18 @@ const readHandlers = Effect.gen(function* () {
         Number(days ?? 30),
         yield* data.details,
       ),
+    );
+  }).pipe(guarded);
+
+  const retention = Effect.gen(function* () {
+    const { variant, version } = yield* HttpServerRequest.schemaSearchParams(RetentionQuery);
+    const [key = "", chosen = ""] = variant?.split("=") ?? [];
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(
+      buildRetentionGrid(events, rows, utcDay(yield* Clock.currentTimeMillis), {
+        variant: variant === undefined ? undefined : { key, variant: chosen },
+        appVersion: version,
+      }),
     );
   }).pipe(guarded);
 
@@ -320,6 +344,7 @@ const readHandlers = Effect.gen(function* () {
     entryOf,
     overview,
     appEvents,
+    retention,
     flagList,
     experiments,
     history,
@@ -370,6 +395,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     );
     yield* router.add("GET", adminApi.overview, reads.overview);
     yield* router.add("GET", adminApi.appEvents, reads.appEvents);
+    yield* router.add("GET", adminApi.retention, reads.retention);
     yield* router.add("GET", adminApi.flags, reads.flagList);
     yield* router.add("GET", adminApi.experiments, reads.experiments);
     yield* router.add("GET", adminApi.history, reads.history);
@@ -470,6 +496,7 @@ export const AgentRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const reads = yield* readHandlers;
     yield* router.add("GET", agentApi.overview, reads.overview);
+    yield* router.add("GET", agentApi.retention, reads.retention);
     yield* router.add("GET", agentApi.experiments, reads.experiments);
     yield* router.add("GET", agentApi.flags, reads.flagList);
     yield* router.add("GET", agentApi.flagHistory, reads.history);

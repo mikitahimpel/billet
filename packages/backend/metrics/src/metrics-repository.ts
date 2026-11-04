@@ -17,6 +17,10 @@ export const StoredMetric = Schema.Struct({
   count: Schema.Int,
   firstAt: EpochMillis,
   lastAt: EpochMillis,
+  /** The build the app said it was on the day's latest report, or null (server-recorded names). */
+  appVersion: Schema.NullOr(Schema.String),
+  /** The system, the same way. */
+  os: Schema.NullOr(Schema.String),
 });
 export type StoredMetric = typeof StoredMetric.Type;
 
@@ -43,6 +47,8 @@ export interface MetricOccurrence {
   readonly detail?: string | undefined;
   /** Added to the detail's `total`. Only with a detail. */
   readonly value?: number | undefined;
+  /** The build and system the app reported with it. Kept as the day's latest; absent keeps it. */
+  readonly client?: { readonly appVersion: string; readonly os: string } | undefined;
 }
 
 /** Counts. Failure is a defect for the caller to log: a counter must never fail a request. */

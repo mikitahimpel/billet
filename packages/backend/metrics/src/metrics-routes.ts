@@ -38,15 +38,16 @@ export const MetricsRoutes = HttpRouter.use((router) =>
           Effect.map(Option.getOrUndefined),
           Effect.catch(() => Effect.succeed(undefined)),
         );
-        yield* Effect.forEach(
-          events,
-          ({ name, detail, value }) => metrics.record({ userId, pairId, name, detail, value }),
-          { discard: true },
-        );
-
         const { appVersion, os } = clientInfoOf(
           (yield* HttpServerRequest.HttpServerRequest).headers,
         );
+        yield* Effect.forEach(
+          events,
+          ({ name, detail, value }) =>
+            metrics.record({ userId, pairId, name, detail, value, client: { appVersion, os } }),
+          { discard: true },
+        );
+
         const pairHash =
           pairId === undefined
             ? ""

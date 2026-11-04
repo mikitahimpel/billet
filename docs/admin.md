@@ -15,6 +15,7 @@ hover.
 | --- | --- | --- |
 | Overview | for the last 7, 30 or 90 days against the same span before it: daily active (mean per day), weekly active (on the last day), new pairs, pair completion (inviters whose first invite fell in the range and are now in a pair), notes per pair per day (notes over the days each pair existed), D1/D7 retention (pairs formed in the range, both partners active on day N), each with its change and a sparkline or its 95% interval; active people and notes per day; the funnel installed → signed in → paired → first note → second day (all time) with each step's conversion from the one before | nothing |
 | In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
+| Retention | pairs by the week they formed (UTC, from Monday), one row per week and one for all weeks, and columns for day 1, 3, 7, 14, 30 and 60 after forming. Three modes: **both active** (both partners opened the app or sent a note on day N), **either active**, and **both sent a note** (the north star at day 7). Filters: an experiment's variant (from `pair_flags`) and the build the pair formed on. Each cell is a share of the week's pairs that have reached that day, coloured from faint to strong within the view; hover shows the count and its 95% Wilson interval. A day no pair of the week has reached is hatched grey, and a share resting on only some of the week's pairs (the others are too young) is in italics. See [below](#retention-grid) | nothing |
 | Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's | start, stop, kill, unkill, each after a confirmation |
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
@@ -23,9 +24,49 @@ hover.
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
-before sign-in. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
+before sign-in.
+
+**Too few.** In the analytics views (Retention so far), any group of fewer than 5 pairs shows "too
+few" and no number: the server leaves the count out of the answer, so neither the page nor an agent
+ever sees it. Some users are minors, and a share of 2 pairs says more about those two couples than
+about the app. There are no per-person timelines and no session replay, by design. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
 a note, an image, an Apple identifier or a push token, and shows no user ids. What each setting
 means is in [experiments.md](experiments.md#what-an-experiment-is).
+
+## Retention grid
+
+`GET /admin/api/retention[?variant=<key>=<variant>&version=<build>]`, built by
+`buildRetentionGrid` (`packages/backend/admin/src/admin-retention.ts`) from the `pair_events` and
+`pair_flags` rows the Overview reads.
+
+- **A pair** is the people with a `PairClaimed` row under its id; it formed on the earliest of those
+  days (UTC), and day N is N days after that. It is counted in day N only once that day has come.
+- **Active** is `AppOpened` or `NoteSent` that day, as in the owner report (`buildReport`).
+- **The build a pair formed on** is the `app_version` on its earliest row the app sent (the
+  server's own rows, such as the claim, carry none). Pairs from before the column existed
+  (2026-11-04) are `unknown`.
+- **Checked against SQL.** `packages/backend/platform/test/admin-retention.test.ts` loads the seed
+  into a migrated D1 and compares every cell, in every mode, with a hand-written query, and the
+  variant and build filters with their own queries.
+
+## Seed data
+
+`pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks
+(more each week), inviters who never pair, four builds and four iOS versions, the `home-layout`
+flag split `classic`/`immersive` (immersive holds on a little better), and what each person did
+each day. Pairs drift off at their own pace, and about one in seven never does. It is deterministic
+(`--seed`, `--today`, `--weeks`, `--scale`). Every user and pair id starts with `seed-`, and the
+file begins by deleting earlier seed rows, so it can be run again. `event_details` has no owner, so
+those rows add up on each run.
+
+```sh
+pnpm alchemy dev                               # once, so the local D1 exists
+pnpm admin:seed --local "$(ls .alchemy/local/d1/cloudflare-runtime-D1DatabaseObject/[0-9a-f]*.sqlite)"
+```
+
+`--local` applies it to that SQLite file; without it the script only writes the file. For a
+deployed stage (the manager's call, never an agent's) the same file goes through Wrangler:
+`wrangler d1 execute <database> --remote --file admin-seed.sql`. Never on `prod`.
 
 ## Why the same Worker
 
@@ -101,6 +142,7 @@ a Cloudflare Access **service token**. They can't change anything.
 | Route (`GET /admin/api/agent/...`) | Same as the panel's |
 | --- | --- |
 | `overview[?days=7\|30\|90]` | Overview (30 days by default) |
+| `retention[?variant=<key>=<variant>&version=<build>]` | Retention |
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
