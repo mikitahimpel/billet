@@ -1,3 +1,4 @@
+import Foundation
 import Observation
 
 /// One tap to buy: the stamps go at once, the item lands where it belongs, and the purchase can be
@@ -11,16 +12,38 @@ import Observation
 public final class ShopCheckout {
   /// A purchase that has just gone through.
   public struct Receipt: Identifiable, Hashable, Sendable {
+    /// Who it was bought for.
+    public enum Kind: Hashable, Sendable {
+      /// For this room.
+      case forUs
+      /// For the partner: it is wrapped and sent, with the note, once it can no longer be taken
+      /// back.
+      case gift(note: String?)
+    }
+
     /// The purchase's transaction ID.
     public let id: String
-    public let item: ShopItem
-    /// Where it was stood in the room, when it was.
-    public let placement: RoomLayout.Placement.ID?
+    /// What was bought: one item, or a bundle's.
+    public let items: [ShopItem]
+    /// The stamps it cost.
+    public let price: Int
+    /// Where its pieces were stood in the room, those that were.
+    public let placements: [RoomLayout.Placement.ID]
     /// The room's style before the purchase changed it, when it did.
     public let styleBefore: RoomStyle?
+    /// The bundle it was bought as, if it was.
+    public let bundle: ShopBundle?
+    public let kind: Kind
 
-    /// A piece that went to the closet because the room had no open spot.
-    public var needsPlacing: Bool { item.isPlaceable && placement == nil }
+    /// The item bought, or the first of a bundle's.
+    public var item: ShopItem { items[0] }
+    /// Where the item was stood in the room, when it was.
+    public var placement: RoomLayout.Placement.ID? { placements.first }
+
+    /// Pieces that went to the closet because the room had no open spot.
+    public var needsPlacing: Bool {
+      kind == .forUs && items.filter(\.isPlaceable).count > placements.count
+    }
   }
 
   /// What a tap on a price did.
@@ -36,6 +59,8 @@ public final class ShopCheckout {
 
   /// How long a purchase can be taken back.
   public static let undoWindow = Duration.seconds(5)
+  /// The longest note a gift carries.
+  public static let noteLimit = 80
 
   /// The latest purchase, while it can still be taken back.
   public private(set) var latest: Receipt?
@@ -44,25 +69,34 @@ public final class ShopCheckout {
   private let renovator: RoomRenovator
   private let style: @MainActor () -> RoomStyle
   private let restyle: @MainActor (RoomStyle) -> Void
+  private let send: @MainActor (ShopItem, String?) -> Void
 
   /// - Parameters:
   ///   - style: The room's style now, which a bought window view is put into.
   ///   - restyle: Shares a new style of the room.
+  ///   - send: Wraps an item from the closet for the partner, with a note.
   public init(
     store: ShopStore,
     renovator: RoomRenovator,
     style: @escaping @MainActor () -> RoomStyle = { .standard },
-    restyle: @escaping @MainActor (RoomStyle) -> Void = { _ in }
+    restyle: @escaping @MainActor (RoomStyle) -> Void = { _ in },
+    send: @escaping @MainActor (ShopItem, String?) -> Void = { _, _ in }
   ) {
     self.store = store
     self.renovator = renovator
     self.style = style
     self.restyle = restyle
+    self.send = send
   }
 
   /// The stamps still missing for `item`, or 0 when there are enough.
   public func shortfall(for item: ShopItem) -> Int {
-    max(item.price - store.stamps, 0)
+    shortfall(price: item.price)
+  }
+
+  /// The stamps still missing to pay `price`, or 0 when there are enough.
+  public func shortfall(price: Int) -> Int {
+    max(price - store.stamps, 0)
   }
 
   /// Whether `item` can only be owned once and is.
@@ -70,14 +104,79 @@ public final class ShopCheckout {
     item.ownsAtMostOne && store.state.owns(item)
   }
 
+  /// What is left to buy of `bundle`, and what it costs: an item that can only be owned once and
+  /// already is, is left out and not charged for.
+  public func remaining(of bundle: ShopBundle) -> (items: [ShopItem], price: Int, sum: Int) {
+    let items = bundle.remaining(in: store.catalog, owns: store.state.owns)
+    return (items, bundle.price(of: items), ShopBundle.sum(of: items))
+  }
+
   /// Buys `item` with stamps, then places or shows it.
   public func buy(_ item: ShopItem) -> Outcome {
-    if isOwned(item) { return .owned }
-    let short = shortfall(for: item)
+    purchase([item], price: item.price, bundle: nil, kind: .forUs)
+  }
+
+  /// Buys one of the day's deals at its price.
+  public func buy(_ deal: ShopDeal) -> Outcome {
+    purchase([deal.item], price: deal.price, bundle: nil, kind: .forUs)
+  }
+
+  /// Buys what is left of `bundle` at its price, then places and shows all of it.
+  public func buy(_ bundle: ShopBundle) -> Outcome {
+    let left = remaining(of: bundle)
+    guard !left.items.isEmpty else { return .owned }
+    return purchase(left.items, price: left.price, bundle: bundle, kind: .forUs)
+  }
+
+  /// Buys `item` for the partner, at `price` or its own. Only what can be wrapped, a piece or a
+  /// treat, can be given; a style is the room's, not a thing.
+  public func give(_ item: ShopItem, price: Int? = nil, note: String?) -> Outcome {
+    guard !item.ownsAtMostOne else { return .refused }
+    let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines).prefix(Self.noteLimit)
+    let kept = trimmed.flatMap { $0.isEmpty ? nil : String($0) }
+    return purchase([item], price: price ?? item.price, bundle: nil, kind: .gift(note: kept))
+  }
+
+  /// Takes back `receipt`'s purchase if it is still the latest one. Returns whether it was.
+  @discardableResult
+  public func undo(_ receipt: Receipt) -> Bool {
+    guard latest?.id == receipt.id else { return false }
+    latest = nil
+    do {
+      try store.undoBuy(
+        receipt.items, transaction: receipt.id, placements: receipt.placements,
+        bundle: receipt.bundle?.id)
+    } catch {
+      return false
+    }
+    if let before = receipt.styleBefore, style() != before {
+      let choices = receipt.items.compactMap(\.styleChoice)
+      if choices.contains(where: style().shows) { restyle(before) }
+    }
+    return true
+  }
+
+  /// Ends `receipt`'s chance to be taken back, once its time is up. A gift goes to the partner
+  /// then.
+  public func settle(_ receipt: Receipt) {
+    guard latest?.id == receipt.id else { return }
+    latest = nil
+    if case .gift(let note) = receipt.kind { send(receipt.item, note) }
+  }
+
+  private func purchase(
+    _ items: [ShopItem], price: Int, bundle: ShopBundle?, kind: Receipt.Kind
+  ) -> Outcome {
+    if items.count == 1, bundle == nil, isOwned(items[0]) { return .owned }
+    let short = shortfall(price: price)
     if short > 0 { return .short(by: short) }
+    // A purchase still open is settled first: only the latest one can be taken back.
+    if let previous = latest { settle(previous) }
     let transaction = store.newTransaction()
     do {
-      guard try store.buy(item, transaction: transaction) == .applied else { return .refused }
+      let outcome = try store.buy(
+        items, price: price, transaction: transaction, bundle: bundle?.id)
+      guard outcome == .applied else { return .refused }
     } catch {
       switch error {
       case .notEnoughStamps(let needed, let have): return .short(by: max(needed - have, 1))
@@ -87,43 +186,27 @@ public final class ShopCheckout {
         return .refused
       }
     }
-    var placement: RoomLayout.Placement.ID?
+    var placements: [RoomLayout.Placement.ID] = []
     var styleBefore: RoomStyle?
-    switch item.look {
-    case .furniture:
-      placement = place(item)
-    case .style(let choice):
-      let before = style()
-      let after = before.with(choice)
-      if after != before {
-        styleBefore = before
-        restyle(after)
+    if kind == .forUs {
+      for item in items where item.isPlaceable {
+        if let placement = place(item) { placements.append(placement) }
       }
-    case .material, .treat:
-      break
+      let choices = items.compactMap(\.styleChoice)
+      if !choices.isEmpty {
+        let before = style()
+        let after = choices.reduce(before) { $0.with($1) }
+        if after != before {
+          styleBefore = before
+          restyle(after)
+        }
+      }
     }
     let receipt = Receipt(
-      id: transaction, item: item, placement: placement, styleBefore: styleBefore)
+      id: transaction, items: items, price: price, placements: placements,
+      styleBefore: styleBefore, bundle: bundle, kind: kind)
     latest = receipt
     return .bought(receipt)
-  }
-
-  /// Takes back `receipt`'s purchase if it is still the latest one. Returns whether it was.
-  @discardableResult
-  public func undo(_ receipt: Receipt) -> Bool {
-    guard latest?.id == receipt.id else { return false }
-    latest = nil
-    do {
-      try store.undoBuy(receipt.item, transaction: receipt.id, placement: receipt.placement)
-    } catch {
-      return false
-    }
-    if let before = receipt.styleBefore, case .style(let choice) = receipt.item.look,
-      style().shows(choice)
-    {
-      restyle(before)
-    }
-    return true
   }
 
   /// Shows a style already owned, or free, in the room.
@@ -132,11 +215,6 @@ public final class ShopCheckout {
     let before = style()
     let after = before.with(choice)
     if after != before { restyle(after) }
-  }
-
-  /// Ends `receipt`'s chance to be taken back, once its time is up.
-  public func settle(_ receipt: Receipt) {
-    if latest?.id == receipt.id { latest = nil }
   }
 
   /// Stands a bought piece in the room. Returns its placement, or `nil` when it stays in the

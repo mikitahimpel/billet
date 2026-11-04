@@ -60,6 +60,37 @@ public final class ShopStore {
     }
   }
 
+  /// Pays `price` for `items` together. See ``ShopState/buy(_:price:transaction:bundle:)``.
+  @discardableResult
+  public func buy(
+    _ items: [ShopItem], price: Int, transaction: String, bundle: String? = nil
+  ) throws(ShopError) -> ShopOutcome {
+    try change { (state: inout ShopState) throws(ShopError) in
+      try state.buy(items, price: price, transaction: transaction, bundle: bundle)
+    }
+  }
+
+  /// Takes back a purchase of several items. See
+  /// ``ShopState/undoBuy(_:transaction:placements:bundle:)``.
+  @discardableResult
+  public func undoBuy(
+    _ items: [ShopItem], transaction: String, placements: [RoomLayout.Placement.ID],
+    bundle: String? = nil
+  ) throws(ShopError) -> ShopOutcome {
+    try change { (state: inout ShopState) throws(ShopError) in
+      try state.undoBuy(items, transaction: transaction, placements: placements, bundle: bundle)
+    }
+  }
+
+  /// Takes the day's free gift, once.
+  @discardableResult
+  public func claim(_ gift: DailyGift) -> ShopOutcome {
+    var next = state
+    let outcome = next.claim(gift, catalog: catalog)
+    if outcome == .applied { commit(next) }
+    return outcome
+  }
+
   @discardableResult
   public func place(
     _ item: ShopItem, transaction: String, at spot: (x: Double, z: Double)? = nil

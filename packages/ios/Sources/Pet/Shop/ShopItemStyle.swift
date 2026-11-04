@@ -109,3 +109,29 @@ extension ShopItem {
     }
   }
 }
+
+extension ShopItem {
+  /// What the cat does with it, for the things made for the cat. `nil` for the rest.
+  public var catReaction: String? {
+    switch id {
+    case "furniture-donutbed": "Curls up inside and won't come out"
+    case "furniture-tower": "Climbs to the top and watches you both"
+    case "furniture-yarn": "Bats it under the sofa, then waits"
+    case "furniture-mouse": "Pounces, then pretends it didn't"
+    case "furniture-idol-catbed": "Kneads it, then naps all afternoon"
+    case "furniture-idol-cattree": "Naps on the highest shelf"
+    case "furniture-idol-scratchpost": "Stretches up tall and scratches"
+    case "treat-fish": "Purrs before it's even unwrapped"
+    case "treat-cookie": "Crunches it, then asks for another"
+    case "treat-milk": "Laps it up, whiskers all white"
+    default: nil
+    }
+  }
+}
+
+extension ShopItem {
+  /// The Style tab's choice it is, for a style.
+  public var styleChoice: RoomStyleItem? {
+    if case .style(let choice) = look { choice } else { nil }
+  }
+}
