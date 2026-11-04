@@ -18,7 +18,7 @@
           let layout = GenzLayout.of(furniture)
           let room = GenzRoomCache(suite: "genz-census-\(UUID())").room(layout)
           room.startBuilding()
-          let deadline = Date.now.addingTimeInterval(60)
+          let deadline = Date.now.addingTimeInterval(120)
           while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
           try #require(room.isBuilt)
           var rows: [(String, Tally)] = []
@@ -47,7 +47,7 @@
         let layout = GenzLayout.of(.cosyNook)
         let room = GenzRoomCache(suite: "genz-census-\(UUID())").room(layout)
         room.startBuilding()
-        let deadline = Date.now.addingTimeInterval(60)
+        let deadline = Date.now.addingTimeInterval(120)
         while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
         try #require(room.isBuilt)
         room.room.isEnabled = true

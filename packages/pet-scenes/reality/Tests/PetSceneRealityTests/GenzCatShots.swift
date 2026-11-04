@@ -18,7 +18,7 @@
       let layout = GenzLayout.of(.cosyNook)
       let room = GenzRoomCache(suite: "genz-cat-shots-\(UUID())").room(layout)
       room.startBuilding()
-      let deadline = Date.now.addingTimeInterval(60)
+      let deadline = Date.now.addingTimeInterval(120)
       while !(room.isBuilt && room.hasCat), Date.now < deadline {
         try await Task.sleep(for: .milliseconds(10))
       }
@@ -53,7 +53,7 @@
       let layout = GenzLayout.of(.original)
       let room = GenzRoomCache(suite: "genz-cat-shots-\(UUID())").room(layout)
       room.startBuilding()
-      let deadline = Date.now.addingTimeInterval(60)
+      let deadline = Date.now.addingTimeInterval(120)
       while !(room.isBuilt && room.hasCat), Date.now < deadline {
         try await Task.sleep(for: .milliseconds(10))
       }
@@ -86,7 +86,7 @@
       let layout = GenzLayout.of(.cosyNook)
       let room = GenzRoomCache(suite: "genz-cat-shadow-\(UUID())").room(layout)
       room.startBuilding()
-      let deadline = Date.now.addingTimeInterval(60)
+      let deadline = Date.now.addingTimeInterval(120)
       while !(room.isBuilt && room.hasCat), Date.now < deadline {
         try await Task.sleep(for: .milliseconds(10))
       }

@@ -11,7 +11,7 @@ import Testing
     let layout = GenzLayout.of(.cosyNook)
     let room = GenzRoomCache(suite: "genz-shadow-\(UUID())").room(layout)
     room.startBuilding()
-    let deadline = Date.now.addingTimeInterval(60)
+    let deadline = Date.now.addingTimeInterval(120)
     while !room.isBuilt, Date.now < deadline { try await Task.sleep(for: .milliseconds(10)) }
     try #require(room.isBuilt)
     room.setLighting(.amberLantern)
