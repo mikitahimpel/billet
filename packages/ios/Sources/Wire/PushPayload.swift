@@ -1,14 +1,21 @@
 /// Custom data carried by a push, not the whole APNs envelope.
-/// `compact` is absent for photos, which have no vector rendition.
+/// `compact` is present for drawings only, `text` for text notes only, and `paper` when the sender
+/// chose one.
 public enum PushPayload: Codable, Hashable, Sendable {
-  case widget(noteId: NoteId, author: UserId, compact: CompactStrokes?)
-  case alert(noteId: NoteId, author: UserId, compact: CompactStrokes?)
+  case widget(
+    noteId: NoteId, author: UserId, compact: CompactStrokes?, text: NoteText? = nil,
+    paper: PaperColor? = nil)
+  case alert(
+    noteId: NoteId, author: UserId, compact: CompactStrokes?, text: NoteText? = nil,
+    paper: PaperColor? = nil)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case noteId
     case author
     case compact
+    case text
+    case paper
   }
 
   public init(from decoder: any Decoder) throws {
@@ -16,20 +23,14 @@ public enum PushPayload: Codable, Hashable, Sendable {
     let tag = try container.decode(String.self, forKey: .tag)
     let noteId = try container.decode(NoteId.self, forKey: .noteId)
     let author = try container.decode(UserId.self, forKey: .author)
-    // The schema's `optionalKey` means absent, never null.
-    let compact: CompactStrokes?
-    if container.contains(.compact) {
-      guard try !container.decodeNil(forKey: .compact) else {
-        throw DecodingError.dataCorruptedError(
-          forKey: .compact, in: container, debugDescription: "compact must be absent, not null")
-      }
-      compact = try container.decode(CompactStrokes.self, forKey: .compact)
-    } else {
-      compact = nil
-    }
+    let compact = try container.decodeOptionalKey(CompactStrokes.self, forKey: .compact)
+    let text = try container.decodeOptionalKey(NoteText.self, forKey: .text)
+    let paper = try container.decodeOptionalKey(PaperColor.self, forKey: .paper)
     switch tag {
-    case "Widget": self = .widget(noteId: noteId, author: author, compact: compact)
-    case "Alert": self = .alert(noteId: noteId, author: author, compact: compact)
+    case "Widget":
+      self = .widget(noteId: noteId, author: author, compact: compact, text: text, paper: paper)
+    case "Alert":
+      self = .alert(noteId: noteId, author: author, compact: compact, text: text, paper: paper)
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -38,17 +39,19 @@ public enum PushPayload: Codable, Hashable, Sendable {
 
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
+    let fields: (NoteId, UserId, CompactStrokes?, NoteText?, PaperColor?)
     switch self {
-    case .widget(let noteId, let author, let compact):
+    case .widget(let noteId, let author, let compact, let text, let paper):
       try container.encode("Widget", forKey: .tag)
-      try container.encode(noteId, forKey: .noteId)
-      try container.encode(author, forKey: .author)
-      try container.encodeIfPresent(compact, forKey: .compact)
-    case .alert(let noteId, let author, let compact):
+      fields = (noteId, author, compact, text, paper)
+    case .alert(let noteId, let author, let compact, let text, let paper):
       try container.encode("Alert", forKey: .tag)
-      try container.encode(noteId, forKey: .noteId)
-      try container.encode(author, forKey: .author)
-      try container.encodeIfPresent(compact, forKey: .compact)
+      fields = (noteId, author, compact, text, paper)
     }
+    try container.encode(fields.0, forKey: .noteId)
+    try container.encode(fields.1, forKey: .author)
+    try container.encodeIfPresent(fields.2, forKey: .compact)
+    try container.encodeIfPresent(fields.3, forKey: .text)
+    try container.encodeIfPresent(fields.4, forKey: .paper)
   }
 }

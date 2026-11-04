@@ -48,7 +48,9 @@ export class AccountDeletion extends Context.Service<
       ) {
         const notes = yield* rooms.forgetMember(pairId, userId);
         const uploaded = yield* media.uploadedBy(pairId, userId);
-        const keys = new Set<MediaKey>([...uploaded, ...notes.map(({ note }) => note.image)]);
+        // A text note has no image to remove.
+        const images = notes.flatMap(({ note }) => (note._tag === "Text" ? [] : [note.image]));
+        const keys = new Set<MediaKey>([...uploaded, ...images]);
         yield* media.remove([...keys]);
       });
 

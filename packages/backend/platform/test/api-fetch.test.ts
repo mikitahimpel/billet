@@ -191,10 +191,18 @@ const readImage = (key: string, token: string) =>
 const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID()) =>
   call("/v1/notes", json({ _tag: "Photo", key, image }, "POST", token));
 
+const sendText = (
+  token: string,
+  note: { readonly text: string; readonly paper?: string },
+  key: string = crypto.randomUUID(),
+) => call("/v1/notes", json({ _tag: "Text", key, ...note }, "POST", token));
+
 const sentPhoto = async (token: string) => {
   const response = await sendPhoto(token, await uploaded(token));
   expect(response.status).toBe(200);
-  return Schema.decodeUnknownSync(SendNoteResponse)(await response.json()).note;
+  const { note } = Schema.decodeUnknownSync(SendNoteResponse)(await response.json());
+  if (note._tag !== "Photo") throw new Error(`expected a photo, got ${note._tag}`);
+  return note;
 };
 
 const entriesFor = async (token: string, query = "") => {
@@ -854,6 +862,58 @@ describe("notes", () => {
       image,
       compact: { strokes: [{ points: [10, 20, 30, 40] }] },
     });
+    expect(note).not.toHaveProperty("paper");
+  });
+
+  it("keeps a drawing's paper", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const image = await uploaded(owner);
+    const compact = { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points: [1, 2] }] };
+    const sent = await call(
+      "/v1/notes",
+      json(
+        { _tag: "Drawing", key: crypto.randomUUID(), image, compact, paper: "sage" },
+        "POST",
+        owner,
+      ),
+    );
+    expect(sent.status).toBe(200);
+    const [note] = await historyFor(owner);
+    expect(note).toMatchObject({ _tag: "Drawing", image, paper: "sage" });
+  });
+
+  it("stores a text note with its paper, and gives it to both partners as written", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const response = await sendText(owner, { text: "miss you already 💛", paper: "butter" });
+    expect(response.status).toBe(200);
+    const { note } = Schema.decodeUnknownSync(SendNoteResponse)(await response.json());
+    expect(note).toMatchObject({ _tag: "Text", text: "miss you already 💛", paper: "butter" });
+    expect(note).not.toHaveProperty("image");
+
+    expect((await sendText(claimer, { text: "home soon" })).status).toBe(200);
+    const history = await historyFor(claimer);
+    expect(history.map((n) => n._tag)).toEqual(["Text", "Text"]);
+    expect(history[0]).toEqual(note);
+    expect(history[1]).not.toHaveProperty("paper");
+    expect(await historyFor(owner)).toEqual(history);
+  });
+
+  it("refuses a text note that is blank, over 120 characters or on an unknown paper", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    expect((await sendText(owner, { text: "   " })).status).toBe(400);
+    expect((await sendText(owner, { text: "a".repeat(121) })).status).toBe(400);
+    expect((await sendText(owner, { text: "hi", paper: "mint" })).status).toBe(400);
+    expect((await sendText(owner, { text: "💛".repeat(120) })).status).toBe(200);
+    expect(await historyFor(owner)).toHaveLength(1);
+  });
+
+  it("stores one text note for a key sent again", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    const key = crypto.randomUUID();
+    const first = await sendText(owner, { text: "once" }, key);
+    const again = await sendText(owner, { text: "once" }, key);
+    expect(await again.json()).toEqual(await first.json());
+    expect(await historyFor(owner)).toHaveLength(1);
   });
 });
 
@@ -1010,6 +1070,10 @@ describe("what the Worker logs", () => {
         ),
       );
       secrets.push(marker.join(","));
+      const words = "a private line for my partner only";
+      await sendText(owner, { text: words, paper: "sky" });
+      await sendText(owner, { text: `${words} ${"x".repeat(120)}` });
+      secrets.push(words);
 
       // The failure paths are where a careless log would quote its input.
       const [header, , signature] = (await identityToken((await challenge()).nonce)).split(".");
@@ -1088,6 +1152,18 @@ describe("the couple's WebSocket", () => {
     await sentPhoto(owner);
     await until(() => partner.seqs().length === 3, "the live note");
     expect(partner.seqs()).toEqual([1, 2, 3]);
+  });
+
+  it("delivers a text note live, words and paper included", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const partner = await openSocket(claimer);
+    partner.resume(0);
+    await sendText(owner, { text: "look outside 🌙", paper: "sky" });
+    await until(() => partner.seqs().length === 1, "the text note");
+    expect(partner.ofTag("NoteReceived")[0]).toMatchObject({
+      seq: 1,
+      note: { _tag: "Text", text: "look outside 🌙", paper: "sky" },
+    });
   });
 
   it("gives no note before the client asks to resume", async () => {

@@ -1,16 +1,18 @@
+import FeatureOnboarding
 import Pet
 import StoreKit
 import SwiftUI
 
 /// Settings, grouped the way iOS groups its own: the couple first, then how the app feels, then support, privacy and
-/// what's installed. Nooki has no account or backend, so there is no sign-in or account deletion yet; erasing the
-/// data on this phone stands in for it.
+/// what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on this phone
+/// stands in for account deletion until it has its own row.
 struct SettingsView: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over.
     var erase: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AnonymousSignInModel.self) private var signIn: AnonymousSignInModel?
     @Environment(\.requestReview) private var requestReview
     @AppStorage(AppSettings.hapticsKey) private var haptics = true
     @AppStorage(WindowChoice.key) private var windowView = WindowChoice.suburbia
@@ -39,6 +41,13 @@ struct SettingsView: View {
                     Text("Small taps when you pet Mochi, buy something or add a wish.")
                 }
                 .listRowBackground(rowBackground)
+
+                if let signIn {
+                    Section("Account") {
+                        AccountRow(state: signIn.state, retry: signIn.retry)
+                    }
+                    .listRowBackground(rowBackground)
+                }
 
                 Section {
                     Picker(selection: $windowView) {
@@ -73,8 +82,11 @@ struct SettingsView: View {
                 } header: {
                     Text("Privacy")
                 } footer: {
-                    Text("Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
-                         + "are saved only on this phone.")
+                    Text(signIn == nil
+                         ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
+                           + "are saved only on this phone."
+                         : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
+                           + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
                 }
                 .listRowBackground(rowBackground)
 
@@ -145,6 +157,69 @@ struct SettingsView: View {
             UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
             Text(title)
                 .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : .white)
+        }
+    }
+}
+
+/// Where the anonymous sign-in stands, with a retry when the server could not be reached.
+private struct AccountRow: View {
+    let state: AnonymousSignInMachine.State
+    let retry: () -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(.white)
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            Spacer(minLength: 0)
+            if case .failed = state {
+                Button("Try Again", action: retry)
+                    .font(.system(size: 15, weight: .semibold))
+            } else if case .signingIn = state {
+                ProgressView()
+            }
+        }
+    }
+
+    private var title: String {
+        switch state {
+        case .idle, .signingIn: "Connecting…"
+        case .signedIn: "Connected"
+        case .failed: "Not connected"
+        }
+    }
+
+    private var detail: String? {
+        switch state {
+        case .idle, .signingIn: nil
+        case .signedIn: "Anonymous account, no email needed"
+        case .failed(let failure, _):
+            switch failure {
+            case .storage: "This iPhone couldn't save the account"
+            case .appleRefused, .rejected, .unavailable, .appleIdInUse: "The server couldn't be reached"
+            }
+        }
+    }
+
+    private var symbol: String {
+        switch state {
+        case .idle, .signingIn: "icloud"
+        case .signedIn: "checkmark.icloud.fill"
+        case .failed: "exclamationmark.icloud.fill"
+        }
+    }
+
+    private var tint: UsTint {
+        switch state {
+        case .idle, .signingIn: .lilac
+        case .signedIn: .sage
+        case .failed: .coral
         }
     }
 }

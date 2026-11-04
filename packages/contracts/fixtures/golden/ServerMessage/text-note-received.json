@@ -1,0 +1,12 @@
+{
+  "_tag": "NoteReceived",
+  "note": {
+    "_tag": "Text",
+    "author": "user-bob",
+    "id": "note-1",
+    "paper": "butter",
+    "sentAt": 1700000002000,
+    "text": "miss you already 💛"
+  },
+  "seq": 10
+}

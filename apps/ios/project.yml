@@ -3,9 +3,6 @@ options:
   bundleIdPrefix: com.mikitahimpel
   deploymentTarget:
     iOS: "18.0"
-packages:
-  BilletPackages:
-    path: ../../packages/ios
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -15,6 +12,9 @@ settings:
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "23"
+packages:
+  BilletPackages:
+    path: ../../packages/ios
 targets:
   Billet:
     type: application
@@ -32,15 +32,22 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen:
           UIColorName: LaunchBackground
+        # The billet server's host, from the BILLET_API_HOST environment variable at build time (see Server/Backend).
+        BilletAPIHost: $(BILLET_API_HOST)
+        # nooki:// links from the widgets and controls (Shared/Widget/DeepLink.swift).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.mikitahimpel.billet
+            CFBundleURLSchemes: [nooki]
     dependencies:
       - target: NookiWidgets
       - target: WindowViews
       - package: BilletPackages
-        product: Pet
+        products: [FeatureOnboarding, Persistence, Pet, Transport, Wire]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet

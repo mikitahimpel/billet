@@ -34,6 +34,17 @@
         "sentAt": 1700000001000
       },
       "seq": 2
+    },
+    {
+      "note": {
+        "_tag": "Text",
+        "author": "user-bob",
+        "id": "note-1",
+        "paper": "butter",
+        "sentAt": 1700000002000,
+        "text": "miss you already 💛"
+      },
+      "seq": 3
     }
   ]
 }

@@ -2,8 +2,11 @@
 # Checks a Release archive before it goes to TestFlight:
 #   check-archive.sh <path.xcarchive> <build-number>
 #
-# The app and its widget extension have their bundle IDs, version 0.1.0 and the build number, and
-# are signed by team 2666YPBJTB and pass codesign --verify. Run from the repository root.
+# - the app and its widget extension have their bundle IDs, version 0.1.0 and the build number, and
+#   are signed by team 2666YPBJTB and pass codesign --verify;
+# - the server host (DEMO_HOST in the environment) is the app's BilletAPIHost and is nowhere in the
+#   git history of this checkout.
+# Prints what it checked, never the host. Run from the repository root with full history.
 set -euo pipefail
 
 archive=${1:?usage: check-archive.sh <path.xcarchive> <build-number>}
@@ -39,5 +42,15 @@ check_bundle() {
 
 check_bundle "$app" com.mikitahimpel.billet
 check_bundle "$app/PlugIns/NookiWidgets.appex" com.mikitahimpel.billet.widget
+
+if [ -z "${DEMO_HOST:-}" ]; then
+  fail "DEMO_HOST is not set"
+else
+  [ "$(plist "$app" BilletAPIHost)" = "$DEMO_HOST" ] || fail "the app's BilletAPIHost is not DEMO_HOST"
+  in_git=$(git log --all -p -S"$DEMO_HOST" --format=%h | grep -c . || true)
+  in_tree=$(git grep -cF -- "$DEMO_HOST" | grep -c . || true)
+  [ "$in_git" = 0 ] && [ "$in_tree" = 0 ] || fail "the server host is in git ($in_git history lines, $in_tree files)"
+  echo "server host: in the app, not in git"
+fi
 
 exit $failed

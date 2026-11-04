@@ -119,6 +119,27 @@ const drawing = Note.cases.Drawing.make({
   image,
 });
 const photo = Note.cases.Photo.make({ id: noteId, author: bob, sentAt: 1_700_000_001_000, image });
+const drawingOnPaper = Note.cases.Drawing.make({
+  id: noteId,
+  author: alice,
+  sentAt: 1_700_000_000_000,
+  compact,
+  image,
+  paper: "sage",
+});
+const text = Note.cases.Text.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_002_000,
+  text: "miss you already 💛",
+  paper: "butter",
+});
+const plainText = Note.cases.Text.make({
+  id: noteId,
+  author: alice,
+  sentAt: 1_700_000_003_000,
+  text: "home soon",
+});
 
 const maintenanceStatus: AppStatus = {
   maintenance: {
@@ -133,7 +154,13 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
   fixture("Stroke", Stroke, { default: stroke }),
-  fixture("Note", Note, { drawing, photo }),
+  fixture("Note", Note, {
+    drawing,
+    "drawing-on-paper": drawingOnPaper,
+    photo,
+    text,
+    "text-without-paper": plainText,
+  }),
   fixture("DeliveryLane", DeliveryLane, {
     "web-socket": DeliveryLane.cases.WebSocket.make({}),
     "widget-push": DeliveryLane.cases.WidgetPush.make({}),
@@ -148,7 +175,22 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("UploadImageResponse", UploadImageResponse, { default: { image } }),
   fixture("SendNoteRequest", SendNoteRequest, {
     drawing: SendNoteRequest.cases.Drawing.make({ key: idempotencyKey, compact, image }),
+    "drawing-on-paper": SendNoteRequest.cases.Drawing.make({
+      key: idempotencyKey,
+      compact,
+      image,
+      paper: "blush",
+    }),
     photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
+    text: SendNoteRequest.cases.Text.make({
+      key: idempotencyKey,
+      text: "miss you already 💛",
+      paper: "butter",
+    }),
+    "text-without-paper": SendNoteRequest.cases.Text.make({
+      key: idempotencyKey,
+      text: "home soon",
+    }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
   fixture("ReportEventsRequest", ReportEventsRequest, {
@@ -199,6 +241,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       notes: [
         { seq: 1, note: drawing },
         { seq: 2, note: photo },
+        { seq: 3, note: text },
       ],
     },
   }),
@@ -312,11 +355,19 @@ export const catalog: ReadonlyArray<Fixture> = [
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
+    "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),
     "widget-without-compact": PushPayload.cases.Widget.make({ noteId, author: bob }),
     "alert-with-compact": PushPayload.cases.Alert.make({ noteId, author: alice, compact }),
     "alert-without-compact": PushPayload.cases.Alert.make({ noteId, author: bob }),
+    "widget-text": PushPayload.cases.Widget.make({
+      noteId,
+      author: bob,
+      text: "miss you already 💛",
+      paper: "butter",
+    }),
+    "alert-text": PushPayload.cases.Alert.make({ noteId, author: alice, text: "home soon" }),
   }),
 ];
