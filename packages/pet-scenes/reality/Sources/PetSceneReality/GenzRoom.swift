@@ -843,7 +843,7 @@ final class GenzRoom: CatPlayStage {
   private func tick(_ delta: TimeInterval) {
     guard isOnScreen, isBuilt else { return }
     clock += delta
-    styler?.step(Float(delta))
+    ScenePerf.time("styler") { styler?.step(Float(delta)) }
     if settlingFrames > 0 {
       settlingFrames -= 1
       if settlingFrames == 0 {
@@ -857,23 +857,27 @@ final class GenzRoom: CatPlayStage {
       self.pendingFlyIn = nil
       startFlight(pendingFlyIn)
     }
-    stepFlight()
-    stepTilt(Float(delta))
+    ScenePerf.time("flight") { stepFlight() }
+    ScenePerf.time("tilt") { stepTilt(Float(delta)) }
     if !camera.isAtRest {
-      camera.step(Float(delta))
-      aimLens()
+      ScenePerf.time("camera") {
+        camera.step(Float(delta))
+        aimLens()
+      }
     }
-    stepMoments()
-    stepView()
-    street?.update(now: Date().timeIntervalSinceReferenceDate, reduceMotion: reduceMotion)
-    street?.follow(eye: camera.position)
-    stepFlames()
-    stepDecor(Float(delta))
-    stepSwitch()
-    stepSwitchPlate()
-    applyCat()
-    reportTouch()
-    applyLevels()
+    ScenePerf.time("moments") { stepMoments() }
+    ScenePerf.time("view") { stepView() }
+    ScenePerf.time("street") {
+      street?.update(now: Date().timeIntervalSinceReferenceDate, reduceMotion: reduceMotion)
+      street?.follow(eye: camera.position)
+    }
+    ScenePerf.time("flames") { stepFlames() }
+    ScenePerf.time("decor") { stepDecor(Float(delta)) }
+    ScenePerf.time("switch") { stepSwitch() }
+    ScenePerf.time("switchPlate") { stepSwitchPlate() }
+    ScenePerf.time("cat") { applyCat() }
+    ScenePerf.time("touch") { reportTouch() }
+    ScenePerf.time("levels") { applyLevels() }
     pace()
   }
 
@@ -1159,19 +1163,19 @@ final class GenzRoom: CatPlayStage {
     var rate: Float = 1
     var headingGoal = homeHeading
     let step = Float(min(clock - lastCatClock, 0.1))
-    stepToys()
-    if let pose = stepHeld() {
+    ScenePerf.time("cat.toys") { stepToys() }
+    if let pose = ScenePerf.time("cat.held", { stepHeld() }) {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
-    } else if let pose = stepPursuit() {
-      mode = .fixed(pose.action)
-      headingGoal = pose.heading
-      if pose.action == .walk { rate = walkRate(pose.speed) }
-    } else if let pose = stepTripHome(step) ?? stepTrip() {
+    } else if let pose = ScenePerf.time("cat.pursuit", { stepPursuit() }) {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       if pose.action == .walk { rate = walkRate(pose.speed) }
-    } else if let pose = stepBrain(step) {
+    } else if let pose = ScenePerf.time("cat.trip", { stepTripHome(step) ?? stepTrip() }) {
+      mode = .fixed(pose.action)
+      headingGoal = pose.heading
+      if pose.action == .walk { rate = walkRate(pose.speed) }
+    } else if let pose = ScenePerf.time("cat.brain", { stepBrain(step) }) {
       mode = .fixed(pose.action)
       headingGoal = pose.heading
       // A walk and a gallop keep pace with the feet; any other clip plays at the cat's tempo.
@@ -1193,15 +1197,15 @@ final class GenzRoom: CatPlayStage {
     let shown = clipGate.choose(beat.action, at: clock, force: toys.liftedAt != nil)
     if shown != rig.current { NookiTrace.catMotion("clip \(shown)", at: clock) }
     if shown == beat.action { clipRate = rate }
-    rig.play(shown, rate: clipRate)
-    stepFooting(step, rate: clipRate)
+    ScenePerf.time("cat.play") { rig.play(shown, rate: clipRate) }
+    ScenePerf.time("cat.footing") { stepFooting(step, rate: clipRate) }
     stepNudges()
     let moved = catHolder.position - lastCatPosition
     if lastCatPosition != .zero, simd_length(SIMD2(moved.x, moved.z)) > layout.cat.length * 0.25 {
       NookiTrace.catMotion("jump \(simd_length(moved) / layout.cat.length)", at: clock)
     }
     lastCatPosition = catHolder.position
-    fitCatShadow(step)
+    ScenePerf.time("cat.shadow") { fitCatShadow(step) }
     if clock > gazeUntil { gazePoint = nil }
     if gazePoint == nil, trip == nil, let gaze = brainGaze() {
       let freedom = reduceMotion ? 0 : CatBehaviour.lookWeight(beat.action)

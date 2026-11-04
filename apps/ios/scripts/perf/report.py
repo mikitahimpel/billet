@@ -91,6 +91,11 @@ def collect(run_dir):
             for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps", "slow",
                         "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders"):
                 add(f"{kind}.{phase}: {key}", number(values.get(key)))
+            # What each timed step of our own code took, in milliseconds a second.
+            for part in values.get("spent", "none").split(","):
+                if ":" in part:
+                    step, ms = part.split(":", 1)
+                    add(f"{kind}.{phase}: spent {step} (ms/s)", number(ms))
         for timing, samples in run["timings"].items():
             for values in samples:
                 add(f"switch {timing}: ms", number(values.get("ms")))

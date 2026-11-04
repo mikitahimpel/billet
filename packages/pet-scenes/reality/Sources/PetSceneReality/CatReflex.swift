@@ -1,4 +1,5 @@
 import Foundation
+import PetScene
 import RealityKit
 
 /// Small movements laid over whatever clip is playing, after it has posed the cat: a blink, an
@@ -84,6 +85,8 @@ struct CatReflexSystem: System {
   }
 
   func update(context: SceneUpdateContext) {
+    let start = DispatchTime.now().uptimeNanoseconds
+    defer { MainActor.assumeIsolated { ScenePerf.spend("system.reflex", since: start) } }
     let delta = Float(min(context.deltaTime, 0.1))
     for entity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
       guard let model = entity as? ModelEntity,

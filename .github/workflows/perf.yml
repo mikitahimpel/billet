@@ -10,6 +10,7 @@ name: iOS perf
 #   gh workflow run perf.yml --ref <branch> -f jobs=cost          # what each part of the room costs
 #   gh workflow run perf.yml --ref <branch> -f room=nookiCabin    # the same in the Nooki cabin
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f jobs=steady  # Home left alone, A/B
+#   gh workflow run perf.yml --ref <branch> -f jobs=rooms         # Window Seat vs Nooki cabin, one build
 #
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
@@ -50,7 +51,7 @@ on:
       jobs:
         description: What to run (both = ab and shots)
         type: choice
-        options: [both, ab, shots, cost, steady, all]
+        options: [both, ab, shots, cost, steady, rooms, all]
         default: both
   pull_request:
     types: [labeled, synchronize, reopened]
@@ -391,5 +392,86 @@ jobs:
         if: always()
         with:
           name: perf-steady-${{ matrix.size }}
+          path: ${{ runner.temp }}/perf
+          if-no-files-found: warn
+
+  rooms:
+    # Window Seat against the Nooki cabin in one build, in turns on the same Simulator: each left
+    # alone for a minute, then a cost run with the main parts switched off and on. With the time each
+    # of the room's own steps takes. After the other jobs, on one runner.
+    needs: [ab, shots, cost, steady]
+    if: >-
+      !cancelled() && github.event_name == 'workflow_dispatch'
+      && (inputs.jobs == 'rooms' || inputs.jobs == 'all')
+    runs-on: macos-26
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - size: se
+            model: 'iPhone SE \(3rd generation\)'
+          - size: pro-max
+            model: "iPhone 17 Pro Max"
+    env:
+      ROUNDS: ${{ inputs.rounds || '2' }}
+      PERF_SWITCHES: ${{ inputs.switches || 'all,shadows,lights,cat,layers' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.HEAD_REF }}
+          path: head
+          persist-credentials: false
+
+      - name: Select Xcode from .xcode-version
+        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+
+      - name: Install XcodeGen
+        run: head/.github/scripts/install-xcodegen.sh
+
+      - name: Build head (Release, Simulator, unsigned)
+        run: head/.github/scripts/build-perf.sh head "$RUNNER_TEMP/head-derived"
+
+      - name: Pick the Simulator model
+        env:
+          MODEL: ${{ matrix.model }}
+        run: head/.github/scripts/pick-device.sh "$MODEL"
+
+      - name: The two rooms in turns
+        env:
+          PERF_OUT: ${{ runner.temp }}/perf
+          PERF_LOCK: ${{ runner.temp }}/sim.lock
+          PERF_DERIVED: ${{ runner.temp }}/head-derived
+          PERF_DEVICE: billet-rooms-${{ matrix.size }}
+        run: |
+          [[ $ROUNDS =~ ^[0-9]+$ ]] || { echo "::error::rounds must be a number"; exit 1; }
+          mkdir -p "$PERF_OUT/console"
+          for ((round = 1; round <= ROUNDS; round++)); do
+            for room in windowSeat nookiCabin; do
+              PERF_ROOM=$room zsh head/apps/ios/scripts/perf/measure.sh $room \
+                --launches 0 --full 0 --steady 1 --cost 1 > "$PERF_OUT/console/$room-$round.log" 2>&1 \
+                || echo "$room round $round failed"
+            done
+          done
+          python3 -I head/apps/ios/scripts/perf/report.py "$PERF_OUT/windowSeat" "$PERF_OUT/nookiCabin" \
+            > "$PERF_OUT/rooms.md"
+
+      - name: Summary
+        if: always()
+        env:
+          PERF_OUT: ${{ runner.temp }}/perf
+          SIZE: ${{ matrix.size }}
+        run: |
+          {
+            echo "## Window Seat vs Nooki cabin, $SIZE, head \`$(git -C head rev-parse --short HEAD)\`"
+            echo
+            if [[ -f $PERF_OUT/rooms.md ]]; then cat "$PERF_OUT/rooms.md"; else echo "No table: see the logs in the artifact."; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: perf-rooms-${{ matrix.size }}
           path: ${{ runner.temp }}/perf
           if-no-files-found: warn

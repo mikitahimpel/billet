@@ -103,6 +103,21 @@ public enum ScenePerf {
     emit("mark trace.\(name.replacingOccurrences(of: " ", with: "_")) t=\(at)")
   }
 
+  /// Runs `body` and adds the time it took to `name` in the phase being recorded, reported as
+  /// milliseconds a second in `spent=` on the phase's line. Outside a measuring run it only runs it.
+  @discardableResult
+  public static func time<T>(_ name: String, _ body: () throws -> T) rethrows -> T {
+    guard recorder != nil else { return try body() }
+    let start = DispatchTime.now().uptimeNanoseconds
+    defer { spend(name, since: start) }
+    return try body()
+  }
+
+  /// Adds the time since `start`, from `DispatchTime.now().uptimeNanoseconds`, to `name`.
+  public static func spend(_ name: String, since start: UInt64) {
+    recorder?.spent[name, default: 0] += DispatchTime.now().uptimeNanoseconds - start
+  }
+
   /// Counts one `name` in the phase being recorded, such as a room's step or a scene's update.
   /// Each count is reported a second, as `steps=` and `renders=` on the phase's line.
   public static func count(_ name: String) {
@@ -356,6 +371,7 @@ extension ScenePerf {
     private var drive: (@MainActor (Int) -> Void)?
     private var mainCPUAtStart = 0.0
     var counts: [String: Int] = [:]
+    var spent: [String: UInt64] = [:]
     private var phaseStart = 0.0
     private var processCPUAtStart = 0.0
     private var lastSample = 0.0
@@ -390,6 +406,7 @@ extension ScenePerf {
       mainCPUAtStart = Self.threadCPU()
       processCPUAtStart = Self.processCPU()
       counts.removeAll()
+      spent.removeAll()
       phaseStart = Self.now()
     }
 
@@ -421,7 +438,16 @@ extension ScenePerf {
         + "mainCPU=\(String(format: "%.2f", main)) procCPU=\(String(format: "%.2f", process)) "
         + "slow=\(slow.count) slowMs=\(ScenePerf.format(slowLength)) "
         + "slowBusyMs=\(ScenePerf.format(slowBusy)) cpuMsPerS=\(ScenePerf.format(cpuPerSecond)) "
-        + "steps=\(perSecond("steps")) renders=\(perSecond("renders"))"
+        + "steps=\(perSecond("steps")) renders=\(perSecond("renders")) spent=\(spentPerSecond())"
+    }
+
+    /// The milliseconds a second each timed step took in the phase, as `name:ms,…`.
+    private func spentPerSecond() -> String {
+      let seconds = max(Self.now() - phaseStart, 0.001)
+      let parts = spent.sorted { $0.key < $1.key }.map {
+        "\($0.key):\(String(format: "%.2f", Double($0.value) / 1e6 / seconds))"
+      }
+      return parts.isEmpty ? "none" : parts.joined(separator: ",")
     }
 
     /// How many of `name` were counted a second in the phase.

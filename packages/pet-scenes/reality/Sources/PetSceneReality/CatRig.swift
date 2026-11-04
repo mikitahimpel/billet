@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import OSLog
 import Pet
+import PetScene
 import RealityKit
 
 /// A loaded cat: its clips trimmed from the one timeline, cross-faded on request, a head that can
@@ -251,6 +252,8 @@ struct CatLookSystem: System {
   }
 
   func update(context: SceneUpdateContext) {
+    let start = DispatchTime.now().uptimeNanoseconds
+    defer { MainActor.assumeIsolated { ScenePerf.spend("system.look", since: start) } }
     let delta = Float(min(context.deltaTime, 0.1))
     for entity in context.entities(matching: Self.query, updatingSystemWhen: .rendering) {
       guard let model = entity as? ModelEntity, var look = model.components[CatLookComponent.self]
