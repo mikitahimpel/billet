@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 
-/** Why the caller's partner is gone. The pair ended; the caller keeps the cat. */
+/** Why the caller's partner is gone. The pair ended, and its cat with it. */
 export const PartnerLeftReason = Schema.Literals(["account-deleted"]);
 export type PartnerLeftReason = typeof PartnerLeftReason.Type;
 

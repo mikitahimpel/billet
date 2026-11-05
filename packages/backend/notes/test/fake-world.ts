@@ -184,6 +184,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    endSessions: () => Effect.void,
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
     recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),
     cat: (pairId) => roomOf(pairId).catView,

@@ -1,4 +1,4 @@
-import { Clock, Context, Duration, Effect, Layer, Schema } from "effect";
+import { Clock, Context, Duration, Effect, Layer, Option, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import {
   InviteCode,
@@ -97,7 +97,15 @@ export class PairingService extends Context.Service<
         return pairId;
       });
 
-      return PairingService.of({ createInvite, claimInvite, unpair: repository.unpair });
+      const unpair = Effect.fn("PairingService.unpair")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<void, PairingUnavailable> {
+        const pair = yield* repository.findPair(userId);
+        yield* repository.unpair(userId);
+        if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value));
+      });
+
+      return PairingService.of({ createInvite, claimInvite, unpair });
     }),
   );
 }
