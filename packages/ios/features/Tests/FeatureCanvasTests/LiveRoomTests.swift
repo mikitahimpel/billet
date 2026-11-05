@@ -73,6 +73,54 @@ import Wire
       M.transition(Self.online, .presenceChanged(.drawing)).1 == [.send(.presence(.drawing))])
   }
 
+  static let begin = LiveStrokeStart(id: 7, color: "#7B4FE0", width: 14)
+
+  @Test func aStreamedStrokeGrowsWhileOpenAndLandsWhenItEnds() {
+    var (state, _) = M.transition(Self.online, .received(.strokeBegin(Self.begin)))
+    #expect(state.partner == .drawing)
+    (state, _) = M.transition(
+      state, .received(.strokePoints(id: 7, points: [Point(x: 1, y: 2), Point(x: 3, y: 4)])))
+    (state, _) = M.transition(state, .received(.strokePoints(id: 7, points: [Point(x: 5, y: 6)])))
+    #expect(state.openStrokes[7]?.points.count == 3)
+    #expect(state.strokes.isEmpty)
+
+    (state, _) = M.transition(state, .received(.strokeEnd(id: 7)))
+    #expect(state.openStrokes.isEmpty)
+    #expect(state.strokes.map(\.color) == ["#7B4FE0"])
+    #expect(state.strokes.first?.points.count == 3)
+  }
+
+  @Test func pointsForAStrokeNeverBegunAreIgnored() {
+    let (state, _) = M.transition(
+      Self.online, .received(.strokePoints(id: 1, points: [Point(x: 1, y: 2)])))
+    #expect(state.openStrokes.isEmpty)
+  }
+
+  @Test func aDroppedStrokeIsDiscarded() {
+    var (state, _) = M.transition(Self.online, .received(.strokeBegin(Self.begin)))
+    (state, _) = M.transition(state, .received(.strokePoints(id: 7, points: [Point(x: 1, y: 2)])))
+    (state, _) = M.transition(state, .received(.strokeDropped(id: 7)))
+    #expect(state.openStrokes.isEmpty)
+    #expect(state.strokes.isEmpty)
+  }
+
+  @Test func clearWipesFinishedAndOpenStrokes() {
+    var (state, _) = M.transition(Self.online, .received(.stroke(seq: 1, stroke: Self.stroke)))
+    (state, _) = M.transition(state, .received(.strokeBegin(Self.begin)))
+    (state, _) = M.transition(state, .received(.clear))
+    #expect(state.strokes.isEmpty)
+    #expect(state.openStrokes.isEmpty)
+  }
+
+  @Test func anOpenStrokeIsBounded() {
+    var (state, _) = M.transition(Self.online, .received(.strokeBegin(Self.begin)))
+    let batch = Array(repeating: Point(x: 1, y: 1), count: LiveStrokeStart.maxPoints)
+    for _ in 0...(M.openPointLimit / batch.count) {
+      (state, _) = M.transition(state, .received(.strokePoints(id: 7, points: batch)))
+    }
+    #expect(state.openStrokes[7]?.points.count == M.openPointLimit)
+  }
+
   @Test func messagesBeforeTheLinkIsUpAreIgnored() {
     let (state, _) = M.transition(M.State(), .received(.stroke(seq: 1, stroke: Self.stroke)))
     #expect(state.strokes.isEmpty)

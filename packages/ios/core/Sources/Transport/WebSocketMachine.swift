@@ -191,7 +191,7 @@ public enum WebSocketMachine: Machine {
       return max(lastSeq ?? seq, seq)
     // A live stroke carries the room's latest note `seq`, which this client may not have received
     // yet, so counting it would let a reconnect skip notes.
-    case .stroke, .presence:
+    case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear:
       return lastSeq
     }
   }

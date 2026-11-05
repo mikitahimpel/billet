@@ -1,8 +1,14 @@
-import { DemoRoom } from "../src/demo-room-durable-object.ts";
+import { DemoRoom as LiveDemoRoom } from "../src/demo-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
 // The demo tests run in their own Worker so they do not load Effect and Drizzle, which only the
 // PairRoom tests need. Loading those dominated the cold start of the first test of a file.
-export { DemoRoom };
+/** DemoRoom at the test instant, so nothing it does depends on when the suite runs. */
+export class DemoRoom extends LiveDemoRoom {
+  protected override clock(): number {
+    return testNowOf(this.env as { readonly TEST_NOW?: string });
+  }
+}
 
 /** DemoRoom with a throwaway APNs key and a recording transport, so no request leaves the test. */
 export class StubbedDemoRoom extends DemoRoom {
@@ -44,7 +50,7 @@ export class ClockedDemoRoom extends StubbedDemoRoom {
   }
 
   protected override clock(): number {
-    return this.fixedNow ?? Date.now();
+    return this.fixedNow ?? super.clock();
   }
 }
 

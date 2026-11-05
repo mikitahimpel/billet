@@ -3,6 +3,7 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { accessJwtHeader } from "@billet/backend-admin/access";
 import {
+  longAgo,
   signAccess,
   signAgent,
   teamKeys,
@@ -64,7 +65,7 @@ describe("the admin panel behind Cloudflare Access", () => {
   });
 
   it.each([
-    ["expired", { exp: Math.floor(Date.now() / 1000) - 60 }],
+    ["expired", { exp: longAgo }],
     ["for another audience", { aud: ["b".repeat(64)] }],
     ["from another team", { iss: "https://other.cloudflareaccess.com" }],
   ])("refuses a token that is %s with 403", async (_, overrides) => {
@@ -179,6 +180,8 @@ describe("the read-only agent API", () => {
     "/admin/api/agent/retention",
     "/admin/api/agent/funnel?steps=AppOpened,NoteSent&window=day&unit=person",
     "/admin/api/agent/funnels",
+    "/admin/api/agent/trends?event=AppOpened&metric=count&interval=day&range=30&split=none",
+    "/admin/api/agent/features?split=home-layout",
   ];
 
   afterEach(() => vi.restoreAllMocks());

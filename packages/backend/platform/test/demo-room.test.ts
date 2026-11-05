@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { runInDurableObject } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DemoRoom } from "../src/demo-room-durable-object.ts";
 import { routeDemo } from "../src/demo-route.ts";
 import { waitFor } from "./demo-wait.ts";
@@ -130,12 +130,16 @@ describe("demo push and note fetch", () => {
     const stub = STUB_DEMO_ROOM.get(STUB_DEMO_ROOM.idFromName(code));
     type Call = { url: string; headers: Record<string, string>; body: string };
     const readCalls = () => runInDurableObject(stub, (_, s) => s.storage.get<Call[]>("apnsCalls"));
-    let calls: Call[] | undefined;
-    for (let i = 0; i < 2000 && (calls = await readCalls()) === undefined; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 2));
-    }
+    const calls = await vi.waitFor(
+      async () => {
+        const read = await readCalls();
+        if (read === undefined) throw new Error("Never saw the APNs call");
+        return read;
+      },
+      { timeout: 4000, interval: 2 },
+    );
     expect(calls).toHaveLength(1);
-    const call = calls![0]!;
+    const call = calls[0]!;
     expect(call.url).toBe(`https://api.push.apple.com/3/device/${token}`);
     expect(call.headers["apns-topic"]).toBe("com.mikitahimpel.billet");
     expect(call.headers["apns-push-type"]).toBe("alert");
