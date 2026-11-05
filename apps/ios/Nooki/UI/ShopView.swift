@@ -106,6 +106,13 @@ struct ShopView: View {
         .id("bundles")
 
         VStack(alignment: .leading, spacing: Space.m) {
+            sectionHeader("Inks") { Text("For notes and drawings") }
+                .padding(.horizontal, Space.l)
+            InkShelf(state: state)
+        }
+        .id("inks")
+
+        VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Collections") { Text("A bonus for each full set") }
             ForEach(Catalog.collections) { collection in
                 CollectionCard(state: state, collection: collection) { sheetItem = $0 }

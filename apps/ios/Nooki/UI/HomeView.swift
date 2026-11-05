@@ -83,7 +83,8 @@ struct HomeView: View {
                     .padding(.horizontal, 16)
             }
 
-            PurchaseMoment(state: state)
+            // The composer and the canvas play it over themselves while they're up.
+            if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
         }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
@@ -167,6 +168,10 @@ struct HomeView: View {
             case .world, .us: break
             }
         }
+        .onChange(of: state.lastPurchase) { _, purchase in
+            guard let purchase, purchase.kind == .ink, let inkSync else { return }
+            Task { await inkSync.settle(purchase, state) }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -178,6 +183,7 @@ struct HomeView: View {
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
+                    await inkSync?.refresh(state)
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(true, photos: photoSync)
@@ -304,6 +310,11 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
+    private var inkSync: InkSync? {
+        guard let session, session.isPaired else { return nil }
+        return InkSync(api: session.api)
+    }
+
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
