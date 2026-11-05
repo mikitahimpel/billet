@@ -132,7 +132,7 @@ const cared = (room: ActiveRoom, cat: RoomCat, entry: CatEntry) => {
 const decideVacant = (command: RoomCommand): RoomDecision => {
   switch (command._tag) {
     case "Open": {
-      const { pairId, members } = command;
+      const { pairId, members, joined } = command;
       const [first, second] = members;
       if (first === second) return rejected(RoomRejection.cases.DuplicateMember.make({}));
       return accepted(
@@ -148,7 +148,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           inks: [],
           wallet: emptyWallet,
         },
-        [RoomOutput.cases.RoomOpened.make({ pairId })],
+        [RoomOutput.cases.RoomOpened.make(joined === undefined ? { pairId } : { pairId, joined })],
       );
     }
     case "SendNote":

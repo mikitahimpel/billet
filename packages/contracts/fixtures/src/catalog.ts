@@ -334,6 +334,7 @@ const activityEvents = {
   "plant-watered-by-the-window": { _tag: "PlantWatered" },
   "cat-adopted": { _tag: "CatAdopted", name: "Mochi" },
   "cat-renamed": { _tag: "CatRenamed", name: "Мочи 🐾" },
+  "partner-joined": { _tag: "PartnerJoined" },
   "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
   reacted: { _tag: "Reacted", note: "note-1", reaction: "heart" },
   purchased: {
