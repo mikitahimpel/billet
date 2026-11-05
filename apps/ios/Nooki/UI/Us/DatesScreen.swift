@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct DatesScreen: View {
@@ -5,8 +6,8 @@ struct DatesScreen: View {
 
     private enum Mode: String, CaseIterable {
         case swipe = "Swipe"
+        case dates = "Our dates"
         case surprise = "Surprise us"
-        case plans = "Plans"
     }
 
     @State private var mode: Mode = .swipe
@@ -15,6 +16,9 @@ struct DatesScreen: View {
 
     @State private var matched: DateIdea?
     @State private var planner: PlannerTarget?
+    @State private var finishing: PlannedDate?
+    /// The idea just liked without a match yet, for a short line under the deck.
+    @State private var likedAlone: Int?
 
     @State private var surpriseIdea: DateIdea?
     @State private var shown: Set<Int> = []
@@ -29,13 +33,13 @@ struct DatesScreen: View {
         VStack(spacing: 0) {
             UsSheetHeader(title: "Date night", subtitle: "Swipe together, or let \(CatProfile.name()) pick")
             modeRow
-            if mode != .plans { filterBar }
+            if mode != .dates { filterBar }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     switch mode {
                     case .swipe: swipeContent
+                    case .dates: datesContent
                     case .surprise: surpriseContent
-                    case .plans: plansContent
                     }
                 }
                 .padding(.horizontal, 20)
@@ -47,7 +51,10 @@ struct DatesScreen: View {
         .overlay { matchOverlay }
         .usSheet()
         .sheet(item: $planner) { target in
-            DatePlannerSheet(state: state, target: target) { mode = .plans }
+            DatePlannerSheet(state: state, target: target) { mode = .dates }
+        }
+        .sheet(item: $finishing) { plan in
+            DateDoneSheet(state: state, plan: plan)
         }
         .sheet(isPresented: $filtersOpen) {
             DateFilterSheet(filter: $filter, count: fitting)
@@ -58,7 +65,7 @@ struct DatesScreen: View {
     private func fitting(_ filter: DateFilter) -> Int {
         switch mode {
         case .swipe: us.deck(for: state.viewer, filter: filter).count
-        case .surprise, .plans: DateIdea.all.filter { filter.allows($0) && $0.inSeason(.current) }.count
+        case .surprise, .dates: DateIdea.all.filter { filter.allows($0) && $0.inSeason(.current) }.count
         }
     }
 
@@ -66,38 +73,72 @@ struct DatesScreen: View {
 
     private var swipeContent: some View {
         let deck = us.deck(for: state.viewer, filter: filter)
-        let matches = us.matches
+        let partner = state.profile.name(of: state.otherPartner)
         return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Monogram(partner: state.viewer, profile: state.profile, size: 22)
-                Text("\(state.profile.name(of: state.viewer))'s turn, then \(state.profile.name(of: state.otherPartner))")
+                Text(likedAlone == nil
+                     ? "\(state.profile.name(of: state.viewer))'s turn, then \(partner)"
+                     : "Saved. If \(partner) loves it too, it's a match")
                     .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
+                    .contentTransition(.opacity)
+            }
+            .task(id: likedAlone) {
+                guard likedAlone != nil else { return }
+                try? await Task.sleep(for: .seconds(2.5))
+                withAnimation(.easeOut(duration: 0.3)) { likedAlone = nil }
             }
 
             if deck.isEmpty {
-                UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
-                        text: filter.isEmpty ? "Plan one of your matches." : "Loosen a filter for more.")
+                deckEnd
             } else {
                 SwipeDeck(deck: deck, onSwipe: commitSwipe)
             }
+        }
+    }
 
-            if !matches.isEmpty { matchesRow(matches) }
+    /// What to do once this partner has seen every card that fits.
+    private var deckEnd: some View {
+        let toPlan = us.matches.count
+        let partner = state.profile.name(of: state.otherPartner)
+        let partnerLeft = us.deck(for: state.otherPartner, filter: filter).count
+        let text = if partnerLeft > 0 {
+            "\(partner) has \(partnerLeft) left to swipe. New matches land in Our dates."
+        } else if filter.isEmpty {
+            "You've both seen every idea."
+        } else {
+            "Loosen a filter for more."
+        }
+        return VStack(spacing: 12) {
+            UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
+                    text: text)
+            if toPlan > 0 {
+                UsPrimaryButton(title: toPlan == 1 ? "Plan your match" : "Plan one of \(toPlan) matches") {
+                    withAnimation(.snappy(duration: 0.25)) { mode = .dates }
+                }
+            }
+            secondaryButton("Surprise us") {
+                withAnimation(.snappy(duration: 0.25)) { mode = .surprise }
+            }
+            if !filter.isEmpty {
+                secondaryButton("Clear filters") {
+                    withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() }
+                }
+            }
         }
     }
 
     private func matchesRow(_ matches: [DateIdea]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Matches")
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
+            sectionTitle("To plan", caption: "You both loved these")
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     ForEach(matches) { idea in
                         Button {
                             planner = PlannerTarget(ideaID: idea.id)
                         } label: {
-                            DateScenePicture(scene: idea.scene)
+                            DateScenePicture(art: idea.art)
                                 .overlay(alignment: .bottomLeading) {
                                     Text(idea.title)
                                         .font(.nookiMicro)
@@ -117,11 +158,15 @@ struct DatesScreen: View {
     }
 
     private func commitSwipe(_ idea: DateIdea, liked: Bool) {
+        // SwipeDeck calls this inside its own hand-off animation.
         let wasMatch = us.isMatch(idea.id)
-        withAnimation(.snappy(duration: 0.25)) {
-            us.swipe(idea.id, liked: liked, by: state.viewer)
-            state.streak.record()
-            if liked, !wasMatch, us.isMatch(idea.id) { matched = idea }
+        us.swipe(idea.id, liked: liked, by: state.viewer)
+        state.streak.record()
+        guard liked else { return }
+        if !wasMatch, us.isMatch(idea.id) {
+            matched = idea
+        } else {
+            likedAlone = idea.id
         }
     }
 
@@ -160,7 +205,7 @@ struct DatesScreen: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
-                .background { DateScenePicture(scene: .plans) }
+                .background { DateScenePicture() }
                 .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
 
                 UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
@@ -177,8 +222,12 @@ struct DatesScreen: View {
     }
 
     private var anotherButton: some View {
-        Button(action: reroll) {
-            Text(rerolls >= 3 ? "\(CatProfile.name()) is getting grumpy" : "Another one")
+        secondaryButton(rerolls >= 3 ? "\(CatProfile.name()) is getting grumpy" : "Another one", action: reroll)
+    }
+
+    private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
                 .font(.nookiHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
@@ -215,30 +264,63 @@ struct DatesScreen: View {
         roll()
     }
 
-    // MARK: Plans
+    // MARK: Our dates
 
+    /// Matches to plan, then planned dates, then the ones done: the path every liked idea takes.
     @ViewBuilder
-    private var plansContent: some View {
-        if us.plannedSorted.isEmpty {
-            UsEmpty(icon: .init(symbol: "calendar.badge.plus", tint: .sky), title: "No dates planned",
-                    text: "Swipe or roll, then tap Plan it.")
-        } else {
-            VStack(spacing: 10) {
-                ForEach(us.plannedSorted) { plan in
-                    DatePlanCard(plan: plan,
-                                 idea: DateIdea.idea(plan.ideaID),
-                                 viewer: state.viewer,
-                                 profile: state.profile,
-                                 onEdit: { planner = PlannerTarget(ideaID: plan.ideaID, existing: plan) },
-                                 onDelete: {
-                                     withAnimation(.snappy(duration: 0.25)) { us.deletePlan(plan.id) }
-                                 },
-                                 onRate: { hearts in
-                                     withAnimation(.snappy(duration: 0.25)) {
-                                         us.rate(plan.id, hearts: hearts)
-                                     }
-                                 })
+    private var datesContent: some View {
+        let toPlan = us.matches, comingUp = us.comingUp, done = us.done
+        if toPlan.isEmpty, comingUp.isEmpty, done.isEmpty {
+            VStack(spacing: 12) {
+                UsEmpty(icon: .init(symbol: "heart.text.square.fill", tint: .blush), title: "No dates yet",
+                        text: "Swipe together. When you both love an idea, it lands here.")
+                UsPrimaryButton(title: "Start swiping") {
+                    withAnimation(.snappy(duration: 0.25)) { mode = .swipe }
                 }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 24) {
+                if !toPlan.isEmpty { matchesRow(toPlan) }
+                if !comingUp.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionTitle("Coming up")
+                        ForEach(comingUp) { planCard($0) }
+                    }
+                }
+                if !done.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        sectionTitle("Done", caption: done.count == 1 ? "1 date" : "\(done.count) dates")
+                        ForEach(done) { planCard($0) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func planCard(_ plan: PlannedDate) -> some View {
+        DatePlanCard(plan: plan,
+                     idea: DateIdea.idea(plan.ideaID),
+                     viewer: state.viewer,
+                     profile: state.profile,
+                     moments: state.moments,
+                     onEdit: { planner = PlannerTarget(ideaID: plan.ideaID, existing: plan) },
+                     onDelete: {
+                         DateReminders.cancel(plan.id)
+                         withAnimation(.snappy(duration: 0.25)) { us.deletePlan(plan.id) }
+                     },
+                     onDone: { finishing = plan })
+    }
+
+    private func sectionTitle(_ title: String, caption: String? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(title)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
+            Spacer(minLength: 0)
+            if let caption {
+                Text(caption)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
         }
     }
@@ -248,7 +330,8 @@ struct DatesScreen: View {
     private var modeRow: some View {
         HStack(spacing: 8) {
             ForEach(Mode.allCases, id: \.self) { item in
-                UsChip(title: item.rawValue, selected: mode == item) {
+                let waiting = item == .dates ? us.matches.count : 0
+                UsChip(title: waiting > 0 ? "\(item.rawValue) · \(waiting)" : item.rawValue, selected: mode == item) {
                     withAnimation(.snappy(duration: 0.25)) { mode = item }
                 }
             }
@@ -346,6 +429,12 @@ private struct SwipeDeck: View {
 
     @State private var drag: CGSize = .zero
     @State private var flying = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let flingDistance: CGFloat = 110
+
+    /// 0 at rest, 1 once the top card is dragged far enough to fling; the cards behind rise with it.
+    private var progress: CGFloat { min(1, abs(drag.width) / Self.flingDistance) }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -368,28 +457,29 @@ private struct SwipeDeck: View {
         .frame(height: DateIdeaCard.height + 22)
     }
 
-    @ViewBuilder
+    /// One view path for every position, so a card keeps its identity (and its drawn picture) while it moves from
+    /// the back of the stack to the top; an if/else here would rebuild it with a crossfade.
     private func stackedCard(_ idea: DateIdea, index: Int) -> some View {
-        if index == 0 {
-            DateIdeaCard(idea: idea)
-                .overlay(alignment: .topLeading) {
-                    stamp("LOVE", tint: Color(hex: 0xE287A9), strength: drag.width / 110)
-                        .padding(24)
-                }
-                .overlay(alignment: .topTrailing) {
-                    stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: -drag.width / 110)
-                        .padding(24)
-                }
-                .rotationEffect(.degrees(drag.width / 20))
-                .offset(drag)
-                .zIndex(3)
-                .gesture(cardDrag)
-        } else {
-            DateIdeaCard(idea: idea)
-                .scaleEffect(0.95)
-                .offset(y: CGFloat(index) * 10)
-                .zIndex(Double(3 - index))
-        }
+        let top = index == 0
+        // Each card behind moves one step forward as the top one is dragged away.
+        let depth = top ? 0 : CGFloat(index) - progress
+        return DateIdeaCard(idea: idea)
+            .overlay(alignment: .topLeading) {
+                stamp("LOVE", tint: Color(hex: 0xE287A9), strength: top ? drag.width / Self.flingDistance : 0)
+                    .padding(24)
+            }
+            .overlay(alignment: .topTrailing) {
+                stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: top ? -drag.width / Self.flingDistance : 0)
+                    .padding(24)
+            }
+            .scaleEffect(reduceMotion ? 1 : 1 - depth * 0.05, anchor: .bottom)
+            .offset(y: reduceMotion ? 0 : depth * 12)
+            .rotationEffect(.degrees(top && !reduceMotion ? drag.width / 20 : 0))
+            .offset(top ? drag : .zero)
+            .zIndex(Double(3 - index))
+            // A flung card is already off screen when it leaves; with Reduce Motion it fades where it is.
+            .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity, removal: .identity))
+            .gesture(cardDrag, including: top ? .all : .subviews)
     }
 
     private func stamp(_ text: String, tint: Color, strength: CGFloat) -> some View {
@@ -440,8 +530,10 @@ private struct SwipeDeck: View {
             }
             .onEnded { value in
                 guard !flying else { return }
-                if abs(value.translation.width) > 110 {
-                    fling(liked: value.translation.width > 0)
+                // A quick flick counts as well as a long drag.
+                let throwWidth = value.predictedEndTranslation.width
+                if abs(value.translation.width) > Self.flingDistance || abs(throwWidth) > Self.flingDistance * 2.5 {
+                    fling(liked: throwWidth > 0)
                 } else {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) { drag = .zero }
                 }
@@ -451,22 +543,28 @@ private struct SwipeDeck: View {
     private func fling(liked: Bool) {
         guard !flying, !deck.isEmpty else { return }
         flying = true
-        withAnimation(.easeIn(duration: 0.18)) {
-            drag = CGSize(width: liked ? 640 : -640, height: drag.height)
+        if reduceMotion {
+            commitSwipe(liked: liked)
+            return
         }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.18))
+        // The cards behind finish rising during the throw, so the hand-off below lands on the same frame.
+        withAnimation(.easeIn(duration: 0.2)) {
+            drag = CGSize(width: liked ? 640 : -640, height: drag.height + 40)
+        } completion: {
             commitSwipe(liked: liked)
         }
     }
 
     private func commitSwipe(liked: Bool) {
-        defer {
+        guard let idea = deck.first else {
             flying = false
-            drag = .zero
+            return
         }
-        guard let idea = deck.first else { return }
-        onSwipe(idea, liked)
+        withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.4, dampingFraction: 0.82)) {
+            onSwipe(idea, liked)
+            drag = .zero
+            flying = false
+        }
     }
 }
 
@@ -477,7 +575,7 @@ private struct DateIdeaCard: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-        DateScenePicture(scene: idea.scene)
+        DateScenePicture(art: idea.art)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(idea.title)
@@ -518,14 +616,26 @@ private struct DateIdeaCard: View {
 
 /// A date scene filling its frame, darkened at the bottom so white text on it stays readable.
 private struct DateScenePicture: View {
-    let scene: DateIdea.Scene
+    /// An idea's picture, fetched from the server; nil for the Plans backdrop, which ships with the app.
+    var art: DateIdea.Art?
+
+    /// The pictures are immutable, so `URLCache` keeps them across launches. A build without a server shows only
+    /// each picture's colour.
+    private static let host = Backend.baseURL(host: Bundle.main.object(forInfoDictionaryKey: Backend.infoKey) as? String)
 
     var body: some View {
-        Color(hex: 0x6B4A35)
+        Color(hex: art.flatMap { UInt32($0.color.dropFirst(), radix: 16) } ?? 0x6B4A35)
             .overlay {
-                Image(decorative: scene.imageName)
-                    .resizable()
-                    .scaledToFill()
+                if let art {
+                    AsyncImage(url: Self.host?.appending(path: art.path),
+                               transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
+                        phase.image?.resizable().scaledToFill()
+                    }
+                } else {
+                    Image(decorative: "DateScene-plans")
+                        .resizable()
+                        .scaledToFill()
+                }
             }
             .overlay {
                 LinearGradient(stops: [.init(color: .clear, location: 0.35),
@@ -707,12 +817,16 @@ private struct DatePlanCard: View {
     let idea: DateIdea?
     let viewer: String
     let profile: CoupleStore
+    let moments: MomentStore
     var onEdit: () -> Void
     var onDelete: () -> Void
-    var onRate: (Int) -> Void
+    var onDone: () -> Void
 
-    private var hidden: Bool { plan.surprise && plan.organizer != viewer }
+    @State private var photo: UIImage?
+
+    private var hidden: Bool { plan.surprise && plan.organizer != viewer && plan.rating == nil }
     private var upcoming: Bool { plan.rating == nil && plan.date > .now }
+    private var moment: Moment? { plan.momentID.flatMap { id in moments.moments.first { $0.id == id } } }
 
     var body: some View {
         Group {
@@ -736,12 +850,32 @@ private struct DatePlanCard: View {
                     Text(hidden ? "Surprise from \(plan.organizer)" : idea?.title ?? "Date")
                         .font(.nookiHeadline)
                         .foregroundStyle(Ink.text)
-                    Text(plan.date.formatted(.dateTime.weekday().day().month().hour().minute()))
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
+                    HStack(spacing: 4) {
+                        Text(plan.date.formatted(.dateTime.weekday().day().month().hour().minute()))
+                        if upcoming, plan.remind == true {
+                            Image(systemName: "bell.fill")
+                                .accessibilityLabel("Reminder on")
+                        }
+                    }
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
-                Monogram(partner: plan.organizer, profile: profile, size: 26)
+                if let photo {
+                    Image(uiImage: photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 42, height: 42)
+                        .clipShape(.rect(cornerRadius: 10, style: .continuous))
+                        .accessibilityHidden(true)
+                } else {
+                    Monogram(partner: plan.organizer, profile: profile, size: 26)
+                }
+            }
+            .task(id: plan.momentID) {
+                guard let moment else { return }
+                photo = moments.cachedThumbnail(for: moment, maxPixels: 128)
+                if photo == nil { photo = await moments.thumbnail(for: moment, maxPixels: 128) }
             }
 
             if hidden {
@@ -774,22 +908,143 @@ private struct DatePlanCard: View {
                 Spacer(minLength: 0)
             }
         } else if plan.date < .now {
-            HStack(spacing: 8) {
-                Text("How was it?")
-                    .font(.nookiCaption.weight(.semibold))
-                    .foregroundStyle(Ink.textSecondary)
-                ForEach(1...3, id: \.self) { value in
-                    Button { onRate(value) } label: {
-                        Image(systemName: "heart")
-                            .font(.nookiHeadline)
-                            .foregroundStyle(Color.blushPink)
+            Button(action: onDone) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("How was it? Mark it done")
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.nookiCaption.weight(.bold))
+                }
+                .font(.nookiCallout.weight(.semibold))
+                .foregroundStyle(Color.honey)
+                .padding(.horizontal, 12)
+                .frame(minHeight: 40)
+                .background(Color.honey.opacity(0.16), in: .capsule)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Closes a date: hearts, and a photo from it that goes into Moments (and to the partner, as any new moment does).
+private struct DateDoneSheet: View {
+    let state: HomeState
+    let plan: PlannedDate
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var hearts = 3
+    @State private var pick: PhotosPickerItem?
+    @State private var photo: UIImage?
+    @State private var caption: String
+
+    init(state: HomeState, plan: PlannedDate) {
+        self.state = state
+        self.plan = plan
+        _caption = State(initialValue: DateIdea.idea(plan.ideaID)?.title ?? "Date night")
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            UsSheetHeader(title: "How was it?", subtitle: DateIdea.idea(plan.ideaID)?.title)
+            ScrollView {
+                VStack(spacing: 14) {
+                    HStack(spacing: 18) {
+                        ForEach(1...3, id: \.self) { value in
+                            Button {
+                                withAnimation(.snappy(duration: 0.2)) { hearts = value }
+                            } label: {
+                                Image(systemName: value <= hearts ? "heart.fill" : "heart")
+                                    .font(.system(size: 34, weight: .semibold))
+                                    .foregroundStyle(Color.blushPink)
+                                    .symbolEffect(.bounce, value: hearts == value)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(value == 1 ? "1 heart" : "\(value) hearts")
+                            .accessibilityAddTraits(value == hearts ? .isSelected : [])
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+
+                    PhotosPicker(selection: $pick, matching: .images) {
+                        photoSlot
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(value) hearts")
+
+                    if photo != nil {
+                        UsField(placeholder: "Caption", text: $caption)
+                    }
+
+                    UsPrimaryButton(title: photo == nil ? "Done" : "Done, add to Moments") { save() }
+                        .padding(.top, 4)
                 }
-                Spacer(minLength: 0)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 40)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .usSheet(detents: [.large])
+        .onChange(of: pick) { _, item in
+            guard let item else { return }
+            Task {
+                if let image = await item.loadImage(maxPixels: MomentStore.storedPixels) {
+                    withAnimation(.snappy(duration: 0.25)) { photo = image }
+                }
             }
         }
+    }
+
+    @ViewBuilder
+    private var photoSlot: some View {
+        if let photo {
+            Image(uiImage: photo)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 260)
+                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                .overlay(alignment: .bottomTrailing) {
+                    Label("Change", systemImage: "photo")
+                        .font(.nookiCaption.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.black.opacity(0.45), in: .capsule)
+                        .padding(10)
+                }
+                .accessibilityLabel("Change photo")
+        } else {
+            VStack(spacing: 8) {
+                Image(systemName: "photo.badge.plus")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(Color.honey)
+                Text("Add a photo from the date")
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Text("It goes into your Moments")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 160)
+            .usCard()
+        }
+    }
+
+    private func save() {
+        var momentID: UUID?
+        if let photo {
+            let text = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+            // addMoment puts the newest photo first.
+            if state.journal.addMoment(photo, caption: text, shares: true) {
+                momentID = state.moments.moments.first?.id
+            }
+        }
+        state.us.rate(plan.id, hearts: hearts, momentID: momentID)
+        DateReminders.cancel(plan.id)
+        dismiss()
     }
 }
 
@@ -805,6 +1060,7 @@ private struct DatePlannerSheet: View {
     @State private var organizer: String
     @State private var surprise: Bool
     @State private var hint: String
+    @State private var remind: Bool
 
     init(state: HomeState, target: PlannerTarget, onSaved: @escaping () -> Void) {
         self.state = state
@@ -816,6 +1072,7 @@ private struct DatePlannerSheet: View {
         _organizer = State(initialValue: target.existing?.organizer ?? state.viewer)
         _surprise = State(initialValue: target.existing?.surprise ?? false)
         _hint = State(initialValue: target.existing?.hint ?? "")
+        _remind = State(initialValue: target.existing?.remind ?? (target.existing == nil))
     }
 
     var body: some View {
@@ -861,6 +1118,14 @@ private struct DatePlannerSheet: View {
                         UsField(placeholder: "Hint, e.g. dress warm", text: $hint)
                     }
 
+                    Toggle("Remind us a day and an hour before", isOn: $remind)
+                        .font(.nookiBody)
+                        .foregroundStyle(Ink.text)
+                        .tint(.honey)
+                        .padding(.horizontal, 16)
+                        .frame(minHeight: 50)
+                        .usCard(radius: 16)
+
                     UsPrimaryButton(title: "Save date") { save() }
                         .padding(.top, 6)
                 }
@@ -874,15 +1139,20 @@ private struct DatePlannerSheet: View {
     }
 
     private func save() {
-        state.us.upsertPlan(PlannedDate(
+        let plan = PlannedDate(
             id: existing?.id ?? UUID(),
             ideaID: ideaID,
             date: date,
             place: place.trimmingCharacters(in: .whitespacesAndNewlines),
             organizer: organizer,
             surprise: surprise,
-            hint: hint.trimmingCharacters(in: .whitespacesAndNewlines)
-        ))
+            hint: hint.trimmingCharacters(in: .whitespacesAndNewlines),
+            remind: remind
+        )
+        state.us.upsertPlan(plan)
+        let title = DateIdea.idea(ideaID)?.title ?? "Date night"
+        let organizerName = state.profile.name(of: organizer)
+        Task { await DateReminders.schedule(plan, title: title, organizer: organizerName) }
         onSaved()
         dismiss()
     }

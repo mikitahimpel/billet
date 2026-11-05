@@ -108,7 +108,7 @@ private struct CoatStage: View {
     /// Her height, ears to paws; the paws stand on the middle of the plinth.
     private var cat: CGFloat { height - plinth / 2 }
 
-    /// The portrait, cut to the cat: billet-gpu's 1200×1600 renders all frame her the same way, paws at 1431.
+    /// The portrait, cut to the cat: billet-gpu's 3:4 renders all frame her the same way, paws at 1431 of 1600 rows.
     private var portrait: some View {
         Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
             .resizable()

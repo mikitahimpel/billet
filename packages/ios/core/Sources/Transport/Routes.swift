@@ -26,6 +26,7 @@ public enum Routes {
   public static let claimInvite = Route(.post, "/v1/invites/claim")
   public static let unpair = Route(.delete, "/v1/pair")
   public static let getPair = Route(.get, "/v1/pair")
+  public static let setMood = Route(.put, "/v1/mood")
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
@@ -42,8 +43,17 @@ public enum Routes {
   public static let openGift = Route(.post, "/v1/shop/gift")
   public static let claimBonus = Route(.post, "/v1/shop/bonus")
   public static let earnCoins = Route(.post, "/v1/coins/earn")
+  /// The pair's gift wishes, the caller's own gift plans and both partners' "What I love". Every
+  /// change answers the same view.
+  public static let getGifts = Route(.get, "/v1/gifts")
+  public static let saveGiftWish = Route(.put, "/v1/gifts/wishes")
+  public static let deleteGiftWish = Route(.delete, "/v1/gifts/wishes")
+  public static let setGiftPlan = Route(.put, "/v1/gifts/plans")
+  public static let markGiftReceived = Route(.put, "/v1/gifts/received")
+  public static let saveLoves = Route(.put, "/v1/gifts/loves")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
+  public static let getDateCatalog = Route(.get, "/v1/dates/catalog")
   public static let reportEvents = Route(.post, "/v1/events")
   public static let getOnboarding = Route(.get, "/v1/onboarding")
   public static let saveOnboardingAnswer = Route(.post, "/v1/onboarding/answers")
@@ -58,6 +68,12 @@ public enum Routes {
   public static let purchase = Route(.post, "/v1/purchases")
   /// Dev server only: the mock store's purchases and refunds.
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")
+  /// Dev server only: pairs the signed-in, unpaired caller with a bot partner.
+  public static let createDemoPartner = Route(.post, "/v1/dev/demo-partner")
+  /// Dev server only: whether the caller is paired with their bot partner. A 404 means no dev tools.
+  public static let getDemoPartner = Route(.get, "/v1/dev/demo-partner")
+  /// Dev server only: unpairs the caller from their bot partner and deletes it.
+  public static let removeDemoPartner = Route(.delete, "/v1/dev/demo-partner")
   public static let getPurchases = Route(.get, "/v1/purchases")
   /// Called by Apple, never by the app. Mirrored so the contract test covers every route.
   public static let appStoreNotifications = Route(.post, "/v1/appstore/notifications")

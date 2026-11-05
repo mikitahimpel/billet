@@ -3,8 +3,8 @@ import Transport
 import Wire
 
 /// The room socket the app keeps while it is in front, outside the canvas: the Inbox's unread count, the partner's
-/// photos as they are sent, and reactions to photos. It resumes after the last note the photos looked at and leaves
-/// the cat's journal out, so no cat frames; the canvas keeps its own socket for those.
+/// photos as they are sent, reactions to photos, the pair's shop and each partner's check-in. It resumes after the last note the photos
+/// looked at and leaves the cat's journal out, so no cat frames; the canvas keeps its own socket for those.
 @MainActor
 final class InboxLink {
     private var client: WebSocketClient?
@@ -17,6 +17,8 @@ final class InboxLink {
         var text: @MainActor @Sendable () -> Void
         var reaction: @MainActor @Sendable (NoteReaction) -> Void
         var lastReactionRev: @MainActor @Sendable () -> Int?
+        var shop: @MainActor @Sendable (ShopResponse) -> Void
+        var mood: @MainActor @Sendable (PartnerCheckIn) -> Void
     }
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
@@ -35,13 +37,17 @@ final class InboxLink {
                 case .noteReceived(_, .photo): await handlers.photo()
                 case .noteReceived(_, .text): await handlers.text()
                 case .reactionChanged(let change): await handlers.reaction(change)
+                case .shopChanged(let shop): await handlers.shop(shop)
+                case .moodChanged(let checkIn): await handlers.mood(checkIn)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catEntryAdded, .catSaved:
+                     .clear, .catEntryAdded, .catSaved, .moodChanged:
                     break
                 }
             },
             followsActivity: true,
-            lastReactionRev: { await handlers.lastReactionRev() })
+            lastReactionRev: { await handlers.lastReactionRev() },
+            followsShop: true,
+            followsMoods: true)
         client = WebSocketClient(dependencies: dependencies, lastSeq: lastSeq)
     }
 

@@ -4,7 +4,7 @@ One native, warm style for everything drawn over Ilya's scenes. Tokens are in `N
 `Nooki/UI/Kit/Style.swift` (type, shape, spacing, buttons, rows), `Nooki/UI/Kit/Glass.swift` (materials) and
 `Shared/Palette.swift` (honey). Settings → Labs → Style renders all of them on the device.
 
-Native first: `List`/`Form`, sheets with detents, `NavigationStack`, `ToolbarItem`, `Menu`, `ContentUnavailableView`,
+Native first: sheets with detents, `NavigationStack`, `ToolbarItem`, `Menu`, `ContentUnavailableView`,
 system buttons. Build a custom control only when the system has none (the tab bar is one: the + is a menu and the
 room stays behind every tab).
 
@@ -72,8 +72,14 @@ Navigation titles use SF Rounded through `NavigationBarStyle.apply()` at launch.
 ## Materials
 - **Over the room**: Liquid Glass via `warmGlass(shape)` (clear glass with `Ink.glassTint`, interactive for controls).
   It falls back to `.ultraThinMaterial` before iOS 26. Group neighbouring glass in `GlassGroup` so it blends.
-- **Screens and forms** (onboarding, settings, lists): solid `Ink.screen` with `Ink.surface` rows. Never put glass on
-  glass, and don't put glass behind reading text.
+- **Screens and forms** (onboarding, profile, settings): solid `Ink.screen` with rows on clay cards (`NookiForm`).
+  Never put glass on glass, and don't put glass behind reading text.
+- **Cards** (Us, the Shop, their sheets): `nookiCard()`, warm clay lit from above with a light rim along the top and
+  a soft shadow cast by the card's shape only. `warm: true` pours honey into the light for a screen's hero card.
+  `usCard()` and `shopCard()` are this card, and so is every `NookiSection`.
+- **The Shop** keeps its own saturated accents for selling (`ShopInk`: coral, plum, teal, gold) and rarity colours:
+  common sand, rare teal, epic plum, legendary gold. Frames are lit in their colour; epic and legendary glow.
+  Discounts are coral; blush stays for love.
 - **Sheets**: the system sheet with detents sized to the content (`.presentationDetents([.height(measured)])` or
   `.medium`/`.large`). On iOS 26 the sheet is the system's glass; give it `Ink.screen` once the screen moves to tokens.
 
@@ -81,22 +87,30 @@ Navigation titles use SF Rounded through `NavigationBarStyle.apply()` at launch.
 | Role | iOS 26+ | iOS 18–25 | Notes |
 |---|---|---|---|
 | Primary | `.nookiPrimary()` (`.glassProminent`, honey) | `.borderedProminent`, honey | one per screen; capsule; heroInk label |
-| Secondary | `.buttonStyle(.glass)` | `.bordered` | capsule or `.circle` for icon buttons |
+| Secondary | `NookiSecondaryStyle()` | same | honey words on a raised clay capsule; `.glass` only over the room |
 | Tertiary | plain text in `Ink.accentText` | same | "Not now", "Skip" |
 | Toolbar | `ToolbarItem` + system button | same | Done is `.confirmationAction` |
 | Destructive | `Button(role: .destructive)` | same | always behind a confirmation |
 
 `.plain` is only for whole-row or whole-card taps, with `PressScaleStyle` for feedback.
 
+Buttons inside cards that scroll (the Shop's prices, claims and chips: `shopButton()`) are flat capsules, honey or
+raised clay, never glass: glass is for chrome that floats over the room, grouped in a `GlassGroup`. Shadows are cast
+by a shape behind the content, not traced from the content.
+
 ## Lists, cards, chips, sheets
-- **Lists**: `List` with `.scrollContentBackground(.hidden)` on `Ink.screen`, `.nookiRow()` on sections, inset grouped,
-  `.tint(.honey)`. Section headers come from the system; footers explain, in one or two sentences.
-- **Cards**: `Ink.surface`, `Radius.card`, `Space.l` padding, no stroke and no shadow on a screen. Over the room, a card
-  is warm glass instead.
+- **Forms and settings**: `NookiForm` (a scroll view on `Ink.screen`, honey tint) of `NookiSection`s: a caption
+  header, rows on one clay card with hairlines, a footer that explains in one or two sentences. Rows are
+  `NookiRowLabel` (icon in a tinted circle, title, optional detail, a trailing control or `RowChevron`),
+  `NookiToggleRow` and `NookiPickerRow`; a plain control in a section gets `.nookiCell()`. No system `List`/`Form`
+  grouped look and no system blue.
+- **Cards**: `nookiCard()`, `Radius.card`, `Space.l` padding. Over the room, a card is warm glass instead.
 - **Chips**: capsule, `.nookiCallout`, `Space.m`×`Space.s` padding; `surfaceRaised` when selected on a screen, and warm
   glass over the room.
-- **Header** (World, Moments, Shop): Inbox circle at the leading edge, the couple's avatars next to it (they open Us),
-  coins at the trailing edge, and nothing else.
+- **Header** (every tab): Inbox circle at the leading edge; coins, then the couple's avatars at the trailing edge (they
+  open the profile as a plain full-height sheet), and nothing else.
+- **Avatars** (`Monogram`): a face-centred square photo or the initial, in a soft clay ring with a gentle shadow; the
+  couple's link is a honey heart.
 - **Tab bar**: World / Moments / Shop and the + menu, a glass capsule over the room.
 - **Empty states**: `ContentUnavailableView` with a symbol, a warm line and one primary action.
 

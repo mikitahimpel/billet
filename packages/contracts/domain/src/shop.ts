@@ -1,7 +1,7 @@
 import { Schema } from "effect";
-import type { LocalDay } from "./coins.ts";
+import { LocalDay } from "./coins.ts";
 import type { EpochMillis } from "./ids.ts";
-import { KnownInkId } from "./inks.ts";
+import { InkId, KnownInkId } from "./inks.ts";
 
 const slug = Schema.String.check(
   Schema.isPattern(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/),
@@ -141,6 +141,22 @@ export type ShopOffer = typeof ShopOffer.Type;
 /** Names pieces that earn a coin bonus once the pair owns them all, such as `cozy-autumn`. */
 export const CollectionId = slug.pipe(Schema.brand("CollectionId"));
 export type CollectionId = typeof CollectionId.Type;
+
+/**
+ * What the pair has in the shop. `inks` starts with the free ink and `items` with the starter
+ * pieces, then the rest in the order they were bought. `wishlist` is in the order it was wished.
+ * `giftDay` is the pair's local day it last opened the daily gift on, absent before the first;
+ * `bonuses` are the collections whose bonus it was paid.
+ */
+export const PairShop = Schema.Struct({
+  balance: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  inks: Schema.Array(InkId),
+  items: Schema.Array(RoomItemId),
+  wishlist: Schema.Array(RoomItemId),
+  giftDay: Schema.optionalKey(LocalDay),
+  bonuses: Schema.Array(CollectionId),
+});
+export type PairShop = typeof PairShop.Type;
 
 export interface PieceCollection {
   readonly id: CollectionId;

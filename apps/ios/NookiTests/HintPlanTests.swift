@@ -17,13 +17,12 @@ import Testing
         #expect(next(HintContext(screen: .shop, busy: true)) == nil)
     }
 
-    @Test func aPartnerToInviteComesRightAfterTheCat() {
-        let unpaired = HintContext(screen: .world, canInvite: true, hasRoomChoice: true, canAffordTreat: true)
-        #expect(next(unpaired, seen: ["pet"]) == "invite")
-        #expect(next(unpaired, seen: ["pet", "invite"]) == "add")
-        var paired = unpaired
-        paired.canInvite = false
-        #expect(next(paired, seen: ["pet"]) == "add")
+    @Test func theAddButtonComesRightAfterTheCat() {
+        let world = HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)
+        #expect(next(world, seen: ["pet"]) == "add")
+        // The pair is made in the onboarding: no hint asks for a partner, whatever an older build saw.
+        #expect(!HintPlan.order.contains("invite"))
+        #expect(next(world, seen: ["pet", "invite"]) == "add")
     }
 
     @Test func worldHintsFollowAFixedOrder() {
@@ -102,6 +101,28 @@ import Testing
         #expect(hints.plan(HintContext(screen: .moments)) == nil)
     }
 
+    /// Every hint, in order: it shows once, is seen from then on, and neither another visit nor a relaunch shows it
+    /// again.
+    @Test func everyHintShowsOnceAndNeverAgain() {
+        func due(_ id: String) -> HintContext {
+            switch id {
+            case MomentsHint.hintId: HintContext(screen: .moments)
+            case ShopHint.hintId: HintContext(screen: .shop)
+            default: HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)
+            }
+        }
+        for id in HintPlan.order {
+            let launch = hints()
+            #expect(launch.show(due(id)) == id)
+            #expect(launch.seen.contains(id))
+            #expect(HintStage.current == id)
+            #expect(launch.plan(due(id)) != id)
+            #expect(hints().plan(due(id)) != id)
+        }
+        #expect(hints().show(HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)) == nil)
+        HintStage.current = ""
+    }
+
     @Test func aSheetOverTheAppHoldsHintsBack() {
         #expect(hints(presenting: true).plan(HintContext(screen: .world)) == nil)
     }
@@ -109,9 +130,8 @@ import Testing
     @Test func nothingBeforeTheOnboardingEnds() {
         let hints = Hints(report: { _ in }, defaults: defaults, isPresenting: { false })
         #expect(hints.plan(HintContext(screen: .world)) == nil)
-        hints.canInvite(true)
         hints.onboardingFinished(true)
         hints.appeared(PetHint())
-        #expect(hints.plan(HintContext(screen: .world)) == "invite")
+        #expect(hints.plan(HintContext(screen: .world)) == "add")
     }
 }

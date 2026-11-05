@@ -53,6 +53,7 @@ struct HomeStores {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    let gifts: GiftsModel
     let journal: Journal
 
     /// The stores over the app group's files.
@@ -63,11 +64,13 @@ struct HomeStores {
         let moments = MomentStore()
         let notes = NoteStore()
         let care = CatCare(wallet: wallet, streak: streak)
+        let shop = ShopModel(wallet: wallet, couple: profile, care: care)
+        let us = UsStore { shop.earn($0) }
         return HomeStores(
-            profile: profile, wallet: wallet, us: UsStore(wallet: wallet), partnerMoods: MoodStore(), streak: streak,
-            moments: moments, notes: notes, rooms: RoomsChoice(), care: care,
-            shop: ShopModel(wallet: wallet, couple: profile, care: care),
-            journal: Journal(moments: moments, notes: notes, wallet: wallet, streak: streak, couple: profile))
+            profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
+            moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
+            gifts: GiftsModel(us: us) { profile.couple.pair.map { (profile.couple.viewer, $0.users) } },
+            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
     }
 }
 
@@ -130,6 +133,8 @@ final class HomeState {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    /// The Us tab's gifts in step with the pair's room once paired.
+    let gifts: GiftsModel
     let journal: Journal
     @ObservationIgnored private let wallet: WalletStore
 
@@ -143,6 +148,7 @@ final class HomeState {
         rooms = stores.rooms
         care = stores.care
         shop = stores.shop
+        gifts = stores.gifts
         journal = stores.journal
         wallet = stores.wallet
         #if DEBUG
@@ -185,20 +191,29 @@ final class HomeState {
     }
     var otherPartner: String { profile.couple.other }
 
-    func setMood(_ mood: PartnerMood) {
-        partnerMoods.set(mood, for: viewer)
+    /// Follows the pair's room once paired; nil keeps check-ins on this phone.
+    var moodSync: MoodSync?
+
+    /// Shows at once here and goes to the partner through the room.
+    func setMood(_ mood: PartnerMood, note: String? = nil) {
+        partnerMoods.set(mood, note: note, for: viewer)
         streak.record()
+        guard let sync = moodSync, let check = partnerMoods.latest[viewer] else { return }
+        Task { await sync.share(check) }
     }
 
     /// Back in the foreground: pick up what the widgets changed and let Mochi feel the pets from outside the app.
-    func refresh() {
-        profile.reload()
-        wallet.reload()
-        partnerMoods.reload()
-        us.reload()
-        moments.reload()
-        notes.reload()
-        streak.reload()
+    /// `reloading` false skips reading the stores again, for launch, where they were read a moment ago.
+    func refresh(reloading: Bool = true) {
+        if reloading {
+            profile.reload()
+            wallet.reload()
+            partnerMoods.reload()
+            us.reload()
+            moments.reload()
+            notes.reload()
+            streak.reload()
+        }
         var activity = WidgetActivity.load()
         let pets = activity.takePendingPets()
         guard pets > 0 else { return }

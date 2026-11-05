@@ -22,17 +22,18 @@ struct CoatPickerTests {
         return (top, bottom, left, right)
     }
 
-    /// The stage cuts every portrait to the cat with the same numbers (ears at 167, paws at 1431 of 1600), so every
-    /// coat must be framed alike: same size, same scale, same eye line.
+    /// The stage cuts every portrait to the cat with the same numbers (ears at 167, paws at 1431, in rows of 1600),
+    /// so every coat must be framed alike at any pixel size: 3:4, same eye line, same paw line.
     @Test(arguments: CatCoat.allCases)
     func everyPortraitIsFramedLikeTheStageExpects(coat: CatCoat) throws {
         let image = try #require(UIImage(named: coat.portrait))
-        #expect(image.size.width * image.scale == 1200)
-        #expect(image.size.height * image.scale == 1600)
+        let cg = try #require(image.cgImage)
+        #expect(cg.width * 4 == cg.height * 3)
         let box = try Self.bounds(of: image)
-        #expect(abs(box.top - 167) <= 12, "ears at \(box.top)")
-        #expect(abs(box.bottom - 1431) <= 8, "paws at \(box.bottom)")
-        #expect(abs((box.left + box.right) / 2 - 592) <= 40, "centred at \((box.left + box.right) / 2)")
+        let full = { (pixel: Int) in pixel * 1600 / cg.height }
+        #expect(abs(full(box.top) - 167) <= 12, "ears at \(full(box.top))")
+        #expect(abs(full(box.bottom) - 1431) <= 8, "paws at \(full(box.bottom))")
+        #expect(abs(full((box.left + box.right) / 2) - 592) <= 40, "centred at \(full((box.left + box.right) / 2))")
     }
 
     @Test

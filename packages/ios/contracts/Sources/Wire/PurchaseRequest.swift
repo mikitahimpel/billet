@@ -27,7 +27,8 @@ public struct MockPurchaseRequest: Codable, Hashable, Sendable {
 }
 
 /// What the server credited (or, for a mock refund, took back) for one transaction, and the
-/// pair's bought coins after it. `stamps` is the contract's `coins`.
+/// pair's wallet balance after it (`GET /v1/coins`), or a demo room's bought coins. `stamps` is
+/// the contract's `coins`.
 public struct PurchaseResponse: Codable, Hashable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case transactionId, productId, balance, duplicate

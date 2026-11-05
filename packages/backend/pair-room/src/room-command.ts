@@ -6,9 +6,10 @@ import {
   NatureSeed,
   UtcOffsetSeconds,
 } from "@billet/contracts-domain/cat";
-import { EarnEvent } from "@billet/contracts-domain/coins";
+import { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
+import { Mood } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -75,5 +76,18 @@ export const RoomCommand = Schema.TaggedUnion({
   ClaimBonus: { by: UserId, at: EpochMillis, collection: CollectionId },
   /** Pays something the couple did in the app, within its daily cap and once per ref. */
   Earn: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds, event: EarnEvent },
+  /** Replaces `by`'s check-in. `note` is as the caller sent it: the room trims and bounds it. */
+  SetMood: { by: UserId, mood: Mood, note: Schema.optionalKey(Schema.String), at: EpochMillis },
+  /**
+   * Coins bought with money: `buy` pays `coins` in, `refund` takes them back. `id` is the payments
+   * ledger's entry id, written once; `ref` is the pack.
+   */
+  CreditPurchase: {
+    id: CoinEntryId,
+    kind: Schema.Literals(["buy", "refund"]),
+    coins: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    ref: Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(100)),
+    at: EpochMillis,
+  },
 });
 export type RoomCommand = typeof RoomCommand.Type;

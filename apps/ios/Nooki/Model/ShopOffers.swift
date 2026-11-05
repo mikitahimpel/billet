@@ -64,10 +64,10 @@ enum GiftReward: Hashable {
 }
 
 /// The Shop's rotations. Everything is a pure function of the pair and the local date, so both partners' phones show
-/// the same deals and gift without asking anyone, and every countdown ends at a real change. A local fixture until
-/// the server's offers (billet-pay) replace it.
+/// the same deals and gift without asking anyone, and every countdown ends at a real change. The server runs the same
+/// functions (`@billet/contracts-domain/shop`) and charges by them; `shop-offers.json` holds both to it.
 struct ShopOffers {
-    /// The same for both partners: their monograms, sorted. The server's pair id replaces it once pairs sync.
+    /// The pair id, the same for both partners and the server.
     let pairSeed: String
     var calendar = Calendar.current
 
@@ -199,18 +199,4 @@ struct SeededRandom {
         z = (z ^ (z >> 27)) &* 0x94d0_49bb_1331_11eb
         return z ^ (z >> 31)
     }
-}
-
-/// The last day the couple opened the free gift. Its own file, so the shared Wallet's format stays as it is.
-nonisolated struct GiftLog: Codable, Hashable {
-    var claimedDay = Date.distantPast
-
-    func canClaim(on date: Date, calendar: Calendar = .current) -> Bool {
-        !calendar.isDate(claimedDay, inSameDayAs: date)
-    }
-}
-
-/// Collections whose bonus the couple has already collected. Its own file, like the gift log.
-nonisolated struct CollectionLog: Codable, Hashable {
-    var claimed: Set<String> = []
 }

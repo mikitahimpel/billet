@@ -9,7 +9,6 @@ struct ProfileHub: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ServerSession.self) private var session: ServerSession?
-    @Environment(Hints.self) private var hints
     @State private var pairing = false
 
     private var canInvite: Bool {
@@ -19,28 +18,20 @@ struct ProfileHub: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section { couple }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-
-                if canInvite {
-                    Section {
-                        Button(action: invite) { inviteCard }
-                            .buttonStyle(.plain)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                }
-
-                Section {
+            NookiForm {
+                couple
+                NookiSection {
                     NavigationLink { ProfileEditor(profile: state.profile) } label: {
-                        row("Edit profile", symbol: "person.2.fill", tint: .sky)
+                        NookiRowLabel(title: "Edit profile", symbol: "person.2.fill", tint: .sky) { RowChevron() }
                     }
                     if canInvite {
-                        Button(action: invite) { row("Invite your partner", symbol: "heart.circle.fill", tint: .blush) }
+                        Button { pairing = true } label: {
+                            NookiRowLabel(title: "Invite your partner", symbol: "heart.circle.fill", tint: .blush) {
+                                RowChevron()
+                            }
+                        }
                     } else if session?.isPaired == true {
-                        row("Paired with your partner", symbol: "heart.fill", tint: .blush)
+                        NookiRowLabel(title: "Paired with your partner", symbol: "heart.fill", tint: .blush)
                     }
                     NavigationLink {
                         SettingsView(state: state) {
@@ -48,12 +39,11 @@ struct ProfileHub: View {
                             erase()
                         }
                     } label: {
-                        row("Settings", symbol: "gearshape.fill", tint: .lilac)
+                        NookiRowLabel(title: "Settings", symbol: "gearshape.fill", tint: .lilac) { RowChevron() }
                     }
                 }
-                .nookiRow()
+                .buttonStyle(.plain)
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -74,17 +64,24 @@ struct ProfileHub: View {
         }
     }
 
-    private func invite() {
-        hints.done(InviteHint())
-        pairing = true
-    }
-
     private var couple: some View {
         VStack(spacing: Space.m) {
-            HStack(spacing: -16) {
-                Monogram(partner: state.partners.0, profile: state.profile, size: 84)
-                Monogram(partner: state.partners.1, profile: state.profile, size: 84)
+            HStack(spacing: -14) {
+                Monogram(partner: state.partners.0, profile: state.profile, size: 88)
+                Monogram(partner: state.partners.1, profile: state.profile, size: 88)
             }
+            .overlay(alignment: .bottom) {
+                // The honey link between the two.
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Ink.heroInk)
+                    .frame(width: 30, height: 30)
+                    .background(.honeyGradient, in: .circle)
+                    .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
+                    .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                    .offset(y: 8)
+            }
+            .padding(.bottom, Space.s)
             VStack(spacing: 4) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
                     .font(.nookiTitle)
@@ -98,35 +95,5 @@ struct ProfileHub: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Space.l)
         .accessibilityElement(children: .combine)
-    }
-
-    private var inviteCard: some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: "heart.circle.fill", tint: .blush), size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Invite your partner")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.heroInk)
-                Text("Share \(CatProfile.name()), notes and coins")
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.heroInk.opacity(0.75))
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.heroInk.opacity(0.6))
-        }
-        .padding(16)
-        .background(.honeyGradient, in: .rect(cornerRadius: Radius.card, style: .continuous))
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
-    }
-
-    private func row(_ title: String, symbol: String, tint: UsTint) -> some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
-            Text(title).foregroundStyle(Ink.text)
-        }
     }
 }

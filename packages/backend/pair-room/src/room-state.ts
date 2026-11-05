@@ -3,6 +3,7 @@ import { CatEntry, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
@@ -89,6 +90,8 @@ export const RoomState = Schema.TaggedUnion({
     wallet: RoomWallet,
     /** The `rev` of the last reaction change; absent before the first. */
     lastReactionRev: Schema.optionalKey(Count),
+    /** Each member's latest check-in, at most one each; a room stored before moods has none. */
+    moods: Schema.Array(MoodCheckIn).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
   },
 });
 export type RoomState = typeof RoomState.Type;

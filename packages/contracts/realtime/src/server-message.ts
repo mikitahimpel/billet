@@ -1,8 +1,10 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { Color, Stroke } from "@billet/contracts-domain/ink";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { PairShop } from "@billet/contracts-domain/shop";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
 /**
@@ -37,5 +39,15 @@ export const ServerMessage = Schema.TaggedUnion({
   ActivityUnread: { unread: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
   /** A reaction was set or taken back, sent to sockets that resumed with `lastReactionRev`. */
   ReactionChanged: { reaction: NoteReaction },
+  /**
+   * The pair's coins, inks, room pieces or wishlist changed, sent to sockets that resumed with
+   * `shop: true`, and once on that resume.
+   */
+  ShopChanged: { shop: PairShop },
+  /**
+   * A member's latest check-in, sent to sockets that resumed with `moods: true`: each one the room
+   * holds on the resume, then every new one.
+   */
+  MoodChanged: { checkIn: MoodCheckIn },
 });
 export type ServerMessage = typeof ServerMessage.Type;

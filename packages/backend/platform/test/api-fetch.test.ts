@@ -1,4 +1,8 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import {
+  createExecutionContext,
+  runInDurableObject,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { Effect, Layer, Redacted, Schema } from "effect";
 import { SecureRandom, Signature } from "effect/crypto";
@@ -32,6 +36,7 @@ import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
+import { PairResponse } from "@billet/contracts-http-api/pair";
 import { resetDirectory } from "./directory-migrations.ts";
 import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
 import {
@@ -1013,6 +1018,31 @@ describe("notes", () => {
     expect(badPage.status).toBe(400);
   });
 
+  it("keeps each member's check-in and shows both in the pair snapshot", async () => {
+    const { owner, claimer } = await pairOf("subject-mood-owner", "subject-mood-claimer");
+    const getPair = async (token: string) =>
+      Schema.decodeUnknownSync(PairResponse)(
+        await (await call("/v1/pair", { method: "GET", headers: bearer(token) })).json(),
+      );
+    expect(await getPair(owner)).toMatchObject({ moods: [] });
+    const setMood = (token: string, body: unknown) =>
+      call("/v1/mood", {
+        method: "PUT",
+        headers: { ...bearer(token), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const set = await setMood(claimer, { mood: "missing", note: " soon? " });
+    expect(set.status).toBe(200);
+    const checkIn = await set.json();
+    expect(checkIn).toMatchObject({ mood: "missing", note: "soon?" });
+    expect((await setMood(owner, { mood: "happy" })).status).toBe(200);
+    const { members, moods } = await getPair(owner);
+    expect(moods).toHaveLength(2);
+    expect(moods).toContainEqual(checkIn);
+    expect(moods).toContainEqual(expect.objectContaining({ user: members[0], mood: "happy" }));
+    expect((await setMood(owner, { mood: "happy", note: "a".repeat(81) })).status).toBe(400);
+  });
+
   it("opens the day's gift once for the pair, and pays an app earn once per ref", async () => {
     const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
     const post = (token: string, path: string, body: unknown) =>
@@ -1198,22 +1228,173 @@ describe("routes from the contracts", () => {
     exports.default.fetch(new Request(`https://billet.test${path}`, { method }));
   const concrete = (path: string) => (path.endsWith("*") ? mediaPath("pairs/p/notes/n.png") : path);
 
-  // The mock purchase route exists only on the dev stage; the payments tests check the others.
+  // These exist only on the dev stage; the payments and demo partner tests check the others.
+  const devOnly = new Set([
+    "mockPurchase",
+    "createDemoPartner",
+    "getDemoPartner",
+    "removeDemoPartner",
+  ]);
   const onDev = (method: string, path: string) =>
     atStage("dev", new Request(`https://billet.test${path}`, { method }));
 
   it.each(Object.entries(routes))("%s is served at its method and path", async (name, route) => {
     // Whatever the answer is, it is not "no such route".
-    const response =
-      name === "mockPurchase"
-        ? await onDev(route.method, route.path)
-        : await send(route.method, concrete(route.path));
+    const response = devOnly.has(name)
+      ? await onDev(route.method, route.path)
+      : await send(route.method, concrete(route.path));
     expect(response.status).not.toBe(404);
   });
 
   it.each(Object.entries(routes))("%s is is not served under another path", async (_, route) => {
     const moved = concrete(route.path).replace("/v1/", "/v1/moved/");
     expect((await send(route.method, moved)).status).toBe(404);
+  });
+});
+
+describe("demo partners in the Worker", () => {
+  const demoPartner = (stage: string | undefined, method: string, token: string) =>
+    atStage(
+      stage,
+      new Request(`https://billet.test${routes.createDemoPartner.path}`, {
+        method,
+        headers: bearer(token),
+      }),
+    );
+  const pairFor = (token: string) => call("/v1/pair", { method: "GET", headers: bearer(token) });
+
+  it("pairs the caller with a bot as a real pair forms, and deletes it again", async () => {
+    const caller = await signedInAs("subject-demo");
+    const created = await demoPartner("dev", "POST", caller);
+    expect(created.status).toBe(200);
+    const pair = Schema.decodeUnknownSync(PairResponse)(await created.json());
+    const [callerId, botId] = pair.members;
+
+    const status = await demoPartner("dev", "GET", caller);
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({ paired: true });
+
+    const read = await pairFor(caller);
+    expect(read.status).toBe(200);
+    expect(Schema.decodeUnknownSync(PairResponse)(await read.json())).toEqual(pair);
+    const claimed = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'PairClaimed' AND pair_id = ?",
+    )
+      .bind(pair.pairId)
+      .all<{ user_id: string }>();
+    // A pair with a demo partner stays out of the funnel, for the bot and its owner alike.
+    expect(claimed.results).toEqual([]);
+    const demoClaimed = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'DemoPairClaimed' AND pair_id = ?",
+    )
+      .bind(pair.pairId)
+      .all<{ user_id: string }>();
+    expect(demoClaimed.results.map(({ user_id }) => user_id).toSorted()).toEqual(
+      [callerId, botId].toSorted(),
+    );
+    const invited = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'InviteCreated' AND user_id = ?",
+    )
+      .bind(botId)
+      .all();
+    expect(invited.results).toEqual([]);
+    const activity = await call("/v1/activity", { method: "GET", headers: bearer(caller) });
+    expect(await activity.text()).toContain("PartnerJoined");
+
+    const again = await demoPartner("dev", "POST", caller);
+    expect(again.status).toBe(409);
+    expect(await again.json()).toEqual({ _tag: "AlreadyPaired" });
+
+    const removed = await demoPartner("dev", "DELETE", caller);
+    expect(removed.status).toBe(204);
+    expect((await pairFor(caller)).status).toBe(404);
+    expect(await (await demoPartner("dev", "GET", caller)).json()).toEqual({ paired: false });
+    const left = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(botId).all();
+    expect(left.results).toEqual([]);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+    // The caller ended it, so there is no "your partner deleted their account" for them.
+    const notices = await env.DB.prepare("SELECT * FROM partner_notices WHERE user_id = ?")
+      .bind(callerId)
+      .all();
+    expect(notices.results).toEqual([]);
+  });
+
+  /** Moves the pair's room `ms` on and runs its alarm there, as workerd would when it fires. */
+  const laterInRoom = (pairId: string, ms: number) =>
+    runInDurableObject(env.PAIR_ROOM.getByName(pairId), async (instance, state) => {
+      (instance as unknown as { advanceClock(ms: number): void }).advanceClock(ms);
+      await instance.alarm();
+      return { alarm: await state.storage.getAlarm(), bot: await state.storage.get("demoBot") };
+    });
+
+  it("answers the owner's text as the bot, once, and stops when the bot goes", async () => {
+    const caller = await signedInAs("subject-demo");
+    const created = await demoPartner("dev", "POST", caller);
+    const { pairId, members } = Schema.decodeUnknownSync(PairResponse)(await created.json());
+    const botId = members[1];
+    const alarm = await runInDurableObject(env.PAIR_ROOM.getByName(pairId), (_, state) =>
+      state.storage.getAlarm(),
+    );
+    // The bot's first turn is minutes away, and the room's alarm is set for it.
+    expect(alarm).toBeGreaterThan(testNowOf(env));
+
+    expect((await sendText(caller, { text: "miss you" })).status).toBe(200);
+    expect((await sendText(caller, { text: "are you there?" })).status).toBe(200);
+    await laterInRoom(pairId, 31_000);
+    const notes = await historyFor(caller);
+    expect(notes.map((note) => [note._tag, note.author])).toEqual([
+      ["Text", members[0]],
+      ["Text", members[0]],
+      ["Text", botId],
+    ]);
+    // A burst gets one answer, however long the owner waits.
+    await laterInRoom(pairId, 61_000);
+    expect((await historyFor(caller)).filter((note) => note.author === botId)).toHaveLength(1);
+
+    expect((await demoPartner("dev", "DELETE", caller)).status).toBe(204);
+    expect(await laterInRoom(pairId, 24 * 60 * 60_000)).toEqual({ alarm: null, bot: undefined });
+    const left = await env.PAIR_ROOM.getByName(pairId).notes(0, 100);
+    expect(left.filter(({ note }) => note.author === botId)).toEqual([]);
+  });
+
+  it("refuses a caller who already has a partner", async () => {
+    const { owner } = await pairOf("subject-demo-a", "subject-demo-b");
+    const response = await demoPartner("dev", "POST", owner);
+    expect(response.status).toBe(409);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+  });
+
+  it("answers 404 to a delete with no demo partner, and keeps a real pair", async () => {
+    const { owner } = await pairOf("subject-demo-a", "subject-demo-b");
+    const response = await demoPartner("dev", "DELETE", owner);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ _tag: "NotFound" });
+    expect((await pairFor(owner)).status).toBe(200);
+  });
+
+  it("deletes the caller's demo partner row with the caller's account", async () => {
+    const caller = await signedInAs("subject-demo");
+    expect((await demoPartner("dev", "POST", caller)).status).toBe(200);
+    const deleted = await call("/v1/account", json({}, "DELETE", caller));
+    expect(deleted.status).toBe(204);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+  });
+
+  it.each([["prod"], ["stage"], [undefined]])("has no demo partner routes on %s", async (stage) => {
+    const caller = await signedInAs("subject-demo");
+    expect((await demoPartner(stage, "POST", caller)).status).toBe(404);
+    expect((await demoPartner(stage, "DELETE", caller)).status).toBe(404);
+    expect((await demoPartner(stage, "GET", caller)).status).toBe(404);
+    expect((await pairFor(caller)).status).toBe(404);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
   });
 });
 
@@ -1730,6 +1911,12 @@ describe("payments in the Worker", () => {
     });
   });
 
+  const walletOf = async (headers: Record<string, string>) => {
+    const response = await atStage("dev", new Request("https://billet.test/v1/coins", { headers }));
+    expect(response.status).toBe(200);
+    return Schema.decodeUnknownSync(CoinsResponse)(await response.json());
+  };
+
   it("credits and refunds mock purchases on dev, shared by the pair", async () => {
     const { owner, claimer, pairId } = await pairOf("subject-mock-a", "subject-mock-b");
     const transactionId = `mock-${crypto.randomUUID()}`;
@@ -1738,14 +1925,31 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(owner)),
     );
     expect(bought.status).toBe(200);
+    // The wallet's balance: the welcome coins (560) and the pack.
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
       productId: "com.mikitahimpel.billet.coins.550",
       coins: 550,
-      balance: 550,
+      balance: 1110,
       duplicate: false,
     });
     expect((await purchasesAt("dev", bearer(claimer))).balance).toBe(550);
+    const wallet = await walletOf(bearer(claimer));
+    expect(wallet.balance).toBe(1110);
+    expect(wallet.entries.at(-1)).toMatchObject({
+      id: `purchase:${transactionId}`,
+      kind: "buy",
+      amount: 550,
+    });
+
+    const again = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(claimer)),
+    );
+    expect(Schema.decodeUnknownSync(PurchaseResponse)(await again.json())).toMatchObject({
+      duplicate: true,
+      balance: 1110,
+    });
 
     const refunded = await atStage(
       "dev",
@@ -1753,8 +1957,12 @@ describe("payments in the Worker", () => {
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
       coins: 550,
-      balance: 0,
+      balance: 560,
     });
+    expect((await walletOf(bearer(owner))).entries.slice(-2)).toMatchObject([
+      { id: `purchase:${transactionId}`, amount: 550 },
+      { id: `refund:${transactionId}`, kind: "refund", amount: -550 },
+    ]);
     const { entries } = await purchasesAt("dev", bearer(owner));
     expect(entries.map(({ id, amount }) => [id, amount])).toEqual([
       [`purchase:${transactionId}`, 550],
@@ -1764,28 +1972,47 @@ describe("payments in the Worker", () => {
     expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
   });
 
-  it("answers 404 on every purchase route to a pair the payments flag is off for", async () => {
+  const flagOff = async () => {
     const { owner, pairId } = await pairOf("subject-flag-a", "subject-flag-b");
     await env.DB.prepare(
       "INSERT INTO pair_flag_overrides (pair_id, experiment_key, variant, set_at, set_by) VALUES (?, 'payments', 'off', 0, 'test')",
     )
       .bind(pairId)
       .run();
-    const responses = [
-      await atStage(
-        "dev",
-        post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
-      ),
-      await atStage("dev", post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
-      await atStage(
-        "dev",
-        new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
-      ),
-    ];
-    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
-    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
-      results: [],
-    });
+    return owner;
+  };
+
+  it.each([["prod"], ["stage"]])(
+    "answers 404 on %s on every purchase route to a pair the payments flag is off for",
+    async (stage) => {
+      const owner = await flagOff();
+      const responses = [
+        await atStage(stage, post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
+        await atStage(
+          stage,
+          new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
+        ),
+      ];
+      expect(responses.map(({ status }) => status)).toEqual([404, 404]);
+      expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
+        results: [],
+      });
+    },
+  );
+
+  it("sells on dev whatever the payments flag says", async () => {
+    const owner = await flagOff();
+    const bought = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
+    );
+    expect(bought.status).toBe(200);
+    const unsigned = await atStage(
+      "dev",
+      post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner)),
+    );
+    expect(unsigned.status).toBe(400);
+    expect((await purchasesAt("dev", bearer(owner))).balance).toBe(550);
   });
 
   it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {
@@ -1830,14 +2057,15 @@ describe("payments in the Worker", () => {
     expect(await refused.json()).toEqual({ _tag: "InvalidPurchase" });
 
     const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
+    // The pair's wallet: the welcome coins (560) and the pack.
     expect(first).toMatchObject({
       transactionId: "7",
       coins: 100,
-      balance: 100,
+      balance: 660,
       duplicate: false,
     });
     const again = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
-    expect(again).toMatchObject({ balance: 100, duplicate: true });
+    expect(again).toMatchObject({ balance: 660, duplicate: true });
   });
 
   it("trusts only Apple's root, for transactions and notifications", async () => {

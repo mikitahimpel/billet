@@ -51,6 +51,8 @@ struct SetSheet: View {
         .padding(.top, Space.gutter)
         .padding(.bottom, Space.s)
         .shopSheet(height: $height)
+        // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
+        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
     /// The pieces side by side on the warm stage, the middle one larger and in front.
@@ -118,7 +120,7 @@ struct SetSheet: View {
                             Text("Buy the set for")
                             CoinPrice(price: quote.price, was: quote.sum)
                         } else {
-                            Image(systemName: "lock.fill")
+                            Image(systemName: "plus.circle.fill")
                             Text("Need \(quote.price - state.shop.coins) more coins").monospacedDigit()
                         }
                     }
@@ -127,7 +129,6 @@ struct SetSheet: View {
                     .frame(maxWidth: .infinity)
                 }
                 .nookiPrimary()
-                .disabled(!affordable)
                 if !affordable {
                     Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
                         .font(.nookiCaption)

@@ -184,51 +184,23 @@ struct CoinPrice: View {
 }
 
 extension View {
-    /// A buy or claim button inside a card: honey prominent glass from iOS 26, bordered prominent before.
-    @ViewBuilder
+    /// A buy or claim button inside a card: a flat honey capsule, or a raised clay one when not prominent. Glass is
+    /// kept for chrome that floats over the room; a dozen glass buttons in a scrolling list would each re-sample
+    /// what is behind them on every frame.
     func shopButton(prominent: Bool = true) -> some View {
-        let styled = font(.nookiHeadline)
-            .buttonBorderShape(.capsule)
-            .tint(.honey)
-        if prominent {
-            if #available(iOS 26, *) {
-                styled.foregroundStyle(Ink.heroInk).buttonStyle(.glassProminent)
-            } else {
-                styled.foregroundStyle(Ink.heroInk).buttonStyle(.borderedProminent)
-            }
-        } else {
-            if #available(iOS 26, *) {
-                styled.buttonStyle(.glass)
-            } else {
-                styled.buttonStyle(.bordered)
-            }
-        }
+        buttonStyle(ShopButtonStyle(prominent: prominent))
     }
 
-    /// A card on the Shop: a warm surface lit from above with a light rim along its top, like the room's clay, and
-    /// a soft shadow.
+    /// A card on the Shop: the app's clay card.
     func shopCard(radius: CGFloat = Radius.card) -> some View {
-        // The shadow is the card's shape's own, not the whole card's: a shine or a countdown changing inside never
-        // makes it draw again.
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return background {
-            shape
-                .fill(LinearGradient(colors: [ShopSurface.top, ShopSurface.bottom], startPoint: .top, endPoint: .bottom))
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
-            shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.16), .white.opacity(0.02)],
-                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
-        }
+        nookiCard(radius: radius)
     }
 
-    /// Fades and rises into place as it scrolls in, once per appearance; only a fade under Reduce Motion.
+    /// Fades and rises a little into place as it scrolls in, straight up, never sideways; only a fade under Reduce
+    /// Motion.
     func shopAppear() -> some View {
         modifier(ShopAppear())
     }
-}
-
-private enum ShopSurface {
-    static let top = Color(light: Color(hex: 0xFFFAF3), dark: Color(hex: 0x4E352A))
-    static let bottom = Color(light: Color(hex: 0xFBEBD8), dark: Color(hex: 0x3A271F))
 }
 
 private struct ShopAppear: ViewModifier {
@@ -239,8 +211,7 @@ private struct ShopAppear: ViewModifier {
         content.scrollTransition(.animated(.spring(duration: 0.5, bounce: 0.25))) { content, phase in
             content
                 .opacity(phase.isIdentity ? 1 : 0.3)
-                .scaleEffect(phase.isIdentity || reduceMotion ? 1 : 0.94)
-                .offset(y: phase.isIdentity || reduceMotion ? 0 : 14)
+                .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
         }
     }
 }
@@ -269,5 +240,75 @@ struct ShopSectionHeader<Trailing: View>: View {
                 .font(.nookiCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
+    }
+}
+
+/// Lays its views out in rows, left to right, starting a new row when the next one wouldn't fit.
+struct WrapLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { $0.width }.max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private func rows(width: CGFloat, subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
+        var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
+        var current: (indices: [Int], width: CGFloat, height: CGFloat) = ([], 0, 0)
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            if needed > width, !current.indices.isEmpty {
+                rows.append(current)
+                current = ([index], size.width, size.height)
+            } else {
+                current = (current.indices + [index], needed, max(current.height, size.height))
+            }
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
+    }
+}
+
+private struct ShopButtonStyle: ButtonStyle {
+    let prominent: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.nookiHeadline)
+            .foregroundStyle(prominent ? Ink.heroInk : Ink.accentText)
+            .padding(.horizontal, Space.l)
+            .padding(.vertical, controlSize == .large ? 14 : 9)
+            .background {
+                if prominent {
+                    Capsule().fill(.honeyGradient)
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                } else {
+                    Capsule().fill(Ink.surfaceRaised)
+                        .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
+                }
+            }
+            .contentShape(.capsule)
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .brightness(configuration.isPressed ? -0.04 : 0)
+            .animation(.spring(duration: 0.2), value: configuration.isPressed)
     }
 }

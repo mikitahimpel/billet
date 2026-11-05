@@ -3,5 +3,18 @@
     "user-alice",
     "user-bob"
   ],
+  "moods": [
+    {
+      "at": 1700000005000,
+      "mood": "missing",
+      "note": "come home soon 🌙",
+      "user": "user-alice"
+    },
+    {
+      "at": 1700000004000,
+      "mood": "sleepy",
+      "user": "user-bob"
+    }
+  ],
   "pairId": "pair-1"
 }

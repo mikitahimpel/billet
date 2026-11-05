@@ -6,6 +6,7 @@
   "sideEffects": false,
   "exports": {
     "./cat": "./src/cat.ts",
+    "./date-ideas": "./src/date-ideas.ts",
     "./pair-id": "./src/pair-id.ts",
     "./flags": "./src/flags.ts",
     "./ids": "./src/ids.ts",
@@ -19,6 +20,7 @@
     "./coin-packs": "./src/coin-packs.ts",
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
+    "./mood": "./src/mood.ts",
     "./reaction": "./src/reaction.ts",
     "./riddle-words": "./src/riddle-words.ts",
     "./shop": "./src/shop.ts"

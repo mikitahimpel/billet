@@ -55,20 +55,6 @@ struct UsView: View {
                 .foregroundStyle(Ink.primary)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
-            Menu {
-                Section("How are you, \(state.profile.name(of: state.viewer))?") {
-                    ForEach(PartnerMood.allCases, id: \.self) { mood in
-                        Button("\(mood.emoji) \(mood.title.capitalized)") { state.setMood(mood) }
-                    }
-                }
-            } label: {
-                Image(systemName: "face.smiling")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.primary)
-                    .frame(width: 40, height: 40)
-            }
-            .glass(.circle, interactive: true)
-            .accessibilityLabel("Mood")
         }
         .frame(height: 44)
     }
@@ -168,7 +154,7 @@ private struct CountdownHero: View {
                 }
             }
             .padding(18)
-            .usCard(radius: Radius.hero)
+            .usCard(radius: Radius.hero, warm: true)
         }
         .buttonStyle(.plain)
     }

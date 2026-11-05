@@ -7,7 +7,7 @@ nonisolated enum CatProfile {
     static let defaultName = "Mochi"
     /// The server's limit for the `cat_name` answer.
     static let nameLimit = 24
-    /// Stands for the cat's name in bundled copy, such as DateIdeas.json.
+    /// Stands for the cat's name in bundled and server copy, such as the date catalog.
     static let placeholder = "{cat}"
 
     /// UserDefaults is thread-safe, though the SDK doesn't mark it Sendable.
