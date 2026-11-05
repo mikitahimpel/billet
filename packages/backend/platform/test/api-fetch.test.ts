@@ -1386,8 +1386,9 @@ describe("the couple's WebSocket", () => {
     it("gives a pair its variants when it pairs, before anyone asks", async () => {
       const { pairId } = await pairOf("subject-owner", "subject-claimer");
       const stored = await storedFlags();
-      expect(stored.map(({ pair_id }) => pair_id)).toEqual([pairId, pairId]);
+      expect(stored.map(({ pair_id }) => pair_id)).toEqual([pairId, pairId, pairId]);
       expect(stored.map(({ experiment_key }) => experiment_key).toSorted()).toEqual([
+        "payments",
         "skewed",
         "split",
       ]);
@@ -1400,10 +1401,10 @@ describe("the couple's WebSocket", () => {
         flagsFor(claimer),
         flagsFor(owner),
       ]);
-      expect(forOwner.map(({ key }) => key)).toEqual(["split", "skewed"]);
+      expect(forOwner.map(({ key }) => key)).toEqual(["split", "skewed", "payments"]);
       expect(forClaimer).toEqual(forOwner);
       expect(again).toEqual(forOwner);
-      expect(await storedFlags()).toHaveLength(2);
+      expect(await storedFlags()).toHaveLength(3);
     });
 
     it("never lists an experiment that is switched off, and stores nothing for it", async () => {
@@ -1631,6 +1632,30 @@ describe("payments in the Worker", () => {
     ]);
     const rows = await env.DB.prepare("SELECT owner_id, environment, status FROM purchases").all();
     expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
+  });
+
+  it("answers 404 on every purchase route to a pair the payments flag is off for", async () => {
+    const { owner, pairId } = await pairOf("subject-flag-a", "subject-flag-b");
+    await env.DB.prepare(
+      "INSERT INTO pair_flag_overrides (pair_id, experiment_key, variant, set_at, set_by) VALUES (?, 'payments', 'off', 0, 'test')",
+    )
+      .bind(pairId)
+      .run();
+    const responses = [
+      await atStage(
+        "dev",
+        post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
+      ),
+      await atStage("dev", post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
+      await atStage(
+        "dev",
+        new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
+      ),
+    ];
+    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
+    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
+      results: [],
+    });
   });
 
   it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {
