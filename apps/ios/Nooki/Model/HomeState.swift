@@ -167,6 +167,16 @@ final class HomeState {
         return record { $0.buy([item.id], cost: price, title: item.name, giftTo: asGift, at: .now) }
     }
 
+    /// Buys an ink colour at its price. The server hears of it once Undo has passed (see `InkSync`).
+    @discardableResult
+    func buy(_ ink: PaletteInk) -> Bool {
+        guard !ink.isOwned(owned) else { return false }
+        return record { $0.buy([ink.id], cost: ink.price, title: "\(ink.name) ink", kind: .ink, at: .now) }
+    }
+
+    /// The inks on sale, the free one first: the server's catalog once it has answered.
+    var inks = PaletteInk.bundled
+
     func toggleWish(_ item: ShopItem) {
         wallet.update { if $0.wishlist.remove(item.id) == nil { $0.wishlist.insert(item.id) } }
     }
@@ -259,8 +269,8 @@ final class HomeState {
 
     /// Adding a note earns the couple 5 coins.
     @discardableResult
-    func addNote(text: String, paper: Note.Paper) -> Bool {
-        guard notes.add(text: text, paper: paper, author: viewer) != nil else { return false }
+    func addNote(text: String, paper: Note.Paper, ink: UInt32? = nil) -> Bool {
+        guard notes.add(text: text, paper: paper, author: viewer, ink: ink) != nil else { return false }
         wallet.earn(5)
         streak.record()
         return true

@@ -14,12 +14,11 @@ struct NoteComposer: View {
     @Environment(\.dismiss) private var dismiss
     @State private var text = ""
     @State private var paper: Note.Paper = .butter
-    @State private var ink: UInt32 = 0x5B3A28
+    @State private var ink = PaletteInk.free
     @State private var drawing = PKDrawing()
     @State private var canvas = PKCanvasView()
     @FocusState private var focused: Bool
 
-    private static let inks: [UInt32] = [0x5B3A28, 0xE0554A, 0x6F8A4E]
     private static let side: CGFloat = 280
 
     private var isEmpty: Bool {
@@ -45,7 +44,7 @@ struct NoteComposer: View {
 
             paperView
 
-            if mode == .draw { inkRow }
+            inkRow
 
             Spacer(minLength: 0)
 
@@ -67,6 +66,8 @@ struct NoteComposer: View {
             .padding(.bottom, 12)
         }
         .usSheet()
+        // Over the sheet: an ink bought here plays its moment and Undo where it was tapped.
+        .overlay { PurchaseMoment(state: state) }
         .onAppear { focused = mode == .write }
         .onChange(of: mode) { _, new in focused = new == .write }
     }
@@ -79,7 +80,7 @@ struct NoteComposer: View {
                 VStack(spacing: 0) {
                     TextField("", text: $text, prompt: Text("Write a little note…"), axis: .vertical)
                         .font(.custom("Noteworthy-Bold", size: 22))
-                        .foregroundStyle(Color(hex: 0x5B3A28))
+                        .foregroundStyle(Color(hex: ink.light))
                         .lineLimit(6)
                         .focused($focused)
                         .onChange(of: text) { _, value in
@@ -91,7 +92,7 @@ struct NoteComposer: View {
                 }
                 .padding(20)
             case .draw:
-                DoodleCanvas(canvas: canvas, ink: Color(hex: ink)) { drawing = $0 }
+                DoodleCanvas(canvas: canvas, ink: Color(hex: ink.light)) { drawing = $0 }
             }
         }
         .frame(width: Self.side, height: Self.side)
@@ -103,14 +104,17 @@ struct NoteComposer: View {
 
     private var inkRow: some View {
         HStack(spacing: 12) {
-            ForEach(Self.inks, id: \.self) { hex in
-                Button { ink = hex } label: {
-                    dot(Color(hex: hex), selected: ink == hex)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Ink")
+            ScrollView(.horizontal) {
+                InkPalette(state: state, selection: $ink, openShop: { _ in openShop() })
             }
-            Spacer()
+            .scrollIndicators(.hidden)
+            if mode == .draw { drawButtons }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var drawButtons: some View {
+        HStack(spacing: 12) {
             Button { canvas.undoManager?.undo() } label: {
                 Image(systemName: "arrow.uturn.backward")
                     .font(.system(size: 16, weight: .semibold))
@@ -130,7 +134,6 @@ struct NoteComposer: View {
             .buttonStyle(.plain)
             .accessibilityLabel("Clear")
         }
-        .padding(.horizontal, 20)
     }
 
     private var paperRow: some View {
@@ -152,6 +155,11 @@ struct NoteComposer: View {
             .overlay(Circle().stroke(.white, lineWidth: 2).opacity(selected ? 1 : 0))
     }
 
+    private func openShop() {
+        state.tab = .shop
+        dismiss()
+    }
+
     private func clear() {
         canvas.drawing = PKDrawing()
         drawing = PKDrawing()
@@ -160,7 +168,7 @@ struct NoteComposer: View {
     private func save() {
         switch mode {
         case .write:
-            guard state.addNote(text: text, paper: paper) else { return }
+            guard state.addNote(text: text, paper: paper, ink: ink.light) else { return }
         case .draw:
             let frame = CGRect(x: 0, y: 0, width: Self.side, height: Self.side)
             var image = UIImage()

@@ -1,3 +1,4 @@
+import PetScene
 import SwiftUI
 
 // MARK: - Shop
@@ -11,6 +12,10 @@ struct ShopView: View {
     @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
     @State private var sheetSet: SetChoice?
+    /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
+    @State private var highlightedInk: String?
+    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.shopScroll`).
+    @State private var position = ScrollPosition(edge: .top)
 
     /// Tab bar (66pt) + home-indicator area + breathing room, so the last row clears it.
     private let bottomInset: CGFloat = 134
@@ -37,16 +42,25 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
+            .scrollPosition($position)
+            .onAppear {
+                guard ScenePerf.isOn else { return }
+                NookiPerf.shopScroll = { position.scrollTo(y: $0) }
+            }
+            .onDisappear { NookiPerf.shopScroll = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
                 selected = .today
                 switch focus {
-                case .ink:
+                case .ink(let id):
                     // After Today has laid out, so the Inks block is there to scroll to.
                     Task {
                         try? await Task.sleep(for: .milliseconds(100))
                         withAnimation(.spring(duration: 0.45)) { reader.scrollTo("inks", anchor: .top) }
+                        highlightedInk = id
                         state.shopFocus = nil
+                        try? await Task.sleep(for: .seconds(3))
+                        withAnimation(.easeOut(duration: 0.4)) { if highlightedInk == id { highlightedInk = nil } }
                     }
                 case .item(let id):
                     sheetItem = Catalog.item(id)
@@ -73,6 +87,13 @@ struct ShopView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .task {
+            // The cards draw their art at 512 px and the bundles and collections at 256: decoded now, off the main
+            // thread, the first scroll down the page doesn't stop for each picture.
+            let names = Catalog.items.map(\.thumbnail)
+            await Thumbnails.prefetch(names, maxPixels: 512)
+            await Thumbnails.prefetch(names, maxPixels: 256)
+        }
         .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
@@ -134,6 +155,13 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
         .id("bundles")
+
+        VStack(alignment: .leading, spacing: Space.m) {
+            sectionHeader("Inks") { Text("For notes and drawings") }
+                .padding(.horizontal, Space.l)
+            InkShelf(state: state, highlighted: highlightedInk)
+        }
+        .id("inks")
 
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Collections") { Text("A bonus for each full set") }

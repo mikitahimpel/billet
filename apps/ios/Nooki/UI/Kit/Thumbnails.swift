@@ -4,15 +4,34 @@ import UIKit
 /// and the hero fan also crops them to the artwork before aligning the pieces on the card's bottom edge.
 @MainActor
 enum Thumbnails {
-    private static let cache = NSCache<NSString, UIImage>()
+    /// NSCache is safe from any thread; `prefetch` fills it off the main one.
+    nonisolated(unsafe) private static let cache = NSCache<NSString, UIImage>()
 
     static func image(_ name: String, maxPixels: Int) -> UIImage? {
-        let key = "\(name)@\(maxPixels)" as NSString
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let url = Bundle.main.url(forResource: name, withExtension: "png"),
-              let image = Downsample.image(at: url, maxPixels: maxPixels) else { return nil }
-        cache.setObject(image, forKey: key)
+        if let cached = cache.object(forKey: key(name, maxPixels)) { return cached }
+        guard let image = decode(name, maxPixels: maxPixels) else { return nil }
+        cache.setObject(image, forKey: key(name, maxPixels))
         return image
+    }
+
+    /// Decodes `names` at `maxPixels` away from the main thread, so the views that draw them later find them ready
+    /// instead of decoding each in the middle of a scroll.
+    nonisolated static func prefetch(_ names: [String], maxPixels: Int) async {
+        await Task.detached(priority: .userInitiated) {
+            for name in names where cache.object(forKey: key(name, maxPixels)) == nil {
+                if Task.isCancelled { return }
+                if let image = decode(name, maxPixels: maxPixels) { cache.setObject(image, forKey: key(name, maxPixels)) }
+            }
+        }.value
+    }
+
+    private nonisolated static func key(_ name: String, _ maxPixels: Int) -> NSString {
+        "\(name)@\(maxPixels)" as NSString
+    }
+
+    private nonisolated static func decode(_ name: String, maxPixels: Int) -> UIImage? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return nil }
+        return Downsample.image(at: url, maxPixels: maxPixels)
     }
 
     /// Fan pieces are at most 88 pt, so the 512 px card decode leaves enough after the crop.
