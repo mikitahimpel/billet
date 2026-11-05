@@ -52,6 +52,8 @@ export const ActivityEvent = Schema.TaggedUnion({
   PlantWatered: { plant: Schema.optionalKey(ActivityPlantId) },
   CatAdopted: { name: CatName },
   CatRenamed: { name: CatName },
+  /** The partner claimed the invite: the pair formed. */
+  PartnerJoined: {},
   NoteSent: { note: NoteId, kind: Schema.Literals(["Drawing", "Photo", "Text"]) },
   /** A partner reacted to the other's photo. */
   Reacted: { note: NoteId, reaction: Reaction },

@@ -15,6 +15,7 @@ import type { CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
 import type { NotesUnavailable } from "./notes-error.ts";
@@ -23,9 +24,11 @@ import type { NotesUnavailable } from "./notes-error.ts";
 export class PairRooms extends Context.Service<
   PairRooms,
   {
+    /** `joined` is who claimed the invite, and when: pairing passes it, a lazy open does not. */
     readonly open: (
       pairId: PairId,
       members: readonly [UserId, UserId],
+      joined?: RoomJoin,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly sendNote: (
       pairId: PairId,

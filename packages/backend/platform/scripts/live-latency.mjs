@@ -10,14 +10,19 @@
 // that is late on the way in points at the uplink or the routing to the Durable Object; one late
 // on the way out points at the room holding its sends (the output gate) or the downlink.
 //
-//   BILLET_HOST=<host> node scripts/live-latency.mjs [frames=150] [intervalMs=40]
+//   BILLET_HOST=<host> node scripts/live-latency.mjs [frames=150] [intervalMs=40] [--host-ok]
 //
-// Keep the host out of committed logs and PRs: pass it in the environment.
+// Keep the host out of committed logs and PRs: pass it in the environment. The probe creates real
+// accounts and a pair, so it runs only against the dev Worker (a host with `billet-api-dev` in
+// it); `--host-ok` is for another host someone has agreed to.
 import { randomBytes } from "node:crypto";
 
 const host = (process.env.BILLET_HOST ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 if (!host) throw new Error("set BILLET_HOST to the API host");
-const [framesArg = "150", intervalArg = "40"] = process.argv.slice(2);
+const args = process.argv.slice(2);
+if (!host.includes("billet-api-dev") && !args.includes("--host-ok"))
+  throw new Error("BILLET_HOST is not the dev Worker; pass --host-ok only if that host is agreed");
+const [framesArg = "150", intervalArg = "40"] = args.filter((arg) => arg !== "--host-ok");
 const frames = Number(framesArg);
 const interval = Number(intervalArg);
 const base = `https://${host}`;
@@ -131,5 +136,8 @@ try {
   );
 } finally {
   for (const token of [sender, receiver])
-    await call("DELETE", "/v1/account", token, {}).catch(() => {});
+    await call("DELETE", "/v1/account", token, {}).catch((error) => {
+      console.error(`account not deleted: ${error.message}`);
+      process.exitCode = 1;
+    });
 }

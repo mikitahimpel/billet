@@ -40,8 +40,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
     PairRooms,
     PairRooms.of(
       spanMethods("PairRooms", {
-        open: (pairId, members) =>
-          callRoom(() => rooms.getByName(pairId).open(pairId, members), decodeDecision),
+        open: (pairId, members, joined) =>
+          callRoom(() => rooms.getByName(pairId).open(pairId, members, joined), decodeDecision),
         sendNote: (pairId, author, request) =>
           callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
         inks: (pairId) => callRoom(() => rooms.getByName(pairId).inks(), decodeInks),

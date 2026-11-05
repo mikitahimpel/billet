@@ -179,14 +179,7 @@ struct HomeView: View {
             petSentAt = .now
             Task { await session.catEvents.send([.petted]) }
         }
-        .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
-        .onChange(of: state.tab) { _, tab in
-            switch tab {
-            case .moments: hints.done(MomentsHint())
-            case .shop: hints.done(ShopHint())
-            case .world, .us: break
-            }
-        }
+        .onChange(of: state.tab, initial: true) { visitHints() }
         .onChange(of: state.lastPurchase) { _, purchase in
             guard let purchase, purchase.kind == .ink, let inkSync else { return }
             Task { await inkSync.settle(purchase, state) }
@@ -196,6 +189,7 @@ struct HomeView: View {
             case .active:
                 state.refresh()
                 scene?.appOpened()
+                visitHints()
                 Task {
                     await DrawingSync.requestPushes(asking: false)
                     await session?.drawingSync?.fetchLatest()
@@ -326,6 +320,24 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
+    /// Each tab shown, and each return to the app, is a visit that may show one hint.
+    private func visitHints() {
+        hints.visit {
+            let screen: HintScreen = switch state.tab {
+            case .world: .world
+            case .moments: .moments
+            case .shop: .shop
+            case .us: .other
+            }
+            let sheet = state.composingNote != nil || state.drawing || state.showsSettings || state.showsInbox
+                || state.openedShopItem != nil
+            let buying = state.lastPurchase?.canUndo(at: .now) == true
+            return HintContext(
+                screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
+                canAffordTreat: state.coins >= HomeState.treatPrice)
+        }
+    }
+
     private var inkSync: InkSync? {
         guard let session, session.isPaired else { return nil }
         return InkSync(api: session.api)
