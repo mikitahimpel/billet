@@ -42,8 +42,9 @@ nonisolated enum CatCoat: String, CaseIterable, Sendable {
     static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
 
     /// Where the rigs are read from in this coat (`CatRig.Files(named:drawn:in:)`): the app itself for grey, else a
-    /// folder in Caches holding each pose's PLY in this coat, written once, beside links to Ilya's skins and rigs.
-    func bundle(from main: Bundle = .main, caches: URL = .cachesDirectory) throws -> Bundle {
+    /// folder in Caches holding each of `poses`' PLY in this coat, written once, beside links to Ilya's skins and rigs.
+    /// Each set of poses has a folder of its own: a Bundle caches its folder's listing, so files written later go unseen.
+    func bundle(poses: [String] = Self.poses, from main: Bundle = .main, caches: URL = .cachesDirectory) throws -> Bundle {
         guard self != .grey else { return main }
         // One folder per build, so an update that changes a coat's colours never reads the old ones.
         let root = caches.appending(path: "Coats")
@@ -52,9 +53,10 @@ nonisolated enum CatCoat: String, CaseIterable, Sendable {
         for old in (try? files.contentsOfDirectory(atPath: root.path)) ?? [] where old != build {
             try? files.removeItem(at: root.appending(path: old))
         }
-        let folder = root.appending(path: "\(build)/\(rawValue).bundle")
+        let set = poses == Self.poses ? "" : "-" + poses.joined(separator: "-")
+        let folder = root.appending(path: "\(build)/\(rawValue)\(set).bundle")
         try files.createDirectory(at: folder, withIntermediateDirectories: true)
-        for pose in Self.poses {
+        for pose in poses {
             let ply = folder.appending(path: "\(pose).ply")
             if !files.fileExists(atPath: ply.path) {
                 try dressedPLY(pose, from: main).write(to: ply, options: .atomic)
