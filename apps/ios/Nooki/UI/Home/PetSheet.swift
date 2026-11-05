@@ -3,6 +3,8 @@ import SwiftUI
 /// Mochi's avatar in the room's corner: her face inside a ring that fills toward the next level. A tap opens her sheet.
 struct PetButton: View {
     let state: HomeState
+    /// Mochi's needs, once her brain is running in the room.
+    var needs: () -> PetNeedsSource?
     var onPlay: () -> Void
     @State private var showsSheet = false
 
@@ -43,20 +45,21 @@ struct PetButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(state.petName), Lv. \(state.level)")
         .sheet(isPresented: $showsSheet) {
-            PetSheet(state: state) {
+            PetSheet(state: state, needs: needs) {
                 showsSheet = false
                 onPlay()
             }
-            .presentationDetents([.height(372)])
+            .presentationDetents([.height(500), .large])
             .presentationBackground(Ink.sheet)
             .presentationDragIndicator(.visible)
         }
     }
 }
 
-/// Mochi up close: her level and mood, and ways to look after her.
+/// Mochi up close: her level, her four needs, and the way to fill each.
 private struct PetSheet: View {
     let state: HomeState
+    var needs: () -> PetNeedsSource?
     var onPlay: () -> Void
     @State private var short = false
 
@@ -84,53 +87,30 @@ private struct PetSheet: View {
                 }
             }
 
-            HStack(spacing: 6) {
-                ForEach(state.moods) { mood in
-                    MoodChip(mood: mood)
-                }
-            }
-
-            HStack(spacing: 10) {
-                action("Pet", "hand.raised.fill", detail: "+3%") {
-                    withAnimation(.spring(duration: 0.4)) { state.pet() }
-                }
-                action("Treat", "fork.knife", detail: "\(HomeState.treatPrice) coins") {
-                    withAnimation(.spring(duration: 0.4)) { short = !state.treat() }
-                }
-                action("Play", "sparkles", detail: "All her tricks", run: onPlay)
+            // The brain starts after the room has loaded and keeps changing; look again each second.
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                NeedBars(
+                    name: state.petName,
+                    needs: (FixedNeeds.fromLaunch ?? needs())?.needs,
+                    feed: {
+                        withAnimation(.spring(duration: 0.4)) { short = !state.treat() }
+                        if !short { needs()?.feed() }
+                    },
+                    pet: { withAnimation(.spring(duration: 0.4)) { state.pet() } },
+                    play: onPlay
+                )
             }
             .haptic(.impact(weight: .light), trigger: state.petPulse)
 
             Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(short ? Color.blushPink : Ink.secondary)
+                .foregroundStyle(Ink.secondary)
                 .contentTransition(.opacity)
         }
         .foregroundStyle(Ink.primary)
         .padding(.horizontal, 20)
         .padding(.top, 28)
         .frame(maxHeight: .infinity, alignment: .top)
-    }
-
-    private func action(_ title: String, _ symbol: String, detail: String, run: @escaping () -> Void) -> some View {
-        Button(action: run) {
-            VStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.honeyGradient)
-                    .frame(height: 26)
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                Text(detail)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(.white.opacity(0.08), in: .rect(cornerRadius: 20))
-            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Ink.hairline, lineWidth: 0.5))
-        }
-        .buttonStyle(PressScaleStyle())
     }
 }
 
@@ -151,25 +131,5 @@ private struct PetPortrait: View {
                                    startRadius: 0, endRadius: size * 0.75))
         .clipShape(.circle)
         .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: size > 70 ? 3 : 2))
-    }
-}
-
-struct MoodChip: View {
-    let mood: Mood
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: mood.symbol)
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(mood.tint)
-            Text(mood.title)
-                .font(.system(size: 13, weight: .medium))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-        }
-        .frame(maxWidth: .infinity)
-        .frame(height: 32)
-        .background(.white.opacity(0.1), in: .capsule)
-        .overlay(Capsule().stroke(Ink.hairline, lineWidth: 0.5))
     }
 }

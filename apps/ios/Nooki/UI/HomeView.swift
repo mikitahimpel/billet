@@ -68,7 +68,7 @@ struct HomeView: View {
         // Bottom left, so it stays clear of the "+" in the right corner.
         .overlay(alignment: .bottomLeading) {
             if state.tab == .world {
-                PetButton(state: state) { scene?.playAll() }
+                PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
                     .padding(.leading, 16)
                     .padding(.bottom, 94)
                     .transition(.opacity.combined(with: .offset(y: 12)))
