@@ -3,6 +3,7 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { ActivityItem } from "@billet/contracts-domain/activity";
 import { CatEntry } from "@billet/contracts-domain/cat";
+import { freeInk } from "@billet/contracts-domain/inks";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { activityForCatEntry, activityForNote, cursorOf, itemFor } from "../src/activity.ts";
@@ -95,7 +96,10 @@ describe("RoomService: the Inbox", () => {
           yield* tick;
           yield* room.recordCatEvent(bob, pet(1));
           yield* tick;
-          yield* room.sendNote(bob, SendNoteRequest.cases.Text.make({ key: uuid(2), text: "hi" }));
+          yield* room.sendNote(
+            bob,
+            SendNoteRequest.cases.Text.make({ key: uuid(2), text: "hi", ink: freeInk }),
+          );
           yield* tick;
           yield* room.recordCatEvent(alice, pet(3));
 

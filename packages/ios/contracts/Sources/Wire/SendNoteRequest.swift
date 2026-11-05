@@ -8,7 +8,8 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
   case photo(
     key: IdempotencyKey, image: MediaKey, width: Int, height: Int, preview: String,
     caption: NoteText? = nil)
-  case text(key: IdempotencyKey, text: NoteText, paper: PaperColor? = nil)
+  /// `ink` must be one the pair owns, or the server answers `ApiError.inkNotOwned`.
+  case text(key: IdempotencyKey, text: NoteText, paper: PaperColor? = nil, ink: InkId = .free)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -21,6 +22,7 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
     case height
     case preview
     case caption
+    case ink
   }
 
   public init(from decoder: any Decoder) throws {
@@ -45,7 +47,8 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
       self = .text(
         key: try container.decode(IdempotencyKey.self, forKey: .key),
         text: try container.decode(NoteText.self, forKey: .text),
-        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper))
+        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        ink: try container.decodeOptionalKey(InkId.self, forKey: .ink) ?? .free)
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -69,11 +72,12 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
       try container.encode(height, forKey: .height)
       try container.encode(preview, forKey: .preview)
       try container.encodeIfPresent(caption, forKey: .caption)
-    case .text(let key, let text, let paper):
+    case .text(let key, let text, let paper, let ink):
       try container.encode("Text", forKey: .tag)
       try container.encode(key, forKey: .key)
       try container.encode(text, forKey: .text)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encode(ink, forKey: .ink)
     }
   }
 }

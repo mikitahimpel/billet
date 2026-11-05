@@ -25,6 +25,12 @@ export const StoredNote = Schema.Struct({
 export const SampleRow = Schema.Struct({ id: Schema.String, createdAt: EpochMillis });
 
 /** What a `delivery` row holds. */
+/** An `owned_ink` row: one ink colour the pair bought, and its place in the order. */
+export const StoredOwnedInk = Schema.Struct({
+  inkId: Schema.String,
+  position: Schema.Int,
+});
+
 export const StoredDelivery = Schema.Struct({
   noteId: Schema.String,
   lane: Schema.String,

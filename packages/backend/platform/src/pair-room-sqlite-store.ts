@@ -12,7 +12,7 @@ import {
 import { ActivityRow, activityRetentionMillis, cursorOf } from "@billet/backend-pair-room/activity";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
-import { activity, activityRead, cat, catEntry, note, room } from "./room-schema.ts";
+import { activity, activityRead, cat, catEntry, note, ownedInk, room } from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
 export class RoomDb extends Context.Service<RoomDb, RoomDatabase>()(
@@ -120,7 +120,11 @@ const catEntryFrom = (row: CatEntryRow): Option.Option<CatEntry> =>
 const catEntriesFrom = (rows: ReadonlyArray<CatEntryRow>): ReadonlyArray<CatEntry> =>
   rows.flatMap((row) => Option.toArray(catEntryFrom(row)));
 
-const roomFrom = (row: RoomRow | undefined, catRow: CatRow | undefined): RoomState =>
+const roomFrom = (
+  row: RoomRow | undefined,
+  catRow: CatRow | undefined,
+  inks: ReadonlyArray<string>,
+): RoomState =>
   decodeRoom(
     row === undefined
       ? { _tag: "Vacant" }
@@ -133,6 +137,7 @@ const roomFrom = (row: RoomRow | undefined, catRow: CatRow | undefined): RoomSta
           ],
           lastSeq: row.lastSeq,
           streakDays: row.streakDays,
+          inks,
           ...catFrom(catRow),
         },
   );
@@ -161,8 +166,18 @@ export const SqliteRoomStore = Layer.effect(
     const db = yield* RoomDb;
 
     return {
-      load: Effect.all([db.select().from(room), db.select().from(cat)]).pipe(
-        Effect.map(([[row], [catRow]]) => roomFrom(row, catRow)),
+      load: Effect.all([
+        db.select().from(room),
+        db.select().from(cat),
+        db.select().from(ownedInk).orderBy(asc(ownedInk.position)),
+      ]).pipe(
+        Effect.map(([[row], [catRow], inks]) =>
+          roomFrom(
+            row,
+            catRow,
+            inks.map(({ inkId }) => inkId),
+          ),
+        ),
         Effect.orDie,
       ),
       commit: (
@@ -179,6 +194,10 @@ export const SqliteRoomStore = Layer.effect(
                 .insert(room)
                 .values(values)
                 .onConflictDoUpdate({ target: room.id, set: values });
+              // Inks are only ever added, so the ones already stored keep their place.
+              for (const [position, inkId] of state.inks.entries()) {
+                yield* tx.insert(ownedInk).values({ inkId, position }).onConflictDoNothing();
+              }
               for (const { entry, key } of notes) {
                 yield* tx.insert(note).values({
                   seq: entry.seq,

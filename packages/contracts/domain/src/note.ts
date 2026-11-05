@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis, MediaKey, NoteId, UserId } from "./ids.ts";
 import { CompactStrokes } from "./ink.ts";
+import { NoteInk } from "./inks.ts";
 
 /** The paper a note is written or drawn on. The client owns the palette; the wire carries the id. */
 export const PaperColor = Schema.Literals(["butter", "blush", "sage", "sky", "cream"]);
@@ -114,6 +115,8 @@ export const Note = Schema.TaggedUnion({
     sentAt: EpochMillis,
     text: NoteText,
     paper: Schema.optionalKey(PaperColor),
+    /** The ink colour, owned by the pair. A note from before inks reads as the free ink. */
+    ink: NoteInk,
   },
 });
 export type Note = typeof Note.Type;

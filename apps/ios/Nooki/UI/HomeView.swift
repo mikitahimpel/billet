@@ -202,13 +202,16 @@ struct HomeView: View {
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
-        // `-room city` on launch opens the City room and `-tab shop` the Shop, for recordings and screenshots.
+        // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" {
             select(.city)
         } else if let home {
             NookiPerf.shown(home, kind: .home)
         }
+        #if DEBUG
+        // `-tab shop` opens the Shop, for screenshots.
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
+        #endif
     }
 
     private func select(_ room: RoomKind) {

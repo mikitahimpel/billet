@@ -7,6 +7,7 @@ import {
   UtcOffsetSeconds,
 } from "@billet/contracts-domain/cat";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
@@ -26,5 +27,7 @@ export const RoomCommand = Schema.TaggedUnion({
     at: EpochMillis,
   },
   RecordCatEvent: { id: IdempotencyKey, by: UserId, at: EpochMillis, event: CatEvent },
+  /** Gives the pair ink colours, as the wallet does once it has taken their coins. */
+  GrantInks: { inks: Schema.Array(InkId) },
 });
 export type RoomCommand = typeof RoomCommand.Type;
