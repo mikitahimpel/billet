@@ -160,6 +160,11 @@ run() {
       done
     fi
     python3 -c 'import time; time.sleep(0.2)'
+    # The app crashed or was killed: no more lines will come.
+    if ! kill -0 $pid 2> /dev/null && ! grep -q '^PERF done' $log; then
+      echo "PERF error app exited" >> $log
+      break
+    fi
     if ((SECONDS - started > run_limit)); then echo "PERF error timeout" >> $log; break; fi
     # A build without `-perf.script` (one from before Nooki had it) never says anything: stop early.
     if ((SECONDS - started > 180)) && ! grep -q '^PERF' $log 2>/dev/null; then
