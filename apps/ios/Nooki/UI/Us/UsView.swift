@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
-/// and the settings are in its header.
+/// and the settings are in its header. Every card is a `usCard`, every icon a `UsIcon`.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -54,9 +54,9 @@ struct UsView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
             Text("Us")
-                .font(.system(size: 26, weight: .bold, design: .rounded))
+                .font(.nookiLargeTitle)
                 .foregroundStyle(Ink.primary)
-                .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
+                .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             Menu {
                 Section("How are you, \(state.profile.name(of: state.viewer))?") {
@@ -66,7 +66,7 @@ struct UsView: View {
                 }
             } label: {
                 Image(systemName: "face.smiling")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.nookiHeadline)
                     .foregroundStyle(Ink.primary)
                     .frame(width: 40, height: 40)
             }
@@ -74,7 +74,7 @@ struct UsView: View {
             .accessibilityLabel("Mood")
             Button { state.showsSettings = true } label: {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.nookiHeadline)
                     .foregroundStyle(Ink.primary)
                     .frame(width: 40, height: 40)
             }
@@ -86,13 +86,13 @@ struct UsView: View {
     }
 
     private func tiles(upcoming: Int) -> some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Space.m) {
             Button { state.usRoute = .dates } label: {
                 DatesTile(matches: us.matches.count, next: us.plannedSorted.first { $0.rating == nil })
             }
             .buttonStyle(.plain)
 
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 Button { state.usRoute = .wishlists } label: {
                     SmallTile(icon: .init(symbol: "gift.fill", tint: .coral), title: "Wishlists",
                               detail: "\(us.wishes(of: state.partners.0).count + us.wishes(of: state.partners.1).count) wishes")
@@ -111,13 +111,14 @@ struct UsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Lists")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .font(.nookiTitle)
                     .foregroundStyle(Ink.primary)
+                    .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
                 Button { state.usRoute = .newList } label: {
                     Label("New list", systemImage: "plus")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.honey)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.accentText)
                 }
                 .buttonStyle(.plain)
             }
@@ -125,7 +126,7 @@ struct UsView: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(us.lists.enumerated()), id: \.element.id) { index, list in
-                    if index > 0 { Divider().overlay(Ink.hairline).padding(.leading, 56) }
+                    if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 58) }
                     Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
                         .buttonStyle(.plain)
                 }
@@ -148,41 +149,38 @@ private struct CountdownHero: View {
                 if let next { UsIcon(glyph: next.icon, size: 48) }
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Day \(days) together")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Ink.heroInk.opacity(0.7))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.accentText)
                     if let next {
                         Text(next.title)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(Ink.heroInk)
+                            .font(.nookiTitle)
+                            .foregroundStyle(Ink.text)
                             .lineLimit(2)
                         Text(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Ink.heroInk.opacity(0.7))
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
                     } else {
                         Text("Nothing planned yet")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(Ink.heroInk)
+                            .font(.nookiTitle)
+                            .foregroundStyle(Ink.text)
                     }
                 }
                 Spacer(minLength: 0)
                 if let next {
                     VStack(spacing: 0) {
                         Text(next.daysLeft == 0 ? "🎉" : "\(next.daysLeft)")
-                            .font(.system(size: 34, weight: .bold, design: .rounded).monospacedDigit())
+                            .font(.nookiLargeTitle.monospacedDigit())
+                            .contentTransition(.numericText())
                         Text(next.daysLeft == 0 ? "today" : next.daysLeft == 1 ? "day" : "days")
-                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .font(.nookiMicro)
                     }
                     .foregroundStyle(Ink.heroInk)
                     .frame(width: 76, height: 76)
-                    .background(.white.opacity(0.45), in: .circle)
+                    .background(Circle().fill(.honeyGradient))
                 }
             }
             .padding(18)
-            .background(
-                LinearGradient(colors: [Color(hex: 0xF6C891), Color(hex: 0xD98A55)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: .rect(cornerRadius: 28, style: .continuous)
-            )
+            .usCard(radius: Radius.hero)
         }
         .buttonStyle(.plain)
     }
@@ -194,23 +192,23 @@ private struct DatesTile: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: "dice.fill", tint: .blush), size: 60)
+            UsIcon(glyph: .init(symbol: "dice.fill", tint: .blush), size: 52)
             VStack(alignment: .leading, spacing: 3) {
                 Text("Date night")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
                 Text(detail)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
                     .lineLimit(1)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Ink.secondary)
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textTertiary)
         }
         .padding(14)
-        .usCard(radius: 24)
+        .usCard()
     }
 
     private var detail: String {
@@ -232,16 +230,16 @@ private struct SmallTile: View {
             UsIcon(glyph: icon, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
                 Text(detail)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .usCard(radius: 24)
+        .usCard()
     }
 }
 
@@ -252,18 +250,18 @@ private struct ListRow: View {
         HStack(spacing: 12) {
             UsIcon(glyph: list.icon, size: 34)
             Text(list.title)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
             Spacer(minLength: 0)
             Text(counts)
-                .font(.system(size: 13, weight: .medium).monospacedDigit())
-                .foregroundStyle(Ink.secondary)
+                .font(.nookiCaption.monospacedDigit())
+                .foregroundStyle(Ink.textSecondary)
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Ink.secondary.opacity(0.6))
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textTertiary)
         }
-        .padding(.horizontal, 12)
-        .frame(height: 54)
+        .padding(.horizontal, Space.m)
+        .frame(minHeight: 54)
         .contentShape(.rect)
     }
 

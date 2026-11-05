@@ -129,13 +129,13 @@ struct WishlistScreen: View {
             if wish.reservedBy == viewer {
                 HStack(spacing: 10) {
                     Text("You're gifting this ✓")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.nookiCaption.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
                     Spacer(minLength: 0)
                     Button("Release") {
                         withAnimation(.snappy(duration: 0.25)) { us.toggleReserve(wish.id, by: viewer) }
                     }
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(.plain)
                 }
@@ -144,7 +144,7 @@ struct WishlistScreen: View {
                     withAnimation(.snappy(duration: 0.25)) { us.toggleReserve(wish.id, by: viewer) }
                 } label: {
                     Text("I'll gift this")
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .font(.nookiCallout.weight(.semibold))
                         .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 16)
                         .frame(height: 36)
@@ -162,26 +162,26 @@ struct WishlistScreen: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(wish.title)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 Text(String(repeating: "♥", count: max(0, wish.want)))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Color.blushPink)
             }
             if !wish.price.isEmpty {
                 Text(wish.price)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Color.blushPink)
             }
             if let url = URL(string: wish.link), let host = url.host() {
                 Link(host, destination: url)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.nookiCaption)
                     .foregroundStyle(Ink.accentText)
             }
             if showReserved && wish.reservedBy != nil {
                 Label("Someone is planning something", systemImage: "gift.fill")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .font(.nookiMicro)
                     .foregroundStyle(Ink.textSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -197,19 +197,19 @@ struct WishlistScreen: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Gifted")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
                 ForEach(items) { wish in
                     HStack(spacing: 10) {
                         UsIcon(glyph: .init(symbol: "gift.fill", tint: .coral), size: 24)
                         Text(wish.title)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .font(.nookiCallout.weight(.semibold))
                             .foregroundStyle(Ink.text)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         if let date = wish.gifted {
                             Text(date, format: .dateTime.day().month())
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .font(.nookiMicro)
                                 .foregroundStyle(Ink.textSecondary)
                         }
                     }
@@ -225,7 +225,7 @@ struct WishlistScreen: View {
         let editable = owner == viewer
         return VStack(alignment: .leading, spacing: 10) {
             Text(owner == viewer ? "What I love" : "What \(other) loves")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.nookiHeadline)
                 .foregroundStyle(Ink.text)
             VStack(spacing: 0) {
                 lovesRow(.init(symbol: "tshirt.fill", tint: .sky), "Sizes", .sizes, \.sizes, editable: editable)
@@ -260,7 +260,7 @@ struct WishlistScreen: View {
         HStack(spacing: 10) {
             UsIcon(glyph: icon, size: 26)
             Text(label)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.nookiCallout.weight(.semibold))
                 .foregroundStyle(Ink.textSecondary)
                 .frame(width: 100, alignment: .leading)
             if editable {
@@ -275,11 +275,11 @@ struct WishlistScreen: View {
                 .focused($lovesFocus, equals: field)
                 .onSubmit { saveLoves() }
                 .multilineTextAlignment(.trailing)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.nookiCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
             } else {
                 Text(us.loves(of: owner)[keyPath: keyPath].isEmpty ? "—" : us.loves(of: owner)[keyPath: keyPath])
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -352,7 +352,7 @@ struct WishEditor: View {
     private var heartsPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("How much do you want it?")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.nookiCaption.weight(.semibold))
                 .foregroundStyle(Ink.textSecondary)
             HStack(spacing: 12) {
                 ForEach(1...3, id: \.self) { value in
