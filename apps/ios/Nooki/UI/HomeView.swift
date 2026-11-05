@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 
 struct HomeView: View {
     @State private var state = HomeState()
@@ -12,7 +13,11 @@ struct HomeView: View {
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(Hints.self) private var hints
+    @Environment(ServerSession.self) private var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    /// Whether this pair has both rooms to switch between.
+    var hasRoomChoice = true
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -99,15 +104,18 @@ struct HomeView: View {
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
             }
         }
-        .task { await lift() }
+        .task {
+            NookiPerf.start(state: state)
+            await lift()
+        }
         .task {
             guard home == nil, !Self.noRoom else { return }
             let room = DioramaScene()
             home = room
-            room.setPolaroids(await state.moments.thumbnails(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
+            room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
         }
         .task(id: state.moments.pinned) {
-            let images = await state.moments.thumbnails(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
+            let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
             if !Task.isCancelled { home?.setPolaroids(images) }
         }
         .task(id: boardKey) {
@@ -122,13 +130,34 @@ struct HomeView: View {
             if new, board == nil { board = makeBoard() }
         }
         .onChange(of: state.room) { showcase = nil }
+        .onChange(of: state.tab) { _, tab in
+            NookiPerf.tabShown(tab)
+            if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
+        }
         // Pets from the widget and the control reach Mochi when the app comes back.
-        .onChange(of: state.petPulse) { scene?.purr() }
+        .onChange(of: state.petPulse) {
+            scene?.purr()
+            hints.done(PetHint())
+        }
+        .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
+        .onChange(of: state.tab) { _, tab in
+            switch tab {
+            case .moments: hints.done(MomentsHint())
+            case .shop: hints.done(ShopHint())
+            case .world, .us: break
+            }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
                 state.refresh()
                 scene?.appOpened()
+                Task {
+                    await DrawingSync.requestPushes(asking: false)
+                    await session?.drawingSync?.fetchLatest()
+                    await session?.drawingSync?.registerPushTokens()
+                }
             case .background: state.didEnterBackground()
             default: break
             }
@@ -150,6 +179,15 @@ struct HomeView: View {
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
         }
+        .fullScreenCover(isPresented: $state.drawing) {
+            LockCanvasView(
+                state: state, api: session?.api,
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
+        }
+        .task { await DrawingSync.watchLiveActivities() }
+        .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
+            Task { await session?.drawingSync?.registerPushTokens() }
+        }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
@@ -167,19 +205,31 @@ struct HomeView: View {
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
-        // `-room city` on launch opens the City room and `-tab shop` the Shop, for recordings and screenshots.
-        if UserDefaults.standard.string(forKey: "room") == "city" { select(.city) }
+        // `-room city` on launch opens the City room, for recordings and screenshots.
+        if UserDefaults.standard.string(forKey: "room") == "city" {
+            select(.city)
+        } else if let home {
+            NookiPerf.shown(home, kind: .home)
+        }
+        #if DEBUG
+        // `-tab shop` opens the Shop, for screenshots.
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
+        #endif
     }
 
     private func select(_ room: RoomKind) {
         guard room != state.room else { return }
+        if room == .city { hints.done(RoomsHint()) }
         scene?.stop()
         if room == .city {
             // After the tap has drawn; until then the home room stays on screen.
-            Task { if state.room == .city, city == nil { city = CityRoomScene() } }
+            Task {
+                if state.room == .city, city == nil { city = CityRoomScene() }
+                if let city { NookiPerf.shown(city, kind: .city) }
+            }
         } else {
             city = nil
+            if let home { NookiPerf.shown(home, kind: .home) }
         }
         withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }
@@ -196,9 +246,7 @@ struct HomeView: View {
     }
 
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
-    private var boardKey: [UUID] {
-        state.notes.notes.prefix(BoardRoomScene.slots).map(\.id)
-    }
+    private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
     private func makeBoard() -> BoardRoomScene {
@@ -239,6 +287,7 @@ private struct RoomControls: View {
             }
             .padding(3)
             .warmGlass(.capsule)
+            .popoverTip(RoomsHint(), arrowEdge: .top)
 
             Spacer(minLength: 0)
 

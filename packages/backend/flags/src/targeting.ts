@@ -1,3 +1,4 @@
+import type { EpochMillis } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { AgeBand, Targeting } from "./experiments.ts";
 
@@ -8,6 +9,8 @@ export interface FlagContext {
   readonly appVersion: string;
   /** Not known until the age gate stores a declared band; then targeting by band applies. */
   readonly ageBand?: AgeBand | undefined;
+  /** When the pair formed, if the server still knows. */
+  readonly pairedAt?: EpochMillis | undefined;
 }
 
 interface ParsedVersion {
@@ -43,7 +46,10 @@ export const compareAppVersions = (a: string, b: string): number | undefined => 
 
 /** Whether the rules let this caller in. Each rule given must hold. */
 export const isTargeted = (targeting: Targeting, context: FlagContext): boolean => {
-  const { minAppVersion, maxAppVersion, ageBands, pairIds } = targeting;
+  const { minAppVersion, maxAppVersion, ageBands, pairIds, pairedSince } = targeting;
+  if (pairedSince !== undefined) {
+    if (context.pairedAt === undefined || context.pairedAt < Date.parse(pairedSince)) return false;
+  }
   if (pairIds !== undefined && pairIds.length > 0 && !pairIds.includes(context.pairId)) {
     return false;
   }

@@ -22,8 +22,16 @@ export const LivePoints = Schema.Array(Point).check(
 );
 
 export const ClientMessage = Schema.TaggedUnion({
-  /** Reconnect, asking for everything after `lastSeq`. */
-  Resume: { lastSeq: Schema.Int },
+  /**
+   * Reconnect, asking for every note after `lastSeq`, and every cat journal entry after
+   * `lastCatSeq`. A socket that leaves `lastCatSeq` out is sent no cat frames.
+   */
+  Resume: {
+    lastSeq: Schema.Int,
+    lastCatSeq: Schema.optionalKey(Schema.Int),
+    /** Asks for `ActivityUnread` whenever the user's Inbox count changes. */
+    activity: Schema.optionalKey(Schema.Boolean),
+  },
   /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },
   Presence: { state: PresenceState },

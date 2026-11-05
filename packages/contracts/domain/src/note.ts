@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis, MediaKey, NoteId, UserId } from "./ids.ts";
 import { CompactStrokes } from "./ink.ts";
+import { NoteInk } from "./inks.ts";
 
 /** The paper a note is written or drawn on. The client owns the palette; the wire carries the id. */
 export const PaperColor = Schema.Literals(["butter", "blush", "sage", "sky", "cream"]);
@@ -37,9 +38,57 @@ export const NoteText = Schema.String.check(
 );
 export type NoteText = typeof NoteText.Type;
 
+/** The most pixels a photo may have on either side. The app resizes before it uploads. */
+export const photoMaxSide = 8192;
+
+/** A photo's width or height in pixels, 1 to 8192. */
+export const PhotoSide = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: photoMaxSide }));
+export type PhotoSide = typeof PhotoSide.Type;
+
+const base83 =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~";
+
+/**
+ * A BlurHash has at most 9 by 9 components: a size flag, a maximum, 4 characters of average colour,
+ * and 2 for each other component.
+ */
+export const photoPreviewMaxLength = 4 + 2 * 9 * 9;
+
+/** Whether `hash` is a well-formed BlurHash: base 83 only, and as long as its header says. */
+const isBlurHash = (hash: string) => {
+  if (hash.length < 6 || hash.length > photoPreviewMaxLength) return false;
+  for (const character of hash) if (!base83.includes(character)) return false;
+  const sizeFlag = base83.indexOf(hash.charAt(0));
+  if (sizeFlag > 9 * 9 - 1) return false;
+  const componentsX = (sizeFlag % 9) + 1;
+  const componentsY = Math.floor(sizeFlag / 9) + 1;
+  return hash.length === 4 + 2 * componentsX * componentsY;
+};
+
+/**
+ * A blurred stand-in for a photo, shown until the full image arrives, as a BlurHash
+ * (https://blurha.sh). A BlurHash, not a tiny JPEG: it is at most 166 ASCII characters, about
+ * 30 for the usual 4 by 3, small enough to ride in a push or a widget's 4 KB budget later, while a
+ * useful JPEG thumbnail is a couple of kilobytes of base64. Its alphabet needs no JSON escaping,
+ * its length is fixed by its first character so it is checked exactly, and decoding it on the
+ * phone is a few dozen lines with no image codec.
+ */
+export const PhotoPreview = Schema.String.check(
+  Schema.makeFilter(
+    (hash) =>
+      isBlurHash(hash) || `expected a BlurHash of at most ${photoPreviewMaxLength} characters`,
+  ),
+);
+export type PhotoPreview = typeof PhotoPreview.Type;
+
 /**
  * A drawing has two renditions: compact strokes for pushes, and a full PNG in R2. A photo has only
- * the PNG. A text note carries its words and no image. `paper` is absent when the sender chose none.
+ * the image, a PNG, JPEG or HEIC. A text note carries its words and no image. `paper` is absent
+ * when the sender chose none.
+ *
+ * A photo's `width`, `height` and `preview` are optional here only because photos stored before
+ * they existed have none; every photo sent now carries them (see `SendNoteRequest`). `caption` is
+ * absent when the sender wrote none.
  */
 export const Note = Schema.TaggedUnion({
   Drawing: {
@@ -55,6 +104,10 @@ export const Note = Schema.TaggedUnion({
     author: UserId,
     sentAt: EpochMillis,
     image: MediaKey,
+    width: Schema.optionalKey(PhotoSide),
+    height: Schema.optionalKey(PhotoSide),
+    preview: Schema.optionalKey(PhotoPreview),
+    caption: Schema.optionalKey(NoteText),
   },
   Text: {
     id: NoteId,
@@ -62,6 +115,8 @@ export const Note = Schema.TaggedUnion({
     sentAt: EpochMillis,
     text: NoteText,
     paper: Schema.optionalKey(PaperColor),
+    /** The ink colour, owned by the pair. A note from before inks reads as the free ink. */
+    ink: NoteInk,
   },
 });
 export type Note = typeof Note.Type;

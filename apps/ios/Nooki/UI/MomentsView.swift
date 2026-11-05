@@ -12,11 +12,17 @@ struct MomentsView: View {
     @State private var draft: Draft?
     @State private var showsPicker = false
     @State private var showsHistory = false
+    /// The open photo, from the feed or the board.
+    @State private var viewing: PinRoute?
+    /// Just added and still a milky blank until the compose sheet is gone.
+    @State private var undeveloped: Set<UUID> = []
+    @State private var feedWidth: CGFloat = 0
+    @Namespace private var zoom
 
     private let hMargin: CGFloat = 16
     /// Same tab bar clearance as the shop.
     private let bottomInset: CGFloat = 134
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    private let columnGap: CGFloat = 14
 
     private var store: MomentStore { state.moments }
     private var notes: [Note] { state.notes.notes }
@@ -40,7 +46,7 @@ struct MomentsView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         header
                         WallStrip(store: store)
-                        grid
+                        feed
                     }
                     .padding(.horizontal, hMargin)
                     .padding(.top, 4)
@@ -60,19 +66,74 @@ struct MomentsView: View {
                 pick = nil
             }
         }
-        .sheet(item: $draft) { draft in
+        .sheet(item: $draft, onDismiss: develop) { draft in
             ComposeSheet(image: draft.image) { caption in
-                withAnimation(.spring(duration: 0.4)) { _ = state.addMoment(draft.image, caption: caption) }
+                withAnimation(.spring(duration: 0.4)) {
+                    if state.addMoment(draft.image, caption: caption), let added = store.moments.first {
+                        undeveloped.insert(added.id)
+                    }
+                }
             }
         }
         .sheet(isPresented: $showsHistory) {
             NotesHistory(state: state)
         }
-        .sheet(item: $state.openedPin) { route in
-            if store.moments.contains(where: { $0.id == route.id }) {
-                MomentSheet(state: state, id: route.id)
-            } else if notes.contains(where: { $0.id == route.id }) {
-                NoteSheet(state: state, id: route.id)
+        .sheet(item: openedNote) { route in
+            NoteSheet(state: state, id: route.id)
+        }
+        .fullScreenCover(item: openedPhoto) { route in
+            MomentViewer(state: state, id: route.id)
+                .navigationTransition(.zoom(sourceID: route.id, in: zoom))
+        }
+    }
+
+    /// A board card that is a note opens as a sheet; a photo opens full screen, like one tapped in the feed.
+    private var openedNote: Binding<PinRoute?> {
+        Binding {
+            state.openedPin.flatMap { route in notes.contains { $0.id == route.id } ? route : nil }
+        } set: { state.openedPin = $0 }
+    }
+
+    private var openedPhoto: Binding<PinRoute?> {
+        Binding {
+            viewing ?? state.openedPin.flatMap { route in store.moments.contains { $0.id == route.id } ? route : nil }
+        } set: { route in
+            viewing = route
+            if route == nil { state.openedPin = nil }
+        }
+    }
+
+    /// The new print develops once the compose sheet is out of the way.
+    private func develop() {
+        guard !undeveloped.isEmpty else { return }
+        Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            undeveloped.removeAll()
+        }
+    }
+
+    /// Two loose columns of prints, the right one dropped a little and each print overlapping the one above.
+    private var feed: some View {
+        let width = max(0, (feedWidth - columnGap) / 2)
+        return HStack(alignment: .top, spacing: columnGap) {
+            column(0, width: width)
+            column(1, width: width).padding(.top, width * 0.3)
+        }
+        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { feedWidth = $0 }
+    }
+
+    private func column(_ parity: Int, width: CGFloat) -> some View {
+        let moments = store.moments.enumerated().filter { $0.offset % 2 == parity }.map(\.element)
+        return LazyVStack(spacing: -width * 0.05) {
+            ForEach(moments) { moment in
+                Button { viewing = PinRoute(id: moment.id) } label: {
+                    MomentPrint(moment: moment, store: store, profile: state.profile, width: width, undeveloped: undeveloped.contains(moment.id))
+                        .rotationEffect(moment.id.polaroidTilt)
+                        .padding(.vertical, width * 0.04)
+                }
+                .buttonStyle(PressScaleStyle())
+                .matchedTransitionSource(id: moment.id, in: zoom)
             }
         }
     }
@@ -84,7 +145,7 @@ struct MomentsView: View {
                 .padding(.horizontal, hMargin)
                 .padding(.top, 4)
             Spacer(minLength: 0)
-            if notes.isEmpty {
+            if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white)
@@ -98,8 +159,8 @@ struct MomentsView: View {
 
     private var subtitle: String? {
         if state.momentsMode == .board {
-            let count = min(notes.count, BoardRoomScene.slots)
-            return notes.isEmpty ? nil : "\(count) \(count == 1 ? "note" : "notes") on the board"
+            let count = min(notes.count + store.pinned.count, BoardRoomScene.slots)
+            return count == 0 ? nil : "\(count) on the board"
         }
         return store.moments.isEmpty ? nil : "\(store.moments.count) \(store.moments.count == 1 ? "photo" : "photos")"
     }
@@ -155,18 +216,6 @@ struct MomentsView: View {
             .frame(height: 48)
 
             ModePicker(mode: $state.momentsMode)
-        }
-    }
-
-    private var grid: some View {
-        LazyVGrid(columns: columns, spacing: 18) {
-            ForEach(Array(store.moments.enumerated()), id: \.element.id) { index, moment in
-                Button { state.openedPin = PinRoute(id: moment.id) } label: {
-                    PolaroidCard(moment: moment, store: store)
-                        .rotationEffect(.degrees(index.isMultiple(of: 2) ? -1.6 : 1.4))
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
@@ -259,10 +308,10 @@ private struct NotesHistory: View {
                         .foregroundStyle(Ink.secondary)
                         .padding(.top, 4)
                     LazyVGrid(columns: columns, spacing: 18) {
-                        ForEach(Array(month.notes.enumerated()), id: \.element.id) { index, note in
+                        ForEach(month.notes) { note in
                             Button { opened = PinRoute(id: note.id) } label: {
                                 NoteCard(note: note)
-                                    .rotationEffect(.degrees(index.isMultiple(of: 2) ? -1.6 : 1.4))
+                                    .rotationEffect(note.id.polaroidTilt)
                             }
                             .buttonStyle(.plain)
                         }
@@ -278,15 +327,16 @@ private struct NotesHistory: View {
     }
 }
 
-/// A note as a small square of its paper: the text or doodle, and who left it.
+/// A note as a small square of its paper: the text or doodle, and who left it; the same grain and shadow as the prints.
 private struct NoteCard: View {
     let note: Note
 
     @State private var doodle: UIImage?
 
     var body: some View {
-        Color(hex: note.paper.hex)
+        Color.clear
             .aspectRatio(1, contentMode: .fit)
+            .background { PaperSheet(color: Color(hex: note.paper.hex)) }
             .overlay {
                 if let doodle {
                     Image(uiImage: doodle).resizable().scaledToFit().padding(12)
@@ -305,8 +355,9 @@ private struct NoteCard: View {
                     .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.7))
                     .padding(8)
             }
-            .clipShape(.rect(cornerRadius: 4))
-            .shadow(color: .black.opacity(0.28), radius: 8, y: 4)
+            .compositingGroup()
+            .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+            .shadow(color: .black.opacity(0.24), radius: 8, y: 6)
             .task(id: note.id) {
                 guard let url = NoteStore.doodleURL(for: note) else { return }
                 doodle = await Task.detached(priority: .userInitiated) { Downsample.image(at: url, maxPixels: 400) }.value
@@ -377,55 +428,50 @@ private struct BlankPolaroid: View {
             Spacer().frame(height: 22)
         }
         .padding(7)
-        .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 4))
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+        .background { PaperSheet() }
+        .compositingGroup()
+        .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+        .shadow(color: .black.opacity(0.24), radius: 8, y: 6)
     }
 }
 
 // MARK: - Cards
 
-/// Polaroid card: white frame, square photo, a handwritten-looking caption in the wide bottom margin.
-struct PolaroidCard: View {
+/// A moment as a print: the graded photo in its polaroid, a heart if the other one loved it, and washi tape on the
+/// ones hanging in Mochi's room.
+struct MomentPrint: View {
     let moment: Moment
     let store: MomentStore
+    let profile: CoupleStore
+    let width: CGFloat
+    var undeveloped = false
+    var maxPixels = 512
+    var captionEditor: Binding<String>?
+    var captionFocus: FocusState<Bool>.Binding?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Color(hex: 0xE9D6BC)
-                .aspectRatio(1, contentMode: .fit)
-                .overlay { MomentPhoto(store: store, moment: moment, maxPixels: 512) }
-                .clipShape(.rect(cornerRadius: 3))
-                .overlay(alignment: .topTrailing) {
-                    if moment.loved {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 24, height: 24)
-                            .background(Color.blushPink, in: .circle)
-                            .padding(6)
-                    }
-                }
-
-            Text(moment.caption.isEmpty ? moment.date.formatted(.dateTime.day().month()) : moment.caption)
-                .font(.custom("Noteworthy-Bold", size: 14))
-                .foregroundStyle(Color(hex: 0x5B3A28))
-                .lineLimit(1)
-                .padding(.horizontal, 2)
+        Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
+                 captionEditor: captionEditor, captionFocus: captionFocus) {
+            MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }
-        .padding(8)
-        .padding(.bottom, 4)
-        .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 5))
-        .overlay(alignment: .top) {
-            if moment.pinned {
-                // A little washi tape strip marks the ones hanging in the room.
-                Rectangle()
-                    .fill(Color.blushPink.opacity(0.75))
-                    .frame(width: 46, height: 16)
-                    .rotationEffect(.degrees(-4))
-                    .offset(y: -8)
+        .overlay(alignment: .topTrailing) {
+            if moment.loved {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: max(11, width * 0.065), weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: max(24, width * 0.14), height: max(24, width * 0.14))
+                    .background(Color.blushPink, in: .circle)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .padding(width * 0.09)
             }
         }
-        .shadow(color: .black.opacity(0.28), radius: 8, y: 4)
+        .overlay(alignment: .top) {
+            if moment.pinned {
+                WashiTape(tone: moment.id.tapeTone, width: width * 0.34)
+                    .rotationEffect(.degrees(-4))
+                    .offset(y: -width * 0.06)
+            }
+        }
     }
 }
 
@@ -469,20 +515,28 @@ private struct MomentPhoto: View {
     let store: MomentStore
     let moment: Moment
     let maxPixels: Int
+    /// With the instant-film grade, as on a polaroid.
+    var film = false
 
     @State private var loaded: UIImage?
+
+    private var cached: UIImage? {
+        film ? store.cachedFilmPrint(for: moment, maxPixels: maxPixels) : store.cachedThumbnail(for: moment, maxPixels: maxPixels)
+    }
 
     var body: some View {
         Color.clear
             .overlay {
-                if let image = store.cachedThumbnail(for: moment, maxPixels: maxPixels) ?? loaded {
+                if let image = cached ?? loaded {
                     Image(uiImage: image).resizable().scaledToFill()
                 }
             }
             .task(id: moment.file) {
                 // A wall slot can switch moments; don't keep showing the previous photo meanwhile.
                 loaded = nil
-                loaded = await store.thumbnail(for: moment, maxPixels: maxPixels)
+                loaded = film
+                    ? await store.filmPrint(for: moment, maxPixels: maxPixels)
+                    : await store.thumbnail(for: moment, maxPixels: maxPixels)
             }
     }
 }
@@ -503,6 +557,7 @@ struct ComposeSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var caption = ""
+    @State private var film: UIImage?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -513,14 +568,14 @@ struct ComposeSheet: View {
                 .padding(.top, 22)
 
             VStack(alignment: .leading, spacing: 10) {
-                Image(uiImage: image)
+                Image(uiImage: film ?? image)
                     .resizable()
                     .scaledToFill()
                     .frame(width: 220, height: 220)
-                    .clipShape(.rect(cornerRadius: 3))
+                    .clipped()
                 TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(Color(hex: 0xB8957A)))
                     .font(.custom("Noteworthy-Bold", size: 17))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .foregroundStyle(PolaroidPaper.ink)
                     .focused($focused)
                     .submitLabel(.done)
                     .frame(width: 220)
@@ -528,11 +583,13 @@ struct ComposeSheet: View {
                         if text.count > 40 { caption = String(text.prefix(40)) }
                     }
             }
-            .padding(10)
-            .padding(.bottom, 8)
-            .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 5))
-            .rotationEffect(.degrees(-1.5))
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
+            .padding(12)
+            .padding(.bottom, 14)
+            .background { PaperSheet() }
+            .compositingGroup()
+            .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+            .shadow(color: .black.opacity(0.3), radius: 12, y: 8)
+            .rotationEffect(.degrees(-2))
 
             Spacer(minLength: 0)
 
@@ -552,79 +609,130 @@ struct ComposeSheet: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
         }
+        .task {
+            let image = image
+            film = await Task.detached(priority: .userInitiated) { InstantFilm.develop(image) }.value
+        }
         .usSheet()
     }
 }
 
 // MARK: - Viewer
 
-private struct MomentSheet: View {
+/// One photo full screen, zoomed out of its print: the polaroid straightened, its caption editable on the strip, and
+/// love, pin, share and delete around it.
+private struct MomentViewer: View {
     let state: HomeState
     let id: UUID
 
     @Environment(\.dismiss) private var dismiss
+    @State private var caption = ""
     @State private var confirmDelete = false
+    @State private var polaroid: Image?
+    @FocusState private var editing: Bool
 
     private var store: MomentStore { state.moments }
     private var moment: Moment? { store.moments.first { $0.id == id } }
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 0) {
             if let moment {
-                VStack(alignment: .leading, spacing: 12) {
-                    Color(hex: 0xE9D6BC)
-                        .aspectRatio(1, contentMode: .fit)
-                        .overlay { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.storedPixels) }
-                        .clipShape(.rect(cornerRadius: 3))
-                    if !moment.caption.isEmpty {
-                        Text(moment.caption)
-                            .font(.custom("Noteworthy-Bold", size: 19))
-                            .foregroundStyle(Color(hex: 0x5B3A28))
-                    }
-                    HStack(spacing: 6) {
-                        Monogram(partner: moment.author, profile: state.profile, size: 20)
-                        Text(moment.date.formatted(date: .long, time: .omitted))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x9A7A62))
-                    }
-                }
-                .padding(12)
-                .padding(.bottom, 6)
-                .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 6))
-                .rotationEffect(.degrees(-1))
-                .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
-                .padding(.horizontal, 28)
-                .padding(.top, 30)
+                topBar(moment)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
 
-                Spacer(minLength: 0)
+                Spacer(minLength: 12)
+
+                GeometryReader { geo in
+                    MomentPrint(moment: moment, store: store, profile: state.profile, width: min(geo.size.width - 40, 520),
+                                maxPixels: MomentStore.storedPixels, captionEditor: $caption, captionFocus: $editing)
+                        .rotationEffect(.degrees(editing ? 0 : -1))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+
+                Spacer(minLength: 12)
 
                 HStack(spacing: 10) {
                     action(moment.loved ? "Loved" : "Love", symbol: moment.loved ? "heart.fill" : "heart",
                            tint: Color.blushPink, active: moment.loved) { store.toggleLove(moment) }
                     action(moment.pinned ? "On the wall" : "Pin to wall", symbol: moment.pinned ? "pin.fill" : "pin",
                            tint: Color.honey, active: moment.pinned) { store.togglePin(moment) }
-                    Button { confirmDelete = true } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Ink.secondary)
-                            .frame(width: 52, height: 52)
-                            .background(.white.opacity(0.1), in: .circle)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Delete")
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 12)
-                .confirmationDialog("Delete this moment?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                    Button("Delete", role: .destructive) {
-                        store.delete(moment)
-                        dismiss()
-                    }
-                }
             }
         }
+        .background(Ink.screen.ignoresSafeArea())
         .animation(.snappy(duration: 0.25), value: moment)
-        .usSheet()
+        .animation(.snappy(duration: 0.25), value: editing)
+        .onAppear { caption = moment?.caption ?? "" }
+        .onChange(of: caption) { _, text in
+            if text.count > 40 { caption = String(text.prefix(40)) }
+        }
+        .onChange(of: editing) { _, now in if !now { saveCaption() } }
+        .onDisappear(perform: saveCaption)
+        .task(id: moment?.caption) { polaroid = await renderPolaroid() }
+        .confirmationDialog("Delete this moment?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let moment { store.delete(moment) }
+                dismiss()
+            }
+        }
+    }
+
+    private func topBar(_ moment: Moment) -> some View {
+        HStack(spacing: 12) {
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Ink.text)
+                    .frame(width: 44, height: 44)
+                    .background(Ink.surfaceRaised, in: .circle)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+
+            Spacer(minLength: 0)
+
+            Menu {
+                ShareLink(item: MomentStore.imageURL(for: moment)) {
+                    Label("Share photo", systemImage: "photo")
+                }
+                if let polaroid {
+                    ShareLink(item: polaroid, preview: SharePreview(moment.caption.isEmpty ? "Moment" : moment.caption,
+                                                                    image: polaroid)) {
+                        Label("Share as polaroid", systemImage: "rectangle.portrait.bottomhalf.filled")
+                    }
+                }
+                Button { editing = true } label: { Label("Edit caption", systemImage: "pencil") }
+                Divider()
+                Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Ink.text)
+                    .frame(width: 44, height: 44)
+                    .background(Ink.surfaceRaised, in: .circle)
+            }
+            .accessibilityLabel("Share and more")
+        }
+    }
+
+    private func saveCaption() {
+        let text = caption.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let moment, text != moment.caption else { return }
+        store.setCaption(text, of: moment)
+    }
+
+    /// The print as an image to share: graded photo, frame, caption and byline, without the tilt and shadow.
+    private func renderPolaroid() async -> Image? {
+        guard let moment, let photo = await store.filmPrint(for: moment, maxPixels: 1024) else { return nil }
+        let renderer = ImageRenderer(content: Polaroid(width: 540, caption: moment.caption, byline: state.profile.byline(of: moment),
+                                                       lifted: false) {
+            Image(uiImage: photo).resizable().scaledToFill()
+        })
+        renderer.scale = 2
+        return renderer.uiImage.map { Image(uiImage: $0) }
     }
 
     private func action(_ title: String, symbol: String, tint: Color, active: Bool,
@@ -637,11 +745,11 @@ private struct MomentSheet: View {
                     .contentTransition(.symbolEffect(.replace))
                 Text(title)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(active ? tint.opacity(0.22) : .white.opacity(0.1), in: .capsule)
+            .background(active ? tint.opacity(0.22) : Ink.surfaceRaised, in: .capsule)
         }
         .buttonStyle(.plain)
     }

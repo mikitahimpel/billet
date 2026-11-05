@@ -1,0 +1,9 @@
+{
+  "_tag": "Purchased",
+  "coins": 120,
+  "items": [
+    "ink-rose",
+    "armchair"
+  ],
+  "offer": "bundle:starter-ink"
+}

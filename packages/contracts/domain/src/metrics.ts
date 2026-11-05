@@ -43,6 +43,8 @@ export const ClientEventName = Schema.Literals([
   "RoomItemPutAway",
   /** The room itself was changed: walls, floor, window (detail: what was changed). */
   "RoomCustomised",
+  /** One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which). */
+  "RoomOpened",
 
   /** The shop was opened. */
   "ShopOpened",
@@ -83,6 +85,13 @@ export const ClientEventName = Schema.Literals([
   "OnboardingStepAnswered",
   /** An onboarding step was skipped (detail: the step id). */
   "OnboardingStepSkipped",
+
+  /** A hint came on screen (detail: the tip id). */
+  "TipShown",
+  /** A hint was closed with its X (detail: the tip id). */
+  "TipDismissed",
+  /** The hint's thing was done, or its button tapped (detail: the tip id). */
+  "TipAction",
 ]);
 export type ClientEventName = typeof ClientEventName.Type;
 
@@ -126,6 +135,7 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   RoomItemMoved: { detail: "id", required: true },
   RoomItemPutAway: { detail: "id", required: true },
   RoomCustomised: { detail: "id" },
+  RoomOpened: { detail: ["room", "city"], required: true },
   ShopOpened: { detail: "none" },
   ShopItemViewed: { detail: "id", required: true },
   ShopItemBought: { detail: "id", required: true, value: true },
@@ -143,6 +153,9 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   OnboardingStepViewed: { detail: "id", required: true },
   OnboardingStepAnswered: { detail: "id", required: true },
   OnboardingStepSkipped: { detail: "id", required: true },
+  TipShown: { detail: "id", required: true },
+  TipDismissed: { detail: "id", required: true },
+  TipAction: { detail: "id", required: true },
 };
 
 /** Why an event breaks its name's rule, or undefined when it keeps it. */

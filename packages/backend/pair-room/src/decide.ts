@@ -1,9 +1,13 @@
-import type { UserId } from "@billet/contracts-domain/ids";
+import type { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
+import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { freeInk, type InkId } from "@billet/contracts-domain/inks";
+import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import type { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
-import type { ActiveRoom, Member, RoomState } from "./room-state.ts";
+import type { ActiveRoom, Member, RoomCat, RoomState } from "./room-state.ts";
+import { newTemper, nextTemper } from "./cat-temper.ts";
 
 const accepted = (state: ActiveRoom, outputs: ReadonlyArray<RoomOutput> = []): RoomDecision =>
   RoomDecision.cases.Accepted.make({ state, outputs });
@@ -27,8 +31,40 @@ const isSameCouple = (
   [first, second]: readonly [UserId, UserId],
 ): boolean => room.pairId === pairId && isMember(room, first) && isMember(room, second);
 
+/** Whether the pair may write in `ink`: the free one, or one it bought. */
+export const ownsInk = (room: ActiveRoom, ink: InkId): boolean =>
+  ink === freeInk || room.inks.includes(ink);
+
+/** The ink a note is written in that the pair does not own, if any. Only text has an ink. */
+const unownedInk = (room: ActiveRoom, note: Note): InkId | undefined => {
+  switch (note._tag) {
+    case "Text":
+      return ownsInk(room, note.ink) ? undefined : note.ink;
+    case "Drawing":
+    case "Photo":
+      return undefined;
+  }
+};
+
 const withPresence = (member: Member, user: UserId, presence: PresenceState): Member =>
   member.user === user ? { ...member, presence } : member;
+
+/** Appends one entry to the cat's journal: the next `seq`, and the temper it leaves. */
+const journal = (
+  cat: RoomCat,
+  draft: { id: IdempotencyKey; by: UserId; at: EpochMillis; event: CatEvent },
+): { cat: RoomCat; entry: CatEntry } => {
+  const seq = cat.lastSeq + 1;
+  return {
+    entry: { seq, ...draft },
+    cat: {
+      ...cat,
+      temper: nextTemper(cat.temper, draft.event, draft.at, cat.lastAt),
+      lastSeq: seq,
+      lastAt: draft.at,
+    },
+  };
+};
 
 const decideVacant = (command: RoomCommand): RoomDecision => {
   switch (command._tag) {
@@ -46,12 +82,16 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           ],
           lastSeq: 0,
           streakDays: 0,
+          inks: [],
         },
         [RoomOutput.cases.RoomOpened.make({ pairId })],
       );
     }
     case "SendNote":
     case "SetPresence":
+    case "SaveCat":
+    case "RecordCatEvent":
+    case "GrantInks":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -70,9 +110,51 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (!isMember(room, note.author)) {
         return rejected(RoomRejection.cases.NotAMember.make({ user: note.author }));
       }
+      const ink = unownedInk(room, note);
+      if (ink !== undefined) return rejected(RoomRejection.cases.InkNotOwned.make({ ink }));
       const seq = room.lastSeq + 1;
-      return accepted({ ...room, lastSeq: seq }, [
-        RoomOutput.cases.NoteAppended.make({ entry: { seq, note }, key }),
+      const appended = RoomOutput.cases.NoteAppended.make({ entry: { seq, note }, key });
+      // With a cat, a note is also care: one journal entry, under the note's own key.
+      if (room.cat === undefined) return accepted({ ...room, lastSeq: seq }, [appended]);
+      const shared = journal(room.cat, {
+        id: key,
+        by: note.author,
+        at: note.sentAt,
+        event: { _tag: "NoteShared", note: note.id, kind: note._tag },
+      });
+      return accepted({ ...room, lastSeq: seq, cat: shared.cat }, [
+        appended,
+        RoomOutput.cases.CatEntryAppended.make({ entry: shared.entry }),
+      ]);
+    }
+    case "SaveCat": {
+      const { user, name, look, utcOffsetSeconds, natureSeed, at } = command;
+      if (!isMember(room, user)) return rejected(RoomRejection.cases.NotAMember.make({ user }));
+      // Birth and nature are the cat's for life: a later save changes only what can change.
+      const cat: RoomCat =
+        room.cat === undefined
+          ? {
+              profile: { name, look, utcOffsetSeconds, natureSeed, bornAt: at },
+              temper: newTemper,
+              lastSeq: 0,
+            }
+          : { ...room.cat, profile: { ...room.cat.profile, name, look, utcOffsetSeconds } };
+      return accepted({ ...room, cat }, [
+        RoomOutput.cases.CatSaved.make({
+          cat: cat.profile,
+          by: user,
+          adopted: room.cat === undefined,
+        }),
+      ]);
+    }
+    case "RecordCatEvent": {
+      const { by } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      if (room.cat === undefined) return rejected(RoomRejection.cases.CatNotAdopted.make({}));
+      const { id, at, event } = command;
+      const next = journal(room.cat, { id, by, at, event });
+      return accepted({ ...room, cat: next.cat }, [
+        RoomOutput.cases.CatEntryAppended.make({ entry: next.entry }),
       ]);
     }
     case "SetPresence": {
@@ -89,6 +171,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
             },
             [RoomOutput.cases.PresenceChanged.make({ user, state })],
           );
+    }
+    case "GrantInks": {
+      const added = [...new Set(command.inks)].filter((ink) => !ownsInk(room, ink));
+      return added.length === 0
+        ? accepted(room)
+        : accepted({ ...room, inks: [...room.inks, ...added] }, [
+            RoomOutput.cases.InksGranted.make({ inks: added }),
+          ]);
     }
   }
 };

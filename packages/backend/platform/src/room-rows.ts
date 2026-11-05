@@ -25,6 +25,12 @@ export const StoredNote = Schema.Struct({
 export const SampleRow = Schema.Struct({ id: Schema.String, createdAt: EpochMillis });
 
 /** What a `delivery` row holds. */
+/** An `owned_ink` row: one ink colour the pair bought, and its place in the order. */
+export const StoredOwnedInk = Schema.Struct({
+  inkId: Schema.String,
+  position: Schema.Int,
+});
+
 export const StoredDelivery = Schema.Struct({
   noteId: Schema.String,
   lane: Schema.String,
@@ -32,3 +38,41 @@ export const StoredDelivery = Schema.Struct({
   attempts: Schema.Int,
   nextAttemptAt: Schema.Int,
 });
+
+/** What the one `cat` row holds, once the cat is adopted. */
+export const StoredCat = Schema.Struct({
+  id: Schema.Int,
+  name: Schema.String,
+  model: Schema.String,
+  coat: Schema.String,
+  bornAt: Schema.Int,
+  natureSeed: Schema.String,
+  utcOffsetSeconds: Schema.Int,
+  curious: Schema.Number,
+  lazy: Schema.Number,
+  cuddly: Schema.Number,
+  lastSeq: Schema.Int,
+  lastAt: Schema.NullOr(Schema.Int),
+});
+
+/** What a `cat_entry` row holds: `body` is the `CatEvent` as JSON. */
+export const StoredCatEntry = Schema.Struct({
+  seq: Schema.Int,
+  id: Schema.String,
+  by: Schema.String,
+  at: Schema.Int,
+  body: Schema.String,
+});
+
+/** What an `activity` row holds: `body` is the item's event and target as JSON. */
+export const StoredActivity = Schema.Struct({
+  id: Schema.String,
+  sortKey: Schema.String,
+  at: Schema.Int,
+  doerKind: Schema.String,
+  doerUser: Schema.NullOr(Schema.String),
+  body: Schema.String,
+});
+
+/** What an `activity_read` row holds. */
+export const StoredActivityRead = Schema.Struct({ user: Schema.String, upTo: Schema.String });

@@ -29,3 +29,35 @@ The backend must add, none of which exists yet:
 - **Dates as numbers.** Payload dates are seconds since 1970; `CatTrip.Content` decodes with the
   default `Date` strategy, so the payload keys must match, or the app switches both sides to one
   explicit strategy.
+
+## The drawing Live Activity and the push lanes (#10)
+
+PairRoom hands every accepted note to its push lanes (`apns-lanes.ts`) when the Worker has an
+APNs key (`APNS_KEY`, `APNS_KEY_ID`; dev only so far):
+
+| Lane | Token kind | `apns-push-type` | Topic | Priority |
+|---|---|---|---|---|
+| `WidgetPush` | `widget` | `widgets` | `com.mikitahimpel.billet.push-type.widgets` | 5 |
+| `AlertPush` | `alert` | `alert` | `com.mikitahimpel.billet` | 10 |
+| `LiveActivityPush` | `liveactivity` (push-to-start) | `liveactivity` | `com.mikitahimpel.billet.push-type.liveactivity` | 10 |
+
+- The Live Activity lane is off unless the deploy sets `LIVE_ACTIVITY_PUSH=on`. That switch
+  stands in for the go/no-go #13 never recorded.
+- Each try goes to every device of the partner that has a token of the lane's kind.
+- A token that APNs calls dead (410, `BadDeviceToken`, `Unregistered`, a wrong environment or
+  topic) is deleted from `push_tokens`.
+- The ledger outcome is:
+  - `Delivered` once any device took the push.
+  - `Retry` for throttling, APNs errors, the network, or an expired provider token. The provider
+    token is signed once and reused for 50 minutes; after an expired or invalid answer it is
+    signed again.
+  - `Abandon` when there is no one to send to, or nothing will ever be accepted.
+- The alert and widget bodies carry the note's `PushPayload` under `billet`, beside `aps`. The
+  alert sets `mutable-content` so the NotificationService extension can save the drawing for
+  the widgets first.
+- The Live Activity push is a push-to-start: `event: "start"`, `attributes-type:
+  "DrawingAttributes"`, `attributes: { noteId }`, and `content-state` as the `LiveActivity`
+  payload (compact strokes and paper).
+- Every push stays under 4 KB with the largest drawing `InkEncoder` makes (3 KB).
+- Only physical iPhones can verify any of it: the Simulator gets no APNs tokens, and widget
+  push tokens are not issued there.

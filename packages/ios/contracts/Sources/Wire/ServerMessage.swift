@@ -10,6 +10,12 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   /// The partner's device left with this stroke still open: discard it, it will not end.
   case strokeDropped(id: Int)
   case clear
+  /// One cat journal entry, either partner's, sent to a socket that resumed with `lastCatSeq`.
+  case catEntryAdded(CatEntry)
+  /// The cat was adopted, renamed or given a new look.
+  case catSaved(CatProfile)
+  /// The Inbox's unread count for this user, sent to a socket that resumed with `activity: true`.
+  case activityUnread(unread: Int)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -19,6 +25,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case note
     case id
     case points
+    case entry
+    case cat
+    case unread
   }
 
   public init(from decoder: any Decoder) throws {
@@ -47,6 +56,12 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .strokeDropped(id: try container.decode(Int.self, forKey: .id))
     case "Clear":
       self = .clear
+    case "CatEntryAdded":
+      self = .catEntryAdded(try container.decode(CatEntry.self, forKey: .entry))
+    case "CatSaved":
+      self = .catSaved(try container.decode(CatProfile.self, forKey: .cat))
+    case "ActivityUnread":
+      self = .activityUnread(unread: try container.decode(Int.self, forKey: .unread))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -82,6 +97,15 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       try container.encode(id, forKey: .id)
     case .clear:
       try container.encode("Clear", forKey: .tag)
+    case .catEntryAdded(let entry):
+      try container.encode("CatEntryAdded", forKey: .tag)
+      try container.encode(entry, forKey: .entry)
+    case .catSaved(let cat):
+      try container.encode("CatSaved", forKey: .tag)
+      try container.encode(cat, forKey: .cat)
+    case .activityUnread(let unread):
+      try container.encode("ActivityUnread", forKey: .tag)
+      try container.encode(unread, forKey: .unread)
     }
   }
 }

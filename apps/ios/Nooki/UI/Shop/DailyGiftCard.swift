@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// The free gift at the top of Today: one tap opens it with a little burst, and it comes back at local midnight.
+/// The free gift at the top of Today: one tap shakes the box open, the reward rises out with a little burst, and a
+/// new gift comes at local midnight.
 struct DailyGiftCard: View {
     let state: HomeState
 
     @State private var reward: GiftReward?
     @State private var bursts = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var ready: Bool { state.canClaimGift() && reward == nil }
 
@@ -55,12 +55,7 @@ struct DailyGiftCard: View {
     }
 
     private var box: some View {
-        Image(systemName: ready ? "gift.fill" : "gift")
-            .font(.system(.largeTitle))
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(Color.blushPink, Color.honey)
-            .symbolEffect(.bounce, options: .repeat(.periodic(delay: 2.5)), isActive: ready && !reduceMotion)
-            .contentTransition(.symbolEffect(.replace))
+        GiftBox(opened: !ready, opens: bursts, reward: reward)
             .frame(width: 56, height: 56)
             .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
             .accessibilityHidden(true)
@@ -137,4 +132,105 @@ private struct BurstFrame {
     var fall: CGFloat = 0
     var scale: CGFloat = 0.2
     var opacity: Double = 0
+}
+
+/// A drawn gift box. While it waits it gives a little wiggle now and then; opening shakes it, pops the lid off and
+/// lifts the reward out. Under Reduce Motion it just shows the open box.
+private struct GiftBox: View {
+    let opened: Bool
+    /// Bumped once per opening; drives the shake.
+    let opens: Int
+    let reward: GiftReward?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            prize
+            boxBody
+            lid
+        }
+        .frame(width: 44, height: 44)
+        .keyframeAnimator(initialValue: Shake(), trigger: opens) { content, shake in
+            content
+                .rotationEffect(.degrees(reduceMotion ? 0 : shake.angle), anchor: .bottom)
+                .scaleEffect(x: reduceMotion ? 1 : shake.squash, y: reduceMotion ? 1 : 2 - shake.squash, anchor: .bottom)
+        } keyframes: { _ in
+            KeyframeTrack(\.angle) {
+                LinearKeyframe(-10, duration: 0.06)
+                LinearKeyframe(10, duration: 0.08)
+                LinearKeyframe(-8, duration: 0.08)
+                LinearKeyframe(6, duration: 0.08)
+                SpringKeyframe(0, duration: 0.3)
+            }
+            KeyframeTrack(\.squash) {
+                LinearKeyframe(1, duration: 0.3)
+                LinearKeyframe(1.12, duration: 0.08)
+                SpringKeyframe(1, duration: 0.35, spring: .bouncy)
+            }
+        }
+        .phaseAnimator([0.0, -7, 7, 0], trigger: opened || reduceMotion ? 0 : idleTicks) { content, angle in
+            content.rotationEffect(.degrees(angle), anchor: .bottom)
+        } animation: { _ in .easeInOut(duration: 0.09) }
+        .task(id: opened) {
+            // A wiggle every few seconds while the gift waits.
+            while !opened, !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                idleTicks += 1
+            }
+        }
+    }
+
+    @State private var idleTicks = 0
+
+    private var boxBody: some View {
+        RoundedRectangle(cornerRadius: 5, style: .continuous)
+            .fill(LinearGradient(colors: [Color(hex: 0xFF9DB0), Color(hex: 0xF07A92)], startPoint: .top, endPoint: .bottom))
+            .frame(width: 34, height: 24)
+            .overlay(Rectangle().fill(Color(hex: 0xFFE2A8)).frame(width: 6))
+    }
+
+    private var lid: some View {
+        VStack(spacing: -2) {
+            bow
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0xFFB3C2), Color.blushPink], startPoint: .top, endPoint: .bottom))
+                .frame(width: 40, height: 10)
+                .overlay(Rectangle().fill(Color(hex: 0xFFE2A8)).frame(width: 6))
+        }
+        .offset(x: opened ? 12 : 0, y: opened ? -34 : -22)
+        .rotationEffect(.degrees(opened ? 24 : 0))
+        .opacity(opened ? 0 : 1)
+        .animation(reduceMotion ? nil : .spring(duration: 0.5, bounce: 0.4).delay(0.3), value: opened)
+    }
+
+    private var bow: some View {
+        HStack(spacing: 0) {
+            Circle().strokeBorder(Color(hex: 0xFFE2A8), lineWidth: 3).frame(width: 10, height: 10)
+            Circle().strokeBorder(Color(hex: 0xFFE2A8), lineWidth: 3).frame(width: 10, height: 10)
+        }
+    }
+
+    /// What was inside, rising out of the open box.
+    @ViewBuilder private var prize: some View {
+        Group {
+            switch reward {
+            case .coins: CoinIcon(size: 22)
+            case .item(let id):
+                if let image = Thumbnails.image("Item_\(id)", maxPixels: 128) {
+                    Image(uiImage: image).resizable().scaledToFit().frame(width: 30, height: 30)
+                }
+            case nil: EmptyView()
+            }
+        }
+        .offset(y: reward == nil ? -6 : -24)
+        .scaleEffect(reward == nil ? 0.3 : 1)
+        .opacity(reward == nil ? 0 : 1)
+        .animation(reduceMotion ? nil : .spring(duration: 0.5, bounce: 0.5).delay(0.45), value: reward)
+    }
+}
+
+private struct Shake {
+    var angle: Double = 0
+    var squash: CGFloat = 1
 }

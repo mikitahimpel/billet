@@ -1,0 +1,14 @@
+{
+  "actor": "Me",
+  "at": 1700000100000,
+  "event": {
+    "_tag": "NoteSent",
+    "kind": "Drawing",
+    "note": "note-1"
+  },
+  "id": "note:note-1",
+  "target": {
+    "_tag": "Moments",
+    "note": "note-1"
+  }
+}

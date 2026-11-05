@@ -4,7 +4,7 @@ import Transport
 import Wire
 
 /// What the cat is called. Saved on this phone; the server gets it as the `cat_name` answer.
-enum CatProfile {
+nonisolated enum CatProfile {
     static let nameKey = "catName"
     static let defaultName = "Mochi"
     /// The server's limit for the `cat_name` answer.
