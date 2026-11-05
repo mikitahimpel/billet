@@ -18,7 +18,7 @@ import Testing
   static let root = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     .deletingLastPathComponent().deletingLastPathComponent()
-    .deletingLastPathComponent()
+    .deletingLastPathComponent().deletingLastPathComponent()
 
   static func manifest(_ target: String) throws -> Manifest {
     let url = root.appending(path: "archive/ios-v1/\(target)/PrivacyInfo.xcprivacy")
@@ -91,7 +91,7 @@ import Testing
 
   @Test func theAppManifestDeclaresEveryAPIItsSourcesUse() throws {
     let used = try Self.categoriesUsed(in: [
-      "archive/ios-v1/App", "packages/ios", "packages/pet-scenes/reality/Sources",
+      "archive/ios-v1/App", "archive/ios-v1/packages", "packages/ios", "apps/ios/WindowViews",
     ])
     let declared = Set(try Self.manifest("App").accessed.keys)
     #expect(used.subtracting(declared).isEmpty, "undeclared: \(used.subtracting(declared))")

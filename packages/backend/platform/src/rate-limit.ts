@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { sha256Hex } from "./hashed-session-tokens.ts";
 import { logLine } from "./observability.ts";
 import { systemNow } from "./wall-clock.ts";
 
@@ -35,11 +36,6 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/media" || pathname.startsWith("/v1/media/")) return "media";
   return undefined;
 };
-
-const sha256Hex = async (text: string): Promise<string> =>
-  [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
 
 const tooManyRequests = (retryAfterSeconds: number): Response =>
   new Response(JSON.stringify(Schema.encodeSync(ApiError)(ApiError.cases.Unavailable.make({}))), {

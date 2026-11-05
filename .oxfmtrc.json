@@ -9,6 +9,7 @@
     "packages/backend/pair-room/test/golden/**",
     "packages/backend/platform/migrations/**/migrations.js",
     "packages/backend/platform/migrations/**/snapshot.json",
-    "tools/cat-gen/**"
+    "tools/cat-gen/**",
+    "archive/ios-v1/packages/**"
   ]
 }

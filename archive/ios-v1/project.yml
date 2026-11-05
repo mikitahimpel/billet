@@ -39,9 +39,12 @@ packages:
     path: ../../packages/ios/pet
   BilletFeatures:
     path: ../../packages/ios/features
+  # This app's own screens, moved out of packages/ios/features.
+  BilletFeaturesV1:
+    path: packages/features-v1
   # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
   PetSceneReality:
-    path: ../../packages/pet-scenes/reality
+    path: packages/pet-scenes-reality
 targets:
   Billet:
     type: application
@@ -55,9 +58,11 @@ targets:
       - package: BilletPayments
         products: [Payments, PaymentsLive]
       - package: BilletPet
-        products: [PetScene, PetSceneCatalog]
+        products: [PetScene]
       - package: BilletFeatures
-        products: [FeatureHome, Labs, WidgetBridge]
+        products: [WidgetBridge]
+      - package: BilletFeaturesV1
+        products: [FeatureHome, Labs, PetSceneCatalog]
       - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService
@@ -92,7 +97,9 @@ targets:
       - package: BilletPet
         product: Pet
       - package: BilletFeatures
-        products: [Surfaces, WidgetBridge]
+        products: [WidgetBridge]
+      - package: BilletFeaturesV1
+        products: [Surfaces]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:
