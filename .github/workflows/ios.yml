@@ -217,6 +217,8 @@ jobs:
         env:
           DEVICE: ${{ matrix.device }}
           ONLY: ${{ inputs.shots }}
+          # xcodebuild hands TEST_RUNNER_ variables to the tests without the prefix.
+          TEST_RUNNER_UITOUR: "1"
         run: |
           # The newest runtime that supports the first device type whose name contains DEVICE.
           read -r runtime devtype <<<"$(xcrun simctl list -j runtimes | python3 -c '
