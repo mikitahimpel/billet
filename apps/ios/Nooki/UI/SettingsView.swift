@@ -37,7 +37,7 @@ struct SettingsView: View {
                 Section {
                     Button { editingProfile = true } label: { coupleCard }
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 Section {
                     Toggle(isOn: $haptics) { row("Haptics", symbol: "hand.tap.fill", tint: .lilac) }
@@ -47,8 +47,8 @@ struct SettingsView: View {
                             Spacer(minLength: 0)
                             if hintsReset {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(Color.honey)
+                                    .font(.nookiCallout)
+                                    .foregroundStyle(Ink.accentText)
                             }
                         }
                     }
@@ -60,7 +60,7 @@ struct SettingsView: View {
                          ? "The hints start over the next time you open Nooki."
                          : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.")
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 if let session {
                     Section("Account") {
@@ -73,7 +73,7 @@ struct SettingsView: View {
                             }
                         }
                     }
-                    .listRowBackground(rowBackground)
+                    .nookiRow()
                 }
 
                 Section {
@@ -94,12 +94,12 @@ struct SettingsView: View {
                 } footer: {
                     Text("What the City room's window looks out on. Suburbia follows the time of day.")
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 Section("Support") {
                     Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 Section {
                     row("Stays on this iPhone", symbol: "lock.fill", tint: .sage)
@@ -115,7 +115,7 @@ struct SettingsView: View {
                          : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
                            + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 Section {
                     Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
@@ -135,7 +135,7 @@ struct SettingsView: View {
                          + "show at once from the next launch, for testing. Rooms shows one room or both on this "
                          + "phone, whatever the test gave your pair.")
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
 
                 Section {
                     LabeledContent("Version", value: version)
@@ -144,7 +144,7 @@ struct SettingsView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, 12)
                 }
-                .listRowBackground(rowBackground)
+                .nookiRow()
             }
             .scrollContentBackground(.hidden)
             .navigationTitle("Settings")
@@ -165,7 +165,7 @@ struct SettingsView: View {
                      + "This can't be undone.")
             }
         }
-        .tint(Color(hex: 0xFFC27A))
+        .tint(.honey)
         .preferredColorScheme(.dark)
         .sheet(isPresented: $pairing) {
             if let session {
@@ -181,8 +181,6 @@ struct SettingsView: View {
         }
     }
 
-    private let rowBackground = Color.white.opacity(0.06)
-
     private var coupleCard: some View {
         HStack(spacing: 14) {
             HStack(spacing: -12) {
@@ -191,17 +189,17 @@ struct SettingsView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
                     .lineLimit(1)
                 Text("Day \(state.daysTogether) together · Edit profile")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textTertiary)
         }
         .padding(.vertical, 6)
     }
@@ -215,7 +213,7 @@ struct SettingsView: View {
         HStack(spacing: 14) {
             UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
             Text(title)
-                .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : .white)
+                .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : Ink.text)
         }
     }
 }
@@ -229,17 +227,17 @@ private struct AccountRow: View {
         HStack(spacing: 14) {
             UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).foregroundStyle(.white)
+                Text(title).foregroundStyle(Ink.text)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
             Spacer(minLength: 0)
             if case .failed = state {
                 Button("Try Again", action: retry)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.nookiCallout.weight(.semibold))
             } else if case .signingIn = state {
                 ProgressView()
             }
