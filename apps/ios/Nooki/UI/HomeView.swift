@@ -64,6 +64,8 @@ struct HomeView: View {
                 TabBar(state: state)
                     .padding(.horizontal, 16)
             }
+
+            PurchaseMoment(state: state)
         }
         // Bottom left, so it stays clear of the "+" in the right corner.
         .overlay(alignment: .bottomLeading) {

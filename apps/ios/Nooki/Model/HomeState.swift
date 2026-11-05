@@ -90,12 +90,29 @@ final class HomeState {
     /// Buys a set's missing pieces at the set price: the featured set or a bundle.
     @discardableResult
     func buy(_ set: some PieceSet) -> Bool {
-        guard let quote = ShopOffers.price(of: set, owned: owned), coins >= quote.price else { return false }
-        wallet.update {
-            $0.coins -= quote.price
-            $0.owned.formUnion(set.itemIDs)
-            $0.wishlist.subtract(set.itemIDs)
-        }
+        guard let quote = ShopOffers.price(of: set, owned: owned) else { return false }
+        return record { $0.buy(set.itemIDs, cost: quote.price, title: set.name, at: .now) }
+    }
+
+    /// The latest buy: the purchase moment plays for it and offers Undo for a few seconds.
+    private(set) var lastPurchase: Purchase?
+
+    /// Takes a buy back within its Undo window: the coins return and the pieces it added leave the closet.
+    @discardableResult
+    func undo(_ purchase: Purchase, at now: Date = .now) -> Bool {
+        guard lastPurchase?.id == purchase.id, purchase.canUndo(at: now) else { return false }
+        wallet.update { $0.undo(purchase) }
+        lastPurchase = nil
+        return true
+    }
+
+    private func record(_ buy: (inout Wallet) -> Purchase?) -> Bool {
+        var made: Purchase?
+        wallet.update { made = buy(&$0) }
+        guard let made else { return false }
+        lastPurchase = made
+        // Mochi notices: the room's cat purrs at the next look.
+        petPulse += 1
         return true
     }
 
@@ -120,14 +137,7 @@ final class HomeState {
     @discardableResult
     func buy(_ item: ShopItem, asGift: Bool = false) -> Bool {
         let price = price(of: item)
-        guard coins >= price, !owned.contains(item.id) else { return false }
-        wallet.update {
-            $0.coins -= price
-            $0.owned.insert(item.id)
-            $0.wishlist.remove(item.id)
-            if asGift { $0.gifted.insert(item.id) }
-        }
-        return true
+        return record { $0.buy([item.id], cost: price, title: item.name, giftTo: asGift, at: .now) }
     }
 
     func toggleWish(_ item: ShopItem) {
