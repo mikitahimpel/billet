@@ -14,7 +14,8 @@ struct NookiApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         _session = State(initialValue: session)
         _onboarding = State(initialValue: OnboardingFlow(
-            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite))
+            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
+            coatChanged: { CatRoom.forgetMochi() }))
     }
 
     var body: some Scene {
@@ -24,11 +25,13 @@ struct NookiApp: App {
                 Color.black
             } else {
                 HomeView()
+                    // A new coat loads Mochi again, so the room is built anew around her.
+                    .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
                     .overlay {
                         if !onboarding.isFinished {
-                            OnboardingView(flow: onboarding, pairing: session?.pairing)
+                            OnboardingView(flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false)
                                 .transition(.opacity)
                         }
                     }

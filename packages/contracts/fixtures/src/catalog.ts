@@ -463,6 +463,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
+    "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ClientMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ClientMessage.cases.StrokeEnd.make({ id: 3 }),
+    clear: ClientMessage.cases.Clear.make({}),
   }),
   fixture("ServerMessage", ServerMessage, {
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
@@ -473,6 +477,11 @@ export const catalog: ReadonlyArray<Fixture> = [
       seq: 11,
       note: photoWithCaption,
     }),
+    "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
+    "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
+    clear: ServerMessage.cases.Clear.make({}),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

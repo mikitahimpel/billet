@@ -194,11 +194,13 @@ describe("events route", () => {
   it("stores no field beyond the fixed ones", () => {
     for (const row of metrics.rows.values()) {
       expect(Object.keys(row).toSorted()).toEqual([
+        "appVersion",
         "count",
         "day",
         "firstAt",
         "lastAt",
         "name",
+        "os",
         "pairId",
         "userId",
       ]);
@@ -244,6 +246,15 @@ describe("events route", () => {
       expect(hash).toMatch(/^[0-9a-f]{16}$/);
       expect(JSON.stringify(points)).not.toContain("pair-1");
       expect(JSON.stringify(points)).not.toContain(tokenOf("cal"));
+    });
+
+    it("keeps the same build and system on the D1 count", async () => {
+      await post({ events: ["ProfileOpened"] }, "cal", {
+        [clientHeaders.appVersion]: "1.3.0+17",
+        [clientHeaders.os]: "iOS 26.1",
+      });
+      const row = [...metrics.rows.values()].find(({ name }) => name === "ProfileOpened");
+      expect(row).toMatchObject({ appVersion: "1.3.0+17", os: "iOS 26.1" });
     });
 
     it("writes an unpaired caller with an empty pair and no variants", async () => {

@@ -51,6 +51,10 @@ const appleKeys = await Effect.runPromise(
   }).pipe(Effect.provide(cryptoLayer)),
 );
 
+// Better Auth and the Apple check run on the real clock here, so a token's times lie far from it.
+const farAhead = Date.UTC(2100, 0, 1) / 1000;
+const longAgo = Date.UTC(2020, 0, 1) / 1000;
+
 const claims = (nonce: string, overrides: Record<string, unknown> = {}) =>
   new TextEncoder().encode(
     JSON.stringify({
@@ -58,7 +62,7 @@ const claims = (nonce: string, overrides: Record<string, unknown> = {}) =>
       aud: appleAudience,
       sub: "subject-a",
       nonce,
-      exp: Math.floor(Date.now() / 1000) + 300,
+      exp: farAhead,
       ...overrides,
     }),
   );
@@ -498,7 +502,7 @@ describe("the Api Worker", () => {
   });
 
   it.each([
-    ["expired", { exp: Math.floor(Date.now() / 1000) - 300 }],
+    ["expired", { exp: longAgo }],
     ["wrong-audience", { aud: "com.example.other" }],
   ])("refuses an %s token and stores no session", async (_, overrides) => {
     const { response } = await signIn(overrides);
@@ -1397,7 +1401,7 @@ describe("the couple's WebSocket", () => {
               expectedVersion,
               action: "edit",
               by: "owner@example.com",
-              at: Date.now(),
+              at: Date.UTC(2026, 9, 31, 22, 42),
             });
           }).pipe(Effect.provide(FlagConfigRepositoryLive(env.DB, caches.default))),
         );
@@ -1579,12 +1583,15 @@ describe("metrics", () => {
     }
     const columns = (await env.DB.prepare("PRAGMA table_info(pair_events)").all<{ name: string }>())
       .results;
+    // The build and system are the app's own headers, in the shapes `clientInfoOf` allows.
     expect(columns.map(({ name }) => name).toSorted()).toEqual([
+      "app_version",
       "count",
       "day",
       "first_at",
       "last_at",
       "name",
+      "os",
       "pair_id",
       "user_id",
     ]);

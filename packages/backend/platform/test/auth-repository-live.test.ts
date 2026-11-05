@@ -20,8 +20,14 @@ const device = Schema.decodeSync(DeviceId);
 const user = Schema.decodeSync(UserId);
 const pushToken = Schema.decodeSync(PushToken);
 
+/**
+ * When the tests sweep: 01:00 UTC on 2026-03-29, the hour Europe moves its clocks forward. The
+ * repository takes the time it is given, so nothing here reads the real clock.
+ */
+const now = Date.UTC(2026, 2, 29, 1);
+
 /** A user and a device of theirs, as a sign-in leaves them. */
-const seedDevice = async (deviceId: string, userId: string, createdAt = Date.now()) => {
+const seedDevice = async (deviceId: string, userId: string, createdAt = now) => {
   await env.DB.batch([
     env.DB.prepare("INSERT INTO users (id, created_at) VALUES (?, 1) ON CONFLICT DO NOTHING").bind(
       userId,
@@ -114,7 +120,6 @@ describe("AuthRepositoryLive on D1", () => {
 
   it("removes users no one can reach, and keeps every user something still points at", async () => {
     const repository = await repositoryOn(env.DB);
-    const now = Date.now();
     const old = now - 2 * 60 * 60 * 1000;
     const iso = new Date(old).toISOString();
     const userAt = (id: string, createdAt: number) => [
@@ -148,7 +153,6 @@ describe("AuthRepositoryLive on D1", () => {
 
   it("removes expired sessions with their devices and tokens, and old devices with none", async () => {
     const repository = await repositoryOn(env.DB);
-    const now = Date.now();
     await seedDevice("device-expired", "user-a");
     await seedSession("device-expired", "user-a", now - 1);
     await seedDevice("device-live", "user-a");

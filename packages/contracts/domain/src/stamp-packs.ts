@@ -2,7 +2,7 @@ import { Schema } from "effect";
 
 /**
  * The stamp packs the App Store sells: consumable in-app purchases. This list is canonical. The
- * app's copy (`packages/ios/Sources/Payments/Resources/stamp-packs.json`) and the Xcode StoreKit
+ * app's copy (`packages/ios/payments/Sources/Payments/Resources/stamp-packs.json`) and the Xcode StoreKit
  * configuration (`apps/ios/App/Billet.storekit`) must match it, which a test in
  * `contracts-fixtures` checks. Prices are the US price tier in USD, as App Store Connect shows it.
  */

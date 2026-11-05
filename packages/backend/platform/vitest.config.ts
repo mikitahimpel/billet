@@ -1,5 +1,9 @@
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
+import { defaultTestNow } from "./test/test-now.ts";
+
+// The instant the test rooms live at; see test/test-now.ts.
+const bindings = { TEST_NOW: process.env["TEST_NOW"] ?? defaultTestNow };
 
 // `*.node.test.ts` runs drizzle-kit, which needs Node. Everything else runs inside workerd, with the
 // bindings from alchemy.run.ts. The date is the newest this pool's workerd supports; Alchemy deploys
@@ -24,6 +28,7 @@ export default defineConfig({
             miniflare: {
               compatibilityDate: "2026-08-15",
               compatibilityFlags: ["nodejs_compat"],
+              bindings,
               d1Databases: ["DB"],
               r2Buckets: ["MEDIA"],
               kvNamespaces: ["STATUS"],
@@ -52,6 +57,7 @@ export default defineConfig({
             miniflare: {
               compatibilityDate: "2026-08-15",
               compatibilityFlags: ["nodejs_compat"],
+              bindings,
               durableObjects: {
                 STUB_DEMO_ROOM: { className: "StubbedDemoRoom", useSQLite: true },
                 HANG_DEMO_ROOM: { className: "HangingApnsRoom", useSQLite: true },

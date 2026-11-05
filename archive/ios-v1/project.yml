@@ -31,8 +31,14 @@ settings:
       DEVELOPMENT_TEAM: 2666YPBJTB
       CODE_SIGN_STYLE: Automatic
 packages:
-  Billet:
-    path: ../../packages/ios
+  BilletCore:
+    path: ../../packages/ios/core
+  BilletPayments:
+    path: ../../packages/ios/payments
+  BilletPet:
+    path: ../../packages/ios/pet
+  BilletFeatures:
+    path: ../../packages/ios/features
   # The scenes this app ships. To remove one, drop it here, in the Billet target and in BilletApp.
   PetSceneReality:
     path: ../../packages/pet-scenes/reality
@@ -44,20 +50,14 @@ targets:
       - path: App
         excludes: [Billet.storekit]
     dependencies:
-      - package: Billet
-        products:
-          [
-            FeatureHome,
-            Ink,
-            Labs,
-            Payments,
-            PaymentsLive,
-            Persistence,
-            PetScene,
-            PetSceneCatalog,
-            Transport,
-            WidgetBridge,
-          ]
+      - package: BilletCore
+        products: [Ink, Persistence, Transport]
+      - package: BilletPayments
+        products: [Payments, PaymentsLive]
+      - package: BilletPet
+        products: [PetScene, PetSceneCatalog]
+      - package: BilletFeatures
+        products: [FeatureHome, Labs, WidgetBridge]
       - package: PetSceneReality
       - target: BilletWidget
       - target: BilletNotificationService
@@ -87,8 +87,12 @@ targets:
     platform: iOS
     sources: [Widget]
     dependencies:
-      - package: Billet
-        products: [DesignSystem, Ink, Persistence, Pet, Surfaces, WidgetBridge]
+      - package: BilletCore
+        products: [DesignSystem, Ink, Persistence]
+      - package: BilletPet
+        product: Pet
+      - package: BilletFeatures
+        products: [Surfaces, WidgetBridge]
     entitlements:
       path: Widget/BilletWidget.entitlements
       properties:
@@ -111,7 +115,7 @@ targets:
     platform: iOS
     sources: [NotificationService]
     dependencies:
-      - package: Billet
+      - package: BilletCore
         product: Delivery
     entitlements:
       path: NotificationService/BilletNotificationService.entitlements
@@ -142,7 +146,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: Billet
-      - package: Billet
+      - package: BilletPayments
         products: [Payments, PaymentsStoreKit]
     settings:
       base:

@@ -244,6 +244,9 @@ class CatRoom {
         }
     }
 
+    /// Loads Mochi again the next time a room is built, after her coat changed.
+    static func forgetMochi() { mochi = nil }
+
     /// Mochi's rigs: standing, sitting, and lying where splats are drawn (the meshes have no lying bodies).
     private struct Mochi {
         let standing: CatRig
@@ -259,11 +262,15 @@ class CatRoom {
         let task = Task {
             let drawn = SplatLoader.isSupported
             let files = try await Task.detached {
-                (try CatRig.Files(named: "MochiStanding", drawn: drawn), try CatRig.Files(named: "Mochi", drawn: drawn))
+                // Grey reads Ilya's files from the app; another coat reads its recoloured copy (CatCoat.bundle).
+                let coat = try drawn ? CatCoat.current().bundle() : .main
+                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
+                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
             var bodies: [NookiRestPose: CatRig] = [:]
-            if drawn {
+            // The lying bodies have no other coats yet, so a cat in another coat stays up rather than turn grey.
+            if drawn, CatCoat.current() == .grey {
                 for (pose, name) in [(NookiRestPose.loaf, "MochiLoaf"), (.sleep, "MochiSleep")] {
                     do {
                         let file = try await Task.detached { try CatRig.Files(named: name, drawn: true) }.value
@@ -276,7 +283,9 @@ class CatRoom {
             if !drawn {
                 for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
                     do {
-                        try rig.wear(try await Entity(named: file, in: .main))
+                        let model = try await Entity(named: file, in: .main)
+                        await CatCoat.current().dress(model, model: file)
+                        try rig.wear(model)
                     } catch {
                         print("\(file) failed to load: \(error)")
                     }

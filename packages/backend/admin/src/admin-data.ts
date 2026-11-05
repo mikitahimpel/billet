@@ -1,6 +1,7 @@
 import { Context, Data, type Effect } from "effect";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { EventRow, FlagRow } from "@billet/backend-metrics/funnel";
+import type { FlagRow } from "@billet/backend-metrics/funnel";
+import type { BuildEventRow } from "./admin-retention.ts";
 import type { OnboardingCountRow } from "@billet/backend-onboarding/onboarding-stats";
 import type { DetailRow } from "./admin-top-details.ts";
 
@@ -57,8 +58,8 @@ export interface NotificationRow {
 export class AdminData extends Context.Service<
   AdminData,
   {
-    /** Every `pair_events` row. The same rows the owner report reads. */
-    readonly events: Effect.Effect<ReadonlyArray<EventRow>, AdminUnavailable>;
+    /** Every `pair_events` row, with the build and system it carries. The owner report's rows. */
+    readonly events: Effect.Effect<ReadonlyArray<BuildEventRow>, AdminUnavailable>;
     /** Every `event_details` row: which cats, items and toys were chosen, apart from anyone. */
     readonly details: Effect.Effect<ReadonlyArray<DetailRow>, AdminUnavailable>;
     /** Every `pair_flags` row. */

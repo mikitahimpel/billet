@@ -8,6 +8,8 @@ struct OnboardingView: View {
     @Bindable var flow: OnboardingFlow
     /// The invite comes from the pairing on the server; nil in a build without one.
     let pairing: PairingModel?
+    /// The invite needs the account; until the sign-in finishes the page waits for it.
+    var signedIn = false
 
     private let language = Locale.current.language.languageCode?.identifier
 
@@ -26,8 +28,8 @@ struct OnboardingView: View {
         .animation(.spring(duration: 0.35), value: flow.index)
         .task { await flow.load() }
         .onChange(of: flow.index, initial: true) { flow.appeared() }
-        .task(id: flow.page) {
-            guard flow.page == .invite, let pairing, case .choosing(nil, _) = pairing.state else { return }
+        .task(id: [flow.page == .invite, signedIn]) {
+            guard flow.page == .invite, signedIn, let pairing, case .choosing(nil, _) = pairing.state else { return }
             pairing.createInvite()
         }
         .preferredColorScheme(.dark)
@@ -103,6 +105,8 @@ struct OnboardingView: View {
             EmptyView()
         case .question(let step):
             question(step)
+        case .catCoat:
+            catCoat
         case .catName:
             catName
         case .invite:
@@ -115,7 +119,7 @@ struct OnboardingView: View {
             switch flow.page {
             case .invite:
                 primaryButton(flow.invited ? "Continue" : "I'll invite them later") { flow.continueTapped() }
-            case .catName:
+            case .catName, .catCoat:
                 primaryButton("Continue") { flow.continueTapped() }
             default:
                 primaryButton("Continue") { flow.continueTapped() }
@@ -133,11 +137,6 @@ struct OnboardingView: View {
         switch step {
         case .single(let choice), .multi(let choice):
             heading(choice.title, choice.subtitle)
-            if case .multi = step {
-                Text("Pick all that fit")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Ink.secondary)
-            }
             VStack(spacing: 10) {
                 ForEach(choice.options, id: \.id) { option in
                     optionCard(option, multi: step.isMulti, picked: flow.picks[choice.id]?.contains(option.id) ?? false) {
@@ -166,6 +165,69 @@ struct OnboardingView: View {
 
     private func textBinding(_ field: OnboardingTextStep) -> Binding<String> {
         Binding { flow.texts[field.id] ?? "" } set: { flow.texts[field.id] = String($0.prefix(field.maxLength)) }
+    }
+
+    // MARK: Coat
+
+    @ViewBuilder private var catCoat: some View {
+        bubble("Which one am I?")
+        heading("Choose your cat", "Swipe to see every coat.")
+        ScrollViewReader { proxy in coatCarousel.onAppear { proxy.scrollTo(flow.coat, anchor: .center) } }
+        HStack(spacing: 8) {
+            ForEach(CatCoat.allCases, id: \.self) { coat in
+                Capsule()
+                    .fill(coat == flow.coat ? Color.honey : Ink.hairline)
+                    .frame(width: coat == flow.coat ? 20 : 8, height: 8)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .animation(.spring(duration: 0.3), value: flow.coat)
+    }
+
+    /// One card per coat; the one in the middle is the pick, and it opens on the coat picked before.
+    private var coatCarousel: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 14) {
+                ForEach(CatCoat.allCases, id: \.self) { coat in
+                    coatCard(coat)
+                        .containerRelativeFrame(.horizontal, count: 4, span: 3, spacing: 14)
+                        .scrollTransition(axis: .horizontal) { card, phase in
+                            card.scaleEffect(phase.isIdentity ? 1 : 0.88).opacity(phase.isIdentity ? 1 : 0.6)
+                        }
+                        .id(coat)
+                        .onTapGesture { withAnimation(.spring(duration: 0.35)) { flow.coat = coat } }
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: Binding { Optional(flow.coat) } set: { if let coat = $0 { flow.coat = coat } },
+                        anchor: .center)
+        .contentMargins(.horizontal, 32, for: .scrollContent)
+        .padding(.horizontal, -24)
+    }
+
+    private func coatCard(_ coat: CatCoat) -> some View {
+        let picked = coat == flow.coat
+        return VStack(spacing: 10) {
+            Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity, maxHeight: 280)
+                .padding(.top, 18)
+            Text(coat.title)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(Ink.heroInk)
+                .padding(.bottom, 16)
+        }
+        .frame(maxWidth: .infinity)
+        .background(RadialGradient(colors: [Color(hex: 0xFFF4E4), Color(hex: 0xF2C08A)], center: .init(x: 0.5, y: 0.35),
+                                   startRadius: 10, endRadius: 260),
+                    in: .rect(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).stroke(picked ? Color.honey : .clear, lineWidth: 3))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(picked ? [.isButton, .isSelected] : .isButton)
     }
 
     // MARK: Cat name
@@ -221,6 +283,8 @@ struct OnboardingView: View {
                 .background(Ink.card, in: .rect(cornerRadius: 24))
             case .creating, .claiming:
                 ProgressView().controlSize(.large).frame(maxWidth: .infinity, minHeight: 160)
+            case .choosing(nil, _) where !signedIn:
+                ProgressView("Connecting…").controlSize(.large).frame(maxWidth: .infinity, minHeight: 160)
             case .choosing(let failure, _):
                 if let failure {
                     Text(PairingCopy.message(for: failure))

@@ -15,7 +15,11 @@ hover.
 | --- | --- | --- |
 | Overview | for the last 7, 30 or 90 days against the same span before it: daily active (mean per day), weekly active (on the last day), new pairs, pair completion (inviters whose first invite fell in the range and are now in a pair), notes per pair per day (notes over the days each pair existed), D1/D7 retention (pairs formed in the range, both partners active on day N), each with its change and a sparkline or its 95% interval; active people and notes per day; the funnel installed → signed in → paired → first note → second day (all time) with each step's conversion from the one before | nothing |
 | In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
-| Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's | start, stop, kill, unkill, each after a confirmation |
+| Retention | pairs by the week they formed (UTC, from Monday), one row per week and one for all weeks, and columns for day 1, 3, 7, 14, 30 and 60 after forming. Three modes: **both active** (both partners opened the app or sent a note on day N), **either active**, and **both sent a note** (the north star at day 7). Filters: an experiment's variant (from `pair_flags`) and the build the pair formed on. Each cell is a share of the week's pairs that have reached that day, coloured from faint to strong within the view; hover shows the count and its 95% Wilson interval. A day no pair of the week has reached is hatched grey, and a share resting on only some of the week's pairs (the others are too young) is in italics. See [below](#retention-grid) | nothing |
+| Funnels | a funnel built from 2 to 6 steps picked from the closed event list, a window (the same UTC day as step 1, within 1 day, within 7 days), counted per pair or per person, for step 1 in the last 7, 30 or 90 days or all time; per step the count, the share of the step before (95% interval on hover), and the median time from the step before; split by an experiment's variants. Saved funnels as chips. See [below](#funnel-builder) | save a funnel under a name, delete one after a confirmation |
+| Trends | any event over time, by day or week: its count, unique people, unique pairs or count per pair, over 30, 90, 180 or 365 days, against the same span before (a dashed line, and the change on each total); split by app version, system or an experiment's variant (up to eight groups, the rest as "other"); every value as a table. See [below](#trends-explorer) | nothing |
+| Feature usage | for each product event (cat, room, shop, streak, widget) and each area as a whole, the share of pairs active in the last 7 and the last 30 days that used it, with a bar; split by an experiment's variants side by side; the count and 95% interval on hover. See [below](#feature-usage) | nothing |
+| Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's; then secondary and guardrail metrics per variant, each with its 95% interval and its difference from the default, and a warning when a guardrail is worse (also a "guardrail worse" pill in the table). See [below](#experiment-metrics) | start, stop, kill, unkill, each after a confirmation |
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
@@ -23,9 +27,154 @@ hover.
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
-before sign-in. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
+before sign-in.
+
+**Too few.** In the analytics views (Retention, Funnels, Trends, Feature usage, an experiment's metrics), any group of fewer than 5 pairs shows "too
+few" and no number: the server leaves the count out of the answer, so neither the page nor an agent
+ever sees it. Some users are minors, and a share of 2 pairs says more about those two couples than
+about the app. There are no per-person timelines and no session replay, by design. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
 a note, an image, an Apple identifier or a push token, and shows no user ids. What each setting
 means is in [experiments.md](experiments.md#what-an-experiment-is).
+
+## Retention grid
+
+`GET /admin/api/retention[?variant=<key>=<variant>&version=<build>]`, built by
+`buildRetentionGrid` (`packages/backend/admin/src/admin-retention.ts`) from the `pair_events` and
+`pair_flags` rows the Overview reads.
+
+- **A pair** is the people with a `PairClaimed` row under its id; it formed on the earliest of those
+  days (UTC), and day N is N days after that. It is counted in day N only once that day has come.
+- **Active** is `AppOpened` or `NoteSent` that day, as in the owner report (`buildReport`).
+- **The build a pair formed on** is the `app_version` on its earliest row the app sent (the
+  server's own rows, such as the claim, carry none). Pairs from before the column existed
+  (2026-11-04) are `unknown`.
+- **Checked against SQL.** `packages/backend/platform/test/admin-retention.test.ts` loads the seed
+  into a migrated D1 and compares every cell, in every mode, with a hand-written query, and the
+  variant and build filters with their own queries.
+
+## Funnel builder
+
+`GET /admin/api/funnel?steps=<a>,<b>[,…]&window=day|1d|7d&unit=pair|person[&range=7|30|90|all][&split=<key>]`,
+built by `buildFunnel` (`packages/backend/admin/src/admin-funnel.ts`) from the same rows as the
+Overview.
+
+- **Steps** are names from the closed list (`metrics.ts`, `analytics.md`), 2 to 6, all different.
+  `AccountDeleted` is not offered: it is written to Analytics Engine only.
+- **A unit enters** at its first step 1 whose day falls in the range (default 90 days). Per pair,
+  the pair's rows after pairing, whichever partner did each step; per person, all their rows.
+- **Each later step** counts at the first moment it happened at or after the step before, and
+  only before the window closes (end of step 1's UTC day, or 24 hours or 7 days after it). The
+  rows keep each day's first and last moment, not every one, so the moment is the row's first
+  when that is not earlier, else its last. A step can be placed later than it was, never
+  earlier, so a conversion is never overstated.
+- **Split** by an experiment key groups units by their stored variant (a person by the pair they
+  joined). Everyone is always the first group.
+- **Too few**: a count, its share and its median are left out when the count or the step before
+  it is under 5.
+- **Saved funnels** (`GET`/`POST /admin/api/funnels`, `DELETE /admin/api/funnels/<id>`) are a name
+  and the definition in `admin_funnels`, with the Access email. Writes need the panel's origin,
+  like every other write; the agent API lists them read-only.
+- **Checked against SQL.** `packages/backend/platform/test/admin-funnel.test.ts` runs four funnels
+  (both units, all three windows, ranges and up to four steps) on the seed and compares each step's
+  count and median with a hand-written query, and a variant split per pair with its own.
+
+## Trends explorer
+
+`GET /admin/api/trends?event=<name>&metric=count|people|pairs|perPair&interval=day|week&range=30|90|180|365&split=none|version|os|variant[&key=<experiment>]`,
+built by `buildTrends` (`packages/backend/admin/src/admin-trends.ts`).
+
+- **Two sources.** D1 (`pair_events`) answers everything. Analytics Engine answers, for its last
+  90 days, the count (by day, added up into weeks) and the unique pairs by day of an event the app
+  reports, overall or by build or system. It has no person, no variant, and none of the names the
+  server records (`NoteSent`, `PairClaimed`, `InviteCreated`), so those always come from D1, as
+  does anything older than 90 days. Each point says where it came from, and the page says which
+  applied. Totals are from D1.
+- **Analytics Engine needs a read token in the Worker** (owner step 5's token): a deploy that adds
+  `.env.pass.analytics-read` binds it as `ANALYTICS_READ_TOKEN`, with the account id. Without it,
+  or when Analytics Engine fails (logged once with a fixed reason), the trends use D1 alone. The
+  query is one SELECT built only from the closed event list and generated days
+  (`engineSql`); the reader never logs the answer's body.
+- **Build and system** are the ones the app sent (`pair_events.app_version`, `os`); a name the
+  server records takes the person's build from their other rows that day; rows from before
+  2026-11-04 are `unknown`.
+- **Too few**: a point (or total) resting on fewer than 5 pairs (people, for what happened before
+  pairing) is left out of the answer and drawn as a gap.
+- **Checked against SQL.** `packages/backend/platform/test/admin-trends.test.ts` compares every
+  point of five queries (each measure, day and week, each split, 30 to 180 days) and the period
+  before with hand-written queries on the seed, and the reader against a stand-in for the API.
+
+## Feature usage
+
+`GET /admin/api/features[?split=<experiment>]`, built by `buildFeatureUsage`
+(`packages/backend/admin/src/admin-features.ts`).
+
+- **Which events.** The product events in the closed list, by area (`featureAreas`). Cat:
+  `CatPetted`, `CatFed`, `CatPlayed`, `CatCalled`, `TrickDone`. Room: `DecoratingOpened` and the
+  `RoomItem*` and `RoomCustomised` events. Shop: `ShopOpened`, `ShopItemViewed`, `ShopItemBought`,
+  `ShopOfferViewed`, `ShopBundleBought`, `ShopDailyGiftClaimed`, `ShopGiftSent`. Streak:
+  `StreakOpened`, `StreakMilestoneSeen`. Widget: `WidgetAdded`, `WidgetButtonTapped`. Each area also
+  has an "any" row: pairs that used at least one of its events.
+- **Of which pairs.** The share is of the pairs **active in the window**: any row of theirs after
+  pairing fell in the last 7 days (today and the 6 before) or the last 30. A pair that stopped
+  using the app a month ago does not count against a feature. Rows from before pairing are left
+  out.
+- **By variant.** With `split`, each variant of that experiment gets its own pair of columns, over
+  the pairs `pair_flags` puts in it.
+- **Too few**: a share whose pairs, or whose active pairs, are fewer than 5 is left out and shows
+  "too few"; so does a variant's pair count.
+- **Checked against SQL.** `packages/backend/platform/test/admin-features.test.ts` compares every
+  row, window and variant with a hand-written query on the seed.
+
+## Experiment metrics
+
+Part of `GET /admin/api/experiments` (each item's `results.metrics`, `baseline` and `warnings`),
+built by `buildExperimentMetrics` (`packages/backend/admin/src/admin-experiment-metrics.ts`).
+
+- **Over the first week.** Every metric reads a pair's first week, counting only pairs at least 7
+  days old, with day 0 the day the pair formed. So a variant whose pairs are younger is not judged
+  on less time.
+
+  | Metric | Role | What it is |
+  | --- | --- | --- |
+  | D7 both active | secondary | share of pairs where both partners opened the app or sent a note on day 7 |
+  | Widget added | secondary | share of pairs where both partners added the widget on days 0 to 6 |
+  | Notes per pair per day | guardrail | notes the pair sent on days 0 to 6, divided by 7, averaged over pairs |
+  | App opens per pair per day | guardrail | app opens by both partners on days 0 to 6, divided by 7, averaged over pairs |
+  | Crash-free share | guardrail | waiting for crash monitoring (#38); shown as "waiting" until it has data |
+
+- **Intervals.** A share has its 95% Wilson interval, and its difference from the baseline has
+  Newcombe's interval built from the two Wilson ones. A per-day rate has a normal 95% interval of
+  the mean, and its difference has Welch's interval. The baseline is the experiment's default
+  variant.
+- **Better, worse, no clear change.** A difference is *better* or *worse* only when its whole
+  interval is on one side of zero. Every metric here is better when higher. A worse guardrail is
+  a red warning at the top of the section, with the difference and its interval. A worse
+  secondary metric is shown but never warns.
+- **Too few**: a variant with fewer than 5 measured pairs shows "too few" and no number, and no
+  difference.
+- **Checked against SQL.** `packages/backend/platform/test/admin-experiment-metrics.test.ts`
+  compares every variant's value for each metric, and the difference for app opens, with a
+  hand-written query on the seed. In the seed, `immersive` pairs open the app less often, so the
+  page has a guardrail warning to show.
+
+## Seed data
+
+`pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks
+(more each week), inviters who never pair, four builds and four iOS versions, the `home-layout`
+flag split `classic`/`immersive` (immersive holds on a little better), and what each person did
+each day. Pairs drift off at their own pace, and about one in seven never does. It is deterministic
+(`--seed`, `--today`, `--weeks`, `--scale`). Every user and pair id starts with `seed-`, and the
+file begins by deleting earlier seed rows, so it can be run again. `event_details` has no owner, so
+those rows add up on each run.
+
+```sh
+pnpm alchemy dev                               # once, so the local D1 exists
+pnpm admin:seed --local "$(ls .alchemy/local/d1/cloudflare-runtime-D1DatabaseObject/[0-9a-f]*.sqlite)"
+```
+
+`--local` applies it to that SQLite file; without it the script only writes the file. For a
+deployed stage (the manager's call, never an agent's) the same file goes through Wrangler:
+`wrangler d1 execute <database> --remote --file admin-seed.sql`. Never on `prod`.
 
 ## Why the same Worker
 
@@ -82,7 +231,8 @@ Nothing here has been done in the Cloudflare account. The steps for the owner:
    passes them to the Worker. Not secrets, but kept out of this public repo.
 5. **Analytics read token** (for Analytics Engine SQL, not needed by the panel): My Profile → API
    Tokens → Create token → Custom: Permissions Account → Account Analytics → Read, this account
-   only. Store it in vault `Billet`, item `cloudflare-analytics`, field `api_token`.
+   only. Store it in vault `Billet`, item `cloudflare-analytics`, field `api_token`. The panel's
+   trends read Analytics Engine with it once a deploy adds `.env.pass.analytics-read`.
    `.env.pass.analytics` refers to it.
 6. **Deploy** through the manager, with the owner's OK for the exact commit (`docs/alchemy.md`).
    Until `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` reach the Worker, `/admin` answers 403 to everyone.
@@ -101,6 +251,11 @@ a Cloudflare Access **service token**. They can't change anything.
 | Route (`GET /admin/api/agent/...`) | Same as the panel's |
 | --- | --- |
 | `overview[?days=7\|30\|90]` | Overview (30 days by default) |
+| `retention[?variant=<key>=<variant>&version=<build>]` | Retention |
+| `funnel?steps=…&window=…&unit=…[&range=…&split=…]` | Funnels: one funnel |
+| `funnels` | Funnels: the saved ones, and the event names a step may be |
+| `trends?event=…&metric=…&interval=…&range=…&split=…[&key=…]` | Trends |
+| `features[?split=…]` | Feature usage |
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |

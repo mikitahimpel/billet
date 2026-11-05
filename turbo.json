@@ -6,11 +6,7 @@
       "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/docs/**"]
     },
     "//#lint:root": {
-      "inputs": [
-        "$TURBO_ROOT$/*",
-        "$TURBO_ROOT$/.*",
-        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
-      ]
+      "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/packages/config/oxlint/*"]
     },
     "//#typecheck:root": {
       "inputs": [
@@ -31,13 +27,15 @@
         "Tests/**",
         "Package.swift",
         "scripts/**",
+        "$TURBO_ROOT$/packages/ios/scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format",
         "App/**",
         "Widget/**",
         "NotificationService/**",
         "project.yml"
-      ]
+      ],
+      "dependsOn": ["transit"]
     },
     "ios:format": {
       "cache": false
@@ -69,21 +67,24 @@
         "Tests/**",
         "Package.swift",
         "scripts/**",
+        "$TURBO_ROOT$/packages/ios/scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format"
-      ]
+      ],
+      "dependsOn": ["transit"]
     },
     "lint": {
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/.oxlintrc.json",
-        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
+        "$TURBO_ROOT$/packages/config/oxlint/*"
       ],
       "dependsOn": ["//#lint:root"]
     },
     "test": {
       "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$"]
+      "inputs": ["$TURBO_DEFAULT$"],
+      "env": ["TEST_NOW", "TZ"]
     },
     "transit": {
       "dependsOn": ["^transit"]

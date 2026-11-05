@@ -19,6 +19,7 @@ import { SessionToken } from "@billet/contracts-http-api/auth";
 import { D1Dialect } from "./d1-kysely-dialect.ts";
 import { hashSessionTokens, sha256Hex } from "./hashed-session-tokens.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
+import { type Now, systemNow } from "./wall-clock.ts";
 
 const IssuedRow = Schema.Struct({
   token: SessionToken,
@@ -54,7 +55,7 @@ const errorCode = (error: unknown): string | undefined => {
  * - No real email is stored: an Apple user's is made up, so Better Auth never links by email.
  * - No Apple token is stored: the hooks drop them before an account row is written.
  */
-const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>) => {
+const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, now: Now) => {
   const secret = [...crypto.getRandomValues(new Uint8Array(32))]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
@@ -172,7 +173,7 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>) =
             const deviceId = crypto.randomUUID();
             await db
               .prepare("INSERT INTO devices (id, user_id, created_at) VALUES (?, ?, ?)")
-              .bind(deviceId, session.userId, Date.now())
+              .bind(deviceId, session.userId, now())
               .run();
             return { data: { ...session, deviceId } };
           },
@@ -202,10 +203,13 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>) =
  * `AuthEngine` on Better Auth and the D1 directory. Build it once per request, as the other
  * directory layers are.
  */
-export const BetterAuthEngineLive = (db: D1Database): Layer.Layer<AuthEngine> =>
+export const BetterAuthEngineLive = (
+  db: D1Database,
+  now: Now = systemNow,
+): Layer.Layer<AuthEngine> =>
   Layer.sync(AuthEngine, () => {
     const verified = new Map<string, string>();
-    const auth = makeBetterAuth(db, verified);
+    const auth = makeBetterAuth(db, verified, now);
 
     const issued = Effect.fnUntraced(function* (token: string) {
       const context = yield* attempt(() => auth.$context);

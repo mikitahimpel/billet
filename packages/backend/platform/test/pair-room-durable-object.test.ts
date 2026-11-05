@@ -1,11 +1,13 @@
 import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
+import { maxFramesPerSecond } from "../src/frame-window.ts";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
 const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
 
@@ -61,12 +63,11 @@ describe("PairRoom state", () => {
 
   it("assigns the id, author and time of a note on the server", async () => {
     const room = await openRoom();
-    const before = Date.now();
     await room.sendNote(bob, photo());
     const [entry] = await room.notes(0, 10);
     expect(entry).toMatchObject({ seq: 1, note: { _tag: "Photo", author: bob, image } });
     expect(entry?.note.id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(entry?.note.sentAt).toBeGreaterThanOrEqual(before);
+    expect(entry?.note.sentAt).toBe(testNowOf(env));
   });
 
   it("round-trips a drawing through SQLite", async () => {
@@ -324,13 +325,13 @@ describe("PairRoom realtime across eviction", () => {
     return { socket: webSocket!, frames };
   };
 
-  const until = async (check: () => boolean) => {
-    const end = Date.now() + 4000;
-    while (!check()) {
-      if (Date.now() > end) throw new Error("Never saw the expected frame");
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-  };
+  const until = (check: () => boolean) =>
+    vi.waitFor(
+      () => {
+        if (!check()) throw new Error("Never saw the expected frame");
+      },
+      { timeout: 4000, interval: 5 },
+    );
 
   it("keeps relaying, and keeps each socket's place in the notes, after the object is evicted", async () => {
     const room = await openRoom();
@@ -366,5 +367,87 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.snapshot()).toMatchObject({
       members: [{ user: alice, presence: "idle" }, { user: bob }],
     });
+  });
+
+  const live = (frames: Array<{ _tag: string }>) =>
+    frames.filter((f) => f._tag.startsWith("Stroke") || f._tag === "Clear");
+  const frame = (message: Record<string, unknown>) => JSON.stringify(message);
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 150));
+
+  it("relays a live stroke and a clear to the partner only, in order", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    a.socket.send(frame({ _tag: "StrokeBegin", id: 1, color: "#7B4FE0", width: 14 }));
+    a.socket.send(frame({ _tag: "StrokePoints", id: 1, points: [{ x: 1, y: 2 }] }));
+    a.socket.send(frame({ _tag: "StrokePoints", id: 1, points: [{ x: 3, y: 4 }] }));
+    a.socket.send(frame({ _tag: "StrokeEnd", id: 1 }));
+    a.socket.send(frame({ _tag: "Clear" }));
+    await until(() => live(b.frames).length === 5);
+
+    expect(live(b.frames).map((f) => f._tag)).toEqual([
+      "StrokeBegin",
+      "StrokePoints",
+      "StrokePoints",
+      "StrokeEnd",
+      "Clear",
+    ]);
+    expect(live(b.frames)[2]).toEqual({ _tag: "StrokePoints", id: 1, points: [{ x: 3, y: 4 }] });
+    await settle();
+    expect(live(a.frames)).toEqual([]);
+  });
+
+  it("drops points of a stroke that was never begun, and batches over the point cap", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    const tooMany = Array.from({ length: 65 }, (_, i) => ({ x: i, y: i }));
+    a.socket.send(frame({ _tag: "StrokePoints", id: 9, points: [{ x: 1, y: 2 }] }));
+    a.socket.send(frame({ _tag: "StrokeBegin", id: 2, color: "#7B4FE0", width: 14 }));
+    a.socket.send(frame({ _tag: "StrokePoints", id: 2, points: tooMany }));
+    a.socket.send(frame({ _tag: "StrokeEnd", id: 2 }));
+    await until(() => live(b.frames).length === 2);
+    await settle();
+
+    expect(live(b.frames).map((f) => f._tag)).toEqual(["StrokeBegin", "StrokeEnd"]);
+  });
+
+  it("tells the partner to drop the strokes a disconnected phone left open", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    a.socket.send(frame({ _tag: "StrokeBegin", id: 4, color: "#7B4FE0", width: 14 }));
+    a.socket.send(frame({ _tag: "StrokeBegin", id: 5, color: "#7B4FE0", width: 14 }));
+    a.socket.send(frame({ _tag: "StrokeEnd", id: 4 }));
+    await until(() => live(b.frames).length === 3);
+
+    // Hibernation must not lose which strokes are open.
+    await evictDurableObject(room);
+    await runInDurableObject(room, async (instance, state) => {
+      const [socket] = state.getWebSockets(alice);
+      if (socket === undefined) throw new Error("expected an accepted socket");
+      await instance.webSocketClose(socket, 1006);
+    });
+    await until(() => b.frames.some((f) => f._tag === "StrokeDropped"));
+    await settle();
+
+    expect(b.frames.filter((f) => f._tag === "StrokeDropped")).toEqual([
+      { _tag: "StrokeDropped", id: 5 },
+    ]);
+  });
+
+  it("drops the frames past a socket's per-second budget", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    a.socket.send(frame({ _tag: "StrokeBegin", id: 1, color: "#7B4FE0", width: 14 }));
+    for (let i = 0; i < 99; i += 1) {
+      a.socket.send(frame({ _tag: "StrokePoints", id: 1, points: [{ x: i, y: i }] }));
+    }
+    await until(() => live(b.frames).length >= maxFramesPerSecond);
+    await settle();
+
+    // The room lives at the fixed TEST_NOW, so its window never rolls over: exactly the budget.
+    expect(live(b.frames)).toHaveLength(maxFramesPerSecond);
   });
 });

@@ -7,6 +7,7 @@
   "exports": {
     "./admin-data-live": "./src/admin-data-live.ts",
     "./admin-fetch": "./src/admin-fetch.ts",
+    "./analytics-engine-reader-live": "./src/analytics-engine-reader-live.ts",
     "./api-fetch": "./src/api-fetch.ts",
     "./app-status-live": "./src/app-status-live.ts",
     "./apple-identity-live": "./src/apple-identity-live.ts",
@@ -18,6 +19,7 @@
     "./event-sink-live": "./src/event-sink-live.ts",
     "./flag-config-repository-live": "./src/flag-config-repository-live.ts",
     "./flags-repository-live": "./src/flags-repository-live.ts",
+    "./funnel-store-live": "./src/funnel-store-live.ts",
     "./maintenance-gate": "./src/maintenance-gate.ts",
     "./media-store-live": "./src/media-store-live.ts",
     "./metrics-repository-live": "./src/metrics-repository-live.ts",
