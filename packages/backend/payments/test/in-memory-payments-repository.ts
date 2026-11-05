@@ -2,26 +2,26 @@ import { Effect, Option } from "effect";
 import {
   entryIds,
   type PaymentsRepository,
-  type StampOwner,
+  type CoinOwner,
   type StoredNotification,
   type StoredPurchase,
-  type StoredStampEntry,
+  type StoredPurchaseEntry,
 } from "../src/payments-repository.ts";
 
 export interface InMemoryPaymentsRepository {
   readonly repository: PaymentsRepository["Service"];
   readonly notifications: () => ReadonlyArray<StoredNotification>;
-  /** A negative entry, as spending stamps on the server would write. Tests only. */
-  readonly spend: (owner: StampOwner, stamps: number) => Promise<void>;
+  /** A negative entry, as spending coins on the server would write. Tests only. */
+  readonly spend: (owner: CoinOwner, coins: number) => Promise<void>;
 }
 
 /** The test double for `PaymentsRepository`. Single-threaded, so each method is trivially atomic. */
 export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => {
   const purchases = new Map<string, StoredPurchase>();
-  const entries: StoredStampEntry[] = [];
+  const entries: StoredPurchaseEntry[] = [];
   const notifications = new Map<string, StoredNotification>();
 
-  const balanceOf = (owner: StampOwner) =>
+  const balanceOf = (owner: CoinOwner) =>
     Math.max(
       0,
       entries
@@ -55,7 +55,7 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
           transactionId: purchase.transactionId,
           ownerId: purchase.ownerId,
           productId: purchase.productId,
-          stamps: purchase.stamps,
+          coins: purchase.coins,
           environment: purchase.environment,
           status: "credited",
           refunds: 0,
@@ -68,7 +68,7 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
           id: entryIds.purchase(purchase.originalTransactionId),
           ownerId: purchase.ownerId,
           kind: "purchase",
-          amount: purchase.stamps,
+          amount: purchase.coins,
           productId: purchase.productId,
           originalTransactionId: purchase.originalTransactionId,
           at: purchase.at,
@@ -81,9 +81,9 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
         note(notification);
         const current = unchanged(purchase);
         if (current === undefined || current.status !== "credited") {
-          return { duplicate: true, stamps: 0, balance: balanceOf(purchase.ownerId) };
+          return { duplicate: true, coins: 0, balance: balanceOf(purchase.ownerId) };
         }
-        const taken = Math.min(current.stamps, balanceOf(current.ownerId));
+        const taken = Math.min(current.coins, balanceOf(current.ownerId));
         const refunds = current.refunds + 1;
         entries.push({
           id: entryIds.refund(current.originalTransactionId, refunds),
@@ -98,17 +98,17 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
           ...current,
           status: "refunded",
           refunds,
-          flagged: taken < current.stamps ? 1 : current.flagged,
+          flagged: taken < current.coins ? 1 : current.flagged,
           updatedAt: at,
         });
-        return { duplicate: false, stamps: taken, balance: balanceOf(current.ownerId) };
+        return { duplicate: false, coins: taken, balance: balanceOf(current.ownerId) };
       }),
     restore: (purchase, at, notification) =>
       Effect.sync(() => {
         note(notification);
         const current = unchanged(purchase);
         if (current === undefined || current.status !== "refunded") {
-          return { duplicate: true, stamps: 0, balance: balanceOf(purchase.ownerId) };
+          return { duplicate: true, coins: 0, balance: balanceOf(purchase.ownerId) };
         }
         const refundId = entryIds.refund(current.originalTransactionId, current.refunds);
         const given = -(entries.find(({ id }) => id === refundId)?.amount ?? 0);
@@ -126,7 +126,7 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
           status: "credited",
           updatedAt: at,
         });
-        return { duplicate: false, stamps: given, balance: balanceOf(current.ownerId) };
+        return { duplicate: false, coins: given, balance: balanceOf(current.ownerId) };
       }),
     hasNotification: (uuid) => Effect.sync(() => notifications.has(uuid)),
     recordNotification: (notification) => Effect.sync(() => note(notification)),
@@ -137,12 +137,12 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
       })),
   };
 
-  const spend = (owner: StampOwner, stamps: number) => {
+  const spend = (owner: CoinOwner, coins: number) => {
     entries.push({
       id: `spend:${crypto.randomUUID()}`,
       ownerId: owner,
       kind: "refund",
-      amount: -stamps,
+      amount: -coins,
       productId: "spent",
       originalTransactionId: "spent",
       at: 0,

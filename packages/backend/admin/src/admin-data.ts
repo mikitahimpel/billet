@@ -12,25 +12,25 @@ export class AdminUnavailable extends Data.TaggedError("AdminUnavailable")<{
   readonly cause?: unknown;
 }> {}
 
-/** A stamp-pack purchase, as the panel lists it. `ownerId` is a pair id or `demo:<code>`. */
+/** A coin-pack purchase, as the panel lists it. `ownerId` is a pair id or `demo:<code>`. */
 export interface PurchaseRow {
   readonly originalTransactionId: string;
   readonly transactionId: string;
   readonly ownerId: string;
   readonly productId: string;
-  readonly stamps: number;
+  readonly coins: number;
   readonly environment: string;
   readonly status: string;
   readonly refunds: number;
-  /** A refund took back less than the pack, because the owner had fewer stamps left. */
+  /** A refund took back less than the pack, because the owner had fewer coins left. */
   readonly flagged: boolean;
   readonly purchasedAt: number;
   readonly createdAt: number;
   readonly updatedAt: number;
 }
 
-/** One stamp ledger entry. */
-export interface StampEntryRow {
+/** One coin ledger entry. */
+export interface PurchaseEntryRow {
   readonly id: string;
   readonly ownerId: string;
   readonly kind: string;
@@ -69,7 +69,7 @@ export class AdminData extends Context.Service<
     readonly purchases: (limit: number) => Effect.Effect<
       {
         readonly purchases: ReadonlyArray<PurchaseRow>;
-        readonly ledger: ReadonlyArray<StampEntryRow>;
+        readonly ledger: ReadonlyArray<PurchaseEntryRow>;
         readonly notifications: ReadonlyArray<NotificationRow>;
       },
       AdminUnavailable

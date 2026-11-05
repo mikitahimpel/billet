@@ -1,30 +1,62 @@
 # Payments
 
-Stamps are billet's in-app currency. The app sells them in packs, as consumable in-app purchases
-through StoreKit 2, and the server keeps a ledger of the stamps each pair has bought.
+Nooki's **coins** are billet's one currency (owner decision, 2026-11-05). Stamps, the old app's
+paid-only currency, are gone. Coins are earned in play (mini-games, feeding, notes) and, once
+payments are on, also sold in packs as consumable in-app purchases through StoreKit 2. The server
+keeps a ledger of the coins each pair has bought.
 
-## Stamp packs
+**The first release ships without payments:** the app is built with `BILLET_PAYMENTS=none`, App
+Store Connect has no in-app purchases, and the server's `payments` flag is off, so every
+`/v1/purchases*` route answers 404. The packs and the ledger are already coins in the contract,
+so turning payments on later needs no redesign.
 
-The canonical list is `stampPacks` in `@billet/contracts-domain/stamp-packs`:
+## The `payments` flag (`payments.enabled`)
 
-| Product id | Stamps | Price (USD) |
+`payments` is a remote flag in the server's registry (`packages/backend/flags/src/experiments.ts`;
+keys can't hold a dot, so `payments.enabled` is the key `payments`), with variants `off` and `on`:
+
+| | |
+| --- | --- |
+| Default | `off`, status `draft`, on every stage: nobody gets `on` |
+| Turn it on for a test pair | an override `payments = on` for that pair in the admin panel (Flags) |
+| Turn it on for everyone | weight `on`, set it as the default and start it, once purchases exist in App Store Connect |
+| Kill switch | kills it: every pair is off again at once |
+
+While it is off for the caller's pair, `POST /v1/purchases`, `POST /v1/purchases/mock` and
+`GET /v1/purchases` answer `404 NotFound`, before the body is read, exactly like a path that does
+not exist. A caller with no session still gets the `401` first. A demo room has no pair, so it is
+always off. `PaymentsSwitch` (`@billet/backend-payments/payments-switch`) asks the question;
+`platform` answers it from `FlagsService` (`payments-switch-live.ts`), and tests use
+`PaymentsSwitch.on` and `.off`. The mock route is still registered on the dev stage only. The App
+Store notifications route is not behind the flag: Apple must always get its 200.
+
+The app reads the same flag from `GET /v1/flags` and never offers to buy coins while it is not
+`on` (see the client brief).
+
+## Coin packs
+
+The canonical list is `coinPacks` in `@billet/contracts-domain/coin-packs`. The amounts and prices
+are **placeholders** until the owner sets them:
+
+| Product id | Coins | Price (USD) |
 | --- | --- | --- |
-| `com.mikitahimpel.billet.stamps.100` | 100 | 0.99 |
-| `com.mikitahimpel.billet.stamps.550` | 550 | 4.99 |
-| `com.mikitahimpel.billet.stamps.1200` | 1200 | 9.99 |
+| `com.mikitahimpel.billet.coins.100` | 100 | 0.99 |
+| `com.mikitahimpel.billet.coins.550` | 550 | 4.99 |
+| `com.mikitahimpel.billet.coins.1200` | 1200 | 9.99 |
 
-The app's copy (`packages/ios/payments/Sources/Payments/Resources/stamp-packs.json`) and the Xcode StoreKit
-configuration (`apps/ios/App/Billet.storekit`) must sell exactly these. A test in
-`contracts-fixtures` (`stamp-packs-sync.test.ts`) fails if an id, a number of stamps or a price
-differs, or if a StoreKit product is not a consumable.
+The app's copy (`packages/ios/payments/Sources/Payments/Resources/coin-packs.json`) and the Xcode StoreKit
+configuration (`archive/ios-v1/App/Billet.storekit` until the Nooki app has its own) must sell
+exactly these. A test in `contracts-fixtures` (`coin-packs-sync.test.ts`) fails if an id, a number
+of coins or a price differs, or if a StoreKit product is not a consumable.
 
-## Two builds: mock and StoreKit
+## Three builds: none, mock and StoreKit
 
 Which store the app carries is chosen when it is built, with one variable:
 
 | `BILLET_PAYMENTS` | Store | Server path | Use |
 | --- | --- | --- | --- |
-| `mock` (default) | `MockPayments`: packs and prices from `stamp-packs.json`, no StoreKit, no network to Apple | `POST /v1/purchases/mock` (dev only) | Simulator, TestFlight demos, UI work |
+| `none` (the release default, to come) | none: no StoreKit, no mock, no "buy coins" anywhere | none | The first App Store release |
+| `mock` (default) | `MockPayments`: packs and prices from `coin-packs.json`, no StoreKit, no network to Apple | `POST /v1/purchases/mock` (dev only) | Simulator, TestFlight demos, UI work |
 | `storekit` | `StoreKitPayments`: StoreKit 2 | `POST /v1/purchases` with the signed transaction | Xcode/Simulator with `Billet.storekit`, TestFlight sandbox, the App Store |
 
 Set it in the **environment**, never as an `xcodebuild` argument: `Package.swift` reads it to link
@@ -65,9 +97,13 @@ default).
 
 ## The app
 
+The Swift package types below still carry the old `Stamp` names (`StampPack`, `StampShop`, …);
+they count coins, and the Nooki client renames them when it wires payments (decoding already maps
+`coins`).
+
 - `Payments` (no StoreKit): the `Payments` protocol (`products()`, `purchase(_:)`, `restore()`,
   `updates()`), plain value types (`StampPack`, `PurchaseResult`, `StampCredit`, `StampLedger`,
-  `PaymentsError`), the pack list (`StampPackCatalog`, from `Resources/stamp-packs.json`) and
+  `PaymentsError`), the pack list (`StampPackCatalog`, from `Resources/coin-packs.json`) and
   `PaymentsServer`, the server half as closures.
 - `PaymentsMock`: `MockPayments` and its switches (`MockSwitches`, Labs → Payments): the next purchase
   succeeds, is cancelled, fails or waits for Ask to Buy; buttons approve or decline Ask to Buy and
@@ -100,13 +136,16 @@ and the wire types in `@billet/contracts-http-api/purchase`, with golden fixture
 | --- | --- | --- |
 | `POST /v1/purchases` `{signedTransaction}` | session, paired | `PurchaseResponse` |
 | `POST /v1/purchases/mock` `{productId, transactionId, kind}` | session, paired; **dev only** | `PurchaseResponse` |
-| `GET /v1/stamps` | session, paired | `StampsResponse` |
+| `GET /v1/purchases` | session, paired | `PurchasesResponse` (the bought-coins ledger) |
 | `POST /v1/appstore/notifications` `{signedPayload}` | Apple, no session | `200 {}` |
 
-- `PurchaseResponse` is `{transactionId, productId, stamps, balance, duplicate}`. `stamps` is what
+The first three routes are behind the `payments` flag: off for the caller, they are a 404 (see
+above).
+
+- `PurchaseResponse` is `{transactionId, productId, coins, balance, duplicate}`. `coins` is what
   the transaction credited (or what a mock refund took back, as a positive number). `duplicate` is
   true when the transaction was already credited: nothing changed and `balance` is the current one.
-- `StampsResponse` is `{balance, entries}`, entries oldest first:
+- `PurchasesResponse` is `{balance, entries}`, entries oldest first:
   `{id, kind: "purchase" | "refund", amount, productId, at}` with `at` in ISO 8601 UTC. Ids are
   stable, so the app merges its local ledger by them.
 - A refused transaction or notification (signature, chain, bundle, environment, product, type,
@@ -157,19 +196,19 @@ exist only when `STAGE` is exactly `dev`, so a missing or unknown stage is close
   `transactionId` (`mock-…`), environment `Mock`; `kind: "refund"` takes it back like an App Store
   refund. Refunding a mock transaction the caller never bought is a 404.
 - **Demo rooms.** The app's demo mode has no session and no pair. On dev only, the purchase, mock
-  and stamps routes take a request with no `authorization` header and an `x-billet-demo-room`
+  and coins routes take a request with no `authorization` header and an `x-billet-demo-room`
   header (`demoRoomHeader`, 1 to 64 of `A-Z a-z 0-9 _ -`); its ledger is `demo:<code>`. A session
   always wins, and every other stage ignores the header (no session is a 401).
 
 ### The ledger
 
-Stamps belong to the pair: both partners share one balance, and pairing again starts from none.
+Coins belong to the pair: both partners share one balance, and pairing again starts from none.
 Three D1 tables (`directory-schema.ts`) hold it:
 
 - `purchases`: one row per `originalTransactionId`, with the owner (pair id or `demo:<code>`),
-  pack, stamps, environment, `status` (`credited` or `refunded`), how many times it was refunded,
+  pack, coins, environment, `status` (`credited` or `refunded`), how many times it was refunded,
   a `flagged` bit and dates. No user, Apple account or receipt is stored.
-- `stamp_ledger`: every change, `purchase:<id>`, `refund:<id>`, `restore:<id>` (then `:2`, `:3` for
+- `coin_ledger`: every change, `purchase:<id>`, `refund:<id>`, `restore:<id>` (then `:2`, `:3` for
   later rounds). The balance is the sum of `amount`.
 - `app_store_notifications`: each notification handled, by `notificationUUID`, with what was done.
 
@@ -177,14 +216,16 @@ Crediting is one D1 batch: insert the purchase if its `originalTransactionId` is
 `purchase:` entry only for the owner the stored row names, and read the balance. A transaction sent
 again, by the same pair or another, credits nothing and answers `duplicate: true`.
 
-A refund is one batch too. It takes back the pack's stamps but at most the owner's balance, so the
+A refund is one batch too. It takes back the pack's coins but at most the owner's balance, so the
 balance never goes below 0. If it took less than the pack, the purchase is flagged for the admin
 (the Purchases page). Each step only applies to the purchase in the state it was read in, so two
 copies of the same refund apply once.
 
-Stamps are still spent in the app, in its local ledger, so the server's balance only counts what was
-bought and refunded. A pair that spent its stamps and then got a refund keeps them on the server's
-side; a refund only finds fewer stamps than the pack once spending moves to the server.
+This D1 ledger counts only bought coins. The pair's wallet (coins earned in play plus coins bought,
+minus coins spent in the shop) moves to the server next, in the pair's `PairRoom` next to the
+cat's journal; until then coins are earned and spent in the app. A pair that spent its coins and
+then got a refund keeps them on the server's side; a refund only finds fewer coins than the pack
+once spending moves to the server.
 
 ### App Store Server Notifications
 
@@ -195,7 +236,7 @@ so everything handled answers 200 and only a bad signature, chain or bundle is a
 
 | Type | What happens |
 | --- | --- |
-| `REFUND`, `REVOKE` | the purchase's stamps come back off (`refund:<id>`), at most down to 0 |
+| `REFUND`, `REVOKE` | the purchase's coins come back off (`refund:<id>`), at most down to 0 |
 | `REFUND_REVERSED` | what the last refund took is credited again (`restore:<id>`, kind `purchase`) |
 | `CONSUMPTION_REQUEST` | recorded only (see below) |
 | anything else | recorded only |

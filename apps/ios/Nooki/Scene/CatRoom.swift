@@ -269,11 +269,12 @@ class CatRoom {
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
             var bodies: [NookiRestPose: CatRig] = [:]
-            // The lying bodies have no other coats yet, so a cat in another coat stays up rather than turn grey.
-            if drawn, CatCoat.current() == .grey {
+            if drawn {
                 for (pose, name) in [(NookiRestPose.loaf, "MochiLoaf"), (.sleep, "MochiSleep")] {
                     do {
-                        let file = try await Task.detached { try CatRig.Files(named: name, drawn: true) }.value
+                        let file = try await Task.detached {
+                            try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle())
+                        }.value
                         bodies[pose] = try CatRig(file)
                     } catch {
                         print("\(name) failed to load: \(error)")

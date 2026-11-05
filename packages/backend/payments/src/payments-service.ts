@@ -1,18 +1,18 @@
 import { Clock, Context, Effect, Layer, Option, Redacted, Schema } from "effect";
 import type { Signature } from "effect/crypto";
 import type { UserId } from "@billet/contracts-domain/ids";
-import { appBundleId, stampPackOf } from "@billet/contracts-domain/stamp-packs";
+import { appBundleId, coinPackOf } from "@billet/contracts-domain/coin-packs";
 import type {
   MockPurchaseRequest,
   PurchaseResponse,
-  StampsResponse,
+  PurchasesResponse,
 } from "@billet/contracts-http-api/purchase";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { verifySignedData } from "./app-store-signed-data.ts";
 import { InvalidPurchase, PaymentsNotFound, PaymentsUnavailable } from "./payments-error.ts";
 import { PaymentsConfig } from "./payments-config.ts";
-import { PaymentsRepository, StampOwner, type StoredNotification } from "./payments-repository.ts";
+import { PaymentsRepository, CoinOwner, type StoredNotification } from "./payments-repository.ts";
 
 /** The fields of a StoreKit 2 transaction (`JWSTransactionDecodedPayload`) that matter here. */
 const Transaction = Schema.Struct({
@@ -48,34 +48,34 @@ const shapeOf =
       Effect.mapError(() => new InvalidPurchase({ reason })),
     );
 
-const decodeOwner = Schema.decodeSync(StampOwner);
+const decodeOwner = Schema.decodeSync(CoinOwner);
 
 /** The ledger of a demo room on the dev stage, which has no pair. */
-export const demoOwner = (code: string): StampOwner => decodeOwner(`demo:${code}`);
+export const demoOwner = (code: string): CoinOwner => decodeOwner(`demo:${code}`);
 
 const iso = (millis: number) => new Date(millis).toISOString();
 
-/** Purchases and stamps go through here; routes never see the repository. */
+/** Purchases and coins go through here; routes never see the repository. */
 export class PaymentsService extends Context.Service<
   PaymentsService,
   {
-    /** The stamps of a signed-in user belong to their pair. No pair: `PaymentsNotFound`. */
+    /** The coins of a signed-in user belong to their pair. No pair: `PaymentsNotFound`. */
     readonly ownerOf: (
       userId: UserId,
-    ) => Effect.Effect<StampOwner, PaymentsNotFound | PaymentsUnavailable>;
+    ) => Effect.Effect<CoinOwner, PaymentsNotFound | PaymentsUnavailable>;
     /** Verifies a StoreKit 2 transaction and credits its pack, once. */
     readonly purchase: (
-      owner: StampOwner,
+      owner: CoinOwner,
       signedTransaction: Redacted.Redacted<string>,
     ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsUnavailable>;
     /** The dev stage's purchase without the App Store. The routes only serve it there. */
     readonly mockPurchase: (
-      owner: StampOwner,
+      owner: CoinOwner,
       request: MockPurchaseRequest,
     ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsNotFound | PaymentsUnavailable>;
-    readonly stamps: (owner: StampOwner) => Effect.Effect<StampsResponse, PaymentsUnavailable>;
+    readonly purchases: (owner: CoinOwner) => Effect.Effect<PurchasesResponse, PaymentsUnavailable>;
     /**
-     * Applies an App Store Server Notification V2 once. Refunds and revocations take the stamps
+     * Applies an App Store Server Notification V2 once. Refunds and revocations take the coins
      * back, a reversed refund gives them back, and everything else is only recorded.
      *
      * `CONSUMPTION_REQUEST` (Apple asking about a refund request for a consumable) is recorded and
@@ -120,7 +120,7 @@ export class PaymentsService extends Context.Service<
       const accepts = (environment: string) =>
         config.environments.some((accepted) => accepted === environment);
 
-      // Where a request learns whose stamps it touches. A demo owner has no user or pair to name.
+      // Where a request learns whose coins it touches. A demo owner has no user or pair to name.
       const ownerOf = Effect.fn("PaymentsService.ownerOf")(function* (userId: UserId) {
         yield* annotateRefs({ user: userId });
         const pairId = yield* pairing
@@ -136,7 +136,7 @@ export class PaymentsService extends Context.Service<
       });
 
       const purchase = Effect.fn("PaymentsService.purchase")(function* (
-        owner: StampOwner,
+        owner: CoinOwner,
         signedTransaction: Redacted.Redacted<string>,
       ) {
         const transaction: Transaction = yield* verifiedTransaction(
@@ -146,7 +146,7 @@ export class PaymentsService extends Context.Service<
         if (!accepts(transaction.environment)) {
           return yield* new InvalidPurchase({ reason: "environment-not-accepted" });
         }
-        const pack = stampPackOf(transaction.productId);
+        const pack = coinPackOf(transaction.productId);
         if (pack === undefined) return yield* new InvalidPurchase({ reason: "product-unknown" });
         if (transaction.type !== "Consumable") {
           return yield* new InvalidPurchase({ reason: "type-not-consumable" });
@@ -159,7 +159,7 @@ export class PaymentsService extends Context.Service<
           transactionId: transaction.transactionId,
           ownerId: owner,
           productId: pack.id,
-          stamps: pack.stamps,
+          coins: pack.coins,
           environment: transaction.environment,
           purchasedAt: Math.max(0, Math.trunc(transaction.purchaseDate)),
           at: yield* Clock.currentTimeMillis,
@@ -167,17 +167,17 @@ export class PaymentsService extends Context.Service<
         return {
           transactionId: transaction.transactionId,
           productId: pack.id,
-          stamps: pack.stamps,
+          coins: pack.coins,
           balance,
           duplicate,
         };
       });
 
       const mockPurchase = Effect.fn("PaymentsService.mockPurchase")(function* (
-        owner: StampOwner,
+        owner: CoinOwner,
         request: MockPurchaseRequest,
       ) {
-        const pack = stampPackOf(request.productId);
+        const pack = coinPackOf(request.productId);
         if (pack === undefined) return yield* new InvalidPurchase({ reason: "product-unknown" });
         const at = yield* Clock.currentTimeMillis;
         const id = request.transactionId;
@@ -187,12 +187,12 @@ export class PaymentsService extends Context.Service<
             transactionId: id,
             ownerId: owner,
             productId: pack.id,
-            stamps: pack.stamps,
+            coins: pack.coins,
             environment: "Mock",
             purchasedAt: at,
             at,
           });
-          return { transactionId: id, productId: pack.id, stamps: pack.stamps, balance, duplicate };
+          return { transactionId: id, productId: pack.id, coins: pack.coins, balance, duplicate };
         }
         const stored = yield* repository.findPurchase(id);
         if (
@@ -206,13 +206,13 @@ export class PaymentsService extends Context.Service<
         return {
           transactionId: id,
           productId: pack.id,
-          stamps: reversal.duplicate ? pack.stamps : reversal.stamps,
+          coins: reversal.duplicate ? pack.coins : reversal.coins,
           balance: reversal.balance,
           duplicate: reversal.duplicate,
         };
       });
 
-      const stamps = Effect.fn("PaymentsService.stamps")((owner: StampOwner) =>
+      const purchases = Effect.fn("PaymentsService.purchases")((owner: CoinOwner) =>
         repository.ledger(owner).pipe(
           Effect.map(({ balance, entries }) => ({
             balance,
@@ -289,7 +289,7 @@ export class PaymentsService extends Context.Service<
         );
       });
 
-      return PaymentsService.of({ ownerOf, purchase, mockPurchase, stamps, notification });
+      return PaymentsService.of({ ownerOf, purchase, mockPurchase, purchases, notification });
     }),
   );
 }

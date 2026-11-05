@@ -4,15 +4,15 @@ import { PaymentsUnavailable } from "@billet/backend-payments/payments-error";
 import {
   entryIds,
   PaymentsRepository,
-  type StampOwner,
+  type CoinOwner,
   type StoredNotification,
   StoredPurchase,
   type StoredPurchase as Purchase,
-  StoredStampEntry,
+  StoredPurchaseEntry,
 } from "@billet/backend-payments/payments-repository";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
-import { appStoreNotifications, purchases, stampLedger } from "./directory-schema.ts";
+import { appStoreNotifications, purchases, coinLedger } from "./directory-schema.ts";
 
 // A storage error can quote bound values, so nothing from it survives this label.
 const unavailable = (cause: unknown) =>
@@ -21,7 +21,7 @@ const unavailable = (cause: unknown) =>
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
 const decodePurchases = Schema.decodeUnknownEffect(Schema.Array(StoredPurchase));
-const decodeEntries = Schema.decodeUnknownEffect(Schema.Array(StoredStampEntry));
+const decodeEntries = Schema.decodeUnknownEffect(Schema.Array(StoredPurchaseEntry));
 // A batch returns rows as stored, keyed by column name rather than by Drizzle field.
 const decodeBalance = Schema.decodeUnknownEffect(
   Schema.Array(Schema.Struct({ balance: Schema.Number })),
@@ -34,11 +34,11 @@ const balanceOf = (rows: unknown) =>
   decodeBalance(rows).pipe(Effect.map(([row]) => Math.max(0, row?.balance ?? 0)));
 
 const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Service"] => {
-  const balanceQuery = (owner: StampOwner) =>
+  const balanceQuery = (owner: CoinOwner) =>
     db
-      .select({ balance: sql<number>`coalesce(sum(${stampLedger.amount}), 0)`.as("balance") })
-      .from(stampLedger)
-      .where(eq(stampLedger.ownerId, owner));
+      .select({ balance: sql<number>`coalesce(sum(${coinLedger.amount}), 0)`.as("balance") })
+      .from(coinLedger)
+      .where(eq(coinLedger.ownerId, owner));
 
   const noted = (notification: StoredNotification | undefined) =>
     notification === undefined
@@ -67,7 +67,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                 transactionId: purchase.transactionId,
                 ownerId: purchase.ownerId,
                 productId: purchase.productId,
-                stamps: purchase.stamps,
+                coins: purchase.coins,
                 environment: purchase.environment,
                 status: "credited",
                 refunds: 0,
@@ -78,13 +78,13 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
               })
               .onConflictDoNothing()
               .returning({ id: purchases.originalTransactionId }),
-            db.insert(stampLedger).select((qb) =>
+            db.insert(coinLedger).select((qb) =>
               qb
                 .select({
                   id: sql<string>`${entryIds.purchase(purchase.originalTransactionId)}`.as("id"),
                   ownerId: purchases.ownerId,
                   kind: sql<string>`'purchase'`.as("kind"),
-                  amount: purchases.stamps,
+                  amount: purchases.coins,
                   productId: purchases.productId,
                   originalTransactionId: purchases.originalTransactionId,
                   at: sql<number>`${purchase.at}`.as("at"),
@@ -94,7 +94,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                   and(
                     eq(purchases.originalTransactionId, purchase.originalTransactionId),
                     eq(purchases.ownerId, purchase.ownerId),
-                    sql`not exists (select 1 from ${stampLedger} where ${stampLedger.id} = ${entryIds.purchase(purchase.originalTransactionId)})`,
+                    sql`not exists (select 1 from ${coinLedger} where ${coinLedger.id} = ${entryIds.purchase(purchase.originalTransactionId)})`,
                   ),
                 ),
             ),
@@ -125,7 +125,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
         return guarded(
           atomically(db, [
             db
-              .insert(stampLedger)
+              .insert(coinLedger)
               .select((qb) =>
                 qb
                   .select({
@@ -133,7 +133,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                     ownerId: purchases.ownerId,
                     kind: sql<string>`'refund'`.as("kind"),
                     amount:
-                      sql<number>`-min(${purchases.stamps}, max(0, (select coalesce(sum(${stampLedger.amount}), 0) from ${stampLedger} where ${stampLedger.ownerId} = ${purchases.ownerId})))`.as(
+                      sql<number>`-min(${purchases.coins}, max(0, (select coalesce(sum(${coinLedger.amount}), 0) from ${coinLedger} where ${coinLedger.ownerId} = ${purchases.ownerId})))`.as(
                         "amount",
                       ),
                     productId: purchases.productId,
@@ -143,13 +143,13 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                   .from(purchases)
                   .where(asRead(purchase, "credited")),
               )
-              .returning({ amount: stampLedger.amount }),
+              .returning({ amount: coinLedger.amount }),
             db
               .update(purchases)
               .set({
                 status: "refunded",
                 refunds: purchase.refunds + 1,
-                flagged: sql`case when (select -${stampLedger.amount} from ${stampLedger} where ${stampLedger.id} = ${id}) < ${purchases.stamps} then 1 else ${purchases.flagged} end`,
+                flagged: sql`case when (select -${coinLedger.amount} from ${coinLedger} where ${coinLedger.id} = ${id}) < ${purchases.coins} then 1 else ${purchases.flagged} end`,
                 updatedAt: at,
               })
               .where(asRead(purchase, "credited")),
@@ -161,7 +161,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
             ),
             Effect.map(([[written], balance]) => ({
               duplicate: written === undefined,
-              stamps: written === undefined ? 0 : -written.amount,
+              coins: written === undefined ? 0 : -written.amount,
               balance,
             })),
           ),
@@ -174,7 +174,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
         return guarded(
           atomically(db, [
             db
-              .insert(stampLedger)
+              .insert(coinLedger)
               .select((qb) =>
                 qb
                   .select({
@@ -184,7 +184,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                     ownerId: purchases.ownerId,
                     kind: sql<string>`'purchase'`.as("kind"),
                     amount:
-                      sql<number>`coalesce((select -${stampLedger.amount} from ${stampLedger} where ${stampLedger.id} = ${refundId}), 0)`.as(
+                      sql<number>`coalesce((select -${coinLedger.amount} from ${coinLedger} where ${coinLedger.id} = ${refundId}), 0)`.as(
                         "amount",
                       ),
                     productId: purchases.productId,
@@ -194,7 +194,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                   .from(purchases)
                   .where(asRead(purchase, "refunded")),
               )
-              .returning({ amount: stampLedger.amount }),
+              .returning({ amount: coinLedger.amount }),
             db
               .update(purchases)
               .set({ status: "credited", updatedAt: at })
@@ -207,7 +207,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
             ),
             Effect.map(([[written], balance]) => ({
               duplicate: written === undefined,
-              stamps: written?.amount ?? 0,
+              coins: written?.amount ?? 0,
               balance,
             })),
           ),
@@ -232,9 +232,9 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
           Effect.all([
             db
               .select()
-              .from(stampLedger)
-              .where(eq(stampLedger.ownerId, owner))
-              .orderBy(asc(stampLedger.at), asc(stampLedger.id))
+              .from(coinLedger)
+              .where(eq(coinLedger.ownerId, owner))
+              .orderBy(asc(coinLedger.at), asc(coinLedger.id))
               .pipe(Effect.flatMap(decodeEntries)),
             balanceQuery(owner).pipe(Effect.flatMap(balanceOf)),
           ]),

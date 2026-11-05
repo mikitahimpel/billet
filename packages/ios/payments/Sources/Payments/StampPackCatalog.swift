@@ -1,11 +1,17 @@
 import Foundation
 
 /// The stamp packs this build knows: product ID, stamps and the reference price. One list for the
-/// app, the server (`@billet/contracts-domain/stamp-packs`) and `apps/ios/App/Billet.storekit`; a
+/// app, the server (`@billet/contracts-domain/coin-packs`) and `apps/ios/App/Billet.storekit`; a
 /// test on each side fails when they disagree.
 public struct StampPackCatalog: Hashable, Sendable {
   public struct Definition: Codable, Hashable, Sendable {
+    private enum CodingKeys: String, CodingKey {
+      case id, price, displayName, description
+      case stamps = "coins"
+    }
+
     public let id: String
+    /// The coins the pack credits (`coins` in coin-packs.json).
     public let stamps: Int
     /// The reference price in US dollars, such as `"0.99"`. The store shows its own.
     public let price: String
@@ -29,9 +35,9 @@ public struct StampPackCatalog: Hashable, Sendable {
 
   /// The list bundled with the app.
   public static let standard: StampPackCatalog = {
-    guard let url = Bundle.module.url(forResource: "stamp-packs", withExtension: "json"),
+    guard let url = Bundle.module.url(forResource: "coin-packs", withExtension: "json"),
       let data = try? Data(contentsOf: url), let catalog = try? StampPackCatalog(json: data)
-    else { preconditionFailure("stamp-packs.json is missing from the Payments bundle") }
+    else { preconditionFailure("coin-packs.json is missing from the Payments bundle") }
     return catalog
   }()
 
