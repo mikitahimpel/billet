@@ -160,14 +160,14 @@ struct NoteComposer: View {
     private func save() {
         switch mode {
         case .write:
-            guard state.addNote(text: text, paper: paper) else { return }
+            guard state.journal.addNote(text: text, paper: paper) else { return }
         case .draw:
             let frame = CGRect(x: 0, y: 0, width: Self.side, height: Self.side)
             var image = UIImage()
             UITraitCollection(userInterfaceStyle: .light).performAsCurrent {
                 image = canvas.drawing.image(from: frame, scale: 2)
             }
-            guard state.addNote(doodle: image, paper: paper) else { return }
+            guard state.journal.addNote(doodle: image, paper: paper) else { return }
         }
         dismiss()
     }

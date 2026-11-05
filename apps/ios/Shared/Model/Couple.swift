@@ -1,15 +1,25 @@
 import Observation
 import UIKit
 
-/// The two partners on this device and the day they got together. A local profile until accounts and sync exist.
+/// The pair on the server: which account holds each monogram.
+nonisolated struct PairMembers: Codable, Hashable {
+    var pairID: String
+    /// User ids by monogram.
+    var users: [String: String]
+}
+
+/// The two partners on this device and the day they got together. Monograms and names are for display; once paired,
+/// `pair` ties each monogram to an account.
 nonisolated struct Couple: Codable, Hashable {
     /// Monograms, first partner first.
     var partners: [String]
     var togetherSince: Date
-    /// Which partner is holding the phone; switched on the Us tab.
+    /// Which partner is holding the phone: the signed-in account once paired, switched on the Us tab before that.
     var viewer: String
     /// Names the partners gave themselves, by monogram. The monograms stay their ids everywhere else.
     var names: [String: String]? = nil
+    /// Nil until this phone is paired on a server.
+    var pair: PairMembers? = nil
 
     var other: String { viewer == partners[0] ? partners[1] : partners[0] }
 
@@ -20,11 +30,9 @@ nonisolated struct Couple: Codable, Hashable {
         return days + 1
     }
 
-    /// First launch lands on day 127, the counter the app showed before profiles existed.
+    /// First launch is day 1 until the couple sets their date.
     static func starter(now: Date = .now) -> Couple {
-        let cal = Calendar.current
-        let start = cal.date(byAdding: .day, value: -126, to: cal.startOfDay(for: now)) ?? now
-        return Couple(partners: ["L", "M"], togetherSince: start, viewer: "L")
+        Couple(partners: ["L", "M"], togetherSince: Calendar.current.startOfDay(for: now), viewer: "L")
     }
 }
 
@@ -105,9 +113,28 @@ final class CoupleStore {
         photos[partner] = square
     }
 
+    /// Before pairing only; after it the viewer is the signed-in account.
     func setViewer(_ partner: String) {
-        guard couple.partners.contains(partner), couple.viewer != partner else { return }
+        guard couple.pair == nil, couple.partners.contains(partner), couple.viewer != partner else { return }
         couple.viewer = partner
+        SharedFile.write(couple, to: Self.file)
+    }
+
+    /// Ties the monograms to the pair's two accounts. The holder keeps the monogram they had, or the one an earlier
+    /// adopt gave this account.
+    func adopt(pairID: String, me: String, partner: String) {
+        let mine = couple.pair?.users.first { $0.value == me }?.key ?? couple.viewer
+        let theirs = mine == couple.partners[0] ? couple.partners[1] : couple.partners[0]
+        let pair = PairMembers(pairID: pairID, users: [mine: me, theirs: partner])
+        guard couple.pair != pair || couple.viewer != mine else { return }
+        couple.pair = pair
+        couple.viewer = mine
+        SharedFile.write(couple, to: Self.file)
+    }
+
+    func leavePair() {
+        guard couple.pair != nil else { return }
+        couple.pair = nil
         SharedFile.write(couple, to: Self.file)
     }
 }

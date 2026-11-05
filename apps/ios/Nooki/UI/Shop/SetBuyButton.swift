@@ -10,18 +10,18 @@ struct SetBuyButton<Pieces: PieceSet>: View {
 
     @State private var confirming = false
 
-    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: set, owned: state.owned) }
+    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: set, owned: state.shop.owned) }
 
     var body: some View {
         Group {
             if let quote {
-                let affordable = state.coins >= quote.price
+                let affordable = state.shop.coins >= quote.price
                 Button { confirming = true } label: {
                     CoinPrice(price: quote.price, was: quote.sum)
                 }
                 .shopButton()
                 .disabled(!affordable)
-                .accessibilityHint(affordable ? "Buys the \(set.name) set" : "Needs \(quote.price - state.coins) more coins")
+                .accessibilityHint(affordable ? "Buys the \(set.name) set" : "Needs \(quote.price - state.shop.coins) more coins")
             } else {
                 Label("Owned", systemImage: "checkmark")
                     .font(.nookiHeadline)
@@ -30,14 +30,14 @@ struct SetBuyButton<Pieces: PieceSet>: View {
         }
         .confirmationDialog(dialogTitle, isPresented: $confirming, titleVisibility: .visible) {
             Button("Buy for \(quote?.price ?? 0) coins") {
-                state.buy(set)
+                state.shop.buy(set)
             }
             Button("Not now", role: .cancel) {}
         }
     }
 
     private var dialogTitle: String {
-        let names = set.itemIDs.filter { !state.owned.contains($0) }.compactMap { Catalog.item($0)?.name }
+        let names = set.itemIDs.filter { !state.shop.owned.contains($0) }.compactMap { Catalog.item($0)?.name }
         return "\(set.name): \(names.formatted(.list(type: .and)))"
     }
 }

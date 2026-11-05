@@ -74,24 +74,27 @@ struct ShopView: View {
 
     @ViewBuilder private var today: some View {
         let now = Date.now
-        DailyGiftCard(state: state)
-            .padding(.horizontal, Space.l)
+        // The server has no daily gift yet; a synced pair's coins come only from the room.
+        if !state.shop.isSynced {
+            DailyGiftCard(state: state)
+                .padding(.horizontal, Space.l)
+        }
 
-        FeaturedCard(state: state, offer: state.offers.featured(on: now))
+        FeaturedCard(state: state, offer: state.shop.offers.featured(on: now))
             .padding(.horizontal, Space.l)
 
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Daily deals") {
                 // Deals change at the couple's local midnight, the same for both of them.
                 Label {
-                    Text(timerInterval: now...state.offers.nextDay(after: now), countsDown: true)
+                    Text(timerInterval: now...state.shop.offers.nextDay(after: now), countsDown: true)
                         .monospacedDigit()
                 } icon: {
                     Image(systemName: "clock")
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            grid(state.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            grid(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
         .padding(.horizontal, Space.l)
         .id("deals")

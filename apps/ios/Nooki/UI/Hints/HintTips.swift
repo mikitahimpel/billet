@@ -77,7 +77,7 @@ nonisolated struct TreatHint: HintTip {
     static let done = Tips.Event(id: "hint.treat.done")
 
     var title: Text { Text("A treat goes further") }
-    var message: Text? { Text("Her card has treats: one fills her bar more than a pet, for \(HomeState.treatPrice) coins.") }
+    var message: Text? { Text("Her card has treats: one fills her bar more than a pet, for \(ShopModel.treatPrice) coins.") }
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(RoomsHint.done) { $0.donations.count >= 1 }] }
 }

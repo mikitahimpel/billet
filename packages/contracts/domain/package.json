@@ -19,7 +19,8 @@
     "./coin-packs": "./src/coin-packs.ts",
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
-    "./riddle-words": "./src/riddle-words.ts"
+    "./riddle-words": "./src/riddle-words.ts",
+    "./shop": "./src/shop.ts"
   },
   "scripts": {
     "lint": "oxlint .",

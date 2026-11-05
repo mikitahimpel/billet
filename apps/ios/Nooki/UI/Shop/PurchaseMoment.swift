@@ -39,7 +39,7 @@ struct PurchaseMoment: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .haptic(.success, trigger: flights)
-        .onChange(of: state.lastPurchase) { _, purchase in
+        .onChange(of: state.shop.lastPurchase) { _, purchase in
             guard let purchase else {
                 withAnimation(.spring(duration: 0.3)) { shown = nil }
                 return
@@ -72,7 +72,7 @@ struct PurchaseMoment: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button("Undo") {
-                if state.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
             }
             .shopButton(prominent: false)
             .accessibilityHint("Gives back \(purchase.cost) coins")

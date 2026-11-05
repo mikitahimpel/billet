@@ -1,10 +1,11 @@
 import SwiftUI
 import TipKit
+import Transport
 import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    @State private var state = HomeState()
+    @State private var state = HomeState(stores: .live())
     /// Built after the first frame, so launch shows the backdrop at once.
     @State private var home: DioramaScene?
     /// Built each time the City room is opened, released when it is left.
@@ -40,8 +41,8 @@ struct HomeView: View {
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
             } else if let scene {
-                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
-                    withAnimation(.spring(duration: 0.4)) { state.pet() }
+                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.care.petPulse) {
+                    withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
                 .allowsHitTesting(showsRoom)
@@ -150,11 +151,11 @@ struct HomeView: View {
             if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
-        .onChange(of: state.petPulse) {
+        .onChange(of: state.care.petPulse) {
             scene?.purr()
             hints.done(PetHint())
         }
-        .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: state.care.treatsGiven) { hints.done(TreatHint()) }
         .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
         .onChange(of: state.tab) { _, tab in
             switch tab {
@@ -174,6 +175,7 @@ struct HomeView: View {
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
+                    await state.shop.refresh()
                 }
                 session?.followInbox(true)
                 refreshRooms()
@@ -189,7 +191,8 @@ struct HomeView: View {
             SettingsView(state: state) {
                 scene?.stop()
                 HomeState.eraseAll()
-                state = HomeState()
+                state = HomeState(stores: .live())
+                Task { await followPair() }
             }
             .presentationBackground(Ink.sheet)
             .presentationDragIndicator(.visible)
@@ -216,6 +219,7 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .task { await DrawingSync.watchLiveActivities() }
+        .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
@@ -299,8 +303,28 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    private func followPair() async {
+        guard let session, let sync = session.shopSync else { return await leavePair() }
+        do throws(TransportError) {
+            let pair = try await session.pair()
+            state.profile.adopt(
+                pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
+        } catch {
+            if error == .api(.notFound) { return await leavePair() }
+            // Offline: a phone that already took the pair keeps following it.
+            guard state.profile.couple.pair != nil else { return }
+        }
+        await state.shop.connect(sync)
+    }
+
+    private func leavePair() async {
+        state.profile.leavePair()
+        await state.shop.connect(nil)
+    }
+
     private var photoSync: PhotoSync? {
-        session?.photoSync(moments: state.moments, partner: state.partners.1)
+        session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.

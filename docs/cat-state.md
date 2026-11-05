@@ -109,7 +109,7 @@ multiplies its brain's `curious`, `lazy` and `cuddly` traits by `temper / 0.5`, 
 - The pair comes from D1, never from the client. A caller with no pair gets 404.
 - `POST /v1/cat/events` before the cat is adopted is 404: there is no cat to feed. `NoteShared`
   from a client is 400.
-- Notes are recorded in the journal only once a cat exists.
+- Notes are recorded in the journal only once a cat exists; before that they still earn coins.
 
 ## Realtime
 

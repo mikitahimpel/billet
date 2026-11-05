@@ -58,7 +58,7 @@ struct UsView: View {
                 .foregroundStyle(Ink.primary)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
             Spacer(minLength: 0)
-            ViewerSwitch(state: state)
+            if state.profile.couple.pair == nil { ViewerSwitch(state: state) }
             Menu {
                 Section("How are you, \(state.profile.name(of: state.viewer))?") {
                     ForEach(PartnerMood.allCases, id: \.self) { mood in
@@ -138,7 +138,7 @@ struct UsView: View {
 
 // MARK: - Pieces
 
-/// "Who's holding the phone" toggle; both partners share one device until sync lands.
+/// "Who's holding the phone" toggle, for a couple sharing one phone before pairing.
 private struct ViewerSwitch: View {
     let state: HomeState
 

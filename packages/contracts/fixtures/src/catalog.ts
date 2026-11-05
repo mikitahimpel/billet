@@ -38,6 +38,14 @@ import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
 import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
+import { PairResponse } from "@billet/contracts-http-api/pair";
+import {
+  OrderRequest,
+  OrderResponse,
+  ShopResponse,
+  WishRequest,
+} from "@billet/contracts-http-api/shop";
+import { PieceSetId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import { CoinEntry } from "@billet/contracts-domain/coins";
 import {
   type AppStatus,
@@ -178,6 +186,11 @@ const drawingOnPaper = Note.cases.Drawing.make({
 });
 const rose = Schema.decodeSync(InkId)("ink-rose");
 const decodeCoinEntry = Schema.decodeUnknownSync(CoinEntry);
+const lamp = Schema.decodeSync(RoomItemId)("lamp");
+const rug = Schema.decodeSync(RoomItemId)("rug");
+const tower = Schema.decodeSync(RoomItemId)("tower");
+const yarn = Schema.decodeSync(RoomItemId)("yarn");
+const readingNook = Schema.decodeSync(PieceSetId)("reading-nook");
 const earnEntry = decodeCoinEntry({
   id: "earn:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
   kind: "earn",
@@ -545,6 +558,31 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { inks, owned: [freeInk, rose] },
     "free-only": { inks, owned: [freeInk] },
   }),
+  fixture("ShopOffer", ShopOffer, {
+    ink: ShopOffer.cases.Ink.make({ ink: rose }),
+    item: ShopOffer.cases.Item.make({ item: tower }),
+    set: ShopOffer.cases.Set.make({ set: readingNook }),
+    treat: ShopOffer.cases.Treat.make({}),
+  }),
+  fixture("ShopResponse", ShopResponse, {
+    default: { balance: 65, inks: [freeInk, rose], items: [lamp, rug, tower], wishlist: [yarn] },
+    new: { balance: 0, inks: [freeInk], items: [lamp, rug], wishlist: [] },
+  }),
+  fixture("OrderRequest", OrderRequest, {
+    default: { id: idempotencyKey, offer: ShopOffer.cases.Item.make({ item: tower }) },
+    treat: { id: idempotencyKey, offer: ShopOffer.cases.Treat.make({}) },
+  }),
+  fixture("OrderResponse", OrderResponse, {
+    default: {
+      entry: { ...spendEntry, amount: -540, ref: "tower" },
+      shop: { balance: 65, inks: [freeInk], items: [lamp, rug, tower], wishlist: [] },
+    },
+  }),
+  fixture("WishRequest", WishRequest, {
+    wished: { item: tower, wished: true },
+    unwished: { item: tower, wished: false },
+  }),
+  fixture("PairResponse", PairResponse, { default: { pairId, members: [alice, bob] } }),
   // A JWS's shape only: never signed by anyone.
   fixture("PurchaseRequest", PurchaseRequest, {
     default: {

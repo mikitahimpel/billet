@@ -2,6 +2,7 @@ import { Clock, Context, Effect, Layer, Option, Schema, Semaphore } from "effect
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import { type CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import type {
   CatResponse,
@@ -33,6 +34,8 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "CatEntryAppended":
       case "CatEntryRepeated":
       case "InksGranted":
+      case "ItemsGranted":
+      case "WishlistChanged":
       case "CoinsEntered":
       case "CoinsRepeated":
         return [];
@@ -204,7 +207,7 @@ export class RoomService extends Context.Service<RoomService>()(
         }).pipe(lock.withPermits(1));
 
       // Like a cat entry: a repeated `id` answers with the spend already stored, charging nothing.
-      const buy = (by: UserId, id: IdempotencyKey, ink: InkId) =>
+      const spendOnce = (id: IdempotencyKey, command: (at: EpochMillis) => RoomCommand) =>
         Effect.gen(function* () {
           const state = yield* store.load;
           if (state._tag === "Active") {
@@ -216,9 +219,17 @@ export class RoomService extends Context.Service<RoomService>()(
               });
             }
           }
-          const at = yield* Clock.currentTimeMillis;
-          return yield* decideAndCommit({ _tag: "Buy", id, by, ink, at });
+          return yield* decideAndCommit(command(yield* Clock.currentTimeMillis));
         }).pipe(lock.withPermits(1));
+
+      const buy = (by: UserId, id: IdempotencyKey, ink: InkId) =>
+        spendOnce(id, (at) => ({ _tag: "Buy", id, by, ink, at }));
+
+      const order = (by: UserId, id: IdempotencyKey, offer: ShopOffer) =>
+        spendOnce(id, (at) => ({ _tag: "Order", id, by, offer, at }));
+
+      const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
+        dispatch({ _tag: "SetWish", by, item, wished });
 
       /**
        * The cat at the room's clock now, or null while the room is not open. Before adoption, a
@@ -253,6 +264,8 @@ export class RoomService extends Context.Service<RoomService>()(
         saveCat,
         recordCatEvent,
         buy,
+        order,
+        setWish,
         catView,
         activityPage,
         markActivityRead,

@@ -31,19 +31,45 @@ struct Mood: Identifiable {
     let tint: Color
 }
 
-/// Home screen state; no backend yet. The couple, the wallet, the Us tab, moments and moods live in the app group so
-/// the widgets read the same data.
+/// The stores and feature models one launch of Home runs on. `HomeView` builds them; nothing below it makes its
+/// own. The couple, the wallet, the Us tab, moments and moods live in the app group so the widgets read the same data.
+struct HomeStores {
+    let profile: CoupleStore
+    let wallet: WalletStore
+    let us: UsStore
+    let partnerMoods: MoodStore
+    let streak: StreakStore
+    let moments: MomentStore
+    let notes: NoteStore
+    let rooms: RoomsChoice
+    let care: CatCare
+    let shop: ShopModel
+    let journal: Journal
+
+    /// The stores over the app group's files.
+    static func live() -> HomeStores {
+        let profile = CoupleStore()
+        let wallet = WalletStore()
+        let streak = StreakStore()
+        let moments = MomentStore()
+        let notes = NoteStore()
+        let care = CatCare(wallet: wallet, streak: streak)
+        return HomeStores(
+            profile: profile, wallet: wallet, us: UsStore(wallet: wallet), partnerMoods: MoodStore(), streak: streak,
+            moments: moments, notes: notes, rooms: RoomsChoice(), care: care,
+            shop: ShopModel(wallet: wallet, couple: profile, care: care),
+            journal: Journal(moments: moments, notes: notes, wallet: wallet, streak: streak, couple: profile))
+    }
+}
+
+/// Where Home is: the tab, the room, the sheets that are open. The data and its rules are in the stores and models it
+/// is given.
 @Observable
 final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
     var room: RoomKind = .home
-    /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
-    let rooms = RoomsChoice()
-    var petPulse = 0
-    /// Treats given since launch.
-    private(set) var treatsGiven = 0
     var showsSettings = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
@@ -52,6 +78,15 @@ final class HomeState {
     var showsPetSheet = false
     /// A shop item opened from outside the Shop, such as an Inbox row.
     var openedShopItem: ShopItem?
+    /// The Us tab's open sheet; widgets deep-link into it.
+    var usRoute: UsView.Route?
+    /// The open note composer; the Add menu and the new-note deep link set it.
+    var composingNote: NoteComposer.Mode?
+    /// The lock-screen drawing is open; the Add menu's Draw and a drawing widget's tap set it.
+    var drawing = false
+    /// The card the couple tapped on the board, opened as a sheet.
+    var openedPin: PinRoute?
+    var momentsMode: MomentsMode = .photos
 
     let moods = [
         Mood(title: "Happy", symbol: "heart.fill", tint: Color(hex: 0xFF7A93)),
@@ -60,131 +95,36 @@ final class HomeState {
         Mood(title: "Curious", symbol: "sparkles", tint: Color(hex: 0xFFD76A)),
     ]
 
-    /// Shop state: both partners share one wallet, room and wishlist.
-    let wallet = WalletStore()
-    var coins: Int { wallet.wallet.coins }
-    var level: Int { wallet.wallet.level }
-    var progress: Double { wallet.wallet.progress }
-    var owned: Set<String> { wallet.wallet.owned }
-    var wishlist: Set<String> { wallet.wallet.wishlist }
-    var gifted: Set<String> { wallet.wallet.gifted }
-
-    /// The Shop's daily and weekly rotations, the same on both partners' phones.
-    var offers: ShopOffers { ShopOffers(pairSeed: profile.couple.partners.sorted().joined(separator: "+")) }
-
-    /// Today's price: the deal price when the item is one of today's deals.
-    func price(of item: ShopItem, on date: Date = .now) -> Int {
-        offers.deal(for: item.id, on: date)?.price(of: item) ?? item.price
-    }
-
-    private static let giftFile = "Shop/gift.json"
-    private(set) var giftLog = SharedFile.read(GiftLog.self, from: giftFile) ?? GiftLog()
-
-    func canClaimGift(on date: Date = .now) -> Bool { giftLog.canClaim(on: date) }
-
-    /// Opens the day's free gift: coins into the wallet, or an item into the room's closet. Nil if it's already open.
-    func claimGift(on date: Date = .now) -> GiftReward? {
-        guard canClaimGift(on: date) else { return nil }
-        let reward = offers.gift(on: date, owned: owned)
-        wallet.update {
-            switch reward {
-            case .coins(let amount): $0.coins += amount
-            case .item(let id): $0.owned.insert(id)
-            }
-        }
-        giftLog.claimedDay = date
-        SharedFile.write(giftLog, to: Self.giftFile)
-        return reward
-    }
-
-    /// Buys a set's missing pieces at the set price: the featured set or a bundle.
-    @discardableResult
-    func buy(_ set: some PieceSet) -> Bool {
-        guard let quote = ShopOffers.price(of: set, owned: owned) else { return false }
-        return record { $0.buy(set.itemIDs, cost: quote.price, title: set.name, at: .now) }
-    }
-
-    /// The latest buy: the purchase moment plays for it and offers Undo for a few seconds.
-    private(set) var lastPurchase: Purchase?
-
-    /// Takes a buy back within its Undo window: the coins return and the pieces it added leave the closet.
-    @discardableResult
-    func undo(_ purchase: Purchase, at now: Date = .now) -> Bool {
-        guard lastPurchase?.id == purchase.id, purchase.canUndo(at: now) else { return false }
-        wallet.update { $0.undo(purchase) }
-        lastPurchase = nil
-        return true
-    }
-
-    private func record(_ buy: (inout Wallet) -> Purchase?) -> Bool {
-        var made: Purchase?
-        wallet.update { made = buy(&$0) }
-        guard let made else { return false }
-        lastPurchase = made
-        // Mochi notices: the room's cat purrs at the next look.
-        petPulse += 1
-        return true
-    }
-
-    private static let collectionsFile = "Shop/collections.json"
-    private(set) var collectionLog = SharedFile.read(CollectionLog.self, from: collectionsFile) ?? CollectionLog()
-
-    /// The bonus waits until every piece is owned, and is collected once.
-    func canClaimBonus(_ collection: ShopCollection) -> Bool {
-        collection.isComplete(owned) && !collectionLog.claimed.contains(collection.id)
-    }
-
-    @discardableResult
-    func claimBonus(_ collection: ShopCollection) -> Bool {
-        guard canClaimBonus(collection) else { return false }
-        wallet.earn(collection.bonus)
-        collectionLog.claimed.insert(collection.id)
-        SharedFile.write(collectionLog, to: Self.collectionsFile)
-        return true
-    }
-
-    /// Deducts from the shared wallet. Gifts arrive wrapped and the partner unwraps them.
-    @discardableResult
-    func buy(_ item: ShopItem, asGift: Bool = false) -> Bool {
-        let price = price(of: item)
-        return record { $0.buy([item.id], cost: price, title: item.name, giftTo: asGift, at: .now) }
-    }
-
-    func toggleWish(_ item: ShopItem) {
-        wallet.update { if $0.wishlist.remove(item.id) == nil { $0.wishlist.insert(item.id) } }
-    }
-
+    let profile: CoupleStore
     /// Lists, wishlists, calendar and dates on the Us tab.
     let us: UsStore
-
-    /// The Us tab's open sheet; widgets deep-link into it.
-    var usRoute: UsView.Route?
-
-    let profile = CoupleStore()
     /// Each partner's latest check-in, mostly left from the widget.
-    let partnerMoods = MoodStore()
-
-    var partners: (String, String) { (profile.couple.partners[0], profile.couple.partners[1]) }
-    var daysTogether: Int { profile.couple.daysTogether() }
-    var togetherSince: Date { profile.couple.togetherSince }
-
-    /// Which partner is holding the phone. Until sync lands both share one device and switch on the Us tab.
-    var viewer: String {
-        get { profile.couple.viewer }
-        set { profile.setViewer(newValue) }
-    }
-    var otherPartner: String { profile.couple.other }
-
-    func setMood(_ mood: PartnerMood) {
-        partnerMoods.set(mood, for: viewer)
-        streak.record()
-    }
-
+    let partnerMoods: MoodStore
     /// Days in a row the couple did something together; see docs/love-streak.md.
-    let streak = StreakStore()
+    let streak: StreakStore
+    /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
+    let moments: MomentStore
+    /// Notes and doodles pinned on the board.
+    let notes: NoteStore
+    /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
+    let rooms: RoomsChoice
+    let care: CatCare
+    let shop: ShopModel
+    let journal: Journal
+    @ObservationIgnored private let wallet: WalletStore
 
-    init() {
-        us = UsStore(wallet: wallet)
+    init(stores: HomeStores) {
+        profile = stores.profile
+        us = stores.us
+        partnerMoods = stores.partnerMoods
+        streak = stores.streak
+        moments = stores.moments
+        notes = stores.notes
+        rooms = stores.rooms
+        care = stores.care
+        shop = stores.shop
+        journal = stores.journal
+        wallet = stores.wallet
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
         let defaults = UserDefaults.standard
@@ -206,84 +146,26 @@ final class HomeState {
         #endif
     }
 
-    /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
-    let moments = MomentStore()
+    var partners: (String, String) { (profile.couple.partners[0], profile.couple.partners[1]) }
+    var daysTogether: Int { profile.couple.daysTogether() }
+    var togetherSince: Date { profile.couple.togetherSince }
 
-    /// Adding a moment earns the couple 10 coins (see docs/shop-concept.md). A photo that `shares` also goes to the
-    /// partner once this phone is paired (`PhotoSync`); a drawing's keepsake does not, as the drawing went already.
-    @discardableResult
-    func addMoment(_ image: UIImage, caption: String, shares: Bool = false) -> Bool {
-        guard moments.add(image, caption: caption, author: partners.0, unsent: shares) != nil else { return false }
-        wallet.earn(10)
-        streak.record()
-        return true
+    /// Which partner is holding the phone: the signed-in user once paired, a switch on the Us tab before that.
+    var viewer: String {
+        get { profile.couple.viewer }
+        set { profile.setViewer(newValue) }
     }
+    var otherPartner: String { profile.couple.other }
 
-    /// Notes and doodles pinned on the board.
-    let notes = NoteStore()
-
-    /// The open note composer; the Add menu and the new-note deep link set it.
-    var composingNote: NoteComposer.Mode?
-
-    /// The lock-screen drawing is open; the Add menu's Draw and a drawing widget's tap set it.
-    var drawing = false
-
-    /// The card the couple tapped on the board, opened as a sheet.
-    var openedPin: PinRoute?
-    var momentsMode: MomentsMode = .photos
-
-    /// Adding a note earns the couple 5 coins.
-    @discardableResult
-    func addNote(text: String, paper: Note.Paper) -> Bool {
-        guard notes.add(text: text, paper: paper, author: viewer) != nil else { return false }
-        wallet.earn(5)
+    func setMood(_ mood: PartnerMood) {
+        partnerMoods.set(mood, for: viewer)
         streak.record()
-        return true
-    }
-
-    @discardableResult
-    func addNote(doodle: UIImage, paper: Note.Paper) -> Bool {
-        guard notes.add(doodle: doodle, paper: paper, author: viewer) != nil else { return false }
-        wallet.earn(5)
-        streak.record()
-        return true
-    }
-
-    func pet() {
-        petPulse += 1
-        care(0.03)
-        streak.record()
-    }
-
-    nonisolated static let treatPrice = 10
-
-    /// A treat from the shared wallet; it fills more of her bar than a pet.
-    func treat() -> Bool {
-        guard coins >= Self.treatPrice else { return false }
-        wallet.update { $0.coins -= Self.treatPrice }
-        treatsGiven += 1
-        petPulse += 1
-        care(0.1)
-        streak.record()
-        return true
-    }
-
-    private func care(_ amount: Double) {
-        wallet.update {
-            $0.progress += amount
-            if $0.progress >= 1 {
-                $0.progress -= 1
-                $0.level += 1
-            }
-        }
     }
 
     /// Back in the foreground: pick up what the widgets changed and let Mochi feel the pets from outside the app.
     func refresh() {
         profile.reload()
         wallet.reload()
-        giftLog = SharedFile.read(GiftLog.self, from: Self.giftFile) ?? giftLog
-        collectionLog = SharedFile.read(CollectionLog.self, from: Self.collectionsFile) ?? collectionLog
         partnerMoods.reload()
         us.reload()
         moments.reload()
@@ -293,7 +175,7 @@ final class HomeState {
         let pets = activity.takePendingPets()
         guard pets > 0 else { return }
         activity.save()
-        for _ in 0..<min(pets, 5) { pet() }
+        for _ in 0..<min(pets, 5) { care.pet() }
     }
 
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts

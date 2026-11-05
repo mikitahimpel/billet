@@ -6,6 +6,7 @@ import m0004 from './20261104232213_cat/migration.sql';
 import m0005 from './20261105014114_activity/migration.sql';
 import m0006 from './20261105032849_owned_ink/migration.sql';
 import m0007 from './20261105053543_wallet/migration.sql';
+import m0008 from './20261105130321_shop/migration.sql';
 
   export default {
     migrations: {
@@ -16,7 +17,8 @@ import m0007 from './20261105053543_wallet/migration.sql';
 "20261104232213_cat": m0004,
 "20261105014114_activity": m0005,
 "20261105032849_owned_ink": m0006,
-"20261105053543_wallet": m0007
+"20261105053543_wallet": m0007,
+"20261105130321_shop": m0008
 }
   }
   

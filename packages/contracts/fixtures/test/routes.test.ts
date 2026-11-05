@@ -71,9 +71,17 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/onboarding",
       },
+      "getPair": {
+        "method": "GET",
+        "path": "/v1/pair",
+      },
       "getPurchases": {
         "method": "GET",
         "path": "/v1/purchases",
+      },
+      "getShop": {
+        "method": "GET",
+        "path": "/v1/shop",
       },
       "getStatus": {
         "method": "GET",
@@ -103,6 +111,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/purchases/mock",
       },
+      "placeOrder": {
+        "method": "POST",
+        "path": "/v1/shop/orders",
+      },
       "purchase": {
         "method": "POST",
         "path": "/v1/purchases",
@@ -130,6 +142,10 @@ it("pins the routes that clients call", () => {
       "sendNote": {
         "method": "POST",
         "path": "/v1/notes",
+      },
+      "setWish": {
+        "method": "PUT",
+        "path": "/v1/shop/wishlist",
       },
       "socket": {
         "method": "GET",

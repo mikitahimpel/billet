@@ -15,6 +15,7 @@ import {
   pairId,
   photoFrom,
   rose,
+  tower,
   sea,
   textFrom,
   uuid,
@@ -106,13 +107,30 @@ describe("decide on an active room", () => {
   it("gives each note the next sequence number", () => {
     const first = expectAccepted(active, send(alice));
     const second = expectAccepted(first.state, send(bob));
-    expect(first.outputs).toEqual([
+    expect(first.outputs[0]).toEqual(
       RoomOutput.cases.NoteAppended.make({ entry: { seq: 1, note: photoFrom(alice) }, key }),
-    ]);
-    expect(second.outputs).toEqual([
+    );
+    expect(second.outputs[0]).toEqual(
       RoomOutput.cases.NoteAppended.make({ entry: { seq: 2, note: photoFrom(bob) }, key }),
-    ]);
+    );
     expect(second.state.lastSeq).toBe(2);
+  });
+
+  it("pays a note's reward before there is a cat", () => {
+    const sent = expectAccepted(active, send(alice));
+    expect(sent.outputs[1]).toEqual({
+      _tag: "CoinsEntered",
+      entry: {
+        id: `earn:${photoFrom(alice).id}`,
+        kind: "earn",
+        amount: 10,
+        ref: photoFrom(alice).id,
+        at: photoFrom(alice).sentAt,
+      },
+    });
+    expect(sent.state._tag === "Active" && sent.state.wallet.balance).toBe(
+      active.wallet.balance + 10,
+    );
   });
 
   it("rejects a note from outside the couple and leaves the sequence alone", () => {
@@ -233,6 +251,13 @@ describe("tagged unions", () => {
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
     Buy: RoomCommand.cases.Buy.make({ id: key, by: alice, ink: rose, at: 1_700_000_000_000 }),
+    Order: RoomCommand.cases.Order.make({
+      id: key,
+      by: alice,
+      offer: { _tag: "Treat" },
+      at: 1_700_000_000_000,
+    }),
+    SetWish: RoomCommand.cases.SetWish.make({ by: alice, item: tower, wished: true }),
   };
   const spend = Schema.decodeUnknownSync(CoinEntry)({
     id: `spend:${key}`,
@@ -255,6 +280,8 @@ describe("tagged unions", () => {
     CatEntryAppended: RoomOutput.cases.CatEntryAppended.make({ entry: petEntry }),
     CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
+    ItemsGranted: RoomOutput.cases.ItemsGranted.make({ items: [tower] }),
+    WishlistChanged: RoomOutput.cases.WishlistChanged.make({ wishlist: [tower] }),
     CoinsEntered: RoomOutput.cases.CoinsEntered.make({ entry: spend }),
     CoinsRepeated: RoomOutput.cases.CoinsRepeated.make({ entry: spend }),
   };
@@ -269,6 +296,8 @@ describe("tagged unions", () => {
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),
     NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
+    OfferOwned: RoomRejection.cases.OfferOwned.make({ offer: tower }),
+    NotOffered: RoomRejection.cases.NotOffered.make({}),
   };
 
   it.each([
@@ -312,6 +341,8 @@ describe("RoomState invariants", () => {
       lastSeq: 0,
       streakDays: 0,
       inks: [],
+      items: [],
+      wishlist: [],
       wallet: { balance: 0, care: 0, notes: 0, games: 0 },
       ...overrides,
     });
@@ -325,6 +356,7 @@ describe("RoomState invariants", () => {
     ["a negative lastSeq", { lastSeq: -1 }],
     ["a negative streakDays", { streakDays: -1 }],
     ["an ink that is not an ink id", { inks: ["rose"] }],
+    ["a piece that is not a piece id", { items: ["Lamp"] }],
   ])("rejects %s", (_, overrides) => {
     expect(() => make(overrides)).toThrow();
   });

@@ -11,7 +11,7 @@ struct DrawTests {
     }
 
     @Test func theDrawLinkOpensTheCanvas() {
-        let state = HomeState()
+        let state = HomeState(stores: .live())
         state.open(.draw)
         #expect(state.drawing)
     }

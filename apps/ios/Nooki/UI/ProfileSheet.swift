@@ -91,7 +91,7 @@ struct ProfileSheet: View {
                     Label("This phone", systemImage: "iphone")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color(hex: 0xFFC27A))
-                } else {
+                } else if profile.couple.pair == nil {
                     Button("This is me") { profile.setViewer(partner) }
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.72))

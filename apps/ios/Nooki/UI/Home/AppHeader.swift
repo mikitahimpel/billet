@@ -53,7 +53,7 @@ struct AppHeader: View {
 
             Spacer(minLength: 0)
 
-            CoinPill(coins: state.coins)
+            CoinPill(coins: state.shop.coins)
         }
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in

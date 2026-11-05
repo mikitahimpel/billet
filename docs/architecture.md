@@ -142,7 +142,9 @@ cached by Cloudflare, in the key fetch itself, for 10 minutes. Only successful r
 
 A user asks for an invite (`POST /v1/invites`), sends the code to their partner, and the partner claims
 it (`POST /v1/invites/claim`), which returns the new pair's id. Either partner can end it
-(`DELETE /v1/pair`). Pairing keeps two tables in D1:
+(`DELETE /v1/pair`). `GET /v1/pair` returns the pair's id and both members, the caller first (404
+unpaired); the app ties the couple's monograms to those accounts, and the viewer is the signed-in
+one. Pairing keeps two tables in D1:
 
 - `invites` says who owns a code. A code is 10 symbols from a 32-symbol alphabet with no `0`, `O`, `1`
   or `I`: 50 random bits. Only its SHA-256 is stored, and it lasts 24 hours. A user has one invite, so
@@ -202,7 +204,8 @@ A repeated open is accepted, so two first notes at once are safe.
 
 `packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
 `platform` provides. The cat routes (`GET`/`PUT /v1/cat`, `GET /v1/cat/journal`,
-`POST /v1/cat/events`) live there too, in `CatService`, and so do the Inbox routes (`GET /v1/activity`,
+`POST /v1/cat/events`) live there too, in `CatService`, the shop (`GET /v1/shop`,
+`POST /v1/shop/orders`, `PUT /v1/shop/wishlist`, see [payments.md](payments.md#the-pair-wallet)), and so do the Inbox routes (`GET /v1/activity`,
 `POST /v1/activity/read`) in `ActivityService`, on the same rule: the pair comes from D1.
 
 ### Deleting an account

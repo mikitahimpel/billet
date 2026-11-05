@@ -6,7 +6,7 @@ struct FeaturedCard: View {
     let state: HomeState
     let offer: FeaturedOffer
 
-    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.owned) }
+    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.shop.owned) }
     private var items: [ShopItem] { offer.itemIDs.compactMap(Catalog.item) }
 
     var body: some View {
@@ -78,7 +78,7 @@ struct FeaturedCard: View {
                 .frame(width: centre ? 140 : 104, height: centre ? 140 : 104)
                 .zIndex(centre ? 1 : 0)
                 .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
-                .opacity(state.owned.contains(item.id) ? 0.45 : 1)
+                .opacity(state.shop.owned.contains(item.id) ? 0.45 : 1)
             }
         }
         .accessibilityHidden(true)

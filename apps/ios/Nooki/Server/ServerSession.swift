@@ -5,6 +5,7 @@ import FeaturePairing
 import Observation
 import Persistence
 import Transport
+import Wire
 
 /// The phone's place on the billet server: the anonymous sign-in, pairing with the partner, and whether this
 /// account has a partner. One per launch, and none at all in a build without a server.
@@ -84,6 +85,16 @@ final class ServerSession {
     /// account has a partner.
     func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
         isPaired ? PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner) : nil
+    }
+
+    /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
+    func pair() async throws(TransportError) -> PairResponse {
+        try await backend.api.pair()
+    }
+
+    /// The pair's shop in its room; nil until this account has a partner.
+    var shopSync: ShopSync? {
+        isPaired ? .live(backend.api) : nil
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.

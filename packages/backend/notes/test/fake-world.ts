@@ -1,3 +1,4 @@
+import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
@@ -167,6 +168,9 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
         })),
       ),
     buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
+    shop: (pairId) => roomOf(pairId).state.pipe(Effect.map(shopOf)),
+    order: (pairId, by, id, offer) => roomOf(pairId).order(by, id, offer),
+    setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),

@@ -8,7 +8,7 @@ struct DailyGiftCard: View {
     @State private var reward: GiftReward?
     @State private var bursts = 0
 
-    private var ready: Bool { state.canClaimGift() && reward == nil }
+    private var ready: Bool { state.shop.canClaimGift() && reward == nil }
 
     var body: some View {
         HStack(spacing: Space.m) {
@@ -48,7 +48,7 @@ struct DailyGiftCard: View {
             // A real rotation: the next gift is the next local day's.
             HStack(spacing: 4) {
                 Text("A new one in")
-                Text(timerInterval: Date.now...state.offers.nextDay(after: .now), countsDown: true)
+                Text(timerInterval: Date.now...state.shop.offers.nextDay(after: .now), countsDown: true)
                     .monospacedDigit()
             }
         }
@@ -69,7 +69,7 @@ struct DailyGiftCard: View {
     }
 
     private func claim() {
-        guard let got = state.claimGift() else { return }
+        guard let got = state.shop.claimGift() else { return }
         withAnimation(.spring(duration: 0.45, bounce: 0.45)) { reward = got }
         bursts += 1
     }

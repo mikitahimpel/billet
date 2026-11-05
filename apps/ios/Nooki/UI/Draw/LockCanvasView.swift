@@ -243,7 +243,7 @@ struct LockCanvasView: View {
     private var inkPalette: some View {
         HStack(spacing: 10) {
             ForEach(DrawInks.all) { ink in
-                let owned = ink.isOwned(state.owned)
+                let owned = ink.isOwned(state.shop.owned)
                 Button {
                     if owned {
                         model.ink = ink

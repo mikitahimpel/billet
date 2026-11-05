@@ -6,8 +6,8 @@ struct ShopItemCard: View {
     let state: HomeState
     var onTap: () -> Void
 
-    private var owned: Bool { state.owned.contains(item.id) }
-    private var price: Int { state.price(of: item) }
+    private var owned: Bool { state.shop.owned.contains(item.id) }
+    private var price: Int { state.shop.price(of: item) }
     private var isDeal: Bool { price < item.price }
 
     var body: some View {

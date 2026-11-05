@@ -5,6 +5,7 @@ import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
 /** A partner and their presence, kept together so presence cannot exist for a stranger. */
@@ -56,7 +57,7 @@ export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0
  * `streakDays` is stored but nothing changes it yet: the rules arrive with #20.
  *
  * `inks` are the ink colours the pair has bought, in the order it got them. The free ink is
- * everyone's and never listed.
+ * everyone's and never listed. `items` are the room's pieces the same way, without the starters.
  */
 export const RoomState = Schema.TaggedUnion({
   /** A new object, not given to a couple yet. */
@@ -69,6 +70,9 @@ export const RoomState = Schema.TaggedUnion({
     /** Absent until one of the couple adopts the cat. */
     cat: Schema.optionalKey(RoomCat),
     inks: Schema.Array(InkId),
+    items: Schema.Array(RoomItemId),
+    /** Pieces the pair wishes for, in the order they were wished. */
+    wishlist: Schema.Array(RoomItemId),
     wallet: RoomWallet,
   },
 });

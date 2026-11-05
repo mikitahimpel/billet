@@ -17,9 +17,9 @@ struct ItemSheet: View {
     @State private var celebrating = false
 
 
-    private var cost: Int { state.price(of: item) }
-    private var affordable: Bool { state.coins >= cost }
-    private var owned: Bool { state.owned.contains(item.id) }
+    private var cost: Int { state.shop.price(of: item) }
+    private var affordable: Bool { state.shop.coins >= cost }
+    private var owned: Bool { state.shop.owned.contains(item.id) }
     private var isDeal: Bool { cost < item.price }
 
 
@@ -179,14 +179,14 @@ struct ItemSheet: View {
                 }
             } else {
                 Image(systemName: "lock.fill")
-                Text("Need \(cost - state.coins) more")
+                Text("Need \(cost - state.shop.coins) more")
                     .monospacedDigit()
             }
         }
     }
 
     private func buy() {
-        guard state.buy(item) else { return }
+        guard state.shop.buy(item) else { return }
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
         withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }

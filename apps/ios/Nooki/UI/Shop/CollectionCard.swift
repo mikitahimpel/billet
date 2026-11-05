@@ -10,8 +10,8 @@ struct CollectionCard: View {
     @State private var claims = 0
 
     private var items: [ShopItem] { collection.itemIDs.compactMap(Catalog.item) }
-    private var have: Int { collection.owned(of: state.owned) }
-    private var claimed: Bool { state.collectionLog.claimed.contains(collection.id) }
+    private var have: Int { collection.owned(of: state.shop.owned) }
+    private var claimed: Bool { state.shop.collectionLog.claimed.contains(collection.id) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
@@ -44,7 +44,7 @@ struct CollectionCard: View {
     }
 
     private func slot(_ item: ShopItem) -> some View {
-        let owns = state.owned.contains(item.id)
+        let owns = state.shop.owned.contains(item.id)
         return Button { open(item) } label: {
             Group {
                 if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
@@ -80,9 +80,9 @@ struct CollectionCard: View {
             .foregroundStyle(Ink.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if state.canClaimBonus(collection) {
+            if state.shop.canClaimBonus(collection) {
                 Button("Collect") {
-                    if state.claimBonus(collection) { claims += 1 }
+                    if state.shop.claimBonus(collection) { claims += 1 }
                 }
                 .shopButton()
             }

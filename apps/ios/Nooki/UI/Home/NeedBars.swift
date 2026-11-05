@@ -30,7 +30,7 @@ struct NeedBars: View {
 
     private func action(for need: PetNeed) -> NeedRow.Action? {
         switch need {
-        case .full: NeedRow.Action(title: "Treat", detail: "\(HomeState.treatPrice)", run: feed)
+        case .full: NeedRow.Action(title: "Treat", detail: "\(ShopModel.treatPrice)", run: feed)
         case .loved: NeedRow.Action(title: "Pet", detail: nil, run: pet)
         case .playful: NeedRow.Action(title: "Play", detail: nil, run: play)
         case .rested: nil
