@@ -81,6 +81,8 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case onboardingStepAnswered = "OnboardingStepAnswered"
   /// An onboarding step was skipped (detail: the step id).
   case onboardingStepSkipped = "OnboardingStepSkipped"
+  /// Onboarding stopped because the person is under 13. Their age answer is never sent.
+  case ageGateStopped = "AgeGateStopped"
 
   /// A hint came on screen (detail: the tip id).
   case tipShown = "TipShown"
@@ -118,7 +120,7 @@ extension ClientEventName {
   public var rule: ClientEventRule {
     switch self {
     case .appOpened, .openingWatched, .openingSkipped, .catPetted, .catCalled, .decoratingOpened,
-      .shopOpened, .streakOpened, .profileOpened, .signInPromptShown:
+      .shopOpened, .streakOpened, .profileOpened, .signInPromptShown, .ageGateStopped:
       ClientEventRule(detail: .none)
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)

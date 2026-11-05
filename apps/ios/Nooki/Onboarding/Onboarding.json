@@ -15,6 +15,13 @@
       "skippable": true,
       "options": [
         {
+          "id": "age-under-13",
+          "label": {
+            "en": "Under 13",
+            "ru": "Меньше 13"
+          }
+        },
+        {
           "id": "age-13-17",
           "label": {
             "en": "13–17",

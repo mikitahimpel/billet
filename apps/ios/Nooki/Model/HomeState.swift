@@ -324,6 +324,7 @@ final class HomeState {
         case .draw: drawing = true
         case .inbox: showsInbox = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
+        case .invite: break
         }
     }
 

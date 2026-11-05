@@ -44,6 +44,7 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `OnboardingStepViewed` | the step's id | | How far into onboarding do people get? |
 | `OnboardingStepAnswered` | the step's id | | Which steps are answered? (Never the answer: that is in `onboarding_answers`.) |
 | `OnboardingStepSkipped` | the step's id | | Which steps are skipped? |
+| `AgeGateStopped` | none | | How many are turned away for being under 13? |
 | `TipShown` | the tip's id | | Which hints after the onboarding are seen? |
 | `TipDismissed` | the tip's id | | Which hints are closed without trying them? |
 | `TipAction` | the tip's id | | Which hints lead to the thing they point at? |

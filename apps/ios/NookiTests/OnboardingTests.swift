@@ -21,18 +21,24 @@ private let goals = OnboardingStep.multi(OnboardingChoiceStep(
         OnboardingOption(id: "closer", label: text("Closer")),
         OnboardingOption(id: "fun", label: text("Fun")),
         OnboardingOption(id: "exploring", label: text("Just exploring"), exclusive: true),
+        OnboardingOption(id: "widgets", label: text("Widgets")),
     ]))
 private let age = OnboardingStep.single(OnboardingChoiceStep(
     id: "age", title: text("Age"),
-    options: [OnboardingOption(id: "a", label: text("A")), OnboardingOption(id: "b", label: text("B"))]))
+    options: [
+        OnboardingOption(id: "age-under-13", label: text("Under 13")), OnboardingOption(id: "a", label: text("A")),
+        OnboardingOption(id: "b", label: text("B")),
+    ]))
 private let catalogue = OnboardingResponse(version: "v1", steps: [age, goals])
 
 @MainActor
 private func makeFlow(
-    sent: Sent = Sent(), server: OnboardingResponse? = nil, canInvite: Bool = true
+    sent: Sent = Sent(), server: OnboardingResponse? = nil, canInvite: Bool = true, hasServer: Bool = false,
+    asksTogetherSince: Bool = false, togetherSinceChosen: @escaping (Date) -> Void = { _ in },
+    defaults reused: UserDefaults? = nil
 ) -> (OnboardingFlow, UserDefaults, URL) {
     let suite = "onboarding-\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suite)!
+    let defaults = reused ?? UserDefaults(suiteName: suite)!
     let file = URL.temporaryDirectory.appending(path: "\(suite)/answers.json")
     let client = OnboardingClient(
         fetch: { () async throws(TransportError) in
@@ -46,7 +52,8 @@ private func makeFlow(
     let flow = OnboardingFlow(
         client: client,
         report: { [sent] (events) async throws(TransportError) in sent.events.withLock { $0.append(contentsOf: events) } },
-        queue: AnswerQueue(file: file), defaults: defaults, canInvite: canInvite, bundled: catalogue,
+        queue: AnswerQueue(file: file), defaults: defaults, canInvite: canInvite, hasServer: hasServer,
+        asksTogetherSince: asksTogetherSince, togetherSinceChosen: togetherSinceChosen, bundled: catalogue,
         now: { Date(timeIntervalSince1970: 1_000) })
     return (flow, defaults, file)
 }
@@ -156,6 +163,70 @@ struct OnboardingFlowTests {
         flow.continueTapped()
         await settle { sent.answers.withLock { $0.count } == 3 }
         #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
+    }
+
+    @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheDateAndTheInvite() {
+        let (flow, _, _) = makeFlow(hasServer: true, asksTogetherSince: true)
+        #expect(flow.pages == [
+            .welcome, .question(age), .question(goals), .togetherSince, .catCoat, .catName, .invite, .notifications,
+        ])
+        flow.join(code: "K7QM4R2XHP")
+        #expect(flow.page == .join)
+        #expect(flow.joinCode == "K7QM4R2XHP")
+        #expect(flow.pages == [.welcome, .join, .question(age), .question(goals), .catCoat, .catName, .notifications])
+        flow.partnerJoined()
+        #expect(flow.page == .question(age))
+        flow.back()
+        flow.back()
+        #expect(flow.page == .welcome)
+        #expect(flow.pages.contains(.invite))
+    }
+
+    @Test func underThirteenStopsAndSendsNoAge() async {
+        let sent = Sent()
+        let (flow, defaults, _) = makeFlow(sent: sent)
+        flow.start()
+        guard case .single(let choice) = age else { return }
+        flow.toggle(choice.options[0], in: age)
+        flow.continueTapped()
+        #expect(flow.page == .stopped)
+        #expect(defaults.bool(forKey: OnboardingFlow.stoppedKey))
+        await settle { sent.events.withLock { $0 }.contains(ClientEvent(.ageGateStopped)) }
+        #expect(sent.events.withLock { $0 }.contains(ClientEvent(.ageGateStopped)))
+        #expect(sent.answers.withLock { $0 }.isEmpty)
+        #expect(makeFlow(defaults: defaults).0.page == .stopped)
+    }
+
+    @Test func theWidgetHowToFollowsTheGoals() {
+        let (flow, _, _) = makeFlow()
+        #expect(!flow.pages.contains(.widget))
+        guard case .multi(let choice) = goals else { return }
+        flow.toggle(choice.options[3], in: goals)
+        #expect(flow.pages.last == .widget)
+    }
+
+    @Test func theDayTheStoryStartedStaysOnThePhone() async {
+        let sent = Sent()
+        var chosen: Date?
+        let (flow, _, _) = makeFlow(sent: sent, asksTogetherSince: true, togetherSinceChosen: { chosen = $0 })
+        flow.start()
+        flow.skip()
+        flow.skip()
+        #expect(flow.page == .togetherSince)
+        let day = Date(timeIntervalSince1970: 1_700_000_000)
+        flow.togetherSince = day
+        flow.continueTapped()
+        #expect(chosen == day)
+        #expect(flow.page == .catCoat)
+        await settle { sent.answers.withLock { $0.count } == 2 }
+        #expect(sent.answers.withLock { $0 }.map(\.stepId) == ["age", "goals"])
+    }
+
+    @Test func aClosedAppOpensOnThePageItWasOn() {
+        let (flow, defaults, _) = makeFlow()
+        flow.start()
+        flow.skip()
+        #expect(makeFlow(defaults: defaults).0.page == .question(goals))
     }
 
     @Test func aRangeStartsInTheMiddleOnAStep() {

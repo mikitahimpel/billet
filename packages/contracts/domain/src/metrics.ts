@@ -85,6 +85,8 @@ export const ClientEventName = Schema.Literals([
   "OnboardingStepAnswered",
   /** An onboarding step was skipped (detail: the step id). */
   "OnboardingStepSkipped",
+  /** Onboarding stopped because the person is under 13. Their age answer is never sent. */
+  "AgeGateStopped",
 
   /** A hint came on screen (detail: the tip id). */
   "TipShown",
@@ -153,6 +155,7 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   OnboardingStepViewed: { detail: "id", required: true },
   OnboardingStepAnswered: { detail: "id", required: true },
   OnboardingStepSkipped: { detail: "id", required: true },
+  AgeGateStopped: { detail: "none" },
   TipShown: { detail: "id", required: true },
   TipDismissed: { detail: "id", required: true },
   TipAction: { detail: "id", required: true },
