@@ -39,4 +39,15 @@ enum InboxFixture {
             markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) })
     }
 }
+
+extension ActivityItem {
+    /// A fixture item with the cursor the server would give it: `at` padded to 16 digits, `~`, the id.
+    nonisolated init(
+        id: String, at: Int, actor: ActivityActor, event: ActivityEvent, target: ActivityTarget? = nil
+    ) {
+        let digits = String(at)
+        let cursor = String(repeating: "0", count: max(0, 16 - digits.count)) + digits + "~" + id
+        self.init(id: id, at: at, actor: actor, event: event, target: target, cursor: cursor)
+    }
+}
 #endif

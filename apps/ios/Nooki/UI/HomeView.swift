@@ -161,7 +161,10 @@ struct HomeView: View {
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                 }
-            case .background: state.didEnterBackground()
+                session?.followInbox(true)
+            case .background:
+                state.didEnterBackground()
+                session?.followInbox(false)
             default: break
             }
         }
