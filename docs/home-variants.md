@@ -133,7 +133,7 @@ also checks that floor pieces never overlap and stay inside the room.
 and close up:
 
 ```sh
-cd packages/pet-scenes/reality
+cd archive/ios-v1/packages/pet-scenes-reality
 GENZ_SHOTS=/path/to/folder GENZ_FURNITURE=cosyNook swift test --filter GenzRenderShots
 ```
 

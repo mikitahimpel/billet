@@ -107,7 +107,7 @@ the Detailed cat with a coat), the kitten and the fluffy one.
 
 `JointCatChoice` (Pet) is the shared machine; `AdoptionModel` runs it on a phone. The scene is
 `PetScene.makeAdoptionScene`, built by `AdoptionStage`/`AdoptionLayout`/`AdoptionSceneView` in
-`packages/pet-scenes/reality`.
+`archive/ios-v1/packages/pet-scenes-reality`.
 
 The real backend skips this step for now and keeps the standard cat; it has no frames for it.
 
@@ -116,7 +116,7 @@ The real backend skips this step for now and keeps the standard cat; it has no f
 - `PetScene.makeOnboardingScene(state:onEvent:)`: the contract. `OnboardingSceneState.Moment` is
   `arriving`, `resting`, `apart(partner: waiting | away)` or `together`, with `mine` (the side) and
   `code` (the tag). The scene reports `arrived`, `heartTapped`, `joined` and `codeTapped`.
-- `packages/pet-scenes/reality`: `OnboardingStage` (the scene, a `TabStage`), `OnboardingLayout`
+- `archive/ios-v1/packages/pet-scenes-reality`: `OnboardingStage` (the scene, a `TabStage`), `OnboardingLayout`
   (where things stand, `OnboardingTimeline` for the flight, `HeartMotion` for the beat,
   `HeartHalves` for the halves, `OnboardingBurst`), `OnboardingTag` (the code's face). Bloom is
   Canvas halos over the scene, as in the other tab scenes, never `customPostProcessing`.

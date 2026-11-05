@@ -8,13 +8,11 @@ on:
     paths: &paths
       - apps/ios/**
       - packages/ios/**
-      - packages/pet-scenes/**
       - packages/contracts/**
       - .xcode-version
       - .swift-format
       - .github/workflows/ios.yml
       - .github/scripts/metal-toolchain.sh
-      - archive/ios-v1/**
   push:
     branches: [main]
     paths: *paths
@@ -155,44 +153,3 @@ jobs:
           name: app-tests-log
           path: ${{ runner.temp }}/app-tests.log
           retention-days: 7
-
-      # The App Store build of payments: generates the project with BILLET_PAYMENTS=storekit (read
-      # from the environment by Package.swift and the app target) and buys every stamp pack from
-      # apps/ios/App/Billet.storekit on a Simulator with StoreKitTest (docs/payments.md).
-      # TODO: back with the Payments wiring; this tested the archived v1 app's StoreKit target.
-      - name: StoreKit purchases on the Simulator
-        if: false
-        env:
-          BILLET_PAYMENTS: storekit
-        run: |
-          # From iOS 26.4 on, Simulators don't get the .storekit file from `xcodebuild test`, so
-          # StoreKitTest serves no products (seen on 26.4 and 26.5 here; developer.apple.com/forums/
-          # thread/826971). On 27.2 the first purchase hangs. Run on the newest runtime before 26.3,
-          # downloading iOS 26.2 when the runner has none.
-          pick() {
-            xcrun simctl list runtimes -j | python3 -c '
-          import json, sys
-          v = lambda r: tuple(map(int, r["version"].split(".")))
-          rs = sorted((r for r in json.load(sys.stdin)["runtimes"]
-                       if r["platform"] == "iOS" and r["isAvailable"] and v(r)[:2] < (26, 3)), key=v)
-          print(rs[-1]["identifier"] if rs else "")'
-          }
-          xcrun simctl list runtimes
-          runtime=$(pick)
-          if [ -z "$runtime" ]; then
-            xcodebuild -downloadPlatform iOS -buildVersion 26.2 2>&1 | grep -vE '^ *[0-9.]+%' | tail -n 5
-            runtime=$(pick)
-          fi
-          if [ -z "$runtime" ]; then
-            echo "::error::no iOS Simulator runtime before 26.3 on this runner"
-            exit 1
-          fi
-          udid=$(xcrun simctl create storekit-tests "iPhone 17" "$runtime")
-          echo "StoreKit tests on $runtime ($udid)"
-          (cd apps/ios && xcodegen generate --quiet)
-          set -o pipefail
-          xcodebuild test -project apps/ios/Billet.xcodeproj -scheme BilletStoreKitTests \
-            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/storekit" \
-            -test-timeouts-enabled YES -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/storekit.log" \
-            | grep -E 'error:|Test Case .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)|StoreKitPurchaseTests:'
