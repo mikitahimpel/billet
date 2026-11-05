@@ -3,6 +3,13 @@ import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { CoinEntry, LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
+import {
+  ListId,
+  ListItemText,
+  ListKind,
+  ListTitle,
+  SharedList,
+} from "@billet/contracts-domain/list";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
@@ -61,6 +68,24 @@ export const RoomOutput = Schema.TaggedUnion({
   GiftOpened: { by: UserId, at: EpochMillis, day: LocalDay, reward: GiftReward },
   /** A collection's bonus, paid once. */
   BonusPaid: { by: UserId, at: EpochMillis, collection: CollectionId, coins: Schema.Int },
+  /** A list to store whole, made or changed at `at` by the change under `key`. */
+  ListSaved: { list: SharedList, key: IdempotencyKey, at: EpochMillis },
+  /** A list and its items to delete, by the change under `key` at `at`. */
+  ListDeleted: { list: ListId, key: IdempotencyKey, at: EpochMillis },
+  /**
+   * An add for the Inbox: `count` items `by` added to the list in the window `at` falls in. `slot`
+   * is `by`'s place among the members, so the item's id names no user.
+   */
+  ListItemAdded: {
+    list: ListId,
+    kind: ListKind,
+    title: ListTitle,
+    by: UserId,
+    slot: Schema.Literals([0, 1]),
+    at: EpochMillis,
+    count: Schema.Int,
+    text: ListItemText,
+  },
   /** A member's new check-in, which replaced their last one. */
   MoodSet: { checkIn: MoodCheckIn },
 });
@@ -103,6 +128,10 @@ export const RoomRejection = Schema.TaggedUnion({
   CollectionIncomplete: { collection: CollectionId },
   /** A bonus already paid. */
   BonusTaken: { collection: CollectionId },
+  /** A change to a list the pair no longer has. */
+  ListNotFound: {},
+  /** A change to an item its list no longer has. */
+  ListItemNotFound: {},
   /** A check-in whose note is longer than `moodNoteMaxLength` once trimmed. */
   MoodNoteTooLong: {},
 });

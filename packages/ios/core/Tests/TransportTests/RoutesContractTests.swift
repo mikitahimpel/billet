@@ -59,6 +59,8 @@ import Testing
       "setGiftPlan": Routes.setGiftPlan,
       "markGiftReceived": Routes.markGiftReceived,
       "saveLoves": Routes.saveLoves,
+      "getLists": Routes.getLists,
+      "changeList": Routes.changeList,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
       "getDateCatalog": Routes.getDateCatalog,

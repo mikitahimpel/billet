@@ -20,7 +20,8 @@ import {
 } from "@billet/backend-pair-room/gifts";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
-import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
+import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
+import type { SharedList } from "@billet/contracts-domain/list";
 import { MediaStore, mediaPrefix } from "../src/media-store.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 
@@ -40,7 +41,16 @@ const makeRoom = () => {
     [...activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
   const keys = new Map<string, SequencedNote>();
   const reactions = new Map<string, NoteReaction>();
+  let lists: Array<SharedList> = [];
+  const listKeys = new Set<string>();
   const store = Layer.succeed(RoomStore, {
+    lists: Effect.sync(() => lists),
+    listById: (id) => Effect.sync(() => Option.fromNullishOr(lists.find((list) => list.id === id))),
+    listKeyUsed: (key) => Effect.sync(() => listKeys.has(key)),
+    forgetLists: Effect.sync(() => {
+      lists = [];
+      listKeys.clear();
+    }),
     load: Effect.sync(() => state),
     commit: (
       room: ActiveRoom,
@@ -49,9 +59,22 @@ const makeRoom = () => {
       rows: ReadonlyArray<ActivityRow>,
       coinEntries: ReadonlyArray<CoinEntry>,
       changed: ReadonlyArray<NoteReaction>,
+      listWrites: ReadonlyArray<ListWrite>,
     ) =>
       Effect.sync(() => {
         state = room;
+        for (const write of listWrites) {
+          listKeys.add(write.key);
+          const id = write._tag === "Put" ? write.list.id : write.list;
+          const rest = lists.filter((list) => list.id !== id);
+          const at = lists.findIndex((list) => list.id === id);
+          lists =
+            write._tag === "Drop"
+              ? rest
+              : at === -1
+                ? [...lists, write.list]
+                : lists.map((list) => (list.id === id ? write.list : list));
+        }
         for (const r of changed) reactions.set(`${r.note}/${r.by}`, r);
         cat.push(...catEntries);
         coins.push(...coinEntries);
@@ -229,6 +252,10 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     setMood: (pairId, by, request) => roomOf(pairId).setMood(by, request),
     moods: (pairId) => roomOf(pairId).moods,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
+    lists: (pairId, by, request) =>
+      roomOf(pairId)
+        .listsFor(by, request)
+        .pipe(Effect.map(({ result }) => result)),
   };
 
   return {

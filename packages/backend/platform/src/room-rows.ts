@@ -158,3 +158,34 @@ export const StoredGiftLoves = Schema.Struct({
   user: Schema.String,
   body: Schema.String,
 });
+
+export const StoredList = Schema.Struct({
+  id: Schema.String,
+  position: Schema.Int,
+  kind: Schema.String,
+  title: Schema.String,
+  iconSymbol: Schema.String,
+  iconTint: Schema.String,
+});
+
+/** What a `list_items` row holds: `wants` is a JSON array of user ids. */
+export const StoredListItem = Schema.Struct({
+  id: Schema.String,
+  listId: Schema.String,
+  position: Schema.Int,
+  text: Schema.String,
+  author: Schema.String,
+  addedAt: Schema.Int,
+  doneBy: Schema.NullOr(Schema.String),
+  doneAt: Schema.NullOr(Schema.Int),
+  quantity: Schema.NullOr(Schema.String),
+  note: Schema.NullOr(Schema.String),
+  icon: Schema.NullOr(Schema.String),
+  aisle: Schema.NullOr(Schema.String),
+  mediaKind: Schema.NullOr(Schema.String),
+  mediaTmdb: Schema.NullOr(Schema.Int),
+  country: Schema.NullOr(Schema.String),
+  wants: Schema.String,
+});
+
+export const StoredListKey = Schema.Struct({ key: Schema.String, at: Schema.Int });

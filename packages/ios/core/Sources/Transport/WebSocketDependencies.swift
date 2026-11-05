@@ -33,6 +33,8 @@ public struct WebSocketDependencies: Sendable {
   public var lastReactionRev: @Sendable () async -> Int?
   /// Each `Resume` also asks for `ShopChanged`, the pair's shop, now and whenever it changes.
   public var followsShop: Bool
+  /// Each `Resume` also asks for `ListsChanged`, the pair's lists, now and whenever they change.
+  public var followsLists: Bool
   /// Each `Resume` also asks for `MoodChanged`: each member's latest check-in, then each new one.
   public var followsMoods: Bool
 
@@ -44,6 +46,7 @@ public struct WebSocketDependencies: Sendable {
     followsActivity: Bool = false,
     lastReactionRev: @escaping @Sendable () async -> Int? = { nil },
     followsShop: Bool = false,
+    followsLists: Bool = false,
     followsMoods: Bool = false
   ) {
     self.open = open
@@ -53,6 +56,7 @@ public struct WebSocketDependencies: Sendable {
     self.followsActivity = followsActivity
     self.lastReactionRev = lastReactionRev
     self.followsShop = followsShop
+    self.followsLists = followsLists
     self.followsMoods = followsMoods
   }
 }

@@ -214,7 +214,7 @@ struct ListScreen: View {
     private func toggle(_ item: ListItem, in list: UsList) {
         let ticking = item.done == nil
         withAnimation(.snappy(duration: 0.25)) {
-            state.us.toggleItem(item.id, in: listID)
+            state.us.toggleItem(item.id, in: listID, by: state.viewer)
         }
         guard ticking, !list.kind.isChecklist else { return }
         reward = item.id

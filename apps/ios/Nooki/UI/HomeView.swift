@@ -269,10 +269,11 @@ struct HomeView: View {
                     await photoSync?.receive()
                     await textSync?.receive()
                     await state.shop.refresh()
+                    await state.lists.refresh()
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(
-                    true, photos: photoSync, texts: textSync, shop: state.shop,
+                    true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
                     moods: { [state] in state.moodSync?.received($0) })
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
@@ -426,7 +427,8 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
-    /// Once paired, the monograms belong to the pair's two accounts and the shop and the gifts follow the pair's room.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop, the gifts and the lists follow the
+    /// pair's room.
     private func followPair() async {
         #if DEBUG
         if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
@@ -447,6 +449,7 @@ struct HomeView: View {
         }
         await state.shop.connect(sync)
         await state.gifts.connect(session.giftSync)
+        await state.lists.connect(session.listSync)
     }
 
     private func leavePair() async {
@@ -454,6 +457,7 @@ struct HomeView: View {
         state.profile.leavePair()
         await state.shop.connect(nil)
         await state.gifts.connect(nil)
+        await state.lists.connect(nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.

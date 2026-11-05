@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { CatGameId, CatName } from "./cat.ts";
 import { EpochMillis, NoteId } from "./ids.ts";
+import { ListId, ListItemText, ListKind, ListTitle } from "./list.ts";
 import { Mood } from "./mood.ts";
 import { Reaction } from "./reaction.ts";
 
@@ -70,6 +71,17 @@ export const ActivityEvent = Schema.TaggedUnion({
   CoinsBought: { productId: ActivityProductId, coins: Coins },
   Refunded: { productId: ActivityProductId, coins: Coins },
   StreakReached: { days: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)) },
+  /**
+   * A partner added items to a list: `count` of them within ten minutes, the latest being `text`.
+   * One item per list, partner and ten minutes, so a shopping run is one line.
+   */
+  ListItemAdded: {
+    list: ListId,
+    kind: ListKind,
+    title: ListTitle,
+    count: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+    text: ListItemText,
+  },
 });
 export type ActivityEvent = typeof ActivityEvent.Type;
 
@@ -83,6 +95,7 @@ export const ActivityTarget = Schema.TaggedUnion({
   Plant: { plant: ActivityPlantId },
   ShopItem: { id: ActivityShopItemId },
   ShopOffer: { id: ActivityOfferId },
+  List: { list: ListId },
 });
 export type ActivityTarget = typeof ActivityTarget.Type;
 

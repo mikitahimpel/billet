@@ -3,10 +3,12 @@ import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import {
   type CoinEntry,
   CoinEntryId,
+  EarnRef,
   type EarnEvent,
   localDayOf,
   rewardForEarn,
 } from "@billet/contracts-domain/coins";
+import type { ListCommand } from "@billet/contracts-domain/list";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
@@ -26,12 +28,13 @@ import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import { activityOf, cursorOf, itemFor } from "./activity.ts";
 import { catNeeds, lifeHorizonMillis } from "./cat-life.ts";
 import { newTemper } from "./cat-temper.ts";
-import { decide } from "./decide.ts";
+import { decide, isMember } from "./decide.ts";
+import { listRefusalOf, ListsResult } from "./lists.ts";
 import { NoteIdSource } from "./note-id-source.ts";
 import type { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
 import type { RoomState } from "./room-state.ts";
-import { RoomStore, type AppendedNote } from "./room-store.ts";
+import { RoomStore, type AppendedNote, type ListWrite } from "./room-store.ts";
 
 const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote> =>
   outputs.flatMap((output) => {
@@ -54,10 +57,22 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "Purchased":
       case "GiftOpened":
       case "BonusPaid":
+      case "ListSaved":
+      case "ListDeleted":
+      case "ListItemAdded":
       case "MoodSet":
         return [];
     }
   });
+
+const listWritesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<ListWrite> =>
+  outputs.flatMap((output): ReadonlyArray<ListWrite> =>
+    output._tag === "ListSaved"
+      ? [{ _tag: "Put", list: output.list, key: output.key, at: output.at }]
+      : output._tag === "ListDeleted"
+        ? [{ _tag: "Drop", list: output.list, key: output.key, at: output.at }]
+        : [],
+  );
 
 const reactionsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<NoteReaction> =>
   outputs.flatMap((output) => (output._tag === "ReactionSet" ? [output.reaction] : []));
@@ -66,6 +81,7 @@ const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =
   outputs.flatMap((output) => (output._tag === "CoinsEntered" ? [output.entry] : []));
 
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
+const decodeEarnRef = Schema.decodeSync(EarnRef);
 
 /**
  * A change to the coins a pair bought, under the payments ledger's entry id. A credit names its
@@ -145,6 +161,7 @@ export class RoomService extends Context.Service<RoomService>()(
                 activityOf(decision.outputs, yield* Clock.currentTimeMillis),
                 coinsIn(decision.outputs),
                 reactionsIn(decision.outputs),
+                listWritesIn(decision.outputs),
               );
               return decision;
             case "Rejected":
@@ -398,6 +415,60 @@ export class RoomService extends Context.Service<RoomService>()(
           });
         }).pipe(lock.withPermits(1));
 
+      // The list and whether its item was paid are read inside the lock, like a reaction's note. A
+      // key the room already holds answers with nothing changed.
+      const changeList = (by: UserId, change: ListCommand, utcOffsetSeconds: number | undefined) =>
+        Effect.gen(function* () {
+          const state = yield* store.load;
+          if (state._tag === "Active" && (yield* store.listKeyUsed(change.key))) {
+            return RoomDecision.cases.Accepted.make({ state, outputs: [] });
+          }
+          const list = Option.getOrUndefined(yield* store.listById(change.list));
+          const paid =
+            change._tag === "TickItem" &&
+            Option.isSome(
+              yield* store.coinEntryById(
+                rewardForEarn({ _tag: "ListTicked", item: decodeEarnRef(change.item) }).id,
+              ),
+            );
+          return yield* decideAndCommit({
+            _tag: "ChangeList",
+            by,
+            at: yield* Clock.currentTimeMillis,
+            utcOffsetSeconds: offsetFor(state, utcOffsetSeconds),
+            change,
+            ...(list === undefined ? {} : { list }),
+            paid,
+          });
+        }).pipe(lock.withPermits(1));
+
+      // Under the lock, like a note: a change at the same moment is not left out of the view.
+      const forgetLists = store.forgetLists.pipe(lock.withPermits(1));
+
+      /**
+       * The pair's lists for `by`, after `change` when there is one, and the decision that change
+       * made, for what the caller pushes.
+       */
+      const listsFor = (
+        by: UserId,
+        change?: { readonly change: ListCommand; readonly utcOffsetSeconds?: number },
+      ) =>
+        Effect.gen(function* () {
+          const decision =
+            change === undefined
+              ? undefined
+              : yield* changeList(by, change.change, change.utcOffsetSeconds);
+          if (decision?._tag === "Rejected") {
+            const reason = listRefusalOf(decision.rejection);
+            return { result: ListsResult.cases.Refused.make({ reason }), decision };
+          }
+          if (!isMember(yield* store.load, by)) {
+            return { result: ListsResult.cases.Refused.make({ reason: "NotOpen" }), decision };
+          }
+          const lists = yield* store.lists;
+          return { result: ListsResult.cases.Done.make({ lists }), decision };
+        });
+
       const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
         dispatch({ _tag: "SetWish", by, item, wished });
 
@@ -449,6 +520,10 @@ export class RoomService extends Context.Service<RoomService>()(
         buy,
         order,
         setWish,
+        changeList,
+        listsFor,
+        lists: store.lists,
+        forgetLists,
         setMood,
         moods,
         openGift,

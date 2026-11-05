@@ -96,6 +96,10 @@ export const routes = {
   /** The owner says a wish arrived, or takes that back. */
   markGiftReceived: route("PUT", "/v1/gifts/received"),
   saveLoves: route("PUT", "/v1/gifts/loves"),
+  /** The pair's shared lists. */
+  getLists: route("GET", "/v1/lists"),
+  /** One change to the pair's lists; answers the lists after it. */
+  changeList: route("POST", "/v1/lists"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

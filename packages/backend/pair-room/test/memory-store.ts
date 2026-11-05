@@ -2,12 +2,13 @@ import { Effect, Layer, Option, Schema } from "effect";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
 import type { CoinEntry } from "@billet/contracts-domain/coins";
+import type { SharedList } from "@billet/contracts-domain/list";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import { countsAsUnread, cursorOf, type ActivityRow } from "../src/activity.ts";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteIdSource } from "../src/note-id-source.ts";
 import type { ActiveRoom, RoomState, SequencedNote } from "../src/room-state.ts";
-import { RoomStore, type AppendedNote } from "../src/room-store.ts";
+import { RoomStore, type AppendedNote, type ListWrite } from "../src/room-store.ts";
 import { vacant } from "./samples.ts";
 
 /** An in-memory store. `load` yields after reading, so a fiber gives way before it commits. */
@@ -21,6 +22,8 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
     marks: new Map<string, ActivityCursor>(),
     coins: [] as Array<CoinEntry>,
     reactions: new Map<string, NoteReaction>(),
+    lists: [] as Array<SharedList>,
+    listKeys: new Set<string>(),
   };
   const newestFirst = () =>
     [...memory.activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
@@ -33,6 +36,7 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
       activity: ReadonlyArray<ActivityRow>,
       coins: ReadonlyArray<CoinEntry>,
       reactions: ReadonlyArray<NoteReaction>,
+      lists: ReadonlyArray<ListWrite>,
     ) =>
       Effect.suspend(() => {
         if (options?.failCommit === true) return Effect.die("storage is down");
@@ -45,8 +49,28 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
           memory.notes.push(entry);
           memory.keys.set(`${entry.note.author}/${key}`, entry);
         }
+        for (const write of lists) {
+          memory.listKeys.add(write.key);
+          if (write._tag === "Drop") {
+            memory.lists = memory.lists.filter((list) => list.id !== write.list);
+          } else if (memory.lists.some((list) => list.id === write.list.id)) {
+            memory.lists = memory.lists.map((list) =>
+              list.id === write.list.id ? write.list : list,
+            );
+          } else {
+            memory.lists.push(write.list);
+          }
+        }
         return Effect.void;
       }),
+    lists: Effect.sync(() => memory.lists),
+    listById: (id) =>
+      Effect.sync(() => Option.fromNullishOr(memory.lists.find((list) => list.id === id))),
+    listKeyUsed: (key) => Effect.sync(() => memory.listKeys.has(key)),
+    forgetLists: Effect.sync(() => {
+      memory.lists = [];
+      memory.listKeys.clear();
+    }),
     coinEntryById: (id) =>
       Effect.sync(() => Option.fromNullishOr(memory.coins.find((entry) => entry.id === id))),
     coinEntriesAfter: (after, limit) =>

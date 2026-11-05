@@ -3,6 +3,7 @@ import { NotesUnavailable } from "@billet/backend-notes/notes-error";
 import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { InkId } from "@billet/contracts-domain/inks";
 import { GiftsResult } from "@billet/backend-pair-room/gifts";
+import { ListsResult } from "@billet/backend-pair-room/lists";
 import { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { SequencedNote } from "@billet/backend-pair-room/room-state";
 import { CatEntry } from "@billet/contracts-domain/cat";
@@ -27,6 +28,7 @@ const decodeCoins = Schema.decodeUnknownEffect(Schema.NullOr(CoinsResponse));
 const decodeShop = Schema.decodeUnknownEffect(Schema.NullOr(ShopResponse));
 const decodeMoods = Schema.decodeUnknownEffect(Schema.Array(MoodCheckIn));
 const decodeGifts = Schema.decodeUnknownEffect(GiftsResult);
+const decodeLists = Schema.decodeUnknownEffect(ListsResult);
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
@@ -103,6 +105,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         moods: (pairId) => callRoom(() => rooms.getByName(pairId).moods(), decodeMoods),
         gifts: (pairId, by, command) =>
           callRoom(() => rooms.getByName(pairId).gifts(by, command), decodeGifts),
+        lists: (pairId, by, request) =>
+          callRoom(() => rooms.getByName(pairId).lists(by, request), decodeLists),
         markActivityRead: (pairId, user, upTo) =>
           callRoom(() => rooms.getByName(pairId).markActivityRead(user, upTo), decodeUnread),
       }),

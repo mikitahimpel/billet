@@ -33,6 +33,8 @@ final class ServerSession {
     @ObservationIgnored private var texts: TextNoteSync?
     /// Takes the room's shop as the socket pushes it.
     @ObservationIgnored private weak var shop: ShopModel?
+    /// Takes the room's lists as the socket pushes them.
+    @ObservationIgnored private weak var lists: ListsModel?
     /// Where the room's check-ins go; set each time the socket is followed.
     @ObservationIgnored private var moods: (@MainActor (PartnerCheckIn) -> Void)?
 
@@ -101,12 +103,13 @@ final class ServerSession {
     /// app is in front; nothing without a partner.
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
-        moods: (@MainActor (PartnerCheckIn) -> Void)? = nil
+        lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil
     ) {
         if follows, isPaired {
             self.photos = photos
             self.texts = texts
             self.shop = shop
+            self.lists = lists
             self.moods = moods
             if inboxLink == nil {
                 let accounts = backend.accounts
@@ -121,6 +124,7 @@ final class ServerSession {
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
                         shop: { [weak self] in self?.shop?.received($0) },
+                        lists: { [weak self] in self?.lists?.received($0) },
                         mood: { [weak self] in self?.moods?($0) }))
             }
             inboxLink?.connect()
@@ -162,6 +166,11 @@ final class ServerSession {
 
     /// The pair's gift wishes in its room; nil until this account has a partner.
     var giftSync: GiftSync? {
+        isPaired ? .live(backend.api) : nil
+    }
+
+    /// The pair's shared lists in its room; nil until this account has a partner.
+    var listSync: ListSync? {
         isPaired ? .live(backend.api) : nil
     }
 

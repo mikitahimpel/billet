@@ -23,6 +23,8 @@ import { MoodRoutes } from "@billet/backend-notes/mood-routes";
 import { MoodService } from "@billet/backend-notes/mood-service";
 import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
 import { GiftsService } from "@billet/backend-notes/gifts-service";
+import { ListsRoutes } from "@billet/backend-notes/lists-routes";
+import { ListsService } from "@billet/backend-notes/lists-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -90,6 +92,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ReactionRoutes,
     MoodRoutes,
     GiftsRoutes,
+    ListsRoutes,
     FlagsRoutes,
     DatesRoutes,
     MetricsRoutes,
@@ -112,6 +115,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ReactionService.layer,
         MoodService.layer,
         GiftsService.layer,
+        ListsService.layer,
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),

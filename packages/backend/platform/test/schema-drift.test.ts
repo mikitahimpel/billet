@@ -73,6 +73,9 @@ import {
   StoredGiftLoves,
   StoredGiftPlan,
   StoredGiftWish,
+  StoredList,
+  StoredListItem,
+  StoredListKey,
   StoredReaction,
   StoredClaimedBonus,
   StoredMood,
@@ -100,6 +103,9 @@ import {
   giftLoves,
   giftPlan,
   giftWish,
+  listItems,
+  listKeys,
+  lists,
 } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
@@ -141,6 +147,9 @@ const checked = [
   ["gift_loves", giftLoves, StoredGiftLoves],
   ["gift_plan", giftPlan, StoredGiftPlan],
   ["gift_wish", giftWish, StoredGiftWish],
+  ["lists", lists, StoredList],
+  ["list_items", listItems, StoredListItem],
+  ["list_keys", listKeys, StoredListKey],
   ["note", note, StoredNote],
   ["owned_ink", ownedInk, StoredOwnedInk],
   ["owned_item", ownedItem, StoredOwnedItem],

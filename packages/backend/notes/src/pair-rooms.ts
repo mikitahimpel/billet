@@ -20,6 +20,8 @@ import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
+import type { ListsResult } from "@billet/backend-pair-room/lists";
+import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
@@ -179,6 +181,12 @@ export class PairRooms extends Context.Service<
       by: UserId,
       command: GiftCommand,
     ) => Effect.Effect<GiftsResult, NotesUnavailable>;
+    /** The pair's lists for `by`, after `request` when there is one. */
+    readonly lists: (
+      pairId: PairId,
+      by: UserId,
+      request: ChangeListRequest | undefined,
+    ) => Effect.Effect<ListsResult, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,

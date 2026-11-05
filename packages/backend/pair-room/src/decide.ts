@@ -8,10 +8,13 @@ import {
   type LocalDay,
   localDayOf,
   rewardFor,
+  EarnRef,
   rewardForEarn,
+  type EarnEvent,
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
+import { earnsOnTick } from "@billet/contracts-domain/list";
 import { type MoodCheckIn, moodNoteMaxLength } from "@billet/contracts-domain/mood";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
@@ -32,7 +35,7 @@ import {
   welcomeCoins,
 } from "@billet/contracts-domain/shop";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
-import type { RoomCommand } from "./room-command.ts";
+import { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
 import {
   type ActiveRoom,
@@ -43,6 +46,7 @@ import {
   type RoomWallet,
 } from "./room-state.ts";
 import { newTemper, nextTemper } from "./cat-temper.ts";
+import { addsInWindow, changeList } from "./lists.ts";
 
 const accepted = (state: ActiveRoom, outputs: ReadonlyArray<RoomOutput> = []): RoomDecision =>
   RoomDecision.cases.Accepted.make({ state, outputs });
@@ -333,6 +337,82 @@ const cared = (room: ActiveRoom, cat: RoomCat, entry: CatEntry) => {
   };
 };
 
+/**
+ * What something the couple did in the app pays: its reward, cut to what is left of its day's cap.
+ * Nothing when the cap is met. The caller makes sure it is paid once per ref.
+ */
+const appEarn = (
+  room: ActiveRoom,
+  at: EpochMillis,
+  utcOffsetSeconds: number,
+  event: EarnEvent,
+): { room: ActiveRoom; outputs: ReadonlyArray<RoomOutput> } => {
+  const reward = rewardForEarn(event);
+  const today = walletOn(room.wallet, localDayOf(at, utcOffsetSeconds));
+  const { source } = reward;
+  const amount =
+    source === undefined
+      ? reward.coins
+      : Math.min(reward.coins, dailyEarnCaps[source] - today[source]);
+  if (amount <= 0) return { room: { ...room, wallet: today }, outputs: [] };
+  const entry = coinEntry(reward.id, "earn", amount, reward.ref, at);
+  const counted = source === undefined ? {} : { [source]: today[source] + amount };
+  return {
+    room: { ...room, wallet: { ...today, balance: today.balance + amount, ...counted } },
+    outputs: [RoomOutput.cases.CoinsEntered.make({ entry })],
+  };
+};
+
+const decodeEarnRef = Schema.decodeSync(EarnRef);
+
+type ChangeListCommand = typeof RoomCommand.cases.ChangeList.Type;
+
+/**
+ * One change to a list. A tick earns, in the same decision, when its kind earns and the item has
+ * not earned before; an add is an Inbox item, counted with `by`'s other adds of its window.
+ */
+const decideList = (room: ActiveRoom, command: ChangeListCommand): RoomDecision => {
+  const { by, at, utcOffsetSeconds, change, list, paid } = command;
+  if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+  const outcome = changeList(list, by, at, change);
+  switch (outcome._tag) {
+    case "Unchanged":
+      return accepted(room);
+    case "Refused":
+      return rejected(outcome.rejection);
+    case "Deleted":
+      return accepted(room, [
+        RoomOutput.cases.ListDeleted.make({ list: outcome.list, key: change.key, at }),
+      ]);
+    case "Saved": {
+      const saved = outcome.list;
+      const outputs: Array<RoomOutput> = [
+        RoomOutput.cases.ListSaved.make({ list: saved, key: change.key, at }),
+      ];
+      if (outcome.added !== undefined) {
+        outputs.push(
+          RoomOutput.cases.ListItemAdded.make({
+            list: saved.id,
+            kind: saved.kind,
+            title: saved.title,
+            by,
+            slot: room.members[0].user === by ? 0 : 1,
+            at,
+            count: addsInWindow(saved, by, at),
+            text: outcome.added.text,
+          }),
+        );
+      }
+      if (outcome.ticked === undefined || paid || !earnsOnTick(saved.kind)) {
+        return accepted(room, outputs);
+      }
+      const event: EarnEvent = { _tag: "ListTicked", item: decodeEarnRef(outcome.ticked.id) };
+      const earned = appEarn(room, at, utcOffsetSeconds, event);
+      return accepted(earned.room, [...outputs, ...earned.outputs]);
+    }
+  }
+};
+
 const decideVacant = (command: RoomCommand): RoomDecision => {
   switch (command._tag) {
     case "Open": {
@@ -375,6 +455,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "Earn":
     case "SetMood":
     case "CreditPurchase":
+    case "ChangeList":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -538,21 +619,11 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
     case "Earn": {
       const { by, at, utcOffsetSeconds, event } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
-      const reward = rewardForEarn(event);
-      const today = walletOn(room.wallet, localDayOf(at, utcOffsetSeconds));
-      const { source } = reward;
-      const amount =
-        source === undefined
-          ? reward.coins
-          : Math.min(reward.coins, dailyEarnCaps[source] - today[source]);
-      if (amount <= 0) return accepted({ ...room, wallet: today });
-      const entry = coinEntry(reward.id, "earn", amount, reward.ref, at);
-      const counted = source === undefined ? {} : { [source]: today[source] + amount };
-      return accepted(
-        { ...room, wallet: { ...today, balance: today.balance + amount, ...counted } },
-        [RoomOutput.cases.CoinsEntered.make({ entry })],
-      );
+      const earned = appEarn(room, at, utcOffsetSeconds, event);
+      return accepted(earned.room, earned.outputs);
     }
+    case "ChangeList":
+      return decideList(room, command);
     case "SetMood": {
       const { by, mood, at } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));

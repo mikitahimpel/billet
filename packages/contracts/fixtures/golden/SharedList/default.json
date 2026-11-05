@@ -1,0 +1,33 @@
+{
+  "icon": {
+    "symbol": "basket.fill",
+    "tint": "sage"
+  },
+  "id": "00000000-0000-4000-8000-0000000000c1",
+  "items": [
+    {
+      "addedAt": 1700000000000,
+      "aisle": "dairy",
+      "author": "user-alice",
+      "doneAt": 1700000600000,
+      "doneBy": "user-bob",
+      "icon": "milk",
+      "id": "00000000-0000-4000-8000-0000000000c2",
+      "note": "the barista one",
+      "quantity": "2",
+      "text": "Oat milk",
+      "wants": []
+    },
+    {
+      "addedAt": 1700000100000,
+      "author": "user-bob",
+      "id": "00000000-0000-4000-8000-0000000000c3",
+      "text": "Pears",
+      "wants": [
+        "user-alice"
+      ]
+    }
+  ],
+  "kind": "groceries",
+  "title": "Groceries"
+}

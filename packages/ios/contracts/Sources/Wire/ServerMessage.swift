@@ -21,6 +21,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case reactionChanged(NoteReaction)
   /// The pair's shop now, sent to a socket that resumed with `shop: true` and after each change.
   case shopChanged(ShopResponse)
+  /// The pair's lists now, sent to a socket that resumed with `lists: true` and after each change.
+  case listsChanged([SharedList])
   /// A member's latest check-in, sent to a socket that resumed with `moods: true`: each one the
   /// room holds on the resume, then every new one.
   case moodChanged(PartnerCheckIn)
@@ -39,6 +41,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case unread
     case reaction
     case shop
+    case lists
     case checkIn
   }
 
@@ -79,6 +82,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .reactionChanged(try container.decode(NoteReaction.self, forKey: .reaction))
     case "ShopChanged":
       self = .shopChanged(try container.decode(ShopResponse.self, forKey: .shop))
+    case "ListsChanged":
+      self = .listsChanged(try container.decode([SharedList].self, forKey: .lists))
     case "MoodChanged":
       self = .moodChanged(try container.decode(PartnerCheckIn.self, forKey: .checkIn))
     default:
@@ -132,6 +137,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .shopChanged(let shop):
       try container.encode("ShopChanged", forKey: .tag)
       try container.encode(shop, forKey: .shop)
+    case .listsChanged(let lists):
+      try container.encode("ListsChanged", forKey: .tag)
+      try container.encode(lists, forKey: .lists)
     case .moodChanged(let checkIn):
       try container.encode("MoodChanged", forKey: .tag)
       try container.encode(checkIn, forKey: .checkIn)

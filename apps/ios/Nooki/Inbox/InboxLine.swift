@@ -91,6 +91,10 @@ struct InboxLine: Equatable {
             self.init(symbol: "arrow.uturn.backward.circle.fill", text: "\(coins) coins were refunded")
         case .streakReached(let days):
             self.init(symbol: "flame.fill", text: "Your streak is \(days) days")
+        case .listItemAdded(_, let kind, let title, let count, let text):
+            let symbol = ListKind(kind).icon.symbol
+            let what = count == 1 ? "“\(text)”" : "\(count) items"
+            self.init(symbol: symbol, text: "\(who) added \(what) to \(title)")
         }
     }
 

@@ -27,6 +27,8 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
   case coinsBought(productId: String, coins: Int)
   case refunded(productId: String, coins: Int)
   case streakReached(days: Int)
+  /// The partner added `count` items to one list within ten minutes; `text` is the latest.
+  case listItemAdded(list: IdempotencyKey, kind: ListKind, title: String, count: Int, text: String)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -46,6 +48,10 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
     case collection
     case productId
     case days
+    case list
+    case title
+    case count
+    case text
   }
 
   public init(from decoder: any Decoder) throws {
@@ -106,6 +112,13 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
         coins: try container.decode(Int.self, forKey: .coins))
     case "StreakReached":
       self = .streakReached(days: try container.decode(Int.self, forKey: .days))
+    case "ListItemAdded":
+      self = .listItemAdded(
+        list: try container.decode(IdempotencyKey.self, forKey: .list),
+        kind: try container.decode(ListKind.self, forKey: .kind),
+        title: try container.decode(String.self, forKey: .title),
+        count: try container.decode(Int.self, forKey: .count),
+        text: try container.decode(String.self, forKey: .text))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -176,6 +189,13 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
     case .streakReached(let days):
       try container.encode("StreakReached", forKey: .tag)
       try container.encode(days, forKey: .days)
+    case .listItemAdded(let list, let kind, let title, let count, let text):
+      try container.encode("ListItemAdded", forKey: .tag)
+      try container.encode(list, forKey: .list)
+      try container.encode(kind, forKey: .kind)
+      try container.encode(title, forKey: .title)
+      try container.encode(count, forKey: .count)
+      try container.encode(text, forKey: .text)
     }
   }
 }

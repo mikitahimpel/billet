@@ -126,6 +126,9 @@ import {
   SetGiftPlanRequest,
 } from "@billet/contracts-http-api/gifts";
 
+import { ListCommand, SharedList } from "@billet/contracts-domain/list";
+import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lists";
+
 export interface Fixture {
   /** Swift type name and golden directory name. */
   readonly name: string;
@@ -456,6 +459,14 @@ const activityEvents = {
   },
   refunded: { _tag: "Refunded", productId: "com.mikitahimpel.billet.coins.small", coins: 500 },
   "streak-reached": { _tag: "StreakReached", days: 7 },
+  "list-item-added": {
+    _tag: "ListItemAdded",
+    list: "00000000-0000-4000-8000-0000000000c1",
+    kind: "groceries",
+    title: "Groceries",
+    count: 3,
+    text: "Oat milk",
+  },
 } as const;
 const activityTargets = {
   note: { _tag: "Note", note: "note-1" },
@@ -464,6 +475,7 @@ const activityTargets = {
   plant: { _tag: "Plant", plant: "monstera" },
   "shop-item": { _tag: "ShopItem", id: "armchair" },
   "shop-offer": { _tag: "ShopOffer", id: "deal:2026-11-05:0" },
+  list: { _tag: "List", list: "00000000-0000-4000-8000-0000000000c1" },
 } as const;
 const decodeSamples = <S extends Schema.Codec<unknown, unknown>>(
   schema: S,
@@ -538,6 +550,102 @@ const aliceLoves = {
   avoid: "Lilies",
 };
 
+const listKey = "00000000-0000-4000-8000-0000000000d1";
+const groceriesId = "00000000-0000-4000-8000-0000000000c1";
+const milkId = "00000000-0000-4000-8000-0000000000c2";
+const groceries = Schema.decodeUnknownSync(SharedList)({
+  id: groceriesId,
+  kind: "groceries",
+  title: "Groceries",
+  icon: { symbol: "basket.fill", tint: "sage" },
+  items: [
+    {
+      id: milkId,
+      text: "Oat milk",
+      author: alice,
+      addedAt: 1_700_000_000_000,
+      doneBy: bob,
+      doneAt: 1_700_000_600_000,
+      quantity: "2",
+      note: "the barista one",
+      icon: "milk",
+      aisle: "dairy",
+      wants: [],
+    },
+    {
+      id: "00000000-0000-4000-8000-0000000000c3",
+      text: "Pears",
+      author: bob,
+      addedAt: 1_700_000_100_000,
+      wants: [alice],
+    },
+  ],
+});
+const toWatch = Schema.decodeUnknownSync(SharedList)({
+  id: "00000000-0000-4000-8000-0000000000c4",
+  kind: "watch",
+  title: "To watch",
+  icon: { symbol: "popcorn.fill", tint: "coral" },
+  items: [
+    {
+      id: "00000000-0000-4000-8000-0000000000c5",
+      text: "Past Lives",
+      author: alice,
+      addedAt: 1_700_000_200_000,
+      media: { kind: "movie", tmdb: 666277 },
+      wants: [alice, bob],
+    },
+  ],
+});
+const listCommands = {
+  "create-list": {
+    _tag: "CreateList",
+    key: listKey,
+    list: groceriesId,
+    kind: "groceries",
+    title: "Groceries",
+    icon: { symbol: "basket.fill", tint: "sage" },
+  },
+  "rename-list": {
+    _tag: "RenameList",
+    key: listKey,
+    list: groceriesId,
+    title: "Saturday shop",
+    icon: { symbol: "cart.fill", tint: "honey" },
+  },
+  "delete-list": { _tag: "DeleteList", key: listKey, list: groceriesId },
+  "add-item": {
+    _tag: "AddItem",
+    key: listKey,
+    list: groceriesId,
+    item: milkId,
+    text: "Oat milk",
+    quantity: "2",
+  },
+  "add-place": {
+    _tag: "AddItem",
+    key: listKey,
+    list: groceriesId,
+    item: milkId,
+    text: "Lisbon",
+    country: "PT",
+  },
+  "edit-item": {
+    _tag: "EditItem",
+    key: listKey,
+    list: groceriesId,
+    item: milkId,
+    text: "Oat milk",
+    note: "the barista one",
+    icon: "milk",
+    aisle: "dairy",
+  },
+  "tick-item": { _tag: "TickItem", key: listKey, list: groceriesId, item: milkId },
+  "untick-item": { _tag: "UntickItem", key: listKey, list: groceriesId, item: milkId },
+  "delete-item": { _tag: "DeleteItem", key: listKey, list: groceriesId, item: milkId },
+  "want-item": { _tag: "WantItem", key: listKey, list: groceriesId, item: milkId, wants: true },
+} as const;
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -600,6 +708,21 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ListReactionsResponse", ListReactionsResponse, {
     default: { reactions: [heart, takenBack] },
     empty: { reactions: [] },
+  }),
+  fixture("SharedList", SharedList, { default: groceries, watch: toWatch }),
+  fixture("ListCommand", ListCommand, decodeSamples(ListCommand, listCommands)),
+  fixture("ListsResponse", ListsResponse, {
+    default: { lists: [groceries, toWatch] },
+    empty: { lists: [] },
+  }),
+  fixture("ChangeListRequest", ChangeListRequest, {
+    default: Schema.decodeUnknownSync(ChangeListRequest)({
+      change: listCommands["tick-item"],
+      utcOffsetSeconds: 3600,
+    }),
+    "without-offset": Schema.decodeUnknownSync(ChangeListRequest)({
+      change: listCommands["add-item"],
+    }),
   }),
   fixture("GiftWish", GiftWish, { default: braceletWish, received: sunflowers }),
   fixture("GiftsResponse", GiftsResponse, {
@@ -1048,6 +1171,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       lastReactionRev: 2,
     }),
     "resume-with-shop": ClientMessage.cases.Resume.make({ lastSeq: 7, activity: true, shop: true }),
+    "resume-with-lists": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      activity: true,
+      shop: true,
+      lists: true,
+    }),
     "resume-with-moods": ClientMessage.cases.Resume.make({
       lastSeq: 7,
       activity: true,
@@ -1086,6 +1215,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
     "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
     "reaction-changed": ServerMessage.cases.ReactionChanged.make({ reaction: heart }),
+    "lists-changed": ServerMessage.cases.ListsChanged.make({ lists: [groceries, toWatch] }),
     "shop-changed": ServerMessage.cases.ShopChanged.make({
       shop: {
         balance: 65,

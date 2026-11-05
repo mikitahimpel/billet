@@ -4,6 +4,7 @@ import { ActivityCursor, ActivityEvent, ActivityTarget } from "@billet/contracts
 import { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
 import { CoinEntry, type CoinEntryId } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { type ListId, ListItem, SharedList } from "@billet/contracts-domain/list";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
@@ -13,7 +14,7 @@ import {
   type SequencedNote,
 } from "@billet/backend-pair-room/room-state";
 import { ActivityRow, activityRetentionMillis, cursorOf } from "@billet/backend-pair-room/activity";
-import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
+import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
 import {
   activity,
@@ -22,6 +23,9 @@ import {
   catEntry,
   claimedBonus,
   coinEntry,
+  listItems,
+  listKeys,
+  lists,
   mood,
   note,
   ownedInk,
@@ -153,6 +157,83 @@ const activityFrom = (record: ActivityRecord): Option.Option<ActivityRow> =>
       ...body,
     }),
   );
+
+type ListRow = typeof lists.$inferSelect;
+type ListItemRow = typeof listItems.$inferSelect;
+
+const WantsJson = Schema.fromJsonString(Schema.Array(Schema.String));
+const encodeWants = Schema.encodeSync(WantsJson);
+const decodeWants = Schema.decodeOption(WantsJson);
+const decodeListItem = Schema.decodeUnknownOption(ListItem);
+const decodeList = Schema.decodeUnknownOption(SharedList);
+
+const listItemValues = (
+  list: ListId,
+  position: number,
+  item: ListItem,
+): typeof listItems.$inferInsert => ({
+  id: item.id,
+  listId: list,
+  position,
+  text: item.text,
+  author: item.author,
+  addedAt: item.addedAt,
+  doneBy: item.doneBy ?? null,
+  doneAt: item.doneAt ?? null,
+  quantity: item.quantity ?? null,
+  note: item.note ?? null,
+  icon: item.icon ?? null,
+  aisle: item.aisle ?? null,
+  mediaKind: item.media?.kind ?? null,
+  mediaTmdb: item.media?.tmdb ?? null,
+  country: item.country ?? null,
+  wants: encodeWants(item.wants),
+});
+
+/** An item this code cannot read, such as one a newer build wrote, is left out. */
+const listItemFrom = (row: ListItemRow): Option.Option<ListItem> =>
+  Option.flatMap(decodeWants(row.wants), (wants) =>
+    decodeListItem({
+      id: row.id,
+      text: row.text,
+      author: row.author,
+      addedAt: row.addedAt,
+      ...(row.doneBy === null || row.doneAt === null
+        ? {}
+        : { doneBy: row.doneBy, doneAt: row.doneAt }),
+      ...(row.quantity === null ? {} : { quantity: row.quantity }),
+      ...(row.note === null ? {} : { note: row.note }),
+      ...(row.icon === null ? {} : { icon: row.icon }),
+      ...(row.aisle === null ? {} : { aisle: row.aisle }),
+      ...(row.mediaKind === null || row.mediaTmdb === null
+        ? {}
+        : { media: { kind: row.mediaKind, tmdb: row.mediaTmdb } }),
+      ...(row.country === null ? {} : { country: row.country }),
+      wants,
+    }),
+  );
+
+/** The lists with their items, each in its stored order. A list this code cannot read is left out. */
+const listsFrom = (
+  rows: ReadonlyArray<ListRow>,
+  items: ReadonlyArray<ListItemRow>,
+): ReadonlyArray<SharedList> =>
+  rows.flatMap((row) =>
+    Option.toArray(
+      decodeList({
+        id: row.id,
+        kind: row.kind,
+        title: row.title,
+        icon: { symbol: row.iconSymbol, tint: row.iconTint },
+        items: items
+          .filter((item) => item.listId === row.id)
+          .flatMap((item) => Option.toArray(listItemFrom(item))),
+      }),
+    ),
+  );
+
+/** How long a list change's key is kept, behind the newest. */
+const listKeyRetentionMillis = activityRetentionMillis;
 
 const catFrom = (row: CatRow | undefined) =>
   row === undefined
@@ -296,6 +377,7 @@ export const SqliteRoomStore = Layer.effect(
         items: ReadonlyArray<ActivityRow>,
         coins: ReadonlyArray<CoinEntry>,
         reactions: ReadonlyArray<NoteReaction>,
+        listWrites: ReadonlyArray<ListWrite>,
       ) =>
         db
           .transaction((tx) =>
@@ -386,6 +468,34 @@ export const SqliteRoomStore = Layer.effect(
                   .values(values)
                   .onConflictDoUpdate({ target: activity.id, set: values });
               }
+              for (const write of listWrites) {
+                const id = write._tag === "Put" ? write.list.id : write.list;
+                yield* tx.delete(listItems).where(eq(listItems.listId, id));
+                if (write._tag === "Drop") {
+                  yield* tx.delete(lists).where(eq(lists.id, id));
+                } else {
+                  const { kind, title, icon, items: listed } = write.list;
+                  const tile = { kind, title, iconSymbol: icon.symbol, iconTint: icon.tint };
+                  // A new list goes last; one already stored keeps its place.
+                  const [last] = yield* tx.select({ at: max(lists.position) }).from(lists);
+                  yield* tx
+                    .insert(lists)
+                    .values({ id, position: (last?.at ?? -1) + 1, ...tile })
+                    .onConflictDoUpdate({ target: lists.id, set: tile });
+                  for (const [position, item] of listed.entries()) {
+                    yield* tx.insert(listItems).values(listItemValues(id, position, item));
+                  }
+                }
+                yield* tx
+                  .insert(listKeys)
+                  .values({ key: write.key, at: write.at })
+                  .onConflictDoNothing();
+              }
+              if (listWrites.length > 0) {
+                const [newest] = yield* tx.select({ at: max(listKeys.at) }).from(listKeys);
+                const cutoff = (newest?.at ?? 0) - listKeyRetentionMillis;
+                yield* tx.delete(listKeys).where(lt(listKeys.at, cutoff));
+              }
               if (items.length > 0) {
                 // Kept for 30 days behind the newest item: the room has no clock of its own.
                 const [newest] = yield* tx.select({ at: max(activity.at) }).from(activity);
@@ -395,6 +505,43 @@ export const SqliteRoomStore = Layer.effect(
             }),
           )
           .pipe(Effect.orDie),
+      lists: Effect.all([
+        db.select().from(lists).orderBy(asc(lists.position)),
+        db.select().from(listItems).orderBy(asc(listItems.listId), asc(listItems.position)),
+      ]).pipe(
+        Effect.map(([rows, items]) => listsFrom(rows, items)),
+        Effect.orDie,
+      ),
+      listById: (id: ListId) =>
+        Effect.all([
+          db.select().from(lists).where(eq(lists.id, id)),
+          db
+            .select()
+            .from(listItems)
+            .where(eq(listItems.listId, id))
+            .orderBy(asc(listItems.position)),
+        ]).pipe(
+          Effect.map(([rows, items]) => Option.fromNullishOr(listsFrom(rows, items)[0])),
+          Effect.orDie,
+        ),
+      listKeyUsed: (key: IdempotencyKey) =>
+        db
+          .select({ key: listKeys.key })
+          .from(listKeys)
+          .where(eq(listKeys.key, key))
+          .pipe(
+            Effect.map((rows) => rows.length > 0),
+            Effect.orDie,
+          ),
+      forgetLists: db
+        .transaction((tx) =>
+          Effect.gen(function* () {
+            yield* tx.delete(listItems);
+            yield* tx.delete(lists);
+            yield* tx.delete(listKeys);
+          }),
+        )
+        .pipe(Effect.asVoid, Effect.orDie),
       noteByKey: (author: UserId, key: IdempotencyKey) =>
         db
           .select()

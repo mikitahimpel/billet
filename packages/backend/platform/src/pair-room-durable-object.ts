@@ -37,6 +37,8 @@ import { type PurchaseCredit, RoomService } from "@billet/backend-pair-room/room
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { GiftsRoom, type GiftCommand, type GiftsResult } from "@billet/backend-pair-room/gifts";
+import type { ListsResult } from "@billet/backend-pair-room/lists";
+import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -110,6 +112,8 @@ interface SocketAttachment {
   readonly sentReactionRev?: number | null;
   /** Whether this socket resumed with `shop: true` and is sent the pair's shop when it changes. */
   readonly shop?: boolean;
+  /** Whether this socket resumed with `lists: true` and is sent the pair's lists when they change. */
+  readonly lists?: boolean;
   /** Whether this socket resumed with `moods: true` and is told each check-in. */
   readonly moods?: boolean;
 }
@@ -262,6 +266,30 @@ export class PairRoom extends DurableObject {
         }),
       ),
     );
+  }
+
+  /**
+   * The pair's lists for `by`, after `request` when there is one. A change is pushed to every socket
+   * that follows the lists; a tick's coins to every one that follows the shop; an add to the
+   * partner's Inbox count.
+   */
+  async lists(by: UserId, request?: ChangeListRequest): Promise<ListsResult> {
+    const { result, decision } = await this.run(
+      (room) => room.listsFor(by, request),
+      request === undefined ? "PairRoom.lists" : `PairRoom.lists.${request.change._tag}`,
+    );
+    if (decision?._tag !== "Accepted" || result._tag !== "Done") return result;
+    const tags = new Set(decision.outputs.map((output) => output._tag));
+    if (tags.has("ListSaved") || tags.has("ListDeleted")) {
+      for (const socket of this.ctx.getWebSockets()) {
+        if (attachmentOf(socket)?.lists === true) {
+          send(socket, { _tag: "ListsChanged", lists: result.lists });
+        }
+      }
+    }
+    await this.pushShop(decision);
+    if (tags.has("ListItemAdded")) await this.pushUnread((member) => member !== by);
+    return result;
   }
 
   open(
@@ -746,6 +774,7 @@ export class PairRoom extends DurableObject {
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
+    await this.run((room) => room.forgetLists, "PairRoom.forgetLists");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
     await this.endSessions();
@@ -811,8 +840,9 @@ export class PairRoom extends DurableObject {
       case "Resume": {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
-        // the Inbox, nor one without `shop` the shop.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, moods } = message.value;
+        // the Inbox, nor one without `shop` the shop, nor one without `lists` the lists.
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, lists, moods } =
+          message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
@@ -820,6 +850,7 @@ export class PairRoom extends DurableObject {
           activity: activity === true,
           sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
           shop: shop === true,
+          lists: lists === true,
           moods: moods === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
@@ -831,6 +862,8 @@ export class PairRoom extends DurableObject {
         }
         const current = shop === true ? await this.shop() : null;
         if (current !== null) send(socket, { _tag: "ShopChanged", shop: current });
+        const held = lists === true ? await this.lists(attachment.user as UserId) : undefined;
+        if (held?._tag === "Done") send(socket, { _tag: "ListsChanged", lists: held.lists });
         // Only the latest check-ins are kept, so a resume is sent those instead of what it missed.
         if (moods === true) {
           for (const checkIn of await this.moods()) send(socket, { _tag: "MoodChanged", checkIn });

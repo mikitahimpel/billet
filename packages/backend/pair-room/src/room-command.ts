@@ -9,6 +9,7 @@ import {
 import { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
+import { ListCommand, SharedList } from "@billet/contracts-domain/list";
 import { Mood } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
@@ -82,6 +83,18 @@ export const RoomCommand = Schema.TaggedUnion({
    * Coins bought with money: `buy` pays `coins` in, `refund` takes them back. `id` is the payments
    * ledger's entry id, written once; `ref` is the pack.
    */
+  /**
+   * One change to the pair's lists. `list` is the stored list the change names, absent when there
+   * is none; `paid` is whether the item it names already earned its tick, under any earlier tick.
+   */
+  ChangeList: {
+    by: UserId,
+    at: EpochMillis,
+    utcOffsetSeconds: UtcOffsetSeconds,
+    change: ListCommand,
+    list: Schema.optionalKey(SharedList),
+    paid: Schema.Boolean,
+  },
   CreditPurchase: {
     id: CoinEntryId,
     kind: Schema.Literals(["buy", "refund"]),

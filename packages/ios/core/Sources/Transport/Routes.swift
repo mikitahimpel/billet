@@ -51,6 +51,9 @@ public enum Routes {
   public static let setGiftPlan = Route(.put, "/v1/gifts/plans")
   public static let markGiftReceived = Route(.put, "/v1/gifts/received")
   public static let saveLoves = Route(.put, "/v1/gifts/loves")
+  /// The pair's shared lists. A change answers the lists after it.
+  public static let getLists = Route(.get, "/v1/lists")
+  public static let changeList = Route(.post, "/v1/lists")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let getDateCatalog = Route(.get, "/v1/dates/catalog")

@@ -105,6 +105,10 @@ let roundTrips: [String: RoundTrip] = [
   "DeleteGiftWishRequest": codec(DeleteGiftWishRequest.self),
   "SetGiftPlanRequest": codec(SetGiftPlanRequest.self),
   "MarkGiftReceivedRequest": codec(MarkGiftReceivedRequest.self),
+  "SharedList": codec(SharedList.self),
+  "ListCommand": codec(ListCommand.self),
+  "ListsResponse": codec(ListsResponse.self),
+  "ChangeListRequest": codec(ChangeListRequest.self),
   "SaveLovesRequest": codec(SaveLovesRequest.self),
 ]
 
