@@ -186,8 +186,10 @@ struct HomeView: View {
         }
         .onChange(of: state.tab) { old, new in
             // The room view goes with the World (see above): keep what it showed, to show again on the way back.
+            // Not while something is presented, a hint's popover say: the snapshot would bring it back with the room.
             if old == .world, !showsRoom {
-                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                worldSnapshot =
+                    Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
             if new == .world, let scene, worldSnapshot != nil {
                 roomLive = false
@@ -380,7 +382,8 @@ struct HomeView: View {
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
-    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    /// Photos to and from the partner; nil until this phone is paired with them.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop and the gifts follow the pair's room.
     private func followPair() async {
         #if DEBUG
         if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
@@ -396,11 +399,13 @@ struct HomeView: View {
             guard state.profile.couple.pair != nil else { return }
         }
         await state.shop.connect(sync)
+        await state.gifts.connect(session.giftSync)
     }
 
     private func leavePair() async {
         state.profile.leavePair()
         await state.shop.connect(nil)
+        await state.gifts.connect(nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.

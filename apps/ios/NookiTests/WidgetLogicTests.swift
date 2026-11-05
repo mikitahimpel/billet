@@ -129,9 +129,9 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 }
 
 /// A store file of its own under the app group, removed after the test.
-private func scratchFile(_ name: String) -> String { "Tests/\(UUID().uuidString)-\(name)" }
+func scratchFile(_ name: String) -> String { "Tests/\(UUID().uuidString)-\(name)" }
 
-private func removeScratch(_ path: String) {
+func removeScratch(_ path: String) {
     SharedFile.flush()
     try? FileManager.default.removeItem(at: SharedFile.url(path))
 }

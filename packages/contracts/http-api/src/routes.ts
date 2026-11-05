@@ -82,6 +82,16 @@ export const routes = {
   claimBonus: route("POST", "/v1/shop/bonus"),
   /** Pays something the couple did in the app, once per ref and within the day's caps. */
   earnCoins: route("POST", "/v1/coins/earn"),
+  /** The pair's gift wishes, the caller's own gift plans and both partners' "What I love". */
+  getGifts: route("GET", "/v1/gifts"),
+  /** Makes or changes one of the caller's gift wishes. */
+  saveGiftWish: route("PUT", "/v1/gifts/wishes"),
+  deleteGiftWish: route("DELETE", "/v1/gifts/wishes"),
+  /** Plans, moves on or lets go the caller's secret plan for one of the partner's wishes. */
+  setGiftPlan: route("PUT", "/v1/gifts/plans"),
+  /** The owner says a wish arrived, or takes that back. */
+  markGiftReceived: route("PUT", "/v1/gifts/received"),
+  saveLoves: route("PUT", "/v1/gifts/loves"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

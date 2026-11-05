@@ -191,3 +191,34 @@ export const coinEntry = sqliteTable(
   },
   (table) => [uniqueIndex("coin_entry_id").on(table.id)],
 );
+
+// A partner's gift wishes. Both partners read every row; who plans to gift one is in `gift_plan`.
+export const giftWish = sqliteTable("gift_wish", {
+  id: text("id").primaryKey(),
+  owner: text("owner").notNull(),
+  title: text("title").notNull(),
+  link: text("link").notNull(),
+  price: text("price").notNull(),
+  note: text("note").notNull(),
+  mostWanted: integer("most_wanted").notNull(),
+  addedAt: integer("added_at").notNull(),
+  receivedAt: integer("received_at"),
+  giftedBy: text("gifted_by"),
+});
+
+// A giver's secret plan for one of the partner's wishes. Only the giver's own answers read it.
+export const giftPlan = sqliteTable(
+  "gift_plan",
+  {
+    wishId: text("wish_id").notNull(),
+    giver: text("giver").notNull(),
+    stage: text("stage").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.wishId, table.giver] })],
+);
+
+// Each partner's "What I love", as the JSON of `Loves`.
+export const giftLoves = sqliteTable("gift_loves", {
+  user: text("user").primaryKey(),
+  body: text("body").notNull(),
+});

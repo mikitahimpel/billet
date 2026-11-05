@@ -53,6 +53,7 @@ struct HomeStores {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    let gifts: GiftsModel
     let journal: Journal
 
     /// The stores over the app group's files.
@@ -64,9 +65,11 @@ struct HomeStores {
         let notes = NoteStore()
         let care = CatCare(wallet: wallet, streak: streak)
         let shop = ShopModel(wallet: wallet, couple: profile, care: care)
+        let us = UsStore { shop.earn($0) }
         return HomeStores(
-            profile: profile, wallet: wallet, us: UsStore { shop.earn($0) }, partnerMoods: MoodStore(), streak: streak,
+            profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
+            gifts: GiftsModel(us: us) { profile.couple.pair.map { (profile.couple.viewer, $0.users) } },
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
     }
 }
@@ -130,6 +133,8 @@ final class HomeState {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    /// The Us tab's gifts in step with the pair's room once paired.
+    let gifts: GiftsModel
     let journal: Journal
     @ObservationIgnored private let wallet: WalletStore
 
@@ -143,6 +148,7 @@ final class HomeState {
         rooms = stores.rooms
         care = stores.care
         shop = stores.shop
+        gifts = stores.gifts
         journal = stores.journal
         wallet = stores.wallet
         #if DEBUG
