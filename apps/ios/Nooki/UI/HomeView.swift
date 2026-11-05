@@ -118,6 +118,11 @@ struct HomeView: View {
             case .active:
                 state.refresh()
                 scene?.appOpened()
+                Task {
+                    await DrawingSync.requestPushes(asking: false)
+                    await session?.drawingSync?.fetchLatest()
+                    await session?.drawingSync?.registerPushTokens()
+                }
             case .background: state.didEnterBackground()
             default: break
             }
@@ -138,6 +143,9 @@ struct HomeView: View {
             LockCanvasView(
                 state: state, api: session?.api,
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
+            Task { await session?.drawingSync?.registerPushTokens() }
         }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }

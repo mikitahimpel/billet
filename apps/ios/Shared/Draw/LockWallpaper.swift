@@ -10,6 +10,17 @@ enum LockWallpaper: String, CaseIterable, Identifiable {
 
     var title: String { rawValue.capitalized }
 
+    /// The wallpaper a drawing was sent on; blush when the sender chose none.
+    init(paper: PaperColor?) {
+        switch paper {
+        case .blush, nil: self = .blush
+        case .butter: self = .butter
+        case .sage: self = .sage
+        case .sky: self = .sky
+        case .cream: self = .cream
+        }
+    }
+
     var paper: PaperColor {
         switch self {
         case .blush: .blush

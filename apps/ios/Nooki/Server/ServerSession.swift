@@ -40,9 +40,18 @@ final class ServerSession {
         let accounts = backend.accounts
         let key = "draw.lastNoteSeq"
         let lastSeq = defaults.object(forKey: key) as? Int
+        let sync = drawingSync
         return LiveRoom.live(
             baseURL: backend.baseURL, token: { (try? accounts.load())?.token }, lastSeq: lastSeq,
-            onNote: { seq, _ in defaults.set(seq, forKey: key) })
+            onNote: { seq, note in
+                defaults.set(seq, forKey: key)
+                sync?.received(note, seq: seq)
+            })
+    }
+
+    /// Fills the drawing widgets and registers push tokens; nil until this account has a partner.
+    var drawingSync: DrawingSync? {
+        isPaired ? DrawingSync(api: backend.api, accounts: backend.accounts) : nil
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.

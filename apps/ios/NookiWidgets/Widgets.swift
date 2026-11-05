@@ -11,6 +11,7 @@ struct NookiWidgetBundle: WidgetBundle {
         PetMochiControl()
         NoteAccessoryWidget()
         NewNoteControl()
+        DrawingWidget()
     }
 }
 

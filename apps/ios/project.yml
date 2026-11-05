@@ -46,6 +46,7 @@ targets:
             CFBundleURLSchemes: [nooki]
     dependencies:
       - target: NookiWidgets
+      - target: NookiNotifications
       - target: WindowViews
       - package: BilletContracts
         products: [Wire]
@@ -60,6 +61,8 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+        # Alert pushes for drawings; automatic signing switches it to production for TestFlight.
+        aps-environment: development
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
@@ -99,10 +102,43 @@ targets:
       path: NookiWidgets/NookiWidgets.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+    dependencies:
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Ink]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
         # Extensions keep Swift's default isolation; Shared types that cross into App Intents are marked nonisolated.
+        SKIP_INSTALL: YES
+  # Writes the drawing a push carries to the App Group and reloads the drawing widgets, before the alert shows.
+  NookiNotifications:
+    type: app-extension
+    platform: iOS
+    sources: [NookiNotifications, Shared]
+    info:
+      path: NookiNotifications/Info.plist
+      properties:
+        CFBundleDisplayName: Nooki
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.usernotifications.service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
+    entitlements:
+      path: NookiNotifications/NookiNotifications.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+    dependencies:
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Ink]
+    settings:
+      base:
+        # The id the first app's notification service registered, so automatic signing finds it.
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
         SKIP_INSTALL: YES
   NookiTests:
     type: bundle.unit-test

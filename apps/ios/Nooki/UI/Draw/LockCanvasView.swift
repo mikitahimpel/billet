@@ -49,6 +49,8 @@ struct LockCanvasView: View {
         .sensoryFeedback(.success, trigger: sent)
         .sensoryFeedback(.selection, trigger: model.ink)
         .onAppear { model.appeared() }
+        // The partner's drawings arrive as notifications; asked here, where it is plain why.
+        .task { await DrawingSync.requestPushes(asking: true) }
         .onDisappear { model.disappeared() }
         .alert(item: $lockedInk) { ink in
             Alert(
