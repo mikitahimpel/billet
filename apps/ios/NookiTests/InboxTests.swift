@@ -7,7 +7,7 @@ import Wire
 
 private let names = InboxLine.Names(partner: "Anya", cat: "Mochi", title: { Catalog.item($0)?.name })
 
-private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner, id: String = "x", at: Int = 0)
+private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner, id: String = "x", at: Int = 0)
     -> ActivityItem
 {
     ActivityItem(id: id, at: at, actor: actor, event: event)
