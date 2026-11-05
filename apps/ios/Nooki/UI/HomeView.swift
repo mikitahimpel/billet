@@ -224,10 +224,11 @@ struct HomeView: View {
             guard let purchase, purchase.kind == .ink, !state.shop.isSynced, let inkSync else { return }
             Task { await inkSync.settle(purchase, state.shop) }
         }
-        .onChange(of: scenePhase, initial: true) { _, phase in
+        .onChange(of: scenePhase, initial: true) { old, phase in
             switch phase {
             case .active:
-                state.refresh()
+                // The first call is launch, where every store has just been read.
+                state.refresh(reloading: old != phase)
                 scene?.appOpened()
                 visitHints()
                 Task {

@@ -36,7 +36,9 @@ final class ServerSession {
         self.backend = backend
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         pairing = PairingModel(api: backend.api)
-        isPaired = (try? backend.accounts.load())?.record.isPaired ?? false
+        let saved = try? backend.accounts.load()
+        hadSavedAccount = saved != nil
+        isPaired = saved?.record.isPaired ?? false
         #if DEBUG
         // For screenshots: `-inboxFixture YES` fills the Inbox from the local fixture instead of the server.
         inbox = UserDefaults.standard.bool(forKey: "inboxFixture") ? InboxFixture.model() : InboxModel(api: backend.api)
@@ -63,7 +65,10 @@ final class ServerSession {
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
 
-    var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
+    /// Sign-in is the only place an account is saved, and nothing removes one, so this is read once instead of from
+    /// the Keychain on every check.
+    @ObservationIgnored private let hadSavedAccount: Bool
+    var isSignedIn: Bool { signIn.state == .signedIn || hadSavedAccount }
 
     /// The pair's room socket for the shared canvas; nil until this account has a partner.
     ///
