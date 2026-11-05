@@ -16,6 +16,8 @@ import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { ActivityRoutes } from "@billet/backend-notes/activity-routes";
 import { ActivityService } from "@billet/backend-notes/activity-service";
 import { CatRoutes } from "@billet/backend-notes/cat-routes";
+import { MoodRoutes } from "@billet/backend-notes/mood-routes";
+import { MoodService } from "@billet/backend-notes/mood-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -45,6 +47,7 @@ import { AuthRepositoryLive } from "./auth-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
+import { PairMoodsLive } from "./pair-moods-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
@@ -69,6 +72,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ActivityRoutes,
     CatRoutes,
     ReactionRoutes,
+    MoodRoutes,
     FlagsRoutes,
     MetricsRoutes,
     PaymentsRoutes,
@@ -79,13 +83,16 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AuthService.layer,
         AccountDeletion.layer,
         // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
+        // The pair snapshot carries the members' check-ins from the room.
         PairingService.layer.pipe(
           Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
+          Layer.provide(PairMoodsLive.pipe(Layer.provide(MoodService.layer))),
         ),
         NotesService.layer,
         ActivityService.layer,
         CatService.layer,
         ReactionService.layer,
+        MoodService.layer,
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),

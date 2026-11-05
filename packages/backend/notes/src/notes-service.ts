@@ -313,6 +313,7 @@ export class NotesService extends Context.Service<
           case "GiftTaken":
           case "BonusTaken":
           case "CollectionIncomplete":
+          case "MoodNoteTooLong":
             return new NotesUnavailable({ reason: "room-refused-buy" });
         }
       };

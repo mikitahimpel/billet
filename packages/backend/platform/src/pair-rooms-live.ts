@@ -10,6 +10,7 @@ import { CatResponse } from "@billet/contracts-http-api/cat";
 import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { ShopResponse } from "@billet/contracts-http-api/shop";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
@@ -23,6 +24,7 @@ const decodeUnread = Schema.decodeUnknownEffect(Schema.Int);
 const decodeInks = Schema.decodeUnknownEffect(Schema.Array(InkId));
 const decodeCoins = Schema.decodeUnknownEffect(Schema.NullOr(CoinsResponse));
 const decodeShop = Schema.decodeUnknownEffect(Schema.NullOr(ShopResponse));
+const decodeMoods = Schema.decodeUnknownEffect(Schema.Array(MoodCheckIn));
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
@@ -92,6 +94,9 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).react(by, request), decodeDecision),
         reactions: (pairId, afterRev, limit) =>
           callRoom(() => rooms.getByName(pairId).reactions(afterRev, limit), decodeReactions),
+        setMood: (pairId, by, request) =>
+          callRoom(() => rooms.getByName(pairId).setMood(by, request), decodeDecision),
+        moods: (pairId) => callRoom(() => rooms.getByName(pairId).moods(), decodeMoods),
         markActivityRead: (pairId, user, upTo) =>
           callRoom(() => rooms.getByName(pairId).markActivityRead(user, upTo), decodeUnread),
       }),

@@ -17,6 +17,8 @@ import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
+import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
@@ -156,6 +158,14 @@ export class PairRooms extends Context.Service<
       afterRev: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
+    /** Replaces `by`'s check-in with how they feel now. */
+    readonly setMood: (
+      pairId: PairId,
+      by: UserId,
+      request: SetMoodRequest,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Each member's latest check-in. A room not opened yet has none. */
+    readonly moods: (pairId: PairId) => Effect.Effect<ReadonlyArray<MoodCheckIn>, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,

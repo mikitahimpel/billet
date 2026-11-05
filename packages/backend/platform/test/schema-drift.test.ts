@@ -70,6 +70,7 @@ import {
   StoredWish,
   StoredReaction,
   StoredClaimedBonus,
+  StoredMood,
   StoredCoinEntry,
   StoredWallet,
   StoredRoom,
@@ -90,6 +91,7 @@ import {
   wallet,
   wish,
   claimedBonus,
+  mood,
 } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
@@ -132,6 +134,7 @@ const checked = [
   ["owned_item", ownedItem, StoredOwnedItem],
   ["reaction", reaction, StoredReaction],
   ["claimed_bonus", claimedBonus, StoredClaimedBonus],
+  ["mood", mood, StoredMood],
   ["room", room, StoredRoom],
   ["users", users, StoredUser],
   ["wallet", wallet, StoredWallet],
