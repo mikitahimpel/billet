@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect";
-import type { UserId } from "@billet/contracts-domain/ids";
+import type { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 
 /**
@@ -12,8 +12,12 @@ export class PairingObserver extends Context.Service<
   {
     /** The user made a new invite code. */
     readonly invited: (userId: UserId) => Effect.Effect<void>;
-    /** `members` now belong to `pairId`. */
-    readonly paired: (pairId: PairId, members: ReadonlyArray<UserId>) => Effect.Effect<void>;
+    /** `members` now belong to `pairId`: `claimer` claimed the invite at `at`. */
+    readonly paired: (
+      pairId: PairId,
+      members: ReadonlyArray<UserId>,
+      joined: { readonly claimer: UserId; readonly at: EpochMillis },
+    ) => Effect.Effect<void>;
     /** `pairId` has no members any more. */
     readonly unpaired: (pairId: PairId) => Effect.Effect<void>;
   }

@@ -1,21 +1,29 @@
 import SwiftUI
 
 /// The Shop's ink colours for notes and drawings, one card each: the colour, its name and the price pill, or "Yours"
-/// once the pair owns it. A buy plays the purchase moment like any other.
+/// once the pair owns it. A buy plays the purchase moment like any other. The Shop opened at an ink (`openShop`)
+/// scrolls the shelf to it and rings it in honey.
 struct InkShelf: View {
     let state: HomeState
+    var highlighted: String? = nil
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.m) {
-                ForEach(state.inks) { ink in
-                    card(ink)
+        ScrollViewReader { reader in
+            ScrollView(.horizontal) {
+                HStack(spacing: Space.m) {
+                    ForEach(state.inks) { ink in
+                        card(ink).id(ink.id)
+                    }
                 }
+                .padding(.horizontal, Space.l)
             }
-            .padding(.horizontal, Space.l)
+            .scrollIndicators(.hidden)
+            .scrollClipDisabled()
+            .onChange(of: highlighted, initial: true) { _, id in
+                guard let id else { return }
+                withAnimation(.spring(duration: 0.45)) { reader.scrollTo(id, anchor: .center) }
+            }
         }
-        .scrollIndicators(.hidden)
-        .scrollClipDisabled()
     }
 
     private func card(_ ink: PaletteInk) -> some View {
@@ -43,6 +51,13 @@ struct InkShelf: View {
         .padding(Space.m)
         .frame(width: 116)
         .shopCard()
+        .overlay {
+            if highlighted == ink.id {
+                RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                    .strokeBorder(Color.honey, lineWidth: 3)
+                    .transition(.opacity)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("shopInk-\(ink.id)")
     }

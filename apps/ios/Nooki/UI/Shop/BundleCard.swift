@@ -5,6 +5,8 @@ struct BundleCard: View {
     let state: HomeState
     let bundle: ShopBundle
     var open: (ShopItem) -> Void
+    /// Opens the bundle's own sheet.
+    var openSet: () -> Void = {}
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -19,7 +21,10 @@ struct BundleCard: View {
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
                 : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
             layout {
-                title.frame(maxWidth: .infinity, alignment: .leading)
+                Button(action: openSet) {
+                    title.frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect)
+                }
+                .buttonStyle(PressScaleStyle())
                 SetBuyButton(state: state, set: bundle)
                     .fixedSize()
             }

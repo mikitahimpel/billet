@@ -305,7 +305,7 @@ packages/
       Pet               World state and the delivery scenario, no graphics
       PetScene          The contract between the pet and a scene
     features/           BilletFeatures
-      Feature*          Onboarding, Pairing, Canvas
+      Feature*          Onboarding, Pairing, Canvas, Moments, Games (the mini-games' rules)
       WidgetBridge      Flags, snapshot and queue shared by app and widget
     scripts/            The import check every package runs before build and test
 archive/ios-v1/         The old app, not built; its own screens (Home, Settings, Inbox, Labs,

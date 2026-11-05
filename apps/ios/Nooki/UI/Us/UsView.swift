@@ -20,8 +20,6 @@ struct UsView: View {
     }
 
     private let hMargin: CGFloat = 16
-    /// Same tab bar clearance as the shop.
-    private let bottomInset: CGFloat = 134
     private var us: UsStore { state.us }
 
     var body: some View {
@@ -36,10 +34,9 @@ struct UsView: View {
             }
             .padding(.horizontal, hMargin)
             .padding(.top, 4)
-            .padding(.bottom, bottomInset)
+            .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
-        .ignoresSafeArea(.container, edges: .bottom)
         .sheet(item: $state.usRoute) { route in
             switch route {
             case .dates: DatesScreen(state: state)

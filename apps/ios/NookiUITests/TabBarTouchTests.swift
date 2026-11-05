@@ -79,6 +79,30 @@ final class TabBarTouchTests: XCTestCase {
         snapshot("profile")
     }
 
+    /// The tab's scroll view runs full-bleed under the header and the tab bar, which float over it, instead of
+    /// stopping (and cutting its cards off) at the header's bottom edge.
+    @MainActor
+    func testScrollingRunsUnderTheHeaderAndTheTabBar() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launch()
+        XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
+        Thread.sleep(forTimeInterval: 8)
+
+        for tab in ["Shop", "Us"] {
+            app.buttons[tab].tap()
+            Thread.sleep(forTimeInterval: 1.5)
+            let inbox = app.buttons["Inbox"].firstMatch
+            let bar = app.otherElements["tabbar"].firstMatch
+            XCTAssertTrue(inbox.waitForExistence(timeout: 10) && bar.exists, "the bars should show on \(tab)")
+            // The tab's own scroll view is the tallest one; Shop also has a horizontal strip of chips.
+            let scroll = app.scrollViews.allElementsBoundByIndex.max { $0.frame.height < $1.frame.height }
+            let frame = try XCTUnwrap(scroll?.frame, "\(tab) should scroll")
+            XCTAssertLessThan(frame.minY, inbox.frame.minY, "\(tab) should scroll under the header")
+            XCTAssertGreaterThanOrEqual(frame.maxY, bar.frame.maxY - 1, "\(tab) should scroll under the tab bar")
+        }
+    }
+
     /// The header is the same on every tab: the Inbox top-left, the coins top-right with the couple's avatars in the
     /// corner to their right, each in the same place.
     @MainActor
