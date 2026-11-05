@@ -16,11 +16,6 @@ public struct InviteCode: Codable, Hashable, Sendable {
     String(typed.uppercased().filter { !$0.isWhitespace && $0 != "-" })
   }
 
-  /// Whether `normalized` uses only the alphabet's symbols, so far. A full code is also `length` long.
-  public static func isPlausible(_ normalized: String) -> Bool {
-    normalized.count <= length && normalized.allSatisfy { alphabet.contains($0) }
-  }
-
   public init(from decoder: any Decoder) throws {
     let value = try decoder.singleValueContainer().decode(String.self)
     guard !value.isEmpty else {

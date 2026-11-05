@@ -45,6 +45,8 @@ final class HomeState {
     private(set) var treatsGiven = 0
     var showsSettings = false
     var showsInbox = false
+    /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
+    var invitedCode: String?
     /// Asks the World tab to open the cat's sheet, as an Inbox row does.
     var showsPetSheet = false
     /// A shop item opened from outside the Shop, such as an Inbox row.
@@ -324,7 +326,9 @@ final class HomeState {
         case .draw: drawing = true
         case .inbox: showsInbox = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
-        case .invite: break
+        case .invite(let code):
+            // Before onboarding is done, the link is its code page's.
+            if UserDefaults.standard.bool(forKey: OnboardingFlow.doneKey) { invitedCode = code }
         }
     }
 

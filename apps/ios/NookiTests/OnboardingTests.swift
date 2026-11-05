@@ -165,7 +165,7 @@ struct OnboardingFlowTests {
         #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
     }
 
-    @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheDateAndTheInvite() {
+    @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInvite() {
         let (flow, _, _) = makeFlow(hasServer: true, asksTogetherSince: true)
         #expect(flow.pages == [
             .welcome, .question(age), .question(goals), .togetherSince, .catCoat, .catName, .invite, .notifications,
@@ -173,7 +173,9 @@ struct OnboardingFlowTests {
         flow.join(code: "K7QM4R2XHP")
         #expect(flow.page == .join)
         #expect(flow.joinCode == "K7QM4R2XHP")
-        #expect(flow.pages == [.welcome, .join, .question(age), .question(goals), .catCoat, .catName, .notifications])
+        #expect(flow.pages == [
+            .welcome, .join, .question(age), .question(goals), .togetherSince, .catCoat, .catName, .notifications,
+        ])
         flow.partnerJoined()
         #expect(flow.page == .question(age))
         flow.back()
@@ -222,11 +224,18 @@ struct OnboardingFlowTests {
         #expect(sent.answers.withLock { $0 }.map(\.stepId) == ["age", "goals"])
     }
 
-    @Test func aClosedAppOpensOnThePageItWasOn() {
-        let (flow, defaults, _) = makeFlow()
+    @Test func aClosedAppOpensOnThePageItWasOnWithItsQuestionsAndPicks() async {
+        let server = OnboardingResponse(version: "v2", steps: [goals, age])
+        let (flow, defaults, _) = makeFlow(server: server)
+        await flow.load()
         flow.start()
-        flow.skip()
-        #expect(makeFlow(defaults: defaults).0.page == .question(goals))
+        guard case .multi(let choice) = goals else { return }
+        flow.toggle(choice.options[3], in: goals)
+        flow.continueTapped()
+        let relaunched = makeFlow(defaults: defaults).0
+        #expect(relaunched.catalogue == server)
+        #expect(relaunched.page == .question(age))
+        #expect(relaunched.pages.last == .widget)
     }
 
     @Test func aRangeStartsInTheMiddleOnAStep() {

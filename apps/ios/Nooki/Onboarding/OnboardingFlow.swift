@@ -40,6 +40,8 @@ final class OnboardingFlow {
     static let pageKey = "onboardingPage"
     static let joiningKey = "onboardingJoining"
     static let stoppedKey = "onboardingStopped"
+    static let catalogueKey = "onboardingCatalogue"
+    static let picksKey = "onboardingPicks"
     static let ageStep: OnboardingStepId = "age"
     static let underAge: OnboardingOptionId = "age-under-13"
     static let goalsStep: OnboardingStepId = "goals"
@@ -63,7 +65,7 @@ final class OnboardingFlow {
     private(set) var wornCoat: CatCoat
     /// The share sheet with the invite was opened.
     var invited = false
-    /// Joining with the partner's code instead of inviting them; the date and the invite are theirs to do.
+    /// Joining with the partner's code instead of inviting them; the invite is theirs to do.
     private(set) var joining: Bool
     var joinCode = ""
     private(set) var stopped: Bool
@@ -115,14 +117,17 @@ final class OnboardingFlow {
         isFinished = defaults.bool(forKey: Self.doneKey)
         joining = defaults.bool(forKey: Self.joiningKey)
         stopped = defaults.bool(forKey: Self.stoppedKey)
-        // A closed app opens again on the page it was on; `-onboardingPage 3` opens that one, for screenshots.
+        // A closed app opens again on the page it was on, with the questions and picks it had; `-onboardingPage 3`
+        // opens that page, for screenshots.
         index = max(defaults.integer(forKey: Self.pageKey), 0)
+        if let saved = Self.saved(OnboardingResponse.self, Self.catalogueKey, in: defaults) { catalogue = saved }
+        picks = Self.saved([OnboardingStepId: [OnboardingOptionId]].self, Self.picksKey, in: defaults) ?? [:]
     }
 
     var pages: [Page] {
         let goals = Set(picks[Self.goalsStep] ?? [])
         return [.welcome] + (joining ? [.join] : []) + catalogue.steps.map(Page.question)
-            + (asksTogetherSince && !joining ? [.togetherSince] : []) + [.catCoat, .catName]
+            + (asksTogetherSince ? [.togetherSince] : []) + [.catCoat, .catName]
             + (canInvite && !joining ? [.invite] : []) + (hasServer ? [.notifications] : [])
             + (goals.isDisjoint(with: Self.widgetGoals) ? [] : [.widget])
     }
@@ -320,6 +325,12 @@ final class OnboardingFlow {
     private func move(to index: Int) {
         self.index = index
         defaults.set(index, forKey: Self.pageKey)
+        defaults.set(try? JSONEncoder().encode(catalogue), forKey: Self.catalogueKey)
+        defaults.set(try? JSONEncoder().encode(picks), forKey: Self.picksKey)
+    }
+
+    private static func saved<Value: Decodable>(_ type: Value.Type, _ key: String, in defaults: UserDefaults) -> Value? {
+        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(type, from: $0) }
     }
 
     /// Counts the step as seen, once per launch.

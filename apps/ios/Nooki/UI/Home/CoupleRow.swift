@@ -64,9 +64,12 @@ struct CoupleRow: View {
 
             CoinPill(coins: state.coins)
         }
-        .sheet(isPresented: $pairing) {
+        .onChange(of: state.invitedCode) { _, code in
+            if code != nil, session?.isPaired == false { pairing = true }
+        }
+        .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
-                PairingSheet(model: session.pairing) { session.pairingFinished() }
+                PairingSheet(model: session.pairing, prefill: state.invitedCode ?? "") { session.pairingFinished() }
                     .presentationBackground(Ink.sheet)
                     .presentationDragIndicator(.visible)
             }

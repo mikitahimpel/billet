@@ -14,6 +14,8 @@ struct OnboardingView: View {
     var signedIn = false
     /// Where invite links point: the server, which hands `/i/<code>` to the app.
     var inviteBase: URL?
+    /// The account already has a partner, as when the pairing finished while the app was closed.
+    var alreadyPaired = false
     /// The pairing finished, on either side.
     var paired: () -> Void = {}
 
@@ -44,10 +46,10 @@ struct OnboardingView: View {
             guard flow.page == .invite, signedIn, let pairing, case .choosing(nil, _) = pairing.state else { return }
             pairing.createInvite()
         }
-        .onChange(of: isPaired) { _, isPaired in
-            guard isPaired else { return }
+        .onChange(of: isPaired || alreadyPaired, initial: true) { _, joined in
+            guard joined else { return }
             flow.partnerJoined()
-            paired()
+            if isPaired { paired() }
         }
     }
 

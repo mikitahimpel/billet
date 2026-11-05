@@ -47,7 +47,8 @@ struct NookiApp: App {
                         if !onboarding.isFinished {
                             OnboardingView(
                                 flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
-                                inviteBase: session?.baseURL, paired: { session?.pairingFinished() })
+                                inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
+                                paired: { session?.pairingFinished() })
                                 .transition(.opacity)
                         }
                     }
