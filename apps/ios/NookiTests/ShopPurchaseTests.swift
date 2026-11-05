@@ -44,4 +44,11 @@ private let t0 = Date(timeIntervalSinceReferenceDate: 815_000_000)
         #expect(purchase.canUndo(at: t0.addingTimeInterval(4.9)))
         #expect(!purchase.canUndo(at: t0.addingTimeInterval(5)))
     }
+
+    @Test func openingTheShopAtAnInkSwitchesTabAndLeavesTheFocus() {
+        let state = HomeState()
+        state.openShop(.ink("ink-rose"))
+        #expect(state.tab == .shop)
+        #expect(state.shopFocus == .ink("ink-rose"))
+    }
 }

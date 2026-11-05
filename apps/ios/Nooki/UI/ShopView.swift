@@ -37,6 +37,22 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
+            .onChange(of: state.shopFocus, initial: true) { _, focus in
+                guard let focus else { return }
+                selected = .today
+                switch focus {
+                case .ink:
+                    // After Today has laid out, so the Inks block is there to scroll to.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(100))
+                        withAnimation(.spring(duration: 0.45)) { reader.scrollTo("inks", anchor: .top) }
+                        state.shopFocus = nil
+                    }
+                case .item(let id):
+                    sheetItem = Catalog.item(id)
+                    state.shopFocus = nil
+                }
+            }
             .task {
                 #if DEBUG
                 // `-shopItem tower` on launch opens that item's sheet, for screenshots.
