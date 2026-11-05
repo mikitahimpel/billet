@@ -404,6 +404,21 @@ describe("the admin API", () => {
     ]);
   });
 
+  it("serves feature usage, split by a variant, and refuses a malformed split", async () => {
+    const seed = makeSeed({ today, weeks: 4 });
+    events.push(...seed.events);
+    flagRows.push(...seed.flags);
+    const ok = await call(`${adminApi.features}?split=home-layout`);
+    expect(ok.status).toBe(200);
+    expect(ok.body.groups.map((group: { variant: string | null }) => group.variant)).toEqual([
+      null,
+      "classic",
+      "immersive",
+    ]);
+    expect(ok.body.rows.length).toBeGreaterThan(10);
+    expect((await call(`${adminApi.features}?split=Not%20A%20Key`)).status).toBe(400);
+  });
+
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {
     events.push(
       { pairId: "p1", userId: "u1", name: "PairClaimed", day: today, count: 1, firstAt: 2 },

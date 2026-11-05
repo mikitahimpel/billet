@@ -3779,6 +3779,123 @@ async function renderTrends(args) {
   ];
 }
 
+/* ---------- Feature usage ---------- */
+
+const featuresHref = (split) => `#/features/${enc(split || "-")}`;
+
+function usageCell(u, groupLabel, windowLabel) {
+  if (!u) return h("td", { class: "num faint", text: "too few" });
+  return h(
+    "td",
+    {
+      class: "num usage",
+      title: `${groupLabel}, ${windowLabel}: ${u.count} of ${u.of} pairs; 95% ${fmtPct(u.low, 0)}–${fmtPct(u.high, 0)}`,
+    },
+    h("span", { text: fmtPct(u.share) }),
+    h(
+      "span",
+      { class: "use-track", "aria-hidden": "true" },
+      h("span", { class: "use-fill", style: { "--w": `${(u.share * 100).toFixed(1)}%` } }),
+    ),
+  );
+}
+
+async function renderFeatures([splitArg]) {
+  const split = splitArg && splitArg !== "-" ? splitArg : "";
+  const usage = await api(`/features${split ? `?split=${enc(split)}` : ""}`);
+  const groupLabel = (g) => (g.variant == null ? "Every pair" : g.variant);
+  const areaLabel = new Map(usage.areas.map((a) => [a.area, a.label]));
+  const activeText = (n) => (n == null ? "too few" : `${fmtNum(n, 0)} pairs`);
+
+  const picker = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        { onchange: (e) => (location.hash = featuresHref(e.target.value)) },
+        h("option", { value: "", text: "Nothing", selected: !split }),
+        usage.experiments.map((key) =>
+          h("option", { value: key, text: `Variant of ${key}`, selected: key === split }),
+        ),
+      ),
+    ),
+  );
+
+  const table = h(
+    "div",
+    { class: "box table-wrap" },
+    h(
+      "table",
+      { class: "features" },
+      h("caption", { class: "sr-only", text: "Share of active pairs using each feature" }),
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", { scope: "col", rowspan: "2", text: "Feature" }),
+          usage.groups.map((g) =>
+            h("th", { scope: "colgroup", colspan: "2", class: "group-head", text: groupLabel(g) }),
+          ),
+        ),
+        h(
+          "tr",
+          null,
+          usage.groups.map((g) => [
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "7 days",
+              h("span", { class: "sub", text: activeText(g.active.d7) }),
+            ),
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "30 days",
+              h("span", { class: "sub", text: activeText(g.active.d30) }),
+            ),
+          ]),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        usage.rows.map((row) =>
+          h(
+            "tr",
+            { class: row.event == null ? "area" : null },
+            h(
+              "th",
+              { scope: "row" },
+              row.event == null
+                ? h("b", { text: `${areaLabel.get(row.area)}: any` })
+                : h("span", { class: "mono event", text: row.event }),
+            ),
+            row.cells.map((c, i) => [
+              usageCell(c.d7, groupLabel(usage.groups[i]), "last 7 days"),
+              usageCell(c.d30, groupLabel(usage.groups[i]), "last 30 days"),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Feature usage",
+      `Of the pairs active in each window (any event after pairing), the share that used each feature: the last 7 days from ${fmtDay(usage.from.d7)}, the last 30 from ${fmtDay(usage.from.d30)}. Under 5 pairs: too few.`,
+    ),
+    picker,
+    table,
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -3787,6 +3904,7 @@ const ROUTES = {
   retention: renderRetention,
   funnels: renderFunnels,
   trends: renderTrends,
+  features: renderFeatures,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,
