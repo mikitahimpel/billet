@@ -29,8 +29,15 @@ struct DrawingProvider: TimelineProvider {
 }
 
 /// The partner's latest drawing, full-bleed on the wallpaper it was drawn on, like their lock screen.
+/// On iOS 26 WidgetKit can also wake it with a push.
 struct DrawingWidget: Widget {
-    var body: some WidgetConfiguration { Self.configuration() }
+    var body: some WidgetConfiguration {
+        if #available(iOS 26, *) {
+            return Self.configuration().pushHandler(DrawingPushHandler.self)
+        } else {
+            return Self.configuration()
+        }
+    }
 
     static func configuration() -> some WidgetConfiguration {
         StaticConfiguration(kind: LatestDrawing.widgetKind, provider: DrawingProvider()) { entry in
@@ -41,14 +48,6 @@ struct DrawingWidget: Widget {
         .description("The latest drawing from your partner. Tap to draw one back.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
         .contentMarginsDisabled()
-    }
-}
-
-/// The same widget on iOS 26, where WidgetKit can wake it with a push.
-@available(iOS 26, *)
-struct DrawingPushWidget: Widget {
-    var body: some WidgetConfiguration {
-        DrawingWidget.configuration().pushHandler(DrawingPushHandler.self)
     }
 }
 
