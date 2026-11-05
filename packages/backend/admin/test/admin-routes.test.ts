@@ -12,7 +12,7 @@ import { makeInMemoryFlagConfigRepository } from "@billet/backend-flags/test/in-
 import { makeInMemoryFlagsRepository } from "@billet/backend-flags/test/in-memory-flags-repository";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
-import type { EventRow } from "@billet/backend-metrics/funnel";
+import type { EventRow, FlagRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
 import { makeSeed } from "../src/seed-data.ts";
 import type { DetailRow } from "../src/admin-top-details.ts";
@@ -49,6 +49,7 @@ const experiments = defineExperiments([
 const today = new Date().toISOString().slice(0, 10);
 const events: Array<EventRow> = [];
 const details: Array<DetailRow> = [];
+const flagRows: Array<FlagRow> = [];
 const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
@@ -82,7 +83,7 @@ const handlerFor = (email: string) =>
               Layer.succeed(AdminData, {
                 events: Effect.sync(() => events),
                 details: Effect.sync(() => details),
-                assignments: Effect.succeed([]),
+                assignments: Effect.sync(() => flagRows),
                 userCount: Effect.succeed(3),
                 purchases: (limit) =>
                   Effect.succeed({
@@ -163,6 +164,7 @@ beforeEach(() => {
   appStatus = makeInMemoryAppStatusStore();
   events.length = 0;
   details.length = 0;
+  flagRows.length = 0;
 });
 
 describe("the admin API", () => {
@@ -371,6 +373,35 @@ describe("the admin API", () => {
     ]) {
       expect((await call(`${adminApi.trends}?${bad}`)).status).toBe(400);
     }
+  });
+
+  it("adds secondary and guardrail metrics to each experiment's results, against its default", async () => {
+    const seed = makeSeed({ today, weeks: 6 });
+    events.push(...seed.events);
+    // The seed's two variants, as `home-direction`'s: classic is the default's place.
+    const renamed: Record<string, string> = { classic: "window-seat", immersive: "sunset-lamp" };
+    flagRows.push(
+      ...seed.flags.map((flag) => ({
+        ...flag,
+        experimentKey: "home-direction",
+        variant: renamed[flag.variant] ?? flag.variant,
+      })),
+    );
+    const { body } = await call(adminApi.experiments);
+    const results = body.items.find(
+      (item: { key: string }) => item.key === "home-direction",
+    ).results;
+    expect(results.baseline).toBe("window-seat");
+    expect(results.metrics.map((metric: { id: string }) => metric.id)).toEqual([
+      "d7BothActive",
+      "widgetAdded",
+      "notesPerDay",
+      "opensPerDay",
+      "crashFree",
+    ]);
+    expect(results.warnings).toEqual([
+      expect.objectContaining({ metric: "opensPerDay", variant: "sunset-lamp" }),
+    ]);
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

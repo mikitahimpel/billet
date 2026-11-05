@@ -1171,7 +1171,10 @@ async function renderExperiments([key]) {
         {
           label: "Result",
           value: (i) => i.results?.verdict?.kind ?? null,
-          cell: (i) => verdictShort(i.results),
+          cell: (i) => [
+            verdictShort(i.results),
+            i.results?.warnings?.length ? [" ", pill("bad", "guardrail worse")] : null,
+          ],
         },
         { label: "Changed", value: (i) => i.updatedAt, cell: (i) => ago(i.updatedAt) },
       ],
@@ -1239,6 +1242,109 @@ function forest(variants, leader) {
     if (w > 0 && w !== W) draw((W = Math.max(320, w)));
   }).observe(box);
   return box;
+}
+
+const fmtMetric = (unit, v) => (v == null ? "—" : unit === "share" ? fmtPct(v) : v.toFixed(2));
+const fmtMetricDiff = (unit, v) => {
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "±";
+  const abs = Math.abs(v);
+  return `${sign}${unit === "share" ? `${(abs * 100).toFixed(1)} pts` : abs.toFixed(2)}`;
+};
+const CHANGE_TONE = { better: "good", worse: "bad", unclear: "" };
+
+/** Secondary and guardrail metrics: a row each, a column per variant, against the baseline. */
+function moreMetrics(r) {
+  const variants = r.metrics[0].variants.map((v) => v.variant);
+  const cell = (m, v) => {
+    if (m.status === "waiting") return h("td", { class: "faint", text: "—" });
+    if (!v.estimate)
+      return h(
+        "td",
+        { class: "faint" },
+        "too few",
+        h("span", { class: "sub", text: `${v.pairs} pairs` }),
+      );
+    const e = v.estimate;
+    const d = v.vsBaseline;
+    return h(
+      "td",
+      null,
+      h("b", { text: fmtMetric(m.unit, e.value) }),
+      h("span", {
+        class: "sub",
+        text: `95% ${fmtMetric(m.unit, e.low)}–${fmtMetric(m.unit, e.high)} · ${v.pairs} pairs`,
+      }),
+      d &&
+        h(
+          "span",
+          { class: "sub metric-diff" },
+          pill(
+            CHANGE_TONE[v.change],
+            v.change === "unclear" ? "no clear change" : v.change,
+            v.change === "unclear",
+          ),
+          ` ${fmtMetricDiff(m.unit, d.value)} vs ${r.baseline} (95% ${fmtMetricDiff(m.unit, d.low)} to ${fmtMetricDiff(m.unit, d.high)})`,
+        ),
+    );
+  };
+  return section(
+    "Secondary and guardrail metrics",
+    `Over each pair's first week, pairs at least 7 days old. Differences are against ${r.baseline}, the default. Under 5 pairs: too few.`,
+    r.warnings.length
+      ? r.warnings.map((w) => callout("bad", "Guardrail worse", w.text))
+      : callout(
+          "good",
+          "No guardrail is worse",
+          "Every guardrail's interval of change still includes no change, or better.",
+        ),
+    h(
+      "div",
+      { class: "box table-wrap", style: { "margin-top": "16px" } },
+      h(
+        "table",
+        { class: "metrics" },
+        h("caption", { class: "sr-only", text: "Secondary and guardrail metrics by variant" }),
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: "Metric" }),
+            variants.map((v) =>
+              h("th", { scope: "col", text: v === r.baseline ? `${v} (baseline)` : v }),
+            ),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          r.metrics.map((m) =>
+            h(
+              "tr",
+              null,
+              h(
+                "th",
+                { scope: "row" },
+                h(
+                  "span",
+                  { class: "metric-name" },
+                  m.label,
+                  " ",
+                  pill(m.role === "guardrail" ? "warn" : "", m.role, true),
+                ),
+                h("span", {
+                  class: "sub",
+                  text: m.status === "waiting" ? `Waiting for ${m.waitingFor}` : m.description,
+                }),
+              ),
+              m.variants.map((v) => cell(m, v)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 async function renderExperiment(key) {
@@ -1341,6 +1447,7 @@ async function renderExperiment(key) {
         : callout("info", "Not enough data yet", "No pair has been assigned to this experiment."),
       r && r.variants.length ? forest(r.variants, leader) : null,
     ),
+    r && r.metrics?.length ? moreMetrics(r) : null,
     section("Variants", null, h("div", { class: "variants" }, variants)),
     section("History", null, h("div", { class: "box" }, historyList(changes, { showKey: false }))),
   ];

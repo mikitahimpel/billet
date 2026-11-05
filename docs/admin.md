@@ -18,7 +18,7 @@ hover.
 | Retention | pairs by the week they formed (UTC, from Monday), one row per week and one for all weeks, and columns for day 1, 3, 7, 14, 30 and 60 after forming. Three modes: **both active** (both partners opened the app or sent a note on day N), **either active**, and **both sent a note** (the north star at day 7). Filters: an experiment's variant (from `pair_flags`) and the build the pair formed on. Each cell is a share of the week's pairs that have reached that day, coloured from faint to strong within the view; hover shows the count and its 95% Wilson interval. A day no pair of the week has reached is hatched grey, and a share resting on only some of the week's pairs (the others are too young) is in italics. See [below](#retention-grid) | nothing |
 | Funnels | a funnel built from 2 to 6 steps picked from the closed event list, a window (the same UTC day as step 1, within 1 day, within 7 days), counted per pair or per person, for step 1 in the last 7, 30 or 90 days or all time; per step the count, the share of the step before (95% interval on hover), and the median time from the step before; split by an experiment's variants. Saved funnels as chips. See [below](#funnel-builder) | save a funnel under a name, delete one after a confirmation |
 | Trends | any event over time, by day or week: its count, unique people, unique pairs or count per pair, over 30, 90, 180 or 365 days, against the same span before (a dashed line, and the change on each total); split by app version, system or an experiment's variant (up to eight groups, the rest as "other"); every value as a table. See [below](#trends-explorer) | nothing |
-| Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's | start, stop, kill, unkill, each after a confirmation |
+| Experiments | a table of each `experiment` with its status, exposure, variants, pairs and result; on its page the variants side by side (split, pairs, the north star with its 95% Wilson interval, median time to first note), every variant's north star on one axis as an error bar, and a plain verdict: "not enough data yet", "no difference yet", or "B looks better" only when B's interval doesn't overlap any other's; then secondary and guardrail metrics per variant, each with its 95% interval and its difference from the default, and a warning when a guardrail is worse (also a "guardrail worse" pill in the table). See [below](#experiment-metrics) | start, stop, kill, unkill, each after a confirmation |
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
@@ -28,7 +28,7 @@ hover.
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
 before sign-in.
 
-**Too few.** In the analytics views (Retention, Funnels, Trends), any group of fewer than 5 pairs shows "too
+**Too few.** In the analytics views (Retention, Funnels, Trends, an experiment's metrics), any group of fewer than 5 pairs shows "too
 few" and no number: the server leaves the count out of the answer, so neither the page nor an agent
 ever sees it. Some users are minors, and a share of 2 pairs says more about those two couples than
 about the app. There are no per-person timelines and no session replay, by design. All figures come from the D1 counts (`docs/experiments.md`); the panel never reads
@@ -101,6 +101,38 @@ built by `buildTrends` (`packages/backend/admin/src/admin-trends.ts`).
 - **Checked against SQL.** `packages/backend/platform/test/admin-trends.test.ts` compares every
   point of five queries (each measure, day and week, each split, 30 to 180 days) and the period
   before with hand-written queries on the seed, and the reader against a stand-in for the API.
+
+## Experiment metrics
+
+Part of `GET /admin/api/experiments` (each item's `results.metrics`, `baseline` and `warnings`),
+built by `buildExperimentMetrics` (`packages/backend/admin/src/admin-experiment-metrics.ts`).
+
+- **Over the first week.** Every metric reads a pair's first week, counting only pairs at least 7
+  days old, with day 0 the day the pair formed. So a variant whose pairs are younger is not judged
+  on less time.
+
+  | Metric | Role | What it is |
+  | --- | --- | --- |
+  | D7 both active | secondary | share of pairs where both partners opened the app or sent a note on day 7 |
+  | Widget added | secondary | share of pairs where both partners added the widget on days 0 to 6 |
+  | Notes per pair per day | guardrail | notes the pair sent on days 0 to 6, divided by 7, averaged over pairs |
+  | App opens per pair per day | guardrail | app opens by both partners on days 0 to 6, divided by 7, averaged over pairs |
+  | Crash-free share | guardrail | waiting for crash monitoring (#38); shown as "waiting" until it has data |
+
+- **Intervals.** A share has its 95% Wilson interval, and its difference from the baseline has
+  Newcombe's interval built from the two Wilson ones. A per-day rate has a normal 95% interval of
+  the mean, and its difference has Welch's interval. The baseline is the experiment's default
+  variant.
+- **Better, worse, no clear change.** A difference is *better* or *worse* only when its whole
+  interval is on one side of zero. Every metric here is better when higher. A worse guardrail is
+  a red warning at the top of the section, with the difference and its interval. A worse
+  secondary metric is shown but never warns.
+- **Too few**: a variant with fewer than 5 measured pairs shows "too few" and no number, and no
+  difference.
+- **Checked against SQL.** `packages/backend/platform/test/admin-experiment-metrics.test.ts`
+  compares every variant's value for each metric, and the difference for app opens, with a
+  hand-written query on the seed. In the seed, `immersive` pairs open the app less often, so the
+  page has a guardrail warning to show.
 
 ## Seed data
 
