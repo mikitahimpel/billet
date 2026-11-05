@@ -42,6 +42,7 @@ import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { PaymentsRepositoryLive } from "./payments-repository-live.ts";
+import { PaymentsSwitchLive } from "./payments-switch-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
 import { withRequestSpan } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
@@ -76,6 +77,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         PairVariantsLive,
         ServiceStatus.with(status),
         PaymentsService.layer,
+        // Buying coins is off until the `payments` flag says `on` for the pair.
+        PaymentsSwitchLive.pipe(Layer.provide(FlagsService.layer)),
         payments,
         OnboardingService.layer,
       ),
