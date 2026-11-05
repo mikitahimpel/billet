@@ -7,7 +7,7 @@ enum WidgetSlot: String, AppEnum {
 
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Block"
     static let caseDisplayRepresentations: [WidgetSlot: DisplayRepresentation] = [
-        .smart: "✦ Smart", .mochi: "Mochi", .us: "Together", .mood: "Mood",
+        .smart: "✦ Smart", .mochi: "Cat", .us: "Together", .mood: "Mood",
         .list: "List", .date: "Date", .moment: "Moment",
     ]
 
@@ -67,7 +67,7 @@ struct CornerConfiguration: NookiConfiguration {
 struct MochiConfiguration: NookiConfiguration {
     static let title: LocalizedStringResource = "Nooki"
 
-    @Parameter(title: "Next to Mochi", default: .smart) var slot: WidgetSlot
+    @Parameter(title: "Next to the Cat", default: .smart) var slot: WidgetSlot
     @Parameter(title: "List") var list: ListEntity?
 
     var listID: UUID? { list?.id }

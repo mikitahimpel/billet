@@ -241,7 +241,7 @@ private struct DatesTile: View {
             return "Next: \(idea.title), \(next.date.formatted(.dateTime.day().month()))"
         }
         if matches > 0 { return "\(matches) \(matches == 1 ? "match" : "matches") waiting" }
-        return "Swipe ideas together or let Mochi pick"
+        return "Swipe ideas together or let \(CatProfile.name()) pick"
     }
 }
 

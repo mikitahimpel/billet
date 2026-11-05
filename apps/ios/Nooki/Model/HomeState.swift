@@ -307,6 +307,7 @@ final class HomeState {
             try? files.removeItem(at: url)
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
+        CatProfile.store.removeObject(forKey: CatProfile.nameKey)
         WidgetCenter.shared.reloadAllTimelines()
     }
 

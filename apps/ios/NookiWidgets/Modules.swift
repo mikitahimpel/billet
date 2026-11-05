@@ -104,7 +104,7 @@ struct MochiRoom: View {
                     .offset(x: size.width - size.height * 0.66, y: size.height * 0.3)
                 if snapshot.isPurring { hearts(in: size) }
                 if showsCaption { caption.padding(10) }
-                PetButton()
+                PetButton(catName: snapshot.catName)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                     .padding(10)
             }
@@ -144,7 +144,7 @@ struct MochiRoom: View {
     }
 
     private var caption: some View {
-        Text("Mochi · \(pose)")
+        Text("\(snapshot.catName) · \(pose)")
             .font(.widget(11, .semibold))
             .foregroundStyle(Color(hex: 0x2B2420))
             .lineLimit(1)
@@ -168,6 +168,8 @@ struct MochiRoom: View {
 }
 
 private struct PetButton: View {
+    let catName: String
+
     var body: some View {
         Button(intent: PetMochiIntent()) {
             Image(systemName: "pawprint.fill")
@@ -177,7 +179,7 @@ private struct PetButton: View {
                 .background(.white.opacity(0.92), in: .circle)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Pet Mochi")
+        .accessibilityLabel("Pet \(catName)")
     }
 }
 

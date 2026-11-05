@@ -10,7 +10,8 @@ import {
   appleIssuer,
   appleKeysUrl,
 } from "@billet/backend-auth/apple-identity-verifier";
-import { limits } from "../src/rate-limit.ts";
+import { limitRequest, limits } from "../src/rate-limit.ts";
+import { testNowOf } from "./test-now.ts";
 import { clientHeaders, mediaPath, routes } from "@billet/contracts-http-api/routes";
 import { respondApi } from "../src/api-fetch.ts";
 import { opaqueRef } from "@billet/backend-observability/opaque-ref";
@@ -1185,20 +1186,21 @@ describe("routes from the contracts", () => {
 });
 
 describe("rate limits in the Worker", () => {
-  const challengeFrom = () =>
-    exports.default.fetch(
-      new Request("https://billet.test/v1/auth/challenge", {
-        method: "POST",
-        headers: { "cf-connecting-ip": "203.0.113.50" },
-      }),
-    );
+  const challenge = () =>
+    new Request("https://billet.test/v1/auth/challenge", {
+      method: "POST",
+      headers: { "cf-connecting-ip": "203.0.113.50" },
+    });
 
   it("answers 429 past the limit on a limited route, and not on others", async () => {
-    // All at once: each request is counted by one atomic upsert, and one at a time took close to
-    // the 5 s test timeout on CI. The window is fixed (TEST_NOW), so they all fall in it.
-    const allowed = await Promise.all(Array.from({ length: limits.auth }, challengeFrom));
-    expect(allowed.map(({ status }) => status)).toEqual(Array(limits.auth).fill(200));
-    expect((await challengeFrom()).status).toBe(429);
+    // The counting is rate-limit.test.ts's; this pins down that the Worker applies it. All but the
+    // last allowed request are counted straight into D1, at the Worker's instant (TEST_NOW):
+    // thirty challenges through the Worker took close to the 5 s timeout on CI.
+    for (let i = 1; i < limits.auth; i++) {
+      expect(await limitRequest(challenge(), env.DB, testNowOf(env))).toBeUndefined();
+    }
+    expect((await exports.default.fetch(challenge())).status).toBe(200);
+    expect((await exports.default.fetch(challenge())).status).toBe(429);
     expect((await call("/v1/notes")).status).not.toBe(429);
   });
 });
