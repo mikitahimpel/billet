@@ -19,28 +19,24 @@ struct ProfileHub: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section { couple }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-
+            NookiForm {
+                couple
                 if canInvite {
-                    Section {
-                        Button(action: invite) { inviteCard }
-                            .buttonStyle(.plain)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    Button(action: invite) { inviteCard }
+                        .buttonStyle(PressScaleStyle())
                 }
-
-                Section {
+                NookiSection {
                     NavigationLink { ProfileEditor(profile: state.profile) } label: {
-                        row("Edit profile", symbol: "person.2.fill", tint: .sky)
+                        NookiRowLabel(title: "Edit profile", symbol: "person.2.fill", tint: .sky) { RowChevron() }
                     }
                     if canInvite {
-                        Button(action: invite) { row("Invite your partner", symbol: "heart.circle.fill", tint: .blush) }
+                        Button(action: invite) {
+                            NookiRowLabel(title: "Invite your partner", symbol: "heart.circle.fill", tint: .blush) {
+                                RowChevron()
+                            }
+                        }
                     } else if session?.isPaired == true {
-                        row("Paired with your partner", symbol: "heart.fill", tint: .blush)
+                        NookiRowLabel(title: "Paired with your partner", symbol: "heart.fill", tint: .blush)
                     }
                     NavigationLink {
                         SettingsView(state: state) {
@@ -48,12 +44,11 @@ struct ProfileHub: View {
                             erase()
                         }
                     } label: {
-                        row("Settings", symbol: "gearshape.fill", tint: .lilac)
+                        NookiRowLabel(title: "Settings", symbol: "gearshape.fill", tint: .lilac) { RowChevron() }
                     }
                 }
-                .nookiRow()
+                .buttonStyle(.plain)
             }
-            .scrollContentBackground(.hidden)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -81,10 +76,22 @@ struct ProfileHub: View {
 
     private var couple: some View {
         VStack(spacing: Space.m) {
-            HStack(spacing: -16) {
-                Monogram(partner: state.partners.0, profile: state.profile, size: 84)
-                Monogram(partner: state.partners.1, profile: state.profile, size: 84)
+            HStack(spacing: -14) {
+                Monogram(partner: state.partners.0, profile: state.profile, size: 88)
+                Monogram(partner: state.partners.1, profile: state.profile, size: 88)
             }
+            .overlay(alignment: .bottom) {
+                // The honey link between the two.
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Ink.heroInk)
+                    .frame(width: 30, height: 30)
+                    .background(.honeyGradient, in: .circle)
+                    .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
+                    .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                    .offset(y: 8)
+            }
+            .padding(.bottom, Space.s)
             VStack(spacing: 4) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
                     .font(.nookiTitle)
@@ -116,17 +123,11 @@ struct ProfileHub: View {
                 .font(.nookiCaption.weight(.semibold))
                 .foregroundStyle(Ink.heroInk.opacity(0.6))
         }
-        .padding(16)
+        .padding(Space.l)
         .background(.honeyGradient, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .shadow(color: Color.honeyDeep.opacity(0.35), radius: 10, y: 5)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
-    }
-
-    private func row(_ title: String, symbol: String, tint: UsTint) -> some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
-            Text(title).foregroundStyle(Ink.text)
-        }
     }
 }

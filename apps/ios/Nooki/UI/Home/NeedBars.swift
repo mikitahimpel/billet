@@ -12,8 +12,8 @@ protocol PetNeedsSource: AnyObject {
 
 extension CatDirector: PetNeedsSource {}
 
-/// Mochi's four needs as warm, chunky bars on one clay card. A low bar is an invitation, never a warning: nothing
-/// turns red, blinks or shakes.
+/// Mochi's four needs as warm, chunky bars, two by two on one clay card. A low bar is an invitation, never a warning:
+/// nothing turns red, blinks or shakes.
 struct NeedBars: View {
     let name: String
     let needs: PetNeeds?
@@ -21,9 +21,9 @@ struct NeedBars: View {
     var body: some View {
         Group {
             if let needs {
-                VStack(spacing: Space.m) {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.l), GridItem(.flexible())], spacing: Space.m) {
                     ForEach(PetNeed.displayOrder, id: \.self) { need in
-                        NeedRow(need: need, name: name, value: needs[need])
+                        NeedCell(need: need, name: name, value: needs[need])
                     }
                 }
             } else {
@@ -35,44 +35,34 @@ struct NeedBars: View {
                     .frame(maxWidth: .infinity, minHeight: 60)
             }
         }
-        .padding(Space.l)
+        .padding(Space.m + 2)
         .nookiCard()
     }
 }
 
-private struct NeedRow: View {
+private struct NeedCell: View {
     let need: PetNeed
     let name: String
     let value: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: Space.m) {
-            Image(systemName: need.symbol)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(LinearGradient(colors: [need.hue.mix(with: .white, by: 0.2), need.hue],
-                                           startPoint: .top, endPoint: .bottom), in: .circle)
-                .shadow(color: need.hue.opacity(0.35), radius: 3, y: 2)
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                    Text(need.title)
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                    Spacer(minLength: 0)
-                    Text(need.line(for: value, name: name))
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .contentTransition(.opacity)
-                }
-                NeedTrack(value: value, hue: need.hue)
-                    .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0.2),
-                               value: value)
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                Image(systemName: need.symbol)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(LinearGradient(colors: [need.hue.mix(with: .white, by: 0.2), need.hue],
+                                               startPoint: .top, endPoint: .bottom), in: .circle)
+                    .shadow(color: need.hue.opacity(0.35), radius: 3, y: 2)
+                Text(need.title)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                    .lineLimit(1)
             }
+            NeedTrack(value: value, hue: need.hue)
+                .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0.2), value: value)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(need.title)
@@ -131,7 +121,7 @@ struct PetActions: View {
                         .foregroundStyle(Ink.text)
                         .lineLimit(1)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 78)
+                    .frame(maxWidth: .infinity, minHeight: 70)
                     .nookiCard(radius: Radius.card, warm: true)
                     .contentShape(.rect(cornerRadius: Radius.card))
                 }

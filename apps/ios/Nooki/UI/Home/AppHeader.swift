@@ -8,7 +8,6 @@ struct AppHeader: View {
     /// Wipes everything saved on this phone and starts the app over, from the profile's settings.
     var erase: () -> Void
     @State private var pairing = false
-    @Namespace private var zoom
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
 
@@ -32,9 +31,9 @@ struct AppHeader: View {
                 .overlay(alignment: .bottom) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Ink.heroInk)
                         .frame(width: 20, height: 20)
-                        .background(Color.blushPink, in: .circle)
+                        .background(.honeyGradient, in: .circle)
                         .overlay(Circle().stroke(.white, lineWidth: 1.5))
                         .offset(y: 6)
                 }
@@ -42,11 +41,6 @@ struct AppHeader: View {
                 .contentShape(.capsule)
             }
             .buttonStyle(PressScaleStyle())
-            // The profile grows out of the round avatars and shrinks back into them, never through a square. A zoom
-            // source clips only to a rounded rectangle; half the avatars' height makes it their capsule.
-            .matchedTransitionSource(id: "profile", in: zoom) {
-                $0.clipShape(RoundedRectangle(cornerRadius: 23)).background(.clear)
-            }
             .accessibilityLabel("Couple")
             .accessibilityHint("Opens your profile")
             .popoverTip(InviteHint(), arrowEdge: .top) { action in
@@ -61,10 +55,12 @@ struct AppHeader: View {
             if code != nil, session?.isPaired == false { pairing = true }
         }
         .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
+            // A plain slide-up at full height: a zoom out of the round avatars would morph through the sheet's
+            // rectangle and land on a detent.
             ProfileHub(state: state, erase: erase)
-                .presentationBackground(Ink.sheet)
+                .presentationDetents([.large])
+                .presentationBackground(Ink.screen)
                 .presentationDragIndicator(.visible)
-                .navigationTransition(.zoom(sourceID: "profile", in: zoom))
         }
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {

@@ -26,6 +26,12 @@ struct Monogram: View {
         }
         .frame(width: size, height: size)
         .clipShape(.circle)
-        .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
+        // A soft clay ring: lit from above, warm below.
+        .overlay {
+            Circle().strokeBorder(LinearGradient(colors: [.white.opacity(0.95), Color(hex: 0xF6D2A8)],
+                                                 startPoint: .top, endPoint: .bottom),
+                                  lineWidth: max(1.5, size * 0.05))
+        }
+        .shadow(color: Color(hex: 0x3A1C10).opacity(size >= 40 ? 0.28 : 0), radius: size * 0.08, y: size * 0.04)
     }
 }

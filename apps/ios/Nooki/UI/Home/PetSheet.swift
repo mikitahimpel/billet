@@ -86,7 +86,7 @@ private struct PetSheet: View {
             // The brain starts after the room has loaded and keeps changing; look again each second.
             TimelineView(.periodic(from: .now, by: 1)) { _ in
                 let current = (FixedNeeds.fromLaunch ?? needs())?.needs
-                VStack(spacing: Space.l) {
+                VStack(spacing: Space.m) {
                     hero(mood: current?.moodLine(name: state.petName))
                     NeedBars(name: state.petName, needs: current)
                     PetActions(
@@ -103,8 +103,8 @@ private struct PetSheet: View {
                         .contentTransition(.opacity)
                 }
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, Space.section)
-                .padding(.bottom, Space.l)
+                .padding(.top, Space.gutter)
+                .padding(.bottom, Space.m)
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         }
@@ -114,8 +114,8 @@ private struct PetSheet: View {
     }
 
     private func hero(mood: String?) -> some View {
-        VStack(spacing: Space.s) {
-            PetPortrait(size: 112)
+        VStack(spacing: 6) {
+            PetPortrait(size: 96)
                 .shadow(color: Color(hex: 0x8A3A1E).opacity(0.35), radius: 14, y: 8)
                 .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                     view.scaleEffect(scale)
@@ -125,7 +125,7 @@ private struct PetSheet: View {
                 }
                 .padding(.top, Space.s)
             Text(state.petName)
-                .font(.nookiLargeTitle)
+                .font(.nookiTitle)
                 .foregroundStyle(Ink.heroInk)
             if let mood {
                 Text(mood)
@@ -153,7 +153,7 @@ private struct PetSheet: View {
             .accessibilityLabel("Level \(state.care.level)")
             .accessibilityValue("\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
         }
-        .padding(.bottom, Space.l)
+        .padding(.bottom, Space.m + 2)
         .frame(maxWidth: .infinity)
         .background {
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
