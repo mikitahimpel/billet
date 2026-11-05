@@ -109,7 +109,7 @@ struct StyleGallery: View {
                 }
                 .font(.nookiHeadline)
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.honey)
+                .foregroundStyle(Color.honey)
                 ProgressView(value: level).tint(.honey)
                 Slider(value: $level.animation(.spring(duration: 0.6, bounce: 0.2)))
             }
