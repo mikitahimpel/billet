@@ -40,6 +40,8 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case roomItemPutAway = "RoomItemPutAway"
   /// The room itself was changed: walls, floor, window (detail: what was changed).
   case roomCustomised = "RoomCustomised"
+  /// One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which).
+  case roomOpened = "RoomOpened"
 
   /// The shop was opened.
   case shopOpened = "ShopOpened"
@@ -124,6 +126,8 @@ extension ClientEventName {
       ClientEventRule(detail: .oneOf(["treat", "food"]), required: true)
     case .noteOpened:
       ClientEventRule(detail: .oneOf(["widget", "app"]), required: true)
+    case .roomOpened:
+      ClientEventRule(detail: .oneOf(["room", "city"]), required: true)
     case .widgetButtonTapped:
       ClientEventRule(detail: .oneOf(["pet", "treat"]), required: true)
     case .signInPromptAnswered:

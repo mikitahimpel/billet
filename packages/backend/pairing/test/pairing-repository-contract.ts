@@ -218,6 +218,24 @@ export const describePairingRepositoryContract = (
       expect(after).toEqual([Option.none(), Option.none()]);
     });
 
+    it("knows when a pair formed, and forgets it once the pair has ended", async () => {
+      const repository = await make();
+      const pairId = pair("pair-user-b-user-a");
+      const [unknown, before, after] = await Effect.runPromise(
+        Effect.gen(function* () {
+          const unknown = yield* repository.pairedAt(pairId);
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana, { now: 1_700 }));
+          const formed = yield* repository.pairedAt(pairId);
+          yield* repository.unpair(ben);
+          return [unknown, formed, yield* repository.pairedAt(pairId)] as const;
+        }),
+      );
+      expect(unknown).toEqual(Option.none());
+      expect(before).toEqual(Option.some(1_700));
+      expect(after).toEqual(Option.none());
+    });
+
     it("finds both members of a pair, and nobody once it has ended", async () => {
       const repository = await make();
       const pairId = pair("pair-user-b-user-a");

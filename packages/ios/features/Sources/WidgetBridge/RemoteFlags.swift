@@ -58,8 +58,11 @@ public enum Experiments {
   /// How Home is laid out around the room (Labs > Home).
   public static let homeLayout = Experiment(key: "home-layout", choices: HomeVariant.self)
 
+  /// Which of Nooki's rooms a new pair gets: both, only the Room, or only the City.
+  public static let rooms = Experiment(key: "rooms", choices: RoomsVariant.self)
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout,
+    roomLighting, windowView, homeLayout, rooms,
   ]
 }
 

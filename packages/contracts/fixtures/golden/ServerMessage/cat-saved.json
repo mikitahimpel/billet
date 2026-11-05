@@ -1,0 +1,13 @@
+{
+  "_tag": "CatSaved",
+  "cat": {
+    "bornAt": 1700000000000,
+    "look": {
+      "coat": "natural",
+      "model": "marmalade"
+    },
+    "name": "Mochi",
+    "natureSeed": "12345678901234567890",
+    "utcOffsetSeconds": 3600
+  }
+}

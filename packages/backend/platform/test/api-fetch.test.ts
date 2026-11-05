@@ -181,11 +181,15 @@ const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 /** Starts as a PNG and holds every byte value, so any text decoding along the way would show. */
 const pngBytes = Uint8Array.from([...pngSignature, ...Array.from({ length: 256 }, (_, i) => i)]);
 
+const jpegBytes = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, ...pngBytes.subarray(8)]);
+const ascii = (text: string) => [...text].map((character) => character.charCodeAt(0));
+const heicBytes = Uint8Array.from([0, 0, 0, 0x18, ...ascii("ftypheic"), ...pngBytes.subarray(8)]);
+
 const upload = (token: string, body: BodyInit = pngBytes) =>
   call("/v1/media", { body, headers: { ...bearer(token), "content-type": "image/png" } });
 
-const uploaded = async (token: string) => {
-  const response = await upload(token);
+const uploaded = async (token: string, body: BodyInit = pngBytes) => {
+  const response = await upload(token, body);
   expect(response.status).toBe(200);
   return Schema.decodeUnknownSync(UploadImageResponse)(await response.json()).image;
 };
@@ -193,8 +197,10 @@ const uploaded = async (token: string) => {
 const readImage = (key: string, token: string) =>
   call(`/v1/media/${key}`, { method: "GET", headers: bearer(token) });
 
+const photoShape = { width: 4032, height: 3024, preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj" };
+
 const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID()) =>
-  call("/v1/notes", json({ _tag: "Photo", key, image }, "POST", token));
+  call("/v1/notes", json({ _tag: "Photo", key, image, ...photoShape }, "POST", token));
 
 const sendText = (
   token: string,
@@ -631,6 +637,21 @@ describe("deleting an account", () => {
     expect(again.userId).not.toBe(ana.userId);
   });
 
+  it("deletes the user's JPEG and HEIC photos, sent or not", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const sent = await uploaded(owner, jpegBytes);
+    expect((await sendPhoto(owner, sent)).status).toBe(200);
+    const unsent = await uploaded(owner, heicBytes);
+    const theirs = await uploaded(claimer, jpegBytes);
+    expect([sent.endsWith(".jpg"), unsent.endsWith(".heic")]).toEqual([true, true]);
+
+    expect((await remove(owner)).status).toBe(204);
+
+    expect(await env.MEDIA.head(sent)).toBeNull();
+    expect(await env.MEDIA.head(unsent)).toBeNull();
+    expect(await env.MEDIA.head(theirs)).not.toBeNull();
+  });
+
   it("deletes an unpaired account, and takes an Apple code without the key configured", async () => {
     const { session } = await signedIn();
     const response = await remove(session.sessionToken, { appleAuthorizationCode: "code" });
@@ -663,6 +684,21 @@ describe("note images", () => {
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(new Uint8Array(await response.arrayBuffer())).toEqual(pngBytes);
     }
+  });
+
+  it.each([
+    ["a JPEG", jpegBytes, ".jpg", "image/jpeg"],
+    ["a HEIC", heicBytes, ".heic", "image/heic"],
+  ])("stores %s with its extension and serves its content type", async (_, bytes, ext, type) => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const key = await uploaded(owner, bytes);
+
+    expect(key.endsWith(ext)).toBe(true);
+    expect((await env.MEDIA.head(key))?.httpMetadata?.contentType).toBe(type);
+    const response = await readImage(key, claimer);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(type);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
   });
 
   it("answers 404 to anyone outside the pair, the same as for a key that doesn't exist", async () => {
@@ -698,14 +734,16 @@ describe("note images", () => {
     expect((await upload(await signedInAs("subject-alone"))).status).toBe(404);
   });
 
-  it("refuses bytes that aren't a PNG, and an image over the limit", async () => {
+  it("refuses bytes that aren't a PNG, JPEG or HEIC, and an image over the limit", async () => {
     const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
 
     expect((await upload(owner, "not an image")).status).toBe(400);
 
-    const oversized = new Uint8Array(imageSizeInBytes + 1);
-    oversized.set(pngSignature);
-    expect((await upload(owner, oversized)).status).toBe(400);
+    for (const signature of [pngSignature, [0xff, 0xd8, 0xff]]) {
+      const oversized = new Uint8Array(imageSizeInBytes + 1);
+      oversized.set(signature);
+      expect((await upload(owner, oversized)).status).toBe(400);
+    }
 
     const stored = await env.MEDIA.list({ prefix: `pairs/${pairId}/` });
     expect(stored.objects).toEqual([]);

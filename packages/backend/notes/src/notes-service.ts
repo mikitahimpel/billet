@@ -8,6 +8,7 @@ import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
+import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import { InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
 import { PairRooms } from "./pair-rooms.ts";
@@ -15,10 +16,6 @@ import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** The most a compact rendition may take as JSON, matching the iOS encoder's budget. */
 export const compactBudget = 3072;
-
-const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-
-const isPng = (bytes: Uint8Array) => pngSignature.every((byte, index) => bytes[index] === byte);
 
 const encoder = new TextEncoder();
 
@@ -42,7 +39,10 @@ const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-una
 export class NotesService extends Context.Service<
   NotesService,
   {
-    /** Stores a PNG under the couple's prefix and returns its new key. */
+    /**
+     * Stores a PNG, JPEG or HEIC under the couple's prefix and returns its new key, which ends in
+     * the extension of the format its signature declares.
+     */
     readonly uploadImage: (
       userId: UserId,
       bytes: Uint8Array,
@@ -106,9 +106,10 @@ export class NotesService extends Context.Service<
         bytes: Uint8Array,
       ): Effect.fn.Return<MediaKey, NotesNotFound | InvalidNote | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
-        if (!isPng(bytes)) return yield* Effect.fail(new InvalidNote());
+        const type = detectImageType(bytes);
+        if (type === undefined) return yield* Effect.fail(new InvalidNote());
         const id = yield* random.uuidV4();
-        const key = decodeMediaKey(`${mediaPrefix(pairId)}notes/${id}.png`);
+        const key = decodeMediaKey(`${mediaPrefix(pairId)}notes/${id}.${extensionOf(type)}`);
         yield* media.put(key, bytes, userId);
         return key;
       });

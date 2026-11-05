@@ -1,7 +1,9 @@
 import {
   check,
+  index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -51,4 +53,39 @@ export const delivery = sqliteTable(
     nextAttemptAt: integer("next_attempt_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.noteId, table.lane] })],
+);
+
+// The couple's cat, once adopted: its profile and temper, and the last journal entry's `seq` and
+// time. The row exists only after adoption.
+export const cat = sqliteTable(
+  "cat",
+  {
+    id: integer("id").primaryKey(),
+    name: text("name").notNull(),
+    model: text("model").notNull(),
+    coat: text("coat").notNull(),
+    bornAt: integer("born_at").notNull(),
+    natureSeed: text("nature_seed").notNull(),
+    utcOffsetSeconds: integer("utc_offset_seconds").notNull(),
+    curious: real("curious").notNull(),
+    lazy: real("lazy").notNull(),
+    cuddly: real("cuddly").notNull(),
+    lastSeq: integer("last_seq").notNull(),
+    lastAt: integer("last_at"),
+  },
+  (table) => [check("cat_single_row", sql`${table.id} = 1`)],
+);
+
+// The cat's journal: `body` is the `CatEvent` as JSON. `id` is the phone's UUID, one entry each;
+// `at` is indexed for the needs fold, which reads the last week.
+export const catEntry = sqliteTable(
+  "cat_entry",
+  {
+    seq: integer("seq").primaryKey(),
+    id: text("id").notNull(),
+    by: text("by").notNull(),
+    at: integer("at").notNull(),
+    body: text("body").notNull(),
+  },
+  (table) => [uniqueIndex("cat_entry_id").on(table.id), index("cat_entry_at").on(table.at)],
 );

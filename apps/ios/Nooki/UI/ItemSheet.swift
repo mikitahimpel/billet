@@ -18,10 +18,10 @@ struct ItemSheet: View {
     @State private var celebrating = false
 
 
-    private var cost: Int { Catalog.price(of: item) }
+    private var cost: Int { state.price(of: item) }
     private var affordable: Bool { state.coins >= cost }
     private var owned: Bool { state.owned.contains(item.id) }
-    private var isDeal: Bool { item.id == Catalog.dealID }
+    private var isDeal: Bool { cost < item.price }
 
 
     var body: some View {
@@ -150,13 +150,13 @@ struct ItemSheet: View {
                     .frame(height: 60)
                     .background(.white.opacity(0.08), in: .capsule)
             } else {
-                Button(action: buy) { buyLabel }
-                    .buttonStyle(PressScaleStyle())
+                Button(action: buy) { buyLabel.frame(maxWidth: .infinity) }
+                    .nookiPrimary()
                     .disabled(!affordable)
 
                 if !affordable {
                     Text("Earn coins by answering today's question")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.nookiCaption)
                         .foregroundStyle(Ink.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -171,31 +171,20 @@ struct ItemSheet: View {
                 Text("Buy for")
                 CoinIcon(size: 22)
                 Text("\(cost)")
+                    .monospacedDigit()
                 if isDeal {
                     Text("\(item.price)")
-                        .font(.system(size: 14, weight: .medium, design: .rounded).monospacedDigit())
+                        .font(.nookiCaption.monospacedDigit())
                         .strikethrough()
                         .opacity(0.7)
+                        .accessibilityLabel("was \(item.price)")
                 }
             } else {
                 Image(systemName: "lock.fill")
-                    .font(.system(size: 15, weight: .semibold))
                 Text("Need \(cost - state.coins) more")
+                    .monospacedDigit()
             }
         }
-        .font(.system(size: 19, weight: .bold, design: .rounded).monospacedDigit())
-        .foregroundStyle(.white.opacity(affordable ? 1 : 0.75))
-        .frame(maxWidth: .infinity)
-        .frame(height: 60)
-        .background {
-            if affordable {
-                Capsule().fill(.honeyGradient)
-            } else {
-                Capsule().fill(.white.opacity(0.12))
-            }
-        }
-        .shadow(color: affordable ? Color.honeyDeep.opacity(0.45) : .clear, radius: 14, y: 6)
-        .contentShape(.capsule)
     }
 
     private func buy() {

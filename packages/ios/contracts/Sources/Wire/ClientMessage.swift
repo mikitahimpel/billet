@@ -1,7 +1,8 @@
 /// A frame this device sends the room.
 public enum ClientMessage: Codable, Hashable, Sendable {
-  /// Reconnect, asking for everything after `lastSeq`.
-  case resume(lastSeq: Int)
+  /// Reconnect, asking for every note after `lastSeq`, and every cat journal entry after
+  /// `lastCatSeq`. Leaving `lastCatSeq` out sends no cat frames.
+  case resume(lastSeq: Int, lastCatSeq: Int? = nil)
   /// A whole stroke at once, from a client that does not stream.
   case stroke(Stroke)
   case presence(PresenceState)
@@ -16,6 +17,7 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case lastSeq
+    case lastCatSeq
     case stroke
     case state
     case id
@@ -29,7 +31,9 @@ public enum ClientMessage: Codable, Hashable, Sendable {
     let tag = try container.decode(String.self, forKey: .tag)
     switch tag {
     case "Resume":
-      self = .resume(lastSeq: try container.decode(Int.self, forKey: .lastSeq))
+      self = .resume(
+        lastSeq: try container.decode(Int.self, forKey: .lastSeq),
+        lastCatSeq: try container.decodeOptionalKey(Int.self, forKey: .lastCatSeq))
     case "Stroke":
       self = .stroke(try container.decode(Stroke.self, forKey: .stroke))
     case "Presence":
@@ -53,9 +57,10 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     switch self {
-    case .resume(let lastSeq):
+    case .resume(let lastSeq, let lastCatSeq):
       try container.encode("Resume", forKey: .tag)
       try container.encode(lastSeq, forKey: .lastSeq)
+      try container.encodeIfPresent(lastCatSeq, forKey: .lastCatSeq)
     case .stroke(let stroke):
       try container.encode("Stroke", forKey: .tag)
       try container.encode(stroke, forKey: .stroke)

@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "at": 1700000101000,
+      "by": "user-alice",
+      "event": {
+        "_tag": "Fed",
+        "grams": 40
+      },
+      "id": "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+      "seq": 1
+    },
+    {
+      "at": 1700000102000,
+      "by": "user-bob",
+      "event": {
+        "_tag": "Petted"
+      },
+      "id": "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+      "seq": 2
+    }
+  ]
+}
