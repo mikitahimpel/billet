@@ -46,7 +46,7 @@ struct NeedBars: View {
         case .full: [
             NeedRow.Action(title: "Feed", detail: nil, run: { play(.feed) }),
             NeedRow.Action(title: "Water", detail: nil, run: { play(.water) }),
-            NeedRow.Action(title: "Treat", detail: "\(HomeState.treatPrice)", run: treat),
+            NeedRow.Action(title: "Treat", detail: "\(ShopModel.treatPrice)", run: treat),
         ]
         case .loved: [
             NeedRow.Action(title: "Brush", detail: nil, run: { play(.brush) }),

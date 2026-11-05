@@ -175,7 +175,7 @@ final class DrawModel {
             }
         }
         if let keepsake = DrawingImage.keepsake(drawing, canvas: canvas, wallpaper: wallpaper, photo: photo) {
-            state.addMoment(keepsake, caption: "For \(partnerName)")
+            state.journal.addMoment(keepsake, caption: "For \(partnerName)")
         }
         sendState = .idle
         return true

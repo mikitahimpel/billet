@@ -6,6 +6,9 @@ export class InvalidInvite extends Data.TaggedError("InvalidInvite") {}
 /** The caller already has a partner, and has to unpair first. */
 export class AlreadyPaired extends Data.TaggedError("AlreadyPaired") {}
 
+/** The caller has no partner. */
+export class NotPaired extends Data.TaggedError("NotPaired") {}
+
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class PairingUnavailable extends Data.TaggedError("PairingUnavailable")<{
   readonly reason: string;

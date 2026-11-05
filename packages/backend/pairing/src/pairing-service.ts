@@ -8,7 +8,13 @@ import {
 } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { CreateInviteResponse } from "@billet/contracts-http-api/invite";
-import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
+import type { PairResponse } from "@billet/contracts-http-api/pair";
+import {
+  type AlreadyPaired,
+  type InvalidInvite,
+  NotPaired,
+  type PairingUnavailable,
+} from "./pairing-error.ts";
 import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
@@ -34,6 +40,8 @@ export class PairingService extends Context.Service<
       code: InviteCode,
     ) => Effect.Effect<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+    /** The caller's pair and both members, the caller first. */
+    readonly pair: (userId: UserId) => Effect.Effect<PairResponse, NotPaired | PairingUnavailable>;
   }
 >()("@billet/backend-pairing/PairingService") {
   static readonly layer: Layer.Layer<
@@ -95,6 +103,18 @@ export class PairingService extends Context.Service<
         return pairId;
       });
 
+      const pair = Effect.fn("PairingService.pair")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<PairResponse, NotPaired | PairingUnavailable> {
+        const found = yield* repository.findPair(userId);
+        if (Option.isNone(found)) return yield* Effect.fail(new NotPaired());
+        const pairId = found.value;
+        const partner = (yield* repository.findMembers(pairId)).find((member) => member !== userId);
+        // The pair ended between the two reads.
+        if (partner === undefined) return yield* Effect.fail(new NotPaired());
+        return { pairId, members: [userId, partner] };
+      });
+
       const unpair = Effect.fn("PairingService.unpair")(function* (
         userId: UserId,
       ): Effect.fn.Return<void, PairingUnavailable> {
@@ -103,7 +123,7 @@ export class PairingService extends Context.Service<
         if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value));
       });
 
-      return PairingService.of({ createInvite, claimInvite, unpair });
+      return PairingService.of({ createInvite, claimInvite, unpair, pair });
     }),
   );
 }

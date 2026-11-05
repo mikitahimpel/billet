@@ -12,6 +12,12 @@ import { MediaKey } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
+import {
+  OrderRequest,
+  OrderResponse,
+  ShopResponse,
+  WishRequest,
+} from "@billet/contracts-http-api/shop";
 import { routes } from "@billet/contracts-http-api/routes";
 import {
   ListNotesResponse,
@@ -62,7 +68,7 @@ const CoinsQuery = Schema.Struct({
   ),
 });
 
-/** A buy request is an id and an item name. */
+/** A buy, an order or a wish is an id and an item or set name. */
 const buySizeLimit = ByteSize.kibibytes(1);
 
 const decodeMediaKey = Schema.decodeUnknownEffect(MediaKey);
@@ -74,6 +80,11 @@ const respondNotes = HttpServerResponse.schemaJson(ListNotesResponse);
 const respondInks = HttpServerResponse.schemaJson(InksResponse);
 const respondCoins = HttpServerResponse.schemaJson(CoinsResponse);
 const respondBuy = HttpServerResponse.schemaJson(BuyResponse);
+const respondShop = HttpServerResponse.schemaJson(ShopResponse);
+const respondOrder = HttpServerResponse.schemaJson(OrderResponse);
+
+/** The pair's shop changes on either phone, so a read is never cached. */
+const shopHeaders = { "cache-control": "no-store" };
 
 /** The path carries a key from the signed-in couple's prefix, so nothing here may be cached. */
 const imageHeaders = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
@@ -99,8 +110,8 @@ const respondNotesFailures = <R>(
         respondError(ApiError.cases.InkNotOwned.make({ ink }), { status: 400 }),
       NotEnoughCoins: ({ needed, have }) =>
         respondError(ApiError.cases.NotEnoughCoins.make({ needed, have }), { status: 409 }),
-      AlreadyOwned: ({ ink }) =>
-        respondError(ApiError.cases.AlreadyOwned.make({ itemId: ink }), { status: 409 }),
+      AlreadyOwned: ({ itemId }) =>
+        respondError(ApiError.cases.AlreadyOwned.make({ itemId }), { status: 409 }),
       NotesUnavailable: (error) =>
         Effect.logError("notes unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
@@ -207,6 +218,39 @@ export const NotesRoutes = HttpRouter.use((router) =>
           Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
         );
         return yield* respondBuy(yield* notes.buy(userId, request));
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.getShop.method,
+      routes.getShop.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        return yield* respondShop(yield* notes.shop(userId), { headers: shopHeaders });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.placeOrder.method,
+      routes.placeOrder.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(OrderRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondOrder(yield* notes.order(userId, request), { headers: shopHeaders });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.setWish.method,
+      routes.setWish.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(WishRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondShop(yield* notes.setWish(userId, request), { headers: shopHeaders });
       }).pipe(respondNotesFailures),
     );
   }),

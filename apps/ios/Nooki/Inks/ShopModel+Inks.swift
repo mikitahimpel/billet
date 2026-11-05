@@ -1,7 +1,7 @@
 import Foundation
 import Wire
 
-extension HomeState {
+extension ShopModel {
     /// The ink buy still inside its Undo window: the server hasn't heard of it yet, so its spend and its ink are the
     /// phone's alone.
     private var pendingInk: Purchase? {

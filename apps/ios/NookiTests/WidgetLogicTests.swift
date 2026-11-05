@@ -93,8 +93,8 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 }
 
 @Suite struct CoupleTests {
-    @Test func starterIsDay127() {
-        #expect(Couple.starter(now: noon).daysTogether(on: noon) == 127)
+    @Test func starterIsDayOne() {
+        #expect(Couple.starter(now: noon).daysTogether(on: noon) == 1)
     }
 
     @Test func otherPartner() {
@@ -120,7 +120,7 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 
     @Test func aShopInkLinkOpensTheShopAtThatInk() {
         #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "nooki://shop/ink/ink-rose")
-        let state = HomeState()
+        let state = HomeState(stores: .live())
         state.open(.shopInk("ink-rose"))
         #expect(state.tab == .shop)
         #expect(state.shopFocus == .ink("ink-rose"))
@@ -136,11 +136,12 @@ private func removeScratch(_ path: String) {
 }
 
 @Suite struct WalletTests {
-    @Test func freshWalletKeepsTheStarterCoins() {
+    @Test func aFreshWalletHasOnlyTheStarterPieces() {
         let path = scratchFile("wallet.json")
         defer { removeScratch(path) }
         #expect(WalletStore(file: path).wallet == Wallet())
-        #expect(Wallet().coins == 560)
+        #expect(Wallet().coins == 0)
+        #expect(Wallet().owned == ["lamp", "rug"])
     }
 
     @Test func roundTripsThroughTheSharedFile() {
@@ -178,9 +179,9 @@ private func removeScratch(_ path: String) {
     @Test func listCoinsCapAtThreeADay() {
         var wallet = Wallet()
         for _ in 0..<5 { wallet.tickList(on: noon) }
-        #expect(wallet.coins == 560 + 15)
+        #expect(wallet.coins == 15)
         wallet.tickList(on: noon.addingTimeInterval(86_400))
-        #expect(wallet.coins == 560 + 20)
+        #expect(wallet.coins == 20)
     }
 
     @Test func listTicksEarnThroughTheStore() {
@@ -191,7 +192,7 @@ private func removeScratch(_ path: String) {
         us.addItem("Paddington", to: watch, author: "L")
         us.setItem(us.list(watch)!.items[0].id, in: watch, done: true)
         // A widget intent builds its own stores and sees the coins.
-        #expect(WalletStore(file: walletPath).wallet.coins == 565)
+        #expect(WalletStore(file: walletPath).wallet.coins == 5)
     }
 }
 

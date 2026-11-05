@@ -7,11 +7,18 @@ import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CoinEntryId } from "@billet/contracts-domain/coins";
 import type { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { InksResponse } from "@billet/contracts-http-api/inks";
+import type {
+  OrderRequest,
+  OrderResponse,
+  ShopResponse,
+  WishRequest,
+} from "@billet/contracts-http-api/shop";
 import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
 import { freeInk, type InkId, inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
-import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
+import type { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
+import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import {
@@ -85,6 +92,22 @@ export class NotesService extends Context.Service<
       BuyResponse,
       NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
     >;
+    /** What the caller's pair has: balance, inks, room pieces and wishlist. */
+    readonly shop: (
+      userId: UserId,
+    ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
+    /** Buys one offer with the pair's coins. A retried `id` answers with the first order. */
+    readonly order: (
+      userId: UserId,
+      request: OrderRequest,
+    ) => Effect.Effect<
+      OrderResponse,
+      NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+    >;
+    readonly setWish: (
+      userId: UserId,
+      request: WishRequest,
+    ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
     /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
@@ -226,6 +249,53 @@ export class NotesService extends Context.Service<
         return yield* rooms.coins(yield* pairOf(userId), after, limit);
       });
 
+      // A refused spend: what the client can act on, or the room's fault.
+      const refusedSpend = (rejection: RoomRejection) => {
+        switch (rejection._tag) {
+          case "NotEnoughCoins":
+            return new NotEnoughCoins({ needed: rejection.needed, have: rejection.have });
+          case "AlreadyOwned":
+            return new AlreadyOwned({ itemId: rejection.ink });
+          case "OfferOwned":
+            return new AlreadyOwned({ itemId: rejection.offer });
+          case "NotSold":
+          case "NotOffered":
+            return new NotesNotFound();
+          case "RoomNotOpen":
+          case "NotAMember":
+          case "DuplicateMember":
+          case "RoomAlreadyOpen":
+          case "CatNotAdopted":
+          case "CatEntryIdTaken":
+          case "InkNotOwned":
+          case "NoteNotFound":
+          case "OwnNote":
+          case "NotReactable":
+          case "NoReaction":
+            return new NotesUnavailable({ reason: "room-refused-buy" });
+        }
+      };
+
+      // Pairing never reaches the room, so a spend or a wish before the first note opens it.
+      const inOpenRoom = (
+        pairId: PairId,
+        attempt: () => Effect.Effect<RoomDecision, NotesUnavailable>,
+      ) =>
+        Effect.flatMap(attempt(), (decision) =>
+          isNotOpen(decision)
+            ? openRoom(pairId).pipe(Effect.andThen(attempt()))
+            : Effect.succeed(decision),
+        );
+
+      /** The spend an accepted order entered, or the first one a retry repeats. */
+      const spendOf = (decision: RoomDecision & { readonly _tag: "Accepted" }) => {
+        for (const output of decision.outputs) {
+          if (output._tag === "CoinsEntered" && output.entry.kind === "spend") return output.entry;
+          if (output._tag === "CoinsRepeated") return output.entry;
+        }
+        return undefined;
+      };
+
       // The room prices the buy from the catalog; the client's idea of the price never reaches it.
       const buy = Effect.fn("NotesService.buy")(function* (
         userId: UserId,
@@ -235,64 +305,74 @@ export class NotesService extends Context.Service<
         NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
       > {
         const pairId = yield* pairOf(userId);
-        const attempt = yield* rooms.buy(pairId, userId, request.id, request.item);
-        // Pairing never reaches the room, so a buy before the first note opens it.
-        const decision = isNotOpen(attempt)
-          ? yield* openRoom(pairId).pipe(
-              Effect.andThen(rooms.buy(pairId, userId, request.id, request.item)),
-            )
-          : attempt;
-        if (decision._tag === "Rejected") {
-          const { rejection } = decision;
-          switch (rejection._tag) {
-            case "NotEnoughCoins":
-              return yield* Effect.fail(
-                new NotEnoughCoins({ needed: rejection.needed, have: rejection.have }),
-              );
-            case "AlreadyOwned":
-              return yield* Effect.fail(new AlreadyOwned({ ink: rejection.ink }));
-            case "NotSold":
-              return yield* Effect.fail(new NotesNotFound());
-            case "RoomNotOpen":
-            case "NotAMember":
-            case "DuplicateMember":
-            case "RoomAlreadyOpen":
-            case "CatNotAdopted":
-            case "CatEntryIdTaken":
-            case "InkNotOwned":
-            case "NoteNotFound":
-            case "OwnNote":
-            case "NotReactable":
-            case "NoReaction":
-              return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-buy" }));
-          }
-        }
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.buy(pairId, userId, request.id, request.item),
+        );
+        if (decision._tag === "Rejected")
+          return yield* Effect.fail(refusedSpend(decision.rejection));
         const { state, outputs } = decision;
-        for (const output of outputs) {
-          if (output._tag === "CoinsEntered" && output.entry.kind === "spend") {
-            const granted = outputs.flatMap((o) => (o._tag === "InksGranted" ? o.inks : []));
-            return {
-              entry: output.entry,
-              balance: state.wallet.balance,
-              granted,
-              owned: owned(state.inks),
-            };
-          }
-          // A retry answers as the first buy did, with today's balance.
-          if (output._tag === "CoinsRepeated") {
-            const granted = state.inks.filter((ink) => ink === output.entry.ref);
-            return {
-              entry: output.entry,
-              balance: state.wallet.balance,
-              granted,
-              owned: owned(state.inks),
-            };
-          }
+        const entry = spendOf(decision);
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "buy-not-entered" }));
         }
-        return yield* Effect.fail(new NotesUnavailable({ reason: "buy-not-entered" }));
+        // A retry answers as the first buy did, with today's balance.
+        const granted = outputs.some((output) => output._tag === "CoinsRepeated")
+          ? state.inks.filter((ink) => ink === entry.ref)
+          : outputs.flatMap((output) => (output._tag === "InksGranted" ? output.inks : []));
+        return { entry, balance: state.wallet.balance, granted, owned: owned(state.inks) };
       });
 
-      return NotesService.of({ uploadImage, readImage, sendNote, inks, coins, buy, history });
+      const shop = Effect.fn("NotesService.shop")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<ShopResponse, NotesNotFound | NotesUnavailable> {
+        return yield* rooms.shop(yield* pairOf(userId));
+      });
+
+      const order = Effect.fn("NotesService.order")(function* (
+        userId: UserId,
+        request: OrderRequest,
+      ): Effect.fn.Return<
+        OrderResponse,
+        NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+      > {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.order(pairId, userId, request.id, request.offer),
+        );
+        if (decision._tag === "Rejected")
+          return yield* Effect.fail(refusedSpend(decision.rejection));
+        const entry = spendOf(decision);
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "order-not-entered" }));
+        }
+        return { entry, shop: shopOf(decision.state) };
+      });
+
+      const setWish = Effect.fn("NotesService.setWish")(function* (
+        userId: UserId,
+        request: WishRequest,
+      ): Effect.fn.Return<ShopResponse, NotesNotFound | NotesUnavailable> {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.setWish(pairId, userId, request.item, request.wished),
+        );
+        return decision._tag === "Accepted"
+          ? shopOf(decision.state)
+          : yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-wish" }));
+      });
+
+      return NotesService.of({
+        uploadImage,
+        readImage,
+        sendNote,
+        inks,
+        coins,
+        buy,
+        shop,
+        order,
+        setWish,
+        history,
+      });
     }),
   );
 }

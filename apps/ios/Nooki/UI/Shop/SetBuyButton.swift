@@ -9,7 +9,7 @@ struct SetBuyButton<Pieces: PieceSet>: View {
     var ownedInk: Color = Ink.text
 
     var body: some View {
-        PriceButton(state: state, quote: ShopOffers.price(of: set, owned: state.owned), name: set.name,
-                    buy: { state.buy(set) }, ownedInk: ownedInk)
+        PriceButton(state: state, quote: ShopOffers.price(of: set, owned: state.shop.owned), name: set.name,
+                    buy: { state.shop.buy(set) }, ownedInk: ownedInk)
     }
 }

@@ -92,6 +92,26 @@ describe("pairing routes", () => {
     expect((await invite("ana")).response.status).toBe(200);
   });
 
+  it("names the caller's pair and both members, the caller first, and 404 once it ends", async () => {
+    const { code } = await invite("hal");
+    const claimed = Schema.decodeUnknownSync(ClaimInviteResponse)(
+      await (await claim("ivy", code)).json(),
+    );
+    const pair = (name: string) => handler(request("/v1/pair", name, { method: "GET" }));
+    const seen = await pair("hal");
+    expect(seen.status).toBe(200);
+    expect(seen.headers.get("cache-control")).toBe("no-store");
+    expect(await seen.json()).toEqual({
+      pairId: claimed.pairId,
+      members: [tokenOf("hal"), tokenOf("ivy")],
+    });
+    expect(await (await pair("ivy")).json()).toMatchObject({
+      members: [tokenOf("ivy"), tokenOf("hal")],
+    });
+    await unpair("hal");
+    expect((await pair("ivy")).status).toBe(404);
+  });
+
   it("answers 404 InvalidInvite for a code nobody issued", async () => {
     const response = await claim("cal", "ABCD2345EF");
     expect(response.status).toBe(404);

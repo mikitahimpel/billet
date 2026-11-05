@@ -44,7 +44,7 @@ struct ListQuery: EntityQuery {
     func suggestedEntities() async throws -> [ListEntity] { all() }
 
     private func all() -> [ListEntity] {
-        UsStore().lists.map { ListEntity(id: $0.id, title: $0.title) }
+        UsStore(wallet: WalletStore()).lists.map { ListEntity(id: $0.id, title: $0.title) }
     }
 }
 

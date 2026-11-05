@@ -15,8 +15,9 @@ final class ShopBuyTests: XCTestCase {
         // Matched by any type: the pill may also be a button.
         let coins = app.descendants(matching: .any)["coins"].firstMatch
         XCTAssertTrue(coins.waitForExistence(timeout: 10))
-        // The label is localized ("5,000 coins"), so the test compares it with itself, not with a literal.
-        let before = coins.label
+        // The pill formats the number for the device's locale, as "5,000" in English.
+        let full = "\(5000.formatted()) coins"
+        XCTAssertEqual(coins.label, full)
 
         let price = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Buy '")).firstMatch
         XCTAssertTrue(price.waitForExistence(timeout: 10), "Today should open on an offer with its price")
@@ -24,6 +25,6 @@ final class ShopBuyTests: XCTestCase {
 
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5), "the buy should offer Undo")
         XCTAssertFalse(app.sheets.firstMatch.exists, "no sheet should come between the tap and the buy")
-        XCTAssertNotEqual(coins.label, before, "the coins should go down at once")
+        XCTAssertNotEqual(coins.label, full, "the coins should go down at once")
     }
 }

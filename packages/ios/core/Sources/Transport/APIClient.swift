@@ -55,6 +55,13 @@ public struct APIClient: Sendable {
   /// Buys one ink at its catalog price: `.api(.notEnoughCoins)` when the balance is short,
   /// `.api(.alreadyOwned)` when the pair has it. A retry with the same `id` buys nothing twice.
   public var buyItem: @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse
+  /// The caller's pair and both members, the caller first. `.api(.notFound)` while unpaired.
+  public var pair: @Sendable () async throws(TransportError) -> PairResponse
+  /// What the pair has: balance, inks, room pieces and wishlist.
+  public var shop: @Sendable () async throws(TransportError) -> ShopResponse
+  /// Buys one offer at the server's price. Repeat the request's `id` on a retry.
+  public var placeOrder: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
+  public var setWish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -118,7 +125,21 @@ public struct APIClient: Sendable {
     },
     buyItem: @escaping @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse = {
       (_) async throws(TransportError) in throw .network("offline")
-    }
+    },
+    pair: @escaping @Sendable () async throws(TransportError) -> PairResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    shop: @escaping @Sendable () async throws(TransportError) -> ShopResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    placeOrder:
+      @escaping @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    setWish:
+      @escaping @Sendable (WishRequest) async throws(TransportError) -> ShopResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -145,6 +166,10 @@ public struct APIClient: Sendable {
     self.listInks = listInks
     self.getCoins = getCoins
     self.buyItem = buyItem
+    self.pair = pair
+    self.shop = shop
+    self.placeOrder = placeOrder
+    self.setWish = setWish
   }
 }
 
@@ -291,6 +316,22 @@ extension APIClient {
       buyItem: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.buyItem, signed: true, body: body), as: BuyResponse.self)
+      },
+      pair: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getPair, signed: true), as: PairResponse.self)
+      },
+      shop: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getShop, signed: true), as: ShopResponse.self)
+      },
+      placeOrder: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.placeOrder, signed: true, body: body), as: OrderResponse.self)
+      },
+      setWish: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.setWish, signed: true, body: body), as: ShopResponse.self)
       })
   }
 }

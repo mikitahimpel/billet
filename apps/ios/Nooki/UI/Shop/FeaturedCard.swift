@@ -8,7 +8,7 @@ struct FeaturedCard: View {
     /// Opens the set's sheet.
     var openSet: (FeaturedOffer) -> Void = { _ in }
 
-    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.owned) }
+    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.shop.owned) }
     private var items: [ShopItem] { offer.itemIDs.compactMap(Catalog.item) }
 
     var body: some View {
@@ -96,7 +96,7 @@ struct FeaturedCard: View {
                     }
                     .frame(width: isCentre ? centre : centre * 0.72, height: isCentre ? centre : centre * 0.72)
                     .zIndex(isCentre ? 1 : 0)
-                    .opacity(state.owned.contains(item.id) ? 0.45 : 1)
+                    .opacity(state.shop.owned.contains(item.id) ? 0.45 : 1)
                 }
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)

@@ -137,6 +137,20 @@ export const ownedInk = sqliteTable("owned_ink", {
   position: integer("position").notNull(),
 });
 
+// The room's pieces the pair has bought, in the order it got them (`position`). The starter
+// pieces are every pair's and have no row.
+export const ownedItem = sqliteTable("owned_item", {
+  itemId: text("item_id").primaryKey(),
+  position: integer("position").notNull(),
+});
+
+// The pieces the pair wishes for, in the order they were wished (`position`). Written whole on
+// every commit, so a piece taken off leaves no row.
+export const wish = sqliteTable("wish", {
+  itemId: text("item_id").primaryKey(),
+  position: integer("position").notNull(),
+});
+
 // The pair's coins: the balance, and what care has earned on `day` (the cat's local day) against
 // each daily cap. No row means no coin yet.
 export const wallet = sqliteTable(

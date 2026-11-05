@@ -71,7 +71,7 @@ struct ShopView: View {
                 // `-shopSet featured` (or a bundle's id) opens that set's sheet.
                 if let id = UserDefaults.standard.string(forKey: "shopSet") {
                     if id == "featured" {
-                        sheetSet = SetChoice(pieces: state.offers.featured(on: .now))
+                        sheetSet = SetChoice(pieces: state.shop.offers.featured(on: .now))
                     } else if let bundle = ShopOffers.bundles.first(where: { $0.id == id }) {
                         sheetSet = SetChoice(pieces: bundle)
                     }
@@ -121,7 +121,7 @@ struct ShopView: View {
 
     @ViewBuilder private var today: some View {
         let now = Date.now
-        FeaturedCard(state: state, offer: state.offers.featured(on: now)) { sheetSet = SetChoice(pieces: $0) }
+        FeaturedCard(state: state, offer: state.shop.offers.featured(on: now)) { sheetSet = SetChoice(pieces: $0) }
             .padding(.horizontal, Space.l)
             .shopAppear()
 
@@ -129,7 +129,7 @@ struct ShopView: View {
             ShopSectionHeader(title: "Daily deals", symbol: "tag.fill", tint: ShopInk.coral) {
                 // Deals change at the couple's local midnight, the same for both of them.
                 Label {
-                    Text(timerInterval: now...state.offers.nextDay(after: now), countsDown: true)
+                    Text(timerInterval: now...state.shop.offers.nextDay(after: now), countsDown: true)
                         .monospacedDigit()
                 } icon: {
                     Image(systemName: "clock")
@@ -137,13 +137,16 @@ struct ShopView: View {
                 .accessibilityLabel("New deals at midnight")
             }
             .padding(.horizontal, Space.l)
-            deals(state.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            deals(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
         .id("deals")
 
-        DailyGiftCard(state: state)
-            .padding(.horizontal, Space.l)
-            .shopAppear()
+        // The server has no daily gift yet; a synced pair's coins come only from the room.
+        if !state.shop.isSynced {
+            DailyGiftCard(state: state)
+                .padding(.horizontal, Space.l)
+                .shopAppear()
+        }
 
         VStack(alignment: .leading, spacing: Space.m) {
             ShopSectionHeader(title: "Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {

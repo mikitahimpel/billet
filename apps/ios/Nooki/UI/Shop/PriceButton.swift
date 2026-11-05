@@ -21,7 +21,7 @@ struct PriceButton: View {
     var body: some View {
         if let quote {
             Button {
-                if state.coins >= quote.price {
+                if state.shop.coins >= quote.price {
                     _ = buy()
                 } else {
                     shakes += 1
@@ -44,10 +44,10 @@ struct PriceButton: View {
             }
             .haptic(.warning, trigger: shakes)
             .accessibilityLabel("Buy \(name), \(quote.price) coins")
-            .accessibilityHint(state.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
-                                                          : "Needs \(quote.price - state.coins) more coins")
+            .accessibilityHint(state.shop.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
+                                                          : "Needs \(quote.price - state.shop.coins) more coins")
             .popover(isPresented: $showsEarn) {
-                EarnCoins(missing: max(0, quote.price - state.coins))
+                EarnCoins(missing: max(0, quote.price - state.shop.coins))
                     .presentationCompactAdaptation(.popover)
             }
         } else {

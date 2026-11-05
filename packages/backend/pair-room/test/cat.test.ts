@@ -117,7 +117,7 @@ describe("decide: the cat", () => {
     const key = uuid(9);
     const without = decide(active, RoomCommand.cases.SendNote.make({ note, key }));
     if (without._tag !== "Accepted") throw new Error("rejected");
-    expect(without.outputs.map((o) => o._tag)).toEqual(["NoteAppended"]);
+    expect(without.outputs.map((o) => o._tag)).toEqual(["NoteAppended", "CoinsEntered"]);
 
     const shared = decide(withCat, RoomCommand.cases.SendNote.make({ note, key }));
     if (shared._tag !== "Accepted") throw new Error("rejected");

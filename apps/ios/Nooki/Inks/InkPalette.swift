@@ -18,14 +18,14 @@ struct InkPalette: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            ForEach(state.inks) { ink in
+            ForEach(state.shop.inks) { ink in
                 dot(ink)
             }
         }
         .haptic(.warning, trigger: shakes)
         .alert(item: $short) { ink in
             Alert(
-                title: Text("\(max(0, ink.price - state.coins)) more coins to go"),
+                title: Text("\(max(0, ink.price - state.shop.coins)) more coins to go"),
                 message: Text(
                     "\(ink.name) ink is \(ink.price) coins. Answer today's question or open the daily gift to earn more."),
                 primaryButton: .default(Text("Open Shop")) { openShop(ink) },
@@ -34,7 +34,7 @@ struct InkPalette: View {
     }
 
     private func dot(_ ink: PaletteInk) -> some View {
-        let owned = ink.isOwned(state.owned)
+        let owned = ink.isOwned(state.shop.owned)
         let selected = selection == ink
         return Button {
             tap(ink, owned: owned)
@@ -75,8 +75,8 @@ struct InkPalette: View {
         if owned {
             selection = ink
             picked()
-        } else if state.coins >= ink.price {
-            if state.buy(ink) {
+        } else if state.shop.coins >= ink.price {
+            if state.shop.buy(ink) {
                 selection = ink
                 picked()
             }

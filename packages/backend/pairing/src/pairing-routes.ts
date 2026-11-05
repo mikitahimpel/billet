@@ -9,12 +9,19 @@ import {
   ClaimInviteResponse,
   CreateInviteResponse,
 } from "@billet/contracts-http-api/invite";
-import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
+import { PairResponse } from "@billet/contracts-http-api/pair";
+import type {
+  AlreadyPaired,
+  InvalidInvite,
+  NotPaired,
+  PairingUnavailable,
+} from "./pairing-error.ts";
 import { PairingService } from "./pairing-service.ts";
 
 const respondError = HttpServerResponse.schemaJson(ApiError);
 const respondInvite = HttpServerResponse.schemaJson(CreateInviteResponse);
 const respondClaim = HttpServerResponse.schemaJson(ClaimInviteResponse);
+const respondPair = HttpServerResponse.schemaJson(PairResponse);
 
 /** An invite code is a one-time credential. */
 const noStore = { "cache-control": "no-store" };
@@ -22,7 +29,7 @@ const noStore = { "cache-control": "no-store" };
 const respondPairingFailures = <R>(
   effect: Effect.Effect<
     HttpServerResponse.HttpServerResponse,
-    RouteFailure | InvalidInvite | AlreadyPaired | PairingUnavailable,
+    RouteFailure | InvalidInvite | AlreadyPaired | NotPaired | PairingUnavailable,
     R
   >,
 ) =>
@@ -30,6 +37,7 @@ const respondPairingFailures = <R>(
     Effect.catchTags({
       InvalidInvite: () => respondError(ApiError.cases.InvalidInvite.make({}), { status: 404 }),
       AlreadyPaired: () => respondError(ApiError.cases.AlreadyPaired.make({}), { status: 409 }),
+      NotPaired: () => respondError(ApiError.cases.NotFound.make({}), { status: 404 }),
       PairingUnavailable: (error) =>
         Effect.logError("pairing unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
@@ -62,6 +70,16 @@ export const PairingRoutes = HttpRouter.use((router) =>
         const { code } = yield* HttpServerRequest.schemaBodyJson(ClaimInviteRequest);
         const pairId = yield* pairing.claimInvite(userId, code);
         return yield* respondClaim({ pairId });
+      }).pipe(respondPairingFailures),
+    );
+
+    // Never cached: a partner who unpairs ends it for both on the next read.
+    yield* router.add(
+      routes.getPair.method,
+      routes.getPair.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        return yield* respondPair(yield* pairing.pair(userId), { headers: noStore });
       }).pipe(respondPairingFailures),
     );
 

@@ -4,10 +4,12 @@ import type { CoinEntryId } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import type { CoinsResponse } from "@billet/contracts-http-api/coins";
+import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -23,6 +25,7 @@ import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
+import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -472,6 +475,20 @@ export class PairRoom extends DurableObject {
   /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
   buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
     return this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+  }
+
+  /** The pair's balance, inks, room pieces and wishlist. */
+  shop(): Promise<ShopResponse> {
+    return this.run((room) => room.state.pipe(Effect.map(shopOf)), "PairRoom.shop");
+  }
+
+  /** Buys one offer with the pair's coins. A repeated `id` answers with the first order. */
+  order(by: UserId, id: IdempotencyKey, offer: ShopOffer): Promise<RoomDecision> {
+    return this.run((room) => room.order(by, id, offer), "PairRoom.order");
+  }
+
+  setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
+    return this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
   }
 
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {

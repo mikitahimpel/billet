@@ -1,35 +1,32 @@
+import LinkPresentation
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct WishlistScreen: View {
     let state: HomeState
 
-    @State private var tab = 0
+    @State private var mine = true
     @State private var adding = false
     @State private var editing: WishItem?
-    @State private var loves = Loves()
-    @State private var lovesOwner = ""
-    @FocusState private var lovesFocus: LovesField?
-
-    private enum LovesField: Hashable {
-        case sizes, flowers, coffee, sweets, allergies
-    }
+    @State private var editingLoves = false
 
     private var us: UsStore { state.us }
     private var viewer: String { state.viewer }
     private var other: String { state.otherPartner }
-    private var owner: String { tab == 0 ? viewer : other }
+    private var otherName: String { state.profile.name(of: other) }
+    private var owner: String { mine ? viewer : other }
 
     var body: some View {
         VStack(spacing: 0) {
             UsSheetHeader(title: "Wishlists", subtitle: "Little hints for each other") {
-                if tab == 0 {
+                if mine {
                     UsAddButton { adding = true }
                 }
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     chips
-                    if tab == 0 { mineTab } else { partnerTab }
+                    if mine { mineTab } else { partnerTab }
                     giftedSection
                     lovesSection
                 }
@@ -46,41 +43,67 @@ struct WishlistScreen: View {
         .sheet(item: $editing) { wish in
             WishEditor(state: state, existing: wish)
         }
-        .onAppear(perform: loadLoves)
-        .onChange(of: state.viewer) { _, _ in loadLoves() }
-        .onChange(of: lovesFocus) { _, focused in
-            if focused == nil { saveLoves() }
+        .sheet(isPresented: $editingLoves) {
+            LovesEditor(state: state)
         }
     }
 
     private var chips: some View {
         HStack(spacing: 8) {
-            UsChip(title: "Mine", selected: tab == 0) {
-                withAnimation(.snappy(duration: 0.25)) { tab = 0 }
+            UsChip(title: String(localized: "Mine"), selected: mine) {
+                withAnimation(.snappy(duration: 0.25)) { mine = true }
             }
-            UsChip(title: "\(other)'s", selected: tab == 1) {
-                saveLoves()
-                withAnimation(.snappy(duration: 0.25)) { tab = 1 }
+            UsChip(title: String(localized: "\(otherName)'s"), selected: !mine) {
+                withAnimation(.snappy(duration: 0.25)) { mine = false }
             }
         }
     }
 
+    // MARK: Mine
+
     private var mineTab: some View {
         let wishes = us.wishes(of: viewer)
         return VStack(alignment: .leading, spacing: 12) {
+            if us.surpriseComing(for: viewer) {
+                Label("\(otherName) is planning a surprise 🤫", systemImage: "gift.fill")
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.accentText)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Ink.surfaceRaised, in: .capsule)
+            }
             if wishes.isEmpty {
                 UsEmpty(
                     icon: .init(symbol: "heart.fill", tint: .blush),
-                    title: "What would make you smile?",
-                    text: "Add things you'd love. \(other) can secretly pick one to gift you."
+                    title: String(localized: "What would make you smile?"),
+                    text: String(
+                        localized: "Paste a link or type a wish. \(otherName) can secretly pick one to gift you.")
                 )
             } else {
                 ForEach(wishes) { wish in
-                    mineCard(wish)
+                    Button { editing = wish } label: {
+                        WishCard(wish: wish)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            withAnimation(.snappy(duration: 0.25)) { us.markReceived(wish.id, by: viewer) }
+                        } label: {
+                            Label("Got it ♥", systemImage: "heart.fill")
+                        }
+                        Button(role: .destructive) {
+                            WishImage.remove(wish.id)
+                            withAnimation(.snappy(duration: 0.25)) { us.deleteWish(wish.id) }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
     }
+
+    // MARK: Partner
 
     private var partnerTab: some View {
         let wishes = us.wishes(of: other)
@@ -88,219 +111,344 @@ struct WishlistScreen: View {
             if wishes.isEmpty {
                 UsEmpty(
                     icon: .init(symbol: "gift.fill", tint: .coral),
-                    title: "No hints yet",
-                    text: "When \(other) adds wishes, you'll see them here."
+                    title: String(localized: "No hints yet"),
+                    text: String(localized: "When \(otherName) adds wishes, you'll see them here.")
                 )
             } else {
                 ForEach(wishes) { wish in
-                    partnerCard(wish)
+                    WishCard(wish: wish, linked: true) { giverRow(wish) }
                 }
+                Text("Your picks stay secret. \(otherName) only sees that a surprise is coming.")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textTertiary)
+                    .padding(.horizontal, 4)
             }
         }
     }
 
-    private func mineCard(_ wish: WishItem) -> some View {
-        cardBody(wish, showReserved: true)
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-            .onTapGesture { editing = wish }
-            .contextMenu {
-                if wish.reservedBy != nil {
-                    Button {
-                        withAnimation(.snappy(duration: 0.25)) { us.markReceived(wish.id) }
-                    } label: {
-                        Label("Got it! ♥", systemImage: "heart.fill")
-                    }
-                }
-                Button(role: .destructive) {
-                    withAnimation(.snappy(duration: 0.25)) { us.deleteWish(wish.id) }
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-            }
-            .accessibilityAddTraits(.isButton)
+    private func animate(_ change: () -> Void) {
+        withAnimation(.snappy(duration: 0.25), change)
     }
 
-    private func partnerCard(_ wish: WishItem) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            cardBody(wish, showReserved: false)
-            if wish.reservedBy == viewer {
-                HStack(spacing: 10) {
-                    Text("You're gifting this ✓")
-                        .font(.nookiCaption.weight(.semibold))
-                        .foregroundStyle(Ink.accentText)
-                    Spacer(minLength: 0)
-                    Button("Release") {
-                        withAnimation(.snappy(duration: 0.25)) { us.toggleReserve(wish.id, by: viewer) }
-                    }
+    @ViewBuilder
+    private func giverRow(_ wish: WishItem) -> some View {
+        switch us.plan(for: wish.id, viewer: viewer)?.stage {
+        case nil:
+            Button { animate { us.pick(wish.id, by: viewer) } } label: {
+                Label("I'll get this", systemImage: "gift.fill")
+                    .font(.nookiCallout.weight(.semibold))
+                    .foregroundStyle(Ink.heroInk)
+                    .padding(.horizontal, 16)
+                    .frame(height: 36)
+                    .background(Capsule().fill(.honeyGradient))
+            }
+            .buttonStyle(.plain)
+        case .planning?:
+            HStack(spacing: 10) {
+                Text("You're getting this 🤫")
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.accentText)
+                Spacer(minLength: 0)
+                Button("Release") { animate { us.release(wish.id, by: viewer) } }
                     .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(.plain)
-                }
-            } else {
-                Button {
-                    withAnimation(.snappy(duration: 0.25)) { us.toggleReserve(wish.id, by: viewer) }
-                } label: {
-                    Text("I'll gift this")
-                        .font(.nookiCallout.weight(.semibold))
+                Button { animate { us.setStage(.bought, of: wish.id, by: viewer) } } label: {
+                    Text("Bought it")
+                        .font(.nookiCaption.weight(.semibold))
                         .foregroundStyle(Ink.heroInk)
-                        .padding(.horizontal, 16)
-                        .frame(height: 36)
+                        .padding(.horizontal, 12)
+                        .frame(height: 30)
                         .background(Capsule().fill(.honeyGradient))
                 }
                 .buttonStyle(.plain)
             }
+        case .bought?:
+            HStack(spacing: 10) {
+                Label("Bought. Hide it well!", systemImage: "checkmark.circle.fill")
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.accentText)
+                Spacer(minLength: 0)
+                Button("Not yet") { animate { us.setStage(.planning, of: wish.id, by: viewer) } }
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.textSecondary)
+                    .buttonStyle(.plain)
+            }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
     }
 
-    private func cardBody(_ wish: WishItem, showReserved: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(wish.title)
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Spacer(minLength: 0)
-                Text(String(repeating: "♥", count: max(0, wish.want)))
-                    .font(.nookiCaption.weight(.semibold))
-                    .foregroundStyle(Color.blushPink)
-            }
-            if !wish.price.isEmpty {
-                Text(wish.price)
-                    .font(.nookiCaption.weight(.semibold))
-                    .foregroundStyle(Color.blushPink)
-            }
-            if let url = URL(string: wish.link), let host = url.host() {
-                Link(host, destination: url)
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.accentText)
-            }
-            if showReserved && wish.reservedBy != nil {
-                Label("Someone is planning something", systemImage: "gift.fill")
-                    .font(.nookiMicro)
-                    .foregroundStyle(Ink.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Ink.surfaceRaised, in: .capsule)
-                    .padding(.top, 2)
-            }
-        }
-    }
+    // MARK: Gifted
 
     @ViewBuilder
     private var giftedSection: some View {
         let items = us.gifted(to: owner)
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Gifted")
+                Text(mine ? "Got it ♥" : "Gifted to \(otherName)")
                     .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
                 ForEach(items) { wish in
-                    HStack(spacing: 10) {
-                        UsIcon(glyph: .init(symbol: "gift.fill", tint: .coral), size: 24)
-                        Text(wish.title)
-                            .font(.nookiCallout.weight(.semibold))
-                            .foregroundStyle(Ink.text)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        if let date = wish.gifted {
-                            Text(date, format: .dateTime.day().month())
-                                .font(.nookiMicro)
-                                .foregroundStyle(Ink.textSecondary)
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 11)
-                    .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+                    giftedRow(wish)
                 }
             }
         }
     }
 
-    private var lovesSection: some View {
-        let editable = owner == viewer
-        return VStack(alignment: .leading, spacing: 10) {
-            Text(owner == viewer ? "What I love" : "What \(other) loves")
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
-            VStack(spacing: 0) {
-                lovesRow(.init(symbol: "tshirt.fill", tint: .sky), "Sizes", .sizes, \.sizes, editable: editable)
-                lovesDivider
-                lovesRow(.init(symbol: "camera.macro", tint: .blush), "Flowers", .flowers, \.flowers, editable: editable)
-                lovesDivider
-                lovesRow(.init(symbol: "cup.and.saucer.fill", tint: .honey), "Coffee order", .coffee, \.coffee, editable: editable)
-                lovesDivider
-                lovesRow(.init(symbol: "birthday.cake.fill", tint: .coral), "Sweets", .sweets, \.sweets, editable: editable)
-                lovesDivider
-                lovesRow(.init(symbol: "exclamationmark.triangle.fill", tint: .sun), "Allergies", .allergies, \.allergies, editable: editable)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 4)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
-        }
-    }
-
-    private var lovesDivider: some View {
-        Rectangle()
-            .fill(Ink.separator)
-            .frame(height: 1)
-    }
-
-    private func lovesRow(
-        _ icon: UsGlyph,
-        _ label: String,
-        _ field: LovesField,
-        _ keyPath: WritableKeyPath<Loves, String>,
-        editable: Bool
-    ) -> some View {
+    private func giftedRow(_ wish: WishItem) -> some View {
         HStack(spacing: 10) {
-            UsIcon(glyph: icon, size: 26)
-            Text(label)
-                .font(.nookiCallout.weight(.semibold))
-                .foregroundStyle(Ink.textSecondary)
-                .frame(width: 100, alignment: .leading)
-            if editable {
-                TextField(
-                    "",
-                    text: Binding(
-                        get: { loves[keyPath: keyPath] },
-                        set: { loves[keyPath: keyPath] = $0 }
-                    ),
-                    prompt: Text("—").foregroundStyle(Ink.textTertiary)
-                )
-                .focused($lovesFocus, equals: field)
-                .onSubmit { saveLoves() }
-                .multilineTextAlignment(.trailing)
+            UsIcon(glyph: .init(symbol: "gift.fill", tint: .coral), size: 24)
+            Text(wish.title)
                 .font(.nookiCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
-            } else {
-                Text(us.loves(of: owner)[keyPath: keyPath].isEmpty ? "—" : us.loves(of: owner)[keyPath: keyPath])
-                    .font(.nookiCallout.weight(.semibold))
-                    .foregroundStyle(Ink.textSecondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 1) {
+                if let giver = wish.giftedBy {
+                    Text(giver == viewer ? "from you" : "from \(state.profile.name(of: giver))")
+                        .font(.nookiMicro.weight(.semibold))
+                        .foregroundStyle(Ink.accentText)
+                }
+                if let date = wish.gifted {
+                    Text(date, format: .dateTime.day().month())
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.textSecondary)
+                }
             }
         }
-        .frame(height: 42)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .contextMenu {
+            if mine {
+                Button {
+                    withAnimation(.snappy(duration: 0.25)) { us.unmarkReceived(wish.id, by: viewer) }
+                } label: {
+                    Label("Not received yet", systemImage: "arrow.uturn.backward")
+                }
+            }
+        }
     }
 
-    private func loadLoves() {
-        guard lovesOwner != viewer else { return }
-        loves = us.loves(of: viewer)
-        lovesOwner = viewer
-    }
+    // MARK: Loves
 
-    private func saveLoves() {
-        guard lovesOwner == viewer else { return }
-        withAnimation(.snappy(duration: 0.25)) { us.setLoves(loves, for: viewer) }
+    private var lovesSection: some View {
+        let loves = us.loves(of: owner)
+        let rows = LovesRow.all.filter { mine || !loves[keyPath: $0.keyPath].isEmpty }
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(mine ? "What I love" : "\(otherName)'s cheat sheet")
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Spacer(minLength: 0)
+                if mine {
+                    Button("Edit") { editingLoves = true }
+                        .font(.nookiCallout.weight(.semibold))
+                        .foregroundStyle(Ink.accentText)
+                        .buttonStyle(.plain)
+                }
+            }
+            if rows.isEmpty {
+                Text("\(otherName) hasn't filled this in yet.")
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(rows.enumerated()), id: \.element.label) { index, row in
+                        if index > 0 {
+                            Rectangle().fill(Ink.separator).frame(height: 1)
+                        }
+                        let value = loves[keyPath: row.keyPath]
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            UsIcon(glyph: row.icon, size: 26)
+                                .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+                            Text(row.label)
+                                .font(.nookiCallout.weight(.semibold))
+                                .foregroundStyle(Ink.textSecondary)
+                            Spacer(minLength: 12)
+                            Text(value.isEmpty ? "—" : value)
+                                .font(.nookiCallout.weight(.semibold))
+                                .foregroundStyle(value.isEmpty ? Ink.textTertiary : Ink.text)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .padding(.vertical, 10)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 2)
+                .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+                .contentShape(.rect)
+                .onTapGesture { if mine { editingLoves = true } }
+            }
+        }
     }
 }
 
+// MARK: - Card
+
+private struct WishCard<Actions: View>: View {
+    let wish: WishItem
+    var linked = false
+    @ViewBuilder var actions: Actions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                if let image = WishImage.load(wish.id) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 64, height: 64)
+                        .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+                        .accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    if wish.mostWanted {
+                        Label("Most wanted", systemImage: "star.fill")
+                            .font(.nookiMicro.weight(.semibold))
+                            .foregroundStyle(Color.blushPink)
+                    }
+                    Text(wish.title)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
+                        .multilineTextAlignment(.leading)
+                    meta
+                    if !wish.note.isEmpty {
+                        Text(wish.note)
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
+                            .lineLimit(3)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            actions
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var meta: some View {
+        let url = URL(string: wish.link)
+        let host = url?.host()?.replacing(/^www\./, with: "")
+        if !wish.price.isEmpty || host != nil {
+            HStack(spacing: 6) {
+                if !wish.price.isEmpty {
+                    Text(wish.price)
+                        .foregroundStyle(Color.blushPink)
+                }
+                if let url, let host {
+                    if !wish.price.isEmpty { Text("·").foregroundStyle(Ink.textTertiary) }
+                    if linked {
+                        Link(destination: url) {
+                            Label(host, systemImage: "arrow.up.right")
+                                .labelStyle(TrailingIcon())
+                        }
+                        .foregroundStyle(Ink.accentText)
+                    } else {
+                        Text(host).foregroundStyle(Ink.textSecondary)
+                    }
+                }
+            }
+            .font(.nookiCaption.weight(.semibold))
+            .lineLimit(1)
+        }
+    }
+}
+
+extension WishCard where Actions == EmptyView {
+    init(wish: WishItem) {
+        self.init(wish: wish) { EmptyView() }
+    }
+}
+
+private struct TrailingIcon: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 3) {
+            configuration.title
+            configuration.icon.imageScale(.small)
+        }
+    }
+}
+
+// MARK: - Loves
+
+private struct LovesRow {
+    let icon: UsGlyph
+    let label: String
+    let keyPath: WritableKeyPath<Loves, String>
+    let example: String
+
+    static let all: [LovesRow] = [
+        .init(icon: .init(symbol: "tshirt.fill", tint: .sky), label: String(localized: "Sizes"), keyPath: \.sizes,
+              example: String(localized: "S, jeans 26, shoes 38")),
+        .init(icon: .init(symbol: "camera.macro", tint: .blush), label: String(localized: "Flowers"),
+              keyPath: \.flowers,
+              example: String(localized: "Peonies, no lilies")),
+        .init(icon: .init(symbol: "cup.and.saucer.fill", tint: .honey), label: String(localized: "Coffee order"),
+              keyPath: \.coffee, example: String(localized: "Iced oat latte")),
+        .init(icon: .init(symbol: "birthday.cake.fill", tint: .coral), label: String(localized: "Sweets"),
+              keyPath: \.sweets,
+              example: String(localized: "Macarons, sour gummies")),
+        .init(icon: .init(symbol: "exclamationmark.triangle.fill", tint: .sun), label: String(localized: "Allergies"),
+              keyPath: \.allergies, example: String(localized: "Nuts, pollen")),
+        .init(icon: .init(symbol: "hand.raised.fill", tint: .lilac), label: String(localized: "Please don't"),
+              keyPath: \.avoid, example: String(localized: "Soft toys, anything yellow")),
+    ]
+}
+
+private struct LovesEditor: View {
+    let state: HomeState
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var loves = Loves()
+
+    var body: some View {
+        VStack(spacing: 0) {
+            UsSheetHeader(title: "What I love",
+                          subtitle: "So \(state.profile.name(of: state.otherPartner)) always gets it right")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(LovesRow.all, id: \.label) { row in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Label {
+                                Text(row.label)
+                            } icon: {
+                                UsIcon(glyph: row.icon, size: 22)
+                            }
+                            .font(.nookiCaption.weight(.semibold))
+                            .foregroundStyle(Ink.textSecondary)
+                            UsField(placeholder: row.example, text: $loves[dynamicMember: row.keyPath])
+                        }
+                    }
+                    UsPrimaryButton(title: String(localized: "Save")) {
+                        state.us.setLoves(loves, for: state.viewer)
+                        dismiss()
+                    }
+                    .padding(.top, 4)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 40)
+            }
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .usSheet()
+        .onAppear { loves = state.us.loves(of: state.viewer) }
+    }
+}
+
+// MARK: - Editor
+
 struct WishEditor: View {
+    private enum PictureChange { case keep, set(Data), remove }
+
     let state: HomeState
     let existing: WishItem?
 
@@ -308,7 +456,11 @@ struct WishEditor: View {
     @State private var title: String
     @State private var link: String
     @State private var price: String
-    @State private var want: Int
+    @State private var note: String
+    @State private var mostWanted: Bool
+    @State private var image: UIImage?
+    @State private var picture = PictureChange.keep
+    @State private var loadingPreview = false
 
     init(state: HomeState, existing: WishItem?) {
         self.state = state
@@ -316,73 +468,229 @@ struct WishEditor: View {
         _title = State(initialValue: existing?.title ?? "")
         _link = State(initialValue: existing?.link ?? "")
         _price = State(initialValue: existing?.price ?? "")
-        _want = State(initialValue: existing?.want ?? 2)
+        _note = State(initialValue: existing?.note ?? "")
+        _mostWanted = State(initialValue: existing?.mostWanted ?? false)
+        _image = State(initialValue: existing.flatMap { WishImage.load($0.id) })
     }
 
     private var trimmedTitle: String {
         title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var url: URL? {
+        let text = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: text), let scheme = url.scheme, ["http", "https"].contains(scheme),
+              url.host() != nil else { return nil }
+        return url
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             UsSheetHeader(
                 title: existing == nil ? "New wish" : "Edit wish",
-                subtitle: "Only you know what you'd love"
+                subtitle: "Paste a link and we'll fill in the rest"
             )
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    UsField(placeholder: "What would you love?", text: $title)
-                    UsField(placeholder: "Link (optional)", text: $link)
-                    UsField(placeholder: "Price (optional)", text: $price)
-                    heartsPicker
-                    UsPrimaryButton(title: "Save") { save() }
+                    linkRow
+                    if image != nil || loadingPreview { preview }
+                    UsField(placeholder: String(localized: "What would you love?"), text: $title)
+                    UsField(placeholder: String(localized: "Price (optional)"), text: $price)
+                    UsField(placeholder: String(localized: "Colour, size, details (optional)"), text: $note)
+                    mostWantedToggle
+                    UsPrimaryButton(title: String(localized: "Save")) { save() }
                         .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                         .disabled(trimmedTitle.isEmpty)
                         .padding(.top, 4)
+                    if let existing { existingActions(existing) }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .usSheet(detents: [.medium, .large])
+        .usSheet(detents: [.large])
+        .task(id: link) { await fetchPreview() }
     }
 
-    private var heartsPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("How much do you want it?")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textSecondary)
-            HStack(spacing: 12) {
-                ForEach(1...3, id: \.self) { value in
-                    Button {
-                        withAnimation(.snappy(duration: 0.2)) { want = value }
-                    } label: {
-                        Image(systemName: value <= want ? "heart.fill" : "heart")
-                            .font(.system(size: 26, weight: .semibold))
-                            .foregroundStyle(value <= want ? Color.blushPink : Ink.textTertiary)
+    private var linkRow: some View {
+        HStack(spacing: 10) {
+            UsField(placeholder: String(localized: "Link (optional)"), text: $link)
+                .keyboardType(.URL)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            PasteButton(payloadType: URL.self) { urls in
+                guard let pasted = urls.first else { return }
+                Task { @MainActor in link = pasted.absoluteString }
+            }
+            .labelStyle(.iconOnly)
+            .buttonBorderShape(.capsule)
+            .tint(.honey)
+        }
+    }
+
+    private var preview: some View {
+        ZStack {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Ink.surfaceRaised
+                ProgressView()
+            }
+        }
+        .frame(height: 160)
+        .frame(maxWidth: .infinity)
+        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            if image != nil {
+                Button {
+                    withAnimation(.snappy(duration: 0.2)) {
+                        image = nil
+                        picture = .remove
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(value) hearts")
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(.black.opacity(0.45), in: .circle)
                 }
+                .buttonStyle(.plain)
+                .padding(8)
+                .accessibilityLabel("Remove picture")
+            }
+        }
+    }
+
+    private var mostWantedToggle: some View {
+        Toggle(isOn: $mostWanted.animation(.snappy(duration: 0.2))) {
+            Label {
+                Text("Most wanted")
+                    .font(.nookiCallout.weight(.semibold))
+                    .foregroundStyle(Ink.text)
+            } icon: {
+                Image(systemName: mostWanted ? "star.fill" : "star")
+                    .foregroundStyle(mostWanted ? Color.blushPink : Ink.textTertiary)
+            }
+        }
+        .tint(.blushPink)
+        .padding(.horizontal, Space.l)
+        .frame(minHeight: 50)
+        .usCard(radius: Radius.control)
+    }
+
+    private func existingActions(_ wish: WishItem) -> some View {
+        HStack {
+            Button {
+                withAnimation(.snappy(duration: 0.25)) { state.us.markReceived(wish.id, by: state.viewer) }
+                dismiss()
+            } label: {
+                Label("Got it ♥", systemImage: "heart.fill")
+            }
+            .foregroundStyle(Ink.accentText)
+            Spacer()
+            Button(role: .destructive) {
+                WishImage.remove(wish.id)
+                withAnimation(.snappy(duration: 0.25)) { state.us.deleteWish(wish.id) }
+                dismiss()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            .foregroundStyle(Color.red.opacity(0.85))
+        }
+        .font(.nookiCallout.weight(.semibold))
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+        .padding(.top, 6)
+    }
+
+    /// Waits for typing to settle, then asks the page for its title and picture. Only fills what is still empty.
+    private func fetchPreview() async {
+        guard let url, url.absoluteString != existing?.link else { return }
+        try? await Task.sleep(for: .milliseconds(600))
+        guard !Task.isCancelled else { return }
+        loadingPreview = image == nil
+        defer { loadingPreview = false }
+        guard let preview = await LinkPreview.fetch(url), !Task.isCancelled else { return }
+        withAnimation(.snappy(duration: 0.25)) {
+            if trimmedTitle.isEmpty, let fetched = preview.title { title = fetched }
+            if image == nil, let data = preview.image, let fetched = UIImage(data: data) {
+                image = fetched
+                picture = .set(data)
             }
         }
     }
 
     private func save() {
         guard !trimmedTitle.isEmpty else { return }
-        withAnimation(.snappy(duration: 0.25)) {
-            state.us.upsertWish(WishItem(
-                id: existing?.id ?? UUID(),
-                owner: state.viewer,
-                title: trimmedTitle,
-                link: link.trimmingCharacters(in: .whitespacesAndNewlines),
-                price: price.trimmingCharacters(in: .whitespacesAndNewlines),
-                want: want,
-                reservedBy: existing?.reservedBy
-            ))
+        var wish = existing ?? WishItem(owner: state.viewer, title: trimmedTitle)
+        wish.title = trimmedTitle
+        wish.link = link.trimmingCharacters(in: .whitespacesAndNewlines)
+        wish.price = price.trimmingCharacters(in: .whitespacesAndNewlines)
+        wish.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        wish.mostWanted = mostWanted
+        switch picture {
+        case .keep: break
+        case .set(let data): WishImage.save(data, for: wish.id)
+        case .remove: WishImage.remove(wish.id)
         }
+        withAnimation(.snappy(duration: 0.25)) { state.us.upsertWish(wish) }
         dismiss()
+    }
+}
+
+// MARK: - Pictures
+
+/// A wish's picture, a small JPEG next to the Us store. Local like the rest of the Us tab.
+enum WishImage {
+    private static func url(_ id: UUID) -> URL { SharedFile.url("Us/Wishes/\(id.uuidString).jpg") }
+
+    static func load(_ id: UUID) -> UIImage? { UIImage(contentsOfFile: url(id).path()) }
+
+    static func save(_ data: Data, for id: UUID) {
+        let target = url(id)
+        let folder = target.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try? data.write(to: target, options: .atomic)
+    }
+
+    static func remove(_ id: UUID) { try? FileManager.default.removeItem(at: url(id)) }
+}
+
+enum LinkPreview {
+    struct Result {
+        var title: String?
+        /// JPEG, at most 600 points on its longer side.
+        var image: Data?
+    }
+
+    /// Nil when the page can't be reached within 8 seconds.
+    static func fetch(_ url: URL) async -> Result? {
+        let provider = LPMetadataProvider()
+        provider.timeout = 8
+        guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return nil }
+        var result = Result(title: metadata.title?.trimmingCharacters(in: .whitespacesAndNewlines))
+        if let item = metadata.imageProvider,
+           let data = await imageData(item),
+           let full = UIImage(data: data),
+           let small = await full.byPreparingThumbnail(ofSize: fit(full.size, in: 600)) {
+            result.image = small.jpegData(compressionQuality: 0.8)
+        }
+        return result
+    }
+
+    private static func imageData(_ item: NSItemProvider) async -> Data? {
+        await withCheckedContinuation { done in
+            _ = item.loadDataRepresentation(for: .image) { data, _ in done.resume(returning: data) }
+        }
+    }
+
+    private static func fit(_ size: CGSize, in side: CGFloat) -> CGSize {
+        let scale = min(1, side / max(size.width, size.height, 1))
+        return CGSize(width: size.width * scale, height: size.height * scale)
     }
 }
