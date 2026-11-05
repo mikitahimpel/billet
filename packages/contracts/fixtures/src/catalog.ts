@@ -44,7 +44,7 @@ import {
   EarnResponse,
 } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
-import { PairResponse } from "@billet/contracts-http-api/pair";
+import { DemoPartnerResponse, PairResponse } from "@billet/contracts-http-api/pair";
 import {
   ClaimBonusRequest,
   ClaimBonusResponse,
@@ -810,6 +810,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     unwished: { item: tower, wished: false },
   }),
   fixture("PairResponse", PairResponse, { default: { pairId, members: [alice, bob] } }),
+  fixture("DemoPartnerResponse", DemoPartnerResponse, {
+    default: { paired: true },
+    unpaired: { paired: false },
+  }),
   // A JWS's shape only: never signed by anyone.
   fixture("PurchaseRequest", PurchaseRequest, {
     default: {

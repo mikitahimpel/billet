@@ -150,6 +150,16 @@ describe("DemoPartnerService", () => {
     expect(await tagOf((_, pairing) => pairing.pair(ana))).toBe("NotPaired");
   });
 
+  it("says whether the caller is paired with their bot", async () => {
+    const { run } = setup();
+    expect(await run((demo) => demo.status(ana))).toEqual({ paired: false });
+    await run((demo) => demo.create(ana));
+    expect(await run((demo) => demo.status(ana))).toEqual({ paired: true });
+    // Left another way: the bot is still there, but no longer the partner.
+    await run((_, pairing) => pairing.unpair(ana));
+    expect(await run((demo) => demo.status(ana))).toEqual({ paired: false });
+  });
+
   it("answers NoDemoPartner to a caller without a bot", async () => {
     const { tagOf } = setup();
     expect(await tagOf((demo) => demo.remove(ana))).toBe("NoDemoPartner");

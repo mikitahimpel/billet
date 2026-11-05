@@ -101,6 +101,11 @@ export const routes = {
    * as `getPair` does. Elsewhere a 404.
    */
   createDemoPartner: route("POST", "/v1/dev/demo-partner"),
+  /**
+   * The dev stage only: whether the caller is paired with their bot. Elsewhere a 404, which is how
+   * the app knows there are no dev tools.
+   */
+  getDemoPartner: route("GET", "/v1/dev/demo-partner"),
   /** The dev stage only: unpairs the caller from their bot and deletes it. Elsewhere a 404. */
   removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
   /** The pair's bought coins: the balance and every ledger entry. */

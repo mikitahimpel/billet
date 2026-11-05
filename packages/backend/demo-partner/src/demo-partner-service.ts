@@ -5,7 +5,7 @@ import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 import { AlreadyPaired } from "@billet/backend-pairing/pairing-error";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { UserId } from "@billet/contracts-domain/ids";
-import type { PairResponse } from "@billet/contracts-http-api/pair";
+import type { DemoPartnerResponse, PairResponse } from "@billet/contracts-http-api/pair";
 import { DemoPartnerUnavailable, NoDemoPartner } from "./demo-partner-error.ts";
 import { DemoBots } from "./demo-bots.ts";
 import { DemoPartnerRepository } from "./demo-partner-repository.ts";
@@ -29,6 +29,10 @@ export class DemoPartnerService extends Context.Service<
     readonly create: (
       ownerId: UserId,
     ) => Effect.Effect<PairResponse, AlreadyPaired | DemoPartnerUnavailable>;
+    /** Whether the caller is paired with their bot. */
+    readonly status: (
+      ownerId: UserId,
+    ) => Effect.Effect<DemoPartnerResponse, DemoPartnerUnavailable>;
     /** Unpairs the caller from their bot if they are paired with it, then deletes the bot. */
     readonly remove: (
       ownerId: UserId,
@@ -106,7 +110,16 @@ export class DemoPartnerService extends Context.Service<
         yield* erase(bot.value);
       });
 
-      return DemoPartnerService.of({ create, remove });
+      const status = Effect.fn("DemoPartnerService.status")(function* (
+        ownerId: UserId,
+      ): Effect.fn.Return<DemoPartnerResponse, DemoPartnerUnavailable> {
+        const bot = yield* repository.botOf(ownerId);
+        if (Option.isNone(bot)) return { paired: false };
+        const pair = yield* pairOf(ownerId);
+        return { paired: Option.isSome(pair) && pair.value.members[1] === bot.value };
+      });
+
+      return DemoPartnerService.of({ create, status, remove });
     }),
   );
 }

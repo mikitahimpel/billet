@@ -68,6 +68,8 @@ public enum Routes {
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")
   /// Dev server only: pairs the signed-in, unpaired caller with a bot partner.
   public static let createDemoPartner = Route(.post, "/v1/dev/demo-partner")
+  /// Dev server only: whether the caller is paired with their bot partner. A 404 means no dev tools.
+  public static let getDemoPartner = Route(.get, "/v1/dev/demo-partner")
   /// Dev server only: unpairs the caller from their bot partner and deletes it.
   public static let removeDemoPartner = Route(.delete, "/v1/dev/demo-partner")
   public static let getPurchases = Route(.get, "/v1/purchases")

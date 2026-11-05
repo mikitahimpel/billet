@@ -1204,7 +1204,12 @@ describe("routes from the contracts", () => {
   const concrete = (path: string) => (path.endsWith("*") ? mediaPath("pairs/p/notes/n.png") : path);
 
   // These exist only on the dev stage; the payments and demo partner tests check the others.
-  const devOnly = new Set(["mockPurchase", "createDemoPartner", "removeDemoPartner"]);
+  const devOnly = new Set([
+    "mockPurchase",
+    "createDemoPartner",
+    "getDemoPartner",
+    "removeDemoPartner",
+  ]);
   const onDev = (method: string, path: string) =>
     atStage("dev", new Request(`https://billet.test${path}`, { method }));
 
@@ -1240,6 +1245,10 @@ describe("demo partners in the Worker", () => {
     const pair = Schema.decodeUnknownSync(PairResponse)(await created.json());
     const [callerId, botId] = pair.members;
 
+    const status = await demoPartner("dev", "GET", caller);
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({ paired: true });
+
     const read = await pairFor(caller);
     expect(read.status).toBe(200);
     expect(Schema.decodeUnknownSync(PairResponse)(await read.json())).toEqual(pair);
@@ -1261,6 +1270,7 @@ describe("demo partners in the Worker", () => {
     const removed = await demoPartner("dev", "DELETE", caller);
     expect(removed.status).toBe(204);
     expect((await pairFor(caller)).status).toBe(404);
+    expect(await (await demoPartner("dev", "GET", caller)).json()).toEqual({ paired: false });
     const left = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(botId).all();
     expect(left.results).toEqual([]);
     expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
@@ -1342,6 +1352,7 @@ describe("demo partners in the Worker", () => {
     const caller = await signedInAs("subject-demo");
     expect((await demoPartner(stage, "POST", caller)).status).toBe(404);
     expect((await demoPartner(stage, "DELETE", caller)).status).toBe(404);
+    expect((await demoPartner(stage, "GET", caller)).status).toBe(404);
     expect((await pairFor(caller)).status).toBe(404);
     expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
       results: [],

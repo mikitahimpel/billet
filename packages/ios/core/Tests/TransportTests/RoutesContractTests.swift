@@ -72,6 +72,7 @@ import Testing
       "purchase": Routes.purchase,
       "mockPurchase": Routes.mockPurchase,
       "createDemoPartner": Routes.createDemoPartner,
+      "getDemoPartner": Routes.getDemoPartner,
       "removeDemoPartner": Routes.removeDemoPartner,
       "getPurchases": Routes.getPurchases,
       "appStoreNotifications": Routes.appStoreNotifications,

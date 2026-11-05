@@ -8,3 +8,7 @@ export const PairResponse = Schema.Struct({
   members: Schema.Tuple([UserId, UserId]),
 });
 export type PairResponse = typeof PairResponse.Type;
+
+/** `GET /v1/dev/demo-partner`, the dev stage only: whether the caller is paired with their bot. */
+export const DemoPartnerResponse = Schema.Struct({ paired: Schema.Boolean });
+export type DemoPartnerResponse = typeof DemoPartnerResponse.Type;
