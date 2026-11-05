@@ -90,7 +90,7 @@ final class HomeState {
     var room: RoomKind = .home
     /// The mini-game being played in the room, if any.
     var game: MiniGame?
-    var showsSettings = false
+    var showsProfile = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
     var invitedCode: String?

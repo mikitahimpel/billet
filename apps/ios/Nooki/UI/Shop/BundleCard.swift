@@ -42,7 +42,7 @@ struct BundleCard: View {
                     .foregroundStyle(Ink.text)
                 if let quote, quote.sum > quote.price {
                     ShopTag(text: "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
-                            fill: .blushPink)
+                            fill: ShopInk.coral)
                 }
             }
             Text(bundle.blurb)
@@ -65,10 +65,11 @@ struct BundleCard: View {
                 Button { open(item) } label: {
                     RarityFrame(rarity: item.rarity) {
                         if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
-                            Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+                            Lifted { Image(uiImage: image).resizable().scaledToFit() }
+                                .padding(Space.s)
                         }
                     }
-                    .frame(width: 60, height: 60)
+                    .frame(width: 72, height: 72)
                     .overlay(alignment: .bottomTrailing) {
                         if state.shop.owned.contains(item.id) { OwnedCheck().offset(x: 4, y: 4) }
                     }

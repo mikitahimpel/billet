@@ -11,6 +11,8 @@ final class CatCare {
     var petPulse = 0
     /// Treats given since launch.
     private(set) var treatsGiven = 0
+    /// Pets given in the app, not from the widgets; each may reach the pair's journal.
+    private(set) var petsGiven = 0
 
     init(wallet: WalletStore, streak: StreakStore) {
         self.wallet = wallet
@@ -21,6 +23,7 @@ final class CatCare {
     var progress: Double { wallet.wallet.progress }
 
     func pet() {
+        petsGiven += 1
         petPulse += 1
         fill(0.03)
         streak.record()

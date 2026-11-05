@@ -19,7 +19,7 @@ struct InkSync {
     func settle(_ purchase: Purchase, _ state: ShopModel) async {
         guard purchase.kind == .ink else { return }
         try? await Task.sleep(for: undoWindow)
-        for id in purchase.added where state.shop.owned.contains(id) {
+        for id in purchase.added where state.owned.contains(id) {
             let request = BuyRequest(id: IdempotencyKey("\(purchase.id.uuidString)-\(id)"), item: InkId(id))
             do throws(TransportError) {
                 state.apply(try await send(request))

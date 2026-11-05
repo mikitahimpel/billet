@@ -14,8 +14,13 @@ struct HomeView: View {
     /// The corkboard room behind the Moments tab, built on first use and kept.
     @State private var board: BoardRoomScene?
     @State private var showcase: String?
+    @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
+    /// The screen as the World last showed it, held up on the way back until the room draws again.
+    @State private var worldSnapshot: UIView?
+    /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
+    @State private var roomLive = true
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -56,6 +61,14 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
 
+            // A new RealityView takes a moment to draw its first frame; the last one shows meanwhile.
+            if state.tab == .world, !roomLive, let worldSnapshot {
+                SnapshotView(view: worldSnapshot)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+
             Group {
                 switch state.tab {
                 case .shop:
@@ -77,9 +90,14 @@ struct HomeView: View {
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
             .bars(fades: !showsRoom) {
-                AppHeader(state: state)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
+                AppHeader(state: state) {
+                    scene?.stop()
+                    HomeState.eraseAll()
+                    state = HomeState(stores: .live())
+                    Task { await followPair() }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
             } bottom: {
                 TabBar(state: state)
                     .padding(.horizontal, 16)
@@ -162,6 +180,25 @@ struct HomeView: View {
         .onChange(of: state.rooms.variant) { _, variant in
             if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
         }
+        .onChange(of: state.tab) { old, new in
+            // The room view goes with the World (see above): keep what it showed, to show again on the way back.
+            if old == .world, !showsRoom {
+                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+            }
+            if new == .world, let scene, worldSnapshot != nil {
+                roomLive = false
+                let start = scene.frame
+                Task {
+                    let deadline = ContinuousClock.now + .seconds(2)
+                    while scene.frame == start, ContinuousClock.now < deadline {
+                        try? await Task.sleep(for: .milliseconds(8))
+                    }
+                    withAnimation(.easeOut(duration: 0.2)) { roomLive = true }
+                    try? await Task.sleep(for: .milliseconds(250))
+                    if roomLive { worldSnapshot = nil }
+                }
+            }
+        }
         .onChange(of: state.tab) { _, tab in
             NookiPerf.tabShown(tab)
             if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
@@ -172,6 +209,12 @@ struct HomeView: View {
             hints.done(PetHint())
         }
         .onChange(of: state.care.treatsGiven) { hints.done(TreatHint()) }
+        // A run of pets is one in the pair's journal and Inbox: one every 10 minutes at most.
+        .onChange(of: state.care.petsGiven) {
+            guard let session, Date.now.timeIntervalSince(petSentAt) > 600 else { return }
+            petSentAt = .now
+            Task { await session.catEvents.send([.petted]) }
+        }
         .onChange(of: state.tab, initial: true) { visitHints() }
         .onChange(of: state.shop.lastPurchase) { _, purchase in
             // A synced shop has sent the order already.
@@ -190,11 +233,12 @@ struct HomeView: View {
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
+                    await textSync?.receive()
                     await state.shop.refresh()
                     await inkSync?.refresh(state.shop)
                 }
                 session?.reactions?.refresh()
-                session?.followInbox(true, photos: photoSync)
+                session?.followInbox(true, photos: photoSync, texts: textSync)
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -203,16 +247,6 @@ struct HomeView: View {
                 reportedRooms = []
             default: break
             }
-        }
-        .sheet(isPresented: $state.showsSettings) {
-            SettingsView(state: state) {
-                scene?.stop()
-                HomeState.eraseAll()
-                state = HomeState(stores: .live())
-                Task { await followPair() }
-            }
-            .presentationBackground(Ink.sheet)
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
@@ -225,6 +259,10 @@ struct HomeView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Ink.sheet)
                 .presentationDragIndicator(.visible)
+            } else {
+                InboxSignedOut(petName: state.petName)
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(item: $state.openedShopItem) { item in
@@ -239,6 +277,7 @@ struct HomeView: View {
         .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
+        .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
@@ -308,6 +347,11 @@ struct HomeView: View {
     /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
     private static let noRoom = UserDefaults.standard.bool(forKey: "uitestNoRoom")
 
+    private static var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows).first(where: \.isKeyWindow)
+    }
+
     private var scene: CatRoom? {
         guard let home else { return nil }
         if showsBoard, let board { return board }
@@ -349,7 +393,7 @@ struct HomeView: View {
             case .shop: .shop
             case .us: .other
             }
-            let sheet = state.composingNote != nil || state.drawing || state.showsSettings || state.showsInbox
+            let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
                 || state.openedShopItem != nil
             let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
             return HintContext(
@@ -365,6 +409,10 @@ struct HomeView: View {
 
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
+    }
+
+    private var textSync: TextNoteSync? {
+        session?.textSync(notes: state.notes, partner: state.otherPartner)
     }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
@@ -440,6 +488,22 @@ private struct PlayAllButton: View {
         .disabled(showcase != nil)
         .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
     }
+}
+
+/// A snapshot from `UIView.snapshotView(afterScreenUpdates:)`, filling the view it is put in.
+private struct SnapshotView: UIViewRepresentable {
+    let view: UIView
+
+    func makeUIView(context: Context) -> UIView {
+        let holder = UIView()
+        holder.isUserInteractionEnabled = false
+        view.frame = holder.bounds
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        holder.addSubview(view)
+        return holder
+    }
+
+    func updateUIView(_ holder: UIView, context: Context) {}
 }
 
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.

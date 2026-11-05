@@ -96,6 +96,32 @@ struct InboxView: View {
     }
 }
 
+/// The Inbox on a phone that isn't connected to the server: nothing can arrive yet, and that is all it says.
+struct InboxSignedOut: View {
+    let petName: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView(
+                "Nothing here yet", systemImage: "tray",
+                description: Text("Once you're connected and your partner joins, what you both do with \(petName) "
+                                  + "shows up here."))
+                .background(Ink.sheet)
+                .navigationTitle("Inbox")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                            .fontWeight(.semibold)
+                    }
+                }
+        }
+        .tint(.honey)
+        .preferredColorScheme(.dark)
+    }
+}
+
 /// One row: who did it, what, and when.
 private struct InboxRow: View {
     let item: ActivityItem

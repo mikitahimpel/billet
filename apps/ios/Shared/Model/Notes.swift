@@ -29,11 +29,16 @@ nonisolated struct Note: Identifiable, Codable, Hashable {
     var paper: Paper
     /// The text's ink, 0xRRGGBB; nil on notes written before inks, which keep the old brown.
     var ink: UInt32? = nil
+    /// The server's id once the note is on it; nil for notes kept on this phone only.
+    var noteID: String? = nil
+    /// True while a text note written here still has to reach the partner.
+    var unsent: Bool? = nil
 
     var inkHex: UInt32 { ink ?? 0x5B3A28 }
 }
 
-/// Local-only notes store; the JSON index and doodle PNGs live in the app group's Notes folder.
+/// The couple's notes on this phone; the JSON index and doodle PNGs live in the app group's Notes folder. Text notes
+/// also go to the partner (see `TextNoteSync`); doodles stay here.
 @Observable
 final class NoteStore {
     /// Longest note worth pinning on the board.
@@ -63,7 +68,7 @@ final class NoteStore {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         let note = Note(id: UUID(), author: author, date: .now, text: String(trimmed.prefix(Self.maxLength)),
-                        doodle: nil, paper: paper, ink: ink)
+                        doodle: nil, paper: paper, ink: ink, unsent: true)
         notes.insert(note, at: 0)
         save()
         return note
@@ -88,6 +93,29 @@ final class NoteStore {
     func delete(_ note: Note) {
         notes.removeAll { $0.id == note.id }
         if let url = Self.doodleURL(for: note) { try? FileManager.default.removeItem(at: url) }
+        save()
+    }
+
+    /// Text notes written here that the partner doesn't have yet, oldest first.
+    var unsent: [Note] { notes.filter { $0.unsent == true }.reversed() }
+
+    func contains(noteID: String) -> Bool { notes.contains { $0.noteID == noteID } }
+
+    func note(noteID: String) -> Note? { notes.first { $0.noteID == noteID } }
+
+    func setSent(_ id: UUID, noteID: String) {
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+        notes[index].unsent = nil
+        notes[index].noteID = noteID
+        save()
+    }
+
+    /// The partner's text note from the server, in date order with the rest.
+    func addReceived(text: String, paper: Note.Paper, ink: UInt32?, author: String, date: Date, noteID: String) {
+        guard !contains(noteID: noteID) else { return }
+        let note = Note(id: UUID(), author: author, date: date, text: text, doodle: nil, paper: paper, ink: ink,
+                        noteID: noteID)
+        notes.insert(note, at: notes.firstIndex { $0.date < date } ?? notes.endIndex)
         save()
     }
 

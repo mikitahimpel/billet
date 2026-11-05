@@ -1,8 +1,9 @@
 import PhotosUI
 import SwiftUI
 
-/// The couple's profile: each partner's photo and name, who is holding the phone, and the day they got together.
-struct ProfileSheet: View {
+/// Editing the couple's profile: each partner's photo and name, who is holding the phone, and the day they got
+/// together. Pushed from the profile; Cancel goes back without saving.
+struct ProfileEditor: View {
     let profile: CoupleStore
     @Environment(\.dismiss) private var dismiss
     @State private var names: [String: String] = [:]
@@ -11,35 +12,32 @@ struct ProfileSheet: View {
     @State private var pick: PhotosPickerItem?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 14) {
-                    ForEach(profile.couple.partners, id: \.self) { partner in
-                        partnerCard(partner)
-                    }
-                    togetherCard
+        ScrollView {
+            VStack(spacing: 14) {
+                ForEach(profile.couple.partners, id: \.self) { partner in
+                    partnerCard(partner)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                togetherCard
             }
-            .scrollIndicators(.hidden)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+        }
+        .scrollIndicators(.hidden)
+        .navigationTitle("Edit profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    profile.update(names: names, togetherSince: since)
+                    dismiss()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        profile.update(names: names, togetherSince: since)
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
+                .fontWeight(.semibold)
             }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
         .onAppear {
             names = Dictionary(uniqueKeysWithValues: profile.couple.partners.map { ($0, profile.couple.names?[$0] ?? "") })
             since = profile.couple.togetherSince

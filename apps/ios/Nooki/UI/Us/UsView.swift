@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
-/// and the settings are in its header. Every card is a `usCard`, every icon a `UsIcon`.
+/// is in its header. Every card is a `usCard`, every icon a `UsIcon`.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -69,15 +69,6 @@ struct UsView: View {
             }
             .glass(.circle, interactive: true)
             .accessibilityLabel("Mood")
-            Button { state.showsSettings = true } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.primary)
-                    .frame(width: 40, height: 40)
-            }
-            .buttonStyle(.plain)
-            .glass(.circle, interactive: true)
-            .accessibilityLabel("Settings")
         }
         .frame(height: 44)
     }

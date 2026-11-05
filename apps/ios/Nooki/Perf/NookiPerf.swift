@@ -32,9 +32,21 @@ enum NookiPerf {
 
     /// `room` is on screen: the Room (`room on screen`) or the City (`city room on screen`), so a run that waits for
     /// "room on screen" finds either.
+    ///
+    /// The mark waits for the room's next update, so a room that has to start drawing again (coming back from another
+    /// tab) counts the wait for its first live frame.
     static func shown(_ room: CatRoom, kind: RoomKind) {
         guard ScenePerf.isOn else { return }
         ScenePerf.host.shotPrefix = kind == .city ? "city" : "world"
+        let start = room.frame
+        Task { @MainActor in
+            let deadline = ContinuousClock.now + .seconds(5)
+            while room.frame == start, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(2)) }
+            register(room, kind: kind)
+        }
+    }
+
+    private static func register(_ room: CatRoom, kind: RoomKind) {
         ScenePerf.shown(
             .init(
                 name: kind == .city ? "city room" : "room",
