@@ -6,6 +6,8 @@ import { AccountDeletion } from "@billet/backend-account/account-deletion";
 import { AccountRoutes } from "@billet/backend-account/account-routes";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
+import { DemoPartnerRoutes } from "@billet/backend-demo-partner/demo-partner-routes";
+import { DemoPartnerService } from "@billet/backend-demo-partner/demo-partner-service";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsRoutes } from "@billet/backend-flags/flags-routes";
 import { FlagsService } from "@billet/backend-flags/flags-service";
@@ -42,6 +44,7 @@ import { AccountNoticesLive, AccountRepositoryLive } from "./account-repository-
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AppleTokenRevokerLive, signInWithAppleKeyOf } from "./apple-token-revoker-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { DemoPartnerRepositoryLive } from "./demo-partner-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
@@ -59,10 +62,16 @@ import { type Now, systemNow } from "./wall-clock.ts";
 
 const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) => {
   // The stage decides which App Store environments count, and whether the dev extras (Xcode
-  // transactions, mock purchases, demo-room callers) exist at all.
-  const payments = PaymentsConfig.with(settingsForStage(env.STAGE));
+  // transactions, mock purchases, demo-room callers, demo partners) exist at all.
+  const settings = settingsForStage(env.STAGE);
+  const payments = PaymentsConfig.with(settings);
+  // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
+  const pairing = PairingService.layer.pipe(
+    Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
+  );
   return Layer.mergeAll(
     AuthRoutes,
+    settings.devTools ? DemoPartnerRoutes : Layer.empty,
     AccountRoutes,
     PairingRoutes,
     NotesRoutes,
@@ -78,9 +87,9 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
       Layer.mergeAll(
         AuthService.layer,
         AccountDeletion.layer,
-        // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
-        PairingService.layer.pipe(
-          Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
+        pairing,
+        DemoPartnerService.layer.pipe(
+          Layer.provide(Layer.mergeAll(pairing, AccountDeletion.layer)),
         ),
         NotesService.layer,
         ActivityService.layer,
@@ -102,6 +111,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         BetterAuthEngineLive(env.DB),
         AccountRepositoryLive(env.DB),
         AccountNoticesLive(env.DB),
+        DemoPartnerRepositoryLive(env.DB),
         AppleTokenRevokerLive(signInWithAppleKeyOf(env)),
         PairingRepositoryLive(env.DB),
         PaymentsRepositoryLive(env.DB),

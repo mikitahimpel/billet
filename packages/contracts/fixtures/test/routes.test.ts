@@ -43,6 +43,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/invites/claim",
       },
+      "createDemoPartner": {
+        "method": "POST",
+        "path": "/v1/dev/demo-partner",
+      },
       "createInvite": {
         "method": "POST",
         "path": "/v1/invites",
@@ -146,6 +150,10 @@ it("pins the routes that clients call", () => {
       "registerPushToken": {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
+      },
+      "removeDemoPartner": {
+        "method": "DELETE",
+        "path": "/v1/dev/demo-partner",
       },
       "reportEvents": {
         "method": "POST",

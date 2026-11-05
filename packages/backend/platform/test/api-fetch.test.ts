@@ -32,6 +32,7 @@ import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
+import { PairResponse } from "@billet/contracts-http-api/pair";
 import { resetDirectory } from "./directory-migrations.ts";
 import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
 import {
@@ -1198,22 +1199,111 @@ describe("routes from the contracts", () => {
     exports.default.fetch(new Request(`https://billet.test${path}`, { method }));
   const concrete = (path: string) => (path.endsWith("*") ? mediaPath("pairs/p/notes/n.png") : path);
 
-  // The mock purchase route exists only on the dev stage; the payments tests check the others.
+  // These exist only on the dev stage; the payments and demo partner tests check the others.
+  const devOnly = new Set(["mockPurchase", "createDemoPartner", "removeDemoPartner"]);
   const onDev = (method: string, path: string) =>
     atStage("dev", new Request(`https://billet.test${path}`, { method }));
 
   it.each(Object.entries(routes))("%s is served at its method and path", async (name, route) => {
     // Whatever the answer is, it is not "no such route".
-    const response =
-      name === "mockPurchase"
-        ? await onDev(route.method, route.path)
-        : await send(route.method, concrete(route.path));
+    const response = devOnly.has(name)
+      ? await onDev(route.method, route.path)
+      : await send(route.method, concrete(route.path));
     expect(response.status).not.toBe(404);
   });
 
   it.each(Object.entries(routes))("%s is is not served under another path", async (_, route) => {
     const moved = concrete(route.path).replace("/v1/", "/v1/moved/");
     expect((await send(route.method, moved)).status).toBe(404);
+  });
+});
+
+describe("demo partners in the Worker", () => {
+  const demoPartner = (stage: string | undefined, method: string, token: string) =>
+    atStage(
+      stage,
+      new Request(`https://billet.test${routes.createDemoPartner.path}`, {
+        method,
+        headers: bearer(token),
+      }),
+    );
+  const pairFor = (token: string) => call("/v1/pair", { method: "GET", headers: bearer(token) });
+
+  it("pairs the caller with a bot as a real pair forms, and deletes it again", async () => {
+    const caller = await signedInAs("subject-demo");
+    const created = await demoPartner("dev", "POST", caller);
+    expect(created.status).toBe(200);
+    const pair = Schema.decodeUnknownSync(PairResponse)(await created.json());
+    const [callerId, botId] = pair.members;
+
+    const read = await pairFor(caller);
+    expect(read.status).toBe(200);
+    expect(Schema.decodeUnknownSync(PairResponse)(await read.json())).toEqual(pair);
+    const claimed = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'PairClaimed' AND pair_id = ?",
+    )
+      .bind(pair.pairId)
+      .all<{ user_id: string }>();
+    expect(claimed.results.map(({ user_id }) => user_id).toSorted()).toEqual(
+      [callerId, botId].toSorted(),
+    );
+    const activity = await call("/v1/activity", { method: "GET", headers: bearer(caller) });
+    expect(await activity.text()).toContain("PartnerJoined");
+
+    const again = await demoPartner("dev", "POST", caller);
+    expect(again.status).toBe(409);
+    expect(await again.json()).toEqual({ _tag: "AlreadyPaired" });
+
+    const removed = await demoPartner("dev", "DELETE", caller);
+    expect(removed.status).toBe(204);
+    expect((await pairFor(caller)).status).toBe(404);
+    const left = await env.DB.prepare("SELECT id FROM users WHERE id = ?").bind(botId).all();
+    expect(left.results).toEqual([]);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+    // The caller ended it, so there is no "your partner deleted their account" for them.
+    const notices = await env.DB.prepare("SELECT * FROM partner_notices WHERE user_id = ?")
+      .bind(callerId)
+      .all();
+    expect(notices.results).toEqual([]);
+  });
+
+  it("refuses a caller who already has a partner", async () => {
+    const { owner } = await pairOf("subject-demo-a", "subject-demo-b");
+    const response = await demoPartner("dev", "POST", owner);
+    expect(response.status).toBe(409);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+  });
+
+  it("answers 404 to a delete with no demo partner, and keeps a real pair", async () => {
+    const { owner } = await pairOf("subject-demo-a", "subject-demo-b");
+    const response = await demoPartner("dev", "DELETE", owner);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ _tag: "NotFound" });
+    expect((await pairFor(owner)).status).toBe(200);
+  });
+
+  it("deletes the caller's demo partner row with the caller's account", async () => {
+    const caller = await signedInAs("subject-demo");
+    expect((await demoPartner("dev", "POST", caller)).status).toBe(200);
+    const deleted = await call("/v1/account", json({}, "DELETE", caller));
+    expect(deleted.status).toBe(204);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
+  });
+
+  it.each([["prod"], ["stage"], [undefined]])("has no demo partner routes on %s", async (stage) => {
+    const caller = await signedInAs("subject-demo");
+    expect((await demoPartner(stage, "POST", caller)).status).toBe(404);
+    expect((await demoPartner(stage, "DELETE", caller)).status).toBe(404);
+    expect((await pairFor(caller)).status).toBe(404);
+    expect(await env.DB.prepare("SELECT * FROM demo_partners").all()).toMatchObject({
+      results: [],
+    });
   });
 });
 

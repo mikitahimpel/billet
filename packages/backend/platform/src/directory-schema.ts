@@ -179,6 +179,19 @@ export const pairMembers = sqliteTable(
   (table) => [index("pair_members_pair_id_index").on(table.pairId)],
 );
 
+// The dev stage's demo partners: a bot user per owner, which pairs like anyone else but has no
+// device and never signs in. Deleting either user takes the row with it.
+export const demoPartners = sqliteTable("demo_partners", {
+  botId: text("bot_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  ownerId: text("owner_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const pushTokens = sqliteTable(
   "push_tokens",
   {
