@@ -52,7 +52,7 @@ targets:
       - package: BilletCore
         products: [Persistence, Transport]
       - package: BilletPet
-        products: [Pet]
+        products: [Pet, PetScene]
       - package: BilletFeatures
         products: [FeatureOnboarding, FeaturePairing]
     entitlements:

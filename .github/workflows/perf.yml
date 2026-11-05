@@ -8,8 +8,11 @@ name: iOS perf
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f rounds=4 -f jobs=ab
 #   gh pr edit <n> --add-label perf                               # the same for a pull request
 #   gh workflow run perf.yml --ref <branch> -f jobs=cost          # what each part of the room costs
-#   gh workflow run perf.yml --ref <branch> -f room=nookiCabin    # the same in the Nooki cabin
+#   gh workflow run perf.yml --ref <branch> -f room=city          # the same in the City room
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f jobs=steady  # Home left alone, A/B
+#
+# The runner's Simulator has no Apple7 GPU, so Mochi is drawn as the mesh cat, not the splats a phone
+# shows: the cat in these numbers and shots is not the shipped one. The room around her is.
 #
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
@@ -82,12 +85,10 @@ env:
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
   ab:
-    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
-    if: false
-    # was: >-
-    #  (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'ab' || inputs.jobs == 'all'))
-    #  || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
-    #  && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    if: >-
+      (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'ab' || inputs.jobs == 'all'))
+      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+      && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
     runs-on: xcode-27
     timeout-minutes: 90
     env:
@@ -165,13 +166,11 @@ jobs:
   shots:
     # After the A/B, whether it ran or not, so the run holds one runner at a time.
     needs: ab
-    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
-    if: false
-    # was: >-
-    #  !cancelled() && (
-    #  (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'shots' || inputs.jobs == 'all'))
-    #  || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
-    #  && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
+    if: >-
+      !cancelled() && (
+      (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'shots' || inputs.jobs == 'all'))
+      || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
+      && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
     runs-on: xcode-27
     timeout-minutes: 50
     strategy:
@@ -240,7 +239,7 @@ jobs:
     # What each part of the room costs to draw on a small and a large screen: one build, each part
     # switched off and back on in turn within a launch. After the other jobs, on one runner.
     needs: [ab, shots]
-    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
+    # Off: Nooki's rooms have no switches for a cost run to turn yet. ScenePerf.Scene.switches is where they go.
     if: false
     # was: >-
     #  !cancelled() && github.event_name == 'workflow_dispatch'
@@ -315,11 +314,9 @@ jobs:
     # room is stepped and drawn, and the process's CPU a second, the nearest a Simulator comes to
     # energy. After the other jobs, on one runner.
     needs: [ab, shots, cost]
-    # TODO: the perf scripts drive the archived v1 app; off until they measure the Nooki-based app.
-    if: false
-    # was: >-
-    #  !cancelled() && github.event_name == 'workflow_dispatch'
-    #  && (inputs.jobs == 'steady' || inputs.jobs == 'all')
+    if: >-
+      !cancelled() && github.event_name == 'workflow_dispatch'
+      && (inputs.jobs == 'steady' || inputs.jobs == 'all')
     runs-on: xcode-27
     timeout-minutes: 90
     strategy:
