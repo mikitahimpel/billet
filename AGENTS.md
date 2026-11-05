@@ -28,11 +28,15 @@ pnpm format:check                  # oxfmt: TS, JSON, YAML, HTML, CSS; not Markd
 pnpm alchemy dev                   # local backend (docs/alchemy.md)
 pnpm db:generate                   # Drizzle migrations
 pnpm ios:test                      # Swift packages (Mac)
+pnpm ios:build                     # Swift packages (Mac)
 pnpm turbo run ios:format:check    # swift-format, packages only
 pnpm turbo run ios:generate        # apps/ios/Billet.xcodeproj
 xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' CODE_SIGNING_ALLOWED=NO
+  -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO
 ```
+
+`<iPhone>`: any from `xcrun simctl list devices available`. Swift scripts are named `ios:*`, never
+`test` or `build`, so the TypeScript commands skip them on Linux.
 
 An app change is also checked by eye in a Simulator. The app reaches a server only when built
 with `BILLET_API_HOST`.
@@ -48,7 +52,7 @@ with `BILLET_API_HOST`.
 
 - `switch` over the project's own enums is exhaustive, no `default`.
 - Typed throws (`throws(PairingError)`).
-- Explicit dependencies. No singletons.
+- Explicit dependencies. No singletons or global containers.
 - Swift 6 strict concurrency.
 - `packages/`: `.swift-format`, 2 spaces, 100 columns. `apps/ios`: 4 spaces, up to 120, match
   the file.
