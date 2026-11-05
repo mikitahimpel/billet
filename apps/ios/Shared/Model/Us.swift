@@ -97,6 +97,8 @@ nonisolated struct UsList: Identifiable, Codable, Hashable {
 
 // MARK: - Wishlists
 
+/// What the owner wants. It carries nothing about who plans to gift it: that is the giver's `GiftPlan`, so the owner's
+/// copy can never spoil the surprise.
 nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var id = UUID()
     /// Whose wish it is.
@@ -104,11 +106,65 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var title: String
     var link = ""
     var price = ""
-    /// 1...3 hearts.
-    var want = 2
-    /// The partner who secretly promised to gift it. The owner only sees that someone did, never what.
-    var reservedBy: String?
+    /// Colour, size, model: whatever the giver needs to get the right one.
+    var note = ""
+    /// Pinned to the top of the list.
+    var mostWanted = false
+    var added = Date.now
+    /// When the owner said it arrived.
     var gifted: Date?
+    /// Who gave it, filled in when it arrives; until then only the giver knows.
+    var giftedBy: String?
+    /// The 20 coins for receiving it were paid, so taking "Got it" back and again pays nothing.
+    var rewarded = false
+    /// `reservedBy` from builds before gift plans; `UsStore` moves it into a plan on load and it is never written.
+    var legacyGiver: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id, owner, title, link, price, note, mostWanted, added, gifted, giftedBy, rewarded
+    }
+
+    private enum LegacyKeys: String, CodingKey { case want, reservedBy }
+
+    init(id: UUID = UUID(), owner: String, title: String, link: String = "", price: String = "", note: String = "",
+         mostWanted: Bool = false, added: Date = .now) {
+        self.id = id
+        self.owner = owner
+        self.title = title
+        self.link = link
+        self.price = price
+        self.note = note
+        self.mostWanted = mostWanted
+        self.added = added
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let legacy = try decoder.container(keyedBy: LegacyKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        owner = try c.decode(String.self, forKey: .owner)
+        title = try c.decode(String.self, forKey: .title)
+        link = try c.decodeIfPresent(String.self, forKey: .link) ?? ""
+        price = try c.decodeIfPresent(String.self, forKey: .price) ?? ""
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        // Three hearts was the top of the old scale.
+        mostWanted = try c.decodeIfPresent(Bool.self, forKey: .mostWanted)
+            ?? (try legacy.decodeIfPresent(Int.self, forKey: .want) == 3)
+        added = try c.decodeIfPresent(Date.self, forKey: .added) ?? .distantPast
+        gifted = try c.decodeIfPresent(Date.self, forKey: .gifted)
+        giftedBy = try c.decodeIfPresent(String.self, forKey: .giftedBy)
+        rewarded = try c.decodeIfPresent(Bool.self, forKey: .rewarded) ?? (gifted != nil)
+        legacyGiver = try legacy.decodeIfPresent(String.self, forKey: .reservedBy)
+    }
+}
+
+/// A partner's secret promise to gift one of the other's wishes. Only the giver ever reads it.
+nonisolated struct GiftPlan: Codable, Hashable {
+    enum Stage: String, Codable { case planning, bought }
+
+    var wishID: UUID
+    var giver: String
+    var stage = Stage.planning
 }
 
 /// "Forget-me-nots": what a partner likes, filled in by that partner.
@@ -118,6 +174,20 @@ nonisolated struct Loves: Codable, Hashable {
     var coffee = ""
     var sweets = ""
     var allergies = ""
+    /// "Please don't": gifts to avoid.
+    var avoid = ""
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sizes = try c.decodeIfPresent(String.self, forKey: .sizes) ?? ""
+        flowers = try c.decodeIfPresent(String.self, forKey: .flowers) ?? ""
+        coffee = try c.decodeIfPresent(String.self, forKey: .coffee) ?? ""
+        sweets = try c.decodeIfPresent(String.self, forKey: .sweets) ?? ""
+        allergies = try c.decodeIfPresent(String.self, forKey: .allergies) ?? ""
+        avoid = try c.decodeIfPresent(String.self, forKey: .avoid) ?? ""
+    }
 }
 
 // MARK: - Calendar
@@ -247,6 +317,9 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
 final class UsStore {
     private(set) var lists: [UsList] = []
     private(set) var wishes: [WishItem] = []
+    /// Each giver's secret picks. Kept apart from `wishes` so that, once the couple syncs, they stay on the giver's
+    /// phone.
+    private(set) var plans: [GiftPlan] = []
     private(set) var loves: [String: Loves] = [:]
     private(set) var events: [UsEvent] = []
     private(set) var planned: [PlannedDate] = []
@@ -265,6 +338,8 @@ final class UsStore {
         var events: [UsEvent]
         var planned: [PlannedDate]
         var swipes: [String: [Int: Bool]]
+        /// Missing in files from builds before gift plans.
+        var plans: [GiftPlan]?
     }
 
     init(wallet: WalletStore, file: String = "Us/us.json") {
@@ -282,6 +357,14 @@ final class UsStore {
             events = saved.events
             planned = saved.planned
             swipes = saved.swipes
+            plans = saved.plans ?? []
+            for i in wishes.indices {
+                guard let giver = wishes[i].legacyGiver else { continue }
+                wishes[i].legacyGiver = nil
+                if wishes[i].gifted == nil && !plans.contains(where: { $0.wishID == wishes[i].id }) {
+                    plans.append(GiftPlan(wishID: wishes[i].id, giver: giver))
+                }
+            }
         } else {
             // Starter lists are empty containers, not fake content.
             lists = [.watch, .groceries, .travel].map { UsList(kind: $0, title: $0.defaultTitle, icon: $0.icon) }
@@ -289,7 +372,8 @@ final class UsStore {
     }
 
     private func save() {
-        SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes),
+        SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
+                                  plans: plans),
                          to: file)
     }
 
@@ -354,8 +438,10 @@ final class UsStore {
 
     // MARK: Wishlists
 
+    /// Still wanted: most wanted first, then newest.
     func wishes(of owner: String) -> [WishItem] {
-        wishes.filter { $0.owner == owner && $0.gifted == nil }.sorted { $0.want > $1.want }
+        wishes.filter { $0.owner == owner && $0.gifted == nil }
+            .sorted { ($0.mostWanted ? 0 : 1, $1.added) < ($1.mostWanted ? 0 : 1, $0.added) }
     }
 
     func gifted(to owner: String) -> [WishItem] {
@@ -369,21 +455,59 @@ final class UsStore {
 
     func deleteWish(_ id: UUID) {
         wishes.removeAll { $0.id == id }
+        plans.removeAll { $0.wishID == id }
         save()
     }
 
-    /// Secret pick: the giver promises to gift it; calling again releases it.
-    func toggleReserve(_ id: UUID, by giver: String) {
-        guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner != giver else { return }
-        wishes[i].reservedBy = wishes[i].reservedBy == nil ? giver : nil
+    /// The viewer's own plan for this wish. Nobody else's plan is ever returned, so the owner gets nil for their own wishes.
+    func plan(for wishID: UUID, viewer: String) -> GiftPlan? {
+        plans.first { $0.wishID == wishID && $0.giver == viewer }
+    }
+
+    /// The owner may learn that a surprise is coming, never for which wish.
+    func surpriseComing(for owner: String) -> Bool {
+        let open = Set(wishes(of: owner).map(\.id))
+        return plans.contains { open.contains($0.wishID) && $0.giver != owner }
+    }
+
+    /// The giver secretly promises to gift it. One plan per wish; the owner can't plan their own.
+    func pick(_ id: UUID, by giver: String) {
+        guard let wish = wishes.first(where: { $0.id == id }), wish.owner != giver, wish.gifted == nil,
+              !plans.contains(where: { $0.wishID == id }) else { return }
+        plans.append(GiftPlan(wishID: id, giver: giver))
         save()
     }
 
-    /// The owner confirms the gift arrived: it moves to "Gifted" and the couple earns 20 coins.
-    func markReceived(_ id: UUID) {
-        guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].gifted == nil else { return }
+    func setStage(_ stage: GiftPlan.Stage, of id: UUID, by giver: String) {
+        guard let i = plans.firstIndex(where: { $0.wishID == id && $0.giver == giver }) else { return }
+        plans[i].stage = stage
+        save()
+    }
+
+    func release(_ id: UUID, by giver: String) {
+        plans.removeAll { $0.wishID == id && $0.giver == giver }
+        save()
+    }
+
+    /// Only the owner says it arrived: it moves to "Gifted", the giver's plan closes and the couple earns 20 coins once.
+    func markReceived(_ id: UUID, by owner: String) {
+        guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner, wishes[i].gifted == nil
+        else { return }
         wishes[i].gifted = .now
-        wallet.earn(20)
+        wishes[i].giftedBy = plans.first { $0.wishID == id }?.giver
+        plans.removeAll { $0.wishID == id }
+        if !wishes[i].rewarded {
+            wishes[i].rewarded = true
+            wallet.earn(20)
+        }
+        save()
+    }
+
+    /// Puts a wish marked by mistake back on the list. The coins stay paid.
+    func unmarkReceived(_ id: UUID, by owner: String) {
+        guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner else { return }
+        wishes[i].gifted = nil
+        wishes[i].giftedBy = nil
         save()
     }
 
