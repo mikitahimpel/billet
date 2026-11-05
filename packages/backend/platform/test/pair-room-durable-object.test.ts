@@ -347,6 +347,25 @@ describe("PairRoom close handling", () => {
 
     expect(await closed).toBe(1002);
   });
+
+  it("closes every open socket when the pair ends, and again harmlessly", async () => {
+    const room = await openRoom();
+    const sockets = await Promise.all([alice, bob].map((user) => connect(room, upgrade(user))));
+    const closed = sockets.map(
+      ({ webSocket }) =>
+        new Promise<string>((resolve) => {
+          webSocket?.addEventListener("close", (event) => {
+            resolve(`${event.code} ${event.reason}`);
+          });
+          webSocket?.accept();
+        }),
+    );
+
+    await room.endSessions();
+    await room.endSessions();
+
+    expect(await Promise.all(closed)).toEqual(["1000 pair ended", "1000 pair ended"]);
+  });
 });
 
 describe("PairRoom realtime across eviction", () => {
