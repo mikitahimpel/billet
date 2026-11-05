@@ -69,6 +69,8 @@ struct NookiSnapshot: Hashable {
     var isPurring: Bool
     var isNight: Bool
     var catName = CatProfile.defaultName
+    /// Her portrait in the coat picked in onboarding.
+    var catAvatar = "MochiPortrait"
 
     /// Rows a list shows at most, sized for the smallest widget.
     static let listRows = 3
@@ -106,6 +108,7 @@ extension NookiSnapshot {
         isPurring = activity.isPurring(at: date)
         isNight = Self.isNight(date)
         catName = CatProfile.name()
+        catAvatar = CatProfile.avatar()
 
         let today = cal.startOfDay(for: date)
         next = us.upcoming(togetherSince: couple.togetherSince, limit: 1, from: date).first.map {

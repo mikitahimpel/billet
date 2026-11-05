@@ -46,12 +46,12 @@ private struct AccessoryView: View {
         VStack(spacing: -1) {
             if entry.configuration.circular == .countdown, let next = s.next {
                 Image(systemName: next.icon.symbol).font(.system(size: 10, weight: .semibold))
-                Text("\(next.daysLeft)").font(.widget(20, .bold)).minimumScaleFactor(0.6)
-                Text(next.daysLeft == 1 ? "day" : "days").font(.widget(9, .medium))
+                Text("\(next.daysLeft)").font(.nookiTitle).minimumScaleFactor(0.6)
+                Text(next.daysLeft == 1 ? "day" : "days").font(.nookiMicro)
             } else {
                 Image(systemName: "heart.fill").font(.system(size: 10, weight: .semibold))
-                Text("\(s.daysTogether)").font(.widget(20, .bold)).minimumScaleFactor(0.6)
-                Text("days").font(.widget(9, .medium))
+                Text("\(s.daysTogether)").font(.nookiTitle).minimumScaleFactor(0.6)
+                Text("days").font(.nookiMicro)
             }
         }
         .widgetAccentable()
@@ -60,10 +60,10 @@ private struct AccessoryView: View {
     private var rectangular: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(line.title)
-                .font(.widget(14, .bold))
+                .font(.nookiCallout.weight(.bold))
                 .widgetAccentable()
             line.detail
-                .font(.widget(12))
+                .font(.nookiCaption)
                 .foregroundStyle(.secondary)
         }
         .lineLimit(1)

@@ -51,7 +51,7 @@ struct DrawingWidget: Widget {
     }
 }
 
-private struct DrawingWidgetView: View {
+struct DrawingWidgetView: View {
     let entry: DrawingEntry
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
@@ -80,10 +80,14 @@ private struct DrawingWidgetView: View {
                 }
                 if family != .systemSmall && family != .accessoryRectangular {
                     Text("from \(entry.partner) · \(drawing.sentAt, style: .relative)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .shadow(color: .black.opacity(0.15), radius: 3)
-                        .padding(12)
+                        .font(.nookiMicro)
+                        // The wallpapers are pastel in either appearance, so dark text on a soft chip, not white.
+                        .foregroundStyle(Ink.heroInk.opacity(0.85))
+                        .lineLimit(1)
+                        .padding(.horizontal, Space.s)
+                        .padding(.vertical, Space.xs)
+                        .background(.white.opacity(0.6), in: .capsule)
+                        .padding(Space.m)
                 }
             }
         } else {
@@ -91,10 +95,10 @@ private struct DrawingWidgetView: View {
                 Image(systemName: "scribble.variable")
                     .font(.system(size: family == .accessoryRectangular ? 16 : 26, weight: .semibold))
                 Text(family == .accessoryRectangular ? "Draw for \(entry.partner)" : "Nothing from \(entry.partner) yet")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .font(.nookiCaption.weight(.semibold))
                 if family != .accessoryRectangular {
                     Text("Tap to draw on their lock screen")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.nookiMicro)
                         .opacity(0.8)
                 }
             }
