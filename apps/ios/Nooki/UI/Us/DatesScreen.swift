@@ -117,12 +117,11 @@ struct DatesScreen: View {
     }
 
     private func commitSwipe(_ idea: DateIdea, liked: Bool) {
+        // SwipeDeck calls this inside its own hand-off animation.
         let wasMatch = us.isMatch(idea.id)
-        withAnimation(.snappy(duration: 0.25)) {
-            us.swipe(idea.id, liked: liked, by: state.viewer)
-            state.streak.record()
-            if liked, !wasMatch, us.isMatch(idea.id) { matched = idea }
-        }
+        us.swipe(idea.id, liked: liked, by: state.viewer)
+        state.streak.record()
+        if liked, !wasMatch, us.isMatch(idea.id) { matched = idea }
     }
 
     @ViewBuilder
@@ -346,6 +345,12 @@ private struct SwipeDeck: View {
 
     @State private var drag: CGSize = .zero
     @State private var flying = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private static let flingDistance: CGFloat = 110
+
+    /// 0 at rest, 1 once the top card is dragged far enough to fling; the cards behind rise with it.
+    private var progress: CGFloat { min(1, abs(drag.width) / Self.flingDistance) }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -368,28 +373,29 @@ private struct SwipeDeck: View {
         .frame(height: DateIdeaCard.height + 22)
     }
 
-    @ViewBuilder
+    /// One view path for every position, so a card keeps its identity (and its drawn picture) while it moves from
+    /// the back of the stack to the top; an if/else here would rebuild it with a crossfade.
     private func stackedCard(_ idea: DateIdea, index: Int) -> some View {
-        if index == 0 {
-            DateIdeaCard(idea: idea)
-                .overlay(alignment: .topLeading) {
-                    stamp("LOVE", tint: Color(hex: 0xE287A9), strength: drag.width / 110)
-                        .padding(24)
-                }
-                .overlay(alignment: .topTrailing) {
-                    stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: -drag.width / 110)
-                        .padding(24)
-                }
-                .rotationEffect(.degrees(drag.width / 20))
-                .offset(drag)
-                .zIndex(3)
-                .gesture(cardDrag)
-        } else {
-            DateIdeaCard(idea: idea)
-                .scaleEffect(0.95)
-                .offset(y: CGFloat(index) * 10)
-                .zIndex(Double(3 - index))
-        }
+        let top = index == 0
+        // Each card behind moves one step forward as the top one is dragged away.
+        let depth = top ? 0 : CGFloat(index) - progress
+        return DateIdeaCard(idea: idea)
+            .overlay(alignment: .topLeading) {
+                stamp("LOVE", tint: Color(hex: 0xE287A9), strength: top ? drag.width / Self.flingDistance : 0)
+                    .padding(24)
+            }
+            .overlay(alignment: .topTrailing) {
+                stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: top ? -drag.width / Self.flingDistance : 0)
+                    .padding(24)
+            }
+            .scaleEffect(reduceMotion ? 1 : 1 - depth * 0.05, anchor: .top)
+            .offset(y: reduceMotion ? 0 : depth * 12)
+            .rotationEffect(.degrees(top && !reduceMotion ? drag.width / 20 : 0))
+            .offset(top ? drag : .zero)
+            .zIndex(Double(3 - index))
+            // A flung card is already off screen when it leaves; with Reduce Motion it fades where it is.
+            .transition(reduceMotion ? .opacity : .asymmetric(insertion: .opacity, removal: .identity))
+            .gesture(cardDrag, including: top ? .all : .subviews)
     }
 
     private func stamp(_ text: String, tint: Color, strength: CGFloat) -> some View {
@@ -440,8 +446,10 @@ private struct SwipeDeck: View {
             }
             .onEnded { value in
                 guard !flying else { return }
-                if abs(value.translation.width) > 110 {
-                    fling(liked: value.translation.width > 0)
+                // A quick flick counts as well as a long drag.
+                let throwWidth = value.predictedEndTranslation.width
+                if abs(value.translation.width) > Self.flingDistance || abs(throwWidth) > Self.flingDistance * 2.5 {
+                    fling(liked: throwWidth > 0)
                 } else {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) { drag = .zero }
                 }
@@ -451,22 +459,28 @@ private struct SwipeDeck: View {
     private func fling(liked: Bool) {
         guard !flying, !deck.isEmpty else { return }
         flying = true
-        withAnimation(.easeIn(duration: 0.18)) {
-            drag = CGSize(width: liked ? 640 : -640, height: drag.height)
+        if reduceMotion {
+            commitSwipe(liked: liked)
+            return
         }
-        Task { @MainActor in
-            try? await Task.sleep(for: .seconds(0.18))
+        // The cards behind finish rising during the throw, so the hand-off below lands on the same frame.
+        withAnimation(.easeIn(duration: 0.2)) {
+            drag = CGSize(width: liked ? 640 : -640, height: drag.height + 40)
+        } completion: {
             commitSwipe(liked: liked)
         }
     }
 
     private func commitSwipe(liked: Bool) {
-        defer {
+        guard let idea = deck.first else {
             flying = false
-            drag = .zero
+            return
         }
-        guard let idea = deck.first else { return }
-        onSwipe(idea, liked)
+        withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.4, dampingFraction: 0.82)) {
+            onSwipe(idea, liked)
+            drag = .zero
+            flying = false
+        }
     }
 }
 
