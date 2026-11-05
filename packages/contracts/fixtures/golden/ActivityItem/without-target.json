@@ -1,6 +1,7 @@
 {
   "actor": "Store",
   "at": 1700000099000,
+  "cursor": "0001700000099000~refund:2000000123456789",
   "event": {
     "_tag": "Refunded",
     "coins": 500,

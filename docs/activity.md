@@ -27,7 +27,7 @@ Coins earned do not appear either, since they would double every cat row. A shop
 
 ```ts
 ActivityItem = { id: ActivityId, at: EpochMillis, actor: ActivityActor, event: ActivityEvent,
-                 target?: ActivityTarget }
+                 target?: ActivityTarget, cursor: ActivityCursor }
 
 ActivityActor  = Me | Partner | Cat | Store        // relative to the caller
 ActivityEvent  =
@@ -56,10 +56,13 @@ ActivityTarget =
 
 | Route | Body | Answer |
 | --- | --- | --- |
-| `GET /v1/activity?before=&limit=` | – | `ActivityResponse { items, next?, unread }`, newest first, at most 50 a page |
+| `GET /v1/activity?before=&limit=` | – | `ActivityResponse { items, next?, head?, unread }`, newest first, at most 50 a page |
 | `POST /v1/activity/read` | `MarkActivityReadRequest { upTo: ActivityCursor }` | `ActivityUnreadResponse { unread }` |
 
-- `before` and `next` are opaque `ActivityCursor` strings. Items are ordered by `at`, then `id`.
+- `before`, `next`, `head` and each item's `cursor` are opaque `ActivityCursor` strings: the phone
+  only hands them back, never builds one. Items are ordered by `at`, then `id`.
+- `head` is the newest item's cursor in the whole list, on every page, and absent while it is
+  empty. Sending it as `upTo` marks everything read; an item's own `cursor` marks up to it.
 - **Read state is per user.** Each member has a read mark. Items the reader made themselves are
   never unread. `unread` counts the partner's, the cat's and the store's items above the mark.
   Marking read only moves the mark forward.

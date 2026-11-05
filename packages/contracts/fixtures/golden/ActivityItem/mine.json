@@ -1,6 +1,7 @@
 {
   "actor": "Me",
   "at": 1700000100000,
+  "cursor": "0001700000100000~note:note-1",
   "event": {
     "_tag": "NoteSent",
     "kind": "Drawing",
