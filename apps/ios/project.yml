@@ -78,14 +78,12 @@ targets:
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-  # The old app's flat window views, compiled from packages/pet-scenes/reality without RealityKit or its
-  # resources, plus a painter that turns one into images for the City room's window (WindowViews/).
+  # The old app's flat window views (WindowViews/Views, without RealityKit or its resources), plus a
+  # painter that turns one into images for the City room's window.
   WindowViews:
     type: library.static
     platform: iOS
     sources:
-      - path: ../../packages/pet-scenes/reality/Sources/PetSceneReality/Views
-        excludes: [NativeWindowView.swift, Street3D.swift]
       - path: WindowViews
     dependencies:
       - package: BilletPet
@@ -159,6 +157,17 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  NookiUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [NookiUITests]
+    dependencies:
+      - target: Billet
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Billet
 schemes:
   Billet:
     build:
@@ -168,6 +177,6 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets: [NookiTests]
+      targets: [NookiTests, NookiUITests]
     archive:
       config: Release

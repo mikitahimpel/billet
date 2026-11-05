@@ -73,12 +73,13 @@ struct CatTemperamentTests {
   // MARK: - Told apart
 
   @Test func eachTypeLivesItsOwnDay() {
+    // Each type's days are folded once and asked about every group.
+    var days: [CatTemperament: [[(Double, CatBrainStack)]]] = [:]
     func share(_ type: CatTemperament, _ groups: Set<CatActivityGroup>) -> Double {
-      (UInt64(1)...3).reduce(0) { sum, seed in
-        sum
-          + Day.share(Self.day(type, seed: seed)) {
-            $0.vitality == .awake && groups.contains($0.group)
-          }
+      let lived = days[type] ?? (UInt64(1)...3).map { Self.day(type, seed: $0) }
+      days[type] = lived
+      return lived.reduce(0) { sum, day in
+        sum + Day.share(day) { $0.vitality == .awake && groups.contains($0.group) }
       }
     }
     #expect(share(.clown, [.play, .mischief]) > share(.sleepyhead, [.play, .mischief]) * 1.5)
@@ -109,12 +110,15 @@ struct CatTemperamentTests {
     var answered = 0
     for type in CatTemperament.allCases {
       guard let script = type.afterTouch else { continue }
+      // One runner through the hours, in order, equals a fresh replay at each of them.
+      var day = CatBrainRunner(
+        events: Day.bothActive, now: Day.at(10), context: Day.context, seed: 4, temperament: type,
+        room: Day.room)
       for hour in [10.0, 13.0, 16.0, 20.0] {
         let pet = Day.event(.pet, "a", hour + 30 / 3600.0, 9)
         let events = Day.bothActive + [pet]
-        let before = CatBrainRunner.replay(
-          events: Day.bothActive, now: Day.at(hour), context: Day.context, seed: 4,
-          temperament: type, room: Day.room)
+        day.advance(to: Day.at(hour))
+        let before = day.brain
         guard before.stack.vitality == .awake, before.stack.step != .curl else { continue }
         let after = CatBrainRunner.replay(
           events: events,

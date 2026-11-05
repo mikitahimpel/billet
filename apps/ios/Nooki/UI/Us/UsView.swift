@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists.
+/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
+/// and the settings are in its header.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -58,6 +59,20 @@ struct UsView: View {
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
             Spacer(minLength: 0)
             ViewerSwitch(state: state)
+            Menu {
+                Section("How are you, \(state.profile.name(of: state.viewer))?") {
+                    ForEach(PartnerMood.allCases, id: \.self) { mood in
+                        Button("\(mood.emoji) \(mood.title.capitalized)") { state.setMood(mood) }
+                    }
+                }
+            } label: {
+                Image(systemName: "face.smiling")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Ink.primary)
+                    .frame(width: 40, height: 40)
+            }
+            .glass(.circle, interactive: true)
+            .accessibilityLabel("Mood")
             Button { state.showsSettings = true } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 17, weight: .semibold))

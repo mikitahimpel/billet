@@ -1,5 +1,6 @@
 import { asc, sql } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
+import { utcDay } from "@billet/backend-metrics/metrics";
 import { MetricsUnavailable } from "@billet/backend-metrics/metrics-error";
 import {
   MetricsRepository,
@@ -19,14 +20,12 @@ const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, u
 const decodeRows = Schema.decodeUnknownEffect(Schema.Array(StoredMetric));
 const decodeDetails = Schema.decodeUnknownEffect(Schema.Array(StoredDetail));
 
-const dayOf = (millis: number): string => new Date(millis).toISOString().slice(0, 10);
-
 const makeMetricsRepository = (db: DirectoryDatabase): MetricsRepository["Service"] =>
   MetricsRepository.of(
     spanMethods("MetricsRepository", {
       // One statement per table: the add happens in the database, so two at once both count.
       record: ({ pairId, userId, name, at, detail, value, client }) => {
-        const day = dayOf(at);
+        const day = utcDay(at);
         const appVersion = client?.appVersion ?? null;
         const os = client?.os ?? null;
         const person = db
