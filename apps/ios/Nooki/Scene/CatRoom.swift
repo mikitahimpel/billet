@@ -412,14 +412,17 @@ class CatRoom {
     }
 
     /// Bloom is iOS 27 only; earlier systems get the room without the glow. The threshold sits above the lit walls
-    /// so only the emissive bulbs, flame and window halo glow, not the whole room.
+    /// so only the emissive bulbs, flame and window halo glow, not the whole room. The compiler check lets Xcode 26
+    /// (the perf runs' image) build the app: its SDK has no bloom.
     func addBloom() {
+        #if compiler(>=6.4)
         guard #available(iOS 27, *) else { return }
         var bloom = BloomOptionsComponent()
         bloom.strength = 0.35
         bloom.threshold = 1.1
         root.components.set(BloomComponent(scope: .unbounded))
         root.components.set(bloom)
+        #endif
     }
 
     /// A 64 x 32 vertical gradient for a room's ambient environment.
