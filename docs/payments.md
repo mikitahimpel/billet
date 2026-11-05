@@ -7,7 +7,7 @@ keeps a ledger of the coins each pair has bought.
 
 **The first release ships without payments:** the app is built with `BILLET_PAYMENTS=none`, App
 Store Connect has no in-app purchases, and the server's `payments` flag is off, so every
-`/v1/purchases*` route answers 404. The packs and the ledger are already coins in the contract,
+`/v1/purchases*` route answers 404 outside the dev stage. The packs and the ledger are already coins in the contract,
 so turning payments on later needs no redesign.
 
 ## The `payments` flag (`payments.enabled`)
@@ -17,7 +17,7 @@ keys can't hold a dot, so `payments.enabled` is the key `payments`), with varian
 
 | | |
 | --- | --- |
-| Default | `off`, status `draft`, on every stage: nobody gets `on` |
+| Default | `off`, status `draft`, on every stage: nobody gets `on` (the dev stage sells anyway, below) |
 | Turn it on for a test pair | an override `payments = on` for that pair in the admin panel (Flags) |
 | Turn it on for everyone | weight `on`, set it as the default and start it, once purchases exist in App Store Connect |
 | Kill switch | kills it: every pair is off again at once |
@@ -29,6 +29,9 @@ always off. `PaymentsSwitch` (`@billet/backend-payments/payments-switch`) asks t
 `platform` answers it from `FlagsService` (`payments-switch-live.ts`), and tests use
 `PaymentsSwitch.on` and `.off`. The mock route is still registered on the dev stage only. The App
 Store notifications route is not behind the flag: Apple must always get its 200.
+
+The dev stage ignores the flag: its purchase routes are on for every pair and demo room, so packs
+can be tried there before the flag is on anywhere. `stage` and `prod` follow the flag.
 
 The app reads the same flag from `GET /v1/flags` and never offers to buy coins while it is not
 `on` (see the client brief).

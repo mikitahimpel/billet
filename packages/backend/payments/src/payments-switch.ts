@@ -4,7 +4,7 @@ import type { CoinOwner } from "./payments-repository.ts";
 
 /**
  * Whether payments are on for a caller: the `payments` flag (`payments.enabled` in
- * docs/payments.md), off on every stage until the owner turns it on. While it is off,
+ * docs/payments.md), off until the owner turns it on, and always on on the dev stage. While off,
  * `/v1/purchases*` answer 404 as if they did not exist. `platform` reads the flag from
  * `FlagsService`; tests use `on` and `off`.
  */

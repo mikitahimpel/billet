@@ -1791,28 +1791,47 @@ describe("payments in the Worker", () => {
     expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
   });
 
-  it("answers 404 on every purchase route to a pair the payments flag is off for", async () => {
+  const flagOff = async () => {
     const { owner, pairId } = await pairOf("subject-flag-a", "subject-flag-b");
     await env.DB.prepare(
       "INSERT INTO pair_flag_overrides (pair_id, experiment_key, variant, set_at, set_by) VALUES (?, 'payments', 'off', 0, 'test')",
     )
       .bind(pairId)
       .run();
-    const responses = [
-      await atStage(
-        "dev",
-        post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
-      ),
-      await atStage("dev", post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
-      await atStage(
-        "dev",
-        new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
-      ),
-    ];
-    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
-    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
-      results: [],
-    });
+    return owner;
+  };
+
+  it.each([["prod"], ["stage"]])(
+    "answers 404 on %s on every purchase route to a pair the payments flag is off for",
+    async (stage) => {
+      const owner = await flagOff();
+      const responses = [
+        await atStage(stage, post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
+        await atStage(
+          stage,
+          new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
+        ),
+      ];
+      expect(responses.map(({ status }) => status)).toEqual([404, 404]);
+      expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
+        results: [],
+      });
+    },
+  );
+
+  it("sells on dev whatever the payments flag says", async () => {
+    const owner = await flagOff();
+    const bought = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
+    );
+    expect(bought.status).toBe(200);
+    const unsigned = await atStage(
+      "dev",
+      post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner)),
+    );
+    expect(unsigned.status).toBe(400);
+    expect((await purchasesAt("dev", bearer(owner))).balance).toBe(550);
   });
 
   it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {

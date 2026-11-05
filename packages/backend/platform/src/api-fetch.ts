@@ -94,7 +94,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         PaymentsService.layer.pipe(
           Layer.provide(PairWalletLive.pipe(Layer.provide(NotesService.layer))),
         ),
-        // Buying coins is off until the `payments` flag says `on` for the pair.
+        // Buying coins is off until the `payments` flag says `on` for the pair, except on dev.
         PaymentsSwitchLive.pipe(Layer.provide(FlagsService.layer)),
         payments,
         OnboardingService.layer,
