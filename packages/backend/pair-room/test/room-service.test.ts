@@ -26,7 +26,14 @@ const newKey = () =>
   Schema.decodeSync(IdempotencyKey)(
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
-const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = () =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 describe("RoomService", () => {
   it("opens a room and commits its state", async () => {
@@ -55,6 +62,9 @@ describe("RoomService", () => {
       author: alice,
       sentAt: 1_700_000_000_000,
       image,
+      width: 4032,
+      height: 3024,
+      preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
     };
     expect(decision).toMatchObject({ _tag: "Accepted", state: { lastSeq: 1 } });
     expect(memory.notes).toEqual([{ seq: 1, note }]);

@@ -100,6 +100,8 @@ jobs:
           echo "Testing on $udid"
           set -o pipefail
           status=0
+          # TEST_RUNNER_ variables reach the tests without the prefix.
+          TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples" \
           xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
             CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/app-tests.log" 2>&1 || status=$?
@@ -111,6 +113,16 @@ jobs:
             echo "::endgroup::"
           fi
           exit "$status"
+
+      # Looks rendered by the app tests (NookiTests/PolaroidLookTests.swift), for review without a Simulator.
+      - name: Keep the rendered samples
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: samples
+          path: ${{ runner.temp }}/samples
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Keep the app test log
         if: failure()
