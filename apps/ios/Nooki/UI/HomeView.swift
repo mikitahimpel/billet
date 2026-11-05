@@ -53,41 +53,35 @@ struct HomeView: View {
                 .ignoresSafeArea()
             }
 
-            VStack(spacing: 12) {
-                // The same header, in the same place, on every tab.
+            Group {
+                switch state.tab {
+                case .shop:
+                    ShopView(state: state)
+                case .moments:
+                    MomentsView(state: state)
+                case .us:
+                    UsView(state: state)
+                case .world:
+                    VStack(spacing: 16) {
+                        RoomControls(state: state, select: select)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+            .transition(.opacity.combined(with: .offset(y: 12)))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
+            // view runs full-bleed under both and only its content is inset.
+            .bars(fades: !showsRoom) {
                 AppHeader(state: state) {
                     scene?.stop()
                     HomeState.eraseAll()
                     state = HomeState()
                 }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-
-                Group {
-                    switch state.tab {
-                    case .shop:
-                        // The scroll view runs under the tab bar and keeps its own 16pt margins.
-                        ShopView(state: state)
-                    case .moments:
-                        MomentsView(state: state)
-                    case .us:
-                        UsView(state: state)
-                    case .world:
-                        VStack(spacing: 16) {
-                            RoomControls(state: state, select: select)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 82)
-                    }
-                }
-                .transition(.opacity.combined(with: .offset(y: 12)))
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-            .opacity(state.game == nil ? 1 : 0)
-
-            VStack {
-                Spacer(minLength: 0)
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+            } bottom: {
                 TabBar(state: state)
                     .padding(.horizontal, 16)
             }
@@ -477,5 +471,42 @@ private struct RoomTapCounter: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+private extension View {
+    /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
+    /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
+    @ViewBuilder
+    func bars(fades: Bool, @ViewBuilder top: () -> some View, @ViewBuilder bottom: () -> some View) -> some View {
+        if #available(iOS 26, *) {
+            scrollEdgeEffectStyle(.soft, for: .vertical)
+                .safeAreaBar(edge: .top, spacing: 12, content: top)
+                .safeAreaBar(edge: .bottom, content: bottom)
+        } else {
+            safeAreaInset(edge: .top, spacing: 12) {
+                top().background { if fades { EdgeFade(edge: .top) } }
+            }
+            .safeAreaInset(edge: .bottom) {
+                bottom().background { if fades { EdgeFade(edge: .bottom) } }
+            }
+        }
+    }
+}
+
+/// Below iOS 26: material that fades out away from the screen edge, under a bar and through the status bar or the
+/// home indicator, so scrolled content softens instead of ending at a line.
+private struct EdgeFade: View {
+    let edge: VerticalEdge
+
+    var body: some View {
+        Rectangle()
+            .fill(.ultraThinMaterial)
+            .mask(LinearGradient(colors: [.black, .black, .clear],
+                                 startPoint: edge == .top ? .top : .bottom,
+                                 endPoint: edge == .top ? .bottom : .top))
+            .padding(edge == .top ? .bottom : .top, -20)
+            .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
+            .allowsHitTesting(false)
     }
 }

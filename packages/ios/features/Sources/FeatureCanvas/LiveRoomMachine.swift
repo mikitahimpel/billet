@@ -90,7 +90,7 @@ public enum LiveRoomMachine: Machine {
       next.openStrokes[start.id] = Stroke(color: start.color, width: start.width, points: [])
       return (next, [])
 
-    case .received(.strokePoints(let id, let points)):
+    case .received(.strokePoints(let id, let points, _)):
       guard state.isOnline, let open = state.openStrokes[id] else { return (state, []) }
       let room = max(openPointLimit - open.points.count, 0)
       next.openStrokes[id] = Stroke(
