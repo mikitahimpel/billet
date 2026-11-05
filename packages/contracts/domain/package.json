@@ -18,7 +18,8 @@
     "./push-token": "./src/push-token.ts",
     "./coin-packs": "./src/coin-packs.ts",
     "./onboarding": "./src/onboarding.ts",
-    "./activity": "./src/activity.ts"
+    "./activity": "./src/activity.ts",
+    "./riddle-words": "./src/riddle-words.ts"
   },
   "scripts": {
     "lint": "oxlint .",
