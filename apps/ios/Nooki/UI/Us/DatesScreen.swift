@@ -1026,7 +1026,9 @@ private struct DateDoneSheet: View {
         if let photo {
             let text = caption.trimmingCharacters(in: .whitespacesAndNewlines)
             // addMoment puts the newest photo first.
-            if state.addMoment(photo, caption: text, shares: true) { momentID = state.moments.moments.first?.id }
+            if state.journal.addMoment(photo, caption: text, shares: true) {
+                momentID = state.moments.moments.first?.id
+            }
         }
         state.us.rate(plan.id, hearts: hearts, momentID: momentID)
         DateReminders.cancel(plan.id)
