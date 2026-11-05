@@ -24,6 +24,7 @@ struct ShopItem: Identifiable, Hashable {
     let blurb: String
     /// Mood chip the item nudges when it's in the room, e.g. a toy makes Mochi more curious.
     var mood: String? = nil
+    var rarity: ShopRarity = .common
     var isPlus = false
     var isNew = false
 
@@ -40,35 +41,30 @@ struct ShopCollection {
 enum Catalog {
     static let items: [ShopItem] = [
         ShopItem(id: "armchair", name: "Cloud Armchair", price: 320, category: .furniture,
-                 blurb: "Big enough for two and a cat who insists.", mood: "Rested", isNew: true),
+                 blurb: "Big enough for two and a cat who insists.", mood: "Rested", rarity: .epic, isNew: true),
         ShopItem(id: "lamp", name: "Mushroom Lamp", price: 140, category: .decor,
-                 blurb: "Warm glow for late-night talks.", mood: "Rested"),
+                 blurb: "Warm glow for late-night talks.", mood: "Rested", rarity: .rare),
         ShopItem(id: "monstera", name: "Monstera", price: 90, category: .decor,
-                 blurb: "Grows a new leaf every week you visit."),
+                 blurb: "Grows a new leaf every week you visit.", rarity: .common),
         ShopItem(id: "bookcase", name: "Little Bookcase", price: 260, category: .furniture,
-                 blurb: "Room for both your favourite stories."),
+                 blurb: "Room for both your favourite stories.", rarity: .epic),
         ShopItem(id: "rug", name: "Woven Rug", price: 180, category: .room,
-                 blurb: "Soft rings in honey and blush."),
+                 blurb: "Soft rings in honey and blush.", rarity: .rare),
         ShopItem(id: "yarn", name: "Yarn Ball", price: 60, category: .mochi,
-                 blurb: "Mochi's favourite thing to unravel.", mood: "Curious"),
+                 blurb: "Mochi's favourite thing to unravel.", mood: "Curious", rarity: .common),
         ShopItem(id: "mouse", name: "Toy Mouse", price: 45, category: .mochi,
-                 blurb: "Squeaks a little. Mochi pretends not to care.", mood: "Curious"),
+                 blurb: "Squeaks a little. Mochi pretends not to care.", mood: "Curious", rarity: .common),
         ShopItem(id: "tower", name: "Cat Tower", price: 540, category: .mochi,
-                 blurb: "Two floors, one nap spot at the very top.", mood: "Happy", isPlus: true),
+                 blurb: "Two floors, one nap spot at the very top.", mood: "Happy", rarity: .legendary, isPlus: true),
         ShopItem(id: "print", name: "Sunset Print", price: 120, category: .decor,
-                 blurb: "The sky from your first evening walk."),
+                 blurb: "The sky from your first evening walk.", rarity: .rare),
         ShopItem(id: "teatable", name: "Tea Table", price: 210, category: .furniture,
-                 blurb: "Two cups, always.", isNew: true),
+                 blurb: "Two cups, always.", rarity: .rare, isNew: true),
         ShopItem(id: "donutbed", name: "Donut Bed", price: 380, category: .mochi,
-                 blurb: "Sprinkles included, calories not.", mood: "Rested"),
+                 blurb: "Sprinkles included, calories not.", mood: "Rested", rarity: .epic),
         ShopItem(id: "lantern", name: "Paper Lantern", price: 150, category: .room,
-                 blurb: "Hangs by the window and hums with light.", isPlus: true),
+                 blurb: "Hangs by the window and hums with light.", rarity: .legendary, isPlus: true),
     ]
-
-    static let todayIDs = ["armchair", "yarn", "lantern", "teatable"]
-    /// One of today's items is discounted; rotates daily on the server.
-    static let dealID = "armchair"
-    static let dealDiscount = 0.2
 
     static let featured = ShopCollection(
         name: "Cozy Cabin",
@@ -78,11 +74,8 @@ enum Catalog {
 
     static func item(_ id: String) -> ShopItem? { items.first { $0.id == id } }
 
+    /// The items of a category; Today is made of offers instead (ShopOffers).
     static func items(in category: ShopCategory) -> [ShopItem] {
-        category == .today ? todayIDs.compactMap(item) : items.filter { $0.category == category }
-    }
-
-    static func price(of item: ShopItem) -> Int {
-        item.id == dealID ? Int((Double(item.price) * (1 - dealDiscount)).rounded()) : item.price
+        items.filter { $0.category == category }
     }
 }
