@@ -152,6 +152,20 @@ private func removeScratch(_ path: String) {
         #expect(data.flatMap { try? JSONDecoder().decode(Wallet.self, from: $0) } == store.wallet)
     }
 
+    @Test func anUnreadableFileIsKeptAsideNotOverwritten() throws {
+        let path = scratchFile("wallet.json")
+        let aside = SharedFile.url(path).appendingPathExtension("unreadable")
+        defer {
+            removeScratch(path)
+            try? FileManager.default.removeItem(at: aside)
+        }
+        let file = SharedFile.url(path)
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"coins": 9000, "#.utf8).write(to: file)
+        #expect(WalletStore(file: path).wallet == Wallet())
+        #expect(try Data(contentsOf: aside) == Data(#"{"coins": 9000, "#.utf8))
+    }
+
     @Test func listCoinsCapAtThreeADay() {
         var wallet = Wallet()
         for _ in 0..<5 { wallet.tickList(on: noon) }

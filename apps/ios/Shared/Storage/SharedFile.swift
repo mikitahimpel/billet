@@ -14,11 +14,18 @@ nonisolated enum SharedFile {
 
     static func url(_ path: String) -> URL { AppGroup.container.appending(path: path) }
 
-    /// Sees this process's own pending write to `path` too.
+    /// Sees this process's own pending write to `path` too. A file that is there but won't decode (cut short, or
+    /// written in a shape this build doesn't know) moves to `<path>.unreadable` first, so the store's next save of its
+    /// defaults doesn't overwrite what it held.
     static func read<Value: Decodable>(_ type: Value.Type, from path: String) -> Value? {
         queue.sync { writePending(path) }
-        guard let data = try? Data(contentsOf: url(path)) else { return nil }
-        return try? JSONDecoder().decode(type, from: data)
+        let file = url(path)
+        guard let data = try? Data(contentsOf: file) else { return nil }
+        if let value = try? JSONDecoder().decode(type, from: data) { return value }
+        let aside = file.appendingPathExtension("unreadable")
+        try? FileManager.default.removeItem(at: aside)
+        try? FileManager.default.moveItem(at: file, to: aside)
+        return nil
     }
 
     static func write(_ value: some Encodable & Sendable, to path: String) {

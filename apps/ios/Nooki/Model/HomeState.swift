@@ -1,4 +1,5 @@
 import Observation
+import Persistence
 import SwiftUI
 import WidgetKit
 
@@ -296,12 +297,14 @@ final class HomeState {
     }
 
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts
-    /// over with a fresh HomeState.
+    /// over with a fresh HomeState. The account stays: its record shares the folder, and its token in the Keychain
+    /// would otherwise outlive it, signing the phone out halfway.
     static func eraseAll() {
         // Pending writes would otherwise land after the files are gone.
         SharedFile.flush()
         let files = FileManager.default
-        for url in (try? files.contentsOfDirectory(at: AppGroup.container, includingPropertiesForKeys: nil)) ?? [] {
+        for url in (try? files.contentsOfDirectory(at: AppGroup.container, includingPropertiesForKeys: nil)) ?? []
+        where url.lastPathComponent != AccountStore.recordName {
             try? files.removeItem(at: url)
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
