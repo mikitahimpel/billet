@@ -109,6 +109,10 @@ final class UITourTests: XCTestCase {
     private func dismissSheet(_ app: XCUIApplication) {
         app.swipeDown(velocity: .fast)
         Thread.sleep(forTimeInterval: 1.5)
+        // On a tall screen the swipe can scroll the sheet instead of closing it; a tap in the left margin above a
+        // part-height sheet closes it, and lands on nothing once it's gone.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.3)).tap()
+        Thread.sleep(forTimeInterval: 1)
     }
 
     @MainActor
