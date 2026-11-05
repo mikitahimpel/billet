@@ -1,10 +1,10 @@
 import { Schema } from "effect";
 
 /**
- * Which push lane a token serves. Live Activity tokens join after the go/no-go in #13.
- * A device holds at most one token of each kind.
+ * Which push lane a token serves. `liveactivity` is the device's push-to-start token for the
+ * drawing Live Activity (iOS 17.2+). A device holds at most one token of each kind.
  */
-export const PushTokenKind = Schema.Literals(["alert", "widget"]);
+export const PushTokenKind = Schema.Literals(["alert", "widget", "liveactivity"]);
 export type PushTokenKind = typeof PushTokenKind.Type;
 
 /** The APNs host a token belongs to: debug builds get sandbox tokens. */

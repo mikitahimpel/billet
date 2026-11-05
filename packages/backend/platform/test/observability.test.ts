@@ -85,7 +85,7 @@ describe("withRequestSpan", () => {
       headers: { "cf-ray": "8d2f0a1b2c3d4e5f-LHR" },
     });
     const response = await withRequestSpan(request, async () => {
-      throw new TypeError("note body 4242 and token s3cret");
+      throw new TypeError("note body quokka and token s3cret");
     });
     restore();
 
@@ -100,6 +100,7 @@ describe("withRequestSpan", () => {
       attributes: { "http.route": "GET /v1/notes", "http.response.status_code": 500 },
     });
     expect(JSON.stringify(lines)).not.toContain("s3cret");
-    expect(JSON.stringify(lines)).not.toContain("4242");
+    // Markers with letters past "f": a digit-only one turns up by chance in the random hex ids.
+    expect(JSON.stringify(lines)).not.toContain("quokka");
   });
 });

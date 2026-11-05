@@ -25,6 +25,7 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `DecoratingOpened` | none | | Do people decorate the room? |
 | `RoomItemPlaced`, `RoomItemMoved`, `RoomItemPutAway` | the item's id | | Which pieces go into rooms, and which come back out? |
 | `RoomCustomised` | what was changed, when that exists | | Do people change the room itself? |
+| `RoomOpened` | `room` or `city` | | Which of Nooki's rooms do people spend time in? With the `rooms` experiment: does one room hold a pair as well as two? |
 | `ShopOpened` | none | | Is the shop found? |
 | `ShopItemViewed` | the item's id | | Which items draw a look? |
 | `ShopItemBought` | the item's id | price in coins | What do people spend their coins on? |
@@ -43,6 +44,9 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `OnboardingStepViewed` | the step's id | | How far into onboarding do people get? |
 | `OnboardingStepAnswered` | the step's id | | Which steps are answered? (Never the answer: that is in `onboarding_answers`.) |
 | `OnboardingStepSkipped` | the step's id | | Which steps are skipped? |
+| `TipShown` | the tip's id | | Which hints after the onboarding are seen? |
+| `TipDismissed` | the tip's id | | Which hints are closed without trying them? |
+| `TipAction` | the tip's id | | Which hints lead to the thing they point at? |
 | `AccountDeleted` (server) | none | | How many leave? Written to Analytics Engine only: the account's own counts are deleted with it. |
 
 The opening's cinematic is covered by `OpeningWatched` and `OpeningSkipped`.

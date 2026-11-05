@@ -2,11 +2,12 @@ import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
+import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingUnavailable } from "@billet/backend-pairing/pairing-error";
 import { MediaStore, mediaPrefix } from "../src/media-store.ts";
-import { InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error.ts";
+import { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error.ts";
 import { compactBudget, NotesService } from "../src/notes-service.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 import { makeWorld, pair, user } from "./fake-world.ts";
@@ -21,6 +22,11 @@ const pairA = pair("pair-a");
 const pairB = pair("pair-b");
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]);
+const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+const ascii = (text: string) => [...text].map((character) => character.charCodeAt(0));
+/** An ISO-BMFF file: a box size, then `ftyp` and the major brand. */
+const isoFile = (brand: string) =>
+  Uint8Array.from([0x00, 0x00, 0x00, 0x18, ...ascii("ftyp"), ...ascii(brand), 0, 0, 0, 0]);
 
 const world = () =>
   makeWorld([
@@ -47,7 +53,14 @@ const newKey = () =>
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
 
-const photo = (image: MediaKey) => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = (image: MediaKey) =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 /** Fills up with one-digit points, four bytes a pair, then makes up the rest in the width's digits. */
 const compactOfSize = (size: number): CompactStrokes => {
@@ -74,9 +87,28 @@ describe("uploadImage", () => {
   });
 
   it.each([
+    ["a PNG", png, ".png"],
+    ["a JPEG", jpeg, ".jpg"],
+    ["an iPhone HEIC", isoFile("heic"), ".heic"],
+    ["a generic HEIF", isoFile("mif1"), ".heic"],
+  ])("stores %s under a key with its extension", async (_, bytes, extension) => {
+    const { layer, objects } = world();
+    const outcome = await run(layer, (notes) => notes.uploadImage(ana, bytes));
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      expect(outcome.value.startsWith(`${mediaPrefix(pairA)}notes/`)).toBe(true);
+      expect(outcome.value.endsWith(extension)).toBe(true);
+      expect(objects.get(outcome.value)).toEqual(bytes);
+    }
+  });
+
+  it.each([
     ["empty", new Uint8Array()],
     ["too short for a signature", png.slice(0, 7)],
-    ["some other format", Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0])],
+    ["a JPEG cut short", jpeg.slice(0, 2)],
+    ["a GIF", Uint8Array.from(ascii("GIF89a"))],
+    ["an MP4 video", isoFile("isom")],
+    ["an ISO file cut before its brand", isoFile("heic").slice(0, 10)],
   ])("refuses bytes that are %s", async (_, bytes) => {
     const { layer, objects } = world();
     expect(await run(layer, (notes) => notes.uploadImage(ana, bytes))).toEqual(
@@ -117,6 +149,16 @@ describe("readImage", () => {
     expect(await run(guarded, (notes) => notes.readImage(ana, key))).toEqual(
       failed(new NotesNotFound()),
     );
+  });
+
+  it("gives another couple the 404 of a missing image for a JPEG too", async () => {
+    const { layer } = world();
+    const read = (reader: UserId) =>
+      run(layer, (notes) =>
+        notes.uploadImage(ana, jpeg).pipe(Effect.flatMap((key) => notes.readImage(reader, key))),
+      );
+    expect(await read(ben)).toEqual(Exit.succeed(jpeg));
+    expect(await read(cal)).toEqual(failed(new NotesNotFound()));
   });
 
   it("does not treat a pair id that only starts the same as the same prefix", async () => {
@@ -169,6 +211,33 @@ describe("sendNote", () => {
     }
   });
 
+  it("stamps a photo with its size, preview and caption, and leaves out a caption not sent", async () => {
+    const { layer } = world();
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const image = yield* notes.uploadImage(ana, jpeg);
+        const captioned = yield* notes.sendNote(
+          ana,
+          SendNoteRequest.cases.Photo.make({ ...photo(image), caption: "the bridge 🌉" }),
+        );
+        const bare = yield* notes.sendNote(ben, photo(image));
+        return { image, captioned, bare };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { image, captioned, bare } = outcome.value;
+      const shape = { _tag: "Photo", image, width: 4032, height: 3024 };
+      expect(captioned).toMatchObject({ ...shape, author: ana, caption: "the bridge 🌉" });
+      expect(bare).toMatchObject({
+        ...shape,
+        author: ben,
+        preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      });
+      expect(bare).not.toHaveProperty("caption");
+    }
+  });
+
   it("refuses an image outside the couple's prefix, or one never uploaded", async () => {
     const { layer } = world();
     const outcome = await run(layer, (notes) =>
@@ -193,11 +262,16 @@ describe("sendNote", () => {
       Effect.gen(function* () {
         const sent = yield* notes.sendNote(
           ana,
-          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi 💛", paper: "blush" }),
+          SendNoteRequest.cases.Text.make({
+            key: newKey(),
+            text: "hi 💛",
+            paper: "blush",
+            ink: freeInk,
+          }),
         );
         const bare = yield* notes.sendNote(
           ben,
-          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hey" }),
+          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hey", ink: freeInk }),
         );
         return { sent, bare, history: yield* notes.history(ben, 0, 10) };
       }),
@@ -213,6 +287,49 @@ describe("sendNote", () => {
         { seq: 2, note: bare },
       ]);
     }
+  });
+
+  it("refuses a text note in an ink the pair has not bought, then takes it once granted", async () => {
+    const { layer, pairRooms } = world();
+    const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
+    const write = (notes: NotesService["Service"], author: UserId) =>
+      notes.sendNote(
+        author,
+        SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: rose }),
+      );
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const refused = yield* Effect.flip(write(notes, ana));
+        const before = yield* notes.inks(ben);
+        yield* pairRooms.grantInks(pairA, [rose]);
+        const sent = yield* write(notes, ben);
+        const after = yield* notes.inks(ana);
+        const elsewhere = yield* notes.inks(cal);
+        return {
+          refused,
+          before,
+          sent,
+          after,
+          elsewhere,
+          history: yield* notes.history(ana, 0, 10),
+        };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { refused, before, sent, after, elsewhere, history } = outcome.value;
+      expect(refused).toEqual(new InkNotOwned({ ink: rose }));
+      expect(before).toEqual({ inks, owned: [freeInk] });
+      expect(sent).toMatchObject({ _tag: "Text", author: ben, ink: rose });
+      expect(after.owned).toEqual([freeInk, rose]);
+      expect(elsewhere.owned).toEqual([freeInk]);
+      expect(history).toEqual([{ seq: 1, note: sent }]);
+    }
+  });
+
+  it("answers inks with NotesNotFound for a caller with no pair", async () => {
+    const outcome = await run(world().layer, (notes) => notes.inks(eve));
+    expect(outcome).toEqual(failed(new NotesNotFound()));
   });
 
   it("takes a compact rendition at the budget and refuses one byte more", async () => {

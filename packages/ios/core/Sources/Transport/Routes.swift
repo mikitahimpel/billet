@@ -28,11 +28,20 @@ public enum Routes {
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
+  public static let listInks = Route(.get, "/v1/inks")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let reportEvents = Route(.post, "/v1/events")
   public static let getOnboarding = Route(.get, "/v1/onboarding")
   public static let saveOnboardingAnswer = Route(.post, "/v1/onboarding/answers")
+  /// The couple's cat: its profile, temper and needs; `PUT` adopts or renames it.
+  public static let getCat = Route(.get, "/v1/cat")
+  public static let saveCat = Route(.put, "/v1/cat")
+  public static let listCatJournal = Route(.get, "/v1/cat/journal")
+  public static let recordCatEvent = Route(.post, "/v1/cat/events")
+  /// The pair's Inbox, newest first, and the caller's read mark.
+  public static let listActivity = Route(.get, "/v1/activity")
+  public static let markActivityRead = Route(.post, "/v1/activity/read")
   public static let purchase = Route(.post, "/v1/purchases")
   /// Dev server only: the mock store's purchases and refunds.
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")

@@ -101,4 +101,38 @@ private func offers(_ seed: String = "L+M") -> ShopOffers { ShopOffers(pairSeed:
         #expect(ShopRarity.legendary.shines && ShopRarity.epic.shines)
         #expect(!ShopRarity.common.shines && !ShopRarity.rare.shines)
     }
+
+    @Test func bundlesCostLessThanTheirPiecesAndOnlyTheMissingOnes() {
+        #expect(Set(ShopOffers.bundles.map(\.id)).count == ShopOffers.bundles.count)
+        for bundle in ShopOffers.bundles {
+            #expect(bundle.itemIDs.allSatisfy { Catalog.item($0) != nil })
+            let full = ShopOffers.price(of: bundle, owned: [])!
+            #expect(full.price < full.sum)
+            #expect(full.price % 5 == 0)
+
+            let first = bundle.itemIDs[0]
+            let partial = ShopOffers.price(of: bundle, owned: [first])!
+            #expect(partial.sum == full.sum - Catalog.item(first)!.price)
+            #expect(partial.price < full.price)
+            #expect(ShopOffers.price(of: bundle, owned: Set(bundle.itemIDs)) == nil)
+        }
+    }
+
+    @Test func noBundleRepeatsAFeaturedSet() {
+        let featured = Set(ShopOffers.featuredSets.map { Set($0.itemIDs) })
+        #expect(ShopOffers.bundles.allSatisfy { !featured.contains(Set($0.itemIDs)) })
+    }
+
+    @Test func collectionsCountOwnedPiecesAndCompleteOnlyWhenAllAreOwned() {
+        for collection in Catalog.collections {
+            #expect(collection.itemIDs.allSatisfy { Catalog.item($0) != nil })
+            #expect(collection.bonus > 0)
+            let allButLast = Set(collection.itemIDs.dropLast())
+            #expect(collection.owned(of: allButLast) == collection.itemIDs.count - 1)
+            #expect(!collection.isComplete(allButLast))
+            #expect(collection.isComplete(Set(collection.itemIDs).union(["unrelated"])))
+            #expect(collection.owned(of: ["unrelated"]) == 0)
+        }
+        #expect(Set(Catalog.collections.map(\.id)).count == Catalog.collections.count)
+    }
 }

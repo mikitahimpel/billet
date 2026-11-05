@@ -596,6 +596,9 @@ importers:
       '@billet/contracts-http-api':
         specifier: workspace:*
         version: link:../../contracts/http-api
+      '@billet/contracts-push':
+        specifier: workspace:*
+        version: link:../../contracts/push
       '@billet/contracts-realtime':
         specifier: workspace:*
         version: link:../../contracts/realtime

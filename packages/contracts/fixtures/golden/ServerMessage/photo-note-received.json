@@ -1,0 +1,15 @@
+{
+  "_tag": "NoteReceived",
+  "note": {
+    "_tag": "Photo",
+    "author": "user-bob",
+    "caption": "sunset from the bridge 🌉",
+    "height": 4032,
+    "id": "note-1",
+    "image": "pairs/pair-1/notes/note-2.jpg",
+    "preview": "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    "sentAt": 1700000001000,
+    "width": 3024
+  },
+  "seq": 11
+}

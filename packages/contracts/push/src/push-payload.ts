@@ -14,12 +14,22 @@ const fields = {
   paper: Schema.optionalKey(PaperColor),
 };
 
+/** The key in an alert or widget push's JSON that holds its `PushPayload`, beside `aps`. */
+export const pushPayloadKey = "billet";
+
 /**
- * Custom data carried by a push, not the whole APNs envelope. Live Activity payloads wait
- * for the go/no-go in #13.
+ * Custom data carried by a push, not the whole APNs envelope. `LiveActivity` is the
+ * `content-state` of a drawing's Live Activity: the compact strokes always, since the activity
+ * cannot use the network, and the whole push stays under APNs' 4 KB.
  */
 export const PushPayload = Schema.TaggedUnion({
   Widget: fields,
   Alert: fields,
+  LiveActivity: {
+    noteId: NoteId,
+    author: UserId,
+    compact: CompactStrokes,
+    paper: Schema.optionalKey(PaperColor),
+  },
 });
 export type PushPayload = typeof PushPayload.Type;

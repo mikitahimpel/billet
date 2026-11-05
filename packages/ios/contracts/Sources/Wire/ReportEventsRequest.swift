@@ -40,6 +40,8 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case roomItemPutAway = "RoomItemPutAway"
   /// The room itself was changed: walls, floor, window (detail: what was changed).
   case roomCustomised = "RoomCustomised"
+  /// One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which).
+  case roomOpened = "RoomOpened"
 
   /// The shop was opened.
   case shopOpened = "ShopOpened"
@@ -79,6 +81,13 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case onboardingStepAnswered = "OnboardingStepAnswered"
   /// An onboarding step was skipped (detail: the step id).
   case onboardingStepSkipped = "OnboardingStepSkipped"
+
+  /// A hint came on screen (detail: the tip id).
+  case tipShown = "TipShown"
+  /// A hint was closed with its X (detail: the tip id).
+  case tipDismissed = "TipDismissed"
+  /// The hint's thing was done, or its button tapped (detail: the tip id).
+  case tipAction = "TipAction"
 }
 
 /// What a name may carry besides itself, as `clientEventRules` in the contract says.
@@ -115,7 +124,8 @@ extension ClientEventName {
       ClientEventRule(detail: .id)
     case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
       .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen,
-      .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped:
+      .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped, .tipShown,
+      .tipDismissed, .tipAction:
       ClientEventRule(detail: .id, required: true)
     case .shopItemBought, .shopBundleBought, .shopPurchaseUndone, .shopDailyGiftClaimed,
       .shopGiftSent:
@@ -124,6 +134,8 @@ extension ClientEventName {
       ClientEventRule(detail: .oneOf(["treat", "food"]), required: true)
     case .noteOpened:
       ClientEventRule(detail: .oneOf(["widget", "app"]), required: true)
+    case .roomOpened:
+      ClientEventRule(detail: .oneOf(["room", "city"]), required: true)
     case .widgetButtonTapped:
       ClientEventRule(detail: .oneOf(["pet", "treat"]), required: true)
     case .signInPromptAnswered:

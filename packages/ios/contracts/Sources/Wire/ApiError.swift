@@ -9,9 +9,12 @@ public enum ApiError: Codable, Hashable, Sendable {
   case appleIdInUse
   /// The server would not credit a purchase: its signature, bundle, environment or product.
   case invalidPurchase
+  /// A text note in an ink colour the pair has not bought.
+  case inkNotOwned(ink: InkId)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
+    case ink
   }
 
   public init(from decoder: any Decoder) throws {
@@ -26,6 +29,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "AlreadyPaired": self = .alreadyPaired
     case "AppleIdInUse": self = .appleIdInUse
     case "InvalidPurchase": self = .invalidPurchase
+    case "InkNotOwned": self = .inkNotOwned(ink: try container.decode(InkId.self, forKey: .ink))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -43,6 +47,9 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .alreadyPaired: try container.encode("AlreadyPaired", forKey: .tag)
     case .appleIdInUse: try container.encode("AppleIdInUse", forKey: .tag)
     case .invalidPurchase: try container.encode("InvalidPurchase", forKey: .tag)
+    case .inkNotOwned(let ink):
+      try container.encode("InkNotOwned", forKey: .tag)
+      try container.encode(ink, forKey: .ink)
     }
   }
 }

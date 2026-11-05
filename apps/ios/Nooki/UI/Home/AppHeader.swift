@@ -1,9 +1,13 @@
 import SwiftUI
+import TipKit
 
 /// The one header of every top-level screen (World, Moments, Shop): the Inbox and the couple's avatars top-left (the
 /// avatars open Us: plans, profile and settings), and the coins top-right. Nothing else sits in it.
 struct AppHeader: View {
     let state: HomeState
+    @State private var pairing = false
+    @Environment(Hints.self) private var hints
+    @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
@@ -31,12 +35,25 @@ struct AppHeader: View {
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Us")
             .accessibilityHint("Your plans, profile and settings")
+            .popoverTip(InviteHint(), arrowEdge: .top) { action in
+                if action.id == InviteHint.inviteAction {
+                    hints.done(InviteHint())
+                    pairing = true
+                }
+            }
 
             Spacer(minLength: 0)
 
             CoinPill(coins: state.coins)
         }
         .frame(height: 48)
+        .sheet(isPresented: $pairing) {
+            if let session {
+                PairingSheet(model: session.pairing) { session.pairingFinished() }
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
+            }
+        }
     }
 
     /// A partner's check-in from the last day, the same one the widgets show.

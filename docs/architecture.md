@@ -21,7 +21,8 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 ### PairRoom: one Durable Object per couple
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
-streak and presence in its own SQLite database, relays in-progress strokes, and uses hibernatable
+streak, presence and the couple's cat (its profile, temper and append-only journal, see
+[cat-state.md](cat-state.md)) and the activity Inbox (see [activity.md](activity.md)) in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.
 
@@ -72,8 +73,8 @@ to it in #67.
 
 ### R2: note images
 
-Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`. Media routes check
-authorisation before serving anything.
+Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`: rendered drawings as PNG,
+photos as PNG, JPEG or HEIC. Media routes check authorisation before serving anything.
 
 ### Two renditions of every note
 
@@ -166,13 +167,26 @@ provides.
 
 A note is sent in two steps, and both need a session and a partner:
 
-1. `POST /v1/media` takes the PNG as the raw body, up to 10 MiB, and returns its `image` key,
-   `pairs/<pairId>/notes/<uuid>.png`. Bytes without the PNG signature are refused.
+1. `POST /v1/media` takes the image as the raw body, up to 10 MiB whatever its format, and returns
+   its `image` key, `pairs/<pairId>/notes/<uuid>.<ext>`. The server reads the format from the
+   signature, never from the client: a PNG (`89 50 4E 47 0D 0A 1A 0A`) is stored as `.png`, a JPEG
+   (`FF D8 FF`) as `.jpg`, and a HEIC as `.heic` (an ISO-BMFF `ftyp` box at offset 4 with major brand
+   `heic`, `heix`, `heim`, `heis`, `hevc`, `hevx` or `mif1`). Anything else is refused with 400. The
+   app resizes photos before upload, so 10 MiB is room to spare.
 2. `POST /v1/notes` takes `SendNoteRequest`, naming that key. For a drawing it also carries the compact
-   rendition, at most 3072 bytes of JSON, the budget of the iOS encoder. The image must exist under the
-   couple's prefix.
+   rendition, at most 3072 bytes of JSON, the budget of the iOS encoder. A photo carries its `width`
+   and `height` in pixels (1 to 8192), a `preview` and an optional `caption` with the rules of a text
+   note (1 to 120 characters). The preview is a [BlurHash](https://blurha.sh), at most 9 by 9
+   components, so at most 166 characters, checked against the length its first character declares.
+   The image must exist under the couple's prefix. A note body is at most 16 KiB, which the largest
+   photo note fits several times over.
 
-`GET /v1/media/<key>` serves an image, with `cache-control: no-store`. `GET /v1/notes` returns notes
+Photos stored before they carried a size and a preview have only `image`, so `Note.Photo` keeps
+`width`, `height` and `preview` optional while `SendNoteRequest.Photo` requires them. Old notes still
+decode and are served as they were.
+
+`GET /v1/media/<key>` serves an image, with `cache-control: no-store` and the content type of the
+key's extension (`image/png`, `image/jpeg` or `image/heic`), the same one R2 stores with the object. `GET /v1/notes` returns notes
 oldest first, from `PairRoom`. `after` is the last `seq` the client holds, default 0, and `limit` is
 1 to 100, default 100. Sequences have no gaps, so the next page starts at `after` plus the notes
 returned.
@@ -187,7 +201,9 @@ Pairing commits in D1 and doesn't reach the room, so the first note opens it, wi
 A repeated open is accepted, so two first notes at once are safe.
 
 `packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
-`platform` provides.
+`platform` provides. The cat routes (`GET`/`PUT /v1/cat`, `GET /v1/cat/journal`,
+`POST /v1/cat/events`) live there too, in `CatService`, and so do the Inbox routes (`GET /v1/activity`,
+`POST /v1/activity/read`) in `ActivityService`, on the same rule: the pair comes from D1.
 
 ### Deleting an account
 
@@ -199,8 +215,9 @@ a fresh Sign in with Apple in it. In order:
    `/auth/revoke`, with a client secret signed by the Sign in with Apple key (`APPLE_SIGN_IN_KEY`).
    The outcome is logged as a label; a failure or a missing key never stops the deletion.
 2. In every room the user has been in (the current pair, and each pair `pair_events` names), the
-   `PairRoom` deletes the notes they sent and closes its sockets, and their images go from R2: the
-   ones those notes name, and every image under the prefix whose `uploader` metadata is theirs.
+   `PairRoom` deletes the notes they sent and the cat with its whole journal, and closes its
+   sockets, and their images go from R2: the ones those notes name, and every image under the
+   prefix whose `uploader` metadata is theirs, whatever its format.
 3. One D1 batch ends the pair, leaves the partner a `partner_notices` row, and deletes the user's
    `users` and `auth_user` rows with their sessions, Apple link, account key, devices, push tokens,
    invite and counted events.

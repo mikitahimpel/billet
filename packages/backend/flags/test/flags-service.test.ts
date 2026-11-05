@@ -1,4 +1,5 @@
-import { Effect, Layer, Schema } from "effect";
+import { Clock, Effect, Layer, Schema } from "effect";
+import { TestClock } from "effect/testing";
 import { Digest } from "effect/crypto";
 import { describe, expect, it } from "vitest";
 import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
@@ -61,17 +62,22 @@ const setup = (specs: ReadonlyArray<Parameters<typeof defineExperiment>[0]>) => 
         return yield* use(yield* FlagsService);
       }).pipe(Effect.provide(build(experiments, repository))),
     );
-  const pairUp = async (first: typeof ana, second: typeof ana, pairId: string) => {
+  const pairUp = async (first: typeof ana, second: typeof ana, pairId: string, now = 2) => {
     const codeHash = `hash-${first}`;
     await Effect.runPromise(
-      pairs.repository.saveInvite({ codeHash, ownerId: first, createdAt: 1, expiresAt: 10 }),
+      pairs.repository.saveInvite({
+        codeHash,
+        ownerId: first,
+        createdAt: now - 1,
+        expiresAt: now + 8,
+      }),
     );
     await Effect.runPromise(
       pairs.repository.claimInvite({
         codeHash,
         claimerId: second,
         pairId: pairId as PairId,
-        now: 2,
+        now,
       }),
     );
     return pairId as PairId;
@@ -391,6 +397,99 @@ describe("FlagsService", () => {
       ]);
       expect(decisions.find(({ key }) => key === "none")?.variant).toBe("control");
       expect(flags.rows.size).toBe(0);
+    });
+  });
+
+  describe("pairedSince: only pairs formed after the experiment started", () => {
+    const start = Date.UTC(2026, 10, 5, 9, 30);
+    const rooms = spec("rooms", {
+      variants: { both: 1, "room-only": 1, "city-only": 1 },
+      default: "both",
+      targeting: { pairedSince: "2026-11-05T09:30Z" },
+    });
+    /** Pairs two people at the moment the test clock has reached. */
+    const pairAt = (
+      pairUp: ReturnType<typeof setup>["pairUp"],
+      first: typeof ana,
+      second: typeof ana,
+      pairId: string,
+      millis: number,
+    ) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          yield* TestClock.setTime(millis);
+          return yield* Clock.currentTimeMillis;
+        }).pipe(Effect.provide(TestClock.layer())),
+      ).then((now) => pairUp(first, second, pairId, now));
+
+    it("lets a pair formed at or after the start in, and leaves one formed before it out", async () => {
+      const { run, pairUp } = setup([rooms]);
+      await pairAt(pairUp, ana, ben, "pair-old", start - 60_000);
+      const dee = user("user-d");
+      await pairAt(pairUp, cal, dee, "pair-new", start);
+      const [old, fresh, freshPartner] = await run((service) =>
+        Effect.all([
+          service.flagsFor(ana, caller),
+          service.flagsFor(cal, caller),
+          service.flagsFor(dee, caller),
+        ]),
+      );
+      expect(old).toEqual({ flags: [] });
+      expect(fresh.flags.map(({ key }) => key)).toEqual(["rooms"]);
+      expect(freshPartner).toEqual(fresh);
+    });
+
+    it("says why in the admin's explanation", async () => {
+      const { run, pairUp } = setup([rooms]);
+      const old = await pairAt(pairUp, ana, ben, "pair-old", start - 1);
+      const fresh = await pairAt(pairUp, cal, user("user-d"), "pair-new", start + 1);
+      const [forOld, forFresh] = await run((service) =>
+        Effect.all([service.explain(old, "unknown"), service.explain(fresh, "unknown")]),
+      );
+      expect(forOld).toEqual([{ key: "rooms", variant: undefined, reason: "not-targeted" }]);
+      expect(forFresh[0]?.reason).toBe("entered");
+    });
+
+    it("keeps a new pair's variant when the start is moved later", async () => {
+      const { run, pairUp } = setup([]);
+      await pairAt(pairUp, ana, ben, "pair-new", start + 60_000);
+      const before = await run(
+        (service) => service.flagsFor(ana, caller),
+        defineExperiments([rooms]),
+      );
+      const moved = defineExperiments([
+        { ...rooms, targeting: { pairedSince: "2026-12-01T00:00Z" } },
+      ]);
+      const after = await run((service) => service.flagsFor(ben, caller), moved);
+      expect(before.flags).toHaveLength(1);
+      expect(after).toEqual(before);
+    });
+
+    it("assigns a new pair when the invite is claimed, as reading would", async () => {
+      const { run, pairUp, flags } = setup([rooms]);
+      const pairId = await pairAt(pairUp, ana, ben, "pair-new", start + 5);
+      await run((service) => service.assignPair(pairId));
+      const stored = await Effect.runPromise(flags.repository.find(pairId));
+      const read = await run((service) => service.flagsFor(ana, caller));
+      expect(stored.map(({ experimentKey, variant }) => ({ key: experimentKey, variant }))).toEqual(
+        read.flags,
+      );
+    });
+
+    it("leaves out a pair whose formation time is unknown", async () => {
+      const { run, pairUp, pairs } = setup([]);
+      const pairId = await pairUp(ana, ben, "pair-x", start + 5);
+      const unknown = await run(
+        (service) => service.explain(pairId, "unknown"),
+        defineExperiments([rooms]),
+      );
+      expect(unknown[0]?.reason).toBe("entered");
+      await Effect.runPromise(pairs.repository.unpair(ana));
+      const ended = await run(
+        (service) => service.explain(pairId, "unknown"),
+        defineExperiments([rooms]),
+      );
+      expect(ended).toEqual([{ key: "rooms", variant: undefined, reason: "not-targeted" }]);
     });
   });
 });

@@ -8,16 +8,19 @@
     "./account": "./src/account.ts",
     "./api-error": "./src/api-error.ts",
     "./auth": "./src/auth.ts",
+    "./cat": "./src/cat.ts",
     "./client-info": "./src/client-info.ts",
     "./device": "./src/device.ts",
     "./events": "./src/events.ts",
     "./flags": "./src/flags.ts",
+    "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",
     "./note": "./src/note.ts",
     "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",
     "./status": "./src/status.ts",
-    "./onboarding": "./src/onboarding.ts"
+    "./onboarding": "./src/onboarding.ts",
+    "./activity": "./src/activity.ts"
   },
   "scripts": {
     "lint": "oxlint .",
