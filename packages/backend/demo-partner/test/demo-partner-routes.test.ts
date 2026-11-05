@@ -51,6 +51,7 @@ const FakeDemo = Layer.succeed(
       if (ownerId === "down") return Effect.fail(new DemoPartnerUnavailable({ reason: "fake" }));
       return Effect.succeed({ ...pair, members: [ownerId, user("bot")] });
     },
+    status: (ownerId) => Effect.succeed({ paired: ownerId === "ana" }),
     remove: (ownerId) => (ownerId === "alone" ? Effect.fail(new NoDemoPartner()) : Effect.void),
   }),
 );
@@ -87,13 +88,23 @@ describe("demo partner routes", () => {
     expect(await response.json()).toEqual(body);
   });
 
+  it.each([
+    ["ana", true],
+    ["alone", false],
+  ])("tells %s whether they are paired with their bot", async (name, paired) => {
+    const response = await send("GET", name);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({ paired });
+  });
+
   it("deletes with no body", async () => {
     const response = await send("DELETE", "ana");
     expect(response.status).toBe(204);
     expect(await response.text()).toBe("");
   });
 
-  it.each([["POST"], ["DELETE"]])("refuses %s without a session", async (method) => {
+  it.each([["POST"], ["GET"], ["DELETE"]])("refuses %s without a session", async (method) => {
     expect((await send(method, "rejected")).status).toBe(401);
   });
 });

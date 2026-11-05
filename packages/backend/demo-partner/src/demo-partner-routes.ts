@@ -4,13 +4,14 @@ import { principalOf, respondFailures, type RouteFailure } from "@billet/backend
 import { AuthService } from "@billet/backend-auth/auth-service";
 import type { AlreadyPaired } from "@billet/backend-pairing/pairing-error";
 import { ApiError } from "@billet/contracts-http-api/api-error";
-import { PairResponse } from "@billet/contracts-http-api/pair";
+import { DemoPartnerResponse, PairResponse } from "@billet/contracts-http-api/pair";
 import { routes } from "@billet/contracts-http-api/routes";
 import type { DemoPartnerUnavailable, NoDemoPartner } from "./demo-partner-error.ts";
 import { DemoPartnerService } from "./demo-partner-service.ts";
 
 const respondError = HttpServerResponse.schemaJson(ApiError);
 const respondPair = HttpServerResponse.schemaJson(PairResponse);
+const respondDemo = HttpServerResponse.schemaJson(DemoPartnerResponse);
 
 const respondDemoFailures = <R>(
   effect: Effect.Effect<
@@ -47,6 +48,16 @@ export const DemoPartnerRoutes = HttpRouter.use((router) =>
         const { userId } = yield* principal;
         const pair = yield* demo.create(userId);
         return yield* respondPair(pair, { headers: { "cache-control": "no-store" } });
+      }).pipe(respondDemoFailures),
+    );
+
+    yield* router.add(
+      routes.getDemoPartner.method,
+      routes.getDemoPartner.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const status = yield* demo.status(userId);
+        return yield* respondDemo(status, { headers: { "cache-control": "no-store" } });
       }).pipe(respondDemoFailures),
     );
 
