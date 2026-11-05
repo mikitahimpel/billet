@@ -2138,3 +2138,27 @@ table.retention tr.total td {
   color: var(--muted);
   font-size: 13px;
 }
+
+table.metrics th[scope="row"],
+table.metrics td {
+  vertical-align: top;
+}
+
+table.metrics .sub {
+  display: block;
+}
+
+table.metrics .metric-diff {
+  margin-top: var(--s1);
+}
+
+table.metrics .metric-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+
+table.metrics th[scope="row"] .sub {
+  font-weight: 400;
+}
