@@ -63,14 +63,15 @@ struct SetSheet: View {
                         Image(uiImage: image).resizable().scaledToFit()
                     }
                 }
-                .frame(width: centre ? 150 : 110, height: centre ? 150 : 110)
+                .frame(width: centre ? 136 : 96, height: centre ? 136 : 96)
                 .zIndex(centre ? 1 : 0)
                 .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
                 .opacity(state.owned.contains(item.id) ? 0.45 : 1)
             }
         }
+        .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity)
-        .frame(height: 200)
+        .frame(height: 180)
         .background(RadialGradient(colors: [Color(hex: 0xF7C98E), Color(hex: 0xC97A45), Color(hex: 0x5A3420)],
                                    center: UnitPoint(x: 0.55, y: 0.4), startRadius: 10, endRadius: 280),
                     in: .rect(cornerRadius: Radius.hero, style: .continuous))

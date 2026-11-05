@@ -18,6 +18,8 @@ struct ItemSheet: View {
     @State private var showsPlaceholder = true
     @State private var celebrating = false
     @State private var height: CGFloat = 640
+    /// On a short screen the stage gives up some height so the sheet fits without scrolling.
+    @State private var tight = false
 
     private var cost: Int { state.price(of: item) }
     private var affordable: Bool { state.coins >= cost }
@@ -52,7 +54,7 @@ struct ItemSheet: View {
         .padding(.horizontal, Space.gutter)
         .padding(.top, Space.gutter)
         .padding(.bottom, Space.s)
-        .shopSheet(height: $height)
+        .shopSheet(height: $height, tight: $tight)
     }
 
     // MARK: Stage
@@ -92,7 +94,8 @@ struct ItemSheet: View {
                 onEnded: { turntable.isDragging = false }
             )
         }
-        .frame(height: CGFloat(ItemTurntable.stageHeight))
+        // The camera is framed for the full stage; a shorter one shows the same view, a little closer to its edges.
+        .frame(height: tight ? 200 : CGFloat(ItemTurntable.stageHeight))
         .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
@@ -119,22 +122,24 @@ struct ItemSheet: View {
     private var actions: some View {
         VStack(spacing: Space.s) {
             HStack(spacing: Space.s) {
+                // Icon-only, so the primary button keeps its label on one line on a small phone.
                 Button(action: reveal) {
-                    Label("Preview", systemImage: "rotate.3d")
-                        .labelStyle(.iconOnly)
-                        .frame(width: 30)
+                    Label("Preview in 3D", systemImage: "cube").labelStyle(.iconOnly).frame(width: 28)
                 }
                 .shopButton(prominent: false)
                 .controlSize(.large)
                 .disabled(!showsPlaceholder || !turntable.isDrawn)
-                .accessibilityLabel("Preview in 3D")
+                .accessibilityHint("Drag the item to turn it")
 
                 if owned {
                     Button {
                         state.tab = .world
                         dismiss()
                     } label: {
-                        Label("Place in your room", systemImage: "house.fill").frame(maxWidth: .infinity)
+                        Label("Place in your room", systemImage: "house.fill")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .frame(maxWidth: .infinity)
                     }
                     .nookiPrimary()
                 } else {
@@ -166,7 +171,7 @@ struct ItemSheet: View {
                 CoinPrice(price: cost, was: isDeal ? item.price : nil)
             } else {
                 Image(systemName: "lock.fill")
-                Text("Need \(cost - state.coins) more coins")
+                Text("Need \(cost - state.coins) more")
                     .monospacedDigit()
             }
         }

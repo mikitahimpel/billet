@@ -35,13 +35,16 @@ struct SheetHeader<Chips: View>: View {
 extension View {
     /// A Shop sheet: the system sheet on `Ink.screen` with a detent as tall as its content, and the large detent too
     /// when the content outgrows it (big text sizes); the content scrolls only then.
-    func shopSheet(height: Binding<CGFloat>) -> some View {
-        modifier(ShopSheet(height: height))
+    /// `tight` turns true, and stays so, when the content is taller than the screen allows (an iPhone SE), so the
+    /// sheet can shrink its art instead of scrolling.
+    func shopSheet(height: Binding<CGFloat>, tight: Binding<Bool> = .constant(false)) -> some View {
+        modifier(ShopSheet(height: height, tight: tight))
     }
 }
 
 private struct ShopSheet: ViewModifier {
     @Binding var height: CGFloat
+    @Binding var tight: Bool
     /// The home indicator's strip, which the detent's height includes.
     @State private var bottom: CGFloat = 0
 
@@ -53,6 +56,9 @@ private struct ShopSheet: ViewModifier {
         .scrollBounceBehavior(.basedOnSize)
         .scrollIndicators(.hidden)
         .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { bottom = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { visible in
+            if height > visible + 1, !tight { tight = true }
+        }
         .presentationDetents([.height(height + bottom), .large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Ink.screen)

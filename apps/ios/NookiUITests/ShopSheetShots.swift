@@ -22,7 +22,7 @@ final class ShopSheetShots: XCTestCase {
 
     @MainActor
     func testShopSheets() throws {
-        for variant in Self.variants {
+        for (index, variant) in Self.variants.enumerated() {
             let app = XCUIApplication()
             app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES",
                                     "-tab", "shop"]
@@ -32,8 +32,9 @@ final class ShopSheetShots: XCTestCase {
             if !variant.arguments.contains("-shopOwned") { app.launchArguments += ["-shopOwned", "lamp,rug"] }
             app.launch()
             _ = app.buttons["Shop"].waitForExistence(timeout: 60)
-            // The launch splash covers everything for up to 6 s; then the sheet slides up.
-            Thread.sleep(forTimeInterval: 9)
+            // The launch splash covers everything for up to 6 s, longer on the first, cold launch; then the sheet
+            // slides up.
+            Thread.sleep(forTimeInterval: index == 0 ? 16 : 9)
             shot(variant.name)
             // The large detent, where the sheet has one.
             app.swipeUp()
