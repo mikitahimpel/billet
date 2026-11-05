@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Wire
 
 extension WebSocketConnection {
@@ -10,18 +11,9 @@ extension WebSocketConnection {
   ) async throws(TransportError) -> WebSocketConnection {
     let task = session.webSocketTask(with: request)
     task.resume()
-    do {
-      // Cancelling the connect cancels the task, so a stuck handshake does not outlive its attempt.
-      try await withTaskCancellationHandler {
-        try await task.ping()
-      } onCancel: {
-        task.cancel(with: .goingAway, reason: nil)
-      }
-    } catch {
-      task.cancel(with: .goingAway, reason: nil)
-      throw .network(error.localizedDescription)
-    }
 
+    // Reading starts before the ping: URLSession handles a pong only after the frames ahead of it
+    // are read, and the room sends `Presence` as soon as it accepts the socket.
     let messages = AsyncStream<ServerMessage> { continuation in
       let reader = Task {
         while !Task.isCancelled {
@@ -45,6 +37,18 @@ extension WebSocketConnection {
       continuation.onTermination = { _ in reader.cancel() }
     }
 
+    do {
+      // Cancelling the connect cancels the task, so a stuck handshake does not outlive its attempt.
+      try await withTaskCancellationHandler {
+        try await task.ping()
+      } onCancel: {
+        task.cancel(with: .goingAway, reason: nil)
+      }
+    } catch {
+      task.cancel(with: .goingAway, reason: nil)
+      throw .network(error.localizedDescription)
+    }
+
     return WebSocketConnection(
       messages: messages,
       send: { message throws(TransportError) in
@@ -66,10 +70,18 @@ extension WebSocketConnection {
 }
 
 extension URLSessionWebSocketTask {
+  /// `sendPing` can call its handler a second time, with an error, when the task is cancelled after
+  /// the pong; only the first answer resumes.
   fileprivate func ping() async throws {
+    let answered = Mutex(false)
     try await withCheckedThrowingContinuation {
       (continuation: CheckedContinuation<Void, any Error>) in
       sendPing { error in
+        let first = answered.withLock { done in
+          defer { done = true }
+          return !done
+        }
+        guard first else { return }
         if let error {
           continuation.resume(throwing: error)
         } else {
