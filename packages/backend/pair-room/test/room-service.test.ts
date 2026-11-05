@@ -87,6 +87,50 @@ describe("RoomService", () => {
     expect(memory.notes[0]?.note).toMatchObject({ _tag: "Drawing", compact, author: bob });
   });
 
+  it("stamps a check-in with the room's time, keeps the latest per member, reads them back, and forgets them with the pair", async () => {
+    const { memory, layer } = memoryStore();
+    const result = await runWith(
+      layer,
+      Effect.gen(function* () {
+        const room = yield* RoomService;
+        yield* room.dispatch(open);
+        yield* TestClock.setTime(1_700_000_000_000);
+        yield* room.setMood(alice, { mood: "busy", note: " till six " });
+        yield* TestClock.setTime(1_700_000_001_000);
+        yield* room.setMood(bob, { mood: "sleepy" });
+        yield* TestClock.setTime(1_700_000_002_000);
+        const replaced = yield* room.setMood(alice, { mood: "happy" });
+        const refused = yield* room.setMood(mallory, { mood: "happy" });
+        return { replaced, refused, moods: yield* room.moods };
+      }).pipe(Effect.provide(TestClock.layer())),
+    );
+    const latest = [
+      { user: alice, mood: "happy", at: 1_700_000_002_000 },
+      { user: bob, mood: "sleepy", at: 1_700_000_001_000 },
+    ];
+    expect(result.replaced).toMatchObject({
+      _tag: "Accepted",
+      outputs: [{ _tag: "MoodSet", checkIn: latest[0] }],
+    });
+    expect(result.refused).toMatchObject({ _tag: "Rejected", rejection: { _tag: "NotAMember" } });
+    expect(result.moods).toEqual(latest);
+    expect(memory.state).toMatchObject({ _tag: "Active", moods: latest });
+    await runWith(
+      layer,
+      RoomService.use((room) => room.forgetAuthor(bob)),
+    );
+    expect(memory.state).toMatchObject({ _tag: "Active", moods: [] });
+  });
+
+  it("has no check-ins before the room opens", async () => {
+    const { layer } = memoryStore();
+    const result = await runWith(
+      layer,
+      RoomService.use((room) => Effect.all([room.moods, room.setMood(alice, { mood: "happy" })])),
+    );
+    expect(result).toEqual([[], { _tag: "Rejected", rejection: { _tag: "RoomNotOpen" } }]);
+  });
+
   it("writes nothing for a rejected command", async () => {
     const { memory, layer } = memoryStore();
     const decision = await runWith(

@@ -36,7 +36,11 @@ const FakeAuth = Layer.succeed(
   }),
 );
 
-const pair = { pairId: Schema.decodeSync(PairId)("pair-1"), members: [user("ana"), user("bot")] };
+const pair = {
+  pairId: Schema.decodeSync(PairId)("pair-1"),
+  members: [user("ana"), user("bot")],
+  moods: [],
+};
 
 // Each caller's name decides the answer: the service is the one under test elsewhere.
 const FakeDemo = Layer.succeed(

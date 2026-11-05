@@ -3,6 +3,7 @@ import { Digest, SecureRandom } from "effect/crypto";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { InviteCode, UserId } from "@billet/contracts-domain/ids";
+import { PairMoods } from "../src/pair-moods.ts";
 import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
 import { inviteLifetime, PairingService } from "../src/pairing-service.ts";
@@ -19,6 +20,7 @@ const setup = () => {
       Layer.mergeAll(
         Layer.succeed(PairingRepository, memory.repository),
         PairingObserver.silent,
+        PairMoods.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),
@@ -122,6 +124,7 @@ describe("PairingService", () => {
                 ),
               unpaired: (pairId) => Effect.sync(() => void calls.push(`unpaired ${pairId}`)),
             }),
+            PairMoods.none,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
           ),
@@ -181,6 +184,7 @@ describe("PairingService", () => {
               paired: () => Effect.die("observer is down"),
               unpaired: () => Effect.die("observer is down"),
             }),
+            PairMoods.none,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
           ),

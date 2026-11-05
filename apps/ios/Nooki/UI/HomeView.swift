@@ -54,6 +54,14 @@ struct HomeView: View {
             // and the glass over them never redraw a moving backdrop every frame.
             WarmBackdrop(drifts: roomOnScreen)
 
+            // The City window's view, seen through the hole in the room's wall; never takes a touch.
+            if !Self.noRoom, showsRoom, !showsBoard, state.room == .city, let city {
+                CityWindowLayer(view: city.windowView)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .ignoresSafeArea()
+            }
+
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
                 Color.clear
@@ -152,11 +160,17 @@ struct HomeView: View {
                 .padding(.top, 120)
             }
         }
+        // Covered by the splash, Home is not there for VoiceOver or UI tests either: a tap aimed at a control under
+        // the splash would land on the splash.
+        .accessibilityHidden(launching)
         // Over the room rather than in place of it: RealityKit keeps drawing underneath, so the room is already
         // warmed up and whole when the splash lifts.
         .overlay {
             if launching {
                 LaunchSplash()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Nooki is opening")
+                    .accessibilityIdentifier("launch-splash")
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
             }
         }

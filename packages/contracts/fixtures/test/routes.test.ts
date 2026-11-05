@@ -199,6 +199,10 @@ it("pins the routes that clients call", () => {
         "method": "PUT",
         "path": "/v1/gifts/plans",
       },
+      "setMood": {
+        "method": "PUT",
+        "path": "/v1/mood",
+      },
       "setWish": {
         "method": "PUT",
         "path": "/v1/shop/wishlist",

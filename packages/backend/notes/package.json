@@ -16,6 +16,8 @@
     "./cat-service": "./src/cat-service.ts",
     "./activity-routes": "./src/activity-routes.ts",
     "./activity-service": "./src/activity-service.ts",
+    "./mood-routes": "./src/mood-routes.ts",
+    "./mood-service": "./src/mood-service.ts",
     "./reaction-routes": "./src/reaction-routes.ts",
     "./reaction-service": "./src/reaction-service.ts",
     "./gifts-routes": "./src/gifts-routes.ts",

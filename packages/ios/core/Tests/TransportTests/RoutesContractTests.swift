@@ -37,6 +37,7 @@ import Testing
       "claimInvite": Routes.claimInvite,
       "unpair": Routes.unpair,
       "getPair": Routes.getPair,
+      "setMood": Routes.setMood,
       "uploadImage": Routes.uploadImage,
       "downloadImage": Route(.get, Routes.downloadImagePrefix + "*"),
       "sendNote": Routes.sendNote,

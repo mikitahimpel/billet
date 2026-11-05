@@ -92,7 +92,7 @@ export class DemoPartnerService extends Context.Service<
         yield* bots
           .start(pairId, ownerId, botId)
           .pipe(Effect.catch((error) => Effect.logWarning("demo bot not started", error)));
-        return { pairId, members: [ownerId, botId] };
+        return { pairId, members: [ownerId, botId], moods: [] };
       });
 
       const remove = Effect.fn("DemoPartnerService.remove")(function* (

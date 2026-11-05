@@ -37,6 +37,7 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   items: [],
   wishlist: [],
   bonuses: [],
+  moods: [],
   welcomed: true,
   wallet: emptyWallet,
 });

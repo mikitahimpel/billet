@@ -1,0 +1,9 @@
+{
+  "_tag": "MoodChanged",
+  "checkIn": {
+    "at": 1700000005000,
+    "mood": "missing",
+    "note": "come home soon 🌙",
+    "user": "user-alice"
+  }
+}

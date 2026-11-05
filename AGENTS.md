@@ -8,7 +8,7 @@ work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original p
 
 | Path | What |
 | --- | --- |
-| `apps/ios` | App, widgets, notification extension. XcodeGen (`project.yml`). |
+| `apps/ios` | App, widgets, notification and share extensions. XcodeGen (`project.yml`). |
 | `apps/api` | Worker entry. |
 | `packages/ios/<layer>` | Swift packages: `contracts`, `core`, `pet`, `features`, `payments`. |
 | `packages/backend/<context>` | Backend contexts and `platform`. |

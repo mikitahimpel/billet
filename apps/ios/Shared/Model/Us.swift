@@ -98,6 +98,20 @@ nonisolated struct UsList: Identifiable, Codable, Hashable {
 
 // MARK: - Wishlists
 
+/// The day a wish is for, such as a birthday, picked from the calendar. A title and a day rather than a calendar
+/// entry, since each partner's phone keeps its own calendar.
+nonisolated struct WishOccasion: Codable, Hashable {
+    var title: String
+    var date: Date
+
+    /// Negative once the day has passed.
+    func daysLeft(from now: Date = .now) -> Int {
+        let calendar = Calendar.current
+        return calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
+                                       to: calendar.startOfDay(for: date)).day ?? 0
+    }
+}
+
 /// What the owner wants. It carries nothing about who plans to gift it: that is the giver's `GiftPlan`, so the owner's
 /// copy can never spoil the surprise.
 nonisolated struct WishItem: Identifiable, Codable, Hashable {
@@ -111,6 +125,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var note = ""
     /// Pinned to the top of the list.
     var mostWanted = false
+    var occasion: WishOccasion?
     var added = Date.now
     /// When the owner said it arrived.
     var gifted: Date?
@@ -122,7 +137,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var legacyGiver: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id, owner, title, link, price, note, mostWanted, added, gifted, giftedBy, rewarded
+        case id, owner, title, link, price, note, mostWanted, occasion, added, gifted, giftedBy, rewarded
     }
 
     private enum LegacyKeys: String, CodingKey { case want, reservedBy }
@@ -151,6 +166,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
         // Three hearts was the top of the old scale.
         mostWanted = try c.decodeIfPresent(Bool.self, forKey: .mostWanted)
             ?? (try legacy.decodeIfPresent(Int.self, forKey: .want) == 3)
+        occasion = try c.decodeIfPresent(WishOccasion.self, forKey: .occasion)
         added = try c.decodeIfPresent(Date.self, forKey: .added) ?? .distantPast
         gifted = try c.decodeIfPresent(Date.self, forKey: .gifted)
         giftedBy = try c.decodeIfPresent(String.self, forKey: .giftedBy)
