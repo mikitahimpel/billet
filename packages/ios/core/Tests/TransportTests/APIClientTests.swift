@@ -154,6 +154,48 @@ import Wire
     #expect(down.requests.first?.path == "/v1/media/couples/p1/a.png")
   }
 
+  @Test func inksAndCoinsAreReadWithTheToken() async throws {
+    let inks = Server(
+      body:
+        ##"{"inks":[{"id":"ink-graphite","name":"Graphite","light":"#2B2B2E","dark":"#ECEAE4","price":0}],"owned":["ink-graphite"]}"##
+    )
+    let catalog = try await Self.client(inks).listInks()
+    #expect(catalog.owned == [InkId.free])
+    #expect(catalog.inks.first?.light == "#2B2B2E")
+    #expect(inks.requests.first?.path == "/v1/inks")
+    #expect(inks.requests.first?.headers["Authorization"] == "Bearer tok")
+
+    let coins = Server(body: #"{"balance":140,"entries":[]}"#)
+    #expect(try await Self.client(coins).getCoins().balance == 140)
+    #expect(coins.requests.first?.method == .get)
+    #expect(coins.requests.first?.path == "/v1/coins")
+  }
+
+  @Test func buyingSendsTheKeyAndTheInk() async throws {
+    let server = Server(
+      body:
+        #"{"entry":{"id":"buy:k1","kind":"buy","amount":-60,"ref":"ink-rose","at":5},"balance":80,"granted":["ink-rose"],"owned":["ink-graphite","ink-rose"]}"#
+    )
+    let response = try await Self.client(server).buyItem(
+      BuyRequest(id: IdempotencyKey("k1"), item: InkId("ink-rose")))
+    #expect(response.balance == 80)
+    #expect(response.owned == [InkId.free, InkId("ink-rose")])
+    let request = try #require(server.requests.first)
+    #expect(request.method == .post)
+    #expect(request.path == "/v1/shop/buy")
+    let body = try #require(request.body)
+    let sent = try #require(try JSONSerialization.jsonObject(with: body) as? NSDictionary)
+    #expect(sent == ["id": "k1", "item": "ink-rose"])
+  }
+
+  @Test func aShortBalanceSaysHowShort() async {
+    let server = Server(status: 402, body: #"{"_tag":"NotEnoughCoins","needed":60,"have":25}"#)
+    await #expect(throws: TransportError.api(.notEnoughCoins(needed: 60, have: 25))) {
+      _ = try await Self.client(server).buyItem(
+        BuyRequest(id: IdempotencyKey("k1"), item: InkId("ink-rose")))
+    }
+  }
+
   @Test func contractErrorsKeepTheirName() async {
     let server = Server(status: 409, body: #"{"_tag":"AlreadyPaired"}"#)
     await #expect(throws: TransportError.api(.alreadyPaired)) {

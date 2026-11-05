@@ -61,7 +61,7 @@ struct NoteSheet: View {
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 30))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .foregroundStyle(Color(hex: note.inkHex))
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.4)
                     .padding(26)

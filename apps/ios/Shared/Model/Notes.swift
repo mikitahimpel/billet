@@ -27,6 +27,10 @@ nonisolated struct Note: Identifiable, Codable, Hashable {
     /// PNG file name inside the app group's Notes folder; nil for a text note.
     let doodle: String?
     var paper: Paper
+    /// The text's ink, 0xRRGGBB; nil on notes written before inks, which keep the old brown.
+    var ink: UInt32? = nil
+
+    var inkHex: UInt32 { ink ?? 0x5B3A28 }
 }
 
 /// Local-only notes store; the JSON index and doodle PNGs live in the app group's Notes folder.
@@ -55,11 +59,11 @@ final class NoteStore {
 
     /// Empty notes are not worth saving, and long ones are cut to `maxLength`.
     @discardableResult
-    func add(text: String, paper: Note.Paper, author: String) -> Note? {
+    func add(text: String, paper: Note.Paper, author: String, ink: UInt32? = nil) -> Note? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         let note = Note(id: UUID(), author: author, date: .now, text: String(trimmed.prefix(Self.maxLength)),
-                        doodle: nil, paper: paper)
+                        doodle: nil, paper: paper, ink: ink)
         notes.insert(note, at: 0)
         save()
         return note

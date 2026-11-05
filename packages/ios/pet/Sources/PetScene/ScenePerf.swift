@@ -9,7 +9,7 @@ import Pet
 /// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
 ///
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches lighting and tabs, then idles and orbits again once settled, and
+/// also orbits, zooms, switches lighting and tabs, scrolls the Shop, then idles and orbits again once settled, and
 /// last switches the cat through four models and back, as `-perf.script cats` does alone.
 /// `-perf.script steady` leaves Home alone for 20 seconds and then records it for a minute, untouched:
 /// what a phone lying on a table with the app open spends. `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
@@ -74,6 +74,9 @@ public enum ScenePerf {
     public var cats: [CatModel] = ScenePerf.catModels
     /// The first part of every screenshot's name, so the shots of two rooms never overwrite each other.
     public var shotPrefix = "windowSeat"
+    /// Scrolls the tab on screen to `y` points from its top; a `full` run scrolls the Shop with it. An
+    /// app that cannot leaves it doing nothing, and the run records a Shop held still.
+    public var scroll: @MainActor (_ y: Double) -> Void = { _ in }
     public init() {}
   }
 
@@ -173,12 +176,29 @@ public enum ScenePerf {
       }
       if tab != "home" { census() }
     }
+    await shopScroll()
     // Home again, long after launch and the switches, when nothing started earlier still runs:
     // what the room costs for good.
     await pause(20)
     await record("settled", seconds: 5)
     await orbit("settled.orbit")
     await cats()
+  }
+
+  /// The Shop held still, then scrolled down its page and back up, again and again: the frames a
+  /// thumb flicking through the offers gets. The pace is per frame, so a slow runner scrolls slower
+  /// and two builds compare under the same drive.
+  private static func shopScroll() async {
+    await timed("tab.shop.scroll", until: "shop on screen") { host.selectTab("shop") }
+    await pause(2)
+    await record("shop.still", seconds: 3)
+    await record("shop.scroll", seconds: 10) { frame in
+      // 2 s down 2,400 pt and 2 s back up, at 60 frames a second.
+      let t = Double(frame % 240) / 120
+      host.scroll(t <= 1 ? t * 2400 : (2 - t) * 2400)
+    }
+    host.scroll(0)
+    await timed("tab.home.scroll", until: "room on screen") { host.selectTab("home") }
   }
 
   private static func orbit(_ name: String) async {

@@ -338,7 +338,7 @@ private struct NoteCard: View {
                 } else if note.doodle == nil {
                     Text(note.text)
                         .font(.custom("Noteworthy-Bold", size: 18))
-                        .foregroundStyle(Color(hex: 0x5B3A28))
+                        .foregroundStyle(Color(hex: note.inkHex))
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                         .padding(14)
@@ -347,7 +347,7 @@ private struct NoteCard: View {
             .overlay(alignment: .bottomTrailing) {
                 Text("— \(note.author)")
                     .font(.custom("Noteworthy-Bold", size: 13))
-                    .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.7))
+                    .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
                     .padding(8)
             }
             .compositingGroup()

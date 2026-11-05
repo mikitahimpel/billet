@@ -22,7 +22,7 @@ final class DrawModel {
     static let eraserReach = 0.04
 
     var tool = Tool.pen
-    var ink = DrawInks.free
+    var ink = PaletteInk.free
     var wallpaper = LockWallpaper.blush
     var photo: UIImage?
     private(set) var sendState = SendState.idle
@@ -102,8 +102,8 @@ final class DrawModel {
     private func draw(_ point: Point) {
         let now = CACurrentMediaTime()
         guard let stroke = current else {
-            current = Stroke(color: ink.wire, width: Self.penWidth, points: [point])
-            send(batcher.begin(color: ink.wire, width: Self.penWidth, at: point, time: now))
+            current = Stroke(color: PaletteInk.wire(ink.dark), width: Self.penWidth, points: [point])
+            send(batcher.begin(color: PaletteInk.wire(ink.dark), width: Self.penWidth, at: point, time: now))
             return
         }
         current = Stroke(color: stroke.color, width: stroke.width, points: stroke.points + [point])
