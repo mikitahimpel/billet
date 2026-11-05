@@ -64,7 +64,9 @@ final class HomeState {
     var game: MiniGame?
     /// Treats given since launch.
     private(set) var treatsGiven = 0
-    var showsSettings = false
+    /// Pets given in the app, not from the widgets; each may reach the pair's journal.
+    private(set) var petsGiven = 0
+    var showsProfile = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
     var invitedCode: String?
@@ -288,6 +290,7 @@ final class HomeState {
     }
 
     func pet() {
+        petsGiven += 1
         petPulse += 1
         care(0.03)
         streak.record()

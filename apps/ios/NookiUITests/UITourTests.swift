@@ -39,8 +39,18 @@ final class UITourTests: XCTestCase {
             shot("07-shop-scrolled")
         }
         if tap(app.buttons["Couple"]) {
-            shot("08-couple-menu")
-            closeMenu(app)
+            shot("08-profile")
+            if tap(app.buttons["Settings"]) {
+                shot("13-settings")
+                app.swipeUp()
+                shot("14-settings-scrolled")
+                if tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Style'")).firstMatch) {
+                    shot("15-style")
+                    app.swipeUp()
+                    shot("16-style-scrolled")
+                }
+            }
+            dismissSheet(app)
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
@@ -54,16 +64,6 @@ final class UITourTests: XCTestCase {
                     shot("1\(index)-us-\(name.lowercased())")
                     // Each opens as a sheet over Us.
                     dismissSheet(app)
-                }
-            }
-            if tap(app.buttons["Settings"]) {
-                shot("13-settings")
-                app.swipeUp()
-                shot("14-settings-scrolled")
-                if tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Style'")).firstMatch) {
-                    shot("15-style")
-                    app.swipeUp()
-                    shot("16-style-scrolled")
                 }
             }
         }
