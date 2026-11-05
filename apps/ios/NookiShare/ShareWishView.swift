@@ -119,7 +119,7 @@ struct ShareWishView: View {
                             price: price.trimmingCharacters(in: .whitespacesAndNewlines),
                             note: note.trimmingCharacters(in: .whitespacesAndNewlines), mostWanted: mostWanted)
         if let imageData { WishImage.save(imageData, for: wish.id) }
-        UsStore(wallet: WalletStore()).upsertWish(wish)
+        UsStore().upsertWish(wish)
         SharedFile.flush()
         withAnimation(.snappy(duration: 0.25)) { saved = true }
         Task {
