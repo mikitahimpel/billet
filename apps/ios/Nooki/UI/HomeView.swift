@@ -157,7 +157,7 @@ struct HomeView: View {
             home = DioramaScene()
         }
         // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
-        .task(id: home == nil ? nil : state.moments.pinned) {
+        .task(id: wallPins) {
             guard let home else { return }
             let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
             if !Task.isCancelled { home.setPolaroids(images) }
@@ -360,6 +360,9 @@ struct HomeView: View {
         room.onShowcase = { label in withAnimation(.snappy(duration: 0.25)) { showcase = label } }
         return room
     }
+
+    /// The moments on the room's wall, nil until the room exists.
+    private var wallPins: [Moment]? { home == nil ? nil : state.moments.pinned }
 
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
