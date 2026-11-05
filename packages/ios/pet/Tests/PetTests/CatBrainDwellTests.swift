@@ -37,13 +37,12 @@ struct CatBrainDwellTests {
   /// The runs of each thing the brain asks for (its step, the clip, the touch it answers) in
   /// one pass over the frames from `from` for `minutes`, with whether a person's event fell
   /// inside a run or at its end. The first run started before the window and the last goes on
-  /// after it, so neither counts.
+  /// after it, so neither counts. `runner` is folded on from wherever it is, which equals a fresh
+  /// replay at `from`.
   static func runs(
-    _ events: [LifeEvent], _ type: CatTemperament?, from: Double, minutes: Double
+    _ runner: inout CatBrainRunner, _ events: [LifeEvent], from: Double, minutes: Double
   ) -> [String: [(run: Run, touched: Bool)]] {
-    var runner = CatBrainRunner(
-      events: events, now: Day.at(from), context: Day.context, seed: 11, temperament: type,
-      room: Day.room)
+    runner.advance(to: Day.at(from))
     let times = events.map(\.at.timeIntervalSince1970)
     func keys(_ frame: CatBrainFrame) -> [String: String] {
       [
@@ -78,8 +77,12 @@ struct CatBrainDwellTests {
   @Test(arguments: CatFeelingTests.types)
   func noStepClipOrTouchFlickers(_ type: CatTemperament?) {
     for (name, events) in Self.days {
+      // One runner through the day's windows, in order, instead of a replay for each.
+      var runner = CatBrainRunner(
+        events: events, now: Day.at(Self.windows[0]), context: Day.context, seed: 11,
+        temperament: type, room: Day.room)
       for from in Self.windows {
-        for (kind, runs) in Self.runs(events, type, from: from, minutes: 30) {
+        for (kind, runs) in Self.runs(&runner, events, from: from, minutes: 30) {
           let short = runs.filter { !$0.touched && $0.run.end - $0.run.start < Self.minimumDwell }
           #expect(
             short.isEmpty,
