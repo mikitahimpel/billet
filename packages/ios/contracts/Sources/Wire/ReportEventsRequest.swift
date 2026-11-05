@@ -122,8 +122,8 @@ extension ClientEventName {
       ClientEventRule(detail: .id)
     case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
       .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen,
-      .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped, .tipShown, .tipDismissed,
-      .tipAction:
+      .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped, .tipShown,
+      .tipDismissed, .tipAction:
       ClientEventRule(detail: .id, required: true)
     case .shopItemBought, .shopBundleBought, .shopPurchaseUndone, .shopDailyGiftClaimed,
       .shopGiftSent:
