@@ -41,9 +41,11 @@ struct TabBar: View {
                         .onChanged { drag in
                             let tab = tab(at: drag.location.x)
                             if tab != hovered { withAnimation(.snappy(duration: 0.2)) { hovered = tab } }
+                            if state.reachingTab != tab { state.reachingTab = tab }
                         }
                         .onEnded { drag in
                             let tab = tab(at: drag.location.x)
+                            state.reachingTab = nil
                             withAnimation(.spring(duration: 0.35)) {
                                 hovered = nil
                                 state.tab = tab

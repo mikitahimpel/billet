@@ -15,11 +15,19 @@ enum NookiPerf {
         host.lightings = []
         host.cats = []
         host.shotPrefix = "world"
-        host.selectTab = { tab in
-            switch tab {
-            case "shop": state.tab = .shop
-            case "notes": state.tab = .moments
-            default: state.tab = .world
+        host.selectTab = { name in
+            let tab: HomeTab =
+                switch name {
+                case "shop": .shop
+                case "notes": .moments
+                default: .world
+                }
+            // A tap: touch-down on the tab, release a tenth of a second later.
+            state.reachingTab = tab
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                state.reachingTab = nil
+                state.tab = tab
             }
         }
         host.scroll = { y in shopScroll?(y) }

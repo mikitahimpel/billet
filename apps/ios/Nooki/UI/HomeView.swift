@@ -47,10 +47,11 @@ struct HomeView: View {
                     .allowsHitTesting(showsRoom)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if let scene, showsRoom {
+            } else if let scene, showsRoom || state.reachingTab == .world {
                 // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
                 // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
-                // (CatRoom), so coming back only makes a new view for it.
+                // (CatRoom), so coming back only makes a new view for it. That view's first frame takes a few hundred
+                // milliseconds, so it starts as the finger lands on World and is ready by the time it lifts.
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }

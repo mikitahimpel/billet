@@ -47,6 +47,8 @@ final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
+    /// The tab under the finger on the tab bar, from touch-down until release.
+    var reachingTab: HomeTab?
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
 
