@@ -55,6 +55,13 @@ struct ShopView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .task {
+            // The cards draw their art at 512 px and the bundles and collections at 256: decoded now, off the main
+            // thread, the first scroll down the page doesn't stop for each picture.
+            let names = Catalog.items.map(\.thumbnail)
+            await Thumbnails.prefetch(names, maxPixels: 512)
+            await Thumbnails.prefetch(names, maxPixels: 256)
+        }
         .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
