@@ -15,6 +15,8 @@ public final class LiveRoom {
 
   @ObservationIgnored private var client: WebSocketClient?
   @ObservationIgnored private let onNote: (Int, Note) -> Void
+  /// Called when the partner clears the shared canvas.
+  @ObservationIgnored public var onClear: (() -> Void)?
 
   /// - Parameters:
   ///   - makeDependencies: Builds the socket's services around the closure that receives each
@@ -67,6 +69,12 @@ public final class LiveRoom {
     apply(.strokeDrawn(stroke))
   }
 
+  /// Sends a frame of this phone's live drawing; offline it is dropped, as live strokes are.
+  public func sendLive(_ message: ClientMessage) {
+    syncLink()
+    apply(.liveFrame(message))
+  }
+
   func receive(_ message: ServerMessage) {
     syncLink()
     apply(.received(message))
@@ -79,6 +87,7 @@ public final class LiveRoom {
       switch output {
       case .send(let message): client?.send(message)
       case .noteArrived(let seq, let note): onNote(seq, note)
+      case .partnerCleared: onClear?()
       }
     }
   }

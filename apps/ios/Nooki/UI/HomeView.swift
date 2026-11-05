@@ -14,6 +14,7 @@ struct HomeView: View {
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
+    @Environment(ServerSession.self) private var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     /// Whether this pair has both rooms to switch between.
     var hasRoomChoice = true
@@ -148,6 +149,11 @@ struct HomeView: View {
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
+        }
+        .fullScreenCover(isPresented: $state.drawing) {
+            LockCanvasView(
+                state: state, api: session?.api,
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }

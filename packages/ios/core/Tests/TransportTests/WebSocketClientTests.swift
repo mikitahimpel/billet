@@ -57,6 +57,24 @@ import Wire
     #expect(await iterator.next() == .presence(.drawing))
     client.disconnect()
   }
+
+  @Test func messagesLeaveInTheOrderTheyWereSent() async {
+    let socket = makeFakeSocket()
+    let client = WebSocketClient(
+      dependencies: WebSocketRunnerTests.dependencies(
+        pool: ConnectionPool([socket.connection])))
+
+    client.connect()
+    var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 0))
+    let frames = (0..<200).map { ClientMessage.strokeEnd(id: $0) }
+    for frame in frames { client.send(frame) }
+
+    var received: [ClientMessage] = []
+    while received.count < frames.count, let next = await iterator.next() { received.append(next) }
+    #expect(received == frames)
+    client.disconnect()
+  }
 }
 
 @Suite @MainActor struct WebSocketClientHungConnectTests {
