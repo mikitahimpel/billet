@@ -106,7 +106,7 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 }
 
 @Suite struct DeepLinkTests {
-    @Test(arguments: [DeepLink.room, .moments, .us, .calendar, .dates, .list(UUID())])
+    @Test(arguments: [DeepLink.room, .moments, .us, .calendar, .dates, .list(UUID()), .shopInk("ink-rose")])
     func roundTrips(_ link: DeepLink) {
         #expect(DeepLink(url: link.url) == link)
     }
@@ -115,6 +115,15 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
         #expect(DeepLink(url: URL(string: "https://room")!) == nil)
         #expect(DeepLink(url: URL(string: "nooki://us/list/not-a-uuid")!) == nil)
         #expect(DeepLink(url: URL(string: "nooki://shop")!) == nil)
+        #expect(DeepLink(url: URL(string: "nooki://shop/ink")!) == nil)
+    }
+
+    @Test func aShopInkLinkOpensTheShopAtThatInk() {
+        #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "nooki://shop/ink/ink-rose")
+        let state = HomeState()
+        state.open(.shopInk("ink-rose"))
+        #expect(state.tab == .shop)
+        #expect(state.shopFocus == .ink("ink-rose"))
     }
 }
 

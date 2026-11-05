@@ -371,6 +371,7 @@ final class HomeState {
         case .invite(let code):
             // Before onboarding is done, the link is its code page's.
             if UserDefaults.standard.bool(forKey: OnboardingFlow.doneKey) { invitedCode = code }
+        case .shopInk(let id): openShop(.ink(id))
         }
     }
 
