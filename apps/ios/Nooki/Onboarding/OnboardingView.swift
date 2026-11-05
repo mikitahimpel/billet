@@ -352,6 +352,7 @@ private struct Portrait: View {
 private struct MochiSays: View {
     let text: LocalizedStringKey
     let avatar: String
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     init(text: LocalizedStringKey, avatar: String) {
         self.text = text
@@ -359,11 +360,16 @@ private struct MochiSays: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: Space.m) {
+        // At accessibility sizes the bubble goes under her face, so its words keep the full width.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
+        layout {
             Portrait(name: avatar, size: 52)
             Text(text)
                 .font(.nookiCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
                 .background(Ink.surface, in: .rect(cornerRadius: Radius.control))
