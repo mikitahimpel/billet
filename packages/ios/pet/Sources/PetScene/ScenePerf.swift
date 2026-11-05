@@ -476,6 +476,12 @@ extension ScenePerf {
           let length = (now - lastFrame) * 1000
           intervals.append(length)
           if length > Self.slowFrame { slow.append((length, cpu - lastFrameCPU)) }
+          // A frame of half a second or more, where in the phase it fell and how much of it the main thread worked.
+          if length > 500 {
+            ScenePerf.emit(
+              "frame long ms=\(ScenePerf.format(length)) at=\(frame)"
+                + " busyMs=\(ScenePerf.format((cpu - lastFrameCPU) * 1000))")
+          }
         }
         lastFrame = now
         lastFrameCPU = cpu
