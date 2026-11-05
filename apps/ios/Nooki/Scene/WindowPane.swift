@@ -56,16 +56,15 @@ final class WindowPane {
     private var weather = WindowChoice.weather
 
     /// A pane for a `width` × `height` window (meters) seen at home from `eye`, a direction from the
-    /// glass toward the camera in the pane's space. A `round` window is a circle `width` across.
-    init(width: Float, height: Float, eye: SIMD3<Float>, round: Bool = false) {
+    /// glass toward the camera in the pane's space.
+    init(width: Float, height: Float, eye: SIMD3<Float>) {
         self.width = width
         self.height = height
         slant = SIMD2(eye.x, eye.y) / max(eye.z, 0.05)
 
         world.components.set(WorldComponent())
         entity.addChild(world)
-        let opening = round ? Self.disc(radius: width / 2) : nil
-        let portal = ModelEntity(mesh: opening ?? .generatePlane(width: width + 0.01, height: height + 0.01),
+        let portal = ModelEntity(mesh: .generatePlane(width: width + 0.01, height: height + 0.01),
                                  materials: [PortalMaterial()])
         portal.components.set(PortalComponent(target: world))
         entity.addChild(portal)
@@ -213,22 +212,6 @@ final class WindowPane {
         descriptor.tAddressMode = .clampToEdge
         return MaterialParameters.Texture.Sampler(descriptor)
     }()
-
-    /// A flat circle facing +Z.
-    private static func disc(radius: Float, segments: Int = 64) -> MeshResource? {
-        var positions: [SIMD3<Float>] = [.zero]
-        var indices: [UInt32] = []
-        for i in 0..<segments {
-            let angle = Float(i) / Float(segments) * 2 * .pi
-            positions.append([radius * cos(angle), radius * sin(angle), 0])
-            indices += [0, UInt32(i + 1), UInt32((i + 1) % segments + 1)]
-        }
-        var descriptor = MeshDescriptor(name: "windowOpening")
-        descriptor.positions = MeshBuffer(positions)
-        descriptor.normals = MeshBuffer(Array(repeating: SIMD3<Float>(0, 0, 1), count: positions.count))
-        descriptor.primitives = .triangles(indices)
-        return try? MeshResource.generate(from: [descriptor])
-    }
 
     /// A quad showing slice `index` of `count`, stacked top to bottom in one texture.
     private static func slice(width: Float, height: Float, index: Int, of count: Int) -> MeshResource? {
