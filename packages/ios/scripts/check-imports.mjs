@@ -1,18 +1,10 @@
 // Run from one of the Swift packages in packages/ios. Fails when a Swift file under its Sources
-// imports a graphics engine, or, in the features package, when Sources/Surfaces imports a Feature target.
-// docs/architecture.md: Surfaces may import Domain, Ink and DesignSystem, not any feature target.
+// imports a graphics engine: the packages stay engine-free, so the widget never links one.
 // A plain `swift build` does not enforce this (see the PR for #3), so ios:build and ios:test run it.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 const sources = join(process.cwd(), "Sources");
-const surfaces = join(sources, "Surfaces");
-
-const featureTargets = new Set(
-  readdirSync(sources, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^Feature[A-Z]/.test(entry.name))
-    .map((entry) => entry.name),
-);
 
 // Matches `import X`, `@testable import X`, `public import X`, `import struct X.Y`, `import X.Y`.
 const importPattern =
@@ -49,22 +41,16 @@ function importViolations(files, describe) {
   );
 }
 
-// Graphics engines stay in packages/pet-scenes, so Pet, FeatureHome and the widget never link one.
 const engines = new Set(["RiveRuntime", "RealityKit"]);
 
-const violations = [
-  ...importViolations(existsSync(surfaces) ? swiftFiles(surfaces) : [], (module) =>
-    featureTargets.has(module) ? `Surfaces imports ${module}` : undefined,
-  ),
-  ...importViolations(swiftFiles(sources), (module) =>
-    engines.has(module) ? `imports the engine ${module}` : undefined,
-  ),
-];
+const violations = importViolations(swiftFiles(sources), (module) =>
+  engines.has(module) ? `imports the engine ${module}` : undefined,
+);
 
 if (violations.length > 0) {
   console.error(violations.join("\n"));
   console.error(
-    "Surfaces may import Domain, Ink and DesignSystem, not any feature target. Engines belong in packages/pet-scenes.",
+    "The packages in packages/ios stay free of graphics engines; RealityKit belongs in apps/ios.",
   );
   process.exit(1);
 }
