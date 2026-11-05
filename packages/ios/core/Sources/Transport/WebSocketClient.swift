@@ -45,9 +45,15 @@ public final class WebSocketClient {
     store.send(.disconnectRequested)
   }
 
-  /// Sends while connected. Otherwise the message is dropped, not queued.
+  /// Sends while connected. Otherwise the message is dropped, not queued. Messages leave in the
+  /// order they were sent.
+  ///
+  /// The message is queued here rather than as a machine output: outputs run in tasks of their
+  /// own and can overtake each other.
   public func send(_ message: ClientMessage) {
-    store.send(.sendRequested(message))
+    let state = store.state
+    guard case .connected = state.phase else { return }
+    runner.enqueue(message, attempt: state.attempt)
   }
 
   public func settled() async {

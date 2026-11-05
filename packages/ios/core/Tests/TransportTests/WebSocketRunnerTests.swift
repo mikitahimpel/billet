@@ -99,6 +99,38 @@ import Wire
     #expect(await iterator.next() == .resume(lastSeq: 2))
   }
 
+  @Test func queuedSendsKeepTheirOrder() async {
+    let socket = makeFakeSocket()
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
+
+    _ = await runner.run(.open(attempt: 1))
+    let frames = (0..<200).map { ClientMessage.strokeEnd(id: $0) }
+    for frame in frames { runner.enqueue(frame, attempt: 1) }
+
+    var iterator = socket.sent.makeAsyncIterator()
+    var received: [ClientMessage] = []
+    while received.count < frames.count, let next = await iterator.next() { received.append(next) }
+    #expect(received == frames)
+  }
+
+  @Test func aFailedSendReportsTheDrop() async {
+    let incoming = AsyncStream.makeStream(of: ServerMessage.self)
+    let failing = WebSocketConnection(
+      messages: incoming.stream,
+      send: { (_) async throws(TransportError) in throw .network("gone") },
+      close: { incoming.continuation.finish() })
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(pool: ConnectionPool([failing])))
+
+    _ = await runner.run(.open(attempt: 1))
+    runner.enqueue(.presence(.idle), attempt: 1)
+
+    var events = runner.events.makeAsyncIterator()
+    #expect(await events.next() == .opened(attempt: 1))
+    #expect(await events.next() == .dropped(attempt: 1))
+  }
+
   @Test func sendWithoutASocketDoesNothing() async {
     let runner = WebSocketRunner(dependencies: Self.dependencies(pool: ConnectionPool([])))
     #expect(await runner.run(.send(.presence(.idle), attempt: 1)) == nil)

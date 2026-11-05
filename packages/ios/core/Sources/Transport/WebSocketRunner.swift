@@ -1,13 +1,17 @@
+import Wire
+
 /// The interpreter for ``WebSocketMachine``: the one place its outputs reach services.
 ///
 /// Events that come from the socket rather than from an output's result (`opened`, `received`,
 /// `dropped`) go through `events`, one pipe, so they reach the machine in the order they happened.
 /// Every event carries its attempt number; the machine discards the stale ones.
 ///
-/// Outputs are not ordered: `Store` runs each in its own task, so a `deliver` or a `send` may
-/// overtake an earlier one. Nothing here depends on that today. A caller that needs strokes in
-/// `seq` order must sort them, and a server that needs `Resume` before anything else must not
-/// rely on this runner for it.
+/// Outputs are not ordered: `Store` runs each in its own task, so a `deliver` may overtake an
+/// earlier one. A caller that needs strokes in `seq` order must sort them. Sends are the
+/// exception: every message goes through one outbox and one writer, so they leave in the order
+/// they were enqueued. A live stroke's points must never overtake its begin. `Resume` is enqueued
+/// from an output's task, so a message the caller sends the moment the socket opens may go
+/// before it.
 ///
 /// A `close` also stops what the attempt has in flight: a connect that is still opening is
 /// cancelled, and its timers are stopped.
@@ -16,16 +20,44 @@ final class WebSocketRunner: Sendable {
   private let continuation: AsyncStream<WebSocketMachine.Event>.Continuation
   private let dependencies: WebSocketDependencies
   private let slot = ConnectionSlot()
+  private let outbox: AsyncStream<Outgoing>.Continuation
+  private let writer: Task<Void, Never>
+
+  private struct Outgoing: Sendable {
+    let message: ClientMessage
+    let attempt: Int
+  }
 
   init(dependencies: WebSocketDependencies) {
     let pipe = AsyncStream.makeStream(of: WebSocketMachine.Event.self)
     self.events = pipe.stream
     self.continuation = pipe.continuation
     self.dependencies = dependencies
+    let outgoing = AsyncStream.makeStream(of: Outgoing.self)
+    self.outbox = outgoing.continuation
+    self.writer = Task { [slot, continuation = pipe.continuation] in
+      for await item in outgoing.stream {
+        // A message for an attempt that has ended is dropped, as live strokes are offline.
+        guard let connection = await slot.connection(for: item.attempt) else { continue }
+        do {
+          try await connection.send(item.message)
+        } catch {
+          continuation.yield(.dropped(attempt: item.attempt))
+        }
+      }
+    }
+  }
+
+  /// Queues `message` for the socket of `attempt`, behind everything queued before it. Never
+  /// waits, so a caller on the main actor keeps its order.
+  func enqueue(_ message: ClientMessage, attempt: Int) {
+    outbox.yield(Outgoing(message: message, attempt: attempt))
   }
 
   /// Closes every socket and stops all work in flight. The client calls it when it goes away.
   func shutdown() async {
+    outbox.finish()
+    writer.cancel()
     for connection in await slot.releaseAll() {
       await connection.close()
     }
@@ -61,13 +93,8 @@ final class WebSocketRunner: Sendable {
       return nil
 
     case .send(let message, let attempt):
-      guard let connection = await slot.connection(for: attempt) else { return nil }
-      do {
-        try await connection.send(message)
-        return nil
-      } catch {
-        return .dropped(attempt: attempt)
-      }
+      enqueue(message, attempt: attempt)
+      return nil
 
     case .startConnectTimeout(let attempt):
       return await timer(
