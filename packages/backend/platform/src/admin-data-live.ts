@@ -11,7 +11,7 @@ import {
   pairFlags,
   pairMembers,
   purchases,
-  stampLedger,
+  coinLedger,
   users,
 } from "./directory-schema.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
@@ -95,15 +95,15 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
             db.select().from(purchases).orderBy(desc(purchases.createdAt)).limit(limit),
             db
               .select({
-                id: stampLedger.id,
-                ownerId: stampLedger.ownerId,
-                kind: stampLedger.kind,
-                amount: stampLedger.amount,
-                productId: stampLedger.productId,
-                at: stampLedger.at,
+                id: coinLedger.id,
+                ownerId: coinLedger.ownerId,
+                kind: coinLedger.kind,
+                amount: coinLedger.amount,
+                productId: coinLedger.productId,
+                at: coinLedger.at,
               })
-              .from(stampLedger)
-              .orderBy(desc(stampLedger.at), desc(stampLedger.id))
+              .from(coinLedger)
+              .orderBy(desc(coinLedger.at), desc(coinLedger.id))
               .limit(limit),
             db
               .select()

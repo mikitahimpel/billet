@@ -21,9 +21,16 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 ### PairRoom: one Durable Object per couple
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
-streak, presence and in-progress strokes in its own SQLite database, and it uses hibernatable
+streak and presence in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.
+
+Live drawing on the shared canvas streams over the room's socket: `StrokeBegin`, then
+`StrokePoints` batches (at most 64 points, sent every 30 to 50 ms), then `StrokeEnd`, plus `Clear`
+for both partners. The room relays these to the partner and does not store them. It remembers
+which strokes each socket has open on the socket's attachment, so when a phone leaves mid-stroke
+the partner gets `StrokeDropped` for each. Each socket may send 60 frames a second; the room drops
+the rest.
 
 ### D1: the cross-couple directory
 
@@ -32,6 +39,15 @@ user belongs to, and who owns a given invite code. Claiming an invite is transac
 
 D1 has no interactive transactions. An operation that spans statements runs as one D1 batch, through
 `D1Client.batch`, so a later statement reads earlier results in SQL rather than in JavaScript.
+
+### Coins and payments
+
+Nooki's coins are the one currency. Coins bought for money live in D1 (`purchases` and
+`coin_ledger`), because a transaction id is unique across every pair and Apple's refund
+notifications name no pair. Coins earned in play and spent in the shop will live in the pair's
+`PairRoom`, next to the cat's journal, so a coin is credited in the same commit as the entry that
+earned it. The first release sells nothing: the `payments` flag is off on every stage, so the
+purchase routes answer 404, and the app is built with no store. See [payments.md](payments.md).
 
 ### Database access: Drizzle on the official Effect drivers
 

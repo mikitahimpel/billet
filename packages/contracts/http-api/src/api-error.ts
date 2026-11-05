@@ -15,7 +15,7 @@ export const ApiError = Schema.TaggedUnion({
   /**
    * An App Store transaction or notification that can't be honoured: a bad signature or
    * certificate chain, another app's bundle, an environment this stage doesn't accept, or a
-   * product that isn't a stamp pack. Retrying the same one fails the same way.
+   * product that isn't a coin pack. Retrying the same one fails the same way.
    */
   InvalidPurchase: {},
 });

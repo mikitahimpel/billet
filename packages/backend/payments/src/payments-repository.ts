@@ -3,11 +3,11 @@ import { EpochMillis } from "@billet/contracts-domain/ids";
 import type { PaymentsUnavailable } from "./payments-error.ts";
 
 /**
- * Whose stamps these are: a pair id, or `demo:<code>` for a demo room on the dev stage. Stamps
+ * Whose coins these are: a pair id, or `demo:<code>` for a demo room on the dev stage. Coins
  * belong to the pair, so both partners share them, and a new pair starts from none.
  */
-export const StampOwner = Schema.String.check(Schema.isNonEmpty()).pipe(Schema.brand("StampOwner"));
-export type StampOwner = typeof StampOwner.Type;
+export const CoinOwner = Schema.String.check(Schema.isNonEmpty()).pipe(Schema.brand("CoinOwner"));
+export type CoinOwner = typeof CoinOwner.Type;
 
 export const PurchaseStatus = Schema.Literals(["credited", "refunded"]);
 export type PurchaseStatus = typeof PurchaseStatus.Type;
@@ -17,15 +17,15 @@ export const StoredPurchase = Schema.Struct({
   /** The App Store's `originalTransactionId`, or a mock transaction id. Credited once. */
   originalTransactionId: Schema.String,
   transactionId: Schema.String,
-  ownerId: StampOwner,
+  ownerId: CoinOwner,
   productId: Schema.String,
-  stamps: Schema.Int,
+  coins: Schema.Int,
   /** `Production`, `Sandbox`, `Xcode` or `Mock`. */
   environment: Schema.String,
   status: PurchaseStatus,
   /** How many times it has been refunded; the next ledger entry ids count on it. */
   refunds: Schema.Int,
-  /** 1 when a refund took back fewer stamps than the pack, because the pair had fewer left. */
+  /** 1 when a refund took back fewer coins than the pack, because the pair had fewer left. */
   flagged: Schema.Int,
   purchasedAt: EpochMillis,
   createdAt: EpochMillis,
@@ -33,19 +33,19 @@ export const StoredPurchase = Schema.Struct({
 });
 export type StoredPurchase = typeof StoredPurchase.Type;
 
-export const StampEntryKind = Schema.Literals(["purchase", "refund"]);
+export const PurchaseEntryKind = Schema.Literals(["purchase", "refund"]);
 
-/** One change to an owner's stamps. The balance is the sum of `amount`, never below 0. */
-export const StoredStampEntry = Schema.Struct({
+/** One change to an owner's coins. The balance is the sum of `amount`, never below 0. */
+export const StoredPurchaseEntry = Schema.Struct({
   id: Schema.String,
-  ownerId: StampOwner,
-  kind: StampEntryKind,
+  ownerId: CoinOwner,
+  kind: PurchaseEntryKind,
   amount: Schema.Int,
   productId: Schema.String,
   originalTransactionId: Schema.String,
   at: EpochMillis,
 });
-export type StoredStampEntry = typeof StoredStampEntry.Type;
+export type StoredPurchaseEntry = typeof StoredPurchaseEntry.Type;
 
 /** Every App Store Server Notification handled, so each is applied once. */
 export const StoredNotification = Schema.Struct({
@@ -63,9 +63,9 @@ export type StoredNotification = typeof StoredNotification.Type;
 export interface NewPurchase {
   readonly originalTransactionId: string;
   readonly transactionId: string;
-  readonly ownerId: StampOwner;
+  readonly ownerId: CoinOwner;
   readonly productId: string;
-  readonly stamps: number;
+  readonly coins: number;
   readonly environment: string;
   readonly purchasedAt: number;
   readonly at: number;
@@ -83,16 +83,16 @@ export interface Credited extends Balance {
 export interface Reversal extends Balance {
   /** Nothing changed: the purchase was not in the state the reversal starts from. */
   readonly duplicate: boolean;
-  /** The stamps this step took back (a refund) or gave back (a restore), as a positive number. */
-  readonly stamps: number;
+  /** The coins this step took back (a refund) or gave back (a restore), as a positive number. */
+  readonly coins: number;
 }
 
 export interface Ledger extends Balance {
-  readonly entries: ReadonlyArray<StoredStampEntry>;
+  readonly entries: ReadonlyArray<StoredPurchaseEntry>;
 }
 
 /**
- * Purchases, the stamp ledger and handled notifications. Each method is one atomic operation and
+ * Purchases, the coin ledger and handled notifications. Each method is one atomic operation and
  * every storage failure is `PaymentsUnavailable`. `test/payments-repository-contract.ts` is the
  * behaviour any implementation must pass.
  */
@@ -100,7 +100,7 @@ export class PaymentsRepository extends Context.Service<
   PaymentsRepository,
   {
     /**
-     * Stores the purchase and credits its stamps to the owner, once per `originalTransactionId`.
+     * Stores the purchase and credits its coins to the owner, once per `originalTransactionId`.
      * A purchase already stored, for any owner, credits nothing.
      */
     readonly credit: (purchase: NewPurchase) => Effect.Effect<Credited, PaymentsUnavailable>;
@@ -108,8 +108,8 @@ export class PaymentsRepository extends Context.Service<
       originalTransactionId: string,
     ) => Effect.Effect<Option.Option<StoredPurchase>, PaymentsUnavailable>;
     /**
-     * Takes a credited purchase's stamps back, at most the owner's balance, and marks it refunded.
-     * Takes fewer than the pack's stamps only when the balance is short, and then flags the
+     * Takes a credited purchase's coins back, at most the owner's balance, and marks it refunded.
+     * Takes fewer than the pack's coins only when the balance is short, and then flags the
      * purchase. Its entry is `refund:<id>`, then `refund:<id>:2` and so on for later refunds.
      * Records `notification` in the same batch, when given. A purchase that is not `credited`
      * with `refunds` as given is left alone (`duplicate`).
@@ -134,7 +134,7 @@ export class PaymentsRepository extends Context.Service<
       notification: StoredNotification,
     ) => Effect.Effect<void, PaymentsUnavailable>;
     /** The owner's balance and entries, oldest first. */
-    readonly ledger: (owner: StampOwner) => Effect.Effect<Ledger, PaymentsUnavailable>;
+    readonly ledger: (owner: CoinOwner) => Effect.Effect<Ledger, PaymentsUnavailable>;
   }
 >()("@billet/backend-payments/PaymentsRepository") {}
 

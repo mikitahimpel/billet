@@ -30,6 +30,12 @@ export interface WorkerEnv {
   /** The AUD tag of the Access application for agents' service tokens (`/admin/api/agent`). */
   readonly ACCESS_AGENT_AUD?: string;
   /**
+   * A Cloudflare API token that can only read Account Analytics, and the account, for the admin's
+   * trends from Analytics Engine. Absent: the trends use D1 alone.
+   */
+  readonly ANALYTICS_READ_TOKEN?: string;
+  readonly ANALYTICS_ACCOUNT_ID?: string;
+  /**
    * The service status (maintenance, minimum build, notice), kept apart from D1 so it works while
    * the database is down. Absent: the normal status, and the admin panel can't change it.
    */

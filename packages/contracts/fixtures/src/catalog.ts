@@ -43,7 +43,7 @@ import {
   MockPurchaseRequest,
   PurchaseRequest,
   PurchaseResponse,
-  StampsResponse,
+  PurchasesResponse,
 } from "@billet/contracts-http-api/purchase";
 import {
   ListNotesResponse,
@@ -340,12 +340,12 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("MockPurchaseRequest", MockPurchaseRequest, {
     purchase: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "purchase",
     },
     refund: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "refund",
     },
@@ -353,20 +353,20 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("PurchaseResponse", PurchaseResponse, {
     default: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: false,
     },
     duplicate: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: true,
     },
   }),
-  fixture("StampsResponse", StampsResponse, {
+  fixture("PurchasesResponse", PurchasesResponse, {
     default: {
       balance: 550,
       entries: [
@@ -374,21 +374,21 @@ export const catalog: ReadonlyArray<Fixture> = [
           id: "purchase:2000000812345678",
           kind: "purchase",
           amount: 100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-04T15:00:00.000Z",
         },
         {
           id: "purchase:2000000812345679",
           kind: "purchase",
           amount: 550,
-          productId: "com.mikitahimpel.billet.stamps.550",
+          productId: "com.mikitahimpel.billet.coins.550",
           at: "2026-11-04T15:05:00.000Z",
         },
         {
           id: "refund:2000000812345678",
           kind: "refund",
           amount: -100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-05T09:30:00.000Z",
         },
       ],
@@ -435,12 +435,21 @@ export const catalog: ReadonlyArray<Fixture> = [
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
+    "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ClientMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ClientMessage.cases.StrokeEnd.make({ id: 3 }),
+    clear: ClientMessage.cases.Clear.make({}),
   }),
   fixture("ServerMessage", ServerMessage, {
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
     "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
+    "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
+    "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
+    clear: ServerMessage.cases.Clear.make({}),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

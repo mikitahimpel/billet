@@ -93,7 +93,9 @@ reads.
    a whole number, exposure outside 0 to 100, a malformed version bound, a key that is not
    lowercase hyphenated words), and a test loads the registry.
 3. For an experiment, choose **one primary metric** before you start and write it in the
-   description.
+   description. The panel also shows a fixed set of secondary and guardrail metrics for every
+   experiment, and warns when a guardrail gets worse ([admin.md](admin.md#experiment-metrics)).
+   They never pick the winner.
 4. Deploy. Then start, stop and kill it from the admin panel, without a deploy and without an App
    Store release if the build already has the variants.
 5. Leave the entry in the registry after it ends, so the key is never reused.
@@ -190,7 +192,7 @@ system with the SQL API. A refused request writes nothing. The row is fixed by
 | `blob5` | system from `x-billet-os`, such as `iOS 26.1`, else `unknown` |
 | `blob6` | the event's detail (a catalogue id or a word from a closed list); empty when none |
 | `double1` | `1` (sum it; read `_sample_interval` too when the dataset is sampled) |
-| `double2` | the event's value: stamps for `ShopItemBought`, `ShopBundleBought`, `ShopGiftSent`, `ShopPurchaseUndone` and `ShopDailyGiftClaimed`, else `0` |
+| `double2` | the event's value: coins for `ShopItemBought`, `ShopBundleBought`, `ShopGiftSent`, `ShopPurchaseUndone` and `ShopDailyGiftClaimed`, else `0` |
 
 Not in the row: the user id, the Apple subject, any email, the IP address, the country or city,
 and anything a note says or shows. The two headers are accepted only in exactly the shapes above;

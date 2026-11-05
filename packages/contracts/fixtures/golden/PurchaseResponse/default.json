@@ -1,7 +1,7 @@
 {
   "balance": 1234,
+  "coins": 550,
   "duplicate": false,
-  "productId": "com.mikitahimpel.billet.stamps.550",
-  "stamps": 550,
+  "productId": "com.mikitahimpel.billet.coins.550",
   "transactionId": "2000000812345678"
 }

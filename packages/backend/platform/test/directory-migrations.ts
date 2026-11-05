@@ -88,7 +88,7 @@ export const resetDirectory = async () => {
       "auth_challenges",
       "rate_limits",
       "purchases",
-      "stamp_ledger",
+      "coin_ledger",
       "app_store_notifications",
       "admin_funnels",
     ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
