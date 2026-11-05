@@ -9,7 +9,6 @@ struct ProfileHub: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ServerSession.self) private var session: ServerSession?
-    @Environment(Hints.self) private var hints
     @State private var pairing = false
 
     private var canInvite: Bool {
@@ -21,16 +20,12 @@ struct ProfileHub: View {
         NavigationStack {
             NookiForm {
                 couple
-                if canInvite {
-                    Button(action: invite) { inviteCard }
-                        .buttonStyle(PressScaleStyle())
-                }
                 NookiSection {
                     NavigationLink { ProfileEditor(profile: state.profile) } label: {
                         NookiRowLabel(title: "Edit profile", symbol: "person.2.fill", tint: .sky) { RowChevron() }
                     }
                     if canInvite {
-                        Button(action: invite) {
+                        Button { pairing = true } label: {
                             NookiRowLabel(title: "Invite your partner", symbol: "heart.circle.fill", tint: .blush) {
                                 RowChevron()
                             }
@@ -69,11 +64,6 @@ struct ProfileHub: View {
         }
     }
 
-    private func invite() {
-        hints.done(InviteHint())
-        pairing = true
-    }
-
     private var couple: some View {
         VStack(spacing: Space.m) {
             HStack(spacing: -14) {
@@ -105,29 +95,5 @@ struct ProfileHub: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Space.l)
         .accessibilityElement(children: .combine)
-    }
-
-    private var inviteCard: some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: "heart.circle.fill", tint: .blush), size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Invite your partner")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.heroInk)
-                Text("Share \(CatProfile.name()), notes and coins")
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.heroInk.opacity(0.75))
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.heroInk.opacity(0.6))
-        }
-        .padding(Space.l)
-        .background(.honeyGradient, in: .rect(cornerRadius: Radius.card, style: .continuous))
-        .shadow(color: Color.honeyDeep.opacity(0.35), radius: 10, y: 5)
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
     }
 }

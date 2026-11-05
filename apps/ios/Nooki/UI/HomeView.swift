@@ -139,11 +139,17 @@ struct HomeView: View {
                 .padding(.top, 120)
             }
         }
+        // Covered by the splash, Home is not there for VoiceOver or UI tests either: a tap aimed at a control under
+        // the splash would land on the splash.
+        .accessibilityHidden(launching)
         // Over the room rather than in place of it: RealityKit keeps drawing underneath, so the room is already
         // warmed up and whole when the splash lifts.
         .overlay {
             if launching {
                 LaunchSplash()
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Nooki is opening")
+                    .accessibilityIdentifier("launch-splash")
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
             }
         }
@@ -182,8 +188,10 @@ struct HomeView: View {
         }
         .onChange(of: state.tab) { old, new in
             // The room view goes with the World (see above): keep what it showed, to show again on the way back.
+            // Not while something is presented, a hint's popover say: the snapshot would bring it back with the room.
             if old == .world, !showsRoom {
-                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                worldSnapshot =
+                    Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
             if new == .world, let scene, worldSnapshot != nil {
                 roomLive = false
