@@ -159,6 +159,39 @@ describe("RoomService: the Inbox", () => {
     expect(result.forBob.unread).toBe(0);
   });
 
+  it("shows a check-in to the partner as one item per member, unread again when it changes", async () => {
+    const store = memoryStore();
+    const result = await run(
+      store,
+      RoomService.use((room) =>
+        Effect.gen(function* () {
+          yield* room.dispatch(RoomCommand.cases.Open.make({ pairId, members: [alice, bob] }));
+          yield* room.setMood(bob, { mood: "sleepy" });
+          const first = yield* room.activityPage(alice, undefined, 10);
+          yield* room.markActivityRead(alice, first.head!);
+          yield* tick;
+          yield* room.setMood(bob, { mood: "missing", note: "call me" });
+          const forAlice = yield* room.activityPage(alice, undefined, 10);
+          const forBob = yield* room.activityPage(bob, undefined, 10);
+          return { first, forAlice, forBob };
+        }),
+      ),
+    );
+    expect(result.first.unread).toBe(1);
+    expect(result.forAlice.items).toEqual([
+      expect.objectContaining({
+        id: `mood:${bob}`,
+        at: start + 1_000,
+        actor: "Partner",
+        event: { _tag: "MoodShared", mood: "missing" },
+      }),
+    ]);
+    expect(result.forAlice.items[0]?.target).toBeUndefined();
+    expect(result.forAlice.unread).toBe(1);
+    expect(result.forBob.items.map((i) => i.actor)).toEqual(["Me"]);
+    expect(result.forBob.unread).toBe(0);
+  });
+
   it("keeps one item for a repeated event, and forgets them all when the pair ends", async () => {
     const store = memoryStore();
     const result = await run(

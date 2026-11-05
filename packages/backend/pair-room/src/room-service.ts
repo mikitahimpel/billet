@@ -18,6 +18,8 @@ import type {
 import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
+import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
@@ -52,6 +54,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "Purchased":
       case "GiftOpened":
       case "BonusPaid":
+      case "MoodSet":
         return [];
     }
   });
@@ -209,6 +212,7 @@ export class RoomService extends Context.Service<RoomService>()(
         store.forgetCat.pipe(
           Effect.andThen(store.forgetActivity),
           Effect.andThen(store.forgetReactions),
+          Effect.andThen(store.forgetMoods),
           Effect.andThen(store.forgetAuthor(author)),
           lock.withPermits(1),
         );
@@ -355,6 +359,18 @@ export class RoomService extends Context.Service<RoomService>()(
       const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
         dispatch({ _tag: "SetWish", by, item, wished });
 
+      // The time is taken inside the lock, so the later of two check-ins is the one kept.
+      const setMood = (by: UserId, request: SetMoodRequest) =>
+        Effect.gen(function* () {
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "SetMood", by, at, ...request });
+        }).pipe(lock.withPermits(1));
+
+      /** Each member's latest check-in; none while the room is not open. */
+      const moods: Effect.Effect<ReadonlyArray<MoodCheckIn>> = store.load.pipe(
+        Effect.map((state) => (state._tag === "Active" ? state.moods : [])),
+      );
+
       /**
        * The cat at the room's clock now, or null while the room is not open. Before adoption, a
        * cat born now, so the answer has one shape.
@@ -391,6 +407,8 @@ export class RoomService extends Context.Service<RoomService>()(
         buy,
         order,
         setWish,
+        setMood,
+        moods,
         openGift,
         claimBonus,
         earn,
