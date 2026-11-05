@@ -16,15 +16,24 @@ enum BoardFaces {
         for (_, card) in cards {
             switch card {
             case .note(let note):
-                if let face = render(NoteFace(note: note, doodle: await doodle(note))) {
+                let key = "note \(note.id) \(note.hashValue)" as NSString
+                var face = faces.object(forKey: key)
+                if face == nil { face = render(NoteFace(note: note, doodle: await doodle(note)), as: key) }
+                if let face {
                     pins.append(BoardPin(id: note.id, face: face, size: [0.12, 0.12]))
                 }
             case .photo(let moment):
-                guard let photo = await state.moments.filmPrint(for: moment, maxPixels: MomentStore.wallPixels) else { continue }
-                let polaroid = Polaroid(width: 240, caption: moment.caption, byline: state.profile.byline(of: moment), lifted: false) {
-                    Image(uiImage: photo).resizable().scaledToFill()
+                let byline = state.profile.byline(of: moment)
+                let key = "photo \(moment.id) \(moment.file) \(moment.caption) \(byline)" as NSString
+                var face = faces.object(forKey: key)
+                if face == nil {
+                    guard let photo = await state.moments.filmPrint(for: moment, maxPixels: MomentStore.wallPixels)
+                    else { continue }
+                    face = render(Polaroid(width: 240, caption: moment.caption, byline: byline, lifted: false) {
+                        Image(uiImage: photo).resizable().scaledToFill()
+                    }, as: key)
                 }
-                if let face = render(polaroid) {
+                if let face {
                     let width: Float = 0.12
                     pins.append(BoardPin(id: moment.id, face: face,
                                          size: [width, width * Float(face.size.height / face.size.width)]))
@@ -45,10 +54,16 @@ enum BoardFaces {
         return await Task.detached(priority: .userInitiated) { Downsample.image(at: url, maxPixels: 480) }.value
     }
 
-    private static func render<V: View>(_ view: V) -> UIImage? {
+    /// Faces already drawn, by everything that shows on them: a new note or caption redraws only its own card, each
+    /// a main-thread rasterization.
+    private static let faces = NSCache<NSString, UIImage>()
+
+    private static func render<V: View>(_ view: V, as key: NSString) -> UIImage? {
         let renderer = ImageRenderer(content: view)
         renderer.scale = 2
-        return renderer.uiImage
+        guard let face = renderer.uiImage else { return nil }
+        faces.setObject(face, forKey: key)
+        return face
     }
 }
 
