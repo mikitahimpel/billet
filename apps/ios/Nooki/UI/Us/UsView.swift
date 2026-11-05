@@ -168,7 +168,7 @@ private struct CountdownHero: View {
                 }
             }
             .padding(18)
-            .usCard(radius: Radius.hero)
+            .usCard(radius: Radius.hero, warm: true)
         }
         .buttonStyle(.plain)
     }
