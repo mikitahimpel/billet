@@ -1,5 +1,6 @@
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 import { logLine } from "./demo-trace.ts";
+import { type Now, systemNow } from "./wall-clock.ts";
 
 // Minimal APNs alert sender for the demo: one HTTP/2 request, no retries, no token cleanup.
 export const APNS_TOPIC = "com.mikitahimpel.billet";
@@ -13,8 +14,8 @@ export interface ApnsCredentials {
 
 export type ApnsFetch = (url: string, init: RequestInit) => Promise<Response>;
 
-const providerToken = ({ key, keyId }: ApnsCredentials): Promise<string> =>
-  signEs256({ pem: key, keyId }, { iss: APNS_TEAM_ID, iat: Math.floor(Date.now() / 1000) });
+const providerToken = ({ key, keyId }: ApnsCredentials, now: Now): Promise<string> =>
+  signEs256({ pem: key, keyId }, { iss: APNS_TEAM_ID, iat: Math.floor(now() / 1000) });
 
 /** Sends one "New note" alert. Resolves to whether APNs accepted it; never throws, never logs the token. */
 export const sendNoteAlert = (
@@ -22,12 +23,14 @@ export const sendNoteAlert = (
   deviceToken: string,
   noteURL: string,
   send: ApnsFetch = fetch,
+  now: Now = systemNow,
 ): Promise<boolean> =>
   sendAlert(
     credentials,
     deviceToken,
     { aps: { alert: { body: "New note" }, "mutable-content": 1 }, noteURL },
     send,
+    now,
   );
 
 /** Sends one alert with `payload` as its body. Resolves to whether APNs accepted it; never throws. */
@@ -36,12 +39,13 @@ export const sendAlert = async (
   deviceToken: string,
   payload: Readonly<Record<string, unknown>>,
   send: ApnsFetch = fetch,
+  now: Now = systemNow,
 ): Promise<boolean> => {
   try {
     const response = await send(`${APNS_ORIGIN}/3/device/${deviceToken}`, {
       method: "POST",
       headers: {
-        authorization: `bearer ${await providerToken(credentials)}`,
+        authorization: `bearer ${await providerToken(credentials, now)}`,
         "apns-topic": APNS_TOPIC,
         "apns-push-type": "alert",
         "apns-priority": "10",

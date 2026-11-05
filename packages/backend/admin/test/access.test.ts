@@ -1,7 +1,9 @@
 import { Effect, Layer } from "effect";
+import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { accessConfigOf, AccessVerifier, accessVerifierLayer, denyAll } from "../src/access.ts";
 import {
+  accessNow,
   cryptoLayer,
   signAccess,
   signAgent,
@@ -12,12 +14,17 @@ import {
   unsignedAccess,
 } from "./access-tokens.ts";
 
+const seconds = Math.floor(accessNow / 1000);
+
+/** Checks `token` at `accessNow`, on a fixed clock. */
 const verify = (token: string | null, layer = accessVerifierLayer(testAccess)) =>
   Effect.runPromise(
     Effect.gen(function* () {
+      yield* TestClock.setTime(accessNow);
       return yield* (yield* AccessVerifier).verify(token);
     }).pipe(
       Effect.provide(layer.pipe(Layer.provide(Layer.mergeAll(teamKeys, cryptoLayer)))),
+      Effect.provide(TestClock.layer()),
       Effect.result,
     ),
   );
@@ -55,10 +62,7 @@ describe("the Access check", () => {
   it.each([
     ["a service token for the panel's audience", () => signAgent({ aud: ["a".repeat(64)] })],
     ["a person for the agent audience only", () => signAccess({ aud: ["c".repeat(64)] })],
-    [
-      "a service token that is expired",
-      () => signAgent({ exp: Math.floor(Date.now() / 1000) - 120 }),
-    ],
+    ["a service token that is expired", () => signAgent({ exp: seconds - 1 })],
     [
       "a service token from another team",
       () => signAgent({ iss: "https://x.cloudflareaccess.com" }),
@@ -84,11 +88,18 @@ describe("the Access check", () => {
   });
 
   it("refuses an expired token", async () => {
-    await denied(await signAccess({ exp: Math.floor(Date.now() / 1000) - 120 }));
+    await denied(await signAccess({ exp: seconds - 1 }));
   });
 
   it("refuses a token not valid yet", async () => {
-    await denied(await signAccess({ nbf: Math.floor(Date.now() / 1000) + 3_600 }));
+    await denied(await signAccess({ nbf: seconds + 120 }));
+  });
+
+  it("takes a token up to the second before `exp` and from the second of `nbf`", async () => {
+    expect((await verify(await signAccess({ exp: seconds + 1 })))._tag).toBe("Success");
+    expect((await verify(await signAccess({ nbf: seconds })))._tag).toBe("Success");
+    await denied(await signAccess({ exp: seconds }));
+    await denied(await signAccess({ nbf: seconds + 1 }));
   });
 
   it.each([

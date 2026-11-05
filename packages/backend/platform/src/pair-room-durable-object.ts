@@ -1,5 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import { Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
+import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
@@ -31,7 +31,9 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import { clockOf } from "./effect-clock.ts";
 import { admitFrame, type FrameWindow } from "./frame-window.ts";
+import { systemNow } from "./wall-clock.ts";
 
 /** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
 export const ROOM_USER_HEADER = "x-billet-user";
@@ -94,9 +96,18 @@ export class PairRoom extends DurableObject {
       Layer.mergeAll(
         PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))),
         Observability,
+        Layer.succeed(
+          Clock.Clock,
+          clockOf(() => this.clock()),
+        ),
       ),
     ),
   );
+
+  /** The room's clock, for its notes' times and its delivery alarms; tests replace it. */
+  protected clock(): number {
+    return systemNow();
+  }
 
   /** The lanes each accepted note is handed to. None until a lane has a sender (#10). */
   protected deliveryLanes: ReadonlyArray<string> = [];
@@ -199,7 +210,7 @@ export class PairRoom extends DurableObject {
   private async enqueueDeliveries(noteId: string): Promise<void> {
     if (this.deliveryLanes.length === 0) return;
     const deliveries = deliveriesOf(await this.database);
-    const now = Date.now();
+    const now = this.clock();
     for (const lane of this.deliveryLanes) {
       const existing = await Effect.runPromise(deliveries.find(noteId, lane));
       if (existing === undefined) {
@@ -235,11 +246,11 @@ export class PairRoom extends DurableObject {
     if (sender === undefined) return;
     await traced("PairRoom.alarm", this.spanAttributes, async (context) => {
       const deliveries = deliveriesOf(await this.database);
-      const now = Date.now();
+      const now = this.clock();
       for (const entry of await Effect.runPromise(deliveries.all)) {
         if (!isDue(entry, now)) continue;
         const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
-        const settled = settle(entry, outcome, Date.now());
+        const settled = settle(entry, outcome, this.clock());
         await Effect.runPromise(deliveries.save(settled));
         // One line per try: summing these per lane gives the delivery success rate.
         await Effect.runPromiseWith(context)(
@@ -399,7 +410,7 @@ export class PairRoom extends DurableObject {
 
   /** Counts a frame against its socket's window, in memory: hibernation resets the window. */
   private admitFrame(socket: WebSocket): boolean {
-    const { window, admitted } = admitFrame(this.frameWindows.get(socket), Date.now());
+    const { window, admitted } = admitFrame(this.frameWindows.get(socket), this.clock());
     this.frameWindows.set(socket, window);
     return admitted;
   }

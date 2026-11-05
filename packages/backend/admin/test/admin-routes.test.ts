@@ -1,4 +1,4 @@
-import { Effect, Layer, Schema } from "effect";
+import { Clock, Effect, Layer, Schema } from "effect";
 import { Digest } from "effect/crypto";
 import { HttpRouter } from "effect/http";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -46,7 +46,18 @@ const experiments = defineExperiments([
   },
 ]);
 
-const today = new Date().toISOString().slice(0, 10);
+/** When the panel thinks it is: 22:42 UTC on a month end, so "the last 7 days" crosses a month. */
+const now = Date.UTC(2026, 9, 31, 22, 42);
+const today = "2026-10-31";
+const fixedClock: Clock.Clock = {
+  currentTimeMillis: Effect.succeed(now),
+  currentTimeMillisUnsafe: () => now,
+  currentTimeNanos: Effect.succeed(BigInt(now) * 1_000_000n),
+  currentTimeNanosUnsafe: () => BigInt(now) * 1_000_000n,
+  monotonicTimeNanos: Effect.succeed(BigInt(now) * 1_000_000n),
+  monotonicTimeNanosUnsafe: () => BigInt(now) * 1_000_000n,
+  sleep: () => Effect.void,
+};
 const events: Array<EventRow> = [];
 const details: Array<DetailRow> = [];
 const flagRows: Array<FlagRow> = [];
@@ -136,7 +147,10 @@ const handlerFor = (email: string) =>
         ),
       ),
     ),
-    { disableLogger: true },
+    {
+      disableLogger: true,
+      middleware: (effect) => Effect.provideService(effect, Clock.Clock, fixedClock),
+    },
   );
 
 const owner = handlerFor("owner@example.com");
@@ -402,6 +416,21 @@ describe("the admin API", () => {
     expect(results.warnings).toEqual([
       expect.objectContaining({ metric: "opensPerDay", variant: "sunset-lamp" }),
     ]);
+  });
+
+  it("serves feature usage, split by a variant, and refuses a malformed split", async () => {
+    const seed = makeSeed({ today, weeks: 4 });
+    events.push(...seed.events);
+    flagRows.push(...seed.flags);
+    const ok = await call(`${adminApi.features}?split=home-layout`);
+    expect(ok.status).toBe(200);
+    expect(ok.body.groups.map((group: { variant: string | null }) => group.variant)).toEqual([
+      null,
+      "classic",
+      "immersive",
+    ]);
+    expect(ok.body.rows.length).toBeGreaterThan(10);
+    expect((await call(`${adminApi.features}?split=Not%20A%20Key`)).status).toBe(400);
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

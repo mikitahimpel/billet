@@ -6,11 +6,7 @@
       "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/docs/**"]
     },
     "//#lint:root": {
-      "inputs": [
-        "$TURBO_ROOT$/*",
-        "$TURBO_ROOT$/.*",
-        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
-      ]
+      "inputs": ["$TURBO_ROOT$/*", "$TURBO_ROOT$/.*", "$TURBO_ROOT$/packages/config/oxlint/*"]
     },
     "//#typecheck:root": {
       "inputs": [
@@ -81,13 +77,14 @@
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/.oxlintrc.json",
-        "$TURBO_ROOT$/packages/config/oxlint/oxlintrc.json"
+        "$TURBO_ROOT$/packages/config/oxlint/*"
       ],
       "dependsOn": ["//#lint:root"]
     },
     "test": {
       "dependsOn": ["transit"],
-      "inputs": ["$TURBO_DEFAULT$"]
+      "inputs": ["$TURBO_DEFAULT$"],
+      "env": ["TEST_NOW", "TZ"]
     },
     "transit": {
       "dependsOn": ["^transit"]
