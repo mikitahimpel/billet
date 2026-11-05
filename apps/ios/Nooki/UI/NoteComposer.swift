@@ -31,8 +31,8 @@ struct NoteComposer: View {
     var body: some View {
         VStack(spacing: 20) {
             Text("New note")
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
                 .padding(.top, 22)
 
             Picker("Style", selection: $mode) {
@@ -52,16 +52,11 @@ struct NoteComposer: View {
 
             Button(action: save) {
                 Text("Pin it · +5")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.white)
+                    .monospacedDigit()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Capsule().fill(.honeyGradient))
-                    .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
             }
-            .buttonStyle(.plain)
+            .nookiPrimary()
             .disabled(isEmpty)
-            .opacity(isEmpty ? 0.5 : 1)
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
         }
@@ -117,19 +112,19 @@ struct NoteComposer: View {
         HStack(spacing: 12) {
             Button { canvas.undoManager?.undo() } label: {
                 Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Ink.textSecondary)
                     .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.1), in: .circle)
+                    .background(Ink.surfaceRaised, in: .circle)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Undo")
             Button { clear() } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Ink.textSecondary)
                     .frame(width: 36, height: 36)
-                    .background(.white.opacity(0.1), in: .circle)
+                    .background(Ink.surfaceRaised, in: .circle)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Clear")
