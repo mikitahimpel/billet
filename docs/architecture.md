@@ -21,7 +21,8 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 ### PairRoom: one Durable Object per couple
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
-streak and presence in its own SQLite database, relays in-progress strokes, and uses hibernatable
+streak, presence and the couple's cat (its profile, temper and append-only journal, see
+[cat-state.md](cat-state.md)) in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.
 
@@ -178,7 +179,8 @@ Pairing commits in D1 and doesn't reach the room, so the first note opens it, wi
 A repeated open is accepted, so two first notes at once are safe.
 
 `packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
-`platform` provides.
+`platform` provides. The cat routes (`GET`/`PUT /v1/cat`, `GET /v1/cat/journal`,
+`POST /v1/cat/events`) live there too, in `CatService`, on the same rule: the pair comes from D1.
 
 ### Deleting an account
 
@@ -190,7 +192,8 @@ a fresh Sign in with Apple in it. In order:
    `/auth/revoke`, with a client secret signed by the Sign in with Apple key (`APPLE_SIGN_IN_KEY`).
    The outcome is logged as a label; a failure or a missing key never stops the deletion.
 2. In every room the user has been in (the current pair, and each pair `pair_events` names), the
-   `PairRoom` deletes the notes they sent and closes its sockets, and their images go from R2: the
+   `PairRoom` deletes the notes they sent and the cat with its whole journal, and closes its
+   sockets, and their images go from R2: the
    ones those notes name, and every image under the prefix whose `uploader` metadata is theirs.
 3. One D1 batch ends the pair, leaves the partner a `partner_notices` row, and deletes the user's
    `users` and `auth_user` rows with their sessions, Apple link, account key, devices, push tokens,

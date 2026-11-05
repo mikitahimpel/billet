@@ -13,6 +13,8 @@ import { ServiceStatus } from "@billet/backend-flags/service-status";
 import type { AppStatus } from "@billet/contracts-http-api/status";
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
+import { CatRoutes } from "@billet/backend-notes/cat-routes";
+import { CatService } from "@billet/backend-notes/cat-service";
 import { NotesRoutes } from "@billet/backend-notes/notes-routes";
 import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
 import { OnboardingRoutes } from "@billet/backend-onboarding/onboarding-routes";
@@ -57,6 +59,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     AccountRoutes,
     PairingRoutes,
     NotesRoutes,
+    CatRoutes,
     FlagsRoutes,
     MetricsRoutes,
     PaymentsRoutes,
@@ -71,6 +74,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
           Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
         ),
         NotesService.layer,
+        CatService.layer,
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),

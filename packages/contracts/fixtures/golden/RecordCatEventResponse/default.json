@@ -1,0 +1,26 @@
+{
+  "entry": {
+    "at": 1700000101000,
+    "by": "user-alice",
+    "event": {
+      "_tag": "Fed",
+      "grams": 40
+    },
+    "id": "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+    "seq": 1
+  },
+  "needs": {
+    "asleep": false,
+    "at": 1700000200000,
+    "full": 0.81,
+    "loved": 0.52,
+    "mood": 0.57,
+    "playful": 0.43,
+    "rested": 0.64
+  },
+  "temper": {
+    "cuddly": 0.62,
+    "curious": 0.5,
+    "lazy": 0.46
+  }
+}

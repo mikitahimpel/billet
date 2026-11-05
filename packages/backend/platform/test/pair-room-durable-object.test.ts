@@ -4,6 +4,8 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { NatureSeed } from "@billet/contracts-domain/cat";
+import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { maxFramesPerSecond } from "../src/frame-window.ts";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
@@ -148,6 +150,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_pair_room"),
       expect.stringContaining("_delivery"),
       expect.stringContaining("_idempotency_key"),
+      expect.stringContaining("_cat"),
     ]);
   });
 
@@ -341,6 +344,52 @@ describe("PairRoom realtime across eviction", () => {
     await room.sendNote(alice, photo());
     await until(() => b.frames.filter((f) => f._tag === "NoteReceived").length === 2);
     expect(b.frames.filter((f) => f._tag === "NoteReceived").map((f) => f["seq"])).toEqual([1, 2]);
+  });
+
+  it("journals the cat in SQLite, streams each entry to sockets that follow it, and forgets it with the pair", async () => {
+    const room = await openRoom();
+    const follower = await open(room, bob);
+    const notesOnly = await open(room, alice);
+    follower.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, lastCatSeq: 0 }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    const seed = Schema.decodeSync(NatureSeed)("42");
+    const mochi = Schema.decodeSync(SaveCatRequest)({
+      name: "Mochi",
+      look: { model: "marmalade", coat: "natural" },
+      utcOffsetSeconds: 3600,
+    });
+    expect((await room.saveCat(alice, mochi, seed))._tag).toBe("Accepted");
+    await until(() => follower.frames.some((f) => f._tag === "CatSaved"));
+
+    const pet = Schema.decodeSync(RecordCatEventRequest)({
+      id: "00000000-0000-4000-8000-0000000000c1",
+      event: { _tag: "Petted" },
+    });
+    expect((await room.recordCatEvent(bob, pet))._tag).toBe("Accepted");
+    await room.sendNote(alice, photo());
+    await until(() => follower.frames.filter((f) => f._tag === "CatEntryAdded").length === 2);
+
+    await evictDurableObject(room);
+    const view = await room.cat();
+    expect(view?.cat).toMatchObject({ name: "Mochi", natureSeed: "42", utcOffsetSeconds: 3600 });
+    expect(view?.lastSeq).toBe(2);
+    expect(view?.temper.cuddly).toBeGreaterThan(0.5);
+    const journal = await room.catJournal(0, 10);
+    expect(journal.map((entry) => [entry.seq, entry.by, entry.event._tag])).toEqual([
+      [1, bob, "Petted"],
+      [2, alice, "NoteShared"],
+    ]);
+    expect(notesOnly.frames.some((f) => f._tag.startsWith("Cat"))).toBe(false);
+
+    // A repeat answers with the stored entry and sends nothing new.
+    const again = await room.recordCatEvent(bob, pet);
+    expect(again._tag === "Accepted" && again.outputs.map((o) => o._tag)).toEqual([
+      "CatEntryRepeated",
+    ]);
+
+    await room.forgetMember(alice);
+    expect((await room.cat())?.cat).toBeUndefined();
+    expect(await room.catJournal(0, 10)).toEqual([]);
   });
 
   it("tells the partner the user stopped drawing when their last socket drops", async () => {

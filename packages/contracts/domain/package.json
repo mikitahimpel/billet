@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./cat": "./src/cat.ts",
     "./pair-id": "./src/pair-id.ts",
     "./flags": "./src/flags.ts",
     "./ids": "./src/ids.ts",
