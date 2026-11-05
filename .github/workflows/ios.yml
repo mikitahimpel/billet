@@ -55,6 +55,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the
+      # Swift packages build and test. Started after the Metal Toolchain install, which it slows down.
+      - name: Boot the test Simulator
+        run: |
+          udid=$(xcrun simctl list -j devices available | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if ".iOS-" in k and devices[k]),
+                       key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")[:2] if x.isdigit()])
+          phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")] if ios else []
+          print(phones[0]["udid"] if phones else "")')
+          if [ -z "$udid" ]; then
+            echo "::error::no available iPhone Simulator on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
+          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+
       # Pinned release, verified by checksum, so project generation cannot drift.
       - name: Install XcodeGen
         env:
@@ -119,19 +138,11 @@ jobs:
         timeout-minutes: 30
         run: |
           (cd apps/ios && xcodegen generate --quiet)
-          udid=$(xcrun simctl list -j devices available | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          ios = sorted((k for k in devices if ".iOS-" in k and devices[k]),
-                       key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")[:2] if x.isdigit()])
-          phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")] if ios else []
-          print(phones[0]["udid"] if phones else "")')
-          if [ -z "$udid" ]; then
-            echo "::error::no available iPhone Simulator on this runner"
-            xcrun simctl list devices available
-            exit 1
-          fi
+          udid="$TEST_SIMULATOR"
           echo "Testing on $udid"
+          echo "::group::Simulator boot"
+          cat "$RUNNER_TEMP/simulator-boot.log" || true
+          echo "::endgroup::"
           set -o pipefail
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
