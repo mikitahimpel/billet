@@ -2,6 +2,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import { describe, expect, it } from "vitest";
 import { AccountDeletion } from "@billet/backend-account/account-deletion";
+import { PairMoods } from "@billet/backend-pairing/pair-moods";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
@@ -41,6 +42,7 @@ const setup = () => {
       Layer.mergeAll(
         Layer.succeed(PairingRepository, pairs),
         observer,
+        PairMoods.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),

@@ -25,6 +25,14 @@ export const StoredReaction = Schema.Struct({
   rev: Schema.Int,
 });
 
+/** What a `mood` row holds: one member's latest check-in. */
+export const StoredMood = Schema.Struct({
+  user: Schema.String,
+  mood: Schema.String,
+  note: Schema.NullOr(Schema.String),
+  at: Schema.Int,
+});
+
 /** What a `note` row holds. */
 export const StoredNote = Schema.Struct({
   seq: Schema.Int,

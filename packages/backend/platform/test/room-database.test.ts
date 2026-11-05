@@ -40,7 +40,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(13);
+      expect(history(state.storage)).toHaveLength(14);
     });
   });
 
@@ -165,6 +165,7 @@ describe("room migrations", () => {
         items: [],
         wishlist: [],
         bonuses: [],
+        moods: [],
         // A room stored before the welcome coins reads unwelcomed, and its wallet has no list earns.
         welcomed: false,
         members: [
@@ -186,6 +187,7 @@ describe("room migrations", () => {
         "gift_loves",
         "gift_plan",
         "gift_wish",
+        "mood",
         "note",
         "owned_ink",
         "owned_item",
@@ -194,7 +196,7 @@ describe("room migrations", () => {
         "wallet",
         "wish",
       ]);
-      expect(history(state.storage)).toHaveLength(13);
+      expect(history(state.storage)).toHaveLength(14);
     });
   });
 });

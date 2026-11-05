@@ -18,6 +18,8 @@ import type {
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
+import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
@@ -96,6 +98,8 @@ interface SocketAttachment {
   readonly sentReactionRev?: number | null;
   /** Whether this socket resumed with `shop: true` and is sent the pair's shop when it changes. */
   readonly shop?: boolean;
+  /** Whether this socket resumed with `moods: true` and is told each check-in. */
+  readonly moods?: boolean;
 }
 
 /** Outputs that change what `shopOf` shows. */
@@ -299,6 +303,32 @@ export class PairRoom extends DurableObject {
   /** Reaction changes with `rev` above `afterRev`, oldest first. */
   reactions(afterRev: number, limit: number): Promise<ReadonlyArray<NoteReaction>> {
     return this.run((room) => room.reactionsAfter(afterRev, limit), "PairRoom.reactions");
+  }
+
+  /**
+   * Replaces `by`'s check-in, tells every socket that follows moods, the caller's own other devices
+   * among them, and moves the partner's Inbox count.
+   */
+  async setMood(by: UserId, request: SetMoodRequest): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.setMood(by, request), "PairRoom.setMood");
+    if (decision._tag === "Accepted") {
+      for (const output of decision.outputs) {
+        if (output._tag === "MoodSet") {
+          for (const socket of this.ctx.getWebSockets()) {
+            if (attachmentOf(socket)?.moods === true) {
+              send(socket, { _tag: "MoodChanged", checkIn: output.checkIn });
+            }
+          }
+        }
+      }
+      await this.pushUnread((member) => member !== by);
+    }
+    return decision;
+  }
+
+  /** Each member's latest check-in; none while the room is not open. */
+  moods(): Promise<ReadonlyArray<MoodCheckIn>> {
+    return this.run((room) => room.moods, "PairRoom.moods");
   }
 
   /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */
@@ -682,7 +712,7 @@ export class PairRoom extends DurableObject {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
         // the Inbox, nor one without `shop` the shop.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop } = message.value;
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, moods } = message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
@@ -690,6 +720,7 @@ export class PairRoom extends DurableObject {
           activity: activity === true,
           sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
           shop: shop === true,
+          moods: moods === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
@@ -700,6 +731,10 @@ export class PairRoom extends DurableObject {
         }
         const current = shop === true ? await this.shop() : null;
         if (current !== null) send(socket, { _tag: "ShopChanged", shop: current });
+        // Only the latest check-ins are kept, so a resume is sent those instead of what it missed.
+        if (moods === true) {
+          for (const checkIn of await this.moods()) send(socket, { _tag: "MoodChanged", checkIn });
+        }
         return;
       }
       case "Stroke": {

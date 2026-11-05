@@ -25,6 +25,7 @@ import {
 import { freeInk } from "@billet/contracts-domain/inks";
 import { CoinEntry, CoinEntryId, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
 import { CollectionId } from "@billet/contracts-domain/shop";
+import { moodNoteMaxLength } from "@billet/contracts-domain/mood";
 
 const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
 
@@ -292,6 +293,54 @@ describe("reactions", () => {
   });
 });
 
+const setMood = (overrides: Partial<typeof RoomCommand.cases.SetMood.Type> = {}) =>
+  RoomCommand.cases.SetMood.make({ by: bob, mood: "sleepy", at: 1_700_000_300_000, ...overrides });
+
+describe("moods", () => {
+  it("keeps a member's check-in and tells the room", () => {
+    const { state, outputs } = expectAccepted(active, setMood());
+    const checkIn = { user: bob, mood: "sleepy", at: 1_700_000_300_000 } as const;
+    expect(state.moods).toEqual([checkIn]);
+    expect(outputs).toEqual([RoomOutput.cases.MoodSet.make({ checkIn })]);
+  });
+
+  it("replaces the member's last check-in and keeps the partner's, in the members' order", () => {
+    const first = expectAccepted(active, setMood({ note: "long night" }));
+    const both = expectAccepted(first.state, setMood({ by: alice, mood: "missing" }));
+    const replaced = expectAccepted(both.state, setMood({ mood: "happy", at: 1_700_000_400_000 }));
+    expect(replaced.state.moods).toEqual([
+      { user: alice, mood: "missing", at: 1_700_000_300_000 },
+      { user: bob, mood: "happy", at: 1_700_000_400_000 },
+    ]);
+  });
+
+  it("trims the note, and drops one that is only blanks", () => {
+    expect(expectAccepted(active, setMood({ note: "  on my way  " })).state.moods).toEqual([
+      { user: bob, mood: "sleepy", note: "on my way", at: 1_700_000_300_000 },
+    ]);
+    expect(expectAccepted(active, setMood({ note: " \n\t " })).state.moods).toEqual([
+      { user: bob, mood: "sleepy", at: 1_700_000_300_000 },
+    ]);
+  });
+
+  it("takes a note of exactly the limit once trimmed, and refuses a longer one", () => {
+    const limit = "a".repeat(moodNoteMaxLength);
+    expect(expectAccepted(active, setMood({ note: ` ${limit} ` })).state.moods[0]?.note).toBe(
+      limit,
+    );
+    expect(decide(active, setMood({ note: `${limit}a` }))).toEqual(
+      rejection(RoomRejection.cases.MoodNoteTooLong.make({})),
+    );
+  });
+
+  it("refuses someone outside the couple, and a room not open yet", () => {
+    expect(decide(active, setMood({ by: mallory }))).toEqual(
+      rejection(RoomRejection.cases.NotAMember.make({ user: mallory })),
+    );
+    expect(decide(vacant, setMood())).toEqual(rejection(RoomRejection.cases.RoomNotOpen.make({})));
+  });
+});
+
 describe("decide as a pure function", () => {
   it("does not mutate its input and repeats its answer", () => {
     const room = JSON.parse(JSON.stringify(active)) as ActiveRoom;
@@ -346,6 +395,7 @@ describe("tagged unions", () => {
       utcOffsetSeconds: 0,
       event: { _tag: "ListTicked", item: Schema.decodeSync(EarnRef)("item-1") },
     }),
+    SetMood: setMood(),
     CreditPurchase: RoomCommand.cases.CreditPurchase.make({
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
       kind: "buy",
@@ -400,6 +450,9 @@ describe("tagged unions", () => {
       collection: cozyAutumn,
       coins: 150,
     }),
+    MoodSet: RoomOutput.cases.MoodSet.make({
+      checkIn: { user: bob, mood: "busy", note: "deadline", at: 1_700_000_000_000 },
+    }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -423,6 +476,7 @@ describe("tagged unions", () => {
     }),
     CollectionIncomplete: RoomRejection.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
     BonusTaken: RoomRejection.cases.BonusTaken.make({ collection: cozyAutumn }),
+    MoodNoteTooLong: RoomRejection.cases.MoodNoteTooLong.make({}),
   };
 
   it.each([

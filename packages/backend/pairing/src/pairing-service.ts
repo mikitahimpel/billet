@@ -15,6 +15,7 @@ import {
   NotPaired,
   type PairingUnavailable,
 } from "./pairing-error.ts";
+import { PairMoods } from "./pair-moods.ts";
 import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
@@ -40,19 +41,20 @@ export class PairingService extends Context.Service<
       code: InviteCode,
     ) => Effect.Effect<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
-    /** The caller's pair and both members, the caller first. */
+    /** The caller's pair and both members, the caller first, with their latest check-ins. */
     readonly pair: (userId: UserId) => Effect.Effect<PairResponse, NotPaired | PairingUnavailable>;
   }
 >()("@billet/backend-pairing/PairingService") {
   static readonly layer: Layer.Layer<
     PairingService,
     never,
-    PairingRepository | PairingObserver | Digest.Digest | SecureRandom.SecureRandom
+    PairingRepository | PairingObserver | PairMoods | Digest.Digest | SecureRandom.SecureRandom
   > = Layer.effect(
     PairingService,
     Effect.gen(function* () {
       const repository = yield* PairingRepository;
       const observer = yield* PairingObserver;
+      const moods = yield* PairMoods;
       const digest = yield* Digest.Digest;
       const random = yield* SecureRandom.SecureRandom;
 
@@ -112,7 +114,7 @@ export class PairingService extends Context.Service<
         const partner = (yield* repository.findMembers(pairId)).find((member) => member !== userId);
         // The pair ended between the two reads.
         if (partner === undefined) return yield* Effect.fail(new NotPaired());
-        return { pairId, members: [userId, partner] };
+        return { pairId, members: [userId, partner], moods: yield* moods.latest(pairId) };
       });
 
       const unpair = Effect.fn("PairingService.unpair")(function* (

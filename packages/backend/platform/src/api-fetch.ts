@@ -18,6 +18,8 @@ import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { ActivityRoutes } from "@billet/backend-notes/activity-routes";
 import { ActivityService } from "@billet/backend-notes/activity-service";
 import { CatRoutes } from "@billet/backend-notes/cat-routes";
+import { MoodRoutes } from "@billet/backend-notes/mood-routes";
+import { MoodService } from "@billet/backend-notes/mood-service";
 import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
 import { GiftsService } from "@billet/backend-notes/gifts-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
@@ -50,6 +52,7 @@ import { DemoPartnerRepositoryLive } from "./demo-partner-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
+import { PairMoodsLive } from "./pair-moods-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
@@ -69,8 +72,10 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
   const settings = settingsForStage(env.STAGE);
   const payments = PaymentsConfig.with(settings);
   // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
+  // The pair snapshot carries the members' check-ins from the room.
   const pairing = PairingService.layer.pipe(
     Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
+    Layer.provide(PairMoodsLive.pipe(Layer.provide(MoodService.layer))),
   );
   return Layer.mergeAll(
     AuthRoutes,
@@ -81,6 +86,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ActivityRoutes,
     CatRoutes,
     ReactionRoutes,
+    MoodRoutes,
     GiftsRoutes,
     FlagsRoutes,
     MetricsRoutes,
@@ -99,6 +105,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ActivityService.layer,
         CatService.layer,
         ReactionService.layer,
+        MoodService.layer,
         GiftsService.layer,
         FlagsService.layer,
         PairVariantsLive,
