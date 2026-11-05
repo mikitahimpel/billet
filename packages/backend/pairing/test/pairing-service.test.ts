@@ -120,6 +120,7 @@ describe("PairingService", () => {
                 Effect.sync(
                   () => void calls.push(`paired ${pairId} ${members.toSorted().join(",")}`),
                 ),
+              unpaired: (pairId) => Effect.sync(() => void calls.push(`unpaired ${pairId}`)),
             }),
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
@@ -153,6 +154,22 @@ describe("PairingService", () => {
       expect(calls).toEqual([]);
     });
 
+    it("hears about an unpair once, and not for a user without a partner", async () => {
+      const { calls, layer } = observed();
+      const pairId = await Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* PairingService;
+          const { code } = yield* service.createInvite(ana);
+          const pairId = yield* service.claimInvite(ben, code);
+          yield* service.unpair(ben);
+          yield* service.unpair(ana);
+          return pairId;
+        }).pipe(Effect.provide(layer)),
+      );
+      expect(calls.at(-1)).toBe(`unpaired ${pairId}`);
+      expect(calls.filter((call) => call.startsWith("unpaired"))).toHaveLength(1);
+    });
+
     it("still pairs when the observer fails or dies", async () => {
       const memory = makeInMemoryPairingRepository();
       const layer = PairingService.layer.pipe(
@@ -162,6 +179,7 @@ describe("PairingService", () => {
             Layer.succeed(PairingObserver, {
               invited: () => Effect.die("observer is down"),
               paired: () => Effect.die("observer is down"),
+              unpaired: () => Effect.die("observer is down"),
             }),
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,

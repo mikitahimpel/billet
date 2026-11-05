@@ -28,18 +28,23 @@ public struct WebSocketDependencies: Sendable {
   public var jitter: @Sendable () -> Double
   /// Each `Resume` also asks for `ActivityUnread`, the Inbox's unread count, whenever it changes.
   public var followsActivity: Bool
+  /// The last reaction `rev` already held, read as each socket opens. A `Resume` that names one
+  /// asks for every reaction change after it; `nil` follows none.
+  public var lastReactionRev: @Sendable () async -> Int?
 
   public init(
     open: @escaping @Sendable () async throws(TransportError) -> WebSocketConnection,
     sleep: @escaping @Sendable (Duration) async -> Void,
     deliver: @escaping @Sendable (ServerMessage) async -> Void,
     jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) },
-    followsActivity: Bool = false
+    followsActivity: Bool = false,
+    lastReactionRev: @escaping @Sendable () async -> Int? = { nil }
   ) {
     self.open = open
     self.sleep = sleep
     self.deliver = deliver
     self.jitter = jitter
     self.followsActivity = followsActivity
+    self.lastReactionRev = lastReactionRev
   }
 }

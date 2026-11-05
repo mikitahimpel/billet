@@ -8,12 +8,14 @@ import { CatEntry } from "@billet/contracts-domain/cat";
 import { ActivityResponse } from "@billet/contracts-http-api/activity";
 import { CatResponse } from "@billet/contracts-http-api/cat";
 import { CoinsResponse } from "@billet/contracts-http-api/coins";
+import { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const decodeDecision = Schema.decodeUnknownEffect(RoomDecision);
 const decodeNotes = Schema.decodeUnknownEffect(Schema.Array(SequencedNote));
 const decodeCat = Schema.decodeUnknownEffect(Schema.NullOr(CatResponse));
+const decodeReactions = Schema.decodeUnknownEffect(Schema.Array(NoteReaction));
 const decodeJournal = Schema.decodeUnknownEffect(Schema.Array(CatEntry));
 const decodeActivity = Schema.decodeUnknownEffect(ActivityResponse);
 const decodeUnread = Schema.decodeUnknownEffect(Schema.Int);
@@ -53,6 +55,11 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
         forgetMember: (pairId, user) =>
           callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
+        endSessions: (pairId) =>
+          callRoom(
+            () => rooms.getByName(pairId).endSessions(),
+            () => Effect.void,
+          ),
         saveCat: (pairId, user, request, natureSeed) =>
           callRoom(
             () => rooms.getByName(pairId).saveCat(user, request, natureSeed),
@@ -65,6 +72,10 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).catJournal(afterSeq, limit), decodeJournal),
         activity: (pairId, caller, before, limit) =>
           callRoom(() => rooms.getByName(pairId).activity(caller, before, limit), decodeActivity),
+        react: (pairId, by, request) =>
+          callRoom(() => rooms.getByName(pairId).react(by, request), decodeDecision),
+        reactions: (pairId, afterRev, limit) =>
+          callRoom(() => rooms.getByName(pairId).reactions(afterRev, limit), decodeReactions),
         markActivityRead: (pairId, user, upTo) =>
           callRoom(() => rooms.getByName(pairId).markActivityRead(user, upTo), decodeUnread),
       }),

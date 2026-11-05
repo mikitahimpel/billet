@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// What the app opens on while the room loads: Mochi's face breathing in a warm glow that blooms out of the launch
-/// screen's color, her name underneath and three soft dots keeping time.
+/// What the app opens on while the room loads: the seated cat breathing in a warm glow that blooms out of the
+/// launch screen's color, the app's name underneath and three soft dots keeping time.
 struct LaunchSplash: View {
     @State private var shown = false
     @State private var breathing = false
@@ -14,10 +14,9 @@ struct LaunchSplash: View {
                 .scaleEffect(shown ? 1 : 0.6)
                 .opacity(shown ? 1 : 0)
 
-            VStack(spacing: 22) {
-                portrait
-                    .scaleEffect(breathing ? 1.04 : 0.98)
-                    .shadow(color: Color(hex: 0xF4BF7E).opacity(breathing ? 0.55 : 0.3), radius: breathing ? 34 : 22)
+            VStack(spacing: 4) {
+                CatHero(size: 300)
+                    .scaleEffect(y: breathing ? 1.015 : 0.995, anchor: .bottom)
 
                 Text("Nooki")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
@@ -25,6 +24,7 @@ struct LaunchSplash: View {
                     .tracking(0.5)
 
                 LoadingDots()
+                    .padding(.top, 18)
             }
             .offset(y: -20)
             .opacity(shown ? 1 : 0)
@@ -39,21 +39,6 @@ struct LaunchSplash: View {
 
     /// The launch screen's LaunchBackground color, so the splash takes over without a seam.
     static let launchColor = Color(hex: 0x2A1A12)
-
-    private var portrait: some View {
-        Group {
-            if let image = UIImage(named: CatCoat.current().avatar) {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "cat.fill").font(.system(size: 54)).foregroundStyle(.white)
-            }
-        }
-        .frame(width: 124, height: 124)
-        .background(RadialGradient(colors: [Color(hex: 0xFFF4E4), Color(hex: 0xF2C08A)], center: .init(x: 0.5, y: 0.35),
-                                   startRadius: 0, endRadius: 93))
-        .clipShape(.circle)
-        .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 3))
-    }
 }
 
 /// Three dots rising and brightening one after another.

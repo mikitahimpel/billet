@@ -9,6 +9,7 @@ import {
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
+import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
@@ -17,6 +18,17 @@ export const RoomCommand = Schema.TaggedUnion({
   Open: { pairId: PairId, members: Schema.Tuple([UserId, UserId]) },
   SendNote: { note: Note, key: IdempotencyKey },
   SetPresence: { user: UserId, state: PresenceState },
+  /**
+   * Sets `by`'s reaction to `note`, or takes it back when `reaction` is absent. `current` is the
+   * reaction the room holds for them on that note, if any.
+   */
+  React: {
+    by: UserId,
+    note: Note,
+    current: Schema.optionalKey(NoteReaction),
+    reaction: Schema.optionalKey(Reaction),
+    at: EpochMillis,
+  },
   /** Adopts the cat, or renames it. `natureSeed` and `at` are used only by an adoption. */
   SaveCat: {
     user: UserId,

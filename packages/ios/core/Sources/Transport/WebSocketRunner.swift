@@ -73,7 +73,9 @@ final class WebSocketRunner: Sendable {
         await slot.install(connection, for: attempt)
         await slot.cancelTimer(for: attempt)
         enqueue(
-          .resume(lastSeq: resumeFrom, activity: dependencies.followsActivity ? true : nil),
+          .resume(
+            lastSeq: resumeFrom, activity: dependencies.followsActivity ? true : nil,
+            lastReactionRev: await dependencies.lastReactionRev()),
           attempt: attempt)
         continuation.yield(.opened(attempt: attempt))
         let reader = Task { [continuation] in

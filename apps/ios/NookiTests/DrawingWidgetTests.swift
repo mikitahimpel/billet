@@ -8,7 +8,7 @@ struct DrawingWidgetTests {
 
     private func push(_ payload: PushPayload) throws -> [AnyHashable: Any] {
         let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(payload))
-        return [LatestDrawing.pushKey: json, "aps": ["alert": ["title": "Anya"]]]
+        return [PushPayload.pushKey: json, "aps": ["alert": ["title": "Anya"]]]
     }
 
     @Test func aDrawingPushBecomesTheLatestDrawing() throws {
@@ -25,7 +25,7 @@ struct DrawingWidgetTests {
         let text = try push(.alert(noteId: NoteId("n2"), author: UserId("anya"), compact: nil, text: NoteText(validating: "hi")))
         #expect(LatestDrawing(push: text) == nil)
         #expect(LatestDrawing(push: ["aps": ["alert": "x"]]) == nil)
-        #expect(LatestDrawing(push: [LatestDrawing.pushKey: "not json"]) == nil)
+        #expect(LatestDrawing(push: [PushPayload.pushKey: "not json"]) == nil)
     }
 
     @Test func onlyThePartnersDrawingNotesCount() {
