@@ -26,16 +26,20 @@ public struct WebSocketDependencies: Sendable {
   public var deliver: @Sendable (ServerMessage) async -> Void
   /// The factor each back-off delay is multiplied by, so that many clients do not retry in step.
   public var jitter: @Sendable () -> Double
+  /// Each `Resume` also asks for `ActivityUnread`, the Inbox's unread count, whenever it changes.
+  public var followsActivity: Bool
 
   public init(
     open: @escaping @Sendable () async throws(TransportError) -> WebSocketConnection,
     sleep: @escaping @Sendable (Duration) async -> Void,
     deliver: @escaping @Sendable (ServerMessage) async -> Void,
-    jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) }
+    jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) },
+    followsActivity: Bool = false
   ) {
     self.open = open
     self.sleep = sleep
     self.deliver = deliver
     self.jitter = jitter
+    self.followsActivity = followsActivity
   }
 }

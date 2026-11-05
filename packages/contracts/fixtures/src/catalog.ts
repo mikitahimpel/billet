@@ -338,7 +338,13 @@ const decodeSamples = <S extends Schema.Codec<unknown, unknown>>(
       Schema.decodeUnknownSync(schema)(sample),
     ]),
   );
-const activityItem = Schema.decodeUnknownSync(ActivityItem);
+const decodeActivityItem = Schema.decodeUnknownSync(ActivityItem);
+/** The server's cursor for an item: its time, zero-padded, then its id. */
+const activityItem = (item: {
+  readonly id: string;
+  readonly at: number;
+  readonly [key: string]: unknown;
+}) => decodeActivityItem({ ...item, cursor: `${String(item.at).padStart(16, "0")}~${item.id}` });
 const fedItem = activityItem({
   id: `cat:${idempotencyKey}`,
   at: 1_700_000_101_000,
@@ -658,8 +664,13 @@ export const catalog: ReadonlyArray<Fixture> = [
     "without-target": refundItem,
   }),
   fixture("ActivityResponse", ActivityResponse, {
-    default: { items: [fedItem, drawingItem], next: activityCursor, unread: 1 },
-    last: { items: [refundItem], unread: 0 },
+    default: {
+      items: [fedItem, drawingItem],
+      next: drawingItem.cursor,
+      head: fedItem.cursor,
+      unread: 1,
+    },
+    last: { items: [refundItem], head: fedItem.cursor, unread: 0 },
     empty: { items: [], unread: 0 },
   }),
   fixture("MarkActivityReadRequest", MarkActivityReadRequest, {

@@ -16,6 +16,9 @@ final class ServerSession {
     private(set) var pairing: PairingModel
     /// Whether the saved account has a partner. A phone learns it by pairing; the record keeps it across launches.
     private(set) var isPaired: Bool
+    /// The pair's activity for the Inbox, and its unread count.
+    let inbox: InboxModel
+    @ObservationIgnored private var inboxLink: InboxLink?
 
     @ObservationIgnored private let backend: Backend
 
@@ -24,6 +27,12 @@ final class ServerSession {
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         pairing = PairingModel(api: backend.api)
         isPaired = (try? backend.accounts.load())?.record.isPaired ?? false
+        #if DEBUG
+        // For screenshots: `-inboxFixture YES` fills the Inbox from the local fixture instead of the server.
+        inbox = UserDefaults.standard.bool(forKey: "inboxFixture") ? InboxFixture.model() : InboxModel(api: backend.api)
+        #else
+        inbox = InboxModel(api: backend.api)
+        #endif
     }
 
     var onboarding: OnboardingClient { backend.onboarding }
@@ -47,6 +56,22 @@ final class ServerSession {
                 defaults.set(seq, forKey: key)
                 sync?.received(note, seq: seq)
             })
+    }
+
+    /// Keeps the Inbox's count live over the room socket while the app is in front; nothing without a partner.
+    func followInbox(_ follows: Bool) {
+        if follows, isPaired {
+            if inboxLink == nil {
+                let accounts = backend.accounts
+                let inbox = inbox
+                inboxLink = InboxLink(
+                    baseURL: backend.baseURL, token: { (try? accounts.load())?.token },
+                    unread: { inbox.unreadChanged($0) })
+            }
+            inboxLink?.connect()
+        } else {
+            inboxLink?.disconnect()
+        }
     }
 
     /// Fills the drawing widgets and registers push tokens; nil until this account has a partner.

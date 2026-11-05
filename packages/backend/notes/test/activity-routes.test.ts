@@ -101,9 +101,9 @@ describe("the activity routes", () => {
     expect(rest.items).toHaveLength(1);
     expect(rest.next).toBeUndefined();
 
-    const newest = first.items[0];
-    const upTo = `${String(newest?.at ?? 0).padStart(16, "0")}~${newest?.id ?? ""}`;
-    const read = await call("POST", "/v1/activity/read", "ana", { upTo });
+    // The head comes with every page: reading from the last one marks everything.
+    expect(rest.head).toBe(first.items[0]?.cursor);
+    const read = await call("POST", "/v1/activity/read", "ana", { upTo: rest.head });
     expect(decodeUnread(await read.json())).toEqual({ unread: 0 });
     expect((await page("ben")).unread).toBe(1);
   });

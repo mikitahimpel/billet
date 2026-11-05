@@ -45,6 +45,7 @@ describe("activity rows", () => {
   it("shows the doer relative to the caller, and decodes as the contract's item", () => {
     const row = activityForNote(photoFrom(bob));
     expect(itemFor(row, bob).actor).toBe("Me");
+    expect(itemFor(row, bob).cursor).toBe(cursorOf(row));
     expect(itemFor(row, alice).actor).toBe("Partner");
     expect(itemFor({ ...row, doer: { _tag: "Store" } }, alice).actor).toBe("Store");
     expect(Schema.decodeUnknownSync(ActivityItem)(itemFor(row, alice))).toEqual(
@@ -106,11 +107,7 @@ describe("RoomService: the Inbox", () => {
           const first = yield* room.activityPage(alice, undefined, 2);
           const second = yield* room.activityPage(alice, first.next, 2);
           const forBob = yield* room.activityPage(bob, undefined, 10);
-          const newest = first.items[0];
-          const readAll = yield* room.markActivityRead(
-            alice,
-            cursorOf({ at: newest?.at ?? 0, id: newest?.id ?? first.items[0]!.id }),
-          );
+          const readAll = yield* room.markActivityRead(alice, second.head!);
           const back = yield* room.markActivityRead(alice, second.next ?? first.next!);
           return { first, second, forBob, readAll, back };
         }),
@@ -125,6 +122,10 @@ describe("RoomService: the Inbox", () => {
       ["Me", "CatAdopted"],
     ]);
     expect(result.second.next).toBeUndefined();
+    // Every page names the newest item, so reading from any page can mark them all.
+    expect(result.first.head).toBe(result.first.items[0]?.cursor);
+    expect(result.second.head).toBe(result.first.head);
+    expect(result.first.items[1]?.cursor).toBe(result.first.next);
     // The partner's note and pet are Alice's to read; her own items never are.
     expect(result.first.unread).toBe(2);
     expect(result.forBob.unread).toBe(2);

@@ -75,22 +75,26 @@ public enum ActivityTarget: Codable, Hashable, Sendable {
 }
 
 /// One Inbox item. `id` is its source's own, such as `cat:<entry id>` or `note:<note id>`, so the
-/// same item never shows twice; `at` is the server's time in epoch milliseconds.
+/// same item never shows twice; `at` is the server's time in epoch milliseconds. `cursor` is its
+/// opaque place in the list: send it back as `upTo` to mark it read, never build one.
 public struct ActivityItem: Codable, Hashable, Sendable {
   public let id: String
   public let at: Int
   public let actor: ActivityActor
   public let event: ActivityEvent
   public let target: ActivityTarget?
+  public let cursor: String
 
   public init(
-    id: String, at: Int, actor: ActivityActor, event: ActivityEvent, target: ActivityTarget? = nil
+    id: String, at: Int, actor: ActivityActor, event: ActivityEvent,
+    target: ActivityTarget? = nil, cursor: String
   ) {
     self.id = id
     self.at = at
     self.actor = actor
     self.event = event
     self.target = target
+    self.cursor = cursor
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -99,6 +103,7 @@ public struct ActivityItem: Codable, Hashable, Sendable {
     case actor
     case event
     case target
+    case cursor
   }
 
   public init(from decoder: any Decoder) throws {
@@ -108,5 +113,6 @@ public struct ActivityItem: Codable, Hashable, Sendable {
     actor = try container.decode(ActivityActor.self, forKey: .actor)
     event = try container.decode(ActivityEvent.self, forKey: .event)
     target = try container.decodeOptionalKey(ActivityTarget.self, forKey: .target)
+    cursor = try container.decode(String.self, forKey: .cursor)
   }
 }
