@@ -13,7 +13,8 @@ nonisolated enum BlurHash {
             guard let context = CGContext(data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8,
                                           bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
                                           bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return false }
-            context.interpolationQuality = .medium
+            // Nearest sampling: smoothing would blend the black outside the image into the border pixels.
+            context.interpolationQuality = .none
             context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
             return true
         }
