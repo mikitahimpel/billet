@@ -24,18 +24,18 @@ struct NoteSheet: View {
                 HStack(spacing: 6) {
                     Monogram(partner: note.author, profile: state.profile, size: 20)
                     Text(note.date.formatted(date: .long, time: .omitted))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x9A7A62))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
 
                 Spacer(minLength: 0)
 
                 Button { confirmDelete = true } label: {
                     Image(systemName: "trash")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Ink.textSecondary)
                         .frame(width: 52, height: 52)
-                        .background(.white.opacity(0.1), in: .circle)
+                        .background(Ink.surfaceRaised, in: .circle)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Delete")
@@ -61,7 +61,7 @@ struct NoteSheet: View {
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 30))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .foregroundStyle(Color(hex: note.inkHex))
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.4)
                     .padding(26)

@@ -6,6 +6,8 @@ enum DeepLink: Hashable {
     case room, moments, us, calendar, dates, newNote, draw, inbox
     case list(UUID)
     case invite(String)
+    /// The Shop at an ink, by its catalog id.
+    case shopInk(String)
 
     static let scheme = "nooki"
 
@@ -21,6 +23,7 @@ enum DeepLink: Hashable {
         case .inbox: "inbox"
         case .list(let id): "us/list/\(id.uuidString)"
         case .invite(let code): "invite/\(code)"
+        case .shopInk(let id): "shop/ink/\(id)"
         }
         return URL(string: "\(Self.scheme)://\(path)")!
     }
@@ -43,6 +46,7 @@ enum DeepLink: Hashable {
         case ["draw"]: self = .draw
         case ["inbox"]: self = .inbox
         case let p where p.count == 2 && p[0] == "invite": self = .invite(p[1])
+        case let p where p.count == 3 && p[0] == "shop" && p[1] == "ink": self = .shopInk(p[2])
         case let p where p.count == 3 && p[0] == "us" && p[1] == "list":
             guard let id = UUID(uuidString: p[2]) else { return nil }
             self = .list(id)

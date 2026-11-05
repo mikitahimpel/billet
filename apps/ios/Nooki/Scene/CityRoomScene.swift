@@ -25,8 +25,8 @@ private enum Tone {
 
 /// The second room, ported from nooki-scene/src/three/cityRoom.js: a bedroom with a wide window onto a living town,
 /// lit by the time of day (the real local hour), where Mochi wanders between her bed and the windowsill.
-/// The window looks out on one of the flat suburb views, painted for the hour with its life moving (see
-/// WindowPicture). Ilya's TownPicture stays as the fallback when a view can't be painted.
+/// The window looks out on one of the suburb views, painted for the hour in layers at their own depths with its life
+/// moving (see WindowPane). Ilya's TownPicture stays as the fallback when a view can't be painted.
 final class CityRoomScene: CatRoom {
     private enum Clock {
         case live
@@ -43,10 +43,8 @@ final class CityRoomScene: CatRoom {
     /// cat-standing.ply is 0.26 m tall on all fours; here Mochi sits about as tall as the nightstand.
     private let catScale: Float = 0.5 * (0.162 / 0.152)
 
-    private var townView: ModelEntity?
-    /// The window's picture, painted over in place as the light changes and the view's life moves.
-    private var townTexture: TextureResource?
-    private let windowPicture = WindowPicture()
+    /// The view behind the glass, repainted as the light changes and the view's life moves.
+    private var pane: WindowPane?
     /// True once a suburb view has been shown; the town is painted only before that, or if one can't be.
     private var showsView = false
     private var townHour: Float = -1
@@ -169,15 +167,14 @@ final class CityRoomScene: CatRoom {
     /// Shows the next frame of the window's view, a few times a second. Without one, the town is repainted once the
     /// hour has moved on a little, at most five times a second while the day is cycling, in the background.
     private func paintTown(_ dt: Float) {
-        if townView != nil, !painting, let image = windowPicture.image(after: dt, hour: hour) {
+        if let pane, !painting, pane.tick(dt, hour: hour) {
             showsView = true
-            show(image)
             return
         }
         guard !showsView else { return }
         townAge += dt
         let moved = abs(hour - townHour)
-        guard min(moved, 24 - moved) > 0.05, townAge > 0.2, !painting, townView != nil else { return }
+        guard min(moved, 24 - moved) > 0.05, townAge > 0.2, !painting, pane != nil else { return }
         townHour = hour
         townAge = 0
         painting = true
@@ -191,17 +188,9 @@ final class CityRoomScene: CatRoom {
         }
     }
 
-    /// Puts `image` on the window's pane, replacing the texture in place once there is one.
+    /// Puts `image` on the window's pane, flat, until a view is painted.
     private func show(_ image: CGImage) {
-        guard let townView else { return }
-        if let townTexture {
-            try? townTexture.replace(withImage: image, options: .init(semantic: .color))
-        } else if let texture = try? TextureResource(image: image, options: .init(semantic: .color)) {
-            townTexture = texture
-            var material = UnlitMaterial()
-            material.color = .init(tint: .white, texture: .init(texture))
-            townView.model?.materials = [material]
-        }
+        pane?.showFlat(image)
     }
 
     private func setPoint(_ entity: Entity, color: SIMD3<Float>, lumens: Float, radius: Float) {
@@ -243,8 +232,10 @@ final class CityRoomScene: CatRoom {
         let width = o.right - o.left, height = o.top - o.bottom
         let c = windowCenter
 
-        townView = pivot.model(.generatePlane(width: width, height: height), UnlitMaterial(color: .white),
-                               at: [0, c.y, -0.545])
+        let pane = WindowPane(width: width, height: height, eye: framing.direction)
+        pane.entity.position = [0, c.y, -0.545]
+        pivot.addChild(pane.entity)
+        self.pane = pane
 
         let frame = Clay.matte(Tone.frame, roughness: 0.6)
         let d: Float = 0.05

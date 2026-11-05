@@ -56,6 +56,7 @@ final class ServerSession {
     }
 
     var onboarding: OnboardingClient { backend.onboarding }
+    var catEvents: CatEventsClient { backend.catEvents }
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
 

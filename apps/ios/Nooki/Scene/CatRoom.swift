@@ -23,6 +23,7 @@ class CatRoom {
     var paused = false {
         didSet { root.isEnabled = !paused }
     }
+    var isPlayingGame = false
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
@@ -194,7 +195,7 @@ class CatRoom {
         pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
 
         if frame % 600 == 0 { Self.releaseBodies() }
-        director?.paused = isShowcasing
+        director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)
         walker?.update(dt)
 

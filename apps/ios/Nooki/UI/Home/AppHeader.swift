@@ -13,7 +13,9 @@ struct AppHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            InboxButton(unread: 0) {}
+            InboxButton(unread: session?.inbox.unread ?? 0) {
+                if session != nil { state.showsInbox = true }
+            }
 
             Spacer(minLength: 0)
 

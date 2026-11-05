@@ -100,8 +100,9 @@ jobs:
             | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
 
       # The Simulator SDK has no splat API, so the cat's splat code (under `#if !targetEnvironment(simulator)`)
-      # compiles only for a device.
+      # compiles only for a device. On main and by hand; pull requests skip it to keep the Mac queue short.
       - name: App Release build (device, unsigned)
+        if: github.event_name != 'pull_request'
         run: |
           # Generated here too: the Simulator Release build above, which also generates it, is skipped on pull requests.
           (cd apps/ios && xcodegen generate --quiet)
@@ -111,7 +112,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
             | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
 
-      # The app's own tests (NookiTests) on a Simulator of the newest iOS this Xcode has.
+      # The app's own tests on a Simulator of the newest iOS this Xcode has. Pull requests run the unit tests
+      # (NookiTests, NookiWidgetsTests); the UI tests (NookiUITests) run on main and by hand.
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below.
         timeout-minutes: 30
@@ -134,10 +136,12 @@ jobs:
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
           export TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples"
+          skip=()
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:NookiUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
-            -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" \
+            -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \

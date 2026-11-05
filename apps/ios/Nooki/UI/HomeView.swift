@@ -1,3 +1,4 @@
+import FeatureGames
 import SwiftUI
 import TipKit
 import WidgetBridge
@@ -30,7 +31,9 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            WarmBackdrop()
+            // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
+            // and the glass over them never redraw a moving backdrop every frame.
+            WarmBackdrop(drifts: showsRoom)
 
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
@@ -44,52 +47,58 @@ struct HomeView: View {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
-                .allowsHitTesting(showsRoom)
+                .allowsHitTesting(showsRoom && state.game == nil)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }
 
-            VStack(spacing: 12) {
-                // The same header, in the same place, on every tab.
+            Group {
+                switch state.tab {
+                case .shop:
+                    ShopView(state: state)
+                case .moments:
+                    MomentsView(state: state)
+                case .us:
+                    UsView(state: state)
+                case .world:
+                    VStack(spacing: 16) {
+                        RoomControls(state: state, select: select)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+            .transition(.opacity.combined(with: .offset(y: 12)))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
+            // view runs full-bleed under both and only its content is inset.
+            .bars(fades: !showsRoom) {
                 AppHeader(state: state)
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
-
-                Group {
-                    switch state.tab {
-                    case .shop:
-                        // The scroll view runs under the tab bar and keeps its own 16pt margins.
-                        ShopView(state: state)
-                    case .moments:
-                        MomentsView(state: state)
-                    case .us:
-                        UsView(state: state)
-                    case .world:
-                        VStack(spacing: 16) {
-                            RoomControls(state: state, select: select)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 82)
-                    }
-                }
-                .transition(.opacity.combined(with: .offset(y: 12)))
-                .frame(maxHeight: .infinity, alignment: .top)
-            }
-
-            VStack {
-                Spacer(minLength: 0)
+            } bottom: {
                 TabBar(state: state)
                     .padding(.horizontal, 16)
             }
+            .opacity(state.game == nil ? 1 : 0)
 
-            PurchaseMoment(state: state)
+            if let game = state.game, let scene {
+                // In the room, with nothing else of Home over it.
+                GameView(session: GameSession(game: game, room: scene, catEvents: session?.catEvents ?? .offline)) {
+                    state.game = nil
+                }
+                .id(game)
+                .transition(.opacity)
+            }
+
+            // The composer and the canvas play it over themselves while they're up.
+            if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
         }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
-            if state.tab == .world {
+            if state.tab == .world, state.game == nil {
                 HStack(alignment: .bottom) {
-                    PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
+                    PetButton(state: state, needs: { scene?.director }) { game in state.game = game }
                     Spacer(minLength: 0)
                     PlayAllButton(showcase: showcase) { scene?.playAll() }
                 }
@@ -159,25 +168,24 @@ struct HomeView: View {
             hints.done(PetHint())
         }
         .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
-        .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
-        .onChange(of: state.tab) { _, tab in
-            switch tab {
-            case .moments: hints.done(MomentsHint())
-            case .shop: hints.done(ShopHint())
-            case .world, .us: break
-            }
+        .onChange(of: state.tab, initial: true) { visitHints() }
+        .onChange(of: state.lastPurchase) { _, purchase in
+            guard let purchase, purchase.kind == .ink, let inkSync else { return }
+            Task { await inkSync.settle(purchase, state) }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
                 state.refresh()
                 scene?.appOpened()
+                visitHints()
                 Task {
                     await DrawingSync.requestPushes(asking: false)
                     await session?.drawingSync?.fetchLatest()
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
+                    await inkSync?.refresh(state)
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(true, photos: photoSync)
@@ -304,6 +312,29 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
+    /// Each tab shown, and each return to the app, is a visit that may show one hint.
+    private func visitHints() {
+        hints.visit {
+            let screen: HintScreen = switch state.tab {
+            case .world: .world
+            case .moments: .moments
+            case .shop: .shop
+            case .us: .other
+            }
+            let sheet = state.composingNote != nil || state.drawing || state.showsSettings || state.showsInbox
+                || state.openedShopItem != nil
+            let buying = state.lastPurchase?.canUndo(at: .now) == true
+            return HintContext(
+                screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
+                canAffordTreat: state.coins >= HomeState.treatPrice)
+        }
+    }
+
+    private var inkSync: InkSync? {
+        guard let session, session.isPaired else { return nil }
+        return InkSync(api: session.api)
+    }
+
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
@@ -385,10 +416,13 @@ private struct PlayAllButton: View {
 
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
 private struct WarmBackdrop: View {
+    /// Whether the bokeh moves; when it doesn't, it stays where it was.
+    var drifts = true
     @Environment(\.scenePhase) private var scenePhase
     /// `-uitestStill YES` holds the bokeh still: redrawn under glass every frame, it keeps the app from ever idling
     /// on CI's GPU-less virtual Macs, and UI queries time out.
     private static let still = UserDefaults.standard.bool(forKey: "uitestStill")
+    private var paused: Bool { scenePhase != .active || !drifts || Self.still }
 
     var body: some View {
         ZStack {
@@ -398,7 +432,7 @@ private struct WarmBackdrop: View {
                 startRadius: 10,
                 endRadius: 520
             )
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: scenePhase != .active || Self.still)) { context in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: paused)) { context in
                 Canvas { ctx, size in
                     let t = context.date.timeIntervalSinceReferenceDate
                     for i in 0..<14 {
@@ -441,5 +475,42 @@ private struct RoomTapCounter: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+private extension View {
+    /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
+    /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
+    @ViewBuilder
+    func bars(fades: Bool, @ViewBuilder top: () -> some View, @ViewBuilder bottom: () -> some View) -> some View {
+        if #available(iOS 26, *) {
+            scrollEdgeEffectStyle(.soft, for: .vertical)
+                .safeAreaBar(edge: .top, spacing: 12, content: top)
+                .safeAreaBar(edge: .bottom, content: bottom)
+        } else {
+            safeAreaInset(edge: .top, spacing: 12) {
+                top().background { if fades { EdgeFade(edge: .top) } }
+            }
+            .safeAreaInset(edge: .bottom) {
+                bottom().background { if fades { EdgeFade(edge: .bottom) } }
+            }
+        }
+    }
+}
+
+/// Below iOS 26: material that fades out away from the screen edge, under a bar and through the status bar or the
+/// home indicator, so scrolled content softens instead of ending at a line.
+private struct EdgeFade: View {
+    let edge: VerticalEdge
+
+    var body: some View {
+        Rectangle()
+            .fill(.ultraThinMaterial)
+            .mask(LinearGradient(colors: [.black, .black, .clear],
+                                 startPoint: edge == .top ? .top : .bottom,
+                                 endPoint: edge == .top ? .bottom : .top))
+            .padding(edge == .top ? .bottom : .top, -20)
+            .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
+            .allowsHitTesting(false)
     }
 }

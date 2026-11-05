@@ -1,3 +1,4 @@
+import FeatureGames
 import Observation
 import Persistence
 import SwiftUI
@@ -5,6 +6,14 @@ import WidgetKit
 
 enum HomeTab: CaseIterable {
     case world, moments, shop, us
+}
+
+/// Where the Shop opens when something elsewhere points at it, e.g. a locked ink in the drawing palette.
+enum ShopFocus: Hashable {
+    /// The Inks block in Today, at that ink.
+    case ink(String)
+    /// That item's sheet.
+    case item(String)
 }
 
 /// Which of Mochi's rooms the World tab shows.
@@ -38,10 +47,21 @@ final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
+    /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
+    var shopFocus: ShopFocus?
+
+    /// Opens the Shop at an ink or an item.
+    func openShop(_ focus: ShopFocus) {
+        shopFocus = focus
+        tab = .shop
+    }
+
     var room: RoomKind = .home
     /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
     let rooms = RoomsChoice()
     var petPulse = 0
+    /// The mini-game being played in the room, if any.
+    var game: MiniGame?
     /// Treats given since launch.
     private(set) var treatsGiven = 0
     var showsSettings = false
@@ -150,6 +170,16 @@ final class HomeState {
         return record { $0.buy([item.id], cost: price, title: item.name, giftTo: asGift, at: .now) }
     }
 
+    /// Buys an ink colour at its price. The server hears of it once Undo has passed (see `InkSync`).
+    @discardableResult
+    func buy(_ ink: PaletteInk) -> Bool {
+        guard !ink.isOwned(owned) else { return false }
+        return record { $0.buy([ink.id], cost: ink.price, title: "\(ink.name) ink", kind: .ink, at: .now) }
+    }
+
+    /// The inks on sale, the free one first: the server's catalog once it has answered.
+    var inks = PaletteInk.bundled
+
     func toggleWish(_ item: ShopItem) {
         wallet.update { if $0.wishlist.remove(item.id) == nil { $0.wishlist.insert(item.id) } }
     }
@@ -199,6 +229,14 @@ final class HomeState {
             }
         default: break
         }
+        // For screenshots: `-shopCoins 20` sets the balance and `-shopOwned lamp,rug` what the couple owns.
+        if defaults.object(forKey: "shopCoins") != nil {
+            let coins = defaults.integer(forKey: "shopCoins")
+            wallet.update { $0.coins = coins }
+        }
+        if let owned = defaults.string(forKey: "shopOwned") {
+            wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
+        }
         if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
             tab = .moments
             openedPin = PinRoute(id: moments.moments[defaults.integer(forKey: "shotMoment")].id)
@@ -234,8 +272,8 @@ final class HomeState {
 
     /// Adding a note earns the couple 5 coins.
     @discardableResult
-    func addNote(text: String, paper: Note.Paper) -> Bool {
-        guard notes.add(text: text, paper: paper, author: viewer) != nil else { return false }
+    func addNote(text: String, paper: Note.Paper, ink: UInt32? = nil) -> Bool {
+        guard notes.add(text: text, paper: paper, author: viewer, ink: ink) != nil else { return false }
         wallet.earn(5)
         streak.record()
         return true
@@ -336,6 +374,7 @@ final class HomeState {
         case .invite(let code):
             // Before onboarding is done, the link is its code page's.
             if UserDefaults.standard.bool(forKey: OnboardingFlow.doneKey) { invitedCode = code }
+        case .shopInk(let id): openShop(.ink(id))
         }
     }
 

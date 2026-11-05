@@ -169,7 +169,12 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
   };
 
   const pairRooms: PairRooms["Service"] = {
-    open: (pairId, members) => roomOf(pairId).dispatch({ _tag: "Open", pairId, members }),
+    open: (pairId, members, joined) =>
+      roomOf(pairId).dispatch(
+        joined === undefined
+          ? { _tag: "Open", pairId, members }
+          : { _tag: "Open", pairId, members, joined },
+      ),
     sendNote: (pairId, author, request) => roomOf(pairId).sendNote(author, request),
     inks: (pairId) =>
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),

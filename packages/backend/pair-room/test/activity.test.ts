@@ -133,6 +133,32 @@ describe("RoomService: the Inbox", () => {
     expect(result.back).toBe(0);
   });
 
+  it("starts with the partner joining when pairing opens the room, once", async () => {
+    const store = memoryStore();
+    const joined = { user: bob, at: start - 5_000 };
+    const result = await run(
+      store,
+      RoomService.use((room) =>
+        Effect.gen(function* () {
+          yield* room.dispatch(
+            RoomCommand.cases.Open.make({ pairId, members: [alice, bob], joined }),
+          );
+          yield* room.dispatch(RoomCommand.cases.Open.make({ pairId, members: [alice, bob] }));
+          const forAlice = yield* room.activityPage(alice, undefined, 10);
+          const forBob = yield* room.activityPage(bob, undefined, 10);
+          return { forAlice, forBob };
+        }),
+      ),
+    );
+    expect(result.forAlice.items.map((i) => [i.actor, i.event._tag, i.at])).toEqual([
+      ["Partner", "PartnerJoined", start - 5_000],
+    ]);
+    expect(result.forAlice.items[0]?.target).toBeUndefined();
+    expect(result.forAlice.unread).toBe(1);
+    expect(result.forBob.items.map((i) => i.actor)).toEqual(["Me"]);
+    expect(result.forBob.unread).toBe(0);
+  });
+
   it("keeps one item for a repeated event, and forgets them all when the pair ends", async () => {
     const store = memoryStore();
     const result = await run(

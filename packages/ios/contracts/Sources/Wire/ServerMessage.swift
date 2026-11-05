@@ -5,7 +5,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case presence(PresenceState)
   case noteReceived(seq: Int, note: Note)
   case strokeBegin(LiveStrokeStart)
-  case strokePoints(id: Int, points: [Point])
+  /// `relayedAt`: the room's clock in ms when the frame reached it, when the room sends it.
+  case strokePoints(id: Int, points: [Point], relayedAt: Int? = nil)
   case strokeEnd(id: Int)
   /// The partner's device left with this stroke still open: discard it, it will not end.
   case strokeDropped(id: Int)
@@ -27,6 +28,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case note
     case id
     case points
+    case relayedAt
     case entry
     case cat
     case unread
@@ -52,7 +54,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case "StrokePoints":
       self = .strokePoints(
         id: try container.decode(Int.self, forKey: .id),
-        points: try LiveStrokeStart.decodePoints(container, forKey: .points))
+        points: try LiveStrokeStart.decodePoints(container, forKey: .points),
+        relayedAt: try container.decodeIfPresent(Int.self, forKey: .relayedAt))
     case "StrokeEnd":
       self = .strokeEnd(id: try container.decode(Int.self, forKey: .id))
     case "StrokeDropped":
@@ -90,10 +93,11 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .strokeBegin(let start):
       try container.encode("StrokeBegin", forKey: .tag)
       try start.encode(to: encoder)
-    case .strokePoints(let id, let points):
+    case .strokePoints(let id, let points, let relayedAt):
       try container.encode("StrokePoints", forKey: .tag)
       try container.encode(id, forKey: .id)
       try container.encode(points, forKey: .points)
+      try container.encodeIfPresent(relayedAt, forKey: .relayedAt)
     case .strokeEnd(let id):
       try container.encode("StrokeEnd", forKey: .tag)
       try container.encode(id, forKey: .id)

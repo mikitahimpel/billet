@@ -6,6 +6,7 @@ import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
+import { RoomJoin } from "./room-command.ts";
 import { RoomState, SequencedNote } from "./room-state.ts";
 
 /**
@@ -14,7 +15,11 @@ import { RoomState, SequencedNote } from "./room-state.ts";
  * `NoteRepeated` answers a send whose key the room already holds: nothing is stored or fanned out.
  */
 export const RoomOutput = Schema.TaggedUnion({
-  RoomOpened: { pairId: PairId },
+  /** `joined` is who claimed the invite, and when, if pairing opened the room. */
+  RoomOpened: {
+    pairId: PairId,
+    joined: Schema.optionalKey(RoomJoin),
+  },
   NoteAppended: { entry: SequencedNote, key: IdempotencyKey },
   NoteRepeated: { entry: SequencedNote },
   PresenceChanged: { user: UserId, state: PresenceState },

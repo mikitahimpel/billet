@@ -22,9 +22,13 @@ enum NookiPerf {
             default: state.tab = .world
             }
         }
+        host.scroll = { y in shopScroll?(y) }
         ScenePerf.host = host
         ScenePerf.start()
     }
+
+    /// Scrolls the Shop's page, while the Shop is on screen; a run scrolls it to measure its frames.
+    static var shopScroll: ((Double) -> Void)?
 
     /// `room` is on screen: the Room (`room on screen`) or the City (`city room on screen`), so a run that waits for
     /// "room on screen" finds either.
