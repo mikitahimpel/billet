@@ -77,6 +77,29 @@ import Wire
     #expect(server.requests.map(\.path) == ["/v1/notes", "/v1/notes?after=7"])
   }
 
+  @Test func activityPagesAskBeforeTheLastCursor() async throws {
+    let server = Server(body: #"{"items":[],"unread":0}"#)
+    _ = try await Self.client(server).listActivity(nil)
+    _ = try await Self.client(server).listActivity("0001700000100000~note:note-1")
+    #expect(
+      server.requests.map(\.path) == [
+        "/v1/activity", "/v1/activity?before=0001700000100000~note:note-1",
+      ])
+  }
+
+  @Test func markingActivityReadSendsTheCursorAndAnswersTheCount() async throws {
+    let server = Server(body: #"{"unread":2}"#)
+    let response = try await Self.client(server).markActivityRead(
+      MarkActivityReadRequest(upTo: "0001700000100000~note:note-1"))
+    #expect(response.unread == 2)
+    let request = try #require(server.requests.first)
+    #expect(request.method == .post)
+    #expect(request.path == "/v1/activity/read")
+    #expect(
+      request.body.map { String(decoding: $0, as: UTF8.self) }
+        == #"{"upTo":"0001700000100000~note:note-1"}"#)
+  }
+
   @Test func flagsAreReadWithTheTokenAndDecoded() async throws {
     let server = Server(body: #"{"flags":[{"key":"home-direction","variant":"window-seat"}]}"#)
     let response = try await Self.client(server).flags()

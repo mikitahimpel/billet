@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 
 struct HomeView: View {
     @State private var state = HomeState()
@@ -12,8 +13,11 @@ struct HomeView: View {
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    /// Whether this pair has both rooms to switch between.
+    var hasRoomChoice = true
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -60,6 +64,8 @@ struct HomeView: View {
                 TabBar(state: state)
                     .padding(.horizontal, 16)
             }
+
+            PurchaseMoment(state: state)
         }
         // Bottom left, so it stays clear of the "+" in the right corner.
         .overlay(alignment: .bottomLeading) {
@@ -119,7 +125,19 @@ struct HomeView: View {
             if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
-        .onChange(of: state.petPulse) { scene?.purr() }
+        .onChange(of: state.petPulse) {
+            scene?.purr()
+            hints.done(PetHint())
+        }
+        .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
+        .onChange(of: state.tab) { _, tab in
+            switch tab {
+            case .moments: hints.done(MomentsHint())
+            case .shop: hints.done(ShopHint())
+            case .world, .us: break
+            }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -129,6 +147,7 @@ struct HomeView: View {
                     await DrawingSync.requestPushes(asking: false)
                     await session?.drawingSync?.fetchLatest()
                     await session?.drawingSync?.registerPushTokens()
+                    await session?.inbox.refreshCount()
                     await photoSync?.receive()
                 }
             case .background: state.didEnterBackground()
@@ -146,6 +165,19 @@ struct HomeView: View {
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
+        }
+        .sheet(isPresented: $state.showsInbox) {
+            if let inbox = session?.inbox {
+                InboxView(model: inbox, state: state) { target in
+                    withAnimation(.spring(duration: 0.4)) { state.open(target) }
+                }
+                .presentationDetents([.large])
+                .presentationBackground(Ink.sheet)
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(item: $state.openedShopItem) { item in
+            ItemSheet(item: item, state: state)
         }
         .fullScreenCover(isPresented: $state.drawing) {
             LockCanvasView(
@@ -175,17 +207,21 @@ struct HomeView: View {
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
-        // `-room city` on launch opens the City room and `-tab shop` the Shop, for recordings and screenshots.
+        // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" {
             select(.city)
         } else if let home {
             NookiPerf.shown(home, kind: .home)
         }
+        #if DEBUG
+        // `-tab shop` opens the Shop, for screenshots.
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
+        #endif
     }
 
     private func select(_ room: RoomKind) {
         guard room != state.room else { return }
+        if room == .city { hints.done(RoomsHint()) }
         scene?.stop()
         if room == .city {
             // After the tap has drawn; until then the home room stays on screen.
@@ -255,6 +291,7 @@ private struct RoomControls: View {
             }
             .padding(3)
             .warmGlass(.capsule)
+            .popoverTip(RoomsHint(), arrowEdge: .top)
 
             Spacer(minLength: 0)
 

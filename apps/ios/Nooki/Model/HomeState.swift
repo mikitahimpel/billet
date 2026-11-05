@@ -39,7 +39,14 @@ final class HomeState {
     var tab: HomeTab = .world
     var room: RoomKind = .home
     var petPulse = 0
+    /// Treats given since launch.
+    private(set) var treatsGiven = 0
     var showsSettings = false
+    var showsInbox = false
+    /// Asks the World tab to open the cat's sheet, as an Inbox row does.
+    var showsPetSheet = false
+    /// A shop item opened from outside the Shop, such as an Inbox row.
+    var openedShopItem: ShopItem?
 
     let moods = [
         Mood(title: "Happy", symbol: "heart.fill", tint: Color(hex: 0xFF7A93)),
@@ -85,15 +92,49 @@ final class HomeState {
         return reward
     }
 
-    /// Buys the featured set's missing pieces at the set price.
+    /// Buys a set's missing pieces at the set price: the featured set or a bundle.
     @discardableResult
-    func buy(_ offer: FeaturedOffer) -> Bool {
-        guard let quote = ShopOffers.price(of: offer, owned: owned), coins >= quote.price else { return false }
-        wallet.update {
-            $0.coins -= quote.price
-            $0.owned.formUnion(offer.itemIDs)
-            $0.wishlist.subtract(offer.itemIDs)
-        }
+    func buy(_ set: some PieceSet) -> Bool {
+        guard let quote = ShopOffers.price(of: set, owned: owned) else { return false }
+        return record { $0.buy(set.itemIDs, cost: quote.price, title: set.name, at: .now) }
+    }
+
+    /// The latest buy: the purchase moment plays for it and offers Undo for a few seconds.
+    private(set) var lastPurchase: Purchase?
+
+    /// Takes a buy back within its Undo window: the coins return and the pieces it added leave the closet.
+    @discardableResult
+    func undo(_ purchase: Purchase, at now: Date = .now) -> Bool {
+        guard lastPurchase?.id == purchase.id, purchase.canUndo(at: now) else { return false }
+        wallet.update { $0.undo(purchase) }
+        lastPurchase = nil
+        return true
+    }
+
+    private func record(_ buy: (inout Wallet) -> Purchase?) -> Bool {
+        var made: Purchase?
+        wallet.update { made = buy(&$0) }
+        guard let made else { return false }
+        lastPurchase = made
+        // Mochi notices: the room's cat purrs at the next look.
+        petPulse += 1
+        return true
+    }
+
+    private static let collectionsFile = "Shop/collections.json"
+    private(set) var collectionLog = SharedFile.read(CollectionLog.self, from: collectionsFile) ?? CollectionLog()
+
+    /// The bonus waits until every piece is owned, and is collected once.
+    func canClaimBonus(_ collection: ShopCollection) -> Bool {
+        collection.isComplete(owned) && !collectionLog.claimed.contains(collection.id)
+    }
+
+    @discardableResult
+    func claimBonus(_ collection: ShopCollection) -> Bool {
+        guard canClaimBonus(collection) else { return false }
+        wallet.earn(collection.bonus)
+        collectionLog.claimed.insert(collection.id)
+        SharedFile.write(collectionLog, to: Self.collectionsFile)
         return true
     }
 
@@ -101,14 +142,7 @@ final class HomeState {
     @discardableResult
     func buy(_ item: ShopItem, asGift: Bool = false) -> Bool {
         let price = price(of: item)
-        guard coins >= price, !owned.contains(item.id) else { return false }
-        wallet.update {
-            $0.coins -= price
-            $0.owned.insert(item.id)
-            $0.wishlist.remove(item.id)
-            if asGift { $0.gifted.insert(item.id) }
-        }
-        return true
+        return record { $0.buy([item.id], cost: price, title: item.name, giftTo: asGift, at: .now) }
     }
 
     func toggleWish(_ item: ShopItem) {
@@ -146,6 +180,25 @@ final class HomeState {
 
     init() {
         us = UsStore(wallet: wallet)
+        #if DEBUG
+        // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
+        let defaults = UserDefaults.standard
+        switch defaults.string(forKey: "shotMoments") {
+        case "photos": tab = .moments
+        case "board":
+            tab = .moments
+            // After launch, so Home sees the change and builds the board room.
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                momentsMode = .board
+            }
+        default: break
+        }
+        if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
+            tab = .moments
+            openedPin = PinRoute(id: moments.moments[defaults.integer(forKey: "shotMoment")].id)
+        }
+        #endif
     }
 
     /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
@@ -197,12 +250,13 @@ final class HomeState {
         streak.record()
     }
 
-    static let treatPrice = 10
+    nonisolated static let treatPrice = 10
 
     /// A treat from the shared wallet; it fills more of her bar than a pet.
     func treat() -> Bool {
         guard coins >= Self.treatPrice else { return false }
         wallet.update { $0.coins -= Self.treatPrice }
+        treatsGiven += 1
         petPulse += 1
         care(0.1)
         streak.record()
@@ -224,6 +278,7 @@ final class HomeState {
         profile.reload()
         wallet.reload()
         giftLog = SharedFile.read(GiftLog.self, from: Self.giftFile) ?? giftLog
+        collectionLog = SharedFile.read(CollectionLog.self, from: Self.collectionsFile) ?? collectionLog
         partnerMoods.reload()
         us.reload()
         moments.reload()
@@ -266,6 +321,7 @@ final class HomeState {
             tab = .moments
             composingNote = .write
         case .draw: drawing = true
+        case .inbox: showsInbox = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
         }
     }

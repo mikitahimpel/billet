@@ -111,3 +111,10 @@ export const activityRead = sqliteTable("activity_read", {
   user: text("user").primaryKey(),
   upTo: text("up_to").notNull(),
 });
+
+// The ink colours the pair has bought, in the order it got them (`position`). The free ink is
+// every pair's and has no row. Pairing again opens a new room, which starts with the free ink only.
+export const ownedInk = sqliteTable("owned_ink", {
+  inkId: text("ink_id").primaryKey(),
+  position: integer("position").notNull(),
+});

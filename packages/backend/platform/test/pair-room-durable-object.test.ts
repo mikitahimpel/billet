@@ -3,6 +3,7 @@ import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
+import { freeInk, InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NatureSeed } from "@billet/contracts-domain/cat";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
@@ -32,6 +33,10 @@ const photo = () =>
     height: 3024,
     preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
   });
+
+const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
+const sea = Schema.decodeUnknownSync(InkId)("ink-sea");
+const text = (ink: InkId) => SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
 
@@ -138,6 +143,7 @@ describe("PairRoom storage", () => {
       ],
       lastSeq: 1,
       streakDays: 4,
+      inks: [],
     });
     await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
@@ -159,7 +165,31 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_idempotency_key"),
       expect.stringContaining("_cat"),
       expect.stringContaining("_activity"),
+      expect.stringContaining("_owned_ink"),
     ]);
+  });
+
+  it("keeps the pair's inks across eviction, in the order they were granted", async () => {
+    const room = await openRoom();
+    expect(await room.grantInks([rose])).toMatchObject({
+      _tag: "Accepted",
+      outputs: [{ _tag: "InksGranted", inks: [rose] }],
+    });
+    await room.grantInks([sea, rose]);
+    await evictDurableObject(room);
+    expect(await room.inks()).toEqual([rose, sea]);
+    expect(await room.sendNote(bob, text(sea))).toMatchObject({ _tag: "Accepted" });
+  });
+
+  it("refuses a text note in an ink the pair has not bought", async () => {
+    const room = await openRoom();
+    expect(await room.inks()).toEqual([]);
+    expect(await room.sendNote(alice, text(rose))).toEqual({
+      _tag: "Rejected",
+      rejection: { _tag: "InkNotOwned", ink: rose },
+    });
+    expect(await room.sendNote(alice, text(freeInk))).toMatchObject({ _tag: "Accepted" });
+    expect(await room.notes(0, 10)).toHaveLength(1);
   });
 
   it("rolls the state back if appending the note fails", async () => {

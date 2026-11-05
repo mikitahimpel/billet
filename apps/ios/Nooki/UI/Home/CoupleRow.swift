@@ -1,8 +1,12 @@
 import SwiftUI
+import TipKit
 
 struct CoupleRow: View {
     let state: HomeState
     @State private var editing = false
+    @State private var pairing = false
+    @Environment(Hints.self) private var hints
+    @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
         HStack(alignment: .center) {
@@ -33,6 +37,12 @@ struct CoupleRow: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .popoverTip(InviteHint(), arrowEdge: .top) { action in
+                    if action.id == InviteHint.inviteAction {
+                        hints.done(InviteHint())
+                        pairing = true
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Day \(state.daysTogether)")
@@ -53,6 +63,13 @@ struct CoupleRow: View {
             Spacer(minLength: 0)
 
             CoinPill(coins: state.coins)
+        }
+        .sheet(isPresented: $pairing) {
+            if let session {
+                PairingSheet(model: session.pairing) { session.pairingFinished() }
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
+            }
         }
         .sheet(isPresented: $editing) {
             ProfileSheet(profile: state.profile)

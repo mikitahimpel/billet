@@ -26,8 +26,17 @@ struct DailyDeal: Hashable {
     }
 }
 
+/// Pieces sold together for less than their sum: the week's featured set and the bundles.
+protocol PieceSet {
+    var id: String { get }
+    var name: String { get }
+    var itemIDs: [String] { get }
+    /// Share of the pieces' sum the couple pays, e.g. 0.5 for half.
+    var share: Double { get }
+}
+
 /// The week's hero offer: a set of items for less than their sum.
-struct FeaturedOffer: Hashable {
+struct FeaturedOffer: PieceSet, Hashable {
     let id: String
     let name: String
     let blurb: String
@@ -36,6 +45,15 @@ struct FeaturedOffer: Hashable {
     let share: Double
     /// When the next featured set replaces it: Monday at local midnight.
     let endsAt: Date
+}
+
+/// A themed set that stays in the Shop, priced below the sum of its pieces.
+struct ShopBundle: PieceSet, Hashable {
+    let id: String
+    let name: String
+    let blurb: String
+    let itemIDs: [String]
+    let share: Double
 }
 
 /// The free gift for the day: coins, or an item the couple doesn't own yet.
@@ -63,10 +81,20 @@ struct ShopOffers {
     /// Weekly featured sets, in turn.
     static let featuredSets: [(id: String, name: String, blurb: String, itemIDs: [String])] = [
         ("rainy-evening", "Rainy Evening", "Lamp, armchair and a sunset print", ["lamp", "armchair", "print"]),
-        ("mochi-playday", "Mochi's Playday", "Yarn, a toy mouse and the cat tower", ["yarn", "mouse", "tower"]),
+        ("nap-time", "Nap Time", "Donut bed, woven rug and a mushroom lamp", ["donutbed", "rug", "lamp"]),
         ("tea-for-two", "Tea for Two", "Tea table, monstera and a lantern", ["teatable", "monstera", "lantern"]),
     ]
     static let featuredShare = 0.5
+
+    /// Bundles that stay in the Shop; unlike the featured set they don't rotate.
+    static let bundles = [
+        ShopBundle(id: "mochi-playday", name: "Mochi's Playday", blurb: "Yarn, a toy mouse and the cat tower",
+                   itemIDs: ["yarn", "mouse", "tower"], share: 0.7),
+        ShopBundle(id: "reading-nook", name: "Reading Nook", blurb: "Bookcase, armchair and a mushroom lamp",
+                   itemIDs: ["bookcase", "armchair", "lamp"], share: 0.75),
+        ShopBundle(id: "window-glow", name: "Window Glow", blurb: "Paper lantern, monstera and a sunset print",
+                   itemIDs: ["lantern", "monstera", "print"], share: 0.75),
+    ]
 
     /// Gift coins are 20, 30 or 40; one day in four it's a small item instead.
     static let giftCoins = [20, 30, 40]
@@ -122,12 +150,13 @@ struct ShopOffers {
 
     // MARK: Prices
 
-    /// What the couple pays for the featured set: the share of the pieces they don't own yet. Nil once they own all.
-    static func price(of offer: FeaturedOffer, owned: Set<String>) -> (price: Int, sum: Int)? {
-        let missing = offer.itemIDs.filter { !owned.contains($0) }.compactMap(Catalog.item)
+    /// What the couple pays for a set: its share of the pieces they don't own yet, next to those pieces' sum. Nil
+    /// once they own them all.
+    static func price(of set: some PieceSet, owned: Set<String>) -> (price: Int, sum: Int)? {
+        let missing = set.itemIDs.filter { !owned.contains($0) }.compactMap(Catalog.item)
         guard !missing.isEmpty else { return nil }
         let sum = missing.reduce(0) { $0 + $1.price }
-        return (roundToFive(Double(sum) * offer.share), sum)
+        return (roundToFive(Double(sum) * set.share), sum)
     }
 
     static func roundToFive(_ value: Double) -> Int {
@@ -178,4 +207,9 @@ nonisolated struct GiftLog: Codable, Hashable {
     func canClaim(on date: Date, calendar: Calendar = .current) -> Bool {
         !calendar.isDate(claimedDay, inSameDayAs: date)
     }
+}
+
+/// Collections whose bonus the couple has already collected. Its own file, like the gift log.
+nonisolated struct CollectionLog: Codable, Hashable {
+    var claimed: Set<String> = []
 }
