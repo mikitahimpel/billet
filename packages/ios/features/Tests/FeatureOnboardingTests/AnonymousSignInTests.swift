@@ -92,6 +92,20 @@ import Wire
         == AccountRecord(userID: "u1", deviceID: "d1", expiresAt: 99, isPaired: true, pairID: "p1"))
   }
 
+  @Test func anUnreadableRecordIsKeptAndTheSignInFails() async {
+    let paired = AccountRecord(
+      userID: "u1", deviceID: "d0", expiresAt: 1, isPaired: true, pairID: "p1")
+    let memory = SignInModelTests.Memory(saved: ("old", paired))
+    memory.failLoading = true
+    var api = APIClient.offline
+    api.signInAnonymously = { (_) async throws(TransportError) in Self.session }
+    let model = AnonymousSignInModel(api: api, keys: Self.keys(), accounts: memory.store)
+    model.appeared()
+    await model.settled()
+    #expect(model.state == .failed(.storage, request: 1))
+    #expect(memory.value?.1 == paired)
+  }
+
   @Test func anotherAccountStartsUnpaired() async {
     let paired = AccountRecord(
       userID: "u0", deviceID: "d0", expiresAt: 1, isPaired: true, pairID: "p1")

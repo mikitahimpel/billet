@@ -73,8 +73,14 @@ extension AnonymousSignInMachine {
       } catch {
         return .failed(SignInFailure(error), request: request)
       }
-      // Each launch signs in again; the same account keeps the pair this phone saved for it.
-      let saved = (try? accounts.load())?.record
+      // Each launch signs in again; the same account keeps the pair this phone saved for it. A record
+      // that cannot be read is not replaced, or a passing read failure would forget the pair.
+      let saved: AccountRecord?
+      do {
+        saved = try accounts.load()?.record
+      } catch {
+        return .failed(.storage, request: request)
+      }
       let samePair = saved?.userID == session.userId.rawValue ? saved : nil
       do {
         try accounts.save(
