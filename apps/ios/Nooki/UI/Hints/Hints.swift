@@ -14,6 +14,11 @@ final class Hints {
     /// Labs: every hint shows at once, whatever its rules, from the next launch.
     static let showAllKey = "hintsShowAll"
 
+    /// Every hint, in the order they come.
+    static let all: [any HintTip.Type] = [
+        PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self, InviteHint.self,
+    ]
+
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
     @ObservationIgnored private var pending: [ClientEvent] = []
     @ObservationIgnored private var sending = false
@@ -31,6 +36,12 @@ final class Hints {
             defaults.removeObject(forKey: resetKey)
         }
         if defaults.bool(forKey: showAllKey) { Tips.showAllTipsForTesting() }
+        #if DEBUG
+        // For screenshots: `-hint treat` shows only that hint, whatever its rules.
+        if let only = defaults.string(forKey: "hint"), let hint = all.first(where: { $0.hintId == only }) {
+            Tips.showTipsForTesting([hint])
+        }
+        #endif
         try? Tips.configure([.displayFrequency(.hourly)])
     }
 
