@@ -205,30 +205,15 @@ extension View {
         }
     }
 
-    /// A card on the Shop: a warm surface lit from above with a light rim along its top, like the room's clay, and
-    /// a soft shadow.
+    /// A card on the Shop: the app's clay card.
     func shopCard(radius: CGFloat = Radius.card) -> some View {
-        // The shadow is the card's shape's own, not the whole card's: a shine or a countdown changing inside never
-        // makes it draw again.
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        return background {
-            shape
-                .fill(LinearGradient(colors: [ShopSurface.top, ShopSurface.bottom], startPoint: .top, endPoint: .bottom))
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
-            shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.16), .white.opacity(0.02)],
-                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
-        }
+        nookiCard(radius: radius)
     }
 
     /// Fades and rises into place as it scrolls in, once per appearance; only a fade under Reduce Motion.
     func shopAppear() -> some View {
         modifier(ShopAppear())
     }
-}
-
-private enum ShopSurface {
-    static let top = Color(light: Color(hex: 0xFFFAF3), dark: Color(hex: 0x4E352A))
-    static let bottom = Color(light: Color(hex: 0xFBEBD8), dark: Color(hex: 0x3A271F))
 }
 
 private struct ShopAppear: ViewModifier {
