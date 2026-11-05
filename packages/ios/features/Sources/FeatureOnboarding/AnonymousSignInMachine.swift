@@ -73,12 +73,16 @@ extension AnonymousSignInMachine {
       } catch {
         return .failed(SignInFailure(error), request: request)
       }
+      // Each launch signs in again; the same account keeps the pair this phone saved for it.
+      let saved = (try? accounts.load())?.record
+      let samePair = saved?.userID == session.userId.rawValue ? saved : nil
       do {
         try accounts.save(
           session.sessionToken.rawValue,
           AccountRecord(
             userID: session.userId.rawValue, deviceID: session.deviceId.rawValue,
-            expiresAt: session.expiresAt))
+            expiresAt: session.expiresAt, isPaired: samePair?.isPaired ?? false,
+            pairID: samePair?.pairID))
         return .sessionSaved(request: request)
       } catch {
         return .failed(.storage, request: request)

@@ -78,6 +78,32 @@ import Wire
     #expect(memory.value?.1 == AccountRecord(userID: "u1", deviceID: "d1", expiresAt: 99))
   }
 
+  @Test func signingInAgainKeepsThePairOfTheSameAccount() async {
+    let paired = AccountRecord(
+      userID: "u1", deviceID: "d0", expiresAt: 1, isPaired: true, pairID: "p1")
+    let memory = SignInModelTests.Memory(saved: ("old", paired))
+    var api = APIClient.offline
+    api.signInAnonymously = { (_) async throws(TransportError) in Self.session }
+    let model = AnonymousSignInModel(api: api, keys: Self.keys(), accounts: memory.store)
+    model.appeared()
+    await model.settled()
+    #expect(
+      memory.value?.1
+        == AccountRecord(userID: "u1", deviceID: "d1", expiresAt: 99, isPaired: true, pairID: "p1"))
+  }
+
+  @Test func anotherAccountStartsUnpaired() async {
+    let paired = AccountRecord(
+      userID: "u0", deviceID: "d0", expiresAt: 1, isPaired: true, pairID: "p1")
+    let memory = SignInModelTests.Memory(saved: ("old", paired))
+    var api = APIClient.offline
+    api.signInAnonymously = { (_) async throws(TransportError) in Self.session }
+    let model = AnonymousSignInModel(api: api, keys: Self.keys(), accounts: memory.store)
+    model.appeared()
+    await model.settled()
+    #expect(memory.value?.1 == AccountRecord(userID: "u1", deviceID: "d1", expiresAt: 99))
+  }
+
   @Test func offlineWaitsAndRetriesWithTheSameKey() async {
     let sent = Sent()
     var api = APIClient.offline
