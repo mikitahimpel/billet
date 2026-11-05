@@ -35,6 +35,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/shop/buy",
       },
+      "claimBonus": {
+        "method": "POST",
+        "path": "/v1/shop/bonus",
+      },
       "claimInvite": {
         "method": "POST",
         "path": "/v1/invites/claim",
@@ -50,6 +54,10 @@ it("pins the routes that clients call", () => {
       "downloadImage": {
         "method": "GET",
         "path": "/v1/media/*",
+      },
+      "earnCoins": {
+        "method": "POST",
+        "path": "/v1/coins/earn",
       },
       "getAccount": {
         "method": "GET",
@@ -114,6 +122,10 @@ it("pins the routes that clients call", () => {
       "mockPurchase": {
         "method": "POST",
         "path": "/v1/purchases/mock",
+      },
+      "openGift": {
+        "method": "POST",
+        "path": "/v1/shop/gift",
       },
       "placeOrder": {
         "method": "POST",

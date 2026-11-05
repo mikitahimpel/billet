@@ -12,7 +12,6 @@ import {
   AlreadyOwned,
   InkNotOwned,
   InvalidNote,
-  NotEnoughCoins,
   NotesNotFound,
   NotesUnavailable,
 } from "../src/notes-error.ts";
@@ -345,7 +344,6 @@ describe("sendNote", () => {
       notes.buy(ana, { id, item: rose });
     const outcome = await run(layer, (notes) =>
       Effect.gen(function* () {
-        const broke = yield* Effect.flip(buyRose(notes, newKey()));
         yield* notes.sendNote(
           ana,
           SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: freeInk }),
@@ -369,24 +367,24 @@ describe("sendNote", () => {
         const retried = yield* buyRose(notes, id);
         const twice = yield* Effect.flip(buyRose(notes, newKey()));
         const after = yield* notes.coins(ana, earned.entries.at(-1)?.id, 100);
-        return { broke, earned, bought, retried, twice, after };
+        return { earned, bought, retried, twice, after };
       }),
     );
     expect(Exit.isSuccess(outcome)).toBe(true);
     if (Exit.isSuccess(outcome)) {
-      const { broke, earned, bought, retried, twice, after } = outcome.value;
-      expect(broke).toEqual(new NotEnoughCoins({ needed: 60, have: 0 }));
-      expect(earned.balance).toBe(65);
-      expect(earned.entries.map((e) => e.kind)).toEqual(Array(9).fill("earn"));
+      const { earned, bought, retried, twice, after } = outcome.value;
+      // The welcome coins (560) come with the room.
+      expect(earned.balance).toBe(625);
+      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(9).fill("earn")]);
       expect(bought).toMatchObject({
         entry: { kind: "spend", amount: -60, ref: rose },
-        balance: 5,
+        balance: 565,
         granted: [rose],
         owned: [freeInk, rose],
       });
       expect(retried).toEqual(bought);
       expect(twice).toEqual(new AlreadyOwned({ itemId: rose }));
-      expect(after).toEqual({ balance: 5, entries: [bought.entry] });
+      expect(after).toEqual({ balance: 565, entries: [bought.entry] });
     }
   });
 

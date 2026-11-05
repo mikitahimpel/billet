@@ -7,13 +7,15 @@ import type { RoomState } from "./room-state.ts";
 export const shopOf = (state: RoomState): ShopResponse => {
   switch (state._tag) {
     case "Vacant":
-      return { balance: 0, inks: [freeInk], items: [...starterItems], wishlist: [] };
+      return { balance: 0, inks: [freeInk], items: [...starterItems], wishlist: [], bonuses: [] };
     case "Active":
       return {
         balance: state.wallet.balance,
         inks: [freeInk, ...state.inks.filter((ink) => ink !== freeInk)],
         items: [...starterItems, ...state.items],
         wishlist: state.wishlist,
+        ...(state.giftDay === undefined ? {} : { giftDay: state.giftDay }),
+        bonuses: state.bonuses,
       };
   }
 };

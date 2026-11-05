@@ -1,0 +1,26 @@
+{
+  "entry": {
+    "amount": 30,
+    "at": 1762350180000,
+    "id": "gift:2026-11-05",
+    "kind": "gift",
+    "ref": "2026-11-05"
+  },
+  "reward": {
+    "_tag": "Coins",
+    "coins": 30
+  },
+  "shop": {
+    "balance": 590,
+    "bonuses": [],
+    "giftDay": "2026-11-05",
+    "inks": [
+      "ink-graphite"
+    ],
+    "items": [
+      "lamp",
+      "rug"
+    ],
+    "wishlist": []
+  }
+}

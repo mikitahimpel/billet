@@ -1,8 +1,11 @@
 import { Schema } from "effect";
 import {
+  ActivityCollectionId,
   ActivityCursor,
   ActivityEvent,
   ActivityId,
+  ActivityOfferId,
+  ActivityShopItemId,
   ActivityTarget,
   activityRetentionDays,
   type ActivityActor,
@@ -85,6 +88,36 @@ export const activityForNote = (note: Note): ActivityRow => ({
       : ActivityTarget.cases.Moments.make({ note: note.id }),
 });
 
+const shopItem = Schema.decodeSync(ActivityShopItemId);
+const decodeOffer = Schema.decodeSync(ActivityOfferId);
+const decodeCollection = Schema.decodeSync(ActivityCollectionId);
+
+type PurchasedOutput = typeof RoomOutput.cases.Purchased.Type;
+
+/** A buy's item, under its spend's id. Tapping it opens the set bought, else the first item. */
+const purchaseRow = ({ id, by, at, items, offer, coins }: PurchasedOutput): ActivityRow => {
+  const bought = items.map((item) => shopItem(item));
+  const [first] = bought;
+  const target =
+    offer !== undefined && !offer.startsWith("deal:")
+      ? { target: ActivityTarget.cases.ShopOffer.make({ id: decodeOffer(offer) }) }
+      : first === undefined
+        ? {}
+        : { target: ActivityTarget.cases.ShopItem.make({ id: first }) };
+  return {
+    id: decodeId(`spend:${id}`),
+    at,
+    doer: member(by),
+    event: {
+      _tag: "Purchased",
+      ...(offer === undefined ? {} : { offer: decodeOffer(offer) }),
+      items: bought,
+      coins,
+    },
+    ...target,
+  };
+};
+
 /**
  * The items an accepted decision adds, in the order of its outputs. `at` is the room's time for
  * outputs that carry none of their own (a save of the cat).
@@ -133,6 +166,33 @@ export const activityOf = (
                 target: ActivityTarget.cases.Moments.make({ note }),
               },
             ];
+      }
+      case "Purchased":
+        return [purchaseRow(output)];
+      case "GiftOpened": {
+        const { by, at: openedAt, day, reward } = output;
+        return [
+          {
+            id: decodeId(`gift:${day}`),
+            at: openedAt,
+            doer: member(by),
+            event: { _tag: "GiftClaimed", coins: reward._tag === "Coins" ? reward.coins : 0 },
+            ...(reward._tag === "Item"
+              ? { target: ActivityTarget.cases.ShopItem.make({ id: shopItem(reward.item) }) }
+              : {}),
+          },
+        ];
+      }
+      case "BonusPaid": {
+        const { by, at: paidAt, collection, coins } = output;
+        return [
+          {
+            id: decodeId(`bonus:${collection}`),
+            at: paidAt,
+            doer: member(by),
+            event: { _tag: "BonusEarned", collection: decodeCollection(collection), coins },
+          },
+        ];
       }
       case "RoomOpened":
         return output.joined === undefined

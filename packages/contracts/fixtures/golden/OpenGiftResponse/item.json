@@ -1,0 +1,27 @@
+{
+  "entry": {
+    "amount": 0,
+    "at": 1762350180000,
+    "id": "gift:2026-11-05",
+    "kind": "gift",
+    "ref": "yarn"
+  },
+  "reward": {
+    "_tag": "Item",
+    "item": "yarn"
+  },
+  "shop": {
+    "balance": 560,
+    "bonuses": [],
+    "giftDay": "2026-11-05",
+    "inks": [
+      "ink-graphite"
+    ],
+    "items": [
+      "lamp",
+      "rug",
+      "yarn"
+    ],
+    "wishlist": []
+  }
+}

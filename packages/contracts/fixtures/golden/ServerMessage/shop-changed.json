@@ -1,0 +1,19 @@
+{
+  "_tag": "ShopChanged",
+  "shop": {
+    "balance": 65,
+    "bonuses": [],
+    "inks": [
+      "ink-graphite",
+      "ink-rose"
+    ],
+    "items": [
+      "lamp",
+      "rug",
+      "tower"
+    ],
+    "wishlist": [
+      "yarn"
+    ]
+  }
+}

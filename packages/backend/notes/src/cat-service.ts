@@ -146,6 +146,9 @@ export class CatService extends Context.Service<
             case "OwnNote":
             case "NotReactable":
             case "NoReaction":
+            case "GiftTaken":
+            case "CollectionIncomplete":
+            case "BonusTaken":
               return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-cat-event" }));
           }
         }

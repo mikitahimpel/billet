@@ -8,6 +8,7 @@
   },
   "shop": {
     "balance": 65,
+    "bonuses": [],
     "inks": [
       "ink-graphite"
     ],

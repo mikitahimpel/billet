@@ -238,7 +238,7 @@ struct HomeView: View {
                     await inkSync?.refresh(state.shop)
                 }
                 session?.reactions?.refresh()
-                session?.followInbox(true, photos: photoSync, texts: textSync)
+                session?.followInbox(true, photos: photoSync, texts: textSync, shop: state.shop)
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:

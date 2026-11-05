@@ -233,11 +233,13 @@ describe("the shop routes", () => {
     const response = await handler(request("/v1/shop", "cal"));
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
+    // Reading the shop opens the room, so the welcome coins are there on the first read.
     expect(await response.json()).toEqual({
-      balance: 0,
+      balance: 560,
       inks: ["ink-graphite"],
       items: ["lamp", "rug"],
       wishlist: [],
+      bonuses: [],
     });
   });
 
@@ -251,17 +253,22 @@ describe("the shop routes", () => {
   });
 
   it("answers 409 to an order the balance cannot pay, and 400 to an unknown piece", async () => {
-    const order = (item: string) =>
+    const order = (item: string, n: number) =>
       handler(
         request("/v1/shop/orders", "dee", {
-          ...json({ id: "00000000-0000-4000-8000-000000000001", offer: { _tag: "Item", item } }),
+          ...json({
+            id: `00000000-0000-4000-8000-00000000000${n}`,
+            offer: { _tag: "Item", item },
+          }),
           method: "POST",
         }),
       );
-    const poor = await order("tower");
+    // The welcome coins pay for the tower and leave 20. Neither piece is ever a deal.
+    expect((await order("tower", 1)).status).toBe(200);
+    const poor = await order("armchair", 2);
     expect(poor.status).toBe(409);
-    expect(await poor.json()).toEqual({ _tag: "NotEnoughCoins", needed: 540, have: 0 });
-    expect((await order("throne")).status).toBe(400);
+    expect(await poor.json()).toEqual({ _tag: "NotEnoughCoins", needed: 320, have: 20 });
+    expect((await order("throne", 3)).status).toBe(400);
   });
 
   it("answers a stranger 404", async () => {

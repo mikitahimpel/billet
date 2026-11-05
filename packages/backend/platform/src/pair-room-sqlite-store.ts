@@ -19,6 +19,7 @@ import {
   activityRead,
   cat,
   catEntry,
+  claimedBonus,
   coinEntry,
   note,
   ownedInk,
@@ -59,13 +60,14 @@ const coinEntriesFrom = (rows: ReadonlyArray<typeof coinEntry.$inferSelect>) =>
 
 const walletFrom = (row: WalletRow | undefined) =>
   row === undefined
-    ? { balance: 0, care: 0, notes: 0, games: 0 }
+    ? { balance: 0, care: 0, notes: 0, games: 0, lists: 0 }
     : {
         balance: row.balance,
         ...(row.day === null ? {} : { day: row.day }),
         care: row.care,
         notes: row.notes,
         games: row.games,
+        lists: row.lists,
       };
 
 const walletValues = ({ wallet: w }: ActiveRoom): typeof wallet.$inferInsert => ({
@@ -75,6 +77,7 @@ const walletValues = ({ wallet: w }: ActiveRoom): typeof wallet.$inferInsert => 
   care: w.care,
   notes: w.notes,
   games: w.games,
+  lists: w.lists,
 });
 
 const decodeReaction = Schema.decodeUnknownOption(NoteReaction);
@@ -187,6 +190,7 @@ const roomFrom = (
   items: ReadonlyArray<string>,
   wishlist: ReadonlyArray<string>,
   walletRow: WalletRow | undefined,
+  bonuses: ReadonlyArray<string>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -204,6 +208,9 @@ const roomFrom = (
           inks,
           items,
           wishlist,
+          bonuses,
+          ...(row.giftDay === null ? {} : { giftDay: row.giftDay }),
+          welcomed: row.welcomed,
           wallet: walletFrom(walletRow),
           ...catFrom(catRow),
         },
@@ -221,6 +228,8 @@ const roomValues = (state: ActiveRoom): typeof room.$inferInsert => {
     lastSeq: state.lastSeq,
     streakDays: state.streakDays,
     lastReactionRev: state.lastReactionRev ?? null,
+    giftDay: state.giftDay ?? null,
+    welcomed: state.welcomed,
   };
 };
 
@@ -241,8 +250,9 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(ownedItem).orderBy(asc(ownedItem.position)),
         db.select().from(wish).orderBy(asc(wish.position)),
         db.select().from(wallet),
+        db.select().from(claimedBonus).orderBy(asc(claimedBonus.position)),
       ]).pipe(
-        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow]]) =>
+        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow], bonuses]) =>
           roomFrom(
             row,
             catRow,
@@ -250,6 +260,7 @@ export const SqliteRoomStore = Layer.effect(
             items.map(({ itemId }) => itemId),
             wishes.map(({ itemId }) => itemId),
             walletRow,
+            bonuses.map(({ collectionId }) => collectionId),
           ),
         ),
         Effect.orDie,
@@ -276,6 +287,13 @@ export const SqliteRoomStore = Layer.effect(
               }
               for (const [position, itemId] of state.items.entries()) {
                 yield* tx.insert(ownedItem).values({ itemId, position }).onConflictDoNothing();
+              }
+              // Bonuses are only ever added, like the inks.
+              for (const [position, collectionId] of state.bonuses.entries()) {
+                yield* tx
+                  .insert(claimedBonus)
+                  .values({ collectionId, position })
+                  .onConflictDoNothing();
               }
               yield* tx.delete(wish);
               for (const [position, itemId] of state.wishlist.entries()) {

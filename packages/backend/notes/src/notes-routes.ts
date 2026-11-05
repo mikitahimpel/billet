@@ -10,9 +10,19 @@ import { principalOf, respondFailures, type RouteFailure } from "@billet/backend
 import { CoinEntryId } from "@billet/contracts-domain/coins";
 import { MediaKey } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
-import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
+import {
+  BuyRequest,
+  BuyResponse,
+  CoinsResponse,
+  EarnRequest,
+  EarnResponse,
+} from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import {
+  ClaimBonusRequest,
+  ClaimBonusResponse,
+  OpenGiftRequest,
+  OpenGiftResponse,
   OrderRequest,
   OrderResponse,
   ShopResponse,
@@ -27,6 +37,10 @@ import {
 } from "@billet/contracts-http-api/note";
 import type {
   AlreadyOwned,
+  BonusTaken,
+  CatNotAdopted,
+  CollectionIncomplete,
+  GiftTaken,
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
@@ -68,7 +82,7 @@ const CoinsQuery = Schema.Struct({
   ),
 });
 
-/** A buy, an order or a wish is an id and an item or set name. */
+/** A buy, an order, a wish, a gift, a bonus or an earn is an id and a name or two. */
 const buySizeLimit = ByteSize.kibibytes(1);
 
 const decodeMediaKey = Schema.decodeUnknownEffect(MediaKey);
@@ -82,6 +96,9 @@ const respondCoins = HttpServerResponse.schemaJson(CoinsResponse);
 const respondBuy = HttpServerResponse.schemaJson(BuyResponse);
 const respondShop = HttpServerResponse.schemaJson(ShopResponse);
 const respondOrder = HttpServerResponse.schemaJson(OrderResponse);
+const respondGift = HttpServerResponse.schemaJson(OpenGiftResponse);
+const respondBonus = HttpServerResponse.schemaJson(ClaimBonusResponse);
+const respondEarn = HttpServerResponse.schemaJson(EarnResponse);
 
 /** The pair's shop changes on either phone, so a read is never cached. */
 const shopHeaders = { "cache-control": "no-store" };
@@ -98,6 +115,10 @@ const respondNotesFailures = <R>(
     | InkNotOwned
     | NotEnoughCoins
     | AlreadyOwned
+    | CollectionIncomplete
+    | GiftTaken
+    | BonusTaken
+    | CatNotAdopted
     | NotesUnavailable,
     R
   >,
@@ -112,6 +133,12 @@ const respondNotesFailures = <R>(
         respondError(ApiError.cases.NotEnoughCoins.make({ needed, have }), { status: 409 }),
       AlreadyOwned: ({ itemId }) =>
         respondError(ApiError.cases.AlreadyOwned.make({ itemId }), { status: 409 }),
+      CollectionIncomplete: ({ collection }) =>
+        respondError(ApiError.cases.CollectionIncomplete.make({ collection }), { status: 409 }),
+      GiftTaken: ({ day }) => respondError(ApiError.cases.GiftTaken.make({ day }), { status: 409 }),
+      BonusTaken: ({ collection }) =>
+        respondError(ApiError.cases.BonusTaken.make({ collection }), { status: 409 }),
+      CatNotAdopted: () => respondError(ApiError.cases.CatNotAdopted.make({}), { status: 409 }),
       NotesUnavailable: (error) =>
         Effect.logError("notes unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
@@ -251,6 +278,44 @@ export const NotesRoutes = HttpRouter.use((router) =>
           Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
         );
         return yield* respondShop(yield* notes.setWish(userId, request), { headers: shopHeaders });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.openGift.method,
+      routes.openGift.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(OpenGiftRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondGift(yield* notes.openGift(userId, request), { headers: shopHeaders });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.claimBonus.method,
+      routes.claimBonus.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(ClaimBonusRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondBonus(yield* notes.claimBonus(userId, request), {
+          headers: shopHeaders,
+        });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.earnCoins.method,
+      routes.earnCoins.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(EarnRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondEarn(yield* notes.earn(userId, request), { headers: shopHeaders });
       }).pipe(respondNotesFailures),
     );
   }),
