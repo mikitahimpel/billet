@@ -51,6 +51,6 @@ Not part of the policy shown to users: the answers to give in App Store Connect 
 - **Identifiers > Device ID:** Collected, linked to the user, not used for tracking, for App Functionality (the random device ID). It is not the advertising identifier.
 - **User Content > Photos or Videos, Other User Content:** Collected, linked to the user, not used for tracking, for App Functionality (the notes you send).
 - **Diagnostics:** Only what Apple provides through TestFlight and App Store crash reports; the app adds no diagnostics SDK.
-- **Not collected:** contact info (name, email, phone), location, contacts, browsing or search history, purchases (stamps are granted in the app for now; revisit this answer when they can be bought), financial info, health, sensitive info.
+- **Not collected:** contact info (name, email, phone), location, contacts, browsing or search history, purchases (coins are earned in the app; buying them is off in this release; revisit this answer when they can be bought), financial info, health, sensitive info.
 
 Change these answers whenever the list of usage counts or what they carry changes: see `docs/analytics.md`.

@@ -24,12 +24,12 @@ beforeAll(async () => {
 // Owners are fresh per test, so the tests share one database.
 paymentsRepositoryContract("D1", async () => ({
   repository: await repositoryOn(env.DB),
-  spend: async (owner, stamps) => {
+  spend: async (owner, coins) => {
     await env.DB.prepare(
-      `INSERT INTO stamp_ledger (id, owner_id, kind, amount, product_id, original_transaction_id, at)
+      `INSERT INTO coin_ledger (id, owner_id, kind, amount, product_id, original_transaction_id, at)
        VALUES (?, ?, 'refund', ?, 'spent', 'spent', 0)`,
     )
-      .bind(`spend:${crypto.randomUUID()}`, owner, -stamps)
+      .bind(`spend:${crypto.randomUUID()}`, owner, -coins)
       .run();
   },
 }));

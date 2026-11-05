@@ -1,4 +1,5 @@
-/// `GET /v1/stamps`: the pair's bought stamps as the server keeps them.
+/// `GET /v1/purchases` (the contract's `PurchasesResponse`): the pair's bought coins as the
+/// server keeps them.
 public struct StampsResponse: Codable, Hashable, Sendable {
   public struct Entry: Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Hashable, Sendable {

@@ -48,7 +48,7 @@ let roundTrips: [String: RoundTrip] = [
   "PurchaseRequest": codec(PurchaseRequest.self),
   "MockPurchaseRequest": codec(MockPurchaseRequest.self),
   "PurchaseResponse": codec(PurchaseResponse.self),
-  "StampsResponse": codec(StampsResponse.self),
+  "PurchasesResponse": codec(StampsResponse.self),
   "AppStoreNotificationRequest": codec(AppStoreNotificationRequest.self),
   "OnboardingStep": codec(OnboardingStep.self),
   "OnboardingAnswer": codec(OnboardingAnswer.self),

@@ -833,8 +833,7 @@ function mostChosen(top, range) {
               "span",
               { class: "top-count" },
               h("b", { text: fmtNum(it.count) }),
-              it.total != null &&
-                h("span", { class: "sub", text: ` · ${fmtNum(it.total)} stamps` }),
+              it.total != null && h("span", { class: "sub", text: ` · ${fmtNum(it.total)} coins` }),
             ),
           ),
         ),
@@ -842,7 +841,7 @@ function mostChosen(top, range) {
     );
   return section(
     "Most chosen",
-    top ? `${range} · times chosen; items bought also show stamps spent` : null,
+    top ? `${range} · times chosen; items bought also show coins spent` : null,
     shown.length
       ? h("div", { class: "grid tops" }, shown.map(box))
       : h(
@@ -2687,7 +2686,7 @@ async function renderPurchases() {
   return [
     pageHead(
       "Purchases",
-      "Stamp packs bought through the App Store, and on dev the mock ones. Read-only: refunds come from Apple.",
+      "Coin packs bought through the App Store, and on dev the mock ones. Read-only: refunds come from Apple.",
     ),
     h(
       "div",
@@ -2704,7 +2703,7 @@ async function renderPurchases() {
       callout(
         "warn",
         `${flagged} flagged ${flagged === 1 ? "purchase" : "purchases"}`,
-        "The pair had fewer stamps than the refund, so the balance stopped at 0. Check them by hand.",
+        "The pair had fewer coins than the refund, so the balance stopped at 0. Check them by hand.",
       ),
     section(
       "Purchases",
@@ -2732,7 +2731,7 @@ async function renderPurchases() {
             value: (p) => p.productId,
             cell: (p) => h("span", { class: "mono", text: packName(p.productId) }),
           },
-          { label: "Stamps", num: true, value: (p) => p.stamps },
+          { label: "Coins", num: true, value: (p) => p.coins },
           {
             label: "Environment",
             value: (p) => p.environment,
@@ -2761,10 +2760,10 @@ async function renderPurchases() {
       }),
     ),
     section(
-      "Stamp ledger",
+      "Coin ledger",
       "Every change to a balance, newest first. A balance is the sum of its entries.",
       dataTable({
-        caption: "Stamp ledger",
+        caption: "Coin ledger",
         noun: "entries",
         rows: ledger,
         sort: [4, "desc"],
