@@ -67,6 +67,10 @@ export class BrokenRoom extends DurableObject {
 }
 
 export default {
+  // The gate and the rate limit read TEST_NOW, so a test's requests share one rate-limit window
+  // instead of straddling a minute boundary of the real clock. Better Auth still reads the real one.
   fetch: (request: Request, env: WorkerEnv, ctx: ExecutionContext) =>
-    respondApi(request, env, ctx, testExperiments),
+    respondApi(request, env, ctx, testExperiments, () =>
+      testNowOf(env as { readonly TEST_NOW?: string }),
+    ),
 };
