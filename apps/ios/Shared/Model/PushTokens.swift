@@ -7,6 +7,9 @@ nonisolated struct PushTokens: Codable, Hashable, Sendable {
     var widget: String?
     var registeredAlert: String?
     var registeredWidget: String?
+    /// The token the server starts the drawing Live Activity with (push-to-start), and the one it already has.
+    var liveActivity: String?
+    var registeredLiveActivity: String?
 
     static let path = "Push/tokens.json"
 
@@ -14,6 +17,7 @@ nonisolated struct PushTokens: Codable, Hashable, Sendable {
 
     static func save(alert token: String) { update { $0.alert = token } }
     static func save(widget token: String) { update { $0.widget = token } }
+    static func save(liveActivity token: String) { update { $0.liveActivity = token } }
 
     static func update(_ change: (inout PushTokens) -> Void) {
         var tokens = load()

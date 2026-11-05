@@ -16,6 +16,7 @@ struct NookiWidgetBundle: WidgetBundle {
         } else {
             DrawingWidget()
         }
+        DrawingLiveActivity()
     }
 }
 

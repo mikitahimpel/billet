@@ -1,3 +1,4 @@
+import ActivityKit
 import Foundation
 import Persistence
 import Transport
@@ -70,6 +71,28 @@ struct DrawingSync {
         }
         guard status == .authorized || status == .provisional || status == .ephemeral else { return }
         UIApplication.shared.registerForRemoteNotifications()
+    }
+}
+
+extension DrawingSync {
+    /// Keeps the push-to-start token of the drawing Live Activity, and the newest such activity only. The server
+    /// starts one per drawing, so without this they pile up on the lock screen. Runs as long as the app does.
+    static func watchLiveActivities() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await token in Activity<DrawingAttributes>.pushToStartTokenUpdates {
+                    PushTokens.save(liveActivity: token.map { String(format: "%02x", $0) }.joined())
+                    await MainActor.run { NotificationCenter.default.post(name: .pushTokenChanged, object: nil) }
+                }
+            }
+            group.addTask {
+                for await started in Activity<DrawingAttributes>.activityUpdates {
+                    for activity in Activity<DrawingAttributes>.activities where activity.id != started.id {
+                        await activity.end(nil, dismissalPolicy: .immediate)
+                    }
+                }
+            }
+        }
     }
 }
 

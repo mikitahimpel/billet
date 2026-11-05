@@ -144,6 +144,7 @@ struct HomeView: View {
                 state: state, api: session?.api,
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
+        .task { await DrawingSync.watchLiveActivities() }
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }

@@ -54,4 +54,18 @@ struct DrawingWidgetTests {
             #expect((0...aspect).contains(point.y))
         }
     }
+
+    /// The server's Live Activity `content-state` (golden PushPayload/live-activity-on-paper.json) decodes as the
+    /// activity's state, `_tag` and all.
+    @Test func theLiveActivityPushDecodesAsItsState() throws {
+        let json = """
+            {"_tag":"LiveActivity","author":"user-bob","noteId":"note-1","paper":"sky",
+             "compact":{"version":1,"strokes":[{"color":"#2A1A1C","width":3,"points":[10,20,30,40]}]}}
+            """
+        let state = try JSONDecoder().decode(DrawingAttributes.ContentState.self, from: Data(json.utf8))
+        #expect(state.noteId == "note-1")
+        #expect(state.author == "user-bob")
+        #expect(state.paper == .sky)
+        #expect(state.strokes.count == 1)
+    }
 }

@@ -72,6 +72,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleDisplayName: Nooki
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # The partner's drawing as a Live Activity, started by a push (Shared/Draw/DrawingActivity.swift).
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
   # The old app's flat window views, compiled from packages/pet-scenes/reality without RealityKit or its
@@ -116,7 +118,11 @@ targets:
   NookiNotifications:
     type: app-extension
     platform: iOS
-    sources: [NookiNotifications, Shared]
+    sources:
+      - path: NookiNotifications
+      # The Live Activity attributes need ActivityKit, which this extension has no use for.
+      - path: Shared
+        excludes: [Draw/DrawingActivity.swift]
     info:
       path: NookiNotifications/Info.plist
       properties:
