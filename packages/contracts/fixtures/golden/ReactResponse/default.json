@@ -1,0 +1,9 @@
+{
+  "reaction": {
+    "at": 1700000002000,
+    "by": "user-alice",
+    "note": "note-1",
+    "reaction": "heart",
+    "rev": 3
+  }
+}

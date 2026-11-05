@@ -76,6 +76,10 @@ let roundTrips: [String: RoundTrip] = [
   "ActivityResponse": codec(ActivityResponse.self),
   "MarkActivityReadRequest": codec(MarkActivityReadRequest.self),
   "ActivityUnreadResponse": codec(ActivityUnreadResponse.self),
+  "NoteReaction": codec(NoteReaction.self),
+  "ReactRequest": codec(ReactRequest.self),
+  "ReactResponse": codec(ReactResponse.self),
+  "ListReactionsResponse": codec(ListReactionsResponse.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

@@ -31,6 +31,8 @@ export const ClientMessage = Schema.TaggedUnion({
     lastCatSeq: Schema.optionalKey(Schema.Int),
     /** Asks for `ActivityUnread` whenever the user's Inbox count changes. */
     activity: Schema.optionalKey(Schema.Boolean),
+    /** Asks for every reaction change after this `rev`, and each one after. Left out, none. */
+    lastReactionRev: Schema.optionalKey(Schema.Int),
   },
   /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },

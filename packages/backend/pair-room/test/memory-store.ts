@@ -2,6 +2,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
 import type { CoinEntry } from "@billet/contracts-domain/coins";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import { countsAsUnread, cursorOf, type ActivityRow } from "../src/activity.ts";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteIdSource } from "../src/note-id-source.ts";
@@ -19,6 +20,7 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
     activity: new Map<string, ActivityRow>(),
     marks: new Map<string, ActivityCursor>(),
     coins: [] as Array<CoinEntry>,
+    reactions: new Map<string, NoteReaction>(),
   };
   const newestFirst = () =>
     [...memory.activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
@@ -30,6 +32,7 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
       catEntries: ReadonlyArray<CatEntry>,
       activity: ReadonlyArray<ActivityRow>,
       coins: ReadonlyArray<CoinEntry>,
+      reactions: ReadonlyArray<NoteReaction>,
     ) =>
       Effect.suspend(() => {
         if (options?.failCommit === true) return Effect.die("storage is down");
@@ -37,6 +40,7 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
         memory.cat.push(...catEntries);
         memory.coins.push(...coins);
         for (const row of activity) memory.activity.set(row.id, row);
+        for (const r of reactions) memory.reactions.set(`${r.note}/${r.by}`, r);
         for (const { entry, key } of notes) {
           memory.notes.push(entry);
           memory.keys.set(`${entry.note.author}/${key}`, entry);
@@ -52,6 +56,18 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
       }),
     noteByKey: (author, key) =>
       Effect.sync(() => Option.fromNullishOr(memory.keys.get(`${author}/${key}`))),
+    noteById: (id) =>
+      Effect.sync(() => Option.fromNullishOr(memory.notes.find((entry) => entry.note.id === id))),
+    reactionOf: (note, by) =>
+      Effect.sync(() => Option.fromNullishOr(memory.reactions.get(`${note}/${by}`))),
+    reactionsAfter: (afterRev, limit) =>
+      Effect.sync(() =>
+        [...memory.reactions.values()]
+          .filter((r) => r.rev > afterRev)
+          .toSorted((a, b) => a.rev - b.rev)
+          .slice(0, limit),
+      ),
+    forgetReactions: Effect.sync(() => memory.reactions.clear()),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => memory.notes.filter((n) => n.seq > afterSeq).slice(0, limit)),
     catEntryById: (id) =>

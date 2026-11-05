@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { NoteId, UserId } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { NoteText, PaperColor } from "@billet/contracts-domain/note";
+import { Reaction } from "@billet/contracts-domain/reaction";
 
 const fields = {
   noteId: NoteId,
@@ -25,6 +26,8 @@ export const pushPayloadKey = "billet";
 export const PushPayload = Schema.TaggedUnion({
   Widget: fields,
   Alert: fields,
+  /** An alert to a photo's author: `by` reacted to their note `noteId`. */
+  Reaction: { noteId: NoteId, by: UserId, reaction: Reaction },
   LiveActivity: {
     noteId: NoteId,
     author: UserId,

@@ -16,6 +16,8 @@ import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { ActivityRoutes } from "@billet/backend-notes/activity-routes";
 import { ActivityService } from "@billet/backend-notes/activity-service";
 import { CatRoutes } from "@billet/backend-notes/cat-routes";
+import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
+import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
 import { NotesRoutes } from "@billet/backend-notes/notes-routes";
 import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
@@ -66,6 +68,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     NotesRoutes,
     ActivityRoutes,
     CatRoutes,
+    ReactionRoutes,
     FlagsRoutes,
     MetricsRoutes,
     PaymentsRoutes,
@@ -82,6 +85,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         NotesService.layer,
         ActivityService.layer,
         CatService.layer,
+        ReactionService.layer,
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),
@@ -144,7 +148,20 @@ export const respondApi = (
       respondAdmin(request, env, ctx, { experiments, context }),
     );
   }
-  return Promise.resolve(respondAppLink(pathname) ?? respondPlaceholder());
+  const appLink = respondAppLink(pathname);
+  if (appLink === undefined) return Promise.resolve(respondPlaceholder());
+  return limitRequest(request, env.DB, now()).then((limited) =>
+    limited === undefined
+      ? appLink
+      : new Response("Too many tries. Open the link again in a minute.", {
+          status: 429,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "retry-after": limited.headers.get("retry-after") ?? "60",
+          },
+        }),
+  );
 };
 
 const routeApi = async (
