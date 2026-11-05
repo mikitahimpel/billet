@@ -12,6 +12,7 @@ struct HomeView: View {
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(ServerSession.self) private var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
@@ -132,6 +133,11 @@ struct HomeView: View {
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
+        }
+        .fullScreenCover(isPresented: $state.drawing) {
+            LockCanvasView(
+                state: state, api: session?.api,
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }

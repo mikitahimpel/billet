@@ -50,11 +50,11 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Persistence, Transport]
+        products: [Ink, Persistence, Transport]
       - package: BilletPet
         products: [Pet]
       - package: BilletFeatures
-        products: [FeatureOnboarding, FeaturePairing]
+        products: [FeatureCanvas, FeatureOnboarding, FeaturePairing]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:

@@ -2,7 +2,7 @@ import Foundation
 
 /// Where a tap on a widget lands in the app, as a nooki:// URL.
 enum DeepLink: Hashable {
-    case room, moments, us, calendar, dates, newNote
+    case room, moments, us, calendar, dates, newNote, draw
     case list(UUID)
 
     static let scheme = "nooki"
@@ -15,6 +15,7 @@ enum DeepLink: Hashable {
         case .calendar: "us/calendar"
         case .dates: "us/dates"
         case .newNote: "notes/new"
+        case .draw: "draw"
         case .list(let id): "us/list/\(id.uuidString)"
         }
         return URL(string: "\(Self.scheme)://\(path)")!
@@ -30,6 +31,7 @@ enum DeepLink: Hashable {
         case ["us", "calendar"]: self = .calendar
         case ["us", "dates"]: self = .dates
         case ["notes", "new"]: self = .newNote
+        case ["draw"]: self = .draw
         case let p where p.count == 3 && p[0] == "us" && p[1] == "list":
             guard let id = UUID(uuidString: p[2]) else { return nil }
             self = .list(id)

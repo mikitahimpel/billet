@@ -55,12 +55,16 @@ public enum LiveRoomMachine: Machine {
     case presenceChanged(PresenceState)
     /// This phone finished a stroke.
     case strokeDrawn(Stroke)
+    /// A frame of this phone's live drawing: a stroke's begin, points or end, or a clear.
+    case liveFrame(ClientMessage)
   }
 
   public enum Output: Equatable, Sendable {
     case send(ClientMessage)
     /// A note the partner sent, new to this client.
     case noteArrived(seq: Int, Note)
+    /// The partner wiped the shared canvas, so this phone's strokes go too.
+    case partnerCleared
   }
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
@@ -107,7 +111,7 @@ public enum LiveRoomMachine: Machine {
     case .received(.clear):
       guard state.isOnline else { return (state, []) }
       next.forgetDrawing()
-      return (next, [])
+      return (next, [.partnerCleared])
 
     case .received(.presence(let presence)):
       guard state.isOnline else { return (state, []) }
@@ -131,6 +135,9 @@ public enum LiveRoomMachine: Machine {
 
     case .strokeDrawn(let stroke):
       return (state, state.isOnline ? [.send(.stroke(stroke))] : [])
+
+    case .liveFrame(let message):
+      return (state, state.isOnline ? [.send(message)] : [])
     }
   }
 }
