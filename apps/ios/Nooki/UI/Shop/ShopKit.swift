@@ -1,3 +1,5 @@
+import SwiftUI
+
 /// The Shop's own accents on the warm room palette, saturated so offers stand out against the brown.
 enum ShopInk {
     static let coral = Color(hex: 0xFF7A59)
