@@ -86,7 +86,7 @@ final class TabBarTouchTests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
         app.launch()
-        XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 120))
+        XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         Thread.sleep(forTimeInterval: 8)
 
         var first: [CGRect]?

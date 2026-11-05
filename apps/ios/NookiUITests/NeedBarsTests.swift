@@ -20,9 +20,9 @@ final class NeedBarsTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        // A cold launch on CI can take minutes before the first frame.
+        // A cold launch on CI can be slow; past a minute something is wrong.
         let pet = app.buttons["pet"]
-        XCTAssertTrue(pet.waitForExistence(timeout: 180), "the cat's button should show")
+        XCTAssertTrue(pet.waitForExistence(timeout: 60), "the cat's button should show")
         // The launch splash covers everything for up to 6 s; wait until the button can take the tap.
         let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: pet)
         wait(for: [hittable], timeout: 30)
