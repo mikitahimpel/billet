@@ -191,17 +191,15 @@ final class WindowPane {
     private static let sortGroup = ModelSortGroup(depthPass: nil)
 
     private static func material(_ texture: TextureResource, transparent: Bool) -> UnlitMaterial {
-        var material = UnlitMaterial()
+        var material = UnlitMaterial(color: .white, applyPostProcessToneMap: false)
         material.color = .init(tint: .white, texture: .init(texture, sampler: sampler))
         if transparent { material.blending = .transparent(opacity: .init(floatLiteral: 1)) }
-        material.applyPostProcessToneMap = false
         return material
     }
 
     private static func colour(_ red: Float, _ green: Float, _ blue: Float) -> UnlitMaterial {
-        var material = UnlitMaterial(color: UIColor(red: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: 1))
-        material.applyPostProcessToneMap = false
-        return material
+        UnlitMaterial(color: UIColor(red: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: 1),
+                      applyPostProcessToneMap: false)
     }
 
     /// Trilinear and anisotropic: the window is mostly seen at a slant, where plain mipmaps blur it.
