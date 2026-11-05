@@ -213,7 +213,7 @@ final class HomeState {
     /// partner once this phone is paired (`PhotoSync`); a drawing's keepsake does not, as the drawing went already.
     @discardableResult
     func addMoment(_ image: UIImage, caption: String, shares: Bool = false) -> Bool {
-        guard moments.add(image, caption: caption, author: partners.0, unsent: shares) != nil else { return false }
+        guard moments.add(image, caption: caption, author: viewer, unsent: shares) != nil else { return false }
         wallet.earn(10)
         streak.record()
         return true

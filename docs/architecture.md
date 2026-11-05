@@ -226,7 +226,8 @@ a fresh Sign in with Apple in it. In order:
 A failure before step 3 answers 503 and leaves the account, so the app tries again; nothing deleted
 comes back. Afterwards the old session is unauthorized, which is also the answer to a retry.
 
-The partner keeps the cat, their own notes and their account. They are unpaired, and
+The partner keeps their own notes and their account; the cat, its journal and the room's activity
+go, as the pair is over. They are unpaired, and
 `GET /v1/account` returns `partnerLeft` while they stay unpaired, so the app can tell them gently;
 pairing again clears it. Analytics Engine points hold no user id, only the pair hash, so nothing
 there names the user. `packages/backend/account` holds this logic on an injected

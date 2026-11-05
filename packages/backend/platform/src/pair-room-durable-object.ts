@@ -439,6 +439,12 @@ export class PairRoom extends DurableObject {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
+    this.endSessions();
+    return forgotten;
+  }
+
+  /** Closes every open socket: the pair has ended, and the Worker won't route a new one here. */
+  endSessions(): void {
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.close(1000, "pair ended");
@@ -446,7 +452,6 @@ export class PairRoom extends DurableObject {
         // Already closing: nothing left to end.
       }
     }
-    return forgotten;
   }
 
   /**
