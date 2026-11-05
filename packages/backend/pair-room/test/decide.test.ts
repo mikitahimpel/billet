@@ -25,6 +25,7 @@ import {
 import { freeInk } from "@billet/contracts-domain/inks";
 import { CoinEntry, CoinEntryId, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
 import { CollectionId } from "@billet/contracts-domain/shop";
+import { ListId } from "@billet/contracts-domain/list";
 
 const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
 
@@ -346,6 +347,13 @@ describe("tagged unions", () => {
       utcOffsetSeconds: 0,
       event: { _tag: "ListTicked", item: Schema.decodeSync(EarnRef)("item-1") },
     }),
+    ChangeList: RoomCommand.cases.ChangeList.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+      change: { _tag: "DeleteList", key, list: Schema.decodeSync(ListId)(key) },
+      paid: false,
+    }),
     CreditPurchase: RoomCommand.cases.CreditPurchase.make({
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
       kind: "buy",
@@ -400,6 +408,32 @@ describe("tagged unions", () => {
       collection: cozyAutumn,
       coins: 150,
     }),
+    ListSaved: RoomOutput.cases.ListSaved.make({
+      list: {
+        id: Schema.decodeSync(ListId)(key),
+        kind: "watch",
+        title: "To watch",
+        icon: { symbol: "popcorn.fill", tint: "coral" },
+        items: [],
+      },
+      key,
+      at: 1_700_000_000_000,
+    }),
+    ListDeleted: RoomOutput.cases.ListDeleted.make({
+      list: Schema.decodeSync(ListId)(key),
+      key,
+      at: 1_700_000_000_000,
+    }),
+    ListItemAdded: RoomOutput.cases.ListItemAdded.make({
+      list: Schema.decodeSync(ListId)(key),
+      kind: "watch",
+      title: "To watch",
+      by: alice,
+      slot: 0,
+      at: 1_700_000_000_000,
+      count: 1,
+      text: "Past Lives",
+    }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -423,6 +457,8 @@ describe("tagged unions", () => {
     }),
     CollectionIncomplete: RoomRejection.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
     BonusTaken: RoomRejection.cases.BonusTaken.make({ collection: cozyAutumn }),
+    ListNotFound: RoomRejection.cases.ListNotFound.make({}),
+    ListItemNotFound: RoomRejection.cases.ListItemNotFound.make({}),
   };
 
   it.each([

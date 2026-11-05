@@ -75,6 +75,13 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
     var isChecklist: Bool { self == .groceries }
 }
 
+/// A film or a show on TMDB.
+nonisolated struct ItemMedia: Codable, Hashable {
+    enum Kind: String, Codable { case movie, tv }
+    var kind: Kind
+    var tmdb: Int
+}
+
 nonisolated struct ListItem: Identifiable, Codable, Hashable {
     var id = UUID()
     var text: String
@@ -82,6 +89,39 @@ nonisolated struct ListItem: Identifiable, Codable, Hashable {
     var author: String
     var added = Date.now
     var done: Date?
+    /// Monogram of the partner who ticked it, when known.
+    var doneBy: String?
+    var quantity: String?
+    var note: String?
+    /// Overrides the icon the phone picks from the text.
+    var icon: String?
+    /// A store aisle such as `dairy`, for groceries.
+    var aisle: String?
+    var media: ItemMedia?
+    /// ISO 3166-1 alpha-2, for places.
+    var country: String?
+    /// Monograms of the partners who want it.
+    var wants: [String] = []
+}
+
+extension ListItem {
+    /// Files from builds before shared lists have no `wants`.
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        author = try container.decode(String.self, forKey: .author)
+        added = try container.decode(Date.self, forKey: .added)
+        done = try container.decodeIfPresent(Date.self, forKey: .done)
+        doneBy = try container.decodeIfPresent(String.self, forKey: .doneBy)
+        quantity = try container.decodeIfPresent(String.self, forKey: .quantity)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        icon = try container.decodeIfPresent(String.self, forKey: .icon)
+        aisle = try container.decodeIfPresent(String.self, forKey: .aisle)
+        media = try container.decodeIfPresent(ItemMedia.self, forKey: .media)
+        country = try container.decodeIfPresent(String.self, forKey: .country)
+        wants = try container.decodeIfPresent([String].self, forKey: .wants) ?? []
+    }
 }
 
 nonisolated struct UsList: Identifiable, Codable, Hashable {
@@ -343,7 +383,8 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
 // MARK: - Store
 
 /// Everything on the Us tab, as JSON in the app group shared with the widgets (docs/together-concept.md, section 6).
-/// Once paired, the gifts mirror the pair's room through `GiftsModel`; the rest stays on this phone.
+/// Once paired, the gifts mirror the pair's room through `GiftsModel` and the lists through `ListsModel`; the rest
+/// stays on this phone.
 @Observable
 final class UsStore {
     private(set) var lists: [UsList] = []
@@ -364,6 +405,12 @@ final class UsStore {
     @ObservationIgnored var onEarn: (EarnEvent) -> Void
     /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
     @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
+    /// Called after each list change made on this phone while it follows the pair's room.
+    @ObservationIgnored var onListChange: (() -> Void)?
+    /// The lists as the pair's room last answered, under `pendingLists`; nil while the lists are this phone's own.
+    private var roomLists: [UsList]?
+    /// List changes made here, a widget's included, that the room has not answered yet, oldest first.
+    private(set) var pendingLists: [PendingListChange] = []
 
     private let file: String
 
@@ -377,6 +424,9 @@ final class UsStore {
         /// Missing in files from builds before gift plans.
         var plans: [GiftPlan]?
         var surprises: Set<String>?
+        /// Missing in files from builds before shared lists.
+        var roomLists: [UsList]?
+        var pendingLists: [PendingListChange]?
     }
 
     init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
@@ -396,6 +446,8 @@ final class UsStore {
             swipes = saved.swipes
             plans = saved.plans ?? []
             surprises = saved.surprises ?? []
+            roomLists = saved.roomLists
+            pendingLists = saved.pendingLists ?? []
             for i in wishes.indices {
                 guard let giver = wishes[i].legacyGiver else { continue }
                 wishes[i].legacyGiver = nil
@@ -411,7 +463,7 @@ final class UsStore {
 
     private func save() {
         SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
-                                  plans: plans, surprises: surprises),
+                                  plans: plans, surprises: surprises, roomLists: roomLists, pendingLists: pendingLists),
                          to: file)
     }
 
@@ -419,60 +471,95 @@ final class UsStore {
 
     func list(_ id: UUID) -> UsList? { lists.first { $0.id == id } }
 
+    /// Whether the lists follow the pair's room rather than being this phone's own.
+    var followsRoomLists: Bool { roomLists != nil }
+
     @discardableResult
     func addList(kind: ListKind, title: String, icon: UsGlyph) -> UsList {
-        let list = UsList(kind: kind, title: title, icon: icon)
-        lists.append(list)
-        save()
+        let list = UsList(kind: kind, title: PendingListChange.line(title, max: 60) ?? kind.defaultTitle, icon: icon)
+        perform(.createList(key: .make(), list: Self.key(list.id), kind: Wire.ListKind(kind),
+                            title: list.title, icon: ListIcon(icon)), by: nil)
         return list
     }
 
     func renameList(_ id: UUID, title: String, icon: UsGlyph) {
-        guard let i = lists.firstIndex(where: { $0.id == id }) else { return }
-        lists[i].title = title
-        lists[i].icon = icon
-        save()
+        guard let title = PendingListChange.line(title, max: 60) else { return }
+        perform(.renameList(key: .make(), list: Self.key(id), title: title, icon: ListIcon(icon)), by: nil)
     }
 
     func deleteList(_ id: UUID) {
-        lists.removeAll { $0.id == id }
-        save()
+        perform(.deleteList(key: .make(), list: Self.key(id)), by: nil)
     }
 
     func addItem(_ text: String, to listID: UUID, author: String) {
-        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let i = lists.firstIndex(where: { $0.id == listID }) else { return }
-        lists[i].items.insert(ListItem(text: text, author: author), at: 0)
-        save()
+        guard let text = PendingListChange.line(text, max: 300), list(listID) != nil else { return }
+        perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(UUID()), text: text,
+                         details: ListItemDetails()), by: author)
     }
 
-    func toggleItem(_ itemID: UUID, in listID: UUID) {
+    func toggleItem(_ itemID: UUID, in listID: UUID, by partner: String? = nil) {
         guard let item = list(listID)?.items.first(where: { $0.id == itemID }) else { return }
-        setItem(itemID, in: listID, done: item.done == nil)
+        setItem(itemID, in: listID, done: item.done == nil, by: partner)
     }
 
-    /// Ticking a "we want to" item earns coins, within the server's daily cap; groceries earn nothing.
-    func setItem(_ itemID: UUID, in listID: UUID, done: Bool) {
-        guard let l = lists.firstIndex(where: { $0.id == listID }),
-              let i = lists[l].items.firstIndex(where: { $0.id == itemID }),
-              (lists[l].items[i].done != nil) != done else { return }
-        lists[l].items[i].done = done ? .now : nil
-        if done && !lists[l].kind.isChecklist { onEarn(.listTicked(item: itemID.uuidString)) }
-        save()
+    /// Ticking a "we want to" item earns coins in the pair's room, within the daily cap; groceries earn nothing.
+    func setItem(_ itemID: UUID, in listID: UUID, done: Bool, by partner: String? = nil) {
+        guard let item = list(listID)?.items.first(where: { $0.id == itemID }), (item.done != nil) != done else {
+            return
+        }
+        let (list, key) = (Self.key(listID), Self.key(itemID))
+        perform(done ? .tickItem(key: .make(), list: list, item: key) : .untickItem(key: .make(), list: list, item: key),
+                by: partner)
     }
 
     func deleteItem(_ itemID: UUID, in listID: UUID) {
-        guard let l = lists.firstIndex(where: { $0.id == listID }) else { return }
-        lists[l].items.removeAll { $0.id == itemID }
-        save()
+        perform(.deleteItem(key: .make(), list: Self.key(listID), item: Self.key(itemID)), by: nil)
     }
 
     /// Groceries: drop everything already bought.
     func clearDone(in listID: UUID) {
-        guard let l = lists.firstIndex(where: { $0.id == listID }) else { return }
-        lists[l].items.removeAll { $0.done != nil }
+        for item in list(listID)?.items ?? [] where item.done != nil { deleteItem(item.id, in: listID) }
+    }
+
+    private func perform(_ change: ListCommand, by partner: String?) {
+        let pending = PendingListChange(change: change, by: partner, at: .now)
+        lists = pending.apply(to: lists)
+        if roomLists != nil {
+            pendingLists.append(pending)
+            onListChange?()
+        }
         save()
     }
+
+    /// Takes the room's lists as the truth, with the changes it has not answered yet on top. The first time, this
+    /// phone's own lists join the room's: each is queued for upload unless the room has it, or it is an empty
+    /// starter list of a kind the room already has.
+    func mirrorLists(_ room: [UsList], me: String) {
+        if roomLists == nil {
+            pendingLists = PendingListChange.upload(lists, missingFrom: room, by: me) + pendingLists
+        }
+        roomLists = room
+        lists = pendingLists.reduce(room) { $1.apply(to: $0) }
+        save()
+    }
+
+    /// The room answered the change with `key`, or refused it for good.
+    func listChangeDone(_ key: IdempotencyKey, room: [UsList]?) {
+        pendingLists.removeAll { $0.change.key == key }
+        if let room { roomLists = room }
+        lists = pendingLists.reduce(roomLists ?? lists) { $1.apply(to: $0) }
+        save()
+    }
+
+    /// The lists become this phone's own again, as they stand.
+    func leaveRoomLists() {
+        guard roomLists != nil else { return }
+        roomLists = nil
+        pendingLists = []
+        save()
+    }
+
+    nonisolated static func key(_ id: UUID) -> IdempotencyKey { IdempotencyKey(id.uuidString) }
 
     // MARK: Wishlists
 

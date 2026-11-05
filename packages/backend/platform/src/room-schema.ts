@@ -224,3 +224,51 @@ export const giftLoves = sqliteTable("gift_loves", {
   user: text("user").primaryKey(),
   body: text("body").notNull(),
 });
+
+// The pair's lists, in the order they were made (`position`). Both partners read and change every
+// row; `icon_symbol` and `icon_tint` are the list's tile.
+export const lists = sqliteTable("lists", {
+  id: text("id").primaryKey(),
+  position: integer("position").notNull(),
+  kind: text("kind").notNull(),
+  title: text("title").notNull(),
+  iconSymbol: text("icon_symbol").notNull(),
+  iconTint: text("icon_tint").notNull(),
+});
+
+// The items of each list, in the order they were added (`position`). `done_by` and `done_at` are
+// both set once ticked. `media_kind` and `media_tmdb` name a film or show on TMDB; `wants` is the
+// JSON array of the members who want it.
+export const listItems = sqliteTable(
+  "list_items",
+  {
+    id: text("id").primaryKey(),
+    listId: text("list_id").notNull(),
+    position: integer("position").notNull(),
+    text: text("text").notNull(),
+    author: text("author").notNull(),
+    addedAt: integer("added_at").notNull(),
+    doneBy: text("done_by"),
+    doneAt: integer("done_at"),
+    quantity: text("quantity"),
+    note: text("note"),
+    icon: text("icon"),
+    aisle: text("aisle"),
+    mediaKind: text("media_kind"),
+    mediaTmdb: integer("media_tmdb"),
+    country: text("country"),
+    wants: text("wants").notNull(),
+  },
+  (table) => [index("list_items_list").on(table.listId, table.position)],
+);
+
+// The key of each list change the room applied, so a retry applies nothing. Kept 30 days behind
+// the newest, like the Inbox.
+export const listKeys = sqliteTable(
+  "list_keys",
+  {
+    key: text("key").primaryKey(),
+    at: integer("at").notNull(),
+  },
+  (table) => [index("list_keys_at").on(table.at)],
+);

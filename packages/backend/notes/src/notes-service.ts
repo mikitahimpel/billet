@@ -328,6 +328,8 @@ export class NotesService extends Context.Service<
           // The service answers a repeat with the first entry before the room decides.
           case "GiftTaken":
           case "BonusTaken":
+          case "ListNotFound":
+          case "ListItemNotFound":
           case "CollectionIncomplete":
             return new NotesUnavailable({ reason: "room-refused-buy" });
         }

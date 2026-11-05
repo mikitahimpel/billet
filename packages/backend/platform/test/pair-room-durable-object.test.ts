@@ -8,6 +8,7 @@ import { PairId } from "@billet/contracts-domain/pair-id";
 import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
 import { NatureSeed } from "@billet/contracts-domain/cat";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
+import { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { maxFramesPerSecond } from "../src/frame-window.ts";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
@@ -182,6 +183,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_shop_rewards"),
       expect.stringContaining("_gifts"),
       expect.stringContaining("_gift_occasion"),
+      expect.stringContaining("_lists"),
     ]);
   });
 
@@ -556,6 +558,71 @@ describe("PairRoom realtime across eviction", () => {
     await room.forgetMember(alice);
     expect((await room.cat())?.cat).toBeUndefined();
     expect(await room.catJournal(0, 10)).toEqual([]);
+  });
+
+  it("keeps lists in SQLite across eviction, pushes changes to sockets that follow them, pays a tick once and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const follower = await open(room, bob);
+    const notesOnly = await open(room, alice);
+    follower.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, lists: true }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await until(() => follower.frames.some((f) => f._tag === "ListsChanged"));
+
+    const list = "00000000-0000-4000-8000-00000000f001";
+    const item = "00000000-0000-4000-8000-00000000f002";
+    const change = (body: unknown) =>
+      Schema.decodeUnknownSync(ChangeListRequest)({ change: body, utcOffsetSeconds: 0 });
+    const create = change({
+      _tag: "CreateList",
+      key: newKey(),
+      list,
+      kind: "watch",
+      title: "To watch",
+      icon: { symbol: "film", tint: "lilac" },
+    });
+    expect(await room.lists(alice, create)).toMatchObject({ _tag: "Done" });
+    expect(
+      await room.lists(alice, change({ _tag: "AddItem", key: newKey(), list, item, text: "Dune" })),
+    ).toMatchObject({ _tag: "Done" });
+    await until(() =>
+      follower.frames.some(
+        (f) => f._tag === "ListsChanged" && JSON.stringify(f["lists"]).includes("Dune"),
+      ),
+    );
+
+    await evictDurableObject(room);
+
+    const tick = change({ _tag: "TickItem", key: newKey(), list, item });
+    expect(await room.lists(bob, tick)).toMatchObject({
+      _tag: "Done",
+      lists: [{ id: list, items: [{ text: "Dune", author: alice, doneBy: bob }] }],
+    });
+    expect(await room.lists(bob, tick)).toMatchObject({ _tag: "Done" });
+    expect(
+      await room.lists(bob, change({ _tag: "UntickItem", key: newKey(), list, item })),
+    ).toMatchObject({ _tag: "Done" });
+    expect(
+      await room.lists(alice, change({ _tag: "TickItem", key: newKey(), list, item })),
+    ).toMatchObject({ _tag: "Done" });
+    const coins = await room.coins(undefined, 10);
+    expect(coins?.entries.filter((entry) => entry.id === `earn:list:${item}`)).toHaveLength(1);
+    expect(notesOnly.frames.some((f) => f._tag === "ListsChanged")).toBe(false);
+    expect(await room.lists(mallory)).toEqual({ _tag: "Refused", reason: "NotOpen" });
+    expect(
+      await room.lists(
+        alice,
+        change({
+          _tag: "AddItem",
+          key: newKey(),
+          list: "00000000-0000-4000-8000-00000000f0ff",
+          item,
+          text: "Gone",
+        }),
+      ),
+    ).toEqual({ _tag: "Refused", reason: "ListNotFound" });
+
+    await room.forgetMember(alice);
+    expect(await room.lists(bob)).toEqual({ _tag: "Done", lists: [] });
   });
 
   it("stores reactions in SQLite, streams each change to sockets that follow them, and forgets them with the pair", async () => {

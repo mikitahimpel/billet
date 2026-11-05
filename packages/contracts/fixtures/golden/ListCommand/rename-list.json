@@ -1,0 +1,10 @@
+{
+  "_tag": "RenameList",
+  "icon": {
+    "symbol": "cart.fill",
+    "tint": "honey"
+  },
+  "key": "00000000-0000-4000-8000-0000000000d1",
+  "list": "00000000-0000-4000-8000-0000000000c1",
+  "title": "Saturday shop"
+}

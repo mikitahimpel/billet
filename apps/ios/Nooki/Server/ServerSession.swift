@@ -30,6 +30,8 @@ final class ServerSession {
     @ObservationIgnored private var texts: TextNoteSync?
     /// Takes the room's shop as the socket pushes it.
     @ObservationIgnored private weak var shop: ShopModel?
+    /// Takes the room's lists as the socket pushes them.
+    @ObservationIgnored private weak var lists: ListsModel?
 
     @ObservationIgnored private let backend: Backend
     /// The build's store for coin packs, over the pair's purchase routes.
@@ -89,11 +91,13 @@ final class ServerSession {
 
     /// Keeps the Inbox's count, the partner's photos into `photos` and reactions live over the room socket while the
     /// app is in front; nothing without a partner.
-    func followInbox(_ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil) {
+    func followInbox(_ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
+                     lists: ListsModel? = nil) {
         if follows, isPaired {
             self.photos = photos
             self.texts = texts
             self.shop = shop
+            self.lists = lists
             if inboxLink == nil {
                 let accounts = backend.accounts
                 let inbox = inbox
@@ -106,7 +110,8 @@ final class ServerSession {
                         text: { [weak self] in Task { await self?.texts?.receive() } },
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
-                        shop: { [weak self] in self?.shop?.received($0) }))
+                        shop: { [weak self] in self?.shop?.received($0) },
+                        lists: { [weak self] in self?.lists?.received($0) }))
             }
             inboxLink?.connect()
         } else {
@@ -139,6 +144,11 @@ final class ServerSession {
 
     /// The pair's gift wishes in its room; nil until this account has a partner.
     var giftSync: GiftSync? {
+        isPaired ? .live(backend.api) : nil
+    }
+
+    /// The pair's shared lists in its room; nil until this account has a partner.
+    var listSync: ListSync? {
         isPaired ? .live(backend.api) : nil
     }
 

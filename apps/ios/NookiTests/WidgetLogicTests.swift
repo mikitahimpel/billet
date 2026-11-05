@@ -176,20 +176,16 @@ func removeScratch(_ path: String) {
         #expect(try Data(contentsOf: aside) == Data(#"{"coins": 9000, "#.utf8))
     }
 
-    @Test func aTickedWantToItemAsksTheServerToPayForIt() {
+    @Test func aTickIsPaidInThePairsRoomNotByThePhone() {
         let usPath = scratchFile("us.json")
         defer { removeScratch(usPath) }
         var earned: [EarnEvent] = []
         let us = UsStore(file: usPath) { earned.append($0) }
         let watch = us.lists.first { $0.kind == .watch }!.id
-        let groceries = us.lists.first { $0.kind == .groceries }!.id
         us.addItem("Paddington", to: watch, author: "L")
-        us.addItem("Milk", to: groceries, author: "L")
-        let film = us.list(watch)!.items[0].id
-        us.setItem(film, in: watch, done: true)
-        us.setItem(film, in: watch, done: true)
-        us.setItem(us.list(groceries)!.items[0].id, in: groceries, done: true)
-        #expect(earned == [.listTicked(item: film.uuidString)])
+        us.setItem(us.list(watch)!.items[0].id, in: watch, done: true)
+        #expect(us.list(watch)!.items[0].done != nil)
+        #expect(earned.isEmpty)
     }
 }
 

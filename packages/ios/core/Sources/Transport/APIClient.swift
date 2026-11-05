@@ -83,6 +83,10 @@ public struct APIClient: Sendable {
   public var markGiftReceived:
     @Sendable (MarkGiftReceivedRequest) async throws(TransportError) -> GiftsResponse
   public var saveLoves: @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse
+  /// The pair's lists. `.api(.notFound)` while unpaired; a change answers the lists after it, and
+  /// `.api(.notFound)` when the list or item it names is gone.
+  public var lists: @Sendable () async throws(TransportError) -> ListsResponse
+  public var changeList: @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -194,6 +198,13 @@ public struct APIClient: Sendable {
     saveLoves:
       @escaping @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse = {
         (_) async throws(TransportError) in throw .network("offline")
+      },
+    lists: @escaping @Sendable () async throws(TransportError) -> ListsResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    changeList:
+      @escaping @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
       }
   ) {
     self.authChallenge = authChallenge
@@ -234,6 +245,8 @@ public struct APIClient: Sendable {
     self.setGiftPlan = setGiftPlan
     self.markGiftReceived = markGiftReceived
     self.saveLoves = saveLoves
+    self.lists = lists
+    self.changeList = changeList
   }
 }
 
@@ -440,6 +453,14 @@ extension APIClient {
       saveLoves: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.saveLoves, signed: true, body: body), as: GiftsResponse.self)
+      },
+      lists: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getLists, signed: true), as: ListsResponse.self)
+      },
+      changeList: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.changeList, signed: true, body: body), as: ListsResponse.self)
       })
   }
 }

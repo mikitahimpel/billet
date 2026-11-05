@@ -3,6 +3,7 @@ import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { Color, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { SharedList } from "@billet/contracts-domain/list";
 import { PairShop } from "@billet/contracts-domain/shop";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
@@ -43,5 +44,10 @@ export const ServerMessage = Schema.TaggedUnion({
    * `shop: true`, and once on that resume.
    */
   ShopChanged: { shop: PairShop },
+  /**
+   * The pair's lists, every one of them, sent to sockets that resumed with `lists: true`: once on
+   * that resume and after each change either partner makes.
+   */
+  ListsChanged: { lists: Schema.Array(SharedList) },
 });
 export type ServerMessage = typeof ServerMessage.Type;

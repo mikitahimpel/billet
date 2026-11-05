@@ -11,6 +11,7 @@
     "./decide": "./src/decide.ts",
     "./delivery-ledger": "./src/delivery-ledger.ts",
     "./gifts": "./src/gifts.ts",
+    "./lists": "./src/lists.ts",
     "./note-id-source": "./src/note-id-source.ts",
     "./room-command": "./src/room-command.ts",
     "./room-decision": "./src/room-decision.ts",

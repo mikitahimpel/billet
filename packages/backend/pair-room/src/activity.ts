@@ -14,6 +14,7 @@ import {
 import type { CatEntry } from "@billet/contracts-domain/cat";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import type { Note } from "@billet/contracts-domain/note";
+import { listWindowOf } from "./lists.ts";
 import type { RoomOutput } from "./room-decision.ts";
 
 /** Who did it, as stored: a member, the cat on its own, or the App Store. */
@@ -194,6 +195,19 @@ export const activityOf = (
           },
         ];
       }
+      // Written over by id, so the count and the latest text move up with each add.
+      case "ListItemAdded": {
+        const { list, kind, title, by, slot, at: addedAt, count, text } = output;
+        return [
+          {
+            id: decodeId(`list:${list}:${listWindowOf(addedAt)}:${slot}`),
+            at: addedAt,
+            doer: member(by),
+            event: { _tag: "ListItemAdded", list, kind, title, count, text },
+            target: ActivityTarget.cases.List.make({ list }),
+          },
+        ];
+      }
       case "RoomOpened":
         return output.joined === undefined
           ? []
@@ -214,6 +228,8 @@ export const activityOf = (
       case "WishlistChanged":
       case "CoinsEntered":
       case "CoinsRepeated":
+      case "ListSaved":
+      case "ListDeleted":
         return [];
     }
   });

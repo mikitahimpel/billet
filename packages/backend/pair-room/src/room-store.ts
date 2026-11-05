@@ -4,11 +4,30 @@ import type { CatEntry } from "@billet/contracts-domain/cat";
 import type { CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
 import type { ActivityRow } from "./activity.ts";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import type { ListId, SharedList } from "@billet/contracts-domain/list";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ActiveRoom, RoomState, SequencedNote } from "./room-state.ts";
 
 /** A note to store, with the key its author sent it under. */
 export type AppendedNote = { readonly entry: SequencedNote; readonly key: IdempotencyKey };
+
+/**
+ * A list change to store: the list written whole, or deleted with its items, and the key of the
+ * change that did it, so the room applies that key once.
+ */
+export type ListWrite =
+  | {
+      readonly _tag: "Put";
+      readonly list: SharedList;
+      readonly key: IdempotencyKey;
+      readonly at: EpochMillis;
+    }
+  | {
+      readonly _tag: "Drop";
+      readonly list: ListId;
+      readonly key: IdempotencyKey;
+      readonly at: EpochMillis;
+    };
 
 /** A room's durable storage. Failures are defects: the room cannot act without its storage. */
 export class RoomStore extends Context.Service<
@@ -16,9 +35,9 @@ export class RoomStore extends Context.Service<
   {
     readonly load: Effect.Effect<RoomState>;
     /**
-     * Saves the state and the cat, appends the notes, journal and wallet entries, and writes the
-     * activity rows and reactions over any with the same id, as one atomic write. Rows older than the retention
-     * are pruned in the same write.
+     * Saves the state and the cat, appends the notes, journal and wallet entries, writes the
+     * activity rows and reactions over any with the same id, and writes or deletes the lists, as
+     * one atomic write. Rows older than the retention are pruned in the same write, list keys too.
      */
     readonly commit: (
       room: ActiveRoom,
@@ -27,7 +46,15 @@ export class RoomStore extends Context.Service<
       activity: ReadonlyArray<ActivityRow>,
       coins: ReadonlyArray<CoinEntry>,
       reactions: ReadonlyArray<NoteReaction>,
+      lists: ReadonlyArray<ListWrite>,
     ) => Effect.Effect<void>;
+    /** The pair's lists, oldest first, each with its items in the order they were added. */
+    readonly lists: Effect.Effect<ReadonlyArray<SharedList>>;
+    readonly listById: (id: ListId) => Effect.Effect<Option.Option<SharedList>>;
+    /** Whether a list change under `key` was stored within the retention. */
+    readonly listKeyUsed: (key: IdempotencyKey) => Effect.Effect<boolean>;
+    /** Deletes every list, item and key: the pair is ending. */
+    readonly forgetLists: Effect.Effect<void>;
     /** The stored note with this id, if the room still holds it. */
     readonly noteById: (id: NoteId) => Effect.Effect<Option.Option<SequencedNote>>;
     /** `by`'s reaction to `note`, taken back or not, if they ever reacted. */

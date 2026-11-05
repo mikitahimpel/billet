@@ -33,6 +33,8 @@ public struct WebSocketDependencies: Sendable {
   public var lastReactionRev: @Sendable () async -> Int?
   /// Each `Resume` also asks for `ShopChanged`, the pair's shop, now and whenever it changes.
   public var followsShop: Bool
+  /// Each `Resume` also asks for `ListsChanged`, the pair's lists, now and whenever they change.
+  public var followsLists: Bool
 
   public init(
     open: @escaping @Sendable () async throws(TransportError) -> WebSocketConnection,
@@ -41,7 +43,8 @@ public struct WebSocketDependencies: Sendable {
     jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) },
     followsActivity: Bool = false,
     lastReactionRev: @escaping @Sendable () async -> Int? = { nil },
-    followsShop: Bool = false
+    followsShop: Bool = false,
+    followsLists: Bool = false
   ) {
     self.open = open
     self.sleep = sleep
@@ -50,5 +53,6 @@ public struct WebSocketDependencies: Sendable {
     self.followsActivity = followsActivity
     self.lastReactionRev = lastReactionRev
     self.followsShop = followsShop
+    self.followsLists = followsLists
   }
 }

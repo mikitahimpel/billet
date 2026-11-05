@@ -17,6 +17,7 @@
     "./coins": "./src/coins.ts",
     "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",
+    "./lists": "./src/lists.ts",
     "./note": "./src/note.ts",
     "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",

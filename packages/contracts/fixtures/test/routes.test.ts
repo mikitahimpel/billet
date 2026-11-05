@@ -35,6 +35,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/shop/buy",
       },
+      "changeList": {
+        "method": "POST",
+        "path": "/v1/lists",
+      },
       "claimBonus": {
         "method": "POST",
         "path": "/v1/shop/bonus",
@@ -86,6 +90,10 @@ it("pins the routes that clients call", () => {
       "getGifts": {
         "method": "GET",
         "path": "/v1/gifts",
+      },
+      "getLists": {
+        "method": "GET",
+        "path": "/v1/lists",
       },
       "getOnboarding": {
         "method": "GET",

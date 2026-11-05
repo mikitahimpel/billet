@@ -20,12 +20,15 @@ public enum ActivityTarget: Codable, Hashable, Sendable {
   case shopItem(String)
   /// A shop offer with several items, such as `bundle:starter-ink`.
   case shopOffer(String)
+  /// A shared list, on the Us tab.
+  case list(IdempotencyKey)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case note
     case plant
     case id
+    case list
   }
 
   public init(from decoder: any Decoder) throws {
@@ -44,6 +47,8 @@ public enum ActivityTarget: Codable, Hashable, Sendable {
       self = .shopItem(try container.decode(String.self, forKey: .id))
     case "ShopOffer":
       self = .shopOffer(try container.decode(String.self, forKey: .id))
+    case "List":
+      self = .list(try container.decode(IdempotencyKey.self, forKey: .list))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -70,6 +75,9 @@ public enum ActivityTarget: Codable, Hashable, Sendable {
     case .shopOffer(let id):
       try container.encode("ShopOffer", forKey: .tag)
       try container.encode(id, forKey: .id)
+    case .list(let list):
+      try container.encode("List", forKey: .tag)
+      try container.encode(list, forKey: .list)
     }
   }
 }

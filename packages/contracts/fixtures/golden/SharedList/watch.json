@@ -1,0 +1,25 @@
+{
+  "icon": {
+    "symbol": "popcorn.fill",
+    "tint": "coral"
+  },
+  "id": "00000000-0000-4000-8000-0000000000c4",
+  "items": [
+    {
+      "addedAt": 1700000200000,
+      "author": "user-alice",
+      "id": "00000000-0000-4000-8000-0000000000c5",
+      "media": {
+        "kind": "movie",
+        "tmdb": 666277
+      },
+      "text": "Past Lives",
+      "wants": [
+        "user-alice",
+        "user-bob"
+      ]
+    }
+  ],
+  "kind": "watch",
+  "title": "To watch"
+}
