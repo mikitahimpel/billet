@@ -1,3 +1,4 @@
+import PetScene
 import SwiftUI
 
 // MARK: - Shop
@@ -10,6 +11,8 @@ struct ShopView: View {
 
     @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
+    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.shopScroll`).
+    @State private var position = ScrollPosition(edge: .top)
 
     /// Tab bar (66pt) + home-indicator area + breathing room, so the last row clears it.
     private let bottomInset: CGFloat = 134
@@ -36,6 +39,12 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
+            .scrollPosition($position)
+            .onAppear {
+                guard ScenePerf.isOn else { return }
+                NookiPerf.shopScroll = { position.scrollTo(y: $0) }
+            }
+            .onDisappear { NookiPerf.shopScroll = nil }
             .task {
                 #if DEBUG
                 // `-shopSection bundles` (or deals, collections) on launch scrolls Today there, for screenshots.
@@ -46,6 +55,13 @@ struct ShopView: View {
             }
         }
         .ignoresSafeArea(.container, edges: .bottom)
+        .task {
+            // The cards draw their art at 512 px and the bundles and collections at 256: decoded now, off the main
+            // thread, the first scroll down the page doesn't stop for each picture.
+            let names = Catalog.items.map(\.thumbnail)
+            await Thumbnails.prefetch(names, maxPixels: 512)
+            await Thumbnails.prefetch(names, maxPixels: 256)
+        }
         .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
@@ -104,6 +120,13 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
         .id("bundles")
+
+        VStack(alignment: .leading, spacing: Space.m) {
+            sectionHeader("Inks") { Text("For notes and drawings") }
+                .padding(.horizontal, Space.l)
+            InkShelf(state: state)
+        }
+        .id("inks")
 
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Collections") { Text("A bonus for each full set") }

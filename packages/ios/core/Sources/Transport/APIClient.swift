@@ -48,6 +48,13 @@ public struct APIClient: Sendable {
   /// Every reaction change after `rev`, oldest first.
   public var listReactions:
     @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse
+  /// Every ink the shop sells and the ones the pair owns.
+  public var listInks: @Sendable () async throws(TransportError) -> InksResponse
+  /// The pair's coin balance, as the server keeps it.
+  public var getCoins: @Sendable () async throws(TransportError) -> CoinsResponse
+  /// Buys one ink at its catalog price: `.api(.notEnoughCoins)` when the balance is short,
+  /// `.api(.alreadyOwned)` when the pair has it. A retry with the same `id` buys nothing twice.
+  public var buyItem: @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -102,7 +109,16 @@ public struct APIClient: Sendable {
     listReactions:
       @escaping @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse = {
         (_) async throws(TransportError) in throw .network("offline")
-      }
+      },
+    listInks: @escaping @Sendable () async throws(TransportError) -> InksResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    getCoins: @escaping @Sendable () async throws(TransportError) -> CoinsResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    buyItem: @escaping @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse = {
+      (_) async throws(TransportError) in throw .network("offline")
+    }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -126,6 +142,9 @@ public struct APIClient: Sendable {
     self.markActivityRead = markActivityRead
     self.react = react
     self.listReactions = listReactions
+    self.listInks = listInks
+    self.getCoins = getCoins
+    self.buyItem = buyItem
   }
 }
 
@@ -260,6 +279,18 @@ extension APIClient {
           Routes.listReactions.method, Routes.listReactions.path + "?after=\(after)")
         return try await http.perform(
           try await request(route, signed: true), as: ListReactionsResponse.self)
+      },
+      listInks: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.listInks, signed: true), as: InksResponse.self)
+      },
+      getCoins: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getCoins, signed: true), as: CoinsResponse.self)
+      },
+      buyItem: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.buyItem, signed: true, body: body), as: BuyResponse.self)
       })
   }
 }
