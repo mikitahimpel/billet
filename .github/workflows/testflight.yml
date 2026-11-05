@@ -151,11 +151,12 @@ jobs:
           echo "Build number: $number"
 
       # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Nooki/Server/Backend.swift).
-      # TODO: the payments input and BILLET_PAYMENTS come back with the Payments wiring.
+      # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md).
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
           BILLET_API_HOST: ${{ secrets.DEMO_HOST }}
+          BILLET_PAYMENTS: ${{ inputs.payments }}
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e

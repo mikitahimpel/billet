@@ -20,12 +20,12 @@ struct AppHeader: View {
 
             Spacer(minLength: 0)
 
-            Button { state.openShop(.coins) } label: {
+            Button { state.shop.askForCoins() } label: {
                 CoinPill(coins: state.shop.coins)
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("\(state.shop.coins) coins")
-            .accessibilityHint("Shows how to earn coins and where they went")
+            .accessibilityHint("Shows your coins, how to get more and where they went")
             .accessibilityIdentifier("coins")
 
             Button { state.showsProfile = true } label: {

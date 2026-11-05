@@ -4,6 +4,7 @@ import FeatureMoments
 import FeatureOnboarding
 import FeaturePairing
 import Observation
+import Payments
 import Persistence
 import Transport
 import Wire
@@ -29,6 +30,8 @@ final class ServerSession {
     @ObservationIgnored private var texts: TextNoteSync?
 
     @ObservationIgnored private let backend: Backend
+    /// The build's store for coin packs, over the pair's purchase routes.
+    @ObservationIgnored let payments: any Payments
 
     init(backend: Backend) {
         self.backend = backend
@@ -41,6 +44,7 @@ final class ServerSession {
         #else
         inbox = InboxModel(api: backend.api)
         #endif
+        payments = AppPayments.make(backend.purchases)
         if isPaired { reactions = Self.reactionsModel(backend) }
     }
 

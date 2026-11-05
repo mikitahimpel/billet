@@ -21,6 +21,10 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// The Coins sheet's packs, once there is a server to buy them through.
+    @State private var coinPacks: CoinPacksModel?
+    /// The Coins sheet on screen, a moment after the shop asked for it.
+    @State private var coinsShown: CoinsAsk?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -259,6 +263,17 @@ struct HomeView: View {
                     .presentationDragIndicator(.visible)
             }
         }
+        .onChange(of: state.shop.coinsAsk) { _, ask in
+            guard let ask else { return coinsShown = nil }
+            Task {
+                // A short buy comes from a sheet that closes first: the Coins sheet waits for it to go.
+                if ask.missing > 0 { try? await Task.sleep(for: .milliseconds(450)) }
+                coinsShown = ask
+            }
+        }
+        .sheet(item: $coinsShown, onDismiss: { state.shop.coinsAsk = nil }) { ask in
+            CoinsSheet(state: state, packs: coinPacks, ask: ask)
+        }
         .sheet(item: $state.openedShopItem) { item in
             ItemSheet(item: item, state: state)
         }
@@ -268,6 +283,14 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .task { await DrawingSync.watchLiveActivities() }
+        .task {
+            guard coinPacks == nil, let payments = session?.payments else { return }
+            let shop = state.shop
+            coinPacks = CoinPacksModel(payments: payments) {
+                await shop.refresh()
+                await shop.loadHistory()
+            }
+        }
         .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }

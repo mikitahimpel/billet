@@ -118,7 +118,7 @@ private func settle(_ done: () -> Bool) async {
         #expect(model.coins == 500)
     }
 
-    @Test func aBuyTheRoomRefusesIsTakenBackWithAGentleLine() async throws {
+    @Test func aBuyThePartnerOutspentOpensTheCoinsAndFinishesAfterATopUp() async throws {
         defer { cleanUp() }
         let (model, _) = shop()
         let server = FakeRoom(room(400))
@@ -130,13 +130,56 @@ private func settle(_ done: () -> Bool) async {
         #expect(model.owned.contains("yarn"))
         #expect(model.coins == 400 - model.price(of: yarn))
         server.shop.withLock { $0 = room(20) }
-        await settle { model.refused != nil }
+        await settle { model.coinsAsk != nil }
 
-        #expect(model.refused?.title == yarn.name)
+        #expect(model.coinsAsk?.missing == 40)
+        #expect(model.coinsAsk?.retry?.offer == .item(RoomItemId("yarn")))
+        #expect(model.refused == nil)
         #expect(model.lastPurchase == nil)
         #expect(!model.owned.contains("yarn"))
         #expect(model.coins == 20)
-        #expect(server.reads.withLock { $0 } == 2)
+
+        // A pack bought: the room has the coins, and the same buy goes through in one tap.
+        server.refuse.withLock { $0 = nil }
+        server.shop.withLock { $0 = room(520) }
+        await model.refresh()
+        #expect(model.finish(try #require(model.coinsAsk?.retry)))
+        #expect(model.owned.contains("yarn"))
+        #expect(model.lastPurchase?.title == yarn.name)
+        await settle { server.orders.withLock { $0.count } == 2 }
+        #expect(server.orders.withLock { $0.count } == 2)
+    }
+
+    @Test func aBuyTheBalanceDoesNotCoverOpensTheCoinsBeforeAnyOrder() async throws {
+        defer { cleanUp() }
+        let (model, _) = shop()
+        let server = FakeRoom(room(25))
+        await model.connect(server.sync())
+        let yarn = try #require(Catalog.item("yarn"))
+
+        #expect(!model.buy(yarn))
+        #expect(model.coinsAsk?.missing == model.price(of: yarn) - 25)
+        #expect(model.coinsAsk?.retry?.title == yarn.name)
+        #expect(model.lastPurchase == nil)
+        #expect(server.orders.withLock { $0 }.isEmpty)
+
+        let retry = try #require(model.coinsAsk?.retry)
+        #expect(!model.finish(retry), "still short, so still not bought")
+        server.shop.withLock { $0 = room(500) }
+        await model.refresh()
+        #expect(model.finish(retry))
+        #expect(model.owned.contains("yarn"))
+        await settle { !server.orders.withLock { $0 }.isEmpty }
+        #expect(server.orders.withLock { $0 }.map(\.offer) == [.item(RoomItemId("yarn"))])
+    }
+
+    @Test func aTreatShortOfCoinsOpensTheCoinsToo() async {
+        defer { cleanUp() }
+        let (model, _) = shop()
+        await model.connect(FakeRoom(room(3)).sync())
+        #expect(!model.treat())
+        #expect(model.coinsAsk?.missing == ShopModel.treatPrice - 3)
+        #expect(model.coinsAsk?.retry?.kind == .treat)
     }
 
     @Test func anOrderAlreadyOwnedOrNoLongerSoldIsTakenBackToo() async throws {
@@ -148,6 +191,8 @@ private func settle(_ done: () -> Bool) async {
             await model.connect(server.sync())
             #expect(model.buy(try #require(Catalog.item("yarn"))))
             await settle { model.refused != nil }
+            #expect(model.refused?.title == "Yarn Ball")
+            #expect(model.coinsAsk == nil)
             #expect(model.coins == 400)
             #expect(!model.owned.contains("yarn"))
         }

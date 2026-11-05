@@ -49,3 +49,28 @@ struct Purchase: Identifiable, Hashable {
 
     func canUndo(at now: Date) -> Bool { kind != .treat && now.timeIntervalSince(date) < Self.undoWindow }
 }
+
+/// Why the Coins sheet is open: `missing` is what a buy needed beyond the balance, 0 when the header's coins opened
+/// it, and `retry` is that buy, to finish in one tap once the coins are there.
+struct CoinsAsk: Identifiable, Hashable {
+    let id = UUID()
+    let missing: Int
+    let retry: Retry?
+
+    struct Retry: Hashable {
+        let offer: ShopOffer
+        let itemIDs: [String]
+        let cost: Int
+        let title: String
+        var kind = Purchase.Kind.item
+        var asGift = false
+    }
+}
+
+extension CoinsAsk.Retry {
+    init(_ purchase: Purchase) {
+        self.init(
+            offer: purchase.offer, itemIDs: purchase.itemIDs, cost: purchase.cost, title: purchase.title,
+            kind: purchase.kind, asGift: purchase.asGift)
+    }
+}

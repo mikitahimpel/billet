@@ -44,6 +44,8 @@ final class ShopModel {
     private(set) var inks = PaletteInk.bundled
     /// The pair's latest wallet entries, newest first.
     private(set) var history: [CoinEntry] = []
+    /// The Coins sheet, open when set: from the header's coins, or for a buy the balance doesn't cover.
+    var coinsAsk: CoinsAsk?
 
     var isSynced: Bool { sync != nil }
     var coins: Int { max(0, wallet.wallet.coins - pending.reduce(0) { $0 + $1.cost }) }
@@ -91,9 +93,29 @@ final class ShopModel {
         return true
     }
 
+    /// Opens the Coins sheet: just the coins, or for a buy that needs `missing` more, which it can finish after.
+    func askForCoins(missing: Int = 0, then retry: CoinsAsk.Retry? = nil) {
+        coinsAsk = CoinsAsk(missing: max(0, missing), retry: retry)
+    }
+
+    /// Buys again what the balance didn't cover, once it does. False while it still doesn't, or if it's owned now.
+    @discardableResult
+    func finish(_ retry: CoinsAsk.Retry) -> Bool {
+        if retry.kind == .treat { return treat() }
+        return place(
+            retry.offer, itemIDs: retry.itemIDs, cost: retry.cost, title: retry.title, kind: retry.kind,
+            asGift: retry.asGift)
+    }
+
     /// A treat: Mochi eats it at once and the server is asked for it at once, as it has no Undo.
     func treat() -> Bool {
-        guard sync != nil, coins >= Self.treatPrice else { return false }
+        guard sync != nil else { return false }
+        guard coins >= Self.treatPrice else {
+            askForCoins(
+                missing: Self.treatPrice - coins,
+                then: CoinsAsk.Retry(offer: .treat, itemIDs: [], cost: Self.treatPrice, title: "A treat", kind: .treat))
+            return false
+        }
         let purchase = Purchase(
             offer: .treat, itemIDs: [], added: [], cost: Self.treatPrice, date: .now, title: "Treat", kind: .treat)
         pending.append(purchase)
@@ -107,7 +129,14 @@ final class ShopModel {
         asGift: Bool = false
     ) -> Bool {
         let added = itemIDs.filter { !owned.contains($0) }
-        guard sync != nil, coins >= cost, !added.isEmpty else { return false }
+        guard sync != nil, !added.isEmpty else { return false }
+        guard coins >= cost else {
+            askForCoins(
+                missing: cost - coins,
+                then: CoinsAsk.Retry(
+                    offer: offer, itemIDs: itemIDs, cost: cost, title: title, kind: kind, asGift: asGift))
+            return false
+        }
         let purchase = Purchase(
             offer: offer, itemIDs: itemIDs, added: added, cost: cost, date: .now, title: title, kind: kind,
             asGift: asGift)
@@ -140,7 +169,12 @@ final class ShopModel {
         } catch {
             pending.removeAll { $0.id == purchase.id }
             if lastPurchase?.id == purchase.id { lastPurchase = nil }
-            if purchase.kind != .treat { refused = purchase }
+            if case .api(.notEnoughCoins(let needed, let have)) = error as? TransportError {
+                // The partner spent the coins first: offer to top up and finish, rather than only refusing.
+                askForCoins(missing: needed - have, then: CoinsAsk.Retry(purchase))
+            } else if purchase.kind != .treat {
+                refused = purchase
+            }
             await refresh()
         }
     }

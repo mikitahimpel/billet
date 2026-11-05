@@ -34,11 +34,4 @@ private let t0 = Date(timeIntervalSinceReferenceDate: 815_000_000)
         #expect(state.tab == .shop)
         #expect(state.shopFocus == .ink("ink-rose"))
     }
-
-    @Test func theCoinsOpenTheShopAtTheCoinsBlock() {
-        let state = HomeState(stores: .live())
-        state.openShop(.coins)
-        #expect(state.tab == .shop)
-        #expect(state.shopFocus == .coins)
-    }
 }

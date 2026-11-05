@@ -62,12 +62,6 @@ struct ShopView: View {
                 case .item(let id):
                     sheetItem = Catalog.item(id)
                     state.shopFocus = nil
-                case .coins:
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(100))
-                        withAnimation(.spring(duration: 0.45)) { reader.scrollTo("coins", anchor: .top) }
-                        state.shopFocus = nil
-                    }
                 }
             }
             .task {
@@ -183,9 +177,6 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
         .id("collections")
-
-        CoinsBlock(state: state)
-            .id("coins")
 
         Text("Earn coins by answering together, keeping your streak, opening the daily gift and completing collections.")
             .font(.nookiCaption)
