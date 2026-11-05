@@ -10,8 +10,7 @@ import Wire
 /// earlier one. A caller that needs strokes in `seq` order must sort them. Sends are the
 /// exception: every message goes through one outbox and one writer, so they leave in the order
 /// they were enqueued. A live stroke's points must never overtake its begin. `Resume` is enqueued
-/// from an output's task, so a message the caller sends the moment the socket opens may go
-/// before it.
+/// when the socket is installed, before `opened` is reported, so it goes first.
 ///
 /// A `close` also stops what the attempt has in flight: a connect that is still opening is
 /// cancelled, and its timers are stopped.
@@ -66,13 +65,14 @@ final class WebSocketRunner: Sendable {
 
   func run(_ output: WebSocketMachine.Output) async -> WebSocketMachine.Event? {
     switch output {
-    case .open(let attempt):
+    case .open(let attempt, let resumeFrom):
       let opening = Task { [dependencies] in try await dependencies.open() }
       await slot.track(opening: opening, for: attempt)
       do {
         let connection = try await opening.value
         await slot.install(connection, for: attempt)
         await slot.cancelTimer(for: attempt)
+        enqueue(.resume(lastSeq: resumeFrom), attempt: attempt)
         continuation.yield(.opened(attempt: attempt))
         let reader = Task { [continuation] in
           for await message in connection.messages {

@@ -39,7 +39,7 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
 
-    #expect(await runner.run(.open(attempt: 1)) == nil)
+    #expect(await runner.run(.open(attempt: 1, resumeFrom: 0)) == nil)
     socket.incoming.yield(.presence(.drawing))
     socket.incoming.finish()
 
@@ -56,7 +56,7 @@ import Wire
 
   @Test func failedOpenIsADrop() async {
     let runner = WebSocketRunner(dependencies: Self.dependencies(pool: ConnectionPool([])))
-    #expect(await runner.run(.open(attempt: 4)) == .dropped(attempt: 4))
+    #expect(await runner.run(.open(attempt: 4, resumeFrom: 0)) == .dropped(attempt: 4))
   }
 
   @Test func closeEndsTheAttemptsSocket() async {
@@ -64,7 +64,7 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
 
-    _ = await runner.run(.open(attempt: 1))
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
     _ = await runner.run(.close(attempt: 1))
     // Closing finished the fake's incoming stream, so reading it ends at once.
     var remaining = 0
@@ -79,11 +79,26 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
 
-    _ = await runner.run(.open(attempt: 2))
+    _ = await runner.run(.open(attempt: 2, resumeFrom: 0))
     _ = await runner.run(.close(attempt: 1))
     _ = await runner.run(.send(.presence(.drawing), attempt: 2))
 
     var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 0))
+    #expect(await iterator.next() == .presence(.drawing))
+  }
+
+  @Test func openingSendsTheResumeFirst() async {
+    let socket = makeFakeSocket()
+    let runner = WebSocketRunner(
+      dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
+
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 7))
+    // A send right after the open, as the caller makes once `opened` arrives, still goes after it.
+    runner.enqueue(.presence(.drawing), attempt: 1)
+
+    var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 7))
     #expect(await iterator.next() == .presence(.drawing))
   }
 
@@ -92,11 +107,12 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
 
-    _ = await runner.run(.open(attempt: 1))
-    #expect(await runner.run(.send(.resume(lastSeq: 2), attempt: 1)) == nil)
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
+    #expect(await runner.run(.send(.presence(.idle), attempt: 1)) == nil)
 
     var iterator = socket.sent.makeAsyncIterator()
-    #expect(await iterator.next() == .resume(lastSeq: 2))
+    #expect(await iterator.next() == .resume(lastSeq: 0))
+    #expect(await iterator.next() == .presence(.idle))
   }
 
   @Test func queuedSendsKeepTheirOrder() async {
@@ -104,11 +120,12 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
 
-    _ = await runner.run(.open(attempt: 1))
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
     let frames = (0..<200).map { ClientMessage.strokeEnd(id: $0) }
     for frame in frames { runner.enqueue(frame, attempt: 1) }
 
     var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 0))
     var received: [ClientMessage] = []
     while received.count < frames.count, let next = await iterator.next() { received.append(next) }
     #expect(received == frames)
@@ -123,12 +140,13 @@ import Wire
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([failing])))
 
-    _ = await runner.run(.open(attempt: 1))
-    runner.enqueue(.presence(.idle), attempt: 1)
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
 
+    // The Resume queued on opening fails, and its drop may be reported before `opened` is.
     var events = runner.events.makeAsyncIterator()
-    #expect(await events.next() == .opened(attempt: 1))
-    #expect(await events.next() == .dropped(attempt: 1))
+    var first: [WebSocketMachine.Event] = []
+    while first.count < 2, let event = await events.next() { first.append(event) }
+    #expect(Set(first.map { "\($0)" }) == ["opened(attempt: 1)", "dropped(attempt: 1)"])
   }
 
   @Test func sendWithoutASocketDoesNothing() async {
@@ -188,7 +206,7 @@ import Wire
           throw .network("cancelled")
         }))
 
-    let opening = Task { await runner.run(.open(attempt: 1)) }
+    let opening = Task { await runner.run(.open(attempt: 1, resumeFrom: 0)) }
     var startedIterator = started.stream.makeAsyncIterator()
     await startedIterator.next()
     _ = await runner.run(.close(attempt: 1))
@@ -229,7 +247,7 @@ import Wire
     let timer = Task { await runner.run(.startConnectTimeout(attempt: 1)) }
     var iterator = started.stream.makeAsyncIterator()
     await iterator.next()
-    _ = await runner.run(.open(attempt: 1))
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
     #expect(await timer.value == nil)
   }
 
@@ -263,7 +281,7 @@ import Wire
     let socket = makeFakeSocket()
     let runner = WebSocketRunner(
       dependencies: Self.dependencies(pool: ConnectionPool([socket.connection])))
-    _ = await runner.run(.open(attempt: 1))
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 0))
     await runner.shutdown()
 
     var remaining = 0
