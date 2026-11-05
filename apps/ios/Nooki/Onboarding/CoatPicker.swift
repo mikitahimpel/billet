@@ -4,13 +4,13 @@ import SwiftUI
 /// a chip, or a swipe across the cat, changes the coat; the cat cross-fades into the new one.
 struct CoatPicker: View {
     @Binding var coat: CatCoat
-    /// The cat's height; the step sizes it to the screen.
-    var stageHeight: CGFloat
+    /// The cat's height; nil to fill the height the rest leaves, between 170 and 440.
+    var stageHeight: CGFloat?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: Space.l) {
-            CoatStage(coat: coat, height: stageHeight)
+            stage
                 .gesture(swipe)
                 .accessibilityElement()
                 .accessibilityLabel(Text("Your cat: \(coat.title)"))
@@ -31,13 +31,28 @@ struct CoatPicker: View {
         .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.35), value: coat)
     }
 
+    @ViewBuilder private var stage: some View {
+        if let stageHeight {
+            CoatStage(coat: coat, height: stageHeight)
+        } else {
+            GeometryReader { geometry in CoatStage(coat: coat, height: geometry.size.height) }
+                .frame(minHeight: 170, maxHeight: 440)
+        }
+    }
+
     private var chips: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3), spacing: Space.l) {
-            ForEach(CatCoat.allCases, id: \.self) { item in
-                Button { coat = item } label: { CoatChip(coat: item, picked: item == coat) }
-                    .buttonStyle(PressScaleStyle())
-                    .accessibilityLabel(Text(item.title))
-                    .accessibilityAddTraits(item == coat ? [.isSelected] : [])
+        // A plain Grid, not a lazy one: the step measures the chips to see whether everything fits.
+        let rows = stride(from: 0, to: CatCoat.allCases.count, by: 3).map { Array(CatCoat.allCases[$0..<min($0 + 3, CatCoat.allCases.count)]) }
+        return Grid(horizontalSpacing: Space.m, verticalSpacing: Space.m) {
+            ForEach(rows, id: \.self) { row in
+                GridRow {
+                    ForEach(row, id: \.self) { item in
+                        Button { coat = item } label: { CoatChip(coat: item, picked: item == coat) }
+                            .buttonStyle(PressScaleStyle())
+                            .accessibilityLabel(Text(item.title))
+                            .accessibilityAddTraits(item == coat ? [.isSelected] : [])
+                    }
+                }
             }
         }
         .padding(.horizontal, Space.gutter)
@@ -71,17 +86,16 @@ private struct CoatStage: View {
                                      center: .center, startRadius: 0, endRadius: height * 0.55))
                 .frame(width: height * 1.15, height: height * 1.15)
                 .offset(y: -height * 0.02)
-            // The plinth and her shadow on it.
+            // The plinth and her shadow on it, inside the stage so her name never sits on it.
             Ellipse()
                 .fill(Ink.surfaceRaised)
-                .frame(width: height * 0.78, height: height * 0.16)
-                .overlay(Ellipse().fill(.black.opacity(0.28)).frame(width: height * 0.5, height: height * 0.07).blur(radius: 6)
-                    .offset(y: -height * 0.005))
-                .offset(y: height * 0.03)
+                .frame(width: height * 0.72, height: plinth)
+                .overlay(Ellipse().fill(.black.opacity(0.28)).frame(width: height * 0.46, height: plinth * 0.42).blur(radius: 6))
             TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let breath = reduceMotion ? 0 : sin(t * 2 * .pi / 3.4)
                 portrait
+                    .padding(.bottom, plinth / 2)
                     .scaleEffect(x: 1 - 0.006 * breath, y: 1 + 0.012 * breath, anchor: .bottom)
                     .rotationEffect(.degrees(reduceMotion ? 0 : 0.8 * sin(t * 2 * .pi / 7.5)), anchor: .bottom)
             }
@@ -90,14 +104,18 @@ private struct CoatStage: View {
         .frame(height: height)
     }
 
+    private var plinth: CGFloat { height * 0.12 }
+    /// Her height, ears to paws; the paws stand on the middle of the plinth.
+    private var cat: CGFloat { height - plinth / 2 }
+
     /// The portrait, cut to the cat: billet-gpu's 1200×1600 renders all frame her the same way, paws at 1431.
     private var portrait: some View {
         Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
             .resizable()
             .scaledToFit()
-            .frame(height: height * 1600 / 1264)
-            .offset(y: height * (1600 - 1431) / 1264)
-            .frame(height: height, alignment: .bottom)
+            .frame(height: cat * 1600 / 1264)
+            .offset(y: cat * (1600 - 1431) / 1264)
+            .frame(height: cat, alignment: .bottom)
             .id(coat)
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)),
                                     removal: .opacity))

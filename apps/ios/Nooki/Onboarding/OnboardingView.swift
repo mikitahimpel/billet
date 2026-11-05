@@ -195,18 +195,23 @@ struct OnboardingView: View {
     }
 
     private var catCoat: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.l) {
-                    PageTitle(title)
-                        .padding(.horizontal, Space.gutter)
-                    // The cat takes what the title, her name and the chips leave, within reason.
-                    CoatPicker(coat: $flow.coat, stageHeight: min(max(geometry.size.height - 330, 200), 430))
-                }
-                .padding(.top, Space.l)
-            }
-            .scrollBounceBehavior(.basedOnSize)
+        // The cat takes the height the title, her name and the chips leave; when they leave too little (large text),
+        // the page scrolls with a smaller cat.
+        ViewThatFits(in: .vertical) {
+            coatPage(stage: nil)
+            ScrollView { coatPage(stage: 200) }
+                .scrollBounceBehavior(.basedOnSize)
         }
+    }
+
+    private func coatPage(stage: CGFloat?) -> some View {
+        VStack(alignment: .leading, spacing: Space.l) {
+            PageTitle(title)
+                .padding(.horizontal, Space.gutter)
+            CoatPicker(coat: $flow.coat, stageHeight: stage)
+        }
+        .padding(.top, Space.l)
+        .padding(.bottom, Space.s)
     }
 
     private static let nameIdeas = ["Mochi", "Tofu", "Biscuit", "Pumpkin", "Luna", "Miso"]
