@@ -79,15 +79,3 @@ nonisolated struct TreatHint: HintTip {
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "treat" }] }
 }
-
-/// The partner, on the couple's avatars, while there is someone to invite.
-nonisolated struct InviteHint: HintTip {
-    static let hintId = "invite"
-    static let inviteAction = "invite"
-
-    var title: Text { Text("Nooki is better with two") }
-    var message: Text? { Text("Invite your partner to share \(CatProfile.name()), notes and coins.") }
-    var image: Image? { Image(systemName: "heart.circle.fill") }
-    var actions: [Action] { [Action(id: Self.inviteAction, title: "Invite")] }
-    var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "invite" }] }
-}

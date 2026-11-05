@@ -19,6 +19,7 @@ import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
@@ -166,6 +167,12 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Each member's latest check-in. A room not opened yet has none. */
     readonly moods: (pairId: PairId) => Effect.Effect<ReadonlyArray<MoodCheckIn>, NotesUnavailable>;
+    /** Runs one gift command for `by`: see `GiftsRoom`. */
+    readonly gifts: (
+      pairId: PairId,
+      by: UserId,
+      command: GiftCommand,
+    ) => Effect.Effect<GiftsResult, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,

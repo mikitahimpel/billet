@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1d3eb57b-3dd9-4d80-a305-7d8df18e1eef",
+  "id": "16038125-5fb7-46e1-b004-09ef955a0e37",
   "prevIds": [
     "9dee96ef-60bc-4834-9fef-f17df8f4afad"
   ],
@@ -35,7 +35,15 @@
       "entityType": "tables"
     },
     {
-      "name": "mood",
+      "name": "gift_loves",
+      "entityType": "tables"
+    },
+    {
+      "name": "gift_plan",
+      "entityType": "tables"
+    },
+    {
+      "name": "gift_wish",
       "entityType": "tables"
     },
     {
@@ -454,7 +462,7 @@
       "generated": null,
       "name": "user",
       "entityType": "columns",
-      "table": "mood"
+      "table": "gift_loves"
     },
     {
       "type": "text",
@@ -462,9 +470,39 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "mood",
+      "name": "body",
       "entityType": "columns",
-      "table": "mood"
+      "table": "gift_loves"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "wish_id",
+      "entityType": "columns",
+      "table": "gift_plan"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "giver",
+      "entityType": "columns",
+      "table": "gift_plan"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "stage",
+      "entityType": "columns",
+      "table": "gift_plan"
     },
     {
       "type": "text",
@@ -472,9 +510,59 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owner",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "title",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "link",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "price",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "note",
       "entityType": "columns",
-      "table": "mood"
+      "table": "gift_wish"
     },
     {
       "type": "integer",
@@ -482,9 +570,39 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "at",
+      "name": "most_wanted",
       "entityType": "columns",
-      "table": "mood"
+      "table": "gift_wish"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "added_at",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "received_at",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "gifted_by",
+      "entityType": "columns",
+      "table": "gift_wish"
     },
     {
       "type": "integer",
@@ -828,6 +946,16 @@
     },
     {
       "columns": [
+        "wish_id",
+        "giver"
+      ],
+      "nameExplicit": false,
+      "name": "gift_plan_pk",
+      "entityType": "pks",
+      "table": "gift_plan"
+    },
+    {
+      "columns": [
         "note_id",
         "by"
       ],
@@ -895,8 +1023,17 @@
         "user"
       ],
       "nameExplicit": false,
-      "name": "mood_pk",
-      "table": "mood",
+      "name": "gift_loves_pk",
+      "table": "gift_loves",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "gift_wish_pk",
+      "table": "gift_wish",
       "entityType": "pks"
     },
     {

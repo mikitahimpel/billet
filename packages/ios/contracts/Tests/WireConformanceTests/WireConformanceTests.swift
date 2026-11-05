@@ -96,6 +96,13 @@ let roundTrips: [String: RoundTrip] = [
   "ReactRequest": codec(ReactRequest.self),
   "ReactResponse": codec(ReactResponse.self),
   "ListReactionsResponse": codec(ListReactionsResponse.self),
+  "GiftWish": codec(GiftWish.self),
+  "GiftsResponse": codec(GiftsResponse.self),
+  "SaveGiftWishRequest": codec(SaveGiftWishRequest.self),
+  "DeleteGiftWishRequest": codec(DeleteGiftWishRequest.self),
+  "SetGiftPlanRequest": codec(SetGiftPlanRequest.self),
+  "MarkGiftReceivedRequest": codec(MarkGiftReceivedRequest.self),
+  "SaveLovesRequest": codec(SaveLovesRequest.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

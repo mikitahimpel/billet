@@ -181,6 +181,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_reactions"),
       expect.stringContaining("_shop"),
       expect.stringContaining("_shop_rewards"),
+      expect.stringContaining("_gifts"),
       expect.stringContaining("_mood"),
     ]);
   });
@@ -263,6 +264,30 @@ describe("PairRoom storage", () => {
       items: ["lamp", "rug", tower],
       wishlist: [yarn],
       bonuses: [],
+    });
+  });
+
+  it("keeps gift wishes and plans across eviction, and the plan only in the giver's view", async () => {
+    const room = await openRoom();
+    const wish = newKey();
+    await room.gifts(alice, {
+      _tag: "SaveWish",
+      wish: { id: wish, title: "Bracelet", link: "", price: "$65", note: "", mostWanted: true },
+    });
+    await room.gifts(bob, { _tag: "SetPlan", wish, stage: "planning" });
+    await evictDurableObject(room);
+
+    expect(await room.gifts(alice, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { wishes: [{ id: wish, owner: alice }], plans: [], surprise: true },
+    });
+    expect(await room.gifts(bob, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { plans: [{ wish, stage: "planning" }], surprise: false },
+    });
+    expect(await room.gifts(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
     });
   });
 

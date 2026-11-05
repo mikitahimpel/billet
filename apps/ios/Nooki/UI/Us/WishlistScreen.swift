@@ -37,6 +37,7 @@ struct WishlistScreen: View {
             .scrollIndicators(.hidden)
         }
         .usSheet()
+        .task { await state.gifts.refresh() }
         .sheet(isPresented: $adding) {
             WishEditor(state: state, existing: nil)
         }
@@ -293,10 +294,12 @@ private struct WishCard<Actions: View>: View {
     var linked = false
     @ViewBuilder var actions: Actions
 
+    @State private var image: UIImage?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                if let image = WishImage.load(wish.id) {
+                if let image {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
@@ -330,6 +333,16 @@ private struct WishCard<Actions: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .task(id: wish) { await loadImage() }
+    }
+
+    /// The phone's own picture, or, for a wish made on the partner's phone, the one its link shows, kept once fetched.
+    private func loadImage() async {
+        image = WishImage.load(wish.id)
+        guard image == nil, let url = URL(string: wish.link), url.scheme?.hasPrefix("http") == true,
+              let data = await LinkPreview.fetch(url)?.image, !Task.isCancelled else { return }
+        WishImage.save(data, for: wish.id)
+        image = UIImage(data: data)
     }
 
     @ViewBuilder
