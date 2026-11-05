@@ -17,9 +17,6 @@ struct ShopView: View {
     /// Where the page is scrolled to; a perf run moves it (`NookiPerf.shopScroll`).
     @State private var position = ScrollPosition(edge: .top)
 
-    /// Tab bar (66pt) + home-indicator area + breathing room, so the last row clears it.
-    private let bottomInset: CGFloat = 134
-
     private let columns = [
         GridItem(.flexible(), spacing: Space.m, alignment: .top),
         GridItem(.flexible(), spacing: Space.m, alignment: .top),
@@ -38,7 +35,7 @@ struct ShopView: View {
                     }
                 }
                 .padding(.top, 4)
-                .padding(.bottom, bottomInset)
+                .padding(.bottom, Space.l)
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
@@ -86,7 +83,6 @@ struct ShopView: View {
                 #endif
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
         .task {
             // The cards draw their art at 512 px and the bundles and collections at 256: decoded now, off the main
             // thread, the first scroll down the page doesn't stop for each picture.
