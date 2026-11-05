@@ -13,6 +13,7 @@ struct HomeView: View {
     /// The corkboard room behind the Moments tab, built on first use and kept.
     @State private var board: BoardRoomScene?
     @State private var showcase: String?
+    @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
@@ -174,6 +175,12 @@ struct HomeView: View {
             hints.done(PetHint())
         }
         .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        // A run of pets is one in the pair's journal and Inbox: one every 10 minutes at most.
+        .onChange(of: state.petsGiven) {
+            guard let session, Date.now.timeIntervalSince(petSentAt) > 600 else { return }
+            petSentAt = .now
+            Task { await session.catEvents.send([.petted]) }
+        }
         .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
         .onChange(of: state.tab) { _, tab in
             switch tab {
