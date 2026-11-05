@@ -9,6 +9,7 @@
     "./flags": "./src/flags.ts",
     "./ids": "./src/ids.ts",
     "./ink": "./src/ink.ts",
+    "./inks": "./src/inks.ts",
     "./metrics": "./src/metrics.ts",
     "./note": "./src/note.ts",
     "./delivery-lane": "./src/delivery-lane.ts",

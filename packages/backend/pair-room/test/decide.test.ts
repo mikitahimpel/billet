@@ -5,7 +5,20 @@ import { decide, isMember } from "../src/decide.ts";
 import { RoomCommand } from "../src/room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "../src/room-decision.ts";
 import { RoomState, type ActiveRoom } from "../src/room-state.ts";
-import { active, alice, bob, mallory, otherPairId, pairId, photoFrom, vacant } from "./samples.ts";
+import {
+  active,
+  alice,
+  bob,
+  mallory,
+  otherPairId,
+  pairId,
+  photoFrom,
+  rose,
+  sea,
+  textFrom,
+  vacant,
+} from "./samples.ts";
+import { freeInk } from "@billet/contracts-domain/inks";
 
 const key = Schema.decodeUnknownSync(IdempotencyKey)("6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f");
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
@@ -118,6 +131,57 @@ describe("decide on an active room", () => {
   });
 });
 
+describe("inks", () => {
+  const sendText = (ink: typeof rose) =>
+    RoomCommand.cases.SendNote.make({ note: textFrom(alice, ink), key });
+  const grant = (...inks: Array<typeof rose>) => RoomCommand.cases.GrantInks.make({ inks });
+
+  it("takes a text note in the free ink from any pair", () => {
+    expect(decide(active, sendText(freeInk))._tag).toBe("Accepted");
+  });
+
+  it("refuses a text note in an ink the pair has not bought, and stores nothing", () => {
+    expect(decide(active, sendText(rose))).toEqual(
+      RoomDecision.cases.Rejected.make({
+        rejection: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
+      }),
+    );
+  });
+
+  it("takes it once the ink is granted, for either partner", () => {
+    const granted = decide(active, grant(rose));
+    if (granted._tag !== "Accepted") throw new Error("grant refused");
+    expect(granted.state.inks).toEqual([rose]);
+    expect(granted.outputs).toEqual([RoomOutput.cases.InksGranted.make({ inks: [rose] })]);
+    expect(decide(granted.state, sendText(rose))._tag).toBe("Accepted");
+    const fromBob = RoomCommand.cases.SendNote.make({ note: textFrom(bob, rose), key });
+    expect(decide(granted.state, fromBob)._tag).toBe("Accepted");
+  });
+
+  it("grants only what is new, in order, and a repeat changes nothing", () => {
+    const first = decide(active, grant(rose));
+    if (first._tag !== "Accepted") throw new Error("grant refused");
+    const second = decide(first.state, grant(sea, rose, sea, freeInk));
+    if (second._tag !== "Accepted") throw new Error("grant refused");
+    expect(second.state.inks).toEqual([rose, sea]);
+    expect(second.outputs).toEqual([RoomOutput.cases.InksGranted.make({ inks: [sea] })]);
+    expect(decide(second.state, grant(rose))).toEqual(
+      RoomDecision.cases.Accepted.make({ state: second.state, outputs: [] }),
+    );
+  });
+
+  it("needs an open room to grant", () => {
+    expect(decide(vacant, grant(rose))).toEqual(
+      RoomDecision.cases.Rejected.make({ rejection: RoomRejection.cases.RoomNotOpen.make({}) }),
+    );
+  });
+
+  it("checks only text notes: drawings and photos have no ink", () => {
+    const photo = RoomCommand.cases.SendNote.make({ note: photoFrom(alice), key });
+    expect(decide(active, photo)._tag).toBe("Accepted");
+  });
+});
+
 describe("decide as a pure function", () => {
   it("does not mutate its input and repeats its answer", () => {
     const room = JSON.parse(JSON.stringify(active)) as ActiveRoom;
@@ -143,6 +207,7 @@ describe("tagged unions", () => {
     Open: open,
     SendNote: send(),
     SetPresence: setPresence(),
+    GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
   };
   const outputs: Record<RoomOutput["_tag"], RoomOutput> = {
     RoomOpened: RoomOutput.cases.RoomOpened.make({ pairId }),
@@ -154,12 +219,14 @@ describe("tagged unions", () => {
       entry: { seq: 1, note: photoFrom(alice) },
     }),
     PresenceChanged: RoomOutput.cases.PresenceChanged.make({ user: alice, state: "drawing" }),
+    InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
     RoomNotOpen: RoomRejection.cases.RoomNotOpen.make({}),
     RoomAlreadyOpen: RoomRejection.cases.RoomAlreadyOpen.make({}),
     NotAMember: RoomRejection.cases.NotAMember.make({ user: mallory }),
+    InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
   };
 
   it.each([
@@ -202,6 +269,7 @@ describe("RoomState invariants", () => {
       members: [member(alice), member(bob)],
       lastSeq: 0,
       streakDays: 0,
+      inks: [],
       ...overrides,
     });
 
@@ -213,6 +281,7 @@ describe("RoomState invariants", () => {
     ["the same user twice", { members: [member(alice), member(alice)] }],
     ["a negative lastSeq", { lastSeq: -1 }],
     ["a negative streakDays", { streakDays: -1 }],
+    ["an ink that is not an ink id", { inks: ["rose"] }],
   ])("rejects %s", (_, overrides) => {
     expect(() => make(overrides)).toThrow();
   });

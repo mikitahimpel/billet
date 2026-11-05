@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomState, SequencedNote } from "./room-state.ts";
@@ -14,6 +15,8 @@ export const RoomOutput = Schema.TaggedUnion({
   NoteAppended: { entry: SequencedNote, key: IdempotencyKey },
   NoteRepeated: { entry: SequencedNote },
   PresenceChanged: { user: UserId, state: PresenceState },
+  /** Inks the pair did not have before, now its own. A grant of inks it had lists none. */
+  InksGranted: { inks: Schema.Array(InkId) },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -24,6 +27,8 @@ export const RoomRejection = Schema.TaggedUnion({
   /** The room already belongs to a different couple. */
   RoomAlreadyOpen: {},
   NotAMember: { user: UserId },
+  /** A text note in an ink colour the pair has not bought. */
+  InkNotOwned: { ink: InkId },
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

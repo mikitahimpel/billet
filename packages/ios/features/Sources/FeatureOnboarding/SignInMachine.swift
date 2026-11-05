@@ -21,7 +21,7 @@ public enum SignInFailure: Equatable, Sendable {
     case .api(.unauthorized), .api(.invalidRequest): self = .rejected
     case .api(.appleIdInUse): self = .appleIdInUse
     case .api(.unavailable), .api(.notFound), .api(.invalidInvite), .api(.alreadyPaired),
-      .api(.invalidPurchase),
+      .api(.invalidPurchase), .api(.inkNotOwned),
       .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }

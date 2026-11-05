@@ -57,9 +57,15 @@ import {
   FlagConfigRow,
   PairOverrideRow,
 } from "../src/flag-config-repository-live.ts";
-import { SampleRow, StoredDelivery, StoredNote, StoredRoom } from "../src/room-rows.ts";
+import {
+  SampleRow,
+  StoredDelivery,
+  StoredNote,
+  StoredOwnedInk,
+  StoredRoom,
+} from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { delivery, note, room } from "../src/room-schema.ts";
+import { delivery, note, ownedInk, room } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
@@ -92,6 +98,7 @@ const checked = [
   ["coin_ledger", coinLedger, StoredPurchaseEntry],
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
+  ["owned_ink", ownedInk, StoredOwnedInk],
   ["room", room, StoredRoom],
   ["users", users, StoredUser],
 ] as const;

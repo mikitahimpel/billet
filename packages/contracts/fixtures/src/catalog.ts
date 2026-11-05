@@ -10,6 +10,7 @@ import {
 } from "@billet/contracts-domain/ids";
 import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
 import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
+import { freeInk, Ink, InkId, inkOf, inks } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PushToken } from "@billet/contracts-domain/push-token";
@@ -28,6 +29,7 @@ import {
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
+import { InksResponse } from "@billet/contracts-http-api/inks";
 import {
   type AppStatus,
   MaintenanceResponse,
@@ -153,18 +155,26 @@ const drawingOnPaper = Note.cases.Drawing.make({
   image,
   paper: "sage",
 });
+const rose = Schema.decodeSync(InkId)("ink-rose");
+const catalogInk = (id: string): Ink => {
+  const found = inkOf(id);
+  if (found === undefined) throw new Error(`no ink ${id} in the catalog`);
+  return found;
+};
 const text = Note.cases.Text.make({
   id: noteId,
   author: bob,
   sentAt: 1_700_000_002_000,
   text: "miss you already 💛",
   paper: "butter",
+  ink: rose,
 });
 const plainText = Note.cases.Text.make({
   id: noteId,
   author: alice,
   sentAt: 1_700_000_003_000,
   text: "home soon",
+  ink: freeInk,
 });
 
 const maintenanceStatus: AppStatus = {
@@ -267,10 +277,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       key: idempotencyKey,
       text: "miss you already 💛",
       paper: "butter",
+      ink: rose,
     }),
     "text-without-paper": SendNoteRequest.cases.Text.make({
       key: idempotencyKey,
       text: "home soon",
+      ink: freeInk,
     }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
@@ -361,6 +373,12 @@ export const catalog: ReadonlyArray<Fixture> = [
     "already-paired": ApiError.cases.AlreadyPaired.make({}),
     "apple-id-in-use": ApiError.cases.AppleIdInUse.make({}),
     "invalid-purchase": ApiError.cases.InvalidPurchase.make({}),
+    "ink-not-owned": ApiError.cases.InkNotOwned.make({ ink: rose }),
+  }),
+  fixture("Ink", Ink, { free: catalogInk("ink-graphite"), default: catalogInk("ink-rose") }),
+  fixture("InksResponse", InksResponse, {
+    default: { inks, owned: [freeInk, rose] },
+    "free-only": { inks, owned: [freeInk] },
   }),
   // A JWS's shape only: never signed by anyone.
   fixture("PurchaseRequest", PurchaseRequest, {

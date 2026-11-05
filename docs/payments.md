@@ -49,6 +49,26 @@ configuration (`archive/ios-v1/App/Billet.storekit` until the Nooki app has its 
 exactly these. A test in `contracts-fixtures` (`coin-packs-sync.test.ts`) fails if an id, a number
 of coins or a price differs, or if a StoreKit product is not a consumable.
 
+## Ink colours
+
+Ink colours for text notes are sold one by one for coins (owner decision, 2026-11-05). One ink,
+`ink-graphite`, is free and every pair owns it. Colours belong to the pair: one partner's purchase
+is both partners'.
+
+- **Catalog:** `inks` in `@billet/contracts-domain/inks`, with `{id, name, light, dark, price}`.
+  `light` and `dark` are the hex colours on light and dark paper, and `price` is in coins. The
+  colours and prices are placeholders the owner sets. An id is never reused.
+- **The note:** `Note.Text` and `SendNoteRequest.Text` carry `ink`. A note written before inks has
+  none and decodes as `ink-graphite`; the server always writes it out.
+- **Owned inks:** the pair's `PairRoom` keeps the ones it bought (`owned_ink`, in the order it got
+  them). `GrantInks` adds them, and the wallet calls it in the same commit as the coins it takes,
+  once it lands. Until then, nothing grants an ink but tests.
+- **The check:** the room refuses a text note in an ink the pair does not own, with
+  `400 {"_tag":"InkNotOwned","ink":…}`, and stores nothing. An ink the catalog does not sell is a
+  `400 InvalidRequest`.
+- **`GET /v1/inks`:** answers `InksResponse {inks, owned}` (session, paired; `no-store`), with the
+  free ink first in `owned`.
+
 ## Three builds: none, mock and StoreKit
 
 Which store the app carries is chosen when it is built, with one variable:

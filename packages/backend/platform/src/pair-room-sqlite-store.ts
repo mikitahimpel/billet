@@ -9,7 +9,7 @@ import {
 } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
-import { note, room } from "./room-schema.ts";
+import { note, ownedInk, room } from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
 export class RoomDb extends Context.Service<RoomDb, RoomDatabase>()(
@@ -28,7 +28,7 @@ const decodeRoom = Schema.decodeUnknownSync(RoomState);
 
 type RoomRow = typeof room.$inferSelect;
 
-const roomFrom = (row: RoomRow | undefined): RoomState =>
+const roomFrom = (row: RoomRow | undefined, inks: ReadonlyArray<string>): RoomState =>
   decodeRoom(
     row === undefined
       ? { _tag: "Vacant" }
@@ -41,6 +41,7 @@ const roomFrom = (row: RoomRow | undefined): RoomState =>
           ],
           lastSeq: row.lastSeq,
           streakDays: row.streakDays,
+          inks,
         },
   );
 
@@ -68,13 +69,14 @@ export const SqliteRoomStore = Layer.effect(
     const db = yield* RoomDb;
 
     return {
-      load: db
-        .select()
-        .from(room)
-        .pipe(
-          Effect.map(([row]) => roomFrom(row)),
-          Effect.orDie,
-        ),
+      load: Effect.gen(function* () {
+        const [row] = yield* db.select().from(room);
+        const inks = yield* db.select().from(ownedInk).orderBy(asc(ownedInk.position));
+        return roomFrom(
+          row,
+          inks.map(({ inkId }) => inkId),
+        );
+      }).pipe(Effect.orDie),
       commit: (state: ActiveRoom, notes: ReadonlyArray<AppendedNote>) =>
         db
           .transaction((tx) =>
@@ -84,6 +86,10 @@ export const SqliteRoomStore = Layer.effect(
                 .insert(room)
                 .values(values)
                 .onConflictDoUpdate({ target: room.id, set: values });
+              // Inks are only ever added, so the ones already stored keep their place.
+              for (const [position, inkId] of state.inks.entries()) {
+                yield* tx.insert(ownedInk).values({ inkId, position }).onConflictDoNothing();
+              }
               for (const { entry, key } of notes) {
                 yield* tx.insert(note).values({
                   seq: entry.seq,

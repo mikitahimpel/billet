@@ -44,6 +44,8 @@ export const routes = {
   saveOnboardingAnswer: route("POST", "/v1/onboarding/answers"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
+  /** Every ink colour the shop sells, and the ones the pair owns. */
+  listInks: route("GET", "/v1/inks"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

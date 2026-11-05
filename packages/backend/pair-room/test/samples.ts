@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { RoomState, type ActiveRoom } from "../src/room-state.ts";
@@ -29,4 +30,17 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   ],
   lastSeq: 0,
   streakDays: 0,
+  inks: [],
 });
+
+export const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
+export const sea = Schema.decodeUnknownSync(InkId)("ink-sea");
+
+export const textFrom = (author: UserId, ink: InkId, id = "note-1"): Note =>
+  Note.cases.Text.make({
+    id: Schema.decodeUnknownSync(NoteId)(id),
+    author,
+    sentAt: 1_700_000_000_000,
+    text: "hi",
+    ink,
+  });

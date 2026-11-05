@@ -27,6 +27,8 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
+import { InksResponse } from "@billet/contracts-http-api/inks";
+import { inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { resetDirectory } from "./directory-migrations.ts";
 import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
@@ -204,7 +206,7 @@ const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID
 
 const sendText = (
   token: string,
-  note: { readonly text: string; readonly paper?: string },
+  note: { readonly text: string; readonly paper?: string; readonly ink?: string },
   key: string = crypto.randomUUID(),
 ) => call("/v1/notes", json({ _tag: "Text", key, ...note }, "POST", token));
 
@@ -950,6 +952,28 @@ describe("notes", () => {
     expect(history[0]).toEqual(note);
     expect(history[1]).not.toHaveProperty("paper");
     expect(await historyFor(owner)).toEqual(history);
+  });
+
+  it("writes a text note in the free ink, and refuses an ink the pair has not bought", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const bare = await sendText(owner, { text: "hi" });
+    expect(bare.status).toBe(200);
+    expect(Schema.decodeUnknownSync(SendNoteResponse)(await bare.json()).note).toMatchObject({
+      ink: "ink-graphite",
+    });
+    const refused = await sendText(claimer, { text: "hi", ink: "ink-rose" });
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ _tag: "InkNotOwned", ink: "ink-rose" });
+    expect((await sendText(owner, { text: "hi", ink: "ink-nope" })).status).toBe(400);
+    expect(await historyFor(owner)).toHaveLength(1);
+
+    const inks = await call("/v1/inks", { method: "GET", headers: bearer(claimer) });
+    expect(inks.status).toBe(200);
+    expect(inks.headers.get("cache-control")).toBe("no-store");
+    expect(Schema.decodeUnknownSync(InksResponse)(await inks.json())).toEqual({
+      inks: inkCatalog,
+      owned: ["ink-graphite"],
+    });
   });
 
   it("refuses a text note that is blank, over 120 characters or on an unknown paper", async () => {

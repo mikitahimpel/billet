@@ -42,6 +42,7 @@ import Testing
       "getOnboarding": Routes.getOnboarding,
       "saveOnboardingAnswer": Routes.saveOnboardingAnswer,
       "listNotes": Routes.listNotes,
+      "listInks": Routes.listInks,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
       "reportEvents": Routes.reportEvents,

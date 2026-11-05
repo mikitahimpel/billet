@@ -1,4 +1,6 @@
 import type { UserId } from "@billet/contracts-domain/ids";
+import { freeInk, type InkId } from "@billet/contracts-domain/inks";
+import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import type { RoomCommand } from "./room-command.ts";
@@ -27,6 +29,21 @@ const isSameCouple = (
   [first, second]: readonly [UserId, UserId],
 ): boolean => room.pairId === pairId && isMember(room, first) && isMember(room, second);
 
+/** Whether the pair may write in `ink`: the free one, or one it bought. */
+export const ownsInk = (room: ActiveRoom, ink: InkId): boolean =>
+  ink === freeInk || room.inks.includes(ink);
+
+/** The ink a note is written in that the pair does not own, if any. Only text has an ink. */
+const unownedInk = (room: ActiveRoom, note: Note): InkId | undefined => {
+  switch (note._tag) {
+    case "Text":
+      return ownsInk(room, note.ink) ? undefined : note.ink;
+    case "Drawing":
+    case "Photo":
+      return undefined;
+  }
+};
+
 const withPresence = (member: Member, user: UserId, presence: PresenceState): Member =>
   member.user === user ? { ...member, presence } : member;
 
@@ -46,12 +63,14 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           ],
           lastSeq: 0,
           streakDays: 0,
+          inks: [],
         },
         [RoomOutput.cases.RoomOpened.make({ pairId })],
       );
     }
     case "SendNote":
     case "SetPresence":
+    case "GrantInks":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -70,6 +89,8 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (!isMember(room, note.author)) {
         return rejected(RoomRejection.cases.NotAMember.make({ user: note.author }));
       }
+      const ink = unownedInk(room, note);
+      if (ink !== undefined) return rejected(RoomRejection.cases.InkNotOwned.make({ ink }));
       const seq = room.lastSeq + 1;
       return accepted({ ...room, lastSeq: seq }, [
         RoomOutput.cases.NoteAppended.make({ entry: { seq, note }, key }),
@@ -89,6 +110,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
             },
             [RoomOutput.cases.PresenceChanged.make({ user, state })],
           );
+    }
+    case "GrantInks": {
+      const added = [...new Set(command.inks)].filter((ink) => !ownsInk(room, ink));
+      return added.length === 0
+        ? accepted(room)
+        : accepted({ ...room, inks: [...room.inks, ...added] }, [
+            RoomOutput.cases.InksGranted.make({ inks: added }),
+          ]);
     }
   }
 };

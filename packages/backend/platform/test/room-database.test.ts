@@ -40,7 +40,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(4);
+      expect(history(state.storage)).toHaveLength(5);
     });
   });
 
@@ -161,6 +161,7 @@ describe("room migrations", () => {
         pairId: "pair-1",
         lastSeq: 1,
         streakDays: 4,
+        inks: [],
         members: [
           { user: "user-alice", presence: "idle" },
           { user: "user-bob", presence: "drawing" },
@@ -169,8 +170,13 @@ describe("room migrations", () => {
       expect(notes).toEqual([{ seq: 1, note: photo }]);
       expect(forgotten).toEqual([{ seq: 1, note: photo }]);
       expect(remaining).toEqual([]);
-      expect(userTables(state.storage).toSorted()).toEqual(["delivery", "note", "room"]);
-      expect(history(state.storage)).toHaveLength(4);
+      expect(userTables(state.storage).toSorted()).toEqual([
+        "delivery",
+        "note",
+        "owned_ink",
+        "room",
+      ]);
+      expect(history(state.storage)).toHaveLength(5);
     });
   });
 });

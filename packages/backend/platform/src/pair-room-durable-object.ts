@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { UserId } from "@billet/contracts-domain/ids";
+import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
@@ -271,6 +272,18 @@ export class PairRoom extends DurableObject {
   }
 
   /** Notes with `seq` above `afterSeq`, in order. */
+  /** The ink colours the pair bought, in the order it got them. The free ink is not listed. */
+  inks(): Promise<ReadonlyArray<InkId>> {
+    return this.run((room) =>
+      room.state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
+    );
+  }
+
+  /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
+  grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
+    return this.run((room) => room.dispatch({ _tag: "GrantInks", inks }), "PairRoom.grantInks");
+  }
+
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {
     return this.run((room) => room.notesAfter(afterSeq, limit), "PairRoom.notes");
   }

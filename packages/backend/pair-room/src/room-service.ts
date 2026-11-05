@@ -16,6 +16,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "NoteRepeated":
       case "RoomOpened":
       case "PresenceChanged":
+      case "InksGranted":
         return [];
     }
   });
@@ -48,7 +49,7 @@ const stamped = (
         ...server,
       };
     case "Text":
-      return { _tag: "Text", text: request.text, ...paperOf(request), ...server };
+      return { _tag: "Text", text: request.text, ...paperOf(request), ink: request.ink, ...server };
   }
 };
 
