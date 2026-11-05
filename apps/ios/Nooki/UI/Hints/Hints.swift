@@ -19,7 +19,7 @@ final class Hints {
 
     /// Every hint.
     static let all: [any HintTip.Type] = [
-        PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self, InviteHint.self,
+        PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
     ]
 
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
@@ -32,7 +32,6 @@ final class Hints {
     @ObservationIgnored private var visiting: Task<Void, Never>?
     @ObservationIgnored private var lastVisit: (@MainActor () -> HintContext)?
     @ObservationIgnored private var onboarded = false
-    @ObservationIgnored private var invitable = false
     @ObservationIgnored private let isPresenting: @MainActor () -> Bool
 
     init(
@@ -77,10 +76,6 @@ final class Hints {
         if ended, let lastVisit { visit(lastVisit) }
     }
 
-    func canInvite(_ can: Bool) {
-        invitable = can
-    }
-
     /// A screen came up: the hint on screen goes, and after `HintPlan.settle` the plan may show one for this
     /// visit. `context` is read then, so a sheet opened meanwhile counts.
     func visit(_ context: @escaping @MainActor () -> HintContext) {
@@ -90,15 +85,24 @@ final class Hints {
         visiting = Task { [weak self] in
             try? await Task.sleep(for: HintPlan.settle)
             guard !Task.isCancelled, let self else { return }
-            HintStage.current = plan(context()) ?? ""
+            show(context())
         }
+    }
+
+    /// Puts up the hint the plan picks for `context`, if any. It counts as seen from that moment, whether or not its
+    /// popover ever reports appearing, so neither a tab switch nor a relaunch brings it back.
+    @discardableResult
+    func show(_ context: HintContext) -> String? {
+        let id = plan(context)
+        if let id { shown(id) }
+        HintStage.current = id ?? ""
+        return id
     }
 
     /// What the plan picks for `context`, with what this object knows filled in.
     func plan(_ context: HintContext) -> String? {
         var context = context
         context.onboarded = context.onboarded && onboarded
-        context.canInvite = invitable
         context.busy = context.busy || isPresenting()
         return HintPlan.next(context, seen: seen, shownThisSession: shownThisSession.count)
     }
@@ -122,10 +126,12 @@ final class Hints {
     }
 
     /// A hint came on screen: it counts as seen from now on.
-    func appeared(_ tip: any Tip) {
-        guard shownThisSession.insert(tip.id).inserted else { return }
-        see(tip.id)
-        record(.tipShown, tip.id)
+    func appeared(_ tip: any Tip) { shown(tip.id) }
+
+    private func shown(_ id: String) {
+        guard shownThisSession.insert(id).inserted else { return }
+        see(id)
+        record(.tipShown, id)
     }
 
     private func see(_ id: String) {
