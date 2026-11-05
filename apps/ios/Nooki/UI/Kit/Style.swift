@@ -5,8 +5,8 @@ import UIKit
 // The guide that explains them is apps/ios/docs/style.md.
 
 extension Color {
-    /// A colour that follows the system appearance.
-    init(light: Color, dark: Color) {
+    /// A colour that follows the system appearance. Nonisolated: SwiftUI resolves it off the main thread.
+    nonisolated init(light: Color, dark: Color) {
         self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light) })
     }
 }
