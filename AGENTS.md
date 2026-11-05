@@ -17,6 +17,7 @@ work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original p
 
 App look: `apps/ios/Nooki/UI/Kit/Ink.swift`, `apps/ios/Shared/Palette.swift`.
 [docs/design.md](docs/design.md) is the old Little House design, not the app's.
+Images for docs and mockups live in `docs/images/<topic>/` as WebP; app images stay in their bundle.
 
 ## Commands
 
