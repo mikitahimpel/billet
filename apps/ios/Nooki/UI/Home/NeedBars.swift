@@ -62,19 +62,17 @@ private struct NeedRow: View {
                 .background(need.hue.opacity(0.16), in: .circle)
 
             VStack(alignment: .leading, spacing: 5) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(need.title)
-                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                        .foregroundStyle(Ink.primary)
-                    Spacer(minLength: 8)
-                    Text(line)
-                        .font(.system(.caption, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
-                        .lineLimit(1)
-                        .contentTransition(.opacity)
-                }
+                Text(need.title)
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Ink.primary)
                 NeedTrack(value: value ?? 0, hue: need.hue)
                     .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0.2), value: value)
+                Text(line)
+                    .font(.system(.caption, weight: .medium))
+                    .foregroundStyle(Ink.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
             }
 
             if let action {

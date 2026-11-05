@@ -50,7 +50,7 @@ struct PetButton: View {
                 showsSheet = false
                 onPlay()
             }
-            .presentationDetents([.height(500), .large])
+            .presentationDetents([.height(560), .large])
             .presentationBackground(Ink.sheet)
             .presentationDragIndicator(.visible)
         }
