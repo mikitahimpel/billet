@@ -11,7 +11,9 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheApp() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
+        // Needs half full, so the cat's sheet shows its bars rather than "settling in".
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
+                                "-uitestNeeds", "0.5"]
         app.launch()
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
@@ -26,23 +28,12 @@ final class UITourTests: XCTestCase {
             shot("03-pet-sheet")
             dismissSheet(app)
         }
-        if tap(app.buttons["Moments"]) {
-            shot("04-moments")
-            if tap(app.buttons["All notes"]) {
-                shot("05-moments-notes")
-                dismissSheet(app)
-            }
-        }
-        if tap(app.buttons["Shop"]) {
-            shot("06-shop")
+        // The Coins sheet and the profile come before the Shop, whose scroll can open an item sheet on the way.
+        if tap(app.buttons["coins"]) {
+            shot("18-coins")
             app.swipeUp()
-            shot("07-shop-scrolled")
-            if tap(app.buttons["coins"]) {
-                shot("18-coins")
-                app.swipeUp()
-                shot("19-coins-scrolled")
-                dismissSheet(app)
-            }
+            shot("19-coins-scrolled")
+            dismissSheet(app)
         }
         if tap(app.buttons["Couple"]) {
             shot("08-profile")
@@ -61,6 +52,20 @@ final class UITourTests: XCTestCase {
                 }
             }
             closeProfile(app)
+        }
+        if tap(app.buttons["Moments"]) {
+            shot("04-moments")
+            if tap(app.buttons["All notes"]) {
+                shot("05-moments-notes")
+                dismissSheet(app)
+            }
+        }
+        if tap(app.buttons["Shop"]) {
+            shot("06-shop")
+            app.swipeUp()
+            shot("07-shop-scrolled")
+            // In case the swipe landed on a card and opened its sheet.
+            dismissSheet(app)
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
