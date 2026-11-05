@@ -103,8 +103,7 @@ struct ShopOffers {
     }
 
     func featured(on date: Date) -> FeaturedOffer {
-        let week = calendar.dateComponents([.weekOfYear, .yearForWeekOfYear], from: date)
-        let index = ((week.yearForWeekOfYear ?? 0) * 53 + (week.weekOfYear ?? 0)) % Self.featuredSets.count
+        let index = mondayWeek(of: date) % Self.featuredSets.count
         let set = Self.featuredSets[index]
         return FeaturedOffer(id: set.id, name: set.name, blurb: set.blurb, itemIDs: set.itemIDs,
                              share: Self.featuredShare, endsAt: nextWeek(after: date))
@@ -136,6 +135,14 @@ struct ShopOffers {
     }
 
     // MARK: Seeding
+
+    /// Weeks counted from Monday 2024-01-01, local time, so the set always changes on Monday, where the countdown
+    /// ends, whatever weekday the locale's calendar starts its weeks on.
+    func mondayWeek(of date: Date) -> Int {
+        let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 1)) ?? .distantPast
+        let days = calendar.dateComponents([.day], from: start, to: calendar.startOfDay(for: date)).day ?? 0
+        return max(0, days) / 7
+    }
 
     /// The local calendar day, so a deal lasts the couple's own day.
     func dayKey(_ date: Date) -> String {

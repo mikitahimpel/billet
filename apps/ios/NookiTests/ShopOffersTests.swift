@@ -2,9 +2,11 @@ import Foundation
 import Testing
 @testable import Billet
 
+/// Weeks start on Sunday here, as in the US locale: the featured set must still change on Monday.
 private let cal: Calendar = {
     var c = Calendar(identifier: .gregorian)
     c.timeZone = TimeZone(identifier: "Europe/Warsaw")!
+    c.firstWeekday = 1
     return c
 }()
 
@@ -54,6 +56,12 @@ private func offers(_ seed: String = "L+M") -> ShopOffers { ShopOffers(pairSeed:
         #expect(o.featured(on: at(5)).endsAt == at(9, 0))
         #expect(o.featured(on: at(5)) == o.featured(on: at(8, 23)))
         #expect(o.featured(on: at(9, 0, minute: 1)).id != o.featured(on: at(8)).id)
+
+        var monday = cal
+        monday.firstWeekday = 2
+        let m = ShopOffers(pairSeed: "L+M", calendar: monday)
+        #expect(m.featured(on: at(8, 23)) == o.featured(on: at(8, 23)))
+        #expect(m.featured(on: at(9, 1)) == o.featured(on: at(9, 1)))
     }
 
     @Test func featuredPriceIsHalfTheMissingPiecesAndNilWhenOwned() {
