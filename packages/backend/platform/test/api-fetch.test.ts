@@ -1143,7 +1143,10 @@ describe("rate limits in the Worker", () => {
     );
 
   it("answers 429 past the limit on a limited route, and not on others", async () => {
-    for (let i = 0; i < limits.auth; i++) expect((await challengeFrom()).status).toBe(200);
+    // All at once: each request is counted by one atomic upsert, and one at a time took close to
+    // the 5 s test timeout on CI. The window is fixed (TEST_NOW), so they all fall in it.
+    const allowed = await Promise.all(Array.from({ length: limits.auth }, challengeFrom));
+    expect(allowed.map(({ status }) => status)).toEqual(Array(limits.auth).fill(200));
     expect((await challengeFrom()).status).toBe(429);
     expect((await call("/v1/notes")).status).not.toBe(429);
   });
