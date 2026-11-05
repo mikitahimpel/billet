@@ -3,8 +3,17 @@
 public struct InviteCode: Codable, Hashable, Sendable {
   public let rawValue: String
 
+  /// The contract's `inviteCodeAlphabet` and `inviteCodeLength`; a test in contracts keeps them so.
+  public static let alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+  public static let length = 10
+
   public init(_ rawValue: String) {
     self.rawValue = rawValue
+  }
+
+  /// What a person typed or pasted, without case, spaces or dashes.
+  public static func normalized(_ typed: String) -> String {
+    String(typed.uppercased().filter { !$0.isWhitespace && $0 != "-" })
   }
 
   public init(from decoder: any Decoder) throws {

@@ -37,6 +37,7 @@ final class ServerSession {
 
     var onboarding: OnboardingClient { backend.onboarding }
     var api: APIClient { backend.api }
+    var baseURL: URL { backend.baseURL }
 
     var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
 

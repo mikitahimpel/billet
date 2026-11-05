@@ -207,6 +207,7 @@ struct HomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coupleChanged)) { _ in state.profile.reload() }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
             withAnimation(.spring(duration: 0.4)) { state.open(link) }

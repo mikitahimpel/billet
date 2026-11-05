@@ -17,6 +17,9 @@ export interface OpenChoiceStep {
   readonly skippable: boolean;
 }
 
+/** Options the app stops on and never sends: an older build that shows them is refused. */
+export const refusedOptions: ReadonlySet<string> = new Set(["age-under-13"]);
+
 /** A step an answer is checked against: a served question, or one the app draws itself. */
 export type CheckedStep = OnboardingStep | OpenChoiceStep;
 
@@ -30,6 +33,7 @@ export const answerProblem = (step: CheckedStep, answer: OnboardingAnswer): stri
     case "Skipped":
       return step.skippable ? undefined : "step can't be skipped";
     case "Single":
+      if (refusedOptions.has(answer.option)) return "never stored";
       if (step._tag === "OpenChoice") return undefined;
       if (step._tag !== "Single") return mismatch;
       return step.options.some((option) => option.id === answer.option)

@@ -28,6 +28,7 @@ import { PaymentsConfig, settingsForStage } from "@billet/backend-payments/payme
 import { PaymentsRoutes } from "@billet/backend-payments/payments-routes";
 import { PaymentsService } from "@billet/backend-payments/payments-service";
 import { isAdminPath, respondAdmin } from "./admin-fetch.ts";
+import { respondAppLink } from "./app-links.ts";
 import { readServedStatus } from "./app-status-live.ts";
 import { gateRequest } from "./maintenance-gate.ts";
 import { EventSinkLive } from "./event-sink-live.ts";
@@ -122,8 +123,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
 /**
  * The `Api` Worker's `fetch`. The router is built per request, because the services under it hold
  * I/O that a Worker can't share between requests. `/admin` is the admin panel, behind Cloudflare
- * Access (admin-fetch.ts). Anything else outside `/v1/` is the placeholder, which the deploy smoke
- * test reads. `experiments` is the registry and `now` the wall clock; only tests pass others.
+ * Access (admin-fetch.ts). Universal Links for invites are app-links.ts. Anything else outside
+ * `/v1/` is the placeholder, which the deploy smoke test reads. `experiments` is the registry and `now` the wall clock; only tests pass others.
  */
 export const respondApi = (
   request: Request,
@@ -143,7 +144,7 @@ export const respondApi = (
       respondAdmin(request, env, ctx, { experiments, context }),
     );
   }
-  return Promise.resolve(respondPlaceholder());
+  return Promise.resolve(respondAppLink(pathname) ?? respondPlaceholder());
 };
 
 const routeApi = async (
