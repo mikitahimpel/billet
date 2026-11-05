@@ -137,6 +137,7 @@ export const itemFor = (row: ActivityRow, caller: UserId): ActivityItem => {
     actor,
     event: row.event,
     ...(row.target === undefined ? {} : { target: row.target }),
+    cursor: cursorOf(row),
   };
 };
 

@@ -12,7 +12,6 @@ struct ItemSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var turntable = ItemTurntable()
-    @State private var purchases = 0
     /// Still frame stays up until the 3D preview has really had a chance to draw.
     @State private var showsPlaceholder = true
     @State private var celebrating = false
@@ -42,7 +41,6 @@ struct ItemSheet: View {
                 .padding(.bottom, 20)
         }
         .usSheet(detents: [.fraction(0.68)])
-        .haptic(.success, trigger: purchases)
     }
 
     // MARK: 3D scene
@@ -189,10 +187,14 @@ struct ItemSheet: View {
 
     private func buy() {
         guard state.buy(item) else { return }
-        purchases += 1
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
         withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }
+        // The purchase moment plays over the app once the sheet is out of the way.
+        Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            dismiss()
+        }
     }
 }
 

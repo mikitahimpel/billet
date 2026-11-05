@@ -36,6 +36,12 @@ public struct APIClient: Sendable {
   /// Counts a few things the app did: names, with a catalogue id or a price for some. The server
   /// stamps the time.
   public var reportEvents: @Sendable (_ events: [ClientEvent]) async throws(TransportError) -> Void
+  /// One page of the pair's activity, newest first, from `before` (the previous page's `next`).
+  public var listActivity:
+    @Sendable (_ before: String?) async throws(TransportError) -> ActivityResponse
+  /// Moves this user's read mark up to a cursor and answers the unread count left.
+  public var markActivityRead:
+    @Sendable (MarkActivityReadRequest) async throws(TransportError) -> ActivityUnreadResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -75,7 +81,14 @@ public struct APIClient: Sendable {
     deleteAccount:
       @escaping @Sendable (DeleteAccountRequest) async throws(TransportError) -> Void = {
         (_) async throws(TransportError) in throw .network("offline")
-      }
+      },
+    listActivity:
+      @escaping @Sendable (_ before: String?) async throws(TransportError) -> ActivityResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    markActivityRead:
+      @escaping @Sendable (MarkActivityReadRequest) async throws(TransportError) ->
+      ActivityUnreadResponse = { (_) async throws(TransportError) in throw .network("offline") }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -95,6 +108,8 @@ public struct APIClient: Sendable {
     self.flags = flags
     self.status = status
     self.reportEvents = reportEvents
+    self.listActivity = listActivity
+    self.markActivityRead = markActivityRead
   }
 }
 
@@ -203,6 +218,21 @@ extension APIClient {
       },
       deleteAccount: { (body) async throws(TransportError) in
         try await http.performEmpty(try await json(Routes.deleteAccount, signed: true, body: body))
+      },
+      listActivity: { (before) async throws(TransportError) in
+        var route = Routes.listActivity
+        if let before,
+          let cursor = before.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed)
+        {
+          route = Route(route.method, route.path + "?before=\(cursor)")
+        }
+        return try await http.perform(
+          try await request(route, signed: true), as: ActivityResponse.self)
+      },
+      markActivityRead: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.markActivityRead, signed: true, body: body),
+          as: ActivityUnreadResponse.self)
       })
   }
 }
@@ -225,4 +255,10 @@ extension APIClient {
     flags: { () async throws(TransportError) in throw .network("offline") },
     status: { () async throws(TransportError) in throw .network("offline") },
     reportEvents: { (_) async throws(TransportError) in throw .network("offline") })
+}
+
+extension CharacterSet {
+  /// What may stand unescaped in a query value: `&`, `=` and `+` are taken out of the query set.
+  fileprivate static let urlQueryValueAllowed = CharacterSet.urlQueryAllowed.subtracting(
+    CharacterSet(charactersIn: "&=+"))
 }
