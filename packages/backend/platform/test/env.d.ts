@@ -1,6 +1,8 @@
 declare namespace Cloudflare {
   interface Env {
     readonly DB: D1Database;
+    /** The instant the test rooms live at, as ISO; see test-now.ts. */
+    readonly TEST_NOW: string;
     readonly STUB_DEMO_ROOM: DurableObjectNamespace<
       import("../src/demo-room-durable-object.ts").DemoRoom
     >;

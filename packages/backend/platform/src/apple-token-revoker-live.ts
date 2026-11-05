@@ -3,6 +3,7 @@ import { AppleTokenRevoker, type RevokeOutcome } from "@billet/backend-account/a
 import { appleAudience } from "@billet/backend-auth/apple-identity-verifier";
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
+import { type Now, systemNow } from "./wall-clock.ts";
 
 const appleOrigin = "https://appleid.apple.com";
 /** Apple accepts a client secret for up to six months; this one lives for one request. */
@@ -39,8 +40,9 @@ export const revokeAppleToken = async (
   key: SignInWithAppleKey,
   code: Redacted.Redacted<string>,
   send: AppleFetch = fetch,
+  clock: Now = systemNow,
 ): Promise<RevokeOutcome> => {
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(clock() / 1000);
   const clientSecret = await signEs256(
     { pem: Redacted.value(key.pem), keyId: Redacted.value(key.keyId) },
     {

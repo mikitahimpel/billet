@@ -5,8 +5,28 @@
     "correctness": "error"
   },
   "rules": {
-    "unicorn/filename-case": ["error", { "case": "kebabCase" }],
+    "unicorn/filename-case": [
+      "error",
+      {
+        "case": "kebabCase"
+      }
+    ],
     "import/no-cycle": "error",
     "import/no-default-export": "error"
-  }
+  },
+  "jsPlugins": ["./no-real-time.js"],
+  "overrides": [
+    {
+      "files": ["**/test/**/*.ts", "**/*.test.ts"],
+      "rules": {
+        "billet/no-real-time": "error"
+      }
+    },
+    {
+      "files": ["**/oxlint/no-real-time.js"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    }
+  ]
 }
