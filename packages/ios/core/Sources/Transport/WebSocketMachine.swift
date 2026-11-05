@@ -194,9 +194,9 @@ public enum WebSocketMachine: Machine {
       return max(lastSeq ?? seq, seq)
     // A live stroke carries the room's latest note `seq`, which this client may not have received
     // yet, so counting it would let a reconnect skip notes.
-    // Cat frames have their own journal `seq`, never a note's.
+    // Cat frames have their own journal `seq`, never a note's, and the Inbox count has none.
     case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear,
-      .catEntryAdded, .catSaved:
+      .catEntryAdded, .catSaved, .activityUnread:
       return lastSeq
     }
   }

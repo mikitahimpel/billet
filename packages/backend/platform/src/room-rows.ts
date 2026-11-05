@@ -57,3 +57,16 @@ export const StoredCatEntry = Schema.Struct({
   at: Schema.Int,
   body: Schema.String,
 });
+
+/** What an `activity` row holds: `body` is the item's event and target as JSON. */
+export const StoredActivity = Schema.Struct({
+  id: Schema.String,
+  sortKey: Schema.String,
+  at: Schema.Int,
+  doerKind: Schema.String,
+  doerUser: Schema.NullOr(Schema.String),
+  body: Schema.String,
+});
+
+/** What an `activity_read` row holds. */
+export const StoredActivityRead = Schema.Struct({ user: Schema.String, upTo: Schema.String });

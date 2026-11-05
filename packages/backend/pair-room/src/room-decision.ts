@@ -15,7 +15,8 @@ export const RoomOutput = Schema.TaggedUnion({
   NoteAppended: { entry: SequencedNote, key: IdempotencyKey },
   NoteRepeated: { entry: SequencedNote },
   PresenceChanged: { user: UserId, state: PresenceState },
-  CatSaved: { cat: CatProfile },
+  /** `adopted` is true for the save that brought the cat home. */
+  CatSaved: { cat: CatProfile, by: UserId, adopted: Schema.Boolean },
   /** A journal entry to store: one a phone recorded, or the room's own for a stored note. */
   CatEntryAppended: { entry: CatEntry },
   /** A record whose `id` the room already holds: nothing is stored or fanned out. */

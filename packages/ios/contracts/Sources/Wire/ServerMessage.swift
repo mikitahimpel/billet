@@ -14,6 +14,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case catEntryAdded(CatEntry)
   /// The cat was adopted, renamed or given a new look.
   case catSaved(CatProfile)
+  /// The Inbox's unread count for this user, sent to a socket that resumed with `activity: true`.
+  case activityUnread(unread: Int)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -25,6 +27,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case points
     case entry
     case cat
+    case unread
   }
 
   public init(from decoder: any Decoder) throws {
@@ -57,6 +60,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .catEntryAdded(try container.decode(CatEntry.self, forKey: .entry))
     case "CatSaved":
       self = .catSaved(try container.decode(CatProfile.self, forKey: .cat))
+    case "ActivityUnread":
+      self = .activityUnread(unread: try container.decode(Int.self, forKey: .unread))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -98,6 +103,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .catSaved(let cat):
       try container.encode("CatSaved", forKey: .tag)
       try container.encode(cat, forKey: .cat)
+    case .activityUnread(let unread):
+      try container.encode("ActivityUnread", forKey: .tag)
+      try container.encode(unread, forKey: .unread)
     }
   }
 }
