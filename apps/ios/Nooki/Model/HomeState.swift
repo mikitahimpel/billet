@@ -7,6 +7,14 @@ enum HomeTab: CaseIterable {
     case world, moments, shop, us
 }
 
+/// Where the Shop opens when something elsewhere points at it, e.g. a locked ink in the drawing palette.
+enum ShopFocus: Hashable {
+    /// The Inks block in Today, at that ink.
+    case ink(String)
+    /// That item's sheet.
+    case item(String)
+}
+
 /// Which of Mochi's rooms the World tab shows.
 enum RoomKind: CaseIterable {
     case home, city
@@ -38,6 +46,15 @@ final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
+    /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
+    var shopFocus: ShopFocus?
+
+    /// Opens the Shop at an ink or an item.
+    func openShop(_ focus: ShopFocus) {
+        shopFocus = focus
+        tab = .shop
+    }
+
     var room: RoomKind = .home
     /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
     let rooms = RoomsChoice()
@@ -208,6 +225,14 @@ final class HomeState {
                 momentsMode = .board
             }
         default: break
+        }
+        // For screenshots: `-shopCoins 20` sets the balance and `-shopOwned lamp,rug` what the couple owns.
+        if defaults.object(forKey: "shopCoins") != nil {
+            let coins = defaults.integer(forKey: "shopCoins")
+            wallet.update { $0.coins = coins }
+        }
+        if let owned = defaults.string(forKey: "shopOwned") {
+            wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
         }
         if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
             tab = .moments
