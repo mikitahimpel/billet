@@ -77,6 +77,11 @@ catalogs:
 overrides:
   '@effect/platform-node-shared': 4.0.6
 
+patchedDependencies:
+  '@cloudflare/vitest-pool-workers@0.23.0':
+    hash: 3c1867b22487025371bbf7ddaf897f2aaa6e2f2203be06cfc830d2e9a733df23
+    path: patches/@cloudflare__vitest-pool-workers@0.23.0.patch
+
 importers:
 
   .:
@@ -629,7 +634,7 @@ importers:
         version: link:../../config/typescript
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
-        version: 0.23.0(@cloudflare/workers-types@5.20261101.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)))
+        version: 0.23.0(patch_hash=3c1867b22487025371bbf7ddaf897f2aaa6e2f2203be06cfc830d2e9a733df23)(@cloudflare/workers-types@5.20261101.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)))
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 5.20261101.1
@@ -3513,7 +3518,7 @@ snapshots:
     optionalDependencies:
       workerd: 1.20261012.1
 
-  '@cloudflare/vitest-pool-workers@0.23.0(@cloudflare/workers-types@5.20261101.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)))':
+  '@cloudflare/vitest-pool-workers@0.23.0(patch_hash=3c1867b22487025371bbf7ddaf897f2aaa6e2f2203be06cfc830d2e9a733df23)(@cloudflare/workers-types@5.20261101.1)(@vitest/runner@4.1.12)(@vitest/snapshot@4.1.12)(vitest@4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)))':
     dependencies:
       '@vitest/runner': 4.1.12
       '@vitest/snapshot': 4.1.12
