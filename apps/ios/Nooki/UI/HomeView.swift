@@ -20,6 +20,8 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// The room's one view, kept across tabs (see `KeptRoomView`).
+    @State private var roomHost = RoomHost()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -51,9 +53,10 @@ struct HomeView: View {
                 // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
                 // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
                 // (CatRoom), so coming back only makes a new view for it.
-                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
+                let room = DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
+                KeptRoomView(host: roomHost, room: room)
                 .opacity(showsRoom ? 1 : 0)
                 .allowsHitTesting(showsRoom && state.game == nil)
                 .modifier(RoomTapCounter())
@@ -479,6 +482,49 @@ private struct SnapshotView: UIViewRepresentable {
     }
 
     func updateUIView(_ holder: UIView, context: Context) {}
+}
+
+/// Holds the room's view and what goes with it, made once and kept while the room is off screen.
+@MainActor
+private final class RoomHost {
+    private var controller: UIHostingController<DioramaView>?
+
+    func view(showing room: DioramaView) -> UIView {
+        if let controller {
+            controller.rootView = room
+            return controller.view
+        }
+        let controller = UIHostingController(rootView: room)
+        controller.safeAreaRegions = []
+        controller.view.backgroundColor = .clear
+        self.controller = controller
+        return controller.view
+    }
+
+    func show(_ room: DioramaView) { controller?.rootView = room }
+}
+
+/// The room's view, the same one every time it shows. Out of the window it neither draws nor composites, and back
+/// in it carries on from its last frame instead of setting up a new renderer.
+private struct KeptRoomView: UIViewRepresentable {
+    let host: RoomHost
+    let room: DioramaView
+
+    func makeUIView(context: Context) -> UIView {
+        let holder = UIView()
+        let view = host.view(showing: room)
+        view.removeFromSuperview()
+        view.frame = holder.bounds
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        holder.addSubview(view)
+        return holder
+    }
+
+    func updateUIView(_ holder: UIView, context: Context) { host.show(room) }
+
+    static func dismantleUIView(_ holder: UIView, coordinator: ()) {
+        for view in holder.subviews { view.removeFromSuperview() }
+    }
 }
 
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
