@@ -182,8 +182,10 @@ struct HomeView: View {
         }
         .onChange(of: state.tab) { old, new in
             // The room view goes with the World (see above): keep what it showed, to show again on the way back.
+            // Not while something is presented, a hint's popover say: the snapshot would bring it back with the room.
             if old == .world, !showsRoom {
-                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                worldSnapshot =
+                    Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
             if new == .world, let scene, worldSnapshot != nil {
                 roomLive = false

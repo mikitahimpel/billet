@@ -60,18 +60,8 @@ struct NookiApp: App {
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
-                    .onChange(of: canInvite, initial: true) { hints.canInvite(canInvite) }
-                    .onChange(of: session?.isPaired == true, initial: true) { _, paired in
-                        if paired { hints.done(InviteHint()) }
-                    }
             }
         }
-    }
-
-    /// Someone to invite: signed in, and not paired yet.
-    private var canInvite: Bool {
-        guard let session else { return false }
-        return session.isSignedIn && !session.isPaired
     }
 
     /// The app was launched to host NookiTests.
