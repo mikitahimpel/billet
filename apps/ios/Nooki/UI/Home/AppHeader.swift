@@ -1,5 +1,4 @@
 import SwiftUI
-import TipKit
 
 /// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox top-left; top-right the
 /// coins, then the couple's avatars in the corner, which open the profile. Nothing else sits in it.
@@ -9,7 +8,6 @@ struct AppHeader: View {
     var erase: () -> Void
     @State private var pairing = false
     @Namespace private var zoom
-    @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
@@ -49,12 +47,6 @@ struct AppHeader: View {
             }
             .accessibilityLabel("Couple")
             .accessibilityHint("Opens your profile")
-            .popoverTip(InviteHint(), arrowEdge: .top) { action in
-                if action.id == InviteHint.inviteAction {
-                    hints.done(InviteHint())
-                    pairing = true
-                }
-            }
         }
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in

@@ -11,8 +11,6 @@ nonisolated struct HintContext: Hashable {
     var onboarded = true
     /// A sheet, a cover, the purchase moment or a game is up: no hint over it.
     var busy = false
-    /// Signed in and not paired yet.
-    var canInvite = false
     /// The room switch is there to point at.
     var hasRoomChoice = false
     var canAffordTreat = false
@@ -21,9 +19,8 @@ nonisolated struct HintContext: Hashable {
 /// Which hint, if any, a screen visit shows. Each hint has one trigger; when several are due, the first in `order`
 /// wins. A seen hint never comes back, one visit shows at most one hint and one session at most `perSession`.
 nonisolated enum HintPlan {
-    /// Invite comes right after the cat: the app is half empty without a partner.
     static let order = [
-        PetHint.hintId, InviteHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId, RoomsHint.hintId,
+        PetHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId, RoomsHint.hintId,
         TreatHint.hintId,
     ]
     static let perSession = 2
@@ -41,7 +38,6 @@ nonisolated enum HintPlan {
         let metCat = seen.contains(PetHint.hintId)
         switch id {
         case PetHint.hintId: return world
-        case InviteHint.hintId: return world && metCat && context.canInvite
         case AddHint.hintId: return world && metCat
         case MomentsHint.hintId: return context.screen == .moments
         case ShopHint.hintId: return context.screen == .shop

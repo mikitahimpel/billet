@@ -121,7 +121,6 @@ private struct ValueBadge: View {
         .padding(.horizontal, Space.m)
         .padding(.vertical, Space.xs + 2)
         .background(ShopInk.gold, in: .rect(cornerRadius: Radius.control, style: .continuous))
-        .rotationEffect(.degrees(5))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(multiple) times the value, saves \(saves) coins")
     }
