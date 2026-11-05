@@ -3,6 +3,7 @@ public enum DeliveryLane: Codable, Hashable, Sendable {
   case widgetPush
   case alertPush
   case timelineRefresh
+  case liveActivityPush
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -16,6 +17,7 @@ public enum DeliveryLane: Codable, Hashable, Sendable {
     case "WidgetPush": self = .widgetPush
     case "AlertPush": self = .alertPush
     case "TimelineRefresh": self = .timelineRefresh
+    case "LiveActivityPush": self = .liveActivityPush
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -29,6 +31,7 @@ public enum DeliveryLane: Codable, Hashable, Sendable {
     case .widgetPush: try container.encode("WidgetPush", forKey: .tag)
     case .alertPush: try container.encode("AlertPush", forKey: .tag)
     case .timelineRefresh: try container.encode("TimelineRefresh", forKey: .tag)
+    case .liveActivityPush: try container.encode("LiveActivityPush", forKey: .tag)
     }
   }
 }

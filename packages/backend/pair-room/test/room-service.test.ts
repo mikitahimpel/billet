@@ -1,57 +1,13 @@
-import { Clock, Effect, Layer, Option, Schema } from "effect";
+import { Clock, Effect, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
-import { IdempotencyKey, NoteId } from "@billet/contracts-domain/ids";
+import { IdempotencyKey } from "@billet/contracts-domain/ids";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
-import { NoteIdSource } from "../src/note-id-source.ts";
 import { RoomCommand } from "../src/room-command.ts";
 import { RoomService } from "../src/room-service.ts";
-import type { ActiveRoom, RoomState, SequencedNote } from "../src/room-state.ts";
-import { RoomStore, type AppendedNote } from "../src/room-store.ts";
+import type { RoomStore } from "../src/room-store.ts";
+import { countingIds, memoryStore } from "./memory-store.ts";
 import { active, alice, bob, image, mallory, pairId, vacant } from "./samples.ts";
-
-/** An in-memory store. `load` yields after reading, so a fiber gives way before it commits. */
-const memoryStore = (options?: { readonly failCommit?: boolean }) => {
-  const memory = {
-    state: vacant as RoomState,
-    notes: [] as Array<SequencedNote>,
-    keys: new Map<string, SequencedNote>(),
-  };
-  const layer = Layer.succeed(RoomStore, {
-    load: Effect.sync(() => memory.state).pipe(Effect.tap(() => Effect.yieldNow)),
-    commit: (room: ActiveRoom, notes: ReadonlyArray<AppendedNote>) =>
-      Effect.suspend(() => {
-        if (options?.failCommit === true) return Effect.die("storage is down");
-        memory.state = room;
-        for (const { entry, key } of notes) {
-          memory.notes.push(entry);
-          memory.keys.set(`${entry.note.author}/${key}`, entry);
-        }
-        return Effect.void;
-      }),
-    noteByKey: (author, key) =>
-      Effect.sync(() => Option.fromNullishOr(memory.keys.get(`${author}/${key}`))),
-    notesAfter: (afterSeq: number, limit: number) =>
-      Effect.sync(() => memory.notes.filter((n) => n.seq > afterSeq).slice(0, limit)),
-    forgetAuthor: (author) =>
-      Effect.sync(() => {
-        const forgotten = memory.notes.filter((entry) => entry.note.author === author);
-        memory.notes = memory.notes.filter((entry) => entry.note.author !== author);
-        for (const [key, entry] of memory.keys) {
-          if (entry.note.author === author) memory.keys.delete(key);
-        }
-        return forgotten;
-      }),
-  });
-  return { memory, layer };
-};
-
-const countingIds = () => {
-  let next = 0;
-  return Layer.succeed(NoteIdSource, {
-    next: Effect.sync(() => Schema.decodeUnknownSync(NoteId)(`note-${(next += 1)}`)),
-  });
-};
 
 const runWith = <A, E>(
   store: Layer.Layer<RoomStore>,
@@ -70,7 +26,14 @@ const newKey = () =>
   Schema.decodeSync(IdempotencyKey)(
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
-const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = () =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 describe("RoomService", () => {
   it("opens a room and commits its state", async () => {
@@ -99,6 +62,9 @@ describe("RoomService", () => {
       author: alice,
       sentAt: 1_700_000_000_000,
       image,
+      width: 4032,
+      height: 3024,
+      preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
     };
     expect(decision).toMatchObject({ _tag: "Accepted", state: { lastSeq: 1 } });
     expect(memory.notes).toEqual([{ seq: 1, note }]);

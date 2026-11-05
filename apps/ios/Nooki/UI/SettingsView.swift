@@ -103,6 +103,7 @@ struct SettingsView: View {
                 Section {
                     Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
                     Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
+                    NavigationLink { StyleGallery() } label: { row("Style", symbol: "paintpalette.fill", tint: .sun) }
                 } header: {
                     Text("Labs")
                 } footer: {

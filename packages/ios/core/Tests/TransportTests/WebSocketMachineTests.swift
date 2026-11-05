@@ -13,17 +13,17 @@ import Wire
     State(phase: phase, lastSeq: lastSeq, attempt: attempt)
   }
 
-  @Test func connectStartsAttemptOneWithATimeout() {
+  @Test func connectStartsAttemptOneWithATimeoutAskingForNotesFromZero() {
     let (state, outputs) = Machine.transition(State.initial, .connectRequested)
     #expect(state == Self.state(.connecting(failures: 0), attempt: 1))
-    #expect(outputs == [.open(attempt: 1), .startConnectTimeout(attempt: 1)])
+    #expect(outputs == [.open(attempt: 1, resumeFrom: 0), .startConnectTimeout(attempt: 1)])
   }
 
-  @Test func firstConnectionAsksForNotesFromZero() {
+  @Test func openingStartsTheStabilityTimer() {
     let (state, outputs) = Machine.transition(
       Self.state(.connecting(failures: 0)), .opened(attempt: 1))
     #expect(state == Self.state(.connected(failures: 0)))
-    #expect(outputs == [.send(.resume(lastSeq: 0), attempt: 1), .startStabilityTimer(attempt: 1)])
+    #expect(outputs == [.startStabilityTimer(attempt: 1)])
   }
 
   static let note = Note.photo(
@@ -70,7 +70,7 @@ import Wire
     let (state, outputs) = Machine.transition(
       Self.state(.backingOff(failures: 1), lastSeq: 7), .retryElapsed(attempt: 1))
     #expect(state == Self.state(.connecting(failures: 1), lastSeq: 7, attempt: 2))
-    #expect(outputs == [.open(attempt: 2), .startConnectTimeout(attempt: 2)])
+    #expect(outputs == [.open(attempt: 2, resumeFrom: 7), .startConnectTimeout(attempt: 2)])
   }
 
   @Test func failedAttemptsBackOffLonger() {
@@ -80,11 +80,11 @@ import Wire
     #expect(outputs == [.close(attempt: 2), .scheduleRetry(afterFailures: 2, attempt: 2)])
   }
 
-  @Test func reopeningResumesAfterLastSeq() {
+  @Test func reopeningKeepsLastSeq() {
     let (state, outputs) = Machine.transition(
       Self.state(.connecting(failures: 2), lastSeq: 7, attempt: 3), .opened(attempt: 3))
     #expect(state == Self.state(.connected(failures: 2), lastSeq: 7, attempt: 3))
-    #expect(outputs == [.send(.resume(lastSeq: 7), attempt: 3), .startStabilityTimer(attempt: 3)])
+    #expect(outputs == [.startStabilityTimer(attempt: 3)])
   }
 
   @Test func aConnectThatNeverAnswersTimesOutAndRetries() {
@@ -97,7 +97,7 @@ import Wire
       (state, outputs) = Machine.transition(state, event)
     }
     #expect(state == Self.state(.connecting(failures: 1), attempt: 2))
-    #expect(outputs == [.open(attempt: 2), .startConnectTimeout(attempt: 2)])
+    #expect(outputs == [.open(attempt: 2, resumeFrom: 0), .startConnectTimeout(attempt: 2)])
   }
 
   @Test func dropThenResumeEndToEnd() {
@@ -107,13 +107,12 @@ import Wire
       .connectRequested, .opened(attempt: 1),
       .received(attempt: 1, .noteReceived(seq: 5, note: Self.note)), .dropped(attempt: 1),
       .retryElapsed(attempt: 1), .dropped(attempt: 2), .retryElapsed(attempt: 2),
-      .opened(attempt: 3),
     ]
     for event in events {
       (state, outputs) = Machine.transition(state, event)
     }
-    #expect(state == Self.state(.connected(failures: 2), lastSeq: 5, attempt: 3))
-    #expect(outputs == [.send(.resume(lastSeq: 5), attempt: 3), .startStabilityTimer(attempt: 3)])
+    #expect(state == Self.state(.connecting(failures: 2), lastSeq: 5, attempt: 3))
+    #expect(outputs == [.open(attempt: 3, resumeFrom: 5), .startConnectTimeout(attempt: 3)])
   }
 
   @Test(
@@ -140,7 +139,7 @@ import Wire
     let (state, outputs) = Machine.transition(
       Self.state(.idle, lastSeq: 3), .connectRequested)
     #expect(state == Self.state(.connecting(failures: 0), lastSeq: 3, attempt: 2))
-    #expect(outputs == [.open(attempt: 2), .startConnectTimeout(attempt: 2)])
+    #expect(outputs == [.open(attempt: 2, resumeFrom: 3), .startConnectTimeout(attempt: 2)])
   }
 
   @Test(

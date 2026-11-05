@@ -5,11 +5,41 @@ import { decide, isMember } from "../src/decide.ts";
 import { RoomCommand } from "../src/room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "../src/room-decision.ts";
 import { RoomState, type ActiveRoom } from "../src/room-state.ts";
-import { active, alice, bob, mallory, otherPairId, pairId, photoFrom, vacant } from "./samples.ts";
+import {
+  active,
+  alice,
+  bob,
+  catProfile,
+  mallory,
+  otherPairId,
+  pairId,
+  photoFrom,
+  uuid,
+  vacant,
+  withCat,
+} from "./samples.ts";
 
 const key = Schema.decodeUnknownSync(IdempotencyKey)("6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f");
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
 const send = (author = alice) => RoomCommand.cases.SendNote.make({ note: photoFrom(author), key });
+const saveCat = (user = alice, at = 1_700_000_500_000) =>
+  RoomCommand.cases.SaveCat.make({
+    user,
+    name: catProfile.name,
+    look: catProfile.look,
+    utcOffsetSeconds: catProfile.utcOffsetSeconds,
+    natureSeed: catProfile.natureSeed,
+    at,
+  });
+const pet = (by = alice, at = 1_700_000_100_000, id = uuid(1)) =>
+  RoomCommand.cases.RecordCatEvent.make({ id, by, at, event: { _tag: "Petted" } });
+const petEntry = {
+  seq: 1,
+  id: uuid(1),
+  by: alice,
+  at: 1_700_000_100_000,
+  event: { _tag: "Petted" },
+} as const;
 const setPresence = (user = alice, state: "idle" | "drawing" = "drawing") =>
   RoomCommand.cases.SetPresence.make({ user, state });
 
@@ -138,11 +168,13 @@ describe("isMember", () => {
 });
 
 describe("tagged unions", () => {
-  const states: Record<RoomState["_tag"], RoomState> = { Vacant: vacant, Active: active };
+  const states: Record<RoomState["_tag"], RoomState> = { Vacant: vacant, Active: withCat };
   const commands: Record<RoomCommand["_tag"], RoomCommand> = {
     Open: open,
     SendNote: send(),
     SetPresence: setPresence(),
+    SaveCat: saveCat(),
+    RecordCatEvent: pet(),
   };
   const outputs: Record<RoomOutput["_tag"], RoomOutput> = {
     RoomOpened: RoomOutput.cases.RoomOpened.make({ pairId }),
@@ -154,12 +186,17 @@ describe("tagged unions", () => {
       entry: { seq: 1, note: photoFrom(alice) },
     }),
     PresenceChanged: RoomOutput.cases.PresenceChanged.make({ user: alice, state: "drawing" }),
+    CatSaved: RoomOutput.cases.CatSaved.make({ cat: catProfile, by: alice, adopted: true }),
+    CatEntryAppended: RoomOutput.cases.CatEntryAppended.make({ entry: petEntry }),
+    CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
     RoomNotOpen: RoomRejection.cases.RoomNotOpen.make({}),
     RoomAlreadyOpen: RoomRejection.cases.RoomAlreadyOpen.make({}),
     NotAMember: RoomRejection.cases.NotAMember.make({ user: mallory }),
+    CatNotAdopted: RoomRejection.cases.CatNotAdopted.make({}),
+    CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
   };
 
   it.each([

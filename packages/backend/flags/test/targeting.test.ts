@@ -50,4 +50,23 @@ describe("isTargeted", () => {
     expect(isTargeted({ minAppVersion: "0" }, unknown)).toBe(false);
     expect(isTargeted({ maxAppVersion: "99" }, unknown)).toBe(false);
   });
+
+  describe("pairedSince", () => {
+    const since = "2026-11-05T09:30Z";
+    const at = Date.UTC(2026, 10, 5, 9, 30);
+
+    it("lets in pairs formed at or after the moment", () => {
+      expect(isTargeted({ pairedSince: since }, { ...context, pairedAt: at })).toBe(true);
+      expect(isTargeted({ pairedSince: since }, { ...context, pairedAt: at + 1 })).toBe(true);
+    });
+
+    it("leaves out pairs formed before it, and pairs whose formation time is unknown", () => {
+      expect(isTargeted({ pairedSince: since }, { ...context, pairedAt: at - 1 })).toBe(false);
+      expect(isTargeted({ pairedSince: since }, context)).toBe(false);
+    });
+
+    it("lets every pair in when absent", () => {
+      expect(isTargeted({}, { ...context, pairedAt: 0 })).toBe(true);
+    });
+  });
 });
