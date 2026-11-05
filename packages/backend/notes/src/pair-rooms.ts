@@ -1,5 +1,7 @@
 import { Context, type Effect } from "effect";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
+import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import type { UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type {
@@ -59,5 +61,18 @@ export class PairRooms extends Context.Service<
       afterSeq: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<CatEntry>, NotesUnavailable>;
+    /** One page of the Inbox as `caller` sees it. A room not opened yet has none. */
+    readonly activity: (
+      pairId: PairId,
+      caller: UserId,
+      before: ActivityCursor | undefined,
+      limit: number,
+    ) => Effect.Effect<ActivityResponse, NotesUnavailable>;
+    /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
+    readonly markActivityRead: (
+      pairId: PairId,
+      user: UserId,
+      upTo: ActivityCursor,
+    ) => Effect.Effect<number, NotesUnavailable>;
   }
 >()("@billet/backend-notes/PairRooms") {}

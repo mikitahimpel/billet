@@ -18,7 +18,8 @@
     "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",
     "./status": "./src/status.ts",
-    "./onboarding": "./src/onboarding.ts"
+    "./onboarding": "./src/onboarding.ts",
+    "./activity": "./src/activity.ts"
   },
   "scripts": {
     "lint": "oxlint .",

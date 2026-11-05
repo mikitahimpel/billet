@@ -22,7 +22,7 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
 streak, presence and the couple's cat (its profile, temper and append-only journal, see
-[cat-state.md](cat-state.md)) in its own SQLite database, relays in-progress strokes, and uses hibernatable
+[cat-state.md](cat-state.md)) and the activity Inbox (see [activity.md](activity.md)) in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.
 
@@ -189,7 +189,8 @@ A repeated open is accepted, so two first notes at once are safe.
 
 `packages/backend/notes` holds this logic on injected `MediaStore` and `PairRooms` services, which
 `platform` provides. The cat routes (`GET`/`PUT /v1/cat`, `GET /v1/cat/journal`,
-`POST /v1/cat/events`) live there too, in `CatService`, on the same rule: the pair comes from D1.
+`POST /v1/cat/events`) live there too, in `CatService`, and so do the Inbox routes (`GET /v1/activity`,
+`POST /v1/activity/read`) in `ActivityService`, on the same rule: the pair comes from D1.
 
 ### Deleting an account
 

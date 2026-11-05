@@ -1,4 +1,10 @@
 import { Schema } from "effect";
+import {
+  ActivityCursor,
+  ActivityEvent,
+  ActivityItem,
+  ActivityTarget,
+} from "@billet/contracts-domain/activity";
 import { CatEntry, CatEvent, CatNeeds, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
 import {
@@ -64,6 +70,11 @@ import {
   RecordCatEventResponse,
   SaveCatRequest,
 } from "@billet/contracts-http-api/cat";
+import {
+  ActivityResponse,
+  ActivityUnreadResponse,
+  MarkActivityReadRequest,
+} from "@billet/contracts-http-api/activity";
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
@@ -248,6 +259,76 @@ const catNeeds: CatNeeds = {
   asleep: false,
 };
 const lonelyCatNeeds: CatNeeds = { ...catNeeds, loved: 0.31, missing: bob };
+
+const activityEvents = {
+  "cat-fed": { _tag: "CatFed", grams: 40 },
+  "cat-petted": { _tag: "CatPetted" },
+  "cat-played": { _tag: "CatPlayed" },
+  "cat-game-played": { _tag: "CatGamePlayed", game: "laser", score: 7, won: true },
+  "cat-slept": { _tag: "CatSlept" },
+  "cat-shooed": { _tag: "CatShooed" },
+  "plant-watered": { _tag: "PlantWatered", plant: "monstera" },
+  "plant-watered-by-the-window": { _tag: "PlantWatered" },
+  "cat-adopted": { _tag: "CatAdopted", name: "Mochi" },
+  "cat-renamed": { _tag: "CatRenamed", name: "Мочи 🐾" },
+  "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
+  purchased: {
+    _tag: "Purchased",
+    offer: "bundle:starter-ink",
+    items: ["ink-rose", "armchair"],
+    coins: 120,
+  },
+  "purchased-one": { _tag: "Purchased", items: ["armchair"], coins: 80 },
+  "gift-claimed": { _tag: "GiftClaimed", coins: 10 },
+  "bonus-earned": { _tag: "BonusEarned", collection: "cozy-cabin", coins: 50 },
+  "coins-bought": {
+    _tag: "CoinsBought",
+    productId: "com.mikitahimpel.billet.coins.small",
+    coins: 500,
+  },
+  refunded: { _tag: "Refunded", productId: "com.mikitahimpel.billet.coins.small", coins: 500 },
+  "streak-reached": { _tag: "StreakReached", days: 7 },
+} as const;
+const activityTargets = {
+  note: { _tag: "Note", note: "note-1" },
+  moments: { _tag: "Moments", note: "note-1" },
+  cat: { _tag: "Cat" },
+  plant: { _tag: "Plant", plant: "monstera" },
+  "shop-item": { _tag: "ShopItem", id: "armchair" },
+  "shop-offer": { _tag: "ShopOffer", id: "deal:2026-11-05:0" },
+} as const;
+const decodeSamples = <S extends Schema.Codec<unknown, unknown>>(
+  schema: S,
+  samples: Readonly<Record<string, unknown>>,
+): Record<string, S["Type"]> =>
+  Object.fromEntries(
+    Object.entries(samples).map(([name, sample]) => [
+      name,
+      Schema.decodeUnknownSync(schema)(sample),
+    ]),
+  );
+const activityItem = Schema.decodeUnknownSync(ActivityItem);
+const fedItem = activityItem({
+  id: `cat:${idempotencyKey}`,
+  at: 1_700_000_101_000,
+  actor: "Partner",
+  event: activityEvents["cat-fed"],
+  target: activityTargets.cat,
+});
+const drawingItem = activityItem({
+  id: "note:note-1",
+  at: 1_700_000_100_000,
+  actor: "Me",
+  event: activityEvents["note-sent"],
+  target: activityTargets.moments,
+});
+const refundItem = activityItem({
+  id: "refund:2000000123456789",
+  at: 1_700_000_099_000,
+  actor: "Store",
+  event: activityEvents.refunded,
+});
+const activityCursor = Schema.decodeUnknownSync(ActivityCursor)(`0001700000100000~note:note-1`);
 
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
@@ -521,9 +602,30 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { entries: [catEntry(1, "fed"), catEntry(2, "petted", bob)] },
     empty: { entries: [] },
   }),
+  fixture("ActivityEvent", ActivityEvent, decodeSamples(ActivityEvent, activityEvents)),
+  fixture("ActivityTarget", ActivityTarget, decodeSamples(ActivityTarget, activityTargets)),
+  fixture("ActivityItem", ActivityItem, {
+    default: fedItem,
+    mine: drawingItem,
+    "without-target": refundItem,
+  }),
+  fixture("ActivityResponse", ActivityResponse, {
+    default: { items: [fedItem, drawingItem], next: activityCursor, unread: 1 },
+    last: { items: [refundItem], unread: 0 },
+    empty: { items: [], unread: 0 },
+  }),
+  fixture("MarkActivityReadRequest", MarkActivityReadRequest, {
+    default: { upTo: activityCursor },
+  }),
+  fixture("ActivityUnreadResponse", ActivityUnreadResponse, { default: { unread: 3 } }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),
     "resume-with-cat": ClientMessage.cases.Resume.make({ lastSeq: 7, lastCatSeq: 3 }),
+    "resume-with-activity": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      lastCatSeq: 3,
+      activity: true,
+    }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -545,6 +647,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       entry: catEntry(5, "petted", bob),
     }),
     "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
+    "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

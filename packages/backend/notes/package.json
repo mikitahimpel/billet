@@ -12,7 +12,9 @@
     "./test/fake-world": "./test/fake-world.ts",
     "./pair-rooms": "./src/pair-rooms.ts",
     "./cat-routes": "./src/cat-routes.ts",
-    "./cat-service": "./src/cat-service.ts"
+    "./cat-service": "./src/cat-service.ts",
+    "./activity-routes": "./src/activity-routes.ts",
+    "./activity-service": "./src/activity-service.ts"
   },
   "scripts": {
     "lint": "oxlint .",

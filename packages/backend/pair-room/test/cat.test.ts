@@ -65,7 +65,9 @@ describe("decide: the cat", () => {
       bornAt: start + hour,
       name: "Pirozhok",
     });
-    expect(renamed.outputs).toEqual([{ _tag: "CatSaved", cat: renamed.state.cat?.profile }]);
+    expect(renamed.outputs).toEqual([
+      { _tag: "CatSaved", cat: renamed.state.cat?.profile, by: bob, adopted: false },
+    ]);
   });
 
   it("refuses a stranger, and care before there is a cat", () => {
