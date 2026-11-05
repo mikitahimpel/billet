@@ -207,5 +207,5 @@ final class FixedNeeds: PetNeedsSource {
 
     static let fromLaunch: FixedNeeds? = UserDefaults.standard.string(forKey: "uitestNeeds")
         .flatMap(Double.init)
-        .map(FixedNeeds.init)
+        .map { FixedNeeds($0) }
 }
