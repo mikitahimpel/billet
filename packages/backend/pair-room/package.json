@@ -5,6 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./cat-life": "./src/cat-life.ts",
+    "./cat-temper": "./src/cat-temper.ts",
     "./decide": "./src/decide.ts",
     "./delivery-ledger": "./src/delivery-ledger.ts",
     "./note-id-source": "./src/note-id-source.ts",

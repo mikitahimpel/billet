@@ -120,6 +120,10 @@ public enum LiveRoomMachine: Machine {
       if presence == .idle { next.forgetDrawing() }
       return (next, [])
 
+    // The canvas has nothing to do with the cat's journal.
+    case .received(.catEntryAdded), .received(.catSaved):
+      return (state, [])
+
     case .received(.noteReceived(let seq, let note)):
       if let last = state.lastNoteSeq, seq <= last { return (state, []) }
       next.lastNoteSeq = seq

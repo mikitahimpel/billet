@@ -8,6 +8,7 @@
     "./account": "./src/account.ts",
     "./api-error": "./src/api-error.ts",
     "./auth": "./src/auth.ts",
+    "./cat": "./src/cat.ts",
     "./client-info": "./src/client-info.ts",
     "./device": "./src/device.ts",
     "./events": "./src/events.ts",

@@ -32,3 +32,28 @@ export const StoredDelivery = Schema.Struct({
   attempts: Schema.Int,
   nextAttemptAt: Schema.Int,
 });
+
+/** What the one `cat` row holds, once the cat is adopted. */
+export const StoredCat = Schema.Struct({
+  id: Schema.Int,
+  name: Schema.String,
+  model: Schema.String,
+  coat: Schema.String,
+  bornAt: Schema.Int,
+  natureSeed: Schema.String,
+  utcOffsetSeconds: Schema.Int,
+  curious: Schema.Number,
+  lazy: Schema.Number,
+  cuddly: Schema.Number,
+  lastSeq: Schema.Int,
+  lastAt: Schema.NullOr(Schema.Int),
+});
+
+/** What a `cat_entry` row holds: `body` is the `CatEvent` as JSON. */
+export const StoredCatEntry = Schema.Struct({
+  seq: Schema.Int,
+  id: Schema.String,
+  by: Schema.String,
+  at: Schema.Int,
+  body: Schema.String,
+});
