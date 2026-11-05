@@ -996,6 +996,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       activity: true,
       lastReactionRev: 2,
     }),
+    "resume-with-shop": ClientMessage.cases.Resume.make({ lastSeq: 7, activity: true, shop: true }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -1028,6 +1029,15 @@ export const catalog: ReadonlyArray<Fixture> = [
     "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
     "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
     "reaction-changed": ServerMessage.cases.ReactionChanged.make({ reaction: heart }),
+    "shop-changed": ServerMessage.cases.ShopChanged.make({
+      shop: {
+        balance: 65,
+        inks: [freeInk, rose],
+        items: [lamp, rug, tower],
+        wishlist: [yarn],
+        bonuses: [],
+      },
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

@@ -74,6 +74,12 @@ Navigation titles use SF Rounded through `NavigationBarStyle.apply()` at launch.
   It falls back to `.ultraThinMaterial` before iOS 26. Group neighbouring glass in `GlassGroup` so it blends.
 - **Screens and forms** (onboarding, settings, lists): solid `Ink.screen` with `Ink.surface` rows. Never put glass on
   glass, and don't put glass behind reading text.
+- **Cards** (Us, the Shop, their sheets): `nookiCard()`, warm clay lit from above with a light rim along the top and
+  a soft shadow cast by the card's shape only. `warm: true` pours honey into the light for a screen's hero card.
+  `usCard()` and `shopCard()` are this card. List rows stay `Ink.surface`.
+- **The Shop** keeps its own saturated accents for selling (`ShopInk`: coral, plum, teal, gold) and rarity colours:
+  common sand, rare teal, epic plum, legendary gold. Frames are lit in their colour; epic and legendary glow.
+  Discounts are coral; blush stays for love.
 - **Sheets**: the system sheet with detents sized to the content (`.presentationDetents([.height(measured)])` or
   `.medium`/`.large`). On iOS 26 the sheet is the system's glass; give it `Ink.screen` once the screen moves to tokens.
 

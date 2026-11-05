@@ -333,6 +333,10 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
     var hint = ""
     /// 1...3 hearts after it happened; nil until rated.
     var rating: Int?
+    /// Local reminders a day and an hour before; nil on dates saved before reminders existed.
+    var remind: Bool?
+    /// The photo from this date in Moments, when it was marked done with one.
+    var momentID: UUID?
 }
 
 // MARK: - Store
@@ -733,17 +737,20 @@ final class UsStore {
     }
 
     /// Rating a date marks it as done and earns the couple 30 coins once.
-    func rate(_ id: UUID, hearts: Int) {
+    func rate(_ id: UUID, hearts: Int, momentID: UUID? = nil) {
         guard let i = planned.firstIndex(where: { $0.id == id }) else { return }
         if planned[i].rating == nil { wallet.earn(30) }
         planned[i].rating = min(max(hearts, 1), 3)
+        if let momentID { planned[i].momentID = momentID }
         save()
     }
 
+    /// Not done yet, soonest first; the ones already past wait on top for "How was it?".
+    var comingUp: [PlannedDate] { planned.filter { $0.rating == nil }.sorted { $0.date < $1.date } }
+
+    /// Rated, newest first.
+    var done: [PlannedDate] { planned.filter { $0.rating != nil }.sorted { $0.date > $1.date } }
+
     /// Not yet rated first (soonest on top), then rated ones newest first.
-    var plannedSorted: [PlannedDate] {
-        let next = planned.filter { $0.rating == nil }.sorted { $0.date < $1.date }
-        let past = planned.filter { $0.rating != nil }.sorted { $0.date > $1.date }
-        return next + past
-    }
+    var plannedSorted: [PlannedDate] { comingUp + done }
 }

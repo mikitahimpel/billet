@@ -94,7 +94,19 @@ interface SocketAttachment {
    * `lastReactionRev`.
    */
   readonly sentReactionRev?: number | null;
+  /** Whether this socket resumed with `shop: true` and is sent the pair's shop when it changes. */
+  readonly shop?: boolean;
 }
+
+/** Outputs that change what `shopOf` shows. */
+const shopOutputs: ReadonlySet<string> = new Set([
+  "CoinsEntered",
+  "InksGranted",
+  "ItemsGranted",
+  "WishlistChanged",
+  "GiftOpened",
+  "BonusPaid",
+]);
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
   (socket.deserializeAttachment() as SocketAttachment | null) ?? undefined;
@@ -256,6 +268,7 @@ export class PairRoom extends DurableObject {
         }
       }
       await this.pushNotes();
+      await this.pushShop(decision);
       // A note to an adopted cat is also a journal entry.
       if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
         await this.pushCatEntries();
@@ -322,6 +335,7 @@ export class PairRoom extends DurableObject {
     );
     if (decision._tag === "Accepted") {
       await this.pushCatEntries();
+      await this.pushShop(decision);
       await this.pushUnread((member) => member !== by);
     }
     return decision;
@@ -344,6 +358,19 @@ export class PairRoom extends DurableObject {
     );
     this.sendUnread((member) => member === user, new Map([[user, unread]]));
     return unread;
+  }
+
+  /** Sends the pair's shop to every socket that follows it, when `decision` changed it. */
+  private async pushShop(decision: RoomDecision): Promise<void> {
+    if (decision._tag !== "Accepted") return;
+    if (!decision.outputs.some((output) => shopOutputs.has(output._tag))) return;
+    const sockets = this.ctx
+      .getWebSockets()
+      .filter((socket) => attachmentOf(socket)?.shop === true);
+    if (sockets.length === 0) return;
+    const shop = await this.shop();
+    if (shop === null) return;
+    for (const socket of sockets) send(socket, { _tag: "ShopChanged", shop });
   }
 
   /**
@@ -467,8 +494,13 @@ export class PairRoom extends DurableObject {
   }
 
   /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
-  grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
-    return this.run((room) => room.dispatch({ _tag: "GrantInks", inks }), "PairRoom.grantInks");
+  async grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantInks", inks }),
+      "PairRoom.grantInks",
+    );
+    await this.pushShop(decision);
+    return decision;
   }
 
   /**
@@ -488,8 +520,10 @@ export class PairRoom extends DurableObject {
   }
 
   /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
-  buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
-    return this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+  async buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+    await this.pushShop(decision);
+    return decision;
   }
 
   /**
@@ -537,8 +571,17 @@ export class PairRoom extends DurableObject {
   }
 
   /** Pays an app earn, once per ref. An earn is no Inbox item. */
-  earn(by: UserId, event: EarnEvent, utcOffsetSeconds: number | undefined): Promise<RoomDecision> {
-    return this.run((room) => room.earn(by, event, utcOffsetSeconds), "PairRoom.earn");
+  async earn(
+    by: UserId,
+    event: EarnEvent,
+    utcOffsetSeconds: number | undefined,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.earn(by, event, utcOffsetSeconds),
+      "PairRoom.earn",
+    );
+    await this.pushShop(decision);
+    return decision;
   }
 
   /** A treat's meal goes to the journal's followers; an order, gift or bonus is an Inbox item. */
@@ -549,11 +592,14 @@ export class PairRoom extends DurableObject {
       }
       await this.pushUnread((member) => member !== by);
     }
+    await this.pushShop(decision);
     return decision;
   }
 
-  setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
-    return this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+  async setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+    await this.pushShop(decision);
+    return decision;
   }
 
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {
@@ -630,14 +676,15 @@ export class PairRoom extends DurableObject {
       case "Resume": {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
-        // the Inbox.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev } = message.value;
+        // the Inbox, nor one without `shop` the shop.
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop } = message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
           sentCatSeq: lastCatSeq === undefined ? null : Math.max(0, lastCatSeq),
           activity: activity === true,
           sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
+          shop: shop === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
@@ -646,6 +693,8 @@ export class PairRoom extends DurableObject {
           const unread = await this.run((room) => room.unread(attachment.user as UserId));
           send(socket, { _tag: "ActivityUnread", unread });
         }
+        const current = shop === true ? await this.shop() : null;
+        if (current !== null) send(socket, { _tag: "ShopChanged", shop: current });
         return;
       }
       case "Stroke": {
