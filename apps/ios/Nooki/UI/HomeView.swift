@@ -41,7 +41,10 @@ struct HomeView: View {
                     .allowsHitTesting(showsRoom)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if let scene {
+            } else if let scene, showsRoom {
+                // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
+                // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
+                // (CatRoom), so coming back only makes a new view for it.
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
