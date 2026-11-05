@@ -28,7 +28,8 @@ struct PhotoUploadTests {
             UIColor.red.setFill()
             context.fill(CGRect(x: 0, y: 0, width: 16, height: 16))
         }
-        let hash = try #require(BlurHash.encode(try #require(flat.cgImage)))
+        let cg = try #require(flat.cgImage)
+        let hash = try #require(BlurHash.encode(cg))
         // Nothing but the average colour, so the quantised maximum of the detail is 0.
         #expect(hash.dropFirst().first == "0")
     }
@@ -37,7 +38,8 @@ struct PhotoUploadTests {
         let url = FileManager.default.temporaryDirectory.appending(path: "\(UUID().uuidString).jpg")
         defer { try? FileManager.default.removeItem(at: url) }
         let big = Self.image(CGSize(width: 3000, height: 1500), color: .systemTeal)
-        try #require(big.jpegData(compressionQuality: 0.9)).write(to: url)
+        let data = try #require(big.jpegData(compressionQuality: 0.9))
+        try data.write(to: url)
 
         let upload = try #require(PhotoUpload(fileAt: url))
         #expect(upload.width == 2048)
