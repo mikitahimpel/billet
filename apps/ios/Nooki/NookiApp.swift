@@ -8,6 +8,7 @@ struct NookiApp: App {
     @State private var onboarding: OnboardingFlow
 
     init() {
+        NavigationBarStyle.apply()
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline
@@ -27,7 +28,9 @@ struct NookiApp: App {
                 HomeView()
                     // A new coat loads Mochi again, so the room is built anew around her.
                     .id(onboarding.wornCoat)
-                    .preferredColorScheme(.dark)
+                    // The onboarding follows the system's appearance; the rest of the app is dark until its
+                    // screens move to the adaptive tokens.
+                    .preferredColorScheme(onboarding.isFinished ? .dark : nil)
                     .environment(session)
                     .overlay {
                         if !onboarding.isFinished {
