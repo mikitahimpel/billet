@@ -38,6 +38,8 @@ struct ShopView: View {
             .scrollIndicators(.hidden)
             .task {
                 #if DEBUG
+                // `-shopItem tower` on launch opens that item's sheet, for screenshots.
+                if let id = UserDefaults.standard.string(forKey: "shopItem") { sheetItem = Catalog.item(id) }
                 // `-shopSection bundles` (or deals, collections) on launch scrolls Today there, for screenshots.
                 guard let section = UserDefaults.standard.string(forKey: "shopSection") else { return }
                 try? await Task.sleep(for: .milliseconds(300))

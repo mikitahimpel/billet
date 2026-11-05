@@ -199,6 +199,14 @@ final class HomeState {
             }
         default: break
         }
+        // For screenshots: `-shopCoins 20` sets the balance and `-shopOwned lamp,rug` what the couple owns.
+        if defaults.object(forKey: "shopCoins") != nil {
+            let coins = defaults.integer(forKey: "shopCoins")
+            wallet.update { $0.coins = coins }
+        }
+        if let owned = defaults.string(forKey: "shopOwned") {
+            wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
+        }
         if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
             tab = .moments
             openedPin = PinRoute(id: moments.moments[defaults.integer(forKey: "shotMoment")].id)
