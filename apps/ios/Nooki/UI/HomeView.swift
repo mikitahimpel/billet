@@ -145,6 +145,7 @@ struct HomeView: View {
                     await DrawingSync.requestPushes(asking: false)
                     await session?.drawingSync?.fetchLatest()
                     await session?.drawingSync?.registerPushTokens()
+                    await session?.inbox.refreshCount()
                 }
             case .background: state.didEnterBackground()
             default: break
@@ -161,6 +162,19 @@ struct HomeView: View {
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
+        }
+        .sheet(isPresented: $state.showsInbox) {
+            if let inbox = session?.inbox {
+                InboxView(model: inbox, state: state) { target in
+                    withAnimation(.spring(duration: 0.4)) { state.open(target) }
+                }
+                .presentationDetents([.large])
+                .presentationBackground(Ink.sheet)
+                .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(item: $state.openedShopItem) { item in
+            ItemSheet(item: item, state: state)
         }
         .fullScreenCover(isPresented: $state.drawing) {
             LockCanvasView(

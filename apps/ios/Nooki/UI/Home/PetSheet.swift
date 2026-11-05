@@ -48,6 +48,11 @@ struct PetButton: View {
         // Both hints live on her portrait; the second waits for the first, so only one shows at a time.
         .popoverTip(PetHint(), arrowEdge: .bottom)
         .popoverTip(TreatHint(), arrowEdge: .bottom)
+        .onChange(of: state.showsPetSheet) { _, asked in
+            guard asked else { return }
+            showsSheet = true
+            state.showsPetSheet = false
+        }
         .sheet(isPresented: $showsSheet) {
             PetSheet(state: state) {
                 showsSheet = false
