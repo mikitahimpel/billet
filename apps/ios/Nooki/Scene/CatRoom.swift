@@ -213,6 +213,15 @@ class CatRoom {
     /// Mochi's two rigs, shared by every room.
     private static var mochi: Task<(standing: CatRig, seated: CatRig), any Error>?
 
+    /// Puts Mochi in the chosen coat in every room, once she is loaded.
+    static func wearChosenCoat() {
+        Task {
+            guard let mochi = try? await mochi?.value else { return }
+            // Read after the wait: taps resume in no set order, and the last choice must win.
+            for rig in [mochi.standing, mochi.seated] { rig.wear(coat: CatCoat.current.file) }
+        }
+    }
+
     private static func loadMochi() async throws -> (standing: CatRig, seated: CatRig) {
         if let mochi { return try await mochi.value }
         let task = Task {
@@ -221,6 +230,7 @@ class CatRoom {
                 (try CatRig.Files(named: "MochiStanding", drawn: drawn), try CatRig.Files(named: "Mochi", drawn: drawn))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
+            for rig in [standing, seated] { rig.wear(coat: CatCoat.current.file) }
             if !drawn {
                 for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
                     do {

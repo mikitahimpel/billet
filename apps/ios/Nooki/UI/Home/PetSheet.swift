@@ -47,18 +47,19 @@ struct PetButton: View {
                 showsSheet = false
                 onPlay()
             }
-            .presentationDetents([.height(372)])
+            .presentationDetents([.height(432)])
             .presentationBackground(Ink.sheet)
             .presentationDragIndicator(.visible)
         }
     }
 }
 
-/// Mochi up close: her level and mood, and ways to look after her.
+/// Mochi up close: her level and mood, her coat, and ways to look after her.
 private struct PetSheet: View {
     let state: HomeState
     var onPlay: () -> Void
     @State private var short = false
+    @AppStorage(CatCoat.key) private var coat = CatCoat.tabby
 
     var body: some View {
         VStack(spacing: 18) {
@@ -89,6 +90,22 @@ private struct PetSheet: View {
                     MoodChip(mood: mood)
                 }
             }
+
+            HStack(spacing: 0) {
+                ForEach(CatCoat.allCases) { option in
+                    Button {
+                        withAnimation(.snappy(duration: 0.2)) { coat = option }
+                    } label: {
+                        CoatSwatch(coat: option, selected: option == coat)
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel(option.title)
+                    .accessibilityAddTraits(option == coat ? .isSelected : [])
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .haptic(.selection, trigger: coat)
+            .onChange(of: coat) { CatRoom.wearChosenCoat() }
 
             HStack(spacing: 10) {
                 action("Pet", "hand.raised.fill", detail: "+3%") {
@@ -131,6 +148,23 @@ private struct PetSheet: View {
             .overlay(RoundedRectangle(cornerRadius: 20).stroke(Ink.hairline, lineWidth: 0.5))
         }
         .buttonStyle(PressScaleStyle())
+    }
+}
+
+/// A coat as a disc split between its fur and its markings, ringed when chosen.
+private struct CoatSwatch: View {
+    let coat: CatCoat
+    let selected: Bool
+
+    var body: some View {
+        Circle()
+            .fill(LinearGradient(stops: [.init(color: coat.swatch.fur, location: 0.58),
+                                         .init(color: coat.swatch.marks, location: 0.58)],
+                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+            .frame(width: 34, height: 34)
+            .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
+            .padding(4)
+            .overlay(Circle().stroke(.honeyGradient, lineWidth: 2.5).opacity(selected ? 1 : 0))
     }
 }
 

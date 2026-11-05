@@ -24,7 +24,10 @@ License 2.0 (`idol-sdk/LICENSE`), without its gallery images and Gradio demo.
    to four bones and writes `<name>.rig.json` (bones, the point between the eyes, the mount for a
    second pose) and `<name>.skin` (4 bone indices and 4 weights per splat, uint8, in the PLY's
    order). The app's `SkinSplats.metal` moves the splats with these weights every frame.
-5. **The app.** `SplatLoader` reads the PLY as it is: its body is already GaussianSplatResource's
+5. **coats.py.** Writes `<name>.coats` beside each splat: Mochi in ginger, cream, black, tuxedo
+   and white, three bytes per splat each. Only colors change, so the skin still fits; the app's
+   `SplatSkinner` copies the chosen coat in place of the PLY's colors (Mochi's sheet picks it).
+6. **The app.** `SplatLoader` reads the PLY as it is: its body is already GaussianSplatResource's
    layout. Mochi's files are checked byte for byte against `apps/ios/nooki-cat.sha256`.
 
 ## Run it
@@ -39,6 +42,8 @@ node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-sitting.png --out Mo
 node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-standing.png --out MochiStanding.ply \
   --height 0.30 --rig tools/cat-gen/rigs/cat-standing.json --match_colors Mochi.ply
 cp Mochi.ply MochiStanding.ply Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Nooki/Resources/
+tools/cat-gen/.venv/bin/python tools/cat-gen/coats.py apps/ios/Nooki/Resources/Mochi.ply tools/cat-gen/rigs/cat-sit.json
+tools/cat-gen/.venv/bin/python tools/cat-gen/coats.py apps/ios/Nooki/Resources/MochiStanding.ply   tools/cat-gen/rigs/cat-standing.json
 ```
 
 `node tools/cat-gen/splat.mjs nooki` builds every asset of `scenes/nooki.json` into `out/nooki`.

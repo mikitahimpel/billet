@@ -105,6 +105,8 @@ final class CatRig {
         let rig: RigFile
         let splat: SplatLoader.File?
         let skin: [UInt8]?
+        /// Her other coats by name, three sRGB bytes per splat each, from `<name>.coats` (tools/cat-gen/coats.py).
+        let coats: [String: Data]
 
         init(named name: String, drawn: Bool, in bundle: Bundle = .main) throws {
             guard let rigURL = bundle.url(forResource: "\(name).rig", withExtension: "json") else { throw Failure.missing(name) }
@@ -114,6 +116,7 @@ final class CatRig {
             guard drawn else {
                 splat = nil
                 skin = nil
+                coats = [:]
                 return
             }
             guard let skinURL = bundle.url(forResource: name, withExtension: "skin") else { throw Failure.missing(name) }
@@ -122,6 +125,25 @@ final class CatRig {
             guard skin.count == splat.count * 8 else { throw Failure.mismatch(name) }
             self.splat = splat
             self.skin = skin
+            coats = Self.coats(named: name, count: splat.count, in: bundle)
+        }
+
+        /// The file is a line `coats <splats> <name,name,...>`, then each coat's bytes in turn; none if it is
+        /// missing or made for another splat.
+        private static func coats(named name: String, count: Int, in bundle: Bundle) -> [String: Data] {
+            guard let url = bundle.url(forResource: name, withExtension: "coats"),
+                  let data = try? Data(contentsOf: url),
+                  let end = data.firstIndex(of: UInt8(ascii: "\n"))
+            else { return [:] }
+            let header = String(decoding: data[..<end], as: UTF8.self).split(separator: " ")
+            let size = 3 * count
+            guard header.count == 3, header[0] == "coats", Int(header[1]) == count else { return [:] }
+            let names = header[2].split(separator: ",").map(String.init)
+            let body = data[(end + 1)...]
+            guard body.count == names.count * size else { return [:] }
+            return Dictionary(names.enumerated().map { index, name in
+                (name, Data(body.dropFirst(index * size).prefix(size)))
+            }, uniquingKeysWith: { first, _ in first })
         }
     }
 
@@ -141,6 +163,7 @@ final class CatRig {
     private(set) var hipsPose = Pose()
 
     private let skinner: SplatSkinner?
+    private let coats: [String: Data]
     private var mesh: CatMeshRig?
     private let boneNames: [String]
     private let joints: [SIMD3<Float>]
@@ -159,6 +182,7 @@ final class CatRig {
             entity = nil
             skinner = nil
         }
+        coats = files.coats
         joints = rig.bones.map(\.head)
         boneNames = rig.bones.map(\.name)
         eyesCenter = rig.eyes ?? .zero
@@ -190,6 +214,12 @@ final class CatRig {
 
     /// Model-space point between the eyes as posed last frame.
     var eyes: SIMD3<Float> { headPose.apply(eyesCenter) }
+
+    /// Draws her splat in the named coat from now on, or in her own colors for nil or a coat it doesn't have.
+    /// note: the mesh standing in where splats can't be drawn keeps her own colors; recoloring its texture is next.
+    func wear(coat: String?) {
+        skinner?.recolor(coat.flatMap { coats[$0] })
+    }
 
     /// Poses every bone; `skinning` off keeps `headPose` and `hipsPose` current without moving the splat or mesh.
     func update(skinning: Bool = true) {
@@ -320,6 +350,8 @@ final class SplatSkinner {
     private let queue: any MTLCommandQueue
     private let pipeline: any MTLComputePipelineState
     private let rest: any MTLBuffer
+    /// The file's splats, for its own colors back after a coat.
+    private let own: Data
     private let skin: any MTLBuffer
     private let target: (any MTLCommandBuffer) -> any MTLBuffer
     private var count: UInt32
@@ -342,9 +374,34 @@ final class SplatSkinner {
         queue = gpu.queue
         pipeline = gpu.pipeline
         self.rest = rest
+        own = splat.rest
         self.skin = skin
         target = splat.replace
         count = UInt32(splat.count)
+    }
+
+    /// Writes `rgb`, three sRGB bytes per splat, into the colors every later pass copies, or the file's own for nil.
+    func recolor(_ rgb: Data?) {
+        let n = Int(count)
+        let floats = rest.contents().bindMemory(to: Float.self, capacity: 14 * n)
+        // A splat's color is 0.5 + C0 * its SH DC term, C0 being the zeroth spherical harmonic's constant.
+        let c0: Float = 0.28209479
+        if let rgb {
+            rgb.withUnsafeBytes { bytes in
+                for i in 0..<n {
+                    for k in 0..<3 { floats[14 * i + 11 + k] = (Float(bytes[3 * i + k]) / 255 - 0.5) / c0 }
+                }
+            }
+        } else {
+            // The PLY body follows its header, so its floats need not be aligned.
+            own.withUnsafeBytes { file in
+                for i in 0..<n {
+                    for k in 11..<14 {
+                        floats[14 * i + k] = file.loadUnaligned(fromByteOffset: 4 * (14 * i + k), as: Float.self)
+                    }
+                }
+            }
+        }
     }
 
     /// `bones` in skin order, at most a few hundred.
