@@ -112,6 +112,12 @@ final class OnboardingFlow {
         index = max(defaults.integer(forKey: Self.pageKey), 0)
         if let saved = Self.saved(OnboardingResponse.self, Self.catalogueKey, in: defaults) { catalogue = saved }
         picks = Self.saved([OnboardingStepId: [OnboardingOptionId]].self, Self.picksKey, in: defaults) ?? [:]
+        #if DEBUG
+        // `-onboardingOpen catCoat` opens the coat step, for screenshots; `-catCoat <coat>` picks the coat it shows.
+        if defaults.string(forKey: "onboardingOpen") == "catCoat", let coatPage = pages.firstIndex(of: .catCoat) {
+            index = coatPage
+        }
+        #endif
     }
 
     var pages: [Page] {
