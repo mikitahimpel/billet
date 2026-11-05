@@ -1,29 +1,21 @@
 import SwiftUI
 
-/// The Shop's ink colours for notes and drawings, one card each: the colour, its name and the price pill, or "Yours"
-/// once the pair owns it. A buy plays the purchase moment like any other. The Shop opened at an ink (`openShop`)
-/// scrolls the shelf to it and rings it in honey.
+/// The Shop's ink colours for notes and drawings, one card each in a wrapping grid: the colour, its name and the price
+/// pill, or "Yours" once the pair owns it. A buy plays the purchase moment like any other. The Shop opened at an ink
+/// (`openShop`) scrolls the page to the grid and rings that ink in honey.
 struct InkShelf: View {
     let state: HomeState
     var highlighted: String? = nil
 
+    private let columns = [GridItem(.adaptive(minimum: 104), spacing: Space.m, alignment: .top)]
+
     var body: some View {
-        ScrollViewReader { reader in
-            ScrollView(.horizontal) {
-                HStack(spacing: Space.m) {
-                    ForEach(state.shop.inks) { ink in
-                        card(ink).id(ink.id)
-                    }
-                }
-                .padding(.horizontal, Space.l)
-            }
-            .scrollIndicators(.hidden)
-            .scrollClipDisabled()
-            .onChange(of: highlighted, initial: true) { _, id in
-                guard let id else { return }
-                withAnimation(.spring(duration: 0.45)) { reader.scrollTo(id, anchor: .center) }
+        LazyVGrid(columns: columns, spacing: Space.m) {
+            ForEach(state.shop.inks) { ink in
+                card(ink).id(ink.id)
             }
         }
+        .padding(.horizontal, Space.l)
     }
 
     private func card(_ ink: PaletteInk) -> some View {
@@ -53,7 +45,7 @@ struct InkShelf: View {
             }
         }
         .padding(Space.m)
-        .frame(width: 124)
+        .frame(maxWidth: .infinity)
         .shopCard()
         .overlay {
             if highlighted == ink.id {

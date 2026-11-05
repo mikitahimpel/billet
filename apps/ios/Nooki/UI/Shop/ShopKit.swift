@@ -210,7 +210,8 @@ extension View {
         nookiCard(radius: radius)
     }
 
-    /// Fades and rises into place as it scrolls in, once per appearance; only a fade under Reduce Motion.
+    /// Fades and rises a little into place as it scrolls in, straight up, never sideways; only a fade under Reduce
+    /// Motion.
     func shopAppear() -> some View {
         modifier(ShopAppear())
     }
@@ -224,8 +225,7 @@ private struct ShopAppear: ViewModifier {
         content.scrollTransition(.animated(.spring(duration: 0.5, bounce: 0.25))) { content, phase in
             content
                 .opacity(phase.isIdentity ? 1 : 0.3)
-                .scaleEffect(phase.isIdentity || reduceMotion ? 1 : 0.94)
-                .offset(y: phase.isIdentity || reduceMotion ? 0 : 14)
+                .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
         }
     }
 }
@@ -254,5 +254,47 @@ struct ShopSectionHeader<Trailing: View>: View {
                 .font(.nookiCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
+    }
+}
+
+/// Lays its views out in rows, left to right, starting a new row when the next one wouldn't fit.
+struct WrapLayout: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { $0.width }.max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
+        return CGSize(width: proposal.width ?? width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private func rows(width: CGFloat, subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
+        var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
+        var current: (indices: [Int], width: CGFloat, height: CGFloat) = ([], 0, 0)
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
+            if needed > width, !current.indices.isEmpty {
+                rows.append(current)
+                current = ([index], size.width, size.height)
+            } else {
+                current = (current.indices + [index], needed, max(current.height, size.height))
+            }
+        }
+        if !current.indices.isEmpty { rows.append(current) }
+        return rows
     }
 }
