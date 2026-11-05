@@ -12,6 +12,8 @@ export const StoredRoom = Schema.Struct({
   lastSeq: Schema.Int,
   streakDays: Schema.Int,
   lastReactionRev: Schema.NullOr(Schema.Int),
+  giftDay: Schema.NullOr(Schema.String),
+  welcomed: Schema.Boolean,
 });
 
 /** What a `reaction` row holds: `reaction` is null once it was taken back. */
@@ -48,6 +50,11 @@ export const StoredOwnedItem = Schema.Struct({
 
 export const StoredWish = Schema.Struct({
   itemId: Schema.String,
+  position: Schema.Int,
+});
+
+export const StoredClaimedBonus = Schema.Struct({
+  collectionId: Schema.String,
   position: Schema.Int,
 });
 
@@ -105,6 +112,7 @@ export const StoredWallet = Schema.Struct({
   care: Schema.Int,
   notes: Schema.Int,
   games: Schema.Int,
+  lists: Schema.Int,
 });
 
 /** A `coin_entry` row: one wallet entry, in the order it was stored. */

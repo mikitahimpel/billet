@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { RoomItemId } from "@billet/contracts-domain/shop";
+import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
 import { NatureSeed } from "@billet/contracts-domain/cat";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
@@ -39,6 +39,7 @@ const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
 const sea = Schema.decodeUnknownSync(InkId)("ink-sea");
 const tower = Schema.decodeUnknownSync(RoomItemId)("tower");
 const yarn = Schema.decodeUnknownSync(RoomItemId)("yarn");
+const corner = Schema.decodeUnknownSync(CollectionId)("mochis-corner");
 const text = (ink: InkId) => SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
@@ -149,7 +150,10 @@ describe("PairRoom storage", () => {
       inks: [],
       items: [],
       wishlist: [],
-      wallet: { balance: 10, day: expect.anything(), care: 0, notes: 10, games: 0 },
+      bonuses: [],
+      welcomed: true,
+      // The welcome coins, and the note's 10.
+      wallet: { balance: 570, day: expect.anything(), care: 0, notes: 10, games: 0, lists: 0 },
     });
     await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
@@ -175,6 +179,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_wallet"),
       expect.stringContaining("_reactions"),
       expect.stringContaining("_shop"),
+      expect.stringContaining("_shop_rewards"),
     ]);
   });
 
@@ -188,6 +193,53 @@ describe("PairRoom storage", () => {
     await evictDurableObject(room);
     expect(await room.inks()).toEqual([rose, sea]);
     expect(await room.sendNote(bob, text(sea))).toMatchObject({ _tag: "Accepted" });
+  });
+
+  it("gives a room stored before the welcome coins them once, keeping its balance", async () => {
+    const room = await openRoom();
+    // A room as the build before the welcome coins left it: 30 coins and no entry.
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("UPDATE room SET welcomed = 0");
+      state.storage.sql.exec("UPDATE wallet SET balance = 30");
+      state.storage.sql.exec("DELETE FROM coin_entry");
+    });
+    await evictDurableObject(room);
+
+    expect(await room.coins(undefined, 10)).toMatchObject({ balance: 590 });
+    await room.setPresence(alice, "drawing");
+    await evictDurableObject(room);
+    const coins = await room.coins(undefined, 10);
+    expect(coins?.balance).toBe(590);
+    expect(coins?.entries.map((entry) => entry.id)).toEqual(["gift:welcome"]);
+    expect(await room.snapshot()).toMatchObject({ welcomed: true });
+  });
+
+  it("keeps the gift day and the bonuses across eviction", async () => {
+    const room = await openRoom();
+    // Every piece of Mochi's corner but the tower, and the coins for it.
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("UPDATE wallet SET balance = 1000");
+      for (const [position, item] of ["yarn", "mouse", "donutbed"].entries()) {
+        state.storage.sql.exec(
+          "INSERT INTO owned_item (item_id, position) VALUES (?, ?)",
+          item,
+          position,
+        );
+      }
+    });
+    await evictDurableObject(room);
+    expect(await room.order(alice, newKey(), { _tag: "Item", item: tower }, 0)).toMatchObject({
+      _tag: "Accepted",
+    });
+    expect(await room.claimBonus(bob, corner)).toMatchObject({ _tag: "Accepted" });
+    expect(await room.openGift(bob, 0)).toMatchObject({ _tag: "Accepted" });
+    await evictDurableObject(room);
+    const shop = await room.shop();
+    expect(shop).toMatchObject({ bonuses: [corner] });
+    expect(shop).toHaveProperty("giftDay");
+    expect(await room.claimBonus(alice, corner)).toMatchObject({
+      outputs: [{ _tag: "CoinsRepeated", entry: { id: "bonus:mochis-corner" } }],
+    });
   });
 
   it("keeps the pair's pieces and wishlist across eviction", async () => {
@@ -208,6 +260,7 @@ describe("PairRoom storage", () => {
       inks: [freeInk],
       items: ["lamp", "rug", tower],
       wishlist: [yarn],
+      bonuses: [],
     });
   });
 

@@ -181,15 +181,21 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
     coins: (pairId, after, limit) =>
-      Effect.all([roomOf(pairId).state, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
-        Effect.map(([state, entries]) => ({
-          balance: state._tag === "Active" ? state.wallet.balance : 0,
-          entries,
-        })),
+      Effect.all([roomOf(pairId).settled, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
+        Effect.map(([state, entries]) =>
+          state._tag === "Active" ? { balance: state.wallet.balance, entries } : null,
+        ),
       ),
     buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
-    shop: (pairId) => roomOf(pairId).state.pipe(Effect.map(shopOf)),
-    order: (pairId, by, id, offer) => roomOf(pairId).order(by, id, offer),
+    shop: (pairId) =>
+      roomOf(pairId).settled.pipe(
+        Effect.map((state) => (state._tag === "Active" ? shopOf(state) : null)),
+      ),
+    order: (pairId, by, id, offer, utcOffsetSeconds) =>
+      roomOf(pairId).order(by, id, offer, utcOffsetSeconds),
+    openGift: (pairId, by, utcOffsetSeconds) => roomOf(pairId).openGift(by, utcOffsetSeconds),
+    claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
+    earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
     setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),

@@ -2,11 +2,11 @@ import { Context, type Effect } from "effect";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
-import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -44,12 +44,15 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       inks: ReadonlyArray<InkId>,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
-    /** The pair's balance and wallet entries after `after`, oldest first. */
+    /**
+     * The pair's balance and wallet entries after `after`, oldest first, or null while the room is
+     * not open. A room owed its welcome coins gets them first.
+     */
     readonly coins: (
       pairId: PairId,
       after: CoinEntryId | undefined,
       limit: number,
-    ) => Effect.Effect<CoinsResponse, NotesUnavailable>;
+    ) => Effect.Effect<CoinsResponse | null, NotesUnavailable>;
     /** Buys one ink with the pair's coins, once per `id`. */
     readonly buy: (
       pairId: PairId,
@@ -57,14 +60,40 @@ export class PairRooms extends Context.Service<
       id: IdempotencyKey,
       ink: InkId,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
-    /** What the pair has: balance, inks, room pieces and wishlist. */
-    readonly shop: (pairId: PairId) => Effect.Effect<ShopResponse, NotesUnavailable>;
-    /** Buys one offer with the pair's coins, once per `id`. */
+    /**
+     * What the pair has: balance, inks, room pieces and wishlist, or null while the room is not
+     * open. A room owed its welcome coins gets them first.
+     */
+    readonly shop: (pairId: PairId) => Effect.Effect<ShopResponse | null, NotesUnavailable>;
+    /**
+     * Buys one offer with the pair's coins, once per `id`, on the local day `utcOffsetSeconds`
+     * from UTC (absent: the cat's, else UTC).
+     */
     readonly order: (
       pairId: PairId,
       by: UserId,
       id: IdempotencyKey,
       offer: ShopOffer,
+      utcOffsetSeconds?: number,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Opens the pair's gift of the local day, once a day for the pair. */
+    readonly openGift: (
+      pairId: PairId,
+      by: UserId,
+      utcOffsetSeconds: number | undefined,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Collects a complete collection's bonus, once. */
+    readonly claimBonus: (
+      pairId: PairId,
+      by: UserId,
+      collection: CollectionId,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Pays something the couple did in the app, once per ref and within the day's cap. */
+    readonly earn: (
+      pairId: PairId,
+      by: UserId,
+      event: EarnEvent,
+      utcOffsetSeconds: number | undefined,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly setWish: (
       pairId: PairId,

@@ -1,10 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
-import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
@@ -458,15 +458,17 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.dispatch({ _tag: "GrantInks", inks }), "PairRoom.grantInks");
   }
 
-  /** The pair's balance and its wallet entries after `after`, oldest first. */
-  coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse> {
+  /**
+   * The pair's balance and its wallet entries after `after`, oldest first, or null while the room
+   * is not open. A room owed its welcome coins gets them first.
+   */
+  coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse | null> {
     return this.run(
       (room) =>
-        Effect.all([room.state, room.coinEntriesAfter(after, limit)]).pipe(
-          Effect.map(([state, entries]) => ({
-            balance: state._tag === "Active" ? state.wallet.balance : 0,
-            entries,
-          })),
+        Effect.all([room.settled, room.coinEntriesAfter(after, limit)]).pipe(
+          Effect.map(([state, entries]) =>
+            state._tag === "Active" ? { balance: state.wallet.balance, entries } : null,
+          ),
         ),
       "PairRoom.coins",
     );
@@ -477,14 +479,64 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
   }
 
-  /** The pair's balance, inks, room pieces and wishlist. */
-  shop(): Promise<ShopResponse> {
-    return this.run((room) => room.state.pipe(Effect.map(shopOf)), "PairRoom.shop");
+  /**
+   * The pair's balance, inks, room pieces and wishlist, or null while the room is not open. A room
+   * owed its welcome coins gets them first.
+   */
+  shop(): Promise<ShopResponse | null> {
+    return this.run(
+      (room) =>
+        room.settled.pipe(Effect.map((state) => (state._tag === "Active" ? shopOf(state) : null))),
+      "PairRoom.shop",
+    );
   }
 
   /** Buys one offer with the pair's coins. A repeated `id` answers with the first order. */
-  order(by: UserId, id: IdempotencyKey, offer: ShopOffer): Promise<RoomDecision> {
-    return this.run((room) => room.order(by, id, offer), "PairRoom.order");
+  async order(
+    by: UserId,
+    id: IdempotencyKey,
+    offer: ShopOffer,
+    utcOffsetSeconds?: number,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.order(by, id, offer, utcOffsetSeconds),
+      "PairRoom.order",
+    );
+    return this.afterCoins(decision, by);
+  }
+
+  /** Opens the day's gift, once a day for the pair. */
+  async openGift(by: UserId, utcOffsetSeconds: number | undefined): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.openGift(by, utcOffsetSeconds),
+      "PairRoom.openGift",
+    );
+    return this.afterCoins(decision, by);
+  }
+
+  /** Collects a complete collection's bonus, once. */
+  async claimBonus(by: UserId, collection: CollectionId): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.claimBonus(by, collection),
+      "PairRoom.claimBonus",
+    );
+    return this.afterCoins(decision, by);
+  }
+
+  /** Pays an app earn, once per ref. An earn is no Inbox item. */
+  earn(by: UserId, event: EarnEvent, utcOffsetSeconds: number | undefined): Promise<RoomDecision> {
+    return this.run((room) => room.earn(by, event, utcOffsetSeconds), "PairRoom.earn");
+  }
+
+  /** A treat's meal goes to the journal's followers; an order, gift or bonus is an Inbox item. */
+  private async afterCoins(decision: RoomDecision, by: UserId): Promise<RoomDecision> {
+    if (decision._tag === "Accepted" && decision.outputs.some((o) => o._tag !== "CoinsRepeated")) {
+      if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
+        await this.pushCatEntries();
+      }
+      await this.pushUnread((member) => member !== by);
+    }
+    return decision;
   }
 
   setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {

@@ -25,6 +25,10 @@ export const room = sqliteTable(
     lastSeq: integer("last_seq").notNull(),
     streakDays: integer("streak_days").notNull(),
     lastReactionRev: integer("last_reaction_rev"),
+    // The pair's local day it last opened the daily gift on; null before the first.
+    giftDay: text("gift_day"),
+    // A room stored before the welcome coins reads false and gets them once.
+    welcomed: integer("welcomed", { mode: "boolean" }).notNull().default(false),
   },
   (table) => [check("room_single_row", sql`${table.id} = 1`)],
 );
@@ -162,9 +166,16 @@ export const wallet = sqliteTable(
     care: integer("care").notNull(),
     notes: integer("notes").notNull(),
     games: integer("games").notNull(),
+    lists: integer("lists").notNull().default(0),
   },
   (table) => [check("wallet_single_row", sql`${table.id} = 1`)],
 );
+
+// The collections whose bonus the pair was paid, in the order it was paid (`position`).
+export const claimedBonus = sqliteTable("claimed_bonus", {
+  collectionId: text("collection_id").primaryKey(),
+  position: integer("position").notNull(),
+});
 
 // The wallet's entries, in the order they were stored (`seq`). `id` is `<kind>:<source>`, one
 // entry each, so a repeated earn or buy cannot pay or charge twice.
