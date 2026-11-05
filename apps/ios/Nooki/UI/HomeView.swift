@@ -271,7 +271,9 @@ struct HomeView: View {
                     await state.shop.refresh()
                 }
                 session?.reactions?.refresh()
-                session?.followInbox(true, photos: photoSync, texts: textSync, shop: state.shop)
+                session?.followInbox(
+                    true, photos: photoSync, texts: textSync, shop: state.shop,
+                    moods: { [state] in state.moodSync?.received($0) })
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -430,20 +432,25 @@ struct HomeView: View {
         if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
         #endif
         guard let session, let sync = session.shopSync else { return await leavePair() }
+        let moods = MoodSync(send: session.api.setMood, moods: state.partnerMoods, couple: state.profile)
         do throws(TransportError) {
             let pair = try await session.pair()
             state.profile.adopt(
                 pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
+            state.moodSync = moods
+            await moods.follow(pair.moods)
         } catch {
             if error == .api(.notFound) { return await leavePair() }
             // Offline: a phone that already took the pair keeps following it.
             guard state.profile.couple.pair != nil else { return }
+            state.moodSync = moods
         }
         await state.shop.connect(sync)
         await state.gifts.connect(session.giftSync)
     }
 
     private func leavePair() async {
+        state.moodSync = nil
         state.profile.leavePair()
         await state.shop.connect(nil)
         await state.gifts.connect(nil)

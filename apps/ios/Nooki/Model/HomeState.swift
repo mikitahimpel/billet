@@ -191,9 +191,15 @@ final class HomeState {
     }
     var otherPartner: String { profile.couple.other }
 
-    func setMood(_ mood: PartnerMood) {
-        partnerMoods.set(mood, for: viewer)
+    /// Follows the pair's room once paired; nil keeps check-ins on this phone.
+    var moodSync: MoodSync?
+
+    /// Shows at once here and goes to the partner through the room.
+    func setMood(_ mood: PartnerMood, note: String? = nil) {
+        partnerMoods.set(mood, note: note, for: viewer)
         streak.record()
+        guard let sync = moodSync, let check = partnerMoods.latest[viewer] else { return }
+        Task { await sync.share(check) }
     }
 
     /// Back in the foreground: pick up what the widgets changed and let Mochi feel the pets from outside the app.
