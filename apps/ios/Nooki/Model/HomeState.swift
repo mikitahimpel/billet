@@ -1,3 +1,4 @@
+import FeatureGames
 import Observation
 import Persistence
 import SwiftUI
@@ -59,6 +60,8 @@ final class HomeState {
     /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
     let rooms = RoomsChoice()
     var petPulse = 0
+    /// The mini-game being played in the room, if any.
+    var game: MiniGame?
     /// Treats given since launch.
     private(set) var treatsGiven = 0
     var showsSettings = false

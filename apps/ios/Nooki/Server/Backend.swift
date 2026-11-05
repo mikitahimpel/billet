@@ -13,6 +13,7 @@ struct Backend {
     let accounts: AccountStore
     let keys: AccountKeyStore
     var onboarding: OnboardingClient = .offline
+    var catEvents: CatEventsClient = .offline
 
     static let infoKey = "BilletAPIHost"
     /// The Keychain service of the session token and the account key; the same as billet's first app, so a phone
@@ -41,6 +42,6 @@ struct Backend {
         let keys = AccountKeyStore.keychain(client: .security, service: keychainService)
         return Backend(
             baseURL: baseURL, api: api, accounts: accounts, keys: keys,
-            onboarding: .live(http: http, token: token))
+            onboarding: .live(http: http, token: token), catEvents: .live(http: http, token: token))
     }
 }

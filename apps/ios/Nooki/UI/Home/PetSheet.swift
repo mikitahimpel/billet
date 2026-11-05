@@ -1,3 +1,4 @@
+import FeatureGames
 import SwiftUI
 import TipKit
 
@@ -6,7 +7,8 @@ struct PetButton: View {
     let state: HomeState
     /// Mochi's needs, once her brain is running in the room.
     var needs: () -> PetNeedsSource?
-    var onPlay: () -> Void
+    /// Starts one of the mini-games, once the sheet is down.
+    var onPlay: (MiniGame) -> Void
     @State private var showsSheet = false
     /// The sheet's content height, measured, so the sheet ends just under its last line.
     @State private var sheetHeight: CGFloat = 520
@@ -59,9 +61,9 @@ struct PetButton: View {
             state.showsPetSheet = false
         }
         .sheet(isPresented: $showsSheet) {
-            PetSheet(state: state, needs: needs, height: $sheetHeight) {
+            PetSheet(state: state, needs: needs, height: $sheetHeight) { game in
                 showsSheet = false
-                onPlay()
+                onPlay(game)
             }
             .presentationDetents([.height(sheetHeight)])
             .presentationBackground(Ink.sheet)
@@ -75,7 +77,7 @@ private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
     @Binding var height: CGFloat
-    var onPlay: () -> Void
+    var onPlay: (MiniGame) -> Void
     @State private var short = false
 
     var body: some View {
@@ -107,7 +109,7 @@ private struct PetSheet: View {
                 NeedBars(
                     name: state.petName,
                     needs: (FixedNeeds.fromLaunch ?? needs())?.needs,
-                    feed: {
+                    treat: {
                         withAnimation(.spring(duration: 0.4)) { short = !state.treat() }
                         if !short { needs()?.feed() }
                     },
