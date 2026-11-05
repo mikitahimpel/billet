@@ -581,7 +581,7 @@ describe("PairRoom realtime across eviction", () => {
     // Stamped with when each frame reached the room, so the partner can pace a clump.
     const stamps = live(b.frames)
       .filter((f) => f._tag === "StrokePoints")
-      .map((f) => (f as { relayedAt: number }).relayedAt);
+      .flatMap((f) => ("relayedAt" in f && typeof f.relayedAt === "number" ? [f.relayedAt] : []));
     expect(stamps[1]).toBeGreaterThanOrEqual(stamps[0] ?? Infinity);
     await settle();
     expect(live(a.frames)).toEqual([]);
