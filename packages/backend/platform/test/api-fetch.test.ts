@@ -1,4 +1,8 @@
-import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
+import {
+  createExecutionContext,
+  runInDurableObject,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { Effect, Layer, Redacted, Schema } from "effect";
 import { SecureRandom, Signature } from "effect/crypto";
@@ -1267,6 +1271,44 @@ describe("demo partners in the Worker", () => {
       .bind(callerId)
       .all();
     expect(notices.results).toEqual([]);
+  });
+
+  /** Moves the pair's room `ms` on and runs its alarm there, as workerd would when it fires. */
+  const laterInRoom = (pairId: string, ms: number) =>
+    runInDurableObject(env.PAIR_ROOM.getByName(pairId), async (instance, state) => {
+      (instance as unknown as { advanceClock(ms: number): void }).advanceClock(ms);
+      await instance.alarm();
+      return { alarm: await state.storage.getAlarm(), bot: await state.storage.get("demoBot") };
+    });
+
+  it("answers the owner's text as the bot, once, and stops when the bot goes", async () => {
+    const caller = await signedInAs("subject-demo");
+    const created = await demoPartner("dev", "POST", caller);
+    const { pairId, members } = Schema.decodeUnknownSync(PairResponse)(await created.json());
+    const botId = members[1];
+    const alarm = await runInDurableObject(env.PAIR_ROOM.getByName(pairId), (_, state) =>
+      state.storage.getAlarm(),
+    );
+    // The bot's first turn is minutes away, and the room's alarm is set for it.
+    expect(alarm).toBeGreaterThan(testNowOf(env));
+
+    expect((await sendText(caller, { text: "miss you" })).status).toBe(200);
+    expect((await sendText(caller, { text: "are you there?" })).status).toBe(200);
+    await laterInRoom(pairId, 31_000);
+    const notes = await historyFor(caller);
+    expect(notes.map((note) => [note._tag, note.author])).toEqual([
+      ["Text", members[0]],
+      ["Text", members[0]],
+      ["Text", botId],
+    ]);
+    // A burst gets one answer, however long the owner waits.
+    await laterInRoom(pairId, 61_000);
+    expect((await historyFor(caller)).filter((note) => note.author === botId)).toHaveLength(1);
+
+    expect((await demoPartner("dev", "DELETE", caller)).status).toBe(204);
+    expect(await laterInRoom(pairId, 24 * 60 * 60_000)).toEqual({ alarm: null, bot: undefined });
+    const left = await env.PAIR_ROOM.getByName(pairId).notes(0, 100);
+    expect(left.filter(({ note }) => note.author === botId)).toEqual([]);
   });
 
   it("refuses a caller who already has a partner", async () => {

@@ -12,6 +12,7 @@
     "./app-status-live": "./src/app-status-live.ts",
     "./apple-identity-live": "./src/apple-identity-live.ts",
     "./auth-repository-live": "./src/auth-repository-live.ts",
+    "./demo-bots-live": "./src/demo-bots-live.ts",
     "./demo-partner-repository-live": "./src/demo-partner-repository-live.ts",
     "./demo-room-durable-object": "./src/demo-room-durable-object.ts",
     "./demo-route": "./src/demo-route.ts",

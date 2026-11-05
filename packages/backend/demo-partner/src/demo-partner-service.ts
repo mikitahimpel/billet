@@ -7,6 +7,7 @@ import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { UserId } from "@billet/contracts-domain/ids";
 import type { PairResponse } from "@billet/contracts-http-api/pair";
 import { DemoPartnerUnavailable, NoDemoPartner } from "./demo-partner-error.ts";
+import { DemoBots } from "./demo-bots.ts";
 import { DemoPartnerRepository } from "./demo-partner-repository.ts";
 
 const decodeUserId = Schema.decodeSync(UserId);
@@ -19,7 +20,7 @@ const unavailable =
 /**
  * A partner for testing the app alone, on the dev stage: a user with no device and no way to sign
  * in, paired with its owner through an invite like anyone else, so everything a new pair gets, it
- * gets too.
+ * gets too. Its room acts for it now and then (`DemoBots`), as a gentle partner would.
  */
 export class DemoPartnerService extends Context.Service<
   DemoPartnerService,
@@ -37,7 +38,7 @@ export class DemoPartnerService extends Context.Service<
   static readonly layer: Layer.Layer<
     DemoPartnerService,
     never,
-    DemoPartnerRepository | PairingService | AccountDeletion | SecureRandom.SecureRandom
+    DemoPartnerRepository | DemoBots | PairingService | AccountDeletion | SecureRandom.SecureRandom
   > = Layer.effect(
     DemoPartnerService,
     Effect.gen(function* () {
@@ -45,11 +46,12 @@ export class DemoPartnerService extends Context.Service<
       const pairing = yield* PairingService;
       const deletion = yield* AccountDeletion;
       const random = yield* SecureRandom.SecureRandom;
+      const bots = yield* DemoBots;
 
-      const partnerOf = (userId: UserId) =>
+      const pairOf = (userId: UserId) =>
         pairing.pair(userId).pipe(
-          Effect.map(({ members }) => Option.fromNullishOr(members[1])),
-          Effect.catchTag("NotPaired", () => Effect.succeed(Option.none<UserId>())),
+          Effect.map(Option.some),
+          Effect.catchTag("NotPaired", () => Effect.succeed(Option.none<PairResponse>())),
           Effect.mapError(unavailable("pairing-unavailable")),
         );
 
@@ -65,7 +67,7 @@ export class DemoPartnerService extends Context.Service<
         ownerId: UserId,
       ): Effect.fn.Return<PairResponse, AlreadyPaired | DemoPartnerUnavailable> {
         yield* annotateRefs({ user: ownerId });
-        if (Option.isSome(yield* partnerOf(ownerId))) return yield* new AlreadyPaired();
+        if (Option.isSome(yield* pairOf(ownerId))) return yield* new AlreadyPaired();
 
         // A bot the owner was unpaired from some other way: one owner has one bot.
         const stale = yield* repository.botOf(ownerId);
@@ -82,6 +84,10 @@ export class DemoPartnerService extends Context.Service<
           // The owner paired with someone else in the meantime, so the bot has no one.
           Effect.tapError(() => erase(botId).pipe(Effect.ignore)),
         );
+        // A bot that never wakes is still a partner to pair with, so this does not fail the pair.
+        yield* bots
+          .start(pairId, ownerId, botId)
+          .pipe(Effect.catch((error) => Effect.logWarning("demo bot not started", error)));
         return { pairId, members: [ownerId, botId] };
       });
 
@@ -91,9 +97,10 @@ export class DemoPartnerService extends Context.Service<
         yield* annotateRefs({ user: ownerId });
         const bot = yield* repository.botOf(ownerId);
         if (Option.isNone(bot)) return yield* new NoDemoPartner();
-        const partner = yield* partnerOf(ownerId);
+        const pair = yield* pairOf(ownerId);
         // First, so deleting the bot leaves the owner no notice that their partner left.
-        if (Option.contains(partner, bot.value)) {
+        if (Option.isSome(pair) && pair.value.members[1] === bot.value) {
+          yield* bots.stop(pair.value.pairId);
           yield* pairing.unpair(ownerId).pipe(Effect.mapError(unavailable("pairing-unavailable")));
         }
         yield* erase(bot.value);

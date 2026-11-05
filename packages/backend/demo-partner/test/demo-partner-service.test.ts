@@ -7,6 +7,8 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import { UserId } from "@billet/contracts-domain/ids";
+import { DemoBots } from "../src/demo-bots.ts";
+import { DemoPartnerUnavailable } from "../src/demo-partner-error.ts";
 import { DemoPartnerRepository } from "../src/demo-partner-repository.ts";
 import { DemoPartnerService } from "../src/demo-partner-service.ts";
 import { makeInMemoryDemoPartnerRepository } from "./in-memory-demo-partner-repository.ts";
@@ -15,13 +17,14 @@ const user = Schema.decodeSync(UserId);
 const ana = user("user-a");
 const ben = user("user-b");
 
-const setup = () => {
+const setup = ({ botsDown = false } = {}) => {
   const pairs = makeInMemoryPairingRepository().repository;
   const demos = makeInMemoryDemoPartnerRepository();
   const paired: Array<{ members: ReadonlyArray<UserId>; claimer: UserId }> = [];
   const unpaired: Array<string> = [];
   // What the real deletion would see: whether each deleted user was still in a pair, and with whom.
   const deleted: Array<{ userId: UserId; partnered: boolean }> = [];
+  const bots: Array<string> = [];
 
   const observer = Layer.succeed(PairingObserver, {
     invited: () => Effect.void,
@@ -35,6 +38,13 @@ const setup = () => {
         deleted.push({ userId, partnered: Option.isSome(pair) });
         yield* Effect.orDie(pairs.unpair(userId));
       }),
+  });
+  const demoBots = Layer.succeed(DemoBots, {
+    start: (pairId, owner, bot) =>
+      botsDown
+        ? Effect.fail(new DemoPartnerUnavailable({ reason: "room-unavailable" }))
+        : Effect.sync(() => bots.push(`start ${pairId} ${owner} ${bot}`)),
+    stop: (pairId) => Effect.sync(() => bots.push(`stop ${pairId}`)),
   });
   const pairing = PairingService.layer.pipe(
     Layer.provide(
@@ -52,6 +62,7 @@ const setup = () => {
         Layer.mergeAll(
           pairing,
           deletion,
+          demoBots,
           Layer.succeed(DemoPartnerRepository, demos.repository),
           SecureRandom.layerWebCrypto,
         ),
@@ -82,19 +93,26 @@ const setup = () => {
         Effect.map(({ _tag }) => _tag),
       ),
     );
-  return { demos, paired, unpaired, deleted, run, tagOf };
+  return { demos, paired, unpaired, deleted, bots, run, tagOf };
 };
 
 describe("DemoPartnerService", () => {
   it("pairs the caller with a new bot through an invite, the caller first", async () => {
-    const { demos, paired, run } = setup();
+    const { demos, paired, bots, run } = setup();
     const created = await run((demo) => demo.create(ana));
     const [, bot] = created.members;
+    expect(bots).toEqual([`start ${created.pairId} ${ana} ${bot}`]);
     expect(created.members[0]).toBe(ana);
     expect(bot).not.toBe(ana);
     expect(await run((_, pairing) => pairing.pair(ana))).toEqual(created);
     expect(paired).toEqual([{ members: expect.arrayContaining([ana, bot]), claimer: ana }]);
     expect([...demos.bots]).toEqual([bot]);
+  });
+
+  it("pairs the caller with a bot whose room could not wake it", async () => {
+    const { run } = setup({ botsDown: true });
+    const created = await run((demo) => demo.create(ana));
+    expect(await run((_, pairing) => pairing.pair(ana))).toEqual(created);
   });
 
   it("gives each caller a bot of its own", async () => {
@@ -122,9 +140,10 @@ describe("DemoPartnerService", () => {
   });
 
   it("unpairs the caller before deleting the bot, and forgets it", async () => {
-    const { demos, deleted, unpaired, run, tagOf } = setup();
+    const { demos, deleted, unpaired, bots, run, tagOf } = setup();
     const { pairId, members } = await run((demo) => demo.create(ana));
     await run((demo) => demo.remove(ana));
+    expect(bots.at(-1)).toBe(`stop ${pairId}`);
     expect(unpaired).toEqual([pairId]);
     expect(deleted).toEqual([{ userId: members[1], partnered: false }]);
     expect(await Effect.runPromise(demos.repository.botOf(ana))).toEqual(Option.none());
@@ -146,7 +165,7 @@ describe("DemoPartnerService", () => {
   });
 
   it("keeps a real partner when it deletes a bot the caller left", async () => {
-    const { deleted, unpaired, run } = setup();
+    const { deleted, unpaired, bots, run } = setup();
     const { members } = await run((demo) => demo.create(ana));
     await run((_, pairing) => pairing.unpair(ana));
     const pairId = await run((_, pairing) =>
@@ -155,6 +174,8 @@ describe("DemoPartnerService", () => {
     await run((demo) => demo.remove(ana));
     expect(deleted).toEqual([{ userId: members[1], partnered: false }]);
     expect(unpaired).toHaveLength(1);
+    // The real pair's room never had a bot to stop.
+    expect(bots.filter((line) => line.startsWith("stop"))).toEqual([]);
     expect((await run((_, pairing) => pairing.pair(ana))).pairId).toBe(pairId);
   });
 });
