@@ -589,7 +589,8 @@ export class PairRoom extends DurableObject {
       case "StrokePoints":
         // Points of a stroke this socket never began would draw nothing on the partner's side.
         if (attachment.openStrokes?.includes(message.value.id) !== true) return;
-        this.toPartner(attachment.user, message.value);
+        // The Workers clock moves on at each incoming event, so this is when the frame arrived.
+        this.toPartner(attachment.user, { ...message.value, relayedAt: Date.now() });
         return;
       case "StrokeEnd": {
         const open = attachment.openStrokes ?? [];
