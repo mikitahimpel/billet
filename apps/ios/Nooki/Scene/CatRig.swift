@@ -2,6 +2,7 @@ import Foundation
 import Metal
 import RealityKit
 import simd
+import Synchronization
 
 /// A rigid motion x' = q x + t.
 nonisolated struct Pose {
@@ -323,6 +324,19 @@ final class SplatSkinner {
     private let skin: any MTLBuffer
     private let target: (any MTLCommandBuffer) -> any MTLBuffer
     private var count: UInt32
+    /// The bones the splats were last skinned to.
+    private var skinned: [DualQuat] = []
+    /// How far a bone's quaternions may drift from `skinned` before a pass is worth rewriting every splat; well under a
+    /// pixel on the cat's 30 cm.
+    private static let drift: Float = 2e-4
+
+    /// Passes run and skipped, and the GPU time of the last pass, for perf runs.
+    nonisolated struct Stats {
+        var passes = 0
+        var skipped = 0
+        var milliseconds = 0.0
+    }
+    nonisolated static let stats = Mutex(Stats())
 
     /// One device, queue and compiled pipeline for every skinner.
     private static let gpu: (device: any MTLDevice, queue: any MTLCommandQueue, pipeline: any MTLComputePipelineState)? = {
@@ -349,6 +363,12 @@ final class SplatSkinner {
 
     /// `bones` in skin order, at most a few hundred.
     func run(_ bones: [DualQuat]) {
+        if bones.count == skinned.count, zip(bones, skinned).allSatisfy({ a, b in
+            max(simd_abs(a.real - b.real).max(), simd_abs(a.dual - b.dual).max()) < Self.drift
+        }) {
+            Self.stats.withLock { $0.skipped += 1 }
+            return
+        }
         guard let commands = queue.makeCommandBuffer(), let encoder = commands.makeComputeCommandEncoder() else { return }
         encoder.setComputePipelineState(pipeline)
         encoder.setBuffer(rest, offset: 0, index: 0)
@@ -359,6 +379,11 @@ final class SplatSkinner {
         let group = MTLSize(width: pipeline.maxTotalThreadsPerThreadgroup, height: 1, depth: 1)
         encoder.dispatchThreads(MTLSize(width: Int(count), height: 1, depth: 1), threadsPerThreadgroup: group)
         encoder.endEncoding()
+        commands.addCompletedHandler { done in
+            let milliseconds = (done.gpuEndTime - done.gpuStartTime) * 1000
+            SplatSkinner.stats.withLock { $0.passes += 1; $0.milliseconds = milliseconds }
+        }
         commands.commit()
+        skinned = bones
     }
 }

@@ -118,3 +118,33 @@ export const ownedInk = sqliteTable("owned_ink", {
   inkId: text("ink_id").primaryKey(),
   position: integer("position").notNull(),
 });
+
+// The pair's coins: the balance, and what care has earned on `day` (the cat's local day) against
+// each daily cap. No row means no coin yet.
+export const wallet = sqliteTable(
+  "wallet",
+  {
+    id: integer("id").primaryKey(),
+    balance: integer("balance").notNull(),
+    day: text("day"),
+    care: integer("care").notNull(),
+    notes: integer("notes").notNull(),
+    games: integer("games").notNull(),
+  },
+  (table) => [check("wallet_single_row", sql`${table.id} = 1`)],
+);
+
+// The wallet's entries, in the order they were stored (`seq`). `id` is `<kind>:<source>`, one
+// entry each, so a repeated earn or buy cannot pay or charge twice.
+export const coinEntry = sqliteTable(
+  "coin_entry",
+  {
+    seq: integer("seq").primaryKey({ autoIncrement: true }),
+    id: text("id").notNull(),
+    kind: text("kind").notNull(),
+    amount: integer("amount").notNull(),
+    ref: text("ref").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [uniqueIndex("coin_entry_id").on(table.id)],
+);

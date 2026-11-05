@@ -158,6 +158,7 @@ class CatRoom {
     /// `viewer` is the camera, which Mochi checks on now and then.
     func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
+        Self.shown = self
         adoptCat()
         subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { [weak self] event in
             guard let self, !paused else { return }
@@ -172,6 +173,7 @@ class CatRoom {
 
     /// Stops driving the room while another one is shown, ending any showcase.
     func stop() {
+        if Self.shown === self { Self.shown = nil }
         subscription?.cancel()
         subscription = nil
         guard let step = showcase.first else { return }
@@ -191,6 +193,7 @@ class CatRoom {
         yaw += (targetYaw - yaw) * min(1, dt * 8)
         pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
 
+        if frame % 600 == 0 { Self.releaseBodies() }
         director?.paused = isShowcasing
         director?.update(dt)
         walker?.update(dt)
@@ -232,29 +235,101 @@ class CatRoom {
             ]))
             catGroup.components.set(InputTargetComponent())
 
-            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: mochi.bodies,
+            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: Self.bodies,
                                    scale: scale, rests: rests, route: route, wandering: wandering)
             walker.keepOut = catKeepOut
+            walker.needsBody = { Self.needBody($0) }
+            Self.rooms.add(self)
             self.walker = walker
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catEvents, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
             director?.appOpened()
             catHeadTop = 0.3 * scale
             if subscription != nil { adoptCat() }
+            NookiPerf.catPlaced()
         }
     }
 
     /// Loads Mochi again the next time a room is built, after her coat changed.
-    static func forgetMochi() { mochi = nil }
+    static func forgetMochi() {
+        mochi = nil
+        for load in bodyLoads.values { load.cancel() }
+        bodyLoads = [:]
+        bodies = [:]
+        rooms.removeAllObjects()
+    }
 
-    /// Mochi's rigs: standing, sitting, and lying where splats are drawn (the meshes have no lying bodies).
+    /// Mochi's standing and sitting rigs.
     private struct Mochi {
         let standing: CatRig
         let seated: CatRig
-        let bodies: [NookiRestPose: CatRig]
     }
 
-    /// Mochi's rigs, shared by every room.
+    /// Her lying bodies where splats are drawn (the meshes have none), shared by every room's walker like her other
+    /// rigs. Each holds some 15 MB, so one loads the first time a brain rests her in it and goes once none has for
+    /// `bodyLife`.
+    private static var bodies: [NookiRestPose: CatRig] = [:]
+    private static var bodyLoads: [NookiRestPose: Task<Void, Never>] = [:]
+    private static var bodyUsed: [NookiRestPose: ContinuousClock.Instant] = [:]
+    private static let bodyLife = Duration.seconds(300)
+    private static let bodyFiles: [NookiRestPose: String] = [.loaf: "MochiLoaf", .sleep: "MochiSleep"]
+    /// Rooms with a walker, and the one on screen, which holds her entities.
+    private static let rooms = NSHashTable<CatRoom>.weakObjects()
+    private static weak var shown: CatRoom?
+    private static var catShadows = true
+
+    private static func needBody(_ pose: NookiRestPose) {
+        bodyUsed[pose] = .now
+        guard SplatLoader.isSupported, bodies[pose] == nil, bodyLoads[pose] == nil, let name = bodyFiles[pose] else { return }
+        bodyLoads[pose] = Task {
+            // A failed load stays in `bodyLoads`, so she lies on the standing splat instead of retrying every rest.
+            do {
+                let file = try await Task.detached {
+                    try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                }.value
+                guard !Task.isCancelled else { return }
+                let rig = try CatRig(file)
+                if let entity = rig.entity {
+                    entity.isEnabled = false
+                    castShadow(entity, catShadows)
+                }
+                bodies[pose] = rig
+                bodyLoads[pose] = nil
+                for room in rooms.allObjects { room.walker?.setBody(pose, rig) }
+                shown?.adoptCat()
+            } catch {
+                print("\(name) failed to load: \(error)")
+            }
+        }
+    }
+
+    /// Lets go of bodies no walker has rested in for `bodyLife`.
+    private static func releaseBodies() {
+        let walkers = rooms.allObjects.compactMap(\.walker)
+        for (pose, rig) in bodies {
+            if walkers.contains(where: { $0.rest == pose }) { bodyUsed[pose] = .now }
+            guard bodyUsed[pose].map({ ContinuousClock.now - $0 > bodyLife }) ?? true else { continue }
+            bodies[pose] = nil
+            for walker in walkers { walker.setBody(pose, nil) }
+            rig.entity?.removeFromParent()
+        }
+    }
+
+    private static func castShadow(_ entity: Entity, _ isOn: Bool = true) {
+        entity.components.set(GroundingShadowComponent(castsShadow: isOn))
+        entity.forEachDescendant { $0.components.set(GroundingShadowComponent(castsShadow: isOn)) }
+    }
+
+    /// Turns her grounding shadow off or back on, for a perf run's `cost` step.
+    func setCatShadow(_ isOn: Bool) {
+        Self.catShadows = isOn
+        guard let walker else { return }
+        for entity in ([walker.standing, walker.seated] + walker.bodies.values).compactMap(\.entity) {
+            Self.castShadow(entity, isOn)
+        }
+    }
+
+    /// Mochi's standing and sitting rigs, shared by every room.
     private static var mochi: Task<Mochi, any Error>?
 
     private static func loadMochi() async throws -> Mochi {
@@ -263,24 +338,11 @@ class CatRoom {
             let drawn = SplatLoader.isSupported
             let files = try await Task.detached {
                 // Grey reads Ilya's files from the app; another coat reads its recoloured copy (CatCoat.bundle).
-                let coat = try drawn ? CatCoat.current().bundle() : .main
+                let coat = try drawn ? CatCoat.current().bundle(poses: ["MochiStanding", "Mochi"]) : .main
                 return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
                         try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
-            var bodies: [NookiRestPose: CatRig] = [:]
-            if drawn {
-                for (pose, name) in [(NookiRestPose.loaf, "MochiLoaf"), (.sleep, "MochiSleep")] {
-                    do {
-                        let file = try await Task.detached {
-                            try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle())
-                        }.value
-                        bodies[pose] = try CatRig(file)
-                    } catch {
-                        print("\(name) failed to load: \(error)")
-                    }
-                }
-            }
             if !drawn {
                 for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
                     do {
@@ -292,11 +354,8 @@ class CatRoom {
                     }
                 }
             }
-            for entity in ([standing.entity, seated.entity] + bodies.values.map(\.entity)).compactMap({ $0 }) {
-                entity.components.set(GroundingShadowComponent(castsShadow: true))
-                entity.forEachDescendant { $0.components.set(GroundingShadowComponent(castsShadow: true)) }
-            }
-            return Mochi(standing: standing, seated: seated, bodies: bodies)
+            for entity in [standing.entity, seated.entity].compactMap({ $0 }) { castShadow(entity) }
+            return Mochi(standing: standing, seated: seated)
         }
         mochi = task
         return try await task.value

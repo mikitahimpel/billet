@@ -47,6 +47,8 @@ final class HomeState {
     /// Us (plans, profile and settings) opens from the couple's avatars in the header, over any tab.
     var showsUs = false
     var showsInbox = false
+    /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
+    var invitedCode: String?
     /// Asks the World tab to open the cat's sheet, as an Inbox row does.
     var showsPetSheet = false
     /// A shop item opened from outside the Shop, such as an Inbox row.
@@ -208,10 +210,11 @@ final class HomeState {
     /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
     let moments = MomentStore()
 
-    /// Adding a moment earns the couple 10 coins (see docs/shop-concept.md).
+    /// Adding a moment earns the couple 10 coins (see docs/shop-concept.md). A photo that `shares` also goes to the
+    /// partner once this phone is paired (`PhotoSync`); a drawing's keepsake does not, as the drawing went already.
     @discardableResult
-    func addMoment(_ image: UIImage, caption: String) -> Bool {
-        guard moments.add(image, caption: caption, author: partners.0) != nil else { return false }
+    func addMoment(_ image: UIImage, caption: String, shares: Bool = false) -> Bool {
+        guard moments.add(image, caption: caption, author: partners.0, unsent: shares) != nil else { return false }
         wallet.earn(10)
         streak.record()
         return true
@@ -326,6 +329,9 @@ final class HomeState {
         case .draw: drawing = true
         case .inbox: showsInbox = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
+        case .invite(let code):
+            // Before onboarding is done, the link is its code page's.
+            if UserDefaults.standard.bool(forKey: OnboardingFlow.doneKey) { invitedCode = code }
         }
     }
 

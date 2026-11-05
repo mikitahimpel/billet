@@ -61,13 +61,40 @@ is both partners'.
 - **The note:** `Note.Text` and `SendNoteRequest.Text` carry `ink`. A note written before inks has
   none and decodes as `ink-graphite`; the server always writes it out.
 - **Owned inks:** the pair's `PairRoom` keeps the ones it bought (`owned_ink`, in the order it got
-  them). `GrantInks` adds them, and the wallet calls it in the same commit as the coins it takes,
-  once it lands. Until then, nothing grants an ink but tests.
+  them). A buy (below) adds one in the same commit as the coins it takes. `GrantInks` adds inks
+  without coins, for bundles to come.
 - **The check:** the room refuses a text note in an ink the pair does not own, with
   `400 {"_tag":"InkNotOwned","ink":…}`, and stores nothing. An ink the catalog does not sell is a
   `400 InvalidRequest`.
 - **`GET /v1/inks`:** answers `InksResponse {inks, owned}` (session, paired; `no-store`), with the
   free ink first in `owned`.
+
+## The pair wallet
+
+Coins are the pair's, like inks, and live in its `PairRoom`: a `wallet` row (the balance, and what
+care earned today against each daily cap) and the `coin_entry` ledger, one row per id. Nothing on
+the phone adds coins.
+
+- **Earning:** each cat journal entry the room stores earns its reward in the same commit, as the
+  entry `earn:<cat entry id>`. Rewards and caps are in `@billet/contracts-domain/coins` and are
+  placeholders until the owner sets them: feeding, petting, playing and watering 1 each (care, 10
+  a day), a note 5 and a photo 10 (notes, 30 a day), a game won 10 and lost 3 (games, 40 a day);
+  sleep and shooing earn nothing. The entry that crosses a cap is cut to what is left. The day is
+  the cat's local day (`utcOffsetSeconds`), so the caps reset at the couple's midnight. A note
+  sent before the cat is adopted is not journalled, so it earns nothing.
+- **Buying:** `POST /v1/shop/buy {id, item}` (session, paired) buys one ink at its catalog price;
+  the client never sends a price. The room takes the coins (`spend:<id>`, a negative amount) and
+  adds the ink in one decision, and answers `BuyResponse {entry, balance, granted, owned}`. A retry
+  with the same `id` answers with the first buy and charges nothing. `409 NotEnoughCoins {needed,
+  have}` and `409 AlreadyOwned {itemId}` (also for the free ink) refuse it; an ink the catalog
+  does not sell is a `400 InvalidRequest`.
+- **`GET /v1/coins?after=<entry id>&limit=<1-100>`:** `CoinsResponse {balance, entries}`, oldest
+  first, `no-store`.
+- **Bought coins** (`coin_ledger` in D1, through `/v1/purchases*`) are not in this wallet yet. They
+  join it when payments are switched on; until then the flag is off and nothing is bought.
+- **Still to come:** shop offers, the daily gift, undo, Inbox items for buys, and a
+  `CoinsChanged` message on the room socket. Until then the app reads `GET /v1/coins` again after a
+  buy or a care action.
 
 ## Three builds: none, mock and StoreKit
 

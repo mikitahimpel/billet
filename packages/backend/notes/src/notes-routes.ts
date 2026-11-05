@@ -7,8 +7,10 @@ import {
 } from "effect/http";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures, type RouteFailure } from "@billet/backend-auth/auth-routes";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
 import { MediaKey } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { routes } from "@billet/contracts-http-api/routes";
 import {
@@ -17,7 +19,14 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
-import type { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
+import type {
+  AlreadyOwned,
+  InkNotOwned,
+  InvalidNote,
+  NotEnoughCoins,
+  NotesNotFound,
+  NotesUnavailable,
+} from "./notes-error.ts";
 import { contentTypeOf } from "./image-type.ts";
 import { NotesService } from "./notes-service.ts";
 
@@ -44,6 +53,18 @@ const HistoryQuery = Schema.Struct({
   ),
 });
 
+export const coinsPageLimit = 100;
+
+const CoinsQuery = Schema.Struct({
+  after: Schema.optionalKey(CoinEntryId),
+  limit: Schema.optionalKey(
+    decimal.check(Schema.isBetween({ minimum: 1, maximum: coinsPageLimit })),
+  ),
+});
+
+/** A buy request is an id and an item name. */
+const buySizeLimit = ByteSize.kibibytes(1);
+
 const decodeMediaKey = Schema.decodeUnknownEffect(MediaKey);
 
 const respondError = HttpServerResponse.schemaJson(ApiError);
@@ -51,6 +72,8 @@ const respondUpload = HttpServerResponse.schemaJson(UploadImageResponse);
 const respondNote = HttpServerResponse.schemaJson(SendNoteResponse);
 const respondNotes = HttpServerResponse.schemaJson(ListNotesResponse);
 const respondInks = HttpServerResponse.schemaJson(InksResponse);
+const respondCoins = HttpServerResponse.schemaJson(CoinsResponse);
+const respondBuy = HttpServerResponse.schemaJson(BuyResponse);
 
 /** The path carries a key from the signed-in couple's prefix, so nothing here may be cached. */
 const imageHeaders = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
@@ -58,7 +81,13 @@ const imageHeaders = { "cache-control": "no-store", "x-content-type-options": "n
 const respondNotesFailures = <R>(
   effect: Effect.Effect<
     HttpServerResponse.HttpServerResponse,
-    RouteFailure | NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable,
+    | RouteFailure
+    | NotesNotFound
+    | InvalidNote
+    | InkNotOwned
+    | NotEnoughCoins
+    | AlreadyOwned
+    | NotesUnavailable,
     R
   >,
 ) =>
@@ -68,6 +97,10 @@ const respondNotesFailures = <R>(
       InvalidNote: () => respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 }),
       InkNotOwned: ({ ink }) =>
         respondError(ApiError.cases.InkNotOwned.make({ ink }), { status: 400 }),
+      NotEnoughCoins: ({ needed, have }) =>
+        respondError(ApiError.cases.NotEnoughCoins.make({ needed, have }), { status: 409 }),
+      AlreadyOwned: ({ ink }) =>
+        respondError(ApiError.cases.AlreadyOwned.make({ itemId: ink }), { status: 409 }),
       NotesUnavailable: (error) =>
         Effect.logError("notes unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
@@ -148,6 +181,32 @@ export const NotesRoutes = HttpRouter.use((router) =>
         return yield* respondInks(yield* notes.inks(userId), {
           headers: { "cache-control": "no-store" },
         });
+      }).pipe(respondNotesFailures),
+    );
+
+    // The wallet is the pair's: never cached, so a partner's buy or earn shows on the next read.
+    yield* router.add(
+      routes.getCoins.method,
+      routes.getCoins.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const { after, limit = coinsPageLimit } =
+          yield* HttpServerRequest.schemaSearchParams(CoinsQuery);
+        return yield* respondCoins(yield* notes.coins(userId, after, limit), {
+          headers: { "cache-control": "no-store" },
+        });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.buyItem.method,
+      routes.buyItem.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(BuyRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondBuy(yield* notes.buy(userId, request));
       }).pipe(respondNotesFailures),
     );
   }),

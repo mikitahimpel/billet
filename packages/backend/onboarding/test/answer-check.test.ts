@@ -30,6 +30,17 @@ const range = step({ _tag: "Range", id: "r", title, skippable: false, min: 0, ma
 const text = step({ _tag: "Text", id: "t", title, skippable: true, maxLength: 5 });
 
 describe("answerProblem", () => {
+  it("refuses an under-13 age, which the app never sends", () => {
+    const age = step({
+      _tag: "Single",
+      id: "age",
+      title,
+      skippable: true,
+      options: [option("age-under-13")],
+    });
+    expect(answerProblem(age, answer({ _tag: "Single", option: "age-under-13" }))).toBeDefined();
+  });
+
   it("takes a skip on a skippable step only", () => {
     expect(answerProblem(single, answer({ _tag: "Skipped" }))).toBeUndefined();
     expect(answerProblem(range, answer({ _tag: "Skipped" }))).toBeDefined();

@@ -144,6 +144,7 @@ describe("PairRoom storage", () => {
       lastSeq: 1,
       streakDays: 4,
       inks: [],
+      wallet: { balance: 0, care: 0, notes: 0, games: 0 },
     });
     await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
@@ -166,6 +167,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_cat"),
       expect.stringContaining("_activity"),
       expect.stringContaining("_owned_ink"),
+      expect.stringContaining("_wallet"),
     ]);
   });
 

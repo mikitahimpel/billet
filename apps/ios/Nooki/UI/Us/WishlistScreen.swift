@@ -14,9 +14,6 @@ struct WishlistScreen: View {
         case sizes, flowers, coffee, sweets, allergies
     }
 
-    private let paper = Color(hex: 0xFFFBF3)
-    private let ink = Color(hex: 0x5B3A28)
-
     private var us: UsStore { state.us }
     private var viewer: String { state.viewer }
     private var other: String { state.otherPartner }
@@ -106,8 +103,8 @@ struct WishlistScreen: View {
         cardBody(wish, showReserved: true)
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(paper, in: .rect(cornerRadius: 18, style: .continuous))
-            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
             .onTapGesture { editing = wish }
             .contextMenu {
                 if wish.reservedBy != nil {
@@ -133,13 +130,13 @@ struct WishlistScreen: View {
                 HStack(spacing: 10) {
                     Text("You're gifting this ✓")
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color.honeyDeep)
+                        .foregroundStyle(Ink.accentText)
                     Spacer(minLength: 0)
                     Button("Release") {
                         withAnimation(.snappy(duration: 0.25)) { us.toggleReserve(wish.id, by: viewer) }
                     }
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(ink.opacity(0.55))
+                    .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(.plain)
                 }
             } else {
@@ -148,7 +145,7 @@ struct WishlistScreen: View {
                 } label: {
                     Text("I'll gift this")
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 16)
                         .frame(height: 36)
                         .background(Capsule().fill(.honeyGradient))
@@ -158,7 +155,7 @@ struct WishlistScreen: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(paper, in: .rect(cornerRadius: 18, style: .continuous))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
     }
 
     private func cardBody(_ wish: WishItem, showReserved: Bool) -> some View {
@@ -166,7 +163,7 @@ struct WishlistScreen: View {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(wish.title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(ink)
+                    .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 Text(String(repeating: "♥", count: max(0, wish.want)))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -180,15 +177,15 @@ struct WishlistScreen: View {
             if let url = URL(string: wish.link), let host = url.host() {
                 Link(host, destination: url)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.honeyDeep)
+                    .foregroundStyle(Ink.accentText)
             }
             if showReserved && wish.reservedBy != nil {
                 Label("Someone is planning something", systemImage: "gift.fill")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(ink.opacity(0.7))
+                    .foregroundStyle(Ink.textSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(ink.opacity(0.07), in: .capsule)
+                    .background(Ink.surfaceRaised, in: .capsule)
                     .padding(.top, 2)
             }
         }
@@ -201,24 +198,24 @@ struct WishlistScreen: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Gifted")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
                 ForEach(items) { wish in
                     HStack(spacing: 10) {
                         UsIcon(glyph: .init(symbol: "gift.fill", tint: .coral), size: 24)
                         Text(wish.title)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(ink)
+                            .foregroundStyle(Ink.text)
                             .lineLimit(1)
                         Spacer(minLength: 8)
                         if let date = wish.gifted {
                             Text(date, format: .dateTime.day().month())
                                 .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .foregroundStyle(ink.opacity(0.55))
+                                .foregroundStyle(Ink.textSecondary)
                         }
                     }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 11)
-                    .background(paper.opacity(0.92), in: .rect(cornerRadius: 14, style: .continuous))
+                    .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
                 }
             }
         }
@@ -229,7 +226,7 @@ struct WishlistScreen: View {
         return VStack(alignment: .leading, spacing: 10) {
             Text(owner == viewer ? "What I love" : "What \(other) loves")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .foregroundStyle(Ink.text)
             VStack(spacing: 0) {
                 lovesRow(.init(symbol: "tshirt.fill", tint: .sky), "Sizes", .sizes, \.sizes, editable: editable)
                 lovesDivider
@@ -243,13 +240,13 @@ struct WishlistScreen: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 4)
-            .background(paper, in: .rect(cornerRadius: 18, style: .continuous))
+            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
         }
     }
 
     private var lovesDivider: some View {
         Rectangle()
-            .fill(ink.opacity(0.08))
+            .fill(Ink.separator)
             .frame(height: 1)
     }
 
@@ -264,7 +261,7 @@ struct WishlistScreen: View {
             UsIcon(glyph: icon, size: 26)
             Text(label)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(ink.opacity(0.7))
+                .foregroundStyle(Ink.textSecondary)
                 .frame(width: 100, alignment: .leading)
             if editable {
                 TextField(
@@ -273,17 +270,17 @@ struct WishlistScreen: View {
                         get: { loves[keyPath: keyPath] },
                         set: { loves[keyPath: keyPath] = $0 }
                     ),
-                    prompt: Text("—").foregroundStyle(ink.opacity(0.35))
+                    prompt: Text("—").foregroundStyle(Ink.textTertiary)
                 )
                 .focused($lovesFocus, equals: field)
                 .onSubmit { saveLoves() }
                 .multilineTextAlignment(.trailing)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(ink)
+                .foregroundStyle(Ink.text)
             } else {
                 Text(us.loves(of: owner)[keyPath: keyPath].isEmpty ? "—" : us.loves(of: owner)[keyPath: keyPath])
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(ink.opacity(0.85))
+                    .foregroundStyle(Ink.textSecondary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -356,7 +353,7 @@ struct WishEditor: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("How much do you want it?")
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.secondary)
+                .foregroundStyle(Ink.textSecondary)
             HStack(spacing: 12) {
                 ForEach(1...3, id: \.self) { value in
                     Button {
@@ -364,7 +361,7 @@ struct WishEditor: View {
                     } label: {
                         Image(systemName: value <= want ? "heart.fill" : "heart")
                             .font(.system(size: 26, weight: .semibold))
-                            .foregroundStyle(value <= want ? Color.blushPink : Ink.secondary.opacity(0.45))
+                            .foregroundStyle(value <= want ? Color.blushPink : Ink.textTertiary)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(value) hearts")

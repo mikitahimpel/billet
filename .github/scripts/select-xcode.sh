@@ -12,4 +12,5 @@ sudo xcode-select -s "$app"
 # Captured, not piped: `head` closing the pipe early makes xcodebuild abort on the broken pipe.
 selected="$(xcodebuild -version)"
 echo "$selected"
-[ "$(sed -n 1p <<< "$selected")" = "Xcode ${version}" ]
+# An app named Xcode_26.6.0 reports itself as "Xcode 26.6".
+[ "$(sed -n 1p <<< "$selected")" = "Xcode ${version%.0}" ] || [ "$(sed -n 1p <<< "$selected")" = "Xcode ${version}" ]

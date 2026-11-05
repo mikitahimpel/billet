@@ -36,7 +36,9 @@ import {
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
+import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
+import { CoinEntry } from "@billet/contracts-domain/coins";
 import {
   type AppStatus,
   MaintenanceResponse,
@@ -175,6 +177,21 @@ const drawingOnPaper = Note.cases.Drawing.make({
   paper: "sage",
 });
 const rose = Schema.decodeSync(InkId)("ink-rose");
+const decodeCoinEntry = Schema.decodeUnknownSync(CoinEntry);
+const earnEntry = decodeCoinEntry({
+  id: "earn:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+  kind: "earn",
+  amount: 10,
+  ref: "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+  at: 1762350000000,
+});
+const spendEntry = decodeCoinEntry({
+  id: "spend:0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+  kind: "spend",
+  amount: -60,
+  ref: "ink-rose",
+  at: 1762350060000,
+});
 const catalogInk = (id: string): Ink => {
   const found = inkOf(id);
   if (found === undefined) throw new Error(`no ink ${id} in the catalog`);
@@ -508,6 +525,20 @@ export const catalog: ReadonlyArray<Fixture> = [
     "apple-id-in-use": ApiError.cases.AppleIdInUse.make({}),
     "invalid-purchase": ApiError.cases.InvalidPurchase.make({}),
     "ink-not-owned": ApiError.cases.InkNotOwned.make({ ink: rose }),
+    "not-enough-coins": ApiError.cases.NotEnoughCoins.make({ needed: 60, have: 25 }),
+    "already-owned": ApiError.cases.AlreadyOwned.make({ itemId: "ink-rose" }),
+  }),
+  fixture("CoinEntry", CoinEntry, {
+    default: earnEntry,
+    spend: spendEntry,
+  }),
+  fixture("CoinsResponse", CoinsResponse, {
+    default: { balance: 65, entries: [earnEntry, spendEntry] },
+    empty: { balance: 0, entries: [] },
+  }),
+  fixture("BuyRequest", BuyRequest, { default: { id: idempotencyKey, item: rose } }),
+  fixture("BuyResponse", BuyResponse, {
+    default: { entry: spendEntry, balance: 65, granted: [rose], owned: [freeInk, rose] },
   }),
   fixture("Ink", Ink, { free: catalogInk("ink-graphite"), default: catalogInk("ink-rose") }),
   fixture("InksResponse", InksResponse, {

@@ -21,5 +21,12 @@ export const ApiError = Schema.TaggedUnion({
   InvalidPurchase: {},
   /** A text note in an ink colour the pair has not bought. Buy it in the shop, or use another. */
   InkNotOwned: { ink: InkId },
+  /** A buy that costs more than the pair's balance. */
+  NotEnoughCoins: {
+    needed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+    have: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  },
+  /** A buy of an item the pair already owns. */
+  AlreadyOwned: { itemId: Schema.String },
 });
 export type ApiError = typeof ApiError.Type;
