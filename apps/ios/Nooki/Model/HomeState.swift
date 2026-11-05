@@ -165,6 +165,25 @@ final class HomeState {
 
     init() {
         us = UsStore(wallet: wallet)
+        #if DEBUG
+        // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
+        let defaults = UserDefaults.standard
+        switch defaults.string(forKey: "shotMoments") {
+        case "photos": tab = .moments
+        case "board":
+            tab = .moments
+            // After launch, so Home sees the change and builds the board room.
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                momentsMode = .board
+            }
+        default: break
+        }
+        if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
+            tab = .moments
+            openedPin = PinRoute(id: moments.moments[defaults.integer(forKey: "shotMoment")].id)
+        }
+        #endif
     }
 
     /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
