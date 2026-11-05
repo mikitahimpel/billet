@@ -1,32 +1,17 @@
 import { Schema } from "effect";
 import { UtcOffsetSeconds } from "@billet/contracts-domain/cat";
-import { CoinEntry, LocalDay } from "@billet/contracts-domain/coins";
+import { CoinEntry } from "@billet/contracts-domain/coins";
 import { IdempotencyKey } from "@billet/contracts-domain/ids";
-import { InkId } from "@billet/contracts-domain/inks";
 import {
   CollectionId,
   GiftReward,
   KnownRoomItemId,
-  RoomItemId,
+  PairShop,
   ShopOffer,
 } from "@billet/contracts-domain/shop";
 
-const Balance = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
-
-/**
- * `GET /v1/shop`: what the pair has. `inks` starts with the free ink and `items` with the starter
- * pieces, then the rest in the order they were bought. `wishlist` is in the order it was wished.
- * `giftDay` is the pair's local day it last opened the daily gift on, absent before the first;
- * `bonuses` are the collections whose bonus it was paid.
- */
-export const ShopResponse = Schema.Struct({
-  balance: Balance,
-  inks: Schema.Array(InkId),
-  items: Schema.Array(RoomItemId),
-  wishlist: Schema.Array(RoomItemId),
-  giftDay: Schema.optionalKey(LocalDay),
-  bonuses: Schema.Array(CollectionId),
-});
+/** `GET /v1/shop`: what the pair has. */
+export const ShopResponse = PairShop;
 export type ShopResponse = typeof ShopResponse.Type;
 
 /**
