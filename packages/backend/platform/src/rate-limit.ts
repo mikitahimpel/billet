@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { EpochMillis } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
 import { logLine } from "./observability.ts";
+import { systemNow } from "./wall-clock.ts";
 
 /** What a `rate_limits` row holds. A test fails if the table's columns differ. */
 export const StoredRateLimit = Schema.Struct({
@@ -58,7 +59,7 @@ const tooManyRequests = (retryAfterSeconds: number): Response =>
 export const limitRequest = async (
   request: Request,
   db: D1Database,
-  now: number = Date.now(),
+  now: number = systemNow(),
 ): Promise<Response | undefined> => {
   const group = groupOf(new URL(request.url).pathname);
   if (group === undefined) return undefined;

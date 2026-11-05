@@ -7,6 +7,7 @@ import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { PairRoom } from "../src/pair-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
 const alice = Schema.decodeUnknownSync(UserId)("user-alice");
 const bob = Schema.decodeUnknownSync(UserId)("user-bob");
@@ -48,23 +49,19 @@ const alarmAt = (room: ReturnType<typeof env.LANE_ROOM.get>) =>
 
 type Room = ReturnType<typeof env.LANE_ROOM.get>;
 
-/** The first try follows the send at once, so tests wait for its outcome instead of assuming one. */
-const untilDeliveries = async (
-  room: Room,
-  check: (entries: Awaited<ReturnType<Room["deliveries"]>>) => boolean,
-): Promise<void> => {
-  const end = Date.now() + 4000;
-  while (!check(await room.deliveries())) {
-    if (Date.now() > end) throw new Error("Never saw the expected deliveries");
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
+/**
+ * The room's alarm, run now. The room lives at the fixed `TEST_NOW`, far ahead of the real clock,
+ * so its alarms never go off by themselves: each try happens where a test runs it.
+ */
+const runAlarm = async (room: Room) => {
+  expect(await runDurableObjectAlarm(room)).toBe(true);
 };
 
 describe("delivery lanes", () => {
   it("hands an accepted note to its lane, and the alarm delivers it once", async () => {
     const room = await laneRoom();
     await room.sendNote(alice, photo());
-    await untilDeliveries(room, (entries) => entries[0]?.status === "delivered");
+    await runAlarm(room);
     expect(await room.deliveries()).toMatchObject([{ lane: "AlertPush", status: "delivered" }]);
     expect(await alarmAt(room)).toBeNull();
 
@@ -85,7 +82,7 @@ describe("delivery lanes", () => {
         enqueue.call(instance, entry!.noteId),
       ]);
     });
-    await untilDeliveries(room, (entries) => entries[0]?.status === "delivered");
+    await runAlarm(room);
     expect(await room.deliveries()).toHaveLength(1);
     await runDurableObjectAlarm(room);
     expect(await calls(room)).toBe(1);
@@ -95,9 +92,9 @@ describe("delivery lanes", () => {
     const room = await laneRoom(["throw", "Retry"]);
     await room.sendNote(alice, photo());
 
-    await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+    await runAlarm(room);
     expect(await room.deliveries()).toMatchObject([{ status: "pending", attempts: 1 }]);
-    expect(await alarmAt(room)).toBeGreaterThan(Date.now());
+    expect(await alarmAt(room)).toBeGreaterThan(testNowOf(env));
 
     // Before its wait is over the entry is not due, so firing early does nothing.
     await runDurableObjectAlarm(room);
@@ -117,7 +114,7 @@ describe("delivery lanes", () => {
   it("abandons after the attempt limit and stops the alarm", async () => {
     const room = await laneRoom(Array.from({ length: maxAttempts }, () => "Retry"));
     await room.sendNote(alice, photo());
-    await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+    await runAlarm(room);
     for (let i = 1; i < maxAttempts; i++) {
       await letWaitsPass(room);
       await runDurableObjectAlarm(room);
@@ -135,7 +132,7 @@ describe("delivery lanes", () => {
     try {
       const room = await laneRoom(["Retry"]);
       await room.sendNote(alice, photo());
-      await untilDeliveries(room, (entries) => entries[0]?.attempts === 1);
+      await runAlarm(room);
       await letWaitsPass(room);
       await runDurableObjectAlarm(room);
       expect(await room.deliveryHealth()).toEqual({
@@ -160,7 +157,7 @@ describe("delivery lanes", () => {
   it("abandons at once when the lane says so, for example a dead token", async () => {
     const room = await laneRoom(["Abandon"]);
     await room.sendNote(alice, photo());
-    await untilDeliveries(room, (entries) => entries[0]?.status === "abandoned");
+    await runAlarm(room);
     expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: 0 }]);
   });
 
