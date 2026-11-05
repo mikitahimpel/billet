@@ -3,8 +3,9 @@ import { Context, Effect, Layer, Option, Schema } from "effect";
 import { ActivityCursor, ActivityEvent, ActivityTarget } from "@billet/contracts-domain/activity";
 import { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
 import { CoinEntry, type CoinEntryId } from "@billet/contracts-domain/coins";
-import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
+import { NoteReaction } from "@billet/contracts-domain/reaction";
 import {
   RoomState,
   type ActiveRoom,
@@ -21,6 +22,7 @@ import {
   coinEntry,
   note,
   ownedInk,
+  reaction,
   room,
   wallet,
 } from "./room-schema.ts";
@@ -72,6 +74,22 @@ const walletValues = ({ wallet: w }: ActiveRoom): typeof wallet.$inferInsert => 
   notes: w.notes,
   games: w.games,
 });
+
+const decodeReaction = Schema.decodeUnknownOption(NoteReaction);
+
+/** A row this code cannot read, such as a reaction a newer build added, is left out. */
+const reactionsFrom = (rows: ReadonlyArray<typeof reaction.$inferSelect>) =>
+  rows.flatMap((row) =>
+    Option.toArray(
+      decodeReaction({
+        rev: row.rev,
+        note: row.noteId,
+        by: row.by,
+        at: row.at,
+        ...(row.reaction === null ? {} : { reaction: row.reaction }),
+      }),
+    ),
+  );
 
 const CatEventJson = Schema.fromJsonString(CatEvent);
 const encodeCatEvent = Schema.encodeSync(CatEventJson);
@@ -178,6 +196,7 @@ const roomFrom = (
           ],
           lastSeq: row.lastSeq,
           streakDays: row.streakDays,
+          ...(row.lastReactionRev === null ? {} : { lastReactionRev: row.lastReactionRev }),
           inks,
           wallet: walletFrom(walletRow),
           ...catFrom(catRow),
@@ -195,6 +214,7 @@ const roomValues = (state: ActiveRoom): typeof room.$inferInsert => {
     secondPresence: second.presence,
     lastSeq: state.lastSeq,
     streakDays: state.streakDays,
+    lastReactionRev: state.lastReactionRev ?? null,
   };
 };
 
@@ -230,6 +250,7 @@ export const SqliteRoomStore = Layer.effect(
         catEntries: ReadonlyArray<CatEntry>,
         items: ReadonlyArray<ActivityRow>,
         coins: ReadonlyArray<CoinEntry>,
+        reactions: ReadonlyArray<NoteReaction>,
       ) =>
         db
           .transaction((tx) =>
@@ -273,6 +294,19 @@ export const SqliteRoomStore = Layer.effect(
                   body: encodeCatEvent(entry.event),
                 });
               }
+              for (const r of reactions) {
+                const values = {
+                  noteId: r.note,
+                  by: r.by,
+                  reaction: r.reaction ?? null,
+                  at: r.at,
+                  rev: r.rev,
+                };
+                yield* tx
+                  .insert(reaction)
+                  .values(values)
+                  .onConflictDoUpdate({ target: [reaction.noteId, reaction.by], set: values });
+              }
               for (const item of items) {
                 const values = activityValues(item);
                 yield* tx
@@ -301,6 +335,37 @@ export const SqliteRoomStore = Layer.effect(
             }),
             Effect.orDie,
           ),
+      // Notes have no id column: the id is in the body, and a room holds few enough to scan.
+      noteById: (id: NoteId) =>
+        db
+          .select()
+          .from(note)
+          .where(sql`json_extract(${note.body}, '$.id') = ${id}`)
+          .pipe(
+            Effect.map(([row]) => {
+              const decoded = row === undefined ? Option.none() : decodeNoteOption(row.body);
+              return Option.map(decoded, (stored) => ({ seq: row?.seq ?? 0, note: stored }));
+            }),
+            Effect.orDie,
+          ),
+      reactionOf: (noteId: NoteId, by: UserId) =>
+        db
+          .select()
+          .from(reaction)
+          .where(and(eq(reaction.noteId, noteId), eq(reaction.by, by)))
+          .pipe(
+            Effect.map((rows) => Option.fromNullishOr(reactionsFrom(rows)[0])),
+            Effect.orDie,
+          ),
+      reactionsAfter: (afterRev: number, limit: number) =>
+        db
+          .select()
+          .from(reaction)
+          .where(gt(reaction.rev, afterRev))
+          .orderBy(asc(reaction.rev))
+          .limit(pageSize(limit))
+          .pipe(Effect.map(reactionsFrom), Effect.orDie),
+      forgetReactions: db.delete(reaction).pipe(Effect.asVoid, Effect.orDie),
       notesAfter: (afterSeq: number, limit: number) =>
         Effect.gen(function* () {
           const rows = yield* db

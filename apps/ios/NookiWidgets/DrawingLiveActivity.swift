@@ -21,7 +21,7 @@ struct DrawingLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text("\(partner) drew on your lock screen")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.nookiCaption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.9))
                 }
             } compactLeading: {
@@ -51,7 +51,7 @@ private struct DrawingActivityBanner: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text("From \(partner)")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .font(.nookiHeadline)
                 Text("Tap to draw one back")
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .opacity(0.8)

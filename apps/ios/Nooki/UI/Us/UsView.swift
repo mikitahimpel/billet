@@ -58,7 +58,6 @@ struct UsView: View {
                 .foregroundStyle(Ink.primary)
                 .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
             Spacer(minLength: 0)
-            ViewerSwitch(state: state)
             Menu {
                 Section("How are you, \(state.profile.name(of: state.viewer))?") {
                     ForEach(PartnerMood.allCases, id: \.self) { mood in
@@ -137,29 +136,6 @@ struct UsView: View {
 }
 
 // MARK: - Pieces
-
-/// "Who's holding the phone" toggle; both partners share one device until sync lands.
-private struct ViewerSwitch: View {
-    let state: HomeState
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
-                Button {
-                    withAnimation(.snappy(duration: 0.25)) { state.viewer = initial }
-                } label: {
-                    Monogram(partner: initial, profile: state.profile, size: 32)
-                        .opacity(state.viewer == initial ? 1 : 0.35)
-                        .overlay(Circle().stroke(.white.opacity(state.viewer == initial ? 0.9 : 0), lineWidth: 2))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Using as \(initial)")
-            }
-        }
-        .padding(4)
-        .glass(.capsule)
-    }
-}
 
 private struct CountdownHero: View {
     let next: Upcoming?

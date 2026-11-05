@@ -47,6 +47,25 @@ const petEntry = {
 } as const;
 const setPresence = (user = alice, state: "idle" | "drawing" = "drawing") =>
   RoomCommand.cases.SetPresence.make({ user, state });
+const heartFromBob = {
+  rev: 1,
+  note: photoFrom(alice).id,
+  by: bob,
+  at: 1_700_000_200_000,
+  reaction: "heart",
+} as const;
+const react = (fields: Partial<Omit<RoomCommand & { _tag: "React" }, "_tag">> = {}) =>
+  RoomCommand.cases.React.make({
+    by: bob,
+    note: photoFrom(alice),
+    reaction: "heart",
+    at: 1_700_000_200_000,
+    ...fields,
+  });
+const takeBack = (fields: Parameters<typeof react>[0] = {}) => {
+  const { _tag, reaction: _, ...rest } = react(fields);
+  return RoomCommand.cases.React.make(rest);
+};
 
 const expectAccepted = (state: RoomState, command: RoomCommand) => {
   const decision = decide(state, command);
@@ -204,6 +223,54 @@ describe("inks", () => {
   });
 });
 
+describe("reactions", () => {
+  it("gives the partner's reaction to a photo the next rev", () => {
+    const first = expectAccepted(active, react());
+    expect(first.state.lastReactionRev).toBe(1);
+    expect(first.outputs).toEqual([RoomOutput.cases.ReactionSet.make({ reaction: heartFromBob })]);
+    const changed = expectAccepted(first.state, react({ current: heartFromBob, reaction: "fire" }));
+    expect(changed.outputs).toEqual([
+      RoomOutput.cases.ReactionSet.make({
+        reaction: { ...heartFromBob, rev: 2, reaction: "fire" },
+      }),
+    ]);
+  });
+
+  it("takes a reaction back as a change with no reaction", () => {
+    const room = { ...active, lastReactionRev: 1 };
+    const { reaction: _, ...rest } = heartFromBob;
+    expect(expectAccepted(room, takeBack({ current: heartFromBob })).outputs).toEqual([
+      RoomOutput.cases.ReactionSet.make({ reaction: { ...rest, rev: 2 } }),
+    ]);
+  });
+
+  it("answers the same reaction again with the stored one, and stores nothing", () => {
+    const room = { ...active, lastReactionRev: 1 };
+    expect(expectAccepted(room, react({ current: heartFromBob }))).toEqual({
+      _tag: "Accepted",
+      state: room,
+      outputs: [RoomOutput.cases.ReactionRepeated.make({ reaction: heartFromBob })],
+    });
+  });
+
+  it.each([
+    ["an own photo", react({ by: alice }), RoomRejection.cases.OwnNote.make({})],
+    [
+      "a text note",
+      react({ note: textFrom(alice, freeInk) }),
+      RoomRejection.cases.NotReactable.make({}),
+    ],
+    [
+      "someone outside the couple",
+      react({ by: mallory }),
+      RoomRejection.cases.NotAMember.make({ user: mallory }),
+    ],
+    ["taking back nothing", takeBack(), RoomRejection.cases.NoReaction.make({})],
+  ])("refuses %s", (_, command, refused) => {
+    expect(decide(active, command)).toEqual(rejection(refused));
+  });
+});
+
 describe("decide as a pure function", () => {
   it("does not mutate its input and repeats its answer", () => {
     const room = JSON.parse(JSON.stringify(active)) as ActiveRoom;
@@ -233,6 +300,7 @@ describe("tagged unions", () => {
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
     Buy: RoomCommand.cases.Buy.make({ id: key, by: alice, ink: rose, at: 1_700_000_000_000 }),
+    React: react(),
   };
   const spend = Schema.decodeUnknownSync(CoinEntry)({
     id: `spend:${key}`,
@@ -257,6 +325,8 @@ describe("tagged unions", () => {
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
     CoinsEntered: RoomOutput.cases.CoinsEntered.make({ entry: spend }),
     CoinsRepeated: RoomOutput.cases.CoinsRepeated.make({ entry: spend }),
+    ReactionSet: RoomOutput.cases.ReactionSet.make({ reaction: heartFromBob }),
+    ReactionRepeated: RoomOutput.cases.ReactionRepeated.make({ reaction: heartFromBob }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -269,6 +339,10 @@ describe("tagged unions", () => {
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),
     NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
+    NoteNotFound: RoomRejection.cases.NoteNotFound.make({}),
+    OwnNote: RoomRejection.cases.OwnNote.make({}),
+    NotReactable: RoomRejection.cases.NotReactable.make({}),
+    NoReaction: RoomRejection.cases.NoReaction.make({}),
   };
 
   it.each([

@@ -157,6 +157,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "RecordCatEvent":
     case "GrantInks":
     case "Buy":
+    case "React":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -233,6 +234,23 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
             },
             [RoomOutput.cases.PresenceChanged.make({ user, state })],
           );
+    }
+    case "React": {
+      const { by, note, current, reaction, at } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      if (note.author === by) return rejected(RoomRejection.cases.OwnNote.make({}));
+      if (note._tag !== "Photo") return rejected(RoomRejection.cases.NotReactable.make({}));
+      if (current?.reaction === reaction) {
+        return current === undefined
+          ? rejected(RoomRejection.cases.NoReaction.make({}))
+          : accepted(room, [RoomOutput.cases.ReactionRepeated.make({ reaction: current })]);
+      }
+      const rev = (room.lastReactionRev ?? 0) + 1;
+      return accepted({ ...room, lastReactionRev: rev }, [
+        RoomOutput.cases.ReactionSet.make({
+          reaction: { rev, note: note.id, by, at, ...(reaction === undefined ? {} : { reaction }) },
+        }),
+      ]);
     }
     case "GrantInks": {
       const added = [...new Set(command.inks)].filter((ink) => !ownsInk(room, ink));

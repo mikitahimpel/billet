@@ -50,6 +50,8 @@ import Testing
       "getCat": Routes.getCat,
       "saveCat": Routes.saveCat,
       "listCatJournal": Routes.listCatJournal,
+      "react": Routes.react,
+      "listReactions": Routes.listReactions,
       "recordCatEvent": Routes.recordCatEvent,
       "listActivity": Routes.listActivity,
       "markActivityRead": Routes.markActivityRead,

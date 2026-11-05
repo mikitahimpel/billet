@@ -55,7 +55,7 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureOnboarding, FeaturePairing, WidgetBridge]
+        products: [FeatureCanvas, FeatureMoments, FeatureOnboarding, FeaturePairing, WidgetBridge]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
@@ -146,6 +146,24 @@ targets:
         # The id the first app's notification service registered, so automatic signing finds it.
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
         SKIP_INSTALL: YES
+  # The widgets' views rendered into BILLET_SAMPLES for review (WidgetGalleryTests). An extension can't host tests, so
+  # the widget sources are compiled in, without their @main bundle; the app hosts it so their images load.
+  NookiWidgetsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: NookiWidgetsTests
+      - path: NookiWidgets
+        excludes: [Widgets.swift]
+      - path: Shared
+    # Wire and Ink come from the app it is loaded into, as for NookiTests: linking them here as well makes Xcode
+    # build them as frameworks, and NookiTests then finds none of their symbols.
+    dependencies:
+      - target: Billet
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget-tests
+        GENERATE_INFOPLIST_FILE: YES
   NookiTests:
     type: bundle.unit-test
     platform: iOS
@@ -177,6 +195,6 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets: [NookiTests, NookiUITests]
+      targets: [NookiTests, NookiWidgetsTests, NookiUITests]
     archive:
       config: Release

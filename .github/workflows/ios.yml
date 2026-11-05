@@ -113,6 +113,8 @@ jobs:
 
       # The app's own tests (NookiTests) on a Simulator of the newest iOS this Xcode has.
       - name: App tests (Simulator)
+        # A hung UI test must not hold a runner for an hour; each test is also capped below.
+        timeout-minutes: 30
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           udid=$(xcrun simctl list -j devices available | python3 -c '
@@ -131,11 +133,18 @@ jobs:
           set -o pipefail
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
-          TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples" \
-          xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
+          export TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples"
+          # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
+          if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$RUNNER_TEMP/app-tests.log" 2>&1 || status=$?
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 300 \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
+            | tee "$RUNNER_TEMP/app-tests.log" \
+            | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
+            status=1
+          fi
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
           if [ "$status" != 0 ]; then
@@ -200,6 +209,8 @@ jobs:
         env:
           DEVICE: ${{ matrix.device }}
           ONLY: ${{ inputs.shots }}
+          # xcodebuild hands TEST_RUNNER_ variables to the tests without the prefix; screenshot tests run only here.
+          TEST_RUNNER_UISHOTS: "1"
         run: |
           # The newest runtime that supports the first device type whose name contains DEVICE.
           read -r runtime devtype <<<"$(xcrun simctl list -j runtimes | python3 -c '

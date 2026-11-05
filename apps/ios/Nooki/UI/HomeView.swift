@@ -66,7 +66,7 @@ struct HomeView: View {
                         UsView(state: state)
                     case .world:
                         VStack(spacing: 16) {
-                            RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
+                            RoomControls(state: state, select: select)
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 16)
@@ -85,13 +85,17 @@ struct HomeView: View {
 
             PurchaseMoment(state: state)
         }
-        // Bottom left, so it stays clear of the "+" in the right corner.
-        .overlay(alignment: .bottomLeading) {
+        // Above the tab bar, so both stay clear of the "+" in the right corner.
+        .overlay(alignment: .bottom) {
             if state.tab == .world {
-                PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
-                    .padding(.leading, 16)
-                    .padding(.bottom, 94)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
+                HStack(alignment: .bottom) {
+                    PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
+                    Spacer(minLength: 0)
+                    PlayAllButton(showcase: showcase) { scene?.playAll() }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 94)
+                .transition(.opacity.combined(with: .offset(y: 12)))
             }
         }
         .overlay(alignment: .topLeading) {
@@ -175,7 +179,8 @@ struct HomeView: View {
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
                 }
-                session?.followInbox(true)
+                session?.reactions?.refresh()
+                session?.followInbox(true, photos: photoSync)
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -300,7 +305,7 @@ struct HomeView: View {
 
     /// Photos to and from the partner; nil until this phone is paired with them.
     private var photoSync: PhotoSync? {
-        session?.photoSync(moments: state.moments, partner: state.partners.1)
+        session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
@@ -317,12 +322,10 @@ struct HomeView: View {
     }
 }
 
-/// Switches between Mochi's rooms and plays all her animations in turn, naming each as it plays.
+/// Switches between Mochi's rooms.
 private struct RoomControls: View {
     let state: HomeState
-    let showcase: String?
     var select: (RoomKind) -> Void
-    var playAll: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -332,22 +335,6 @@ private struct RoomControls: View {
             }
 
             Spacer(minLength: 0)
-
-            Button(action: playAll) {
-                HStack(spacing: 6) {
-                    Image(systemName: showcase == nil ? "play.fill" : "sparkles")
-                    Text(showcase ?? "Play all")
-                        .contentTransition(.opacity)
-                }
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(height: 40)
-                .warmGlass(.capsule, interactive: true)
-            }
-            .buttonStyle(.plain)
-            .disabled(showcase != nil)
-            .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
         }
     }
 
@@ -369,6 +356,30 @@ private struct RoomControls: View {
         .padding(3)
         .warmGlass(.capsule)
         .popoverTip(RoomsHint(), arrowEdge: .top)
+    }
+}
+
+/// Plays all Mochi's animations in turn, naming each as it plays.
+private struct PlayAllButton: View {
+    let showcase: String?
+    var playAll: () -> Void
+
+    var body: some View {
+        Button(action: playAll) {
+            HStack(spacing: 6) {
+                Image(systemName: showcase == nil ? "play.fill" : "sparkles")
+                Text(showcase ?? "Play all")
+                    .contentTransition(.opacity)
+            }
+            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .frame(height: 40)
+            .warmGlass(.capsule, interactive: true)
+        }
+        .buttonStyle(.plain)
+        .disabled(showcase != nil)
+        .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
     }
 }
 

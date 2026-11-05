@@ -11,8 +11,9 @@ import { AppleTokenRevoker } from "./apple-token-revoker.ts";
 const unavailable = (reason: string) => () => new AccountUnavailable({ reason });
 
 /**
- * Deletes an account and everything it owns (App Store guideline 5.1.1(v)). The partner keeps the
- * cat and their own notes, is unpaired, and is told why the next time the app asks.
+ * Deletes an account and everything it owns (App Store guideline 5.1.1(v)). The pair's cat and its
+ * activity go with it, as the pair is over; the partner keeps their own notes, is unpaired, and is
+ * told why the next time the app asks.
  */
 export class AccountDeletion extends Context.Service<
   AccountDeletion,

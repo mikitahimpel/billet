@@ -66,6 +66,7 @@ import {
   StoredDelivery,
   StoredNote,
   StoredOwnedInk,
+  StoredReaction,
   StoredCoinEntry,
   StoredWallet,
   StoredRoom,
@@ -80,6 +81,7 @@ import {
   delivery,
   note,
   ownedInk,
+  reaction,
   room,
   wallet,
 } from "../src/room-schema.ts";
@@ -121,6 +123,7 @@ const checked = [
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["owned_ink", ownedInk, StoredOwnedInk],
+  ["reaction", reaction, StoredReaction],
   ["room", room, StoredRoom],
   ["users", users, StoredUser],
   ["wallet", wallet, StoredWallet],
