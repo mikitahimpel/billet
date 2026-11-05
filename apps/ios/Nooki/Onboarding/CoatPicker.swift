@@ -1,0 +1,194 @@
+import SwiftUI
+
+/// The coat step's picker: the chosen cat large on a soft light, its name, and one round clay chip per coat. A tap on
+/// a chip, or a swipe across the cat, changes the coat; the cat cross-fades into the new one.
+struct CoatPicker: View {
+    @Binding var coat: CatCoat
+    /// The cat's height; the step sizes it to the screen.
+    var stageHeight: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: Space.l) {
+            CoatStage(coat: coat, height: stageHeight)
+                .gesture(swipe)
+                .accessibilityElement()
+                .accessibilityLabel(Text("Your cat: \(coat.title)"))
+                .accessibilityAdjustableAction { direction in
+                    switch direction {
+                    case .increment: step(1)
+                    case .decrement: step(-1)
+                    @unknown default: break
+                    }
+                }
+            Text(coat.title)
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.text)
+                .contentTransition(.opacity)
+                .accessibilityHidden(true)
+            chips
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.35), value: coat)
+    }
+
+    private var chips: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3), spacing: Space.l) {
+            ForEach(CatCoat.allCases, id: \.self) { item in
+                Button { coat = item } label: { CoatChip(coat: item, picked: item == coat) }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel(Text(item.title))
+                    .accessibilityAddTraits(item == coat ? [.isSelected] : [])
+            }
+        }
+        .padding(.horizontal, Space.gutter)
+    }
+
+    private var swipe: some Gesture {
+        DragGesture(minimumDistance: 24).onEnded { drag in
+            guard abs(drag.translation.width) > abs(drag.translation.height), abs(drag.translation.width) > 40 else { return }
+            step(drag.translation.width < 0 ? 1 : -1)
+        }
+    }
+
+    private func step(_ by: Int) {
+        let all = CatCoat.allCases
+        guard let at = all.firstIndex(of: coat) else { return }
+        coat = all[(at + by + all.count) % all.count]
+    }
+}
+
+/// The chosen cat, seated on a little clay plinth in a warm pool of light, breathing slowly.
+private struct CoatStage: View {
+    let coat: CatCoat
+    let height: CGFloat
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // The light behind her.
+            Circle()
+                .fill(RadialGradient(colors: [Color.honey.opacity(0.42), Color.honey.opacity(0.12), .clear],
+                                     center: .center, startRadius: 0, endRadius: height * 0.55))
+                .frame(width: height * 1.15, height: height * 1.15)
+                .offset(y: -height * 0.02)
+            // The plinth and her shadow on it.
+            Ellipse()
+                .fill(Ink.surfaceRaised)
+                .frame(width: height * 0.78, height: height * 0.16)
+                .overlay(Ellipse().fill(.black.opacity(0.28)).frame(width: height * 0.5, height: height * 0.07).blur(radius: 6)
+                    .offset(y: -height * 0.005))
+                .offset(y: height * 0.03)
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
+                let t = context.date.timeIntervalSinceReferenceDate
+                let breath = reduceMotion ? 0 : sin(t * 2 * .pi / 3.4)
+                portrait
+                    .scaleEffect(x: 1 - 0.006 * breath, y: 1 + 0.012 * breath, anchor: .bottom)
+                    .rotationEffect(.degrees(reduceMotion ? 0 : 0.8 * sin(t * 2 * .pi / 7.5)), anchor: .bottom)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+    }
+
+    /// The portrait, cut to the cat: billet-gpu's 1200×1600 renders all frame her the same way, paws at 1431.
+    private var portrait: some View {
+        Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
+            .resizable()
+            .scaledToFit()
+            .frame(height: height * 1600 / 1264)
+            .offset(y: height * (1600 - 1431) / 1264)
+            .frame(height: height, alignment: .bottom)
+            .id(coat)
+            .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)),
+                                    removal: .opacity))
+    }
+}
+
+/// A coat as a round clay chip in its colours, with its name under it; the picked one sits in a honey ring.
+struct CoatChip: View {
+    let coat: CatCoat
+    let picked: Bool
+    @ScaledMetric(relativeTo: .footnote) private var size: CGFloat = 56
+
+    var body: some View {
+        VStack(spacing: Space.s) {
+            CoatSwatchShape(swatch: coat.swatch)
+                .frame(width: size, height: size)
+                .padding(4)
+                .overlay(Circle().stroke(picked ? Color.honey : .clear, lineWidth: 2.5))
+                .scaleEffect(picked ? 1.06 : 1)
+            Text(coat.title)
+                .font(.nookiCaption)
+                .foregroundStyle(picked ? Ink.text : Ink.textSecondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .contentShape(.rect)
+    }
+}
+
+/// The clay disc: the coat's base, its markings, then a soft highlight top-left and shade bottom-right.
+struct CoatSwatchShape: View {
+    let swatch: CatCoat.Swatch
+
+    var body: some View {
+        Canvas { context, size in
+            let r = min(size.width, size.height) / 2
+            let disc = Path(ellipseIn: CGRect(origin: .zero, size: size))
+            context.clip(to: disc)
+            context.fill(disc, with: .color(swatch.base))
+            for mark in swatch.marks {
+                let rect = CGRect(x: mark.rect.minX * size.width, y: mark.rect.minY * size.height,
+                                  width: mark.rect.width * size.width, height: mark.rect.height * size.height)
+                var shape = Path(ellipseIn: rect)
+                if mark.angle != 0 {
+                    shape = shape.applying(CGAffineTransform(translationX: -rect.midX, y: -rect.midY)
+                        .concatenating(CGAffineTransform(rotationAngle: mark.angle))
+                        .concatenating(CGAffineTransform(translationX: rect.midX, y: rect.midY)))
+                }
+                context.fill(shape, with: .color(mark.color))
+            }
+            context.fill(disc, with: .radialGradient(Gradient(colors: [.white.opacity(0.5), .white.opacity(0)]),
+                                                     center: CGPoint(x: r * 0.62, y: r * 0.55), startRadius: 0, endRadius: r * 0.9))
+            context.fill(disc, with: .radialGradient(Gradient(colors: [.black.opacity(0), .black.opacity(0.3)]),
+                                                     center: CGPoint(x: r * 0.85, y: r * 0.8), startRadius: r * 0.7, endRadius: r * 1.45))
+        }
+        .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
+        .accessibilityHidden(true)
+    }
+}
+
+extension CatCoat {
+    /// The coat's colours for its chip, picked from billet-gpu's renders.
+    struct Swatch {
+        struct Mark {
+            /// In the unit square of the chip.
+            let rect: CGRect
+            var angle: CGFloat = 0
+            let color: Color
+        }
+
+        let base: Color
+        var marks: [Mark] = []
+    }
+
+    var swatch: Swatch {
+        // Three soft stripes across a tabby's chip.
+        func stripes(_ color: Color) -> [Swatch.Mark] {
+            [0.18, 0.44, 0.7].map { Swatch.Mark(rect: CGRect(x: -0.1, y: $0, width: 1.2, height: 0.12), angle: -0.35, color: color) }
+        }
+        return switch self {
+        case .grey: Swatch(base: Color(hex: 0xB9B7B4), marks: stripes(Color(hex: 0x6F6C69)))
+        case .ginger: Swatch(base: Color(hex: 0xF2A466), marks: stripes(Color(hex: 0xD9773E)))
+        case .cream: Swatch(base: Color(hex: 0xF4E6D2), marks: stripes(Color(hex: 0xE3CBAA)))
+        case .tuxedo: Swatch(base: Color(hex: 0x2C2A2C),
+                             marks: [Swatch.Mark(rect: CGRect(x: 0.22, y: 0.52, width: 0.56, height: 0.7), color: Color(hex: 0xF7F2EC))])
+        case .black: Swatch(base: Color(hex: 0x262426))
+        case .calico: Swatch(base: Color(hex: 0xF7F2EC), marks: [
+            Swatch.Mark(rect: CGRect(x: -0.15, y: -0.1, width: 0.7, height: 0.6), angle: 0.4, color: Color(hex: 0xE8934C)),
+            Swatch.Mark(rect: CGRect(x: 0.5, y: 0.25, width: 0.65, height: 0.5), angle: -0.5, color: Color(hex: 0x2E2A2A)),
+        ])
+        }
+    }
+}

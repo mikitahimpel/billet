@@ -39,7 +39,7 @@ struct OnboardingView: View {
         .tint(Ink.accentText)
         .animation(.smooth(duration: 0.35), value: flow.index)
         .sensoryFeedback(.selection, trigger: flow.picks)
-        .sensoryFeedback(.selection, trigger: flow.coat)
+        .haptic(.selection, trigger: flow.coat)
         .task { await flow.load() }
         .onChange(of: flow.index, initial: true) { flow.appeared() }
         .task(id: [flow.page == .invite, signedIn]) {
@@ -195,23 +195,18 @@ struct OnboardingView: View {
     }
 
     private var catCoat: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.l) {
-                PageTitle(title)
-                    .padding(.horizontal, Space.gutter)
-                MochiSays(text: "Which one am I?", avatar: flow.coat.avatar)
-                    .padding(.horizontal, Space.gutter)
-                Text("Swipe to see every coat.")
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.textSecondary)
-                    .padding(.horizontal, Space.gutter)
-                CoatCarousel(coat: $flow.coat)
-                PageDots(count: CatCoat.allCases.count, index: CatCoat.allCases.firstIndex(of: flow.coat) ?? 0)
-                    .frame(maxWidth: .infinity)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.l) {
+                    PageTitle(title)
+                        .padding(.horizontal, Space.gutter)
+                    // The cat takes what the title, her name and the chips leave, within reason.
+                    CoatPicker(coat: $flow.coat, stageHeight: min(max(geometry.size.height - 330, 200), 430))
+                }
+                .padding(.top, Space.l)
             }
-            .padding(.top, Space.l + Space.m)
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     private static let nameIdeas = ["Mochi", "Tofu", "Biscuit", "Pumpkin", "Luna", "Miso"]
@@ -531,74 +526,6 @@ private struct MochiSays: View {
                 .padding(.vertical, Space.s)
                 .background(Ink.surface, in: .rect(cornerRadius: Radius.control))
         }
-    }
-}
-
-/// One card per coat; the one in the middle is the pick, and it opens on the coat picked before.
-private struct CoatCarousel: View {
-    @Binding var coat: CatCoat
-
-    var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal) {
-                HStack(spacing: Space.m) {
-                    ForEach(CatCoat.allCases, id: \.self) { item in
-                        card(item)
-                            .containerRelativeFrame(.horizontal, count: 4, span: 3, spacing: Space.m)
-                            .scrollTransition(axis: .horizontal) { card, phase in
-                                card.scaleEffect(phase.isIdentity ? 1 : 0.9).opacity(phase.isIdentity ? 1 : 0.6)
-                            }
-                            .id(item)
-                            .onTapGesture { withAnimation(.smooth) { coat = item } }
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollIndicators(.hidden)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: Binding { Optional(coat) } set: { if let new = $0 { coat = new } }, anchor: .center)
-            .contentMargins(.horizontal, Space.xl, for: .scrollContent)
-            .onAppear { proxy.scrollTo(coat, anchor: .center) }
-        }
-    }
-
-    private func card(_ item: CatCoat) -> some View {
-        let picked = item == coat
-        return VStack(spacing: Space.s) {
-            Image(uiImage: UIImage(named: item.portrait) ?? UIImage())
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: .infinity, maxHeight: 300)
-                .padding(.top, Space.l)
-            Text(item.title)
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
-                .padding(.bottom, Space.l)
-        }
-        .frame(maxWidth: .infinity)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Radius.card).stroke(picked ? Ink.accentText : Ink.separator,
-                                                                     lineWidth: picked ? 2.5 : 1))
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(picked ? [.isButton, .isSelected] : .isButton)
-    }
-}
-
-/// Where the carousel is, as page dots.
-private struct PageDots: View {
-    let count: Int
-    let index: Int
-
-    var body: some View {
-        HStack(spacing: Space.s) {
-            ForEach(0..<count, id: \.self) { dot in
-                Capsule()
-                    .fill(dot == index ? Ink.accentText : Ink.separator)
-                    .frame(width: dot == index ? 20 : 8, height: 8)
-            }
-        }
-        .animation(.smooth, value: index)
-        .accessibilityHidden(true)
     }
 }
 
