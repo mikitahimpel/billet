@@ -158,12 +158,10 @@ targets:
       - path: NookiWidgets
         excludes: [Widgets.swift]
       - path: Shared
+    # Wire and Ink come from the app it is loaded into, as for NookiTests: linking them here as well makes Xcode
+    # build them as frameworks, and NookiTests then finds none of their symbols.
     dependencies:
       - target: Billet
-      - package: BilletContracts
-        products: [Wire]
-      - package: BilletCore
-        products: [Ink]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget-tests
