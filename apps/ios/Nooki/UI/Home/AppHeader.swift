@@ -87,7 +87,8 @@ struct InboxButton: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Ink.primary)
                 .frame(width: 42, height: 42)
-                .warmGlass(.circle, interactive: true)
+                // Not interactive: the button style answers the press; interactive glass would track the same touch.
+                .warmGlass(.circle)
                 .overlay(alignment: .topTrailing) {
                     if unread > 0 {
                         Text(unread > 9 ? "9+" : "\(unread)")
@@ -99,6 +100,8 @@ struct InboxButton: View {
                             .offset(x: 4, y: -4)
                     }
                 }
+                .frame(width: 44, height: 44)
+                .contentShape(.circle)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Inbox")

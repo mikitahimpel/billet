@@ -19,6 +19,9 @@ final class ServerSession {
     private(set) var pairing: PairingModel
     /// Whether the saved account has a partner. A phone learns it by pairing; the record keeps it across launches.
     private(set) var isPaired: Bool
+    /// Dev server only: whether this account is paired with its bot partner. Nil on a server without dev tools, and
+    /// until `checkDemoPartner()` has asked.
+    private(set) var demoPartner: Bool?
     /// The pair's activity for the Inbox, and its unread count.
     let inbox: InboxModel
     /// The couple's reactions to each other's photos; nil until this account has a partner.
@@ -41,7 +44,9 @@ final class ServerSession {
         self.backend = backend
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         pairing = PairingModel(api: backend.api)
-        isPaired = (try? backend.accounts.load())?.record.isPaired ?? false
+        let saved = try? backend.accounts.load()
+        hadSavedAccount = saved != nil
+        isPaired = saved?.record.isPaired ?? false
         #if DEBUG
         // For screenshots: `-inboxFixture YES` fills the Inbox from the local fixture instead of the server.
         inbox = UserDefaults.standard.bool(forKey: "inboxFixture") ? InboxFixture.model() : InboxModel(api: backend.api)
@@ -69,7 +74,10 @@ final class ServerSession {
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
 
-    var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
+    /// Sign-in is the only place an account is saved, and nothing removes one, so this is read once instead of from
+    /// the Keychain on every check.
+    @ObservationIgnored private let hadSavedAccount: Bool
+    var isSignedIn: Bool { signIn.state == .signedIn || hadSavedAccount }
 
     /// The pair's room socket for the shared canvas; nil until this account has a partner.
     ///
@@ -156,9 +164,35 @@ final class ServerSession {
         return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner)
     }
 
+    /// Asks the server about the demo partner. Any answer but the dev server's, offline included, hides the dev tools.
+    func checkDemoPartner() async {
+        guard isSignedIn else { return }
+        demoPartner = try? await backend.api.demoPartner().paired
+    }
+
+    /// Dev server only: pairs this account with a bot partner, which the server pairs like a real one.
+    func pairWithDemoPartner() async throws(TransportError) {
+        let pair = try await backend.api.createDemoPartner()
+        paired(pair.pairId.rawValue)
+        demoPartner = true
+    }
+
+    /// Dev server only: ends the pair with the bot partner and deletes it.
+    func removeDemoPartner() async throws(TransportError) {
+        try await backend.api.removeDemoPartner()
+        try? backend.accounts.setPaired(false, nil)
+        isPaired = false
+        reactions = nil
+        demoPartner = false
+    }
+
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.
     func pairingFinished() {
         guard case .paired(let pairID) = pairing.state else { return }
+        paired(pairID)
+    }
+
+    private func paired(_ pairID: String?) {
         try? backend.accounts.setPaired(true, pairID)
         isPaired = true
         reactions = Self.reactionsModel(backend)

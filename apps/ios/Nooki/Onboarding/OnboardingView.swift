@@ -18,6 +18,8 @@ struct OnboardingView: View {
     var alreadyPaired = false
     /// The pairing finished, on either side.
     var paired: () -> Void = {}
+    /// Dev server only: pairs with a bot partner instead of waiting for a real one; nil elsewhere.
+    var demoPartner: (() -> Void)?
 
     private let language = Locale.current.language.languageCode?.identifier
 
@@ -281,6 +283,13 @@ struct OnboardingView: View {
                     NookiSection {
                         NookiRowLabel(title: String(localized: "You're paired!"), symbol: "heart.fill", tint: .blush)
                     }
+                }
+            }
+            if let demoPartner, !isPaired, !alreadyPaired {
+                Section {
+                    Button("Try with a demo partner", action: demoPartner)
+                        .font(.nookiCallout)
+                        .nookiRow()
                 }
             }
         }

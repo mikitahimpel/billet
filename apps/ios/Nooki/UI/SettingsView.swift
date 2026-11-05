@@ -23,6 +23,8 @@ struct SettingsView: View {
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @State private var confirmingErase = false
+    @State private var demoBusy = false
+    @State private var demoFailed = false
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -87,6 +89,19 @@ struct SettingsView: View {
                 .buttonStyle(PressScaleStyle())
             }
 
+            if let session, let demo = session.demoPartner {
+                NookiSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
+                    Button { Task { await switchDemoPartner(session, paired: demo) } } label: {
+                        NookiRowLabel(title: demo ? "Remove demo partner" : "Pair with a demo partner",
+                                      symbol: "person.2.wave.2.fill", tint: .blush) {
+                            if demoBusy { ProgressView() }
+                        }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    .disabled(demoBusy || (!demo && session.isPaired))
+                }
+            }
+
             NookiSection(header: "Labs",
                          footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
@@ -120,6 +135,7 @@ struct SettingsView: View {
                 .foregroundStyle(Ink.textTertiary)
                 .frame(maxWidth: .infinity)
         }
+        .task { await session?.checkDemoPartner() }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Erase all data?", isPresented: $confirmingErase, titleVisibility: .visible) {
@@ -131,6 +147,24 @@ struct SettingsView: View {
             Text("Your profile, photos, moments, lists, wishes and dates will be deleted from this phone. "
                  + "This can't be undone.")
         }
+    }
+
+    private func switchDemoPartner(_ session: ServerSession, paired: Bool) async {
+        demoBusy = true
+        defer { demoBusy = false }
+        do {
+            if paired { try await session.removeDemoPartner() } else { try await session.pairWithDemoPartner() }
+            demoFailed = false
+        } catch {
+            demoFailed = true
+        }
+    }
+
+    private func demoFooter(paired: Bool, hasPartner: Bool) -> String {
+        if demoFailed { return "The dev server didn't answer. Try again in a moment." }
+        if !paired, hasPartner { return "Only without a partner: this account already has one." }
+        return "The dev server plays a partner, so you can try Nooki alone: it answers your notes, reacts to "
+            + "your photos, cares for \(CatProfile.name()) and opens the daily gift."
     }
 
     /// The Labs choice of rooms on this phone; "Follow the test" clears it.
