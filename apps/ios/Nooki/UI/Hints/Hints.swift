@@ -42,6 +42,8 @@ final class Hints {
             Tips.showTipsForTesting([hint])
             Tips.hideTipsForTesting(all.filter { $0.hintId != only })
         }
+        // The UI tests tap through the app; a popover would take their first tap.
+        if defaults.bool(forKey: "uitestNoHints") { Tips.hideAllTipsForTesting() }
         #endif
         try? Tips.configure([.displayFrequency(.hourly)])
     }
