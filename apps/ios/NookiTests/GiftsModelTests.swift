@@ -29,7 +29,8 @@ private nonisolated final class FakeRoom: @unchecked Sendable {
                 self.wishes.removeAll { $0.id == request.id }
                 self.wishes.append(GiftWish(id: request.id, owner: UserId(user), title: request.title,
                                             link: request.link, price: request.price, note: request.note,
-                                            mostWanted: request.mostWanted, addedAt: 1_700_000_000_000))
+                                            mostWanted: request.mostWanted, occasion: request.occasion,
+                                            addedAt: 1_700_000_000_000))
                 return self.view(for: user)
             },
             deleteWish: { request in
@@ -73,7 +74,10 @@ private nonisolated final class FakeRoom: @unchecked Sendable {
         defer { cleanUp() }
         let room = FakeRoom()
         let (lena, lenaGifts) = phone("L", file: 0)
-        lena.upsertWish(WishItem(owner: "L", title: "Bracelet", note: "silver"))
+        var bracelet = WishItem(owner: "L", title: "Bracelet", note: "silver")
+        let birthday = Date(timeIntervalSince1970: 1_800_000_000)
+        bracelet.occasion = WishOccasion(title: "Lena's birthday", date: birthday)
+        lena.upsertWish(bracelet)
         var lovesValue = Loves()
         lovesValue.flowers = "Peonies"
         lena.setLoves(lovesValue, for: "L")
@@ -84,6 +88,7 @@ private nonisolated final class FakeRoom: @unchecked Sendable {
 
         #expect(max.wishes(of: "L").map(\.title) == ["Bracelet"])
         #expect(max.wishes(of: "L").first?.note == "silver")
+        #expect(max.wishes(of: "L").first?.occasion == WishOccasion(title: "Lena's birthday", date: birthday))
         #expect(max.loves(of: "L").flowers == "Peonies")
     }
 
