@@ -303,6 +303,13 @@ final class ShopModel {
         if let shop = try? await sync.fetch() { apply(shop) }
     }
 
+    /// The room's shop as the socket pushes it, after either partner's change. Ignored unless this phone follows a
+    /// room.
+    func received(_ shop: ShopResponse) {
+        guard sync != nil else { return }
+        apply(shop)
+    }
+
     private func apply(_ shop: ShopResponse) {
         wallet.mirror(
             coins: shop.balance,

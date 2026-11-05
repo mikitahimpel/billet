@@ -99,13 +99,15 @@ the phone adds coins.
   item already owned is `409 AlreadyOwned {itemId}`, a set that is not on sale this week `409
   NotOffered`. `PUT /v1/shop/wishlist {item, wished}` answers the new `ShopResponse`. All are
   `no-store`. A paired app mirrors the room in its wallet file and earns nothing on the phone.
+- **Live shop:** a socket whose `Resume` carries `shop: true` gets `ShopChanged {shop}` (the same
+  shape as `ShopResponse`) at once, and again after every decision that enters coins, grants inks
+  or pieces, or changes the wishlist: either partner's order, wish, note or cat event. The app's
+  Inbox socket follows it, so a partner's buy shows without a refresh.
 - **`GET /v1/coins?after=<entry id>&limit=<1-100>`:** `CoinsResponse {balance, entries}`, oldest
   first, `no-store`.
 - **Bought coins** (`coin_ledger` in D1, through `/v1/purchases*`) are not in this wallet yet. They
   join it when payments are switched on; until then the flag is off and nothing is bought.
-- **Still to come:** daily deals, the daily gift, collection bonuses, undo, Inbox items for buys, and a
-  `CoinsChanged` message on the room socket. Until then the app reads `GET /v1/coins` again after a
-  buy or a care action.
+- **Still to come:** daily deals, the daily gift, collection bonuses, undo, and Inbox items for buys.
 
 ## Three builds: none, mock and StoreKit
 

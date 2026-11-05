@@ -75,7 +75,8 @@ final class WebSocketRunner: Sendable {
         enqueue(
           .resume(
             lastSeq: resumeFrom, activity: dependencies.followsActivity ? true : nil,
-            lastReactionRev: await dependencies.lastReactionRev()),
+            lastReactionRev: await dependencies.lastReactionRev(),
+            shop: dependencies.followsShop ? true : nil),
           attempt: attempt)
         continuation.yield(.opened(attempt: attempt))
         let reader = Task { [continuation] in

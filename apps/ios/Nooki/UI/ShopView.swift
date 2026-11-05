@@ -101,20 +101,18 @@ struct ShopView: View {
 
     // MARK: Categories
 
+    /// The categories wrap onto a second line rather than scrolling sideways: the Shop only ever scrolls up and down.
     private var chips: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.s) {
-                ForEach(ShopCategory.allCases) { category in
-                    let isSelected = selected == category
-                    Button(category.title) { selected = category }
-                        .shopButton(prominent: isSelected)
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
-                }
+        WrapLayout(spacing: Space.s) {
+            ForEach(ShopCategory.allCases) { category in
+                let isSelected = selected == category
+                Button(category.title) { selected = category }
+                    .shopButton(prominent: isSelected)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
-            .padding(.vertical, 2)
         }
-        .contentMargins(.horizontal, Space.l, for: .scrollContent)
-        .scrollIndicators(.hidden)
+        .padding(.vertical, 2)
+        .padding(.horizontal, Space.l)
     }
 
     // MARK: Today
@@ -136,9 +134,9 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            .padding(.horizontal, Space.l)
-            deals(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            grid(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
+        .padding(.horizontal, Space.l)
         .id("deals")
 
         DailyGiftCard(state: state)
@@ -182,24 +180,6 @@ struct ShopView: View {
             .font(.nookiCaption)
             .foregroundStyle(Ink.textSecondary)
             .padding(.horizontal, Space.l)
-    }
-
-    /// Today's deals as big art-first cards in a row that snaps card by card, the next one peeking in.
-    private func deals(_ items: [ShopItem]) -> some View {
-        ScrollView(.horizontal) {
-            LazyHStack(alignment: .top, spacing: Space.m) {
-                ForEach(items) { item in
-                    ShopItemCard(item: item, state: state, large: true) { sheetItem = item }
-                        .containerRelativeFrame(.horizontal) { width, _ in width * 0.72 }
-                        .shopAppear()
-                }
-            }
-            .scrollTargetLayout()
-        }
-        .contentMargins(.horizontal, Space.l, for: .scrollContent)
-        .scrollTargetBehavior(.viewAligned)
-        .scrollIndicators(.hidden)
-        .scrollClipDisabled()
     }
 
     private func grid(_ items: [ShopItem]) -> some View {

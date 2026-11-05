@@ -110,6 +110,19 @@ private func settle(_ done: () -> Bool) async {
         #expect(model.coins == 0)
     }
 
+    @Test func aPushedShopIsTakenOnlyWhileFollowingTheRoom() async {
+        defer { cleanUp() }
+        let (model, _) = shop(coins: 70)
+        model.received(room(500, items: ["lamp", "rug", "tower"]))
+        #expect(model.coins == 70)
+
+        let server = room(100, items: ["lamp", "rug"])
+        await model.connect(ShopSync(fetch: { server }, order: { _ throws(TransportError) in throw .status(500) }, wish: { _ in server }))
+        model.received(room(500, items: ["lamp", "rug", "tower"]))
+        #expect(model.coins == 500)
+        #expect(model.owned.contains("tower"))
+    }
+
     @Test func nothingIsBoughtWithoutAPair() throws {
         defer { cleanUp() }
         let (model, _) = shop(coins: 500)

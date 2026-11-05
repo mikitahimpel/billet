@@ -194,7 +194,6 @@ class CatRoom {
         yaw += (targetYaw - yaw) * min(1, dt * 8)
         pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
 
-        if frame % 600 == 0 { Self.releaseBodies() }
         director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)
         walker?.update(dt)
@@ -267,12 +266,10 @@ class CatRoom {
     }
 
     /// Her lying bodies where splats are drawn (the meshes have none), shared by every room's walker like her other
-    /// rigs. Each holds some 15 MB, so one loads the first time a brain rests her in it and goes once none has for
-    /// `bodyLife`.
+    /// rigs, loaded with her and kept. Without one she lies down on the standing splat with its legs folded under
+    /// her, which looks wrong, so `needBody` only stands in when one failed to load at launch.
     private static var bodies: [NookiRestPose: CatRig] = [:]
     private static var bodyLoads: [NookiRestPose: Task<Void, Never>] = [:]
-    private static var bodyUsed: [NookiRestPose: ContinuousClock.Instant] = [:]
-    private static let bodyLife = Duration.seconds(300)
     private static let bodyFiles: [NookiRestPose: String] = [.loaf: "MochiLoaf", .sleep: "MochiSleep"]
     /// Rooms with a walker, and the one on screen, which holds her entities.
     private static let rooms = NSHashTable<CatRoom>.weakObjects()
@@ -280,7 +277,6 @@ class CatRoom {
     private static var catShadows = true
 
     private static func needBody(_ pose: NookiRestPose) {
-        bodyUsed[pose] = .now
         guard SplatLoader.isSupported, bodies[pose] == nil, bodyLoads[pose] == nil, let name = bodyFiles[pose] else { return }
         bodyLoads[pose] = Task {
             // A failed load stays in `bodyLoads`, so she lies on the standing splat instead of retrying every rest.
@@ -301,18 +297,6 @@ class CatRoom {
             } catch {
                 print("\(name) failed to load: \(error)")
             }
-        }
-    }
-
-    /// Lets go of bodies no walker has rested in for `bodyLife`.
-    private static func releaseBodies() {
-        let walkers = rooms.allObjects.compactMap(\.walker)
-        for (pose, rig) in bodies {
-            if walkers.contains(where: { $0.rest == pose }) { bodyUsed[pose] = .now }
-            guard bodyUsed[pose].map({ ContinuousClock.now - $0 > bodyLife }) ?? true else { continue }
-            bodies[pose] = nil
-            for walker in walkers { walker.setBody(pose, nil) }
-            rig.entity?.removeFromParent()
         }
     }
 
@@ -356,6 +340,24 @@ class CatRoom {
                 }
             }
             for entity in [standing.entity, seated.entity].compactMap({ $0 }) { castShadow(entity) }
+            // Her loaf and sleep come with her, so she never lies down before her lying body is there.
+            if drawn {
+                for (pose, name) in bodyFiles where bodies[pose] == nil {
+                    do {
+                        let file = try await Task.detached {
+                            try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                        }.value
+                        let rig = try CatRig(file)
+                        if let entity = rig.entity {
+                            entity.isEnabled = false
+                            castShadow(entity, catShadows)
+                        }
+                        bodies[pose] = rig
+                    } catch {
+                        print("\(name) failed to load: \(error)")
+                    }
+                }
+            }
             return Mochi(standing: standing, seated: seated)
         }
         mochi = task

@@ -3,9 +3,11 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   /// Reconnect, asking for every note after `lastSeq`, and every cat journal entry after
   /// `lastCatSeq`. Leaving `lastCatSeq` out sends no cat frames. `activity: true` asks for the
   /// Inbox's unread count now and whenever it changes. `lastReactionRev` asks for every reaction
-  /// change after it, and each one after; left out, none.
+  /// change after it, and each one after; left out, none. `shop: true` asks for the pair's shop
+  /// now and whenever it changes.
   case resume(
-    lastSeq: Int, lastCatSeq: Int? = nil, activity: Bool? = nil, lastReactionRev: Int? = nil)
+    lastSeq: Int, lastCatSeq: Int? = nil, activity: Bool? = nil, lastReactionRev: Int? = nil,
+    shop: Bool? = nil)
   /// A whole stroke at once, from a client that does not stream.
   case stroke(Stroke)
   case presence(PresenceState)
@@ -23,6 +25,7 @@ public enum ClientMessage: Codable, Hashable, Sendable {
     case lastCatSeq
     case activity
     case lastReactionRev
+    case shop
     case stroke
     case state
     case id
@@ -40,7 +43,8 @@ public enum ClientMessage: Codable, Hashable, Sendable {
         lastSeq: try container.decode(Int.self, forKey: .lastSeq),
         lastCatSeq: try container.decodeOptionalKey(Int.self, forKey: .lastCatSeq),
         activity: try container.decodeOptionalKey(Bool.self, forKey: .activity),
-        lastReactionRev: try container.decodeOptionalKey(Int.self, forKey: .lastReactionRev))
+        lastReactionRev: try container.decodeOptionalKey(Int.self, forKey: .lastReactionRev),
+        shop: try container.decodeOptionalKey(Bool.self, forKey: .shop))
     case "Stroke":
       self = .stroke(try container.decode(Stroke.self, forKey: .stroke))
     case "Presence":
@@ -64,12 +68,13 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     switch self {
-    case .resume(let lastSeq, let lastCatSeq, let activity, let lastReactionRev):
+    case .resume(let lastSeq, let lastCatSeq, let activity, let lastReactionRev, let shop):
       try container.encode("Resume", forKey: .tag)
       try container.encode(lastSeq, forKey: .lastSeq)
       try container.encodeIfPresent(lastCatSeq, forKey: .lastCatSeq)
       try container.encodeIfPresent(activity, forKey: .activity)
       try container.encodeIfPresent(lastReactionRev, forKey: .lastReactionRev)
+      try container.encodeIfPresent(shop, forKey: .shop)
     case .stroke(let stroke):
       try container.encode("Stroke", forKey: .tag)
       try container.encode(stroke, forKey: .stroke)

@@ -28,6 +28,8 @@ final class ServerSession {
     /// What the room socket pages when a photo arrives; set each time the socket is followed.
     @ObservationIgnored private var photos: PhotoSync?
     @ObservationIgnored private var texts: TextNoteSync?
+    /// Takes the room's shop as the socket pushes it.
+    @ObservationIgnored private weak var shop: ShopModel?
 
     @ObservationIgnored private let backend: Backend
     /// The build's store for coin packs, over the pair's purchase routes.
@@ -87,10 +89,11 @@ final class ServerSession {
 
     /// Keeps the Inbox's count, the partner's photos into `photos` and reactions live over the room socket while the
     /// app is in front; nothing without a partner.
-    func followInbox(_ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil) {
+    func followInbox(_ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil) {
         if follows, isPaired {
             self.photos = photos
             self.texts = texts
+            self.shop = shop
             if inboxLink == nil {
                 let accounts = backend.accounts
                 let inbox = inbox
@@ -102,7 +105,8 @@ final class ServerSession {
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
                         text: { [weak self] in Task { await self?.texts?.receive() } },
                         reaction: { [weak self] in self?.reactions?.received($0) },
-                        lastReactionRev: { [weak self] in self?.reactions?.lastRev }))
+                        lastReactionRev: { [weak self] in self?.reactions?.lastRev },
+                        shop: { [weak self] in self?.shop?.received($0) }))
             }
             inboxLink?.connect()
         } else {
