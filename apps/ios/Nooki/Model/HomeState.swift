@@ -197,14 +197,17 @@ final class HomeState {
     }
 
     /// Back in the foreground: pick up what the widgets changed and let Mochi feel the pets from outside the app.
-    func refresh() {
-        profile.reload()
-        wallet.reload()
-        partnerMoods.reload()
-        us.reload()
-        moments.reload()
-        notes.reload()
-        streak.reload()
+    /// `reloading` false skips reading the stores again, for launch, where they were read a moment ago.
+    func refresh(reloading: Bool = true) {
+        if reloading {
+            profile.reload()
+            wallet.reload()
+            partnerMoods.reload()
+            us.reload()
+            moments.reload()
+            notes.reload()
+            streak.reload()
+        }
         var activity = WidgetActivity.load()
         let pets = activity.takePendingPets()
         guard pets > 0 else { return }

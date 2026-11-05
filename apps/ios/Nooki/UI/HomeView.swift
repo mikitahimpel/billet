@@ -254,10 +254,11 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
-        .onChange(of: scenePhase, initial: true) { _, phase in
+        .onChange(of: scenePhase, initial: true) { old, phase in
             switch phase {
             case .active:
-                state.refresh()
+                // The first call is launch, where every store has just been read.
+                state.refresh(reloading: old != phase)
                 scene?.appOpened()
                 visitHints()
                 Task {
