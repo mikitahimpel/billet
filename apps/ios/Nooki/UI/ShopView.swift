@@ -3,7 +3,8 @@ import SwiftUI
 // MARK: - Shop
 
 /// The Shop tab under the app header: category chips, then Today's offers (the free gift, the week's featured set,
-/// the daily deals) or a category's grid. Every price is in coins and every countdown ends at a real rotation.
+/// the daily deals, bundles and collections) or a category's grid. Every price is in coins and every countdown ends
+/// at a real rotation.
 struct ShopView: View {
     let state: HomeState
 
@@ -84,10 +85,23 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
 
-        CollectionHero(state: state) { sheetItem = $0 }
-            .padding(.horizontal, Space.l)
+        VStack(alignment: .leading, spacing: Space.m) {
+            sectionHeader("Bundles") { Text("Less than one by one") }
+            ForEach(ShopOffers.bundles, id: \.id) { bundle in
+                BundleCard(state: state, bundle: bundle) { sheetItem = $0 }
+            }
+        }
+        .padding(.horizontal, Space.l)
 
-        Text("Earn coins by answering together, keeping your streak and opening the daily gift.")
+        VStack(alignment: .leading, spacing: Space.m) {
+            sectionHeader("Collections") { Text("A bonus for each full set") }
+            ForEach(Catalog.collections) { collection in
+                CollectionCard(state: state, collection: collection) { sheetItem = $0 }
+            }
+        }
+        .padding(.horizontal, Space.l)
+
+        Text("Earn coins by answering together, keeping your streak, opening the daily gift and completing collections.")
             .font(.nookiCaption)
             .foregroundStyle(Ink.textSecondary)
             .padding(.horizontal, Space.l)

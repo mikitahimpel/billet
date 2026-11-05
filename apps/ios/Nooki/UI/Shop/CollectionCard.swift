@@ -1,0 +1,93 @@
+import SwiftUI
+
+/// A collection's progress: "3/7", a bar, its pieces (missing ones greyed, a tap opens them) and the bonus, which can
+/// be collected once every piece is owned.
+struct CollectionCard: View {
+    let state: HomeState
+    let collection: ShopCollection
+    var open: (ShopItem) -> Void
+
+    @State private var claims = 0
+
+    private var items: [ShopItem] { collection.itemIDs.compactMap(Catalog.item) }
+    private var have: Int { collection.owned(of: state.owned) }
+    private var claimed: Bool { state.collectionLog.claimed.contains(collection.id) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.m) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(collection.name)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Spacer(minLength: Space.s)
+                Text("\(have)/\(collection.itemIDs.count)")
+                    .font(.nookiHeadline.monospacedDigit())
+                    .foregroundStyle(Ink.accentText)
+                    .contentTransition(.numericText())
+            }
+            ProgressView(value: Double(have), total: Double(collection.itemIDs.count))
+                .tint(.honey)
+                .accessibilityLabel("\(have) of \(collection.itemIDs.count) collected")
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: 4), spacing: Space.s) {
+                ForEach(items) { item in
+                    slot(item)
+                }
+            }
+
+            bonus
+        }
+        .padding(Space.m)
+        .shopCard()
+        .haptic(.success, trigger: claims)
+        .animation(.spring(duration: 0.35), value: have)
+    }
+
+    private func slot(_ item: ShopItem) -> some View {
+        let owns = state.owned.contains(item.id)
+        return Button { open(item) } label: {
+            Group {
+                if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
+                    Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+                }
+            }
+            .grayscale(owns ? 0 : 1)
+            .opacity(owns ? 1 : 0.4)
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+            .overlay(alignment: .bottomTrailing) {
+                if owns { OwnedCheck().offset(x: 3, y: 3) }
+            }
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel(item.name + (owns ? ", owned" : ", missing"))
+    }
+
+    @ViewBuilder private var bonus: some View {
+        HStack(spacing: Space.s) {
+            Image(systemName: claimed ? "checkmark.seal.fill" : "sparkles")
+                .foregroundStyle(Color.honey)
+                .accessibilityHidden(true)
+            Group {
+                if claimed {
+                    Text("Bonus collected: \(collection.bonus) coins")
+                } else {
+                    Text("Complete it for \(collection.bonus) coins")
+                }
+            }
+            .font(.nookiCallout)
+            .foregroundStyle(Ink.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if state.canClaimBonus(collection) {
+                Button("Collect") {
+                    if state.claimBonus(collection) { claims += 1 }
+                }
+                .shopButton()
+            }
+        }
+        .padding(Space.m)
+        .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+    }
+}
