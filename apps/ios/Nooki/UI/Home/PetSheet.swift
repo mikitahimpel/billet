@@ -44,6 +44,7 @@ struct PetButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(state.petName), Lv. \(state.level)")
+        .accessibilityIdentifier("pet")
         .sheet(isPresented: $showsSheet) {
             PetSheet(state: state, needs: needs) {
                 showsSheet = false
