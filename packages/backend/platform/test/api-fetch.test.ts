@@ -51,6 +51,10 @@ const appleKeys = await Effect.runPromise(
   }).pipe(Effect.provide(cryptoLayer)),
 );
 
+// Better Auth and the Apple check run on the real clock here, so a token's times lie far from it.
+const farAhead = Date.UTC(2100, 0, 1) / 1000;
+const longAgo = Date.UTC(2020, 0, 1) / 1000;
+
 const claims = (nonce: string, overrides: Record<string, unknown> = {}) =>
   new TextEncoder().encode(
     JSON.stringify({
@@ -58,7 +62,7 @@ const claims = (nonce: string, overrides: Record<string, unknown> = {}) =>
       aud: appleAudience,
       sub: "subject-a",
       nonce,
-      exp: Math.floor(Date.now() / 1000) + 300,
+      exp: farAhead,
       ...overrides,
     }),
   );
@@ -492,7 +496,7 @@ describe("the Api Worker", () => {
   });
 
   it.each([
-    ["expired", { exp: Math.floor(Date.now() / 1000) - 300 }],
+    ["expired", { exp: longAgo }],
     ["wrong-audience", { aud: "com.example.other" }],
   ])("refuses an %s token and stores no session", async (_, overrides) => {
     const { response } = await signIn(overrides);
@@ -1101,7 +1105,10 @@ describe("rate limits in the Worker", () => {
     );
 
   it("answers 429 past the limit on a limited route, and not on others", async () => {
-    for (let i = 0; i < limits.auth; i++) expect((await challengeFrom()).status).toBe(200);
+    // All at once: each request is counted by one atomic upsert, and one at a time took close to
+    // the 5 s test timeout on CI. The window is fixed (TEST_NOW), so they all fall in it.
+    const allowed = await Promise.all(Array.from({ length: limits.auth }, challengeFrom));
+    expect(allowed.map(({ status }) => status)).toEqual(Array(limits.auth).fill(200));
     expect((await challengeFrom()).status).toBe(429);
     expect((await call("/v1/notes")).status).not.toBe(429);
   });
@@ -1359,7 +1366,7 @@ describe("the couple's WebSocket", () => {
               expectedVersion,
               action: "edit",
               by: "owner@example.com",
-              at: Date.now(),
+              at: Date.UTC(2026, 9, 31, 22, 42),
             });
           }).pipe(Effect.provide(FlagConfigRepositoryLive(env.DB, caches.default))),
         );

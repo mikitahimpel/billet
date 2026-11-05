@@ -1,3 +1,5 @@
+import { systemNow } from "./wall-clock.ts";
+
 // The demo Worker must not load Effect or any @billet package (test/demo-imports.node.test.ts), so
 // its trace and log lines are written here by hand, in the shape of the main Worker's
 // (docs/observability.md). Only fixed labels and numbers are passed in.
@@ -33,17 +35,23 @@ export const traced = async <A>(
   attributes: Readonly<Record<string, string>>,
   run: () => Promise<A>,
 ): Promise<A> => {
-  const started = Date.now();
+  const started = systemNow();
   const ids = { traceId: hex(16), span: name, spanId: hex(8) };
   try {
     const result = await run();
-    write("info", { message: "trace", ...ids, ms: Date.now() - started, status: "ok", attributes });
+    write("info", {
+      message: "trace",
+      ...ids,
+      ms: systemNow() - started,
+      status: "ok",
+      attributes,
+    });
     return result;
   } catch (error) {
     write("error", {
       message: "trace",
       ...ids,
-      ms: Date.now() - started,
+      ms: systemNow() - started,
       status: "error",
       error: error instanceof Error ? error.name : "unknown",
       attributes,
