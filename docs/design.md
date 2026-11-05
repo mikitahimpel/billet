@@ -5,7 +5,7 @@ cross-section, in flat geometric scenes. Notes come through the letterbox and ha
 living-room wall. The streak is the house number, and the house grows with it. Everything comes in
 twos, and two wisps cross to form one heart.
 
-![The corrected board](design/little-house-board.png)
+![The corrected board](images/little-house/board.webp)
 
 The board's source is [design/little-house.dc.html](design/little-house.dc.html). The code in
 `packages/ios/core/Sources/DesignSystem` is the source of truth: where they differ, the code wins.
@@ -203,7 +203,7 @@ plate is the house number and passes on any wall.
 The board had never been rendered. The real runtime rendered it at 2400×960, and this is what it
 showed.
 
-![The board as first rendered](design/little-house-board-first-render.png)
+![The board as first rendered](images/little-house/board-first-render.webp)
 
 | Problem | Fix |
 | --- | --- |
