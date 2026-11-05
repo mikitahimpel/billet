@@ -21,7 +21,8 @@
     "./routes": "./src/routes.ts",
     "./status": "./src/status.ts",
     "./onboarding": "./src/onboarding.ts",
-    "./activity": "./src/activity.ts"
+    "./activity": "./src/activity.ts",
+    "./reaction": "./src/reaction.ts"
   },
   "scripts": {
     "lint": "oxlint .",

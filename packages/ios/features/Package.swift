@@ -25,6 +25,7 @@ let features = [
   "FeatureCanvas",
   "FeatureInbox",
   "FeatureSettings",
+  "FeatureMoments",
 ]
 
 // Surfaces is shared with the widget and Live Activity, so it never depends on a feature target.
@@ -90,6 +91,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureSettingsTests", ["FeatureSettings", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
   ("FeatureInboxTests", ["FeatureInbox", "Persistence", "Transport", "Wire"]),
+  ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
   (
     "LabsTests",

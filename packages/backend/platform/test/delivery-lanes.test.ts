@@ -73,6 +73,21 @@ describe("delivery lanes", () => {
     expect(await calls(room)).toBe(1);
   });
 
+  it("hands a new reaction to the lanes under its rev, and a take-back to none", async () => {
+    const room = await laneRoom();
+    const sent = await room.sendNote(alice, photo());
+    if (sent._tag !== "Accepted") throw new Error("note refused");
+    const note = sent.outputs.flatMap((o) =>
+      o._tag === "NoteAppended" ? [o.entry.note.id] : [],
+    )[0]!;
+    await room.react(bob, { note, reaction: "wow" });
+    await room.react(bob, { note, reaction: "wow" });
+    await room.react(bob, { note });
+    expect((await room.deliveries()).map((d) => d.noteId).toSorted()).toEqual(
+      [note, "reaction:1"].toSorted(),
+    );
+  });
+
   it("starts one delivery for a note however often it is handed over", async () => {
     const room = await laneRoom();
     await room.sendNote(alice, photo());

@@ -1,10 +1,12 @@
 import FeatureCanvas
 import Foundation
+import FeatureMoments
 import FeatureOnboarding
 import FeaturePairing
 import Observation
 import Persistence
 import Transport
+import Wire
 
 /// The phone's place on the billet server: the anonymous sign-in, pairing with the partner, and whether this
 /// account has a partner. One per launch, and none at all in a build without a server.
@@ -18,7 +20,12 @@ final class ServerSession {
     private(set) var isPaired: Bool
     /// The pair's activity for the Inbox, and its unread count.
     let inbox: InboxModel
+    /// The couple's reactions to each other's photos; nil until this account has a partner.
+    private(set) var reactions: ReactionsModel?
     @ObservationIgnored private var inboxLink: InboxLink?
+    @ObservationIgnored private let photoReceiving = PhotoReceiving()
+    /// What the room socket pages when a photo arrives; set each time the socket is followed.
+    @ObservationIgnored private var photos: PhotoSync?
 
     @ObservationIgnored private let backend: Backend
 
@@ -33,6 +40,19 @@ final class ServerSession {
         #else
         inbox = InboxModel(api: backend.api)
         #endif
+        if isPaired { reactions = Self.reactionsModel(backend) }
+    }
+
+    nonisolated private static let reactionsKey = "moments.reactions"
+
+    /// Reactions for the saved account, starting from what this phone last saved of them.
+    private static func reactionsModel(_ backend: Backend) -> ReactionsModel? {
+        guard let userID = (try? backend.accounts.load())?.record.userID else { return nil }
+        let saved = UserDefaults.standard.data(forKey: reactionsKey)
+            .flatMap { try? JSONDecoder().decode(ReactionsMachine.Saved.self, from: $0) }
+        return ReactionsModel(api: backend.api, viewer: UserId(userID), saved: saved ?? .init()) { saved in
+            UserDefaults.standard.set(try? JSONEncoder().encode(saved), forKey: reactionsKey)
+        }
     }
 
     var onboarding: OnboardingClient { backend.onboarding }
@@ -59,15 +79,22 @@ final class ServerSession {
             })
     }
 
-    /// Keeps the Inbox's count live over the room socket while the app is in front; nothing without a partner.
-    func followInbox(_ follows: Bool) {
+    /// Keeps the Inbox's count, the partner's photos into `photos` and reactions live over the room socket while the
+    /// app is in front; nothing without a partner.
+    func followInbox(_ follows: Bool, photos: PhotoSync? = nil) {
         if follows, isPaired {
+            self.photos = photos
             if inboxLink == nil {
                 let accounts = backend.accounts
                 let inbox = inbox
                 inboxLink = InboxLink(
                     baseURL: backend.baseURL, token: { (try? accounts.load())?.token },
-                    unread: { inbox.unreadChanged($0) })
+                    lastSeq: UserDefaults.standard.object(forKey: PhotoSync.cursorKey) as? Int,
+                    handlers: .init(
+                        unread: { inbox.unreadChanged($0) },
+                        photo: { [weak self] in Task { await self?.photos?.receive() } },
+                        reaction: { [weak self] in self?.reactions?.received($0) },
+                        lastReactionRev: { [weak self] in self?.reactions?.lastRev }))
             }
             inboxLink?.connect()
         } else {
@@ -83,7 +110,9 @@ final class ServerSession {
     /// Sends the photos taken here to the partner and keeps theirs in `moments` as from `partner`; nil until this
     /// account has a partner.
     func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
-        isPaired ? PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner) : nil
+        guard isPaired else { return nil }
+        return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
+                         receiving: photoReceiving)
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.
@@ -91,6 +120,7 @@ final class ServerSession {
         guard case .paired(let pairID) = pairing.state else { return }
         try? backend.accounts.setPaired(true, pairID)
         isPaired = true
+        reactions = Self.reactionsModel(backend)
         pairing = PairingModel(api: backend.api)
     }
 }

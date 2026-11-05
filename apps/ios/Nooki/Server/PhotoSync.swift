@@ -13,6 +13,7 @@ struct PhotoSync {
     let moments: MomentStore
     /// Monogram the partner's photos are kept under.
     let partner: String
+    let receiving: PhotoReceiving
     var defaults: UserDefaults = .standard
 
     /// The last note `seq` this phone has looked at for photos. Separate from the drawings' cursor, so each reads
@@ -30,10 +31,11 @@ struct PhotoSync {
             do {
                 let upload = try await api.uploadImage(photo.jpeg)
                 let caption = moment.caption.isEmpty ? nil : NoteText(validating: moment.caption)
-                _ = try await api.sendNote(
+                let sent = try await api.sendNote(
                     .photo(key: IdempotencyKey(moment.id.uuidString), image: upload.image, width: photo.width,
                            height: photo.height, preview: photo.preview, caption: caption))
-                moments.setUnsent(false, id: moment.id)
+                guard case .photo(let id, _, _, _, _, _, _, _) = sent.note else { continue }
+                moments.setUnsent(false, id: moment.id, noteID: id.rawValue)
             } catch {
                 continue
             }
@@ -43,6 +45,10 @@ struct PhotoSync {
     /// Pages through the notes after the last one looked at and keeps each photo the partner sent. Stops at a photo
     /// that won't download, so the next call tries it again.
     func receive() async {
+        await receiving.run(page)
+    }
+
+    private func page() async {
         let viewer = (try? accounts.load())?.record.userID
         var after = defaults.object(forKey: Self.cursorKey) as? Int
         while let page = try? await api.listNotes(after), !page.notes.isEmpty {
@@ -66,6 +72,27 @@ struct PhotoSync {
         moments.add(photo, caption: caption?.rawValue ?? "", author: partner,
                     date: Date(timeIntervalSince1970: Double(sentAt) / 1000), noteID: id.rawValue)
         return true
+    }
+}
+
+/// Runs one receive at a time across every `PhotoSync`: a call while one runs asks it to go once more instead, so a
+/// burst of socket frames downloads each photo once and the cursor only moves forward.
+@MainActor
+final class PhotoReceiving {
+    private var running = false
+    private var again = false
+
+    func run(_ body: () async -> Void) async {
+        guard !running else {
+            again = true
+            return
+        }
+        running = true
+        repeat {
+            again = false
+            await body()
+        } while again
+        running = false
     }
 }
 

@@ -15,7 +15,9 @@
     "./cat-routes": "./src/cat-routes.ts",
     "./cat-service": "./src/cat-service.ts",
     "./activity-routes": "./src/activity-routes.ts",
-    "./activity-service": "./src/activity-service.ts"
+    "./activity-service": "./src/activity-service.ts",
+    "./reaction-routes": "./src/reaction-routes.ts",
+    "./reaction-service": "./src/reaction-service.ts"
   },
   "scripts": {
     "lint": "oxlint .",

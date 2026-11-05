@@ -161,7 +161,8 @@ struct HomeView: View {
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
                 }
-                session?.followInbox(true)
+                session?.reactions?.refresh()
+                session?.followInbox(true, photos: photoSync)
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -283,7 +284,7 @@ struct HomeView: View {
 
     /// Photos to and from the partner; nil until this phone is paired with them.
     private var photoSync: PhotoSync? {
-        session?.photoSync(moments: state.moments, partner: state.partners.1)
+        session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
