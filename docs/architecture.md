@@ -289,7 +289,6 @@ packages/
   config/{typescript,oxlint}
   ios/                  SwiftPM packages, one per layer:
     contracts/          BilletContracts
-      Domain            Pure types
       Wire              Codable contract types, tested against packages/contracts/fixtures
     core/               BilletCore
       BilletKit         Machine, Store
@@ -304,14 +303,12 @@ packages/
     pet/                BilletPet
       Pet               World state and the delivery scenario, no graphics
       PetScene          The contract between the pet and a scene
-      PetSceneCatalog   The linked scenes and the user's choice
     features/           BilletFeatures
-      Feature*          Home, Onboarding, Pairing, Canvas, Inbox, Settings
-      Surfaces          Widget and Live Activity views
-      WidgetBridge      Flags, snapshot and queue shared by app, widget and settings
-      Labs              Experiments
+      Feature*          Onboarding, Pairing, Canvas
+      WidgetBridge      Flags, snapshot and queue shared by app and widget
     scripts/            The import check every package runs before build and test
-  pet-scenes/reality  The RealityKit scene, the only one the app ships
+archive/ios-v1/         The old app, not built; its own screens (Home, Settings, Inbox, Labs,
+                        Surfaces, PetSceneCatalog) and RealityKit scenes are in packages/ there
 ```
 
 ### Swift package layers
@@ -325,24 +322,18 @@ features ──► pet ──► core ──► contracts
    ├──────────────────┘          │
    ├─────────────────────────────┘
    └──► payments   (depends on nothing)
-
-pet-scenes/reality ──► pet, core
 ```
 
 `WidgetBridge` sits in `features`, not `core`, because it uses `Pet`. Target and product names are
 the same as when this was one package, so imports name modules, not packages. The apps add each
 package they link in `project.yml`.
 
-### Pet scenes
+### Graphics engines
 
-The App target lists the scenes it ships, and removing one means not linking its package. Graphics
-engines stay inside `packages/pet-scenes`; `ios:test` fails if any package in `packages/ios` imports
-RealityKit or Rive.
-Scenes show `PetWorld` and report events, and `Pet` finishes a step by deadline if a scene hangs.
-The widget links no engine: the catalog copies the chosen scene's PNG poses to the App Group.
+RealityKit lives in the app (`apps/ios/Nooki/Scene`); `ios:test` fails if any package in
+`packages/ios` imports RealityKit or Rive, so the widget never links an engine.
 
-The SwiftPM dependency graph enforces boundaries at compile time. For example, `Surfaces` may import
-`Domain`, `Ink` and `DesignSystem`, but not any feature target.
+The SwiftPM dependency graph enforces the other boundaries at compile time.
 
 On the TypeScript side: kebab-case file names, no barrel files, `exports` in `package.json` as the
 only module boundary, and only the `platform` package touches Cloudflare bindings.

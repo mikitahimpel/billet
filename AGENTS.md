@@ -11,10 +11,9 @@ work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original p
 | `apps/ios` | App, widgets, notification extension. XcodeGen (`project.yml`). |
 | `apps/api` | Worker entry. |
 | `packages/ios/<layer>` | Swift packages: `contracts`, `core`, `pet`, `features`, `payments`. |
-| `packages/pet-scenes` | 3D cat scenes. RealityKit only here. |
 | `packages/backend/<context>` | Backend contexts and `platform`. |
 | `packages/contracts/<name>` | Effect Schema, source of truth for TS and Swift. |
-| `archive/ios-v1` | Old app. Don't build on it. |
+| `archive/ios-v1` | Old app, not built, with the packages only it used. Don't build on it. |
 
 App look: `apps/ios/Nooki/UI/Kit/Ink.swift`, `apps/ios/Shared/Palette.swift`.
 [docs/design.md](docs/design.md) is the old Little House design, not the app's.

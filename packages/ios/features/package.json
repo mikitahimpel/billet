@@ -11,7 +11,6 @@
   "dependencies": {
     "@billet/ios-contracts": "workspace:*",
     "@billet/ios-core": "workspace:*",
-    "@billet/ios-payments": "workspace:*",
     "@billet/ios-pet": "workspace:*"
   }
 }

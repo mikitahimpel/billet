@@ -5,28 +5,10 @@ import PackageDescription
 let library: [(name: String, dependencies: [Target.Dependency])] = [
   ("BilletKit", []),
   ("DesignSystem", []),
-  (
-    "Ink",
-    [
-      "BilletKit", .product(name: "Domain", package: "contracts"),
-      .product(name: "Wire", package: "contracts"),
-    ]
-  ),
-  (
-    "Transport",
-    [
-      "BilletKit", .product(name: "Domain", package: "contracts"),
-      .product(name: "Wire", package: "contracts"),
-    ]
-  ),
-  ("Persistence", [.product(name: "Domain", package: "contracts")]),
-  (
-    "Delivery",
-    [
-      .product(name: "Domain", package: "contracts"), .product(name: "Wire", package: "contracts"),
-      "Ink", "Persistence",
-    ]
-  ),
+  ("Ink", ["BilletKit", .product(name: "Wire", package: "contracts")]),
+  ("Transport", ["BilletKit", .product(name: "Wire", package: "contracts")]),
+  ("Persistence", []),
+  ("Delivery", [.product(name: "Wire", package: "contracts"), "Ink", "Persistence"]),
 ]
 
 let wire: Target.Dependency = .product(name: "Wire", package: "contracts")
@@ -49,7 +31,6 @@ let package = Package(
     .testTarget(name: "PersistenceTests", dependencies: ["Persistence"]),
     .testTarget(name: "InkTests", dependencies: ["BilletKit", "Ink", wire]),
     .testTarget(name: "DesignSystemTests", dependencies: ["DesignSystem"]),
-    .testTarget(name: "PrivacyManifestTests"),
   ],
   swiftLanguageModes: [.v6]
 )
