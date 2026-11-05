@@ -88,7 +88,10 @@ struct HomeView: View {
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
             }
         }
-        .task { await lift() }
+        .task {
+            NookiPerf.start(state: state)
+            await lift()
+        }
         .task {
             guard home == nil else { return }
             let room = DioramaScene()
@@ -111,6 +114,10 @@ struct HomeView: View {
             if new, board == nil { board = makeBoard() }
         }
         .onChange(of: state.room) { showcase = nil }
+        .onChange(of: state.tab) { _, tab in
+            NookiPerf.tabShown(tab)
+            if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
+        }
         // Pets from the widget and the control reach Mochi when the app comes back.
         .onChange(of: state.petPulse) { scene?.purr() }
         .onChange(of: scenePhase, initial: true) { _, phase in
@@ -157,7 +164,11 @@ struct HomeView: View {
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
         // `-room city` on launch opens the City room and `-tab shop` the Shop, for recordings and screenshots.
-        if UserDefaults.standard.string(forKey: "room") == "city" { select(.city) }
+        if UserDefaults.standard.string(forKey: "room") == "city" {
+            select(.city)
+        } else if let home {
+            NookiPerf.shown(home, kind: .home)
+        }
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
     }
 
@@ -166,9 +177,13 @@ struct HomeView: View {
         scene?.stop()
         if room == .city {
             // After the tap has drawn; until then the home room stays on screen.
-            Task { if state.room == .city, city == nil { city = CityRoomScene() } }
+            Task {
+                if state.room == .city, city == nil { city = CityRoomScene() }
+                if let city { NookiPerf.shown(city, kind: .city) }
+            }
         } else {
             city = nil
+            if let home { NookiPerf.shown(home, kind: .home) }
         }
         withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }

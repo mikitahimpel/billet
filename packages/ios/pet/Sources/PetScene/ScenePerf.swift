@@ -68,6 +68,12 @@ public enum ScenePerf {
     /// The cat model shown now, and how to show another.
     public var cat: @MainActor () -> CatModel = { CatChoice.standard.model }
     public var setCat: @MainActor (CatModel) -> Void = { _ in }
+    /// The lighting presets a run steps through; empty for an app whose rooms have none.
+    public var lightings: [RoomLighting] = RoomLighting.allCases
+    /// The cat models a `cats` step shows; empty for an app with one cat.
+    public var cats: [CatModel] = ScenePerf.catModels
+    /// The first part of every screenshot's name, so the shots of two rooms never overwrite each other.
+    public var shotPrefix = "windowSeat"
     public init() {}
   }
 
@@ -157,7 +163,7 @@ public enum ScenePerf {
     scene?.release()
     await pause(1.5)
     census()
-    for lighting in RoomLighting.allCases + [RoomLighting.amberLantern] {
+    for lighting in host.lightings.isEmpty ? [] : host.lightings + [RoomLighting.amberLantern] {
       host.setLighting(lighting)
       await record("light.\(lighting.rawValue)", seconds: 2)
     }
@@ -203,14 +209,17 @@ public enum ScenePerf {
   }
 
   /// Models a `cats` step switches through: four of different builds, so each is a model of its own.
-  static let catModels: [CatModel] = [.detailedKitten, .mooCat, .britishGrey, .bengal]
+  public nonisolated static let catModels: [CatModel] = [
+    .detailedKitten, .mooCat, .britishGrey, .bengal,
+  ]
 
   /// Shows four other cat models and then the first again, with the memory in use after each. What
   /// a model costs to hold shows as the rise after it; one let go when the next comes shows as
   /// memory that does not keep climbing, and coming back to the first as no rise at all.
   private static func cats() async {
+    guard !host.cats.isEmpty else { return }
     let first = host.cat()
-    for model in catModels.filter({ $0 != first }) + [first] {
+    for model in host.cats.filter({ $0 != first }) + [first] {
       host.setCat(model)
       await record("cat.\(model.rawValue)", seconds: 5)
       emit("timing cat.\(model.rawValue) mb=\(format(Recorder.footprint() / 1_048_576))")
@@ -219,13 +228,17 @@ public enum ScenePerf {
 
   /// The room under each lighting preset, at the camera's extremes, held still for a screenshot.
   private static func sweep() async {
-    for lighting in RoomLighting.allCases {
+    for lighting in host.lightings {
       host.setLighting(lighting)
       await pause(2.5)
-      await shot("windowSeat-\(lighting.rawValue)-home")
+      await shot("\(host.shotPrefix)-\(lighting.rawValue)-home")
     }
-    host.setLighting(.amberLantern)
-    await pause(1.5)
+    if host.lightings.isEmpty {
+      await shot("\(host.shotPrefix)-home")
+    } else {
+      host.setLighting(.amberLantern)
+      await pause(1.5)
+    }
     let poses: [(String, Float, Float, Float)] = [
       ("left", 4000, 0, 1), ("right", -4000, 0, 1), ("high", 0, -4000, 1),
       ("low", 0, 4000, 1), ("near", 0, 0, 3), ("far", 0, 0, 0.3),
@@ -234,7 +247,7 @@ public enum ScenePerf {
       scene?.orbit(x, y)
       scene?.zoom(scale)
       await pause(1.2)
-      await shot("windowSeat-\(name)")
+      await shot("\(host.shotPrefix)-\(name)")
       scene?.zoom(1 / scale)
       scene?.orbit(-x, -y)
       scene?.release()
@@ -243,7 +256,7 @@ public enum ScenePerf {
     for tab in ["shop", "notes"] {
       await timed("tab.\(tab)", until: "\(tab) on screen") { host.selectTab(tab) }
       await pause(3)
-      await shot("tab-\(tab)")
+      await shot("\(host.shotPrefix)-tab-\(tab)")
     }
     host.selectTab("home")
   }
