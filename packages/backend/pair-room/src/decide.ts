@@ -12,6 +12,7 @@ import {
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
+import { type MoodCheckIn, moodNoteMaxLength } from "@billet/contracts-domain/mood";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import {
@@ -352,6 +353,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           items: [],
           wishlist: [],
           bonuses: [],
+          moods: [],
           welcomed: false,
           wallet: emptyWallet,
         },
@@ -371,6 +373,8 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "OpenGift":
     case "ClaimBonus":
     case "Earn":
+    case "SetMood":
+    case "CreditPurchase":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -548,6 +552,28 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         { ...room, wallet: { ...today, balance: today.balance + amount, ...counted } },
         [RoomOutput.cases.CoinsEntered.make({ entry })],
       );
+    }
+    case "SetMood": {
+      const { by, mood, at } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const note = command.note?.trim() ?? "";
+      if (note.length > moodNoteMaxLength) {
+        return rejected(RoomRejection.cases.MoodNoteTooLong.make({}));
+      }
+      const checkIn: MoodCheckIn = { user: by, mood, ...(note === "" ? {} : { note }), at };
+      // In the members' order, so the pair reads the same however the check-ins came in.
+      const moods = room.members.flatMap(({ user }) =>
+        user === by ? [checkIn] : room.moods.filter((earlier) => earlier.user === user),
+      );
+      return accepted({ ...room, moods }, [RoomOutput.cases.MoodSet.make({ checkIn })]);
+    }
+    case "CreditPurchase": {
+      const { id, kind, coins, ref, at } = command;
+      // Apple refunds a pack after its coins may be spent, so a refund takes at most the balance
+      // and its entry records what it took.
+      const amount = kind === "buy" ? coins : -Math.min(coins, room.wallet.balance);
+      const entry = coinEntry(id, kind, amount === 0 ? 0 : amount, ref, at);
+      return accepted(withCoins(room, amount), [RoomOutput.cases.CoinsEntered.make({ entry })]);
     }
   }
 };

@@ -34,7 +34,7 @@ private struct Stores {
     let couple = CoupleStore().couple
     let moods = MoodStore().latest
     let activity = WidgetActivity.load()
-    let us = UsStore(wallet: WalletStore())
+    let us = UsStore()
     let moment: (preview: NookiSnapshot.MomentPreview, image: Data?)?
 
     init() {

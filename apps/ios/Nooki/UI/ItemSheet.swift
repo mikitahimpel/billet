@@ -55,6 +55,8 @@ struct ItemSheet: View {
         .padding(.top, Space.gutter)
         .padding(.bottom, Space.s)
         .shopSheet(height: $height, tight: $tight)
+        // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
+        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
     // MARK: Stage
@@ -145,7 +147,6 @@ struct ItemSheet: View {
                 } else {
                     Button(action: buy) { buyLabel.frame(maxWidth: .infinity) }
                         .nookiPrimary()
-                        .disabled(!affordable)
                 }
             }
             if owned {
@@ -170,7 +171,7 @@ struct ItemSheet: View {
                 Text("Buy for")
                 CoinPrice(price: cost, was: isDeal ? item.price : nil)
             } else {
-                Image(systemName: "lock.fill")
+                Image(systemName: "plus.circle.fill")
                 Text("Need \(cost - state.shop.coins) more")
                     .monospacedDigit()
             }

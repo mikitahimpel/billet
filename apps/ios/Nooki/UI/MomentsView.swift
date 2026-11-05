@@ -1,3 +1,4 @@
+import PetScene
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -17,6 +18,8 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
+    /// Where the feed is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
+    @State private var position = ScrollPosition(edge: .top)
     @Namespace private var zoom
 
     private let hMargin: CGFloat = 16
@@ -51,6 +54,12 @@ struct MomentsView: View {
                     .padding(.bottom, Space.l)
                 }
                 .scrollIndicators(.hidden)
+                .scrollPosition($position)
+                .onAppear {
+                    guard ScenePerf.isOn else { return }
+                    NookiPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
+                }
+                .onDisappear { NookiPerf.scrolls[.moments] = nil }
             }
         }
         .onChange(of: pick) { _, item in
@@ -685,7 +694,13 @@ private struct MomentViewer: View {
         }
         .onChange(of: editing) { _, now in if !now { saveCaption() } }
         .onDisappear(perform: saveCaption)
-        .task(id: moment?.caption) { polaroid = await renderPolaroid() }
+        .task(id: moment?.caption) {
+            // After the zoom in has played and the caption has stopped changing: the render is a main-thread
+            // rasterization of a 1080 px print.
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            polaroid = await renderPolaroid()
+        }
         .confirmationDialog("Delete this moment?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let moment { store.delete(moment) }

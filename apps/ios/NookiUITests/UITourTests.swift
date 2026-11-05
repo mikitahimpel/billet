@@ -40,6 +40,10 @@ final class UITourTests: XCTestCase {
         }
         if tap(app.buttons["Couple"]) {
             shot("08-profile")
+            if tap(app.buttons["Edit profile"]) {
+                shot("17-profile-edit")
+                _ = tap(app.buttons["Cancel"])
+            }
             if tap(app.buttons["Settings"]) {
                 shot("13-settings")
                 app.swipeUp()
@@ -54,9 +58,9 @@ final class UITourTests: XCTestCase {
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
-            if tap(app.buttons["Mood"]) {
-                shot("09-us-mood")
-                closeMenu(app)
+            if tap(app.buttons["mood"]) {
+                shot("09-mood")
+                dismissSheet(app)
             }
             for (index, name) in ["Dates", "Wishlists", "Calendar"].enumerated() {
                 let entry = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch

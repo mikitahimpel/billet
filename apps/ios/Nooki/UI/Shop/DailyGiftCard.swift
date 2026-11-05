@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// The free gift at the top of Today: one tap shakes the box open, the reward rises out with a little burst, and a
-/// new gift comes at local midnight.
+/// The free gift in Today: one tap asks the server to open it, the box shakes open with the reward it gave, and a new
+/// gift comes at local midnight.
 struct DailyGiftCard: View {
     let state: HomeState
 
     @State private var reward: GiftReward?
     @State private var bursts = 0
+    @State private var opening = false
 
     private var ready: Bool { state.shop.canClaimGift() && reward == nil }
 
@@ -24,8 +25,9 @@ struct DailyGiftCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if ready {
-                Button("Open", action: claim)
+                Button("Open") { Task { await claim() } }
                     .shopButton()
+                    .disabled(opening)
                     .accessibilityHint("Opens today's free gift")
             }
         }
@@ -68,10 +70,17 @@ struct DailyGiftCard: View {
         }
     }
 
-    private func claim() {
-        guard let got = state.shop.claimGift() else { return }
-        withAnimation(.spring(duration: 0.45, bounce: 0.45)) { reward = got }
-        bursts += 1
+    private func claim() async {
+        opening = true
+        defer { opening = false }
+        switch await state.shop.openGift() {
+        case .opened(let got):
+            withAnimation(.spring(duration: 0.45, bounce: 0.45)) { reward = got }
+            bursts += 1
+        case .taken, nil:
+            // Opened already (by the partner, or a try whose answer was lost): the card shows it as opened.
+            break
+        }
     }
 }
 

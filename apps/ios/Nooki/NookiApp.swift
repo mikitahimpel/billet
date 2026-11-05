@@ -8,6 +8,7 @@ struct NookiApp: App {
     @State private var session: ServerSession?
     @State private var onboarding: OnboardingFlow
     @State private var hints: Hints
+    @State private var home: HomeState
 
     init() {
         NavigationBarStyle.apply()
@@ -31,6 +32,7 @@ struct NookiApp: App {
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
             coatChanged: { CatRoom.forgetMochi() }))
+        _home = State(initialValue: HomeState(stores: .live()))
     }
 
     var body: some Scene {
@@ -39,7 +41,7 @@ struct NookiApp: App {
                 // The unit tests run on the main actor; the room would keep it busy drawing the whole time.
                 Color.black
             } else {
-                HomeView()
+                HomeView(state: $home)
                     // A new coat loads Mochi again, so the room is built anew around her.
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
@@ -51,7 +53,8 @@ struct NookiApp: App {
                             OnboardingView(
                                 flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
-                                paired: { session?.pairingFinished() })
+                                paired: { session?.pairingFinished() },
+                                demoPartner: demoPartnerPairing)
                                 .transition(.opacity)
                         }
                     }
@@ -60,11 +63,24 @@ struct NookiApp: App {
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
-                    .task { session?.signIn.appeared() }
-                    .task { await session?.refreshDateCatalog() }
+                    .task {
+                        session?.signIn.appeared()
+                        await session?.refreshDateCatalog()
+                    }
+                    .task(id: session?.isSignedIn) { await session?.checkDemoPartner() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }
+    }
+
+    /// Built on its own: written inline, the compiler cannot check `body`.
+    private var demoPartnerPairing: (() -> Void)? {
+        guard session?.demoPartner == false else { return nil }
+        return { pairWithDemoPartner() }
+    }
+
+    private func pairWithDemoPartner() {
+        Task { try? await session?.pairWithDemoPartner() }
     }
 
     /// The app was launched to host NookiTests.

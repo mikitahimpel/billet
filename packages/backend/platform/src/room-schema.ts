@@ -177,6 +177,14 @@ export const claimedBonus = sqliteTable("claimed_bonus", {
   position: integer("position").notNull(),
 });
 
+// Each member's latest check-in, one row each: a new one writes over it. `note` is null without one.
+export const mood = sqliteTable("mood", {
+  user: text("user").primaryKey(),
+  mood: text("mood").notNull(),
+  note: text("note"),
+  at: integer("at").notNull(),
+});
+
 // The wallet's entries, in the order they were stored (`seq`). `id` is `<kind>:<source>`, one
 // entry each, so a repeated earn or buy cannot pay or charge twice.
 export const coinEntry = sqliteTable(
@@ -191,3 +199,36 @@ export const coinEntry = sqliteTable(
   },
   (table) => [uniqueIndex("coin_entry_id").on(table.id)],
 );
+
+// A partner's gift wishes. Both partners read every row; who plans to gift one is in `gift_plan`.
+export const giftWish = sqliteTable("gift_wish", {
+  id: text("id").primaryKey(),
+  owner: text("owner").notNull(),
+  title: text("title").notNull(),
+  link: text("link").notNull(),
+  price: text("price").notNull(),
+  note: text("note").notNull(),
+  mostWanted: integer("most_wanted").notNull(),
+  occasionTitle: text("occasion_title"),
+  occasionDate: integer("occasion_date"),
+  addedAt: integer("added_at").notNull(),
+  receivedAt: integer("received_at"),
+  giftedBy: text("gifted_by"),
+});
+
+// A giver's secret plan for one of the partner's wishes. Only the giver's own answers read it.
+export const giftPlan = sqliteTable(
+  "gift_plan",
+  {
+    wishId: text("wish_id").notNull(),
+    giver: text("giver").notNull(),
+    stage: text("stage").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.wishId, table.giver] })],
+);
+
+// Each partner's "What I love", as the JSON of `Loves`.
+export const giftLoves = sqliteTable("gift_loves", {
+  user: text("user").primaryKey(),
+  body: text("body").notNull(),
+});

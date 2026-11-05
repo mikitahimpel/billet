@@ -46,7 +46,7 @@ import {
   EarnResponse,
 } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
-import { PairResponse } from "@billet/contracts-http-api/pair";
+import { DemoPartnerResponse, PairResponse } from "@billet/contracts-http-api/pair";
 import {
   ClaimBonusRequest,
   ClaimBonusResponse,
@@ -109,11 +109,22 @@ import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import {
   ListReactionsResponse,
   ReactRequest,
   ReactResponse,
 } from "@billet/contracts-http-api/reaction";
+import {
+  DeleteGiftWishRequest,
+  GiftsResponse,
+  GiftWish,
+  MarkGiftReceivedRequest,
+  SaveGiftWishRequest,
+  SaveLovesRequest,
+  SetGiftPlanRequest,
+} from "@billet/contracts-http-api/gifts";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -406,6 +417,14 @@ const heart: NoteReaction = {
 };
 const takenBack: NoteReaction = { rev: 4, note: noteId, by: alice, at: 1_700_000_003_000 };
 
+const sleepy: MoodCheckIn = { user: bob, mood: "sleepy", at: 1_700_000_004_000 };
+const missingAlice: MoodCheckIn = {
+  user: alice,
+  mood: "missing",
+  note: "come home soon 🌙",
+  at: 1_700_000_005_000,
+};
+
 const activityEvents = {
   "cat-fed": { _tag: "CatFed", grams: 40 },
   "cat-petted": { _tag: "CatPetted" },
@@ -420,6 +439,7 @@ const activityEvents = {
   "partner-joined": { _tag: "PartnerJoined" },
   "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
   reacted: { _tag: "Reacted", note: "note-1", reaction: "heart" },
+  "mood-shared": { _tag: "MoodShared", mood: "sleepy" },
   purchased: {
     _tag: "Purchased",
     offer: "bundle:starter-ink",
@@ -484,6 +504,40 @@ const refundItem = activityItem({
 });
 const activityCursor = Schema.decodeUnknownSync(ActivityCursor)(`0001700000100000~note:note-1`);
 
+const braceletWish: GiftWish = {
+  id: idempotencyKey,
+  owner: alice,
+  title: "Silver charm bracelet",
+  link: "https://example.com/bracelet",
+  price: "$65",
+  note: "the one with the little moon",
+  mostWanted: true,
+  occasion: { title: "Alice's birthday", date: 1_700_600_000_000 },
+  addedAt: 1_700_000_000_000,
+};
+
+const sunflowers: GiftWish = {
+  id: Schema.decodeUnknownSync(IdempotencyKey)("00000000-0000-4000-8000-0000000000b2"),
+  owner: alice,
+  title: "Sunflowers",
+  link: "",
+  price: "",
+  note: "",
+  mostWanted: false,
+  addedAt: 1_700_000_000_000,
+  receivedAt: 1_700_086_400_000,
+  giftedBy: bob,
+};
+
+const aliceLoves = {
+  sizes: "S, shoes 38",
+  flowers: "Peonies",
+  coffee: "Iced oat latte",
+  sweets: "",
+  allergies: "",
+  avoid: "Lilies",
+};
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -547,6 +601,44 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { reactions: [heart, takenBack] },
     empty: { reactions: [] },
   }),
+  fixture("GiftWish", GiftWish, { default: braceletWish, received: sunflowers }),
+  fixture("GiftsResponse", GiftsResponse, {
+    default: {
+      wishes: [braceletWish, sunflowers],
+      plans: [{ wish: idempotencyKey, stage: "planning" }],
+      surprise: true,
+      loves: [{ user: alice, loves: aliceLoves }],
+    },
+    empty: { wishes: [], plans: [], surprise: false, loves: [] },
+  }),
+  fixture("SaveGiftWishRequest", SaveGiftWishRequest, {
+    default: {
+      id: idempotencyKey,
+      title: "Silver charm bracelet",
+      link: "https://example.com/bracelet",
+      price: "$65",
+      note: "the one with the little moon",
+      mostWanted: true,
+    },
+    occasion: {
+      id: idempotencyKey,
+      title: "Peonies",
+      link: "",
+      price: "",
+      note: "",
+      mostWanted: false,
+      occasion: { title: "Our anniversary", date: 1_700_600_000_000 },
+    },
+  }),
+  fixture("DeleteGiftWishRequest", DeleteGiftWishRequest, { default: { id: idempotencyKey } }),
+  fixture("SetGiftPlanRequest", SetGiftPlanRequest, {
+    default: { wish: idempotencyKey, stage: "bought" },
+    release: { wish: idempotencyKey },
+  }),
+  fixture("MarkGiftReceivedRequest", MarkGiftReceivedRequest, {
+    default: { wish: idempotencyKey, received: true },
+  }),
+  fixture("SaveLovesRequest", SaveLovesRequest, { default: { loves: aliceLoves } }),
   fixture("ReportEventsRequest", ReportEventsRequest, {
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },
@@ -766,7 +858,19 @@ export const catalog: ReadonlyArray<Fixture> = [
     wished: { item: tower, wished: true },
     unwished: { item: tower, wished: false },
   }),
-  fixture("PairResponse", PairResponse, { default: { pairId, members: [alice, bob] } }),
+  fixture("PairResponse", PairResponse, {
+    default: { pairId, members: [alice, bob], moods: [missingAlice, sleepy] },
+    "no-moods": { pairId, members: [alice, bob], moods: [] },
+  }),
+  fixture("MoodCheckIn", MoodCheckIn, { default: sleepy, "with-note": missingAlice }),
+  fixture("SetMoodRequest", SetMoodRequest, {
+    default: { mood: "happy" },
+    "with-note": { mood: "busy", note: "  deadline till 6  " },
+  }),
+  fixture("DemoPartnerResponse", DemoPartnerResponse, {
+    default: { paired: true },
+    unpaired: { paired: false },
+  }),
   // A JWS's shape only: never signed by anyone.
   fixture("PurchaseRequest", PurchaseRequest, {
     default: {
@@ -944,6 +1048,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       lastReactionRev: 2,
     }),
     "resume-with-shop": ClientMessage.cases.Resume.make({ lastSeq: 7, activity: true, shop: true }),
+    "resume-with-moods": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      activity: true,
+      lastReactionRev: 2,
+      moods: true,
+    }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -985,6 +1095,7 @@ export const catalog: ReadonlyArray<Fixture> = [
         bonuses: [],
       },
     }),
+    "mood-changed": ServerMessage.cases.MoodChanged.make({ checkIn: missingAlice }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

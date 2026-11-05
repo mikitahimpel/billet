@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./pair-moods": "./src/pair-moods.ts",
     "./pairing-error": "./src/pairing-error.ts",
     "./pairing-observer": "./src/pairing-observer.ts",
     "./pairing-repository": "./src/pairing-repository.ts",

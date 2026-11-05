@@ -1,5 +1,6 @@
 import Observation
 import UIKit
+import Vision
 
 /// The pair on the server: which account holds each monogram.
 nonisolated struct PairMembers: Codable, Hashable {
@@ -97,7 +98,8 @@ final class CoupleStore {
         }
     }
 
-    /// Crops `image` to its centre square and stores it at 400 px; nil removes the photo.
+    /// Crops `image` to a square around the face, or its upper middle when there is none, and stores it at 400 px; nil
+    /// removes the photo.
     func setPhoto(_ image: UIImage?, for partner: String) {
         let url = SharedFile.url(Self.photoFile(partner))
         guard let image else {
@@ -105,18 +107,44 @@ final class CoupleStore {
             photos[partner] = nil
             return
         }
-        let side = min(image.size.width, image.size.height)
+        let crop = Self.portraitSquare(in: image)
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         let square = UIGraphicsImageRenderer(size: CGSize(width: 400, height: 400), format: format).image { _ in
-            let scale = 400 / side
-            image.draw(in: CGRect(x: (side - image.size.width) / 2 * scale, y: (side - image.size.height) / 2 * scale,
+            let scale = 400 / crop.width
+            image.draw(in: CGRect(x: -crop.minX * scale, y: -crop.minY * scale,
                                   width: image.size.width * scale, height: image.size.height * scale))
         }
         guard let data = square.jpegData(compressionQuality: 0.85) else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: .atomic)
         photos[partner] = square
+    }
+
+    /// The square, in the image's points, that frames a head: the largest face with room around it, so a circle
+    /// never clips the chin or the hair. Without a face, the top of a tall photo, where heads usually are.
+    static func portraitSquare(in image: UIImage) -> CGRect {
+        let size = image.size
+        let short = min(size.width, size.height)
+        var centre = CGPoint(x: size.width / 2, y: size.height > size.width ? short / 2 + (size.height - short) * 0.2
+                                                                              : size.height / 2)
+        var side = short
+        if let cgImage = image.cgImage {
+            let request = VNDetectFaceRectanglesRequest()
+            let orientation = CGImagePropertyOrientation(image.imageOrientation)
+            try? VNImageRequestHandler(cgImage: cgImage, orientation: orientation).perform([request])
+            if let face = request.results?.max(by: { $0.boundingBox.width < $1.boundingBox.width })?.boundingBox {
+                // Vision's box is normalised with its origin at the bottom left.
+                let rect = CGRect(x: face.minX * size.width, y: (1 - face.maxY) * size.height,
+                                  width: face.width * size.width, height: face.height * size.height)
+                side = min(short, max(rect.width, rect.height) * 2.4)
+                // A little above the box's middle, so the hair has as much room as the chin.
+                centre = CGPoint(x: rect.midX, y: rect.midY - rect.height * 0.1)
+            }
+        }
+        let x = min(max(centre.x - side / 2, 0), size.width - side)
+        let y = min(max(centre.y - side / 2, 0), size.height - side)
+        return CGRect(x: x, y: y, width: side, height: side)
     }
 
     /// Before pairing only; after it the viewer is the signed-in account.
@@ -148,4 +176,20 @@ final class CoupleStore {
 extension Notification.Name {
     /// The couple was saved by another `CoupleStore`, so the one on screen reads it again.
     static let coupleChanged = Notification.Name("com.mikitahimpel.billet.couple-changed")
+}
+
+private extension CGImagePropertyOrientation {
+    init(_ orientation: UIImage.Orientation) {
+        switch orientation {
+        case .up: self = .up
+        case .down: self = .down
+        case .left: self = .left
+        case .right: self = .right
+        case .upMirrored: self = .upMirrored
+        case .downMirrored: self = .downMirrored
+        case .leftMirrored: self = .leftMirrored
+        case .rightMirrored: self = .rightMirrored
+        @unknown default: self = .up
+        }
+    }
 }

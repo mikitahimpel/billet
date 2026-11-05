@@ -151,6 +151,7 @@ describe("PairRoom storage", () => {
       items: [],
       wishlist: [],
       bonuses: [],
+      moods: [],
       welcomed: true,
       // The welcome coins, and the note's 10.
       wallet: { balance: 570, day: expect.anything(), care: 0, notes: 10, games: 0, lists: 0 },
@@ -180,6 +181,9 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_reactions"),
       expect.stringContaining("_shop"),
       expect.stringContaining("_shop_rewards"),
+      expect.stringContaining("_gifts"),
+      expect.stringContaining("_gift_occasion"),
+      expect.stringContaining("_mood"),
     ]);
   });
 
@@ -261,6 +265,30 @@ describe("PairRoom storage", () => {
       items: ["lamp", "rug", tower],
       wishlist: [yarn],
       bonuses: [],
+    });
+  });
+
+  it("keeps gift wishes and plans across eviction, and the plan only in the giver's view", async () => {
+    const room = await openRoom();
+    const wish = newKey();
+    await room.gifts(alice, {
+      _tag: "SaveWish",
+      wish: { id: wish, title: "Bracelet", link: "", price: "$65", note: "", mostWanted: true },
+    });
+    await room.gifts(bob, { _tag: "SetPlan", wish, stage: "planning" });
+    await evictDurableObject(room);
+
+    expect(await room.gifts(alice, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { wishes: [{ id: wish, owner: alice }], plans: [], surprise: true },
+    });
+    expect(await room.gifts(bob, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { plans: [{ wish, stage: "planning" }], surprise: false },
+    });
+    expect(await room.gifts(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
     });
   });
 
@@ -570,6 +598,69 @@ describe("PairRoom realtime across eviction", () => {
 
     await room.forgetMember(alice);
     expect(await room.reactions(0, 10)).toEqual([]);
+  });
+
+  it("keeps each member's latest check-in in SQLite, tells every socket that follows moods, and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const partner = await open(room, alice);
+    const ownOther = await open(room, bob);
+    const older = await open(room, alice);
+    partner.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, moods: true }));
+    ownOther.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, moods: true }));
+    older.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    // A socket that has seen the note has had its Resume read, so it follows moods from here.
+    await room.sendNote(alice, photo());
+    await until(() => partner.frames.some((f) => f._tag === "NoteReceived"));
+    await until(() => ownOther.frames.some((f) => f._tag === "NoteReceived"));
+
+    expect(await room.setMood(bob, { mood: "busy", note: "  till six " })).toMatchObject({
+      _tag: "Accepted",
+      outputs: [{ _tag: "MoodSet", checkIn: { user: bob, mood: "busy", note: "till six" } }],
+    });
+    expect(await room.setMood(alice, { mood: "missing" })).toMatchObject({ _tag: "Accepted" });
+    expect(await room.setMood(mallory, { mood: "happy" })).toMatchObject({
+      _tag: "Rejected",
+      rejection: { _tag: "NotAMember" },
+    });
+    await evictDurableObject(room);
+    expect(await room.setMood(bob, { mood: "sleepy" })).toMatchObject({ _tag: "Accepted" });
+
+    const moodsOf = (frames: ReadonlyArray<{ _tag: string; [key: string]: unknown }>) =>
+      frames.filter((f) => f._tag === "MoodChanged").map((f) => f["checkIn"]);
+    await until(() => moodsOf(partner.frames).length === 3);
+    await until(() => moodsOf(ownOther.frames).length === 3);
+    expect(moodsOf(partner.frames)).toEqual([
+      expect.objectContaining({ user: bob, mood: "busy", note: "till six" }),
+      expect.objectContaining({ user: alice, mood: "missing" }),
+      expect.not.objectContaining({ note: expect.anything() }),
+    ]);
+    expect(moodsOf(older.frames)).toEqual([]);
+
+    await evictDurableObject(room);
+    expect(await room.moods()).toEqual([
+      expect.objectContaining({ user: alice, mood: "missing" }),
+      expect.objectContaining({ user: bob, mood: "sleepy" }),
+    ]);
+    expect(await room.snapshot()).toMatchObject({
+      _tag: "Active",
+      moods: [{ user: alice }, { user: bob }],
+    });
+    const inbox = await room.activity(alice, undefined, 10);
+    expect(inbox.items.filter((i) => i.event._tag === "MoodShared")).toEqual([
+      expect.objectContaining({ actor: "Partner", event: { _tag: "MoodShared", mood: "sleepy" } }),
+      expect.objectContaining({ actor: "Me", event: { _tag: "MoodShared", mood: "missing" } }),
+    ]);
+
+    const late = await open(room, alice);
+    late.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 1, moods: true }));
+    await until(() => moodsOf(late.frames).length === 2);
+    expect(moodsOf(late.frames)).toEqual([
+      expect.objectContaining({ user: alice, mood: "missing" }),
+      expect.objectContaining({ user: bob, mood: "sleepy" }),
+    ]);
+
+    await room.forgetMember(alice);
+    expect(await room.moods()).toEqual([]);
   });
 
   it("keeps the Inbox in SQLite, pushes the unread count to sockets that follow it, and forgets it with the pair", async () => {

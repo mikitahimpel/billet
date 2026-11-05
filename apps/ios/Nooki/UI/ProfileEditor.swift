@@ -13,16 +13,18 @@ struct ProfileEditor: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 14) {
+            VStack(spacing: Space.m + 2) {
                 ForEach(profile.couple.partners, id: \.self) { partner in
                     partnerCard(partner)
                 }
                 togetherCard
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 8)
+            .padding(.horizontal, Space.gutter)
+            .padding(.vertical, Space.s)
         }
         .scrollIndicators(.hidden)
+        .background(Ink.screen.ignoresSafeArea())
+        .tint(.honey)
         .navigationTitle("Edit profile")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden()
@@ -68,11 +70,11 @@ struct ProfileEditor: View {
                 Monogram(partner: partner, profile: profile, size: 64)
                     .overlay(alignment: .bottomTrailing) {
                         Image(systemName: "camera.fill")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.white)
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.heroInk)
                             .frame(width: 24, height: 24)
-                            .background(Color(hex: 0x4A3A33), in: .circle)
-                            .overlay(Circle().stroke(.white.opacity(0.8), lineWidth: 1.5))
+                            .background(.honeyGradient, in: .circle)
+                            .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5))
                     }
             }
 
@@ -96,19 +98,20 @@ struct ProfileEditor: View {
                 }
             }
         }
-        .padding(14)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+        .padding(Space.m + 2)
+        .nookiCard()
     }
 
     private var togetherCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
                 .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
             Text("Day \(Couple(partners: profile.couple.partners, togetherSince: since, viewer: profile.couple.viewer).daysTogether()) together")
                 .font(.nookiCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
-        .padding(14)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+        .padding(Space.m + 2)
+        .nookiCard()
     }
 }

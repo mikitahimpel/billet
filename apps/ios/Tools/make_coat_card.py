@@ -14,7 +14,7 @@ from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
 OUT = args[0]
-WIDTH = int(args[1]) if len(args) > 1 else 1200
+WIDTH = int(args[1]) if len(args) > 1 else 900
 SAMPLES = int(args[2]) if len(args) > 2 else 512
 ROOT = __file__.rsplit("/Tools/", 1)[0]
 
