@@ -81,9 +81,13 @@ struct DrawingWidgetView: View {
                 if family != .systemSmall && family != .accessoryRectangular {
                     Text("from \(entry.partner) · \(drawing.sentAt, style: .relative)")
                         .font(.nookiMicro)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .shadow(color: .black.opacity(0.15), radius: 3)
-                        .padding(12)
+                        // The wallpapers are pastel in either appearance, so dark text on a soft chip, not white.
+                        .foregroundStyle(Ink.heroInk.opacity(0.85))
+                        .lineLimit(1)
+                        .padding(.horizontal, Space.s)
+                        .padding(.vertical, Space.xs)
+                        .background(.white.opacity(0.6), in: .capsule)
+                        .padding(Space.m)
                 }
             }
         } else {
