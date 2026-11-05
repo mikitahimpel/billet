@@ -9,10 +9,16 @@ name: iOS perf
 #   gh pr edit <n> --add-label perf                               # the same for a pull request
 #   gh workflow run perf.yml --ref <branch> -f jobs=cost          # what each part of the room costs
 #   gh workflow run perf.yml --ref <branch> -f room=city          # the same in the City room
+#   gh workflow run perf.yml --ref <branch> -f image=xcode-27     # on Xcode 27 and iOS 27
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f jobs=steady  # Home left alone, A/B
 #
 # The runner's Simulator has no Apple7 GPU, so Mochi is drawn as the mesh cat, not the splats a phone
 # shows: the cat in these numbers and shots is not the shipped one. The room around her is.
+#
+# Runs go on the macos-26 image (Xcode 26, an iOS 26 Simulator) unless `-f image=xcode-27`: on the
+# xcode-27 image the iOS 27 Simulator's Metal host often aborts the app's GPU work under load
+# (SimMetalHost, "Ignored (for causing prior/excessive GPU errors)"), and measure.sh's one retry
+# is not always enough.
 #
 # Runners are shared and noisy: the A/B runs the two builds in turns (ab.sh), several rounds, and
 # reports medians with min–max ranges. Compare ranges, not single numbers.
@@ -46,10 +52,15 @@ on:
         description: Parts a cost run switches, comma-separated (empty = all)
         default: ""
       room:
-        description: Room Home shows (Labs > Room)
+        description: Room Home opens on
         type: choice
-        options: [windowSeat, nookiCabin]
-        default: windowSeat
+        options: [room, city]
+        default: room
+      image:
+        description: Runner image (macos-26 = Xcode 26 and an iOS 26 Simulator; xcode-27 = Xcode 27 and iOS 27)
+        type: choice
+        options: [macos-26, xcode-27]
+        default: macos-26
       jobs:
         description: What to run (both = ab and shots)
         type: choice
@@ -89,7 +100,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'ab' || inputs.jobs == 'all'))
       || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
       && (github.event.action != 'labeled' || github.event.label.name == 'perf'))
-    runs-on: xcode-27
+    runs-on: ${{ inputs.image || 'macos-26' }}
     timeout-minutes: 90
     env:
       ROUNDS: ${{ inputs.rounds || '3' }}
@@ -108,8 +119,8 @@ jobs:
           path: base
           persist-credentials: false
 
-      - name: Select Xcode from .xcode-version
-        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+      - name: Select Xcode
+        run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
       # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
@@ -184,7 +195,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' && (inputs.jobs == 'both' || inputs.jobs == 'shots' || inputs.jobs == 'all'))
       || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'perf')
       && (github.event.action != 'labeled' || github.event.label.name == 'perf')))
-    runs-on: xcode-27
+    runs-on: ${{ inputs.image || 'macos-26' }}
     timeout-minutes: 50
     strategy:
       fail-fast: false
@@ -202,8 +213,8 @@ jobs:
           path: head
           persist-credentials: false
 
-      - name: Select Xcode from .xcode-version
-        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+      - name: Select Xcode
+        run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
       # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
@@ -270,7 +281,7 @@ jobs:
     # was: >-
     #  !cancelled() && github.event_name == 'workflow_dispatch'
     #  && (inputs.jobs == 'cost' || inputs.jobs == 'all')
-    runs-on: xcode-27
+    runs-on: ${{ inputs.image || 'macos-26' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -291,8 +302,8 @@ jobs:
           path: head
           persist-credentials: false
 
-      - name: Select Xcode from .xcode-version
-        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+      - name: Select Xcode
+        run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
       # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
@@ -356,7 +367,7 @@ jobs:
     if: >-
       !cancelled() && github.event_name == 'workflow_dispatch'
       && (inputs.jobs == 'steady' || inputs.jobs == 'all')
-    runs-on: xcode-27
+    runs-on: ${{ inputs.image || 'macos-26' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -382,8 +393,8 @@ jobs:
           path: base
           persist-credentials: false
 
-      - name: Select Xcode from .xcode-version
-        run: head/.github/scripts/select-xcode.sh head/.xcode-version
+      - name: Select Xcode
+        run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
       # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
