@@ -8,6 +8,7 @@ struct NookiApp: App {
     @State private var onboarding: OnboardingFlow
 
     init() {
+        NavigationBarStyle.apply()
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline
