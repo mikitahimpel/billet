@@ -11,18 +11,9 @@ extension WebSocketConnection {
   ) async throws(TransportError) -> WebSocketConnection {
     let task = session.webSocketTask(with: request)
     task.resume()
-    do {
-      // Cancelling the connect cancels the task, so a stuck handshake does not outlive its attempt.
-      try await withTaskCancellationHandler {
-        try await task.ping()
-      } onCancel: {
-        task.cancel(with: .goingAway, reason: nil)
-      }
-    } catch {
-      task.cancel(with: .goingAway, reason: nil)
-      throw .network(error.localizedDescription)
-    }
 
+    // Reading starts before the ping: URLSession handles a pong only after the frames ahead of it
+    // are read, and the room sends `Presence` as soon as it accepts the socket.
     let messages = AsyncStream<ServerMessage> { continuation in
       let reader = Task {
         while !Task.isCancelled {
@@ -44,6 +35,18 @@ extension WebSocketConnection {
         continuation.finish()
       }
       continuation.onTermination = { _ in reader.cancel() }
+    }
+
+    do {
+      // Cancelling the connect cancels the task, so a stuck handshake does not outlive its attempt.
+      try await withTaskCancellationHandler {
+        try await task.ping()
+      } onCancel: {
+        task.cancel(with: .goingAway, reason: nil)
+      }
+    } catch {
+      task.cancel(with: .goingAway, reason: nil)
+      throw .network(error.localizedDescription)
     }
 
     return WebSocketConnection(
