@@ -51,6 +51,10 @@ export class PairingRepository extends Context.Service<
       claim: InviteClaim,
     ) => Effect.Effect<void, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly findPair: (userId: UserId) => Effect.Effect<Option.Option<PairId>, PairingUnavailable>;
+    /** When the pair formed: the moment its invite was claimed. None once it has ended. */
+    readonly pairedAt: (
+      pairId: PairId,
+    ) => Effect.Effect<Option.Option<EpochMillis>, PairingUnavailable>;
     /** The users in a pair: none once it has ended. */
     readonly findMembers: (
       pairId: PairId,

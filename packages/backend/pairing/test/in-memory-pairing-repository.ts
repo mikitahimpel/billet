@@ -1,6 +1,6 @@
 import { Effect, Option } from "effect";
 import type { TokenHash } from "@billet/backend-auth/auth-repository";
-import type { UserId } from "@billet/contracts-domain/ids";
+import type { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import { AlreadyPaired, InvalidInvite } from "../src/pairing-error.ts";
 import type { PairingRepository, StoredInvite } from "../src/pairing-repository.ts";
@@ -15,6 +15,7 @@ export interface InMemoryPairingRepository {
 export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
   const invites = new Map<TokenHash, StoredInvite>();
   const pairs = new Map<UserId, PairId>();
+  const formed = new Map<PairId, EpochMillis>();
 
   const removeInvites = (shouldRemove: (invite: StoredInvite) => boolean) => {
     for (const [hash, invite] of invites) {
@@ -41,10 +42,17 @@ export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
         }
         pairs.set(claimerId, pairId);
         pairs.set(invite.ownerId, pairId);
+        formed.set(pairId, now);
         removeInvites(({ ownerId }) => ownerId === claimerId || ownerId === invite.ownerId);
         return Effect.void;
       }),
     findPair: (userId) => Effect.sync(() => Option.fromNullishOr(pairs.get(userId))),
+    pairedAt: (pairId) =>
+      Effect.sync(() =>
+        [...pairs.values()].includes(pairId)
+          ? Option.fromNullishOr(formed.get(pairId))
+          : Option.none(),
+      ),
     findMembers: (pairId) =>
       Effect.sync(() =>
         [...pairs].filter(([, memberPair]) => memberPair === pairId).map(([member]) => member),
