@@ -24,6 +24,7 @@ public struct APIClient: Sendable {
   public var claimInvite:
     @Sendable (ClaimInviteRequest) async throws(TransportError) -> ClaimInviteResponse
   public var unpair: @Sendable () async throws(TransportError) -> Void
+  /// A PNG drawing or a JPEG or HEIC photo, sent with the content type its bytes declare.
   public var uploadImage: @Sendable (Data) async throws(TransportError) -> UploadImageResponse
   public var downloadImage: @Sendable (MediaKey) async throws(TransportError) -> Data
   public var sendNote: @Sendable (SendNoteRequest) async throws(TransportError) -> SendNoteResponse
@@ -154,10 +155,11 @@ extension APIClient {
       unpair: { () async throws(TransportError) in
         try await http.performEmpty(try await request(Routes.unpair, signed: true))
       },
-      uploadImage: { (png) async throws(TransportError) in
+      uploadImage: { (image) async throws(TransportError) in
         try await http.perform(
           try await request(
-            Routes.uploadImage, signed: true, headers: ["Content-Type": "image/png"], body: png),
+            Routes.uploadImage, signed: true,
+            headers: ["Content-Type": APIClient.contentType(ofImage: image)], body: image),
           as: UploadImageResponse.self)
       },
       downloadImage: { (key) async throws(TransportError) in
@@ -225,4 +227,15 @@ extension APIClient {
     flags: { () async throws(TransportError) in throw .network("offline") },
     status: { () async throws(TransportError) in throw .network("offline") },
     reportEvents: { (_) async throws(TransportError) in throw .network("offline") })
+}
+
+extension APIClient {
+  /// The MIME type an image's signature declares: JPEG, HEIC, or PNG for anything else, as the
+  /// server reads the bytes themselves anyway.
+  static func contentType(ofImage data: Data) -> String {
+    let bytes = [UInt8](data.prefix(12))
+    if bytes.starts(with: [0xFF, 0xD8, 0xFF]) { return "image/jpeg" }
+    if bytes.count == 12, bytes[4..<8].elementsEqual(Array("ftyp".utf8)) { return "image/heic" }
+    return "image/png"
+  }
 }
