@@ -19,5 +19,5 @@ extension View {
 /// What the widgets are laid on, for the gallery (NookiWidgetsTests), which has no WidgetKit to draw the container
 /// background.
 enum WidgetGallery {
-    static var background: Color { WidgetInk.background }
+    static var background: Color { Ink.screen }
 }

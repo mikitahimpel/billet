@@ -20,6 +20,8 @@ struct WidgetGalleryTests {
     @Test func rendersTheGallery() throws {
         let day = NookiSnapshot.sample(now: Self.afternoon)
         let evening = NookiSnapshot.sample(now: Self.night)
+        var ginger = day
+        ginger.catAvatar = "MochiPortrait-ginger"
         let drawing = DrawingEntry(
             date: .now,
             drawing: LatestDrawing(
@@ -35,6 +37,7 @@ struct WidgetGalleryTests {
             ("corner-large", Self.large, AnyView(Corner(snapshot: day))),
             ("mochi-medium", Self.medium, AnyView(MochiMedium(snapshot: day))),
             ("mochi-night-medium", Self.medium, AnyView(MochiMedium(snapshot: evening))),
+            ("mochi-ginger-medium", Self.medium, AnyView(MochiMedium(snapshot: ginger))),
             ("us-small", Self.small, AnyView(ModuleView(module: .us, snapshot: day))),
             ("mood-small", Self.small, AnyView(ModuleView(module: .mood, snapshot: day, smart: true))),
             ("list-small", Self.small, AnyView(ModuleView(module: .list, snapshot: day))),
