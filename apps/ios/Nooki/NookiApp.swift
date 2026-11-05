@@ -52,7 +52,7 @@ struct NookiApp: App {
                                 flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
-                                demoPartner: session?.demoPartner == false ? pairWithDemoPartner : nil)
+                                demoPartner: session?.demoPartner == false ? { pairWithDemoPartner() } : nil)
                                 .transition(.opacity)
                         }
                     }
