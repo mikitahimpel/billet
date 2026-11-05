@@ -44,8 +44,7 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
-          # No pnpm cache: setup-node saves one per branch, ~220 MB each, which crowds the repository's
-          # 10 GB of Actions cache; a cold install here takes seconds.
+          cache: pnpm
 
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
