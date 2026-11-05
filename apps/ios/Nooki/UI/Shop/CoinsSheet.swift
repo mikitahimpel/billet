@@ -18,7 +18,7 @@ struct CoinsSheet: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Space.l) {
+            VStack(alignment: .leading, spacing: Space.section) {
                 SheetHeader(title: "Coins", chips: { EmptyView() }, close: { dismiss() })
                 balance
                 if let retry = ask.retry { ShortBanner(state: state, retry: retry) { dismiss() } }
@@ -29,9 +29,11 @@ struct CoinsSheet: View {
                 waysCard
                 recent
             }
-            .padding(Space.l)
+            .padding(.horizontal, Space.gutter)
+            .padding(.vertical, Space.l)
         }
         .scrollIndicators(.hidden)
+        .tint(.honey)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .presentationBackground(Ink.screen)
@@ -44,19 +46,23 @@ struct CoinsSheet: View {
     private var missing: Int { ask.retry.map { max(0, $0.cost - state.shop.coins) } ?? 0 }
 
     private var balance: some View {
-        HStack(spacing: Space.m) {
-            CoinIcon(size: 40)
+        HStack(spacing: Space.l) {
+            CoinIcon(size: 56)
+                .shadow(color: Color.honeyDeep.opacity(0.45), radius: 8, y: 4)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(state.shop.coins)")
-                    .font(.nookiTitle.monospacedDigit())
+                    .font(.nookiLargeTitle.monospacedDigit())
                     .foregroundStyle(Ink.text)
                     .contentTransition(.numericText())
                     .animation(.snappy, value: state.shop.coins)
                 Text("coins for the two of you")
-                    .font(.nookiCaption)
+                    .font(.nookiCallout)
                     .foregroundStyle(Ink.textSecondary)
             }
+            Spacer(minLength: 0)
         }
+        .padding(Space.gutter)
+        .nookiCard(radius: Radius.hero, warm: true)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("coinBalance")
     }
@@ -64,51 +70,30 @@ struct CoinsSheet: View {
     // MARK: Earning
 
     private var waysCard: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            Text("How to earn")
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
+        NookiSection(header: "How to earn") {
             ForEach(ways, id: \.text) { way in
-                Label {
-                    Text(way.text)
-                        .font(.nookiCallout)
-                        .foregroundStyle(Ink.text)
-                } icon: {
-                    Image(systemName: way.symbol)
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(Color.honey)
-                }
+                NookiRowLabel(title: way.text, symbol: way.symbol, tint: way.tint)
             }
         }
-        .padding(Space.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .shopCard()
     }
 
-    private var ways: [(symbol: String, text: String)] { [
-        ("note.text", "Send each other notes and photos"),
-        ("heart.fill", "Look after \(state.petName) and play together"),
-        ("gift.fill", "Open the daily gift"),
-        ("checklist", "Tick off things you want to do"),
-        ("sparkles", "Match on a date idea, then rate the date"),
-        ("shippingbox.fill", "Mark a wished-for gift as received"),
-        ("square.grid.2x2.fill", "Complete a collection"),
+    private var ways: [(symbol: String, tint: UsTint, text: String)] { [
+        ("note.text", .sun, "Send each other notes and photos"),
+        ("heart.fill", .blush, "Look after \(state.petName) and play together"),
+        ("gift.fill", .coral, "Open the daily gift"),
+        ("checklist", .sage, "Tick off things you want to do"),
+        ("sparkles", .lilac, "Match on a date idea, then rate the date"),
+        ("shippingbox.fill", .sky, "Mark a wished-for gift as received"),
+        ("square.grid.2x2.fill", .honey, "Complete a collection"),
     ] }
 
     @ViewBuilder private var recent: some View {
         if !state.shop.history.isEmpty {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Recently")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                    .padding(.bottom, Space.s)
+            NookiSection(header: "Recently") {
                 ForEach(state.shop.history, id: \.id) { entry in
                     HistoryRow(line: CoinLine(entry))
-                    if entry.id != state.shop.history.last?.id { Divider().overlay(Ink.separator) }
                 }
             }
-            .padding(Space.m)
-            .shopCard()
             .accessibilityIdentifier("coinHistory")
         }
     }
@@ -118,27 +103,12 @@ private struct HistoryRow: View {
     let line: CoinLine
 
     var body: some View {
-        HStack(spacing: Space.m) {
-            Image(systemName: line.symbol)
-                .font(.nookiCallout.weight(.semibold))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Color.honey)
-                .frame(width: 28)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(line.title)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.text)
-                Text(line.date, format: .relative(presentation: .named))
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        NookiRowLabel(title: line.title, detail: line.date.formatted(.relative(presentation: .named)),
+                      symbol: line.symbol, tint: line.isGain ? .honey : .sky) {
             Text(line.amount)
                 .font(.nookiHeadline.monospacedDigit())
                 .foregroundStyle(line.isGain ? Ink.accentText : Ink.textSecondary)
         }
-        .padding(.vertical, Space.s)
         .accessibilityElement(children: .combine)
     }
 }
@@ -246,7 +216,7 @@ private struct ShortBanner: View {
                 .accessibilityIdentifier("finishBuy")
             }
         }
-        .padding(Space.m)
+        .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .shopCard()
         .animation(.snappy, value: missing)
@@ -263,8 +233,10 @@ private struct PacksList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             Text("Get more coins")
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textSecondary)
+                .padding(.horizontal, Space.l)
+                .accessibilityAddTraits(.isHeader)
             ForEach(model.packs) { pack in
                 PackRow(pack: pack, buying: model.status == .buying(pack.id), isFit: pack.id == fit?.id) {
                     Task { await model.buy(pack) }
@@ -326,7 +298,7 @@ private struct PackRow: View {
             .disabled(buying)
             .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
         }
-        .padding(Space.m)
+        .padding(Space.l)
         .shopCard()
         .overlay {
             if isFit {
@@ -345,9 +317,8 @@ private struct PlusCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            HStack(spacing: Space.s) {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(ShopInk.plum)
+            HStack(spacing: Space.m) {
+                UsIcon(glyph: .init(symbol: "sparkles", tint: .lilac), size: 34)
                 Text("Billet Plus")
                     .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
@@ -370,7 +341,7 @@ private struct PlusCard: View {
                     .foregroundStyle(Ink.textSecondary)
             }
         }
-        .padding(Space.m)
+        .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .shopCard()
     }
