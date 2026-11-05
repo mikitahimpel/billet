@@ -14,6 +14,8 @@ import type {
   SaveCatRequest,
 } from "@billet/contracts-http-api/cat";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { ReactRequest } from "@billet/contracts-http-api/reaction";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
@@ -38,7 +40,12 @@ import {
 import { openRoomDatabase } from "./room-database.ts";
 import type { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
-import { enabledPushLanes, sendPushLane, type PushLaneSettings } from "./apns-lanes.ts";
+import {
+  enabledPushLanes,
+  reactionDeliveryId,
+  sendPushLane,
+  type PushLaneSettings,
+} from "./apns-lanes.ts";
 import { dropToken, tokensOf } from "./partner-push-tokens.ts";
 import { clockOf } from "./effect-clock.ts";
 import { admitFrame, type FrameWindow } from "./frame-window.ts";
@@ -77,6 +84,11 @@ interface SocketAttachment {
   readonly sentCatSeq?: number | null;
   /** Whether this socket resumed with `activity: true` and is told its user's unread count. */
   readonly activity?: boolean;
+  /**
+   * The highest reaction `rev` this socket has been sent; null (or absent) until it resumes with
+   * `lastReactionRev`.
+   */
+  readonly sentReactionRev?: number | null;
 }
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
@@ -156,6 +168,14 @@ export class PairRoom extends DurableObject {
       send: (entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">) =>
         sendPushLane(entry, {
           note: (noteId) => this.recentNote(noteId),
+          reaction: async (rev) => {
+            const [latest] = await this.reactions(rev - 1, 1);
+            if (latest?.rev !== rev) return undefined;
+            const stored = await this.run((room) => room.noteById(latest.note));
+            return stored._tag === "Some"
+              ? { reaction: latest, note: stored.value.note }
+              : undefined;
+          },
           recipient: async (note) => {
             const room = await this.snapshot();
             if (room._tag !== "Active") return undefined;
@@ -221,6 +241,29 @@ export class PairRoom extends DurableObject {
       await this.pushUnread((member) => member !== author);
     }
     return decision;
+  }
+
+  /**
+   * Sets or takes back `by`'s reaction, tells every socket that follows reactions, and sends the
+   * photo's author an alert for a new one.
+   */
+  async react(by: UserId, request: ReactRequest): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.react(by, request), "PairRoom.react");
+    if (decision._tag === "Accepted") {
+      for (const output of decision.outputs) {
+        if (output._tag === "ReactionSet" && output.reaction.reaction !== undefined) {
+          await this.enqueueDeliveries(reactionDeliveryId(output.reaction.rev));
+        }
+      }
+      await this.pushReactions();
+      await this.pushUnread((member) => member !== by);
+    }
+    return decision;
+  }
+
+  /** Reaction changes with `rev` above `afterRev`, oldest first. */
+  reactions(afterRev: number, limit: number): Promise<ReadonlyArray<NoteReaction>> {
+    return this.run((room) => room.reactionsAfter(afterRev, limit), "PairRoom.reactions");
   }
 
   /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */
@@ -494,15 +537,17 @@ export class PairRoom extends DurableObject {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
         // the Inbox.
-        const { lastSeq, lastCatSeq, activity } = message.value;
+        const { lastSeq, lastCatSeq, activity, lastReactionRev } = message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
           sentCatSeq: lastCatSeq === undefined ? null : Math.max(0, lastCatSeq),
           activity: activity === true,
+          sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
+        await this.catchUpReactions(socket);
         if (activity === true) {
           const unread = await this.run((room) => room.unread(attachment.user as UserId));
           send(socket, { _tag: "ActivityUnread", unread });
@@ -613,6 +658,29 @@ export class PairRoom extends DurableObject {
         } satisfies SocketAttachment);
       }
     }
+  }
+
+  /** Sends one socket every reaction change it has not seen, oldest first, without repeats. */
+  private async catchUpReactions(socket: WebSocket): Promise<void> {
+    for (;;) {
+      const attachment = attachmentOf(socket);
+      if (attachment?.sentReactionRev == null || socket.readyState !== WebSocket.OPEN) return;
+      const page = await this.reactions(attachment.sentReactionRev, pageLimit);
+      if (page.length === 0) return;
+      for (const reaction of page) {
+        const current = attachmentOf(socket);
+        if (current?.sentReactionRev == null || reaction.rev <= current.sentReactionRev) continue;
+        send(socket, { _tag: "ReactionChanged", reaction });
+        socket.serializeAttachment({
+          ...current,
+          sentReactionRev: reaction.rev,
+        } satisfies SocketAttachment);
+      }
+    }
+  }
+
+  private async pushReactions(): Promise<void> {
+    await Promise.all(this.ctx.getWebSockets().map((socket) => this.catchUpReactions(socket)));
   }
 
   /** After a journal entry is stored, brings every socket that follows the journal up to date. */

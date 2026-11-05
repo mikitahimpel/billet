@@ -44,6 +44,10 @@ export const routes = {
   saveOnboardingAnswer: route("POST", "/v1/onboarding/answers"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
+  /** Sets or takes back the caller's reaction to one of the partner's photos. */
+  react: route("PUT", "/v1/reactions"),
+  /** Every reaction change after `after`, oldest first. */
+  listReactions: route("GET", "/v1/reactions"),
   /** The couple's cat: its profile, temper and needs now. See docs/cat-state.md. */
   getCat: route("GET", "/v1/cat"),
   /** Adopts the cat the first time, then renames it or changes its look. */

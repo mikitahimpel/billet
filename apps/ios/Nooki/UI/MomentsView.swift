@@ -1,6 +1,7 @@
 import PhotosUI
 import SwiftUI
 import UIKit
+import Wire
 
 // MARK: - Moments
 
@@ -427,8 +428,8 @@ private struct BlankPolaroid: View {
 
 // MARK: - Cards
 
-/// A moment as a print: the graded photo in its polaroid, a heart if the other one loved it, and washi tape on the
-/// ones hanging in Mochi's room.
+/// A moment as a print: the graded photo in its polaroid, the partner's reaction to it (or a heart on one kept only
+/// here), and washi tape on the ones hanging in Mochi's room.
 struct MomentPrint: View {
     let moment: Moment
     let store: MomentStore
@@ -438,6 +439,13 @@ struct MomentPrint: View {
     var maxPixels = 512
     var captionEditor: Binding<String>?
     var captionFocus: FocusState<Bool>.Binding?
+    @Environment(ServerSession.self) private var session: ServerSession?
+
+    /// Only one side has a reaction per photo: the partner's on this user's, this user's on the partner's.
+    private var reaction: PhotoReaction? {
+        guard let note = moment.noteID, let reactions = session?.reactions else { return nil }
+        return reactions.theirs(note) ?? reactions.mine(note)
+    }
 
     var body: some View {
         Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
@@ -445,7 +453,16 @@ struct MomentPrint: View {
             MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }
         .overlay(alignment: .topTrailing) {
-            if moment.loved {
+            if let reaction {
+                Text(reaction.emoji)
+                    .font(.system(size: max(13, width * 0.08)))
+                    .frame(width: max(28, width * 0.16), height: max(28, width * 0.16))
+                    .background(Ink.surface, in: .circle)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .padding(width * 0.08)
+                    .transition(.scale.combined(with: .opacity))
+                    .accessibilityLabel("Reacted \(reaction.label)")
+            } else if moment.loved {
                 Image(systemName: "heart.fill")
                     .font(.system(size: max(11, width * 0.065), weight: .bold))
                     .foregroundStyle(.white)
@@ -616,6 +633,7 @@ private struct MomentViewer: View {
     let id: UUID
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(ServerSession.self) private var session: ServerSession?
     @State private var caption = ""
     @State private var confirmDelete = false
     @State private var polaroid: Image?
@@ -642,9 +660,18 @@ private struct MomentViewer: View {
 
                 Spacer(minLength: 12)
 
+                if let note = moment.noteID, moment.author == state.otherPartner, let reactions = session?.reactions {
+                    ReactionPicker(selected: reactions.mine(note)) { reactions.tap($0, on: NoteId(note)) }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 10)
+                }
+
                 HStack(spacing: 10) {
-                    action(moment.loved ? "Loved" : "Love", symbol: moment.loved ? "heart.fill" : "heart",
-                           tint: Color.blushPink, active: moment.loved) { store.toggleLove(moment) }
+                    // A shared photo gets reactions instead; the heart stays for ones kept only on this phone.
+                    if moment.noteID == nil {
+                        action(moment.loved ? "Loved" : "Love", symbol: moment.loved ? "heart.fill" : "heart",
+                               tint: Color.blushPink, active: moment.loved) { store.toggleLove(moment) }
+                    }
                     action(moment.pinned ? "On the wall" : "Pin to wall", symbol: moment.pinned ? "pin.fill" : "pin",
                            tint: Color.honey, active: moment.pinned) { store.togglePin(moment) }
                 }
@@ -742,5 +769,31 @@ private struct MomentViewer: View {
             .background(active ? tint.opacity(0.22) : Ink.surfaceRaised, in: .capsule)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// The five reactions to the partner's photo. Tapping the one chosen takes it back.
+private struct ReactionPicker: View {
+    let selected: PhotoReaction?
+    let choose: (PhotoReaction) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(PhotoReaction.allCases, id: \.self) { reaction in
+                Button { choose(reaction) } label: {
+                    Text(reaction.emoji)
+                        .font(.system(size: 26))
+                        .scaleEffect(selected == reaction ? 1.15 : 1)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(selected == reaction ? Color.honey.opacity(0.26) : Ink.surfaceRaised, in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: selected == reaction)
+                .accessibilityLabel(reaction.label)
+                .accessibilityAddTraits(selected == reaction ? .isSelected : [])
+            }
+        }
+        .animation(.snappy(duration: 0.2), value: selected)
     }
 }

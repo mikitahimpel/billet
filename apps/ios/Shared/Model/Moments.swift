@@ -137,10 +137,11 @@ final class MomentStore {
     /// Whether the partner's photo note is already here.
     func contains(noteID: String) -> Bool { moments.contains { $0.noteID == noteID } }
 
-    /// Marks a photo taken here as waiting to reach the partner, or as delivered.
-    func setUnsent(_ unsent: Bool, id: UUID) {
+    /// Marks a photo taken here as waiting to reach the partner, or as delivered as the server's note `noteID`.
+    func setUnsent(_ unsent: Bool, id: UUID, noteID: String? = nil) {
         guard let i = moments.firstIndex(where: { $0.id == id }) else { return }
         moments[i].unsent = unsent ? true : nil
+        if let noteID { moments[i].noteID = noteID }
         save()
     }
 

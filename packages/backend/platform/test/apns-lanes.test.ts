@@ -5,7 +5,12 @@ import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload";
 import type { ApnsPush, ApnsResult } from "../src/apns-client.ts";
-import { enabledPushLanes, sendPushLane, type PushLaneDependencies } from "../src/apns-lanes.ts";
+import {
+  enabledPushLanes,
+  reactionDeliveryId,
+  sendPushLane,
+  type PushLaneDependencies,
+} from "../src/apns-lanes.ts";
 import {
   alertBody,
   byteLength,
@@ -52,6 +57,10 @@ const deps = (overrides: Partial<PushLaneDependencies> = {}) => {
   const results: ApnsResult[] = [];
   const dependencies: PushLaneDependencies = {
     note: async () => drawing,
+    reaction: async (rev) => ({
+      reaction: { rev, note: id, by: bob, at: 2, reaction: "heart" },
+      note: photo,
+    }),
     recipient: async (note) => (note.author === alice ? bob : alice),
     tokens: async () => [
       { token: "aa", environment: "production" },
@@ -150,6 +159,52 @@ describe("one try of a push lane", () => {
     const { dependencies, sent } = deps({ note: async () => photo });
     expect(await sendPushLane({ noteId: id, lane: "LiveActivityPush" }, dependencies)).toBe(
       "Delivered",
+    );
+    expect(sent).toEqual([]);
+  });
+});
+
+describe("one try of a reaction's push", () => {
+  const delivery = reactionDeliveryId(3);
+
+  it("alerts the photo's author, collapsing earlier reactions to the same photo", async () => {
+    const users: string[] = [];
+    const { dependencies, sent } = deps({
+      tokens: async (user) => {
+        users.push(user);
+        return [{ token: "aa", environment: "production" }];
+      },
+    });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, dependencies)).toBe(
+      "Delivered",
+    );
+    expect(users).toEqual([alice]);
+    expect(sent.map((push) => [push.pushType, push.collapseId])).toEqual([["alert", `r-${id}`]]);
+    expect(
+      Schema.decodeUnknownSync(PushPayload)(
+        (sent[0]!.body as Record<string, unknown>)[pushPayloadKey],
+      ),
+    ).toEqual(PushPayload.cases.Reaction.make({ noteId: id, by: bob, reaction: "heart" }));
+  });
+
+  it("sends nothing on the other lanes, nor for a reaction taken back", async () => {
+    const widget = deps();
+    expect(await sendPushLane({ noteId: delivery, lane: "WidgetPush" }, widget.dependencies)).toBe(
+      "Delivered",
+    );
+    const takenBack = deps({
+      reaction: async (rev) => ({ reaction: { rev, note: id, by: bob, at: 2 }, note: photo }),
+    });
+    expect(
+      await sendPushLane({ noteId: delivery, lane: "AlertPush" }, takenBack.dependencies),
+    ).toBe("Delivered");
+    expect([...widget.sent, ...takenBack.sent]).toEqual([]);
+  });
+
+  it("gives up on a reaction changed since", async () => {
+    const { dependencies, sent } = deps({ reaction: async () => undefined });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, dependencies)).toBe(
+      "Abandon",
     );
     expect(sent).toEqual([]);
   });

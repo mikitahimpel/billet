@@ -32,7 +32,7 @@ struct CornerWidget: Widget {
                 }
                 .frame(height: 158)
             }
-            .containerBackground(WidgetInk.background, for: .widget)
+            .containerBackground(Ink.screen, for: .widget)
         }
         .configurationDisplayName("Our Corner")
         .description("Your cat's room with two blocks of your choice.")
@@ -51,7 +51,7 @@ struct MochiWidget: Widget {
                 Hairline(vertical: true)
                 Block(slot: entry.configuration.slot, entry: entry)
             }
-            .containerBackground(WidgetInk.background, for: .widget)
+            .containerBackground(Ink.screen, for: .widget)
         }
         .configurationDisplayName("Nooki")
         .description("Your cat and what matters right now.")
@@ -66,7 +66,7 @@ struct BlockWidget: Widget {
         AppIntentConfiguration(kind: "com.mikitahimpel.billet.block", intent: ModuleConfiguration.self,
                                provider: NookiProvider<ModuleConfiguration>()) { entry in
             BlockWidgetView(entry: entry)
-                .containerBackground(WidgetInk.background, for: .widget)
+                .containerBackground(Ink.screen, for: .widget)
         }
         .configurationDisplayName("Block")
         .description("Mood, a list, a date idea, a countdown or a photo. Smart picks what matters now.")
@@ -112,7 +112,7 @@ private struct Hairline: View {
     var vertical = false
 
     var body: some View {
-        WidgetInk.hairline
+        Ink.separator
             .frame(width: vertical ? 1 : nil, height: vertical ? nil : 1)
     }
 }

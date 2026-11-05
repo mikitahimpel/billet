@@ -51,6 +51,11 @@ struct InboxLine: Equatable {
             self.init(symbol: "heart.fill", text: "\(who) adopted \(name)")
         case .catRenamed(let name):
             self.init(symbol: "pencil", text: "\(who) named the cat \(name)")
+        case .reacted(_, let reaction):
+            let text = item.actor == .me
+                ? "You reacted \(reaction.emoji) to a photo"
+                : "\(who) reacted \(reaction.emoji) to your photo"
+            self.init(symbol: "face.smiling", text: text)
         case .noteSent(_, let kind):
             let thing = switch kind {
             case "Drawing": "a drawing"

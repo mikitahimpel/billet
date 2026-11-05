@@ -85,12 +85,12 @@ private struct NoteAccessoryView: View {
         VStack(alignment: .leading, spacing: 1) {
             if entry.doodle == nil {
                 Text(note.text)
-                    .font(.widget(13, .semibold))
+                    .font(.nookiCaption.weight(.semibold))
                     .lineLimit(3)
                     .widgetAccentable()
             }
             Text("— \(note.author)")
-                .font(.widget(12))
+                .font(.nookiCaption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -99,9 +99,9 @@ private struct NoteAccessoryView: View {
     private var empty: some View {
         VStack(alignment: .leading, spacing: 1) {
             Label("Leave a note", systemImage: "pencil.and.scribble")
-                .font(.widget(14, .bold))
+                .font(.nookiCallout.weight(.bold))
             Text("for \(CatProfile.name())'s board")
-                .font(.widget(12))
+                .font(.nookiCaption)
                 .foregroundStyle(.secondary)
         }
         .widgetAccentable()

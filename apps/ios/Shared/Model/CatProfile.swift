@@ -18,6 +18,17 @@ nonisolated enum CatProfile {
         return saved.isEmpty ? defaultName : saved
     }
 
+    /// The coat picked in onboarding, mirrored here from the app's own defaults (`CatCoat.key`) so the widgets can
+    /// dress her in it. Holds the coat's raw value; nil until the app first mirrors it.
+    static let coatKey = "catCoat"
+
+    /// The image of her round portrait in her coat: the bundled `MochiPortrait` for the grey tabby or an unknown coat.
+    static func avatar(in defaults: UserDefaults = store) -> String {
+        let coats = ["ginger", "cream", "tuxedo", "black", "calico"]
+        guard let coat = defaults.string(forKey: coatKey), coats.contains(coat) else { return "MochiPortrait" }
+        return "MochiPortrait-\(coat)"
+    }
+
     /// `text` with every `placeholder` replaced by the cat's name.
     static func named(_ text: String) -> String {
         text.replacingOccurrences(of: placeholder, with: name())
