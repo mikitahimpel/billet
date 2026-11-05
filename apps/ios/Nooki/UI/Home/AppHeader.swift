@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// The one header of every top-level screen (World, Moments, Shop): the couple's avatars top-left, which open Us
-/// (plans, profile and settings), and the coins top-right. Nothing else sits in it.
+/// The one header of every top-level screen (World, Moments, Shop): the Inbox and the couple's avatars top-left (the
+/// avatars open Us: plans, profile and settings), and the coins top-right. Nothing else sits in it.
 struct AppHeader: View {
     let state: HomeState
 
     var body: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 10) {
+            InboxButton(unread: 0) {}
+
             Button { state.showsUs = true } label: {
                 HStack(spacing: -10) {
                     Monogram(partner: state.partners.0, profile: state.profile)
@@ -50,6 +52,36 @@ struct AppHeader: View {
     }
 }
 
+/// The Inbox, leftmost in the header: a glass circle with a tray and a count of what is unread.
+struct InboxButton: View {
+    let unread: Int
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "tray.fill")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Ink.primary)
+                .frame(width: 42, height: 42)
+                .warmGlass(.circle, interactive: true)
+                .overlay(alignment: .topTrailing) {
+                    if unread > 0 {
+                        Text(unread > 9 ? "9+" : "\(unread)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded).monospacedDigit())
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .frame(minWidth: 18, minHeight: 18)
+                            .background(Color.blushPink, in: .capsule)
+                            .offset(x: 4, y: -4)
+                    }
+                }
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Inbox")
+        .accessibilityValue(unread > 0 ? "\(unread) unread" : "")
+    }
+}
+
 struct CoinPill: View {
     let coins: Int
 
@@ -66,5 +98,17 @@ struct CoinPill: View {
         .padding(.trailing, 14)
         .frame(height: 40)
         .warmGlass(.capsule, interactive: true)
+        .animation(.snappy(duration: 0.4), value: coins)
+        // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
+        // `.overlayPreferenceValue(CoinPillAnchor.self)`).
+        .anchorPreference(key: CoinPillAnchor.self, value: .bounds) { $0 }
+    }
+}
+
+/// The coin pill's bounds, published by `CoinPill` for effects drawn over the whole screen.
+struct CoinPillAnchor: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
     }
 }

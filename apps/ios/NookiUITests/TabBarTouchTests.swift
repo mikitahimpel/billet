@@ -41,4 +41,39 @@ final class TabBarTouchTests: XCTestCase {
             XCTAssertEqual(room.value as? String, "1", "the tap on the bar's \(name) reached the room")
         }
     }
+
+    /// A slow drag along the bar lands on the tab under the finger, and the avatars in the header open Us.
+    @MainActor
+    func testDragAcrossTheBarAndOpenUs() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES"]
+        app.launch()
+
+        let world = app.buttons["World"]
+        let shop = app.buttons["Shop"]
+        XCTAssertTrue(world.waitForExistence(timeout: 60))
+        Thread.sleep(forTimeInterval: 8)
+        snapshot("world")
+
+        world.press(forDuration: 0.3, thenDragTo: shop, withVelocity: .slow, thenHoldForDuration: 0.5)
+        XCTAssertTrue(shop.isSelected, "the drag should end on Shop")
+        snapshot("shop")
+
+        app.buttons["Moments"].tap()
+        Thread.sleep(forTimeInterval: 2)
+        snapshot("moments")
+
+        app.buttons["Us"].tap()
+        XCTAssertTrue(app.staticTexts["Us"].waitForExistence(timeout: 10), "the avatars should open Us")
+        Thread.sleep(forTimeInterval: 1)
+        snapshot("us")
+    }
+
+    @MainActor
+    private func snapshot(_ name: String) {
+        let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+    }
 }
