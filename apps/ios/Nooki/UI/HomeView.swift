@@ -32,35 +32,49 @@ struct HomeView: View {
         ZStack {
             WarmBackdrop()
 
-            if let scene {
+            if Self.noRoom {
+                // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
+                Color.clear
+                    .contentShape(.rect)
+                    .allowsHitTesting(showsRoom)
+                    .modifier(RoomTapCounter())
+                    .ignoresSafeArea()
+            } else if let scene {
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
                 .allowsHitTesting(showsRoom)
+                .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }
 
-            if state.tab == .shop {
-                // The scroll view runs under the tab bar and keeps its own 16pt margins.
-                ShopView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else if state.tab == .moments {
-                MomentsView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else if state.tab == .us {
-                UsView(state: state)
-                    .transition(.opacity.combined(with: .offset(y: 12)))
-            } else {
-                VStack(spacing: 16) {
-                    CoupleRow(state: state)
-                    RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
-                    Spacer(minLength: 0)
+            VStack(spacing: 12) {
+                // The same header, in the same place, on every tab.
+                AppHeader(state: state)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+
+                Group {
+                    switch state.tab {
+                    case .shop:
+                        // The scroll view runs under the tab bar and keeps its own 16pt margins.
+                        ShopView(state: state)
+                    case .moments:
+                        MomentsView(state: state)
+                    case .us:
+                        UsView(state: state)
+                    case .world:
+                        VStack(spacing: 16) {
+                            RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 82)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .padding(.bottom, 82)
                 .transition(.opacity.combined(with: .offset(y: 12)))
+                .frame(maxHeight: .infinity, alignment: .top)
             }
 
             VStack {
@@ -74,7 +88,7 @@ struct HomeView: View {
         // Bottom left, so it stays clear of the "+" in the right corner.
         .overlay(alignment: .bottomLeading) {
             if state.tab == .world {
-                PetButton(state: state) { scene?.playAll() }
+                PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
                     .padding(.leading, 16)
                     .padding(.bottom, 94)
                     .transition(.opacity.combined(with: .offset(y: 12)))
@@ -103,7 +117,7 @@ struct HomeView: View {
             await lift()
         }
         .task {
-            guard home == nil else { return }
+            guard home == nil, !Self.noRoom else { return }
             let room = DioramaScene()
             home = room
             room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
@@ -270,6 +284,9 @@ struct HomeView: View {
         withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }
 
+    /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
+    private static let noRoom = UserDefaults.standard.bool(forKey: "uitestNoRoom")
+
     private var scene: CatRoom? {
         guard let home else { return nil }
         if showsBoard, let board { return board }
@@ -391,5 +408,24 @@ private struct WarmBackdrop: View {
             }
         }
         .ignoresSafeArea()
+    }
+}
+
+/// Under the UI tests (`-uitestRoomTaps YES`), counts every tap that reaches the room and reports it as the room's
+/// accessibility value, so a test can tell that a tap on the tab bar never fell through. Off otherwise.
+private struct RoomTapCounter: ViewModifier {
+    @State private var taps = 0
+    private let counts = UserDefaults.standard.bool(forKey: "uitestRoomTaps")
+
+    func body(content: Content) -> some View {
+        if counts {
+            content
+                .simultaneousGesture(TapGesture().onEnded { taps += 1 })
+                .accessibilityElement()
+                .accessibilityIdentifier("room")
+                .accessibilityValue("\(taps)")
+        } else {
+            content
+        }
     }
 }

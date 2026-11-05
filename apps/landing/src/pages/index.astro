@@ -1,0 +1,533 @@
+---
+import { getImage, Image } from "astro:assets";
+import AppStoreBadge from "../components/app-store-badge.astro";
+import { HeroStage } from "../components/hero-stage";
+import QrCode from "../components/qr-code.astro";
+import Step from "../components/setup-step.astro";
+import { TwoPhones } from "../components/two-phones";
+import { appStoreId, appStoreUrl, siteDescription, siteTitle } from "../config";
+import { faq } from "../faq";
+import "../styles/global.css";
+
+import appIcon from "../assets/app-icon.png";
+import mochi from "../assets/MochiPortrait.png";
+import armchair from "../assets/Item_armchair.png";
+import lamp from "../assets/Item_lamp.png";
+import donutbed from "../assets/Item_donutbed.png";
+import bookcase from "../assets/Item_bookcase.png";
+import monstera from "../assets/Item_monstera.png";
+import yarn from "../assets/Item_yarn.png";
+import teatable from "../assets/Item_teatable.png";
+import lantern from "../assets/Item_lantern.png";
+
+const portrait = await getImage({ src: mochi, width: 96, format: "webp" });
+const demoMochi = await getImage({ src: mochi, width: 352, format: "webp" });
+
+// Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift).
+const items = [
+  { src: armchair, name: "Cloud Armchair", price: 320, blurb: "Big enough for two and a cat who insists." },
+  { src: lamp, name: "Mushroom Lamp", price: 140, blurb: "Warm glow for late-night talks." },
+  { src: teatable, name: "Tea Table", price: 210, blurb: "Two cups, always." },
+  { src: donutbed, name: "Donut Bed", price: 380, blurb: "Sprinkles included, calories not." },
+  { src: bookcase, name: "Little Bookcase", price: 260, blurb: "Room for both your favourite stories." },
+  { src: monstera, name: "Monstera", price: 90, blurb: "Grows a new leaf every week you visit." },
+  { src: yarn, name: "Yarn Ball", price: 60, blurb: "Mochi's favourite thing to unravel." },
+  { src: lantern, name: "Paper Lantern", price: 150, blurb: "Hangs by the window and hums with light." },
+];
+
+const steps = [
+  { title: "Get Nooki", body: "Free on iPhone. Mochi is already curled up in her bed." },
+  { title: "Send your code", body: "Your partner types it into Nooki on their phone. That's all the setup there is." },
+  { title: "Share one cat", body: "Whatever one of you does, the other sees on their lock screen." },
+];
+
+// Dark-mode ink colours from packages/contracts/domain/src/inks.ts.
+const inks = ["#ECEAE4", "#FF8FAB", "#7CC4FF", "#9BD88F", "#C3A2F0", "#F2CF5B"];
+
+// The six coats of apps/ios/Nooki/Model/CatCoat.swift.
+const coats = [
+  { name: "Grey tabby", fill: "repeating-linear-gradient(120deg,#9a9a98 0 6px,#cfcdc8 6px 12px)" },
+  { name: "Ginger", fill: "#e08a3c" },
+  { name: "Cream", fill: "#f1dcb4" },
+  { name: "Tuxedo", fill: "linear-gradient(90deg,#1d1a1a 55%,#f4f1ea 55%)" },
+  { name: "Black", fill: "#1d1a1a" },
+  { name: "Calico", fill: "conic-gradient(#f4f1ea 0 40%,#e08a3c 0 70%,#1d1a1a 0)" },
+];
+
+const inbox = [
+  { text: "They sent you a drawing", at: "21:04", fresh: true },
+  { text: "You fed Mochi", at: "19:30", fresh: false },
+  { text: "You bought the Mushroom Lamp", at: "12:15", fresh: false },
+];
+
+const promises = [
+  {
+    title: "A missed day stays warm.",
+    body: "Your shared flame rests as a glowing ember. It never goes dark, and nothing tells you what you lost.",
+  },
+  { title: "Mochi never suffers.", body: "Furniture lifts her mood. Buying nothing doesn't hurt her." },
+  { title: "Only the two of you.", body: "One code pairs your phones. Nobody else gets into your room." },
+];
+
+const canonical = new URL("/", Astro.site).href;
+const ogImage = new URL("/og.png", Astro.site).href;
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${canonical}#website`,
+      url: canonical,
+      name: "Nooki",
+      description: siteDescription,
+      inLanguage: "en",
+    },
+    {
+      "@type": "MobileApplication",
+      "@id": `${canonical}#app`,
+      name: "Nooki",
+      description: siteDescription,
+      url: canonical,
+      downloadUrl: appStoreUrl,
+      image: ogImage,
+      applicationCategory: "LifestyleApplication",
+      operatingSystem: "iOS 18.0 or later",
+      offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
+      audience: { "@type": "Audience", audienceType: "Couples" },
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${canonical}#faq`,
+      mainEntity: faq.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: { "@type": "Answer", text: item.answer },
+      })),
+    },
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e1838" />
+    <title>{siteTitle}</title>
+    <meta name="description" content={siteDescription} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="Nooki for language models" />
+    {appStoreId && <meta name="apple-itunes-app" content={`app-id=${appStoreId}`} />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Nooki" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content="Nooki: a cat you raise together" />
+    <meta property="og:description" content="One room. Two phones. One cat. Free on iPhone." />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Mochi, a grey tabby kitten, beside the words: Your love has a cat now." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Nooki: a cat you raise together" />
+    <meta name="twitter:description" content="One room. Two phones. One cat. Free on iPhone." />
+    <meta name="twitter:image" content={ogImage} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  </head>
+  <body>
+    <header class="fixed inset-x-0 top-0 z-30 bg-linear-to-b from-page-deep/80 to-transparent">
+      <div class="container-page flex items-center justify-between py-5">
+        <a href="#" class="text-[1.375rem] font-black tracking-[-0.03em]">Nooki</a>
+        <a
+          href={appStoreUrl}
+          class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
+          data-cta>Get the app</a
+        >
+      </div>
+    </header>
+
+    <main class="overflow-x-clip">
+      <!-- The story: one pinned room, lit and approached as you scroll (see diorama.tsx). -->
+      <section id="story" class="relative h-[420svh]">
+        <div class="sticky top-0 h-svh overflow-hidden">
+          <div class="absolute inset-0">
+            <HeroStage client:only="react" portrait={portrait.src} storyId="story" />
+          </div>
+
+          <div class="container-page pointer-events-none relative flex h-full flex-col justify-end pt-24 pb-10 md:justify-center md:pb-0">
+            <div data-beat="0" data-on class="max-w-[22rem] sm:max-w-[34rem] lg:max-w-[40rem]">
+              <p class="eyebrow">Free on iPhone · made for two</p>
+              <h1 class="mt-5 text-display">Your love has a cat now.</h1>
+              <p class="mt-6 max-w-[26rem] text-lead text-soft">
+                A cozy room you share with your partner, and Mochi, who lives there.
+              </p>
+              <AppStoreBadge qr class="pointer-events-auto mt-9" />
+            </div>
+          </div>
+
+          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-12 md:justify-center md:pb-0">
+            <div data-beat="1" class="max-w-[22rem] sm:max-w-[32rem]">
+              <p class="eyebrow">Late. Miles apart.</p>
+              <h2 class="mt-4 text-h2">Leave a light on for each other.</h2>
+            </div>
+          </div>
+
+          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-28 md:justify-start md:pt-36 md:pb-0">
+            <div data-beat="2" class="max-w-[22rem] sm:max-w-[34rem]">
+              <p class="eyebrow">One room, two phones</p>
+              <h2 class="mt-4 text-h2">She lives in yours and in theirs.</h2>
+            </div>
+          </div>
+
+          <div
+            data-beat="3"
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-[60%] bg-linear-to-t from-page-deep via-page-deep/70 to-transparent"
+            aria-hidden="true"
+          ></div>
+          <div class="container-page pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-10 text-center md:pb-14">
+            <div data-beat="3" class="flex flex-col items-center">
+              <h2 class="text-h2">Pet her.<br />They'll feel it.</h2>
+              <p class="mt-4 text-body text-soft">Tap Mochi. Drag to turn the room.</p>
+              <AppStoreBadge class="pointer-events-auto mt-7" />
+            </div>
+          </div>
+
+          <div class="pointer-events-none absolute inset-x-0 bottom-6 hidden justify-center md:flex" data-beat="scroll" data-on>
+            <span class="text-label font-bold tracking-[0.14em] text-muted uppercase">Scroll</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-y">
+        <div class="container-page grid items-center gap-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
+          <div>
+            <p class="eyebrow">No chat. No feed.</p>
+            <h2 class="mt-5 max-w-[30rem] text-h2">You do it here. They feel it there.</h2>
+            <p class="mt-6 max-w-[28rem] text-lead text-soft">
+              Pet Mochi, feed her, pin a note to her wall. It turns up on your partner's lock screen, quietly, with no
+              thread to keep up with.
+            </p>
+          </div>
+          <TwoPhones client:visible mochi={demoMochi.src} />
+        </div>
+      </section>
+
+      <section class="section-y overflow-hidden">
+        <div class="container-page grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
+          <div>
+            <p class="eyebrow">Her room, your taste</p>
+            <h2 class="mt-5 text-h2">Furnish it together.</h2>
+          </div>
+          <p class="max-w-[28rem] text-lead text-soft">
+            Look after Mochi and you both earn coins. Every piece you buy appears on both phones.
+          </p>
+        </div>
+        <div class="marquee mt-16 flex w-max gap-4" aria-label="Things you can buy for Mochi's room">
+          {
+            [0, 1].map((copy) =>
+              items.map((item) => (
+                <figure class="lit-panel w-[16rem] shrink-0 p-6 md:w-[18rem]" aria-hidden={copy === 1 ? "true" : undefined}>
+                  <Image src={item.src} alt="" widths={[240, 480]} sizes="240px" class="mx-auto aspect-square w-44" />
+                  <figcaption class="mt-4">
+                    <div class="flex items-baseline justify-between gap-3">
+                      <span class="text-body font-extrabold">{item.name}</span>
+                      <span class="font-mono text-label text-honey tabular-nums">● {item.price}</span>
+                    </div>
+                    <p class="mt-1.5 text-small text-muted">{item.blurb}</p>
+                  </figcaption>
+                </figure>
+              )),
+            )
+          }
+        </div>
+      </section>
+
+      <section class="section-y">
+        <div class="container-page">
+          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
+            <div>
+              <p class="eyebrow">Small ways to stay close</p>
+              <h2 class="mt-5 max-w-[40rem] text-h2">Little things that travel.</h2>
+            </div>
+            <p class="max-w-[26rem] text-lead text-soft">Everything you make here ends up on the other phone.</p>
+          </div>
+
+          <div class="mt-14 grid gap-4 md:mt-20 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
+            <article class="lit-panel grid gap-8 overflow-hidden p-6 md:col-span-2 md:grid-cols-2 md:items-center md:p-8">
+              <div>
+                <h3 class="text-h3">Draw on their lock screen.</h3>
+                <p class="mt-3 max-w-[24rem] text-body text-soft">
+                  Doodle with a finger. It shows up on your partner's Lock Screen and home widget, stroke by stroke, while
+                  you draw.
+                </p>
+              </div>
+              <div
+                class="relative mx-auto flex h-64 w-full max-w-[17rem] flex-col items-center rounded-[34px] border-[5px] border-plate bg-linear-to-b from-sky to-foot pt-7"
+                aria-hidden="true"
+              >
+                <span class="text-small text-soft">Thursday 5 November</span>
+                <span class="text-[3.25rem] leading-none font-bold tracking-[-0.03em]">9:41</span>
+                <svg viewBox="0 0 200 120" class="doodle mt-3 w-48" fill="none" stroke="#ff8fab" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+                  <path pathLength="1" d="M100 92C70 72 56 58 62 42s30-16 38 2c8-18 32-18 38-2s-8 30-38 50"></path>
+                  <path pathLength="1" d="M40 108q15-10 30 0t30 0 30 0 30 0"></path>
+                </svg>
+              </div>
+            </article>
+
+            <article class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="flex h-48 flex-col justify-center gap-5" aria-hidden="true">
+                <div class="flex justify-center gap-2.5">
+                  {inks.map((ink) => <span class="size-7 rounded-full ring-2 ring-plate/60" style={`background:${ink}`} />)}
+                </div>
+                <div class="rounded-[20px] bg-plate/80 p-3.5">
+                  <div class="flex items-center gap-3">
+                    <img src={portrait.src} alt="" width="36" height="36" class="size-9 rounded-full bg-raised" />
+                    <span class="flex-1 text-small font-semibold">Mochi is carrying your note</span>
+                    <span class="font-mono text-label text-honey">2 min</span>
+                  </div>
+                  <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-raised-top">
+                    <div class="h-full w-3/5 rounded-full bg-gold"></div>
+                  </div>
+                </div>
+              </div>
+              <h3 class="mt-8 text-h3">Notes in your own ink.</h3>
+              <p class="mt-3 text-body text-soft">
+                Pick a colour, pin a note to her wall. Mochi carries it over, and the trip plays on your Lock Screen.
+              </p>
+            </article>
+
+            <article class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="grid h-48 place-items-center" aria-hidden="true">
+                <figure class="w-36 -rotate-3 rounded-[4px] bg-paper p-2.5 pb-3 shadow-[0_20px_40px_-16px_var(--color-plate)]">
+                  <div class="lamp-glow aspect-square bg-raised">
+                    <Image src={mochi} alt="" widths={[160, 320]} sizes="160px" class="h-full w-full object-contain" />
+                  </div>
+                  <figcaption class="mt-2 text-center text-small font-semibold text-ink">sunday nap</figcaption>
+                </figure>
+              </div>
+              <h3 class="mt-8 text-h3">Moments, on film.</h3>
+              <p class="mt-3 text-body text-soft">Send a photo and it lands as a polaroid, with an instant-film look and your caption.</p>
+            </article>
+
+            <article class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="flex h-48 flex-col justify-center" aria-hidden="true">
+                <p class="text-label font-bold tracking-[0.14em] text-muted uppercase">Today</p>
+                <ul class="mt-3 divide-y divide-paper/10 rounded-[20px] bg-plate/70 px-4">
+                  {
+                    inbox.map((line) => (
+                      <li class="flex items-center gap-3 py-3 text-small">
+                        <span class={line.fresh ? "size-2 rounded-full bg-gold" : "size-2"} />
+                        <span class="flex-1">{line.text}</span>
+                        <span class="font-mono text-label text-muted tabular-nums">{line.at}</span>
+                      </li>
+                    ))
+                  }
+                </ul>
+              </div>
+              <h3 class="mt-8 text-h3">Everything, by day.</h3>
+              <p class="mt-3 text-body text-soft">The Inbox keeps what you two did: who fed her, who drew what, what you bought.</p>
+            </article>
+
+            <article class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="flex h-48 flex-col items-center justify-center gap-4" aria-hidden="true">
+                <div class="grid grid-cols-3 gap-3">
+                  {
+                    coats.map((coat, i) => (
+                      <span
+                        class:list={["size-12 rounded-full ring-2", i === 0 ? "ring-gold" : "ring-plate/60"]}
+                        style={`background:${coat.fill}`}
+                      />
+                    ))
+                  }
+                </div>
+                <span class="text-small font-semibold">Grey tabby <span class="text-muted">· 1 of 6</span></span>
+              </div>
+              <h3 class="mt-8 text-h3">Her own little life.</h3>
+              <p class="mt-3 text-body text-soft">
+                Mochi keeps a journal of her day, so both phones agree when she's full, sleepy or missing you. Pick her coat
+                from six.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section-y">
+        <div class="container-page">
+          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
+            <div>
+              <p class="eyebrow">Setup</p>
+              <h2 class="mt-5 max-w-[34rem] text-h2">Two minutes to move in.</h2>
+            </div>
+            <p class="max-w-[26rem] text-lead text-soft">One of you installs Nooki, the other types a code. Then it's your room.</p>
+          </div>
+          <ol class="mt-14 grid gap-4 md:mt-20 md:grid-cols-3 md:gap-5">
+            <li class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="grid h-44 place-items-center" aria-hidden="true">
+                <div class="flex flex-col items-center gap-2.5">
+                  <Image src={appIcon} alt="" widths={[96, 192]} sizes="96px" class="size-24 rounded-[22px] shadow-[0_18px_40px_-14px_var(--color-plate)]" />
+                  <span class="text-small font-semibold">Nooki</span>
+                </div>
+              </div>
+              <Step n={1} {...steps[0]!} />
+            </li>
+            <li class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="grid h-44 place-items-center" aria-hidden="true">
+                <div class="flex flex-col items-center gap-3">
+                  <span class="text-label font-bold tracking-[0.14em] text-muted uppercase">Your code</span>
+                  <span class="rounded-plate bg-plate px-5 py-3.5 font-mono text-[1.5rem] leading-none tracking-[0.1em] text-honey">7KQM2&thinsp;XWPRD</span>
+                  <span class="flex gap-2 text-label font-bold">
+                    <span class="rounded-full bg-raised-top px-3.5 py-2">Copy</span>
+                    <span class="rounded-full bg-gold px-3.5 py-2 text-ink">Share</span>
+                  </span>
+                </div>
+              </div>
+              <Step n={2} {...steps[1]!} />
+            </li>
+            <li class="lit-panel flex flex-col p-6 md:p-8">
+              <div class="grid h-44 place-items-center" aria-hidden="true">
+                <div class="flex w-full max-w-[17rem] items-center gap-3 rounded-[22px] bg-plate/70 p-3 shadow-[0_18px_40px_-14px_var(--color-plate)]">
+                  <img src={portrait.src} alt="" width="44" height="44" class="size-11 rounded-[11px] bg-raised" />
+                  <span class="min-w-0 flex-1 text-left">
+                    <span class="flex justify-between text-label text-muted">
+                      <span class="font-bold tracking-[0.08em] uppercase">Nooki</span><span>now</span>
+                    </span>
+                    <span class="mt-0.5 block text-small leading-snug">Your partner petted Mochi.</span>
+                  </span>
+                </div>
+              </div>
+              <Step n={3} {...steps[2]!} />
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="section-y">
+        <div class="container-page">
+          <p class="eyebrow">Cozy, never needy</p>
+          <h2 class="mt-5 max-w-[58rem] text-h2">Nothing here makes you feel guilty.</h2>
+          <dl class="mt-14 border-b border-paper/15 md:mt-20">
+            {
+              promises.map((promise) => (
+                <div class="grid gap-3 border-t border-paper/15 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 md:py-11">
+                  <dt class="text-h3 font-extrabold">{promise.title}</dt>
+                  <dd class="max-w-[34rem] text-lead text-soft">{promise.body}</dd>
+                </div>
+              ))
+            }
+          </dl>
+        </div>
+      </section>
+
+      <section class="section-y" aria-labelledby="faq-title">
+        <div class="container-page grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
+          <div class="lg:sticky lg:top-28 lg:self-start">
+            <p class="eyebrow">Questions</p>
+            <h2 id="faq-title" class="mt-5 max-w-[30rem] text-h2">Before you move in.</h2>
+          </div>
+          <div class="border-b border-paper/15">
+            {
+              faq.map((item) => (
+                <details class="faq group border-t border-paper/15">
+                  <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[1.25rem] leading-snug font-extrabold tracking-[-0.015em] md:text-[1.375rem]">
+                    <h3>{item.question}</h3>
+                    <span aria-hidden="true" class="grid size-9 shrink-0 place-items-center rounded-full bg-raised text-honey transition-transform group-open:rotate-45">+</span>
+                  </summary>
+                  <p class="max-w-[38rem] pb-7 text-body text-soft">{item.answer}</p>
+                </details>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+
+      <section id="get" class="relative section-y">
+        <div class="lamp-glow absolute inset-x-0 top-0 mx-auto h-[36rem] max-w-3xl" aria-hidden="true"></div>
+        <div class="container-page relative flex flex-col items-center text-center">
+          <Image
+            src={mochi}
+            alt="Mochi, a grey tabby kitten with a red collar and a gold bell"
+            widths={[256, 512]}
+            sizes="256px"
+            class="w-52 [mask-image:linear-gradient(#000_70%,transparent)] md:w-64"
+          />
+          <h2 class="mt-2 max-w-[11ch] text-display">She's waiting for you two.</h2>
+          <p class="mt-6 max-w-[34rem] text-lead text-soft">Free on iPhone. Your partner joins with one code.</p>
+
+          <div class="lit-panel mt-12 flex w-full max-w-[36rem] items-center gap-4 p-4 text-left md:gap-5 md:p-5">
+            <Image src={appIcon} alt="" widths={[80, 160]} sizes="80px" class="size-16 shrink-0 rounded-[16px] md:size-20 md:rounded-[19px]" />
+            <div class="min-w-0 flex-1">
+              <p class="text-body leading-tight font-extrabold">Nooki</p>
+              <p class="mt-0.5 text-small text-muted">A cat you raise together</p>
+              <p class="mt-1.5 text-label font-bold tracking-[0.08em] text-honey uppercase">Free · iPhone</p>
+            </div>
+            <a
+              href={appStoreUrl}
+              class="shrink-0 rounded-full bg-gold px-6 py-3 font-extrabold text-ink transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
+              data-cta>Get</a
+            >
+            <div class="hidden shrink-0 border-l border-paper/15 pl-5 lg:block">
+              <QrCode class="size-24" />
+            </div>
+          </div>
+          <p class="mt-4 hidden text-small text-muted lg:block">On a computer? Scan the code with your iPhone camera.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="border-t border-paper/10">
+      <div class="container-page flex flex-col gap-6 pt-10 pb-28 md:flex-row md:items-end md:justify-between md:pb-10">
+        <div>
+          <p class="text-[1.375rem] font-black tracking-[-0.03em]">Nooki</p>
+          <p class="mt-1 max-w-[28rem] text-small text-muted">A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock Screen.</p>
+        </div>
+        <nav class="flex flex-wrap gap-x-6 gap-y-2 text-small text-muted" aria-label="Footer">
+          <a href={appStoreUrl} class="underline-offset-4 hover:text-paper hover:underline">App Store</a>
+          <a href="#" class="underline-offset-4 hover:text-paper hover:underline">Privacy</a>
+          <span>© 2026 Nooki</span>
+        </nav>
+      </div>
+    </footer>
+
+    <!-- Phones get a download bar once the story's own buttons are out of view. -->
+    <div
+      id="sticky-cta"
+      class="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 flex translate-y-[150%] items-center gap-3 rounded-[22px] border border-paper/10 bg-plate/85 p-2 pl-3 shadow-2xl backdrop-blur-xl transition-transform duration-500 md:hidden"
+    >
+      <img src={portrait.src} alt="" width="40" height="40" class="size-10 rounded-[10px] bg-raised" />
+      <p class="flex-1 text-small leading-tight"><b>Nooki</b><br /><span class="text-muted">Free · iPhone</span></p>
+      <a href={appStoreUrl} class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">Get</a>
+    </div>
+
+    <script>
+      const story = document.getElementById("story")!;
+      const beats = [...document.querySelectorAll<HTMLElement>("[data-beat]")];
+      const bar = document.getElementById("sticky-cta");
+      const final = document.getElementById("get")!;
+      // Which beat shows at each stretch of the story's scroll.
+      const beatAt = (p: number) => (p < 0.1 ? "0" : p < 0.42 ? "1" : p < 0.68 ? "2" : "3");
+
+      function update() {
+        const rect = story.getBoundingClientRect();
+        const p = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height - innerHeight)));
+        const current = beatAt(p);
+        for (const beat of beats) {
+          beat.toggleAttribute("data-on", beat.dataset.beat === current || (beat.dataset.beat === "scroll" && p < 0.04));
+        }
+        const showsOwnButton = p < 0.1 || (p > 0.68 && rect.bottom > innerHeight);
+        const atEnd = final.getBoundingClientRect().top < innerHeight;
+        bar?.classList.toggle("translate-y-[150%]", showsOwnButton || atEnd);
+      }
+      addEventListener("scroll", update, { passive: true });
+      addEventListener("resize", update);
+      update();
+    </script>
+  </body>
+</html>

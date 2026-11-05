@@ -4,8 +4,10 @@
   "ignorePatterns": ["**/node_modules/**", "**/dist/**", "**/.turbo/**", "**/.build/**"],
   "overrides": [
     {
-      "files": ["alchemy.run.ts"],
-      "rules": { "import/no-default-export": "off" }
+      "files": ["alchemy.run.ts", "apps/landing/astro.config.ts"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
     }
   ]
 }
