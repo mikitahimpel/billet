@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// An item in a grid: its art in the rarity frame, the name, what it does for Mochi, and its price pill.
+/// An item on the Shop: its art large and lifted in the rarity frame, the name, what it does for Mochi, and its
+/// price pill, which buys it in one tap. `large` is the art-first card of the daily deals.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
+    var large = false
     var onTap: () -> Void
 
     private var owned: Bool { state.owned.contains(item.id) }
@@ -18,7 +20,7 @@ struct ShopItemCard: View {
                     art
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.name)
-                            .font(.nookiHeadline)
+                            .font(large ? .nookiTitle : .nookiHeadline)
                             .foregroundStyle(Ink.text)
                             .lineLimit(2)
                         if let mood = item.mood {
@@ -39,30 +41,36 @@ struct ShopItemCard: View {
             PriceButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
                         buy: { state.buy(item) }, fills: true)
         }
-        .padding(Space.s + 2)
+        .padding(large ? Space.m : Space.s + 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .shopCard()
+        .shopCard(radius: large ? Radius.hero : Radius.card)
     }
 
     private var art: some View {
         RarityFrame(rarity: item.rarity) {
             if let image = Thumbnails.image(item.thumbnail, maxPixels: 512) {
-                Image(uiImage: image).resizable().scaledToFit().padding(Space.s)
+                Lifted {
+                    Image(uiImage: image).resizable().scaledToFit()
+                }
+                .padding(large ? Space.l : Space.s)
+                .padding(.bottom, Space.xs)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
             }
         }
-        .aspectRatio(1.1, contentMode: .fit)
+        .aspectRatio(large ? 1 : 1.05, contentMode: .fit)
         .overlay(alignment: .topLeading) {
-            ShopTag(text: item.rarity.title, fill: item.rarity.tint).padding(6)
+            ShopTag(text: item.rarity.title, fill: item.rarity.tint).padding(Space.s)
         }
         .overlay(alignment: .topTrailing) {
             if isDeal, !owned {
                 ShopTag(text: "−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%",
-                        fill: .blushPink)
-                    .padding(6)
+                        fill: ShopInk.coral)
+                    .scaleEffect(large ? 1.25 : 1, anchor: .topTrailing)
+                    .rotationEffect(.degrees(4))
+                    .padding(Space.s)
             } else if item.isNew, !owned {
-                ShopTag(text: "New", fill: .honey, ink: Ink.heroInk).padding(6)
+                ShopTag(text: "New", fill: .honey).padding(Space.s)
             }
         }
     }

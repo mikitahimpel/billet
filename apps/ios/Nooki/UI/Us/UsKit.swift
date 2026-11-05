@@ -6,8 +6,7 @@ extension View {
     func usSheet(detents: Set<PresentationDetent> = [.large]) -> some View {
         presentationDetents(detents)
             .presentationDragIndicator(.visible)
-            .presentationBackground(Ink.sheet)
-            .presentationCornerRadius(36)
+            .presentationBackground(Ink.screen)
     }
 
     /// The card for rows and tiles.

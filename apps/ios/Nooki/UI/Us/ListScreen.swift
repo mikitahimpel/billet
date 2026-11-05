@@ -36,7 +36,7 @@ struct ListScreen: View {
                         .font(.nookiHeadline)
                         .foregroundStyle(Ink.text)
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(.white.opacity(0.1)))
+                        .background(Circle().fill(Ink.surfaceRaised))
                 }
                 .accessibilityLabel("List options")
             }

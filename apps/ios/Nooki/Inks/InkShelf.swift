@@ -29,10 +29,14 @@ struct InkShelf: View {
     private func card(_ ink: PaletteInk) -> some View {
         let owned = ink.isOwned(state.owned)
         return VStack(spacing: Space.s) {
+            // A glossy drop of the ink, lit from the top left like the room's clay.
             Circle()
                 .fill(ink.color(onDark: false))
-                .frame(width: 44, height: 44)
-                .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 2))
+                .overlay(Circle().fill(RadialGradient(colors: [.white.opacity(0.55), .clear],
+                                                      center: UnitPoint(x: 0.3, y: 0.25), startRadius: 0,
+                                                      endRadius: 26)))
+                .overlay(Circle().strokeBorder(.white.opacity(0.5), lineWidth: 1.5))
+                .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
             Text(ink.name)
                 .font(.nookiHeadline)
@@ -49,7 +53,7 @@ struct InkShelf: View {
             }
         }
         .padding(Space.m)
-        .frame(width: 116)
+        .frame(width: 124)
         .shopCard()
         .overlay {
             if highlighted == ink.id {

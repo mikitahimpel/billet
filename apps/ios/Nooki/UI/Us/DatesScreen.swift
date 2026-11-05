@@ -106,7 +106,7 @@ struct DatesScreen: View {
                                         .padding(8)
                                 }
                                 .frame(width: 104, height: 124)
-                                .clipShape(.rect(cornerRadius: 18, style: .continuous))
+                                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }
@@ -161,7 +161,7 @@ struct DatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
                 .background { DateScenePicture(scene: .plans) }
-                .clipShape(.rect(cornerRadius: 28, style: .continuous))
+                .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
 
                 UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
@@ -183,7 +183,7 @@ struct DatesScreen: View {
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(.white.opacity(0.1), in: .capsule)
+                .background(Ink.surfaceRaised, in: .capsule)
                 .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -300,7 +300,7 @@ struct DatesScreen: View {
             .padding(.leading, 14)
             .padding(.trailing, filter.isEmpty ? 14 : 7)
             .frame(height: 34)
-            .background(.white.opacity(0.1), in: .capsule)
+            .background(Ink.surfaceRaised, in: .capsule)
             .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -399,7 +399,7 @@ private struct SwipeDeck: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.tag, style: .continuous)
                     .stroke(tint, lineWidth: 3)
             )
             .rotationEffect(.degrees(text == "LOVE" ? -14 : 14))
@@ -412,7 +412,7 @@ private struct SwipeDeck: View {
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(Ink.text)
                 .frame(width: 64, height: 64)
-                .background(.white.opacity(0.1), in: .circle)
+                .background(Ink.surfaceRaised, in: .circle)
                 .overlay(Circle().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
@@ -476,7 +476,7 @@ private struct DateIdeaCard: View {
     let idea: DateIdea
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
         DateScenePicture(scene: idea.scene)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -639,8 +639,8 @@ private struct DateFilterSheet: View {
             .padding(.horizontal, 14)
             .frame(height: 50)
             .background(selected ? Color.honey.opacity(0.22) : Ink.surface,
-                        in: .rect(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        in: .rect(cornerRadius: Radius.control, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                 .stroke(selected ? Color.honey : Ink.separator, lineWidth: selected ? 1.5 : 0.5))
         }
         .buttonStyle(.plain)
@@ -660,25 +660,25 @@ private struct DateMatchOverlay: View {
 
             VStack(spacing: 10) {
                 Text("It's a match!")
-                    .font(.system(size: 25, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .font(.nookiLargeTitle)
+                    .foregroundStyle(Ink.text)
                 UsIcon(glyph: .init(symbol: "heart.fill", tint: .blush), size: 72)
                 Text(idea.title)
                     .font(.nookiTitle)
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                 Label("+10", systemImage: "star.fill")
                     .font(.nookiHeadline)
-                    .foregroundStyle(Color.honeyDeep)
+                    .foregroundStyle(Ink.accentText)
 
                 HStack(spacing: 10) {
                     Button(action: onKeep) {
                         Text("Keep swiping")
                             .font(.nookiHeadline)
-                            .foregroundStyle(Color(hex: 0x5B3A28))
+                            .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(Color(hex: 0xF0DCC0), in: .capsule)
+                            .frame(minHeight: 44)
+                            .background(Ink.surfaceRaised, in: .capsule)
                     }
                     .buttonStyle(.plain)
 
@@ -687,7 +687,7 @@ private struct DateMatchOverlay: View {
                             .font(.nookiHeadline)
                             .foregroundStyle(Ink.heroInk)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
+                            .frame(minHeight: 44)
                             .background(Capsule().fill(.honeyGradient))
                     }
                     .buttonStyle(.plain)
@@ -696,7 +696,7 @@ private struct DateMatchOverlay: View {
             }
             .padding(24)
             .frame(maxWidth: 330)
-            .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 30, style: .continuous))
+            .background(Ink.surface, in: .rect(cornerRadius: Radius.hero, style: .continuous))
             .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
         }
     }

@@ -24,7 +24,7 @@ struct SetSheet: View {
             SheetHeader(title: pieces.name) {
                 if let quote, quote.sum > quote.price {
                     ShopTag(text: "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
-                            fill: .blushPink)
+                            fill: ShopInk.coral)
                 }
                 ShopTag(text: "\(items.count) pieces", fill: Ink.surfaceRaised, ink: Ink.text)
             } close: { dismiss() }
@@ -58,23 +58,20 @@ struct SetSheet: View {
         HStack(alignment: .bottom, spacing: -Space.l) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 let centre = index == items.count / 2
-                Group {
+                Lifted {
                     if let image = Thumbnails.trimmed(item.thumbnail) {
                         Image(uiImage: image).resizable().scaledToFit()
                     }
                 }
                 .frame(width: centre ? 136 : 96, height: centre ? 136 : 96)
                 .zIndex(centre ? 1 : 0)
-                .shadow(color: .black.opacity(0.28), radius: 10, y: 6)
                 .opacity(state.owned.contains(item.id) ? 0.45 : 1)
             }
         }
         .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity)
         .frame(height: 180)
-        .background(RadialGradient(colors: [Color(hex: 0xF7C98E), Color(hex: 0xC97A45), Color(hex: 0x5A3420)],
-                                   center: UnitPoint(x: 0.55, y: 0.4), startRadius: 10, endRadius: 280),
-                    in: .rect(cornerRadius: Radius.hero, style: .continuous))
+        .background(ShopInk.lamplight, in: .rect(cornerRadius: Radius.hero, style: .continuous))
         .accessibilityHidden(true)
     }
 

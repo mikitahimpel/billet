@@ -3,9 +3,9 @@ import SwiftUI
 
 // MARK: - Shop
 
-/// The Shop tab under the app header: category chips, then Today's offers (the free gift, the week's featured set,
-/// the daily deals, bundles and collections) or a category's grid. Every price is in coins and every countdown ends
-/// at a real rotation.
+/// The Shop tab under the app header: category chips, then Today's offers (the week's featured set as the hero, the
+/// daily deals, the free gift, bundles, inks and collections) or a category's grid. Every price is in coins and every
+/// countdown ends at a real rotation.
 struct ShopView: View {
     let state: HomeState
 
@@ -121,14 +121,12 @@ struct ShopView: View {
 
     @ViewBuilder private var today: some View {
         let now = Date.now
-        DailyGiftCard(state: state)
-            .padding(.horizontal, Space.l)
-
         FeaturedCard(state: state, offer: state.offers.featured(on: now)) { sheetSet = SetChoice(pieces: $0) }
             .padding(.horizontal, Space.l)
+            .shopAppear()
 
         VStack(alignment: .leading, spacing: Space.m) {
-            sectionHeader("Daily deals") {
+            ShopSectionHeader(title: "Daily deals", symbol: "tag.fill", tint: ShopInk.coral) {
                 // Deals change at the couple's local midnight, the same for both of them.
                 Label {
                     Text(timerInterval: now...state.offers.nextDay(after: now), countsDown: true)
@@ -138,31 +136,43 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            grid(state.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            .padding(.horizontal, Space.l)
+            deals(state.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
-        .padding(.horizontal, Space.l)
         .id("deals")
 
+        DailyGiftCard(state: state)
+            .padding(.horizontal, Space.l)
+            .shopAppear()
+
         VStack(alignment: .leading, spacing: Space.m) {
-            sectionHeader("Bundles") { Text("Less than one by one") }
+            ShopSectionHeader(title: "Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {
+                Text("Less than one by one")
+            }
             ForEach(ShopOffers.bundles, id: \.id) { bundle in
                 BundleCard(state: state, bundle: bundle, open: { sheetItem = $0 }) { sheetSet = SetChoice(pieces: bundle) }
+                    .shopAppear()
             }
         }
         .padding(.horizontal, Space.l)
         .id("bundles")
 
         VStack(alignment: .leading, spacing: Space.m) {
-            sectionHeader("Inks") { Text("For notes and drawings") }
-                .padding(.horizontal, Space.l)
+            ShopSectionHeader(title: "Inks", symbol: "paintpalette.fill", tint: .honey) {
+                Text("For notes and drawings")
+            }
+            .padding(.horizontal, Space.l)
             InkShelf(state: state, highlighted: highlightedInk)
         }
         .id("inks")
 
         VStack(alignment: .leading, spacing: Space.m) {
-            sectionHeader("Collections") { Text("A bonus for each full set") }
+            ShopSectionHeader(title: "Collections", symbol: "square.grid.2x2.fill", tint: ShopInk.teal) {
+                Text("A bonus for each full set")
+            }
             ForEach(Catalog.collections) { collection in
                 CollectionCard(state: state, collection: collection) { sheetItem = $0 }
+                    .shopAppear()
             }
         }
         .padding(.horizontal, Space.l)
@@ -174,23 +184,29 @@ struct ShopView: View {
             .padding(.horizontal, Space.l)
     }
 
-    private func sectionHeader(_ title: String, @ViewBuilder trailing: () -> some View) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: Space.s)
-            trailing()
-                .font(.nookiCaption)
-                .foregroundStyle(Ink.textSecondary)
+    /// Today's deals as big art-first cards in a row that snaps card by card, the next one peeking in.
+    private func deals(_ items: [ShopItem]) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(alignment: .top, spacing: Space.m) {
+                ForEach(items) { item in
+                    ShopItemCard(item: item, state: state, large: true) { sheetItem = item }
+                        .containerRelativeFrame(.horizontal) { width, _ in width * 0.72 }
+                        .shopAppear()
+                }
+            }
+            .scrollTargetLayout()
         }
+        .contentMargins(.horizontal, Space.l, for: .scrollContent)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollIndicators(.hidden)
+        .scrollClipDisabled()
     }
 
     private func grid(_ items: [ShopItem]) -> some View {
         LazyVGrid(columns: columns, spacing: Space.m) {
             ForEach(items) { item in
                 ShopItemCard(item: item, state: state) { sheetItem = item }
+                    .shopAppear()
             }
         }
     }

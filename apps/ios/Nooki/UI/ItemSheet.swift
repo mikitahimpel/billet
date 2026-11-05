@@ -31,7 +31,7 @@ struct ItemSheet: View {
             SheetHeader(title: item.name) {
                 ShopTag(text: item.rarity.title, fill: item.rarity.tint)
                 if isDeal, !owned {
-                    ShopTag(text: "−\(Int(((1 - Double(cost) / Double(item.price)) * 100).rounded()))%", fill: .blushPink)
+                    ShopTag(text: "−\(Int(((1 - Double(cost) / Double(item.price)) * 100).rounded()))%", fill: ShopInk.coral)
                 } else if item.isNew, !owned {
                     ShopTag(text: "New", fill: .honey, ink: Ink.heroInk)
                 }
