@@ -8,6 +8,7 @@ struct NookiApp: App {
     @State private var session: ServerSession?
     @State private var onboarding: OnboardingFlow
     @State private var hints: Hints
+    @State private var home: HomeState
 
     init() {
         NavigationBarStyle.apply()
@@ -29,6 +30,7 @@ struct NookiApp: App {
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
             coatChanged: { CatRoom.forgetMochi() }))
+        _home = State(initialValue: HomeState(stores: .live()))
     }
 
     var body: some Scene {
@@ -37,7 +39,7 @@ struct NookiApp: App {
                 // The unit tests run on the main actor; the room would keep it busy drawing the whole time.
                 Color.black
             } else {
-                HomeView()
+                HomeView(state: $home)
                     // A new coat loads Mochi again, so the room is built anew around her.
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)

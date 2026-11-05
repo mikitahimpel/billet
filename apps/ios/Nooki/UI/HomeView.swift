@@ -6,7 +6,8 @@ import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    @State private var state = HomeState(stores: .live())
+    /// Owned by NookiApp: a `@State` default here would read every store again on each pass of the app's `body`.
+    @Binding var state: HomeState
     /// Built after the first frame, so launch shows the backdrop at once.
     @State private var home: DioramaScene?
     /// Built each time the City room is opened, released when it is left.
@@ -153,13 +154,13 @@ struct HomeView: View {
         }
         .task {
             guard home == nil, !Self.noRoom else { return }
-            let room = DioramaScene()
-            home = room
-            room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
+            home = DioramaScene()
         }
-        .task(id: state.moments.pinned) {
+        // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
+        .task(id: home == nil ? nil : state.moments.pinned) {
+            guard let home else { return }
             let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
-            if !Task.isCancelled { home?.setPolaroids(images) }
+            if !Task.isCancelled { home.setPolaroids(images) }
         }
         .task(id: boardKey) {
             guard board != nil else { return }
