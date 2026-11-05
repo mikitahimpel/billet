@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { UserId } from "@billet/contracts-domain/ids";
+import { CatEntry, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
+import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
@@ -18,6 +19,19 @@ const Couple = Schema.Tuple([Member, Member]).check(
 );
 
 /**
+ * The couple's cat, without its journal: the journal is unbounded, so it stays in the store, and
+ * `lastSeq` and `lastAt` are the only parts of it a decision needs.
+ */
+export const RoomCat = Schema.Struct({
+  profile: CatProfile,
+  temper: CatTemper,
+  lastSeq: Count,
+  /** When the last entry was stored, absent before the first. The temper reads the gap. */
+  lastAt: Schema.optionalKey(EpochMillis),
+});
+export type RoomCat = typeof RoomCat.Type;
+
+/**
  * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
  * in the store and `lastSeq` is the only part of them that a decision needs.
  *
@@ -31,6 +45,8 @@ export const RoomState = Schema.TaggedUnion({
     members: Couple,
     lastSeq: Count,
     streakDays: Count,
+    /** Absent until one of the couple adopts the cat. */
+    cat: Schema.optionalKey(RoomCat),
   },
 });
 export type RoomState = typeof RoomState.Type;
@@ -39,3 +55,6 @@ export type ActiveRoom = typeof RoomState.cases.Active.Type;
 /** A committed note. `seq` orders the room and is what a reconnecting client resumes from. */
 export const SequencedNote = Schema.Struct({ seq: Schema.Int, note: Note });
 export type SequencedNote = typeof SequencedNote.Type;
+
+/** A cat journal entry before the room has given it a `seq`. */
+export type CatEntryDraft = Omit<CatEntry, "seq">;

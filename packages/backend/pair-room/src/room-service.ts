@@ -1,11 +1,22 @@
 import { Clock, Context, Effect, Layer, Option, Semaphore } from "effect";
+import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { EpochMillis, NoteId, UserId } from "@billet/contracts-domain/ids";
+import type {
+  CatResponse,
+  RecordCatEventRequest,
+  SaveCatRequest,
+} from "@billet/contracts-http-api/cat";
 import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
+import type { ActivityResponse } from "@billet/contracts-http-api/activity";
+import { activityOf, cursorOf, itemFor } from "./activity.ts";
+import { catNeeds, lifeHorizonMillis } from "./cat-life.ts";
+import { newTemper } from "./cat-temper.ts";
 import { decide } from "./decide.ts";
 import { NoteIdSource } from "./note-id-source.ts";
 import type { RoomCommand } from "./room-command.ts";
-import { RoomDecision, RoomOutput } from "./room-decision.ts";
+import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
 import { RoomStore, type AppendedNote } from "./room-store.ts";
 
 const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote> =>
@@ -16,9 +27,15 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "NoteRepeated":
       case "RoomOpened":
       case "PresenceChanged":
+      case "CatSaved":
+      case "CatEntryAppended":
+      case "CatEntryRepeated":
         return [];
     }
   });
+
+const catEntriesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CatEntry> =>
+  outputs.flatMap((output) => (output._tag === "CatEntryAppended" ? [output.entry] : []));
 
 // `paper` is an optional key: a note without one carries no `paper` at all, never `undefined`.
 const paperOf = (request: { readonly paper?: PaperColor }) =>
@@ -68,7 +85,12 @@ export class RoomService extends Context.Service<RoomService>()(
           const decision = decide(yield* store.load, command);
           switch (decision._tag) {
             case "Accepted":
-              yield* store.commit(decision.state, notesIn(decision.outputs));
+              yield* store.commit(
+                decision.state,
+                notesIn(decision.outputs),
+                catEntriesIn(decision.outputs),
+                activityOf(decision.outputs, yield* Clock.currentTimeMillis),
+              );
               return decision;
             case "Rejected":
               return decision;
@@ -102,14 +124,110 @@ export class RoomService extends Context.Service<RoomService>()(
         }).pipe(lock.withPermits(1));
 
       // Under the lock, so a note the author is sending at the same moment is not left behind.
-      const forgetAuthor = (author: UserId) => store.forgetAuthor(author).pipe(lock.withPermits(1));
+      // The pair is ending, so the cat goes with it.
+      const forgetAuthor = (author: UserId) =>
+        store.forgetCat.pipe(
+          Effect.andThen(store.forgetActivity),
+          Effect.andThen(store.forgetAuthor(author)),
+          lock.withPermits(1),
+        );
+
+      const unread = (user: UserId) =>
+        store
+          .readMark(user)
+          .pipe(Effect.flatMap((mark) => store.unreadCount(user, Option.getOrUndefined(mark))));
+
+      /** One page of the Inbox as `caller` sees it, newest first. */
+      const activityPage = (caller: UserId, before: ActivityCursor | undefined, limit: number) =>
+        Effect.gen(function* () {
+          // One more than asked tells whether there is a page after this one.
+          const rows = yield* store.activityBefore(before, limit + 1);
+          const page = rows.slice(0, limit);
+          const last = page.at(-1);
+          const response: ActivityResponse = {
+            items: page.map((row) => itemFor(row, caller)),
+            ...(rows.length > limit && last !== undefined ? { next: cursorOf(last) } : {}),
+            unread: yield* unread(caller),
+          };
+          return response;
+        });
+
+      // Under the lock, so two devices reading at once leave the later mark.
+      const markActivityRead = (user: UserId, upTo: ActivityCursor) =>
+        Effect.gen(function* () {
+          const mark = yield* store.readMark(user);
+          if (Option.isNone(mark) || upTo > mark.value) yield* store.saveReadMark(user, upTo);
+          return yield* unread(user);
+        }).pipe(lock.withPermits(1));
+
+      // The time is taken inside the lock, so a cat's birth follows the order of the room.
+      const saveCat = (user: UserId, request: SaveCatRequest, natureSeed: NatureSeed) =>
+        Effect.gen(function* () {
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "SaveCat", user, natureSeed, at, ...request });
+        }).pipe(lock.withPermits(1));
+
+      // Like a note: the time inside the lock, so `at` follows `seq`, and a repeated `id` answers
+      // with the entry already stored.
+      const recordCatEvent = (by: UserId, request: RecordCatEventRequest) =>
+        Effect.gen(function* () {
+          const state = yield* store.load;
+          if (state._tag === "Active") {
+            const earlier = yield* store.catEntryById(request.id);
+            if (Option.isSome(earlier)) {
+              return earlier.value.by === by
+                ? RoomDecision.cases.Accepted.make({
+                    state,
+                    outputs: [RoomOutput.cases.CatEntryRepeated.make({ entry: earlier.value })],
+                  })
+                : RoomDecision.cases.Rejected.make({
+                    rejection: RoomRejection.cases.CatEntryIdTaken.make({}),
+                  });
+            }
+          }
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "RecordCatEvent", by, at, ...request });
+        }).pipe(lock.withPermits(1));
+
+      /**
+       * The cat at the room's clock now, or null while the room is not open. Before adoption, a
+       * cat born now, so the answer has one shape.
+       */
+      const catView: Effect.Effect<CatResponse | null> = Effect.gen(function* () {
+        const now = yield* Clock.currentTimeMillis;
+        const state = yield* store.load;
+        if (state._tag !== "Active") return null;
+        const partners = [state.members[0].user, state.members[1].user] as const;
+        if (state.cat === undefined) {
+          return {
+            temper: newTemper,
+            needs: catNeeds([], now, { partners, utcOffsetSeconds: 0, bornAt: now }),
+            lastSeq: 0,
+          };
+        }
+        const { profile, temper, lastSeq } = state.cat;
+        const entries = yield* store.catEntriesSince(Math.max(0, now - lifeHorizonMillis));
+        const needs = catNeeds(entries, now, {
+          partners,
+          utcOffsetSeconds: profile.utcOffsetSeconds,
+          bornAt: profile.bornAt,
+        });
+        return { cat: profile, temper, needs, lastSeq };
+      });
 
       return {
         dispatch,
         sendNote,
         forgetAuthor,
+        saveCat,
+        recordCatEvent,
+        catView,
+        activityPage,
+        markActivityRead,
+        unread,
         state: store.load,
         notesAfter: store.notesAfter,
+        catEntriesAfter: store.catEntriesAfter,
       };
     }),
   },

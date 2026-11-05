@@ -1,0 +1,17 @@
+{
+  "lastSeq": 0,
+  "needs": {
+    "asleep": false,
+    "at": 1700000200000,
+    "full": 0.7,
+    "loved": 0.7,
+    "mood": 0.7,
+    "playful": 0.7,
+    "rested": 0.7
+  },
+  "temper": {
+    "cuddly": 0.5,
+    "curious": 0.5,
+    "lazy": 0.5
+  }
+}

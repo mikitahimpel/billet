@@ -1,5 +1,8 @@
 import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
+import type { CatEntry } from "@billet/contracts-domain/cat";
+import { countsAsUnread, cursorOf, type ActivityRow } from "@billet/backend-pair-room/activity";
 import { NoteId, UserId, type MediaKey } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { Metrics, type MetricEvent } from "@billet/backend-metrics/metrics";
@@ -20,12 +23,24 @@ const makeRoom = () => {
   let state: RoomState = { _tag: "Vacant" };
   let notes: Array<SequencedNote> = [];
   let nextNote = 0;
+  let cat: Array<CatEntry> = [];
+  const activity = new Map<string, ActivityRow>();
+  const marks = new Map<string, ActivityCursor>();
+  const newestFirst = () =>
+    [...activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
   const keys = new Map<string, SequencedNote>();
   const store = Layer.succeed(RoomStore, {
     load: Effect.sync(() => state),
-    commit: (room: ActiveRoom, appended: ReadonlyArray<AppendedNote>) =>
+    commit: (
+      room: ActiveRoom,
+      appended: ReadonlyArray<AppendedNote>,
+      catEntries: ReadonlyArray<CatEntry>,
+      rows: ReadonlyArray<ActivityRow>,
+    ) =>
       Effect.sync(() => {
         state = room;
+        cat.push(...catEntries);
+        for (const row of rows) activity.set(row.id, row);
         for (const { entry, key } of appended) {
           notes.push(entry);
           keys.set(`${entry.note.author}/${key}`, entry);
@@ -35,6 +50,36 @@ const makeRoom = () => {
       Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    catEntryById: (id) => Effect.sync(() => Option.fromNullishOr(cat.find((e) => e.id === id))),
+    catEntriesAfter: (afterSeq: number, limit: number) =>
+      Effect.sync(() => cat.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    catEntriesSince: (since: number) => Effect.sync(() => cat.filter(({ at }) => at >= since)),
+    forgetCat: Effect.sync(() => {
+      cat = [];
+      if (state._tag === "Active") {
+        const { cat: _, ...rest } = state;
+        state = rest;
+      }
+    }),
+    activityBefore: (before, limit) =>
+      Effect.sync(() =>
+        newestFirst()
+          .filter((row) => before === undefined || cursorOf(row) < before)
+          .slice(0, limit),
+      ),
+    unreadCount: (user, mark) =>
+      Effect.sync(
+        () =>
+          newestFirst().filter(
+            (row) => (mark === undefined || cursorOf(row) > mark) && countsAsUnread(row, user),
+          ).length,
+      ),
+    readMark: (user) => Effect.sync(() => Option.fromNullishOr(marks.get(user))),
+    saveReadMark: (user, mark) => Effect.sync(() => void marks.set(user, mark)),
+    forgetActivity: Effect.sync(() => {
+      activity.clear();
+      marks.clear();
+    }),
     forgetAuthor: (author) =>
       Effect.sync(() => {
         const forgotten = notes.filter(({ note }) => note.author === author);
@@ -103,6 +148,12 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     sendNote: (pairId, author, request) => roomOf(pairId).sendNote(author, request),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
+    recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),
+    cat: (pairId) => roomOf(pairId).catView,
+    catJournal: (pairId, afterSeq, limit) => roomOf(pairId).catEntriesAfter(afterSeq, limit),
+    activity: (pairId, caller, before, limit) => roomOf(pairId).activityPage(caller, before, limit),
+    markActivityRead: (pairId, user, upTo) => roomOf(pairId).markActivityRead(user, upTo),
   };
 
   return {

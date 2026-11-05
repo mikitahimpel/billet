@@ -1,4 +1,11 @@
 import { Schema } from "effect";
+import {
+  ActivityCursor,
+  ActivityEvent,
+  ActivityItem,
+  ActivityTarget,
+} from "@billet/contracts-domain/activity";
+import { CatEntry, CatEvent, CatNeeds, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
 import {
   DeviceId,
@@ -56,6 +63,18 @@ import {
   SaveOnboardingAnswerRequest,
 } from "@billet/contracts-http-api/onboarding";
 import { OnboardingAnswer, OnboardingStep } from "@billet/contracts-domain/onboarding";
+import {
+  CatJournalResponse,
+  CatResponse,
+  RecordCatEventRequest,
+  RecordCatEventResponse,
+  SaveCatRequest,
+} from "@billet/contracts-http-api/cat";
+import {
+  ActivityResponse,
+  ActivityUnreadResponse,
+  MarkActivityReadRequest,
+} from "@billet/contracts-http-api/activity";
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
@@ -222,6 +241,115 @@ const nameStep = onboardingStep({
   maxLength: 20,
 });
 const onboardingAnswer = Schema.decodeUnknownSync(OnboardingAnswer);
+
+const catProfile = Schema.decodeUnknownSync(CatProfile)({
+  name: "Mochi",
+  look: { model: "marmalade", coat: "natural" },
+  bornAt: 1_700_000_000_000,
+  natureSeed: "12345678901234567890",
+  utcOffsetSeconds: 3600,
+});
+const catEvents = {
+  fed: { _tag: "Fed", grams: 40 },
+  petted: { _tag: "Petted" },
+  played: { _tag: "Played" },
+  watered: { _tag: "Watered" },
+  "note-shared": { _tag: "NoteShared", note: "note-1", kind: "Photo" },
+  "game-played": { _tag: "GamePlayed", game: "laser", score: 7, won: true },
+  slept: { _tag: "Slept" },
+  shooed: { _tag: "Shooed" },
+} as const;
+const catEvent = (name: keyof typeof catEvents): CatEvent =>
+  Schema.decodeUnknownSync(CatEvent)(catEvents[name]);
+const catEntry = (seq: number, name: keyof typeof catEvents, by = alice): CatEntry =>
+  Schema.decodeUnknownSync(CatEntry)({
+    seq,
+    id: idempotencyKey,
+    by,
+    at: 1_700_000_100_000 + seq * 1000,
+    event: catEvents[name],
+  });
+const catTemper: CatTemper = { curious: 0.5, lazy: 0.46, cuddly: 0.62 };
+const catNeeds: CatNeeds = {
+  at: 1_700_000_200_000,
+  full: 0.81,
+  rested: 0.64,
+  loved: 0.52,
+  playful: 0.43,
+  mood: 0.57,
+  asleep: false,
+};
+const lonelyCatNeeds: CatNeeds = { ...catNeeds, loved: 0.31, missing: bob };
+
+const activityEvents = {
+  "cat-fed": { _tag: "CatFed", grams: 40 },
+  "cat-petted": { _tag: "CatPetted" },
+  "cat-played": { _tag: "CatPlayed" },
+  "cat-game-played": { _tag: "CatGamePlayed", game: "laser", score: 7, won: true },
+  "cat-slept": { _tag: "CatSlept" },
+  "cat-shooed": { _tag: "CatShooed" },
+  "plant-watered": { _tag: "PlantWatered", plant: "monstera" },
+  "plant-watered-by-the-window": { _tag: "PlantWatered" },
+  "cat-adopted": { _tag: "CatAdopted", name: "Mochi" },
+  "cat-renamed": { _tag: "CatRenamed", name: "Мочи 🐾" },
+  "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
+  purchased: {
+    _tag: "Purchased",
+    offer: "bundle:starter-ink",
+    items: ["ink-rose", "armchair"],
+    coins: 120,
+  },
+  "purchased-one": { _tag: "Purchased", items: ["armchair"], coins: 80 },
+  "gift-claimed": { _tag: "GiftClaimed", coins: 10 },
+  "bonus-earned": { _tag: "BonusEarned", collection: "cozy-cabin", coins: 50 },
+  "coins-bought": {
+    _tag: "CoinsBought",
+    productId: "com.mikitahimpel.billet.coins.small",
+    coins: 500,
+  },
+  refunded: { _tag: "Refunded", productId: "com.mikitahimpel.billet.coins.small", coins: 500 },
+  "streak-reached": { _tag: "StreakReached", days: 7 },
+} as const;
+const activityTargets = {
+  note: { _tag: "Note", note: "note-1" },
+  moments: { _tag: "Moments", note: "note-1" },
+  cat: { _tag: "Cat" },
+  plant: { _tag: "Plant", plant: "monstera" },
+  "shop-item": { _tag: "ShopItem", id: "armchair" },
+  "shop-offer": { _tag: "ShopOffer", id: "deal:2026-11-05:0" },
+} as const;
+const decodeSamples = <S extends Schema.Codec<unknown, unknown>>(
+  schema: S,
+  samples: Readonly<Record<string, unknown>>,
+): Record<string, S["Type"]> =>
+  Object.fromEntries(
+    Object.entries(samples).map(([name, sample]) => [
+      name,
+      Schema.decodeUnknownSync(schema)(sample),
+    ]),
+  );
+const activityItem = Schema.decodeUnknownSync(ActivityItem);
+const fedItem = activityItem({
+  id: `cat:${idempotencyKey}`,
+  at: 1_700_000_101_000,
+  actor: "Partner",
+  event: activityEvents["cat-fed"],
+  target: activityTargets.cat,
+});
+const drawingItem = activityItem({
+  id: "note:note-1",
+  at: 1_700_000_100_000,
+  actor: "Me",
+  event: activityEvents["note-sent"],
+  target: activityTargets.moments,
+});
+const refundItem = activityItem({
+  id: "refund:2000000123456789",
+  at: 1_700_000_099_000,
+  actor: "Store",
+  event: activityEvents.refunded,
+});
+const activityCursor = Schema.decodeUnknownSync(ActivityCursor)(`0001700000100000~note:note-1`);
 
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
@@ -461,8 +589,73 @@ export const catalog: ReadonlyArray<Fixture> = [
       answeredAt: 1_700_000_001_000,
     }),
   }),
+  fixture(
+    "CatEvent",
+    CatEvent,
+    Object.fromEntries(
+      (Object.keys(catEvents) as Array<keyof typeof catEvents>).map((name) => [
+        name,
+        catEvent(name),
+      ]),
+    ),
+  ),
+  fixture("CatEntry", CatEntry, {
+    default: catEntry(3, "game-played"),
+    "note-shared": catEntry(4, "note-shared", bob),
+  }),
+  fixture("CatProfile", CatProfile, { default: catProfile }),
+  fixture("CatTemper", CatTemper, { default: catTemper }),
+  fixture("CatNeeds", CatNeeds, { default: catNeeds, missing: lonelyCatNeeds }),
+  fixture("CatResponse", CatResponse, {
+    default: { cat: catProfile, temper: catTemper, needs: lonelyCatNeeds, lastSeq: 4 },
+    "not-adopted": {
+      temper: { curious: 0.5, lazy: 0.5, cuddly: 0.5 },
+      needs: { ...catNeeds, full: 0.7, rested: 0.7, loved: 0.7, playful: 0.7, mood: 0.7 },
+      lastSeq: 0,
+    },
+  }),
+  fixture("SaveCatRequest", SaveCatRequest, {
+    default: Schema.decodeUnknownSync(SaveCatRequest)({
+      name: "Мочи 🐾",
+      look: { model: "detailed", coat: "greyWhite" },
+      utcOffsetSeconds: -18_000,
+    }),
+  }),
+  fixture("RecordCatEventRequest", RecordCatEventRequest, {
+    fed: { id: idempotencyKey, event: catEvent("fed") },
+    "game-played": { id: idempotencyKey, event: catEvent("game-played") },
+  }),
+  fixture("RecordCatEventResponse", RecordCatEventResponse, {
+    default: { entry: catEntry(1, "fed"), temper: catTemper, needs: catNeeds },
+  }),
+  fixture("CatJournalResponse", CatJournalResponse, {
+    default: { entries: [catEntry(1, "fed"), catEntry(2, "petted", bob)] },
+    empty: { entries: [] },
+  }),
+  fixture("ActivityEvent", ActivityEvent, decodeSamples(ActivityEvent, activityEvents)),
+  fixture("ActivityTarget", ActivityTarget, decodeSamples(ActivityTarget, activityTargets)),
+  fixture("ActivityItem", ActivityItem, {
+    default: fedItem,
+    mine: drawingItem,
+    "without-target": refundItem,
+  }),
+  fixture("ActivityResponse", ActivityResponse, {
+    default: { items: [fedItem, drawingItem], next: activityCursor, unread: 1 },
+    last: { items: [refundItem], unread: 0 },
+    empty: { items: [], unread: 0 },
+  }),
+  fixture("MarkActivityReadRequest", MarkActivityReadRequest, {
+    default: { upTo: activityCursor },
+  }),
+  fixture("ActivityUnreadResponse", ActivityUnreadResponse, { default: { unread: 3 } }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),
+    "resume-with-cat": ClientMessage.cases.Resume.make({ lastSeq: 7, lastCatSeq: 3 }),
+    "resume-with-activity": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      lastCatSeq: 3,
+      activity: true,
+    }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -484,6 +677,11 @@ export const catalog: ReadonlyArray<Fixture> = [
     "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
     "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
     clear: ServerMessage.cases.Clear.make({}),
+    "cat-entry-added": ServerMessage.cases.CatEntryAdded.make({
+      entry: catEntry(5, "petted", bob),
+    }),
+    "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
+    "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

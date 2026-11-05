@@ -16,8 +16,9 @@ import Wire
 /// stayed up for ``stableAfter``, reported by the `stable` event.
 ///
 /// `lastSeq` is the highest `seq` seen from the server. It survives drops, so a reconnect sends
-/// `Resume(lastSeq:)`. Before any sequenced message arrives there is nothing to resume, and the
-/// first connection sends no `Resume`. `failures` counts consecutive failed attempts and sets the
+/// `Resume(lastSeq:)`; the first connection resumes from zero. The `open` output carries it, and
+/// the runner queues the `Resume` as soon as the socket is up, so it goes before anything the
+/// caller sends. `lastSeq` cannot change while connecting, as messages only arrive once connected. `failures` counts consecutive failed attempts and sets the
 /// back-off delay.
 public enum WebSocketMachine: Machine {
   public struct State: Equatable, Sendable {
@@ -73,7 +74,8 @@ public enum WebSocketMachine: Machine {
   }
 
   public enum Output: Equatable, Sendable {
-    case open(attempt: Int)
+    /// Opens the attempt's socket and sends `Resume(lastSeq: resumeFrom)` before anything else.
+    case open(attempt: Int, resumeFrom: Int)
     /// Closes this attempt's socket if it has one. Harmless if it has none.
     case close(attempt: Int)
     case send(ClientMessage, attempt: Int)
@@ -100,16 +102,10 @@ public enum WebSocketMachine: Machine {
     let id = state.attempt
     switch (state.phase, event) {
     case (.idle, .connectRequested):
-      return (state.moved(to: .connecting(failures: 0), attempt: id + 1), opening(id + 1))
+      return (state.moved(to: .connecting(failures: 0), attempt: id + 1), opening(id + 1, state))
 
     case (.connecting(let failures), .opened):
-      // The server sends no note to a socket that has not asked, so the first connection asks too,
-      // from zero when nothing has been received.
-      let resume = Output.send(.resume(lastSeq: state.lastSeq ?? 0), attempt: id)
-      return (
-        state.moved(to: .connected(failures: failures)),
-        [resume, .startStabilityTimer(attempt: id)]
-      )
+      return (state.moved(to: .connected(failures: failures)), [.startStabilityTimer(attempt: id)])
 
     case (.connected, .stable):
       return (state.moved(to: .connected(failures: 0)), [])
@@ -128,7 +124,9 @@ public enum WebSocketMachine: Machine {
       )
 
     case (.backingOff(let failures), .retryElapsed):
-      return (state.moved(to: .connecting(failures: failures), attempt: id + 1), opening(id + 1))
+      return (
+        state.moved(to: .connecting(failures: failures), attempt: id + 1), opening(id + 1, state)
+      )
 
     case (.connecting, .disconnectRequested),
       (.connected, .disconnectRequested),
@@ -181,8 +179,13 @@ public enum WebSocketMachine: Machine {
     return .seconds(1 << exponent)
   }
 
-  private static func opening(_ attempt: Int) -> [Output] {
-    [.open(attempt: attempt), .startConnectTimeout(attempt: attempt)]
+  /// The server sends no note to a socket that has not asked, so every connection resumes, from
+  /// zero when nothing has been received.
+  private static func opening(_ attempt: Int, _ state: State) -> [Output] {
+    [
+      .open(attempt: attempt, resumeFrom: state.lastSeq ?? 0),
+      .startConnectTimeout(attempt: attempt),
+    ]
   }
 
   private static func advance(_ lastSeq: Int?, past message: ServerMessage) -> Int? {
@@ -191,7 +194,9 @@ public enum WebSocketMachine: Machine {
       return max(lastSeq ?? seq, seq)
     // A live stroke carries the room's latest note `seq`, which this client may not have received
     // yet, so counting it would let a reconnect skip notes.
-    case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear:
+    // Cat frames have their own journal `seq`, never a note's, and the Inbox count has none.
+    case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear,
+      .catEntryAdded, .catSaved, .activityUnread:
       return lastSeq
     }
   }

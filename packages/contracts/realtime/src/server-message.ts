@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { Color, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
@@ -17,5 +18,11 @@ export const ServerMessage = Schema.TaggedUnion({
   /** The partner's device left with this stroke still open: discard it, it will not end. */
   StrokeDropped: { id: LiveStrokeId },
   Clear: {},
+  /** One cat journal entry, either partner's, sent once to each socket that resumed the journal. */
+  CatEntryAdded: { entry: CatEntry },
+  /** The cat was adopted, renamed or given a new look. */
+  CatSaved: { cat: CatProfile },
+  /** The user's Inbox count changed, sent to sockets that resumed with `activity: true`. */
+  ActivityUnread: { unread: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
 });
 export type ServerMessage = typeof ServerMessage.Type;

@@ -3,11 +3,13 @@ import SwiftUI
 
 @main
 struct NookiApp: App {
+    @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
     /// Nil when the build has no server; the app then keeps everything on the phone.
     @State private var session: ServerSession?
     @State private var onboarding: OnboardingFlow
 
     init() {
+        NavigationBarStyle.apply()
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline

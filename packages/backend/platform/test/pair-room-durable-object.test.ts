@@ -4,6 +4,8 @@ import { Schema } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { NatureSeed } from "@billet/contracts-domain/cat";
+import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { maxFramesPerSecond } from "../src/frame-window.ts";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
@@ -155,6 +157,8 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_pair_room"),
       expect.stringContaining("_delivery"),
       expect.stringContaining("_idempotency_key"),
+      expect.stringContaining("_cat"),
+      expect.stringContaining("_activity"),
     ]);
   });
 
@@ -348,6 +352,90 @@ describe("PairRoom realtime across eviction", () => {
     await room.sendNote(alice, photo());
     await until(() => b.frames.filter((f) => f._tag === "NoteReceived").length === 2);
     expect(b.frames.filter((f) => f._tag === "NoteReceived").map((f) => f["seq"])).toEqual([1, 2]);
+  });
+
+  it("journals the cat in SQLite, streams each entry to sockets that follow it, and forgets it with the pair", async () => {
+    const room = await openRoom();
+    const follower = await open(room, bob);
+    const notesOnly = await open(room, alice);
+    follower.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, lastCatSeq: 0 }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    const seed = Schema.decodeSync(NatureSeed)("42");
+    const mochi = Schema.decodeSync(SaveCatRequest)({
+      name: "Mochi",
+      look: { model: "marmalade", coat: "natural" },
+      utcOffsetSeconds: 3600,
+    });
+    expect((await room.saveCat(alice, mochi, seed))._tag).toBe("Accepted");
+    await until(() => follower.frames.some((f) => f._tag === "CatSaved"));
+
+    const pet = Schema.decodeSync(RecordCatEventRequest)({
+      id: "00000000-0000-4000-8000-0000000000c1",
+      event: { _tag: "Petted" },
+    });
+    expect((await room.recordCatEvent(bob, pet))._tag).toBe("Accepted");
+    await room.sendNote(alice, photo());
+    await until(() => follower.frames.filter((f) => f._tag === "CatEntryAdded").length === 2);
+
+    await evictDurableObject(room);
+    const view = await room.cat();
+    expect(view?.cat).toMatchObject({ name: "Mochi", natureSeed: "42", utcOffsetSeconds: 3600 });
+    expect(view?.lastSeq).toBe(2);
+    expect(view?.temper.cuddly).toBeGreaterThan(0.5);
+    const journal = await room.catJournal(0, 10);
+    expect(journal.map((entry) => [entry.seq, entry.by, entry.event._tag])).toEqual([
+      [1, bob, "Petted"],
+      [2, alice, "NoteShared"],
+    ]);
+    expect(notesOnly.frames.some((f) => f._tag.startsWith("Cat"))).toBe(false);
+
+    // A repeat answers with the stored entry and sends nothing new.
+    const again = await room.recordCatEvent(bob, pet);
+    expect(again._tag === "Accepted" && again.outputs.map((o) => o._tag)).toEqual([
+      "CatEntryRepeated",
+    ]);
+
+    await room.forgetMember(alice);
+    expect((await room.cat())?.cat).toBeUndefined();
+    expect(await room.catJournal(0, 10)).toEqual([]);
+  });
+
+  it("keeps the Inbox in SQLite, pushes the unread count to sockets that follow it, and forgets it with the pair", async () => {
+    const room = await openRoom();
+    const bobInbox = await open(room, bob);
+    const bobOld = await open(room, bob);
+    const aliceInbox = await open(room, alice);
+    bobInbox.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, activity: true }));
+    bobOld.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    aliceInbox.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, activity: true }));
+    const unreadOf = (frames: ReadonlyArray<{ _tag: string; [key: string]: unknown }>) =>
+      frames.filter((f) => f._tag === "ActivityUnread").map((f) => f["unread"]);
+    await until(() => unreadOf(bobInbox.frames).length === 1);
+    expect(unreadOf(bobInbox.frames)).toEqual([0]);
+
+    await room.sendNote(alice, photo());
+    await room.sendNote(alice, photo());
+    await until(() => unreadOf(bobInbox.frames).length === 3);
+    expect(unreadOf(bobInbox.frames)).toEqual([0, 1, 2]);
+
+    await evictDurableObject(room);
+    const page = await room.activity(bob, undefined, 1);
+    expect(page.items.map((i) => [i.actor, i.event._tag])).toEqual([["Partner", "NoteSent"]]);
+    expect(page.unread).toBe(2);
+    const rest = await room.activity(bob, page.next, 10);
+    expect(rest.items).toHaveLength(1);
+    expect(rest.next).toBeUndefined();
+    expect((await room.activity(alice, undefined, 10)).unread).toBe(0);
+
+    expect(await room.markActivityRead(bob, page.next!)).toBe(0);
+    await until(() => unreadOf(bobInbox.frames).length === 4);
+    expect(unreadOf(bobInbox.frames).at(-1)).toBe(0);
+    // Alice's count did not move, and an older build never sees the frame.
+    expect(unreadOf(aliceInbox.frames)).toEqual([0]);
+    expect(unreadOf(bobOld.frames)).toEqual([]);
+
+    await room.forgetMember(alice);
+    expect(await room.activity(bob, undefined, 10)).toEqual({ items: [], unread: 0 });
   });
 
   it("tells the partner the user stopped drawing when their last socket drops", async () => {
