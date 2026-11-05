@@ -73,8 +73,8 @@ to it in #67.
 
 ### R2: note images
 
-Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`. Media routes check
-authorisation before serving anything.
+Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`: rendered drawings as PNG,
+photos as PNG, JPEG or HEIC. Media routes check authorisation before serving anything.
 
 ### Two renditions of every note
 
@@ -167,13 +167,26 @@ provides.
 
 A note is sent in two steps, and both need a session and a partner:
 
-1. `POST /v1/media` takes the PNG as the raw body, up to 10 MiB, and returns its `image` key,
-   `pairs/<pairId>/notes/<uuid>.png`. Bytes without the PNG signature are refused.
+1. `POST /v1/media` takes the image as the raw body, up to 10 MiB whatever its format, and returns
+   its `image` key, `pairs/<pairId>/notes/<uuid>.<ext>`. The server reads the format from the
+   signature, never from the client: a PNG (`89 50 4E 47 0D 0A 1A 0A`) is stored as `.png`, a JPEG
+   (`FF D8 FF`) as `.jpg`, and a HEIC as `.heic` (an ISO-BMFF `ftyp` box at offset 4 with major brand
+   `heic`, `heix`, `heim`, `heis`, `hevc`, `hevx` or `mif1`). Anything else is refused with 400. The
+   app resizes photos before upload, so 10 MiB is room to spare.
 2. `POST /v1/notes` takes `SendNoteRequest`, naming that key. For a drawing it also carries the compact
-   rendition, at most 3072 bytes of JSON, the budget of the iOS encoder. The image must exist under the
-   couple's prefix.
+   rendition, at most 3072 bytes of JSON, the budget of the iOS encoder. A photo carries its `width`
+   and `height` in pixels (1 to 8192), a `preview` and an optional `caption` with the rules of a text
+   note (1 to 120 characters). The preview is a [BlurHash](https://blurha.sh), at most 9 by 9
+   components, so at most 166 characters, checked against the length its first character declares.
+   The image must exist under the couple's prefix. A note body is at most 16 KiB, which the largest
+   photo note fits several times over.
 
-`GET /v1/media/<key>` serves an image, with `cache-control: no-store`. `GET /v1/notes` returns notes
+Photos stored before they carried a size and a preview have only `image`, so `Note.Photo` keeps
+`width`, `height` and `preview` optional while `SendNoteRequest.Photo` requires them. Old notes still
+decode and are served as they were.
+
+`GET /v1/media/<key>` serves an image, with `cache-control: no-store` and the content type of the
+key's extension (`image/png`, `image/jpeg` or `image/heic`), the same one R2 stores with the object. `GET /v1/notes` returns notes
 oldest first, from `PairRoom`. `after` is the last `seq` the client holds, default 0, and `limit` is
 1 to 100, default 100. Sequences have no gaps, so the next page starts at `after` plus the notes
 returned.
@@ -203,8 +216,8 @@ a fresh Sign in with Apple in it. In order:
    The outcome is logged as a label; a failure or a missing key never stops the deletion.
 2. In every room the user has been in (the current pair, and each pair `pair_events` names), the
    `PairRoom` deletes the notes they sent and the cat with its whole journal, and closes its
-   sockets, and their images go from R2: the
-   ones those notes name, and every image under the prefix whose `uploader` metadata is theirs.
+   sockets, and their images go from R2: the ones those notes name, and every image under the
+   prefix whose `uploader` metadata is theirs, whatever its format.
 3. One D1 batch ends the pair, leaves the partner a `partner_notices` row, and deletes the user's
    `users` and `auth_user` rows with their sessions, Apple link, account key, devices, push tokens,
    invite and counted events.

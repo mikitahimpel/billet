@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./image-type": "./src/image-type.ts",
     "./media-store": "./src/media-store.ts",
     "./notes-error": "./src/notes-error.ts",
     "./notes-routes": "./src/notes-routes.ts",

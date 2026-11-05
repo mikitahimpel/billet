@@ -1,5 +1,6 @@
 import { Effect, Layer, Option, Schema } from "effect";
 import { MediaKey } from "@billet/contracts-domain/ids";
+import { contentTypeOf } from "@billet/backend-notes/image-type";
 import { MediaStore, mediaPrefix } from "@billet/backend-notes/media-store";
 import { NotesUnavailable } from "@billet/backend-notes/notes-error";
 import { spanMethods } from "@billet/backend-observability/span-methods";
@@ -29,7 +30,7 @@ export const MediaStoreLive = (bucket: R2Bucket): Layer.Layer<MediaStore> =>
         put: (key, bytes, uploader) =>
           guarded(() =>
             bucket.put(key, bytes, {
-              httpMetadata: { contentType: "image/png" },
+              httpMetadata: { contentType: contentTypeOf(key) },
               customMetadata: { uploader },
             }),
           ).pipe(Effect.asVoid),

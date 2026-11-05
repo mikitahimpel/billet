@@ -17,12 +17,19 @@ import {
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
 import type { InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
+import { contentTypeOf } from "./image-type.ts";
 import { NotesService } from "./notes-service.ts";
 
-/** A rendered note or a resized photo fits, and a Worker holds the whole image in memory. */
+/**
+ * The most one image may take, a PNG drawing or a JPEG or HEIC photo alike. A rendered note or a
+ * photo the app has resized fits, and a Worker holds the whole image in memory.
+ */
 export const imageSizeLimit = ByteSize.mebibytes(10);
 
-/** A note is its compact rendition and a key, so anything larger is over budget anyway. */
+/**
+ * A note is at most a 3 KB compact rendition, or a photo's key, size, BlurHash (at most 166
+ * characters) and 120-character caption, so anything larger is over budget anyway.
+ */
 const noteSizeLimit = ByteSize.kibibytes(16);
 
 export const historyPageLimit = 100;
@@ -95,7 +102,7 @@ export const NotesRoutes = HttpRouter.use((router) =>
         const key = yield* decodeMediaKey(params["*"]);
         const bytes = yield* notes.readImage(userId, key);
         return HttpServerResponse.uint8Array(bytes, {
-          contentType: "image/png",
+          contentType: contentTypeOf(key),
           headers: imageHeaders,
         });
       }).pipe(respondNotesFailures),

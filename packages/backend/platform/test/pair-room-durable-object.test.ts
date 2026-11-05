@@ -24,7 +24,14 @@ const newKey = () =>
   Schema.decodeSync(IdempotencyKey)(
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
-const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = () =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
 
@@ -242,7 +249,7 @@ describe("PairRoom sockets", () => {
 });
 
 describe("PairRoom notes page", () => {
-  const drawing = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+  const drawing = photo;
 
   it("skips a note body it cannot decode instead of failing the page", async () => {
     const room = await openRoom();
