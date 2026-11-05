@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
+import { LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
@@ -33,6 +34,22 @@ export const RoomCat = Schema.Struct({
 export type RoomCat = typeof RoomCat.Type;
 
 /**
+ * The pair's coins: the balance, and what care has earned on `day` against each daily cap. The
+ * entries are unbounded, so they stay in the store.
+ */
+export const RoomWallet = Schema.Struct({
+  balance: Count,
+  /** The local day the earned counts are for, absent before the first coin is earned. */
+  day: Schema.optionalKey(LocalDay),
+  care: Count,
+  notes: Count,
+  games: Count,
+});
+export type RoomWallet = typeof RoomWallet.Type;
+
+export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0 };
+
+/**
  * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
  * in the store and `lastSeq` is the only part of them that a decision needs.
  *
@@ -52,6 +69,7 @@ export const RoomState = Schema.TaggedUnion({
     /** Absent until one of the couple adopts the cat. */
     cat: Schema.optionalKey(RoomCat),
     inks: Schema.Array(InkId),
+    wallet: RoomWallet,
   },
 });
 export type RoomState = typeof RoomState.Type;

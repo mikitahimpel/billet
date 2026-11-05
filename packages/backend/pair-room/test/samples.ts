@@ -4,7 +4,7 @@ import { IdempotencyKey, MediaKey, NoteId, UserId } from "@billet/contracts-doma
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { RoomState, type ActiveRoom, type RoomCat } from "../src/room-state.ts";
+import { emptyWallet, RoomState, type ActiveRoom, type RoomCat } from "../src/room-state.ts";
 import { newTemper } from "../src/cat-temper.ts";
 
 export const alice = Schema.decodeUnknownSync(UserId)("user-alice");
@@ -33,6 +33,7 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   lastSeq: 0,
   streakDays: 0,
   inks: [],
+  wallet: emptyWallet,
 });
 
 export const catProfile: CatProfile = Schema.decodeUnknownSync(CatProfile)({

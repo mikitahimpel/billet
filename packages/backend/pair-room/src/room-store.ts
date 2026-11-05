@@ -1,6 +1,7 @@
 import { Context, type Effect, type Option } from "effect";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
+import type { CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
 import type { ActivityRow } from "./activity.ts";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { ActiveRoom, RoomState, SequencedNote } from "./room-state.ts";
@@ -14,16 +15,27 @@ export class RoomStore extends Context.Service<
   {
     readonly load: Effect.Effect<RoomState>;
     /**
-     * Saves the state and the cat, appends the notes and journal entries, and writes the activity
-     * rows over any with the same id, as one atomic write. Rows older than the retention are
-     * pruned in the same write.
+     * Saves the state and the cat, appends the notes, journal and wallet entries, and writes the
+     * activity rows over any with the same id, as one atomic write. Rows older than the retention
+     * are pruned in the same write.
      */
     readonly commit: (
       room: ActiveRoom,
       notes: ReadonlyArray<AppendedNote>,
       catEntries: ReadonlyArray<CatEntry>,
       activity: ReadonlyArray<ActivityRow>,
+      coins: ReadonlyArray<CoinEntry>,
     ) => Effect.Effect<void>;
+    /** The wallet entry stored under `id`, if any. */
+    readonly coinEntryById: (id: CoinEntryId) => Effect.Effect<Option.Option<CoinEntry>>;
+    /**
+     * Wallet entries stored after the one under `after` (from the first when absent), oldest
+     * first. An `after` the store does not hold reads from the first.
+     */
+    readonly coinEntriesAfter: (
+      after: CoinEntryId | undefined,
+      limit: number,
+    ) => Effect.Effect<ReadonlyArray<CoinEntry>>;
     /** Activity rows below `before` (all of them when absent), newest first. */
     readonly activityBefore: (
       before: ActivityCursor | undefined,

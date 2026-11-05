@@ -3,21 +3,36 @@ import Observation
 import Transport
 import Wire
 
-/// The first launch: a welcome over the room, the server's questions, the cat's coat and name, an invite for the partner,
-/// then home. Every step can be skipped. Answers are queued in a file and sent when the server can be reached
+/// The first launch: a welcome over the room (or the partner's code, for whoever was invited), the server's questions,
+/// the day the story started, the cat's coat and name, an invite for the partner, notifications and the widget, then
+/// home. Every step but the code can be skipped; under 13 it stops. Answers are queued in a file and sent when the server can be reached
 /// (`AnswerQueue`); the questions come from the server, or from the copy in the app when it can't be reached.
 @MainActor
 @Observable
 final class OnboardingFlow {
     enum Page: Hashable {
         case welcome
+        case join
         case question(OnboardingStep)
+        case stopped
+        case togetherSince
         case catCoat
         case catName
         case invite
+        case notifications
+        case widget
     }
 
     static let doneKey = "onboardingDone"
+    static let pageKey = "onboardingPage"
+    static let joiningKey = "onboardingJoining"
+    static let stoppedKey = "onboardingStopped"
+    static let catalogueKey = "onboardingCatalogue"
+    static let picksKey = "onboardingPicks"
+    static let ageStep: OnboardingStepId = "age"
+    static let underAge: OnboardingOptionId = "age-under-13"
+    static let goalsStep: OnboardingStepId = "goals"
+    static let widgetGoals: Set<OnboardingOptionId> = ["widgets", "stay-close"]
     static let catCoatStep: OnboardingStepId = "cat_coat"
     static let catNameStep: OnboardingStepId = "cat_name"
     static let inviteStep: OnboardingStepId = "invite_partner"
@@ -37,6 +52,11 @@ final class OnboardingFlow {
     private(set) var wornCoat: CatCoat
     /// The share sheet with the invite was opened.
     var invited = false
+    /// Joining with the partner's code instead of inviting them; the invite is theirs to do.
+    private(set) var joining: Bool
+    var joinCode = ""
+    private(set) var stopped: Bool
+    var togetherSince = Calendar.current.date(byAdding: .year, value: -1, to: .now) ?? .now
 
     @ObservationIgnored private let client: OnboardingClient
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
@@ -44,6 +64,10 @@ final class OnboardingFlow {
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let catNames: UserDefaults
     @ObservationIgnored private let canInvite: Bool
+    @ObservationIgnored private let hasServer: Bool
+    @ObservationIgnored private let asksTogetherSince: Bool
+    @ObservationIgnored private let togetherSinceChosen: (Date) -> Void
+    @ObservationIgnored private let requestPushes: () async -> Void
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let coatChanged: () -> Void
     @ObservationIgnored private var events: [ClientEvent] = []
@@ -57,6 +81,10 @@ final class OnboardingFlow {
         defaults: UserDefaults = .standard,
         catNames: UserDefaults = CatProfile.store,
         canInvite: Bool,
+        hasServer: Bool = false,
+        asksTogetherSince: Bool = false,
+        togetherSinceChosen: @escaping (Date) -> Void = { _ in },
+        requestPushes: @escaping () async -> Void = {},
         bundled: OnboardingResponse = BundledOnboarding.load(),
         now: @escaping () -> Date = Date.init,
         coatChanged: @escaping () -> Void = {}
@@ -70,20 +98,31 @@ final class OnboardingFlow {
         self.defaults = defaults
         self.catNames = catNames
         self.canInvite = canInvite
+        self.hasServer = hasServer
+        self.asksTogetherSince = asksTogetherSince
+        self.togetherSinceChosen = togetherSinceChosen
+        self.requestPushes = requestPushes
         self.now = now
         catalogue = bundled
         isFinished = defaults.bool(forKey: Self.doneKey)
-        #if DEBUG
-        // For screenshots: `-onboardingPage 3` opens that page (the welcome is 0).
-        index = max(defaults.integer(forKey: "onboardingPage"), 0)
-        #endif
+        joining = defaults.bool(forKey: Self.joiningKey)
+        stopped = defaults.bool(forKey: Self.stoppedKey)
+        // A closed app opens again on the page it was on, with the questions and picks it had; `-onboardingPage 3`
+        // opens that page, for screenshots.
+        index = max(defaults.integer(forKey: Self.pageKey), 0)
+        if let saved = Self.saved(OnboardingResponse.self, Self.catalogueKey, in: defaults) { catalogue = saved }
+        picks = Self.saved([OnboardingStepId: [OnboardingOptionId]].self, Self.picksKey, in: defaults) ?? [:]
     }
 
     var pages: [Page] {
-        [.welcome] + catalogue.steps.map(Page.question) + [.catCoat, .catName] + (canInvite ? [.invite] : [])
+        let goals = Set(picks[Self.goalsStep] ?? [])
+        return [.welcome] + (joining ? [.join] : []) + catalogue.steps.map(Page.question)
+            + (asksTogetherSince ? [.togetherSince] : []) + [.catCoat, .catName]
+            + (canInvite && !joining ? [.invite] : []) + (hasServer ? [.notifications] : [])
+            + (goals.isDisjoint(with: Self.widgetGoals) ? [] : [.widget])
     }
 
-    var page: Page { pages[min(index, pages.count - 1)] }
+    var page: Page { stopped ? .stopped : pages[min(index, pages.count - 1)] }
 
     /// How far along the steps after the welcome, from 0 to 1.
     var progress: Double { Double(index) / Double(max(pages.count - 1, 1)) }
@@ -128,7 +167,7 @@ final class OnboardingFlow {
     /// The answer the Continue button would send, or nil while there is nothing to send.
     var answer: OnboardingAnswer? {
         switch page {
-        case .welcome, .invite:
+        case .welcome, .join, .stopped, .togetherSince, .invite, .notifications, .widget:
             return nil
         case .catCoat:
             return .single(option: OnboardingOptionId(coat.rawValue))
@@ -156,24 +195,28 @@ final class OnboardingFlow {
 
     var stepId: OnboardingStepId? {
         switch page {
-        case .welcome: nil
+        case .welcome, .stopped: nil
+        case .join: "join_partner"
         case .question(let step): step.id
+        case .togetherSince: "together_since"
         case .catCoat: Self.catCoatStep
         case .catName: Self.catNameStep
         case .invite: Self.inviteStep
+        case .notifications: "notifications"
+        case .widget: "widget_howto"
         }
     }
 
     var canSkip: Bool {
         switch page {
-        case .welcome: false
+        case .welcome, .join, .stopped, .widget: false
         case .question(let step):
             switch step {
             case .single(let s), .multi(let s): s.skippable
             case .range(let s): s.skippable
             case .text(let s): s.skippable
             }
-        case .catCoat, .catName, .invite: true
+        case .togetherSince, .catCoat, .catName, .invite, .notifications: true
         }
     }
 
@@ -181,9 +224,38 @@ final class OnboardingFlow {
 
     func start() { advance() }
 
+    /// "I have an invite code" on the welcome, or an invite link opened before onboarding was done.
+    func join(code: String = "") {
+        guard !isFinished, !stopped else { return }
+        joining = true
+        defaults.set(true, forKey: Self.joiningKey)
+        if !code.isEmpty { joinCode = code }
+        move(to: 1)
+    }
+
+    /// The partner is in: the joiner moves on from the code, the inviter from the invite.
+    func partnerJoined() {
+        switch page {
+        case .join: advance()
+        case .invite:
+            invited = true
+            continueTapped()
+        default: break
+        }
+    }
+
     func continueTapped() {
         switch page {
-        case .welcome:
+        case .welcome, .join, .widget:
+            advance()
+        case .stopped:
+            break
+        case .togetherSince:
+            togetherSinceChosen(togetherSince)
+            advance()
+        case .notifications:
+            let requestPushes = requestPushes
+            Task { await requestPushes() }
             advance()
         case .invite:
             record(invited ? .single(option: Self.inviteSent) : .skipped)
@@ -201,8 +273,9 @@ final class OnboardingFlow {
             }
             record(answer ?? .skipped)
             advance()
-        case .question:
+        case .question(let step):
             guard let answer else { return }
+            if step.id == Self.ageStep, answer == .single(option: Self.underAge) { return stop() }
             record(answer)
             advance()
         }
@@ -215,13 +288,39 @@ final class OnboardingFlow {
             coat = .grey
             wear(.grey)
         }
-        record(.skipped)
+        switch page {
+        case .question, .catCoat, .catName, .invite: record(.skipped)
+        case .welcome, .join, .stopped, .togetherSince, .notifications, .widget: break
+        }
         advance()
     }
 
     func back() {
-        guard index > 0 else { return }
-        index -= 1
+        guard index > 0, !stopped else { return }
+        if page == .join {
+            joining = false
+            defaults.set(false, forKey: Self.joiningKey)
+        }
+        move(to: index - 1)
+    }
+
+    /// Under 13: the age answer is never sent, and onboarding stays on its last page.
+    private func stop() {
+        stopped = true
+        defaults.set(true, forKey: Self.stoppedKey)
+        events.append(ClientEvent(.ageGateStopped))
+        Task { await send() }
+    }
+
+    private func move(to index: Int) {
+        self.index = index
+        defaults.set(index, forKey: Self.pageKey)
+        defaults.set(try? JSONEncoder().encode(catalogue), forKey: Self.catalogueKey)
+        defaults.set(try? JSONEncoder().encode(picks), forKey: Self.picksKey)
+    }
+
+    private static func saved<Value: Decodable>(_ type: Value.Type, _ key: String, in defaults: UserDefaults) -> Value? {
+        defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(type, from: $0) }
     }
 
     /// Counts the step as seen, once per launch.
@@ -240,7 +339,7 @@ final class OnboardingFlow {
 
     private func advance() {
         if index + 1 < pages.count {
-            index += 1
+            move(to: index + 1)
         } else {
             defaults.set(true, forKey: Self.doneKey)
             isFinished = true

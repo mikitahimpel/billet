@@ -45,9 +45,9 @@ D1 has no interactive transactions. An operation that spans statements runs as o
 
 Nooki's coins are the one currency. Coins bought for money live in D1 (`purchases` and
 `coin_ledger`), because a transaction id is unique across every pair and Apple's refund
-notifications name no pair. Coins earned in play and spent in the shop will live in the pair's
-`PairRoom`, next to the cat's journal, so a coin is credited in the same commit as the entry that
-earned it. The first release sells nothing: the `payments` flag is off on every stage, so the
+notifications name no pair. Coins earned in play and spent in the shop live in the pair's
+`PairRoom` (`wallet` and `coin_entry`), next to the cat's journal, so a coin is credited in the
+same commit as the entry that earned it, within daily caps the room checks. The first release sells nothing: the `payments` flag is off on every stage, so the
 purchase routes answer 404, and the app is built with no store. See [payments.md](payments.md).
 
 ### Database access: Drizzle on the official Effect drivers

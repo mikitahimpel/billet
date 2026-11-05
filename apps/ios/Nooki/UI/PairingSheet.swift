@@ -5,6 +5,8 @@ import SwiftUI
 /// while the sheet checks every few seconds whether it was claimed.
 struct PairingSheet: View {
     let model: PairingModel
+    /// The code from an invite link.
+    var prefill = ""
     /// Called once when the pairing is done and the user taps Done.
     var finished: () -> Void
 
@@ -38,6 +40,7 @@ struct PairingSheet: View {
         .tint(Color(hex: 0xFFC27A))
         .preferredColorScheme(.dark)
         .interactiveDismissDisabled(isPaired)
+        .onAppear { if code.isEmpty { code = prefill } }
         .task(id: waitingCode) {
             guard waitingCode != nil else { return }
             while !Task.isCancelled {

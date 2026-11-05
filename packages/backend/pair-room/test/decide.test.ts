@@ -22,6 +22,7 @@ import {
   withCat,
 } from "./samples.ts";
 import { freeInk } from "@billet/contracts-domain/inks";
+import { CoinEntry } from "@billet/contracts-domain/coins";
 
 const key = Schema.decodeUnknownSync(IdempotencyKey)("6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f");
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
@@ -231,7 +232,15 @@ describe("tagged unions", () => {
     SaveCat: saveCat(),
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
+    Buy: RoomCommand.cases.Buy.make({ id: key, by: alice, ink: rose, at: 1_700_000_000_000 }),
   };
+  const spend = Schema.decodeUnknownSync(CoinEntry)({
+    id: `spend:${key}`,
+    kind: "spend",
+    amount: -60,
+    ref: rose,
+    at: 1_700_000_000_000,
+  });
   const outputs: Record<RoomOutput["_tag"], RoomOutput> = {
     RoomOpened: RoomOutput.cases.RoomOpened.make({ pairId }),
     NoteAppended: RoomOutput.cases.NoteAppended.make({
@@ -246,6 +255,8 @@ describe("tagged unions", () => {
     CatEntryAppended: RoomOutput.cases.CatEntryAppended.make({ entry: petEntry }),
     CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
+    CoinsEntered: RoomOutput.cases.CoinsEntered.make({ entry: spend }),
+    CoinsRepeated: RoomOutput.cases.CoinsRepeated.make({ entry: spend }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -255,6 +266,9 @@ describe("tagged unions", () => {
     CatNotAdopted: RoomRejection.cases.CatNotAdopted.make({}),
     CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
     InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
+    NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
+    AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),
+    NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
   };
 
   it.each([
@@ -298,6 +312,7 @@ describe("RoomState invariants", () => {
       lastSeq: 0,
       streakDays: 0,
       inks: [],
+      wallet: { balance: 0, care: 0, notes: 0, games: 0 },
       ...overrides,
     });
 

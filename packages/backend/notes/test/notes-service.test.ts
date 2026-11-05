@@ -1,5 +1,6 @@
 import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
+import { CatGameId, CatLook, CatName, NatureSeed } from "@billet/contracts-domain/cat";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
@@ -7,7 +8,14 @@ import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingUnavailable } from "@billet/backend-pairing/pairing-error";
 import { MediaStore, mediaPrefix } from "../src/media-store.ts";
-import { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error.ts";
+import {
+  AlreadyOwned,
+  InkNotOwned,
+  InvalidNote,
+  NotEnoughCoins,
+  NotesNotFound,
+  NotesUnavailable,
+} from "../src/notes-error.ts";
 import { compactBudget, NotesService } from "../src/notes-service.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 import { makeWorld, pair, user } from "./fake-world.ts";
@@ -20,6 +28,8 @@ const dee = user("dee");
 const eve = user("eve");
 const pairA = pair("pair-a");
 const pairB = pair("pair-b");
+const catName = Schema.decodeUnknownSync(CatName)("Mochi");
+const look = Schema.decodeUnknownSync(CatLook)({ model: "marmalade", coat: "natural" });
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0xff]);
 const jpeg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
@@ -324,6 +334,59 @@ describe("sendNote", () => {
       expect(after.owned).toEqual([freeInk, rose]);
       expect(elsewhere.owned).toEqual([freeInk]);
       expect(history).toEqual([{ seq: 1, note: sent }]);
+    }
+  });
+
+  it("buys an ink with coins the pair earned, once per id, and refuses what it cannot", async () => {
+    const { layer, pairRooms } = world();
+    const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
+    const yarn = Schema.decodeUnknownSync(CatGameId)("yarn");
+    const buyRose = (notes: NotesService["Service"], id: IdempotencyKey) =>
+      notes.buy(ana, { id, item: rose });
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const broke = yield* Effect.flip(buyRose(notes, newKey()));
+        yield* notes.sendNote(
+          ana,
+          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: freeInk }),
+        );
+        const seed = Schema.decodeUnknownSync(NatureSeed)("7");
+        yield* pairRooms.saveCat(pairA, ana, { name: catName, look, utcOffsetSeconds: 0 }, seed);
+        // Four wins (40) and four notes (20) make 60, the price of rose.
+        for (let n = 0; n < 4; n++) {
+          yield* pairRooms.recordCatEvent(pairA, ben, {
+            id: newKey(),
+            event: { _tag: "GamePlayed", game: yarn, score: 1, won: true },
+          });
+          yield* notes.sendNote(
+            ben,
+            SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: freeInk }),
+          );
+        }
+        const earned = yield* notes.coins(ben, undefined, 100);
+        const id = newKey();
+        const bought = yield* buyRose(notes, id);
+        const retried = yield* buyRose(notes, id);
+        const twice = yield* Effect.flip(buyRose(notes, newKey()));
+        const after = yield* notes.coins(ana, earned.entries.at(-1)?.id, 100);
+        return { broke, earned, bought, retried, twice, after };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { broke, earned, bought, retried, twice, after } = outcome.value;
+      expect(broke).toEqual(new NotEnoughCoins({ needed: 60, have: 0 }));
+      expect(earned.balance).toBe(60);
+      expect(earned.entries.map((e) => e.kind)).toEqual(Array(8).fill("earn"));
+      expect(bought).toMatchObject({
+        entry: { kind: "spend", amount: -60, ref: rose },
+        balance: 0,
+        granted: [rose],
+        owned: [freeInk, rose],
+      });
+      expect(retried).toEqual(bought);
+      expect(twice).toEqual(new AlreadyOwned({ ink: rose }));
+      expect(after).toEqual({ balance: 0, entries: [bought.entry] });
     }
   });
 

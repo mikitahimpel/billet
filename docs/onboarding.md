@@ -1,5 +1,34 @@
 # First launch
 
+## Nooki
+
+Nooki's first launch is `Nooki/Onboarding`: `OnboardingFlow` holds the pages, `OnboardingView`
+draws them. The questions come from the server (`GET /v1/onboarding`) or the bundled
+`Onboarding.json`, and answers queue in `AnswerQueue` for `POST /v1/onboarding/answers`.
+
+- **Inviter:** welcome → the server's questions → together since → the cat's coat and name →
+  the invite → notifications → the widget how-to → home.
+- **Joiner:** "I have an invite code" on the welcome, or an invite link, opens the code page
+  first (PasteButton; typed codes are tidied to the code's alphabet). Once paired the questions
+  follow; the invite is the inviter's, so it is left out. Each phone asks for together since,
+  since the date is kept only on the phone. A link opened after onboarding, while unpaired,
+  opens Home's pairing sheet with the code.
+- **Under 13:** the `age-under-13` option stops onboarding on "See you in a few years". The answer
+  is never sent, and the server refuses it from any build (`refusedOptions`); `AgeGateStopped`
+  is counted.
+- **Together since** stays on the phone, in `CoupleStore`.
+- **Notifications:** the primer asks for permission only after its button is tapped, then the
+  push tokens are registered as for drawings (`DrawingSync`).
+- **The widget how-to** shows when the goals include `widgets` or `stay-close`.
+- **Without a server** there is no code page, invite or notifications primer.
+- **Invite links:** `https://<server>/i/<code>`. The Worker serves the
+  `apple-app-site-association` file for `/i/*` (`app-links.ts`), the app has the matching
+  associated domain, and `DeepLink.invite` also reads `nooki://invite/<code>`.
+- **A closed app** opens again on the page it was on, with the questions and picks it had. A
+  pairing that finished while it was closed moves the code page on.
+
+## The first app: the cinematic
+
 Every cold launch opens on a cinematic; there is no switch for it.
 
 - **Before the pair is made**, it is the first-launch scene: the camera glides in out of the dark
@@ -23,7 +52,7 @@ Every cold launch opens on a cinematic; there is no switch for it.
 - **Reduce Motion:** nothing flies. The heart's scene fades up at its place, and the cover
   cross-fades to the room at its place.
 
-## Pairing in the scene
+### Pairing in the scene
 
 Once the camera lands, the welcome offers **Invite your person** and **I have a code**. Every
 step after the welcome has a glass back chevron in the top-left corner (it cancels an invite or a
@@ -52,7 +81,7 @@ holds the joined moment on screen after the pairing itself has finished.
   the pair, with a scripted partner: a made code is joined after about 4 s, and any well-formed typed
   code is joined at once.
 
-## Choosing the cat together
+### Choosing the cat together
 
 Once the pair is made in the scene (demo backend), both phones open a cosy
 corner with five cats on cushions: the ginger tabby, the grey and white cat and the black cat (all
@@ -82,7 +111,7 @@ the Detailed cat with a coat), the kitten and the fluffy one.
 
 The real backend skips this step for now and keeps the standard cat; it has no frames for it.
 
-## Where things are
+### Where things are
 
 - `PetScene.makeOnboardingScene(state:onEvent:)`: the contract. `OnboardingSceneState.Moment` is
   `arriving`, `resting`, `apart(partner: waiting | away)` or `together`, with `mine` (the side) and

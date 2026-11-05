@@ -10,6 +10,7 @@
     "./flags": "./src/flags.ts",
     "./ids": "./src/ids.ts",
     "./ink": "./src/ink.ts",
+    "./coins": "./src/coins.ts",
     "./inks": "./src/inks.ts",
     "./metrics": "./src/metrics.ts",
     "./note": "./src/note.ts",

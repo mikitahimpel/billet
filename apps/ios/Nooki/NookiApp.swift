@@ -21,6 +21,13 @@ struct NookiApp: App {
         _hints = State(initialValue: Hints(report: api.reportEvents))
         _onboarding = State(initialValue: OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
+            hasServer: session != nil, asksTogetherSince: true,
+            togetherSinceChosen: { day in
+                let profile = CoupleStore()
+                profile.update(names: profile.couple.names ?? [:], togetherSince: day)
+                NotificationCenter.default.post(name: .coupleChanged, object: nil)
+            },
+            requestPushes: { await DrawingSync.requestPushes(asking: true) },
             coatChanged: { CatRoom.forgetMochi() }))
     }
 
@@ -39,11 +46,17 @@ struct NookiApp: App {
                     .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
-                            OnboardingView(flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false)
+                            OnboardingView(
+                                flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
+                                inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
+                                paired: { session?.pairingFinished() })
                                 .transition(.opacity)
                         }
                     }
                     .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
+                    .onOpenURL { url in
+                        if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
+                    }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }

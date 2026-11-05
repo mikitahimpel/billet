@@ -8,5 +8,5 @@ cd "$checkout/apps/ios"
 xcodegen generate -q
 xcodebuild build -project Billet.xcodeproj -scheme Billet -configuration Release \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" \
-  CODE_SIGNING_ALLOWED=NO -quiet
+  CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -quiet
 test -d "$derived/Build/Products/Release-iphonesimulator/Billet.app"

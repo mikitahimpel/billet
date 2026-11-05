@@ -31,6 +31,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/auth/sign-out",
       },
+      "buyItem": {
+        "method": "POST",
+        "path": "/v1/shop/buy",
+      },
       "claimInvite": {
         "method": "POST",
         "path": "/v1/invites/claim",
@@ -54,6 +58,10 @@ it("pins the routes that clients call", () => {
       "getCat": {
         "method": "GET",
         "path": "/v1/cat",
+      },
+      "getCoins": {
+        "method": "GET",
+        "path": "/v1/coins",
       },
       "getFlags": {
         "method": "GET",

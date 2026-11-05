@@ -24,8 +24,10 @@ export const seedCatalogue: OnboardingResponse = Schema.decodeUnknownSync(Onboar
         ru: "Billet — для тех, кому 13 и больше. Это видишь только ты.",
       },
       skippable: true,
-      // Buckets only: the server never learns a date of birth.
+      // Buckets only: the server never learns a date of birth. The app stops on `age-under-13` and
+      // never sends it.
       options: [
+        { id: "age-under-13", label: { en: "Under 13", ru: "Меньше 13" } },
         { id: "age-13-17", label: { en: "13–17", ru: "13–17" } },
         { id: "age-18-24", label: { en: "18–24", ru: "18–24" } },
         { id: "age-25-34", label: { en: "25–34", ru: "25–34" } },

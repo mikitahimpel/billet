@@ -137,12 +137,16 @@ import Wire
     #expect(sent == expected)
   }
 
-  @Test func imagesGoUpAsPNGAndComeBackAsBytes() async throws {
+  @Test func imagesGoUpWithTheirOwnTypeAndComeBackAsBytes() async throws {
     let up = Server(body: #"{"image":"couples/p1/a.png"}"#)
     _ = try await Self.client(up).uploadImage(Data([1, 2, 3]))
     let request = try #require(up.requests.first)
     #expect(request.headers["Content-Type"] == "image/png")
     #expect(request.body == Data([1, 2, 3]))
+
+    let photo = Server(body: #"{"image":"couples/p1/b.jpg"}"#)
+    _ = try await Self.client(photo).uploadImage(Data([0xFF, 0xD8, 0xFF, 0xE0]))
+    #expect(photo.requests.first?.headers["Content-Type"] == "image/jpeg")
 
     let down = Server(body: "bytes")
     let bytes = try await Self.client(down).downloadImage(MediaKey("couples/p1/a.png"))

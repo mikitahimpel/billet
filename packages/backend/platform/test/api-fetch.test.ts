@@ -27,6 +27,7 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
+import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
@@ -974,6 +975,32 @@ describe("notes", () => {
       inks: inkCatalog,
       owned: ["ink-graphite"],
     });
+  });
+
+  it("shows the pair's wallet, and refuses a buy it cannot pay for or already owns", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const coins = await call("/v1/coins", { method: "GET", headers: bearer(claimer) });
+    expect(coins.status).toBe(200);
+    expect(coins.headers.get("cache-control")).toBe("no-store");
+    expect(Schema.decodeUnknownSync(CoinsResponse)(await coins.json())).toEqual({
+      balance: 0,
+      entries: [],
+    });
+    const buy = (item: string) =>
+      call("/v1/shop/buy", {
+        method: "POST",
+        headers: { ...bearer(owner), "content-type": "application/json" },
+        body: JSON.stringify({ id: crypto.randomUUID(), item }),
+      });
+    const broke = await buy("ink-rose");
+    expect(broke.status).toBe(409);
+    expect(await broke.json()).toEqual({ _tag: "NotEnoughCoins", needed: 60, have: 0 });
+    const free = await buy("ink-graphite");
+    expect(free.status).toBe(409);
+    expect(await free.json()).toEqual({ _tag: "AlreadyOwned", itemId: "ink-graphite" });
+    expect((await buy("ink-nope")).status).toBe(400);
+    const badPage = await call("/v1/coins?limit=0", { method: "GET", headers: bearer(owner) });
+    expect(badPage.status).toBe(400);
   });
 
   it("refuses a text note that is blank, over 120 characters or on an unknown paper", async () => {

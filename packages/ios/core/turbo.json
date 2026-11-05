@@ -1,0 +1,16 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "ios:test": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/packages/contracts/http-api/src/routes.ts",
+        "$TURBO_ROOT$/packages/contracts/realtime/src/socket-route.ts",
+        "$TURBO_ROOT$/archive/ios-v1/**",
+        "$TURBO_ROOT$/packages/ios/*/Sources/**",
+        "$TURBO_ROOT$/packages/pet-scenes/reality/Sources/**"
+      ]
+    }
+  }
+}

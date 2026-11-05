@@ -37,6 +37,7 @@ final class ServerSession {
 
     var onboarding: OnboardingClient { backend.onboarding }
     var api: APIClient { backend.api }
+    var baseURL: URL { backend.baseURL }
 
     var isSignedIn: Bool { signIn.state == .signedIn || (try? backend.accounts.load()) != nil }
 
@@ -77,6 +78,12 @@ final class ServerSession {
     /// Fills the drawing widgets and registers push tokens; nil until this account has a partner.
     var drawingSync: DrawingSync? {
         isPaired ? DrawingSync(api: backend.api, accounts: backend.accounts) : nil
+    }
+
+    /// Sends the photos taken here to the partner and keeps theirs in `moments` as from `partner`; nil until this
+    /// account has a partner.
+    func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
+        isPaired ? PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner) : nil
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.

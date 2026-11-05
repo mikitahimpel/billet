@@ -12,6 +12,12 @@ struct OnboardingView: View {
     let pairing: PairingModel?
     /// The invite needs the account; until the sign-in finishes the page waits for it.
     var signedIn = false
+    /// Where invite links point: the server, which hands `/i/<code>` to the app.
+    var inviteBase: URL?
+    /// The account already has a partner, as when the pairing finished while the app was closed.
+    var alreadyPaired = false
+    /// The pairing finished, on either side.
+    var paired: () -> Void = {}
 
     private let language = Locale.current.language.languageCode?.identifier
 
@@ -40,20 +46,34 @@ struct OnboardingView: View {
             guard flow.page == .invite, signedIn, let pairing, case .choosing(nil, _) = pairing.state else { return }
             pairing.createInvite()
         }
+        .onChange(of: isPaired || alreadyPaired, initial: true) { _, joined in
+            guard joined else { return }
+            flow.partnerJoined()
+            if isPaired { paired() }
+        }
+    }
+
+    private var isPaired: Bool {
+        if case .paired = pairing?.state { true } else { false }
     }
 
     private var title: String {
         switch flow.page {
         case .welcome: ""
+        case .join: String(localized: "Enter your invite code")
         case .question(let step): step.title.text(for: language)
+        case .stopped: String(localized: "See you in a few years")
+        case .togetherSince: String(localized: "When did your story start?")
         case .catCoat: String(localized: "Choose your cat")
         case .catName: String(localized: "Name your cat")
         case .invite: String(localized: "Invite your partner")
+        case .notifications: String(localized: "Don't miss a drawing")
+        case .widget: String(localized: "Keep \(CatProfile.name()) on your Home Screen")
         }
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        if flow.page != .welcome {
+        if flow.page != .welcome, flow.page != .stopped {
             ToolbarItem(placement: .topBarLeading) {
                 Button("Back", systemImage: "chevron.left") { flow.back() }
             }
@@ -75,10 +95,15 @@ struct OnboardingView: View {
     @ViewBuilder private var page: some View {
         switch flow.page {
         case .welcome: welcome
+        case .join: join
         case .question(let step): question(step)
+        case .stopped: stopped
+        case .togetherSince: togetherSince
         case .catCoat: catCoat
         case .catName: catName
         case .invite: invite
+        case .notifications: notifications
+        case .widget: widget
         }
     }
 
@@ -94,6 +119,11 @@ struct OnboardingView: View {
                     .font(.nookiBody)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
+                if pairing != nil {
+                    Button("I have an invite code") { flow.join() }
+                        .font(.nookiBody.weight(.semibold))
+                        .frame(minHeight: 44)
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.gutter)
@@ -196,7 +226,7 @@ struct OnboardingView: View {
                             .padding(.vertical, Space.s)
                             .accessibilityLabel("Your code: \(code)")
                             .nookiRow()
-                        ShareLink(item: String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")) {
+                        ShareLink(item: inviteMessage(code)) {
                             Label("Share invite", systemImage: "square.and.arrow.up")
                                 .font(.nookiBody)
                         }
@@ -219,6 +249,82 @@ struct OnboardingView: View {
                     Section { Label("You're paired!", systemImage: "heart.fill").nookiRow() }
                 }
             }
+        }
+    }
+
+    private var join: some View {
+        form(say: "Who's waiting for me?",
+             subtitle: String(localized: "It's in the message your partner sent, or on their screen.")) {
+            Section {
+                TextField("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { flow.joinCode = Self.code(from: $0) })
+                    .font(.system(.title2, design: .monospaced, weight: .bold))
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .textContentType(.oneTimeCode)
+                    .accessibilityLabel("Invite code")
+                    .nookiRow()
+                PasteButton(payloadType: String.self) { strings in
+                    guard let pasted = strings.first else { return }
+                    Task { @MainActor in flow.joinCode = Self.code(from: pasted) }
+                }
+                .labelStyle(.titleAndIcon)
+                .nookiRow()
+            } footer: {
+                if case .choosing(let failure?, _) = pairing?.state {
+                    Text(PairingCopy.message(for: failure))
+                } else {
+                    Text("10 letters and digits. There's no 0, O, 1 or I.")
+                }
+            }
+        }
+    }
+
+    /// What was typed or pasted, kept to the symbols a code has.
+    static func code(from typed: String) -> String {
+        String(InviteCode.normalized(typed).filter { InviteCode.alphabet.contains($0) }.prefix(InviteCode.length))
+    }
+
+    private var stopped: some View {
+        form(subtitle: String(localized: "Nooki is for 13 and up. \(CatProfile.name()) will be here when you're older.")) {
+            EmptyView()
+        }
+    }
+
+    private var togetherSince: some View {
+        form(say: "I'll count your days together!",
+             subtitle: String(localized: "Only on this phone. You can change it in your profile.")) {
+            Section {
+                DatePicker("Together since", selection: $flow.togetherSince, in: ...Date.now, displayedComponents: .date)
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                    .nookiRow()
+            }
+        }
+    }
+
+    private var notifications: some View {
+        form(say: "I'll tell you when they think of you.",
+             subtitle: String(localized: "Only for your partner and \(CatProfile.name()). Never ads.")) {
+            Section {
+                Label("Your partner drew you something", systemImage: "scribble.variable").nookiRow()
+                Label("\(CatProfile.name()) is hungry", systemImage: "fork.knife").nookiRow()
+                Label("Your day together is tomorrow", systemImage: "heart.fill").nookiRow()
+            }
+            .font(.nookiBody)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Examples of notifications")
+        }
+    }
+
+    private var widget: some View {
+        form(subtitle: String(localized: "Notes and \(CatProfile.name()), without opening the app.")) {
+            Section {
+                Label("Touch and hold the Home Screen", systemImage: "1.circle.fill").nookiRow()
+                Label("Tap Edit, then Add Widget", systemImage: "2.circle.fill").nookiRow()
+                Label("Find Nooki and pick a size", systemImage: "3.circle.fill").nookiRow()
+            }
+            .font(.nookiBody)
         }
     }
 
@@ -276,22 +382,42 @@ struct OnboardingView: View {
         .accessibilityAddTraits(picked ? .isSelected : [])
     }
 
-    private var bottomBar: some View {
-        Button(action: flow.continueTapped) {
-            Text(primaryTitle).frame(maxWidth: .infinity)
+    private func inviteMessage(_ code: String) -> String {
+        guard let link = inviteBase?.appending(path: "i/\(code)") else {
+            return String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")
         }
-        .nookiPrimary()
-        .disabled(!canContinue)
-        .padding(.horizontal, Space.gutter)
-        .padding(.top, Space.s)
-        .padding(.bottom, Space.s)
-        .background(Ink.screen.ignoresSafeArea(edges: .bottom))
+        return String(localized: "Join me in Nooki! \(link.absoluteString) or enter my code: \(code)")
+    }
+
+    @ViewBuilder private var bottomBar: some View {
+        if flow.page != .stopped {
+            Button(action: primaryTapped) {
+                Text(primaryTitle).frame(maxWidth: .infinity)
+            }
+            .nookiPrimary()
+            .disabled(!canContinue)
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.s)
+            .padding(.bottom, Space.s)
+            .background(Ink.screen.ignoresSafeArea(edges: .bottom))
+        }
+    }
+
+    private func primaryTapped() {
+        if flow.page == .join, let pairing {
+            pairing.submit(code: flow.joinCode)
+        } else {
+            flow.continueTapped()
+        }
     }
 
     private var primaryTitle: LocalizedStringKey {
         switch flow.page {
         case .welcome: "Let's go"
+        case .join: isClaiming ? "Joining…" : "Join"
         case .invite: flow.invited ? "Continue" : "I'll invite them later"
+        case .notifications: "Turn on notifications"
+        case .widget: "Got it"
         default: "Continue"
         }
     }
@@ -299,8 +425,13 @@ struct OnboardingView: View {
     private var canContinue: Bool {
         switch flow.page {
         case .question: flow.answer != nil
+        case .join: signedIn && !isClaiming && flow.joinCode.count == InviteCode.length
         default: true
         }
+    }
+
+    private var isClaiming: Bool {
+        if case .claiming = pairing?.state { true } else { false }
     }
 
     private func rangeBinding(_ range: OnboardingRangeStep) -> Binding<Int> {

@@ -63,6 +63,8 @@ targets:
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
         # Alert pushes for drawings; automatic signing switches it to production for TestFlight.
         aps-environment: development
+        # Invite links, https://<server>/i/<code> (the Worker's app-links.ts).
+        com.apple.developer.associated-domains: [applinks:$(BILLET_API_HOST)]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet

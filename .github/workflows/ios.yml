@@ -63,28 +63,42 @@ jobs:
           unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
 
+      # As in ci.yml: the newest cache from an earlier commit lets Turbo skip the Swift package
+      # tasks whose inputs did not change.
+      - name: Restore Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-ios-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-ios-${{ runner.os }}-
+
       - name: swift-format lint
         run: pnpm turbo run ios:format:check
 
+      # Nobody reads an index on a runner; building it costs compile time.
       - name: Swift tests and fixture conformance
-        run: pnpm turbo run ios:test
+        run: pnpm turbo run ios:test -- --disable-index-store
 
       - name: Xcode build
-        run: pnpm turbo run ios:build
+        run: pnpm turbo run ios:build -- --disable-index-store
 
-      # The app in apps/ios builds, shaders included; no tests yet.
+      # The app in apps/ios builds, shaders included. Pull requests skip it: the app tests below
+      # build the app too (Debug), and main and TestFlight still build Release.
       - name: App Release build (Simulator, unsigned)
+        if: github.event_name != 'pull_request'
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set -o pipefail
           xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/app" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/app.log" \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app.log" \
             | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
 
       # The app's own tests (NookiTests) on a Simulator of the newest iOS this Xcode has.
       - name: App tests (Simulator)
         run: |
+          (cd apps/ios && xcodegen generate --quiet)
           udid=$(xcrun simctl list -j devices available | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
@@ -104,7 +118,7 @@ jobs:
           TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples" \
           xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
-            CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/app-tests.log" 2>&1 || status=$?
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$RUNNER_TEMP/app-tests.log" 2>&1 || status=$?
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
           if [ "$status" != 0 ]; then

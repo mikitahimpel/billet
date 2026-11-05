@@ -10,6 +10,15 @@ export class InvalidNote extends Data.TaggedError("InvalidNote") {}
 /** A text note in an ink colour the pair has not bought. */
 export class InkNotOwned extends Data.TaggedError("InkNotOwned")<{ readonly ink: InkId }> {}
 
+/** A buy that costs more than the pair's balance. */
+export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
+  readonly needed: number;
+  readonly have: number;
+}> {}
+
+/** A buy of an ink the pair already owns. */
+export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly ink: InkId }> {}
+
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{
   readonly reason: string;

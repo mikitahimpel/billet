@@ -1,11 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
-import { UserId } from "@billet/contracts-domain/ids";
+import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
+import type { CoinsResponse } from "@billet/contracts-http-api/coins";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -398,6 +400,25 @@ export class PairRoom extends DurableObject {
   /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
   grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
     return this.run((room) => room.dispatch({ _tag: "GrantInks", inks }), "PairRoom.grantInks");
+  }
+
+  /** The pair's balance and its wallet entries after `after`, oldest first. */
+  coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse> {
+    return this.run(
+      (room) =>
+        Effect.all([room.state, room.coinEntriesAfter(after, limit)]).pipe(
+          Effect.map(([state, entries]) => ({
+            balance: state._tag === "Active" ? state.wallet.balance : 0,
+            entries,
+          })),
+        ),
+      "PairRoom.coins",
+    );
+  }
+
+  /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
+  buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
+    return this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
   }
 
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {

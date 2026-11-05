@@ -159,6 +159,7 @@ struct HomeView: View {
                     await session?.drawingSync?.fetchLatest()
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
+                    await photoSync?.receive()
                 }
                 session?.followInbox(true)
                 refreshRooms()
@@ -201,9 +202,12 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .task { await DrawingSync.watchLiveActivities() }
+        // A new photo, or one that failed to go earlier, goes to the partner.
+        .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .coupleChanged)) { _ in state.profile.reload() }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
@@ -276,6 +280,11 @@ struct HomeView: View {
 
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
+
+    /// Photos to and from the partner; nil until this phone is paired with them.
+    private var photoSync: PhotoSync? {
+        session?.photoSync(moments: state.moments, partner: state.partners.1)
+    }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
     private func makeBoard() -> BoardRoomScene {

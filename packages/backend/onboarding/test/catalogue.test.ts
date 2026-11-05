@@ -21,6 +21,7 @@ describe("the seeded catalogue", () => {
     expect(age?._tag).toBe("Single");
     if (age?._tag === "Single") {
       expect(age.options.map((option) => option.id)).toEqual([
+        "age-under-13",
         "age-13-17",
         "age-18-24",
         "age-25-34",

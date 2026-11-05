@@ -111,3 +111,8 @@ final class CoupleStore {
         SharedFile.write(couple, to: Self.file)
     }
 }
+
+extension Notification.Name {
+    /// The couple was saved by another `CoupleStore`, so the one on screen reads it again.
+    static let coupleChanged = Notification.Name("com.mikitahimpel.billet.couple-changed")
+}

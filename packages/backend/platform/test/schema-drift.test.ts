@@ -66,6 +66,8 @@ import {
   StoredDelivery,
   StoredNote,
   StoredOwnedInk,
+  StoredCoinEntry,
+  StoredWallet,
   StoredRoom,
 } from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
@@ -74,10 +76,12 @@ import {
   activityRead,
   cat,
   catEntry,
+  coinEntry,
   delivery,
   note,
   ownedInk,
   room,
+  wallet,
 } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
@@ -113,11 +117,13 @@ const checked = [
   ["activity_read", activityRead, StoredActivityRead],
   ["cat", cat, StoredCat],
   ["cat_entry", catEntry, StoredCatEntry],
+  ["coin_entry", coinEntry, StoredCoinEntry],
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["owned_ink", ownedInk, StoredOwnedInk],
   ["room", room, StoredRoom],
   ["users", users, StoredUser],
+  ["wallet", wallet, StoredWallet],
 ] as const;
 
 describe("tables match their Effect Schema", () => {
