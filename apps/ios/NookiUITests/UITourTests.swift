@@ -11,7 +11,7 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheApp() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
@@ -73,7 +73,7 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheOnboarding() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "NO", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "NO", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
         Thread.sleep(forTimeInterval: 10)
         shot("20-onboarding")

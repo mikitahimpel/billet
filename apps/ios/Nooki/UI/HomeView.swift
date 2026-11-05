@@ -386,6 +386,9 @@ private struct PlayAllButton: View {
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
 private struct WarmBackdrop: View {
     @Environment(\.scenePhase) private var scenePhase
+    /// `-uitestStill YES` holds the bokeh still: redrawn under glass every frame, it keeps the app from ever idling
+    /// on CI's GPU-less virtual Macs, and UI queries time out.
+    private static let still = UserDefaults.standard.bool(forKey: "uitestStill")
 
     var body: some View {
         ZStack {
@@ -395,7 +398,7 @@ private struct WarmBackdrop: View {
                 startRadius: 10,
                 endRadius: 520
             )
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: scenePhase != .active)) { context in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: scenePhase != .active || Self.still)) { context in
                 Canvas { ctx, size in
                     let t = context.date.timeIntervalSinceReferenceDate
                     for i in 0..<14 {
