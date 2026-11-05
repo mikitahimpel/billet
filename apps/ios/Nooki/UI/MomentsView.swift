@@ -337,7 +337,7 @@ private struct NoteCard: View {
     var body: some View {
         Color.clear
             .aspectRatio(1, contentMode: .fit)
-            .background { PaperSheet(color: Color(hex: note.paper.hex)) }
+            .background { PaperSheet(color: Color(hex: note.paper.hex), lift: PaperSheet.Lift()) }
             .overlay {
                 if let doodle {
                     Image(uiImage: doodle).resizable().scaledToFit().padding(12)
@@ -356,9 +356,6 @@ private struct NoteCard: View {
                     .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
                     .padding(8)
             }
-            .compositingGroup()
-            .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
-            .shadow(color: .black.opacity(0.24), radius: 8, y: 6)
             .task(id: note.id) {
                 guard let url = NoteStore.doodleURL(for: note) else { return }
                 doodle = await Task.detached(priority: .userInitiated) { Downsample.image(at: url, maxPixels: 400) }.value
@@ -425,10 +422,7 @@ private struct BlankPolaroid: View {
             Spacer().frame(height: 22)
         }
         .padding(7)
-        .background { PaperSheet() }
-        .compositingGroup()
-        .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
-        .shadow(color: .black.opacity(0.24), radius: 8, y: 6)
+        .background { PaperSheet(lift: PaperSheet.Lift()) }
     }
 }
 
@@ -598,10 +592,7 @@ struct ComposeSheet: View {
             }
             .padding(12)
             .padding(.bottom, 14)
-            .background { PaperSheet() }
-            .compositingGroup()
-            .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
-            .shadow(color: .black.opacity(0.3), radius: 12, y: 8)
+            .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
             .rotationEffect(.degrees(-2))
 
             Spacer(minLength: 0)

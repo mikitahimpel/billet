@@ -60,8 +60,20 @@ final class ShopModel {
 
     /// Today's price: the deal price when the item is one of today's deals, as the server charges it.
     func price(of item: ShopItem, on date: Date = .now) -> Int {
-        offers.deal(for: item.id, on: date)?.price(of: item) ?? item.price
+        let offers = offers
+        let key = "\(offers.pairSeed)|\(offers.dayKey(date))"
+        let deals: [DailyDeal]
+        if let cached = dealsByDay, cached.key == key {
+            deals = cached.deals
+        } else {
+            deals = offers.deals(on: date)
+            dealsByDay = (key, deals)
+        }
+        return deals.first { $0.itemID == item.id }?.price(of: item) ?? item.price
     }
+
+    /// The day's deals for the pair, drawn once: every price on the Shop asks for them, several times a card.
+    @ObservationIgnored private var dealsByDay: (key: String, deals: [DailyDeal])?
 
     // MARK: Buying
 
