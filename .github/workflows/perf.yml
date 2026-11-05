@@ -80,7 +80,7 @@ env:
   # A runner draws slowly, a Pro Max's screen most of all: give each scripted run room to finish.
   PERF_RUN_LIMIT: "1500"
   # The room Home shows in every run; a pull request measures the standard one.
-  PERF_ROOM: ${{ inputs.room || 'windowSeat' }}
+  PERF_ROOM: ${{ inputs.room || 'room' }}
 
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
@@ -160,6 +160,15 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # A crash in the app leaves an .ips report on the host, not in the run's logs.
+      - name: Crash reports
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf/crashes"
+          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+            | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
+          ls "$RUNNER_TEMP/perf/crashes"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -235,6 +244,15 @@ jobs:
               echo "No shots: see the logs in the artifact."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # A crash in the app leaves an .ips report on the host, not in the run's logs.
+      - name: Crash reports
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf/crashes"
+          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+            | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
+          ls "$RUNNER_TEMP/perf/crashes"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -312,6 +330,15 @@ jobs:
             echo
             if [[ -f $SUMMARY ]]; then sed -n '/## What each part costs/,$p' "$SUMMARY" | tail -n +2; else echo "No table: see the logs in the artifact."; fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # A crash in the app leaves an .ips report on the host, not in the run's logs.
+      - name: Crash reports
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf/crashes"
+          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+            | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
+          ls "$RUNNER_TEMP/perf/crashes"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -407,6 +434,15 @@ jobs:
             cat "$PERF_OUT"/*/load.txt 2>/dev/null || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # A crash in the app leaves an .ips report on the host, not in the run's logs.
+      - name: Crash reports
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/perf/crashes"
+          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+            | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
+          ls "$RUNNER_TEMP/perf/crashes"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

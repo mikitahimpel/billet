@@ -38,6 +38,8 @@ final class HomeState {
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
     var room: RoomKind = .home
+    /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
+    let rooms = RoomsChoice()
     var petPulse = 0
     /// Treats given since launch.
     private(set) var treatsGiven = 0
