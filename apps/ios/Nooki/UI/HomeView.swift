@@ -14,6 +14,10 @@ struct HomeView: View {
     @State private var showcase: String?
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
+    /// The screen as the World last showed it, held up on the way back until the room draws again.
+    @State private var worldSnapshot: UIView?
+    /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
+    @State private var roomLive = true
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -52,6 +56,14 @@ struct HomeView: View {
                 .allowsHitTesting(showsRoom)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
+            }
+
+            // A new RealityView takes a moment to draw its first frame; the last one shows meanwhile.
+            if state.tab == .world, !roomLive, let worldSnapshot {
+                SnapshotView(view: worldSnapshot)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
             }
 
             VStack(spacing: 12) {
@@ -154,6 +166,25 @@ struct HomeView: View {
         // A variant with one room never leaves Home on a room it lacks.
         .onChange(of: state.rooms.variant) { _, variant in
             if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
+        }
+        .onChange(of: state.tab) { old, new in
+            // The room view goes with the World (see above): keep what it showed, to show again on the way back.
+            if old == .world, !showsRoom {
+                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+            }
+            if new == .world, let scene, worldSnapshot != nil {
+                roomLive = false
+                let start = scene.frame
+                Task {
+                    let deadline = ContinuousClock.now + .seconds(2)
+                    while scene.frame == start, ContinuousClock.now < deadline {
+                        try? await Task.sleep(for: .milliseconds(8))
+                    }
+                    withAnimation(.easeOut(duration: 0.2)) { roomLive = true }
+                    try? await Task.sleep(for: .milliseconds(250))
+                    if roomLive { worldSnapshot = nil }
+                }
+            }
         }
         .onChange(of: state.tab) { _, tab in
             NookiPerf.tabShown(tab)
@@ -303,6 +334,11 @@ struct HomeView: View {
     /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
     private static let noRoom = UserDefaults.standard.bool(forKey: "uitestNoRoom")
 
+    private static var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows).first(where: \.isKeyWindow)
+    }
+
     private var scene: CatRoom? {
         guard let home else { return nil }
         if showsBoard, let board { return board }
@@ -397,6 +433,22 @@ private struct PlayAllButton: View {
         .disabled(showcase != nil)
         .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
     }
+}
+
+/// A snapshot from `UIView.snapshotView(afterScreenUpdates:)`, filling the view it is put in.
+private struct SnapshotView: UIViewRepresentable {
+    let view: UIView
+
+    func makeUIView(context: Context) -> UIView {
+        let holder = UIView()
+        holder.isUserInteractionEnabled = false
+        view.frame = holder.bounds
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        holder.addSubview(view)
+        return holder
+    }
+
+    func updateUIView(_ holder: UIView, context: Context) {}
 }
 
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
