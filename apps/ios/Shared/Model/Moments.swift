@@ -126,20 +126,27 @@ final class MomentStore {
     @discardableResult
     func addReceived(_ data: Data, caption: String, author: String, date: Date, noteID: String) async -> Moment? {
         let folder = Self.folder, maxPixels = Self.storedPixels
-        let file = await Task.detached(priority: .utility) { () -> String? in
-            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
-            let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? .max
-            let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? .max
-            if CGImageSourceGetType(source) as String? == UTType.jpeg.identifier, max(width, height) <= maxPixels {
-                return Self.write(data, in: folder)
-            }
-            guard let jpeg = Downsample.image(data: data, maxPixels: maxPixels)?.jpegData(compressionQuality: 0.85)
-            else { return nil }
-            return Self.write(jpeg, in: folder)
+        let file = await Task.detached(priority: .utility) {
+            MomentStore.store(received: data, maxPixels: maxPixels, in: folder)
         }.value
         guard let file, !contains(noteID: noteID) else { return nil }
         return insert(file: file, caption: caption, author: author, date: date, noteID: noteID, unsent: false)
+    }
+
+    /// `data` as a stored photo in `folder`: as it came when it is a JPEG within `maxPixels`, otherwise fitted and
+    /// encoded. Returns the file's name. Its own function: Xcode 26's isolation checker rejects this body inline in a
+    /// detached closure in Release builds.
+    nonisolated private static func store(received data: Data, maxPixels: Int, in folder: URL) -> String? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? .max
+        let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? .max
+        if CGImageSourceGetType(source) as String? == UTType.jpeg.identifier, max(width, height) <= maxPixels {
+            return write(data, in: folder)
+        }
+        guard let jpeg = Downsample.image(data: data, maxPixels: maxPixels)?.jpegData(compressionQuality: 0.85)
+        else { return nil }
+        return write(jpeg, in: folder)
     }
 
     /// Writes a photo's JPEG into the Moments folder under a new name, and returns the name.
