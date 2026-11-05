@@ -9,11 +9,18 @@ import UniformTypeIdentifiers
 @testable import DesignSystem
 
 /// Renders a view to pixels. `BILLET_SNAPSHOT_DIR` keeps a PNG for review.
+///
+/// A busy CI runner now and then hands back a blank image (one colour) for a large view; a blank
+/// first render is drawn once more before the tests look at it.
 @MainActor
 func render(_ view: some View, named name: String, scale: CGFloat = 2) throws -> CGImage {
-  let renderer = ImageRenderer(content: view)
-  renderer.scale = scale
-  let image = try #require(renderer.cgImage)
+  func draw() throws -> CGImage {
+    let renderer = ImageRenderer(content: view)
+    renderer.scale = scale
+    return try #require(renderer.cgImage)
+  }
+  var image = try draw()
+  if distinctColors(in: image) == 1 { image = try draw() }
   if let directory = ProcessInfo.processInfo.environment["BILLET_SNAPSHOT_DIR"] {
     let url = URL(fileURLWithPath: directory).appendingPathComponent("\(name).png")
     let target = try #require(
