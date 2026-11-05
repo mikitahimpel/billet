@@ -37,7 +37,7 @@ prints; and his Shop items, which were never placed in his room.
 - `packages/ios/pet/Sources/PetScene/PetSceneRooms.swift`: the contract. `RoomLayerSlot` names every
   flat layer, `RoomLayerArt` is the protocol a Rive file plugs in through, and
   `PetSceneCatAnchorKey` tells the host where the cat is.
-- `packages/pet-scenes/reality/Sources/PetSceneReality/Genz*.swift`: the room. `GenzKit` makes
+- `archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Genz*.swift`: the room. `GenzKit` makes
   flat-shaded meshes and shared materials, `GenzPieces` the furniture, `GenzLayout` where things
   stand, `GenzRoom` the room and its opening, `GenzArt` the native flat layers, `GenzRoomView` the
   stack of layers. `NookiPetScene` shows it through `NookiRoom`.
@@ -89,7 +89,7 @@ choice is `window-view.json` next to the Labs flags. Art rules are in the style 
 | ------------- | ---------- |
 | `suburbNight` | US suburb at night: water tower, power lines, roofs, the houses across the street, the street lamp. |
 
-How a view is made (`packages/pet-scenes/reality/Sources/PetSceneReality/Views/`):
+How a view is made (`apps/ios/WindowViews/Views/`):
 
 - **Stage.** Art is laid out in stage units against the window: the opening is 100 wide and 58
   tall, its top left corner at the origin. The sill hides the glass below about 52, so a street

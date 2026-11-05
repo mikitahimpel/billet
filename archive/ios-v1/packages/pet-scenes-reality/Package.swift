@@ -7,7 +7,9 @@ let package = Package(
   name: "PetSceneReality",
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: [.library(name: "PetSceneReality", targets: ["PetSceneReality"])],
-  dependencies: [.package(path: "../../ios/core"), .package(path: "../../ios/pet")],
+  dependencies: [
+    .package(path: "../../../../packages/ios/core"), .package(path: "../../../../packages/ios/pet"),
+  ],
   targets: [
     .target(
       name: "PetSceneReality",

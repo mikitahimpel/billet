@@ -5,7 +5,7 @@ it.
 
 ## Cats
 
-The cats in `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Cats` (tabby, plush,
+The cats in `archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Resources/Cats` (tabby, plush,
 detailed, detailedKitten, detailedFluffy, hero, chibi, kitten, tuxedo) are new models made for
 billet in Blender. The detailed cats' and the hero's fur, stripes, fur cards and normal maps are
 made in Blender from billet's own model; no outside model or texture is used.
@@ -37,7 +37,7 @@ the picture's lighting taken out of its baked colour.
 
 ## Idol props
 
-`packages/pet-scenes/reality/Sources/PetSceneReality/Resources/IdolProps.reality` (the Labs
+`archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Resources/IdolProps.reality` (the Labs
 "Idol props" pilot) holds room props generated for billet. Each began as a picture made with
 [FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) (Black Forest Labs,
 Apache License 2.0), prompted in words and, for some, with a render of billet's own Window Seat
@@ -50,18 +50,18 @@ None of these models ships in the app; only the meshes and their one baked textu
 
 ## First-launch heart
 
-`packages/pet-scenes/reality/Sources/PetSceneReality/Resources/Heart.reality` is a new model made
-for billet in Blender from code alone (`packages/pet-scenes/reality/scripts/make_heart.py`); no
+`archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Resources/Heart.reality` is a new model made
+for billet in Blender from code alone (`archive/ios-v1/packages/pet-scenes-reality/scripts/make_heart.py`); no
 outside model or texture is used. The windowsill, candles and fairy lights around it are built in
 Swift at run time.
 
 ## Night street in 3D
 
-`packages/pet-scenes/reality/Sources/PetSceneReality/Resources/StreetView` (the street outside
+`archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Resources/StreetView` (the street outside
 Window Seat's window behind Labs' "3D view") is made for billet from code alone: modelled and
-light-baked in Blender by `packages/pet-scenes/reality/scripts/make_street_view.py`, its far
+light-baked in Blender by `archive/ios-v1/packages/pet-scenes-reality/scripts/make_street_view.py`, its far
 roofline card painted by `paint_street_cards.py`. The far skyline
-(`packages/pet-scenes/reality/assets-source/street/skyline.png`, keyed and tiled into
+(`archive/ios-v1/packages/pet-scenes-reality/assets-source/street/skyline.png`, keyed and tiled into
 `street-cards.png`) was generated for billet from a text prompt with
 [FLUX.2-klein-4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) (Black Forest Labs,
 Apache License 2.0) on the owner's PC. The model does not ship in the app; only the image made with
@@ -69,8 +69,8 @@ it does. No outside model or texture is used.
 
 ## Project assets
 
-- `packages/pet-scenes/reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.
-- The Nooki cabin (`packages/pet-scenes/reality/Sources/PetSceneReality/NookiCabin.swift` and
+- `archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/Resources/*.usdz` come from the Nooki project.
+- The Nooki cabin (`archive/ios-v1/packages/pet-scenes-reality/Sources/PetSceneReality/NookiCabin.swift` and
   `NookiCabinPieces.swift`) comes from the Nooki project: its room, furniture, colours, lights and
   backdrop are ported from `Nooki/Scene/DioramaScene.swift` and `HomeView.swift` in
   [nexishq/nooki-ios](https://github.com/nexishq/nooki-ios) at 6b968d4, with its author's permission.

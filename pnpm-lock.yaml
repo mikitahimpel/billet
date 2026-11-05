@@ -799,9 +799,6 @@ importers:
       '@billet/ios-core':
         specifier: workspace:*
         version: link:../core
-      '@billet/ios-payments':
-        specifier: workspace:*
-        version: link:../payments
       '@billet/ios-pet':
         specifier: workspace:*
         version: link:../pet
@@ -813,15 +810,6 @@ importers:
       '@billet/ios-core':
         specifier: workspace:*
         version: link:../core
-
-  packages/pet-scenes/reality:
-    dependencies:
-      '@billet/ios-core':
-        specifier: workspace:*
-        version: link:../../ios/core
-      '@billet/ios-pet':
-        specifier: workspace:*
-        version: link:../../ios/pet
 
 packages:
 
