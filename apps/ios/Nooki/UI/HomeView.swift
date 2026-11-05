@@ -181,6 +181,10 @@ struct HomeView: View {
         .onChange(of: state.rooms.variant) { _, variant in
             if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
         }
+        // The kept room view goes on running its scene out of the window; it stops with the room, as before.
+        .onChange(of: showsRoom) {
+            for room in [home, city, board] as [CatRoom?] { room?.paused = !showsRoom }
+        }
         .onChange(of: state.tab) { old, new in
             // The room view goes with the World (see above): keep what it showed, to show again on the way back.
             if old == .world, !showsRoom {
