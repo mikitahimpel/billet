@@ -57,6 +57,7 @@ import Wire
         .strokePoints(id: 0, points: [Point(x: 0, y: 0)]), .strokeEnd(id: 0),
         .strokeBegin(LiveStrokeStart(id: 1, color: Self.color, width: 0.03)),
       ])
-    #expect(LiveStrokeBatcher().end().isEmpty)
+    var fresh = LiveStrokeBatcher()
+    #expect(fresh.end().isEmpty)
   }
 }
