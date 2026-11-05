@@ -47,6 +47,7 @@ import {
 import { AnalyticsEngineReader } from "./analytics-engine-reader.ts";
 import { AppStatusStore } from "./app-status-store.ts";
 import { buildExperimentMetrics } from "./admin-experiment-metrics.ts";
+import { buildFeatureUsage } from "./admin-features.ts";
 import { verdictOf } from "./experiment-verdict.ts";
 
 /** Who is using the panel, as Cloudflare Access verified them. Every change is logged under it. */
@@ -73,6 +74,7 @@ export const adminApi = {
   funnels: "/admin/api/funnels",
   savedFunnel: "/admin/api/funnels/:id",
   trends: "/admin/api/trends",
+  features: "/admin/api/features",
   flags: "/admin/api/flags",
   flag: "/admin/api/flags/:key",
   experiments: "/admin/api/experiments",
@@ -94,6 +96,7 @@ export const agentApi = {
   funnel: "/admin/api/agent/funnel",
   funnels: "/admin/api/agent/funnels",
   trends: "/admin/api/agent/trends",
+  features: "/admin/api/agent/features",
   experiments: "/admin/api/agent/experiments",
   flags: "/admin/api/agent/flags",
   flagHistory: "/admin/api/agent/flag-history",
@@ -189,6 +192,7 @@ const TrendsQuery = Schema.Struct({
   split: TrendSplit,
   key: Schema.optional(ExperimentKeyText),
 });
+const FeaturesQuery = Schema.Struct({ split: Schema.optional(ExperimentKeyText) });
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
 const KeyParams = Schema.Struct({ key: ExperimentKey });
@@ -335,6 +339,14 @@ const readHandlers = Effect.gen(function* () {
     return respondJson(buildTrends(events, rows, today, query, fromEngine));
   }).pipe(guarded);
 
+  const features = Effect.gen(function* () {
+    const { split } = yield* HttpServerRequest.schemaSearchParams(FeaturesQuery);
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(
+      buildFeatureUsage(events, rows, utcDay(yield* Clock.currentTimeMillis), { split }),
+    );
+  }).pipe(guarded);
+
   const savedFunnels = Effect.gen(function* () {
     // With the names a step may be, so the page offers the closed list and nothing else.
     return respondJson({ funnels: yield* funnelStore.all, events: funnelEventNames });
@@ -450,6 +462,7 @@ const readHandlers = Effect.gen(function* () {
     retention,
     funnel,
     trends,
+    features,
     savedFunnels,
     funnelStore,
     flagList,
@@ -506,6 +519,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.funnel, reads.funnel);
     yield* router.add("GET", adminApi.funnels, reads.savedFunnels);
     yield* router.add("GET", adminApi.trends, reads.trends);
+    yield* router.add("GET", adminApi.features, reads.features);
 
     // A saved funnel is a definition and a name, never a count. Saved with the Access email.
     yield* router.add(
@@ -637,6 +651,7 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.funnel, reads.funnel);
     yield* router.add("GET", agentApi.funnels, reads.savedFunnels);
     yield* router.add("GET", agentApi.trends, reads.trends);
+    yield* router.add("GET", agentApi.features, reads.features);
     yield* router.add("GET", agentApi.experiments, reads.experiments);
     yield* router.add("GET", agentApi.flags, reads.flagList);
     yield* router.add("GET", agentApi.flagHistory, reads.history);
