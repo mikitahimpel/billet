@@ -15,6 +15,22 @@ export const GiftTitle = Schema.String.check(
 export type GiftTitle = typeof GiftTitle.Type;
 
 /**
+ * The day a wish is for, such as a birthday, as the owner's phone named it. Each phone keeps its
+ * own calendar, so the wish carries the title and the day rather than a calendar entry.
+ */
+export const GiftOccasion = Schema.Struct({
+  title: Schema.String.check(
+    Schema.makeFilter(
+      (text) =>
+        (text.trim().length > 0 && text.length <= 60) ||
+        "expected 1 to 60 characters, not only whitespace",
+    ),
+  ),
+  date: EpochMillis,
+});
+export type GiftOccasion = typeof GiftOccasion.Type;
+
+/**
  * One partner's wish, as both partners see it. Nothing here says who plans to gift it: that is the
  * giver's `GiftPlan`, which the owner never receives. `giftedBy` appears only once it arrived.
  */
@@ -28,6 +44,7 @@ export const GiftWish = Schema.Struct({
   /** Colour, size or model, for the giver. */
   note: Text(500),
   mostWanted: Schema.Boolean,
+  occasion: Schema.optionalKey(GiftOccasion),
   addedAt: EpochMillis,
   receivedAt: Schema.optionalKey(EpochMillis),
   giftedBy: Schema.optionalKey(UserId),
@@ -77,6 +94,8 @@ export const SaveGiftWishRequest = Schema.Struct({
   price: Text(40),
   note: Text(500),
   mostWanted: Schema.Boolean,
+  /** Absent clears it. */
+  occasion: Schema.optionalKey(GiftOccasion),
 });
 export type SaveGiftWishRequest = typeof SaveGiftWishRequest.Type;
 

@@ -181,6 +181,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_shop"),
       expect.stringContaining("_shop_rewards"),
       expect.stringContaining("_gifts"),
+      expect.stringContaining("_gift_occasion"),
     ]);
   });
 

@@ -86,6 +86,7 @@ final class GiftsModel {
             }
             var item = WishItem(id: id, owner: owner, title: wish.title, link: wish.link, price: wish.price,
                                 note: wish.note, mostWanted: wish.mostWanted, added: Self.date(wish.addedAt))
+            item.occasion = wish.occasion.map { WishOccasion(title: $0.title, date: Self.date($0.date)) }
             item.gifted = wish.receivedAt.map(Self.date)
             item.giftedBy = wish.giftedBy.flatMap { monograms[$0.rawValue] }
             return item
@@ -120,7 +121,11 @@ final class GiftsModel {
     private static func request(_ wish: WishItem) -> SaveGiftWishRequest {
         SaveGiftWishRequest(id: key(wish.id), title: String(wish.title.prefix(200)),
                             link: String(wish.link.prefix(2048)), price: String(wish.price.prefix(40)),
-                            note: String(wish.note.prefix(500)), mostWanted: wish.mostWanted)
+                            note: String(wish.note.prefix(500)), mostWanted: wish.mostWanted,
+                            occasion: wish.occasion.map {
+                                GiftOccasion(title: String($0.title.prefix(60)),
+                                             date: Int(($0.date.timeIntervalSince1970 * 1000).rounded()))
+                            })
     }
 
     private static func wire(_ loves: Loves) -> GiftLoves {
