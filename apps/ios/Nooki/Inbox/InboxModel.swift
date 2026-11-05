@@ -65,6 +65,11 @@ final class InboxModel {
         self.next = page.next
     }
 
+    /// The count the room socket reports when the partner adds something or this person reads elsewhere.
+    func unreadChanged(_ count: Int) {
+        unread = count
+    }
+
     /// Only the count, for the badge while the Inbox is closed.
     func refreshCount() async {
         guard let page = try? await list(nil) else { return }

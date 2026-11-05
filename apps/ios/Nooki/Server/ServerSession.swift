@@ -18,6 +18,7 @@ final class ServerSession {
     private(set) var isPaired: Bool
     /// The pair's activity for the Inbox, and its unread count.
     let inbox: InboxModel
+    @ObservationIgnored private var inboxLink: InboxLink?
 
     @ObservationIgnored private let backend: Backend
 
@@ -55,6 +56,22 @@ final class ServerSession {
                 defaults.set(seq, forKey: key)
                 sync?.received(note, seq: seq)
             })
+    }
+
+    /// Keeps the Inbox's count live over the room socket while the app is in front; nothing without a partner.
+    func followInbox(_ follows: Bool) {
+        if follows, isPaired {
+            if inboxLink == nil {
+                let accounts = backend.accounts
+                let inbox = inbox
+                inboxLink = InboxLink(
+                    baseURL: backend.baseURL, token: { (try? accounts.load())?.token },
+                    unread: { inbox.unreadChanged($0) })
+            }
+            inboxLink?.connect()
+        } else {
+            inboxLink?.disconnect()
+        }
     }
 
     /// Fills the drawing widgets and registers push tokens; nil until this account has a partner.
