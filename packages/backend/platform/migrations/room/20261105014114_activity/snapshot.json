@@ -1,11 +1,19 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3f98bbe7-66e6-4185-8d38-c9580cabb365",
+  "id": "5dcead43-4e87-49e4-b1a7-b13aa8659e0f",
   "prevIds": [
     "213b7331-e8ee-4350-8291-d6a981a03549"
   ],
   "ddl": [
+    {
+      "name": "activity",
+      "entityType": "tables"
+    },
+    {
+      "name": "activity_read",
+      "entityType": "tables"
+    },
     {
       "name": "cat",
       "entityType": "tables"
@@ -23,12 +31,88 @@
       "entityType": "tables"
     },
     {
-      "name": "owned_ink",
+      "name": "room",
       "entityType": "tables"
     },
     {
-      "name": "room",
-      "entityType": "tables"
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sort_key",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "at",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doer_kind",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doer_user",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user",
+      "entityType": "columns",
+      "table": "activity_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "up_to",
+      "entityType": "columns",
+      "table": "activity_read"
     },
     {
       "type": "integer",
@@ -291,26 +375,6 @@
       "table": "note"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "ink_id",
-      "entityType": "columns",
-      "table": "owned_ink"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "position",
-      "entityType": "columns",
-      "table": "owned_ink"
-    },
-    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -405,6 +469,24 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "activity_pk",
+      "table": "activity",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "user"
+      ],
+      "nameExplicit": false,
+      "name": "activity_read_pk",
+      "table": "activity_read",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "cat_pk",
       "table": "cat",
       "entityType": "pks"
@@ -429,21 +511,40 @@
     },
     {
       "columns": [
-        "ink_id"
-      ],
-      "nameExplicit": false,
-      "name": "owned_ink_pk",
-      "table": "owned_ink",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
         "id"
       ],
       "nameExplicit": false,
       "name": "room_pk",
       "table": "room",
       "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "sort_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "activity_sort_key",
+      "entityType": "indexes",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        {
+          "value": "at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "activity_at",
+      "entityType": "indexes",
+      "table": "activity"
     },
     {
       "columns": [

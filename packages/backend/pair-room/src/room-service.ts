@@ -8,6 +8,9 @@ import type {
 } from "@billet/contracts-http-api/cat";
 import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
+import type { ActivityResponse } from "@billet/contracts-http-api/activity";
+import { activityOf, cursorOf, itemFor } from "./activity.ts";
 import { catNeeds, lifeHorizonMillis } from "./cat-life.ts";
 import { newTemper } from "./cat-temper.ts";
 import { decide } from "./decide.ts";
@@ -87,6 +90,7 @@ export class RoomService extends Context.Service<RoomService>()(
                 decision.state,
                 notesIn(decision.outputs),
                 catEntriesIn(decision.outputs),
+                activityOf(decision.outputs, yield* Clock.currentTimeMillis),
               );
               return decision;
             case "Rejected":
@@ -123,7 +127,39 @@ export class RoomService extends Context.Service<RoomService>()(
       // Under the lock, so a note the author is sending at the same moment is not left behind.
       // The pair is ending, so the cat goes with it.
       const forgetAuthor = (author: UserId) =>
-        store.forgetCat.pipe(Effect.andThen(store.forgetAuthor(author)), lock.withPermits(1));
+        store.forgetCat.pipe(
+          Effect.andThen(store.forgetActivity),
+          Effect.andThen(store.forgetAuthor(author)),
+          lock.withPermits(1),
+        );
+
+      const unread = (user: UserId) =>
+        store
+          .readMark(user)
+          .pipe(Effect.flatMap((mark) => store.unreadCount(user, Option.getOrUndefined(mark))));
+
+      /** One page of the Inbox as `caller` sees it, newest first. */
+      const activityPage = (caller: UserId, before: ActivityCursor | undefined, limit: number) =>
+        Effect.gen(function* () {
+          // One more than asked tells whether there is a page after this one.
+          const rows = yield* store.activityBefore(before, limit + 1);
+          const page = rows.slice(0, limit);
+          const last = page.at(-1);
+          const response: ActivityResponse = {
+            items: page.map((row) => itemFor(row, caller)),
+            ...(rows.length > limit && last !== undefined ? { next: cursorOf(last) } : {}),
+            unread: yield* unread(caller),
+          };
+          return response;
+        });
+
+      // Under the lock, so two devices reading at once leave the later mark.
+      const markActivityRead = (user: UserId, upTo: ActivityCursor) =>
+        Effect.gen(function* () {
+          const mark = yield* store.readMark(user);
+          if (Option.isNone(mark) || upTo > mark.value) yield* store.saveReadMark(user, upTo);
+          return yield* unread(user);
+        }).pipe(lock.withPermits(1));
 
       // The time is taken inside the lock, so a cat's birth follows the order of the room.
       const saveCat = (user: UserId, request: SaveCatRequest, natureSeed: NatureSeed) =>
@@ -187,6 +223,9 @@ export class RoomService extends Context.Service<RoomService>()(
         saveCat,
         recordCatEvent,
         catView,
+        activityPage,
+        markActivityRead,
+        unread,
         state: store.load,
         notesAfter: store.notesAfter,
         catEntriesAfter: store.catEntriesAfter,

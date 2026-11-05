@@ -139,7 +139,13 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
               lastSeq: 0,
             }
           : { ...room.cat, profile: { ...room.cat.profile, name, look, utcOffsetSeconds } };
-      return accepted({ ...room, cat }, [RoomOutput.cases.CatSaved.make({ cat: cat.profile })]);
+      return accepted({ ...room, cat }, [
+        RoomOutput.cases.CatSaved.make({
+          cat: cat.profile,
+          by: user,
+          adopted: room.cat === undefined,
+        }),
+      ]);
     }
     case "RecordCatEvent": {
       const { by } = command;

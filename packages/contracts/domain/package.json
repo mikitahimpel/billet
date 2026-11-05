@@ -16,7 +16,8 @@
     "./delivery-lane": "./src/delivery-lane.ts",
     "./push-token": "./src/push-token.ts",
     "./coin-packs": "./src/coin-packs.ts",
-    "./onboarding": "./src/onboarding.ts"
+    "./onboarding": "./src/onboarding.ts",
+    "./activity": "./src/activity.ts"
   },
   "scripts": {
     "lint": "oxlint .",

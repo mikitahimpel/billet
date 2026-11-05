@@ -52,6 +52,10 @@ export const routes = {
   listCatJournal: route("GET", "/v1/cat/journal"),
   /** Appends one thing the caller did for the cat, once per `id`. */
   recordCatEvent: route("POST", "/v1/cat/events"),
+  /** The pair's recent activity, newest first, for the Inbox. See docs/activity.md. */
+  listActivity: route("GET", "/v1/activity"),
+  /** Marks the caller's activity read up to a cursor, and answers their unread count. */
+  markActivityRead: route("POST", "/v1/activity/read"),
   /** Every ink colour the shop sells, and the ones the pair owns. */
   listInks: route("GET", "/v1/inks"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */

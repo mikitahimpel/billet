@@ -66,6 +66,12 @@ let roundTrips: [String: RoundTrip] = [
   "RecordCatEventRequest": codec(RecordCatEventRequest.self),
   "RecordCatEventResponse": codec(RecordCatEventResponse.self),
   "CatJournalResponse": codec(CatJournalResponse.self),
+  "ActivityEvent": codec(ActivityEvent.self),
+  "ActivityTarget": codec(ActivityTarget.self),
+  "ActivityItem": codec(ActivityItem.self),
+  "ActivityResponse": codec(ActivityResponse.self),
+  "MarkActivityReadRequest": codec(MarkActivityReadRequest.self),
+  "ActivityUnreadResponse": codec(ActivityUnreadResponse.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

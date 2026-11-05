@@ -22,5 +22,7 @@ export const ServerMessage = Schema.TaggedUnion({
   CatEntryAdded: { entry: CatEntry },
   /** The cat was adopted, renamed or given a new look. */
   CatSaved: { cat: CatProfile },
+  /** The user's Inbox count changed, sent to sockets that resumed with `activity: true`. */
+  ActivityUnread: { unread: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
 });
 export type ServerMessage = typeof ServerMessage.Type;

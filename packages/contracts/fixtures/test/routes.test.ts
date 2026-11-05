@@ -71,6 +71,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/status",
       },
+      "listActivity": {
+        "method": "GET",
+        "path": "/v1/activity",
+      },
       "listCatJournal": {
         "method": "GET",
         "path": "/v1/cat/journal",
@@ -82,6 +86,10 @@ it("pins the routes that clients call", () => {
       "listNotes": {
         "method": "GET",
         "path": "/v1/notes",
+      },
+      "markActivityRead": {
+        "method": "POST",
+        "path": "/v1/activity/read",
       },
       "mockPurchase": {
         "method": "POST",

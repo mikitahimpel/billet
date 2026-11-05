@@ -259,3 +259,13 @@ final class NoteLog: @unchecked Sendable {
     room.disconnect()
   }
 }
+
+@Suite struct LiveFrameSendingTests {
+  @Test func liveFramesGoOutOnlyWhileOnline() {
+    let frame = ClientMessage.strokeEnd(id: 1)
+    #expect(LiveRoomMachine.transition(LiveRoomMachine.State(), .liveFrame(frame)).1.isEmpty)
+    #expect(
+      LiveRoomMachine.transition(LiveRoomMachine.State(isOnline: true), .liveFrame(frame)).1
+        == [.send(frame)])
+  }
+}
