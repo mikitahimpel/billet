@@ -22,12 +22,12 @@ struct DrawingSync {
         let viewer = (try? accounts.load())?.record.userID
         var after = defaults.object(forKey: Self.cursorKey) as? Int
         var newest: LatestDrawing?
-        while let page = try? await api.listNotes(after), let last = page.notes.last {
+        while let page = try? await api.listNotes(after), let last = page.lastSeq {
             for entry in page.notes {
                 if let drawing = LatestDrawing(entry.note, seq: entry.seq, viewer: viewer) { newest = drawing }
             }
-            after = last.seq
-            defaults.set(last.seq, forKey: Self.cursorKey)
+            after = last
+            defaults.set(last, forKey: Self.cursorKey)
         }
         save(newest)
     }

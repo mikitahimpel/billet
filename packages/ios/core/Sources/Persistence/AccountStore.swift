@@ -26,7 +26,8 @@ public struct AccountRecord: Codable, Equatable, Sendable {
 /// The signed-in account: its token in the shared Keychain and its record in the App Group, so the
 /// app, widget and extensions all see the same one.
 public struct AccountStore: Sendable {
-  static let recordName = "account.json"
+  /// The record's file name in the App Group.
+  public static let recordName = "account.json"
 
   /// The saved account, or `nil` when signed out. A record without a token (or a token without a
   /// record) counts as signed out, so a half-written sign-in never looks signed in.

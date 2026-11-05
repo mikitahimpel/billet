@@ -40,17 +40,27 @@ struct PhotoSync {
         }
     }
 
+    /// Whether a `receive` is running: each return to the app starts one, and two at once would both download a
+    /// photo the store doesn't hold yet and keep it twice.
+    private static var receiving = false
+
     /// Pages through the notes after the last one looked at and keeps each photo the partner sent. Stops at a photo
-    /// that won't download, so the next call tries it again.
+    /// that won't download, so the next call tries it again. A call while another runs does nothing; the running one
+    /// pages on to the end.
     func receive() async {
+        guard !Self.receiving else { return }
+        Self.receiving = true
+        defer { Self.receiving = false }
         let viewer = (try? accounts.load())?.record.userID
         var after = defaults.object(forKey: Self.cursorKey) as? Int
-        while let page = try? await api.listNotes(after), !page.notes.isEmpty {
+        while let page = try? await api.listNotes(after), let last = page.lastSeq {
             for entry in page.notes {
                 guard await keep(entry.note, viewer: viewer) else { return }
                 after = entry.seq
                 defaults.set(entry.seq, forKey: Self.cursorKey)
             }
+            after = last
+            defaults.set(last, forKey: Self.cursorKey)
         }
     }
 

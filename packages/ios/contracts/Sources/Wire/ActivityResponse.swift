@@ -1,4 +1,5 @@
-/// One page of the Inbox, newest first: `GET /v1/activity?before=&limit=`. `next` is the cursor
+/// One page of the Inbox, newest first: `GET /v1/activity?before=&limit=`, without the items this
+/// build can't read. `next` is the cursor
 /// for the page after this one, `nil` on the last page. `head` is the newest item's cursor in the
 /// whole list, on every page, `nil` while it is empty: send it as `upTo` to mark all read.
 /// `unread` counts the partner's, the cat's and the store's items above the caller's read mark.
@@ -24,7 +25,7 @@ public struct ActivityResponse: Codable, Hashable, Sendable {
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    items = try container.decode([ActivityItem].self, forKey: .items)
+    items = try container.decodeLossyArray(ActivityItem.self, forKey: .items)
     next = try container.decodeOptionalKey(String.self, forKey: .next)
     head = try container.decodeOptionalKey(String.self, forKey: .head)
     unread = try container.decode(Int.self, forKey: .unread)
