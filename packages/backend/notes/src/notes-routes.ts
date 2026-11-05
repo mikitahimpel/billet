@@ -9,6 +9,7 @@ import { AuthService } from "@billet/backend-auth/auth-service";
 import { principalOf, respondFailures, type RouteFailure } from "@billet/backend-auth/auth-routes";
 import { MediaKey } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { InksResponse } from "@billet/contracts-http-api/inks";
 import { routes } from "@billet/contracts-http-api/routes";
 import {
   ListNotesResponse,
@@ -16,7 +17,7 @@ import {
   SendNoteResponse,
   UploadImageResponse,
 } from "@billet/contracts-http-api/note";
-import type { InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
+import type { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
 import { contentTypeOf } from "./image-type.ts";
 import { NotesService } from "./notes-service.ts";
 
@@ -49,6 +50,7 @@ const respondError = HttpServerResponse.schemaJson(ApiError);
 const respondUpload = HttpServerResponse.schemaJson(UploadImageResponse);
 const respondNote = HttpServerResponse.schemaJson(SendNoteResponse);
 const respondNotes = HttpServerResponse.schemaJson(ListNotesResponse);
+const respondInks = HttpServerResponse.schemaJson(InksResponse);
 
 /** The path carries a key from the signed-in couple's prefix, so nothing here may be cached. */
 const imageHeaders = { "cache-control": "no-store", "x-content-type-options": "nosniff" };
@@ -56,7 +58,7 @@ const imageHeaders = { "cache-control": "no-store", "x-content-type-options": "n
 const respondNotesFailures = <R>(
   effect: Effect.Effect<
     HttpServerResponse.HttpServerResponse,
-    RouteFailure | NotesNotFound | InvalidNote | NotesUnavailable,
+    RouteFailure | NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable,
     R
   >,
 ) =>
@@ -64,6 +66,8 @@ const respondNotesFailures = <R>(
     Effect.catchTags({
       NotesNotFound: () => respondError(ApiError.cases.NotFound.make({}), { status: 404 }),
       InvalidNote: () => respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 }),
+      InkNotOwned: ({ ink }) =>
+        respondError(ApiError.cases.InkNotOwned.make({ ink }), { status: 400 }),
       NotesUnavailable: (error) =>
         Effect.logError("notes unavailable", error).pipe(
           Effect.andThen(respondError(ApiError.cases.Unavailable.make({}), { status: 503 })),
@@ -132,6 +136,18 @@ export const NotesRoutes = HttpRouter.use((router) =>
           yield* HttpServerRequest.schemaSearchParams(HistoryQuery);
         const page = yield* notes.history(userId, after, limit);
         return yield* respondNotes({ notes: page });
+      }).pipe(respondNotesFailures),
+    );
+
+    // Never cached: a colour bought on the partner's phone shows up on the next read.
+    yield* router.add(
+      routes.listInks.method,
+      routes.listInks.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        return yield* respondInks(yield* notes.inks(userId), {
+          headers: { "cache-control": "no-store" },
+        });
       }).pipe(respondNotesFailures),
     );
   }),

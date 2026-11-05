@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomState, SequencedNote } from "./room-state.ts";
@@ -21,6 +22,8 @@ export const RoomOutput = Schema.TaggedUnion({
   CatEntryAppended: { entry: CatEntry },
   /** A record whose `id` the room already holds: nothing is stored or fanned out. */
   CatEntryRepeated: { entry: CatEntry },
+  /** Inks the pair did not have before, now its own. A grant of inks it had lists none. */
+  InksGranted: { inks: Schema.Array(InkId) },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -35,6 +38,8 @@ export const RoomRejection = Schema.TaggedUnion({
   CatNotAdopted: {},
   /** The other partner already recorded an entry under this `id`. */
   CatEntryIdTaken: {},
+  /** A text note in an ink colour the pair has not bought. */
+  InkNotOwned: { ink: InkId },
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

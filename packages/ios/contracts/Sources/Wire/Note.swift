@@ -1,7 +1,8 @@
 /// A drawing has two renditions: compact strokes for pushes, and a full PNG in R2. A photo has
 /// its image (PNG, JPEG or HEIC) with its pixel size, a BlurHash `preview` and an optional
 /// `caption`; photos stored before those existed carry only the image, so each is `nil` there. A
-/// text note carries its words and no image. `paper` is `nil` when the sender chose none.
+/// text note carries its words and no image. `paper` is `nil` when the sender chose none. A text
+/// note's `ink` is the colour it is written in; one stored before inks reads as `InkId.free`.
 public enum Note: Codable, Hashable, Sendable {
   case drawing(
     id: NoteId, author: UserId, sentAt: Int, compact: CompactStrokes, image: MediaKey,
@@ -9,7 +10,9 @@ public enum Note: Codable, Hashable, Sendable {
   case photo(
     id: NoteId, author: UserId, sentAt: Int, image: MediaKey, width: Int? = nil,
     height: Int? = nil, preview: String? = nil, caption: NoteText? = nil)
-  case text(id: NoteId, author: UserId, sentAt: Int, text: NoteText, paper: PaperColor? = nil)
+  case text(
+    id: NoteId, author: UserId, sentAt: Int, text: NoteText, paper: PaperColor? = nil,
+    ink: InkId = .free)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -24,6 +27,7 @@ public enum Note: Codable, Hashable, Sendable {
     case height
     case preview
     case caption
+    case ink
   }
 
   /// `sentAt` is epoch milliseconds, which the contract requires to be zero or more.
@@ -66,7 +70,8 @@ public enum Note: Codable, Hashable, Sendable {
         author: try container.decode(UserId.self, forKey: .author),
         sentAt: try Self.sentAt(container),
         text: try container.decode(NoteText.self, forKey: .text),
-        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper))
+        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        ink: try container.decodeOptionalKey(InkId.self, forKey: .ink) ?? .free)
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -95,13 +100,14 @@ public enum Note: Codable, Hashable, Sendable {
       try container.encodeIfPresent(height, forKey: .height)
       try container.encodeIfPresent(preview, forKey: .preview)
       try container.encodeIfPresent(caption, forKey: .caption)
-    case .text(let id, let author, let sentAt, let text, let paper):
+    case .text(let id, let author, let sentAt, let text, let paper, let ink):
       try container.encode("Text", forKey: .tag)
       try container.encode(id, forKey: .id)
       try container.encode(author, forKey: .author)
       try container.encode(sentAt, forKey: .sentAt)
       try container.encode(text, forKey: .text)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encode(ink, forKey: .ink)
     }
   }
 }

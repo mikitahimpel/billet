@@ -122,6 +122,7 @@ export const activityOf = (
       case "NoteRepeated":
       case "PresenceChanged":
       case "CatEntryRepeated":
+      case "InksGranted":
         return [];
     }
   });
