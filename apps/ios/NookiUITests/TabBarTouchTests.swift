@@ -15,8 +15,11 @@ final class TabBarTouchTests: XCTestCase {
         let world = app.buttons["World"]
         XCTAssertTrue(bar.waitForExistence(timeout: 60))
         XCTAssertTrue(room.waitForExistence(timeout: 60))
-        // The launch splash covers everything for up to 6 s.
-        Thread.sleep(forTimeInterval: 8)
+        // The launch splash covers the room until the app has loaded, which takes longer on a cold CI Simulator than
+        // any fixed wait; the room can take a tap once it's gone.
+        let uncovered = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: room)
+        wait(for: [uncovered], timeout: 60)
+        Thread.sleep(forTimeInterval: 1)
 
         // The counter works: a tap in the middle of the room reaches it.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)).tap()
@@ -119,7 +122,7 @@ final class TabBarTouchTests: XCTestCase {
             app.buttons[tab].tap()
             Thread.sleep(forTimeInterval: 1.5)
             let inbox = app.buttons["Inbox"].firstMatch
-            let coins = app.otherElements["coins"].firstMatch
+            let coins = app.buttons["coins"].firstMatch
             let couple = app.buttons["Couple"].firstMatch
             XCTAssertTrue(inbox.waitForExistence(timeout: 10) && coins.exists && couple.exists, "the header should show on \(tab)")
             let frames = [inbox.frame, coins.frame, couple.frame].map(\.integral)

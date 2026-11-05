@@ -1,6 +1,4 @@
-import LinkPresentation
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct WishlistScreen: View {
     let state: HomeState
@@ -37,6 +35,7 @@ struct WishlistScreen: View {
             .scrollIndicators(.hidden)
         }
         .usSheet()
+        .task { await state.gifts.refresh() }
         .sheet(isPresented: $adding) {
             WishEditor(state: state, existing: nil)
         }
@@ -293,10 +292,12 @@ private struct WishCard<Actions: View>: View {
     var linked = false
     @ViewBuilder var actions: Actions
 
+    @State private var image: UIImage?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                if let image = WishImage.load(wish.id) {
+                if let image {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()
@@ -315,6 +316,9 @@ private struct WishCard<Actions: View>: View {
                         .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.leading)
                     meta
+                    if let occasion = wish.occasion, occasion.daysLeft() >= 0 {
+                        OccasionLine(occasion: occasion)
+                    }
                     if !wish.note.isEmpty {
                         Text(wish.note)
                             .font(.nookiCaption)
@@ -330,6 +334,16 @@ private struct WishCard<Actions: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .task(id: wish) { await loadImage() }
+    }
+
+    /// The phone's own picture, or, for a wish made on the partner's phone, the one its link shows, kept once fetched.
+    private func loadImage() async {
+        image = WishImage.load(wish.id)
+        guard image == nil, let url = URL(string: wish.link), url.scheme?.hasPrefix("http") == true,
+              let data = await LinkPreview.fetch(url)?.image, !Task.isCancelled else { return }
+        WishImage.save(data, for: wish.id)
+        image = UIImage(data: data)
     }
 
     @ViewBuilder
@@ -357,6 +371,30 @@ private struct WishCard<Actions: View>: View {
             }
             .font(.nookiCaption.weight(.semibold))
             .lineLimit(1)
+        }
+    }
+}
+
+/// "For Lena's birthday · in 12 days", so the giver knows when it's needed.
+private struct OccasionLine: View {
+    let occasion: WishOccasion
+
+    var body: some View {
+        Label {
+            Text("For \(occasion.title) · \(Self.when(occasion.daysLeft()))")
+        } icon: {
+            Image(systemName: "calendar")
+        }
+        .font(.nookiCaption.weight(.semibold))
+        .foregroundStyle(Ink.accentText)
+        .lineLimit(1)
+    }
+
+    static func when(_ days: Int) -> String {
+        switch days {
+        case 0: String(localized: "today")
+        case 1: String(localized: "tomorrow")
+        default: String(localized: "in \(days) days")
         }
     }
 }
@@ -458,6 +496,7 @@ struct WishEditor: View {
     @State private var price: String
     @State private var note: String
     @State private var mostWanted: Bool
+    @State private var occasion: WishOccasion?
     @State private var image: UIImage?
     @State private var picture = PictureChange.keep
     @State private var loadingPreview = false
@@ -470,6 +509,7 @@ struct WishEditor: View {
         _price = State(initialValue: existing?.price ?? "")
         _note = State(initialValue: existing?.note ?? "")
         _mostWanted = State(initialValue: existing?.mostWanted ?? false)
+        _occasion = State(initialValue: existing?.occasion)
         _image = State(initialValue: existing.flatMap { WishImage.load($0.id) })
     }
 
@@ -498,6 +538,7 @@ struct WishEditor: View {
                     UsField(placeholder: String(localized: "Price (optional)"), text: $price)
                     UsField(placeholder: String(localized: "Colour, size, details (optional)"), text: $note)
                     mostWantedToggle
+                    occasionPicker
                     UsPrimaryButton(title: String(localized: "Save")) { save() }
                         .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                         .disabled(trimmedTitle.isEmpty)
@@ -583,6 +624,53 @@ struct WishEditor: View {
         .usCard(radius: Radius.control)
     }
 
+    /// The calendar's coming days that gifts are for: the couple's own events and their anniversaries.
+    private var occasions: [WishOccasion] {
+        state.us.upcoming(togetherSince: state.togetherSince, limit: 60)
+            .filter { row in
+                switch row.source {
+                case .event: true
+                case .milestone: row.id.hasPrefix("year-")
+                case .date: false
+                }
+            }
+            .prefix(8)
+            .map { WishOccasion(title: $0.title, date: $0.date) }
+    }
+
+    private var occasionPicker: some View {
+        Menu {
+            Button(String(localized: "No occasion")) { occasion = nil }
+            ForEach(occasions, id: \.self) { choice in
+                Button("\(choice.title) · \(choice.date.formatted(.dateTime.day().month()))") { occasion = choice }
+            }
+        } label: {
+            HStack {
+                Label {
+                    Text(occasion.map { String(localized: "For \($0.title)") } ?? String(localized: "For an occasion"))
+                        .font(.nookiCallout.weight(.semibold))
+                        .foregroundStyle(Ink.text)
+                        .lineLimit(1)
+                } icon: {
+                    Image(systemName: "calendar")
+                        .foregroundStyle(occasion == nil ? Ink.textTertiary : Ink.accentText)
+                }
+                Spacer(minLength: 8)
+                Text(occasion?.date.formatted(.dateTime.day().month()) ?? String(localized: "None"))
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Ink.textTertiary)
+            }
+            .padding(.horizontal, Space.l)
+            .frame(minHeight: 50)
+            .usCard(radius: Radius.control)
+        }
+        .buttonStyle(.plain)
+        .disabled(occasions.isEmpty && occasion == nil)
+    }
+
     private func existingActions(_ wish: WishItem) -> some View {
         HStack {
             Button {
@@ -633,6 +721,7 @@ struct WishEditor: View {
         wish.price = price.trimmingCharacters(in: .whitespacesAndNewlines)
         wish.note = note.trimmingCharacters(in: .whitespacesAndNewlines)
         wish.mostWanted = mostWanted
+        wish.occasion = occasion
         switch picture {
         case .keep: break
         case .set(let data): WishImage.save(data, for: wish.id)
@@ -640,57 +729,5 @@ struct WishEditor: View {
         }
         withAnimation(.snappy(duration: 0.25)) { state.us.upsertWish(wish) }
         dismiss()
-    }
-}
-
-// MARK: - Pictures
-
-/// A wish's picture, a small JPEG next to the Us store. Local like the rest of the Us tab.
-enum WishImage {
-    private static func url(_ id: UUID) -> URL { SharedFile.url("Us/Wishes/\(id.uuidString).jpg") }
-
-    static func load(_ id: UUID) -> UIImage? { UIImage(contentsOfFile: url(id).path()) }
-
-    static func save(_ data: Data, for id: UUID) {
-        let target = url(id)
-        let folder = target.deletingLastPathComponent()
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try? data.write(to: target, options: .atomic)
-    }
-
-    static func remove(_ id: UUID) { try? FileManager.default.removeItem(at: url(id)) }
-}
-
-enum LinkPreview {
-    struct Result {
-        var title: String?
-        /// JPEG, at most 600 points on its longer side.
-        var image: Data?
-    }
-
-    /// Nil when the page can't be reached within 8 seconds.
-    static func fetch(_ url: URL) async -> Result? {
-        let provider = LPMetadataProvider()
-        provider.timeout = 8
-        guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return nil }
-        var result = Result(title: metadata.title?.trimmingCharacters(in: .whitespacesAndNewlines))
-        if let item = metadata.imageProvider,
-           let data = await imageData(item),
-           let full = UIImage(data: data),
-           let small = await full.byPreparingThumbnail(ofSize: fit(full.size, in: 600)) {
-            result.image = small.jpegData(compressionQuality: 0.8)
-        }
-        return result
-    }
-
-    private static func imageData(_ item: NSItemProvider) async -> Data? {
-        await withCheckedContinuation { done in
-            _ = item.loadDataRepresentation(for: .image) { data, _ in done.resume(returning: data) }
-        }
-    }
-
-    private static func fit(_ size: CGSize, in side: CGFloat) -> CGSize {
-        let scale = min(1, side / max(size.width, size.height, 1))
-        return CGSize(width: size.width * scale, height: size.height * scale)
     }
 }

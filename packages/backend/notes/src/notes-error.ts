@@ -1,5 +1,7 @@
 import { Data } from "effect";
+import type { LocalDay } from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { CollectionId } from "@billet/contracts-domain/shop";
 
 /** The caller has no partner, or the couple has no such image: the client can't tell which. */
 export class NotesNotFound extends Data.TaggedError("NotesNotFound") {}
@@ -18,6 +20,22 @@ export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
 
 /** A buy of something the pair already owns: an ink, a piece, or every piece of a set. */
 export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly itemId: string }> {}
+
+/** A bonus for a collection with a piece still missing. */
+export class CollectionIncomplete extends Data.TaggedError("CollectionIncomplete")<{
+  readonly collection: CollectionId;
+}> {}
+
+/** The day's gift is already open, and its entry is no longer there to repeat. */
+export class GiftTaken extends Data.TaggedError("GiftTaken")<{ readonly day: LocalDay }> {}
+
+/** A collection's bonus already paid, and its entry is no longer there to repeat. */
+export class BonusTaken extends Data.TaggedError("BonusTaken")<{
+  readonly collection: CollectionId;
+}> {}
+
+/** A buy for the cat, such as a treat, before the couple adopted one. */
+export class CatNotAdopted extends Data.TaggedError("CatNotAdopted") {}
 
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{

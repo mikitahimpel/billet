@@ -1,0 +1,10 @@
+{
+  "balance": 565,
+  "entry": {
+    "amount": 5,
+    "at": 1762350300000,
+    "id": "earn:list:item-1",
+    "kind": "earn",
+    "ref": "item-1"
+  }
+}

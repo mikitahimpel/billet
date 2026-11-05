@@ -1,7 +1,9 @@
 import { Effect, Layer, Schema } from "effect";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
+import { GiftsRoom } from "@billet/backend-pair-room/gifts";
 import { RoomService } from "@billet/backend-pair-room/room-service";
+import { SqliteGiftsStore } from "./pair-room-gifts-store.ts";
 import { RoomDb, SqliteRoomStore } from "./pair-room-sqlite-store.ts";
 
 const decodeNoteId = Schema.decodeSync(NoteId);
@@ -11,6 +13,7 @@ const RandomNoteIds = Layer.succeed(NoteIdSource, {
 });
 
 /** The service graph of one room. It still requires `RoomDb`, given once at the object edge. */
-export const PairRoomLive: Layer.Layer<RoomService, never, RoomDb> = RoomService.layer.pipe(
-  Layer.provide(Layer.merge(SqliteRoomStore, RandomNoteIds)),
-);
+export const PairRoomLive: Layer.Layer<RoomService | GiftsRoom, never, RoomDb> = Layer.merge(
+  RoomService.layer,
+  GiftsRoom.layer,
+).pipe(Layer.provide(Layer.mergeAll(SqliteRoomStore, SqliteGiftsStore, RandomNoteIds)));

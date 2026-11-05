@@ -7,6 +7,7 @@ import {
 } from "@billet/backend-auth/auth-repository";
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
 import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
+import { StoredDemoPartner } from "@billet/backend-demo-partner/demo-partner-repository";
 import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
 import {
   StoredNotification,
@@ -25,6 +26,7 @@ import {
   authSessions,
   authUsers,
   authVerifications,
+  demoPartners,
   devices,
   flagChanges,
   flagConfigs,
@@ -68,7 +70,11 @@ import {
   StoredOwnedInk,
   StoredOwnedItem,
   StoredWish,
+  StoredGiftLoves,
+  StoredGiftPlan,
+  StoredGiftWish,
   StoredReaction,
+  StoredClaimedBonus,
   StoredCoinEntry,
   StoredWallet,
   StoredRoom,
@@ -88,6 +94,10 @@ import {
   room,
   wallet,
   wish,
+  claimedBonus,
+  giftLoves,
+  giftPlan,
+  giftWish,
 } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
@@ -104,6 +114,7 @@ const checked = [
   ["auth_session", authSessions, AuthSessionRow],
   ["auth_user", authUsers, AuthUserRow],
   ["auth_verification", authVerifications, AuthVerificationRow],
+  ["demo_partners", demoPartners, StoredDemoPartner],
   ["devices", devices, StoredDevice],
   ["flag_changes", flagChanges, FlagChangeRow],
   ["flag_configs", flagConfigs, FlagConfigRow],
@@ -125,10 +136,14 @@ const checked = [
   ["cat_entry", catEntry, StoredCatEntry],
   ["coin_entry", coinEntry, StoredCoinEntry],
   ["delivery", delivery, StoredDelivery],
+  ["gift_loves", giftLoves, StoredGiftLoves],
+  ["gift_plan", giftPlan, StoredGiftPlan],
+  ["gift_wish", giftWish, StoredGiftWish],
   ["note", note, StoredNote],
   ["owned_ink", ownedInk, StoredOwnedInk],
   ["owned_item", ownedItem, StoredOwnedItem],
   ["reaction", reaction, StoredReaction],
+  ["claimed_bonus", claimedBonus, StoredClaimedBonus],
   ["room", room, StoredRoom],
   ["users", users, StoredUser],
   ["wallet", wallet, StoredWallet],

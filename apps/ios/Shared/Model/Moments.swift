@@ -1,6 +1,7 @@
 import ImageIO
 import Observation
 import UIKit
+import UniformTypeIdentifiers
 
 /// One shared photo with a caption, visible only to the couple.
 nonisolated struct Moment: Identifiable, Codable, Hashable {
@@ -115,14 +116,46 @@ final class MomentStore {
         let fitted = scale < 1
             ? image.preparingThumbnail(of: CGSize(width: image.size.width * scale, height: image.size.height * scale)) ?? image
             : image
-        guard let data = fitted.jpegData(compressionQuality: 0.85) else { return nil }
+        guard let data = fitted.jpegData(compressionQuality: 0.85),
+              let file = Self.write(data, in: Self.folder) else { return nil }
+        return insert(file: file, caption: caption, author: author, date: date, noteID: noteID, unsent: unsent)
+    }
+
+    /// A partner's photo as it was downloaded. A JPEG within `storedPixels` is kept as it came; anything else is fitted
+    /// and encoded again. Either way off the main thread, which only adds it to the list.
+    @discardableResult
+    func addReceived(_ data: Data, caption: String, author: String, date: Date, noteID: String) async -> Moment? {
+        let folder = Self.folder, maxPixels = Self.storedPixels
+        let file = await Task.detached(priority: .utility) { () -> String? in
+            guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+            let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? .max
+            let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? .max
+            if CGImageSourceGetType(source) as String? == UTType.jpeg.identifier, max(width, height) <= maxPixels {
+                return Self.write(data, in: folder)
+            }
+            guard let jpeg = Downsample.image(data: data, maxPixels: maxPixels)?.jpegData(compressionQuality: 0.85)
+            else { return nil }
+            return Self.write(jpeg, in: folder)
+        }.value
+        guard let file, !contains(noteID: noteID) else { return nil }
+        return insert(file: file, caption: caption, author: author, date: date, noteID: noteID, unsent: false)
+    }
+
+    /// Writes a photo's JPEG into the Moments folder under a new name, and returns the name.
+    nonisolated private static func write(_ jpeg: Data, in folder: URL) -> String? {
         let file = "\(UUID().uuidString).jpg"
         do {
-            try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
-            try data.write(to: Self.folder.appending(path: file))
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try jpeg.write(to: folder.appending(path: file))
         } catch {
             return nil
         }
+        return file
+    }
+
+    private func insert(file: String, caption: String, author: String, date: Date, noteID: String?,
+                        unsent: Bool) -> Moment {
         let moment = Moment(id: UUID(), author: author, date: date, caption: caption, file: file,
                             pinned: pinned.count < Self.wallSlots, loved: false, unsent: unsent ? true : nil, noteID: noteID)
         // Newest first; a photo from the partner can be older than ones already here.

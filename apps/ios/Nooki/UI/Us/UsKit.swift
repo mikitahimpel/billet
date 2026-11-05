@@ -9,10 +9,9 @@ extension View {
             .presentationBackground(Ink.screen)
     }
 
-    /// The card for rows and tiles.
-    func usCard(radius: CGFloat = Radius.card) -> some View {
-        background(Ink.surface, in: .rect(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Ink.separator, lineWidth: 0.5))
+    /// The card for rows and tiles: the app's clay card.
+    func usCard(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
+        nookiCard(radius: radius, warm: warm)
     }
 }
 

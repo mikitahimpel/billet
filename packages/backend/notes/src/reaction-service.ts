@@ -76,6 +76,9 @@ export class ReactionService extends Context.Service<
               case "NotSold":
               case "OfferOwned":
               case "NotOffered":
+              case "GiftTaken":
+              case "CollectionIncomplete":
+              case "BonusTaken":
                 return yield* Effect.fail(
                   new NotesUnavailable({ reason: "room-refused-reaction" }),
                 );

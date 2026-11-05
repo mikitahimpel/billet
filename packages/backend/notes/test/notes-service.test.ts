@@ -1,6 +1,7 @@
 import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { CatGameId, CatLook, CatName, NatureSeed } from "@billet/contracts-domain/cat";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
@@ -12,7 +13,6 @@ import {
   AlreadyOwned,
   InkNotOwned,
   InvalidNote,
-  NotEnoughCoins,
   NotesNotFound,
   NotesUnavailable,
 } from "../src/notes-error.ts";
@@ -345,7 +345,6 @@ describe("sendNote", () => {
       notes.buy(ana, { id, item: rose });
     const outcome = await run(layer, (notes) =>
       Effect.gen(function* () {
-        const broke = yield* Effect.flip(buyRose(notes, newKey()));
         yield* notes.sendNote(
           ana,
           SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: freeInk }),
@@ -369,24 +368,24 @@ describe("sendNote", () => {
         const retried = yield* buyRose(notes, id);
         const twice = yield* Effect.flip(buyRose(notes, newKey()));
         const after = yield* notes.coins(ana, earned.entries.at(-1)?.id, 100);
-        return { broke, earned, bought, retried, twice, after };
+        return { earned, bought, retried, twice, after };
       }),
     );
     expect(Exit.isSuccess(outcome)).toBe(true);
     if (Exit.isSuccess(outcome)) {
-      const { broke, earned, bought, retried, twice, after } = outcome.value;
-      expect(broke).toEqual(new NotEnoughCoins({ needed: 60, have: 0 }));
-      expect(earned.balance).toBe(65);
-      expect(earned.entries.map((e) => e.kind)).toEqual(Array(9).fill("earn"));
+      const { earned, bought, retried, twice, after } = outcome.value;
+      // The welcome coins (560) come with the room.
+      expect(earned.balance).toBe(625);
+      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(9).fill("earn")]);
       expect(bought).toMatchObject({
         entry: { kind: "spend", amount: -60, ref: rose },
-        balance: 5,
+        balance: 565,
         granted: [rose],
         owned: [freeInk, rose],
       });
       expect(retried).toEqual(bought);
       expect(twice).toEqual(new AlreadyOwned({ itemId: rose }));
-      expect(after).toEqual({ balance: 5, entries: [bought.entry] });
+      expect(after).toEqual({ balance: 565, entries: [bought.entry] });
     }
   });
 
@@ -532,6 +531,47 @@ describe("history", () => {
     );
     expect(await run(down, (notes) => notes.history(ana, 0, 10))).toEqual(
       failed(new NotesUnavailable({ reason: "directory-unavailable" })),
+    );
+  });
+});
+
+describe("coins bought with money", () => {
+  const entryId = Schema.decodeSync(CoinEntryId);
+  const pack = "com.mikitahimpel.billet.coins.550";
+  const purchase = entryId("purchase:2000");
+
+  it("opens the room and pays the pack into the wallet the pair reads, once", async () => {
+    const outcome = await run(world().layer, (notes) =>
+      Effect.gen(function* () {
+        const credit = { kind: "buy" as const, id: purchase, ref: pack, coins: 550 };
+        const first = yield* notes.creditPurchase(pairA, credit);
+        const again = yield* notes.creditPurchase(pairA, credit);
+        const refunded = yield* notes.creditPurchase(pairA, {
+          kind: "refund",
+          id: entryId("refund:2000"),
+          ref: pack,
+          reverses: purchase,
+        });
+        const coins = yield* notes.coins(ben, undefined, 100);
+        return { first, again, refunded, coins, balance: yield* notes.walletBalance(pairA) };
+      }),
+    );
+    expect(outcome).toEqual(
+      Exit.succeed({
+        // The welcome coins (560) come with the room.
+        first: { balance: 1110, coins: 550 },
+        again: { balance: 1110, coins: 550 },
+        refunded: { balance: 560, coins: 550 },
+        coins: {
+          balance: 560,
+          entries: [
+            expect.objectContaining({ id: "gift:welcome" }),
+            expect.objectContaining({ id: "purchase:2000", kind: "buy", amount: 550 }),
+            expect.objectContaining({ id: "refund:2000", kind: "refund", amount: -550 }),
+          ],
+        },
+        balance: 560,
+      }),
     );
   });
 });

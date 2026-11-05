@@ -74,7 +74,7 @@ struct SetListItemIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         if let list = UUID(uuidString: listID), let item = UUID(uuidString: itemID) {
-            UsStore(wallet: WalletStore()).setItem(item, in: list, done: done)
+            UsStore().setItem(item, in: list, done: done)
             savedReloadingWidgets()
         }
         return .result()
@@ -88,7 +88,7 @@ nonisolated struct SurpriseIdeaIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         var activity = WidgetActivity.load()
-        activity.ideaID = UsStore(wallet: WalletStore()).randomIdea(filter: DateFilter(), excluding: Set([activity.ideaID].compactMap { $0 }))?.id
+        activity.ideaID = UsStore().randomIdea(filter: DateFilter(), excluding: Set([activity.ideaID].compactMap { $0 }))?.id
         activity.save()
         savedReloadingWidgets()
         return .result()

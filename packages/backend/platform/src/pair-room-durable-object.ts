@@ -1,10 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
-import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
@@ -23,9 +23,10 @@ import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
-import { RoomService } from "@billet/backend-pair-room/room-service";
+import { type PurchaseCredit, RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
+import { GiftsRoom, type GiftCommand, type GiftsResult } from "@billet/backend-pair-room/gifts";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -93,7 +94,19 @@ interface SocketAttachment {
    * `lastReactionRev`.
    */
   readonly sentReactionRev?: number | null;
+  /** Whether this socket resumed with `shop: true` and is sent the pair's shop when it changes. */
+  readonly shop?: boolean;
 }
+
+/** Outputs that change what `shopOf` shows. */
+const shopOutputs: ReadonlySet<string> = new Set([
+  "CoinsEntered",
+  "InksGranted",
+  "ItemsGranted",
+  "WishlistChanged",
+  "GiftOpened",
+  "BonusPaid",
+]);
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
   (socket.deserializeAttachment() as SocketAttachment | null) ?? undefined;
@@ -223,6 +236,18 @@ export class PairRoom extends DurableObject {
     );
   }
 
+  /** Runs one gift command for `by` and answers with what they may see after it. */
+  async gifts(by: UserId, command: GiftCommand): Promise<GiftsResult> {
+    return (await this.runtime).runPromise(
+      GiftsRoom.use((gifts) => gifts.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.gifts.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
+    );
+  }
+
   open(
     pairId: PairId,
     members: readonly [UserId, UserId],
@@ -243,6 +268,7 @@ export class PairRoom extends DurableObject {
         }
       }
       await this.pushNotes();
+      await this.pushShop(decision);
       // A note to an adopted cat is also a journal entry.
       if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
         await this.pushCatEntries();
@@ -309,6 +335,7 @@ export class PairRoom extends DurableObject {
     );
     if (decision._tag === "Accepted") {
       await this.pushCatEntries();
+      await this.pushShop(decision);
       await this.pushUnread((member) => member !== by);
     }
     return decision;
@@ -331,6 +358,19 @@ export class PairRoom extends DurableObject {
     );
     this.sendUnread((member) => member === user, new Map([[user, unread]]));
     return unread;
+  }
+
+  /** Sends the pair's shop to every socket that follows it, when `decision` changed it. */
+  private async pushShop(decision: RoomDecision): Promise<void> {
+    if (decision._tag !== "Accepted") return;
+    if (!decision.outputs.some((output) => shopOutputs.has(output._tag))) return;
+    const sockets = this.ctx
+      .getWebSockets()
+      .filter((socket) => attachmentOf(socket)?.shop === true);
+    if (sockets.length === 0) return;
+    const shop = await this.shop();
+    if (shop === null) return;
+    for (const socket of sockets) send(socket, { _tag: "ShopChanged", shop });
   }
 
   /**
@@ -454,41 +494,117 @@ export class PairRoom extends DurableObject {
   }
 
   /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
-  grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
-    return this.run((room) => room.dispatch({ _tag: "GrantInks", inks }), "PairRoom.grantInks");
+  async grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantInks", inks }),
+      "PairRoom.grantInks",
+    );
+    await this.pushShop(decision);
+    return decision;
   }
 
-  /** The pair's balance and its wallet entries after `after`, oldest first. */
-  coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse> {
+  /**
+   * The pair's balance and its wallet entries after `after`, oldest first, or null while the room
+   * is not open. A room owed its welcome coins gets them first.
+   */
+  coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse | null> {
     return this.run(
       (room) =>
-        Effect.all([room.state, room.coinEntriesAfter(after, limit)]).pipe(
-          Effect.map(([state, entries]) => ({
-            balance: state._tag === "Active" ? state.wallet.balance : 0,
-            entries,
-          })),
+        Effect.all([room.settled, room.coinEntriesAfter(after, limit)]).pipe(
+          Effect.map(([state, entries]) =>
+            state._tag === "Active" ? { balance: state.wallet.balance, entries } : null,
+          ),
         ),
       "PairRoom.coins",
     );
   }
 
   /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
-  buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
-    return this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+  async buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+    await this.pushShop(decision);
+    return decision;
   }
 
-  /** The pair's balance, inks, room pieces and wishlist. */
-  shop(): Promise<ShopResponse> {
-    return this.run((room) => room.state.pipe(Effect.map(shopOf)), "PairRoom.shop");
+  /**
+   * The pair's balance, inks, room pieces and wishlist, or null while the room is not open. A room
+   * owed its welcome coins gets them first.
+   */
+  shop(): Promise<ShopResponse | null> {
+    return this.run(
+      (room) =>
+        room.settled.pipe(Effect.map((state) => (state._tag === "Active" ? shopOf(state) : null))),
+      "PairRoom.shop",
+    );
   }
 
   /** Buys one offer with the pair's coins. A repeated `id` answers with the first order. */
-  order(by: UserId, id: IdempotencyKey, offer: ShopOffer): Promise<RoomDecision> {
-    return this.run((room) => room.order(by, id, offer), "PairRoom.order");
+  async order(
+    by: UserId,
+    id: IdempotencyKey,
+    offer: ShopOffer,
+    utcOffsetSeconds?: number,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.order(by, id, offer, utcOffsetSeconds),
+      "PairRoom.order",
+    );
+    return this.afterCoins(decision, by);
   }
 
-  setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
-    return this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+  /** Opens the day's gift, once a day for the pair. */
+  async openGift(by: UserId, utcOffsetSeconds: number | undefined): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.openGift(by, utcOffsetSeconds),
+      "PairRoom.openGift",
+    );
+    return this.afterCoins(decision, by);
+  }
+
+  /** Collects a complete collection's bonus, once. */
+  async claimBonus(by: UserId, collection: CollectionId): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.claimBonus(by, collection),
+      "PairRoom.claimBonus",
+    );
+    return this.afterCoins(decision, by);
+  }
+
+  /** Pays an app earn, once per ref. An earn is no Inbox item. */
+  async earn(
+    by: UserId,
+    event: EarnEvent,
+    utcOffsetSeconds: number | undefined,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.earn(by, event, utcOffsetSeconds),
+      "PairRoom.earn",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
+  /** Pays in or takes back coins bought with money, once per entry id. No Inbox item. */
+  creditPurchase(credit: PurchaseCredit): Promise<RoomDecision> {
+    return this.run((room) => room.creditPurchase(credit), "PairRoom.creditPurchase");
+  }
+
+  /** A treat's meal goes to the journal's followers; an order, gift or bonus is an Inbox item. */
+  private async afterCoins(decision: RoomDecision, by: UserId): Promise<RoomDecision> {
+    if (decision._tag === "Accepted" && decision.outputs.some((o) => o._tag !== "CoinsRepeated")) {
+      if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
+        await this.pushCatEntries();
+      }
+      await this.pushUnread((member) => member !== by);
+    }
+    await this.pushShop(decision);
+    return decision;
+  }
+
+  async setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+    await this.pushShop(decision);
+    return decision;
   }
 
   notes(afterSeq: number, limit: number): Promise<ReadonlyArray<SequencedNote>> {
@@ -503,6 +619,7 @@ export class PairRoom extends DurableObject {
    */
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
+    await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
     this.endSessions();
@@ -564,14 +681,15 @@ export class PairRoom extends DurableObject {
       case "Resume": {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
-        // the Inbox.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev } = message.value;
+        // the Inbox, nor one without `shop` the shop.
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop } = message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
           sentCatSeq: lastCatSeq === undefined ? null : Math.max(0, lastCatSeq),
           activity: activity === true,
           sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
+          shop: shop === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
@@ -580,6 +698,8 @@ export class PairRoom extends DurableObject {
           const unread = await this.run((room) => room.unread(attachment.user as UserId));
           send(socket, { _tag: "ActivityUnread", unread });
         }
+        const current = shop === true ? await this.shop() : null;
+        if (current !== null) send(socket, { _tag: "ShopChanged", shop: current });
         return;
       }
       case "Stroke": {

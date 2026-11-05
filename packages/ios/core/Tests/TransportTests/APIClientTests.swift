@@ -166,9 +166,11 @@ import Wire
     #expect(inks.requests.first?.headers["Authorization"] == "Bearer tok")
 
     let coins = Server(body: #"{"balance":140,"entries":[]}"#)
-    #expect(try await Self.client(coins).getCoins().balance == 140)
+    #expect(try await Self.client(coins).getCoins(nil).balance == 140)
     #expect(coins.requests.first?.method == .get)
     #expect(coins.requests.first?.path == "/v1/coins")
+    _ = try await Self.client(coins).getCoins("spend:k1")
+    #expect(coins.requests.last?.path == "/v1/coins?after=spend%3Ak1")
   }
 
   @Test func buyingSendsTheKeyAndTheInk() async throws {
@@ -201,5 +203,53 @@ import Wire
     await #expect(throws: TransportError.api(.alreadyPaired)) {
       try await Self.client(server).claimInvite(ClaimInviteRequest(code: InviteCode("ABC")))
     }
+  }
+
+  @Test func anOrderSendsThePhonesClockForTheDaysDeal() async throws {
+    let server = Server(
+      body:
+        #"{"entry":{"id":"spend:k1","kind":"spend","amount":-45,"ref":"yarn","at":5},"shop":{"balance":515,"inks":["ink-graphite"],"items":["lamp","rug","yarn"],"wishlist":[],"bonuses":[]}}"#
+    )
+    let response = try await Self.client(server).placeOrder(
+      OrderRequest(
+        id: IdempotencyKey("k1"), offer: .item(RoomItemId("yarn")), utcOffsetSeconds: 3600))
+    #expect(response.shop.balance == 515)
+    let body = try #require(server.requests.first?.body)
+    let sent = try #require(try JSONSerialization.jsonObject(with: body) as? NSDictionary)
+    #expect(
+      sent == ["id": "k1", "offer": ["_tag": "Item", "item": "yarn"], "utcOffsetSeconds": 3600])
+  }
+
+  @Test func theGiftBonusAndEarnsGoToTheirRoutes() async throws {
+    let gift = Server(
+      body:
+        #"{"entry":{"id":"gift:2026-11-05","kind":"gift","amount":0,"ref":"yarn","at":5},"reward":{"_tag":"Item","item":"yarn"},"shop":{"balance":560,"inks":["ink-graphite"],"items":["lamp","rug","yarn"],"wishlist":[],"giftDay":"2026-11-05","bonuses":[]}}"#
+    )
+    let opened = try await Self.client(gift).openGift(OpenGiftRequest())
+    #expect(opened.reward == .item(RoomItemId("yarn")))
+    #expect(opened.shop.giftDay == "2026-11-05")
+    #expect(gift.requests.first?.path == "/v1/shop/gift")
+
+    let bonus = Server(
+      status: 409, body: #"{"_tag":"CollectionIncomplete","collection":"cozy-autumn"}"#)
+    await #expect(throws: TransportError.api(.collectionIncomplete(collection: "cozy-autumn"))) {
+      _ = try await Self.client(bonus).claimBonus(ClaimBonusRequest(collection: "cozy-autumn"))
+    }
+    #expect(bonus.requests.first?.path == "/v1/shop/bonus")
+
+    let earn = Server(body: #"{"balance":575}"#)
+    let earned = try await Self.client(earn).earnCoins(
+      EarnRequest(event: .listTicked(item: "item-1"), utcOffsetSeconds: 0))
+    #expect(earned.entry == nil)
+    #expect(earn.requests.first?.path == "/v1/coins/earn")
+  }
+
+  @Test func aShopFromBeforeBonusesReadsWithNone() throws {
+    let shop = try JSONDecoder().decode(
+      ShopResponse.self,
+      from: Data(
+        #"{"balance":0,"inks":["ink-graphite"],"items":["lamp","rug"],"wishlist":[]}"#.utf8))
+    #expect(shop.bonuses == [])
+    #expect(shop.giftDay == nil)
   }
 }

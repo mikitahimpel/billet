@@ -3,24 +3,32 @@ import type { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
 import {
   type CoinEntry,
   CoinEntryId,
+  type CoinEntryKind,
   dailyEarnCaps,
+  type LocalDay,
   localDayOf,
   rewardFor,
+  rewardForEarn,
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import {
+  collectionOf,
   featuredSetAt,
   featuredSets,
+  giftOn,
+  itemPriceOn,
   pieceSetOf,
   roomItemOf,
   type RoomItemId,
   setPrice,
   type ShopOffer,
   starterItems,
+  treatGrams,
   treatPrice,
+  welcomeCoins,
 } from "@billet/contracts-domain/shop";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import type { RoomCommand } from "./room-command.ts";
@@ -76,12 +84,21 @@ const unownedInk = (room: ActiveRoom, note: Note): InkId | undefined => {
 export const ownsItem = (room: ActiveRoom, item: RoomItemId): boolean =>
   starterItems.includes(item) || room.items.includes(item);
 
-/** What an order costs and gives, and the `ref` its wallet entry names. */
+/** The pieces the pair has: the starters and the ones it bought or was given. */
+const ownedItems = (room: ActiveRoom): ReadonlySet<string> =>
+  new Set<string>([...starterItems, ...room.items]);
+
+/**
+ * What an order costs and gives, and the `ref` its wallet entry names. `offer` names a deal or a
+ * set for the Inbox; a `treat` feeds the cat instead of granting anything.
+ */
 type Quote = {
   readonly price: number;
   readonly ref: string;
   readonly inks: ReadonlyArray<InkId>;
   readonly items: ReadonlyArray<RoomItemId>;
+  readonly offer?: string;
+  readonly treat?: true;
 };
 
 const hour = 3_600_000;
@@ -97,7 +114,12 @@ const quoteInk = (room: ActiveRoom, ink: InkId): Quote | RoomRejection => {
   return { price: sold.price, ref: ink, inks: [ink], items: [] };
 };
 
-const quote = (room: ActiveRoom, offer: ShopOffer, at: EpochMillis): Quote | RoomRejection => {
+const quote = (
+  room: ActiveRoom,
+  offer: ShopOffer,
+  at: EpochMillis,
+  day: LocalDay,
+): Quote | RoomRejection => {
   switch (offer._tag) {
     case "Ink":
       return quoteInk(room, offer.ink);
@@ -105,7 +127,14 @@ const quote = (room: ActiveRoom, offer: ShopOffer, at: EpochMillis): Quote | Roo
       const sold = roomItemOf(offer.item);
       if (sold === undefined) return RoomRejection.cases.NotOffered.make({});
       if (ownsItem(room, sold.id)) return RoomRejection.cases.OfferOwned.make({ offer: sold.id });
-      return { price: sold.price, ref: sold.id, inks: [], items: [sold.id] };
+      const { price, deal } = itemPriceOn(sold, room.pairId, day);
+      return {
+        price,
+        ref: sold.id,
+        inks: [],
+        items: [sold.id],
+        ...(deal === undefined ? {} : { offer: `deal:${day}` }),
+      };
     }
     case "Set": {
       const pieces = pieceSetOf(offer.set);
@@ -116,17 +145,22 @@ const quote = (room: ActiveRoom, offer: ShopOffer, at: EpochMillis): Quote | Roo
       const price = setPrice(pieces, owned);
       if (price === undefined) return RoomRejection.cases.OfferOwned.make({ offer: pieces.id });
       const items = pieces.items.filter((item) => !owned.has(item));
-      return { price: price.price, ref: pieces.id, inks: [], items };
+      const offered = `${featured ? "featured" : "bundle"}:${pieces.id}`;
+      return { price: price.price, ref: pieces.id, inks: [], items, offer: offered };
     }
     case "Treat":
-      return { price: treatPrice, ref: "treat", inks: [], items: [] };
+      if (room.cat === undefined) return RoomRejection.cases.CatNotAdopted.make({});
+      return { price: treatPrice, ref: "treat", inks: [], items: [], treat: true };
   }
 };
 
-/** Takes the price and gives what was bought. A piece bought leaves the wishlist. */
+/**
+ * Takes the price and gives what was bought. A piece bought leaves the wishlist. A treat feeds the
+ * cat on the spot, under the order's id; it was paid for, so the meal earns nothing back.
+ */
 const charge = (
   room: ActiveRoom,
-  order: { readonly id: IdempotencyKey; readonly at: EpochMillis },
+  order: { readonly id: IdempotencyKey; readonly by: UserId; readonly at: EpochMillis },
   bought: Quote,
 ): RoomDecision => {
   const have = room.wallet.balance;
@@ -141,9 +175,27 @@ const charge = (
     at: order.at,
   };
   const wishlist = room.wishlist.filter((item) => !bought.items.includes(item));
+  const fed =
+    bought.treat === true && room.cat !== undefined
+      ? journal(room.cat, {
+          id: order.id,
+          by: order.by,
+          at: order.at,
+          event: { _tag: "Fed", grams: treatGrams },
+        })
+      : undefined;
+  const purchased = RoomOutput.cases.Purchased.make({
+    id: order.id,
+    by: order.by,
+    at: order.at,
+    items: bought.treat === true ? [bought.ref] : [...bought.inks, ...bought.items],
+    ...(bought.offer === undefined ? {} : { offer: bought.offer }),
+    coins: bought.price,
+  });
   return accepted(
     {
       ...room,
+      ...(fed === undefined ? {} : { cat: fed.cat }),
       inks: [...room.inks, ...bought.inks],
       items: [...room.items, ...bought.items],
       wishlist,
@@ -151,6 +203,7 @@ const charge = (
     },
     [
       RoomOutput.cases.CoinsEntered.make({ entry }),
+      ...(fed === undefined ? [] : [RoomOutput.cases.CatEntryAppended.make({ entry: fed.entry })]),
       ...(bought.inks.length === 0
         ? []
         : [RoomOutput.cases.InksGranted.make({ inks: bought.inks })]),
@@ -160,6 +213,7 @@ const charge = (
       ...(wishlist.length === room.wishlist.length
         ? []
         : [RoomOutput.cases.WishlistChanged.make({ wishlist })]),
+      purchased,
     ],
   );
 };
@@ -188,6 +242,53 @@ const journal = (
 
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
+const coinEntry = (
+  id: string,
+  kind: CoinEntryKind,
+  amount: number,
+  ref: string,
+  at: EpochMillis,
+): CoinEntry => ({ id: decodeEntryId(id), kind, amount, ref, at });
+
+/** The wallet with its earned counts for `day`: zero when the day has turned. */
+const walletOn = (wallet: RoomWallet, day: LocalDay): RoomWallet =>
+  wallet.day === day
+    ? wallet
+    : { balance: wallet.balance, day, care: 0, notes: 0, games: 0, lists: 0 };
+
+const withCoins = (room: ActiveRoom, amount: number): ActiveRoom => ({
+  ...room,
+  wallet: { ...room.wallet, balance: room.wallet.balance + amount },
+});
+
+/** The offset a day is counted in: the caller's, else the cat's, else UTC. */
+const offsetOf = (room: ActiveRoom, utcOffsetSeconds: number | undefined): number =>
+  utcOffsetSeconds ?? room.cat?.profile.utcOffsetSeconds ?? 0;
+
+/** Opens the day's gift: coins, or a piece with an amount-0 entry that names it. */
+const openGift = (room: ActiveRoom, by: UserId, at: EpochMillis, day: LocalDay): RoomDecision => {
+  const reward = giftOn(room.pairId, day, ownedItems(room));
+  const opened = RoomOutput.cases.GiftOpened.make({ by, at, day, reward });
+  const dated = { ...room, giftDay: day };
+  switch (reward._tag) {
+    case "Coins": {
+      const entry = coinEntry(`gift:${day}`, "gift", reward.coins, day, at);
+      return accepted(withCoins(dated, reward.coins), [
+        RoomOutput.cases.CoinsEntered.make({ entry }),
+        opened,
+      ]);
+    }
+    case "Item": {
+      const entry = coinEntry(`gift:${day}`, "gift", 0, reward.item, at);
+      return accepted({ ...dated, items: [...dated.items, reward.item] }, [
+        RoomOutput.cases.CoinsEntered.make({ entry }),
+        RoomOutput.cases.ItemsGranted.make({ items: [reward.item] }),
+        opened,
+      ]);
+    }
+  }
+};
+
 /**
  * What a journal entry earns the pair: its reward, cut to what is left of the day's cap. The day is
  * the cat's local day, so the caps reset at the couple's midnight. Nothing when the cap is met.
@@ -200,8 +301,7 @@ export const earnFor = (
   const reward = rewardFor(entry.event);
   if (reward === undefined) return { wallet };
   const day = localDayOf(entry.at, utcOffsetSeconds);
-  const today: RoomWallet =
-    wallet.day === day ? wallet : { balance: wallet.balance, day, care: 0, notes: 0, games: 0 };
+  const today = walletOn(wallet, day);
   const amount = Math.min(reward.coins, dailyEarnCaps[reward.source] - today[reward.source]);
   if (amount <= 0) return { wallet: today };
   return {
@@ -251,6 +351,8 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           inks: [],
           items: [],
           wishlist: [],
+          bonuses: [],
+          welcomed: false,
           wallet: emptyWallet,
         },
         [RoomOutput.cases.RoomOpened.make(joined === undefined ? { pairId } : { pairId, joined })],
@@ -265,6 +367,11 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "Order":
     case "SetWish":
     case "React":
+    case "Welcome":
+    case "OpenGift":
+    case "ClaimBonus":
+    case "Earn":
+    case "CreditPurchase":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -375,13 +482,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       const { id, by, ink, at } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
       const bought = quoteInk(room, ink);
-      return isRejection(bought) ? rejected(bought) : charge(room, { id, at }, bought);
+      return isRejection(bought) ? rejected(bought) : charge(room, { id, by, at }, bought);
     }
     case "Order": {
       const { id, by, offer, at } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
-      const bought = quote(room, offer, at);
-      return isRejection(bought) ? rejected(bought) : charge(room, { id, at }, bought);
+      const day = localDayOf(at, offsetOf(room, command.utcOffsetSeconds));
+      const bought = quote(room, offer, at, day);
+      return isRejection(bought) ? rejected(bought) : charge(room, { id, by, at }, bought);
     }
     case "SetWish": {
       const { by, item, wished } = command;
@@ -391,6 +499,64 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (listed === wished) return accepted(room);
       const wishlist = wished ? [...room.wishlist, item] : room.wishlist.filter((i) => i !== item);
       return accepted({ ...room, wishlist }, [RoomOutput.cases.WishlistChanged.make({ wishlist })]);
+    }
+    case "Welcome": {
+      if (room.welcomed) return accepted(room);
+      const entry = coinEntry("gift:welcome", "gift", welcomeCoins, "welcome", command.at);
+      return accepted(withCoins({ ...room, welcomed: true }, welcomeCoins), [
+        RoomOutput.cases.CoinsEntered.make({ entry }),
+      ]);
+    }
+    case "OpenGift": {
+      const { by, at, utcOffsetSeconds } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const day = localDayOf(at, utcOffsetSeconds);
+      if (room.giftDay === day) return rejected(RoomRejection.cases.GiftTaken.make({ day }));
+      return openGift(room, by, at, day);
+    }
+    case "ClaimBonus": {
+      const { by, at, collection } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const sold = collectionOf(collection);
+      if (sold === undefined) return rejected(RoomRejection.cases.NotOffered.make({}));
+      if (room.bonuses.includes(sold.id)) {
+        return rejected(RoomRejection.cases.BonusTaken.make({ collection: sold.id }));
+      }
+      const owned = ownedItems(room);
+      if (!sold.items.every((item) => owned.has(item))) {
+        return rejected(RoomRejection.cases.CollectionIncomplete.make({ collection: sold.id }));
+      }
+      const entry = coinEntry(`bonus:${sold.id}`, "bonus", sold.bonus, sold.id, at);
+      return accepted(withCoins({ ...room, bonuses: [...room.bonuses, sold.id] }, sold.bonus), [
+        RoomOutput.cases.CoinsEntered.make({ entry }),
+        RoomOutput.cases.BonusPaid.make({ by, at, collection: sold.id, coins: sold.bonus }),
+      ]);
+    }
+    case "Earn": {
+      const { by, at, utcOffsetSeconds, event } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const reward = rewardForEarn(event);
+      const today = walletOn(room.wallet, localDayOf(at, utcOffsetSeconds));
+      const { source } = reward;
+      const amount =
+        source === undefined
+          ? reward.coins
+          : Math.min(reward.coins, dailyEarnCaps[source] - today[source]);
+      if (amount <= 0) return accepted({ ...room, wallet: today });
+      const entry = coinEntry(reward.id, "earn", amount, reward.ref, at);
+      const counted = source === undefined ? {} : { [source]: today[source] + amount };
+      return accepted(
+        { ...room, wallet: { ...today, balance: today.balance + amount, ...counted } },
+        [RoomOutput.cases.CoinsEntered.make({ entry })],
+      );
+    }
+    case "CreditPurchase": {
+      const { id, kind, coins, ref, at } = command;
+      // Apple refunds a pack after its coins may be spent, so a refund takes at most the balance
+      // and its entry records what it took.
+      const amount = kind === "buy" ? coins : -Math.min(coins, room.wallet.balance);
+      const entry = coinEntry(id, kind, amount === 0 ? 0 : amount, ref, at);
+      return accepted(withCoins(room, amount), [RoomOutput.cases.CoinsEntered.make({ entry })]);
     }
   }
 };

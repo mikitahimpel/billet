@@ -1,6 +1,8 @@
 import { Clock, Context, Effect, Layer, Option, Redacted, Schema } from "effect";
 import type { Signature } from "effect/crypto";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
 import type { UserId } from "@billet/contracts-domain/ids";
+import { PairId } from "@billet/contracts-domain/pair-id";
 import { appBundleId, coinPackOf } from "@billet/contracts-domain/coin-packs";
 import type {
   MockPurchaseRequest,
@@ -12,7 +14,15 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { verifySignedData } from "./app-store-signed-data.ts";
 import { InvalidPurchase, PaymentsNotFound, PaymentsUnavailable } from "./payments-error.ts";
 import { PaymentsConfig } from "./payments-config.ts";
-import { PaymentsRepository, CoinOwner, type StoredNotification } from "./payments-repository.ts";
+import { PairWallet } from "./pair-wallet.ts";
+import {
+  CoinOwner,
+  entryIds,
+  type NewPurchase,
+  PaymentsRepository,
+  type StoredNotification,
+  type StoredPurchase,
+} from "./payments-repository.ts";
 
 /** The fields of a StoreKit 2 transaction (`JWSTransactionDecodedPayload`) that matter here. */
 const Transaction = Schema.Struct({
@@ -49,9 +59,17 @@ const shapeOf =
     );
 
 const decodeOwner = Schema.decodeSync(CoinOwner);
+const decodePairId = Schema.decodeSync(PairId);
+const decodeEntryId = Schema.decodeSync(CoinEntryId);
+
+const demoPrefix = "demo:";
 
 /** The ledger of a demo room on the dev stage, which has no pair. */
-export const demoOwner = (code: string): CoinOwner => decodeOwner(`demo:${code}`);
+export const demoOwner = (code: string): CoinOwner => decodeOwner(`${demoPrefix}${code}`);
+
+/** The pair whose wallet an owner's coins go to. A demo room has none and keeps only the ledger. */
+const pairOf = (owner: CoinOwner): PairId | undefined =>
+  owner.startsWith(demoPrefix) ? undefined : decodePairId(owner);
 
 const iso = (millis: number) => new Date(millis).toISOString();
 
@@ -63,11 +81,14 @@ export class PaymentsService extends Context.Service<
     readonly ownerOf: (
       userId: UserId,
     ) => Effect.Effect<CoinOwner, PaymentsNotFound | PaymentsUnavailable>;
-    /** Verifies a StoreKit 2 transaction and credits its pack, once. */
+    /**
+     * Verifies a StoreKit 2 transaction and credits its pack, once, to the ledger and to the pair's
+     * wallet. The answer's `balance` is the wallet's.
+     */
     readonly purchase: (
       owner: CoinOwner,
       signedTransaction: Redacted.Redacted<string>,
-    ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsUnavailable>;
+    ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsNotFound | PaymentsUnavailable>;
     /** The dev stage's purchase without the App Store. The routes only serve it there. */
     readonly mockPurchase: (
       owner: CoinOwner,
@@ -90,12 +111,13 @@ export class PaymentsService extends Context.Service<
   static readonly layer: Layer.Layer<
     PaymentsService,
     never,
-    PaymentsRepository | PaymentsConfig | PairingRepository | Signature.Signature
+    PaymentsRepository | PaymentsConfig | PairingRepository | PairWallet | Signature.Signature
   > = Layer.effect(
     PaymentsService,
     Effect.gen(function* () {
       const repository = yield* PaymentsRepository;
       const pairing = yield* PairingRepository;
+      const wallet = yield* PairWallet;
       const config = yield* PaymentsConfig;
       const services = yield* Effect.context<Signature.Signature>();
 
@@ -119,6 +141,65 @@ export class PaymentsService extends Context.Service<
 
       const accepts = (environment: string) =>
         config.environments.some((accepted) => accepted === environment);
+
+      // The ledger commits first, then the wallet. A retry after the wallet failed, or a transaction
+      // sent again, reaches the wallet again: it enters `purchase:<id>` once. A duplicate stored for
+      // another owner, or one refunded since, enters nothing.
+      const credit = Effect.fnUntraced(function* (owner: CoinOwner, purchase: NewPurchase) {
+        const credited = yield* repository.credit(purchase);
+        const pairId = pairOf(owner);
+        if (pairId === undefined) return credited;
+        const id = purchase.originalTransactionId;
+        const stored = credited.duplicate ? yield* repository.findPurchase(id) : Option.none();
+        const ours =
+          !credited.duplicate ||
+          (Option.isSome(stored) &&
+            stored.value.ownerId === owner &&
+            stored.value.status === "credited");
+        const balance = ours
+          ? (yield* wallet.enter(pairId, {
+              kind: "buy",
+              id: decodeEntryId(entryIds.purchase(id)),
+              ref: purchase.productId,
+              coins: purchase.coins,
+            })).balance
+          : yield* wallet.balance(pairId);
+        return { duplicate: credited.duplicate, balance };
+      });
+
+      // A refund or a reversed refund, in the pair's wallet, under the id the ledger's step will
+      // write. It goes before the ledger's step, which records the notification: once that is
+      // stored a retry stops early, so a wallet that failed would never get it. A refund takes back
+      // what the credit or the last restore paid; a restore gives back what its refund took.
+      // Nothing when the purchase is not in the state the step starts from, or has no pair.
+      const reverseInWallet = Effect.fnUntraced(function* (
+        stored: StoredPurchase,
+        step: "refund" | "restore",
+      ) {
+        const pairId = pairOf(stored.ownerId);
+        const from = step === "refund" ? "credited" : "refunded";
+        if (pairId === undefined || stored.status !== from) return undefined;
+        const id = stored.originalTransactionId;
+        const n = stored.refunds;
+        const credit =
+          step === "refund"
+            ? {
+                kind: "refund" as const,
+                id: entryIds.refund(id, n + 1),
+                reverses: n === 0 ? entryIds.purchase(id) : entryIds.restore(id, n),
+              }
+            : {
+                kind: "buy" as const,
+                id: entryIds.restore(id, n),
+                reverses: entryIds.refund(id, n),
+              };
+        return yield* wallet.enter(pairId, {
+          kind: credit.kind,
+          id: decodeEntryId(credit.id),
+          reverses: decodeEntryId(credit.reverses),
+          ref: stored.productId,
+        });
+      });
 
       // Where a request learns whose coins it touches. A demo owner has no user or pair to name.
       const ownerOf = Effect.fn("PaymentsService.ownerOf")(function* (userId: UserId) {
@@ -154,7 +235,7 @@ export class PaymentsService extends Context.Service<
         if (transaction.revocationDate !== undefined) {
           return yield* new InvalidPurchase({ reason: "transaction-revoked" });
         }
-        const { duplicate, balance } = yield* repository.credit({
+        const { duplicate, balance } = yield* credit(owner, {
           originalTransactionId: transaction.originalTransactionId,
           transactionId: transaction.transactionId,
           ownerId: owner,
@@ -182,7 +263,7 @@ export class PaymentsService extends Context.Service<
         const at = yield* Clock.currentTimeMillis;
         const id = request.transactionId;
         if (request.kind === "purchase") {
-          const { duplicate, balance } = yield* repository.credit({
+          const { duplicate, balance } = yield* credit(owner, {
             originalTransactionId: id,
             transactionId: id,
             ownerId: owner,
@@ -202,12 +283,17 @@ export class PaymentsService extends Context.Service<
         ) {
           return yield* new PaymentsNotFound();
         }
+        const inWallet = yield* reverseInWallet(stored.value, "refund");
         const reversal = yield* repository.refund(stored.value, at);
+        const pairId = pairOf(owner);
+        const balance =
+          inWallet?.balance ??
+          (pairId === undefined ? reversal.balance : yield* wallet.balance(pairId));
         return {
           transactionId: id,
           productId: pack.id,
-          coins: reversal.duplicate ? pack.coins : reversal.coins,
-          balance: reversal.balance,
+          coins: reversal.duplicate ? pack.coins : (inWallet?.coins ?? reversal.coins),
+          balance,
           duplicate: reversal.duplicate,
         };
       });
@@ -273,6 +359,10 @@ export class PaymentsService extends Context.Service<
         if (Option.isNone(stored)) {
           return yield* repository.recordNotification(record("unknown-transaction", otid));
         }
+        // A pair that has ended has no wallet left to change; the ledger still records the step.
+        yield* reverseInWallet(stored.value, reverses ? "refund" : "restore").pipe(
+          Effect.catchTag("PaymentsNotFound", () => Effect.void),
+        );
         if (reverses) {
           const { duplicate } = yield* repository.refund(
             stored.value,

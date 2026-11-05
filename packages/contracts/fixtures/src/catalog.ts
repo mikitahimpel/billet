@@ -36,17 +36,33 @@ import {
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
-import { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
+import {
+  BuyRequest,
+  BuyResponse,
+  CoinsResponse,
+  EarnRequest,
+  EarnResponse,
+} from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { PairResponse } from "@billet/contracts-http-api/pair";
 import {
+  ClaimBonusRequest,
+  ClaimBonusResponse,
+  OpenGiftRequest,
+  OpenGiftResponse,
   OrderRequest,
   OrderResponse,
   ShopResponse,
   WishRequest,
 } from "@billet/contracts-http-api/shop";
-import { PieceSetId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
-import { CoinEntry } from "@billet/contracts-domain/coins";
+import {
+  CollectionId,
+  GiftReward,
+  PieceSetId,
+  RoomItemId,
+  ShopOffer,
+} from "@billet/contracts-domain/shop";
+import { CoinEntry, EarnEvent, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
 import {
   type AppStatus,
   MaintenanceResponse,
@@ -96,6 +112,15 @@ import {
   ReactRequest,
   ReactResponse,
 } from "@billet/contracts-http-api/reaction";
+import {
+  DeleteGiftWishRequest,
+  GiftsResponse,
+  GiftWish,
+  MarkGiftReceivedRequest,
+  SaveGiftWishRequest,
+  SaveLovesRequest,
+  SetGiftPlanRequest,
+} from "@billet/contracts-http-api/gifts";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -197,6 +222,9 @@ const rug = Schema.decodeSync(RoomItemId)("rug");
 const tower = Schema.decodeSync(RoomItemId)("tower");
 const yarn = Schema.decodeSync(RoomItemId)("yarn");
 const readingNook = Schema.decodeSync(PieceSetId)("reading-nook");
+const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
+const giftDay = Schema.decodeSync(LocalDay)("2026-11-05");
+const earnRef = Schema.decodeSync(EarnRef);
 const earnEntry = decodeCoinEntry({
   id: "earn:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
   kind: "earn",
@@ -210,6 +238,34 @@ const spendEntry = decodeCoinEntry({
   amount: -60,
   ref: "ink-rose",
   at: 1762350060000,
+});
+const giftEntry = decodeCoinEntry({
+  id: "gift:2026-11-05",
+  kind: "gift",
+  amount: 30,
+  ref: "2026-11-05",
+  at: 1762350180000,
+});
+const giftItemEntry = decodeCoinEntry({
+  id: "gift:2026-11-05",
+  kind: "gift",
+  amount: 0,
+  ref: "yarn",
+  at: 1762350180000,
+});
+const bonusEntry = decodeCoinEntry({
+  id: "bonus:cozy-autumn",
+  kind: "bonus",
+  amount: 150,
+  ref: "cozy-autumn",
+  at: 1762350240000,
+});
+const listEarnEntry = decodeCoinEntry({
+  id: "earn:list:item-1",
+  kind: "earn",
+  amount: 5,
+  ref: "item-1",
+  at: 1762350300000,
 });
 const catalogInk = (id: string): Ink => {
   const found = inkOf(id);
@@ -414,6 +470,40 @@ const refundItem = activityItem({
 });
 const activityCursor = Schema.decodeUnknownSync(ActivityCursor)(`0001700000100000~note:note-1`);
 
+const braceletWish: GiftWish = {
+  id: idempotencyKey,
+  owner: alice,
+  title: "Silver charm bracelet",
+  link: "https://example.com/bracelet",
+  price: "$65",
+  note: "the one with the little moon",
+  mostWanted: true,
+  occasion: { title: "Alice's birthday", date: 1_700_600_000_000 },
+  addedAt: 1_700_000_000_000,
+};
+
+const sunflowers: GiftWish = {
+  id: Schema.decodeUnknownSync(IdempotencyKey)("00000000-0000-4000-8000-0000000000b2"),
+  owner: alice,
+  title: "Sunflowers",
+  link: "",
+  price: "",
+  note: "",
+  mostWanted: false,
+  addedAt: 1_700_000_000_000,
+  receivedAt: 1_700_086_400_000,
+  giftedBy: bob,
+};
+
+const aliceLoves = {
+  sizes: "S, shoes 38",
+  flowers: "Peonies",
+  coffee: "Iced oat latte",
+  sweets: "",
+  allergies: "",
+  avoid: "Lilies",
+};
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -477,6 +567,44 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { reactions: [heart, takenBack] },
     empty: { reactions: [] },
   }),
+  fixture("GiftWish", GiftWish, { default: braceletWish, received: sunflowers }),
+  fixture("GiftsResponse", GiftsResponse, {
+    default: {
+      wishes: [braceletWish, sunflowers],
+      plans: [{ wish: idempotencyKey, stage: "planning" }],
+      surprise: true,
+      loves: [{ user: alice, loves: aliceLoves }],
+    },
+    empty: { wishes: [], plans: [], surprise: false, loves: [] },
+  }),
+  fixture("SaveGiftWishRequest", SaveGiftWishRequest, {
+    default: {
+      id: idempotencyKey,
+      title: "Silver charm bracelet",
+      link: "https://example.com/bracelet",
+      price: "$65",
+      note: "the one with the little moon",
+      mostWanted: true,
+    },
+    occasion: {
+      id: idempotencyKey,
+      title: "Peonies",
+      link: "",
+      price: "",
+      note: "",
+      mostWanted: false,
+      occasion: { title: "Our anniversary", date: 1_700_600_000_000 },
+    },
+  }),
+  fixture("DeleteGiftWishRequest", DeleteGiftWishRequest, { default: { id: idempotencyKey } }),
+  fixture("SetGiftPlanRequest", SetGiftPlanRequest, {
+    default: { wish: idempotencyKey, stage: "bought" },
+    release: { wish: idempotencyKey },
+  }),
+  fixture("MarkGiftReceivedRequest", MarkGiftReceivedRequest, {
+    default: { wish: idempotencyKey, received: true },
+  }),
+  fixture("SaveLovesRequest", SaveLovesRequest, { default: { loves: aliceLoves } }),
   fixture("ReportEventsRequest", ReportEventsRequest, {
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },
@@ -567,6 +695,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     "ink-not-owned": ApiError.cases.InkNotOwned.make({ ink: rose }),
     "not-enough-coins": ApiError.cases.NotEnoughCoins.make({ needed: 60, have: 25 }),
     "already-owned": ApiError.cases.AlreadyOwned.make({ itemId: "ink-rose" }),
+    "collection-incomplete": ApiError.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
+    "gift-taken": ApiError.cases.GiftTaken.make({ day: giftDay }),
+    "bonus-taken": ApiError.cases.BonusTaken.make({ collection: cozyAutumn }),
+    "cat-not-adopted": ApiError.cases.CatNotAdopted.make({}),
   }),
   fixture("CoinEntry", CoinEntry, {
     default: earnEntry,
@@ -592,18 +724,96 @@ export const catalog: ReadonlyArray<Fixture> = [
     treat: ShopOffer.cases.Treat.make({}),
   }),
   fixture("ShopResponse", ShopResponse, {
-    default: { balance: 65, inks: [freeInk, rose], items: [lamp, rug, tower], wishlist: [yarn] },
-    new: { balance: 0, inks: [freeInk], items: [lamp, rug], wishlist: [] },
+    default: {
+      balance: 65,
+      inks: [freeInk, rose],
+      items: [lamp, rug, tower],
+      wishlist: [yarn],
+      giftDay,
+      bonuses: [cozyAutumn],
+    },
+    new: { balance: 560, inks: [freeInk], items: [lamp, rug], wishlist: [], bonuses: [] },
   }),
   fixture("OrderRequest", OrderRequest, {
     default: { id: idempotencyKey, offer: ShopOffer.cases.Item.make({ item: tower }) },
     treat: { id: idempotencyKey, offer: ShopOffer.cases.Treat.make({}) },
+    "local-day": {
+      id: idempotencyKey,
+      offer: ShopOffer.cases.Item.make({ item: yarn }),
+      utcOffsetSeconds: 3600,
+    },
   }),
   fixture("OrderResponse", OrderResponse, {
     default: {
       entry: { ...spendEntry, amount: -540, ref: "tower" },
-      shop: { balance: 65, inks: [freeInk], items: [lamp, rug, tower], wishlist: [] },
+      shop: {
+        balance: 65,
+        inks: [freeInk],
+        items: [lamp, rug, tower],
+        wishlist: [],
+        bonuses: [],
+      },
     },
+  }),
+  fixture("GiftReward", GiftReward, {
+    coins: GiftReward.cases.Coins.make({ coins: 30 }),
+    item: GiftReward.cases.Item.make({ item: yarn }),
+  }),
+  fixture("OpenGiftRequest", OpenGiftRequest, { default: { utcOffsetSeconds: 3600 }, empty: {} }),
+  fixture("OpenGiftResponse", OpenGiftResponse, {
+    default: {
+      entry: giftEntry,
+      reward: GiftReward.cases.Coins.make({ coins: 30 }),
+      shop: {
+        balance: 590,
+        inks: [freeInk],
+        items: [lamp, rug],
+        wishlist: [],
+        giftDay,
+        bonuses: [],
+      },
+    },
+    item: {
+      entry: giftItemEntry,
+      reward: GiftReward.cases.Item.make({ item: yarn }),
+      shop: {
+        balance: 560,
+        inks: [freeInk],
+        items: [lamp, rug, yarn],
+        wishlist: [],
+        giftDay,
+        bonuses: [],
+      },
+    },
+  }),
+  fixture("ClaimBonusRequest", ClaimBonusRequest, { default: { collection: cozyAutumn } }),
+  fixture("ClaimBonusResponse", ClaimBonusResponse, {
+    default: {
+      entry: bonusEntry,
+      shop: {
+        balance: 710,
+        inks: [freeInk],
+        items: [lamp, rug],
+        wishlist: [],
+        bonuses: [cozyAutumn],
+      },
+    },
+  }),
+  fixture("EarnEvent", EarnEvent, {
+    "wish-received": EarnEvent.cases.WishReceived.make({ wish: earnRef("wish-1") }),
+    "date-matched": EarnEvent.cases.DateMatched.make({ idea: earnRef("idea-1") }),
+    "date-rated": EarnEvent.cases.DateRated.make({ plan: earnRef("plan-1") }),
+    "list-ticked": EarnEvent.cases.ListTicked.make({ item: earnRef("item-1") }),
+    "moment-added": EarnEvent.cases.MomentAdded.make({ moment: earnRef("moment-1") }),
+    "note-added": EarnEvent.cases.NoteAdded.make({ note: earnRef("note-1") }),
+  }),
+  fixture("EarnRequest", EarnRequest, {
+    default: { event: { _tag: "ListTicked", item: earnRef("item-1") }, utcOffsetSeconds: -18000 },
+    "no-clock": { event: { _tag: "WishReceived", wish: earnRef("wish-1") } },
+  }),
+  fixture("EarnResponse", EarnResponse, {
+    default: { balance: 565, entry: listEarnEntry },
+    capped: { balance: 575 },
   }),
   fixture("WishRequest", WishRequest, {
     wished: { item: tower, wished: true },
@@ -786,6 +996,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       activity: true,
       lastReactionRev: 2,
     }),
+    "resume-with-shop": ClientMessage.cases.Resume.make({ lastSeq: 7, activity: true, shop: true }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -818,6 +1029,15 @@ export const catalog: ReadonlyArray<Fixture> = [
     "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
     "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
     "reaction-changed": ServerMessage.cases.ReactionChanged.make({ reaction: heart }),
+    "shop-changed": ServerMessage.cases.ShopChanged.make({
+      shop: {
+        balance: 65,
+        inks: [freeInk, rose],
+        items: [lamp, rug, tower],
+        wishlist: [yarn],
+        bonuses: [],
+      },
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

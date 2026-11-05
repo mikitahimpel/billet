@@ -1,8 +1,14 @@
 import { Clock, Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
-import { type CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
+import {
+  type CoinEntry,
+  CoinEntryId,
+  type EarnEvent,
+  localDayOf,
+  rewardForEarn,
+} from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
-import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import type {
   CatResponse,
@@ -22,6 +28,7 @@ import { decide } from "./decide.ts";
 import { NoteIdSource } from "./note-id-source.ts";
 import type { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
+import type { RoomState } from "./room-state.ts";
 import { RoomStore, type AppendedNote } from "./room-store.ts";
 
 const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote> =>
@@ -42,6 +49,9 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "CoinsRepeated":
       case "ReactionSet":
       case "ReactionRepeated":
+      case "Purchased":
+      case "GiftOpened":
+      case "BonusPaid":
         return [];
     }
   });
@@ -53,6 +63,26 @@ const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =
   outputs.flatMap((output) => (output._tag === "CoinsEntered" ? [output.entry] : []));
 
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
+
+/**
+ * A change to the coins a pair bought, under the payments ledger's entry id. A credit names its
+ * coins. A reversal (a refund, or a refund Apple reversed) takes back or gives back what the entry
+ * it `reverses` moved, so a restore returns only what its refund took; nothing when the room lacks
+ * that entry.
+ */
+export type PurchaseCredit =
+  | {
+      readonly kind: "buy";
+      readonly id: CoinEntryId;
+      readonly ref: string;
+      readonly coins: number;
+    }
+  | {
+      readonly kind: "buy" | "refund";
+      readonly id: CoinEntryId;
+      readonly ref: string;
+      readonly reverses: CoinEntryId;
+    };
 
 const catEntriesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CatEntry> =>
   outputs.flatMap((output) => (output._tag === "CatEntryAppended" ? [output.entry] : []));
@@ -100,7 +130,7 @@ export class RoomService extends Context.Service<RoomService>()(
       // between load and commit. Without this lock two commands could decide from the same state.
       const lock = yield* Semaphore.make(1);
 
-      const decideAndCommit = (command: RoomCommand): Effect.Effect<RoomDecision> =>
+      const commitOnly = (command: RoomCommand): Effect.Effect<RoomDecision> =>
         Effect.gen(function* () {
           const decision = decide(yield* store.load, command);
           switch (decision._tag) {
@@ -117,6 +147,54 @@ export class RoomService extends Context.Service<RoomService>()(
             case "Rejected":
               return decision;
           }
+        });
+
+      // Every open room gets its welcome coins once: a new one right after it opens, one opened
+      // before they existed on its next command or read. Callers hold the lock.
+      const welcome = Effect.gen(function* () {
+        const state = yield* store.load;
+        if (state._tag !== "Active" || state.welcomed) return;
+        yield* commitOnly({ _tag: "Welcome", at: yield* Clock.currentTimeMillis });
+      });
+
+      const activeState = store.load.pipe(
+        Effect.flatMap((state) =>
+          state._tag === "Active" ? Effect.succeed(state) : Effect.die("the room closed"),
+        ),
+      );
+
+      const decideAndCommit = (command: RoomCommand): Effect.Effect<RoomDecision> =>
+        Effect.gen(function* () {
+          yield* welcome;
+          const decision = yield* commitOnly(command);
+          if (decision._tag === "Accepted" && !decision.state.welcomed) {
+            yield* welcome;
+            return RoomDecision.cases.Accepted.make({ ...decision, state: yield* activeState });
+          }
+          return decision;
+        });
+
+      /** The room's state, after any welcome coins it is owed. */
+      const settled = welcome.pipe(Effect.andThen(store.load), lock.withPermits(1));
+
+      /** The offset a day is counted in: the caller's, else the cat's, else UTC. */
+      const offsetFor = (state: RoomState, utcOffsetSeconds: number | undefined): number =>
+        utcOffsetSeconds ??
+        (state._tag === "Active" && state.cat !== undefined
+          ? state.cat.profile.utcOffsetSeconds
+          : 0);
+
+      /** An answer that repeats an entry already stored, so nothing is charged or paid again. */
+      const repeated = (state: RoomState, id: CoinEntryId) =>
+        Effect.gen(function* () {
+          if (state._tag !== "Active") return undefined;
+          const earlier = yield* store.coinEntryById(id);
+          return Option.isSome(earlier)
+            ? RoomDecision.cases.Accepted.make({
+                state,
+                outputs: [RoomOutput.cases.CoinsRepeated.make({ entry: earlier.value })],
+              })
+            : undefined;
         });
 
       const dispatch = (command: RoomCommand) => decideAndCommit(command).pipe(lock.withPermits(1));
@@ -240,24 +318,81 @@ export class RoomService extends Context.Service<RoomService>()(
       // Like a cat entry: a repeated `id` answers with the spend already stored, charging nothing.
       const spendOnce = (id: IdempotencyKey, command: (at: EpochMillis) => RoomCommand) =>
         Effect.gen(function* () {
-          const state = yield* store.load;
-          if (state._tag === "Active") {
-            const earlier = yield* store.coinEntryById(decodeEntryId(`spend:${id}`));
-            if (Option.isSome(earlier)) {
-              return RoomDecision.cases.Accepted.make({
-                state,
-                outputs: [RoomOutput.cases.CoinsRepeated.make({ entry: earlier.value })],
-              });
-            }
-          }
+          const earlier = yield* repeated(yield* store.load, decodeEntryId(`spend:${id}`));
+          if (earlier !== undefined) return earlier;
           return yield* decideAndCommit(command(yield* Clock.currentTimeMillis));
         }).pipe(lock.withPermits(1));
 
       const buy = (by: UserId, id: IdempotencyKey, ink: InkId) =>
         spendOnce(id, (at) => ({ _tag: "Buy", id, by, ink, at }));
 
-      const order = (by: UserId, id: IdempotencyKey, offer: ShopOffer) =>
-        spendOnce(id, (at) => ({ _tag: "Order", id, by, offer, at }));
+      const order = (by: UserId, id: IdempotencyKey, offer: ShopOffer, utcOffsetSeconds?: number) =>
+        spendOnce(id, (at) => ({
+          _tag: "Order",
+          id,
+          by,
+          offer,
+          at,
+          ...(utcOffsetSeconds === undefined ? {} : { utcOffsetSeconds }),
+        }));
+
+      // The day's gift is the pair's, so the partner opening it again answers with the first.
+      const openGift = (by: UserId, utcOffsetSeconds: number | undefined) =>
+        Effect.gen(function* () {
+          const state = yield* store.load;
+          const at = yield* Clock.currentTimeMillis;
+          const offset = offsetFor(state, utcOffsetSeconds);
+          const earlier = yield* repeated(state, decodeEntryId(`gift:${localDayOf(at, offset)}`));
+          if (earlier !== undefined) return earlier;
+          return yield* decideAndCommit({ _tag: "OpenGift", by, at, utcOffsetSeconds: offset });
+        }).pipe(lock.withPermits(1));
+
+      // Paid once ever: asking again answers with the bonus already paid.
+      const claimBonus = (by: UserId, collection: CollectionId) =>
+        Effect.gen(function* () {
+          const earlier = yield* repeated(yield* store.load, decodeEntryId(`bonus:${collection}`));
+          if (earlier !== undefined) return earlier;
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "ClaimBonus", by, at, collection });
+        }).pipe(lock.withPermits(1));
+
+      // Once per ref: the same wish, idea or item again answers with the coins it already earned.
+      const earn = (by: UserId, event: EarnEvent, utcOffsetSeconds: number | undefined) =>
+        Effect.gen(function* () {
+          const state = yield* store.load;
+          const earlier = yield* repeated(state, rewardForEarn(event).id);
+          if (earlier !== undefined) return earlier;
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({
+            _tag: "Earn",
+            by,
+            at,
+            utcOffsetSeconds: offsetFor(state, utcOffsetSeconds),
+            event,
+          });
+        }).pipe(lock.withPermits(1));
+
+      // Once per entry id: the payments side calls again for a retry or a duplicate transaction.
+      const creditPurchase = (credit: PurchaseCredit) =>
+        Effect.gen(function* () {
+          const earlier = yield* repeated(yield* store.load, credit.id);
+          if (earlier !== undefined) return earlier;
+          const coins =
+            "coins" in credit
+              ? credit.coins
+              : Option.match(yield* store.coinEntryById(credit.reverses), {
+                  onNone: () => 0,
+                  onSome: (entry) => Math.abs(entry.amount),
+                });
+          return yield* decideAndCommit({
+            _tag: "CreditPurchase",
+            id: credit.id,
+            kind: credit.kind,
+            coins,
+            ref: credit.ref,
+            at: yield* Clock.currentTimeMillis,
+          });
+        }).pipe(lock.withPermits(1));
 
       const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
         dispatch({ _tag: "SetWish", by, item, wished });
@@ -298,6 +433,11 @@ export class RoomService extends Context.Service<RoomService>()(
         buy,
         order,
         setWish,
+        openGift,
+        claimBonus,
+        earn,
+        creditPurchase,
+        settled,
         catView,
         activityPage,
         markActivityRead,

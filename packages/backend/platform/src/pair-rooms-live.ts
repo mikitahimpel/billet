@@ -2,6 +2,7 @@ import { Effect, Layer, Schema } from "effect";
 import { NotesUnavailable } from "@billet/backend-notes/notes-error";
 import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { InkId } from "@billet/contracts-domain/inks";
+import { GiftsResult } from "@billet/backend-pair-room/gifts";
 import { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { SequencedNote } from "@billet/backend-pair-room/room-state";
 import { CatEntry } from "@billet/contracts-domain/cat";
@@ -21,8 +22,9 @@ const decodeJournal = Schema.decodeUnknownEffect(Schema.Array(CatEntry));
 const decodeActivity = Schema.decodeUnknownEffect(ActivityResponse);
 const decodeUnread = Schema.decodeUnknownEffect(Schema.Int);
 const decodeInks = Schema.decodeUnknownEffect(Schema.Array(InkId));
-const decodeCoins = Schema.decodeUnknownEffect(CoinsResponse);
-const decodeShop = Schema.decodeUnknownEffect(ShopResponse);
+const decodeCoins = Schema.decodeUnknownEffect(Schema.NullOr(CoinsResponse));
+const decodeShop = Schema.decodeUnknownEffect(Schema.NullOr(ShopResponse));
+const decodeGifts = Schema.decodeUnknownEffect(GiftsResult);
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
@@ -54,8 +56,19 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         buy: (pairId, by, id, ink) =>
           callRoom(() => rooms.getByName(pairId).buy(by, id, ink), decodeDecision),
         shop: (pairId) => callRoom(() => rooms.getByName(pairId).shop(), decodeShop),
-        order: (pairId, by, id, offer) =>
-          callRoom(() => rooms.getByName(pairId).order(by, id, offer), decodeDecision),
+        order: (pairId, by, id, offer, utcOffsetSeconds) =>
+          callRoom(
+            () => rooms.getByName(pairId).order(by, id, offer, utcOffsetSeconds),
+            decodeDecision,
+          ),
+        openGift: (pairId, by, utcOffsetSeconds) =>
+          callRoom(() => rooms.getByName(pairId).openGift(by, utcOffsetSeconds), decodeDecision),
+        claimBonus: (pairId, by, collection) =>
+          callRoom(() => rooms.getByName(pairId).claimBonus(by, collection), decodeDecision),
+        earn: (pairId, by, event, utcOffsetSeconds) =>
+          callRoom(() => rooms.getByName(pairId).earn(by, event, utcOffsetSeconds), decodeDecision),
+        creditPurchase: (pairId, credit) =>
+          callRoom(() => rooms.getByName(pairId).creditPurchase(credit), decodeDecision),
         setWish: (pairId, by, item, wished) =>
           callRoom(() => rooms.getByName(pairId).setWish(by, item, wished), decodeDecision),
         notesAfter: (pairId, afterSeq, limit) =>
@@ -83,6 +96,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).react(by, request), decodeDecision),
         reactions: (pairId, afterRev, limit) =>
           callRoom(() => rooms.getByName(pairId).reactions(afterRev, limit), decodeReactions),
+        gifts: (pairId, by, command) =>
+          callRoom(() => rooms.getByName(pairId).gifts(by, command), decodeGifts),
         markActivityRead: (pairId, user, upTo) =>
           callRoom(() => rooms.getByName(pairId).markActivityRead(user, upTo), decodeUnread),
       }),

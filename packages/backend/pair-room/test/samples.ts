@@ -36,6 +36,8 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   inks: [],
   items: [],
   wishlist: [],
+  bonuses: [],
+  welcomed: true,
   wallet: emptyWallet,
 });
 
@@ -50,6 +52,9 @@ export const catProfile: CatProfile = Schema.decodeUnknownSync(CatProfile)({
 export const adoptedCat: RoomCat = { profile: catProfile, temper: newTemper, lastSeq: 0 };
 
 export const withCat: ActiveRoom = { ...active, cat: adoptedCat };
+
+/** A room the service just opened: welcomed with its coins. */
+export const welcomed: ActiveRoom = { ...active, wallet: { ...emptyWallet, balance: 560 } };
 
 /** A UUID numbered `n`, for journal ids and note keys. */
 export const uuid = (n: number) =>

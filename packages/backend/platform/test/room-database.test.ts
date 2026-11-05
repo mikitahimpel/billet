@@ -40,7 +40,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(10);
+      expect(history(state.storage)).toHaveLength(13);
     });
   });
 
@@ -164,6 +164,9 @@ describe("room migrations", () => {
         inks: [],
         items: [],
         wishlist: [],
+        bonuses: [],
+        // A room stored before the welcome coins reads unwelcomed, and its wallet has no list earns.
+        welcomed: false,
         members: [
           { user: "user-alice", presence: "idle" },
           { user: "user-bob", presence: "drawing" },
@@ -177,8 +180,12 @@ describe("room migrations", () => {
         "activity_read",
         "cat",
         "cat_entry",
+        "claimed_bonus",
         "coin_entry",
         "delivery",
+        "gift_loves",
+        "gift_plan",
+        "gift_wish",
         "note",
         "owned_ink",
         "owned_item",
@@ -187,7 +194,7 @@ describe("room migrations", () => {
         "wallet",
         "wish",
       ]);
-      expect(history(state.storage)).toHaveLength(10);
+      expect(history(state.storage)).toHaveLength(13);
     });
   });
 });

@@ -6,7 +6,9 @@ final class ShopBuyTests: XCTestCase {
     func testThePricePillBuysInOneTap() throws {
         let app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES",
-                                "-tab", "shop", "-shopCoins", "5000", "-shopOwned", ""]
+                                "-tab", "shop", "-shopCoins", "5000", "-shopOwned", "",
+                                // A pair's room in memory, as buying needs one.
+                                "-shopFixture", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["Shop"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
@@ -26,5 +28,10 @@ final class ShopBuyTests: XCTestCase {
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5), "the buy should offer Undo")
         XCTAssertFalse(app.sheets.firstMatch.exists, "no sheet should come between the tap and the buy")
         XCTAssertNotEqual(coins.label, full, "the coins should go down at once")
+
+        // The coins open their sheet right there, over the Shop.
+        coins.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["coinsSheet"].waitForExistence(timeout: 5),
+                      "the coins should open the Coins sheet")
     }
 }

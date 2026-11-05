@@ -7,7 +7,7 @@ keeps a ledger of the coins each pair has bought.
 
 **The first release ships without payments:** the app is built with `BILLET_PAYMENTS=none`, App
 Store Connect has no in-app purchases, and the server's `payments` flag is off, so every
-`/v1/purchases*` route answers 404. The packs and the ledger are already coins in the contract,
+`/v1/purchases*` route answers 404 outside the dev stage. The packs and the ledger are already coins in the contract,
 so turning payments on later needs no redesign.
 
 ## The `payments` flag (`payments.enabled`)
@@ -17,7 +17,7 @@ keys can't hold a dot, so `payments.enabled` is the key `payments`), with varian
 
 | | |
 | --- | --- |
-| Default | `off`, status `draft`, on every stage: nobody gets `on` |
+| Default | `off`, status `draft`, on every stage: nobody gets `on` (the dev stage sells anyway, below) |
 | Turn it on for a test pair | an override `payments = on` for that pair in the admin panel (Flags) |
 | Turn it on for everyone | weight `on`, set it as the default and start it, once purchases exist in App Store Connect |
 | Kill switch | kills it: every pair is off again at once |
@@ -29,6 +29,9 @@ always off. `PaymentsSwitch` (`@billet/backend-payments/payments-switch`) asks t
 `platform` answers it from `FlagsService` (`payments-switch-live.ts`), and tests use
 `PaymentsSwitch.on` and `.off`. The mock route is still registered on the dev stage only. The App
 Store notifications route is not behind the flag: Apple must always get its 200.
+
+The dev stage ignores the flag: its purchase routes are on for every pair and demo room, so packs
+can be tried there before the flag is on anywhere. `stage` and `prod` follow the flag.
 
 The app reads the same flag from `GET /v1/flags` and never offers to buy coins while it is not
 `on` (see the client brief).
@@ -99,13 +102,15 @@ the phone adds coins.
   item already owned is `409 AlreadyOwned {itemId}`, a set that is not on sale this week `409
   NotOffered`. `PUT /v1/shop/wishlist {item, wished}` answers the new `ShopResponse`. All are
   `no-store`. A paired app mirrors the room in its wallet file and earns nothing on the phone.
+- **Live shop:** a socket whose `Resume` carries `shop: true` gets `ShopChanged {shop}` (the same
+  shape as `ShopResponse`) at once, and again after every decision that enters coins, grants inks
+  or pieces, or changes the wishlist: either partner's order, wish, note or cat event. The app's
+  Inbox socket follows it, so a partner's buy shows without a refresh.
 - **`GET /v1/coins?after=<entry id>&limit=<1-100>`:** `CoinsResponse {balance, entries}`, oldest
   first, `no-store`.
 - **Bought coins** (`coin_ledger` in D1, through `/v1/purchases*`) are not in this wallet yet. They
   join it when payments are switched on; until then the flag is off and nothing is bought.
-- **Still to come:** daily deals, the daily gift, collection bonuses, undo, Inbox items for buys, and a
-  `CoinsChanged` message on the room socket. Until then the app reads `GET /v1/coins` again after a
-  buy or a care action.
+- **Still to come:** daily deals, the daily gift, collection bonuses, undo, and Inbox items for buys.
 
 ## Three builds: none, mock and StoreKit
 
@@ -201,8 +206,10 @@ The first three routes are behind the `payments` flag: off for the caller, they 
 above).
 
 - `PurchaseResponse` is `{transactionId, productId, coins, balance, duplicate}`. `coins` is what
-  the transaction credited (or what a mock refund took back, as a positive number). `duplicate` is
-  true when the transaction was already credited: nothing changed and `balance` is the current one.
+  the transaction credited (or what a mock refund took back, as a positive number). `balance` is
+  the pair's wallet after it, the `GET /v1/coins` balance (a demo room's: its bought coins).
+  `duplicate` is true when the transaction was already credited: nothing changed and `balance` is
+  the current one.
 - `PurchasesResponse` is `{balance, entries}`, entries oldest first:
   `{id, kind: "purchase" | "refund", amount, productId, at}` with `at` in ISO 8601 UTC. Ids are
   stable, so the app merges its local ledger by them.
@@ -281,7 +288,13 @@ copies of the same refund apply once.
 
 This D1 ledger counts only bought coins. The pair's wallet (coins earned in play plus coins bought,
 minus coins spent in the shop) is in the pair's `PairRoom`, next to the cat's journal; a phone
-with no partner keeps its own. Bought coins join the room's wallet when payments are switched on.
+with no partner keeps its own. Every purchase, refund and restore is entered there too
+(`CreditPurchase`, through `PairWallet`), under the same entry id, kind `buy` or `refund`: once
+per id, so the server always calls the room again for a repeated transaction or a retry. A credit
+goes to the room after D1, a refund or restore before it (D1 records the notification, which stops
+Apple's retries). A refund in the room takes at most the wallet's balance, which coins spent
+already may have lowered; a restore gives back what that refund took. A demo room has no wallet
+and keeps only the D1 ledger.
 
 ### App Store Server Notifications
 

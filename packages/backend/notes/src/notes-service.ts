@@ -4,10 +4,21 @@ import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
-import type { CoinEntryId } from "@billet/contracts-domain/coins";
-import type { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
+import type { CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
+import { type GiftReward, RoomItemId } from "@billet/contracts-domain/shop";
+import type {
+  BuyRequest,
+  BuyResponse,
+  CoinsResponse,
+  EarnRequest,
+  EarnResponse,
+} from "@billet/contracts-http-api/coins";
 import type { InksResponse } from "@billet/contracts-http-api/inks";
 import type {
+  ClaimBonusRequest,
+  ClaimBonusResponse,
+  OpenGiftRequest,
+  OpenGiftResponse,
   OrderRequest,
   OrderResponse,
   ShopResponse,
@@ -18,11 +29,16 @@ import { freeInk, type InkId, inks as inkCatalog } from "@billet/contracts-domai
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
+import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import {
   AlreadyOwned,
+  BonusTaken,
+  CatNotAdopted,
+  CollectionIncomplete,
+  GiftTaken,
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
@@ -43,6 +59,8 @@ const compactFits = (compact: CompactStrokes) =>
 const decodeMediaKey = Schema.decodeSync(MediaKey);
 
 const belongsTo = (pairId: PairId, key: MediaKey) => key.startsWith(mediaPrefix(pairId));
+
+const decodeItemId = Schema.decodeSync(RoomItemId);
 
 const isNotOpen = (decision: RoomDecision) =>
   decision._tag === "Rejected" && decision.rejection._tag === "RoomNotOpen";
@@ -102,12 +120,45 @@ export class NotesService extends Context.Service<
       request: OrderRequest,
     ) => Effect.Effect<
       OrderResponse,
-      NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+      NotesNotFound | NotEnoughCoins | AlreadyOwned | CatNotAdopted | NotesUnavailable
     >;
+    /** Opens the day's gift. The partner's open, or a retry, answers with the first. */
+    readonly openGift: (
+      userId: UserId,
+      request: OpenGiftRequest,
+    ) => Effect.Effect<OpenGiftResponse, NotesNotFound | GiftTaken | NotesUnavailable>;
+    /** Collects a complete collection's bonus. Asking again answers with the bonus paid. */
+    readonly claimBonus: (
+      userId: UserId,
+      request: ClaimBonusRequest,
+    ) => Effect.Effect<
+      ClaimBonusResponse,
+      NotesNotFound | CollectionIncomplete | BonusTaken | NotesUnavailable
+    >;
+    /** Pays an app earn once per ref, within the day's cap. */
+    readonly earn: (
+      userId: UserId,
+      request: EarnRequest,
+    ) => Effect.Effect<EarnResponse, NotesNotFound | NotesUnavailable>;
     readonly setWish: (
       userId: UserId,
       request: WishRequest,
     ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
+    /** The balance of a pair's wallet. Payments asks by pair, never by caller. */
+    readonly walletBalance: (
+      pairId: PairId,
+    ) => Effect.Effect<number, NotesNotFound | NotesUnavailable>;
+    /**
+     * Enters coins bought with money in a pair's wallet, once per entry id, and answers the
+     * balance after it and the coins the entry moved, as a positive number.
+     */
+    readonly creditPurchase: (
+      pairId: PairId,
+      credit: PurchaseCredit,
+    ) => Effect.Effect<
+      { readonly balance: number; readonly coins: number },
+      NotesNotFound | NotesUnavailable
+    >;
     /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
@@ -246,7 +297,8 @@ export class NotesService extends Context.Service<
         after: CoinEntryId | undefined,
         limit: number,
       ): Effect.fn.Return<CoinsResponse, NotesNotFound | NotesUnavailable> {
-        return yield* rooms.coins(yield* pairOf(userId), after, limit);
+        const pairId = yield* pairOf(userId);
+        return yield* openedRead(pairId, () => rooms.coins(pairId, after, limit));
       });
 
       // A refused spend: what the client can act on, or the room's fault.
@@ -261,20 +313,38 @@ export class NotesService extends Context.Service<
           case "NotSold":
           case "NotOffered":
             return new NotesNotFound();
+          case "CatNotAdopted":
+            return new CatNotAdopted();
           case "RoomNotOpen":
           case "NotAMember":
           case "DuplicateMember":
           case "RoomAlreadyOpen":
-          case "CatNotAdopted":
           case "CatEntryIdTaken":
           case "InkNotOwned":
           case "NoteNotFound":
           case "OwnNote":
           case "NotReactable":
           case "NoReaction":
+          // The service answers a repeat with the first entry before the room decides.
+          case "GiftTaken":
+          case "BonusTaken":
+          case "CollectionIncomplete":
             return new NotesUnavailable({ reason: "room-refused-buy" });
         }
       };
+
+      // Reading a pair's shop or wallet opens its room, so its welcome coins show on the first read.
+      const openedRead = <A>(
+        pairId: PairId,
+        read: () => Effect.Effect<A | null, NotesUnavailable>,
+      ): Effect.Effect<A, NotesNotFound | NotesUnavailable> =>
+        Effect.gen(function* () {
+          const first = yield* read();
+          if (first !== null) return first;
+          yield* openRoom(pairId);
+          const opened = yield* read();
+          return opened ?? (yield* Effect.fail(new NotesUnavailable({ reason: "room-not-open" })));
+        });
 
       // Pairing never reaches the room, so a spend or a wish before the first note opens it.
       const inOpenRoom = (
@@ -287,14 +357,20 @@ export class NotesService extends Context.Service<
             : Effect.succeed(decision),
         );
 
-      /** The spend an accepted order entered, or the first one a retry repeats. */
-      const spendOf = (decision: RoomDecision & { readonly _tag: "Accepted" }) => {
+      /** The entry of `kind` an accepted decision entered, or the first one a retry repeats. */
+      const entryOf = (
+        decision: RoomDecision & { readonly _tag: "Accepted" },
+        kind: CoinEntry["kind"],
+      ) => {
         for (const output of decision.outputs) {
-          if (output._tag === "CoinsEntered" && output.entry.kind === "spend") return output.entry;
+          if (output._tag === "CoinsEntered" && output.entry.kind === kind) return output.entry;
           if (output._tag === "CoinsRepeated") return output.entry;
         }
         return undefined;
       };
+
+      const spendOf = (decision: RoomDecision & { readonly _tag: "Accepted" }) =>
+        entryOf(decision, "spend");
 
       // The room prices the buy from the catalog; the client's idea of the price never reaches it.
       const buy = Effect.fn("NotesService.buy")(function* (
@@ -308,8 +384,15 @@ export class NotesService extends Context.Service<
         const decision = yield* inOpenRoom(pairId, () =>
           rooms.buy(pairId, userId, request.id, request.item),
         );
-        if (decision._tag === "Rejected")
-          return yield* Effect.fail(refusedSpend(decision.rejection));
+        if (decision._tag === "Rejected") {
+          const refused = refusedSpend(decision.rejection);
+          // An ink is never for the cat.
+          return yield* Effect.fail(
+            refused._tag === "CatNotAdopted"
+              ? new NotesUnavailable({ reason: "room-refused-buy" })
+              : refused,
+          );
+        }
         const { state, outputs } = decision;
         const entry = spendOf(decision);
         if (entry === undefined) {
@@ -325,7 +408,8 @@ export class NotesService extends Context.Service<
       const shop = Effect.fn("NotesService.shop")(function* (
         userId: UserId,
       ): Effect.fn.Return<ShopResponse, NotesNotFound | NotesUnavailable> {
-        return yield* rooms.shop(yield* pairOf(userId));
+        const pairId = yield* pairOf(userId);
+        return yield* openedRead(pairId, () => rooms.shop(pairId));
       });
 
       const order = Effect.fn("NotesService.order")(function* (
@@ -333,11 +417,11 @@ export class NotesService extends Context.Service<
         request: OrderRequest,
       ): Effect.fn.Return<
         OrderResponse,
-        NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+        NotesNotFound | NotEnoughCoins | AlreadyOwned | CatNotAdopted | NotesUnavailable
       > {
         const pairId = yield* pairOf(userId);
         const decision = yield* inOpenRoom(pairId, () =>
-          rooms.order(pairId, userId, request.id, request.offer),
+          rooms.order(pairId, userId, request.id, request.offer, request.utcOffsetSeconds),
         );
         if (decision._tag === "Rejected")
           return yield* Effect.fail(refusedSpend(decision.rejection));
@@ -361,6 +445,105 @@ export class NotesService extends Context.Service<
           : yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-wish" }));
       });
 
+      /** What a gift entry gave: its coins, or the piece an amount-0 entry names. */
+      const rewardOf = (entry: CoinEntry): GiftReward =>
+        entry.amount > 0
+          ? { _tag: "Coins", coins: entry.amount }
+          : { _tag: "Item", item: decodeItemId(entry.ref) };
+
+      const openGift = Effect.fn("NotesService.openGift")(function* (
+        userId: UserId,
+        request: OpenGiftRequest,
+      ): Effect.fn.Return<OpenGiftResponse, NotesNotFound | GiftTaken | NotesUnavailable> {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.openGift(pairId, userId, request.utcOffsetSeconds),
+        );
+        if (decision._tag === "Rejected") {
+          const { rejection } = decision;
+          return yield* Effect.fail(
+            rejection._tag === "GiftTaken"
+              ? new GiftTaken({ day: rejection.day })
+              : new NotesUnavailable({ reason: "room-refused-gift" }),
+          );
+        }
+        const entry = entryOf(decision, "gift");
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "gift-not-entered" }));
+        }
+        const opened = decision.outputs.find((output) => output._tag === "GiftOpened");
+        const reward = opened?._tag === "GiftOpened" ? opened.reward : rewardOf(entry);
+        return { entry, reward, shop: shopOf(decision.state) };
+      });
+
+      const claimBonus = Effect.fn("NotesService.claimBonus")(function* (
+        userId: UserId,
+        request: ClaimBonusRequest,
+      ): Effect.fn.Return<
+        ClaimBonusResponse,
+        NotesNotFound | CollectionIncomplete | BonusTaken | NotesUnavailable
+      > {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.claimBonus(pairId, userId, request.collection),
+        );
+        if (decision._tag === "Rejected") {
+          const { rejection } = decision;
+          return yield* Effect.fail(
+            rejection._tag === "CollectionIncomplete"
+              ? new CollectionIncomplete({ collection: rejection.collection })
+              : rejection._tag === "BonusTaken"
+                ? new BonusTaken({ collection: rejection.collection })
+                : rejection._tag === "NotOffered"
+                  ? new NotesNotFound()
+                  : new NotesUnavailable({ reason: "room-refused-bonus" }),
+          );
+        }
+        const entry = entryOf(decision, "bonus");
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "bonus-not-entered" }));
+        }
+        return { entry, shop: shopOf(decision.state) };
+      });
+
+      const earn = Effect.fn("NotesService.earn")(function* (
+        userId: UserId,
+        request: EarnRequest,
+      ): Effect.fn.Return<EarnResponse, NotesNotFound | NotesUnavailable> {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.earn(pairId, userId, request.event, request.utcOffsetSeconds),
+        );
+        if (decision._tag === "Rejected") {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-earn" }));
+        }
+        // No entry when the day's cap was already met.
+        const entry = entryOf(decision, "earn");
+        return {
+          balance: decision.state.wallet.balance,
+          ...(entry === undefined ? {} : { entry }),
+        };
+      });
+
+      const walletBalance = Effect.fn("NotesService.walletBalance")(function* (pairId: PairId) {
+        return (yield* openedRead(pairId, () => rooms.shop(pairId))).balance;
+      });
+
+      const creditPurchase = Effect.fn("NotesService.creditPurchase")(function* (
+        pairId: PairId,
+        credit: PurchaseCredit,
+      ) {
+        const decision = yield* inOpenRoom(pairId, () => rooms.creditPurchase(pairId, credit));
+        if (decision._tag === "Rejected") {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-purchase" }));
+        }
+        const entry = entryOf(decision, credit.kind);
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "purchase-not-entered" }));
+        }
+        return { balance: decision.state.wallet.balance, coins: Math.abs(entry.amount) };
+      });
+
       return NotesService.of({
         uploadImage,
         readImage,
@@ -371,6 +554,11 @@ export class NotesService extends Context.Service<
         shop,
         order,
         setWish,
+        openGift,
+        claimBonus,
+        earn,
+        walletBalance,
+        creditPurchase,
         history,
       });
     }),

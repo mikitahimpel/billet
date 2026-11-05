@@ -19,9 +19,8 @@ final class HeaderTapTests: XCTestCase {
             "-uitestRoomTaps", "YES",
         ]
         app.launch()
+        // Home is hidden from accessibility under the launch splash, so this also waits for the splash to go.
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
-        // The launch splash covers everything for up to 6 s.
-        Thread.sleep(forTimeInterval: 8)
         return app
     }
 

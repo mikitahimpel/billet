@@ -7,7 +7,7 @@ import { RoomCommand } from "../src/room-command.ts";
 import { RoomService } from "../src/room-service.ts";
 import type { RoomStore } from "../src/room-store.ts";
 import { countingIds, memoryStore } from "./memory-store.ts";
-import { active, alice, bob, image, mallory, pairId, vacant } from "./samples.ts";
+import { alice, bob, image, mallory, pairId, vacant, welcomed } from "./samples.ts";
 
 const runWith = <A, E>(
   store: Layer.Layer<RoomStore>,
@@ -42,7 +42,7 @@ describe("RoomService", () => {
       layer,
       RoomService.use((room) => room.dispatch(open)),
     );
-    expect(memory.state).toEqual(active);
+    expect(memory.state).toEqual(welcomed);
   });
 
   it("stamps a note with server id, author and time, and stores it", async () => {
@@ -98,7 +98,7 @@ describe("RoomService", () => {
       }),
     );
     expect(decision).toMatchObject({ _tag: "Rejected", rejection: { _tag: "NotAMember" } });
-    expect(memory.state).toEqual(active);
+    expect(memory.state).toEqual(welcomed);
     expect(memory.notes).toEqual([]);
   });
 

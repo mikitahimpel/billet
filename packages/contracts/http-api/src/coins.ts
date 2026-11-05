@@ -1,5 +1,6 @@
 import { Schema } from "effect";
-import { CoinEntry } from "@billet/contracts-domain/coins";
+import { UtcOffsetSeconds } from "@billet/contracts-domain/cat";
+import { CoinEntry, EarnEvent } from "@billet/contracts-domain/coins";
 import { IdempotencyKey } from "@billet/contracts-domain/ids";
 import { InkId, KnownInkId } from "@billet/contracts-domain/inks";
 
@@ -30,3 +31,21 @@ export const BuyResponse = Schema.Struct({
   owned: Schema.Array(InkId),
 });
 export type BuyResponse = typeof BuyResponse.Type;
+
+/**
+ * `POST /v1/coins/earn`: pays something the couple did in the app. Once per ref: the same event
+ * again answers with the first entry. The day the cap counts is `utcOffsetSeconds` from UTC: the
+ * caller's clock, else the cat's, else UTC.
+ */
+export const EarnRequest = Schema.Struct({
+  event: EarnEvent,
+  utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds),
+});
+export type EarnRequest = typeof EarnRequest.Type;
+
+/** The balance, and the entry: absent when the day's cap was already met. */
+export const EarnResponse = Schema.Struct({
+  balance: Balance,
+  entry: Schema.optionalKey(CoinEntry),
+});
+export type EarnResponse = typeof EarnResponse.Type;
