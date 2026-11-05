@@ -51,7 +51,7 @@ struct DrawingWidget: Widget {
     }
 }
 
-private struct DrawingWidgetView: View {
+struct DrawingWidgetView: View {
     let entry: DrawingEntry
     @Environment(\.widgetFamily) private var family
     @Environment(\.widgetRenderingMode) private var renderingMode
