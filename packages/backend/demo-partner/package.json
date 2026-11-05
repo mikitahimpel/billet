@@ -1,0 +1,38 @@
+{
+  "name": "@billet/backend-demo-partner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./demo-partner-error": "./src/demo-partner-error.ts",
+    "./demo-partner-repository": "./src/demo-partner-repository.ts",
+    "./demo-partner-routes": "./src/demo-partner-routes.ts",
+    "./demo-partner-service": "./src/demo-partner-service.ts",
+    "./test/demo-partner-repository-contract": "./test/demo-partner-repository-contract.ts",
+    "./test/in-memory-demo-partner-repository": "./test/in-memory-demo-partner-repository.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-account": "workspace:*",
+    "@billet/backend-auth": "workspace:*",
+    "@billet/backend-observability": "workspace:*",
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
