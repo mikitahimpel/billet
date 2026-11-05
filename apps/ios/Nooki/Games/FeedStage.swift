@@ -66,6 +66,7 @@ final class FeedStage: GameStage {
     private var bowlMove: (from: SIMD3<Float>, to: SIMD3<Float>, time: Float)?
     private var shown: Double = 0
     private var settle: Float = 0
+    private var sinceWobble: Float = 0
     private var sinceTap: Float = 0
     private var eating: Float?
     /// The kibble in the bowl when dinner was served.
@@ -365,8 +366,16 @@ final class FeedStage: GameStage {
     private func updateDisplay(_ dt: Float) {
         settle = max(0, settle - dt)
         let reading = Double(scale.reading)
-        // A real scale wobbles a gram or two before it settles.
-        shown = settle > 0 ? reading + Double(Int.random(in: -1...1)) : reading
+        if settle > 0 {
+            // A real scale wobbles a gram or two before it settles, about ten times a second: each new number is a
+            // texture drawn on the main thread.
+            sinceWobble += dt
+            guard sinceWobble >= 0.1 else { return }
+            sinceWobble = 0
+            shown = reading + Double(Int.random(in: -1...1))
+        } else {
+            shown = reading
+        }
         drawDisplay(force: false)
     }
 

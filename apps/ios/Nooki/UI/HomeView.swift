@@ -39,12 +39,20 @@ struct HomeView: View {
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
     /// The World tab and the board show a room; the others get their own screens over the backdrop.
     private var showsRoom: Bool { state.tab == .world || showsBoard }
+    /// Something hides the room whole: the canvas, the Inbox or the composer over it, or the app not in front.
+    private var roomCovered: Bool {
+        state.drawing || state.showsInbox || state.composingNote != nil || scenePhase != .active
+    }
+    /// The room is mounted only while it can be seen.
+    private var roomOnScreen: Bool { showsRoom && !roomCovered }
+    /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
+    private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
     var body: some View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: showsRoom)
+            WarmBackdrop(drifts: roomOnScreen)
 
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
@@ -53,10 +61,10 @@ struct HomeView: View {
                     .allowsHitTesting(showsRoom)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if let scene, showsRoom {
-                // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
-                // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
-                // (CatRoom), so coming back only makes a new view for it.
+            } else if let scene, roomOnScreen {
+                // Only while a room can be seen: a paused RealityView left in place under the Shop, Moments, Us or a
+                // cover still runs its render loop and composites a full-screen layer every frame. The room itself
+                // stays loaded (CatRoom), so coming back only makes a new view for it.
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.care.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
@@ -67,7 +75,7 @@ struct HomeView: View {
             }
 
             // A new RealityView takes a moment to draw its first frame; the last one shows meanwhile.
-            if state.tab == .world, !roomLive, let worldSnapshot {
+            if state.tab == .world, !roomLive || roomCovered, let worldSnapshot {
                 SnapshotView(view: worldSnapshot)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -185,14 +193,15 @@ struct HomeView: View {
         .onChange(of: state.rooms.variant) { _, variant in
             if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
         }
-        .onChange(of: state.tab) { old, new in
-            // The room view goes with the World (see above): keep what it showed, to show again on the way back.
-            // Not while something is presented, a hint's popover say: the snapshot would bring it back with the room.
-            if old == .world, !showsRoom {
+        .onChange(of: worldOnScreen) { old, new in
+            // The room view goes when the World can't be seen (see above): keep what it showed, to show again on the
+            // way back and under a cover. Not while something is presented, a hint's popover say: the snapshot would
+            // bring it back with the room.
+            if old, !new, !(showsBoard && !roomCovered) {
                 worldSnapshot =
                     Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
-            if new == .world, let scene, worldSnapshot != nil {
+            if new, let scene, worldSnapshot != nil {
                 roomLive = false
                 let start = scene.frame
                 Task {
@@ -548,7 +557,9 @@ private struct WarmBackdrop: View {
                 startRadius: 10,
                 endRadius: 520
             )
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: paused)) { context in
+            // 10 Hz: the drift is at most 18–24 pt over half a minute, a fraction of a pixel a step, and each step
+            // redraws the full screen under the room and its glass.
+            TimelineView(.animation(minimumInterval: 1 / 10, paused: paused)) { context in
                 Canvas { ctx, size in
                     let t = context.date.timeIntervalSinceReferenceDate
                     for i in 0..<14 {
