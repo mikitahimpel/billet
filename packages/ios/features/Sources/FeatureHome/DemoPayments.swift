@@ -107,8 +107,8 @@ extension PaymentsServer {
     switch error {
     case .api(.invalidPurchase), .api(.invalidRequest): .rejected
     case .api(.unauthorized), .api(.notFound), .api(.unavailable), .api(.invalidInvite),
-      .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned), .network, .status, .maintenance, .encoding,
-      .decoding:
+      .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned), .network, .status,
+      .maintenance, .encoding, .decoding:
       .unavailable
     }
   }
