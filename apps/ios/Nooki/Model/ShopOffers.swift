@@ -30,6 +30,7 @@ struct DailyDeal: Hashable {
 protocol PieceSet {
     var id: String { get }
     var name: String { get }
+    var blurb: String { get }
     var itemIDs: [String] { get }
     /// Share of the pieces' sum the couple pays, e.g. 0.5 for half.
     var share: Double { get }

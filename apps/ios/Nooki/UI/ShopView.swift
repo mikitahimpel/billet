@@ -10,6 +10,7 @@ struct ShopView: View {
 
     @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
+    @State private var sheetSet: SetChoice?
 
     /// Tab bar (66pt) + home-indicator area + breathing room, so the last row clears it.
     private let bottomInset: CGFloat = 134
@@ -40,6 +41,14 @@ struct ShopView: View {
                 #if DEBUG
                 // `-shopItem tower` on launch opens that item's sheet, for screenshots.
                 if let id = UserDefaults.standard.string(forKey: "shopItem") { sheetItem = Catalog.item(id) }
+                // `-shopSet featured` (or a bundle's id) opens that set's sheet.
+                if let id = UserDefaults.standard.string(forKey: "shopSet") {
+                    if id == "featured" {
+                        sheetSet = SetChoice(pieces: state.offers.featured(on: .now))
+                    } else if let bundle = ShopOffers.bundles.first(where: { $0.id == id }) {
+                        sheetSet = SetChoice(pieces: bundle)
+                    }
+                }
                 // `-shopSection bundles` (or deals, collections) on launch scrolls Today there, for screenshots.
                 guard let section = UserDefaults.standard.string(forKey: "shopSection") else { return }
                 try? await Task.sleep(for: .milliseconds(300))
@@ -51,6 +60,9 @@ struct ShopView: View {
         .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
+        }
+        .sheet(item: $sheetSet) { choice in
+            SetSheet(state: state, pieces: choice.pieces)
         }
     }
 
@@ -79,7 +91,7 @@ struct ShopView: View {
         DailyGiftCard(state: state)
             .padding(.horizontal, Space.l)
 
-        FeaturedCard(state: state, offer: state.offers.featured(on: now))
+        FeaturedCard(state: state, offer: state.offers.featured(on: now)) { sheetSet = SetChoice(pieces: $0) }
             .padding(.horizontal, Space.l)
 
         VStack(alignment: .leading, spacing: Space.m) {
@@ -101,7 +113,7 @@ struct ShopView: View {
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Bundles") { Text("Less than one by one") }
             ForEach(ShopOffers.bundles, id: \.id) { bundle in
-                BundleCard(state: state, bundle: bundle) { sheetItem = $0 }
+                BundleCard(state: state, bundle: bundle, open: { sheetItem = $0 }) { sheetSet = SetChoice(pieces: bundle) }
             }
         }
         .padding(.horizontal, Space.l)

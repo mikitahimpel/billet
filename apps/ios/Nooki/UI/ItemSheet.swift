@@ -5,6 +5,8 @@ import UIKit
 
 // MARK: - Item sheet
 
+/// An item's card: the name with its rarity, the item big on a warm stage that turns into the live 3D model on Preview,
+/// what it does for Mochi, and one buy button with the price in coins. The sheet is as tall as what it shows.
 struct ItemSheet: View {
     let item: ShopItem
     let state: HomeState
@@ -15,39 +17,49 @@ struct ItemSheet: View {
     /// Still frame stays up until the 3D preview has really had a chance to draw.
     @State private var showsPlaceholder = true
     @State private var celebrating = false
-
+    @State private var height: CGFloat = 640
 
     private var cost: Int { state.price(of: item) }
     private var affordable: Bool { state.coins >= cost }
     private var owned: Bool { state.owned.contains(item.id) }
     private var isDeal: Bool { cost < item.price }
 
-
     var body: some View {
-        VStack(spacing: 0) {
-            scene
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
+        VStack(alignment: .leading, spacing: Space.l) {
+            SheetHeader(title: item.name) {
+                ShopTag(text: item.rarity.title, fill: item.rarity.tint)
+                if isDeal, !owned {
+                    ShopTag(text: "−\(Int(((1 - Double(cost) / Double(item.price)) * 100).rounded()))%", fill: .blushPink)
+                } else if item.isNew, !owned {
+                    ShopTag(text: "New", fill: .honey, ink: Ink.heroInk)
+                }
+            } close: { dismiss() }
 
-            Spacer(minLength: 8)
+            stage
 
-            details
-                .padding(.horizontal, 20)
-
-            Spacer(minLength: 8)
+            VStack(alignment: .leading, spacing: Space.m) {
+                if let mood = item.mood {
+                    MochiReaction(name: state.petName, mood: mood)
+                }
+                Text(item.blurb)
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             actions
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
         }
-        .usSheet(detents: [.fraction(0.68)])
+        .padding(.horizontal, Space.gutter)
+        .padding(.top, Space.gutter)
+        .padding(.bottom, Space.s)
+        .shopSheet(height: $height)
     }
 
-    // MARK: 3D scene
+    // MARK: Stage
 
-    private var scene: some View {
+    private var stage: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
+            Rectangle()
                 .fill(RadialGradient(colors: [Color(hex: 0xF4BF7E).opacity(0.6),
                                               Color(hex: 0xB36E3A).opacity(0.32),
                                               Color(hex: 0x2A1A12).opacity(0.05)],
@@ -79,110 +91,87 @@ struct ItemSheet: View {
                 onChanged: { dx in turntable.spin(Float(dx) * 0.012) },
                 onEnded: { turntable.isDragging = false }
             )
-
-            closeButton
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                .padding(12)
         }
-        .frame(height: 300)
-        .clipShape(.rect(cornerRadius: 32))
+        .frame(height: CGFloat(ItemTurntable.stageHeight))
+        .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .stroke(.white.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .strokeBorder(item.rarity == .common ? Ink.separator : item.rarity.tint.opacity(0.7), lineWidth: 1.5)
         }
         .scaleEffect(celebrating ? 1.03 : 1)
+        .accessibilityElement()
+        .accessibilityLabel(item.name)
+        .accessibilityHint("Drag sideways to turn it")
     }
 
     private func reveal() {
-        // note: the still stays until the first drag, because the simulator puts RealityKit frames on screen
-        // late and an automatic swap showed an empty stage; bring back a timed swap once checked on a device.
+        // note: the still stays until the first drag or Preview, because the simulator puts RealityKit frames on
+        // screen late and an automatic swap showed an empty stage; bring back a timed swap once checked on a device.
         guard showsPlaceholder, turntable.isDrawn else { return }
         // The model fades in under the still first, so lifting the still never uncovers an empty stage.
         turntable.isRevealed = true
         withAnimation(.easeInOut(duration: 0.3).delay(0.5)) { showsPlaceholder = false }
     }
 
-    private var closeButton: some View {
-        Button {
-            dismiss()
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(Ink.primary)
-                .frame(width: 36, height: 36)
-                .background(.black.opacity(0.22), in: .circle)
-        }
-        .buttonStyle(.plain)
-        .glass(.circle, interactive: true)
-        .accessibilityLabel("Close")
-    }
-
-    // MARK: Details
-
-    private var details: some View {
-        VStack(spacing: 8) {
-            Text(item.name)
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
-                .multilineTextAlignment(.center)
-
-            Text(item.blurb)
-                .font(.system(size: 15))
-                .foregroundStyle(Ink.secondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     // MARK: Actions
 
-    @ViewBuilder private var actions: some View {
-        VStack(spacing: 10) {
-            if owned {
-                Label("Yours", systemImage: "checkmark")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Color(hex: 0xFFD9A8))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 60)
-                    .background(.white.opacity(0.08), in: .capsule)
-            } else {
-                Button(action: buy) { buyLabel.frame(maxWidth: .infinity) }
-                    .nookiPrimary()
-                    .disabled(!affordable)
+    /// One primary button (buy, or place once owned) and Preview beside it.
+    private var actions: some View {
+        VStack(spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                Button(action: reveal) {
+                    Label("Preview", systemImage: "rotate.3d")
+                        .labelStyle(.iconOnly)
+                        .frame(width: 30)
+                }
+                .shopButton(prominent: false)
+                .controlSize(.large)
+                .disabled(!showsPlaceholder || !turntable.isDrawn)
+                .accessibilityLabel("Preview in 3D")
 
-                if !affordable {
-                    Text("Earn coins by answering today's question")
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.secondary)
-                        .multilineTextAlignment(.center)
+                if owned {
+                    Button {
+                        state.tab = .world
+                        dismiss()
+                    } label: {
+                        Label("Place in your room", systemImage: "house.fill").frame(maxWidth: .infinity)
+                    }
+                    .nookiPrimary()
+                } else {
+                    Button(action: buy) { buyLabel.frame(maxWidth: .infinity) }
+                        .nookiPrimary()
+                        .disabled(!affordable)
                 }
             }
+            if owned {
+                Label("In your closet", systemImage: "checkmark.circle.fill")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+            } else if !affordable {
+                Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+        .frame(maxWidth: .infinity)
         .animation(.snappy(duration: 0.25), value: owned)
     }
 
     private var buyLabel: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             if affordable {
                 Text("Buy for")
-                CoinIcon(size: 22)
-                Text("\(cost)")
-                    .monospacedDigit()
-                if isDeal {
-                    Text("\(item.price)")
-                        .font(.nookiCaption.monospacedDigit())
-                        .strikethrough()
-                        .opacity(0.7)
-                        .accessibilityLabel("was \(item.price)")
-                }
+                CoinPrice(price: cost, was: isDeal ? item.price : nil)
             } else {
                 Image(systemName: "lock.fill")
-                Text("Need \(cost - state.coins) more")
+                Text("Need \(cost - state.coins) more coins")
                     .monospacedDigit()
             }
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
 
     private func buy() {
@@ -194,6 +183,50 @@ struct ItemSheet: View {
         Task {
             try? await Task.sleep(for: .milliseconds(350))
             dismiss()
+        }
+    }
+}
+
+/// What the item does for Mochi: her face and the mood it nudges.
+private struct MochiReaction: View {
+    let name: String
+    let mood: String
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Group {
+                if let image = UIImage(named: CatCoat.current().avatar) {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    Image(systemName: "cat.fill").foregroundStyle(Color.honey)
+                }
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(.circle)
+            .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(name) feels \(mood.lowercased())")
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Text(line)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(Space.m)
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    private var line: String {
+        switch mood {
+        case "Curious": "\(name) will chase it all over the room."
+        case "Rested": "\(name) naps better with it nearby."
+        case "Happy": "\(name) purrs every time it's in the room."
+        default: "\(name) notices it right away."
         }
     }
 }
@@ -289,9 +322,9 @@ private final class ItemTurntable {
     @ObservationIgnored private var framesDrawn = 0
     @ObservationIgnored private var shown: Float = 0
 
-    /// Vertical padding the still gets inside the 300 pt stage; the camera allows for it.
+    /// Vertical padding the still gets inside the stage; the camera allows for it.
     static let thumbnailInset: CGFloat = 8
-    private static let stageHeight: Float = 300
+    static let stageHeight: Float = 260
 
     @ObservationIgnored private let pivot = Entity()
     @ObservationIgnored private let camera = PerspectiveCamera()
