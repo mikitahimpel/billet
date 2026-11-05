@@ -30,6 +30,9 @@ nonisolated enum CatCoat: String, CaseIterable, Sendable {
     /// The card in the onboarding carousel: billet-gpu's render of the seated cat in this coat, on transparency.
     var portrait: String { "Coat-\(rawValue)" }
 
+    /// Her round avatar in this coat: Ilya's for grey, the others rendered the same way (scripts/coats/coat-portraits.sh).
+    var avatar: String { self == .grey ? "MochiPortrait" : "MochiPortrait-\(rawValue)" }
+
     enum Failure: Error {
         case missing(String)
         case mismatch(String)

@@ -3,7 +3,7 @@
 Fine grain plus a few long soft fibres, as an alpha mask of a warm grey, so it
 only ever darkens the paper a little and the ink stays crisp. Seeded, so it is the same every run.
 
-    python3 packages/ios/scripts/make-paper-grain.py
+    python3 packages/ios/core/scripts/make-paper-grain.py
 """
 
 from pathlib import Path

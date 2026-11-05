@@ -45,6 +45,7 @@ struct CatCoatTests {
     @Test func everyCoatHasItsCardAndMeshTextures() {
         for coat in CatCoat.allCases {
             #expect(Bundle.main.url(forResource: coat.portrait, withExtension: "png") != nil)
+            #expect(Bundle.main.url(forResource: coat.avatar, withExtension: "png") != nil)
             guard coat != .grey else { continue }
             for model in ["Cat", "CatStanding"] {
                 #expect(Bundle.main.url(forResource: "\(model)Color-\(coat.rawValue)", withExtension: "jpg") != nil)

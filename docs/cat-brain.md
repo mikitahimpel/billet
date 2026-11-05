@@ -1,7 +1,7 @@
 # The cat's brain
 
 The cat decides what to do with one hierarchical state machine, in
-`packages/ios/Sources/Pet/Brain`. It is pure Swift with no scene in it: a scene asks it for a
+`packages/ios/pet/Sources/Pet/Brain`. It is pure Swift with no scene in it: a scene asks it for a
 frame (the state stack, a clip, where to go and where to look) and plays that with the cat's own
 clips.
 

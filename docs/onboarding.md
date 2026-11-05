@@ -91,7 +91,7 @@ The real backend skips this step for now and keeps the standard cat; it has no f
   (where things stand, `OnboardingTimeline` for the flight, `HeartMotion` for the beat,
   `HeartHalves` for the halves, `OnboardingBurst`), `OnboardingTag` (the code's face). Bloom is
   Canvas halos over the scene, as in the other tab scenes, never `customPostProcessing`.
-- `packages/ios/Sources/FeatureHome`: `CinematicOnboardingView` (title and buttons over the
+- `packages/ios/features/Sources/FeatureHome`: `CinematicOnboardingView` (title and buttons over the
   scene), `OnboardingIntro` (its state), `OnboardingPairing` (the pairing steps) and
   `OnboardingPairingView`, `RealOnboardingPairing`, `OnboardingReplay`.
 - The heart: `scripts/make_heart.py` in Blender (background mode), compiled by

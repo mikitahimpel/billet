@@ -3010,12 +3010,676 @@ async function renderRetention([modeArg, variantArg, versionArg]) {
   ];
 }
 
+/* ---------- Funnels ---------- */
+
+const FUNNEL_WINDOWS = [
+  ["day", "Same day"],
+  ["1d", "Within 1 day"],
+  ["7d", "Within 7 days"],
+];
+const FUNNEL_UNITS = [
+  ["pair", "Pairs"],
+  ["person", "People"],
+];
+const FUNNEL_RANGES = [
+  ["7", "7 days"],
+  ["30", "30 days"],
+  ["90", "90 days"],
+  ["all", "All time"],
+];
+const DEFAULT_FUNNEL = {
+  steps: ["PairClaimed", "NoteSent", "WidgetAdded"],
+  window: "7d",
+  unit: "pair",
+  range: "90",
+  split: "",
+};
+
+/** `#/funnels/<steps,comma>/<window>/<unit>/<range>/<split or ->`. */
+const funnelHref = (f) =>
+  `#/funnels/${f.steps.map(enc).join(",")}/${f.window}/${f.unit}/${f.range}/${enc(f.split || "-")}`;
+
+function funnelFromArgs([steps, window, unit, range, split]) {
+  const pick = (value, options, fallback) =>
+    options.some(([v]) => v === value) ? value : fallback;
+  return {
+    steps: steps ? steps.split(",").filter(Boolean) : DEFAULT_FUNNEL.steps,
+    window: pick(window, FUNNEL_WINDOWS, DEFAULT_FUNNEL.window),
+    unit: pick(unit, FUNNEL_UNITS, DEFAULT_FUNNEL.unit),
+    range: pick(range, FUNNEL_RANGES, DEFAULT_FUNNEL.range),
+    split: split && split !== "-" ? split : "",
+  };
+}
+
+const segOf = (label, options, current, toHref) =>
+  h(
+    "nav",
+    { class: "seg", "aria-label": label },
+    options.map(([v, text]) =>
+      h("a", { href: toHref(v), "aria-current": v === current ? "true" : null, text }),
+    ),
+  );
+
+function funnelBars(group, unitNoun) {
+  const top = Math.max(1, group.steps[0]?.count ?? 0);
+  return h(
+    "div",
+    {
+      class: "funnel funnel-built",
+      role: "table",
+      "aria-label": `Funnel, ${group.variant || "everyone"}`,
+    },
+    h(
+      "div",
+      { role: "row", style: { display: "contents" } },
+      h("span", { class: "funnel-head", role: "columnheader", text: "Step" }),
+      h("span", { class: "funnel-head bar", role: "columnheader", "aria-hidden": "true" }),
+      h("span", { class: "funnel-head f-num", role: "columnheader", text: unitNoun }),
+      h("span", { class: "funnel-head f-conv", role: "columnheader", text: "From step before" }),
+      h("span", { class: "funnel-head f-conv", role: "columnheader", text: "Median time" }),
+    ),
+    group.steps.map((st, i) =>
+      h(
+        "div",
+        { role: "row", style: { display: "contents" } },
+        h("span", { class: "f-label mono", role: "rowheader", text: `${i + 1}. ${st.name}` }),
+        h(
+          "span",
+          { class: "f-track", "aria-hidden": "true" },
+          st.count != null &&
+            h("span", {
+              class: "f-fill",
+              style: { "--w": `${((st.count / top) * 100).toFixed(1)}%` },
+            }),
+        ),
+        h("span", {
+          class: `f-num${st.count == null ? " faint" : ""}`,
+          role: "cell",
+          text: st.count == null ? "too few" : fmtNum(st.count, 0),
+        }),
+        h(
+          "span",
+          {
+            class: "f-conv",
+            role: "cell",
+            title: st.fromPrevious
+              ? `95% interval ${fmtPct(st.fromPrevious.low, 0)}–${fmtPct(st.fromPrevious.high, 0)}; ${fmtPct(st.fromFirst)} of step 1`
+              : null,
+          },
+          i === 0 ? "—" : st.fromPrevious ? fmtPct(st.fromPrevious.share) : "too few",
+        ),
+        h("span", {
+          class: "f-conv",
+          role: "cell",
+          text: i === 0 ? "—" : st.count == null ? "too few" : fmtDuration(st.medianFromPrevious),
+        }),
+      ),
+    ),
+  );
+}
+
+async function renderFunnels(args) {
+  const f = funnelFromArgs(args);
+  const query = new URLSearchParams({
+    steps: f.steps.join(","),
+    window: f.window,
+    unit: f.unit,
+    range: f.range,
+  });
+  if (f.split) query.set("split", f.split);
+  const [saved, result] = await Promise.all([
+    api("/funnels"),
+    api(`/funnel?${query}`).catch((err) => ({ error: errorText(err) })),
+  ]);
+  const go = (patch) => (location.hash = funnelHref({ ...f, ...patch }));
+  const unitNoun = f.unit === "pair" ? "Pairs" : "People";
+
+  const stepPicker = h(
+    "ol",
+    { class: "step-list" },
+    f.steps.map((name, i) =>
+      h(
+        "li",
+        null,
+        h(
+          "select",
+          {
+            "aria-label": `Step ${i + 1}`,
+            onchange: (e) => go({ steps: f.steps.map((x, j) => (j === i ? e.target.value : x)) }),
+          },
+          saved.events.map((ev) =>
+            h("option", {
+              value: ev,
+              text: ev,
+              selected: ev === name,
+              disabled: ev !== name && f.steps.includes(ev),
+            }),
+          ),
+        ),
+        f.steps.length > 2 &&
+          h("button", {
+            type: "button",
+            class: "btn icon",
+            "aria-label": `Remove step ${i + 1}`,
+            text: "×",
+            onclick: () => go({ steps: f.steps.filter((_, j) => j !== i) }),
+          }),
+      ),
+    ),
+    f.steps.length < 6 &&
+      h(
+        "li",
+        null,
+        h("button", {
+          type: "button",
+          class: "btn",
+          text: "Add a step",
+          onclick: () =>
+            go({ steps: [...f.steps, saved.events.find((ev) => !f.steps.includes(ev))] }),
+        }),
+      ),
+  );
+
+  const splitPicker = h(
+    "label",
+    { class: "inline-field" },
+    h("span", { text: "Split by" }),
+    h(
+      "select",
+      { onchange: (e) => go({ split: e.target.value }) },
+      h("option", { value: "", text: "Nothing", selected: !f.split }),
+      (result.experiments || []).map((key) =>
+        h("option", { value: key, text: key, selected: key === f.split }),
+      ),
+    ),
+  );
+
+  const nameId = fid();
+  const saveForm = h(
+    "form",
+    {
+      class: "save-funnel",
+      onsubmit: async (e) => {
+        e.preventDefault();
+        const name = e.target.elements.name.value.trim();
+        try {
+          await api("/funnels", {
+            method: "POST",
+            body: { name, definition: { steps: f.steps, window: f.window, unit: f.unit } },
+          });
+          toast(`Saved "${name}"`, "good");
+          route();
+        } catch (err) {
+          toast(errorText(err), "bad");
+        }
+      },
+    },
+    h("label", { for: nameId, class: "sr-only", text: "Name for this funnel" }),
+    h("input", {
+      id: nameId,
+      name: "name",
+      placeholder: "Name this funnel",
+      maxlength: "80",
+      required: true,
+    }),
+    h("button", { type: "submit", class: "btn", text: "Save" }),
+  );
+
+  const savedList = saved.funnels.length
+    ? h(
+        "ul",
+        { class: "saved-funnels" },
+        saved.funnels.map((sf) =>
+          h(
+            "li",
+            null,
+            h("a", {
+              href: funnelHref({ ...f, ...sf.definition, split: f.split }),
+              text: sf.name,
+              title: `${sf.definition.steps.join(" → ")} · saved by ${sf.createdBy}`,
+            }),
+            h("button", {
+              type: "button",
+              class: "btn icon",
+              "aria-label": `Delete ${sf.name}`,
+              text: "×",
+              onclick: async () => {
+                if (
+                  !(await confirmDialog({
+                    title: `Delete "${sf.name}"?`,
+                    body: "Only the saved definition goes; nothing else changes.",
+                    confirm: "Delete",
+                  }))
+                )
+                  return;
+                await api(`/funnels/${enc(sf.id)}`, { method: "DELETE" });
+                route();
+              },
+            }),
+          ),
+        ),
+      )
+    : h("p", { class: "faint", text: "No saved funnels yet." });
+
+  const results = result.error
+    ? callout("bad", result.error, null)
+    : h(
+        "div",
+        { class: "funnel-groups" },
+        result.groups.map((group) =>
+          h(
+            "div",
+            { class: "box" },
+            h(
+              "div",
+              { class: "box-head" },
+              h("h3", { class: "box-title", text: group.variant ?? "Everyone" }),
+              h("p", {
+                class: "box-sub",
+                text:
+                  group.entered == null
+                    ? `Under 5 ${unitNoun.toLowerCase()}: too few`
+                    : `${fmtNum(group.entered, 0)} ${unitNoun.toLowerCase()} did step 1`,
+              }),
+            ),
+            funnelBars(group, unitNoun),
+          ),
+        ),
+      );
+
+  return [
+    pageHead(
+      "Funnels",
+      "Pick 2 to 6 steps from the event list. Each step counts once it happens after the one before, within the window of step 1. Times come from each day's first and last moment, so a step is never placed earlier than it happened.",
+    ),
+    h(
+      "div",
+      { class: "funnel-builder box box-pad" },
+      h(
+        "div",
+        { class: "builder-steps" },
+        h("h3", { class: "box-title", text: "Steps" }),
+        stepPicker,
+      ),
+      h(
+        "div",
+        { class: "builder-options" },
+        segOf("Window", FUNNEL_WINDOWS, f.window, (v) => funnelHref({ ...f, window: v })),
+        segOf("Count", FUNNEL_UNITS, f.unit, (v) => funnelHref({ ...f, unit: v })),
+        segOf("Step 1 in the last", FUNNEL_RANGES, f.range, (v) => funnelHref({ ...f, range: v })),
+        splitPicker,
+        saveForm,
+      ),
+    ),
+    section("Saved", null, savedList),
+    section(
+      "Result",
+      f.split
+        ? `Everyone, then each variant of ${f.split}. Groups under 5 show "too few".`
+        : 'Groups under 5 show "too few".',
+      results,
+    ),
+  ];
+}
+
+/* ---------- Trends ---------- */
+
+const TREND_METRICS = [
+  ["count", "Count"],
+  ["people", "Unique people"],
+  ["pairs", "Unique pairs"],
+  ["perPair", "Per pair"],
+];
+const TREND_INTERVALS = [
+  ["day", "By day"],
+  ["week", "By week"],
+];
+const TREND_RANGES = [
+  ["30", "30 days"],
+  ["90", "90 days"],
+  ["180", "180 days"],
+  ["365", "365 days"],
+];
+const TREND_SPLITS = [
+  ["none", "No split"],
+  ["version", "App version"],
+  ["os", "System"],
+  ["variant", "Variant"],
+];
+const SERIES_CLASSES = 8;
+
+/** `#/trends/<event>/<metric>/<interval>/<range>/<split>/<key or ->`. */
+const trendHref = (t) =>
+  `#/trends/${enc(t.event)}/${t.metric}/${t.interval}/${t.range}/${t.split}/${enc(t.key || "-")}`;
+
+function trendFromArgs([event, metric, interval, range, split, key]) {
+  const pick = (value, options, fallback) =>
+    options.some(([v]) => v === value) ? value : fallback;
+  return {
+    event: event || "AppOpened",
+    metric: pick(metric, TREND_METRICS, "count"),
+    interval: pick(interval, TREND_INTERVALS, "day"),
+    range: pick(range, TREND_RANGES, "90"),
+    split: pick(split, TREND_SPLITS, "none"),
+    key: key && key !== "-" ? key : "",
+  };
+}
+
+const fmtTrend = (v, metric) =>
+  v == null ? "too few" : metric === "perPair" ? v.toFixed(2) : fmtNum(v, 0);
+
+/**
+ * A line per group over time, with gaps where a point is "too few". With one group the period
+ * before is a dashed line behind it. Hover or arrow keys read a point.
+ */
+function trendChart(result, colourOf) {
+  const { groups } = result;
+  const metric = result.query.metric;
+  const starts = groups[0]?.points.map((p) => p.start) ?? [];
+  const n = starts.length;
+  const single = groups.length === 1;
+  const values = groups.flatMap((g) =>
+    g.points.flatMap((p) => [p.value, single ? p.previous : null]).filter((v) => v != null),
+  );
+  const max = niceMax(Math.max(0, ...values));
+  const W = 960;
+  const H = 260;
+  const m = { t: 12, r: 12, b: 28, l: 48 };
+  const iw = W - m.l - m.r;
+  const ih = H - m.t - m.b;
+  const x = (i) => m.l + (n <= 1 ? iw / 2 : (i * iw) / (n - 1));
+  const y = (v) => m.t + ih - (max ? (v / max) * ih : 0);
+  const path = (vals) => {
+    let d = "";
+    let pen = false;
+    vals.forEach((v, i) => {
+      if (v == null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      pen = true;
+    });
+    return d;
+  };
+  const axis = s("g", { class: "axis" });
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k;
+    axis.append(
+      s("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: k ? null : "base" }),
+      s("text", {
+        x: m.l - 8,
+        y: y(v) + 4,
+        "text-anchor": "end",
+        text: fmtTrend(v, metric === "perPair" ? "perPair" : "count"),
+      }),
+    );
+  }
+  for (const i of [...new Set([0, Math.floor((n - 1) / 2), n - 1])].filter((i) => i >= 0)) {
+    const anchor = i === 0 ? "start" : i === n - 1 ? "end" : "middle";
+    axis.append(s("text", { x: x(i), y: H - 6, "text-anchor": anchor, text: fmtDay(starts[i]) }));
+  }
+  const lines = s(
+    "g",
+    null,
+    single &&
+      s("path", {
+        class: "mark-line trend-previous",
+        d: path(groups[0].points.map((p) => p.previous)),
+      }),
+    groups.map((g) =>
+      s("path", { class: `mark-line ${colourOf(g.group)}`, d: path(g.points.map((p) => p.value)) }),
+    ),
+  );
+  const cursorLine = s("line", { y1: m.t, y2: m.t + ih });
+  const dots = groups.map((g) => s("circle", { r: 4, class: `trend-dot ${colourOf(g.group)}` }));
+  const cursor = s("g", { class: "cursor", visibility: "hidden" }, cursorLine, dots);
+  const svg = s(
+    "svg",
+    {
+      viewBox: `0 0 ${W} ${H}`,
+      role: "img",
+      tabindex: "0",
+      "aria-label": `${result.query.event}, ${TREND_METRICS.find(([k]) => k === metric)[1].toLowerCase()}, ${groups.length} line${groups.length === 1 ? "" : "s"}. The table below has every value.`,
+    },
+    axis,
+    lines,
+    cursor,
+  );
+  const readout = h("p", {
+    class: "readout",
+    "aria-live": "polite",
+    text: "Hover, or focus the chart and use the arrow keys, to read a point.",
+  });
+  let active = -1;
+  const show = (i) => {
+    if (!n) return;
+    active = Math.max(0, Math.min(n - 1, i));
+    cursor.setAttribute("visibility", "visible");
+    cursorLine.setAttribute("x1", x(active));
+    cursorLine.setAttribute("x2", x(active));
+    groups.forEach((g, j) => {
+      const v = g.points[active].value;
+      dots[j].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) {
+        dots[j].setAttribute("cx", x(active));
+        dots[j].setAttribute("cy", y(v));
+      }
+    });
+    const p0 = groups[0].points[active];
+    readout.textContent = `${result.query.interval === "week" ? "Week of " : ""}${fmtDay(p0.start)}: ${groups
+      .map(
+        (g) =>
+          `${g.group === "all" ? "" : `${g.group} `}${fmtTrend(g.points[active].value, metric)}`,
+      )
+      .join(" · ")}${single ? ` (period before: ${fmtTrend(p0.previous, metric)})` : ""}${
+      p0.source === "analytics-engine" ? " · from Analytics Engine" : ""
+    }`;
+  };
+  svg.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    show(Math.round(((px - m.l) / iw) * (n - 1)));
+  });
+  svg.addEventListener("pointerleave", () => cursor.setAttribute("visibility", "hidden"));
+  svg.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      show(active < 0 ? n - 1 : active + (e.key === "ArrowRight" ? 1 : -1));
+    }
+  });
+  return h("div", { class: "chart trend-chart" }, svg, readout);
+}
+
+async function renderTrends(args) {
+  const t = trendFromArgs(args);
+  if (t.split === "variant" && !t.key) t.split = "none";
+  const query = new URLSearchParams({
+    event: t.event,
+    metric: t.metric,
+    interval: t.interval,
+    range: t.range,
+    split: t.split,
+  });
+  if (t.split === "variant") query.set("key", t.key);
+  // The saved-funnels answer carries the closed event list.
+  const [{ events }, result] = await Promise.all([api("/funnels"), api(`/trends?${query}`)]);
+  const go = (patch) => (location.hash = trendHref({ ...t, ...patch }));
+  const names = result.groups
+    .map((g) => g.group)
+    .filter((g) => g !== "other")
+    .toSorted();
+  // A colour follows the group's name, not its rank: the same build keeps its colour as others
+  // come and go. One line wears the panel's accent; the rest are folded into a grey "other".
+  const colourOf = (group) => {
+    if (group === "other") return "series-other";
+    if (result.groups.length === 1) return "series-accent";
+    return `series-${(names.indexOf(group) % SERIES_CLASSES) + 1}`;
+  };
+  const metricLabel = TREND_METRICS.find(([k]) => k === t.metric)[1];
+
+  const controls = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Event" }),
+      h(
+        "select",
+        { onchange: (e) => go({ event: e.target.value }) },
+        events.map((ev) => h("option", { value: ev, text: ev, selected: ev === t.event })),
+      ),
+    ),
+    segOf("Measure", TREND_METRICS, t.metric, (v) => trendHref({ ...t, metric: v })),
+    segOf("Interval", TREND_INTERVALS, t.interval, (v) => trendHref({ ...t, interval: v })),
+    segOf("Range", TREND_RANGES, t.range, (v) => trendHref({ ...t, range: v })),
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        {
+          onchange: (e) => {
+            const [split, key] = e.target.value.split(":");
+            go({ split, key: key || "" });
+          },
+        },
+        TREND_SPLITS.filter(([v]) => v !== "variant").map(([v, text]) =>
+          h("option", { value: v, text, selected: v === t.split }),
+        ),
+        result.experiments.map((key) =>
+          h("option", {
+            value: `variant:${key}`,
+            text: `Variant of ${key}`,
+            selected: t.split === "variant" && t.key === key,
+          }),
+        ),
+      ),
+    ),
+  );
+
+  const sourceNote = {
+    used: "The last 90 days come from Analytics Engine, older days from D1.",
+    unavailable:
+      "All from D1: Analytics Engine can't be read from the panel (no read token), or didn't answer.",
+    "not-applicable":
+      "All from D1: Analytics Engine has no person, no variant, and none of the names the server records, so it can't answer this.",
+  }[result.engine];
+
+  const legend = h(
+    "p",
+    { class: "legend trend-legend" },
+    result.groups.map((g) =>
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: `swatch ${colourOf(g.group)}`, "aria-hidden": "true" }),
+        g.group === "all" ? metricLabel : g.group,
+      ),
+    ),
+    result.groups.length === 1 &&
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: "swatch series-previous", "aria-hidden": "true" }),
+        "Period before",
+      ),
+  );
+
+  const totals = h(
+    "div",
+    { class: "stats" },
+    result.groups.slice(0, 4).map((g) =>
+      statCard({
+        label: g.group === "all" ? `${metricLabel}, ${t.range} days` : g.group,
+        value: fmtTrend(g.total, t.metric),
+        delta:
+          g.total != null && g.previousTotal != null ? deltaOf(g.total, g.previousTotal) : null,
+        foot: `vs previous ${t.range} days`,
+      }),
+    ),
+  );
+
+  const table = h(
+    "details",
+    { class: "box trend-table" },
+    h("summary", { text: "Every value as a table" }),
+    h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        null,
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: t.interval === "week" ? "Week of" : "Day" }),
+            result.groups.map((g) =>
+              h("th", {
+                scope: "col",
+                class: "num",
+                text: g.group === "all" ? metricLabel : g.group,
+              }),
+            ),
+            result.groups.length === 1 &&
+              h("th", { scope: "col", class: "num", text: "Period before" }),
+            h("th", { scope: "col", text: "Source" }),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          (result.groups[0]?.points ?? []).map((p, i) =>
+            h(
+              "tr",
+              null,
+              h("th", { scope: "row", text: fmtDay(p.start) }),
+              result.groups.map((g) =>
+                h("td", { class: "num", text: fmtTrend(g.points[i].value, t.metric) }),
+              ),
+              result.groups.length === 1 &&
+                h("td", { class: "num", text: fmtTrend(p.previous, t.metric) }),
+              h("td", { text: p.source === "d1" ? "D1" : "Analytics Engine" }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Trends",
+      "Any event over time. Points resting on fewer than 5 pairs (or people, before pairing) show as gaps.",
+    ),
+    controls,
+    result.groups.length === 0
+      ? empty("Nothing yet", `No ${t.event} in this range or the one before.`)
+      : [
+          totals,
+          section(
+            `${t.event}: ${metricLabel.toLowerCase()}`,
+            sourceNote,
+            h("div", { class: "box box-pad" }, legend, trendChart(result, colourOf)),
+            table,
+          ),
+        ],
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
   overview: renderOverview,
   events: renderEvents,
   retention: renderRetention,
+  funnels: renderFunnels,
+  trends: renderTrends,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,

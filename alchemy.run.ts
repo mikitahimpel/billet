@@ -14,6 +14,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as HttpClient from "effect/http/HttpClient";
 import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
@@ -67,6 +68,9 @@ export default Alchemy.Stack(
     const db = yield* Database;
     const media = yield* Media;
     const status = yield* Status;
+    // A token that can only read Account Analytics, for the admin's trends (docs/admin.md). Bound
+    // only when the deploy has it (.env.pass.analytics-read); without it the trends use D1 alone.
+    const analyticsReadToken = yield* Config.option(Config.Redacted("ANALYTICS_READ_TOKEN"));
     // Accepted app events, written by the Worker (docs/experiments.md). Analytics Engine makes a
     // dataset on its first write, so a deploy creates nothing else. One dataset per stage.
     const events = yield* Cloudflare.AnalyticsEngine.Dataset("Events", {
@@ -108,6 +112,12 @@ export default Alchemy.Stack(
         // The Access application that lets agents' service tokens read /admin/api/agent. Empty
         // keeps the agent routes closed.
         ACCESS_AGENT_AUD: Config.String("ACCESS_AGENT_AUD").pipe(Config.withDefault("")),
+        ...(Option.isSome(analyticsReadToken)
+          ? {
+              ANALYTICS_READ_TOKEN: analyticsReadToken.value,
+              ANALYTICS_ACCOUNT_ID: Config.String("CLOUDFLARE_ACCOUNT_ID"),
+            }
+          : {}),
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
         // The Sign in with Apple key revokes a deleted account's Apple token. Only the dev vault

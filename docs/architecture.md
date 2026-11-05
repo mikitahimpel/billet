@@ -254,28 +254,57 @@ packages/
   contracts/{domain,http-api,realtime,push,fixtures}
   backend/{platform,auth,account,pairing,pair-room,notes,flags,metrics,admin,payments}
   config/{typescript,oxlint}
-  ios/                  Main SwiftPM package, many targets:
-    BilletKit           Machine, Store
-    Domain              Pure types
-    Wire                Codable contract types
-    Ink                 Strokes, renderer, compact encoding
-    DesignSystem        Tokens, components
-    Transport           HTTP, WebSocket
-    Persistence         App Group, Keychain
-    Delivery            Shared by app and notification extension
-    Surfaces            Widget and Live Activity views
-    Feature*            Home, Onboarding, Pairing, Canvas, Inbox, Settings
-    Pet                 World state and the delivery scenario, no graphics
-    PetScene            The contract between the pet and a scene
-    PetSceneCatalog     The linked scenes and the user's choice
+  ios/                  SwiftPM packages, one per layer:
+    contracts/          BilletContracts
+      Domain            Pure types
+      Wire              Codable contract types, tested against packages/contracts/fixtures
+    core/               BilletCore
+      BilletKit         Machine, Store
+      DesignSystem      Tokens, components
+      Ink               Strokes, renderer, compact encoding
+      Transport         HTTP, WebSocket
+      Persistence       App Group, Keychain
+      Delivery          Shared by app and notification extension
+    payments/           BilletPayments
+      Payments          The protocol and stamp packs
+      PaymentsMock, PaymentsStoreKit, PaymentsLive (picks one by BILLET_PAYMENTS)
+    pet/                BilletPet
+      Pet               World state and the delivery scenario, no graphics
+      PetScene          The contract between the pet and a scene
+      PetSceneCatalog   The linked scenes and the user's choice
+    features/           BilletFeatures
+      Feature*          Home, Onboarding, Pairing, Canvas, Inbox, Settings
+      Surfaces          Widget and Live Activity views
+      WidgetBridge      Flags, snapshot and queue shared by app, widget and settings
+      Labs              Experiments
+    scripts/            The import check every package runs before build and test
   pet-scenes/reality  The RealityKit scene, the only one the app ships
 ```
+
+### Swift package layers
+
+Each layer is its own package, so it builds and tests alone (`swift test` in its folder) and an
+agent working in one layer does not rebuild the others' tests. Dependencies only point down:
+
+```
+features ──► pet ──► core ──► contracts
+   │                  ▲          ▲
+   ├──────────────────┘          │
+   ├─────────────────────────────┘
+   └──► payments   (depends on nothing)
+
+pet-scenes/reality ──► pet, core
+```
+
+`WidgetBridge` sits in `features`, not `core`, because it uses `Pet`. Target and product names are
+the same as when this was one package, so imports name modules, not packages. The apps add each
+package they link in `project.yml`.
 
 ### Pet scenes
 
 The App target lists the scenes it ships, and removing one means not linking its package. Graphics
-engines stay inside `packages/pet-scenes`; `ios:test` fails if `packages/ios` imports RealityKit or
-Rive.
+engines stay inside `packages/pet-scenes`; `ios:test` fails if any package in `packages/ios` imports
+RealityKit or Rive.
 Scenes show `PetWorld` and report events, and `Pet` finishes a step by deadline if a scene hangs.
 The widget links no engine: the catalog copies the chosen scene's PNG poses to the App Group.
 
@@ -295,8 +324,9 @@ Reasoning:
 
 - There are two native toolchains, roughly 25 packages and one developer. A heavier build system
   would cost more to maintain than it saves.
-- Swift joins the Turbo graph through a small `package.json` in `packages/ios` and `apps/ios`. Its
-  scripts call `swift` and `xcodebuild`, and depend on fixture generation.
+- Swift joins the Turbo graph through a small `package.json` in each `packages/ios/<layer>` and in
+  `apps/ios`. Its scripts call `swift` and `xcodebuild`, and depend on fixture generation. A layer's
+  `package.json` lists the layers it builds against, so a change below reruns the layers above.
 - SwiftPM already builds incrementally. Swift tasks therefore declare `outputs: []`, so Turbo only
   skips tests whose inputs have not changed.
 - A committed `.xcode-version` file is listed in task inputs, because Turbo cannot see which Xcode is
