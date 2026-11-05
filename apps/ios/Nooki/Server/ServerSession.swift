@@ -26,6 +26,7 @@ final class ServerSession {
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
     /// What the room socket pages when a photo arrives; set each time the socket is followed.
     @ObservationIgnored private var photos: PhotoSync?
+    @ObservationIgnored private var texts: TextNoteSync?
 
     @ObservationIgnored private let backend: Backend
 
@@ -82,9 +83,10 @@ final class ServerSession {
 
     /// Keeps the Inbox's count, the partner's photos into `photos` and reactions live over the room socket while the
     /// app is in front; nothing without a partner.
-    func followInbox(_ follows: Bool, photos: PhotoSync? = nil) {
+    func followInbox(_ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil) {
         if follows, isPaired {
             self.photos = photos
+            self.texts = texts
             if inboxLink == nil {
                 let accounts = backend.accounts
                 let inbox = inbox
@@ -94,6 +96,7 @@ final class ServerSession {
                     handlers: .init(
                         unread: { inbox.unreadChanged($0) },
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
+                        text: { [weak self] in Task { await self?.texts?.receive() } },
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev }))
             }
@@ -114,6 +117,13 @@ final class ServerSession {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
                          receiving: photoReceiving)
+    }
+
+    /// Sends the text notes written here to the partner and keeps theirs in `notes` as from `partner`; nil until this
+    /// account has a partner.
+    func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {
+        guard isPaired else { return nil }
+        return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner)
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.

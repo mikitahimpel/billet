@@ -55,7 +55,11 @@ struct HomeView: View {
 
             VStack(spacing: 12) {
                 // The same header, in the same place, on every tab.
-                AppHeader(state: state)
+                AppHeader(state: state) {
+                    scene?.stop()
+                    HomeState.eraseAll()
+                    state = HomeState()
+                }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
 
@@ -204,10 +208,11 @@ struct HomeView: View {
                     await session?.drawingSync?.registerPushTokens()
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
+                    await textSync?.receive()
                     await inkSync?.refresh(state)
                 }
                 session?.reactions?.refresh()
-                session?.followInbox(true, photos: photoSync)
+                session?.followInbox(true, photos: photoSync, texts: textSync)
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -216,15 +221,6 @@ struct HomeView: View {
                 reportedRooms = []
             default: break
             }
-        }
-        .sheet(isPresented: $state.showsSettings) {
-            SettingsView(state: state) {
-                scene?.stop()
-                HomeState.eraseAll()
-                state = HomeState()
-            }
-            .presentationBackground(Ink.sheet)
-            .presentationDragIndicator(.visible)
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
@@ -237,6 +233,10 @@ struct HomeView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Ink.sheet)
                 .presentationDragIndicator(.visible)
+            } else {
+                InboxSignedOut(petName: state.petName)
+                    .presentationBackground(Ink.sheet)
+                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(item: $state.openedShopItem) { item in
@@ -250,6 +250,7 @@ struct HomeView: View {
         .task { await DrawingSync.watchLiveActivities() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
+        .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
@@ -338,6 +339,10 @@ struct HomeView: View {
 
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
+    }
+
+    private var textSync: TextNoteSync? {
+        session?.textSync(notes: state.notes, partner: state.otherPartner)
     }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.

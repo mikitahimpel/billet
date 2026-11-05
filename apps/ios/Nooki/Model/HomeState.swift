@@ -66,7 +66,6 @@ final class HomeState {
     private(set) var treatsGiven = 0
     /// Pets given in the app, not from the widgets; each may reach the pair's journal.
     private(set) var petsGiven = 0
-    var showsSettings = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
     var invitedCode: String?

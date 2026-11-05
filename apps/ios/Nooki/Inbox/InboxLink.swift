@@ -13,6 +13,8 @@ final class InboxLink {
         var unread: @MainActor @Sendable (Int) -> Void
         /// A photo note arrived; the photos page from their own cursor, so the frame only says when.
         var photo: @MainActor @Sendable () -> Void
+        /// A text note arrived; the text notes page from their own cursor too.
+        var text: @MainActor @Sendable () -> Void
         var reaction: @MainActor @Sendable (NoteReaction) -> Void
         var lastReactionRev: @MainActor @Sendable () -> Int?
     }
@@ -31,6 +33,7 @@ final class InboxLink {
                 switch message {
                 case .activityUnread(let count): await handlers.unread(count)
                 case .noteReceived(_, .photo): await handlers.photo()
+                case .noteReceived(_, .text): await handlers.text()
                 case .reactionChanged(let change): await handlers.reaction(change)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
                      .clear, .catEntryAdded, .catSaved:

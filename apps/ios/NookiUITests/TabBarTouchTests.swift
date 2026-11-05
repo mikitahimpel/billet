@@ -72,11 +72,12 @@ final class TabBarTouchTests: XCTestCase {
         snapshot("moments")
 
         app.buttons["Couple"].tap()
-        XCTAssertTrue(app.buttons["Couple profile"].waitForExistence(timeout: 10), "the avatars should offer the profile")
-        snapshot("couple-menu")
-        app.buttons["Couple profile"].tap()
-        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertTrue(app.navigationBars["Profile"].waitForExistence(timeout: 10), "a tap on the avatars should open the profile")
+        XCTAssertTrue(app.buttons["Edit profile"].exists && app.buttons["Settings"].exists,
+                      "the profile should lead to editing it and to the settings")
         snapshot("profile")
+        app.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 10), "Settings should open from the profile")
     }
 
     /// The header is the same on every tab: the Inbox top-left, the coins top-right with the couple's avatars in the
