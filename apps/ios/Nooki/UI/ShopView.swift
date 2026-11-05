@@ -14,7 +14,7 @@ struct ShopView: View {
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
-    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.shopScroll`).
+    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
 
     private let columns = [
@@ -42,9 +42,9 @@ struct ShopView: View {
             .scrollPosition($position)
             .onAppear {
                 guard ScenePerf.isOn else { return }
-                NookiPerf.shopScroll = { position.scrollTo(y: $0) }
+                NookiPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
             }
-            .onDisappear { NookiPerf.shopScroll = nil }
+            .onDisappear { NookiPerf.scrolls[.shop] = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
                 selected = .today
