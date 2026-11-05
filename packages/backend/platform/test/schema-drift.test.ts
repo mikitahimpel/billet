@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
 import {
   accountKeys,
+  adminFunnels,
   appStoreNotifications,
   authAccounts,
   authChallenges,
@@ -50,6 +51,7 @@ import {
 import { StoredPartnerNotice } from "../src/account-repository-live.ts";
 import { StoredRateLimit } from "../src/rate-limit.ts";
 import { OnboardingAnswerRow } from "../src/onboarding-repository-live.ts";
+import { FunnelRow } from "../src/funnel-store-live.ts";
 import {
   FlagChangeRow,
   FlagConfigRow,
@@ -66,6 +68,7 @@ import { getTableName, tablesOf } from "./table-columns.ts";
 // fails on one that is missing.
 const checked = [
   ["account_keys", accountKeys, StoredAccountKey],
+  ["admin_funnels", adminFunnels, FunnelRow],
   ["app_store_notifications", appStoreNotifications, StoredNotification],
   ["auth_account", authAccounts, AuthAccountRow],
   ["auth_challenges", authChallenges, StoredChallenge],

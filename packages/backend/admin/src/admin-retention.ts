@@ -14,6 +14,8 @@ export const minimumGroup = 5;
 
 /** A `pair_events` row with the build that sent it, when the server knew it. */
 export interface BuildEventRow extends EventRow {
+  /** The day's last moment; the funnel uses it. Taken as `firstAt` when absent. */
+  readonly lastAt?: number;
   /** `x-billet-app-version` as `<marketing>+<build>`, or null when it was not recorded. */
   readonly appVersion?: string | null;
   /** `x-billet-os`, such as `iOS 26.1`, or null. */

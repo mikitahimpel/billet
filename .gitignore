@@ -17,5 +17,6 @@ xcuserdata
 !.env.pass.release
 !.env.pass.agents
 !.env.pass.agent-access
+!.env.pass.analytics-read
 !.env.example
 admin-seed.sql

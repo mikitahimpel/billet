@@ -40,6 +40,15 @@
   --focus: #0b6bcb;
   --shadow: 0 1px 2px rgb(16 24 32 / 0.06);
   --overlay: rgb(16 20 24 / 0.4);
+  /* Categorical series, in this order (checked with the dataviz validator against the surface). */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -68,6 +77,14 @@
     --focus: #5aa9ff;
     --shadow: none;
     --overlay: rgb(0 0 0 / 0.6);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
   }
 }
 
@@ -1928,4 +1945,259 @@ table.retention tr.total td {
 .heat-legend .few-key {
   background: var(--subtle);
   box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Funnel builder */
+
+.funnel-builder {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: var(--s5);
+  margin-bottom: var(--s5);
+}
+
+.step-list {
+  display: grid;
+  gap: var(--s2);
+  margin: var(--s3) 0 0;
+  padding-left: var(--s5);
+}
+
+.step-list li {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.builder-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: var(--s3) var(--s4);
+}
+
+.save-funnel {
+  display: flex;
+  gap: var(--s2);
+  flex-basis: 100%;
+  max-width: 420px;
+}
+
+.saved-funnels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-funnels li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  padding: 2px 4px 2px var(--s3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.funnel-groups {
+  display: grid;
+  gap: var(--s4);
+}
+
+.funnel.funnel-built {
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) 80px 120px 110px;
+}
+
+.faint {
+  color: var(--faint);
+}
+
+@media (max-width: 760px) {
+  .funnel-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .funnel.funnel-built {
+    grid-template-columns: minmax(0, 1fr) 64px 80px 80px;
+  }
+
+  .funnel.funnel-built .f-track,
+  .funnel.funnel-built .funnel-head.bar {
+    display: none;
+  }
+}
+
+.box-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Trends */
+
+.series-accent {
+  --c: var(--accent);
+}
+
+.series-other {
+  --c: var(--faint);
+}
+
+.series-previous {
+  --c: var(--chart-2);
+}
+
+.series-1 {
+  --c: var(--series-1);
+}
+
+.series-2 {
+  --c: var(--series-2);
+}
+
+.series-3 {
+  --c: var(--series-3);
+}
+
+.series-4 {
+  --c: var(--series-4);
+}
+
+.series-5 {
+  --c: var(--series-5);
+}
+
+.series-6 {
+  --c: var(--series-6);
+}
+
+.series-7 {
+  --c: var(--series-7);
+}
+
+.series-8 {
+  --c: var(--series-8);
+}
+
+.trend-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mark-line[class*="series-"] {
+  stroke: var(--c);
+}
+
+.mark-line.trend-previous {
+  stroke: var(--chart-2);
+  stroke-dasharray: 4 3;
+}
+
+.cursor circle.trend-dot {
+  stroke: var(--c);
+}
+
+.trend-legend {
+  flex-wrap: wrap;
+  margin: 0 0 var(--s3);
+}
+
+.trend-legend span::before {
+  display: none;
+}
+
+.trend-legend .legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trend-legend .swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c);
+}
+
+.trend-legend .swatch.series-previous {
+  background: repeating-linear-gradient(90deg, var(--chart-2) 0 4px, transparent 4px 7px);
+}
+
+.trend-table {
+  margin-top: var(--s4);
+}
+
+.trend-table summary {
+  padding: var(--s3) var(--s4);
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+table.metrics th[scope="row"],
+table.metrics td {
+  vertical-align: top;
+}
+
+table.metrics .sub {
+  display: block;
+}
+
+table.metrics .metric-diff {
+  margin-top: var(--s1);
+}
+
+table.metrics .metric-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+
+table.metrics th[scope="row"] .sub {
+  font-weight: 400;
+}
+
+table.features thead th .sub {
+  display: block;
+  font-weight: 400;
+}
+
+table.features th.group-head {
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+
+table.features tr.area > * {
+  background: var(--subtle);
+}
+
+table.features .event {
+  padding-left: var(--s4);
+}
+
+table.features td.usage {
+  min-width: 96px;
+}
+
+.use-track {
+  display: block;
+  height: 4px;
+  margin-top: var(--s1);
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.use-fill {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
 }

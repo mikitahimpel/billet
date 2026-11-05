@@ -25,6 +25,7 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import { admitFrame, type FrameWindow } from "./frame-window.ts";
 
 /** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
 export const ROOM_USER_HEADER = "x-billet-user";
@@ -37,12 +38,16 @@ const encodeServerMessage = Schema.encodeSync(Schema.fromJsonString(ServerMessag
 const maxFrameLength = 64 * 1024;
 /** Notes sent per storage read while catching a socket up. */
 const pageLimit = 100;
+/** Open live strokes kept per socket; a begin past it is dropped. Bounds the attachment. */
+const maxOpenStrokes = 16;
 
 /** Kept on each hibernatable socket, so it survives the object leaving memory. */
 interface SocketAttachment {
   readonly user: string;
   /** The highest note `seq` this socket has been sent; null before it asked to resume. */
   readonly sentSeq: number | null;
+  /** Live strokes this socket began and has not ended, dropped for the partner if it leaves. */
+  readonly openStrokes?: ReadonlyArray<number>;
 }
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
@@ -70,6 +75,8 @@ export class PairRoom extends DurableObject {
   private readonly database = this.ctx.blockConcurrencyWhile(() =>
     Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
   );
+
+  private readonly frameWindows = new WeakMap<WebSocket, FrameWindow>();
 
   private readonly runtime = this.database.then((database) =>
     ManagedRuntime.make(
@@ -261,6 +268,7 @@ export class PairRoom extends DurableObject {
       socket.close(1009, "frame too large");
       return;
     }
+    if (!this.admitFrame(socket)) return;
     const message = decodeClientMessage(data);
     const attachment = attachmentOf(socket);
     if (message._tag === "None" || attachment === undefined) return;
@@ -289,7 +297,55 @@ export class PairRoom extends DurableObject {
         }
         return;
       }
+      case "StrokeBegin": {
+        const open = attachment.openStrokes ?? [];
+        if (!open.includes(message.value.id)) {
+          if (open.length >= maxOpenStrokes) return;
+          socket.serializeAttachment({
+            ...attachment,
+            openStrokes: [...open, message.value.id],
+          } satisfies SocketAttachment);
+        }
+        this.toPartner(attachment.user, message.value);
+        return;
+      }
+      case "StrokePoints":
+        // Points of a stroke this socket never began would draw nothing on the partner's side.
+        if (attachment.openStrokes?.includes(message.value.id) !== true) return;
+        this.toPartner(attachment.user, message.value);
+        return;
+      case "StrokeEnd": {
+        const open = attachment.openStrokes ?? [];
+        const ended = message.value.id;
+        if (!open.includes(ended)) return;
+        socket.serializeAttachment({
+          ...attachment,
+          openStrokes: open.filter((id) => id !== ended),
+        } satisfies SocketAttachment);
+        this.toPartner(attachment.user, message.value);
+        return;
+      }
+      case "Clear":
+        this.toPartner(attachment.user, message.value);
+        return;
     }
+  }
+
+  /** Counts a frame against its socket's window, in memory: hibernation resets the window. */
+  private admitFrame(socket: WebSocket): boolean {
+    const { window, admitted } = admitFrame(this.frameWindows.get(socket), Date.now());
+    this.frameWindows.set(socket, window);
+    return admitted;
+  }
+
+  /** Tells the partner to discard the strokes a leaving socket left open. */
+  private dropOpenStrokes(socket: WebSocket): void {
+    const attachment = attachmentOf(socket);
+    if (attachment === undefined) return;
+    for (const id of attachment.openStrokes ?? []) {
+      this.toPartner(attachment.user, { _tag: "StrokeDropped", id });
+    }
+    socket.serializeAttachment({ ...attachment, openStrokes: [] } satisfies SocketAttachment);
   }
 
   /** Sends one socket every stored note it has not seen, oldest first, without repeats. */
@@ -304,7 +360,11 @@ export class PairRoom extends DurableObject {
         const current = attachmentOf(socket)?.sentSeq;
         if (current == null || entry.seq <= current) continue;
         send(socket, { _tag: "NoteReceived", seq: entry.seq, note: entry.note });
-        socket.serializeAttachment({ user: attachment.user, sentSeq: entry.seq });
+        socket.serializeAttachment({
+          ...attachmentOf(socket),
+          user: attachment.user,
+          sentSeq: entry.seq,
+        } satisfies SocketAttachment);
       }
     }
   }
@@ -338,7 +398,9 @@ export class PairRoom extends DurableObject {
    * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
    */
   override async webSocketClose(socket: WebSocket, code: number): Promise<void> {
-    // Presence is settled before the early return below: a dropped phone takes that return.
+    // Presence and open strokes are settled before the early return below: a dropped phone takes
+    // that return.
+    this.dropOpenStrokes(socket);
     await this.leave(socket);
     if (code === 1006 || code === 1015) return;
     try {
