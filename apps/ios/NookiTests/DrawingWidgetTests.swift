@@ -55,6 +55,13 @@ struct DrawingWidgetTests {
         }
     }
 
+    @Test func aLiveActivityPayloadIsADrawingToo() throws {
+        let info = try push(.liveActivity(noteId: NoteId("n2"), author: UserId("anya"), compact: Self.compact))
+        let drawing = try #require(LatestDrawing(push: info))
+        #expect(drawing.noteID == "n2")
+        #expect(drawing.paper == nil)
+    }
+
     /// The server's Live Activity `content-state` (golden PushPayload/live-activity-on-paper.json) decodes as the
     /// activity's state, `_tag` and all.
     @Test func theLiveActivityPushDecodesAsItsState() throws {

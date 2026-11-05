@@ -42,7 +42,8 @@ struct DrawingSync {
         WidgetCenter.shared.reloadTimelines(ofKind: LatestDrawing.widgetKind)
     }
 
-    /// Sends the server any APNs token it does not have yet: the app's alert token and the widgets' token.
+    /// Sends the server any APNs token it does not have yet: the alert token, the widgets' token and the Live
+    /// Activity push-to-start token.
     func registerPushTokens() async {
         let tokens = PushTokens.load()
         #if DEBUG
@@ -57,6 +58,11 @@ struct DrawingSync {
         if let widget = tokens.widget, widget != tokens.registeredWidget,
            (try? await api.registerPushToken(.init(kind: .widget, environment: environment, token: PushToken(widget)))) != nil {
             PushTokens.update { $0.registeredWidget = widget }
+        }
+        if let start = tokens.liveActivity, start != tokens.registeredLiveActivity,
+           (try? await api.registerPushToken(.init(kind: .liveactivity, environment: environment,
+                                                   token: PushToken(start)))) != nil {
+            PushTokens.update { $0.registeredLiveActivity = start }
         }
     }
 

@@ -43,7 +43,8 @@ nonisolated struct LatestDrawing: Codable, Hashable, Sendable {
               let data = try? JSONSerialization.data(withJSONObject: object),
               let payload = try? JSONDecoder().decode(PushPayload.self, from: data) else { return nil }
         switch payload {
-        case .alert(let noteId, _, let compact?, _, let paper), .widget(let noteId, _, let compact?, _, let paper):
+        case .alert(let noteId, _, let compact?, _, let paper), .widget(let noteId, _, let compact?, _, let paper),
+             .liveActivity(let noteId, _, let compact, let paper):
             self.init(noteID: noteId.rawValue, seq: nil, sentAt: now, compact: compact, paper: paper)
         case .alert, .widget:
             return nil
