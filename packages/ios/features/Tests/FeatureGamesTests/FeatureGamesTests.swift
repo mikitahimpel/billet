@@ -196,9 +196,18 @@ struct GameResultTests {
   }
 
   @Test func eachGameGoesToTheJournalItsOwnWay() {
-    #expect(GameResult(game: .brush, score: 100).events == [.petted, .gamePlayed(game: "brush", score: 100, won: true)])
-    #expect(GameResult(game: .laser, score: 100).events == [.gamePlayed(game: "laser", score: 100, won: true)])
-    #expect(GameResult(game: .water, score: 70).events == [.gamePlayed(game: "water", score: 70, won: true)])
+    #expect(
+      GameResult(game: .brush, score: 100).events == [
+        .petted, .gamePlayed(game: "brush", score: 100, won: true),
+      ])
+    #expect(
+      GameResult(game: .laser, score: 100).events == [
+        .gamePlayed(game: "laser", score: 100, won: true)
+      ])
+    #expect(
+      GameResult(game: .water, score: 70).events == [
+        .gamePlayed(game: "water", score: 70, won: true)
+      ])
     #expect(GameResult(game: .laser, score: 400).score == 100)
   }
 

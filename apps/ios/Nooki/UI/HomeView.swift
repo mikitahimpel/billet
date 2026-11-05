@@ -1,3 +1,4 @@
+import FeatureGames
 import SwiftUI
 import TipKit
 import WidgetBridge
@@ -44,7 +45,7 @@ struct HomeView: View {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
-                .allowsHitTesting(showsRoom)
+                .allowsHitTesting(showsRoom && state.game == nil)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }
@@ -76,20 +77,31 @@ struct HomeView: View {
                 .transition(.opacity.combined(with: .offset(y: 12)))
                 .frame(maxHeight: .infinity, alignment: .top)
             }
+            .opacity(state.game == nil ? 1 : 0)
 
             VStack {
                 Spacer(minLength: 0)
                 TabBar(state: state)
                     .padding(.horizontal, 16)
             }
+            .opacity(state.game == nil ? 1 : 0)
+
+            if let game = state.game, let scene {
+                // In the room, with nothing else of Home over it.
+                GameView(session: GameSession(game: game, room: scene, catEvents: session?.catEvents ?? .offline)) {
+                    state.game = nil
+                }
+                .id(game)
+                .transition(.opacity)
+            }
 
             PurchaseMoment(state: state)
         }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
-            if state.tab == .world {
+            if state.tab == .world, state.game == nil {
                 HStack(alignment: .bottom) {
-                    PetButton(state: state, needs: { scene?.director }) { scene?.playAll() }
+                    PetButton(state: state, needs: { scene?.director }) { game in state.game = game }
                     Spacer(minLength: 0)
                     PlayAllButton(showcase: showcase) { scene?.playAll() }
                 }

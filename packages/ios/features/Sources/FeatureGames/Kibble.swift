@@ -54,7 +54,8 @@ public struct FeedTask: Equatable, Sendable {
   /// The portion for a cat this `full` (0...1): the emptier she is, the more she needs.
   public init(full: Double) {
     let empty = 1 - min(max(full, 0), 1)
-    self.init(target: Int((Double(Self.grams.lowerBound) + empty * Double(Self.grams.count - 1)).rounded()))
+    self.init(
+      target: Int((Double(Self.grams.lowerBound) + empty * Double(Self.grams.count - 1)).rounded()))
   }
 
   /// Grams either side of the target that still count: 2, or 5 % of a big portion.
@@ -102,7 +103,8 @@ public enum KibblePour {
   public static let pinch = KibbleScale.kibbleGrams
 
   /// A shake of `strength` (0...1) loosens one to three kibbles.
-  public static func shake(strength: Double, using rng: inout some RandomNumberGenerator) -> Double {
+  public static func shake(strength: Double, using rng: inout some RandomNumberGenerator) -> Double
+  {
     let kibbles = 1 + Int(Double.random(in: 0..<1.6, using: &rng) + min(max(strength, 0), 1) * 2.4)
     return Double(kibbles) * KibbleScale.kibbleGrams
   }
