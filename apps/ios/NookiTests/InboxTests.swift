@@ -96,7 +96,7 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
 
 @MainActor @Suite(.serialized) struct InboxTargetTests {
     @Test func aTextNoteWaitsToBeSentAndThenOpensFromItsRow() throws {
-        let state = HomeState()
+        let state = HomeState(stores: .live())
         let note = try #require(state.notes.add(text: "dinner at 8?", paper: .sky, author: state.viewer))
         defer { state.notes.delete(note) }
         #expect(state.notes.unsent.map(\.id) == [note.id])
@@ -109,7 +109,7 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
     }
 
     @Test func thePartnersNoteKeepsItsDateOrderAndComesOnce() throws {
-        let state = HomeState()
+        let state = HomeState(stores: .live())
         let date = Date(timeIntervalSince1970: 1_000)
         state.notes.addReceived(text: "hi", paper: .blush, ink: nil, author: state.otherPartner, date: date,
                                 noteID: "note-in-1")
@@ -123,7 +123,7 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
     }
 
     @Test func aRowForSomethingThisPhoneLacksOpensItsTab() {
-        let state = HomeState()
+        let state = HomeState(stores: .live())
         state.open(.moments(NoteId("not-on-this-phone")))
         #expect(state.tab == .moments)
         #expect(state.openedPin == nil)

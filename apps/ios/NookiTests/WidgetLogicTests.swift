@@ -179,9 +179,9 @@ private func removeScratch(_ path: String) {
     @Test func listCoinsCapAtThreeADay() {
         var wallet = Wallet()
         for _ in 0..<5 { wallet.tickList(on: noon) }
-        #expect(wallet.coins == 560 + 15)
+        #expect(wallet.coins == 15)
         wallet.tickList(on: noon.addingTimeInterval(86_400))
-        #expect(wallet.coins == 560 + 20)
+        #expect(wallet.coins == 20)
     }
 
     @Test func listTicksEarnThroughTheStore() {
@@ -192,7 +192,7 @@ private func removeScratch(_ path: String) {
         us.addItem("Paddington", to: watch, author: "L")
         us.setItem(us.list(watch)!.items[0].id, in: watch, done: true)
         // A widget intent builds its own stores and sees the coins.
-        #expect(WalletStore(file: walletPath).wallet.coins == 565)
+        #expect(WalletStore(file: walletPath).wallet.coins == 5)
     }
 }
 

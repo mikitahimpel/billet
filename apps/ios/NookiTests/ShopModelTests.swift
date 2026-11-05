@@ -30,7 +30,7 @@ import Wire
         defer { cleanUp() }
         let (model, wallet) = shop(coins: 70)
         let server = room(400, items: ["lamp", "rug", "tower"])
-        await model.connect(ShopSync(fetch: { server }, order: { _ in throw .status(500) }, wish: { _ in server }))
+        await model.connect(ShopSync(fetch: { server }, order: { _ throws(TransportError) in throw .status(500) }, wish: { _ in server }))
         #expect(model.isSynced)
         #expect(model.coins == 400)
         #expect(model.owned == ["lamp", "rug", "tower"])
@@ -47,7 +47,7 @@ import Wire
         defer { cleanUp() }
         let (model, _) = shop(coins: 0)
         let server = room(100, items: ["lamp", "rug"])
-        await model.connect(ShopSync(fetch: { server }, order: { _ in throw .status(409) }, wish: { _ in server }))
+        await model.connect(ShopSync(fetch: { server }, order: { _ throws(TransportError) in throw .status(409) }, wish: { _ in server }))
         let yarn = try #require(Catalog.item("yarn"))
 
         #expect(model.buy(yarn))
