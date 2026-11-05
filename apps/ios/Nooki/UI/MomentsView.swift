@@ -1,3 +1,4 @@
+import PetScene
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -17,6 +18,8 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
+    /// Where the feed is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
+    @State private var position = ScrollPosition(edge: .top)
     @Namespace private var zoom
 
     private let hMargin: CGFloat = 16
@@ -51,6 +54,12 @@ struct MomentsView: View {
                     .padding(.bottom, Space.l)
                 }
                 .scrollIndicators(.hidden)
+                .scrollPosition($position)
+                .onAppear {
+                    guard ScenePerf.isOn else { return }
+                    NookiPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
+                }
+                .onDisappear { NookiPerf.scrolls[.moments] = nil }
             }
         }
         .onChange(of: pick) { _, item in
