@@ -14,9 +14,14 @@ nonisolated struct Moment: Identifiable, Codable, Hashable {
     var pinned: Bool
     /// The other partner tapped the heart.
     var loved: Bool
+    /// Taken on this phone and still waiting to reach the partner.
+    var unsent: Bool? = nil
+    /// The partner's photo note this came from, for photos they sent.
+    var noteID: String? = nil
 }
 
-/// Local-only moments store; JSON index and JPEGs live in the app group's Moments folder, where the widgets read them.
+/// The couple's moments on this phone: a JSON index and JPEGs in the app group's Moments folder, where the widgets read
+/// them. Photos taken here go to the partner and theirs come back through `PhotoSync`; this folder is the cache.
 @Observable
 final class MomentStore {
     /// Polaroids that fit on the room wall.
@@ -102,7 +107,8 @@ final class MomentStore {
     }
 
     @discardableResult
-    func add(_ image: UIImage, caption: String, author: String) -> Moment? {
+    func add(_ image: UIImage, caption: String, author: String, date: Date = .now, noteID: String? = nil,
+             unsent: Bool = false) -> Moment? {
         // Camera photos are 12+ MP; 2048 px is plenty for a full-screen look and keeps the folder small.
         let longSide = max(image.size.width, image.size.height)
         let scale = min(1, CGFloat(Self.storedPixels) / max(longSide, 1))
@@ -117,11 +123,25 @@ final class MomentStore {
         } catch {
             return nil
         }
-        let moment = Moment(id: UUID(), author: author, date: .now, caption: caption, file: file,
-                            pinned: pinned.count < Self.wallSlots, loved: false)
-        moments.insert(moment, at: 0)
+        let moment = Moment(id: UUID(), author: author, date: date, caption: caption, file: file,
+                            pinned: pinned.count < Self.wallSlots, loved: false, unsent: unsent ? true : nil, noteID: noteID)
+        // Newest first; a photo from the partner can be older than ones already here.
+        moments.insert(moment, at: moments.firstIndex { $0.date < date } ?? moments.endIndex)
         save()
         return moment
+    }
+
+    /// Photos taken here that have not reached the partner yet, oldest first.
+    var unsent: [Moment] { moments.filter { $0.unsent == true }.reversed() }
+
+    /// Whether the partner's photo note is already here.
+    func contains(noteID: String) -> Bool { moments.contains { $0.noteID == noteID } }
+
+    /// Marks a photo taken here as waiting to reach the partner, or as delivered.
+    func setUnsent(_ unsent: Bool, id: UUID) {
+        guard let i = moments.firstIndex(where: { $0.id == id }) else { return }
+        moments[i].unsent = unsent ? true : nil
+        save()
     }
 
     /// Pinning a seventh moment unpins the oldest pinned one so the wall stays full but tidy.

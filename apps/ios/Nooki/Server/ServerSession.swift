@@ -79,6 +79,12 @@ final class ServerSession {
         isPaired ? DrawingSync(api: backend.api, accounts: backend.accounts) : nil
     }
 
+    /// Sends the photos taken here to the partner and keeps theirs in `moments` as from `partner`; nil until this
+    /// account has a partner.
+    func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
+        isPaired ? PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner) : nil
+    }
+
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.
     func pairingFinished() {
         guard case .paired(let pairID) = pairing.state else { return }
