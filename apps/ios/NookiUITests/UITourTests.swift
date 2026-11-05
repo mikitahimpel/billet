@@ -2,10 +2,10 @@ import XCTest
 
 /// Walks every screen it can reach and saves a screenshot of each, for the UI audit and before/after shots. A step
 /// whose control is missing is skipped, so one moved button never loses the rest of the tour.
-/// It runs only from the ios.yml shots job, which sets UITOUR.
+/// It runs only from the ios.yml shots job, which sets UISHOTS.
 final class UITourTests: XCTestCase {
     override func setUpWithError() throws {
-        try XCTSkipUnless(ProcessInfo.processInfo.environment["UITOUR"] == "1", "the tour runs only for shots")
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["UISHOTS"] == "1", "the tour runs only for shots")
     }
 
     @MainActor
@@ -20,7 +20,7 @@ final class UITourTests: XCTestCase {
 
         if tap(app.buttons["Add"]) {
             shot("02-add-menu")
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+            closeMenu(app)
         }
         if tap(app.buttons["pet"].firstMatch) {
             shot("03-pet-sheet")
@@ -40,13 +40,13 @@ final class UITourTests: XCTestCase {
         }
         if tap(app.buttons["Couple"]) {
             shot("08-couple-menu")
-            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6)).tap()
+            closeMenu(app)
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
             if tap(app.buttons["Mood"]) {
                 shot("09-us-mood")
-                app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15)).tap()
+                closeMenu(app)
             }
             for (index, name) in ["Dates", "Wishlists", "Calendar"].enumerated() {
                 let entry = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", name)).firstMatch
@@ -93,6 +93,14 @@ final class UITourTests: XCTestCase {
         element.tap()
         Thread.sleep(forTimeInterval: 1.5)
         return true
+    }
+
+    /// Closes an open menu through the system's own dismiss region; a tap elsewhere could land on a control.
+    @MainActor
+    private func closeMenu(_ app: XCUIApplication) {
+        let region = app.otherElements["PopoverDismissRegion"].firstMatch
+        if region.exists { region.tap() } else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)).tap() }
+        Thread.sleep(forTimeInterval: 1)
     }
 
     @MainActor
