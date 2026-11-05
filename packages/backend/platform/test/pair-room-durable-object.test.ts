@@ -610,6 +610,36 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.activity(bob, undefined, 10)).toEqual({ items: [], unread: 0 });
   });
 
+  it("sends the pair's shop to sockets that follow it, on resume and on every change", async () => {
+    const room = await openRoom();
+    const bobShop = await open(room, bob);
+    const bobOld = await open(room, bob);
+    const aliceShop = await open(room, alice);
+    bobShop.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, shop: true }));
+    bobOld.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    aliceShop.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, shop: true }));
+    const shopsOf = (frames: ReadonlyArray<{ _tag: string; [key: string]: unknown }>) =>
+      frames.filter((f) => f._tag === "ShopChanged").map((f) => f["shop"]);
+    await until(
+      () => shopsOf(bobShop.frames).length === 1 && shopsOf(aliceShop.frames).length === 1,
+    );
+    expect(shopsOf(bobShop.frames)).toEqual([
+      { balance: 0, inks: [freeInk], items: ["lamp", "rug"], wishlist: [] },
+    ]);
+
+    // A note earns, so it changes the shop; a presence does not.
+    await room.sendNote(alice, photo());
+    await room.setPresence(alice, "drawing");
+    await room.setWish(bob, tower, true);
+    await until(() => shopsOf(aliceShop.frames).length === 3);
+    expect(shopsOf(aliceShop.frames).slice(1)).toEqual([
+      { balance: 10, inks: [freeInk], items: ["lamp", "rug"], wishlist: [] },
+      { balance: 10, inks: [freeInk], items: ["lamp", "rug"], wishlist: [tower] },
+    ]);
+    expect(shopsOf(bobShop.frames)).toHaveLength(3);
+    expect(shopsOf(bobOld.frames)).toEqual([]);
+  });
+
   it("tells the partner the user stopped drawing when their last socket drops", async () => {
     const room = await openRoom();
     const a = await open(room, alice);
