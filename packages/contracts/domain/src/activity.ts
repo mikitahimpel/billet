@@ -78,20 +78,22 @@ export const ActivityTarget = Schema.TaggedUnion({
 });
 export type ActivityTarget = typeof ActivityTarget.Type;
 
+/** A place in the list, newest first: an opaque string the client only hands back. */
+export const ActivityCursor = Schema.String.check(
+  Schema.isPattern(/^[0-9]{16}~[a-z]+:[A-Za-z0-9:._-]{1,96}$/),
+).pipe(Schema.brand("ActivityCursor"));
+export type ActivityCursor = typeof ActivityCursor.Type;
+
+/** One Inbox item. `cursor` is its place in the list: hand it back as `upTo` to mark it read. */
 export const ActivityItem = Schema.Struct({
   id: ActivityId,
   at: EpochMillis,
   actor: ActivityActor,
   event: ActivityEvent,
   target: Schema.optionalKey(ActivityTarget),
+  cursor: ActivityCursor,
 });
 export type ActivityItem = typeof ActivityItem.Type;
-
-/** A place in the list, newest first: an opaque string the client only hands back. */
-export const ActivityCursor = Schema.String.check(
-  Schema.isPattern(/^[0-9]{16}~[a-z]+:[A-Za-z0-9:._-]{1,96}$/),
-).pipe(Schema.brand("ActivityCursor"));
-export type ActivityCursor = typeof ActivityCursor.Type;
 
 /** How long the room keeps an item. */
 export const activityRetentionDays = 30;

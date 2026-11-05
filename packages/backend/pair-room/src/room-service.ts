@@ -144,9 +144,12 @@ export class RoomService extends Context.Service<RoomService>()(
           const rows = yield* store.activityBefore(before, limit + 1);
           const page = rows.slice(0, limit);
           const last = page.at(-1);
+          // The first page starts at the head; a later one asks for it, one row.
+          const [head] = before === undefined ? rows : yield* store.activityBefore(undefined, 1);
           const response: ActivityResponse = {
             items: page.map((row) => itemFor(row, caller)),
             ...(rows.length > limit && last !== undefined ? { next: cursorOf(last) } : {}),
+            ...(head === undefined ? {} : { head: cursorOf(head) }),
             unread: yield* unread(caller),
           };
           return response;
