@@ -40,9 +40,14 @@ export interface WorkerEnv {
    * the database is down. Absent: the normal status, and the admin panel can't change it.
    */
   readonly STATUS?: KVNamespace;
-  /** APNs auth key (PEM) and key id for demo alerts. Absent: no pushes. */
+  /**
+   * APNs auth key (PEM) and key id, for the demo's alerts and the PairRoom's widget and alert
+   * lanes. Absent: no pushes.
+   */
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
+  /** `on` adds the drawing Live Activity lane. Absent or anything else: off. */
+  readonly LIVE_ACTIVITY_PUSH?: string;
   /**
    * Sign in with Apple key (PEM) and key id, for revoking a user's Apple token when they delete
    * their account. Absent or empty: deletion still deletes, and logs that nothing was revoked.

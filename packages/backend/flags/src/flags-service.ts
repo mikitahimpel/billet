@@ -101,6 +101,16 @@ export class FlagsService extends Context.Service<
         if (live.length === 0) {
           return experiments.map(({ key }) => ({ key, variant: undefined, reason: "killed" }));
         }
+        const needsPairedAt = live.some(({ targeting }) => targeting.pairedSince !== undefined);
+        const pairedAt = needsPairedAt
+          ? Option.getOrUndefined(
+              yield* pairing
+                .pairedAt(context.pairId)
+                .pipe(
+                  Effect.mapError(() => new FlagsUnavailable({ reason: "directory-unavailable" })),
+                ),
+            )
+          : undefined;
 
         const overrides = new Map(
           (yield* configs.overridesOf(context.pairId)).map(({ experimentKey, variant }) => [
@@ -137,7 +147,7 @@ export class FlagsService extends Context.Service<
             );
           } else if (experiment.status === "stopped") {
             decisions.push({ key, variant: undefined, reason: "stopped" });
-          } else if (!isTargeted(experiment.targeting, context)) {
+          } else if (!isTargeted(experiment.targeting, { ...context, pairedAt })) {
             decisions.push({ key, variant: undefined, reason: "not-targeted" });
           } else {
             const result = yield* assign(experiment, context.pairId).pipe(

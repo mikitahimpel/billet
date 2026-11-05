@@ -43,23 +43,25 @@ export const ClientEventName = Schema.Literals([
   "RoomItemPutAway",
   /** The room itself was changed: walls, floor, window (detail: what was changed). */
   "RoomCustomised",
+  /** One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which). */
+  "RoomOpened",
 
   /** The shop was opened. */
   "ShopOpened",
   /** An item was looked at in the shop (detail: the item). */
   "ShopItemViewed",
-  /** An item was bought with stamps (detail: the item; value: its price in stamps). */
+  /** An item was bought with coins (detail: the item; value: its price in coins). */
   "ShopItemBought",
   /** One of the shop's offers came on screen: the week's bundle, a deal or a bundle (detail: it). */
   "ShopOfferViewed",
-  /** A bundle was bought (detail: the bundle; value: its price in stamps). */
+  /** A bundle was bought (detail: the bundle; value: its price in coins). */
   "ShopBundleBought",
   /** A purchase was taken back within its few seconds (detail: the item or bundle; value: the
-   * stamps given back). */
+   * coins given back). */
   "ShopPurchaseUndone",
-  /** The shop's free gift of the day was taken (detail: `stamps` or the item; value: stamps). */
+  /** The shop's free gift of the day was taken (detail: `coins` or the item; value: coins). */
   "ShopDailyGiftClaimed",
-  /** Something was bought for the partner (detail: the item; value: its price in stamps). */
+  /** Something was bought for the partner (detail: the item; value: its price in coins). */
   "ShopGiftSent",
 
   /** The streak's flame scene was opened. */
@@ -126,6 +128,7 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   RoomItemMoved: { detail: "id", required: true },
   RoomItemPutAway: { detail: "id", required: true },
   RoomCustomised: { detail: "id" },
+  RoomOpened: { detail: ["room", "city"], required: true },
   ShopOpened: { detail: "none" },
   ShopItemViewed: { detail: "id", required: true },
   ShopItemBought: { detail: "id", required: true, value: true },

@@ -29,7 +29,7 @@ import {
 } from "@billet/contracts-http-api/note";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { resetDirectory } from "./directory-migrations.ts";
-import { PurchaseResponse, StampsResponse } from "@billet/contracts-http-api/purchase";
+import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
 import {
   makeChain,
   makeXcodeChain,
@@ -181,11 +181,15 @@ const pngSignature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 /** Starts as a PNG and holds every byte value, so any text decoding along the way would show. */
 const pngBytes = Uint8Array.from([...pngSignature, ...Array.from({ length: 256 }, (_, i) => i)]);
 
+const jpegBytes = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, ...pngBytes.subarray(8)]);
+const ascii = (text: string) => [...text].map((character) => character.charCodeAt(0));
+const heicBytes = Uint8Array.from([0, 0, 0, 0x18, ...ascii("ftypheic"), ...pngBytes.subarray(8)]);
+
 const upload = (token: string, body: BodyInit = pngBytes) =>
   call("/v1/media", { body, headers: { ...bearer(token), "content-type": "image/png" } });
 
-const uploaded = async (token: string) => {
-  const response = await upload(token);
+const uploaded = async (token: string, body: BodyInit = pngBytes) => {
+  const response = await upload(token, body);
   expect(response.status).toBe(200);
   return Schema.decodeUnknownSync(UploadImageResponse)(await response.json()).image;
 };
@@ -193,8 +197,10 @@ const uploaded = async (token: string) => {
 const readImage = (key: string, token: string) =>
   call(`/v1/media/${key}`, { method: "GET", headers: bearer(token) });
 
+const photoShape = { width: 4032, height: 3024, preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj" };
+
 const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID()) =>
-  call("/v1/notes", json({ _tag: "Photo", key, image }, "POST", token));
+  call("/v1/notes", json({ _tag: "Photo", key, image, ...photoShape }, "POST", token));
 
 const sendText = (
   token: string,
@@ -631,6 +637,21 @@ describe("deleting an account", () => {
     expect(again.userId).not.toBe(ana.userId);
   });
 
+  it("deletes the user's JPEG and HEIC photos, sent or not", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const sent = await uploaded(owner, jpegBytes);
+    expect((await sendPhoto(owner, sent)).status).toBe(200);
+    const unsent = await uploaded(owner, heicBytes);
+    const theirs = await uploaded(claimer, jpegBytes);
+    expect([sent.endsWith(".jpg"), unsent.endsWith(".heic")]).toEqual([true, true]);
+
+    expect((await remove(owner)).status).toBe(204);
+
+    expect(await env.MEDIA.head(sent)).toBeNull();
+    expect(await env.MEDIA.head(unsent)).toBeNull();
+    expect(await env.MEDIA.head(theirs)).not.toBeNull();
+  });
+
   it("deletes an unpaired account, and takes an Apple code without the key configured", async () => {
     const { session } = await signedIn();
     const response = await remove(session.sessionToken, { appleAuthorizationCode: "code" });
@@ -663,6 +684,21 @@ describe("note images", () => {
       expect(response.headers.get("cache-control")).toBe("no-store");
       expect(new Uint8Array(await response.arrayBuffer())).toEqual(pngBytes);
     }
+  });
+
+  it.each([
+    ["a JPEG", jpegBytes, ".jpg", "image/jpeg"],
+    ["a HEIC", heicBytes, ".heic", "image/heic"],
+  ])("stores %s with its extension and serves its content type", async (_, bytes, ext, type) => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const key = await uploaded(owner, bytes);
+
+    expect(key.endsWith(ext)).toBe(true);
+    expect((await env.MEDIA.head(key))?.httpMetadata?.contentType).toBe(type);
+    const response = await readImage(key, claimer);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe(type);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes);
   });
 
   it("answers 404 to anyone outside the pair, the same as for a key that doesn't exist", async () => {
@@ -698,14 +734,16 @@ describe("note images", () => {
     expect((await upload(await signedInAs("subject-alone"))).status).toBe(404);
   });
 
-  it("refuses bytes that aren't a PNG, and an image over the limit", async () => {
+  it("refuses bytes that aren't a PNG, JPEG or HEIC, and an image over the limit", async () => {
     const { owner, pairId } = await pairOf("subject-owner", "subject-claimer");
 
     expect((await upload(owner, "not an image")).status).toBe(400);
 
-    const oversized = new Uint8Array(imageSizeInBytes + 1);
-    oversized.set(pngSignature);
-    expect((await upload(owner, oversized)).status).toBe(400);
+    for (const signature of [pngSignature, [0xff, 0xd8, 0xff]]) {
+      const oversized = new Uint8Array(imageSizeInBytes + 1);
+      oversized.set(signature);
+      expect((await upload(owner, oversized)).status).toBe(400);
+    }
 
     const stored = await env.MEDIA.list({ prefix: `pairs/${pairId}/` });
     expect(stored.objects).toEqual([]);
@@ -1105,7 +1143,10 @@ describe("rate limits in the Worker", () => {
     );
 
   it("answers 429 past the limit on a limited route, and not on others", async () => {
-    for (let i = 0; i < limits.auth; i++) expect((await challengeFrom()).status).toBe(200);
+    // All at once: each request is counted by one atomic upsert, and one at a time took close to
+    // the 5 s test timeout on CI. The window is fixed (TEST_NOW), so they all fall in it.
+    const allowed = await Promise.all(Array.from({ length: limits.auth }, challengeFrom));
+    expect(allowed.map(({ status }) => status)).toEqual(Array(limits.auth).fill(200));
     expect((await challengeFrom()).status).toBe(429);
     expect((await call("/v1/notes")).status).not.toBe(429);
   });
@@ -1390,8 +1431,9 @@ describe("the couple's WebSocket", () => {
     it("gives a pair its variants when it pairs, before anyone asks", async () => {
       const { pairId } = await pairOf("subject-owner", "subject-claimer");
       const stored = await storedFlags();
-      expect(stored.map(({ pair_id }) => pair_id)).toEqual([pairId, pairId]);
+      expect(stored.map(({ pair_id }) => pair_id)).toEqual([pairId, pairId, pairId]);
       expect(stored.map(({ experiment_key }) => experiment_key).toSorted()).toEqual([
+        "payments",
         "skewed",
         "split",
       ]);
@@ -1404,10 +1446,10 @@ describe("the couple's WebSocket", () => {
         flagsFor(claimer),
         flagsFor(owner),
       ]);
-      expect(forOwner.map(({ key }) => key)).toEqual(["split", "skewed"]);
+      expect(forOwner.map(({ key }) => key)).toEqual(["split", "skewed", "payments"]);
       expect(forClaimer).toEqual(forOwner);
       expect(again).toEqual(forOwner);
-      expect(await storedFlags()).toHaveLength(2);
+      expect(await storedFlags()).toHaveLength(3);
     });
 
     it("never lists an experiment that is switched off, and stores nothing for it", async () => {
@@ -1577,16 +1619,16 @@ describe("payments in the Worker", () => {
       headers: { "content-type": "application/json", ...headers },
       body: JSON.stringify(body),
     });
-  const stampsAt = async (stage: string, headers: Record<string, string>) => {
+  const purchasesAt = async (stage: string, headers: Record<string, string>) => {
     const response = await atStage(
       stage,
-      new Request("https://billet.test/v1/stamps", { headers }),
+      new Request("https://billet.test/v1/purchases", { headers }),
     );
     expect(response.status).toBe(200);
-    return Schema.decodeUnknownSync(StampsResponse)(await response.json());
+    return Schema.decodeUnknownSync(PurchasesResponse)(await response.json());
   };
   const mockBody = (kind: "purchase" | "refund", transactionId: string) => ({
-    productId: "com.mikitahimpel.billet.stamps.550",
+    productId: "com.mikitahimpel.billet.coins.550",
     transactionId,
     kind,
   });
@@ -1598,7 +1640,7 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", "mock-1"), bearer(owner)),
     );
     expect(response.status).toBe(404);
-    expect(await env.DB.prepare("SELECT * FROM stamp_ledger").all()).toMatchObject({
+    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
       results: [],
     });
   });
@@ -1613,28 +1655,52 @@ describe("payments in the Worker", () => {
     expect(bought.status).toBe(200);
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 550,
       duplicate: false,
     });
-    expect((await stampsAt("dev", bearer(claimer))).balance).toBe(550);
+    expect((await purchasesAt("dev", bearer(claimer))).balance).toBe(550);
 
     const refunded = await atStage(
       "dev",
       post("/v1/purchases/mock", mockBody("refund", transactionId), bearer(claimer)),
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
-      stamps: 550,
+      coins: 550,
       balance: 0,
     });
-    const { entries } = await stampsAt("dev", bearer(owner));
+    const { entries } = await purchasesAt("dev", bearer(owner));
     expect(entries.map(({ id, amount }) => [id, amount])).toEqual([
       [`purchase:${transactionId}`, 550],
       [`refund:${transactionId}`, -550],
     ]);
     const rows = await env.DB.prepare("SELECT owner_id, environment, status FROM purchases").all();
     expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
+  });
+
+  it("answers 404 on every purchase route to a pair the payments flag is off for", async () => {
+    const { owner, pairId } = await pairOf("subject-flag-a", "subject-flag-b");
+    await env.DB.prepare(
+      "INSERT INTO pair_flag_overrides (pair_id, experiment_key, variant, set_at, set_by) VALUES (?, 'payments', 'off', 0, 'test')",
+    )
+      .bind(pairId)
+      .run();
+    const responses = [
+      await atStage(
+        "dev",
+        post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
+      ),
+      await atStage("dev", post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
+      await atStage(
+        "dev",
+        new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
+      ),
+    ];
+    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
+    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
+      results: [],
+    });
   });
 
   it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {
@@ -1645,16 +1711,16 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", transactionId), demo),
     );
     expect(response.status).toBe(200);
-    expect((await stampsAt("dev", demo)).balance).toBe(550);
-    const rows = await env.DB.prepare("SELECT owner_id FROM stamp_ledger").all();
+    expect((await purchasesAt("dev", demo)).balance).toBe(550);
+    const rows = await env.DB.prepare("SELECT owner_id FROM coin_ledger").all();
     expect(rows.results).toEqual([{ owner_id: "demo:AB2345CDEF" }]);
 
     for (const stage of ["prod", undefined]) {
-      const stamps = await atStage(
+      const coins = await atStage(
         stage,
-        new Request("https://billet.test/v1/stamps", { headers: demo }),
+        new Request("https://billet.test/v1/purchases", { headers: demo }),
       );
-      expect(stamps.status).toBe(401);
+      expect(coins.status).toBe(401);
       const purchase = await atStage(
         stage,
         post("/v1/purchases", { signedTransaction: "a.b.c" }, demo),
@@ -1681,7 +1747,7 @@ describe("payments in the Worker", () => {
     const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
     expect(first).toMatchObject({
       transactionId: "7",
-      stamps: 100,
+      coins: 100,
       balance: 100,
       duplicate: false,
     });
@@ -1732,7 +1798,7 @@ describe("payments in the Worker", () => {
         );
       }),
     );
-    await env.DB.prepare("ALTER TABLE stamp_ledger RENAME TO stamp_ledger_away").run();
+    await env.DB.prepare("ALTER TABLE coin_ledger RENAME TO coin_ledger_away").run();
     try {
       const down = await atStage(
         "dev",
@@ -1740,7 +1806,7 @@ describe("payments in the Worker", () => {
       );
       expect(down.status).toBe(503);
     } finally {
-      await env.DB.prepare("ALTER TABLE stamp_ledger_away RENAME TO stamp_ledger").run();
+      await env.DB.prepare("ALTER TABLE coin_ledger_away RENAME TO coin_ledger").run();
     }
     try {
       await atStage("dev", post("/v1/purchases", { signedTransaction: fromXcode }, bearer(owner)));
@@ -1762,7 +1828,7 @@ describe("payments in the Worker", () => {
     const token = await signedInAs("subject-alone");
     const response = await atStage(
       "dev",
-      new Request("https://billet.test/v1/stamps", { headers: bearer(token) }),
+      new Request("https://billet.test/v1/purchases", { headers: bearer(token) }),
     );
     expect(response.status).toBe(404);
   });

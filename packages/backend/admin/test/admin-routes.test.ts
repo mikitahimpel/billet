@@ -103,8 +103,8 @@ const handlerFor = (email: string) =>
                         originalTransactionId: "2000000900000001",
                         transactionId: "2000000900000001",
                         ownerId: "pair-1",
-                        productId: "com.mikitahimpel.billet.stamps.100",
-                        stamps: 100,
+                        productId: "com.mikitahimpel.billet.coins.100",
+                        coins: 100,
                         environment: "Sandbox",
                         status: "refunded",
                         refunds: 1,
@@ -243,6 +243,7 @@ describe("the admin API", () => {
     ["a default outside the variants", { default: "disco" }],
     ["exposure over 100", { exposure: 101 }],
     ["a bad version bound", { targeting: { minAppVersion: "latest" } }],
+    ["a paired-since without a time zone", { targeting: { pairedSince: "2026-11-05T09:30" } }],
   ])("refuses %s with 400", async (_, change) => {
     const config = (await call(adminApi.flags)).body.items[1].config;
     const response = await call("/admin/api/flags/room-lighting", "PUT", {
@@ -252,6 +253,17 @@ describe("the admin API", () => {
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("invalid");
     expect(configs.configs.size).toBe(0);
+  });
+
+  it("saves a paired-since rule, so only pairs formed after it enter", async () => {
+    const config = (await call(adminApi.flags)).body.items[1].config;
+    const targeting = { pairedSince: "2026-11-05T09:30Z" };
+    const saved = await call("/admin/api/flags/room-lighting", "PUT", {
+      config: { ...config, targeting },
+      expectedVersion: 0,
+    });
+    expect(saved.status).toBe(200);
+    expect((await call(adminApi.flags)).body.items[1].config.targeting).toEqual(targeting);
   });
 
   it("answers 404 for a key the registry does not have", async () => {
@@ -464,7 +476,7 @@ describe("the admin API", () => {
     expect((await call(`${adminApi.appEvents}?days=1`)).status).toBe(400);
   });
 
-  it("ranks the most chosen things over the range, with stamps spent on bought ones", async () => {
+  it("ranks the most chosen things over the range, with coins spent on bought ones", async () => {
     details.push(
       { name: "CatChosen", detail: "tabby", day: today, count: 2, total: 0 },
       { name: "CatChosen", detail: "idolIlya", day: today, count: 5, total: 0 },

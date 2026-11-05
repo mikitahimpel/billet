@@ -833,8 +833,7 @@ function mostChosen(top, range) {
               "span",
               { class: "top-count" },
               h("b", { text: fmtNum(it.count) }),
-              it.total != null &&
-                h("span", { class: "sub", text: ` · ${fmtNum(it.total)} stamps` }),
+              it.total != null && h("span", { class: "sub", text: ` · ${fmtNum(it.total)} coins` }),
             ),
           ),
         ),
@@ -842,7 +841,7 @@ function mostChosen(top, range) {
     );
   return section(
     "Most chosen",
-    top ? `${range} · times chosen; items bought also show stamps spent` : null,
+    top ? `${range} · times chosen; items bought also show coins spent` : null,
     shown.length
       ? h("div", { class: "grid tops" }, shown.map(box))
       : h(
@@ -1592,6 +1591,7 @@ async function renderFlags([key]) {
 }
 
 const VERSION_PATTERN = "^\\d{1,4}(\\.\\d{1,4}){0,3}(\\+\\d{1,8})?$";
+const PAIRED_SINCE_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,3})?)?Z$";
 let fieldSeq = 0;
 const fid = () => `f${++fieldSeq}`;
 
@@ -1690,6 +1690,23 @@ async function renderFlag(key) {
     b,
     h("input", { type: "checkbox", checked: (t.ageBands || []).includes(b) }),
   ]);
+  const pairedSince = h("input", {
+    type: "text",
+    class: "mono",
+    pattern: PAIRED_SINCE_PATTERN,
+    placeholder: "e.g. 2026-11-05T09:30Z",
+    value: t.pairedSince || "",
+    autocomplete: "off",
+    spellcheck: "false",
+  });
+  const pairedSinceNow = h("button", {
+    type: "button",
+    class: "btn quiet",
+    text: "Now",
+    onclick: () => {
+      pairedSince.value = new Date().toISOString().slice(0, 16) + "Z";
+    },
+  });
   const pairIds = h("textarea", {
     class: "mono",
     rows: "3",
@@ -1712,6 +1729,7 @@ async function renderFlag(key) {
     if (maxV.value.trim()) targeting.maxAppVersion = maxV.value.trim();
     const ageBands = bands.filter(([, el]) => el.checked).map(([b]) => b);
     if (ageBands.length) targeting.ageBands = ageBands;
+    if (pairedSince.value.trim()) targeting.pairedSince = pairedSince.value.trim();
     const ids = pairIds.value
       .split(/\r?\n/)
       .map((x) => x.trim())
@@ -1875,6 +1893,12 @@ async function renderFlag(key) {
           class: "hint",
           text: "None checked means everyone. The server doesn't know age bands yet, so checking one excludes everyone for now.",
         }),
+      ),
+      field(
+        "Paired since (UTC)",
+        h("div", { class: "row" }, pairedSince, pairedSinceNow),
+        "Only pairs formed at or after this moment enter, so set it to when the experiment starts to keep it to new pairs. Blank means pairs of any age.",
+        pairedSince,
       ),
       field("Pair ids", pairIds, "One per line. Blank means all pairs."),
     ),
@@ -2687,7 +2711,7 @@ async function renderPurchases() {
   return [
     pageHead(
       "Purchases",
-      "Stamp packs bought through the App Store, and on dev the mock ones. Read-only: refunds come from Apple.",
+      "Coin packs bought through the App Store, and on dev the mock ones. Read-only: refunds come from Apple.",
     ),
     h(
       "div",
@@ -2704,7 +2728,7 @@ async function renderPurchases() {
       callout(
         "warn",
         `${flagged} flagged ${flagged === 1 ? "purchase" : "purchases"}`,
-        "The pair had fewer stamps than the refund, so the balance stopped at 0. Check them by hand.",
+        "The pair had fewer coins than the refund, so the balance stopped at 0. Check them by hand.",
       ),
     section(
       "Purchases",
@@ -2732,7 +2756,7 @@ async function renderPurchases() {
             value: (p) => p.productId,
             cell: (p) => h("span", { class: "mono", text: packName(p.productId) }),
           },
-          { label: "Stamps", num: true, value: (p) => p.stamps },
+          { label: "Coins", num: true, value: (p) => p.coins },
           {
             label: "Environment",
             value: (p) => p.environment,
@@ -2761,10 +2785,10 @@ async function renderPurchases() {
       }),
     ),
     section(
-      "Stamp ledger",
+      "Coin ledger",
       "Every change to a balance, newest first. A balance is the sum of its entries.",
       dataTable({
-        caption: "Stamp ledger",
+        caption: "Coin ledger",
         noun: "entries",
         rows: ledger,
         sort: [4, "desc"],
