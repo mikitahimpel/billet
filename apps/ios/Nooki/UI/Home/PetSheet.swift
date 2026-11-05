@@ -7,6 +7,8 @@ struct PetButton: View {
     var needs: () -> PetNeedsSource?
     var onPlay: () -> Void
     @State private var showsSheet = false
+    /// The sheet's content height, measured, so the sheet ends just under its last line.
+    @State private var sheetHeight: CGFloat = 520
 
     var body: some View {
         Button {
@@ -46,11 +48,11 @@ struct PetButton: View {
         .accessibilityLabel("\(state.petName), Lv. \(state.level)")
         .accessibilityIdentifier("pet")
         .sheet(isPresented: $showsSheet) {
-            PetSheet(state: state, needs: needs) {
+            PetSheet(state: state, needs: needs, height: $sheetHeight) {
                 showsSheet = false
                 onPlay()
             }
-            .presentationDetents([.height(560), .large])
+            .presentationDetents([.height(sheetHeight)])
             .presentationBackground(Ink.sheet)
             .presentationDragIndicator(.visible)
         }
@@ -61,6 +63,7 @@ struct PetButton: View {
 private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
+    @Binding var height: CGFloat
     var onPlay: () -> Void
     @State private var short = false
 
@@ -111,6 +114,8 @@ private struct PetSheet: View {
         .foregroundStyle(Ink.primary)
         .padding(.horizontal, 20)
         .padding(.top, 28)
+        .padding(.bottom, 20)
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         .frame(maxHeight: .infinity, alignment: .top)
     }
 }
