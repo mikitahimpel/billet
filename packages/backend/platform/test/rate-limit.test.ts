@@ -35,6 +35,10 @@ describe("rate limit groups", () => {
     ["/v1/purchases/mock", "purchases"],
     ["/v1/appstore/notifications", undefined],
     ["/v1/notes", undefined],
+    ["/i/K7QM4R2XHP", "links"],
+    ["/i/not-a-code", "links"],
+    ["/i/K7QM4R2XHP/more", undefined],
+    ["/.well-known/apple-app-site-association", undefined],
     ["/", undefined],
   ])("%s is %s", (path, group) => {
     expect(groupOf(path)).toBe(group);
