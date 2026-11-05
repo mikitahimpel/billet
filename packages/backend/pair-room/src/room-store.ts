@@ -39,6 +39,8 @@ export class RoomStore extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<NoteReaction>>;
     /** Deletes every reaction: the pair is ending. */
     readonly forgetReactions: Effect.Effect<void>;
+    /** Deletes both members' check-ins: the pair is ending. */
+    readonly forgetMoods: Effect.Effect<void>;
     /** The wallet entry stored under `id`, if any. */
     readonly coinEntryById: (id: CoinEntryId) => Effect.Effect<Option.Option<CoinEntry>>;
     /**

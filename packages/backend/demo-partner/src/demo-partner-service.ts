@@ -82,7 +82,7 @@ export class DemoPartnerService extends Context.Service<
           // The owner paired with someone else in the meantime, so the bot has no one.
           Effect.tapError(() => erase(botId).pipe(Effect.ignore)),
         );
-        return { pairId, members: [ownerId, botId] };
+        return { pairId, members: [ownerId, botId], moods: [] };
       });
 
       const remove = Effect.fn("DemoPartnerService.remove")(function* (

@@ -62,6 +62,8 @@ let roundTrips: [String: RoundTrip] = [
   "EarnRequest": codec(EarnRequest.self),
   "EarnResponse": codec(EarnResponse.self),
   "PairResponse": codec(PairResponse.self),
+  "MoodCheckIn": codec(PartnerCheckIn.self),
+  "SetMoodRequest": codec(SetMoodRequest.self),
   "ClientMessage": codec(ClientMessage.self),
   "ServerMessage": codec(ServerMessage.self),
   "PushPayload": codec(PushPayload.self),

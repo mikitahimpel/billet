@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { Color, Stroke } from "@billet/contracts-domain/ink";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { PairShop } from "@billet/contracts-domain/shop";
@@ -43,5 +44,10 @@ export const ServerMessage = Schema.TaggedUnion({
    * `shop: true`, and once on that resume.
    */
   ShopChanged: { shop: PairShop },
+  /**
+   * A member's latest check-in, sent to sockets that resumed with `moods: true`: each one the room
+   * holds on the resume, then every new one.
+   */
+  MoodChanged: { checkIn: MoodCheckIn },
 });
 export type ServerMessage = typeof ServerMessage.Type;

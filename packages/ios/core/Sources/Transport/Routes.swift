@@ -26,6 +26,7 @@ public enum Routes {
   public static let claimInvite = Route(.post, "/v1/invites/claim")
   public static let unpair = Route(.delete, "/v1/pair")
   public static let getPair = Route(.get, "/v1/pair")
+  public static let setMood = Route(.put, "/v1/mood")
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")

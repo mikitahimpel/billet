@@ -83,6 +83,9 @@ public struct APIClient: Sendable {
   public var markGiftReceived:
     @Sendable (MarkGiftReceivedRequest) async throws(TransportError) -> GiftsResponse
   public var saveLoves: @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse
+  /// Replaces this user's check-in and answers with it as stored, the note trimmed.
+  /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
+  public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -194,6 +197,10 @@ public struct APIClient: Sendable {
     saveLoves:
       @escaping @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse = {
         (_) async throws(TransportError) in throw .network("offline")
+      },
+    setMood:
+      @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
+        (_) async throws(TransportError) in throw .network("offline")
       }
   ) {
     self.authChallenge = authChallenge
@@ -234,6 +241,7 @@ public struct APIClient: Sendable {
     self.setGiftPlan = setGiftPlan
     self.markGiftReceived = markGiftReceived
     self.saveLoves = saveLoves
+    self.setMood = setMood
   }
 }
 
@@ -440,6 +448,10 @@ extension APIClient {
       saveLoves: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.saveLoves, signed: true, body: body), as: GiftsResponse.self)
+      },
+      setMood: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.setMood, signed: true, body: body), as: PartnerCheckIn.self)
       })
   }
 }

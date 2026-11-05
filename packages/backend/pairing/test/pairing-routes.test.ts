@@ -6,6 +6,8 @@ import { AuthRejected, AuthUnavailable } from "@billet/backend-auth/auth-error";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { PairMoods } from "../src/pair-moods.ts";
 import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
 import { PairingRoutes } from "../src/pairing-routes.ts";
@@ -40,7 +42,10 @@ const FakeAuth = Layer.succeed(
   }),
 );
 
-const setup = (repository: PairingRepository["Service"]) =>
+const setup = (
+  repository: PairingRepository["Service"],
+  moods: Layer.Layer<PairMoods> = PairMoods.none,
+) =>
   HttpRouter.toWebHandler(
     PairingRoutes.pipe(
       Layer.provide(Layer.mergeAll(FakeAuth, PairingService.layer)),
@@ -48,6 +53,7 @@ const setup = (repository: PairingRepository["Service"]) =>
         Layer.mergeAll(
           Layer.succeed(PairingRepository, repository),
           PairingObserver.silent,
+          moods,
           Digest.layerWebCrypto,
           SecureRandom.layerWebCrypto,
         ),
@@ -104,6 +110,7 @@ describe("pairing routes", () => {
     expect(await seen.json()).toEqual({
       pairId: claimed.pairId,
       members: [tokenOf("hal"), tokenOf("ivy")],
+      moods: [],
     });
     expect(await (await pair("ivy")).json()).toMatchObject({
       members: [tokenOf("ivy"), tokenOf("hal")],
@@ -157,6 +164,30 @@ describe("pairing routes", () => {
       request(path, "down", { method, body: method === "POST" ? "{" : null }),
     );
     expect(down.status).toBe(503);
+  });
+});
+
+describe("the pair snapshot with check-ins", () => {
+  const checkedIn = (user: string): MoodCheckIn => ({
+    user: Schema.decodeSync(UserId)(user),
+    mood: "sleepy",
+    note: "long night",
+    at: 1_700_000_000_000,
+  });
+  const app = setup(
+    makeInMemoryPairingRepository().repository,
+    Layer.succeed(PairMoods, { latest: () => Effect.succeed([checkedIn(tokenOf("kim"))]) }),
+  );
+  afterAll(() => app.dispose());
+
+  it("carries the members' latest check-ins", async () => {
+    const { code } = Schema.decodeUnknownSync(CreateInviteResponse)(
+      await (await app.handler(request("/v1/invites", "jo"))).json(),
+    );
+    await app.handler(request("/v1/invites/claim", "kim", { body: JSON.stringify({ code }) }));
+    const seen = await app.handler(request("/v1/pair", "jo", { method: "GET" }));
+    expect(seen.status).toBe(200);
+    expect(await seen.json()).toMatchObject({ moods: [checkedIn(tokenOf("kim"))] });
   });
 });
 

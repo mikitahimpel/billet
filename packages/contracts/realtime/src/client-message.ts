@@ -35,6 +35,8 @@ export const ClientMessage = Schema.TaggedUnion({
     lastReactionRev: Schema.optionalKey(Schema.Int),
     /** Asks for `ShopChanged` now and whenever the pair's shop changes. */
     shop: Schema.optionalKey(Schema.Boolean),
+    /** Asks for `MoodChanged` with each member's latest check-in now, and each new one. */
+    moods: Schema.optionalKey(Schema.Boolean),
   },
   /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },

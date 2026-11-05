@@ -21,6 +21,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case reactionChanged(NoteReaction)
   /// The pair's shop now, sent to a socket that resumed with `shop: true` and after each change.
   case shopChanged(ShopResponse)
+  /// A member's latest check-in, sent to a socket that resumed with `moods: true`: each one the
+  /// room holds on the resume, then every new one.
+  case moodChanged(PartnerCheckIn)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -36,6 +39,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case unread
     case reaction
     case shop
+    case checkIn
   }
 
   public init(from decoder: any Decoder) throws {
@@ -75,6 +79,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .reactionChanged(try container.decode(NoteReaction.self, forKey: .reaction))
     case "ShopChanged":
       self = .shopChanged(try container.decode(ShopResponse.self, forKey: .shop))
+    case "MoodChanged":
+      self = .moodChanged(try container.decode(PartnerCheckIn.self, forKey: .checkIn))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -126,6 +132,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .shopChanged(let shop):
       try container.encode("ShopChanged", forKey: .tag)
       try container.encode(shop, forKey: .shop)
+    case .moodChanged(let checkIn):
+      try container.encode("MoodChanged", forKey: .tag)
+      try container.encode(checkIn, forKey: .checkIn)
     }
   }
 }

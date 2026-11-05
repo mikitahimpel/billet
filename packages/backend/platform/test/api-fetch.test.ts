@@ -1014,6 +1014,31 @@ describe("notes", () => {
     expect(badPage.status).toBe(400);
   });
 
+  it("keeps each member's check-in and shows both in the pair snapshot", async () => {
+    const { owner, claimer } = await pairOf("subject-mood-owner", "subject-mood-claimer");
+    const getPair = async (token: string) =>
+      Schema.decodeUnknownSync(PairResponse)(
+        await (await call("/v1/pair", { method: "GET", headers: bearer(token) })).json(),
+      );
+    expect(await getPair(owner)).toMatchObject({ moods: [] });
+    const setMood = (token: string, body: unknown) =>
+      call("/v1/mood", {
+        method: "PUT",
+        headers: { ...bearer(token), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const set = await setMood(claimer, { mood: "missing", note: " soon? " });
+    expect(set.status).toBe(200);
+    const checkIn = await set.json();
+    expect(checkIn).toMatchObject({ mood: "missing", note: "soon?" });
+    expect((await setMood(owner, { mood: "happy" })).status).toBe(200);
+    const { members, moods } = await getPair(owner);
+    expect(moods).toHaveLength(2);
+    expect(moods).toContainEqual(checkIn);
+    expect(moods).toContainEqual(expect.objectContaining({ user: members[0], mood: "happy" }));
+    expect((await setMood(owner, { mood: "happy", note: "a".repeat(81) })).status).toBe(400);
+  });
+
   it("opens the day's gift once for the pair, and pays an app earn once per ref", async () => {
     const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
     const post = (token: string, path: string, body: unknown) =>

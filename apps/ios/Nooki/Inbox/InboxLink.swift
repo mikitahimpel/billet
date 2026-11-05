@@ -38,7 +38,7 @@ final class InboxLink {
                 case .reactionChanged(let change): await handlers.reaction(change)
                 case .shopChanged(let shop): await handlers.shop(shop)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catEntryAdded, .catSaved:
+                     .clear, .catEntryAdded, .catSaved, .moodChanged:
                     break
                 }
             },

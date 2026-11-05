@@ -177,6 +177,14 @@ export const claimedBonus = sqliteTable("claimed_bonus", {
   position: integer("position").notNull(),
 });
 
+// Each member's latest check-in, one row each: a new one writes over it. `note` is null without one.
+export const mood = sqliteTable("mood", {
+  user: text("user").primaryKey(),
+  mood: text("mood").notNull(),
+  note: text("note"),
+  at: integer("at").notNull(),
+});
+
 // The wallet's entries, in the order they were stored (`seq`). `id` is `<kind>:<source>`, one
 // entry each, so a repeated earn or buy cannot pay or charge twice.
 export const coinEntry = sqliteTable(
