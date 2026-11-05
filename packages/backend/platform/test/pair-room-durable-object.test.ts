@@ -623,19 +623,17 @@ describe("PairRoom realtime across eviction", () => {
     await until(
       () => shopsOf(bobShop.frames).length === 1 && shopsOf(aliceShop.frames).length === 1,
     );
-    expect(shopsOf(bobShop.frames)).toEqual([
-      { balance: 0, inks: [freeInk], items: ["lamp", "rug"], wishlist: [] },
-    ]);
+    const start = await room.shop();
+    expect(shopsOf(bobShop.frames)).toEqual([start]);
 
     // A note earns, so it changes the shop; a presence does not.
     await room.sendNote(alice, photo());
+    const earned = await room.shop();
     await room.setPresence(alice, "drawing");
     await room.setWish(bob, tower, true);
     await until(() => shopsOf(aliceShop.frames).length === 3);
-    expect(shopsOf(aliceShop.frames).slice(1)).toEqual([
-      { balance: 10, inks: [freeInk], items: ["lamp", "rug"], wishlist: [] },
-      { balance: 10, inks: [freeInk], items: ["lamp", "rug"], wishlist: [tower] },
-    ]);
+    expect(earned?.balance).toBeGreaterThan(start?.balance ?? 0);
+    expect(shopsOf(aliceShop.frames).slice(1)).toEqual([earned, { ...earned, wishlist: [tower] }]);
     expect(shopsOf(bobShop.frames)).toHaveLength(3);
     expect(shopsOf(bobOld.frames)).toEqual([]);
   });

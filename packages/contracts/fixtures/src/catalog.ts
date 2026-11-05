@@ -949,7 +949,13 @@ export const catalog: ReadonlyArray<Fixture> = [
     "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
     "reaction-changed": ServerMessage.cases.ReactionChanged.make({ reaction: heart }),
     "shop-changed": ServerMessage.cases.ShopChanged.make({
-      shop: { balance: 65, inks: [freeInk, rose], items: [lamp, rug, tower], wishlist: [yarn] },
+      shop: {
+        balance: 65,
+        inks: [freeInk, rose],
+        items: [lamp, rug, tower],
+        wishlist: [yarn],
+        bonuses: [],
+      },
     }),
   }),
   fixture("PushPayload", PushPayload, {
