@@ -100,7 +100,7 @@ private struct NoteAccessoryView: View {
         VStack(alignment: .leading, spacing: 1) {
             Label("Leave a note", systemImage: "pencil.and.scribble")
                 .font(.widget(14, .bold))
-            Text("for Mochi's board")
+            Text("for \(CatProfile.name())'s board")
                 .font(.widget(12))
                 .foregroundStyle(.secondary)
         }
@@ -118,6 +118,6 @@ struct NewNoteControl: ControlWidget {
             }
         }
         .displayName("New Note")
-        .description("Write a note for Mochi's board.")
+        .description("Write a note for your cat's board.")
     }
 }

@@ -21,7 +21,7 @@ nonisolated extension PartnerMood: AppEnum {
 
 /// Mochi purrs: the widget shows it right away, the app plays it on its next launch.
 nonisolated struct PetMochiIntent: AppIntent {
-    static let title: LocalizedStringResource = "Pet Mochi"
+    static let title: LocalizedStringResource = "Pet Your Cat"
 
     @MainActor
     func perform() async throws -> some IntentResult {

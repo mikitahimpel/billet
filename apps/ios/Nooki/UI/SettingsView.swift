@@ -58,7 +58,7 @@ struct SettingsView: View {
                 } footer: {
                     Text(hintsReset
                          ? "The hints start over the next time you open Nooki."
-                         : "Small taps when you pet Mochi, buy something or add a wish.")
+                         : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.")
                 }
                 .listRowBackground(rowBackground)
 
@@ -130,7 +130,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Labs")
                 } footer: {
-                    Text("With the brain off, Mochi lives on her own timers as Ilya made her. The card shows what the "
+                    Text("With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The card shows what the "
                          + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
                          + "show at once from the next launch, for testing. Rooms shows one room or both on this "
                          + "phone, whatever the test gave your pair.")

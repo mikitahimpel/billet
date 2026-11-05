@@ -76,7 +76,7 @@ struct StreakCard: View {
     private func caption(_ status: LoveStreak.Status, now: Date) -> String {
         switch status {
         case .done: "You showed up today. See you tomorrow!"
-        case .atRisk: "Pet Mochi or leave a note to keep it going"
+        case .atRisk: "Pet \(CatProfile.name()) or leave a note to keep it going"
         case .restorable: "You missed a day. You can bring the flame back once a month"
         case .cold: "Do something together today to light the flame"
         }

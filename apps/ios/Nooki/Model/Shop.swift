@@ -10,7 +10,7 @@ enum ShopCategory: String, CaseIterable, Identifiable {
         case .today: "Today"
         case .furniture: "Furniture"
         case .decor: "Decor"
-        case .mochi: "For Mochi"
+        case .mochi: "For \(CatProfile.name())"
         case .room: "Room"
         }
     }
@@ -44,7 +44,8 @@ struct ShopCollection: Identifiable, Hashable {
 
 /// Bundled mock catalog; later served as catalog.json (see docs/shop-concept.md).
 enum Catalog {
-    static let items: [ShopItem] = [
+    /// Computed, so the copy calls the cat by the name given in onboarding.
+    static var items: [ShopItem] { [
         ShopItem(id: "armchair", name: "Cloud Armchair", price: 320, category: .furniture,
                  blurb: "Big enough for two and a cat who insists.", mood: "Rested", rarity: .epic, isNew: true),
         ShopItem(id: "lamp", name: "Mushroom Lamp", price: 140, category: .decor,
@@ -56,9 +57,9 @@ enum Catalog {
         ShopItem(id: "rug", name: "Woven Rug", price: 180, category: .room,
                  blurb: "Soft rings in honey and blush.", rarity: .rare),
         ShopItem(id: "yarn", name: "Yarn Ball", price: 60, category: .mochi,
-                 blurb: "Mochi's favourite thing to unravel.", mood: "Curious", rarity: .common),
+                 blurb: "\(CatProfile.name())'s favourite thing to unravel.", mood: "Curious", rarity: .common),
         ShopItem(id: "mouse", name: "Toy Mouse", price: 45, category: .mochi,
-                 blurb: "Squeaks a little. Mochi pretends not to care.", mood: "Curious", rarity: .common),
+                 blurb: "Squeaks a little. \(CatProfile.name()) pretends not to care.", mood: "Curious", rarity: .common),
         ShopItem(id: "tower", name: "Cat Tower", price: 540, category: .mochi,
                  blurb: "Two floors, one nap spot at the very top.", mood: "Happy", rarity: .legendary, isPlus: true),
         ShopItem(id: "print", name: "Sunset Print", price: 120, category: .decor,
@@ -69,14 +70,14 @@ enum Catalog {
                  blurb: "Sprinkles included, calories not.", mood: "Rested", rarity: .epic),
         ShopItem(id: "lantern", name: "Paper Lantern", price: 150, category: .room,
                  blurb: "Hangs by the window and hums with light.", rarity: .legendary, isPlus: true),
-    ]
+    ] }
 
-    static let collections = [
+    static var collections: [ShopCollection] { [
         ShopCollection(id: "cozy-autumn", name: "Cozy Autumn",
                        itemIDs: ["lamp", "lantern", "armchair", "rug", "teatable", "print", "monstera"], bonus: 150),
-        ShopCollection(id: "mochis-corner", name: "Mochi's Corner",
+        ShopCollection(id: "mochis-corner", name: "\(CatProfile.name())'s Corner",
                        itemIDs: ["yarn", "mouse", "tower", "donutbed"], bonus: 100),
-    ]
+    ] }
 
     static func item(_ id: String) -> ShopItem? { items.first { $0.id == id } }
 

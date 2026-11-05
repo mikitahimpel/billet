@@ -26,7 +26,7 @@ struct DatesScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Date night", subtitle: "Swipe together, or let Mochi pick")
+            UsSheetHeader(title: "Date night", subtitle: "Swipe together, or let \(CatProfile.name()) pick")
             modeRow
             if mode != .plans { filterRow }
             ScrollView {
@@ -156,14 +156,14 @@ struct DatesScreen: View {
     }
 
     private var surpriseCaption: String {
-        if rolling { return "Mochi is digging…" }
+        if rolling { return "\(CatProfile.name()) is digging…" }
         if didRoll { return "Nothing fits these filters" }
-        return "Mochi will pull a date out of the hat"
+        return "\(CatProfile.name()) will pull a date out of the hat"
     }
 
     private var anotherButton: some View {
         Button(action: reroll) {
-            Text(rerolls >= 3 ? "Mochi is getting grumpy" : "Another one")
+            Text(rerolls >= 3 ? "\(CatProfile.name()) is getting grumpy" : "Another one")
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .foregroundStyle(Ink.primary)
                 .frame(maxWidth: .infinity)
