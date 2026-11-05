@@ -1,0 +1,13 @@
+{
+  "art": {
+    "color": "#a1b2c3",
+    "path": "/art/dates/42.webp"
+  },
+  "cost": "$$",
+  "id": 42,
+  "pitch": "Ten minutes of treats and patience, then show your partner",
+  "place": "apart",
+  "season": "winter",
+  "time": "1h",
+  "title": "Teach {cat} a trick"
+}

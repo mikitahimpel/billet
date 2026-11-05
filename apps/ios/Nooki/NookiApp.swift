@@ -12,6 +12,8 @@ struct NookiApp: App {
 
     init() {
         NavigationBarStyle.apply()
+        // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
+        URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline
@@ -52,7 +54,7 @@ struct NookiApp: App {
                                 flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
-                                demoPartner: session?.demoPartner == false ? pairWithDemoPartner : nil)
+                                demoPartner: demoPartnerPairing)
                                 .transition(.opacity)
                         }
                     }
@@ -61,11 +63,20 @@ struct NookiApp: App {
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
-                    .task { session?.signIn.appeared() }
+                    .task {
+                        session?.signIn.appeared()
+                        await session?.refreshDateCatalog()
+                    }
                     .task(id: session?.isSignedIn) { await session?.checkDemoPartner() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }
+    }
+
+    /// Built on its own: written inline, the compiler cannot check `body`.
+    private var demoPartnerPairing: (() -> Void)? {
+        guard session?.demoPartner == false else { return nil }
+        return { pairWithDemoPartner() }
     }
 
     private func pairWithDemoPartner() {

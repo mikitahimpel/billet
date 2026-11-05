@@ -94,6 +94,8 @@ public struct APIClient: Sendable {
   public var createDemoPartner: @Sendable () async throws(TransportError) -> PairResponse
   /// Dev server only: unpairs the caller from their bot partner and deletes it.
   public var removeDemoPartner: @Sendable () async throws(TransportError) -> Void
+  /// Every date idea. Needs no session.
+  public var dateCatalog: @Sendable () async throws(TransportError) -> DateCatalogResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -219,6 +221,9 @@ public struct APIClient: Sendable {
     },
     removeDemoPartner: @escaping @Sendable () async throws(TransportError) -> Void = {
       () async throws(TransportError) in throw .network("offline")
+    },
+    dateCatalog: @escaping @Sendable () async throws(TransportError) -> DateCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
     }
   ) {
     self.authChallenge = authChallenge
@@ -263,6 +268,7 @@ public struct APIClient: Sendable {
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
     self.removeDemoPartner = removeDemoPartner
+    self.dateCatalog = dateCatalog
   }
 }
 
@@ -484,6 +490,10 @@ extension APIClient {
       },
       removeDemoPartner: { () async throws(TransportError) in
         try await http.performEmpty(try await request(Routes.removeDemoPartner, signed: true))
+      },
+      dateCatalog: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getDateCatalog, signed: false), as: DateCatalogResponse.self)
       })
   }
 }
