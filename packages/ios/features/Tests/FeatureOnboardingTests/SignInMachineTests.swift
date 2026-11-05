@@ -89,6 +89,7 @@ import Wire
     private let lock = NSLock()
     private var saved: (String, AccountRecord)?
     var failSaving = false
+    var failLoading = false
 
     init(saved: (String, AccountRecord)? = nil) { self.saved = saved }
 
@@ -97,7 +98,8 @@ import Wire
     var store: AccountStore {
       AccountStore(
         load: { [self] () throws(PersistenceError) in
-          lock.withLock { saved.map { (token: $0.0, record: $0.1) } }
+          if failLoading { throw .storage("unreadable") }
+          return lock.withLock { saved.map { (token: $0.0, record: $0.1) } }
         },
         save: { [self] (token, record) throws(PersistenceError) in
           if failSaving { throw .storage("full") }
