@@ -1,8 +1,9 @@
 import SwiftUI
 import TipKit
 
-/// The one header of every tab: the Inbox and the couple's avatars top-left (the avatars open the couple's profile and,
-/// until the two are paired, the partner invite), and the coins top-right. Nothing else sits in it.
+/// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox top-left; top-right the
+/// coins, then the couple's avatars in the corner (they open the couple's profile and, until the two are paired, the
+/// partner invite). Nothing else sits in it.
 struct AppHeader: View {
     let state: HomeState
     @State private var editing = false
@@ -12,7 +13,13 @@ struct AppHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            InboxButton(unread: 0) {}
+            InboxButton(unread: session?.inbox.unread ?? 0) {
+                if session != nil { state.showsInbox = true }
+            }
+
+            Spacer(minLength: 0)
+
+            CoinPill(coins: state.shop.coins)
 
             Menu {
                 Button("Couple profile", systemImage: "person.2.crop.square.stack") { editing = true }
@@ -50,10 +57,6 @@ struct AppHeader: View {
                     pairing = true
                 }
             }
-
-            Spacer(minLength: 0)
-
-            CoinPill(coins: state.shop.coins)
         }
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in
@@ -136,6 +139,9 @@ struct CoinPill: View {
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).
         .anchorPreference(key: CoinPillAnchor.self, value: .bounds) { $0 }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(coins) coins")
+        .accessibilityIdentifier("coins")
     }
 }
 

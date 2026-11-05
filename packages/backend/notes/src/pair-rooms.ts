@@ -15,6 +15,9 @@ import type {
 import type { CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ShopResponse } from "@billet/contracts-http-api/shop";
+import type { ReactRequest } from "@billet/contracts-http-api/reaction";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
 import type { NotesUnavailable } from "./notes-error.ts";
@@ -23,9 +26,11 @@ import type { NotesUnavailable } from "./notes-error.ts";
 export class PairRooms extends Context.Service<
   PairRooms,
   {
+    /** `joined` is who claimed the invite, and when: pairing passes it, a lazy open does not. */
     readonly open: (
       pairId: PairId,
       members: readonly [UserId, UserId],
+      joined?: RoomJoin,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly sendNote: (
       pairId: PairId,
@@ -81,6 +86,8 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       user: UserId,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
+    /** Closes the room's open sockets, as the pair has ended. Safe to repeat. */
+    readonly endSessions: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Adopts the cat, or renames it. `natureSeed` is used only by the adoption. */
     readonly saveCat: (
       pairId: PairId,
@@ -108,6 +115,18 @@ export class PairRooms extends Context.Service<
       before: ActivityCursor | undefined,
       limit: number,
     ) => Effect.Effect<ActivityResponse, NotesUnavailable>;
+    /** Sets or takes back `by`'s reaction to one of the partner's photos. */
+    readonly react: (
+      pairId: PairId,
+      by: UserId,
+      request: ReactRequest,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Reaction changes with `rev` above `afterRev`, oldest first. */
+    readonly reactions: (
+      pairId: PairId,
+      afterRev: number,
+      limit: number,
+    ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,

@@ -23,6 +23,7 @@
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
     "./pair": "./src/pair.ts",
+    "./reaction": "./src/reaction.ts",
     "./shop": "./src/shop.ts"
   },
   "scripts": {

@@ -107,28 +107,53 @@ struct OnboardingView: View {
         }
     }
 
+    /// The hero fills the top, the rest sits under it, and the whole page centers in the space above the button;
+    /// it scrolls only when large text doesn't fit.
     private var welcome: some View {
-        ScrollView {
-            VStack(spacing: Space.l) {
-                Portrait(name: CatCoat.current().avatar, size: 160)
-                    .padding(.top, Space.xl)
-                Text("Meet \(CatProfile.name())")
-                    .font(.nookiLargeTitle)
-                    .foregroundStyle(Ink.text)
-                Text("A cat the two of you look after together. A few quick questions first, so Nooki fits you.")
-                    .font(.nookiBody)
-                    .foregroundStyle(Ink.textSecondary)
-                    .multilineTextAlignment(.center)
-                if pairing != nil {
-                    Button("I have an invite code") { flow.join() }
-                        .font(.nookiBody.weight(.semibold))
-                        .frame(minHeight: 44)
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: Space.l) {
+                    CatHero(size: min(proxy.size.height * 0.42, 340))
+                        .padding(.bottom, Space.s)
+                    Text("A cat for the two of you")
+                        .font(.nookiLargeTitle)
+                        .foregroundStyle(Ink.text)
+                        .multilineTextAlignment(.center)
+                    Text("A few quick questions first. At the end you pick its coat and give it a name.")
+                        .font(.nookiBody)
+                        .foregroundStyle(Ink.textSecondary)
+                        .multilineTextAlignment(.center)
+                    VStack(alignment: .leading, spacing: Space.m) {
+                        welcomePoint("pawprint.fill", "Feed it, pet it and play with it together")
+                        welcomePoint("scribble.variable", "Send each other drawings and notes")
+                        welcomePoint("flame.fill", "Keep a streak going, day after day")
+                    }
+                    .padding(.top, Space.s)
+                    if pairing != nil {
+                        Button("I have an invite code") { flow.join() }
+                            .font(.nookiBody.weight(.semibold))
+                            .frame(minHeight: 44)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Space.gutter)
+                .frame(minHeight: proxy.size.height)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Space.gutter)
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private func welcomePoint(_ symbol: String, _ text: LocalizedStringKey) -> some View {
+        Label {
+            Text(text)
+                .font(.nookiCallout)
+                .foregroundStyle(Ink.text)
+        } icon: {
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Ink.accentText)
+                .frame(width: 24)
+        }
     }
 
     @ViewBuilder private func question(_ step: OnboardingStep) -> some View {
@@ -285,7 +310,7 @@ struct OnboardingView: View {
     }
 
     private var stopped: some View {
-        form(subtitle: String(localized: "Nooki is for 13 and up. \(CatProfile.name()) will be here when you're older.")) {
+        form(subtitle: String(localized: "Nooki is for 13 and up. Your cat will be waiting when you're older.")) {
             EmptyView()
         }
     }

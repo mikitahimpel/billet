@@ -33,8 +33,8 @@ final class Journal {
 
     /// Adding a note earns the couple 5 coins.
     @discardableResult
-    func addNote(text: String, paper: Note.Paper) -> Bool {
-        guard notes.add(text: text, paper: paper, author: viewer) != nil else { return false }
+    func addNote(text: String, paper: Note.Paper, ink: UInt32? = nil) -> Bool {
+        guard notes.add(text: text, paper: paper, author: viewer, ink: ink) != nil else { return false }
         wallet.earn(5)
         streak.record()
         return true

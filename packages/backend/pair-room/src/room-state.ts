@@ -74,6 +74,8 @@ export const RoomState = Schema.TaggedUnion({
     /** Pieces the pair wishes for, in the order they were wished. */
     wishlist: Schema.Array(RoomItemId),
     wallet: RoomWallet,
+    /** The `rev` of the last reaction change; absent before the first. */
+    lastReactionRev: Schema.optionalKey(Count),
   },
 });
 export type RoomState = typeof RoomState.Type;

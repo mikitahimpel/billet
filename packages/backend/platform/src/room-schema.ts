@@ -24,6 +24,7 @@ export const room = sqliteTable(
     secondPresence: text("second_presence").notNull(),
     lastSeq: integer("last_seq").notNull(),
     streakDays: integer("streak_days").notNull(),
+    lastReactionRev: integer("last_reaction_rev"),
   },
   (table) => [check("room_single_row", sql`${table.id} = 1`)],
 );
@@ -53,6 +54,23 @@ export const delivery = sqliteTable(
     nextAttemptAt: integer("next_attempt_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.noteId, table.lane] })],
+);
+
+// Each partner's latest reaction to each note, one row per pair of them. `reaction` is null once
+// it was taken back, so the row still carries the change. `rev` orders the changes.
+export const reaction = sqliteTable(
+  "reaction",
+  {
+    noteId: text("note_id").notNull(),
+    by: text("by").notNull(),
+    reaction: text("reaction"),
+    at: integer("at").notNull(),
+    rev: integer("rev").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.noteId, table.by] }),
+    uniqueIndex("reaction_rev").on(table.rev),
+  ],
 );
 
 // The couple's cat, once adopted: its profile and temper, and the last journal entry's `seq` and

@@ -11,6 +11,8 @@ import type {
 } from "@billet/contracts-http-api/cat";
 import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { ReactRequest } from "@billet/contracts-http-api/reaction";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import { activityOf, cursorOf, itemFor } from "./activity.ts";
@@ -38,9 +40,14 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "WishlistChanged":
       case "CoinsEntered":
       case "CoinsRepeated":
+      case "ReactionSet":
+      case "ReactionRepeated":
         return [];
     }
   });
+
+const reactionsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<NoteReaction> =>
+  outputs.flatMap((output) => (output._tag === "ReactionSet" ? [output.reaction] : []));
 
 const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =>
   outputs.flatMap((output) => (output._tag === "CoinsEntered" ? [output.entry] : []));
@@ -104,6 +111,7 @@ export class RoomService extends Context.Service<RoomService>()(
                 catEntriesIn(decision.outputs),
                 activityOf(decision.outputs, yield* Clock.currentTimeMillis),
                 coinsIn(decision.outputs),
+                reactionsIn(decision.outputs),
               );
               return decision;
             case "Rejected":
@@ -142,6 +150,7 @@ export class RoomService extends Context.Service<RoomService>()(
       const forgetAuthor = (author: UserId) =>
         store.forgetCat.pipe(
           Effect.andThen(store.forgetActivity),
+          Effect.andThen(store.forgetReactions),
           Effect.andThen(store.forgetAuthor(author)),
           lock.withPermits(1),
         );
@@ -206,6 +215,28 @@ export class RoomService extends Context.Service<RoomService>()(
           return yield* decideAndCommit({ _tag: "RecordCatEvent", by, at, ...request });
         }).pipe(lock.withPermits(1));
 
+      // The note and `by`'s reaction to it are read inside the lock, so two changes at once each
+      // decide from the one before.
+      const react = (by: UserId, request: ReactRequest) =>
+        Effect.gen(function* () {
+          const stored = yield* store.noteById(request.note);
+          if (Option.isNone(stored)) {
+            return RoomDecision.cases.Rejected.make({
+              rejection: RoomRejection.cases.NoteNotFound.make({}),
+            });
+          }
+          const current = yield* store.reactionOf(request.note, by);
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({
+            _tag: "React",
+            by,
+            note: stored.value.note,
+            ...(Option.isSome(current) ? { current: current.value } : {}),
+            ...(request.reaction === undefined ? {} : { reaction: request.reaction }),
+            at,
+          });
+        }).pipe(lock.withPermits(1));
+
       // Like a cat entry: a repeated `id` answers with the spend already stored, charging nothing.
       const spendOnce = (id: IdempotencyKey, command: (at: EpochMillis) => RoomCommand) =>
         Effect.gen(function* () {
@@ -263,6 +294,7 @@ export class RoomService extends Context.Service<RoomService>()(
         forgetAuthor,
         saveCat,
         recordCatEvent,
+        react,
         buy,
         order,
         setWish,
@@ -272,7 +304,9 @@ export class RoomService extends Context.Service<RoomService>()(
         unread,
         state: store.load,
         notesAfter: store.notesAfter,
+        noteById: store.noteById,
         catEntriesAfter: store.catEntriesAfter,
+        reactionsAfter: store.reactionsAfter,
         coinEntriesAfter: store.coinEntriesAfter,
       };
     }),

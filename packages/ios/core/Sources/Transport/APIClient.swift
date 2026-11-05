@@ -43,6 +43,18 @@ public struct APIClient: Sendable {
   /// Moves this user's read mark up to a cursor and answers the unread count left.
   public var markActivityRead:
     @Sendable (MarkActivityReadRequest) async throws(TransportError) -> ActivityUnreadResponse
+  /// Sets or takes back this user's reaction to one of the partner's photos.
+  public var react: @Sendable (ReactRequest) async throws(TransportError) -> ReactResponse
+  /// Every reaction change after `rev`, oldest first.
+  public var listReactions:
+    @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse
+  /// Every ink the shop sells and the ones the pair owns.
+  public var listInks: @Sendable () async throws(TransportError) -> InksResponse
+  /// The pair's coin balance, as the server keeps it.
+  public var getCoins: @Sendable () async throws(TransportError) -> CoinsResponse
+  /// Buys one ink at its catalog price: `.api(.notEnoughCoins)` when the balance is short,
+  /// `.api(.alreadyOwned)` when the pair has it. A retry with the same `id` buys nothing twice.
+  public var buyItem: @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse
   /// The caller's pair and both members, the caller first. `.api(.notFound)` while unpaired.
   public var pair: @Sendable () async throws(TransportError) -> PairResponse
   /// What the pair has: balance, inks, room pieces and wishlist.
@@ -97,6 +109,23 @@ public struct APIClient: Sendable {
     markActivityRead:
       @escaping @Sendable (MarkActivityReadRequest) async throws(TransportError) ->
       ActivityUnreadResponse = { (_) async throws(TransportError) in throw .network("offline") },
+    react:
+      @escaping @Sendable (ReactRequest) async throws(TransportError) -> ReactResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    listReactions:
+      @escaping @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    listInks: @escaping @Sendable () async throws(TransportError) -> InksResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    getCoins: @escaping @Sendable () async throws(TransportError) -> CoinsResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    buyItem: @escaping @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
     pair: @escaping @Sendable () async throws(TransportError) -> PairResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
@@ -132,6 +161,11 @@ public struct APIClient: Sendable {
     self.reportEvents = reportEvents
     self.listActivity = listActivity
     self.markActivityRead = markActivityRead
+    self.react = react
+    self.listReactions = listReactions
+    self.listInks = listInks
+    self.getCoins = getCoins
+    self.buyItem = buyItem
     self.pair = pair
     self.shop = shop
     self.placeOrder = placeOrder
@@ -260,6 +294,28 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.markActivityRead, signed: true, body: body),
           as: ActivityUnreadResponse.self)
+      },
+      react: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.react, signed: true, body: body), as: ReactResponse.self)
+      },
+      listReactions: { (after) async throws(TransportError) in
+        let route = Route(
+          Routes.listReactions.method, Routes.listReactions.path + "?after=\(after)")
+        return try await http.perform(
+          try await request(route, signed: true), as: ListReactionsResponse.self)
+      },
+      listInks: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.listInks, signed: true), as: InksResponse.self)
+      },
+      getCoins: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getCoins, signed: true), as: CoinsResponse.self)
+      },
+      buyItem: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.buyItem, signed: true, body: body), as: BuyResponse.self)
       },
       pair: { () async throws(TransportError) in
         try await http.perform(

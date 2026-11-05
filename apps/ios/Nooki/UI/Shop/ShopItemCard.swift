@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// An item in a grid: its art in the rarity frame, the name, what it does for Mochi, and the price or "Owned".
+/// An item in a grid: its art in the rarity frame, the name, what it does for Mochi, and its price pill.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
@@ -11,32 +11,37 @@ struct ShopItemCard: View {
     private var isDeal: Bool { price < item.price }
 
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: Space.s) {
-                art
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                        .lineLimit(2)
-                    if let mood = item.mood {
-                        Text("\(state.petName): \(mood)")
-                            .font(.nookiCaption)
-                            .foregroundStyle(Ink.accentText)
-                            .lineLimit(1)
+        // The art and the name open the item's sheet; the price pill under them buys it in one tap.
+        VStack(alignment: .leading, spacing: Space.s) {
+            Button(action: onTap) {
+                VStack(alignment: .leading, spacing: Space.s) {
+                    art
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.name)
+                            .font(.nookiHeadline)
+                            .foregroundStyle(Ink.text)
+                            .lineLimit(2)
+                        if let mood = item.mood {
+                            Text("\(state.petName): \(mood)")
+                                .font(.nookiCaption)
+                                .foregroundStyle(Ink.accentText)
+                                .lineLimit(1)
+                        }
                     }
                 }
-                Spacer(minLength: 0)
-                footer
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
             }
-            .padding(Space.s + 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .shopCard()
-            .contentShape(.rect(cornerRadius: Radius.card))
+            .buttonStyle(PressScaleStyle())
+            .accessibilityElement(children: .combine)
+            .accessibilityHint("Opens \(item.name)")
+            Spacer(minLength: 0)
+            PriceButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
+                        buy: { state.shop.buy(item) }, fills: true)
         }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityElement(children: .combine)
-        .accessibilityHint("Opens \(item.name)")
+        .padding(Space.s + 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .shopCard()
     }
 
     private var art: some View {
@@ -59,21 +64,6 @@ struct ShopItemCard: View {
             } else if item.isNew, !owned {
                 ShopTag(text: "New", fill: .honey, ink: Ink.heroInk).padding(6)
             }
-        }
-    }
-
-    @ViewBuilder private var footer: some View {
-        if owned {
-            Label("Owned", systemImage: "checkmark")
-                .font(.nookiCallout)
-                .foregroundStyle(Ink.textSecondary)
-                .frame(maxWidth: .infinity, minHeight: 34)
-        } else {
-            CoinPrice(price: price, was: isDeal ? item.price : nil)
-                .font(.nookiHeadline)
-                .foregroundStyle(isDeal ? Ink.heroInk : Ink.text)
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .background(isDeal ? AnyShapeStyle(Color.honey) : AnyShapeStyle(Ink.surfaceRaised), in: .capsule)
         }
     }
 }

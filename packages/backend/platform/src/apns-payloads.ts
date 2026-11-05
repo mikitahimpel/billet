@@ -3,6 +3,7 @@
 // Activity decodes `content-state` as the `LiveActivity` case.
 import { Schema } from "effect";
 import type { Note } from "@billet/contracts-domain/note";
+import type { Reaction } from "@billet/contracts-domain/reaction";
 import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload";
 
 const encodePayload = Schema.encodeSync(PushPayload);
@@ -40,6 +41,38 @@ const alertOf = (note: Note): { readonly title: string; readonly body: string } 
 export const alertBody = (note: Note): unknown => ({
   aps: { alert: alertOf(note), sound: "default", "mutable-content": 1, "thread-id": "notes" },
   [pushPayloadKey]: encodePayload(PushPayload.cases.Alert.make(fieldsOf(note))),
+});
+
+const emoji = {
+  heart: "❤️",
+  laugh: "😂",
+  wow: "😮",
+  sad: "😢",
+  fire: "🔥",
+} as const satisfies Record<Reaction, string>;
+
+/**
+ * An alert to a photo's author that the partner reacted. The extension writes the partner's name
+ * into the title, as for a note.
+ */
+export const reactionAlertBody = (reaction: {
+  readonly note: Note["id"];
+  readonly by: Note["author"];
+  readonly reaction: Reaction;
+}): unknown => ({
+  aps: {
+    alert: { title: "Nooki", body: `${emoji[reaction.reaction]} on your photo` },
+    sound: "default",
+    "mutable-content": 1,
+    "thread-id": "reactions",
+  },
+  [pushPayloadKey]: encodePayload(
+    PushPayload.cases.Reaction.make({
+      noteId: reaction.note,
+      by: reaction.by,
+      reaction: reaction.reaction,
+    }),
+  ),
 });
 
 /** A WidgetKit push only asks the widgets to reload; the payload rides along for a future reader. */

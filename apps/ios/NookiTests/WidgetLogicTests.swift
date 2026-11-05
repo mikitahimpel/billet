@@ -106,7 +106,7 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 }
 
 @Suite struct DeepLinkTests {
-    @Test(arguments: [DeepLink.room, .moments, .us, .calendar, .dates, .list(UUID())])
+    @Test(arguments: [DeepLink.room, .moments, .us, .calendar, .dates, .list(UUID()), .shopInk("ink-rose")])
     func roundTrips(_ link: DeepLink) {
         #expect(DeepLink(url: link.url) == link)
     }
@@ -115,6 +115,15 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
         #expect(DeepLink(url: URL(string: "https://room")!) == nil)
         #expect(DeepLink(url: URL(string: "nooki://us/list/not-a-uuid")!) == nil)
         #expect(DeepLink(url: URL(string: "nooki://shop")!) == nil)
+        #expect(DeepLink(url: URL(string: "nooki://shop/ink")!) == nil)
+    }
+
+    @Test func aShopInkLinkOpensTheShopAtThatInk() {
+        #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "nooki://shop/ink/ink-rose")
+        let state = HomeState(stores: .live())
+        state.open(.shopInk("ink-rose"))
+        #expect(state.tab == .shop)
+        #expect(state.shopFocus == .ink("ink-rose"))
     }
 }
 
@@ -127,11 +136,12 @@ private func removeScratch(_ path: String) {
 }
 
 @Suite struct WalletTests {
-    @Test func freshWalletKeepsTheStarterCoins() {
+    @Test func aFreshWalletHasOnlyTheStarterPieces() {
         let path = scratchFile("wallet.json")
         defer { removeScratch(path) }
         #expect(WalletStore(file: path).wallet == Wallet())
-        #expect(Wallet().coins == 560)
+        #expect(Wallet().coins == 0)
+        #expect(Wallet().owned == ["lamp", "rug"])
     }
 
     @Test func roundTripsThroughTheSharedFile() {

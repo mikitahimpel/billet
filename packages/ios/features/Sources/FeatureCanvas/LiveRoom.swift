@@ -18,17 +18,30 @@ public final class LiveRoom {
   /// Called when the partner clears the shared canvas.
   @ObservationIgnored public var onClear: (() -> Void)?
 
+  /// Spreads clumps of the partner's frames back out (#326); `held` are the messages waiting
+  /// for their turn, in order, and `drain` draws them.
+  @ObservationIgnored private var pacer = LivePacer()
+  @ObservationIgnored private var held: [(at: Double, message: ServerMessage)] = []
+  @ObservationIgnored private var drain: Task<Void, Never>?
+  @ObservationIgnored private let now: @Sendable () -> Double
+  @ObservationIgnored private let wait: @Sendable (Double) async -> Void
+
   /// - Parameters:
   ///   - makeDependencies: Builds the socket's services around the closure that receives each
   ///     server message.
   ///   - lastSeq: The last note `seq` this phone already holds.
   ///   - onNote: Called once for each note that arrives over the socket.
+  ///   - now: A monotonic clock in seconds, and `wait` sleeps on it; both are for the pacer.
   public init(
     makeDependencies: (@escaping @Sendable (ServerMessage) async -> Void) -> WebSocketDependencies,
     lastSeq: Int?,
-    onNote: @escaping (Int, Note) -> Void
+    onNote: @escaping (Int, Note) -> Void,
+    now: @escaping @Sendable () -> Double = { ProcessInfo.processInfo.systemUptime },
+    wait: @escaping @Sendable (Double) async -> Void = { try? await Task.sleep(for: .seconds($0)) }
   ) {
     self.onNote = onNote
+    self.now = now
+    self.wait = wait
     state.lastNoteSeq = lastSeq
     let deliver: @Sendable (ServerMessage) async -> Void = { [weak self] message in
       await self?.receive(message)
@@ -56,7 +69,14 @@ public final class LiveRoom {
   /// changes; receiving and sending do it too.
   public func syncLink() {
     let online = isOnline
-    if online != state.isOnline { apply(.linkChanged(online: online)) }
+    guard online != state.isOnline else { return }
+    // Live frames held for pacing belong to the connection that just went; they are dropped
+    // with it, as live strokes are.
+    if !online {
+      held.removeAll()
+      pacer.reset()
+    }
+    apply(.linkChanged(online: online))
   }
 
   public func setDrawing(_ drawing: Bool) {
@@ -77,7 +97,32 @@ public final class LiveRoom {
 
   func receive(_ message: ServerMessage) {
     syncLink()
-    apply(.received(message))
+    let arrived = now()
+    let at = pacer.draw(relayedAt: Self.relayedAt(of: message), arrived: arrived)
+    if held.isEmpty, at <= arrived {
+      apply(.received(message))
+      return
+    }
+    held.append((at, message))
+    if drain == nil { drain = Task { [weak self] in await self?.drawHeld() } }
+  }
+
+  /// Draws the held messages, each at its time.
+  private func drawHeld() async {
+    while let next = held.first {
+      let remaining = next.at - now()
+      if remaining > 0 { await wait(remaining) }
+      // The link may have dropped meanwhile, which empties `held`.
+      guard let first = held.first, first.at == next.at else { continue }
+      held.removeFirst()
+      apply(.received(first.message))
+    }
+    drain = nil
+  }
+
+  private static func relayedAt(of message: ServerMessage) -> Int? {
+    if case .strokePoints(_, _, let relayedAt) = message { return relayedAt }
+    return nil
   }
 
   private func apply(_ event: LiveRoomMachine.Event) {

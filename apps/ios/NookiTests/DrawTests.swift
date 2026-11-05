@@ -47,15 +47,15 @@ struct DrawTests {
 
     @Test func strokesUseTheChosenInkAsWireColour() {
         let model = DrawModel(room: nil, partnerName: "Anya")
-        model.ink = DrawInks.all[1]
+        model.ink = PaletteInk.bundled[1]
         stroke(model, at: 0.5)
-        #expect(model.strokes.first?.color == "#FF4F86")
+        #expect(model.strokes.first?.color == "#FF8FAB")
         #expect(model.strokes.first?.width == DrawModel.penWidth)
     }
 
     @Test func onlyTheFreeInkIsOwnedAtFirst() {
-        let owned = DrawInks.all.filter { $0.isOwned([]) }
-        #expect(owned == [DrawInks.free])
-        #expect(DrawInks.all[1].isOwned([DrawInks.all[1].id]))
+        let owned = PaletteInk.bundled.filter { $0.isOwned([]) }
+        #expect(owned == [PaletteInk.free])
+        #expect(PaletteInk.bundled[1].isOwned([PaletteInk.bundled[1].id]))
     }
 }

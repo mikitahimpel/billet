@@ -268,6 +268,10 @@ export class NotesService extends Context.Service<
           case "CatNotAdopted":
           case "CatEntryIdTaken":
           case "InkNotOwned":
+          case "NoteNotFound":
+          case "OwnNote":
+          case "NotReactable":
+          case "NoReaction":
             return new NotesUnavailable({ reason: "room-refused-buy" });
         }
       };

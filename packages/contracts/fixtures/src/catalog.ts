@@ -90,6 +90,12 @@ import {
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
+import { NoteReaction } from "@billet/contracts-domain/reaction";
+import {
+  ListReactionsResponse,
+  ReactRequest,
+  ReactResponse,
+} from "@billet/contracts-http-api/reaction";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -321,6 +327,15 @@ const catNeeds: CatNeeds = {
 };
 const lonelyCatNeeds: CatNeeds = { ...catNeeds, loved: 0.31, missing: bob };
 
+const heart: NoteReaction = {
+  rev: 3,
+  note: noteId,
+  by: alice,
+  at: 1_700_000_002_000,
+  reaction: "heart",
+};
+const takenBack: NoteReaction = { rev: 4, note: noteId, by: alice, at: 1_700_000_003_000 };
+
 const activityEvents = {
   "cat-fed": { _tag: "CatFed", grams: 40 },
   "cat-petted": { _tag: "CatPetted" },
@@ -332,7 +347,9 @@ const activityEvents = {
   "plant-watered-by-the-window": { _tag: "PlantWatered" },
   "cat-adopted": { _tag: "CatAdopted", name: "Mochi" },
   "cat-renamed": { _tag: "CatRenamed", name: "Мочи 🐾" },
+  "partner-joined": { _tag: "PartnerJoined" },
   "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
+  reacted: { _tag: "Reacted", note: "note-1", reaction: "heart" },
   purchased: {
     _tag: "Purchased",
     offer: "bundle:starter-ink",
@@ -450,6 +467,16 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),
+  fixture("NoteReaction", NoteReaction, { default: heart, "taken-back": takenBack }),
+  fixture("ReactRequest", ReactRequest, {
+    default: { note: noteId, reaction: "fire" },
+    "take-back": { note: noteId },
+  }),
+  fixture("ReactResponse", ReactResponse, { default: { reaction: heart } }),
+  fixture("ListReactionsResponse", ListReactionsResponse, {
+    default: { reactions: [heart, takenBack] },
+    empty: { reactions: [] },
+  }),
   fixture("ReportEventsRequest", ReportEventsRequest, {
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },
@@ -754,6 +781,11 @@ export const catalog: ReadonlyArray<Fixture> = [
       lastCatSeq: 3,
       activity: true,
     }),
+    "resume-with-reactions": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      activity: true,
+      lastReactionRev: 2,
+    }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -772,6 +804,11 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
     "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
     "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-points-relayed": ServerMessage.cases.StrokePoints.make({
+      id: 3,
+      points: stroke.points,
+      relayedAt: 1_762_300_000_123,
+    }),
     "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
     "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
     clear: ServerMessage.cases.Clear.make({}),
@@ -780,6 +817,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
     "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
     "activity-unread": ServerMessage.cases.ActivityUnread.make({ unread: 2 }),
+    "reaction-changed": ServerMessage.cases.ReactionChanged.make({ reaction: heart }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),
@@ -793,6 +831,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       paper: "butter",
     }),
     "alert-text": PushPayload.cases.Alert.make({ noteId, author: alice, text: "home soon" }),
+    reaction: PushPayload.cases.Reaction.make({ noteId, by: alice, reaction: "laugh" }),
     "live-activity": PushPayload.cases.LiveActivity.make({ noteId, author: alice, compact }),
     "live-activity-on-paper": PushPayload.cases.LiveActivity.make({
       noteId,

@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "b0243594-f0cc-452d-869e-4369ddda5d6b",
+  "id": "93478453-4363-4698-8546-9a0df42d3229",
   "prevIds": [
     "77558b28-53e0-4097-b3d2-71491d1c1a88"
   ],
@@ -39,7 +39,7 @@
       "entityType": "tables"
     },
     {
-      "name": "owned_item",
+      "name": "reaction",
       "entityType": "tables"
     },
     {
@@ -48,10 +48,6 @@
     },
     {
       "name": "wallet",
-      "entityType": "tables"
-    },
-    {
-      "name": "wish",
       "entityType": "tables"
     },
     {
@@ -476,13 +472,33 @@
     },
     {
       "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note_id",
+      "entityType": "columns",
+      "table": "reaction"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "by",
+      "entityType": "columns",
+      "table": "reaction"
+    },
+    {
+      "type": "text",
       "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "item_id",
+      "name": "reaction",
       "entityType": "columns",
-      "table": "owned_item"
+      "table": "reaction"
     },
     {
       "type": "integer",
@@ -490,9 +506,19 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "position",
+      "name": "at",
       "entityType": "columns",
-      "table": "owned_item"
+      "table": "reaction"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "rev",
+      "entityType": "columns",
+      "table": "reaction"
     },
     {
       "type": "integer",
@@ -580,6 +606,16 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
+      "name": "last_reaction_rev",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
       "name": "id",
       "entityType": "columns",
       "table": "wallet"
@@ -635,26 +671,6 @@
       "table": "wallet"
     },
     {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "item_id",
-      "entityType": "columns",
-      "table": "wish"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "position",
-      "entityType": "columns",
-      "table": "wish"
-    },
-    {
       "columns": [
         "note_id",
         "lane"
@@ -663,6 +679,16 @@
       "name": "delivery_pk",
       "entityType": "pks",
       "table": "delivery"
+    },
+    {
+      "columns": [
+        "note_id",
+        "by"
+      ],
+      "nameExplicit": false,
+      "name": "reaction_pk",
+      "entityType": "pks",
+      "table": "reaction"
     },
     {
       "columns": [
@@ -729,15 +755,6 @@
     },
     {
       "columns": [
-        "item_id"
-      ],
-      "nameExplicit": false,
-      "name": "owned_item_pk",
-      "table": "owned_item",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
         "id"
       ],
       "nameExplicit": false,
@@ -752,15 +769,6 @@
       "nameExplicit": false,
       "name": "wallet_pk",
       "table": "wallet",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "item_id"
-      ],
-      "nameExplicit": false,
-      "name": "wish_pk",
-      "table": "wish",
       "entityType": "pks"
     },
     {
@@ -850,6 +858,20 @@
       "name": "note_author_key",
       "entityType": "indexes",
       "table": "note"
+    },
+    {
+      "columns": [
+        {
+          "value": "rev",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "reaction_rev",
+      "entityType": "indexes",
+      "table": "reaction"
     },
     {
       "value": "\"id\" = 1",

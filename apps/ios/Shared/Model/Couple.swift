@@ -23,6 +23,11 @@ nonisolated struct Couple: Codable, Hashable {
 
     var other: String { viewer == partners[0] ? partners[1] : partners[0] }
 
+    /// The partner's own name, or their monogram until they set one.
+    func name(of partner: String) -> String {
+        names?[partner].flatMap { $0.isEmpty ? nil : $0 } ?? partner
+    }
+
     /// Day one counts as day 1.
     func daysTogether(on day: Date = .now) -> Int {
         let cal = Calendar.current
@@ -40,7 +45,10 @@ nonisolated struct Couple: Codable, Hashable {
 final class CoupleStore {
     private(set) var couple: Couple
 
-    private static let file = "Couple/couple.json"
+    nonisolated private static let file = "Couple/couple.json"
+
+    /// The couple as last saved, for a reader without a store such as the notification extension.
+    nonisolated static func saved() -> Couple? { SharedFile.read(Couple.self, from: file) }
 
     init() {
         if let saved = SharedFile.read(Couple.self, from: Self.file) {
@@ -60,9 +68,7 @@ final class CoupleStore {
     }
 
     /// The partner's own name, or their monogram until they set one.
-    func name(of partner: String) -> String {
-        couple.names?[partner].flatMap { $0.isEmpty ? nil : $0 } ?? partner
-    }
+    func name(of partner: String) -> String { couple.name(of: partner) }
 
     /// The first letter of their name, shown on their avatar.
     func initial(of partner: String) -> String {

@@ -19,7 +19,7 @@ func dependencies(_ names: [String]) -> [Target.Dependency] {
   }
 }
 
-let features = ["FeatureOnboarding", "FeaturePairing", "FeatureCanvas"]
+let features = ["FeatureOnboarding", "FeaturePairing", "FeatureCanvas", "FeatureMoments"]
 
 let featureDependencies = ["BilletKit", "Wire", "Ink", "DesignSystem", "Transport", "Persistence"]
 
@@ -34,10 +34,16 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
+  ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
+  ("FeatureGamesTests", ["FeatureGames", "Wire"]),
 ]
 
-let products = features + ["WidgetBridge"]
+// The mini-games' rules, apart from how they are drawn: the scale, the bowl, the dot, the brush, and what a finished
+// game puts in the cat's journal.
+let games: Target = .target(name: "FeatureGames", dependencies: dependencies(["Wire"]))
+
+let products = features + ["WidgetBridge", "FeatureGames"]
 
 let package = Package(
   name: "BilletFeatures",
@@ -49,7 +55,7 @@ let package = Package(
     .package(path: "../pet"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
-    + [widgetBridge]
+    + [widgetBridge, games]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]
 )

@@ -11,6 +11,16 @@ export const StoredRoom = Schema.Struct({
   secondPresence: Schema.String,
   lastSeq: Schema.Int,
   streakDays: Schema.Int,
+  lastReactionRev: Schema.NullOr(Schema.Int),
+});
+
+/** What a `reaction` row holds: `reaction` is null once it was taken back. */
+export const StoredReaction = Schema.Struct({
+  noteId: Schema.String,
+  by: Schema.String,
+  reaction: Schema.NullOr(Schema.String),
+  at: Schema.Int,
+  rev: Schema.Int,
 });
 
 /** What a `note` row holds. */

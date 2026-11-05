@@ -1,3 +1,4 @@
+import FeatureGames
 import Observation
 import Persistence
 import SwiftUI
@@ -5,6 +6,14 @@ import WidgetKit
 
 enum HomeTab: CaseIterable {
     case world, moments, shop, us
+}
+
+/// Where the Shop opens when something elsewhere points at it, e.g. a locked ink in the drawing palette.
+enum ShopFocus: Hashable {
+    /// The Inks block in Today, at that ink.
+    case ink(String)
+    /// That item's sheet.
+    case item(String)
 }
 
 /// Which of Mochi's rooms the World tab shows.
@@ -69,7 +78,18 @@ final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
     var tab: HomeTab = .world
+    /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
+    var shopFocus: ShopFocus?
+
+    /// Opens the Shop at an ink or an item.
+    func openShop(_ focus: ShopFocus) {
+        shopFocus = focus
+        tab = .shop
+    }
+
     var room: RoomKind = .home
+    /// The mini-game being played in the room, if any.
+    var game: MiniGame?
     var showsSettings = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
@@ -139,6 +159,14 @@ final class HomeState {
             }
         default: break
         }
+        // For screenshots: `-shopCoins 20` sets the balance and `-shopOwned lamp,rug` what the couple owns.
+        if defaults.object(forKey: "shopCoins") != nil {
+            let coins = defaults.integer(forKey: "shopCoins")
+            wallet.update { $0.coins = coins }
+        }
+        if let owned = defaults.string(forKey: "shopOwned") {
+            wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
+        }
         if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
             tab = .moments
             openedPin = PinRoute(id: moments.moments[defaults.integer(forKey: "shotMoment")].id)
@@ -191,12 +219,14 @@ final class HomeState {
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
         CatProfile.store.removeObject(forKey: CatProfile.nameKey)
+        CatProfile.store.removeObject(forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Leaving the app: the widgets redraw from what was saved here.
     func didEnterBackground() {
         SharedFile.flush()
+        CatProfile.store.set(CatCoat.current().rawValue, forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -216,6 +246,7 @@ final class HomeState {
         case .invite(let code):
             // Before onboarding is done, the link is its code page's.
             if UserDefaults.standard.bool(forKey: OnboardingFlow.doneKey) { invitedCode = code }
+        case .shopInk(let id): openShop(.ink(id))
         }
     }
 

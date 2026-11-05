@@ -235,7 +235,7 @@ const cared = (room: ActiveRoom, cat: RoomCat, entry: CatEntry) => {
 const decideVacant = (command: RoomCommand): RoomDecision => {
   switch (command._tag) {
     case "Open": {
-      const { pairId, members } = command;
+      const { pairId, members, joined } = command;
       const [first, second] = members;
       if (first === second) return rejected(RoomRejection.cases.DuplicateMember.make({}));
       return accepted(
@@ -253,7 +253,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           wishlist: [],
           wallet: emptyWallet,
         },
-        [RoomOutput.cases.RoomOpened.make({ pairId })],
+        [RoomOutput.cases.RoomOpened.make(joined === undefined ? { pairId } : { pairId, joined })],
       );
     }
     case "SendNote":
@@ -264,6 +264,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "Buy":
     case "Order":
     case "SetWish":
+    case "React":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -344,6 +345,23 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
             },
             [RoomOutput.cases.PresenceChanged.make({ user, state })],
           );
+    }
+    case "React": {
+      const { by, note, current, reaction, at } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      if (note.author === by) return rejected(RoomRejection.cases.OwnNote.make({}));
+      if (note._tag !== "Photo") return rejected(RoomRejection.cases.NotReactable.make({}));
+      if (current?.reaction === reaction) {
+        return current === undefined
+          ? rejected(RoomRejection.cases.NoReaction.make({}))
+          : accepted(room, [RoomOutput.cases.ReactionRepeated.make({ reaction: current })]);
+      }
+      const rev = (room.lastReactionRev ?? 0) + 1;
+      return accepted({ ...room, lastReactionRev: rev }, [
+        RoomOutput.cases.ReactionSet.make({
+          reaction: { rev, note: note.id, by, at, ...(reaction === undefined ? {} : { reaction }) },
+        }),
+      ]);
     }
     case "GrantInks": {
       const added = [...new Set(command.inks)].filter((ink) => !ownsInk(room, ink));

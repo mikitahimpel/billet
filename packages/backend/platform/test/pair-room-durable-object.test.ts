@@ -173,6 +173,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_activity"),
       expect.stringContaining("_owned_ink"),
       expect.stringContaining("_wallet"),
+      expect.stringContaining("_reactions"),
       expect.stringContaining("_shop"),
     ]);
   });
@@ -373,6 +374,25 @@ describe("PairRoom close handling", () => {
 
     expect(await closed).toBe(1002);
   });
+
+  it("closes every open socket when the pair ends, and again harmlessly", async () => {
+    const room = await openRoom();
+    const sockets = await Promise.all([alice, bob].map((user) => connect(room, upgrade(user))));
+    const closed = sockets.map(
+      ({ webSocket }) =>
+        new Promise<string>((resolve) => {
+          webSocket?.addEventListener("close", (event) => {
+            resolve(`${event.code} ${event.reason}`);
+          });
+          webSocket?.accept();
+        }),
+    );
+
+    await room.endSessions();
+    await room.endSessions();
+
+    expect(await Promise.all(closed)).toEqual(["1000 pair ended", "1000 pair ended"]);
+  });
 });
 
 describe("PairRoom realtime across eviction", () => {
@@ -459,6 +479,46 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.catJournal(0, 10)).toEqual([]);
   });
 
+  it("stores reactions in SQLite, streams each change to sockets that follow them, and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const author = await open(room, alice);
+    const older = await open(room, alice);
+    author.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, lastReactionRev: 0 }));
+    older.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    const sent = await room.sendNote(alice, photo());
+    if (sent._tag !== "Accepted") throw new Error("note refused");
+    const note = sent.outputs.flatMap((o) =>
+      o._tag === "NoteAppended" ? [o.entry.note.id] : [],
+    )[0]!;
+
+    expect(await room.react(alice, { note, reaction: "heart" })).toMatchObject({
+      _tag: "Rejected",
+      rejection: { _tag: "OwnNote" },
+    });
+    expect((await room.react(bob, { note, reaction: "heart" }))._tag).toBe("Accepted");
+    await evictDurableObject(room);
+    expect((await room.react(bob, { note, reaction: "fire" }))._tag).toBe("Accepted");
+    expect((await room.react(bob, { note }))._tag).toBe("Accepted");
+    const changes = () => author.frames.filter((f) => f._tag === "ReactionChanged");
+    await until(() => changes().length === 3);
+    expect(changes().map((f) => f["reaction"])).toEqual([
+      expect.objectContaining({ rev: 1, note, by: bob, reaction: "heart" }),
+      expect.objectContaining({ rev: 2, reaction: "fire" }),
+      expect.not.objectContaining({ reaction: expect.anything() }),
+    ]);
+    expect(older.frames.some((f) => f._tag === "ReactionChanged")).toBe(false);
+
+    const late = await open(room, alice);
+    late.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 1, lastReactionRev: 1 }));
+    await until(() => late.frames.filter((f) => f._tag === "ReactionChanged").length === 1);
+    expect(await room.reactions(0, 10)).toEqual([expect.objectContaining({ rev: 3, by: bob })]);
+    const inbox = await room.activity(alice, undefined, 10);
+    expect(inbox.items.map((i) => [i.actor, i.event._tag])).toContainEqual(["Partner", "Reacted"]);
+
+    await room.forgetMember(alice);
+    expect(await room.reactions(0, 10)).toEqual([]);
+  });
+
   it("keeps the Inbox in SQLite, pushes the unread count to sockets that follow it, and forgets it with the pair", async () => {
     const room = await openRoom();
     const bobInbox = await open(room, bob);
@@ -539,7 +599,17 @@ describe("PairRoom realtime across eviction", () => {
       "StrokeEnd",
       "Clear",
     ]);
-    expect(live(b.frames)[2]).toEqual({ _tag: "StrokePoints", id: 1, points: [{ x: 3, y: 4 }] });
+    expect(live(b.frames)[2]).toEqual({
+      _tag: "StrokePoints",
+      id: 1,
+      points: [{ x: 3, y: 4 }],
+      relayedAt: expect.any(Number),
+    });
+    // Stamped with when each frame reached the room, so the partner can pace a clump.
+    const stamps = live(b.frames)
+      .filter((f) => f._tag === "StrokePoints")
+      .flatMap((f) => ("relayedAt" in f && typeof f.relayedAt === "number" ? [f.relayedAt] : []));
+    expect(stamps[1]).toBeGreaterThanOrEqual(stamps[0] ?? Infinity);
     await settle();
     expect(live(a.frames)).toEqual([]);
   });

@@ -113,6 +113,18 @@ final class ShopModel {
         return true
     }
 
+    /// Buys an ink colour at its price. Unsynced, the server hears of it once Undo has passed (see `InkSync`).
+    @discardableResult
+    func buy(_ ink: PaletteInk) -> Bool {
+        guard !ink.isOwned(owned) else { return false }
+        return record(.ink(InkId(ink.id))) {
+            $0.buy([ink.id], cost: ink.price, title: "\(ink.name) ink", kind: .ink, at: .now)
+        }
+    }
+
+    /// The inks on sale, the free one first: the server's catalog once it has answered.
+    var inks = PaletteInk.bundled
+
     /// A treat from the shared wallet.
     func treat() -> Bool {
         guard coins >= Self.treatPrice else { return false }
@@ -182,11 +194,11 @@ final class ShopModel {
     }
 
     private func apply(_ shop: ShopResponse) {
-        // What the server doesn't sell, such as a drawing ink, stays as the phone has it.
-        let ownOnly = wallet.wallet.owned.subtracting(Catalog.items.map(\.id))
+        // What the server doesn't sell stays as the phone has it.
+        let ownOnly = wallet.wallet.owned.subtracting(Catalog.items.map(\.id)).filter { !PaletteInk.isInk($0) }
         wallet.mirror(
             coins: shop.balance,
-            owned: Set(shop.items.map(\.rawValue)).union(ownOnly),
+            owned: Set(shop.items.map(\.rawValue) + shop.inks.map(\.rawValue)).union(ownOnly),
             wishlist: Set(shop.wishlist.map(\.rawValue)))
     }
 }

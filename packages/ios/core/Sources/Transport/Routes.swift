@@ -29,6 +29,9 @@ public enum Routes {
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
+  /// Sets or takes back this user's reaction to one of the partner's photos.
+  public static let react = Route(.put, "/v1/reactions")
+  public static let listReactions = Route(.get, "/v1/reactions")
   public static let listInks = Route(.get, "/v1/inks")
   public static let getCoins = Route(.get, "/v1/coins")
   public static let buyItem = Route(.post, "/v1/shop/buy")

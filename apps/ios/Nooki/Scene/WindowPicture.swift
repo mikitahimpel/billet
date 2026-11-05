@@ -56,37 +56,3 @@ enum WindowChoice: String, CaseIterable, Identifiable {
         }
     }
 }
-
-/// The City room window's picture: the chosen view painted for the hour, with its life redrawn a few times a second.
-/// Each frame is one image for the pane's texture, so nothing is layered over the 3D view.
-final class WindowPicture {
-    /// How often the view's life is redrawn.
-    static let rate: Float = 12
-    static let size = CGSize(width: 640, height: 352)
-
-    private let painter = WindowPainter(size: WindowPicture.size)
-    private var age: Float = .infinity
-    private var choiceAge: Float = .infinity
-    private var choice = WindowChoice.current
-    private var weather = WindowChoice.weather
-    private var moves = false
-
-    /// The next frame for the pane, or `nil` when the one shown still stands. Changing views or the hour's part of the
-    /// day repaints at once.
-    func image(after dt: Float, hour: Float) -> CGImage? {
-        age += dt
-        choiceAge += dt
-        // Settings are read once a second rather than every frame.
-        if choiceAge > 1 {
-            choiceAge = 0
-            choice = WindowChoice.current
-            weather = WindowChoice.weather
-        }
-        let look = choice.look(hour: hour, weather: weather)
-        let changed = painter.prepare(look.view, hour: look.hour, weather: look.weather)
-        if changed { moves = WindowPainter.moves(look.view) }
-        guard changed || (moves && age >= 1 / Self.rate) || age > 4 else { return nil }
-        age = 0
-        return painter.frame()
-    }
-}

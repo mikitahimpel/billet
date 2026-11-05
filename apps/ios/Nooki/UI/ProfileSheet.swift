@@ -38,7 +38,7 @@ struct ProfileSheet: View {
                 }
             }
         }
-        .tint(Color(hex: 0xFFC27A))
+        .tint(.honey)
         .preferredColorScheme(.dark)
         .onAppear {
             names = Dictionary(uniqueKeysWithValues: profile.couple.partners.map { ($0, profile.couple.names?[$0] ?? "") })
@@ -80,37 +80,37 @@ struct ProfileSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 TextField("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }))
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .font(.nookiHeadline)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
                     .padding(.horizontal, 12)
                     .frame(height: 42)
-                    .background(.white.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
 
                 if profile.couple.viewer == partner {
                     Label("This phone", systemImage: "iphone")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xFFC27A))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.accentText)
                 } else if profile.couple.pair == nil {
                     Button("This is me") { profile.setViewer(partner) }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
         }
         .padding(14)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 22))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
     }
 
     private var togetherCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.nookiHeadline)
             Text("Day \(Couple(partners: profile.couple.partners, togetherSince: since, viewer: profile.couple.viewer).daysTogether()) together")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.nookiCaption)
+                .foregroundStyle(Ink.textSecondary)
         }
         .padding(14)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 22))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
     }
 }

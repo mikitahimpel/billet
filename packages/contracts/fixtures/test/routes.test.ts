@@ -103,6 +103,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/notes",
       },
+      "listReactions": {
+        "method": "GET",
+        "path": "/v1/reactions",
+      },
       "markActivityRead": {
         "method": "POST",
         "path": "/v1/activity/read",
@@ -118,6 +122,10 @@ it("pins the routes that clients call", () => {
       "purchase": {
         "method": "POST",
         "path": "/v1/purchases",
+      },
+      "react": {
+        "method": "PUT",
+        "path": "/v1/reactions",
       },
       "recordCatEvent": {
         "method": "POST",

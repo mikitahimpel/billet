@@ -1,0 +1,106 @@
+import FeatureGames
+import RealityKit
+import UIKit
+
+/// The laser dot: drag it across the floor and Mochi runs after it; let it rest close to her and she pounces.
+/// Chasing and pouncing fill the play bar; full, she sits down pleased.
+@MainActor
+final class LaserStage: GameStage {
+    private let room: CatRoom
+    private let deck: GameDeck
+    private let spots: GameSpots
+    private let root: Entity
+    private var laser: LaserPlay
+    private let dot: Entity
+    private let halo: ModelEntity
+    private var aim: SIMD3<Float>?
+    /// Where she was last frame while running after it, to count how far she ran.
+    private var running: SIMD3<Float>?
+    private var chases = 0
+    private var pouncing = false
+    private var time: Float = 0
+
+    init(room: CatRoom, deck: GameDeck) {
+        self.room = room
+        self.deck = deck
+        spots = GameSpots(room: room)
+        root = room.pivot.group()
+        laser = LaserPlay(length: Double(spots.length), floor: spots.area)
+        dot = root.group()
+        dot.cylinder(0.0015, 0.0055, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
+        var glow = UnlitMaterial(color: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 0.35))
+        glow.blending = .transparent(opacity: .init(floatLiteral: 0.35))
+        halo = dot.cylinder(0.001, 0.012, glow, at: [0, 0.0005, 0])
+        dot.isEnabled = false
+        deck.say("Drag the dot across the floor", for: 4)
+        deck.bar = (0, "Play")
+        let seat = spots.at(0, -0.05)
+        room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + spots.toward), id: "laser-start")
+    }
+
+    var focus: [SIMD3<Float>] {
+        [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+    }
+
+    func began(_ touch: GameTouch) { moved(touch) }
+
+    func moved(_ touch: GameTouch) {
+        if let point = touch.onPlane(y: spots.floor) { aim = point }
+    }
+
+    func ended(_ touch: GameTouch?) { aim = nil }
+
+    func update(_ dt: Float) {
+        time += dt
+        laser.aim(aim.map { SIMD2(Double($0.x), Double($0.z)) }, dt: Double(dt))
+        if let at = laser.dot {
+            dot.isEnabled = true
+            dot.position = [Float(at.x), spots.floor + 0.0015, Float(at.y)]
+            let pulse = sin(time * 30)
+            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.012, 0.001, 0.012]
+        } else {
+            dot.isEnabled = false
+        }
+        guard let walker = room.walker else { return }
+        let at = walker.at
+        if walker.moving {
+            if let running { laser.ran(Double(simd_distance(SIMD2(at.x, at.z), SIMD2(running.x, running.z)))) }
+            if chases > 0 { running = at }
+        } else {
+            running = nil
+            if pouncing {
+                pouncing = false
+                laser.pounced()
+                deck.thump()
+                deck.say(laser.cheer, for: 0.9)
+            }
+            if deck.result == nil, laser.isDone {
+                dot.isEnabled = false
+                deck.result = GameResult(game: .laser, score: 100)
+            } else if let cue = laser.cue(cat: SIMD2(Double(at.x), Double(at.z))) {
+                switch cue {
+                case .chase(let p): run(to: p, from: at, pounce: false)
+                case .pounce(let p): run(to: p, from: at, pounce: true)
+                }
+            }
+        }
+        deck.bar = (laser.play, "Play")
+    }
+
+    /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.
+    private func run(to p: SIMD2<Double>, from at: SIMD3<Float>, pounce: Bool) {
+        let target = SIMD3(Float(p.x), spots.floor, Float(p.y))
+        let gap = simd_distance(target, at)
+        let short = min(0.3 * spots.length, gap * 0.9)
+        let stop = gap > 0.001 ? target + (at - target) / gap * short : target
+        chases += 1
+        pouncing = pounce
+        room.send(to: [stop.x, spots.floor, stop.z], facing: GameSpots.yaw(from: at, to: target),
+                  id: "laser-\(chases)", play: pounce)
+    }
+
+    func tearDown() {
+        root.removeFromParent()
+        room.walker?.go(to: nil)
+    }
+}

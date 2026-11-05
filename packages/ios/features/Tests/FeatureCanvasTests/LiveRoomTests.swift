@@ -167,7 +167,8 @@ final class NoteLog: @unchecked Sendable {
 
 @Suite @MainActor struct LiveRoomTests {
   static func room(
-    sockets: [FakeSocket], lastSeq: Int? = nil, log: NoteLog = NoteLog()
+    sockets: [FakeSocket], lastSeq: Int? = nil, log: NoteLog = NoteLog(),
+    clock: TestClock = TestClock()
   ) -> LiveRoom {
     let queue = SocketQueue(sockets)
     return LiveRoom(
@@ -185,7 +186,8 @@ final class NoteLog: @unchecked Sendable {
           },
           deliver: deliver, jitter: { 1 })
       },
-      lastSeq: lastSeq, onNote: { seq, _ in log.add(seq) })
+      lastSeq: lastSeq, onNote: { seq, _ in log.add(seq) },
+      now: { clock.now }, wait: { clock.advance($0) })
   }
 
   static func wait(_ condition: @MainActor () -> Bool) async {
@@ -249,6 +251,32 @@ final class NoteLog: @unchecked Sendable {
     room.disconnect()
   }
 
+  @Test func aClumpOfPointsIsDrawnInOrderAtTheRelayPace() async {
+    let socket = FakeSocket()
+    let clock = TestClock()
+    let room = Self.room(sockets: [socket], clock: clock)
+    room.connect()
+    var sent = socket.sent.makeAsyncIterator()
+    #expect(await sent.next() == .resume(lastSeq: 0))
+    await Self.wait { room.isOnline }
+
+    socket.incoming.yield(.strokeBegin(LiveStrokeStart(id: 2, color: "#7B4FE0", width: 0.03)))
+    // Five frames relayed 40 ms apart reach this phone at the same moment; the end follows.
+    let frames = (0..<5).map { [Point(x: Double($0), y: 0)] }
+    for (index, points) in frames.enumerated() {
+      socket.incoming.yield(.strokePoints(id: 2, points: points, relayedAt: 1_000 + index * 40))
+    }
+    socket.incoming.yield(.strokeEnd(id: 2))
+
+    await Self.wait { room.state.strokes.count == 1 }
+    #expect(room.state.strokes.first?.points == frames.flatMap { $0 })
+    // Some were held, never longer than the four early frames' 4 × 40 ms replayed faster than
+    // real time. Frames delivered after the clock moved on wait less, so this is a bound.
+    #expect(clock.waited > 0)
+    #expect(clock.waited <= 0.16 / LivePacer.catchUp + 1e-6)
+    room.disconnect()
+  }
+
   @Test func theFirstConnectionAsksOnlyForWhatIsNewerThanHistory() async {
     let socket = FakeSocket()
     let room = Self.room(sockets: [socket], lastSeq: 40)
@@ -267,5 +295,23 @@ final class NoteLog: @unchecked Sendable {
     #expect(
       LiveRoomMachine.transition(LiveRoomMachine.State(isOnline: true), .liveFrame(frame)).1
         == [.send(frame)])
+  }
+}
+
+/// A clock that moves only when the pacer waits on it.
+final class TestClock: @unchecked Sendable {
+  private let lock = NSLock()
+  private var time = 10.0
+  private var total = 0.0
+
+  var now: Double { lock.withLock { time } }
+  /// Everything the pacer has waited, in seconds.
+  var waited: Double { lock.withLock { total } }
+
+  func advance(_ seconds: Double) {
+    lock.withLock {
+      time += seconds
+      total += seconds
+    }
   }
 }
