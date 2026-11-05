@@ -36,6 +36,8 @@ final class Hints {
             defaults.removeObject(forKey: resetKey)
         }
         if defaults.bool(forKey: showAllKey) { Tips.showAllTipsForTesting() }
+        // A `-perf.script` run (Release builds too) measures and photographs the room, not the hints over it.
+        if defaults.string(forKey: "perf.script") != nil { Tips.hideAllTipsForTesting() }
         #if DEBUG
         // For screenshots: `-hint treat` shows only that hint, whatever its rules.
         if let only = defaults.string(forKey: "hint"), let hint = all.first(where: { $0.hintId == only }) {
