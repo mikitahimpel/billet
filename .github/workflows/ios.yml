@@ -99,6 +99,8 @@ jobs:
       # compiles only for a device.
       - name: App Release build (device, unsigned)
         run: |
+          # Generated here too: the Simulator Release build above, which also generates it, is skipped on pull requests.
+          (cd apps/ios && xcodegen generate --quiet)
           set -o pipefail
           xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
             -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
