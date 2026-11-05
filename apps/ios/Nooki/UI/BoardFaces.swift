@@ -3,16 +3,41 @@ import UIKit
 
 /// Draws the notes and doodles pinned on the corkboard as small images the board puts on planes.
 enum BoardFaces {
-    /// The newest `BoardRoomScene.slots` notes, newest first.
+    /// The newest `BoardRoomScene.slots` cards, newest first: the notes and doodles, and the photos pinned to the wall
+    /// as polaroids.
     static func pins(state: HomeState) async -> [BoardPin] {
+        enum Card { case note(Note), photo(Moment) }
+        let cards = (state.notes.notes.map { (date: $0.date, card: Card.note($0)) }
+            + state.moments.pinned.map { (date: $0.date, card: Card.photo($0)) })
+            .sorted { $0.date > $1.date }
+            .prefix(BoardRoomScene.slots)
+
         var pins: [BoardPin] = []
-        for note in state.notes.notes.prefix(BoardRoomScene.slots) {
-            let view = NoteFace(note: note, doodle: await doodle(note))
-            if let face = render(view) {
-                pins.append(BoardPin(id: note.id, face: face, size: [0.12, 0.12]))
+        for (_, card) in cards {
+            switch card {
+            case .note(let note):
+                if let face = render(NoteFace(note: note, doodle: await doodle(note))) {
+                    pins.append(BoardPin(id: note.id, face: face, size: [0.12, 0.12]))
+                }
+            case .photo(let moment):
+                guard let photo = await state.moments.filmPrint(for: moment, maxPixels: MomentStore.wallPixels) else { continue }
+                let polaroid = Polaroid(width: 240, caption: moment.caption, byline: moment.byline, lifted: false) {
+                    Image(uiImage: photo).resizable().scaledToFill()
+                }
+                if let face = render(polaroid) {
+                    let width: Float = 0.12
+                    pins.append(BoardPin(id: moment.id, face: face,
+                                         size: [width, width * Float(face.size.height / face.size.width)]))
+                }
             }
         }
         return pins
+    }
+
+    /// Changes whenever a card on the board would.
+    static func key(state: HomeState) -> [String] {
+        state.notes.notes.prefix(BoardRoomScene.slots).map(\.id.uuidString)
+            + state.moments.pinned.map { "\($0.id)\($0.caption)" }
     }
 
     private static func doodle(_ note: Note) async -> UIImage? {
@@ -27,14 +52,14 @@ enum BoardFaces {
     }
 }
 
-/// A note on the board: the couple's paper color, the text or the doodle, and who wrote it.
+/// A note on the board: the couple's paper color with the prints' grain, the text or the doodle, and who wrote it.
 private struct NoteFace: View {
     let note: Note
     let doodle: UIImage?
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            Color(hex: note.paper.hex)
+            PaperSheet(color: Color(hex: note.paper.hex), cornerRadius: 0)
 
             if let doodle {
                 Image(uiImage: doodle).resizable().scaledToFit().padding(12)
