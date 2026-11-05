@@ -6,7 +6,8 @@ import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    @State private var state = HomeState(stores: .live())
+    /// Owned by NookiApp: a `@State` default here would read every store again on each pass of the app's `body`.
+    @Binding var state: HomeState
     /// Built after the first frame, so launch shows the backdrop at once.
     @State private var home: DioramaScene?
     /// Built each time the City room is opened, released when it is left.
@@ -161,13 +162,13 @@ struct HomeView: View {
         }
         .task {
             guard home == nil, !Self.noRoom else { return }
-            let room = DioramaScene()
-            home = room
-            room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
+            home = DioramaScene()
         }
-        .task(id: state.moments.pinned) {
+        // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
+        .task(id: wallPins) {
+            guard let home else { return }
             let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
-            if !Task.isCancelled { home?.setPolaroids(images) }
+            if !Task.isCancelled { home.setPolaroids(images) }
         }
         .task(id: boardKey) {
             guard board != nil else { return }
@@ -190,9 +191,11 @@ struct HomeView: View {
         }
         .onChange(of: worldOnScreen) { old, new in
             // The room view goes when the World can't be seen (see above): keep what it showed, to show again on the
-            // way back and under a cover.
+            // way back and under a cover. Not while something is presented, a hint's popover say: the snapshot would
+            // bring it back with the room.
             if old, !new, !(showsBoard && !roomCovered) {
-                worldSnapshot = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                worldSnapshot =
+                    Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
             if new, let scene, worldSnapshot != nil {
                 roomLive = false
@@ -369,11 +372,14 @@ struct HomeView: View {
         return room
     }
 
+    /// The moments on the room's wall, nil until the room exists.
+    private var wallPins: [Moment]? { home == nil ? nil : state.moments.pinned }
+
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
-    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop and the gifts follow the pair's room.
     private func followPair() async {
         guard let session, let sync = session.shopSync else { return await leavePair() }
         do throws(TransportError) {
@@ -386,11 +392,13 @@ struct HomeView: View {
             guard state.profile.couple.pair != nil else { return }
         }
         await state.shop.connect(sync)
+        await state.gifts.connect(session.giftSync)
     }
 
     private func leavePair() async {
         state.profile.leavePair()
         await state.shop.connect(nil)
+        await state.gifts.connect(nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.

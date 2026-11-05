@@ -9,7 +9,6 @@ struct ProfileHub: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(ServerSession.self) private var session: ServerSession?
-    @Environment(Hints.self) private var hints
     @State private var pairing = false
 
     private var canInvite: Bool {
@@ -24,21 +23,14 @@ struct ProfileHub: View {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
 
-                if canInvite {
-                    Section {
-                        Button(action: invite) { inviteCard }
-                            .buttonStyle(.plain)
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                }
-
                 Section {
                     NavigationLink { ProfileEditor(profile: state.profile) } label: {
                         row("Edit profile", symbol: "person.2.fill", tint: .sky)
                     }
                     if canInvite {
-                        Button(action: invite) { row("Invite your partner", symbol: "heart.circle.fill", tint: .blush) }
+                        Button { pairing = true } label: {
+                            row("Invite your partner", symbol: "heart.circle.fill", tint: .blush)
+                        }
                     } else if session?.isPaired == true {
                         row("Paired with your partner", symbol: "heart.fill", tint: .blush)
                     }
@@ -74,11 +66,6 @@ struct ProfileHub: View {
         }
     }
 
-    private func invite() {
-        hints.done(InviteHint())
-        pairing = true
-    }
-
     private var couple: some View {
         VStack(spacing: Space.m) {
             HStack(spacing: -16) {
@@ -98,29 +85,6 @@ struct ProfileHub: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Space.l)
         .accessibilityElement(children: .combine)
-    }
-
-    private var inviteCard: some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: "heart.circle.fill", tint: .blush), size: 44)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Invite your partner")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.heroInk)
-                Text("Share \(CatProfile.name()), notes and coins")
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.heroInk.opacity(0.75))
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.heroInk.opacity(0.6))
-        }
-        .padding(16)
-        .background(.honeyGradient, in: .rect(cornerRadius: Radius.card, style: .continuous))
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isButton)
     }
 
     private func row(_ title: String, symbol: String, tint: UsTint) -> some View {

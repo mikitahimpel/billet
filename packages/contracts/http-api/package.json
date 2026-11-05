@@ -13,6 +13,7 @@
     "./device": "./src/device.ts",
     "./events": "./src/events.ts",
     "./flags": "./src/flags.ts",
+    "./gifts": "./src/gifts.ts",
     "./coins": "./src/coins.ts",
     "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",
