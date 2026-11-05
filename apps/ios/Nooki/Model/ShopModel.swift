@@ -171,8 +171,8 @@ final class ShopModel {
 
     func canClaimGift(on date: Date = .now) -> Bool { sync != nil && giftDay != Self.localDay(date) }
 
-    /// Opens the day's gift on the server. A refusal reads the room again: if the day's gift is open there, it was
-    /// `taken`; nil when it couldn't be asked.
+    /// Opens the day's gift on the server. `taken` when it was open already (the server's 409 GiftTaken, or a refusal
+    /// after which the room shows it open); nil when it couldn't be asked.
     func openGift(at date: Date = .now) async -> GiftOutcome? {
         guard let sync, canClaimGift(on: date) else { return nil }
         let request = OpenGiftRequest(utcOffsetSeconds: Self.utcOffset(at: date))
@@ -182,6 +182,7 @@ final class ShopModel {
             if giftDay == nil { giftDay = Self.localDay(date) }
             return .opened(GiftReward(response.reward))
         } catch {
+            if case .api(.giftTaken(let day)) = error { giftDay = day }
             await refresh()
             return giftDay == Self.localDay(date) ? .taken : nil
         }
@@ -192,7 +193,8 @@ final class ShopModel {
         sync != nil && collection.isComplete(owned) && !bonuses.contains(collection.id)
     }
 
-    /// Collects the bonus on the server; a refusal reads the room again.
+    /// Collects the bonus on the server. A refusal reads the room again; one already paid (409 BonusTaken, the
+    /// partner was quicker) shows as collected.
     func claimBonus(_ collection: ShopCollection) async -> Bool {
         guard let sync, canClaimBonus(collection) else { return false }
         let request = ClaimBonusRequest(collection: collection.id)
@@ -201,6 +203,7 @@ final class ShopModel {
             apply(response.shop)
             return true
         } catch {
+            if case .api(.bonusTaken) = error { bonuses.insert(collection.id) }
             await refresh()
             return false
         }

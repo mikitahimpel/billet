@@ -282,12 +282,14 @@ private func settle(_ done: () -> Bool) async {
         #expect(!model.canClaimGift())
     }
 
-    @Test func aGiftTheServerRefusesReadsTheRoomAndShowsItOpened() async throws {
+    @Test func aTakenGiftReadsTheRoomAndShowsItOpened() async throws {
         defer { cleanUp() }
         let (model, _) = shop()
         let today = ShopModel.localDay(.now)
         let server = FakeRoom(room(400))
-        await model.connect(server.sync(gift: { (_) async throws(TransportError) in throw .api(.unavailable) }))
+        await model.connect(server.sync(gift: { (_) async throws(TransportError) in
+            throw .api(.giftTaken(day: today))
+        }))
         server.shop.withLock { $0 = room(430, giftDay: today) }
 
         #expect(await model.openGift() == .taken)
@@ -310,6 +312,24 @@ private func settle(_ done: () -> Bool) async {
         #expect(await model.claimBonus(corner) == false)
         #expect(!model.canClaimBonus(corner))
         #expect(model.coins == 400)
+    }
+
+    @Test func aBonusThePartnerCollectedShowsAsCollected() async throws {
+        defer { cleanUp() }
+        let (model, _) = shop()
+        let corner = try #require(Catalog.collections.first { $0.id == "mochis-corner" })
+        let cornerID = corner.id
+        let items = ["lamp", "rug"] + corner.itemIDs
+        let server = FakeRoom(room(400, items: items))
+        await model.connect(server.sync(bonus: { (_) async throws(TransportError) in
+            throw .api(.bonusTaken(collection: cornerID))
+        }))
+        server.shop.withLock { $0 = room(500, items: items, bonuses: [cornerID]) }
+
+        #expect(await model.claimBonus(corner) == false)
+        #expect(model.bonuses == [cornerID])
+        #expect(!model.canClaimBonus(corner))
+        #expect(model.coins == 500)
     }
 
     @Test func aCollectedBonusShowsTheServersBalance() async throws {
