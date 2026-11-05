@@ -1257,9 +1257,22 @@ describe("demo partners in the Worker", () => {
     )
       .bind(pair.pairId)
       .all<{ user_id: string }>();
-    expect(claimed.results.map(({ user_id }) => user_id).toSorted()).toEqual(
+    // A pair with a demo partner stays out of the funnel, for the bot and its owner alike.
+    expect(claimed.results).toEqual([]);
+    const demoClaimed = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'DemoPairClaimed' AND pair_id = ?",
+    )
+      .bind(pair.pairId)
+      .all<{ user_id: string }>();
+    expect(demoClaimed.results.map(({ user_id }) => user_id).toSorted()).toEqual(
       [callerId, botId].toSorted(),
     );
+    const invited = await env.DB.prepare(
+      "SELECT user_id FROM pair_events WHERE name = 'InviteCreated' AND user_id = ?",
+    )
+      .bind(botId)
+      .all();
+    expect(invited.results).toEqual([]);
     const activity = await call("/v1/activity", { method: "GET", headers: bearer(caller) });
     expect(await activity.text()).toContain("PartnerJoined");
 

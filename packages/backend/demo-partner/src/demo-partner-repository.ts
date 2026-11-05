@@ -25,6 +25,8 @@ export class DemoPartnerRepository extends Context.Service<
     readonly botOf: (
       ownerId: UserId,
     ) => Effect.Effect<Option.Option<UserId>, DemoPartnerUnavailable>;
+    /** Whether `userId` is someone's demo partner. */
+    readonly isBot: (userId: UserId) => Effect.Effect<boolean, DemoPartnerUnavailable>;
     /** Drops the record and keeps the bot's user. Does nothing for an unknown bot. */
     readonly forget: (botId: UserId) => Effect.Effect<void, DemoPartnerUnavailable>;
   }

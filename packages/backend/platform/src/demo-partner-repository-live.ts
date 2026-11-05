@@ -35,6 +35,15 @@ const makeDemoPartnerRepository = (db: DirectoryDatabase): DemoPartnerRepository
             .pipe(Effect.flatMap(decodeBotIds)),
         ).pipe(Effect.map(([row]) => Option.fromNullishOr(row?.botId))),
 
+      isBot: (userId) =>
+        guarded(
+          db
+            .select({ botId: demoPartners.botId })
+            .from(demoPartners)
+            .where(eq(demoPartners.botId, userId))
+            .pipe(Effect.flatMap(decodeBotIds)),
+        ).pipe(Effect.map((rows) => rows.length > 0)),
+
       forget: (botId) =>
         guarded(db.delete(demoPartners).where(eq(demoPartners.botId, botId))).pipe(Effect.asVoid),
     }),
