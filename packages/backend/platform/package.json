@@ -7,6 +7,7 @@
   "exports": {
     "./admin-data-live": "./src/admin-data-live.ts",
     "./admin-fetch": "./src/admin-fetch.ts",
+    "./analytics-engine-reader-live": "./src/analytics-engine-reader-live.ts",
     "./api-fetch": "./src/api-fetch.ts",
     "./app-status-live": "./src/app-status-live.ts",
     "./apple-identity-live": "./src/apple-identity-live.ts",
