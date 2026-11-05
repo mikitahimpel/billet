@@ -3,6 +3,7 @@ import { SecureRandom } from "effect/crypto";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
 import type { CoinEntry } from "@billet/contracts-domain/coins";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import { countsAsUnread, cursorOf, type ActivityRow } from "@billet/backend-pair-room/activity";
 import { NoteId, UserId, type MediaKey } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -31,6 +32,7 @@ const makeRoom = () => {
   const newestFirst = () =>
     [...activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
   const keys = new Map<string, SequencedNote>();
+  const reactions = new Map<string, NoteReaction>();
   const store = Layer.succeed(RoomStore, {
     load: Effect.sync(() => state),
     commit: (
@@ -39,9 +41,11 @@ const makeRoom = () => {
       catEntries: ReadonlyArray<CatEntry>,
       rows: ReadonlyArray<ActivityRow>,
       coinEntries: ReadonlyArray<CoinEntry>,
+      changed: ReadonlyArray<NoteReaction>,
     ) =>
       Effect.sync(() => {
         state = room;
+        for (const r of changed) reactions.set(`${r.note}/${r.by}`, r);
         cat.push(...catEntries);
         coins.push(...coinEntries);
         for (const row of rows) activity.set(row.id, row);
@@ -54,6 +58,17 @@ const makeRoom = () => {
       Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    noteById: (id) => Effect.sync(() => Option.fromNullishOr(notes.find((e) => e.note.id === id))),
+    reactionOf: (note, by) =>
+      Effect.sync(() => Option.fromNullishOr(reactions.get(`${note}/${by}`))),
+    reactionsAfter: (afterRev, limit) =>
+      Effect.sync(() =>
+        [...reactions.values()]
+          .filter((r) => r.rev > afterRev)
+          .toSorted((a, b) => a.rev - b.rev)
+          .slice(0, limit),
+      ),
+    forgetReactions: Effect.sync(() => reactions.clear()),
     coinEntryById: (id) => Effect.sync(() => Option.fromNullishOr(coins.find((e) => e.id === id))),
     coinEntriesAfter: (after, limit) =>
       Effect.sync(() => {
@@ -173,6 +188,8 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),
     cat: (pairId) => roomOf(pairId).catView,
     catJournal: (pairId, afterSeq, limit) => roomOf(pairId).catEntriesAfter(afterSeq, limit),
+    react: (pairId, by, request) => roomOf(pairId).react(by, request),
+    reactions: (pairId, afterRev, limit) => roomOf(pairId).reactionsAfter(afterRev, limit),
     activity: (pairId, caller, before, limit) => roomOf(pairId).activityPage(caller, before, limit),
     markActivityRead: (pairId, user, upTo) => roomOf(pairId).markActivityRead(user, upTo),
   };

@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { Color, Stroke } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
+import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
 /**
@@ -24,5 +25,7 @@ export const ServerMessage = Schema.TaggedUnion({
   CatSaved: { cat: CatProfile },
   /** The user's Inbox count changed, sent to sockets that resumed with `activity: true`. */
   ActivityUnread: { unread: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
+  /** A reaction was set or taken back, sent to sockets that resumed with `lastReactionRev`. */
+  ReactionChanged: { reaction: NoteReaction },
 });
 export type ServerMessage = typeof ServerMessage.Type;

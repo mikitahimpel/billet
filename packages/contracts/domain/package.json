@@ -19,6 +19,7 @@
     "./coin-packs": "./src/coin-packs.ts",
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
+    "./reaction": "./src/reaction.ts",
     "./riddle-words": "./src/riddle-words.ts"
   },
   "scripts": {

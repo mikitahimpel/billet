@@ -19,7 +19,7 @@ func dependencies(_ names: [String]) -> [Target.Dependency] {
   }
 }
 
-let features = ["FeatureOnboarding", "FeaturePairing", "FeatureCanvas"]
+let features = ["FeatureOnboarding", "FeaturePairing", "FeatureCanvas", "FeatureMoments"]
 
 let featureDependencies = ["BilletKit", "Wire", "Ink", "DesignSystem", "Transport", "Persistence"]
 
@@ -34,6 +34,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
+  ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
 ]
 

@@ -70,6 +70,8 @@ export const RoomState = Schema.TaggedUnion({
     cat: Schema.optionalKey(RoomCat),
     inks: Schema.Array(InkId),
     wallet: RoomWallet,
+    /** The `rev` of the last reaction change; absent before the first. */
+    lastReactionRev: Schema.optionalKey(Count),
   },
 });
 export type RoomState = typeof RoomState.Type;

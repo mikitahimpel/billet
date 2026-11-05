@@ -118,7 +118,24 @@ export const activityOf = (
           },
         ];
       }
+      // One item per photo: the partner is the only one who can react, and a change moves it up.
+      // Taking a reaction back leaves the item as it was.
+      case "ReactionSet": {
+        const { note, by, reaction, at: reactedAt } = output.reaction;
+        return reaction === undefined
+          ? []
+          : [
+              {
+                id: decodeId(`reaction:${note}`),
+                at: reactedAt,
+                doer: member(by),
+                event: { _tag: "Reacted", note, reaction },
+                target: ActivityTarget.cases.Moments.make({ note }),
+              },
+            ];
+      }
       case "RoomOpened":
+      case "ReactionRepeated":
       case "NoteRepeated":
       case "PresenceChanged":
       case "CatEntryRepeated":

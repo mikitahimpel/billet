@@ -4,6 +4,7 @@ import { CoinEntry } from "@billet/contracts-domain/coins";
 import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomState, SequencedNote } from "./room-state.ts";
 
@@ -29,6 +30,10 @@ export const RoomOutput = Schema.TaggedUnion({
   CoinsEntered: { entry: CoinEntry },
   /** A buy whose `id` the room already holds: nothing is stored or charged again. */
   CoinsRepeated: { entry: CoinEntry },
+  /** A reaction change to store and fan out. */
+  ReactionSet: { reaction: NoteReaction },
+  /** A reaction the room already holds: nothing is stored or fanned out. */
+  ReactionRepeated: { reaction: NoteReaction },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -51,6 +56,14 @@ export const RoomRejection = Schema.TaggedUnion({
   AlreadyOwned: { ink: InkId },
   /** A buy of an ink the catalog does not sell. */
   NotSold: { ink: InkId },
+  /** A reaction to a note the room does not hold. */
+  NoteNotFound: {},
+  /** A reaction to the reactor's own note. */
+  OwnNote: {},
+  /** A reaction to a note that is not a photo. */
+  NotReactable: {},
+  /** Taking back a reaction the room never had. */
+  NoReaction: {},
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

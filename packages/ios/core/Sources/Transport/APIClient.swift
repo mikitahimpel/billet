@@ -43,6 +43,11 @@ public struct APIClient: Sendable {
   /// Moves this user's read mark up to a cursor and answers the unread count left.
   public var markActivityRead:
     @Sendable (MarkActivityReadRequest) async throws(TransportError) -> ActivityUnreadResponse
+  /// Sets or takes back this user's reaction to one of the partner's photos.
+  public var react: @Sendable (ReactRequest) async throws(TransportError) -> ReactResponse
+  /// Every reaction change after `rev`, oldest first.
+  public var listReactions:
+    @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -89,7 +94,15 @@ public struct APIClient: Sendable {
       },
     markActivityRead:
       @escaping @Sendable (MarkActivityReadRequest) async throws(TransportError) ->
-      ActivityUnreadResponse = { (_) async throws(TransportError) in throw .network("offline") }
+      ActivityUnreadResponse = { (_) async throws(TransportError) in throw .network("offline") },
+    react:
+      @escaping @Sendable (ReactRequest) async throws(TransportError) -> ReactResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    listReactions:
+      @escaping @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -111,6 +124,8 @@ public struct APIClient: Sendable {
     self.reportEvents = reportEvents
     self.listActivity = listActivity
     self.markActivityRead = markActivityRead
+    self.react = react
+    self.listReactions = listReactions
   }
 }
 
@@ -235,6 +250,16 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.markActivityRead, signed: true, body: body),
           as: ActivityUnreadResponse.self)
+      },
+      react: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.react, signed: true, body: body), as: ReactResponse.self)
+      },
+      listReactions: { (after) async throws(TransportError) in
+        let route = Route(
+          Routes.listReactions.method, Routes.listReactions.path + "?after=\(after)")
+        return try await http.perform(
+          try await request(route, signed: true), as: ListReactionsResponse.self)
       })
   }
 }

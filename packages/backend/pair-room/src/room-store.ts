@@ -3,7 +3,8 @@ import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
 import type { CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
 import type { ActivityRow } from "./activity.ts";
-import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ActiveRoom, RoomState, SequencedNote } from "./room-state.ts";
 
 /** A note to store, with the key its author sent it under. */
@@ -16,7 +17,7 @@ export class RoomStore extends Context.Service<
     readonly load: Effect.Effect<RoomState>;
     /**
      * Saves the state and the cat, appends the notes, journal and wallet entries, and writes the
-     * activity rows over any with the same id, as one atomic write. Rows older than the retention
+     * activity rows and reactions over any with the same id, as one atomic write. Rows older than the retention
      * are pruned in the same write.
      */
     readonly commit: (
@@ -25,7 +26,19 @@ export class RoomStore extends Context.Service<
       catEntries: ReadonlyArray<CatEntry>,
       activity: ReadonlyArray<ActivityRow>,
       coins: ReadonlyArray<CoinEntry>,
+      reactions: ReadonlyArray<NoteReaction>,
     ) => Effect.Effect<void>;
+    /** The stored note with this id, if the room still holds it. */
+    readonly noteById: (id: NoteId) => Effect.Effect<Option.Option<SequencedNote>>;
+    /** `by`'s reaction to `note`, taken back or not, if they ever reacted. */
+    readonly reactionOf: (note: NoteId, by: UserId) => Effect.Effect<Option.Option<NoteReaction>>;
+    /** Reactions changed after `afterRev`, oldest change first. */
+    readonly reactionsAfter: (
+      afterRev: number,
+      limit: number,
+    ) => Effect.Effect<ReadonlyArray<NoteReaction>>;
+    /** Deletes every reaction: the pair is ending. */
+    readonly forgetReactions: Effect.Effect<void>;
     /** The wallet entry stored under `id`, if any. */
     readonly coinEntryById: (id: CoinEntryId) => Effect.Effect<Option.Option<CoinEntry>>;
     /**

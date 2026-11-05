@@ -2,12 +2,14 @@
 // try of one lane goes. Pure over its dependencies, so the room and the tests supply them.
 import type { DeliveryEntry, DeliveryOutcome } from "@billet/backend-pair-room/delivery-ledger";
 import type { Note } from "@billet/contracts-domain/note";
+import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ApnsEnvironment, ApnsPush, ApnsPushType, ApnsResult } from "./apns-client.ts";
 import {
   alertBody,
   byteLength,
   liveActivityBody,
   maxPushBytes,
+  reactionAlertBody,
   widgetBody,
 } from "./apns-payloads.ts";
 
@@ -46,6 +48,10 @@ export interface DeviceToken {
 export interface PushLaneDependencies {
   /** The stored note the entry is for, if the room still has it. */
   readonly note: (noteId: string) => Promise<Note | undefined>;
+  /** The reaction change under its `rev` and the note it is on, while it is the latest. */
+  readonly reaction: (
+    rev: number,
+  ) => Promise<{ readonly reaction: NoteReaction; readonly note: Note } | undefined>;
   /** Who receives it: the member who did not write it. */
   readonly recipient: (note: Note) => Promise<string | undefined>;
   readonly tokens: (user: string, kind: string) => Promise<ReadonlyArray<DeviceToken>>;
@@ -67,6 +73,61 @@ const bodyFor = (lane: PushLane, note: Note, nowSeconds: number): unknown => {
 
 const isPushLane = (lane: string): lane is PushLane => Object.hasOwn(pushLanes, lane);
 
+const reactionPrefix = "reaction:";
+
+/** The ledger key of a reaction change's delivery, beside the note ids of note deliveries. */
+export const reactionDeliveryId = (rev: number): string => `${reactionPrefix}${rev}`;
+
+const reactionRevOf = (deliveryId: string): number | undefined => {
+  if (!deliveryId.startsWith(reactionPrefix)) return undefined;
+  const rev = Number(deliveryId.slice(reactionPrefix.length));
+  return Number.isInteger(rev) ? rev : undefined;
+};
+
+const sendToAll = async (
+  recipient: string,
+  lane: PushLane,
+  body: unknown,
+  collapseId: string,
+  deps: PushLaneDependencies,
+): Promise<DeliveryOutcome> => {
+  const { kind, pushType } = pushLanes[lane];
+  const tokens = await deps.tokens(recipient, kind);
+  if (tokens.length === 0) return "Abandon";
+  const results = await Promise.all(
+    tokens.map(async ({ token, environment }) => {
+      const result = await deps.send({ token, environment, pushType, body, collapseId });
+      if (result._tag === "Unregistered") await deps.dropToken(token, kind);
+      return result;
+    }),
+  );
+  if (results.some((result) => result._tag === "Delivered")) return "Delivered";
+  if (results.some((result) => result._tag === "Retry")) return "Retry";
+  return "Abandon";
+};
+
+/**
+ * A reaction is an alert to the photo's author, and nothing on the other lanes. One that was
+ * changed or taken back since is not sent: the change after it has its own delivery.
+ */
+const sendReactionLane = async (
+  lane: PushLane,
+  rev: number,
+  deps: PushLaneDependencies,
+): Promise<DeliveryOutcome> => {
+  if (lane !== "AlertPush") return "Delivered";
+  const found = await deps.reaction(rev);
+  if (found === undefined) return "Abandon";
+  const { reaction, note } = found;
+  if (reaction.reaction === undefined) return "Delivered";
+  const body = reactionAlertBody({
+    note: reaction.note,
+    by: reaction.by,
+    reaction: reaction.reaction,
+  });
+  return sendToAll(note.author, lane, body, `r-${note.id}`, deps);
+};
+
 /**
  * One try of one lane: sends the note to every device of the partner that has a token for it.
  * Delivered once any device took it; Retry while any failure may pass; Abandon when there is no
@@ -78,7 +139,8 @@ export const sendPushLane = async (
   deps: PushLaneDependencies,
 ): Promise<DeliveryOutcome> => {
   if (!isPushLane(entry.lane)) return "Abandon";
-  const { kind, pushType } = pushLanes[entry.lane];
+  const rev = reactionRevOf(entry.noteId);
+  if (rev !== undefined) return sendReactionLane(entry.lane, rev, deps);
   const note = await deps.note(entry.noteId);
   if (note === undefined) return "Abandon";
   const body = bodyFor(entry.lane, note, deps.nowSeconds());
@@ -86,17 +148,5 @@ export const sendPushLane = async (
   if (byteLength(body) > maxPushBytes) return "Abandon";
   const recipient = await deps.recipient(note);
   if (recipient === undefined) return "Abandon";
-  const tokens = await deps.tokens(recipient, kind);
-  if (tokens.length === 0) return "Abandon";
-
-  const results = await Promise.all(
-    tokens.map(async ({ token, environment }) => {
-      const result = await deps.send({ token, environment, pushType, body, collapseId: note.id });
-      if (result._tag === "Unregistered") await deps.dropToken(token, kind);
-      return result;
-    }),
-  );
-  if (results.some((result) => result._tag === "Delivered")) return "Delivered";
-  if (results.some((result) => result._tag === "Retry")) return "Retry";
-  return "Abandon";
+  return sendToAll(recipient, entry.lane, body, note.id, deps);
 };
