@@ -111,6 +111,10 @@ jobs:
       - name: Select Xcode from .xcode-version
         run: head/.github/scripts/select-xcode.sh head/.xcode-version
 
+      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      - name: Metal Toolchain
+        run: head/.github/scripts/metal-toolchain.sh
+
       - name: Install XcodeGen
         run: head/.github/scripts/install-xcodegen.sh
 
@@ -192,6 +196,10 @@ jobs:
       - name: Select Xcode from .xcode-version
         run: head/.github/scripts/select-xcode.sh head/.xcode-version
 
+      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      - name: Metal Toolchain
+        run: head/.github/scripts/metal-toolchain.sh
+
       - name: Install XcodeGen
         run: head/.github/scripts/install-xcodegen.sh
 
@@ -267,6 +275,10 @@ jobs:
 
       - name: Select Xcode from .xcode-version
         run: head/.github/scripts/select-xcode.sh head/.xcode-version
+
+      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      - name: Metal Toolchain
+        run: head/.github/scripts/metal-toolchain.sh
 
       - name: Install XcodeGen
         run: head/.github/scripts/install-xcodegen.sh
@@ -345,6 +357,10 @@ jobs:
 
       - name: Select Xcode from .xcode-version
         run: head/.github/scripts/select-xcode.sh head/.xcode-version
+
+      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      - name: Metal Toolchain
+        run: head/.github/scripts/metal-toolchain.sh
 
       - name: Install XcodeGen
         run: head/.github/scripts/install-xcodegen.sh
