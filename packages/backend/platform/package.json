@@ -55,6 +55,7 @@
     "@billet/backend-payments": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
+    "@billet/contracts-push": "workspace:*",
     "@billet/contracts-realtime": "workspace:*",
     "@effect/sql-d1": "catalog:",
     "@effect/sql-sqlite-do": "catalog:",

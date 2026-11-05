@@ -25,6 +25,10 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import type { Note } from "@billet/contracts-domain/note";
+import { ProviderTokens, sendApns } from "./apns-client.ts";
+import { enabledPushLanes, sendPushLane, type PushLaneSettings } from "./apns-lanes.ts";
+import { dropToken, tokensOf } from "./partner-push-tokens.ts";
 import { clockOf } from "./effect-clock.ts";
 import { admitFrame, type FrameWindow } from "./frame-window.ts";
 import { systemNow } from "./wall-clock.ts";
@@ -42,6 +46,11 @@ const maxFrameLength = 64 * 1024;
 const pageLimit = 100;
 /** Open live strokes kept per socket; a begin past it is dropped. Bounds the attachment. */
 const maxOpenStrokes = 16;
+
+/** The Worker bindings the room reads: the directory for tokens, and the APNs settings. */
+interface PairRoomEnv extends PushLaneSettings {
+  readonly DB: D1Database;
+}
 
 /** Kept on each hibernatable socket, so it survives the object leaving memory. */
 interface SocketAttachment {
@@ -98,17 +107,58 @@ export class PairRoom extends DurableObject {
     return systemNow();
   }
 
-  /** The lanes each accepted note is handed to. None until a lane has a sender (#10). */
-  protected deliveryLanes: ReadonlyArray<string> = [];
+  private get roomEnv(): PairRoomEnv {
+    return this.env as PairRoomEnv;
+  }
 
-  /** Tries one lane once. Without one configured the alarm has nothing to do. */
+  /**
+   * The lanes each accepted note is handed to: the APNs widget and alert lanes when the Worker has
+   * an APNs key, and the Live Activity lane when `LIVE_ACTIVITY_PUSH` is `on` (off by default).
+   */
+  protected deliveryLanes: ReadonlyArray<string> = enabledPushLanes(this.roomEnv);
+
+  /** Tries one lane once. Without an APNs key the alarm has nothing to do. */
   protected laneSender:
     | {
         readonly send: (
           entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">,
         ) => Promise<DeliveryOutcome>;
       }
-    | undefined = undefined;
+    | undefined = this.apnsLaneSender();
+
+  private apnsLaneSender() {
+    const env = this.roomEnv;
+    const key = env.APNS_KEY;
+    const keyId = env.APNS_KEY_ID;
+    if (!key || !keyId) return undefined;
+    const credentials = { key, keyId };
+    const nowSeconds = () => Math.floor(this.clock() / 1000);
+    const providerTokens = new ProviderTokens(nowSeconds);
+    return {
+      send: (entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">) =>
+        sendPushLane(entry, {
+          note: (noteId) => this.recentNote(noteId),
+          recipient: async (note) => {
+            const room = await this.snapshot();
+            if (room._tag !== "Active") return undefined;
+            return room.members.find((member) => member.user !== note.author)?.user;
+          },
+          tokens: (user, kind) => tokensOf(env.DB, user, kind),
+          dropToken: (token, kind) => dropToken(env.DB, token, kind),
+          send: (push) => sendApns(push, credentials, providerTokens),
+          nowSeconds,
+        }),
+    };
+  }
+
+  /** A note among the room's latest; deliveries are only ever for notes just sent. */
+  private async recentNote(noteId: string): Promise<Note | undefined> {
+    const room = await this.snapshot();
+    const lastSeq = room._tag === "Active" ? room.lastSeq : 0;
+    const window = 100;
+    const page = await this.notes(Math.max(0, lastSeq - window), window);
+    return page.find((entry) => entry.note.id === noteId)?.note;
+  }
 
   /** Names this room in spans without naming the pair: the ref of the id it was opened by. */
   private readonly spanAttributes = {
