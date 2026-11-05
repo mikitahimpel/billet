@@ -48,6 +48,7 @@ import { AccountNoticesLive, AccountRepositoryLive } from "./account-repository-
 import { AppleIdentityLive } from "./apple-identity-live.ts";
 import { AppleTokenRevokerLive, signInWithAppleKeyOf } from "./apple-token-revoker-live.ts";
 import { AuthRepositoryLive } from "./auth-repository-live.ts";
+import { DemoBotsLive } from "./demo-bots-live.ts";
 import { DemoPartnerRepositoryLive } from "./demo-partner-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
@@ -99,7 +100,9 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AccountDeletion.layer,
         pairing,
         DemoPartnerService.layer.pipe(
-          Layer.provide(Layer.mergeAll(pairing, AccountDeletion.layer)),
+          Layer.provide(
+            Layer.mergeAll(pairing, AccountDeletion.layer, DemoBotsLive(env.PAIR_ROOM)),
+          ),
         ),
         NotesService.layer,
         ActivityService.layer,

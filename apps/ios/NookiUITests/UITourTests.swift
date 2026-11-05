@@ -40,6 +40,10 @@ final class UITourTests: XCTestCase {
         }
         if tap(app.buttons["Couple"]) {
             shot("08-profile")
+            if tap(app.buttons["Edit profile"]) {
+                shot("17-profile-edit")
+                _ = tap(app.buttons["Cancel"])
+            }
             if tap(app.buttons["Settings"]) {
                 shot("13-settings")
                 app.swipeUp()

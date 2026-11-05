@@ -9,61 +9,59 @@ struct AppHeader: View {
     var erase: () -> Void
     @State private var pairing = false
     @State private var checkingIn = false
-    @Namespace private var zoom
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            InboxButton(unread: session?.inbox.unread ?? 0) {
-                state.showsInbox = true
-            }
-            MoodButton(state: state) { checkingIn = true }
-
-            Spacer(minLength: 0)
-
-            Button { state.shop.askForCoins() } label: {
-                CoinPill(coins: state.shop.coins)
-            }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityLabel("\(state.shop.coins) coins")
-            .accessibilityHint("Shows your coins, how to get more and where they went")
-            .accessibilityIdentifier("coins")
-
-            Button { state.showsProfile = true } label: {
-                HStack(spacing: -10) {
-                    Monogram(partner: state.partners.0, profile: state.profile)
-                    Monogram(partner: state.partners.1, profile: state.profile)
+        // One container for the header's glass, as the tab bar has, so it is sampled together.
+        GlassGroup(spacing: Space.s) {
+            HStack(alignment: .center, spacing: 10) {
+                InboxButton(unread: session?.inbox.unread ?? 0) {
+                    state.showsInbox = true
                 }
-                .overlay(alignment: .bottom) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 20, height: 20)
-                        .background(Color.blushPink, in: .circle)
-                        .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                        .offset(y: 6)
+                MoodButton(state: state) { checkingIn = true }
+
+                Spacer(minLength: 0)
+
+                Button { state.shop.askForCoins() } label: {
+                    CoinPill(coins: state.shop.coins)
                 }
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 1)
-                .contentShape(.capsule)
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("\(state.shop.coins) coins")
+                .accessibilityHint("Shows your coins, how to get more and where they went")
+                .accessibilityIdentifier("coins")
+
+                Button { state.showsProfile = true } label: {
+                    HStack(spacing: -10) {
+                        Monogram(partner: state.partners.0, profile: state.profile)
+                        Monogram(partner: state.partners.1, profile: state.profile)
+                    }
+                    .overlay(alignment: .bottom) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Ink.heroInk)
+                            .frame(width: 20, height: 20)
+                            .background(.honeyGradient, in: .circle)
+                            .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                            .offset(y: 6)
+                    }
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("Couple")
+                .accessibilityHint("Opens your profile")
             }
-            .buttonStyle(PressScaleStyle())
-            // The profile grows out of the round avatars and shrinks back into them, never through a square. A zoom
-            // source clips only to a rounded rectangle; half the avatars' height makes it their capsule.
-            .matchedTransitionSource(id: "profile", in: zoom) {
-                $0.clipShape(RoundedRectangle(cornerRadius: 23)).background(.clear)
-            }
-            .accessibilityLabel("Couple")
-            .accessibilityHint("Opens your profile")
         }
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
         }
         .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
+            // A plain slide-up at full height: a zoom out of the round avatars would morph through the sheet's
+            // rectangle and land on a detent.
             ProfileHub(state: state, erase: erase)
-                .presentationBackground(Ink.sheet)
+                .presentationDetents([.large])
+                .presentationBackground(Ink.screen)
                 .presentationDragIndicator(.visible)
-                .navigationTransition(.zoom(sourceID: "profile", in: zoom))
         }
         .sheet(isPresented: $checkingIn) {
             MoodPicker(state: state)
@@ -76,7 +74,6 @@ struct AppHeader: View {
             }
         }
     }
-
 }
 
 /// The Inbox, leftmost in the header: a glass circle with a tray and a count of what is unread.

@@ -11,10 +11,19 @@ import type { RoomMigrations } from "../src/room-database.ts";
 import { PairRoom as LivePairRoom } from "../src/pair-room-durable-object.ts";
 import { testNowOf } from "./test-now.ts";
 
-/** PairRoom at the test instant: notes are stamped with it and delivery alarms set from it. */
+/**
+ * PairRoom at the test instant: notes are stamped with it and alarms set from it. A test can move
+ * the clock on with `advanceClock`, in memory, so an eviction takes it back to the instant.
+ */
 export class PairRoom extends LivePairRoom {
+  private advancedMs = 0;
+
+  advanceClock(ms: number): void {
+    this.advancedMs += ms;
+  }
+
   protected override clock(): number {
-    return testNowOf(this.env as { readonly TEST_NOW?: string });
+    return testNowOf(this.env as { readonly TEST_NOW?: string }) + this.advancedMs;
   }
 }
 
