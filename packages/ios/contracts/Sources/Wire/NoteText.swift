@@ -7,9 +7,15 @@ public struct NoteText: Codable, Hashable, Sendable {
 
   public let rawValue: String
 
+  /// What JavaScript's `trim()` strips, the server's test for blank text. Swift's `isWhitespace`
+  /// differs: it counts U+0085 and not U+FEFF.
+  private static let blank = Set<Unicode.Scalar>(
+    ([0x9, 0xA, 0xB, 0xC, 0xD, 0x20, 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
+      + Array(0x2000...0x200A)).compactMap { Unicode.Scalar(UInt32($0)) })
+
   /// Whether the server would take `text` as a text note.
   public static func accepts(_ text: String) -> Bool {
-    !text.allSatisfy(\.isWhitespace) && text.utf16.count <= maxUnits
+    !text.unicodeScalars.allSatisfy(blank.contains) && text.utf16.count <= maxUnits
       && text.count <= maxCharacters
   }
 

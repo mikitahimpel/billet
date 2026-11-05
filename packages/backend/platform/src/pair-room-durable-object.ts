@@ -227,7 +227,11 @@ export class PairRoom extends DurableObject {
     const decision = await this.run((room) => room.sendNote(author, request), "PairRoom.sendNote");
     if (decision._tag === "Accepted") {
       for (const output of decision.outputs) {
-        if (output._tag === "NoteAppended") await this.enqueueDeliveries(output.entry.note.id);
+        // A retried send enqueues too: if the first one stored the note and failed before its
+        // deliveries were saved, the retry is the only chance to push it. Enqueueing is idempotent.
+        if (output._tag === "NoteAppended" || output._tag === "NoteRepeated") {
+          await this.enqueueDeliveries(output.entry.note.id);
+        }
       }
       await this.pushNotes();
       // A note to an adopted cat is also a journal entry.

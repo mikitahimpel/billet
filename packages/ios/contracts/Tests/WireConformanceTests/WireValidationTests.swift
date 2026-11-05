@@ -188,6 +188,35 @@ import Testing
     #expect(NoteText(validating: text) == nil)
   }
 
+  /// JavaScript's `trim()`, which the server uses, and Swift's `isWhitespace` disagree on these.
+  @Test func blankMeansWhatTheServerTrims() throws {
+    #expect(NoteText(validating: "\u{FEFF}") == nil)
+    #expect(NoteText(validating: "\u{3000}\u{2009}") == nil)
+    #expect(NoteText(validating: "\u{85}") != nil)
+    _ = try decode(Note.self, textNote(#"\u0085"#))
+  }
+
+  // MARK: pages skip what this build can't read
+
+  @Test func aNotesPageSkipsAnUnknownKindButCountsItsSeq() throws {
+    let known = #"{"seq":1,"note":\#(textNote("hi"))}"#
+    let unknown = #"{"seq":2,"note":{"_tag":"Hologram","id":"n2","author":"u1","sentAt":0}}"#
+    let page = try decode(ListNotesResponse.self, #"{"notes":[\#(known),\#(unknown)]}"#)
+    #expect(page.notes.map(\.seq) == [1])
+    #expect(page.lastSeq == 2)
+    #expect(try decode(ListNotesResponse.self, #"{"notes":[]}"#).lastSeq == nil)
+  }
+
+  @Test func anActivityPageSkipsAnItemItCantRead() throws {
+    let item = ActivityItem(
+      id: "a1", at: 0, actor: .partner, event: .catPetted, target: .cat, cursor: "c1")
+    let good = String(decoding: try JSONEncoder().encode(item), as: UTF8.self)
+    let bad = good.replacingOccurrences(of: #""_tag":"Cat""#, with: #""_tag":"Hologram""#)
+    #expect(bad != good)
+    let page = try decode(ActivityResponse.self, #"{"items":[\#(good),\#(bad)],"unread":0}"#)
+    #expect(page.items == [item])
+  }
+
   @Test func textCountsCharactersAsAPersonDoes() throws {
     let family = String(repeating: "👩‍👩‍👧‍👦", count: NoteText.maxCharacters)
     #expect(NoteText(validating: family) != nil)

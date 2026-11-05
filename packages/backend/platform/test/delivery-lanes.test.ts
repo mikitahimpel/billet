@@ -106,6 +106,25 @@ describe("delivery lanes", () => {
     expect(await calls(room)).toBe(1);
   });
 
+  it("enqueues a retried send whose first try stored the note but no delivery", async () => {
+    const room = await laneRoom();
+    const request = photo();
+    await room.sendNote(alice, request);
+    // As if the first try failed between storing the note and saving its deliveries.
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("DELETE FROM delivery");
+    });
+    expect(await room.sendNote(alice, request)).toMatchObject({
+      outputs: [{ _tag: "NoteRepeated" }],
+    });
+    await runAlarm(room);
+    expect(await room.deliveries()).toMatchObject([{ lane: "AlertPush", status: "delivered" }]);
+
+    await room.sendNote(alice, request);
+    await runDurableObjectAlarm(room);
+    expect(await calls(room)).toBe(1);
+  });
+
   it("retries after a failure, with the alarm moved to the wait", async () => {
     const room = await laneRoom(["throw", "Retry"]);
     await room.sendNote(alice, photo());

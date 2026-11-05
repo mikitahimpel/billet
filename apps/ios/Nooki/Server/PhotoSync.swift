@@ -51,12 +51,14 @@ struct PhotoSync {
     private func page() async {
         let viewer = (try? accounts.load())?.record.userID
         var after = defaults.object(forKey: Self.cursorKey) as? Int
-        while let page = try? await api.listNotes(after), !page.notes.isEmpty {
+        while let page = try? await api.listNotes(after), let last = page.lastSeq {
             for entry in page.notes {
                 guard await keep(entry.note, viewer: viewer) else { return }
                 after = entry.seq
                 defaults.set(entry.seq, forKey: Self.cursorKey)
             }
+            after = last
+            defaults.set(last, forKey: Self.cursorKey)
         }
     }
 
