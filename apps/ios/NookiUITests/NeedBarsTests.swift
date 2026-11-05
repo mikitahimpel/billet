@@ -10,7 +10,7 @@ final class NeedBarsTests: XCTestCase {
     private func shoot(_ name: String, needs value: String) throws {
         do {
             let app = XCUIApplication()
-            app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNeeds", value]
+            app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES", "-uitestNeeds", value]
             app.launch()
 
             let pet = app.buttons["pet"]
