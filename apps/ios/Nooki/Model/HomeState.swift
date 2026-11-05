@@ -306,12 +306,14 @@ final class HomeState {
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
         CatProfile.store.removeObject(forKey: CatProfile.nameKey)
+        CatProfile.store.removeObject(forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Leaving the app: the widgets redraw from what was saved here.
     func didEnterBackground() {
         SharedFile.flush()
+        CatProfile.store.set(CatCoat.current().rawValue, forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }
 

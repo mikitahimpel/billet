@@ -14,14 +14,15 @@ struct ModuleView: View {
         Group {
             switch module {
             case .mochi: MochiRoom(snapshot: snapshot)
-            case .us: UsModule(snapshot: snapshot, smart: smart).padding(12)
-            case .mood: MoodModule(snapshot: snapshot, smart: smart).padding(12)
-            case .list: ListModule(snapshot: snapshot, smart: smart).padding(12)
-            case .date: DateModule(snapshot: snapshot, smart: smart).padding(12)
+            case .us: UsModule(snapshot: snapshot, smart: smart).padding(Space.m)
+            case .mood: MoodModule(snapshot: snapshot, smart: smart).padding(Space.m)
+            case .list: ListModule(snapshot: snapshot, smart: smart).padding(Space.m)
+            case .date: DateModule(snapshot: snapshot, smart: smart).padding(Space.m)
             case .moment: MomentModule(snapshot: snapshot, image: momentImage)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetTypeCap()
     }
 
     var link: DeepLink { module.link(in: snapshot) }
@@ -46,15 +47,15 @@ private struct ModuleHeader: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(title.uppercased())
-                .font(.widget(10, .bold))
+                .font(.nookiMicro)
                 .tracking(0.4)
-                .foregroundStyle(WidgetInk.secondary)
+                .foregroundStyle(Ink.textSecondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
             if smart {
                 Image(systemName: "sparkle")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(WidgetInk.accent)
+                    .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
             }
         }
@@ -66,8 +67,8 @@ private struct BigNumber: View {
 
     var body: some View {
         Text(text)
-            .font(.widget(32, .bold))
-            .foregroundStyle(WidgetInk.accent)
+            .font(.nookiLargeTitle)
+            .foregroundStyle(Ink.accentText)
             .minimumScaleFactor(0.6)
             .lineLimit(1)
             .contentTransition(.numericText())
@@ -83,22 +84,15 @@ private struct BigNumber: View {
 struct MochiRoom: View {
     let snapshot: NookiSnapshot
     var showsCaption = true
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
         GeometryReader { geo in
             let size = geo.size
             ZStack(alignment: .topLeading) {
-                LinearGradient(colors: WidgetInk.room(night: snapshot.isNight), startPoint: .top, endPoint: .bottom)
-                WidgetInk.floor(night: snapshot.isNight)
-                    .frame(height: size.height * 0.3)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                window
-                    .frame(width: size.width * 0.24, height: size.height * 0.3)
-                    .offset(x: size.width * 0.08, y: size.height * 0.16)
-                Ellipse()
-                    .fill(Color(hex: snapshot.isNight ? 0x8A5A57 : 0xE8A497))
-                    .frame(width: size.width * 0.62, height: size.height * 0.14)
-                    .offset(x: size.width * 0.28, y: size.height * 0.8)
+                // Tinted and clear Home Screens draw everything in one tint, where the room's fills would turn into
+                // flat grey blocks: there Mochi sits on the system's own background.
+                if renderingMode == .fullColor { room(in: size) }
                 mochi
                     .frame(width: size.height * 0.78, height: size.height * 0.78)
                     .offset(x: size.width - size.height * 0.66, y: size.height * 0.3)
@@ -112,6 +106,21 @@ struct MochiRoom: View {
         .clipped()
     }
 
+    @ViewBuilder
+    private func room(in size: CGSize) -> some View {
+        LinearGradient(colors: WidgetScene.room(night: snapshot.isNight), startPoint: .top, endPoint: .bottom)
+        WidgetScene.floor(night: snapshot.isNight)
+            .frame(height: size.height * 0.3)
+            .frame(maxHeight: .infinity, alignment: .bottom)
+        window
+            .frame(width: size.width * 0.24, height: size.height * 0.3)
+            .offset(x: size.width * 0.08, y: size.height * 0.16)
+        Ellipse()
+            .fill(Color(hex: snapshot.isNight ? 0x8A5A57 : 0xE8A497))
+            .frame(width: size.width * 0.62, height: size.height * 0.14)
+            .offset(x: size.width * 0.28, y: size.height * 0.8)
+    }
+
     private var window: some View {
         RoundedRectangle(cornerRadius: 6, style: .continuous)
             .fill(LinearGradient(colors: snapshot.isNight ? [Color(hex: 0x1D2A4A), Color(hex: 0x3C4C78)]
@@ -122,7 +131,7 @@ struct MochiRoom: View {
 
     @ViewBuilder
     private var mochi: some View {
-        if let portrait = UIImage(named: "MochiPortrait") {
+        if let portrait = UIImage(named: snapshot.catAvatar) ?? UIImage(named: "MochiPortrait") {
             Image(uiImage: portrait)
                 .resizable()
                 .widgetAccentedRenderingMode(.desaturated)
@@ -145,8 +154,8 @@ struct MochiRoom: View {
 
     private var caption: some View {
         Text("\(snapshot.catName) · \(pose)")
-            .font(.widget(11, .semibold))
-            .foregroundStyle(Color(hex: 0x2B2420))
+            .font(.nookiMicro)
+            .foregroundStyle(Ink.heroInk)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -174,7 +183,9 @@ private struct PetButton: View {
         Button(intent: PetMochiIntent()) {
             Image(systemName: "pawprint.fill")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(WidgetInk.accent)
+                // On a white chip in either appearance, so the fixed deep honey rather than the adaptive accent.
+                .foregroundStyle(Color.honeyDeep)
+                .widgetAccentable()
                 .frame(width: 34, height: 34)
                 .background(.white.opacity(0.92), in: .circle)
         }
@@ -196,18 +207,18 @@ struct UsModule: View {
             if let next = snapshot.next, next.daysLeft <= 3 {
                 BigNumber(text: next.daysLeft == 0 ? "Today" : "\(next.daysLeft)")
                 Text(next.daysLeft == 0 ? next.title : "\(next.daysLeft == 1 ? "day" : "days") to \(next.title)")
-                    .font(.widget(13, .semibold))
-                    .foregroundStyle(WidgetInk.primary)
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.text)
                     .lineLimit(2)
             } else {
                 BigNumber(text: "\(snapshot.daysTogether)")
                 Text("days together")
-                    .font(.widget(13, .semibold))
-                    .foregroundStyle(WidgetInk.primary)
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.text)
                 if let next = snapshot.next {
                     Text("\(next.title) in \(next.daysLeft)d")
-                        .font(.widget(11))
-                        .foregroundStyle(WidgetInk.secondary)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.textSecondary)
                         .lineLimit(1)
                 }
             }
@@ -229,19 +240,19 @@ struct MoodModule: View {
                     Text(check.mood.emoji).font(.system(size: 18))
                     VStack(alignment: .leading, spacing: 0) {
                         Text("\(snapshot.partner) · \(check.mood.title)")
-                            .font(.widget(12, .semibold))
-                            .foregroundStyle(WidgetInk.primary)
+                            .font(.nookiCaption.weight(.semibold))
+                            .foregroundStyle(Ink.text)
                             .privacySensitive()
                         Text("\(Text(check.date, style: .relative)) ago")
-                            .font(.widget(10))
-                            .foregroundStyle(WidgetInk.secondary)
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.textSecondary)
                     }
                     .lineLimit(1)
                 }
             } else {
                 Text("How are you, \(snapshot.viewer)?")
-                    .font(.widget(12, .medium))
-                    .foregroundStyle(WidgetInk.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)
             VStack(spacing: 5) {
@@ -262,8 +273,9 @@ struct MoodModule: View {
             Text(mood.emoji)
                 .font(.system(size: 15))
                 .frame(maxWidth: .infinity, minHeight: 26)
-                .background(isMine(mood) ? WidgetInk.accent.opacity(0.9) : WidgetInk.card,
-                            in: .rect(cornerRadius: 9, style: .continuous))
+                .background(isMine(mood) ? Color.honey : Ink.surfaceRaised,
+                            in: .rect(cornerRadius: Radius.tag, style: .continuous))
+                .widgetAccentable(isMine(mood))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(mood.title)
@@ -290,14 +302,14 @@ struct ListModule: View {
                 let hidden = list.openCount - list.items.filter { !$0.done }.count
                 if hidden > 0 {
                     Text("+\(hidden) more")
-                        .font(.widget(10, .medium))
-                        .foregroundStyle(WidgetInk.secondary)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             } else {
                 Spacer(minLength: 0)
                 Text("Nothing on the list")
-                    .font(.widget(12, .medium))
-                    .foregroundStyle(WidgetInk.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
                 Spacer(minLength: 0)
             }
         }
@@ -307,17 +319,17 @@ struct ListModule: View {
         HStack(spacing: 7) {
             Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(WidgetInk.accent)
+                .foregroundStyle(Ink.accentText)
                 .widgetAccentable()
             Text(item.text)
-                .font(.widget(13, .medium))
+                .font(.nookiCaption)
                 .strikethrough(item.done)
-                .foregroundStyle(item.done ? WidgetInk.secondary : WidgetInk.primary)
+                .foregroundStyle(item.done ? Ink.textSecondary : Ink.text)
                 .lineLimit(1)
             Spacer(minLength: 0)
             Text(item.author)
-                .font(.widget(9, .bold))
-                .foregroundStyle(WidgetInk.secondary)
+                .font(.nookiMicro)
+                .foregroundStyle(Ink.textSecondary)
         }
         .contentShape(.rect)
     }
@@ -340,46 +352,46 @@ struct DateModule: View {
                 ModuleHeader(title: plan.isToday ? "Date night" : "Next date", smart: smart)
                 Spacer(minLength: 0)
                 Text(plan.title)
-                    .font(.widget(14, .bold))
-                    .foregroundStyle(WidgetInk.primary)
+                    .font(.nookiCallout.weight(.bold))
+                    .foregroundStyle(Ink.text)
                     .lineLimit(2)
                 Text(plan.date, format: plan.isToday ? Date.FormatStyle.dateTime.hour().minute()
                                                      : Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-                    .font(.widget(plan.isToday ? 22 : 14, .bold))
-                    .foregroundStyle(WidgetInk.accent)
+                    .font(plan.isToday ? .nookiTitle : .nookiCallout.weight(.bold))
+                    .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
                 if let hint = plan.hint {
                     Text("Hint: \(hint)")
-                        .font(.widget(11))
-                        .foregroundStyle(WidgetInk.secondary)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 }
             } else {
                 ModuleHeader(title: "Date idea", smart: smart)
                 if let idea = snapshot.idea {
                     Text(idea.title)
-                        .font(.widget(14, .bold))
-                        .foregroundStyle(WidgetInk.primary)
+                        .font(.nookiCallout.weight(.bold))
+                        .foregroundStyle(Ink.text)
                         .lineLimit(2)
                         .padding(.top, 2)
                     Text(idea.matched ? "You both liked it" : idea.pitch)
-                        .font(.widget(11))
-                        .foregroundStyle(WidgetInk.secondary)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 } else {
                     Text("Can't decide what to do tonight?")
-                        .font(.widget(12, .medium))
-                        .foregroundStyle(WidgetInk.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                         .padding(.top, 2)
                 }
                 Spacer(minLength: 0)
                 Button(intent: SurpriseIdeaIntent()) {
                     Label(snapshot.idea == nil ? "Surprise us" : "Another", systemImage: "dice.fill")
-                        .font(.widget(12, .bold))
-                        .foregroundStyle(.white)
+                        .font(.nookiCaption.weight(.bold))
+                        .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(WidgetInk.accent, in: .capsule)
+                        .background(Color.honey, in: .capsule)
                 }
                 .buttonStyle(.plain)
                 .widgetAccentable()
@@ -407,7 +419,7 @@ struct MomentModule: View {
                 .clipped()
                 if let caption = snapshot.moment?.caption, !caption.isEmpty {
                     Text(caption)
-                        .font(.widget(11, .semibold))
+                        .font(.nookiMicro)
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .padding(.horizontal, 10)
@@ -422,13 +434,13 @@ struct MomentModule: View {
                 Spacer(minLength: 0)
                 Image(systemName: "photo.on.rectangle.angled")
                     .font(.system(size: 22))
-                    .foregroundStyle(WidgetInk.accent)
+                    .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
                 Text("Pin a photo to the garland")
-                    .font(.widget(12, .medium))
-                    .foregroundStyle(WidgetInk.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
-            .padding(12)
+            .padding(Space.m)
         }
     }
 }
