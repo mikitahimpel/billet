@@ -151,6 +151,7 @@ struct HomeView: View {
                 Color.clear
                     .contentShape(.rect)
                     .ignoresSafeArea()
+                    .accessibilityHidden(true)
                     .transition(.identity)
             }
         }
