@@ -1,0 +1,23 @@
+{
+  "entry": {
+    "amount": 150,
+    "at": 1762350240000,
+    "id": "bonus:cozy-autumn",
+    "kind": "bonus",
+    "ref": "cozy-autumn"
+  },
+  "shop": {
+    "balance": 710,
+    "bonuses": [
+      "cozy-autumn"
+    ],
+    "inks": [
+      "ink-graphite"
+    ],
+    "items": [
+      "lamp",
+      "rug"
+    ],
+    "wishlist": []
+  }
+}

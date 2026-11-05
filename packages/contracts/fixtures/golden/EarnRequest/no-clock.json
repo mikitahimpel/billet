@@ -1,0 +1,6 @@
+{
+  "event": {
+    "_tag": "WishReceived",
+    "wish": "wish-1"
+  }
+}

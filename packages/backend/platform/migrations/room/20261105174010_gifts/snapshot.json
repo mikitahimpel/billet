@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "1e009a42-299a-4b1f-a577-f44f6586a77b",
+  "id": "16038125-5fb7-46e1-b004-09ef955a0e37",
   "prevIds": [
-    "7a03b375-9728-4ea3-b398-c8b4de38b5a5"
+    "9dee96ef-60bc-4834-9fef-f17df8f4afad"
   ],
   "ddl": [
     {
@@ -20,6 +20,10 @@
     },
     {
       "name": "cat_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "claimed_bonus",
       "entityType": "tables"
     },
     {
@@ -319,6 +323,26 @@
       "name": "body",
       "entityType": "columns",
       "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "collection_id",
+      "entityType": "columns",
+      "table": "claimed_bonus"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "claimed_bonus"
     },
     {
       "type": "integer",
@@ -801,6 +825,26 @@
       "table": "room"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "gift_day",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "false",
+      "generated": null,
+      "name": "welcomed",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
       "type": "integer",
       "notNull": false,
       "autoincrement": false,
@@ -857,6 +901,16 @@
       "default": null,
       "generated": null,
       "name": "games",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": "0",
+      "generated": null,
+      "name": "lists",
       "entityType": "columns",
       "table": "wallet"
     },
@@ -944,6 +998,15 @@
       "nameExplicit": false,
       "name": "cat_entry_pk",
       "table": "cat_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "collection_id"
+      ],
+      "nameExplicit": false,
+      "name": "claimed_bonus_pk",
+      "table": "claimed_bonus",
       "entityType": "pks"
     },
     {

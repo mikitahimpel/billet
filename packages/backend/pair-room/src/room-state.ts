@@ -1,11 +1,11 @@
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 import { CatEntry, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { RoomItemId } from "@billet/contracts-domain/shop";
+import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
 /** A partner and their presence, kept together so presence cannot exist for a stranger. */
@@ -13,6 +13,9 @@ export const Member = Schema.Struct({ user: UserId, presence: PresenceState });
 export type Member = typeof Member.Type;
 
 const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+
+/** A count stored before it existed reads as 0. */
+const NewCount = Count.pipe(Schema.withDecodingDefaultKey(Effect.succeed(0)));
 
 /** Two different people: a room cannot be built around one user twice. */
 const Couple = Schema.Tuple([Member, Member]).check(
@@ -45,10 +48,11 @@ export const RoomWallet = Schema.Struct({
   care: Count,
   notes: Count,
   games: Count,
+  lists: NewCount,
 });
 export type RoomWallet = typeof RoomWallet.Type;
 
-export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0 };
+export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0, lists: 0 };
 
 /**
  * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
@@ -58,6 +62,7 @@ export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0
  *
  * `inks` are the ink colours the pair has bought, in the order it got them. The free ink is
  * everyone's and never listed. `items` are the room's pieces the same way, without the starters.
+ * `bonuses` are the collections whose bonus the pair was paid; a room stored before them has none.
  */
 export const RoomState = Schema.TaggedUnion({
   /** A new object, not given to a couple yet. */
@@ -73,6 +78,14 @@ export const RoomState = Schema.TaggedUnion({
     items: Schema.Array(RoomItemId),
     /** Pieces the pair wishes for, in the order they were wished. */
     wishlist: Schema.Array(RoomItemId),
+    bonuses: Schema.Array(CollectionId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
+    /** The pair's local day it last opened the daily gift on. */
+    giftDay: Schema.optionalKey(LocalDay),
+    /**
+     * Whether the pair got its welcome coins. A room opened before they existed reads false and
+     * gets them on its next command or read.
+     */
+    welcomed: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(false))),
     wallet: RoomWallet,
     /** The `rev` of the last reaction change; absent before the first. */
     lastReactionRev: Schema.optionalKey(Count),

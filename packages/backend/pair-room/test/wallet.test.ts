@@ -59,6 +59,7 @@ describe("earning coins", () => {
       care: 1,
       notes: 0,
       games: 0,
+      lists: 0,
     });
   });
 
@@ -116,6 +117,7 @@ describe("earning coins", () => {
       care: 1,
       notes: 0,
       games: 0,
+      lists: 0,
     });
   });
 
@@ -139,6 +141,7 @@ describe("buying an ink", () => {
         entry: { id: `spend:${uuid(1)}`, kind: "spend", amount: -60, ref: rose, at: start },
       },
       { _tag: "InksGranted", inks: [rose] },
+      { _tag: "Purchased", id: uuid(1), by: alice, at: start, items: [rose], coins: 60 },
     ]);
     expect(decision.state.wallet.balance).toBe(40);
     expect(decision.state.inks).toEqual([rose]);
@@ -217,9 +220,10 @@ describe("RoomService: the wallet", () => {
       _tag: "Accepted",
       outputs: [{ _tag: "CoinsRepeated", entry: { id: `spend:${uuid(20)}`, amount: -60 } }],
     });
-    // Five wins hit the 40-coin cap after four, four notes add 20; a 60-coin ink takes it all.
-    expect(result.state._tag === "Active" && result.state.wallet.balance).toBe(0);
-    expect(result.page.map((e) => e.amount)).toEqual([10, 10]);
-    expect(result.rest.map((e) => e.amount)).toEqual([10, 10, 5, 5, 5, 5, -60]);
+    // The welcome coins come first. Five wins hit the 40-coin cap after four, four notes add 20,
+    // and a 60-coin ink takes those 60 back.
+    expect(result.state._tag === "Active" && result.state.wallet.balance).toBe(560);
+    expect(result.page.map((e) => e.amount)).toEqual([560, 10]);
+    expect(result.rest.map((e) => e.amount)).toEqual([10, 10, 10, 5, 5, 5, 5, -60]);
   });
 });

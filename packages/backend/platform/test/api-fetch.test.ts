@@ -983,10 +983,19 @@ describe("notes", () => {
     const coins = await call("/v1/coins", { method: "GET", headers: bearer(claimer) });
     expect(coins.status).toBe(200);
     expect(coins.headers.get("cache-control")).toBe("no-store");
-    expect(Schema.decodeUnknownSync(CoinsResponse)(await coins.json())).toEqual({
-      balance: 0,
-      entries: [],
+    // Reading the wallet opens the pair's room, with its welcome coins.
+    expect(Schema.decodeUnknownSync(CoinsResponse)(await coins.json())).toMatchObject({
+      balance: 560,
+      entries: [{ id: "gift:welcome", kind: "gift", amount: 560 }],
     });
+    const order = (item: string) =>
+      call("/v1/shop/orders", {
+        method: "POST",
+        headers: { ...bearer(owner), "content-type": "application/json" },
+        body: JSON.stringify({ id: crypto.randomUUID(), offer: { _tag: "Item", item } }),
+      });
+    // Neither piece is ever a deal: the tower leaves 20 of the 560.
+    expect((await order("tower")).status).toBe(200);
     const buy = (item: string) =>
       call("/v1/shop/buy", {
         method: "POST",
@@ -995,13 +1004,36 @@ describe("notes", () => {
       });
     const broke = await buy("ink-rose");
     expect(broke.status).toBe(409);
-    expect(await broke.json()).toEqual({ _tag: "NotEnoughCoins", needed: 60, have: 0 });
+    expect(await broke.json()).toEqual({ _tag: "NotEnoughCoins", needed: 60, have: 20 });
     const free = await buy("ink-graphite");
     expect(free.status).toBe(409);
     expect(await free.json()).toEqual({ _tag: "AlreadyOwned", itemId: "ink-graphite" });
     expect((await buy("ink-nope")).status).toBe(400);
     const badPage = await call("/v1/coins?limit=0", { method: "GET", headers: bearer(owner) });
     expect(badPage.status).toBe(400);
+  });
+
+  it("opens the day's gift once for the pair, and pays an app earn once per ref", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const post = (token: string, path: string, body: unknown) =>
+      call(path, {
+        method: "POST",
+        headers: { ...bearer(token), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const gift = await post(owner, "/v1/shop/gift", { utcOffsetSeconds: 3600 });
+    expect(gift.status).toBe(200);
+    const opened = await gift.json();
+    expect(await (await post(claimer, "/v1/shop/gift", { utcOffsetSeconds: 3600 })).json()).toEqual(
+      opened,
+    );
+    const earn = { event: { _tag: "WishReceived", wish: "wish-1" } };
+    const first = await (await post(owner, "/v1/coins/earn", earn)).json();
+    expect(first).toMatchObject({ entry: { id: "earn:wish:wish-1", amount: 20 } });
+    expect(await (await post(claimer, "/v1/coins/earn", earn)).json()).toEqual(first);
+    const bonus = await post(owner, "/v1/shop/bonus", { collection: "cozy-autumn" });
+    expect(bonus.status).toBe(409);
+    expect(await bonus.json()).toEqual({ _tag: "CollectionIncomplete", collection: "cozy-autumn" });
   });
 
   it("refuses a text note that is blank, over 120 characters or on an unknown paper", async () => {

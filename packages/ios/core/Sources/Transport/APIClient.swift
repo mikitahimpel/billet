@@ -62,6 +62,14 @@ public struct APIClient: Sendable {
   /// Buys one offer at the server's price. Repeat the request's `id` on a retry.
   public var placeOrder: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var setWish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
+  /// Opens the day's gift, once a day for the pair. The partner's open answers with the first.
+  public var openGift: @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse
+  /// Collects a complete collection's bonus, once. `.api(.collectionIncomplete)` while a piece is
+  /// missing.
+  public var claimBonus:
+    @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse
+  /// Pays something the couple did in the app, once per ref and within the day's cap.
+  public var earnCoins: @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse
   /// The pair's gifts as the caller may see them. `.api(.notFound)` while unpaired; every change
   /// answers the view after it, and `.api(.invalidRequest)` for a change that is not the caller's.
   public var gifts: @Sendable () async throws(TransportError) -> GiftsResponse
@@ -152,6 +160,17 @@ public struct APIClient: Sendable {
       @escaping @Sendable (WishRequest) async throws(TransportError) -> ShopResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    openGift:
+      @escaping @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    claimBonus:
+      @escaping @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse =
+      { (_) async throws(TransportError) in throw .network("offline") },
+    earnCoins:
+      @escaping @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     gifts: @escaping @Sendable () async throws(TransportError) -> GiftsResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
@@ -204,6 +223,9 @@ public struct APIClient: Sendable {
     self.shop = shop
     self.placeOrder = placeOrder
     self.setWish = setWish
+    self.openGift = openGift
+    self.claimBonus = claimBonus
+    self.earnCoins = earnCoins
     self.gifts = gifts
     self.saveGiftWish = saveGiftWish
     self.deleteGiftWish = deleteGiftWish
@@ -372,6 +394,19 @@ extension APIClient {
       setWish: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.setWish, signed: true, body: body), as: ShopResponse.self)
+      },
+      openGift: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.openGift, signed: true, body: body), as: OpenGiftResponse.self)
+      },
+      claimBonus: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.claimBonus, signed: true, body: body),
+          as: ClaimBonusResponse.self)
+      },
+      earnCoins: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.earnCoins, signed: true, body: body), as: EarnResponse.self)
       },
       gifts: { () async throws(TransportError) in
         try await http.perform(

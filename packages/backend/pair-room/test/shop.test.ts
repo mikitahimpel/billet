@@ -8,7 +8,7 @@ import type { RoomDecision } from "../src/room-decision.ts";
 import { RoomService } from "../src/room-service.ts";
 import type { ActiveRoom } from "../src/room-state.ts";
 import { countingIds, memoryStore } from "./memory-store.ts";
-import { active, alice, bob, mallory, rose, tower, uuid } from "./samples.ts";
+import { active, adoptedCat, alice, bob, mallory, rose, tower, uuid } from "./samples.ts";
 
 // Monday 2024-01-08 12:00 UTC: week 1, so "nap-time" is the featured set.
 const monday: EpochMillis = Date.UTC(2024, 0, 8, 12);
@@ -42,6 +42,7 @@ describe("ordering a piece", () => {
         entry: { id: `spend:${uuid(1)}`, kind: "spend", amount: -540, ref: "tower", at: monday },
       },
       { _tag: "ItemsGranted", items: [tower] },
+      { _tag: "Purchased", id: uuid(1), by: alice, at: monday, items: [tower], coins: 540 },
     ]);
   });
 
@@ -72,7 +73,7 @@ describe("ordering a piece", () => {
     );
     const bought = accept(wished.state, order(1, { _tag: "Item", item: tower }));
     expect(bought.state.wishlist).toEqual([]);
-    expect(bought.outputs.at(-1)).toEqual({ _tag: "WishlistChanged", wishlist: [] });
+    expect(bought.outputs).toContainEqual({ _tag: "WishlistChanged", wishlist: [] });
   });
 });
 
@@ -107,10 +108,14 @@ describe("ordering an ink or a treat", () => {
   });
 
   it("spends a treat's price and gives nothing to keep", () => {
-    const decision = accept(rich, order(1, { _tag: "Treat" }));
+    const decision = accept({ ...rich, cat: adoptedCat }, order(1, { _tag: "Treat" }));
     expect(decision.state.wallet.balance).toBe(1990);
     expect(decision.state.items).toEqual([]);
-    expect(decision.outputs).toHaveLength(1);
+    expect(decision.outputs.map((output) => output._tag)).toEqual([
+      "CoinsEntered",
+      "CatEntryAppended",
+      "Purchased",
+    ]);
   });
 });
 

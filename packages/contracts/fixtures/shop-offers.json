@@ -1,0 +1,529 @@
+{
+  "cases": [
+    {
+      "seed": "pair-1",
+      "day": "2024-01-01",
+      "deals": [
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 30
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 30
+      }
+    },
+    {
+      "seed": "pair-1",
+      "day": "2025-02-28",
+      "deals": [
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "teatable",
+          "discount": 0.25,
+          "price": 160
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "monstera",
+          "discount": 0.3,
+          "price": 65
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Item",
+        "item": "yarn"
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    },
+    {
+      "seed": "pair-1",
+      "day": "2026-11-05",
+      "deals": [
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "monstera",
+          "discount": 0.3,
+          "price": 65
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        }
+      ],
+      "featured": "nap-time",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 40
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    },
+    {
+      "seed": "pair-1",
+      "day": "2026-11-09",
+      "deals": [
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        },
+        {
+          "item": "print",
+          "discount": 0.25,
+          "price": 90
+        }
+      ],
+      "featured": "tea-for-two",
+      "gift": {
+        "_tag": "Item",
+        "item": "yarn"
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 30
+      }
+    },
+    {
+      "seed": "pair-1",
+      "day": "2026-12-31",
+      "deals": [
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 20
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 20
+      }
+    },
+    {
+      "seed": "0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "day": "2024-01-01",
+      "deals": [
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 20
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 20
+      }
+    },
+    {
+      "seed": "0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "day": "2025-02-28",
+      "deals": [
+        {
+          "item": "monstera",
+          "discount": 0.3,
+          "price": 65
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "print",
+          "discount": 0.25,
+          "price": 90
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 30
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 30
+      }
+    },
+    {
+      "seed": "0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "day": "2026-11-05",
+      "deals": [
+        {
+          "item": "teatable",
+          "discount": 0.25,
+          "price": 160
+        },
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "print",
+          "discount": 0.25,
+          "price": 90
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        }
+      ],
+      "featured": "nap-time",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 40
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    },
+    {
+      "seed": "0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "day": "2026-11-09",
+      "deals": [
+        {
+          "item": "teatable",
+          "discount": 0.25,
+          "price": 160
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        }
+      ],
+      "featured": "tea-for-two",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 20
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 20
+      }
+    },
+    {
+      "seed": "0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+      "day": "2026-12-31",
+      "deals": [
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 40
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    },
+    {
+      "seed": "Paarë",
+      "day": "2024-01-01",
+      "deals": [
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "donutbed",
+          "discount": 0.2,
+          "price": 305
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "print",
+          "discount": 0.25,
+          "price": 90
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 20
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 20
+      }
+    },
+    {
+      "seed": "Paarë",
+      "day": "2025-02-28",
+      "deals": [
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        },
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 40
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    },
+    {
+      "seed": "Paarë",
+      "day": "2026-11-05",
+      "deals": [
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "monstera",
+          "discount": 0.3,
+          "price": 65
+        },
+        {
+          "item": "teatable",
+          "discount": 0.25,
+          "price": 160
+        },
+        {
+          "item": "yarn",
+          "discount": 0.3,
+          "price": 40
+        }
+      ],
+      "featured": "nap-time",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 20
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 20
+      }
+    },
+    {
+      "seed": "Paarë",
+      "day": "2026-11-09",
+      "deals": [
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "monstera",
+          "discount": 0.3,
+          "price": 65
+        },
+        {
+          "item": "print",
+          "discount": 0.25,
+          "price": 90
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        }
+      ],
+      "featured": "tea-for-two",
+      "gift": {
+        "_tag": "Item",
+        "item": "yarn"
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 30
+      }
+    },
+    {
+      "seed": "Paarë",
+      "day": "2026-12-31",
+      "deals": [
+        {
+          "item": "lamp",
+          "discount": 0.25,
+          "price": 105
+        },
+        {
+          "item": "bookcase",
+          "discount": 0.2,
+          "price": 210
+        },
+        {
+          "item": "mouse",
+          "discount": 0.3,
+          "price": 30
+        },
+        {
+          "item": "lantern",
+          "discount": 0.2,
+          "price": 120
+        }
+      ],
+      "featured": "rainy-evening",
+      "gift": {
+        "_tag": "Coins",
+        "coins": 40
+      },
+      "giftOwningGiftItems": {
+        "_tag": "Coins",
+        "coins": 40
+      }
+    }
+  ]
+}

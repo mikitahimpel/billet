@@ -6,12 +6,13 @@ import {
   NatureSeed,
   UtcOffsetSeconds,
 } from "@billet/contracts-domain/cat";
+import { EarnEvent } from "@billet/contracts-domain/coins";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
 /** Who claimed the invite, and when. */
@@ -53,8 +54,26 @@ export const RoomCommand = Schema.TaggedUnion({
   GrantInks: { inks: Schema.Array(InkId) },
   /** Buys one ink with the pair's coins, at its catalog price. `id` is the buyer's, once. */
   Buy: { id: IdempotencyKey, by: UserId, ink: InkId, at: EpochMillis },
-  /** Buys one offer with the pair's coins, at the catalog's price. `id` is the buyer's, once. */
-  Order: { id: IdempotencyKey, by: UserId, offer: ShopOffer, at: EpochMillis },
+  /**
+   * Buys one offer with the pair's coins, at the catalog's price: a piece at its deal price when it
+   * is a deal of the pair's local day, counted `utcOffsetSeconds` from UTC (else the cat's clock,
+   * else UTC). `id` is the buyer's, once.
+   */
+  Order: {
+    id: IdempotencyKey,
+    by: UserId,
+    offer: ShopOffer,
+    at: EpochMillis,
+    utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds),
+  },
   SetWish: { by: UserId, item: RoomItemId, wished: Schema.Boolean },
+  /** Gives the pair its welcome coins, once: the room service sends it after an open. */
+  Welcome: { at: EpochMillis },
+  /** Opens the pair's free gift of the local day, once a day for the pair. */
+  OpenGift: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds },
+  /** Collects a collection's bonus, once ever, when the pair owns every piece. */
+  ClaimBonus: { by: UserId, at: EpochMillis, collection: CollectionId },
+  /** Pays something the couple did in the app, within its daily cap and once per ref. */
+  Earn: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds, event: EarnEvent },
 });
 export type RoomCommand = typeof RoomCommand.Type;
