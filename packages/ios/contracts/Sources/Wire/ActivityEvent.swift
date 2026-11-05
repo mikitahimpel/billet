@@ -12,6 +12,8 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
   case plantWatered(plant: String?)
   case catAdopted(name: String)
   case catRenamed(name: String)
+  /// The partner claimed the invite: the pair formed.
+  case partnerJoined
   /// `kind` is the note's `_tag`: `Drawing`, `Photo` or `Text`.
   case noteSent(note: NoteId, kind: String)
   /// The partner reacted to a photo.
@@ -68,6 +70,8 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
       self = .catAdopted(name: try container.decode(String.self, forKey: .name))
     case "CatRenamed":
       self = .catRenamed(name: try container.decode(String.self, forKey: .name))
+    case "PartnerJoined":
+      self = .partnerJoined
     case "NoteSent":
       self = .noteSent(
         note: try container.decode(NoteId.self, forKey: .note),
@@ -131,6 +135,8 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
     case .catRenamed(let name):
       try container.encode("CatRenamed", forKey: .tag)
       try container.encode(name, forKey: .name)
+    case .partnerJoined:
+      try container.encode("PartnerJoined", forKey: .tag)
     case .noteSent(let note, let kind):
       try container.encode("NoteSent", forKey: .tag)
       try container.encode(note, forKey: .note)

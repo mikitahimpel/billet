@@ -82,16 +82,14 @@ export class PairingService extends Context.Service<
       ): Effect.fn.Return<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable> {
         const pairId = decodePairId(yield* random.uuidV4());
         yield* annotateRefs({ user: claimerId, pair: pairId });
-        yield* repository.claimInvite({
-          codeHash: yield* hash(code),
-          claimerId,
-          pairId,
-          now: yield* Clock.currentTimeMillis,
-        });
+        const now = yield* Clock.currentTimeMillis;
+        yield* repository.claimInvite({ codeHash: yield* hash(code), claimerId, pairId, now });
         yield* afterwards(
           repository.findMembers(pairId).pipe(
             Effect.orDie,
-            Effect.flatMap((members) => observer.paired(pairId, members)),
+            Effect.flatMap((members) =>
+              observer.paired(pairId, members, { claimer: claimerId, at: now }),
+            ),
           ),
         );
         return pairId;
