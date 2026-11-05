@@ -8,6 +8,8 @@
     "./access": "./src/access.ts",
     "./admin-assets": "./src/admin-assets.ts",
     "./admin-data": "./src/admin-data.ts",
+    "./admin-experiment-metrics": "./src/admin-experiment-metrics.ts",
+    "./admin-features": "./src/admin-features.ts",
     "./admin-funnel": "./src/admin-funnel.ts",
     "./admin-overview": "./src/admin-overview.ts",
     "./admin-retention": "./src/admin-retention.ts",

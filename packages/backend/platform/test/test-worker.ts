@@ -8,9 +8,15 @@ import { testExperiments } from "./test-experiments.ts";
 import type { RoomMigrations } from "../src/room-database.ts";
 
 // The Worker under test: exports the object class, as apps/api/src/worker.ts does.
-import { PairRoom } from "../src/pair-room-durable-object.ts";
+import { PairRoom as LivePairRoom } from "../src/pair-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
-export { PairRoom };
+/** PairRoom at the test instant: notes are stamped with it and delivery alarms set from it. */
+export class PairRoom extends LivePairRoom {
+  protected override clock(): number {
+    return testNowOf(this.env as { readonly TEST_NOW?: string });
+  }
+}
 
 const migrateOnActivation = (ctx: DurableObjectState, migrations?: RoomMigrations) =>
   void ctx.blockConcurrencyWhile(() =>

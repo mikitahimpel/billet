@@ -13,7 +13,7 @@ const owner = Schema.decodeSync(CoinOwner);
 let counter = 0;
 const purchaseOf = (ownerId: CoinOwner, coins = 100): NewPurchase => {
   counter += 1;
-  const id = `tx-${Date.now()}-${counter}`;
+  const id = `tx-${crypto.randomUUID()}-${counter}`;
   return {
     originalTransactionId: id,
     transactionId: id,

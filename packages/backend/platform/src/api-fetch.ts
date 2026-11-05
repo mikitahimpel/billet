@@ -48,6 +48,7 @@ import { withRequestSpan } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
 import { respondSocket } from "./socket-fetch.ts";
 import type { WorkerEnv } from "./worker-env.ts";
+import { type Now, systemNow } from "./wall-clock.ts";
 
 const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) => {
   // The stage decides which App Store environments count, and whether the dev extras (Xcode
@@ -114,17 +115,20 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
  * The `Api` Worker's `fetch`. The router is built per request, because the services under it hold
  * I/O that a Worker can't share between requests. `/admin` is the admin panel, behind Cloudflare
  * Access (admin-fetch.ts). Anything else outside `/v1/` is the placeholder, which the deploy smoke
- * test reads. `experiments` is the registry; only tests pass another list.
+ * test reads. `experiments` is the registry and `now` the wall clock; only tests pass others.
  */
 export const respondApi = (
   request: Request,
   env: WorkerEnv,
   ctx: ExecutionContext,
   experiments: ReadonlyArray<Experiment> = registry,
+  now: Now = systemNow,
 ): Promise<Response> => {
   const { pathname } = new URL(request.url);
   if (pathname.startsWith("/v1/")) {
-    return withRequestSpan(request, (context) => routeApi(request, env, ctx, experiments, context));
+    return withRequestSpan(request, (context) =>
+      routeApi(request, env, ctx, experiments, context, now),
+    );
   }
   if (isAdminPath(pathname)) {
     return withRequestSpan(request, (context) =>
@@ -140,17 +144,18 @@ const routeApi = async (
   ctx: ExecutionContext,
   experiments: ReadonlyArray<Experiment>,
   context: Context.Context<never>,
+  now: Now,
 ): Promise<Response> => {
   // The service status comes first, from KV: `/v1/status` and the maintenance 503 must answer
   // while D1 or the rest of the API is down, so nothing before this may touch the database.
   const status = await readServedStatus(env.STATUS);
-  const gated = gateRequest(request, status, Date.now());
+  const gated = gateRequest(request, status, now());
   if (gated !== undefined) return gated;
 
   if (new URL(request.url).pathname === socketRoute.path)
     return respondSocket(request, env, context);
 
-  const limited = await limitRequest(request, env.DB);
+  const limited = await limitRequest(request, env.DB, now());
   if (limited !== undefined) return limited;
 
   const { handler, dispose } = HttpRouter.toWebHandler(apiRoutes(env, experiments, status), {

@@ -1170,7 +1170,10 @@ async function renderExperiments([key]) {
         {
           label: "Result",
           value: (i) => i.results?.verdict?.kind ?? null,
-          cell: (i) => verdictShort(i.results),
+          cell: (i) => [
+            verdictShort(i.results),
+            i.results?.warnings?.length ? [" ", pill("bad", "guardrail worse")] : null,
+          ],
         },
         { label: "Changed", value: (i) => i.updatedAt, cell: (i) => ago(i.updatedAt) },
       ],
@@ -1238,6 +1241,109 @@ function forest(variants, leader) {
     if (w > 0 && w !== W) draw((W = Math.max(320, w)));
   }).observe(box);
   return box;
+}
+
+const fmtMetric = (unit, v) => (v == null ? "—" : unit === "share" ? fmtPct(v) : v.toFixed(2));
+const fmtMetricDiff = (unit, v) => {
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "±";
+  const abs = Math.abs(v);
+  return `${sign}${unit === "share" ? `${(abs * 100).toFixed(1)} pts` : abs.toFixed(2)}`;
+};
+const CHANGE_TONE = { better: "good", worse: "bad", unclear: "" };
+
+/** Secondary and guardrail metrics: a row each, a column per variant, against the baseline. */
+function moreMetrics(r) {
+  const variants = r.metrics[0].variants.map((v) => v.variant);
+  const cell = (m, v) => {
+    if (m.status === "waiting") return h("td", { class: "faint", text: "—" });
+    if (!v.estimate)
+      return h(
+        "td",
+        { class: "faint" },
+        "too few",
+        h("span", { class: "sub", text: `${v.pairs} pairs` }),
+      );
+    const e = v.estimate;
+    const d = v.vsBaseline;
+    return h(
+      "td",
+      null,
+      h("b", { text: fmtMetric(m.unit, e.value) }),
+      h("span", {
+        class: "sub",
+        text: `95% ${fmtMetric(m.unit, e.low)}–${fmtMetric(m.unit, e.high)} · ${v.pairs} pairs`,
+      }),
+      d &&
+        h(
+          "span",
+          { class: "sub metric-diff" },
+          pill(
+            CHANGE_TONE[v.change],
+            v.change === "unclear" ? "no clear change" : v.change,
+            v.change === "unclear",
+          ),
+          ` ${fmtMetricDiff(m.unit, d.value)} vs ${r.baseline} (95% ${fmtMetricDiff(m.unit, d.low)} to ${fmtMetricDiff(m.unit, d.high)})`,
+        ),
+    );
+  };
+  return section(
+    "Secondary and guardrail metrics",
+    `Over each pair's first week, pairs at least 7 days old. Differences are against ${r.baseline}, the default. Under 5 pairs: too few.`,
+    r.warnings.length
+      ? r.warnings.map((w) => callout("bad", "Guardrail worse", w.text))
+      : callout(
+          "good",
+          "No guardrail is worse",
+          "Every guardrail's interval of change still includes no change, or better.",
+        ),
+    h(
+      "div",
+      { class: "box table-wrap", style: { "margin-top": "16px" } },
+      h(
+        "table",
+        { class: "metrics" },
+        h("caption", { class: "sr-only", text: "Secondary and guardrail metrics by variant" }),
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: "Metric" }),
+            variants.map((v) =>
+              h("th", { scope: "col", text: v === r.baseline ? `${v} (baseline)` : v }),
+            ),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          r.metrics.map((m) =>
+            h(
+              "tr",
+              null,
+              h(
+                "th",
+                { scope: "row" },
+                h(
+                  "span",
+                  { class: "metric-name" },
+                  m.label,
+                  " ",
+                  pill(m.role === "guardrail" ? "warn" : "", m.role, true),
+                ),
+                h("span", {
+                  class: "sub",
+                  text: m.status === "waiting" ? `Waiting for ${m.waitingFor}` : m.description,
+                }),
+              ),
+              m.variants.map((v) => cell(m, v)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 async function renderExperiment(key) {
@@ -1340,6 +1446,7 @@ async function renderExperiment(key) {
         : callout("info", "Not enough data yet", "No pair has been assigned to this experiment."),
       r && r.variants.length ? forest(r.variants, leader) : null,
     ),
+    r && r.metrics?.length ? moreMetrics(r) : null,
     section("Variants", null, h("div", { class: "variants" }, variants)),
     section("History", null, h("div", { class: "box" }, historyList(changes, { showKey: false }))),
   ];
@@ -3671,6 +3778,123 @@ async function renderTrends(args) {
   ];
 }
 
+/* ---------- Feature usage ---------- */
+
+const featuresHref = (split) => `#/features/${enc(split || "-")}`;
+
+function usageCell(u, groupLabel, windowLabel) {
+  if (!u) return h("td", { class: "num faint", text: "too few" });
+  return h(
+    "td",
+    {
+      class: "num usage",
+      title: `${groupLabel}, ${windowLabel}: ${u.count} of ${u.of} pairs; 95% ${fmtPct(u.low, 0)}–${fmtPct(u.high, 0)}`,
+    },
+    h("span", { text: fmtPct(u.share) }),
+    h(
+      "span",
+      { class: "use-track", "aria-hidden": "true" },
+      h("span", { class: "use-fill", style: { "--w": `${(u.share * 100).toFixed(1)}%` } }),
+    ),
+  );
+}
+
+async function renderFeatures([splitArg]) {
+  const split = splitArg && splitArg !== "-" ? splitArg : "";
+  const usage = await api(`/features${split ? `?split=${enc(split)}` : ""}`);
+  const groupLabel = (g) => (g.variant == null ? "Every pair" : g.variant);
+  const areaLabel = new Map(usage.areas.map((a) => [a.area, a.label]));
+  const activeText = (n) => (n == null ? "too few" : `${fmtNum(n, 0)} pairs`);
+
+  const picker = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        { onchange: (e) => (location.hash = featuresHref(e.target.value)) },
+        h("option", { value: "", text: "Nothing", selected: !split }),
+        usage.experiments.map((key) =>
+          h("option", { value: key, text: `Variant of ${key}`, selected: key === split }),
+        ),
+      ),
+    ),
+  );
+
+  const table = h(
+    "div",
+    { class: "box table-wrap" },
+    h(
+      "table",
+      { class: "features" },
+      h("caption", { class: "sr-only", text: "Share of active pairs using each feature" }),
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", { scope: "col", rowspan: "2", text: "Feature" }),
+          usage.groups.map((g) =>
+            h("th", { scope: "colgroup", colspan: "2", class: "group-head", text: groupLabel(g) }),
+          ),
+        ),
+        h(
+          "tr",
+          null,
+          usage.groups.map((g) => [
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "7 days",
+              h("span", { class: "sub", text: activeText(g.active.d7) }),
+            ),
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "30 days",
+              h("span", { class: "sub", text: activeText(g.active.d30) }),
+            ),
+          ]),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        usage.rows.map((row) =>
+          h(
+            "tr",
+            { class: row.event == null ? "area" : null },
+            h(
+              "th",
+              { scope: "row" },
+              row.event == null
+                ? h("b", { text: `${areaLabel.get(row.area)}: any` })
+                : h("span", { class: "mono event", text: row.event }),
+            ),
+            row.cells.map((c, i) => [
+              usageCell(c.d7, groupLabel(usage.groups[i]), "last 7 days"),
+              usageCell(c.d30, groupLabel(usage.groups[i]), "last 30 days"),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Feature usage",
+      `Of the pairs active in each window (any event after pairing), the share that used each feature: the last 7 days from ${fmtDay(usage.from.d7)}, the last 30 from ${fmtDay(usage.from.d30)}. Under 5 pairs: too few.`,
+    ),
+    picker,
+    table,
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -3679,6 +3903,7 @@ const ROUTES = {
   retention: renderRetention,
   funnels: renderFunnels,
   trends: renderTrends,
+  features: renderFeatures,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,
