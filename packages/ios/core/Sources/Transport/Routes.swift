@@ -38,6 +38,9 @@ public enum Routes {
   public static let saveCat = Route(.put, "/v1/cat")
   public static let listCatJournal = Route(.get, "/v1/cat/journal")
   public static let recordCatEvent = Route(.post, "/v1/cat/events")
+  /// The pair's Inbox, newest first, and the caller's read mark.
+  public static let listActivity = Route(.get, "/v1/activity")
+  public static let markActivityRead = Route(.post, "/v1/activity/read")
   public static let purchase = Route(.post, "/v1/purchases")
   /// Dev server only: the mock store's purchases and refunds.
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")

@@ -1,5 +1,7 @@
 import { Effect, Layer, Option, Schema } from "effect";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
+import { countsAsUnread, cursorOf, type ActivityRow } from "../src/activity.ts";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteIdSource } from "../src/note-id-source.ts";
 import type { ActiveRoom, RoomState, SequencedNote } from "../src/room-state.ts";
@@ -13,18 +15,24 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
     notes: [] as Array<SequencedNote>,
     keys: new Map<string, SequencedNote>(),
     cat: [] as Array<CatEntry>,
+    activity: new Map<string, ActivityRow>(),
+    marks: new Map<string, ActivityCursor>(),
   };
+  const newestFirst = () =>
+    [...memory.activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
   const layer = Layer.succeed(RoomStore, {
     load: Effect.sync(() => memory.state).pipe(Effect.tap(() => Effect.yieldNow)),
     commit: (
       room: ActiveRoom,
       notes: ReadonlyArray<AppendedNote>,
       catEntries: ReadonlyArray<CatEntry>,
+      activity: ReadonlyArray<ActivityRow>,
     ) =>
       Effect.suspend(() => {
         if (options?.failCommit === true) return Effect.die("storage is down");
         memory.state = room;
         memory.cat.push(...catEntries);
+        for (const row of activity) memory.activity.set(row.id, row);
         for (const { entry, key } of notes) {
           memory.notes.push(entry);
           memory.keys.set(`${entry.note.author}/${key}`, entry);
@@ -46,6 +54,25 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
         const { cat: _, ...rest } = memory.state;
         memory.state = rest;
       }
+    }),
+    activityBefore: (before, limit) =>
+      Effect.sync(() =>
+        newestFirst()
+          .filter((row) => before === undefined || cursorOf(row) < before)
+          .slice(0, limit),
+      ),
+    unreadCount: (user, mark) =>
+      Effect.sync(
+        () =>
+          newestFirst().filter(
+            (row) => (mark === undefined || cursorOf(row) > mark) && countsAsUnread(row, user),
+          ).length,
+      ),
+    readMark: (user) => Effect.sync(() => Option.fromNullishOr(memory.marks.get(user))),
+    saveReadMark: (user, mark) => Effect.sync(() => void memory.marks.set(user, mark)),
+    forgetActivity: Effect.sync(() => {
+      memory.activity.clear();
+      memory.marks.clear();
     }),
     forgetAuthor: (author) =>
       Effect.sync(() => {

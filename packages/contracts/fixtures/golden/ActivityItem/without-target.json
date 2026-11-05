@@ -1,0 +1,10 @@
+{
+  "actor": "Store",
+  "at": 1700000099000,
+  "event": {
+    "_tag": "Refunded",
+    "coins": 500,
+    "productId": "com.mikitahimpel.billet.coins.small"
+  },
+  "id": "refund:2000000123456789"
+}

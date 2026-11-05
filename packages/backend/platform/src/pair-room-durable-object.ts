@@ -2,7 +2,9 @@ import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
+import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -70,6 +72,8 @@ interface SocketAttachment {
    * before the cat existed) until it resumes with `lastCatSeq`.
    */
   readonly sentCatSeq?: number | null;
+  /** Whether this socket resumed with `activity: true` and is told its user's unread count. */
+  readonly activity?: boolean;
 }
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
@@ -207,6 +211,7 @@ export class PairRoom extends DurableObject {
       if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
         await this.pushCatEntries();
       }
+      await this.pushUnread((member) => member !== author);
     }
     return decision;
   }
@@ -232,6 +237,7 @@ export class PairRoom extends DurableObject {
           }
         }
       }
+      await this.pushUnread((member) => member !== user);
     }
     return decision;
   }
@@ -242,8 +248,58 @@ export class PairRoom extends DurableObject {
       (room) => room.recordCatEvent(by, request),
       "PairRoom.recordCatEvent",
     );
-    if (decision._tag === "Accepted") await this.pushCatEntries();
+    if (decision._tag === "Accepted") {
+      await this.pushCatEntries();
+      await this.pushUnread((member) => member !== by);
+    }
     return decision;
+  }
+
+  /** One page of the Inbox, newest first, as `caller` sees it. */
+  activity(
+    caller: UserId,
+    before: ActivityCursor | undefined,
+    limit: number,
+  ): Promise<ActivityResponse> {
+    return this.run((room) => room.activityPage(caller, before, limit), "PairRoom.activity");
+  }
+
+  /** Moves `user`'s read mark forward and tells their other devices the new count. */
+  async markActivityRead(user: UserId, upTo: ActivityCursor): Promise<number> {
+    const unread = await this.run(
+      (room) => room.markActivityRead(user, upTo),
+      "PairRoom.markActivityRead",
+    );
+    this.sendUnread((member) => member === user, new Map([[user, unread]]));
+    return unread;
+  }
+
+  /**
+   * Tells each socket that follows the Inbox, of the users `who` picks, its user's unread count.
+   * Each count is read once, however many devices a user has.
+   */
+  private async pushUnread(who: (user: string) => boolean): Promise<void> {
+    const users = new Set<string>();
+    for (const socket of this.ctx.getWebSockets()) {
+      const attachment = attachmentOf(socket);
+      if (attachment?.activity === true && who(attachment.user)) users.add(attachment.user);
+    }
+    if (users.size === 0) return;
+    const counts = new Map<string, number>();
+    for (const user of users) {
+      counts.set(user, await this.run((room) => room.unread(user as UserId)));
+    }
+    this.sendUnread(who, counts);
+  }
+
+  private sendUnread(who: (user: string) => boolean, counts: ReadonlyMap<string, number>): void {
+    for (const socket of this.ctx.getWebSockets()) {
+      const attachment = attachmentOf(socket);
+      const unread = attachment === undefined ? undefined : counts.get(attachment.user);
+      if (attachment?.activity === true && who(attachment.user) && unread !== undefined) {
+        send(socket, { _tag: "ActivityUnread", unread });
+      }
+    }
   }
 
   /** The cat now, by the room's clock, or null while the room is not open. */
@@ -398,15 +454,21 @@ export class PairRoom extends DurableObject {
     switch (message.value._tag) {
       case "Resume": {
         // Start from what the client holds, never from more than it asks for. A client that
-        // leaves `lastCatSeq` out does not follow the cat's journal.
-        const { lastSeq, lastCatSeq } = message.value;
+        // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
+        // the Inbox.
+        const { lastSeq, lastCatSeq, activity } = message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
           sentCatSeq: lastCatSeq === undefined ? null : Math.max(0, lastCatSeq),
+          activity: activity === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
+        if (activity === true) {
+          const unread = await this.run((room) => room.unread(attachment.user as UserId));
+          send(socket, { _tag: "ActivityUnread", unread });
+        }
         return;
       }
       case "Stroke": {

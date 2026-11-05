@@ -1,5 +1,6 @@
-import { and, asc, eq, gt, gte, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, isNull, lt, max, ne, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option, Schema } from "effect";
+import { ActivityCursor, ActivityEvent, ActivityTarget } from "@billet/contracts-domain/activity";
 import { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
@@ -8,9 +9,10 @@ import {
   type ActiveRoom,
   type SequencedNote,
 } from "@billet/backend-pair-room/room-state";
+import { ActivityRow, activityRetentionMillis, cursorOf } from "@billet/backend-pair-room/activity";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
-import { cat, catEntry, note, room } from "./room-schema.ts";
+import { activity, activityRead, cat, catEntry, note, room } from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
 export class RoomDb extends Context.Service<RoomDb, RoomDatabase>()(
@@ -35,6 +37,42 @@ const CatEventJson = Schema.fromJsonString(CatEvent);
 const encodeCatEvent = Schema.encodeSync(CatEventJson);
 const decodeCatEntryOption = Schema.decodeUnknownOption(CatEntry);
 const decodeCatEventJson = Schema.decodeOption(CatEventJson);
+
+type ActivityRecord = typeof activity.$inferSelect;
+
+const ActivityBodyJson = Schema.fromJsonString(
+  Schema.Struct({ event: ActivityEvent, target: Schema.optionalKey(ActivityTarget) }),
+);
+const encodeActivityBody = Schema.encodeSync(ActivityBodyJson);
+const decodeActivityRow = Schema.decodeUnknownOption(ActivityRow);
+const decodeActivityBody = Schema.decodeOption(ActivityBodyJson);
+const decodeCursorOption = Schema.decodeUnknownOption(ActivityCursor);
+
+const activityValues = (row: ActivityRow): typeof activity.$inferInsert => ({
+  id: row.id,
+  sortKey: cursorOf(row),
+  at: row.at,
+  doerKind: row.doer._tag,
+  doerUser: row.doer._tag === "Member" ? row.doer.user : null,
+  body: encodeActivityBody({
+    event: row.event,
+    ...(row.target === undefined ? {} : { target: row.target }),
+  }),
+});
+
+/** An item this code cannot read, such as a kind a newer build added, is left out. */
+const activityFrom = (record: ActivityRecord): Option.Option<ActivityRow> =>
+  Option.flatMap(decodeActivityBody(record.body), (body) =>
+    decodeActivityRow({
+      id: record.id,
+      at: record.at,
+      doer:
+        record.doerUser === null
+          ? { _tag: record.doerKind }
+          : { _tag: "Member", user: record.doerUser },
+      ...body,
+    }),
+  );
 
 const catFrom = (row: CatRow | undefined) =>
   row === undefined
@@ -131,6 +169,7 @@ export const SqliteRoomStore = Layer.effect(
         state: ActiveRoom,
         notes: ReadonlyArray<AppendedNote>,
         catEntries: ReadonlyArray<CatEntry>,
+        items: ReadonlyArray<ActivityRow>,
       ) =>
         db
           .transaction((tx) =>
@@ -163,6 +202,19 @@ export const SqliteRoomStore = Layer.effect(
                   at: entry.at,
                   body: encodeCatEvent(entry.event),
                 });
+              }
+              for (const item of items) {
+                const values = activityValues(item);
+                yield* tx
+                  .insert(activity)
+                  .values(values)
+                  .onConflictDoUpdate({ target: activity.id, set: values });
+              }
+              if (items.length > 0) {
+                // Kept for 30 days behind the newest item: the room has no clock of its own.
+                const [newest] = yield* tx.select({ at: max(activity.at) }).from(activity);
+                const cutoff = (newest?.at ?? 0) - activityRetentionMillis;
+                yield* tx.delete(activity).where(lt(activity.at, cutoff));
               }
             }),
           )
@@ -221,6 +273,57 @@ export const SqliteRoomStore = Layer.effect(
           .where(gte(catEntry.at, since))
           .orderBy(asc(catEntry.seq))
           .pipe(Effect.map(catEntriesFrom), Effect.orDie),
+      activityBefore: (before: ActivityCursor | undefined, limit: number) =>
+        db
+          .select()
+          .from(activity)
+          .where(before === undefined ? undefined : lt(activity.sortKey, before))
+          .orderBy(desc(activity.sortKey))
+          .limit(pageSize(limit))
+          .pipe(
+            Effect.map((rows) => rows.flatMap((row) => Option.toArray(activityFrom(row)))),
+            Effect.orDie,
+          ),
+      // The caller's own items are never theirs to read.
+      unreadCount: (user: UserId, mark: ActivityCursor | undefined) =>
+        db
+          .select({ n: count() })
+          .from(activity)
+          .where(
+            and(
+              mark === undefined ? undefined : gt(activity.sortKey, mark),
+              or(isNull(activity.doerUser), ne(activity.doerUser, user)),
+            ),
+          )
+          .pipe(
+            Effect.map(([row]) => row?.n ?? 0),
+            Effect.orDie,
+          ),
+      readMark: (user: UserId) =>
+        db
+          .select()
+          .from(activityRead)
+          .where(eq(activityRead.user, user))
+          .pipe(
+            Effect.map(([row]) =>
+              row === undefined ? Option.none() : decodeCursorOption(row.upTo),
+            ),
+            Effect.orDie,
+          ),
+      saveReadMark: (user: UserId, mark: ActivityCursor) =>
+        db
+          .insert(activityRead)
+          .values({ user, upTo: mark })
+          .onConflictDoUpdate({ target: activityRead.user, set: { upTo: mark } })
+          .pipe(Effect.asVoid, Effect.orDie),
+      forgetActivity: db
+        .transaction((tx) =>
+          Effect.gen(function* () {
+            yield* tx.delete(activity);
+            yield* tx.delete(activityRead);
+          }),
+        )
+        .pipe(Effect.asVoid, Effect.orDie),
       forgetCat: db
         .transaction((tx) =>
           Effect.gen(function* () {
