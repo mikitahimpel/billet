@@ -86,10 +86,9 @@ struct Polaroid<Photo: View>: View {
         .padding([.top, .horizontal], border)
         .padding(.bottom, border * 0.6)
         .frame(width: width)
-        .background { PaperSheet(cornerRadius: 2.5) }
-        .compositingGroup()
-        .shadow(color: .black.opacity(lifted ? 0.16 : 0), radius: 1, y: 1)
-        .shadow(color: .black.opacity(lifted ? 0.24 : 0), radius: width * 0.05, y: width * 0.035)
+        .background {
+            PaperSheet(cornerRadius: 2.5, lift: lifted ? PaperSheet.Lift(radius: width * 0.05, y: width * 0.035) : nil)
+        }
         .sensoryFeedback(trigger: undeveloped) { old, new in
             old && !new && AppSettings.haptics ? .impact(flexibility: .soft, intensity: 0.7) : nil
         }
@@ -98,21 +97,34 @@ struct Polaroid<Photo: View>: View {
 }
 
 /// Polaroid paper: the frame color with a soft grain, for prints and the notes that sit with them.
+///
+/// The grain is baked into a tile of the paper's own color and the shadow is cast by the sheet's shape, so a feed of
+/// prints scrolls without a blend or a shadow traced from each card's pixels, both offscreen passes.
 struct PaperSheet: View {
+    /// A sheet lying on something: a tight contact shadow and a soft one `radius` wide, `y` below.
+    struct Lift {
+        var radius: CGFloat = 8
+        var y: CGFloat = 6
+        var opacity: Double = 0.24
+    }
+
     var color: Color = PolaroidPaper.frame
     var cornerRadius: CGFloat = 3
+    var lift: Lift?
 
     var body: some View {
-        RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(color)
-            .overlay {
-                Image(uiImage: PaperGrain.tile)
-                    .resizable(resizingMode: .tile)
-                    .blendMode(.multiply)
-                    .opacity(0.4)
-                    .clipShape(.rect(cornerRadius: cornerRadius))
-                    .allowsHitTesting(false)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius)
+        ZStack {
+            if let lift {
+                shape.fill(color)
+                    .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
+                    .shadow(color: .black.opacity(lift.opacity), radius: lift.radius, y: lift.y)
             }
+            Image(uiImage: PaperGrain.tile(on: color))
+                .resizable(resizingMode: .tile)
+                .clipShape(shape)
+                .allowsHitTesting(false)
+        }
     }
 }
 
@@ -155,20 +167,39 @@ private nonisolated struct RaggedStrip: Shape {
 
 /// A small tile of light noise, multiplied over paper so it reads as paper rather than flat color.
 enum PaperGrain {
-    static let tile: UIImage = {
-        let side = 96
+    private static let side = 96
+    /// The grain's levels, 226–255, one per pixel of a `side`-square tile.
+    private static let levels: [UInt8] = {
         var state: UInt32 = 0x9E37_79B9
-        var pixels = [UInt8](repeating: 0, count: side * side)
-        for i in pixels.indices {
+        return (0..<side * side).map { _ in
             state = state &* 1_664_525 &+ 1_013_904_223
-            pixels[i] = 226 + UInt8(truncatingIfNeeded: state >> 24) % 30
+            return 226 + UInt8(truncatingIfNeeded: state >> 24) % 30
+        }
+    }()
+    private static var tiles: [UInt32: UIImage] = [:]
+
+    /// A tile of `color` with the grain multiplied in at 40%, made once per color.
+    static func tile(on color: Color) -> UIImage {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        let rgb = [r, g, b].map { UInt8(max(0, min(1, $0)) * 255) }
+        let key = UInt32(rgb[0]) << 16 | UInt32(rgb[1]) << 8 | UInt32(rgb[2])
+        if let tile = tiles[key] { return tile }
+        var pixels = [UInt8](repeating: 255, count: side * side * 4)
+        for (i, level) in levels.enumerated() {
+            // Multiply at 40%: the paper darkened by up to 40% of how dark the grain is there.
+            let shade = 0.6 + 0.4 * Double(level) / 255
+            for c in 0..<3 { pixels[i * 4 + c] = UInt8(Double(rgb[c]) * shade) }
         }
         let image = pixels.withUnsafeMutableBytes { buffer -> CGImage? in
-            CGContext(data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side,
-                      space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)?.makeImage()
+            CGContext(data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                      space: CGColorSpaceCreateDeviceRGB(),
+                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)?.makeImage()
         }
-        return image.map { UIImage(cgImage: $0, scale: 2, orientation: .up) } ?? UIImage()
-    }()
+        let tile = image.map { UIImage(cgImage: $0, scale: 2, orientation: .up) } ?? UIImage()
+        tiles[key] = tile
+        return tile
+    }
 }
 
 extension Moment {
