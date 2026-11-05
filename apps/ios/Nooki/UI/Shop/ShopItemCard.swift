@@ -1,11 +1,10 @@
 import SwiftUI
 
 /// An item on the Shop: its art large and lifted in the rarity frame, the name, what it does for Mochi, and its
-/// price pill, which buys it in one tap. `large` is the art-first card of the daily deals.
+/// price pill, which buys it in one tap.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
-    var large = false
     var onTap: () -> Void
 
     private var owned: Bool { state.shop.owned.contains(item.id) }
@@ -20,7 +19,7 @@ struct ShopItemCard: View {
                     art
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.name)
-                            .font(large ? .nookiTitle : .nookiHeadline)
+                            .font(.nookiHeadline)
                             .foregroundStyle(Ink.text)
                             .lineLimit(2)
                         if let mood = item.mood {
@@ -41,9 +40,9 @@ struct ShopItemCard: View {
             PriceButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
                         buy: { state.shop.buy(item) }, fills: true)
         }
-        .padding(large ? Space.m : Space.s + 2)
+        .padding(Space.s + 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .shopCard(radius: large ? Radius.hero : Radius.card)
+        .shopCard()
     }
 
     private var art: some View {
@@ -52,13 +51,13 @@ struct ShopItemCard: View {
                 Lifted {
                     Image(uiImage: image).resizable().scaledToFit()
                 }
-                .padding(large ? Space.l : Space.s)
+                .padding(Space.s)
                 .padding(.bottom, Space.xs)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
             }
         }
-        .aspectRatio(large ? 1 : 1.05, contentMode: .fit)
+        .aspectRatio(1.05, contentMode: .fit)
         .overlay(alignment: .topLeading) {
             ShopTag(text: item.rarity.title, fill: item.rarity.tint).padding(Space.s)
         }
@@ -66,8 +65,6 @@ struct ShopItemCard: View {
             if isDeal, !owned {
                 ShopTag(text: "−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%",
                         fill: ShopInk.coral)
-                    .scaleEffect(large ? 1.25 : 1, anchor: .topTrailing)
-                    .rotationEffect(.degrees(4))
                     .padding(Space.s)
             } else if item.isNew, !owned {
                 ShopTag(text: "New", fill: .honey).padding(Space.s)
