@@ -37,6 +37,12 @@ describe("defineExperiment", () => {
     ["a description over 500 characters", { description: "x".repeat(501) }],
     ["a malformed app version bound", { targeting: { minAppVersion: "v1" } }],
     ["an unknown age band", { targeting: JSON.parse('{ "ageBands": ["21+"] }') }],
+    ["a paired-since without a time zone", { targeting: { pairedSince: "2026-11-05T09:30" } }],
+    ["a paired-since that is only a day", { targeting: { pairedSince: "2026-11-05" } }],
+    [
+      "a paired-since that is not a real moment",
+      { targeting: { pairedSince: "2026-13-45T99:99Z" } },
+    ],
     ["a fractional weight", { variants: { a: 0.5, b: 1 } }],
     ["exposure above 100", { exposure: 101 }],
     ["negative exposure", { exposure: -1 }],

@@ -33,10 +33,15 @@ public enum Routes {
   public static let reportEvents = Route(.post, "/v1/events")
   public static let getOnboarding = Route(.get, "/v1/onboarding")
   public static let saveOnboardingAnswer = Route(.post, "/v1/onboarding/answers")
+  /// The couple's cat: its profile, temper and needs; `PUT` adopts or renames it.
+  public static let getCat = Route(.get, "/v1/cat")
+  public static let saveCat = Route(.put, "/v1/cat")
+  public static let listCatJournal = Route(.get, "/v1/cat/journal")
+  public static let recordCatEvent = Route(.post, "/v1/cat/events")
   public static let purchase = Route(.post, "/v1/purchases")
   /// Dev server only: the mock store's purchases and refunds.
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")
-  public static let getStamps = Route(.get, "/v1/stamps")
+  public static let getPurchases = Route(.get, "/v1/purchases")
   /// Called by Apple, never by the app. Mirrored so the contract test covers every route.
   public static let appStoreNotifications = Route(.post, "/v1/appstore/notifications")
 

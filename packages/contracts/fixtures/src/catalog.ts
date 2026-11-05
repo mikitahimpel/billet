@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { CatEntry, CatEvent, CatNeeds, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
 import {
   DeviceId,
@@ -43,7 +44,7 @@ import {
   MockPurchaseRequest,
   PurchaseRequest,
   PurchaseResponse,
-  StampsResponse,
+  PurchasesResponse,
 } from "@billet/contracts-http-api/purchase";
 import {
   ListNotesResponse,
@@ -56,6 +57,13 @@ import {
   SaveOnboardingAnswerRequest,
 } from "@billet/contracts-http-api/onboarding";
 import { OnboardingAnswer, OnboardingStep } from "@billet/contracts-domain/onboarding";
+import {
+  CatJournalResponse,
+  CatResponse,
+  RecordCatEventRequest,
+  RecordCatEventResponse,
+  SaveCatRequest,
+} from "@billet/contracts-http-api/cat";
 import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
@@ -123,7 +131,28 @@ const drawing = Note.cases.Drawing.make({
   compact,
   image,
 });
+// Stored before photos carried a size and a preview: it must still decode.
 const photo = Note.cases.Photo.make({ id: noteId, author: bob, sentAt: 1_700_000_001_000, image });
+const photoImage = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-2.jpg");
+const photoShape = {
+  image: photoImage,
+  width: 3024,
+  height: 4032,
+  preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+} as const;
+const photoWithCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+  caption: "sunset from the bridge 🌉",
+});
+const photoWithoutCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+});
 const drawingOnPaper = Note.cases.Drawing.make({
   id: noteId,
   author: alice,
@@ -202,6 +231,45 @@ const nameStep = onboardingStep({
 });
 const onboardingAnswer = Schema.decodeUnknownSync(OnboardingAnswer);
 
+const catProfile = Schema.decodeUnknownSync(CatProfile)({
+  name: "Mochi",
+  look: { model: "marmalade", coat: "natural" },
+  bornAt: 1_700_000_000_000,
+  natureSeed: "12345678901234567890",
+  utcOffsetSeconds: 3600,
+});
+const catEvents = {
+  fed: { _tag: "Fed", grams: 40 },
+  petted: { _tag: "Petted" },
+  played: { _tag: "Played" },
+  watered: { _tag: "Watered" },
+  "note-shared": { _tag: "NoteShared", note: "note-1", kind: "Photo" },
+  "game-played": { _tag: "GamePlayed", game: "laser", score: 7, won: true },
+  slept: { _tag: "Slept" },
+  shooed: { _tag: "Shooed" },
+} as const;
+const catEvent = (name: keyof typeof catEvents): CatEvent =>
+  Schema.decodeUnknownSync(CatEvent)(catEvents[name]);
+const catEntry = (seq: number, name: keyof typeof catEvents, by = alice): CatEntry =>
+  Schema.decodeUnknownSync(CatEntry)({
+    seq,
+    id: idempotencyKey,
+    by,
+    at: 1_700_000_100_000 + seq * 1000,
+    event: catEvents[name],
+  });
+const catTemper: CatTemper = { curious: 0.5, lazy: 0.46, cuddly: 0.62 };
+const catNeeds: CatNeeds = {
+  at: 1_700_000_200_000,
+  full: 0.81,
+  rested: 0.64,
+  loved: 0.52,
+  playful: 0.43,
+  mood: 0.57,
+  asleep: false,
+};
+const lonelyCatNeeds: CatNeeds = { ...catNeeds, loved: 0.31, missing: bob };
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -210,6 +278,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     drawing,
     "drawing-on-paper": drawingOnPaper,
     photo,
+    "photo-with-caption": photoWithCaption,
+    "photo-without-caption": photoWithoutCaption,
     text,
     "text-without-paper": plainText,
   }),
@@ -218,6 +288,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "widget-push": DeliveryLane.cases.WidgetPush.make({}),
     "alert-push": DeliveryLane.cases.AlertPush.make({}),
     "timeline-refresh": DeliveryLane.cases.TimelineRefresh.make({}),
+    "live-activity-push": DeliveryLane.cases.LiveActivityPush.make({}),
   }),
   fixture("CreateInviteResponse", CreateInviteResponse, {
     default: { code, expiresAt: 1_700_086_400_000 },
@@ -233,7 +304,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       image,
       paper: "blush",
     }),
-    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
+    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, ...photoShape }),
+    "photo-with-caption": SendNoteRequest.cases.Photo.make({
+      key: idempotencyKey,
+      ...photoShape,
+      caption: "sunset from the bridge 🌉",
+    }),
     text: SendNoteRequest.cases.Text.make({
       key: idempotencyKey,
       text: "miss you already 💛",
@@ -321,6 +397,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("RegisterPushTokenRequest", RegisterPushTokenRequest, {
     alert: { kind: "alert", environment: "production", token: pushToken },
     widget: { kind: "widget", environment: "sandbox", token: pushToken },
+    "live-activity": { kind: "liveactivity", environment: "production", token: pushToken },
   }),
   fixture("ApiError", ApiError, {
     unauthorized: ApiError.cases.Unauthorized.make({}),
@@ -340,12 +417,12 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("MockPurchaseRequest", MockPurchaseRequest, {
     purchase: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "purchase",
     },
     refund: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "refund",
     },
@@ -353,20 +430,20 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("PurchaseResponse", PurchaseResponse, {
     default: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: false,
     },
     duplicate: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: true,
     },
   }),
-  fixture("StampsResponse", StampsResponse, {
+  fixture("PurchasesResponse", PurchasesResponse, {
     default: {
       balance: 550,
       entries: [
@@ -374,21 +451,21 @@ export const catalog: ReadonlyArray<Fixture> = [
           id: "purchase:2000000812345678",
           kind: "purchase",
           amount: 100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-04T15:00:00.000Z",
         },
         {
           id: "purchase:2000000812345679",
           kind: "purchase",
           amount: 550,
-          productId: "com.mikitahimpel.billet.stamps.550",
+          productId: "com.mikitahimpel.billet.coins.550",
           at: "2026-11-04T15:05:00.000Z",
         },
         {
           id: "refund:2000000812345678",
           kind: "refund",
           amount: -100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-05T09:30:00.000Z",
         },
       ],
@@ -431,16 +508,77 @@ export const catalog: ReadonlyArray<Fixture> = [
       answeredAt: 1_700_000_001_000,
     }),
   }),
+  fixture(
+    "CatEvent",
+    CatEvent,
+    Object.fromEntries(
+      (Object.keys(catEvents) as Array<keyof typeof catEvents>).map((name) => [
+        name,
+        catEvent(name),
+      ]),
+    ),
+  ),
+  fixture("CatEntry", CatEntry, {
+    default: catEntry(3, "game-played"),
+    "note-shared": catEntry(4, "note-shared", bob),
+  }),
+  fixture("CatProfile", CatProfile, { default: catProfile }),
+  fixture("CatTemper", CatTemper, { default: catTemper }),
+  fixture("CatNeeds", CatNeeds, { default: catNeeds, missing: lonelyCatNeeds }),
+  fixture("CatResponse", CatResponse, {
+    default: { cat: catProfile, temper: catTemper, needs: lonelyCatNeeds, lastSeq: 4 },
+    "not-adopted": {
+      temper: { curious: 0.5, lazy: 0.5, cuddly: 0.5 },
+      needs: { ...catNeeds, full: 0.7, rested: 0.7, loved: 0.7, playful: 0.7, mood: 0.7 },
+      lastSeq: 0,
+    },
+  }),
+  fixture("SaveCatRequest", SaveCatRequest, {
+    default: Schema.decodeUnknownSync(SaveCatRequest)({
+      name: "Мочи 🐾",
+      look: { model: "detailed", coat: "greyWhite" },
+      utcOffsetSeconds: -18_000,
+    }),
+  }),
+  fixture("RecordCatEventRequest", RecordCatEventRequest, {
+    fed: { id: idempotencyKey, event: catEvent("fed") },
+    "game-played": { id: idempotencyKey, event: catEvent("game-played") },
+  }),
+  fixture("RecordCatEventResponse", RecordCatEventResponse, {
+    default: { entry: catEntry(1, "fed"), temper: catTemper, needs: catNeeds },
+  }),
+  fixture("CatJournalResponse", CatJournalResponse, {
+    default: { entries: [catEntry(1, "fed"), catEntry(2, "petted", bob)] },
+    empty: { entries: [] },
+  }),
   fixture("ClientMessage", ClientMessage, {
     resume: ClientMessage.cases.Resume.make({ lastSeq: 7 }),
+    "resume-with-cat": ClientMessage.cases.Resume.make({ lastSeq: 7, lastCatSeq: 3 }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
+    "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ClientMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ClientMessage.cases.StrokeEnd.make({ id: 3 }),
+    clear: ClientMessage.cases.Clear.make({}),
   }),
   fixture("ServerMessage", ServerMessage, {
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
     "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
+    "photo-note-received": ServerMessage.cases.NoteReceived.make({
+      seq: 11,
+      note: photoWithCaption,
+    }),
+    "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
+    "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
+    "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
+    clear: ServerMessage.cases.Clear.make({}),
+    "cat-entry-added": ServerMessage.cases.CatEntryAdded.make({
+      entry: catEntry(5, "petted", bob),
+    }),
+    "cat-saved": ServerMessage.cases.CatSaved.make({ cat: catProfile }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),
@@ -454,5 +592,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       paper: "butter",
     }),
     "alert-text": PushPayload.cases.Alert.make({ noteId, author: alice, text: "home soon" }),
+    "live-activity": PushPayload.cases.LiveActivity.make({ noteId, author: alice, compact }),
+    "live-activity-on-paper": PushPayload.cases.LiveActivity.make({
+      noteId,
+      author: bob,
+      compact,
+      paper: "sky",
+    }),
   }),
 ];

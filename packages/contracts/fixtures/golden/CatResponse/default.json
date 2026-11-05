@@ -1,0 +1,28 @@
+{
+  "cat": {
+    "bornAt": 1700000000000,
+    "look": {
+      "coat": "natural",
+      "model": "marmalade"
+    },
+    "name": "Mochi",
+    "natureSeed": "12345678901234567890",
+    "utcOffsetSeconds": 3600
+  },
+  "lastSeq": 4,
+  "needs": {
+    "asleep": false,
+    "at": 1700000200000,
+    "full": 0.81,
+    "loved": 0.31,
+    "missing": "user-bob",
+    "mood": 0.57,
+    "playful": 0.43,
+    "rested": 0.64
+  },
+  "temper": {
+    "cuddly": 0.62,
+    "curious": 0.5,
+    "lazy": 0.46
+  }
+}

@@ -8,13 +8,13 @@
       "internalID": "6700000001",
       "localizations": [
         {
-          "description": "A handful of stamps for the shop.",
-          "displayName": "100 stamps",
+          "description": "A handful of coins for the shop.",
+          "displayName": "100 coins",
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.stamps.100",
-      "referenceName": "Stamps 100",
+      "productID": "com.mikitahimpel.billet.coins.100",
+      "referenceName": "Coins 100",
       "type": "Consumable"
     },
     {
@@ -23,13 +23,13 @@
       "internalID": "6700000002",
       "localizations": [
         {
-          "description": "A pouch of stamps for the shop.",
-          "displayName": "550 stamps",
+          "description": "A pouch of coins for the shop.",
+          "displayName": "550 coins",
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.stamps.550",
-      "referenceName": "Stamps 550",
+      "productID": "com.mikitahimpel.billet.coins.550",
+      "referenceName": "Coins 550",
       "type": "Consumable"
     },
     {
@@ -38,13 +38,13 @@
       "internalID": "6700000003",
       "localizations": [
         {
-          "description": "A chest of stamps for the shop.",
-          "displayName": "1,200 stamps",
+          "description": "A chest of coins for the shop.",
+          "displayName": "1,200 coins",
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.stamps.1200",
-      "referenceName": "Stamps 1200",
+      "productID": "com.mikitahimpel.billet.coins.1200",
+      "referenceName": "Coins 1200",
       "type": "Consumable"
     }
   ],

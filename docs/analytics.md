@@ -25,14 +25,15 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `DecoratingOpened` | none | | Do people decorate the room? |
 | `RoomItemPlaced`, `RoomItemMoved`, `RoomItemPutAway` | the item's id | | Which pieces go into rooms, and which come back out? |
 | `RoomCustomised` | what was changed, when that exists | | Do people change the room itself? |
+| `RoomOpened` | `room` or `city` | | Which of Nooki's rooms do people spend time in? With the `rooms` experiment: does one room hold a pair as well as two? |
 | `ShopOpened` | none | | Is the shop found? |
 | `ShopItemViewed` | the item's id | | Which items draw a look? |
-| `ShopItemBought` | the item's id | price in stamps | What do people spend their stamps on? |
+| `ShopItemBought` | the item's id | price in coins | What do people spend their coins on? |
 | `ShopOfferViewed` | the bundle's id, or the deal's item | | Which offers are seen: the week's bundle, the day's deals, the other bundles? |
-| `ShopBundleBought` | the bundle's id | price in stamps | Which bundles sell? |
-| `ShopPurchaseUndone` | the item's or bundle's id | stamps given back | What do people take back within the five seconds? |
-| `ShopDailyGiftClaimed` | `stamps` or the treat's id | stamps given | Does the free gift bring people back each day? |
-| `ShopGiftSent` | the item's id | price in stamps | What do people buy for each other? (Never the note.) |
+| `ShopBundleBought` | the bundle's id | price in coins | Which bundles sell? |
+| `ShopPurchaseUndone` | the item's or bundle's id | coins given back | What do people take back within the five seconds? |
+| `ShopDailyGiftClaimed` | `coins` or the treat's id | coins given | Does the free gift bring people back each day? |
+| `ShopGiftSent` | the item's id | price in coins | What do people buy for each other? (Never the note.) |
 | `StreakOpened` | none | | Is the streak's flame looked at? |
 | `StreakMilestoneSeen` | the milestone's id | | How far do streaks get? |
 | `WidgetAdded` | the widget kind, when known | | Which widgets are added? Once per kind. |
@@ -67,7 +68,7 @@ is needed, a word outside a closed list, and a value anywhere but a price.
 The admin panel's "In the app" page (`GET /admin/api/app-events`) reads the two D1 tables. For
 each event it shows the daily counts over the chosen range (7, 30 or 90 days), how many pairs did
 it at least once in the last 7 days, and how many people did it. Under "Most chosen" it shows the
-five most chosen things per name over the same range, with the stamps spent for purchases.
+five most chosen things per name over the same range, with the coins spent for purchases.
 
 ## On the phone
 

@@ -214,7 +214,7 @@ export const transactionPayload = (overrides: Record<string, unknown> = {}) => (
   transactionId: "2000000900000001",
   originalTransactionId: "2000000900000001",
   bundleId,
-  productId: "com.mikitahimpel.billet.stamps.100",
+  productId: "com.mikitahimpel.billet.coins.100",
   purchaseDate: Date.UTC(2026, 10, 4, 15),
   originalPurchaseDate: Date.UTC(2026, 10, 4, 15),
   quantity: 1,

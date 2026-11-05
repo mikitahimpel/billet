@@ -5,12 +5,15 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./image-type": "./src/image-type.ts",
     "./media-store": "./src/media-store.ts",
     "./notes-error": "./src/notes-error.ts",
     "./notes-routes": "./src/notes-routes.ts",
     "./notes-service": "./src/notes-service.ts",
     "./test/fake-world": "./test/fake-world.ts",
-    "./pair-rooms": "./src/pair-rooms.ts"
+    "./pair-rooms": "./src/pair-rooms.ts",
+    "./cat-routes": "./src/cat-routes.ts",
+    "./cat-service": "./src/cat-service.ts"
   },
   "scripts": {
     "lint": "oxlint .",

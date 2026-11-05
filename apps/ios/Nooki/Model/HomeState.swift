@@ -59,10 +59,50 @@ final class HomeState {
     var wishlist: Set<String> { wallet.wallet.wishlist }
     var gifted: Set<String> { wallet.wallet.gifted }
 
+    /// The Shop's daily and weekly rotations, the same on both partners' phones.
+    var offers: ShopOffers { ShopOffers(pairSeed: profile.couple.partners.sorted().joined(separator: "+")) }
+
+    /// Today's price: the deal price when the item is one of today's deals.
+    func price(of item: ShopItem, on date: Date = .now) -> Int {
+        offers.deal(for: item.id, on: date)?.price(of: item) ?? item.price
+    }
+
+    private static let giftFile = "Shop/gift.json"
+    private(set) var giftLog = SharedFile.read(GiftLog.self, from: giftFile) ?? GiftLog()
+
+    func canClaimGift(on date: Date = .now) -> Bool { giftLog.canClaim(on: date) }
+
+    /// Opens the day's free gift: coins into the wallet, or an item into the room's closet. Nil if it's already open.
+    func claimGift(on date: Date = .now) -> GiftReward? {
+        guard canClaimGift(on: date) else { return nil }
+        let reward = offers.gift(on: date, owned: owned)
+        wallet.update {
+            switch reward {
+            case .coins(let amount): $0.coins += amount
+            case .item(let id): $0.owned.insert(id)
+            }
+        }
+        giftLog.claimedDay = date
+        SharedFile.write(giftLog, to: Self.giftFile)
+        return reward
+    }
+
+    /// Buys the featured set's missing pieces at the set price.
+    @discardableResult
+    func buy(_ offer: FeaturedOffer) -> Bool {
+        guard let quote = ShopOffers.price(of: offer, owned: owned), coins >= quote.price else { return false }
+        wallet.update {
+            $0.coins -= quote.price
+            $0.owned.formUnion(offer.itemIDs)
+            $0.wishlist.subtract(offer.itemIDs)
+        }
+        return true
+    }
+
     /// Deducts from the shared wallet. Gifts arrive wrapped and the partner unwraps them.
     @discardableResult
     func buy(_ item: ShopItem, asGift: Bool = false) -> Bool {
-        let price = Catalog.price(of: item)
+        let price = price(of: item)
         guard coins >= price, !owned.contains(item.id) else { return false }
         wallet.update {
             $0.coins -= price
@@ -182,6 +222,7 @@ final class HomeState {
     func refresh() {
         profile.reload()
         wallet.reload()
+        giftLog = SharedFile.read(GiftLog.self, from: Self.giftFile) ?? giftLog
         partnerMoods.reload()
         us.reload()
         moments.reload()

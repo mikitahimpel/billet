@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./cat": "./src/cat.ts",
     "./pair-id": "./src/pair-id.ts",
     "./flags": "./src/flags.ts",
     "./ids": "./src/ids.ts",
@@ -13,7 +14,7 @@
     "./note": "./src/note.ts",
     "./delivery-lane": "./src/delivery-lane.ts",
     "./push-token": "./src/push-token.ts",
-    "./stamp-packs": "./src/stamp-packs.ts",
+    "./coin-packs": "./src/coin-packs.ts",
     "./onboarding": "./src/onboarding.ts"
   },
   "scripts": {

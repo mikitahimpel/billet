@@ -2138,3 +2138,66 @@ table.retention tr.total td {
   color: var(--muted);
   font-size: 13px;
 }
+
+table.metrics th[scope="row"],
+table.metrics td {
+  vertical-align: top;
+}
+
+table.metrics .sub {
+  display: block;
+}
+
+table.metrics .metric-diff {
+  margin-top: var(--s1);
+}
+
+table.metrics .metric-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-weight: 600;
+}
+
+table.metrics th[scope="row"] .sub {
+  font-weight: 400;
+}
+
+table.features thead th .sub {
+  display: block;
+  font-weight: 400;
+}
+
+table.features th.group-head {
+  text-align: center;
+  border-left: 1px solid var(--border);
+}
+
+table.features tr.area > * {
+  background: var(--subtle);
+}
+
+table.features .event {
+  padding-left: var(--s4);
+}
+
+table.features td.usage {
+  min-width: 96px;
+}
+
+.use-track {
+  display: block;
+  height: 4px;
+  margin-top: var(--s1);
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.use-fill {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+}

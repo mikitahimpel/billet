@@ -1,6 +1,7 @@
-import { and, asc, eq, gt, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, gte, isNull, or, sql } from "drizzle-orm";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
+import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
 import {
   RoomState,
@@ -9,7 +10,7 @@ import {
 } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
-import { note, room } from "./room-schema.ts";
+import { cat, catEntry, note, room } from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
 export class RoomDb extends Context.Service<RoomDb, RoomDatabase>()(
@@ -27,8 +28,61 @@ const pageSize = (limit: number): number =>
 const decodeRoom = Schema.decodeUnknownSync(RoomState);
 
 type RoomRow = typeof room.$inferSelect;
+type CatRow = typeof cat.$inferSelect;
+type CatEntryRow = typeof catEntry.$inferSelect;
 
-const roomFrom = (row: RoomRow | undefined): RoomState =>
+const CatEventJson = Schema.fromJsonString(CatEvent);
+const encodeCatEvent = Schema.encodeSync(CatEventJson);
+const decodeCatEntryOption = Schema.decodeUnknownOption(CatEntry);
+const decodeCatEventJson = Schema.decodeOption(CatEventJson);
+
+const catFrom = (row: CatRow | undefined) =>
+  row === undefined
+    ? {}
+    : {
+        cat: {
+          profile: {
+            name: row.name,
+            look: { model: row.model, coat: row.coat },
+            bornAt: row.bornAt,
+            natureSeed: row.natureSeed,
+            utcOffsetSeconds: row.utcOffsetSeconds,
+          },
+          temper: { curious: row.curious, lazy: row.lazy, cuddly: row.cuddly },
+          lastSeq: row.lastSeq,
+          ...(row.lastAt === null ? {} : { lastAt: row.lastAt }),
+        },
+      };
+
+const catValues = (state: ActiveRoom): typeof cat.$inferInsert | undefined => {
+  if (state.cat === undefined) return undefined;
+  const { profile, temper, lastSeq, lastAt } = state.cat;
+  return {
+    id: 1,
+    name: profile.name,
+    model: profile.look.model,
+    coat: profile.look.coat,
+    bornAt: profile.bornAt,
+    natureSeed: profile.natureSeed,
+    utcOffsetSeconds: profile.utcOffsetSeconds,
+    curious: temper.curious,
+    lazy: temper.lazy,
+    cuddly: temper.cuddly,
+    lastSeq,
+    lastAt: lastAt ?? null,
+  };
+};
+
+/** A row this code cannot read, such as an event a newer build added, is left out. */
+const catEntryFrom = (row: CatEntryRow): Option.Option<CatEntry> =>
+  Option.flatMap(decodeCatEventJson(row.body), (event) =>
+    decodeCatEntryOption({ seq: row.seq, id: row.id, by: row.by, at: row.at, event }),
+  );
+
+const catEntriesFrom = (rows: ReadonlyArray<CatEntryRow>): ReadonlyArray<CatEntry> =>
+  rows.flatMap((row) => Option.toArray(catEntryFrom(row)));
+
+const roomFrom = (row: RoomRow | undefined, catRow: CatRow | undefined): RoomState =>
   decodeRoom(
     row === undefined
       ? { _tag: "Vacant" }
@@ -41,6 +95,7 @@ const roomFrom = (row: RoomRow | undefined): RoomState =>
           ],
           lastSeq: row.lastSeq,
           streakDays: row.streakDays,
+          ...catFrom(catRow),
         },
   );
 
@@ -68,14 +123,15 @@ export const SqliteRoomStore = Layer.effect(
     const db = yield* RoomDb;
 
     return {
-      load: db
-        .select()
-        .from(room)
-        .pipe(
-          Effect.map(([row]) => roomFrom(row)),
-          Effect.orDie,
-        ),
-      commit: (state: ActiveRoom, notes: ReadonlyArray<AppendedNote>) =>
+      load: Effect.all([db.select().from(room), db.select().from(cat)]).pipe(
+        Effect.map(([[row], [catRow]]) => roomFrom(row, catRow)),
+        Effect.orDie,
+      ),
+      commit: (
+        state: ActiveRoom,
+        notes: ReadonlyArray<AppendedNote>,
+        catEntries: ReadonlyArray<CatEntry>,
+      ) =>
         db
           .transaction((tx) =>
             Effect.gen(function* () {
@@ -90,6 +146,22 @@ export const SqliteRoomStore = Layer.effect(
                   body: encodeNote(entry.note),
                   author: entry.note.author,
                   idempotencyKey: key,
+                });
+              }
+              const catRow = catValues(state);
+              if (catRow !== undefined) {
+                yield* tx
+                  .insert(cat)
+                  .values(catRow)
+                  .onConflictDoUpdate({ target: cat.id, set: catRow });
+              }
+              for (const entry of catEntries) {
+                yield* tx.insert(catEntry).values({
+                  seq: entry.seq,
+                  id: entry.id,
+                  by: entry.by,
+                  at: entry.at,
+                  body: encodeCatEvent(entry.event),
                 });
               }
             }),
@@ -125,6 +197,38 @@ export const SqliteRoomStore = Layer.effect(
           }
           return page;
         }).pipe(Effect.orDie),
+      catEntryById: (id: IdempotencyKey) =>
+        db
+          .select()
+          .from(catEntry)
+          .where(eq(catEntry.id, id))
+          .pipe(
+            Effect.map(([row]) => (row === undefined ? Option.none() : catEntryFrom(row))),
+            Effect.orDie,
+          ),
+      catEntriesAfter: (afterSeq: number, limit: number) =>
+        db
+          .select()
+          .from(catEntry)
+          .where(gt(catEntry.seq, afterSeq))
+          .orderBy(asc(catEntry.seq))
+          .limit(pageSize(limit))
+          .pipe(Effect.map(catEntriesFrom), Effect.orDie),
+      catEntriesSince: (since: EpochMillis) =>
+        db
+          .select()
+          .from(catEntry)
+          .where(gte(catEntry.at, since))
+          .orderBy(asc(catEntry.seq))
+          .pipe(Effect.map(catEntriesFrom), Effect.orDie),
+      forgetCat: db
+        .transaction((tx) =>
+          Effect.gen(function* () {
+            yield* tx.delete(catEntry);
+            yield* tx.delete(cat);
+          }),
+        )
+        .pipe(Effect.asVoid, Effect.orDie),
       // Notes stored before `author` existed have it only in the body.
       forgetAuthor: (author: UserId) =>
         Effect.gen(function* () {

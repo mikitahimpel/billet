@@ -48,12 +48,22 @@ let roundTrips: [String: RoundTrip] = [
   "PurchaseRequest": codec(PurchaseRequest.self),
   "MockPurchaseRequest": codec(MockPurchaseRequest.self),
   "PurchaseResponse": codec(PurchaseResponse.self),
-  "StampsResponse": codec(StampsResponse.self),
+  "PurchasesResponse": codec(StampsResponse.self),
   "AppStoreNotificationRequest": codec(AppStoreNotificationRequest.self),
   "OnboardingStep": codec(OnboardingStep.self),
   "OnboardingAnswer": codec(OnboardingAnswer.self),
   "OnboardingResponse": codec(OnboardingResponse.self),
   "SaveOnboardingAnswerRequest": codec(SaveOnboardingAnswerRequest.self),
+  "CatEvent": codec(CatEvent.self),
+  "CatEntry": codec(CatEntry.self),
+  "CatProfile": codec(CatProfile.self),
+  "CatTemper": codec(CatTemper.self),
+  "CatNeeds": codec(CatNeeds.self),
+  "CatResponse": codec(CatResponse.self),
+  "SaveCatRequest": codec(SaveCatRequest.self),
+  "RecordCatEventRequest": codec(RecordCatEventRequest.self),
+  "RecordCatEventResponse": codec(RecordCatEventResponse.self),
+  "CatJournalResponse": codec(CatJournalResponse.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

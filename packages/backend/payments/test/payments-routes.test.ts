@@ -7,11 +7,12 @@ import { AuthService } from "@billet/backend-auth/auth-service";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { PurchaseResponse, StampsResponse } from "@billet/contracts-http-api/purchase";
+import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
 import { PaymentsConfig, settingsForStage } from "../src/payments-config.ts";
-import { PaymentsRepository, StampOwner } from "../src/payments-repository.ts";
+import { PaymentsRepository, CoinOwner } from "../src/payments-repository.ts";
 import { PaymentsRoutes } from "../src/payments-routes.ts";
 import { PaymentsService } from "../src/payments-service.ts";
+import { PaymentsSwitch } from "../src/payments-switch.ts";
 import {
   makeChain,
   makeXcodeChain,
@@ -48,6 +49,7 @@ const FakeAuth = Layer.succeed(
 const FakePairing = Layer.succeed(PairingRepository, {
   saveInvite: () => Effect.die("unused"),
   claimInvite: () => Effect.die("unused"),
+  pairedAt: () => Effect.die("unused"),
   findMembers: () => Effect.die("unused"),
   unpair: () => Effect.die("unused"),
   findPair: (userId) =>
@@ -62,12 +64,13 @@ const [apple, xcode] = await Promise.all([makeChain(), makeXcodeChain()]);
 
 const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
 
-const setup = (stage: string) => {
+// Payments on unless a test says otherwise: these tests are about buying, not the flag.
+const setup = (stage: string, payments: Layer.Layer<PaymentsSwitch> = PaymentsSwitch.on) => {
   const memory = makeInMemoryPaymentsRepository();
   const config = PaymentsConfig.with(settingsForStage(stage, [apple.root]));
   const app = HttpRouter.toWebHandler(
     PaymentsRoutes.pipe(
-      Layer.provide(Layer.mergeAll(FakeAuth, PaymentsService.layer, config)),
+      Layer.provide(Layer.mergeAll(FakeAuth, PaymentsService.layer, payments, config)),
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PaymentsRepository, memory.repository),
@@ -112,8 +115,8 @@ const notification = async (type: string, signedTransactionInfo?: string, overri
 });
 
 const decodePurchase = Schema.decodeUnknownSync(PurchaseResponse);
-const decodeStamps = Schema.decodeUnknownSync(StampsResponse);
-const owner = Schema.decodeSync(StampOwner);
+const decodeCoins = Schema.decodeUnknownSync(PurchasesResponse);
+const owner = Schema.decodeSync(CoinOwner);
 
 describe("purchases on prod", () => {
   const app = setup("prod");
@@ -123,21 +126,21 @@ describe("purchases on prod", () => {
   const buy = async (user: string, signedTransaction: string) =>
     handler(post("/v1/purchases", { signedTransaction }, bearer(user)));
 
-  const stampsOf = async (user: string) =>
-    decodeStamps(
+  const purchasesOf = async (user: string) =>
+    decodeCoins(
       await (
-        await handler(new Request("http://billet.test/v1/stamps", { headers: bearer(user) }))
+        await handler(new Request("http://billet.test/v1/purchases", { headers: bearer(user) }))
       ).json(),
     );
 
   it("credits a verified pack to the caller's pair, once", async () => {
-    const signed = await appleTransaction({ productId: "com.mikitahimpel.billet.stamps.550" });
+    const signed = await appleTransaction({ productId: "com.mikitahimpel.billet.coins.550" });
     const first = await buy("paired-ana", signed);
     expect(first.status).toBe(200);
     const credited = decodePurchase(await first.json());
     expect(credited).toMatchObject({
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 550,
       duplicate: false,
     });
@@ -145,14 +148,14 @@ describe("purchases on prod", () => {
     const again = decodePurchase(await (await buy("paired-ana", signed)).json());
     expect(again).toEqual({ ...credited, duplicate: true });
 
-    const { balance, entries } = await stampsOf("paired-ana");
+    const { balance, entries } = await purchasesOf("paired-ana");
     expect(balance).toBe(550);
     expect(entries).toEqual([
       {
         id: `purchase:${credited.transactionId}`,
         kind: "purchase",
         amount: 550,
-        productId: "com.mikitahimpel.billet.stamps.550",
+        productId: "com.mikitahimpel.billet.coins.550",
         at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
       },
     ]);
@@ -174,7 +177,7 @@ describe("purchases on prod", () => {
     ["another app's bundle", () => appleTransaction({ bundleId: "com.example.other" })],
     [
       "a product that is not a pack",
-      () => appleTransaction({ productId: "com.mikitahimpel.billet.stamps.5" }),
+      () => appleTransaction({ productId: "com.mikitahimpel.billet.coins.5" }),
     ],
     ["a non-consumable", () => appleTransaction({ type: "Non-Consumable" })],
     ["a revoked transaction", () => appleTransaction({ revocationDate: Date.UTC(2026, 10, 5) })],
@@ -196,7 +199,7 @@ describe("purchases on prod", () => {
     const response = await buy("paired-bad", await make());
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ _tag: "InvalidPurchase" });
-    expect((await stampsOf("paired-bad")).balance).toBe(0);
+    expect((await purchasesOf("paired-bad")).balance).toBe(0);
   });
 
   it("answers 404 NotFound to a caller with no pair, and 401 without a session", async () => {
@@ -219,7 +222,7 @@ describe("purchases on prod", () => {
       post(
         "/v1/purchases/mock",
         {
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           transactionId: "mock-1",
           kind: "purchase",
         },
@@ -235,10 +238,12 @@ describe("purchases on prod", () => {
       post("/v1/purchases", { signedTransaction: signed }, { "x-billet-demo-room": "ABC123" }),
     );
     expect(response.status).toBe(401);
-    const stamps = await handler(
-      new Request("http://billet.test/v1/stamps", { headers: { "x-billet-demo-room": "ABC123" } }),
+    const coins = await handler(
+      new Request("http://billet.test/v1/purchases", {
+        headers: { "x-billet-demo-room": "ABC123" },
+      }),
     );
-    expect(stamps.status).toBe(401);
+    expect(coins.status).toBe(401);
   });
 });
 
@@ -270,20 +275,20 @@ describe("purchases on dev", () => {
     expect((await buy(bearer("paired-dev"), signed)).status).toBe(400);
   });
 
-  it("keeps a demo room's stamps under demo:<code> when there is no session", async () => {
+  it("keeps a demo room's coins under demo:<code> when there is no session", async () => {
     const response = await buy({ "x-billet-demo-room": "ROOM_42-a" }, await appleTransaction());
     expect(response.status).toBe(200);
     const ledger = await Effect.runPromise(app.memory.repository.ledger(owner("demo:ROOM_42-a")));
     expect(ledger.balance).toBe(100);
-    const stamps = await handler(
-      new Request("http://billet.test/v1/stamps", {
+    const coins = await handler(
+      new Request("http://billet.test/v1/purchases", {
         headers: { "x-billet-demo-room": "ROOM_42-a" },
       }),
     );
-    expect(decodeStamps(await stamps.json()).balance).toBe(100);
+    expect(decodeCoins(await coins.json()).balance).toBe(100);
   });
 
-  it("gives the pair the stamps when a session comes with the header", async () => {
+  it("gives the pair the coins when a session comes with the header", async () => {
     const response = await buy(
       { ...bearer("paired-both"), "x-billet-demo-room": "ROOM-both" },
       await appleTransaction(),
@@ -308,7 +313,7 @@ describe("purchases on dev", () => {
       body: Record<string, unknown>,
       headers: Record<string, string> = bearer("paired-mock"),
     ) => handler(post("/v1/purchases/mock", body, headers));
-    const productId = "com.mikitahimpel.billet.stamps.1200";
+    const productId = "com.mikitahimpel.billet.coins.1200";
 
     it("credits, dedups and refunds a mock transaction", async () => {
       const transactionId = `mock-${crypto.randomUUID()}`;
@@ -318,7 +323,7 @@ describe("purchases on dev", () => {
       expect(bought).toEqual({
         transactionId,
         productId,
-        stamps: 1200,
+        coins: 1200,
         balance: 1200,
         duplicate: false,
       });
@@ -333,7 +338,7 @@ describe("purchases on dev", () => {
       expect(refunded).toEqual({
         transactionId,
         productId,
-        stamps: 1200,
+        coins: 1200,
         balance: 0,
         duplicate: false,
       });
@@ -367,6 +372,101 @@ describe("purchases on dev", () => {
       expect(response.status).toBe(400);
       expect(await response.json()).toEqual({ _tag: "InvalidPurchase" });
     });
+  });
+});
+
+describe("with the payments flag off", () => {
+  // On only for the pair `pair-paired-on`; every question is recorded.
+  const asked: Array<[string, string]> = [];
+  const app = setup(
+    "dev",
+    Layer.succeed(PaymentsSwitch, {
+      enabledFor: (caller, appVersion) => {
+        asked.push([caller, appVersion]);
+        return Effect.succeed(caller === "pair-paired-on");
+      },
+    }),
+  );
+  afterAll(() => app.dispose());
+  const { handler } = app;
+  const productId = "com.mikitahimpel.billet.coins.100";
+
+  it("answers 404 on every purchase route and changes nothing", async () => {
+    const responses = [
+      await handler(
+        post(
+          "/v1/purchases",
+          { signedTransaction: await appleTransaction() },
+          bearer("paired-off"),
+        ),
+      ),
+      await handler(
+        post(
+          "/v1/purchases/mock",
+          { productId, transactionId: "mock-flag-off", kind: "purchase" },
+          bearer("paired-off"),
+        ),
+      ),
+      await handler(
+        new Request("http://billet.test/v1/purchases", { headers: bearer("paired-off") }),
+      ),
+      await handler(
+        post(
+          "/v1/purchases/mock",
+          { productId, transactionId: "mock-flag-off-demo", kind: "purchase" },
+          { "x-billet-demo-room": "ROOM-off" },
+        ),
+      ),
+    ];
+    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404, 404]);
+    expect(await responses[0]?.json()).toEqual({ _tag: "NotFound" });
+    const pair = await Effect.runPromise(app.memory.repository.ledger(owner("pair-paired-off")));
+    expect(pair.entries).toEqual([]);
+  });
+
+  it("asks before reading the body, so a bad body is a 404 too", async () => {
+    const response = await handler(post("/v1/purchases", {}, bearer("paired-off")));
+    expect(response.status).toBe(404);
+  });
+
+  it("asks about the caller's pair or demo room, with its app version", async () => {
+    asked.length = 0;
+    await handler(
+      new Request("http://billet.test/v1/purchases", {
+        headers: { ...bearer("paired-off"), "x-billet-app-version": "1.2.0+14" },
+      }),
+    );
+    await handler(
+      new Request("http://billet.test/v1/purchases", {
+        headers: { "x-billet-demo-room": "ROOM-off" },
+      }),
+    );
+    expect(asked).toEqual([
+      ["pair-paired-off", "1.2.0+14"],
+      ["demo:ROOM-off", "unknown"],
+    ]);
+  });
+
+  it("still asks for a session first", async () => {
+    const response = await handler(new Request("http://billet.test/v1/purchases"));
+    expect(response.status).toBe(401);
+  });
+
+  it("serves a pair the flag is on for", async () => {
+    const response = await handler(
+      post(
+        "/v1/purchases/mock",
+        { productId, transactionId: "mock-flag-on", kind: "purchase" },
+        bearer("paired-on"),
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(decodePurchase(await response.json()).balance).toBe(100);
+  });
+
+  it("leaves App Store notifications alone", async () => {
+    const response = await handler(post("/v1/appstore/notifications", await notification("TEST")));
+    expect(response.status).toBe(200);
   });
 });
 
@@ -413,7 +513,7 @@ describe("App Store server notifications", () => {
 
   it("never takes the balance below 0, and flags the purchase", async () => {
     const { signed, transactionId } = await bought("paired-spent", {
-      productId: "com.mikitahimpel.billet.stamps.550",
+      productId: "com.mikitahimpel.billet.coins.550",
     });
     await memory.spend(owner("pair-paired-spent"), 500);
     expect((await notify(await notification("REFUND", signed))).status).toBe(200);
@@ -427,7 +527,7 @@ describe("App Store server notifications", () => {
     });
   });
 
-  it("gives the stamps back when Apple reverses a refund", async () => {
+  it("gives the coins back when Apple reverses a refund", async () => {
     const { signed, transactionId } = await bought("paired-reversed");
     await notify(await notification("REFUND", signed));
     expect((await notify(await notification("REFUND_REVERSED", signed))).status).toBe(200);

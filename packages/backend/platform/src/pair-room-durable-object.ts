@@ -1,7 +1,13 @@
 import { DurableObject } from "cloudflare:workers";
-import { Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
+import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
+import type {
+  CatResponse,
+  RecordCatEventRequest,
+  SaveCatRequest,
+} from "@billet/contracts-http-api/cat";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
@@ -25,6 +31,13 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import type { Note } from "@billet/contracts-domain/note";
+import { ProviderTokens, sendApns } from "./apns-client.ts";
+import { enabledPushLanes, sendPushLane, type PushLaneSettings } from "./apns-lanes.ts";
+import { dropToken, tokensOf } from "./partner-push-tokens.ts";
+import { clockOf } from "./effect-clock.ts";
+import { admitFrame, type FrameWindow } from "./frame-window.ts";
+import { systemNow } from "./wall-clock.ts";
 
 /** Who is connecting. Only the Worker can reach this object, after it has authenticated them. */
 export const ROOM_USER_HEADER = "x-billet-user";
@@ -37,12 +50,26 @@ const encodeServerMessage = Schema.encodeSync(Schema.fromJsonString(ServerMessag
 const maxFrameLength = 64 * 1024;
 /** Notes sent per storage read while catching a socket up. */
 const pageLimit = 100;
+/** Open live strokes kept per socket; a begin past it is dropped. Bounds the attachment. */
+const maxOpenStrokes = 16;
+
+/** The Worker bindings the room reads: the directory for tokens, and the APNs settings. */
+interface PairRoomEnv extends PushLaneSettings {
+  readonly DB: D1Database;
+}
 
 /** Kept on each hibernatable socket, so it survives the object leaving memory. */
 interface SocketAttachment {
   readonly user: string;
   /** The highest note `seq` this socket has been sent; null before it asked to resume. */
   readonly sentSeq: number | null;
+  /** Live strokes this socket began and has not ended, dropped for the partner if it leaves. */
+  readonly openStrokes?: ReadonlyArray<number>;
+  /**
+   * The highest cat journal `seq` this socket has been sent; null (or absent, on a socket accepted
+   * before the cat existed) until it resumes with `lastCatSeq`.
+   */
+  readonly sentCatSeq?: number | null;
 }
 
 const attachmentOf = (socket: WebSocket): SocketAttachment | undefined =>
@@ -71,26 +98,78 @@ export class PairRoom extends DurableObject {
     Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
   );
 
+  private readonly frameWindows = new WeakMap<WebSocket, FrameWindow>();
+
   private readonly runtime = this.database.then((database) =>
     ManagedRuntime.make(
       Layer.mergeAll(
         PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))),
         Observability,
+        Layer.succeed(
+          Clock.Clock,
+          clockOf(() => this.clock()),
+        ),
       ),
     ),
   );
 
-  /** The lanes each accepted note is handed to. None until a lane has a sender (#10). */
-  protected deliveryLanes: ReadonlyArray<string> = [];
+  /** The room's clock, for its notes' times and its delivery alarms; tests replace it. */
+  protected clock(): number {
+    return systemNow();
+  }
 
-  /** Tries one lane once. Without one configured the alarm has nothing to do. */
+  private get roomEnv(): PairRoomEnv {
+    return this.env as PairRoomEnv;
+  }
+
+  /**
+   * The lanes each accepted note is handed to: the APNs widget and alert lanes when the Worker has
+   * an APNs key, and the Live Activity lane when `LIVE_ACTIVITY_PUSH` is `on` (off by default).
+   */
+  protected deliveryLanes: ReadonlyArray<string> = enabledPushLanes(this.roomEnv);
+
+  /** Tries one lane once. Without an APNs key the alarm has nothing to do. */
   protected laneSender:
     | {
         readonly send: (
           entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">,
         ) => Promise<DeliveryOutcome>;
       }
-    | undefined = undefined;
+    | undefined = this.apnsLaneSender();
+
+  private apnsLaneSender() {
+    const env = this.roomEnv;
+    const key = env.APNS_KEY;
+    const keyId = env.APNS_KEY_ID;
+    if (!key || !keyId) return undefined;
+    const credentials = { key, keyId };
+    const nowSeconds = () => Math.floor(this.clock() / 1000);
+    const providerTokens = new ProviderTokens(nowSeconds);
+    return {
+      send: (entry: Pick<DeliveryEntry, "noteId" | "lane" | "attempts">) =>
+        sendPushLane(entry, {
+          note: (noteId) => this.recentNote(noteId),
+          recipient: async (note) => {
+            const room = await this.snapshot();
+            if (room._tag !== "Active") return undefined;
+            return room.members.find((member) => member.user !== note.author)?.user;
+          },
+          tokens: (user, kind) => tokensOf(env.DB, user, kind),
+          dropToken: (token, kind) => dropToken(env.DB, token, kind),
+          send: (push) => sendApns(push, credentials, providerTokens),
+          nowSeconds,
+        }),
+    };
+  }
+
+  /** A note among the room's latest; deliveries are only ever for notes just sent. */
+  private async recentNote(noteId: string): Promise<Note | undefined> {
+    const room = await this.snapshot();
+    const lastSeq = room._tag === "Active" ? room.lastSeq : 0;
+    const window = 100;
+    const page = await this.notes(Math.max(0, lastSeq - window), window);
+    return page.find((entry) => entry.note.id === noteId)?.note;
+  }
 
   /** Names this room in spans without naming the pair: the ref of the id it was opened by. */
   private readonly spanAttributes = {
@@ -124,15 +203,64 @@ export class PairRoom extends DurableObject {
         if (output._tag === "NoteAppended") await this.enqueueDeliveries(output.entry.note.id);
       }
       await this.pushNotes();
+      // A note to an adopted cat is also a journal entry.
+      if (decision.outputs.some((output) => output._tag === "CatEntryAppended")) {
+        await this.pushCatEntries();
+      }
     }
     return decision;
+  }
+
+  /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */
+  async saveCat(
+    user: UserId,
+    request: SaveCatRequest,
+    natureSeed: NatureSeed,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.saveCat(user, request, natureSeed),
+      "PairRoom.saveCat",
+    );
+    if (decision._tag === "Accepted") {
+      for (const output of decision.outputs) {
+        if (output._tag === "CatSaved") {
+          // Only sockets that follow the journal: an older build never sees a cat frame.
+          for (const socket of this.ctx.getWebSockets()) {
+            if (attachmentOf(socket)?.sentCatSeq != null) {
+              send(socket, { _tag: "CatSaved", cat: output.cat });
+            }
+          }
+        }
+      }
+    }
+    return decision;
+  }
+
+  /** Appends one journal entry and brings every socket that follows the journal up to date. */
+  async recordCatEvent(by: UserId, request: RecordCatEventRequest): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.recordCatEvent(by, request),
+      "PairRoom.recordCatEvent",
+    );
+    if (decision._tag === "Accepted") await this.pushCatEntries();
+    return decision;
+  }
+
+  /** The cat now, by the room's clock, or null while the room is not open. */
+  cat(): Promise<CatResponse | null> {
+    return this.run((room) => room.catView, "PairRoom.cat");
+  }
+
+  /** Journal entries with `seq` above `afterSeq`, in order. */
+  catJournal(afterSeq: number, limit: number): Promise<ReadonlyArray<CatEntry>> {
+    return this.run((room) => room.catEntriesAfter(afterSeq, limit), "PairRoom.catJournal");
   }
 
   /** Hands a note to every configured lane, once each, and makes sure the alarm will run. */
   private async enqueueDeliveries(noteId: string): Promise<void> {
     if (this.deliveryLanes.length === 0) return;
     const deliveries = deliveriesOf(await this.database);
-    const now = Date.now();
+    const now = this.clock();
     for (const lane of this.deliveryLanes) {
       const existing = await Effect.runPromise(deliveries.find(noteId, lane));
       if (existing === undefined) {
@@ -168,11 +296,11 @@ export class PairRoom extends DurableObject {
     if (sender === undefined) return;
     await traced("PairRoom.alarm", this.spanAttributes, async (context) => {
       const deliveries = deliveriesOf(await this.database);
-      const now = Date.now();
+      const now = this.clock();
       for (const entry of await Effect.runPromise(deliveries.all)) {
         if (!isDue(entry, now)) continue;
         const outcome = await sender.send(entry).catch((): DeliveryOutcome => "Retry");
-        const settled = settle(entry, outcome, Date.now());
+        const settled = settle(entry, outcome, this.clock());
         await Effect.runPromise(deliveries.save(settled));
         // One line per try: summing these per lane gives the delivery success rate.
         await Effect.runPromiseWith(context)(
@@ -209,7 +337,8 @@ export class PairRoom extends DurableObject {
 
   /**
    * The pair is ending because `user` is leaving: deletes every note they sent with its delivery
-   * rows, returns those notes so their images can go too, and closes every socket of the room.
+   * rows, and the cat with its whole journal, returns those notes so their images can go too, and
+   * closes every socket of the room.
    * Repeating it finds nothing more to delete.
    */
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
@@ -261,19 +390,25 @@ export class PairRoom extends DurableObject {
       socket.close(1009, "frame too large");
       return;
     }
+    if (!this.admitFrame(socket)) return;
     const message = decodeClientMessage(data);
     const attachment = attachmentOf(socket);
     if (message._tag === "None" || attachment === undefined) return;
 
     switch (message.value._tag) {
-      case "Resume":
-        // Start from what the client holds, never from more than it asks for.
+      case "Resume": {
+        // Start from what the client holds, never from more than it asks for. A client that
+        // leaves `lastCatSeq` out does not follow the cat's journal.
+        const { lastSeq, lastCatSeq } = message.value;
         socket.serializeAttachment({
           ...attachment,
-          sentSeq: Math.max(0, message.value.lastSeq),
+          sentSeq: Math.max(0, lastSeq),
+          sentCatSeq: lastCatSeq === undefined ? null : Math.max(0, lastCatSeq),
         } satisfies SocketAttachment);
         await this.catchUp(socket);
+        await this.catchUpCat(socket);
         return;
+      }
       case "Stroke": {
         // Live strokes are not stored or replayed: `seq` places one among the notes, as the
         // room's last note when it was relayed.
@@ -289,7 +424,55 @@ export class PairRoom extends DurableObject {
         }
         return;
       }
+      case "StrokeBegin": {
+        const open = attachment.openStrokes ?? [];
+        if (!open.includes(message.value.id)) {
+          if (open.length >= maxOpenStrokes) return;
+          socket.serializeAttachment({
+            ...attachment,
+            openStrokes: [...open, message.value.id],
+          } satisfies SocketAttachment);
+        }
+        this.toPartner(attachment.user, message.value);
+        return;
+      }
+      case "StrokePoints":
+        // Points of a stroke this socket never began would draw nothing on the partner's side.
+        if (attachment.openStrokes?.includes(message.value.id) !== true) return;
+        this.toPartner(attachment.user, message.value);
+        return;
+      case "StrokeEnd": {
+        const open = attachment.openStrokes ?? [];
+        const ended = message.value.id;
+        if (!open.includes(ended)) return;
+        socket.serializeAttachment({
+          ...attachment,
+          openStrokes: open.filter((id) => id !== ended),
+        } satisfies SocketAttachment);
+        this.toPartner(attachment.user, message.value);
+        return;
+      }
+      case "Clear":
+        this.toPartner(attachment.user, message.value);
+        return;
     }
+  }
+
+  /** Counts a frame against its socket's window, in memory: hibernation resets the window. */
+  private admitFrame(socket: WebSocket): boolean {
+    const { window, admitted } = admitFrame(this.frameWindows.get(socket), this.clock());
+    this.frameWindows.set(socket, window);
+    return admitted;
+  }
+
+  /** Tells the partner to discard the strokes a leaving socket left open. */
+  private dropOpenStrokes(socket: WebSocket): void {
+    const attachment = attachmentOf(socket);
+    if (attachment === undefined) return;
+    for (const id of attachment.openStrokes ?? []) {
+      this.toPartner(attachment.user, { _tag: "StrokeDropped", id });
+    }
+    socket.serializeAttachment({ ...attachment, openStrokes: [] } satisfies SocketAttachment);
   }
 
   /** Sends one socket every stored note it has not seen, oldest first, without repeats. */
@@ -304,9 +487,37 @@ export class PairRoom extends DurableObject {
         const current = attachmentOf(socket)?.sentSeq;
         if (current == null || entry.seq <= current) continue;
         send(socket, { _tag: "NoteReceived", seq: entry.seq, note: entry.note });
-        socket.serializeAttachment({ user: attachment.user, sentSeq: entry.seq });
+        socket.serializeAttachment({
+          ...attachmentOf(socket),
+          user: attachment.user,
+          sentSeq: entry.seq,
+        } satisfies SocketAttachment);
       }
     }
+  }
+
+  /** Sends one socket every journal entry it has not seen, oldest first, without repeats. */
+  private async catchUpCat(socket: WebSocket): Promise<void> {
+    for (;;) {
+      const attachment = attachmentOf(socket);
+      if (attachment?.sentCatSeq == null || socket.readyState !== WebSocket.OPEN) return;
+      const page = await this.catJournal(attachment.sentCatSeq, pageLimit);
+      if (page.length === 0) return;
+      for (const entry of page) {
+        const current = attachmentOf(socket);
+        if (current?.sentCatSeq == null || entry.seq <= current.sentCatSeq) continue;
+        send(socket, { _tag: "CatEntryAdded", entry });
+        socket.serializeAttachment({
+          ...current,
+          sentCatSeq: entry.seq,
+        } satisfies SocketAttachment);
+      }
+    }
+  }
+
+  /** After a journal entry is stored, brings every socket that follows the journal up to date. */
+  private async pushCatEntries(): Promise<void> {
+    await Promise.all(this.ctx.getWebSockets().map((socket) => this.catchUpCat(socket)));
   }
 
   /** After a note is stored, brings every resumed socket of the couple up to date. */
@@ -338,7 +549,9 @@ export class PairRoom extends DurableObject {
    * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
    */
   override async webSocketClose(socket: WebSocket, code: number): Promise<void> {
-    // Presence is settled before the early return below: a dropped phone takes that return.
+    // Presence and open strokes are settled before the early return below: a dropped phone takes
+    // that return.
+    this.dropOpenStrokes(socket);
     await this.leave(socket);
     if (code === 1006 || code === 1015) return;
     try {

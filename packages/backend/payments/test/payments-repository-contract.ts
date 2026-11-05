@@ -3,23 +3,23 @@ import { describe, expect, it } from "vitest";
 import {
   type NewPurchase,
   type PaymentsRepository,
-  StampOwner,
+  CoinOwner,
   type StoredNotification,
   type StoredPurchase,
 } from "../src/payments-repository.ts";
 
-const owner = Schema.decodeSync(StampOwner);
+const owner = Schema.decodeSync(CoinOwner);
 
 let counter = 0;
-const purchaseOf = (ownerId: StampOwner, stamps = 100): NewPurchase => {
+const purchaseOf = (ownerId: CoinOwner, coins = 100): NewPurchase => {
   counter += 1;
-  const id = `tx-${Date.now()}-${counter}`;
+  const id = `tx-${crypto.randomUUID()}-${counter}`;
   return {
     originalTransactionId: id,
     transactionId: id,
     ownerId,
-    productId: "com.mikitahimpel.billet.stamps.100",
-    stamps,
+    productId: "com.mikitahimpel.billet.coins.100",
+    coins,
     environment: "Sandbox",
     purchasedAt: 1_700_000_000_000,
     at: 1_700_000_000_000 + counter,
@@ -46,10 +46,10 @@ const notificationOf = (outcome: string): StoredNotification => ({
 export interface ContractSubject {
   readonly repository: PaymentsRepository["Service"];
   /**
-   * Takes stamps from an owner outside the repository's methods. Stamps are spent in the app
+   * Takes coins from an owner outside the repository's methods. Coins are spent in the app
    * today, so only a test can make the server's balance smaller than a purchase it refunds.
    */
-  readonly spend: (owner: StampOwner, stamps: number) => Promise<void>;
+  readonly spend: (owner: CoinOwner, coins: number) => Promise<void>;
 }
 
 export const paymentsRepositoryContract = (label: string, make: () => Promise<ContractSubject>) =>
@@ -95,7 +95,7 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
       await run(repository.credit(purchaseOf(pair, 550)));
 
       const refunded = await run(repository.refund(await stored(repository, id), later(2)));
-      expect(refunded).toEqual({ duplicate: false, stamps: 100, balance: 550 });
+      expect(refunded).toEqual({ duplicate: false, coins: 100, balance: 550 });
       // The same refund again, from the state read before it, changes nothing.
       expect(
         (
@@ -113,13 +113,13 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
 
       expect(await run(repository.restore(await stored(repository, id), later(4)))).toEqual({
         duplicate: false,
-        stamps: 100,
+        coins: 100,
         balance: 650,
       });
       expect(
         (await run(repository.restore(await stored(repository, id), later(5)))).duplicate,
       ).toBe(true);
-      expect((await run(repository.refund(await stored(repository, id), later(6)))).stamps).toBe(
+      expect((await run(repository.refund(await stored(repository, id), later(6)))).coins).toBe(
         100,
       );
 
@@ -150,7 +150,7 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
 
       expect(await run(repository.refund(await stored(repository, id), later(2)))).toEqual({
         duplicate: false,
-        stamps: 30,
+        coins: 30,
         balance: 0,
       });
       const after = await stored(repository, id);
@@ -164,7 +164,7 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
       // Apple reversing that refund gives back what it took, not the whole pack.
       expect(await run(repository.restore(after, later(3)))).toEqual({
         duplicate: false,
-        stamps: 30,
+        coins: 30,
         balance: 30,
       });
     });

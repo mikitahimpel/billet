@@ -44,10 +44,14 @@ import Testing
       "listNotes": Routes.listNotes,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
+      "getCat": Routes.getCat,
+      "saveCat": Routes.saveCat,
+      "listCatJournal": Routes.listCatJournal,
+      "recordCatEvent": Routes.recordCatEvent,
       "reportEvents": Routes.reportEvents,
       "purchase": Routes.purchase,
       "mockPurchase": Routes.mockPurchase,
-      "getStamps": Routes.getStamps,
+      "getPurchases": Routes.getPurchases,
       "appStoreNotifications": Routes.appStoreNotifications,
     ]
     #expect(contract == mirrored)

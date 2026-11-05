@@ -11,7 +11,7 @@ import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-
 import {
   StoredNotification,
   StoredPurchase,
-  StoredStampEntry,
+  StoredPurchaseEntry,
 } from "@billet/backend-payments/payments-repository";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
@@ -39,7 +39,7 @@ import {
   purchases,
   pushTokens,
   rateLimits,
-  stampLedger,
+  coinLedger,
   users,
 } from "../src/directory-schema.ts";
 import {
@@ -57,9 +57,16 @@ import {
   FlagConfigRow,
   PairOverrideRow,
 } from "../src/flag-config-repository-live.ts";
-import { SampleRow, StoredDelivery, StoredNote, StoredRoom } from "../src/room-rows.ts";
+import {
+  SampleRow,
+  StoredCat,
+  StoredCatEntry,
+  StoredDelivery,
+  StoredNote,
+  StoredRoom,
+} from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { delivery, note, room } from "../src/room-schema.ts";
+import { cat, catEntry, delivery, note, room } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
@@ -89,7 +96,9 @@ const checked = [
   ["purchases", purchases, StoredPurchase],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
-  ["stamp_ledger", stampLedger, StoredStampEntry],
+  ["coin_ledger", coinLedger, StoredPurchaseEntry],
+  ["cat", cat, StoredCat],
+  ["cat_entry", catEntry, StoredCatEntry],
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["room", room, StoredRoom],
