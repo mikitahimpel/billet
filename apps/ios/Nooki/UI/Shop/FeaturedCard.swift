@@ -16,12 +16,11 @@ struct FeaturedCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space.s) {
                 Label {
-                    Text(offer.endsAt, style: .relative)
+                    (Text("New in ") + Text(offer.endsAt, style: .relative))
                         .monospacedDigit()
                 } icon: {
                     Image(systemName: "clock")
                 }
-                .accessibilityLabel(Text("New set in ") + Text(offer.endsAt, style: .relative))
                 .font(.nookiMicro)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10)
