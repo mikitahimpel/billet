@@ -99,7 +99,9 @@ final class UITourTests: XCTestCase {
     @MainActor
     private func closeMenu(_ app: XCUIApplication) {
         let region = app.otherElements["PopoverDismissRegion"].firstMatch
-        if region.exists { region.tap() } else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)).tap() }
+        // Without the region, an empty spot of the room on the left, clear of the menus and the header; a tap on the
+        // status bar doesn't close a menu.
+        if region.exists { region.tap() } else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.42)).tap() }
         Thread.sleep(forTimeInterval: 1)
     }
 
