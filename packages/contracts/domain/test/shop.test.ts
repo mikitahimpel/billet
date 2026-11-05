@@ -1,14 +1,23 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
+import { LocalDay } from "@billet/contracts-domain/coins";
 import {
   bundles,
+  collections,
+  dealCount,
+  dealsOn,
   featuredSetAt,
   featuredSets,
+  fnv1a,
+  giftItems,
+  giftOn,
+  itemPriceOn,
   pieceSetOf,
   roomItemOf,
   roomItems,
   setPrice,
   ShopOffer,
+  splitMix64,
   starterItems,
 } from "@billet/contracts-domain/shop";
 
@@ -70,6 +79,53 @@ describe("offer", () => {
       { _tag: "Ink", ink: "ink-unknown" },
     ]) {
       expect(() => decode(bad), JSON.stringify(bad)).toThrow();
+    }
+  });
+});
+
+describe("collections", () => {
+  it("name only pieces the catalog sells, under unique ids", () => {
+    expect(new Set(collections.map(({ id }) => id)).size).toBe(collections.length);
+    for (const { items } of collections)
+      for (const id of items) expect(roomItemOf(id)).toBeDefined();
+  });
+});
+
+describe("the seeded rotations", () => {
+  const localDay = Schema.decodeSync(LocalDay);
+
+  it("hash with FNV-1a and draw with SplitMix64, as the app does", () => {
+    expect(fnv1a("")).toBe(0xcbf2_9ce4_8422_2325n);
+    expect(fnv1a("a")).toBe(0xaf63_dc4c_8601_ec8cn);
+    expect(splitMix64(0n)()).toBe(0xe220_a839_7b1d_cdafn);
+  });
+
+  it("draw four different deals, the same for the same pair and day", () => {
+    const deals = dealsOn("pair-1", localDay("2026-11-05"));
+    expect(deals).toHaveLength(dealCount);
+    expect(new Set(deals.map((deal) => deal.item)).size).toBe(dealCount);
+    expect(dealsOn("pair-1", localDay("2026-11-05"))).toEqual(deals);
+    expect(dealsOn("pair-2", localDay("2026-11-05"))).not.toEqual(deals);
+  });
+
+  it("price a piece at its deal on the day it is one", () => {
+    const today = localDay("2026-11-05");
+    for (const deal of dealsOn("pair-1", today)) {
+      const piece = roomItemOf(deal.item);
+      if (piece === undefined) throw new Error(deal.item);
+      expect(itemPriceOn(piece, "pair-1", today)).toEqual({ price: deal.price, deal });
+      expect(deal.price).toBeLessThan(piece.price);
+    }
+    const armchair = roomItemOf("armchair");
+    if (armchair === undefined) throw new Error("no armchair");
+    expect(itemPriceOn(armchair, "pair-1", today)).toEqual({ price: 320 });
+  });
+
+  it("give an owned gift piece as coins instead", () => {
+    const owned = new Set<string>(giftItems);
+    for (let date = 1; date <= 28; date++) {
+      const day = localDay(`2026-02-${String(date).padStart(2, "0")}`);
+      expect(giftOn("pair-1", day, owned)._tag).toBe("Coins");
     }
   });
 });

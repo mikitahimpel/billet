@@ -1,5 +1,9 @@
 {
   "balance": 65,
+  "bonuses": [
+    "cozy-autumn"
+  ],
+  "giftDay": "2026-11-05",
   "inks": [
     "ink-graphite",
     "ink-rose"

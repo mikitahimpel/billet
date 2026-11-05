@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { InkId } from "@billet/contracts-domain/inks";
+import { CollectionId } from "@billet/contracts-domain/shop";
 
 /** Errors named by the auth, pairing, notes and payments flows. Each can grow fields later. */
 export const ApiError = Schema.TaggedUnion({
@@ -28,5 +29,9 @@ export const ApiError = Schema.TaggedUnion({
   },
   /** A buy of an item the pair already owns. */
   AlreadyOwned: { itemId: Schema.String },
+  /** A bonus for a collection with a piece still missing. */
+  CollectionIncomplete: { collection: CollectionId },
+  /** A buy for the cat, such as a treat, before the couple adopted one. */
+  CatNotAdopted: {},
 });
 export type ApiError = typeof ApiError.Type;
