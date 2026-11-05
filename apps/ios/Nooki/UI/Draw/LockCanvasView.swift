@@ -235,7 +235,7 @@ struct LockCanvasView: View {
     }
 
     private var inkPalette: some View {
-        InkPalette(state: state, selection: $model.ink, onDark: true, label: .white, openShop: openShop) {
+        InkPalette(state: state, selection: $model.ink, onDark: true, label: .white, openShop: { _ in openShop() }) {
             model.tool = .pen
             choosingInk = false
         }

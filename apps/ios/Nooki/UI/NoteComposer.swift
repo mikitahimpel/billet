@@ -105,7 +105,7 @@ struct NoteComposer: View {
     private var inkRow: some View {
         HStack(spacing: 12) {
             ScrollView(.horizontal) {
-                InkPalette(state: state, selection: $ink, openShop: openShop)
+                InkPalette(state: state, selection: $ink, openShop: { _ in openShop() })
             }
             .scrollIndicators(.hidden)
             if mode == .draw { drawButtons }

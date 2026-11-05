@@ -9,7 +9,8 @@ struct InkPalette: View {
     var onDark = false
     /// The price under a locked dot.
     var label: Color = Ink.text
-    var openShop: () -> Void
+    /// Opens the Shop at an ink the coins don't cover yet.
+    var openShop: (PaletteInk) -> Void
     var picked: () -> Void = {}
 
     @State private var short: PaletteInk?
@@ -27,7 +28,7 @@ struct InkPalette: View {
                 title: Text("\(max(0, ink.price - state.coins)) more coins to go"),
                 message: Text(
                     "\(ink.name) ink is \(ink.price) coins. Answer today's question or open the daily gift to earn more."),
-                primaryButton: .default(Text("Open Shop")) { openShop() },
+                primaryButton: .default(Text("Open Shop")) { openShop(ink) },
                 secondaryButton: .cancel())
         }
     }
