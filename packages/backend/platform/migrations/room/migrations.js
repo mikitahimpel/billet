@@ -11,7 +11,8 @@ import m0009 from './20261105151740_shop/migration.sql';
 import m0010 from './20261105163518_shop_rewards/migration.sql';
 import m0011 from './20261105174010_gifts/migration.sql';
 import m0012 from './20261105180416_gift_occasion/migration.sql';
-import m0013 from './20261105194344_lists/migration.sql';
+import m0013 from './20261105185112_mood/migration.sql';
+import m0014 from './20261105204456_lists/migration.sql';
 
   export default {
     migrations: {
@@ -28,7 +29,8 @@ import m0013 from './20261105194344_lists/migration.sql';
 "20261105163518_shop_rewards": m0010,
 "20261105174010_gifts": m0011,
 "20261105180416_gift_occasion": m0012,
-"20261105194344_lists": m0013
+"20261105185112_mood": m0013,
+"20261105204456_lists": m0014
 }
   }
   

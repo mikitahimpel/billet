@@ -30,6 +30,21 @@ export const describeDemoPartnerRepositoryContract = (
       expect(found).toEqual([Option.some(bot("1")), Option.none()]);
     });
 
+    it("tells a bot from its owner and from anyone else", async () => {
+      const repository = await make();
+      const found = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.create({ botId: bot("1"), ownerId: ana, createdAt: 1_000 });
+          return [
+            yield* repository.isBot(bot("1")),
+            yield* repository.isBot(ana),
+            yield* repository.isBot(ben),
+          ];
+        }),
+      );
+      expect(found).toEqual([true, false, false]);
+    });
+
     it("refuses a second bot for one owner, keeping the first", async () => {
       const repository = await make();
       const [second, found] = await Effect.runPromise(

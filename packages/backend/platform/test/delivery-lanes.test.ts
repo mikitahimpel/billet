@@ -198,6 +198,39 @@ describe("delivery lanes", () => {
     expect(await room.deliveries()).toMatchObject([{ status: "abandoned", attempts: 0 }]);
   });
 
+  it("shares the one alarm with a demo bot: the earlier of the two, and both run", async () => {
+    const room = await laneRoom();
+    await room.startDemo(alice, bob);
+    const botWake = await alarmAt(room);
+    expect(botWake).toBeGreaterThan(testNowOf(env));
+
+    // Alice's photo is due for delivery now, and for the bot's reaction later.
+    await room.sendNote(alice, photo());
+    expect(await alarmAt(room)).toBe(testNowOf(env));
+    await runAlarm(room);
+    expect(await room.deliveries()).toMatchObject([{ status: "delivered" }]);
+    const reactAt = await alarmAt(room);
+    expect(reactAt).toBeGreaterThan(testNowOf(env));
+    expect(reactAt).toBeLessThan(botWake!);
+
+    // At the reaction, the bot reacts and its reaction is handed to the lane on the same alarm.
+    await runInDurableObject(room, (instance) =>
+      (instance as unknown as { advanceClock(ms: number): void }).advanceClock(
+        reactAt! - testNowOf(env),
+      ),
+    );
+    await runAlarm(room);
+    expect((await room.reactions(0, 10)).map(({ by }) => by)).toEqual([bob]);
+    await runAlarm(room);
+    expect((await room.deliveries()).map((entry) => entry.status)).toEqual([
+      "delivered",
+      "delivered",
+    ]);
+
+    await room.stopDemo();
+    expect(await alarmAt(room)).toBeNull();
+  });
+
   it("does nothing for a room without lanes", async () => {
     const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
     const room = PAIR_ROOM.get(PAIR_ROOM.newUniqueId());

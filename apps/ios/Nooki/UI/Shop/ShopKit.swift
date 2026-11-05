@@ -184,25 +184,11 @@ struct CoinPrice: View {
 }
 
 extension View {
-    /// A buy or claim button inside a card: honey prominent glass from iOS 26, bordered prominent before.
-    @ViewBuilder
+    /// A buy or claim button inside a card: a flat honey capsule, or a raised clay one when not prominent. Glass is
+    /// kept for chrome that floats over the room; a dozen glass buttons in a scrolling list would each re-sample
+    /// what is behind them on every frame.
     func shopButton(prominent: Bool = true) -> some View {
-        let styled = font(.nookiHeadline)
-            .buttonBorderShape(.capsule)
-            .tint(.honey)
-        if prominent {
-            if #available(iOS 26, *) {
-                styled.foregroundStyle(Ink.heroInk).buttonStyle(.glassProminent)
-            } else {
-                styled.foregroundStyle(Ink.heroInk).buttonStyle(.borderedProminent)
-            }
-        } else {
-            if #available(iOS 26, *) {
-                styled.buttonStyle(.glass)
-            } else {
-                styled.buttonStyle(.bordered)
-            }
-        }
+        buttonStyle(ShopButtonStyle(prominent: prominent))
     }
 
     /// A card on the Shop: the app's clay card.
@@ -296,5 +282,33 @@ struct WrapLayout: Layout {
         }
         if !current.indices.isEmpty { rows.append(current) }
         return rows
+    }
+}
+
+private struct ShopButtonStyle: ButtonStyle {
+    let prominent: Bool
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.controlSize) private var controlSize
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.nookiHeadline)
+            .foregroundStyle(prominent ? Ink.heroInk : Ink.accentText)
+            .padding(.horizontal, Space.l)
+            .padding(.vertical, controlSize == .large ? 14 : 9)
+            .background {
+                if prominent {
+                    Capsule().fill(.honeyGradient)
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 1))
+                } else {
+                    Capsule().fill(Ink.surfaceRaised)
+                        .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
+                }
+            }
+            .contentShape(.capsule)
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .brightness(configuration.isPressed ? -0.04 : 0)
+            .animation(.spring(duration: 0.2), value: configuration.isPressed)
     }
 }

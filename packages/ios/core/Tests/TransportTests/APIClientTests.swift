@@ -244,6 +244,37 @@ import Wire
     #expect(earn.requests.first?.path == "/v1/coins/earn")
   }
 
+  @Test func aCheckInIsPutAndAnsweredAsStored() async throws {
+    let server = Server(
+      body: #"{"user":"u1","mood":"busy","note":"till six","at":5}"#)
+    let stored = try await Self.client(server).setMood(
+      SetMoodRequest(mood: .busy, note: " till six "))
+    #expect(stored == PartnerCheckIn(user: UserId("u1"), mood: .busy, note: "till six", at: 5))
+    let request = try #require(server.requests.first)
+    #expect(request.method == .put)
+    #expect(request.path == "/v1/mood")
+    let body = try #require(request.body)
+    let sent = try #require(try JSONSerialization.jsonObject(with: body) as? NSDictionary)
+    #expect(sent == ["mood": "busy", "note": " till six "])
+
+    let long = Server(status: 400, body: #"{"_tag":"InvalidRequest"}"#)
+    await #expect(throws: TransportError.api(.invalidRequest)) {
+      _ = try await Self.client(long).setMood(SetMoodRequest(mood: .happy))
+    }
+  }
+
+  @Test func thePairCarriesBothCheckInsAndAPairFromBeforeMoodsHasNone() async throws {
+    let server = Server(
+      body:
+        #"{"pairId":"p1","members":["u1","u2"],"moods":[{"user":"u2","mood":"sleepy","at":5},{"user":"u1","mood":"grumpy","at":6}]}"#
+    )
+    let pair = try await Self.client(server).pair()
+    #expect(pair.moods == [PartnerCheckIn(user: UserId("u2"), mood: .sleepy, at: 5)])
+    let older = try JSONDecoder().decode(
+      PairResponse.self, from: Data(#"{"pairId":"p1","members":["u1","u2"]}"#.utf8))
+    #expect(older.moods == [])
+  }
+
   @Test func aShopFromBeforeBonusesReadsWithNone() throws {
     let shop = try JSONDecoder().decode(
       ShopResponse.self,

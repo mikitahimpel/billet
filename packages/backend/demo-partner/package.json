@@ -5,6 +5,9 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./demo-bot": "./src/demo-bot.ts",
+    "./demo-bot-replies": "./src/demo-bot-replies.ts",
+    "./demo-bots": "./src/demo-bots.ts",
     "./demo-partner-error": "./src/demo-partner-error.ts",
     "./demo-partner-repository": "./src/demo-partner-repository.ts",
     "./demo-partner-routes": "./src/demo-partner-routes.ts",

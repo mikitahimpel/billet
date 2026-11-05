@@ -99,6 +99,9 @@ const makeRoom = () => {
           .slice(0, limit),
       ),
     forgetReactions: Effect.sync(() => reactions.clear()),
+    forgetMoods: Effect.sync(() => {
+      if (state._tag === "Active") state = { ...state, moods: [] };
+    }),
     coinEntryById: (id) => Effect.sync(() => Option.fromNullishOr(coins.find((e) => e.id === id))),
     coinEntriesAfter: (after, limit) =>
       Effect.sync(() => {
@@ -246,6 +249,8 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     reactions: (pairId, afterRev, limit) => roomOf(pairId).reactionsAfter(afterRev, limit),
     activity: (pairId, caller, before, limit) => roomOf(pairId).activityPage(caller, before, limit),
     markActivityRead: (pairId, user, upTo) => roomOf(pairId).markActivityRead(user, upTo),
+    setMood: (pairId, by, request) => roomOf(pairId).setMood(by, request),
+    moods: (pairId) => roomOf(pairId).moods,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
     lists: (pairId, by, request) =>
       roomOf(pairId)

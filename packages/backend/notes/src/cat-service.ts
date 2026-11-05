@@ -151,6 +151,7 @@ export class CatService extends Context.Service<
             case "BonusTaken":
             case "ListNotFound":
             case "ListItemNotFound":
+            case "MoodNoteTooLong":
               return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-cat-event" }));
           }
         }

@@ -33,6 +33,8 @@ export const routes = {
   unpair: route("DELETE", "/v1/pair"),
   /** The caller's pair and both members. 404 while the caller has no partner. */
   getPair: route("GET", "/v1/pair"),
+  /** Replaces the caller's check-in with how they feel now. */
+  setMood: route("PUT", "/v1/mood"),
   uploadImage: route("POST", "/v1/media"),
   /** A media key has slashes in it, so it is the rest of the path: see `mediaPath`. */
   downloadImage: route("GET", "/v1/media/*"),
@@ -105,6 +107,11 @@ export const routes = {
    * as `getPair` does. Elsewhere a 404.
    */
   createDemoPartner: route("POST", "/v1/dev/demo-partner"),
+  /**
+   * The dev stage only: whether the caller is paired with their bot. Elsewhere a 404, which is how
+   * the app knows there are no dev tools.
+   */
+  getDemoPartner: route("GET", "/v1/dev/demo-partner"),
   /** The dev stage only: unpairs the caller from their bot and deletes it. Elsewhere a 404. */
   removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
   /** The pair's bought coins: the balance and every ledger entry. */

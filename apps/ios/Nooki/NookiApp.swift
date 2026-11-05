@@ -51,7 +51,8 @@ struct NookiApp: App {
                             OnboardingView(
                                 flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
-                                paired: { session?.pairingFinished() })
+                                paired: { session?.pairingFinished() },
+                                demoPartner: session?.demoPartner == false ? pairWithDemoPartner : nil)
                                 .transition(.opacity)
                         }
                     }
@@ -61,9 +62,14 @@ struct NookiApp: App {
                     }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
+                    .task(id: session?.isSignedIn) { await session?.checkDemoPartner() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }
+    }
+
+    private func pairWithDemoPartner() {
+        Task { try? await session?.pairWithDemoPartner() }
     }
 
     /// The app was launched to host NookiTests.

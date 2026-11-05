@@ -28,6 +28,21 @@ nonisolated enum PartnerMood: String, Codable, CaseIterable, Sendable {
 nonisolated struct MoodCheckIn: Codable, Hashable {
     var mood: PartnerMood
     var date: Date
+    /// A few words with the mood, at most `MoodCheckIn.noteLimit` UTF-16 units, as the server keeps it.
+    var note: String? = nil
+
+    static let noteLimit = 80
+
+    /// Trimmed, cut to the limit, and nil when nothing is left.
+    static func clean(_ note: String?) -> String? {
+        guard let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        var cut = trimmed
+        while cut.utf16.count > noteLimit { cut.removeLast() }
+        return cut
+    }
+
+    /// From the last day: what the header and the widgets show.
+    func isFresh(at now: Date = .now) -> Bool { date > now.addingTimeInterval(-86_400) }
 }
 
 @Observable
@@ -45,8 +60,17 @@ final class MoodStore {
         latest = SharedFile.read([String: MoodCheckIn].self, from: Self.file) ?? [:]
     }
 
-    func set(_ mood: PartnerMood, for partner: String, at date: Date = .now) {
-        latest[partner] = MoodCheckIn(mood: mood, date: date)
+    func set(_ mood: PartnerMood, note: String? = nil, for partner: String, at date: Date = .now) {
+        take(MoodCheckIn(mood: mood, date: date, note: MoodCheckIn.clean(note)), for: partner)
+    }
+
+    /// Keeps `check` unless a later one is already here, such as one set on this phone before the server heard of it;
+    /// `replacing` keeps it anyway, as the server's copy of the one this phone just sent.
+    @discardableResult
+    func take(_ check: MoodCheckIn, for partner: String, replacing: Bool = false) -> Bool {
+        if !replacing, let current = latest[partner], current.date > check.date { return false }
+        latest[partner] = check
         SharedFile.write(latest, to: Self.file)
+        return true
     }
 }

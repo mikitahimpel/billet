@@ -167,11 +167,19 @@ struct HomeView: View {
         // warmed up and whole when the splash lifts.
         .overlay {
             if launching {
+                // A removed view keeps its last state while it fades, so the splash never takes taps itself; the
+                // stand-in below does, and goes the moment the splash starts to lift.
                 LaunchSplash()
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Nooki is opening")
                     .accessibilityIdentifier("launch-splash")
+                    .allowsHitTesting(false)
                     .transition(.opacity.combined(with: .scale(scale: 1.08)))
+                Color.clear
+                    .contentShape(.rect)
+                    .ignoresSafeArea()
+                    .accessibilityHidden(true)
+                    .transition(.identity)
             }
         }
         .task {
@@ -246,10 +254,11 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
-        .onChange(of: scenePhase, initial: true) { _, phase in
+        .onChange(of: scenePhase, initial: true) { old, phase in
             switch phase {
             case .active:
-                state.refresh()
+                // The first call is launch, where every store has just been read.
+                state.refresh(reloading: old != phase)
                 scene?.appOpened()
                 visitHints()
                 Task {
@@ -263,7 +272,9 @@ struct HomeView: View {
                     await state.lists.refresh()
                 }
                 session?.reactions?.refresh()
-                session?.followInbox(true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists)
+                session?.followInbox(
+                    true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
+                    moods: { [state] in state.moodSync?.received($0) })
                 refreshRooms()
                 if !launching { reportOpened(state.room) }
             case .background:
@@ -374,14 +385,19 @@ struct HomeView: View {
     private func select(_ room: RoomKind) {
         guard room != state.room else { return }
         if room == .city { hints.done(RoomsHint()) }
-        scene?.stop()
         if room == .city {
-            // After the tap has drawn; until then the home room stays on screen.
+            // Building the City holds the main thread for a moment, so it waits for the switch to finish moving;
+            // until then the home room stays on screen and running, and a tap back to it just stays there.
             Task {
-                if state.room == .city, city == nil { city = CityRoomScene() }
-                if let city { NookiPerf.shown(city, kind: .city) }
+                try? await Task.sleep(for: .milliseconds(300))
+                guard state.room == .city, city == nil else { return }
+                home?.stop()
+                let built = CityRoomScene()
+                city = built
+                NookiPerf.shown(built, kind: .city)
             }
         } else {
+            city?.stop()
             city = nil
             if let home { NookiPerf.shown(home, kind: .home) }
         }
@@ -418,14 +434,18 @@ struct HomeView: View {
         if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
         #endif
         guard let session, let sync = session.shopSync else { return await leavePair() }
+        let moods = MoodSync(send: session.api.setMood, moods: state.partnerMoods, couple: state.profile)
         do throws(TransportError) {
             let pair = try await session.pair()
             state.profile.adopt(
                 pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
+            state.moodSync = moods
+            await moods.follow(pair.moods)
         } catch {
             if error == .api(.notFound) { return await leavePair() }
             // Offline: a phone that already took the pair keeps following it.
             guard state.profile.couple.pair != nil else { return }
+            state.moodSync = moods
         }
         await state.shop.connect(sync)
         await state.gifts.connect(session.giftSync)
@@ -433,6 +453,7 @@ struct HomeView: View {
     }
 
     private func leavePair() async {
+        state.moodSync = nil
         state.profile.leavePair()
         await state.shop.connect(nil)
         await state.gifts.connect(nil)
@@ -506,13 +527,17 @@ private struct RoomControls: View {
                         .padding(.horizontal, 14)
                         .frame(height: 34)
                         .background(state.room == room ? Color.honey.opacity(0.45) : .clear, in: .capsule)
+                        // 44 pt tall to the finger, though 34 to the eye; a miss would land on the room.
+                        .frame(height: 44)
+                        .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .accessibilityAddTraits(state.room == room ? .isSelected : [])
             }
         }
-        .padding(3)
-        .warmGlass(.capsule)
+        .padding(.horizontal, 3)
+        .background { Color.clear.warmGlass(.capsule).padding(.vertical, 2) }
+        .sensoryFeedback(.selection, trigger: state.room)
         .popoverTip(RoomsHint(), arrowEdge: .top)
     }
 }
@@ -533,9 +558,12 @@ private struct PlayAllButton: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
             .frame(height: 40)
-            .warmGlass(.capsule, interactive: true)
+            // Not interactive: the button style answers the press; interactive glass would track the same touch.
+            .warmGlass(.capsule)
+            .frame(height: 44)
+            .contentShape(.capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .disabled(showcase != nil)
         .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
     }

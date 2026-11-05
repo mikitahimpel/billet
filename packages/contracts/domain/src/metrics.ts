@@ -191,11 +191,13 @@ export type ClientEvent = typeof ClientEvent.Type;
 
 /**
  * Events only the server records, from what it already does. `AccountDeleted` is written to
- * Analytics Engine only, since the account's counts go with it.
+ * Analytics Engine only, since the account's counts go with it. `DemoPairClaimed` is a pair with a
+ * dev-stage demo partner: kept as the account's pair history, out of the funnel.
  */
 export const ServerEventName = Schema.Literals([
   "InviteCreated",
   "PairClaimed",
+  "DemoPairClaimed",
   "NoteSent",
   "AccountDeleted",
 ]);

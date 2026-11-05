@@ -10,6 +10,7 @@ import {
   ListTitle,
   SharedList,
 } from "@billet/contracts-domain/list";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { CollectionId, GiftReward, PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
@@ -85,6 +86,8 @@ export const RoomOutput = Schema.TaggedUnion({
     count: Schema.Int,
     text: ListItemText,
   },
+  /** A member's new check-in, which replaced their last one. */
+  MoodSet: { checkIn: MoodCheckIn },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -129,6 +132,8 @@ export const RoomRejection = Schema.TaggedUnion({
   ListNotFound: {},
   /** A change to an item its list no longer has. */
   ListItemNotFound: {},
+  /** A check-in whose note is longer than `moodNoteMaxLength` once trimmed. */
+  MoodNoteTooLong: {},
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

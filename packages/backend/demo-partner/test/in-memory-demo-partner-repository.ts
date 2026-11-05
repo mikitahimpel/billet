@@ -26,6 +26,7 @@ export const makeInMemoryDemoPartnerRepository = (): InMemoryDemoPartnerReposito
       }),
     botOf: (ownerId) =>
       Effect.sync(() => Option.map(Option.fromNullishOr(demos.get(ownerId)), ({ botId }) => botId)),
+    isBot: (userId) => Effect.sync(() => [...demos.values()].some(({ botId }) => botId === userId)),
     forget: (botId) =>
       Effect.sync(() => {
         for (const [ownerId, demo] of demos) {

@@ -35,6 +35,8 @@ public struct WebSocketDependencies: Sendable {
   public var followsShop: Bool
   /// Each `Resume` also asks for `ListsChanged`, the pair's lists, now and whenever they change.
   public var followsLists: Bool
+  /// Each `Resume` also asks for `MoodChanged`: each member's latest check-in, then each new one.
+  public var followsMoods: Bool
 
   public init(
     open: @escaping @Sendable () async throws(TransportError) -> WebSocketConnection,
@@ -44,7 +46,8 @@ public struct WebSocketDependencies: Sendable {
     followsActivity: Bool = false,
     lastReactionRev: @escaping @Sendable () async -> Int? = { nil },
     followsShop: Bool = false,
-    followsLists: Bool = false
+    followsLists: Bool = false,
+    followsMoods: Bool = false
   ) {
     self.open = open
     self.sleep = sleep
@@ -54,5 +57,6 @@ public struct WebSocketDependencies: Sendable {
     self.lastReactionRev = lastReactionRev
     self.followsShop = followsShop
     self.followsLists = followsLists
+    self.followsMoods = followsMoods
   }
 }

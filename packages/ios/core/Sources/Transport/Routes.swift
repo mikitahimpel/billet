@@ -26,6 +26,7 @@ public enum Routes {
   public static let claimInvite = Route(.post, "/v1/invites/claim")
   public static let unpair = Route(.delete, "/v1/pair")
   public static let getPair = Route(.get, "/v1/pair")
+  public static let setMood = Route(.put, "/v1/mood")
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
@@ -71,6 +72,8 @@ public enum Routes {
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")
   /// Dev server only: pairs the signed-in, unpaired caller with a bot partner.
   public static let createDemoPartner = Route(.post, "/v1/dev/demo-partner")
+  /// Dev server only: whether the caller is paired with their bot partner. A 404 means no dev tools.
+  public static let getDemoPartner = Route(.get, "/v1/dev/demo-partner")
   /// Dev server only: unpairs the caller from their bot partner and deletes it.
   public static let removeDemoPartner = Route(.delete, "/v1/dev/demo-partner")
   public static let getPurchases = Route(.get, "/v1/purchases")

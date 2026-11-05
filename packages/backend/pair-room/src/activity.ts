@@ -208,6 +208,18 @@ export const activityOf = (
           },
         ];
       }
+      // One item per member: a new check-in writes over their last one and moves it up.
+      case "MoodSet": {
+        const { user, mood, at: checkedAt } = output.checkIn;
+        return [
+          {
+            id: decodeId(`mood:${user}`),
+            at: checkedAt,
+            doer: member(user),
+            event: { _tag: "MoodShared", mood },
+          },
+        ];
+      }
       case "RoomOpened":
         return output.joined === undefined
           ? []

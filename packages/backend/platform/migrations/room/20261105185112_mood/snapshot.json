@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "4332fd80-d046-42f9-8f65-98db2ffae5fb",
+  "id": "8b6016ae-10c7-4b43-aeee-c7d8e68f291c",
   "prevIds": [
     "1adb3d16-e6c4-46df-8589-bfe5079dbcb6"
   ],
@@ -47,15 +47,7 @@
       "entityType": "tables"
     },
     {
-      "name": "list_items",
-      "entityType": "tables"
-    },
-    {
-      "name": "list_keys",
-      "entityType": "tables"
-    },
-    {
-      "name": "lists",
+      "name": "mood",
       "entityType": "tables"
     },
     {
@@ -642,9 +634,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "id",
+      "name": "user",
       "entityType": "columns",
-      "table": "list_items"
+      "table": "mood"
     },
     {
       "type": "text",
@@ -652,79 +644,9 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "list_id",
+      "name": "mood",
       "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "position",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "text",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "author",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "added_at",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "done_by",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "done_at",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "quantity",
-      "entityType": "columns",
-      "table": "list_items"
+      "table": "mood"
     },
     {
       "type": "text",
@@ -734,77 +656,7 @@
       "generated": null,
       "name": "note",
       "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "icon",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "aisle",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "media_kind",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "integer",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "media_tmdb",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "country",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "wants",
-      "entityType": "columns",
-      "table": "list_items"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "key",
-      "entityType": "columns",
-      "table": "list_keys"
+      "table": "mood"
     },
     {
       "type": "integer",
@@ -814,67 +666,7 @@
       "generated": null,
       "name": "at",
       "entityType": "columns",
-      "table": "list_keys"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "id",
-      "entityType": "columns",
-      "table": "lists"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "position",
-      "entityType": "columns",
-      "table": "lists"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "kind",
-      "entityType": "columns",
-      "table": "lists"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "title",
-      "entityType": "columns",
-      "table": "lists"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "icon_symbol",
-      "entityType": "columns",
-      "table": "lists"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "icon_tint",
-      "entityType": "columns",
-      "table": "lists"
+      "table": "mood"
     },
     {
       "type": "integer",
@@ -1310,29 +1102,11 @@
     },
     {
       "columns": [
-        "id"
+        "user"
       ],
       "nameExplicit": false,
-      "name": "list_items_pk",
-      "table": "list_items",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "key"
-      ],
-      "nameExplicit": false,
-      "name": "list_keys_pk",
-      "table": "list_keys",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "lists_pk",
-      "table": "lists",
+      "name": "mood_pk",
+      "table": "mood",
       "entityType": "pks"
     },
     {
@@ -1458,38 +1232,6 @@
       "name": "coin_entry_id",
       "entityType": "indexes",
       "table": "coin_entry"
-    },
-    {
-      "columns": [
-        {
-          "value": "list_id",
-          "isExpression": false
-        },
-        {
-          "value": "position",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "list_items_list",
-      "entityType": "indexes",
-      "table": "list_items"
-    },
-    {
-      "columns": [
-        {
-          "value": "at",
-          "isExpression": false
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "origin": "manual",
-      "name": "list_keys_at",
-      "entityType": "indexes",
-      "table": "list_keys"
     },
     {
       "columns": [

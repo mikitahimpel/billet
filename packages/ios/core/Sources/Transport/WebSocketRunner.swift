@@ -77,7 +77,8 @@ final class WebSocketRunner: Sendable {
             lastSeq: resumeFrom, activity: dependencies.followsActivity ? true : nil,
             lastReactionRev: await dependencies.lastReactionRev(),
             shop: dependencies.followsShop ? true : nil,
-            lists: dependencies.followsLists ? true : nil),
+            lists: dependencies.followsLists ? true : nil,
+            moods: dependencies.followsMoods ? true : nil),
           attempt: attempt)
         continuation.yield(.opened(attempt: attempt))
         let reader = Task { [continuation] in

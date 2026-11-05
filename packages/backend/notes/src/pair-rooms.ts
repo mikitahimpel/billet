@@ -17,6 +17,8 @@ import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
+import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { ListsResult } from "@billet/backend-pair-room/lists";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
@@ -165,6 +167,14 @@ export class PairRooms extends Context.Service<
       afterRev: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
+    /** Replaces `by`'s check-in with how they feel now. */
+    readonly setMood: (
+      pairId: PairId,
+      by: UserId,
+      request: SetMoodRequest,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Each member's latest check-in. A room not opened yet has none. */
+    readonly moods: (pairId: PairId) => Effect.Effect<ReadonlyArray<MoodCheckIn>, NotesUnavailable>;
     /** Runs one gift command for `by`: see `GiftsRoom`. */
     readonly gifts: (
       pairId: PairId,

@@ -92,6 +92,9 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
           .slice(0, limit),
       ),
     forgetReactions: Effect.sync(() => memory.reactions.clear()),
+    forgetMoods: Effect.sync(() => {
+      if (memory.state._tag === "Active") memory.state = { ...memory.state, moods: [] };
+    }),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => memory.notes.filter((n) => n.seq > afterSeq).slice(0, limit)),
     catEntryById: (id) =>

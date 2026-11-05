@@ -87,6 +87,17 @@ public struct APIClient: Sendable {
   /// `.api(.notFound)` when the list or item it names is gone.
   public var lists: @Sendable () async throws(TransportError) -> ListsResponse
   public var changeList: @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse
+  /// Replaces this user's check-in and answers with it as stored, the note trimmed.
+  /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
+  public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
+  /// Dev server only: whether the caller is paired with their bot partner. `.api(.notFound)` on
+  /// any other server, which has no dev tools.
+  public var demoPartner: @Sendable () async throws(TransportError) -> DemoPartnerResponse
+  /// Dev server only: pairs the unpaired caller with a new bot partner. `.api(.alreadyPaired)`
+  /// with a partner.
+  public var createDemoPartner: @Sendable () async throws(TransportError) -> PairResponse
+  /// Dev server only: unpairs the caller from their bot partner and deletes it.
+  public var removeDemoPartner: @Sendable () async throws(TransportError) -> Void
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -205,7 +216,21 @@ public struct APIClient: Sendable {
     changeList:
       @escaping @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse = {
         (_) async throws(TransportError) in throw .network("offline")
-      }
+      },
+    setMood:
+      @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    demoPartner:
+      @escaping @Sendable () async throws(TransportError) -> DemoPartnerResponse = {
+        () async throws(TransportError) in throw .network("offline")
+      },
+    createDemoPartner: @escaping @Sendable () async throws(TransportError) -> PairResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    removeDemoPartner: @escaping @Sendable () async throws(TransportError) -> Void = {
+      () async throws(TransportError) in throw .network("offline")
+    }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -247,6 +272,10 @@ public struct APIClient: Sendable {
     self.saveLoves = saveLoves
     self.lists = lists
     self.changeList = changeList
+    self.setMood = setMood
+    self.demoPartner = demoPartner
+    self.createDemoPartner = createDemoPartner
+    self.removeDemoPartner = removeDemoPartner
   }
 }
 
@@ -461,6 +490,21 @@ extension APIClient {
       changeList: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.changeList, signed: true, body: body), as: ListsResponse.self)
+      },
+      setMood: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.setMood, signed: true, body: body), as: PartnerCheckIn.self)
+      },
+      demoPartner: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getDemoPartner, signed: true), as: DemoPartnerResponse.self)
+      },
+      createDemoPartner: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.createDemoPartner, signed: true), as: PairResponse.self)
+      },
+      removeDemoPartner: { () async throws(TransportError) in
+        try await http.performEmpty(try await request(Routes.removeDemoPartner, signed: true))
       })
   }
 }

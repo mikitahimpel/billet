@@ -59,6 +59,10 @@ struct InboxLine: Equatable {
                 ? "You reacted \(reaction.emoji) to a photo"
                 : "\(who) reacted \(reaction.emoji) to your photo"
             self.init(symbol: "face.smiling", text: text)
+        case .moodShared(let mood):
+            let feeling = PartnerMood(rawValue: mood.rawValue).map { "\($0.title) \($0.emoji)" } ?? mood.rawValue
+            let text = item.actor == .me ? "You feel \(feeling)" : "\(who) feels \(feeling)"
+            self.init(symbol: "heart.text.square.fill", text: text)
         case .noteSent(_, let kind):
             let thing = switch kind {
             case "Drawing": "a drawing"

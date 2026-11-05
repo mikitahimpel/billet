@@ -7,6 +7,7 @@ import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contra
 import { type ListId, ListItem, SharedList } from "@billet/contracts-domain/list";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import {
   RoomState,
   type ActiveRoom,
@@ -25,6 +26,7 @@ import {
   listItems,
   listKeys,
   lists,
+  mood,
   note,
   ownedInk,
   ownedItem,
@@ -96,6 +98,21 @@ const reactionsFrom = (rows: ReadonlyArray<typeof reaction.$inferSelect>) =>
         by: row.by,
         at: row.at,
         ...(row.reaction === null ? {} : { reaction: row.reaction }),
+      }),
+    ),
+  );
+
+const decodeMood = Schema.decodeUnknownOption(MoodCheckIn);
+
+/** A row this code cannot read, such as a mood a newer build added, is left out. */
+const moodsFrom = (rows: ReadonlyArray<typeof mood.$inferSelect>) =>
+  rows.flatMap((row) =>
+    Option.toArray(
+      decodeMood({
+        user: row.user,
+        mood: row.mood,
+        ...(row.note === null ? {} : { note: row.note }),
+        at: row.at,
       }),
     ),
   );
@@ -272,6 +289,7 @@ const roomFrom = (
   wishlist: ReadonlyArray<string>,
   walletRow: WalletRow | undefined,
   bonuses: ReadonlyArray<string>,
+  moods: ReadonlyArray<MoodCheckIn>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -290,6 +308,10 @@ const roomFrom = (
           items,
           wishlist,
           bonuses,
+          // In the members' order, as the room keeps them.
+          moods: [row.firstUser, row.secondUser].flatMap((user) =>
+            moods.filter((checkIn) => checkIn.user === user),
+          ),
           ...(row.giftDay === null ? {} : { giftDay: row.giftDay }),
           welcomed: row.welcomed,
           wallet: walletFrom(walletRow),
@@ -332,8 +354,9 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(wish).orderBy(asc(wish.position)),
         db.select().from(wallet),
         db.select().from(claimedBonus).orderBy(asc(claimedBonus.position)),
+        db.select().from(mood),
       ]).pipe(
-        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow], bonuses]) =>
+        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow], bonuses, moods]) =>
           roomFrom(
             row,
             catRow,
@@ -342,6 +365,7 @@ export const SqliteRoomStore = Layer.effect(
             wishes.map(({ itemId }) => itemId),
             walletRow,
             bonuses.map(({ collectionId }) => collectionId),
+            moodsFrom(moods),
           ),
         ),
         Effect.orDie,
@@ -376,6 +400,19 @@ export const SqliteRoomStore = Layer.effect(
                   .insert(claimedBonus)
                   .values({ collectionId, position })
                   .onConflictDoNothing();
+              }
+              // A row this code could not read stays: only a member's own check-in replaces it.
+              for (const checkIn of state.moods) {
+                const values = {
+                  user: checkIn.user,
+                  mood: checkIn.mood,
+                  note: checkIn.note ?? null,
+                  at: checkIn.at,
+                };
+                yield* tx
+                  .insert(mood)
+                  .values(values)
+                  .onConflictDoUpdate({ target: mood.user, set: values });
               }
               yield* tx.delete(wish);
               for (const [position, itemId] of state.wishlist.entries()) {
@@ -548,6 +585,7 @@ export const SqliteRoomStore = Layer.effect(
           .limit(pageSize(limit))
           .pipe(Effect.map(reactionsFrom), Effect.orDie),
       forgetReactions: db.delete(reaction).pipe(Effect.asVoid, Effect.orDie),
+      forgetMoods: db.delete(mood).pipe(Effect.asVoid, Effect.orDie),
       notesAfter: (afterSeq: number, limit: number) =>
         Effect.gen(function* () {
           const rows = yield* db

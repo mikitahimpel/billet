@@ -18,8 +18,18 @@ import type {
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { MoodCheckIn } from "@billet/contracts-domain/mood";
+import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
+import {
+  type DemoBotAction,
+  DemoBotState,
+  demoBotStep,
+  nextWakeAt,
+  noteSeen,
+  startDemoBot,
+} from "@billet/backend-demo-partner/demo-bot";
 import { isMember } from "@billet/backend-pair-room/decide";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
@@ -62,6 +72,10 @@ import { systemNow } from "./wall-clock.ts";
 export const ROOM_USER_HEADER = "x-billet-user";
 
 const decodeUser = Schema.decodeUnknownOption(UserId);
+const decodeDemoBot = Schema.decodeUnknownOption(DemoBotState);
+
+/** Where a demo pair's room keeps its bot's plans; absent in every other room. */
+const demoBotKey = "demoBot";
 const decodeClientMessage = Schema.decodeUnknownOption(Schema.fromJsonString(ClientMessage));
 const encodeServerMessage = Schema.encodeSync(Schema.fromJsonString(ServerMessage));
 
@@ -100,6 +114,8 @@ interface SocketAttachment {
   readonly shop?: boolean;
   /** Whether this socket resumed with `lists: true` and is sent the pair's lists when they change. */
   readonly lists?: boolean;
+  /** Whether this socket resumed with `moods: true` and is told each check-in. */
+  readonly moods?: boolean;
 }
 
 /** Outputs that change what `shopOf` shows. */
@@ -294,6 +310,7 @@ export class PairRoom extends DurableObject {
         if (output._tag === "NoteAppended" || output._tag === "NoteRepeated") {
           await this.enqueueDeliveries(output.entry.note.id);
         }
+        if (output._tag === "NoteAppended") await this.showDemoBot(output.entry.note);
       }
       await this.pushNotes();
       await this.pushShop(decision);
@@ -327,6 +344,32 @@ export class PairRoom extends DurableObject {
   /** Reaction changes with `rev` above `afterRev`, oldest first. */
   reactions(afterRev: number, limit: number): Promise<ReadonlyArray<NoteReaction>> {
     return this.run((room) => room.reactionsAfter(afterRev, limit), "PairRoom.reactions");
+  }
+
+  /**
+   * Replaces `by`'s check-in, tells every socket that follows moods, the caller's own other devices
+   * among them, and moves the partner's Inbox count.
+   */
+  async setMood(by: UserId, request: SetMoodRequest): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.setMood(by, request), "PairRoom.setMood");
+    if (decision._tag === "Accepted") {
+      for (const output of decision.outputs) {
+        if (output._tag === "MoodSet") {
+          for (const socket of this.ctx.getWebSockets()) {
+            if (attachmentOf(socket)?.moods === true) {
+              send(socket, { _tag: "MoodChanged", checkIn: output.checkIn });
+            }
+          }
+        }
+      }
+      await this.pushUnread((member) => member !== by);
+    }
+    return decision;
+  }
+
+  /** Each member's latest check-in; none while the room is not open. */
+  moods(): Promise<ReadonlyArray<MoodCheckIn>> {
+    return this.run((room) => room.moods, "PairRoom.moods");
   }
 
   /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */
@@ -453,10 +496,19 @@ export class PairRoom extends DurableObject {
     await this.scheduleAlarm();
   }
 
+  /**
+   * The room has one alarm, for both its deliveries and its demo bot: it is set for whichever is
+   * due first. Without a lane sender the deliveries wait for nothing, so they set no alarm.
+   */
   private async scheduleAlarm(): Promise<void> {
     const entries = await Effect.runPromise(deliveriesOf(await this.database).all);
-    const at = nextAlarmAt(entries);
-    if (at !== undefined) await this.ctx.storage.setAlarm(at);
+    const bot = await this.demoBot();
+    const times = [
+      this.laneSender === undefined ? undefined : nextAlarmAt(entries),
+      bot === undefined ? undefined : nextWakeAt(bot),
+    ].filter((at) => at !== undefined);
+    if (times.length > 0) await this.ctx.storage.setAlarm(Math.min(...times));
+    else await this.ctx.storage.deleteAlarm();
   }
 
   /** How each lane is doing in this room. */
@@ -470,14 +522,20 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * Works through the pending deliveries that are due, one try each. A sender that throws counts
-   * as a retry, so a failing lane backs off instead of ending the alarm. Delivered and abandoned
-   * entries are never sent again, which is what makes a repeated alarm harmless.
+   * Works through the pending deliveries that are due, one try each, then lets a demo pair's bot
+   * take its turn. A sender that throws counts as a retry, so a failing lane backs off instead of
+   * ending the alarm. Delivered and abandoned entries are never sent again, which is what makes a
+   * repeated alarm harmless.
    */
   override async alarm(): Promise<void> {
     const sender = this.laneSender;
-    if (sender === undefined) return;
-    await traced("PairRoom.alarm", this.spanAttributes, async (context) => {
+    if (sender !== undefined) await this.deliver(sender);
+    await this.actAsDemoBot();
+    await this.scheduleAlarm();
+  }
+
+  private deliver(sender: NonNullable<PairRoom["laneSender"]>): Promise<void> {
+    return traced("PairRoom.alarm", this.spanAttributes, async (context) => {
       const deliveries = deliveriesOf(await this.database);
       const now = this.clock();
       for (const entry of await Effect.runPromise(deliveries.all)) {
@@ -498,8 +556,76 @@ export class PairRoom extends DurableObject {
           ),
         );
       }
-      await this.scheduleAlarm();
     });
+  }
+
+  /**
+   * Makes this a demo pair's room: from now on `bot` acts here now and then, through the same
+   * calls a phone's requests reach. Repeating it for the same bot keeps its plans.
+   */
+  async startDemo(owner: UserId, bot: UserId): Promise<void> {
+    if ((await this.demoBot())?.bot !== bot) {
+      await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock()));
+    }
+    await this.scheduleAlarm();
+  }
+
+  /** The bot does nothing more here. */
+  async stopDemo(): Promise<void> {
+    await this.ctx.storage.delete(demoBotKey);
+    await this.scheduleAlarm();
+  }
+
+  private async demoBot(): Promise<DemoBotState | undefined> {
+    const stored = decodeDemoBot(await this.ctx.storage.get(demoBotKey));
+    return stored._tag === "Some" ? stored.value : undefined;
+  }
+
+  /** Lets the bot plan around a note just stored. Each read and write here is storage only. */
+  private async showDemoBot(note: Note): Promise<void> {
+    const bot = await this.demoBot();
+    if (bot === undefined) return;
+    const next = noteSeen(bot, note, this.clock());
+    if (next === bot) return;
+    await this.ctx.storage.put(demoBotKey, next);
+    await this.scheduleAlarm();
+  }
+
+  /**
+   * The bot's one due action, if any. Its plans move on before it acts, so an action that fails
+   * or is refused is dropped instead of retried. A room the bot no longer belongs to stops it.
+   */
+  private async actAsDemoBot(): Promise<void> {
+    const bot = await this.demoBot();
+    if (bot === undefined) return;
+    const { action, state } = demoBotStep(bot, this.clock());
+    if (state !== bot) await this.ctx.storage.put(demoBotKey, state);
+    if (action === undefined) return;
+    const room = await this.snapshot();
+    if (room._tag === "Active" && !isMember(room, bot.bot)) {
+      await this.ctx.storage.delete(demoBotKey);
+      return;
+    }
+    await this.demoBotDoes(bot.bot, action).catch((error: unknown) =>
+      this.run(() => Effect.logWarning("demo bot action failed", error)),
+    );
+  }
+
+  private async demoBotDoes(bot: UserId, action: DemoBotAction): Promise<void> {
+    switch (action._tag) {
+      case "SendNote":
+        await this.sendNote(bot, action.request);
+        return;
+      case "React":
+        await this.react(bot, action.request);
+        return;
+      case "RecordCatEvent":
+        await this.recordCatEvent(bot, action.request);
+        return;
+      case "OpenGift":
+        await this.openGift(bot, undefined);
+        return;
+    }
   }
 
   setPresence(user: UserId, state: PresenceState): Promise<RoomDecision> {
@@ -651,12 +777,15 @@ export class PairRoom extends DurableObject {
     await this.run((room) => room.forgetLists, "PairRoom.forgetLists");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
-    this.endSessions();
+    await this.endSessions();
     return forgotten;
   }
 
-  /** Closes every open socket: the pair has ended, and the Worker won't route a new one here. */
-  endSessions(): void {
+  /**
+   * Closes every open socket and stills a demo pair's bot: the pair has ended, and the Worker
+   * won't route a new one here.
+   */
+  async endSessions(): Promise<void> {
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.close(1000, "pair ended");
@@ -664,6 +793,7 @@ export class PairRoom extends DurableObject {
         // Already closing: nothing left to end.
       }
     }
+    if ((await this.demoBot()) !== undefined) await this.stopDemo();
   }
 
   /**
@@ -711,7 +841,8 @@ export class PairRoom extends DurableObject {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
         // the Inbox, nor one without `shop` the shop, nor one without `lists` the lists.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, lists } = message.value;
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, lists, moods } =
+          message.value;
         socket.serializeAttachment({
           ...attachment,
           sentSeq: Math.max(0, lastSeq),
@@ -720,6 +851,7 @@ export class PairRoom extends DurableObject {
           sentReactionRev: lastReactionRev === undefined ? null : Math.max(0, lastReactionRev),
           shop: shop === true,
           lists: lists === true,
+          moods: moods === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
@@ -732,6 +864,10 @@ export class PairRoom extends DurableObject {
         if (current !== null) send(socket, { _tag: "ShopChanged", shop: current });
         const held = lists === true ? await this.lists(attachment.user as UserId) : undefined;
         if (held?._tag === "Done") send(socket, { _tag: "ListsChanged", lists: held.lists });
+        // Only the latest check-ins are kept, so a resume is sent those instead of what it missed.
+        if (moods === true) {
+          for (const checkIn of await this.moods()) send(socket, { _tag: "MoodChanged", checkIn });
+        }
         return;
       }
       case "Stroke": {

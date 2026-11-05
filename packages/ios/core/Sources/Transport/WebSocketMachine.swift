@@ -196,7 +196,8 @@ public enum WebSocketMachine: Machine {
     // yet, so counting it would let a reconnect skip notes.
     // Cat frames have their own journal `seq`, never a note's, and the Inbox count has none.
     case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear,
-      .catEntryAdded, .catSaved, .activityUnread, .reactionChanged, .shopChanged, .listsChanged:
+      .catEntryAdded, .catSaved, .activityUnread, .reactionChanged, .shopChanged, .listsChanged,
+      .moodChanged:
       return lastSeq
     }
   }
