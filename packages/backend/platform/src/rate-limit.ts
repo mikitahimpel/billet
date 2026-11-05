@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { EpochMillis } from "@billet/contracts-domain/ids";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { isInviteLinkPath } from "./app-links.ts";
 import { sha256Hex } from "./hashed-session-tokens.ts";
 import { logLine } from "./observability.ts";
 import { systemNow } from "./wall-clock.ts";
@@ -22,6 +23,7 @@ export const limits = {
   events: 60,
   purchases: 30,
   onboarding: 60,
+  links: 30,
 } as const;
 export type LimitedGroup = keyof typeof limits;
 
@@ -34,6 +36,7 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";
   if (pathname === "/v1/media" || pathname.startsWith("/v1/media/")) return "media";
+  if (isInviteLinkPath(pathname)) return "links";
   return undefined;
 };
 
