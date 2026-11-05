@@ -8,8 +8,8 @@ struct StyleGallery: View {
     @State private var level = 0.6
 
     var body: some View {
-        List {
-            Section("Colour") {
+        NookiForm {
+            NookiSection(header: "Colour", inset: Space.m + 2, padsRows: true) {
                 swatch("screen", Ink.screen)
                 swatch("surface", Ink.surface)
                 swatch("surfaceRaised", Ink.surfaceRaised)
@@ -22,9 +22,8 @@ struct StyleGallery: View {
                 swatch("honeyDeep", .honeyDeep)
                 swatch("blushPink", .blushPink)
             }
-            .nookiRow()
 
-            Section("Type") {
+            NookiSection(header: "Type", inset: Space.m + 2, padsRows: true) {
                 Text("Large title").font(.nookiLargeTitle)
                 Text("Title").font(.nookiTitle)
                 Text("Headline").font(.nookiHeadline)
@@ -34,9 +33,8 @@ struct StyleGallery: View {
                 Text("MICRO 128").font(.nookiMicro).monospacedDigit()
             }
             .foregroundStyle(Ink.text)
-            .nookiRow()
 
-            Section("Buttons") {
+            NookiSection(header: "Buttons", inset: Space.m + 2, padsRows: true) {
                 Button {} label: { Text("Primary").frame(maxWidth: .infinity) }
                     .nookiPrimary()
                 secondary
@@ -45,9 +43,14 @@ struct StyleGallery: View {
                     .foregroundStyle(Ink.accentText)
                 Button("Erase All Data", role: .destructive) {}
             }
-            .nookiRow()
 
-            Section("Shape and chips") {
+            NookiSection(header: "Rows") {
+                NookiRowLabel(title: "A row that opens a screen", symbol: "person.2.fill", tint: .sky) { RowChevron() }
+                NookiToggleRow(title: "A switch", symbol: "hand.tap.fill", tint: .honey, isOn: .constant(true))
+                NookiRowLabel(title: "Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+            }
+
+            NookiSection(header: "Shape and chips", inset: Space.m + 2, padsRows: true) {
                 HStack(spacing: Space.m) {
                     ForEach([Radius.tag, Radius.control, Radius.card, Radius.hero], id: \.self) { radius in
                         RoundedRectangle(cornerRadius: radius)
@@ -69,9 +72,10 @@ struct StyleGallery: View {
                 }
                 .sensoryFeedback(.selection, trigger: chip)
             }
-            .nookiRow()
 
-            Section {
+            NookiSection(header: "Materials",
+                         footer: "Glass only over the room. Screens, forms and lists are clay cards on the screen.",
+                         padsRows: true) {
                 ZStack {
                     LinearGradient(colors: [Color(hex: 0x5B3A2A), Color(hex: 0xC9814F), Color(hex: 0x2F4A3A)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -93,15 +97,9 @@ struct StyleGallery: View {
                 }
                 .frame(height: 120)
                 .clipShape(.rect(cornerRadius: Radius.card))
-                .listRowInsets(EdgeInsets())
-            } header: {
-                Text("Materials")
-            } footer: {
-                Text("Glass only over the room. Screens, forms and lists are solid surfaces.")
             }
-            .nookiRow()
 
-            Section("Symbols and motion") {
+            NookiSection(header: "Symbols and motion", inset: Space.m + 2, padsRows: true) {
                 HStack(spacing: Space.l) {
                     ForEach(["fork.knife", "moon.zzz.fill", "tennisball.fill", "heart.fill"], id: \.self) {
                         Image(systemName: $0)
@@ -113,9 +111,8 @@ struct StyleGallery: View {
                 ProgressView(value: level).tint(.honey)
                 Slider(value: $level.animation(.spring(duration: 0.6, bounce: 0.2)))
             }
-            .nookiRow()
 
-            Section("Empty state") {
+            NookiSection(header: "Empty state", inset: Space.m + 2, padsRows: true) {
                 ContentUnavailableView {
                     Label("No moments yet", systemImage: "photo.on.rectangle.angled")
                 } description: {
@@ -124,11 +121,7 @@ struct StyleGallery: View {
                     Button("Add a moment") {}.nookiPrimary()
                 }
             }
-            .nookiRow()
         }
-        .scrollContentBackground(.hidden)
-        .background(Ink.screen)
-        .tint(.honey)
         .navigationTitle("Style")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -139,17 +132,9 @@ struct StyleGallery: View {
         .environment(\.colorScheme, dark ? .dark : .light)
     }
 
-    @ViewBuilder
     private var secondary: some View {
-        let label = Button {} label: { Text("Secondary").frame(maxWidth: .infinity) }
-            .font(.nookiHeadline)
-            .buttonBorderShape(.capsule)
-            .controlSize(.large)
-        if #available(iOS 26, *) {
-            label.buttonStyle(.glass)
-        } else {
-            label.buttonStyle(.bordered)
-        }
+        Button("Secondary") {}
+            .buttonStyle(NookiSecondaryStyle())
     }
 
     private func swatch(_ name: String, _ colour: Color) -> some View {

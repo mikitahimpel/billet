@@ -4,9 +4,9 @@ import StoreKit
 import SwiftUI
 import WidgetBridge
 
-/// Settings, pushed from the profile and grouped the way iOS groups its own: how the app feels, the account, then
-/// support, privacy and what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on this phone
-/// stands in for account deletion until it has its own row.
+/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account, the window, then support,
+/// privacy and what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on
+/// this phone stands in for account deletion until it has its own row.
 struct SettingsView: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over.
@@ -32,128 +32,109 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                Toggle(isOn: $haptics) { row("Haptics", symbol: "hand.tap.fill", tint: .lilac) }
+        NookiForm {
+            NookiSection(header: "General",
+                         footer: hintsReset
+                             ? "The hints start over the next time you open Nooki."
+                             : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                NookiToggleRow(title: "Haptics", symbol: "hand.tap.fill", tint: .lilac, isOn: $haptics)
                 Button { hintsReset = true } label: {
-                    HStack {
-                        row("Show hints again", symbol: "lightbulb.fill", tint: .sun)
-                        Spacer(minLength: 0)
+                    NookiRowLabel(title: "Show hints again", symbol: "lightbulb.fill", tint: .sun) {
                         if hintsReset {
                             Image(systemName: "checkmark")
-                                .font(.nookiCallout)
+                                .font(.nookiCallout.weight(.semibold))
                                 .foregroundStyle(Ink.accentText)
                         }
                     }
                 }
+                .buttonStyle(PressScaleStyle())
                 .disabled(hintsReset)
-            } header: {
-                Text("General")
-            } footer: {
-                Text(hintsReset
-                     ? "The hints start over the next time you open Nooki."
-                     : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.")
             }
-            .nookiRow()
 
             if let session {
-                Section("Account") {
+                NookiSection(header: "Account") {
                     AccountRow(state: session.signIn.state, retry: session.signIn.retry)
                 }
-                .nookiRow()
             }
 
-            Section {
-                Picker(selection: $windowView) {
+            NookiSection(header: "Window",
+                         footer: "What the City room's window looks out on. Suburbia follows the time of day.") {
+                NookiPickerRow(title: "View", symbol: "window.horizontal", tint: .sky, selection: $windowView) {
                     ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
-                } label: {
-                    row("View", symbol: "window.horizontal", tint: .sky)
                 }
                 if windowView == .suburbia {
-                    Picker(selection: $windowWeather) {
+                    NookiPickerRow(title: "Weather", symbol: "cloud.rain.fill", tint: .sky, selection: $windowWeather) {
                         ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
-                    } label: {
-                        row("Weather", symbol: "cloud.rain.fill", tint: .sky)
                     }
                 }
-            } header: {
-                Text("Window")
-            } footer: {
-                Text("What the City room's window looks out on. Suburbia follows the time of day.")
             }
-            .nookiRow()
 
-            Section("Support") {
-                Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }
-            }
-            .nookiRow()
-
-            Section {
-                row("Stays on this iPhone", symbol: "lock.fill", tint: .sage)
-                Button(role: .destructive) { confirmingErase = true } label: {
-                    row("Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+            NookiSection(header: "Support") {
+                Button { requestReview() } label: {
+                    NookiRowLabel(title: "Rate Nooki", symbol: "star.fill", tint: .sun) { RowChevron() }
                 }
-            } header: {
-                Text("Privacy")
-            } footer: {
-                Text(session == nil
-                     ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
-                       + "are saved only on this phone."
-                     : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
-                       + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
+                .buttonStyle(PressScaleStyle())
             }
-            .nookiRow()
+
+            NookiSection(header: "Privacy",
+                         footer: session == nil
+                             ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
+                               + "are saved only on this phone."
+                             : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
+                               + "with an anonymous key kept in your iCloud Keychain, without your name or email.") {
+                NookiRowLabel(title: "Stays on this iPhone", symbol: "lock.fill", tint: .sage)
+                Button(role: .destructive) { confirmingErase = true } label: {
+                    NookiRowLabel(title: "Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+                }
+                .buttonStyle(PressScaleStyle())
+            }
 
             if let session, let demo = session.demoPartner {
-                Section {
+                NookiSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
                     Button { Task { await switchDemoPartner(session, paired: demo) } } label: {
-                        HStack {
-                            row(demo ? "Remove demo partner" : "Pair with a demo partner",
-                                symbol: "person.2.wave.2.fill", tint: .blush)
-                            Spacer(minLength: 0)
+                        NookiRowLabel(title: demo ? "Remove demo partner" : "Pair with a demo partner",
+                                      symbol: "person.2.wave.2.fill", tint: .blush) {
                             if demoBusy { ProgressView() }
                         }
                     }
+                    .buttonStyle(PressScaleStyle())
                     .disabled(demoBusy || (!demo && session.isPaired))
-                } header: {
-                    Text("Testing")
-                } footer: {
-                    Text(demoFooter(paired: demo, hasPartner: session.isPaired))
                 }
-                .nookiRow()
             }
 
-            Section {
-                Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
-                Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
-                Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
-                NavigationLink { StyleGallery() } label: { row("Style", symbol: "paintpalette.fill", tint: .sun) }
-                Picker(selection: roomsOverride) {
+            NookiSection(header: "Labs",
+                         footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
+                             + "card shows what the brain has her doing and why: her state, needs and the last thing she "
+                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                             + "both on this phone, whatever the test gave your pair.") {
+                NookiToggleRow(title: "Cat brain", symbol: "brain", tint: .lilac, isOn: $catBrain)
+                NookiToggleRow(title: "Cat brain card", symbol: "brain.head.profile", tint: .lilac, isOn: $brainCard)
+                NookiToggleRow(title: "Show all hints now", symbol: "lightbulb.max.fill", tint: .sun,
+                               isOn: $showAllHints)
+                NavigationLink { StyleGallery() } label: {
+                    NookiRowLabel(title: "Style", symbol: "paintpalette.fill", tint: .sun) { RowChevron() }
+                }
+                .buttonStyle(PressScaleStyle())
+                NookiPickerRow(title: "Rooms", symbol: "square.split.2x1", tint: .lilac, selection: roomsOverride) {
                     Text("Follow the test").tag(RoomsVariant?.none)
                     ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
-                } label: {
-                    row("Rooms", symbol: "square.split.2x1", tint: .lilac)
                 }
-            } header: {
-                Text("Labs")
-            } footer: {
-                Text("With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The card shows what the "
-                     + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
-                     + "show at once from the next launch, for testing. Rooms shows one room or both on this "
-                     + "phone, whatever the test gave your pair.")
             }
-            .nookiRow()
 
-            Section {
-                LabeledContent("Version", value: version)
-            } footer: {
-                Text("Made with love by Jutsu Studio")
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 12)
+            NookiSection(footer: nil) {
+                NookiRowLabel(title: "Version", symbol: "info.circle.fill", tint: .honey) {
+                    Text(version)
+                        .font(.nookiCallout.monospacedDigit())
+                        .foregroundStyle(Ink.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
             }
-            .nookiRow()
+
+            Text("Made with love by Jutsu Studio")
+                .font(.nookiCaption)
+                .foregroundStyle(Ink.textTertiary)
+                .frame(maxWidth: .infinity)
         }
-        .scrollContentBackground(.hidden)
         .task { await session?.checkDemoPartner() }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -190,14 +171,6 @@ struct SettingsView: View {
     private var roomsOverride: Binding<RoomsVariant?> {
         Binding(get: { state.rooms.labs }, set: { state.rooms.labs = $0 })
     }
-
-    private func row(_ title: String, symbol: String, tint: UsTint, destructive: Bool = false) -> some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
-            Text(title)
-                .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : Ink.text)
-        }
-    }
 }
 
 /// Where the anonymous sign-in stands, with a retry when the server could not be reached.
@@ -206,20 +179,11 @@ private struct AccountRow: View {
     let retry: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).foregroundStyle(Ink.text)
-                if let detail {
-                    Text(detail)
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                }
-            }
-            Spacer(minLength: 0)
+        NookiRowLabel(title: title, detail: detail, symbol: symbol, tint: tint) {
             if case .failed = state {
                 Button("Try Again", action: retry)
                     .font(.nookiCallout.weight(.semibold))
+                    .foregroundStyle(Ink.accentText)
             } else if case .signingIn = state {
                 ProgressView()
             }

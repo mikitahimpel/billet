@@ -15,12 +15,13 @@ struct HeartBubble: View {
                     .font(.system(size: 18))
                     .foregroundStyle(Color(hex: 0xFF7A93))
                     .frame(width: 42, height: 42)
-                    .background(.white.opacity(0.95), in: .circle)
+                    .background {
+                        Circle().fill(.white.opacity(0.95)).shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                    }
                 Triangle()
                     .fill(.white.opacity(0.95))
                     .frame(width: 10, height: 6)
             }
-            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
             .keyframeAnimator(initialValue: 1.0, trigger: pulse) { view, scale in
                 view.scaleEffect(scale)
             } keyframes: { _ in

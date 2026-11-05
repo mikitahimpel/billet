@@ -34,7 +34,14 @@ final class NeedBarsTests: XCTestCase {
             XCTAssertTrue(app.descendants(matching: .any)[need].firstMatch.waitForExistence(timeout: 15),
                           "the \(need) bar should show")
         }
+        // Every action shows and the journal line ends on screen: the sheet fits its content without a scroll.
+        for action in ["Feed", "Water", "Play", "Brush", "Pet"] {
+            XCTAssertTrue(app.buttons[action].exists, "the \(action) tile should show")
+        }
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Treat'")).firstMatch.exists)
         Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertLessThanOrEqual(sheet.frame.maxY, app.frame.maxY, "the journal line should end on screen")
+        XCTAssertTrue(sheet.isHittable, "the journal line should not sit under the home indicator")
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.name = "needs-\(name)"
         shot.lifetime = .keepAlways
