@@ -1,11 +1,11 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
-import { CoinEntry } from "@billet/contracts-domain/coins";
-import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
+import { CoinEntry, LocalDay } from "@billet/contracts-domain/coins";
+import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { CollectionId, GiftReward, PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomJoin } from "./room-command.ts";
 import { RoomState, SequencedNote } from "./room-state.ts";
@@ -44,6 +44,22 @@ export const RoomOutput = Schema.TaggedUnion({
   ReactionSet: { reaction: NoteReaction },
   /** A reaction the room already holds: nothing is stored or fanned out. */
   ReactionRepeated: { reaction: NoteReaction },
+  /**
+   * A buy for the Inbox: what it was for and what it cost. `items` names the ink, the pieces
+   * granted or the treat; `offer` is set for a deal or a set.
+   */
+  Purchased: {
+    id: IdempotencyKey,
+    by: UserId,
+    at: EpochMillis,
+    items: Schema.Array(Schema.String),
+    offer: Schema.optionalKey(Schema.String),
+    coins: Schema.Int,
+  },
+  /** The day's free gift, opened by `by`. */
+  GiftOpened: { by: UserId, at: EpochMillis, day: LocalDay, reward: GiftReward },
+  /** A collection's bonus, paid once. */
+  BonusPaid: { by: UserId, at: EpochMillis, collection: CollectionId, coins: Schema.Int },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -78,6 +94,12 @@ export const RoomRejection = Schema.TaggedUnion({
   NotReactable: {},
   /** Taking back a reaction the room never had. */
   NoReaction: {},
+  /** The day's gift is already open. */
+  GiftTaken: { day: LocalDay },
+  /** A bonus for a collection with a piece still missing. */
+  CollectionIncomplete: { collection: CollectionId },
+  /** A bonus already paid. */
+  BonusTaken: { collection: CollectionId },
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

@@ -15,6 +15,14 @@ public enum ApiError: Codable, Hashable, Sendable {
   case notEnoughCoins(needed: Int, have: Int)
   /// A buy of an item the pair already owns.
   case alreadyOwned(itemId: String)
+  /// A bonus for a collection with a piece still missing.
+  case collectionIncomplete(collection: String)
+  /// The day's gift is already open. Come back tomorrow.
+  case giftTaken(day: String)
+  /// A collection's bonus already paid.
+  case bonusTaken(collection: String)
+  /// A buy for the cat, such as a treat, before the couple adopted one.
+  case catNotAdopted
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -22,6 +30,8 @@ public enum ApiError: Codable, Hashable, Sendable {
     case needed
     case have
     case itemId
+    case collection
+    case day
   }
 
   public init(from decoder: any Decoder) throws {
@@ -43,6 +53,13 @@ public enum ApiError: Codable, Hashable, Sendable {
         have: try container.decode(Int.self, forKey: .have))
     case "AlreadyOwned":
       self = .alreadyOwned(itemId: try container.decode(String.self, forKey: .itemId))
+    case "CollectionIncomplete":
+      self = .collectionIncomplete(
+        collection: try container.decode(String.self, forKey: .collection))
+    case "GiftTaken": self = .giftTaken(day: try container.decode(String.self, forKey: .day))
+    case "BonusTaken":
+      self = .bonusTaken(collection: try container.decode(String.self, forKey: .collection))
+    case "CatNotAdopted": self = .catNotAdopted
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -70,6 +87,16 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .alreadyOwned(let itemId):
       try container.encode("AlreadyOwned", forKey: .tag)
       try container.encode(itemId, forKey: .itemId)
+    case .collectionIncomplete(let collection):
+      try container.encode("CollectionIncomplete", forKey: .tag)
+      try container.encode(collection, forKey: .collection)
+    case .giftTaken(let day):
+      try container.encode("GiftTaken", forKey: .tag)
+      try container.encode(day, forKey: .day)
+    case .bonusTaken(let collection):
+      try container.encode("BonusTaken", forKey: .tag)
+      try container.encode(collection, forKey: .collection)
+    case .catNotAdopted: try container.encode("CatNotAdopted", forKey: .tag)
     }
   }
 }

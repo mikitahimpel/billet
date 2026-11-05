@@ -8,6 +8,7 @@ import m0006 from './20261105032849_owned_ink/migration.sql';
 import m0007 from './20261105053543_wallet/migration.sql';
 import m0008 from './20261105081657_reactions/migration.sql';
 import m0009 from './20261105151740_shop/migration.sql';
+import m0010 from './20261105163518_shop_rewards/migration.sql';
 
   export default {
     migrations: {
@@ -20,7 +21,8 @@ import m0009 from './20261105151740_shop/migration.sql';
 "20261105032849_owned_ink": m0006,
 "20261105053543_wallet": m0007,
 "20261105081657_reactions": m0008,
-"20261105151740_shop": m0009
+"20261105151740_shop": m0009,
+"20261105163518_shop_rewards": m0010
 }
   }
   

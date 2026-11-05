@@ -1,0 +1,7 @@
+{
+  "event": {
+    "_tag": "ListTicked",
+    "item": "item-1"
+  },
+  "utcOffsetSeconds": -18000
+}

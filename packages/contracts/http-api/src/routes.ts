@@ -76,6 +76,12 @@ export const routes = {
   placeOrder: route("POST", "/v1/shop/orders"),
   /** Adds a piece to the pair's wishlist or takes it off. */
   setWish: route("PUT", "/v1/shop/wishlist"),
+  /** Opens the pair's free gift of the local day, once a day for the pair. */
+  openGift: route("POST", "/v1/shop/gift"),
+  /** Collects a complete collection's coin bonus, once. */
+  claimBonus: route("POST", "/v1/shop/bonus"),
+  /** Pays something the couple did in the app, once per ref and within the day's caps. */
+  earnCoins: route("POST", "/v1/coins/earn"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

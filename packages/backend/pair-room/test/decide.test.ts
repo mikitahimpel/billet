@@ -23,7 +23,10 @@ import {
   withCat,
 } from "./samples.ts";
 import { freeInk } from "@billet/contracts-domain/inks";
-import { CoinEntry } from "@billet/contracts-domain/coins";
+import { CoinEntry, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
+import { CollectionId } from "@billet/contracts-domain/shop";
+
+const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
 
 const key = Schema.decodeUnknownSync(IdempotencyKey)("6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f");
 const open = RoomCommand.cases.Open.make({ pairId, members: [alice, bob] });
@@ -80,7 +83,7 @@ describe("decide on a vacant room", () => {
   it("opens for two different people, both idle, at sequence zero", () => {
     expect(expectAccepted(vacant, open)).toEqual({
       _tag: "Accepted",
-      state: active,
+      state: { ...active, welcomed: false },
       outputs: [RoomOutput.cases.RoomOpened.make({ pairId })],
     });
   });
@@ -326,6 +329,23 @@ describe("tagged unions", () => {
     }),
     SetWish: RoomCommand.cases.SetWish.make({ by: alice, item: tower, wished: true }),
     React: react(),
+    Welcome: RoomCommand.cases.Welcome.make({ at: 1_700_000_000_000 }),
+    OpenGift: RoomCommand.cases.OpenGift.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+    }),
+    ClaimBonus: RoomCommand.cases.ClaimBonus.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      collection: cozyAutumn,
+    }),
+    Earn: RoomCommand.cases.Earn.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+      event: { _tag: "ListTicked", item: Schema.decodeSync(EarnRef)("item-1") },
+    }),
   };
   const spend = Schema.decodeUnknownSync(CoinEntry)({
     id: `spend:${key}`,
@@ -354,6 +374,25 @@ describe("tagged unions", () => {
     CoinsRepeated: RoomOutput.cases.CoinsRepeated.make({ entry: spend }),
     ReactionSet: RoomOutput.cases.ReactionSet.make({ reaction: heartFromBob }),
     ReactionRepeated: RoomOutput.cases.ReactionRepeated.make({ reaction: heartFromBob }),
+    Purchased: RoomOutput.cases.Purchased.make({
+      id: key,
+      by: alice,
+      at: 1_700_000_000_000,
+      items: [tower],
+      coins: 540,
+    }),
+    GiftOpened: RoomOutput.cases.GiftOpened.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      day: Schema.decodeSync(LocalDay)("2023-11-14"),
+      reward: { _tag: "Coins", coins: 30 },
+    }),
+    BonusPaid: RoomOutput.cases.BonusPaid.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      collection: cozyAutumn,
+      coins: 150,
+    }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -372,6 +411,11 @@ describe("tagged unions", () => {
     OwnNote: RoomRejection.cases.OwnNote.make({}),
     NotReactable: RoomRejection.cases.NotReactable.make({}),
     NoReaction: RoomRejection.cases.NoReaction.make({}),
+    GiftTaken: RoomRejection.cases.GiftTaken.make({
+      day: Schema.decodeSync(LocalDay)("2023-11-14"),
+    }),
+    CollectionIncomplete: RoomRejection.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
+    BonusTaken: RoomRejection.cases.BonusTaken.make({ collection: cozyAutumn }),
   };
 
   it.each([
