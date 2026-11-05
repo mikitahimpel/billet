@@ -1730,6 +1730,12 @@ describe("payments in the Worker", () => {
     });
   });
 
+  const walletOf = async (headers: Record<string, string>) => {
+    const response = await atStage("dev", new Request("https://billet.test/v1/coins", { headers }));
+    expect(response.status).toBe(200);
+    return Schema.decodeUnknownSync(CoinsResponse)(await response.json());
+  };
+
   it("credits and refunds mock purchases on dev, shared by the pair", async () => {
     const { owner, claimer, pairId } = await pairOf("subject-mock-a", "subject-mock-b");
     const transactionId = `mock-${crypto.randomUUID()}`;
@@ -1738,14 +1744,31 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(owner)),
     );
     expect(bought.status).toBe(200);
+    // The wallet's balance: the welcome coins (560) and the pack.
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
       productId: "com.mikitahimpel.billet.coins.550",
       coins: 550,
-      balance: 550,
+      balance: 1110,
       duplicate: false,
     });
     expect((await purchasesAt("dev", bearer(claimer))).balance).toBe(550);
+    const wallet = await walletOf(bearer(claimer));
+    expect(wallet.balance).toBe(1110);
+    expect(wallet.entries.at(-1)).toMatchObject({
+      id: `purchase:${transactionId}`,
+      kind: "buy",
+      amount: 550,
+    });
+
+    const again = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(claimer)),
+    );
+    expect(Schema.decodeUnknownSync(PurchaseResponse)(await again.json())).toMatchObject({
+      duplicate: true,
+      balance: 1110,
+    });
 
     const refunded = await atStage(
       "dev",
@@ -1753,8 +1776,12 @@ describe("payments in the Worker", () => {
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
       coins: 550,
-      balance: 0,
+      balance: 560,
     });
+    expect((await walletOf(bearer(owner))).entries.slice(-2)).toMatchObject([
+      { id: `purchase:${transactionId}`, amount: 550 },
+      { id: `refund:${transactionId}`, kind: "refund", amount: -550 },
+    ]);
     const { entries } = await purchasesAt("dev", bearer(owner));
     expect(entries.map(({ id, amount }) => [id, amount])).toEqual([
       [`purchase:${transactionId}`, 550],
@@ -1764,28 +1791,47 @@ describe("payments in the Worker", () => {
     expect(rows.results).toEqual([{ owner_id: pairId, environment: "Mock", status: "refunded" }]);
   });
 
-  it("answers 404 on every purchase route to a pair the payments flag is off for", async () => {
+  const flagOff = async () => {
     const { owner, pairId } = await pairOf("subject-flag-a", "subject-flag-b");
     await env.DB.prepare(
       "INSERT INTO pair_flag_overrides (pair_id, experiment_key, variant, set_at, set_by) VALUES (?, 'payments', 'off', 0, 'test')",
     )
       .bind(pairId)
       .run();
-    const responses = [
-      await atStage(
-        "dev",
-        post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
-      ),
-      await atStage("dev", post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
-      await atStage(
-        "dev",
-        new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
-      ),
-    ];
-    expect(responses.map(({ status }) => status)).toEqual([404, 404, 404]);
-    expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
-      results: [],
-    });
+    return owner;
+  };
+
+  it.each([["prod"], ["stage"]])(
+    "answers 404 on %s on every purchase route to a pair the payments flag is off for",
+    async (stage) => {
+      const owner = await flagOff();
+      const responses = [
+        await atStage(stage, post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner))),
+        await atStage(
+          stage,
+          new Request("https://billet.test/v1/purchases", { headers: bearer(owner) }),
+        ),
+      ];
+      expect(responses.map(({ status }) => status)).toEqual([404, 404]);
+      expect(await env.DB.prepare("SELECT * FROM coin_ledger").all()).toMatchObject({
+        results: [],
+      });
+    },
+  );
+
+  it("sells on dev whatever the payments flag says", async () => {
+    const owner = await flagOff();
+    const bought = await atStage(
+      "dev",
+      post("/v1/purchases/mock", mockBody("purchase", "mock-off"), bearer(owner)),
+    );
+    expect(bought.status).toBe(200);
+    const unsigned = await atStage(
+      "dev",
+      post("/v1/purchases", { signedTransaction: "a.b.c" }, bearer(owner)),
+    );
+    expect(unsigned.status).toBe(400);
+    expect((await purchasesAt("dev", bearer(owner))).balance).toBe(550);
   });
 
   it("serves a demo room with no session on dev, and refuses it elsewhere", async () => {
@@ -1830,14 +1876,15 @@ describe("payments in the Worker", () => {
     expect(await refused.json()).toEqual({ _tag: "InvalidPurchase" });
 
     const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
+    // The pair's wallet: the welcome coins (560) and the pack.
     expect(first).toMatchObject({
       transactionId: "7",
       coins: 100,
-      balance: 100,
+      balance: 660,
       duplicate: false,
     });
     const again = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
-    expect(again).toMatchObject({ balance: 100, duplicate: true });
+    expect(again).toMatchObject({ balance: 660, duplicate: true });
   });
 
   it("trusts only Apple's root, for transactions and notifications", async () => {

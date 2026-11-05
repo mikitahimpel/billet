@@ -29,6 +29,7 @@ import { freeInk, type InkId, inks as inkCatalog } from "@billet/contracts-domai
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
+import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
@@ -143,6 +144,21 @@ export class NotesService extends Context.Service<
       userId: UserId,
       request: WishRequest,
     ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
+    /** The balance of a pair's wallet. Payments asks by pair, never by caller. */
+    readonly walletBalance: (
+      pairId: PairId,
+    ) => Effect.Effect<number, NotesNotFound | NotesUnavailable>;
+    /**
+     * Enters coins bought with money in a pair's wallet, once per entry id, and answers the
+     * balance after it and the coins the entry moved, as a positive number.
+     */
+    readonly creditPurchase: (
+      pairId: PairId,
+      credit: PurchaseCredit,
+    ) => Effect.Effect<
+      { readonly balance: number; readonly coins: number },
+      NotesNotFound | NotesUnavailable
+    >;
     /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
@@ -509,6 +525,25 @@ export class NotesService extends Context.Service<
         };
       });
 
+      const walletBalance = Effect.fn("NotesService.walletBalance")(function* (pairId: PairId) {
+        return (yield* openedRead(pairId, () => rooms.shop(pairId))).balance;
+      });
+
+      const creditPurchase = Effect.fn("NotesService.creditPurchase")(function* (
+        pairId: PairId,
+        credit: PurchaseCredit,
+      ) {
+        const decision = yield* inOpenRoom(pairId, () => rooms.creditPurchase(pairId, credit));
+        if (decision._tag === "Rejected") {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-purchase" }));
+        }
+        const entry = entryOf(decision, credit.kind);
+        if (entry === undefined) {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "purchase-not-entered" }));
+        }
+        return { balance: decision.state.wallet.balance, coins: Math.abs(entry.amount) };
+      });
+
       return NotesService.of({
         uploadImage,
         readImage,
@@ -522,6 +557,8 @@ export class NotesService extends Context.Service<
         openGift,
         claimBonus,
         earn,
+        walletBalance,
+        creditPurchase,
         history,
       });
     }),
