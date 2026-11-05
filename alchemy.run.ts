@@ -83,6 +83,10 @@ export default Alchemy.Stack(
     const samplingRate = yield* Config.Number("API_SAMPLING_RATE").pipe(
       Config.withDefault(stage === "dev" ? 1 : 0.15),
     );
+    // The drawing Live Activity's push lane stays off until a deploy sets LIVE_ACTIVITY_PUSH=on.
+    const liveActivityPush = yield* Config.String("LIVE_ACTIVITY_PUSH").pipe(
+      Config.withDefault(""),
+    );
     const observability = {
       enabled: true,
       headSamplingRate: samplingRate,
@@ -127,6 +131,7 @@ export default Alchemy.Stack(
               DEMO_ROOM: Cloudflare.DurableObject("DemoRoom"),
               APNS_KEY: Config.Redacted("APNS_KEY"),
               APNS_KEY_ID: Config.Redacted("APNS_KEY_ID"),
+              LIVE_ACTIVITY_PUSH: liveActivityPush,
               APPLE_SIGN_IN_KEY: Config.Redacted("APPLE_SIGN_IN_KEY"),
               APPLE_SIGN_IN_KEY_ID: Config.Redacted("APPLE_SIGN_IN_KEY_ID"),
             }

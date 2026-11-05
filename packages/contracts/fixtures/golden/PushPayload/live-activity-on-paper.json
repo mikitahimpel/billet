@@ -1,0 +1,21 @@
+{
+  "_tag": "LiveActivity",
+  "author": "user-bob",
+  "compact": {
+    "strokes": [
+      {
+        "color": "#2A1A1C",
+        "points": [
+          10,
+          20,
+          30,
+          40
+        ],
+        "width": 3
+      }
+    ],
+    "version": 1
+  },
+  "noteId": "note-1",
+  "paper": "sky"
+}

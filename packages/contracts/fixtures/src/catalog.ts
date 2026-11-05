@@ -218,6 +218,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "widget-push": DeliveryLane.cases.WidgetPush.make({}),
     "alert-push": DeliveryLane.cases.AlertPush.make({}),
     "timeline-refresh": DeliveryLane.cases.TimelineRefresh.make({}),
+    "live-activity-push": DeliveryLane.cases.LiveActivityPush.make({}),
   }),
   fixture("CreateInviteResponse", CreateInviteResponse, {
     default: { code, expiresAt: 1_700_086_400_000 },
@@ -321,6 +322,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("RegisterPushTokenRequest", RegisterPushTokenRequest, {
     alert: { kind: "alert", environment: "production", token: pushToken },
     widget: { kind: "widget", environment: "sandbox", token: pushToken },
+    "live-activity": { kind: "liveactivity", environment: "production", token: pushToken },
   }),
   fixture("ApiError", ApiError, {
     unauthorized: ApiError.cases.Unauthorized.make({}),
@@ -463,5 +465,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       paper: "butter",
     }),
     "alert-text": PushPayload.cases.Alert.make({ noteId, author: alice, text: "home soon" }),
+    "live-activity": PushPayload.cases.LiveActivity.make({ noteId, author: alice, compact }),
+    "live-activity-on-paper": PushPayload.cases.LiveActivity.make({
+      noteId,
+      author: bob,
+      compact,
+      paper: "sky",
+    }),
   }),
 ];
