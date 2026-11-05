@@ -7,7 +7,6 @@ struct AppHeader: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over, from the profile's settings.
     var erase: () -> Void
-    @State private var profile = false
     @State private var pairing = false
     @Namespace private var zoom
     @Environment(Hints.self) private var hints
@@ -23,7 +22,7 @@ struct AppHeader: View {
 
             CoinPill(coins: state.coins)
 
-            Button { profile = true } label: {
+            Button { state.showsProfile = true } label: {
                 HStack(spacing: -10) {
                     Monogram(partner: state.partners.0, profile: state.profile)
                         .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
@@ -61,7 +60,7 @@ struct AppHeader: View {
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
         }
-        .sheet(isPresented: $profile) {
+        .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
             ProfileHub(state: state, erase: erase)
                 .presentationBackground(Ink.sheet)
                 .presentationDragIndicator(.visible)

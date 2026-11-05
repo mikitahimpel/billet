@@ -329,7 +329,7 @@ struct HomeView: View {
             case .shop: .shop
             case .us: .other
             }
-            let sheet = state.composingNote != nil || state.drawing || state.showsSettings || state.showsInbox
+            let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
                 || state.openedShopItem != nil
             let buying = state.lastPurchase?.canUndo(at: .now) == true
             return HintContext(
