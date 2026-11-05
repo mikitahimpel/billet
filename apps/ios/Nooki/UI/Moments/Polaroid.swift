@@ -4,9 +4,7 @@ import UIKit
 /// Colors of the polaroid paper family, shared by photos and the notes beside them.
 enum PolaroidPaper {
     /// The frame: warm off-white in light, a softer cream on the brown screen in dark so it doesn't glare.
-    static let frame = Color(uiColor: UIColor {
-        $0.userInterfaceStyle == .dark ? UIColor(Color(hex: 0xF3E4CC)) : UIColor(Color(hex: 0xFFFBF3))
-    })
+    static let frame = Color(light: Color(hex: 0xFFFBF3), dark: Color(hex: 0xF5E8D3))
     /// Handwriting on the paper.
     static let ink = Color(hex: 0x4A2E1F)
     static let byline = Color(hex: 0x9A7A62)

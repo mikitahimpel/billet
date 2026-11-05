@@ -661,7 +661,7 @@ private struct MomentViewer: View {
                 .padding(.bottom, 12)
             }
         }
-        .background(Ink.sheet.ignoresSafeArea())
+        .background(Ink.screen.ignoresSafeArea())
         .animation(.snappy(duration: 0.25), value: moment)
         .animation(.snappy(duration: 0.25), value: editing)
         .onAppear { caption = moment?.caption ?? "" }
@@ -684,9 +684,9 @@ private struct MomentViewer: View {
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
                     .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.12), in: .circle)
+                    .background(Ink.surfaceRaised, in: .circle)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
@@ -709,9 +709,9 @@ private struct MomentViewer: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
                     .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.12), in: .circle)
+                    .background(Ink.surfaceRaised, in: .circle)
             }
             .accessibilityLabel("Share and more")
         }
@@ -744,11 +744,11 @@ private struct MomentViewer: View {
                     .contentTransition(.symbolEffect(.replace))
                 Text(title)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(active ? tint.opacity(0.22) : .white.opacity(0.1), in: .capsule)
+            .background(active ? tint.opacity(0.22) : Ink.surfaceRaised, in: .capsule)
         }
         .buttonStyle(.plain)
     }

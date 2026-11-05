@@ -33,15 +33,13 @@ private struct LookSheet: View {
     let raw: UIImage
     let prints: [UIImage]
 
-    @Environment(\.colorScheme) private var scheme
-
     private let width: CGFloat = (375 - 32 - 14) / 2
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Moments")
                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(scheme == .dark ? Color.white : Color(hex: 0x3A2114))
+                .foregroundStyle(Ink.text)
             HStack(alignment: .top, spacing: 14) {
                 VStack(spacing: -width * 0.05) {
                     card(prints[0], "sunday with Mochi", "Anya · Nov 5", id: 1, taped: true)
@@ -66,7 +64,7 @@ private struct LookSheet: View {
         }
         .padding(16)
         .frame(width: 375)
-        .background(scheme == .dark ? Color(hex: 0x2A1A12) : Color(hex: 0xFBF3E8))
+        .background(Ink.screen)
     }
 
     private func card(_ image: UIImage, _ caption: String, _ byline: String, id: Int, taped: Bool = false) -> some View {
@@ -89,6 +87,6 @@ private struct LookSheet: View {
     private func label(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundStyle(scheme == .dark ? Color.white.opacity(0.7) : Color(hex: 0x7A5A45))
+            .foregroundStyle(Ink.textSecondary)
     }
 }
