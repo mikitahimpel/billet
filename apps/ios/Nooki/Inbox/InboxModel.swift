@@ -22,6 +22,8 @@ final class InboxModel {
     /// Items that were unread when the Inbox was last opened; they stay marked until it is opened again.
     private(set) var fresh: Set<String> = []
     private(set) var next: String?
+    /// The newest item's cursor, as the server gave it with the first page: the read mark moves up to it.
+    @ObservationIgnored private var head: String?
 
     @ObservationIgnored private let list: @Sendable (String?) async throws(TransportError) -> ActivityResponse
     @ObservationIgnored private let markRead:
@@ -46,6 +48,7 @@ final class InboxModel {
             let page = try await list(nil)
             items = page.items
             next = page.next
+            head = page.head ?? page.items.first?.cursor
             unread = page.unread
             fresh = Self.unreadIDs(in: page.items, count: page.unread)
             phase = .loaded
@@ -77,8 +80,8 @@ final class InboxModel {
     }
 
     private func readAll() async {
-        guard unread > 0, let newest = items.first else { return }
-        if let answer = try? await markRead(MarkActivityReadRequest(upTo: newest.cursor)) {
+        guard unread > 0, let head else { return }
+        if let answer = try? await markRead(MarkActivityReadRequest(upTo: head)) {
             unread = answer.unread
         }
     }
