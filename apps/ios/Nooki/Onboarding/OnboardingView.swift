@@ -4,7 +4,8 @@ import Wire
 
 /// The first launch as a native flow on the app's warm screen: a welcome, then one step per page with a large title,
 /// a progress bar, Back and Skip in the bar, the choices as inset-grouped rows and one primary button at the bottom.
-/// Server questions are drawn by their kind, so a new question needs no app update. Follows the system appearance.
+/// Server questions are drawn by their kind, so a new question needs no app update. Built on the adaptive tokens;
+/// the app is dark for now, and light comes app-wide in one step.
 struct OnboardingView: View {
     @Bindable var flow: OnboardingFlow
     /// The invite comes from the pairing on the server; nil in a build without one.

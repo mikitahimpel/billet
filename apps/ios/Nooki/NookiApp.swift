@@ -28,9 +28,7 @@ struct NookiApp: App {
                 HomeView()
                     // A new coat loads Mochi again, so the room is built anew around her.
                     .id(onboarding.wornCoat)
-                    // The onboarding follows the system's appearance; the rest of the app is dark until its
-                    // screens move to the adaptive tokens.
-                    .preferredColorScheme(onboarding.isFinished ? .dark : nil)
+                    .preferredColorScheme(.dark)
                     .environment(session)
                     .overlay {
                         if !onboarding.isFinished {
