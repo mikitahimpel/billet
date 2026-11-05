@@ -40,7 +40,7 @@ final class InboxLink {
                 case .shopChanged(let shop): await handlers.shop(shop)
                 case .moodChanged(let checkIn): await handlers.mood(checkIn)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catEntryAdded, .catSaved:
+                     .clear, .catEntryAdded, .catSaved, .moodChanged:
                     break
                 }
             },
