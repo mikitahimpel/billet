@@ -1,0 +1,195 @@
+@import "tailwindcss";
+@import "@fontsource-variable/nunito";
+@import "@fontsource/dm-mono/500.css";
+
+/* Colours are the app's Palette and the ember dusk ground (packages/ios/core/Sources/DesignSystem). */
+@theme {
+  --color-sky: #2e1838;
+  --color-page: #34172c;
+  --color-page-deep: #1a0a14;
+  --color-foot: #4a1c1a;
+  --color-ember: #ff7a3a;
+  --color-raised: #402a1c;
+  --color-raised-top: #5a3c27;
+  --color-paper: #fbf3e6;
+  --color-paper-turned: #e3d2ac;
+  /* Text roles on the dusk ground: paper (headings), soft (body, >= 7:1), muted (meta, >= 5:1 on panels). */
+  --color-soft: #e6dccf;
+  --color-muted: #c4b6a6;
+  --color-gold: #d9a441;
+  /* Gold lifted for small text: the fill gold drops under 4.5:1 on the raised panels. */
+  --color-honey: #e8b65a;
+  --color-ink: #2a1208;
+  --color-plate: #1b0b07;
+  --color-light: #ffd98a;
+
+  /* The app sets every word in SF Pro Rounded; Apple devices get it here too, everyone else Nunito. */
+  --font-sans: ui-rounded, "SF Pro Rounded", "Nunito Variable", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "DM Mono", monospace;
+
+  /* One fluid scale (ratio ~1.333 at desktop), 360px to 1440px. */
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.2;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.45;
+  --text-body: clamp(1.0625rem, 1rem + 0.2vw, 1.1875rem);
+  --text-body--line-height: 1.55;
+  --text-lead: clamp(1.1875rem, 1.05rem + 0.6vw, 1.5rem);
+  --text-lead--line-height: 1.45;
+  --text-h3: clamp(1.5rem, 1.3rem + 0.9vw, 2.125rem);
+  --text-h3--line-height: 1.1;
+  --text-h2: clamp(2.5rem, 1.6rem + 3.9vw, 5.25rem);
+  --text-h2--line-height: 0.98;
+  --text-display: clamp(3.25rem, 1.9rem + 6vw, 8rem);
+  --text-display--line-height: 0.92;
+
+  --radius-card: 28px;
+  --radius-plate: 16px;
+  --radius-paper: 10px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+    background: var(--color-page-deep);
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    font-weight: 450;
+    color: var(--color-paper);
+    background:
+      radial-gradient(
+        120% 60% at 50% 100%,
+        color-mix(in oklab, var(--color-ember) 22%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(var(--color-sky), var(--color-page) 45%, var(--color-foot));
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 850;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  p,
+  dd {
+    text-wrap: pretty;
+  }
+}
+
+@utility container-page {
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
+  padding-inline: clamp(1.25rem, 0.5rem + 3.5vw, 3.5rem);
+}
+
+@utility section-y {
+  padding-block: clamp(5rem, 2.5rem + 7vw, 9rem);
+}
+
+@utility eyebrow {
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-honey);
+}
+
+/* The app's lit panel: a lamp-lit surface standing on the page. */
+.lit-panel {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--color-raised) 92%, var(--color-light)),
+    var(--color-raised)
+  );
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 1px 0 color-mix(in oklab, var(--color-light) 18%, transparent) inset,
+    0 24px 48px -24px var(--color-page-deep);
+}
+
+/* A pool of lamp light: the only gradient the design allows. */
+.lamp-glow {
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--color-light) 38%, transparent),
+    transparent
+  );
+}
+
+/* Story beats over the pinned room: the script sets data-on on the current one. */
+[data-beat] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+[data-beat][data-on] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-beat] {
+    transform: none;
+    transition-duration: 0.01s;
+  }
+}
+
+.marquee {
+  animation: marquee 60s linear infinite;
+}
+.marquee:hover {
+  animation-play-state: paused;
+}
+@keyframes marquee {
+  to {
+    transform: translateX(calc(-50% - 8px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    animation: none;
+    overflow-x: auto;
+    width: auto;
+  }
+}
+
+/* The lock-screen doodle draws itself as it scrolls in; without scroll timelines it is simply drawn. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .doodle path {
+      stroke-dasharray: 1;
+      animation: draw linear both;
+      animation-timeline: view();
+      animation-range: entry 30% cover 55%;
+    }
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
