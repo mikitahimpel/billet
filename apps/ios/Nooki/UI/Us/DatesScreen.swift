@@ -11,6 +11,7 @@ struct DatesScreen: View {
 
     @State private var mode: Mode = .swipe
     @State private var filter = DateFilter()
+    @State private var filtersOpen = false
 
     @State private var matched: DateIdea?
     @State private var planner: PlannerTarget?
@@ -28,7 +29,7 @@ struct DatesScreen: View {
         VStack(spacing: 0) {
             UsSheetHeader(title: "Date night", subtitle: "Swipe together, or let \(CatProfile.name()) pick")
             modeRow
-            if mode != .plans { filterRow }
+            if mode != .plans { filterBar }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     switch mode {
@@ -48,6 +49,17 @@ struct DatesScreen: View {
         .sheet(item: $planner) { target in
             DatePlannerSheet(state: state, target: target) { mode = .plans }
         }
+        .sheet(isPresented: $filtersOpen) {
+            DateFilterSheet(filter: $filter, count: fitting)
+        }
+    }
+
+    /// Swipe counts what's left in this partner's deck, Surprise everything in season.
+    private func fitting(_ filter: DateFilter) -> Int {
+        switch mode {
+        case .swipe: us.deck(for: state.viewer, filter: filter).count
+        case .surprise, .plans: DateIdea.all.filter { filter.allows($0) && $0.inSeason(.current) }.count
+        }
     }
 
     // MARK: Swipe
@@ -56,13 +68,16 @@ struct DatesScreen: View {
         let deck = us.deck(for: state.viewer, filter: filter)
         let matches = us.matches
         return VStack(alignment: .leading, spacing: 14) {
-            Text("Swiping as \(state.viewer) · pass the phone to \(state.otherPartner) next")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Ink.secondary)
+            HStack(spacing: 8) {
+                Monogram(partner: state.viewer, profile: state.profile, size: 22)
+                Text("\(state.profile.name(of: state.viewer))'s turn, then \(state.profile.name(of: state.otherPartner))")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Ink.secondary)
+            }
 
             if deck.isEmpty {
-                UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "You've seen them all",
-                        text: "Change the filters or check your matches.")
+                UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
+                        text: filter.isEmpty ? "Plan one of your matches." : "Loosen a filter for more.")
             } else {
                 SwipeDeck(deck: deck, onSwipe: commitSwipe)
             }
@@ -82,17 +97,16 @@ struct DatesScreen: View {
                         Button {
                             planner = PlannerTarget(ideaID: idea.id)
                         } label: {
-                            VStack(spacing: 6) {
-                                UsIcon(glyph: idea.place.icon, size: 34)
-                                Text(idea.title)
-                                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(Color(hex: 0x5B3A28))
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                            }
-                            .frame(width: 104, height: 92)
-                            .background(Color(hex: 0xFFFBF3),
-                                        in: .rect(cornerRadius: 18, style: .continuous))
+                            DateScenePicture(scene: idea.scene)
+                                .overlay(alignment: .bottomLeading) {
+                                    Text(idea.title)
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(2)
+                                        .padding(8)
+                                }
+                                .frame(width: 104, height: 124)
+                                .clipShape(.rect(cornerRadius: 18, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }
@@ -135,18 +149,19 @@ struct DatesScreen: View {
                 anotherButton
             } else {
                 VStack(spacing: 16) {
-                    UsIcon(glyph: .init(symbol: "wand.and.stars", tint: .lilac), size: 96)
+                    UsIcon(glyph: .init(symbol: "wand.and.stars", tint: .lilac), size: 72)
                         .rotationEffect(.degrees(hatAngle), anchor: .bottom)
                     Text(surpriseCaption)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.75))
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
                 }
+                .padding(.bottom, 32)
                 .frame(maxWidth: .infinity)
-                .frame(height: 300)
-                .background(Color(hex: 0xFFFBF3),
-                            in: .rect(cornerRadius: 28, style: .continuous))
+                .frame(height: DateIdeaCard.height, alignment: .bottom)
+                .background { DateScenePicture(scene: .plans) }
+                .clipShape(.rect(cornerRadius: 28, style: .continuous))
 
                 UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
@@ -157,7 +172,7 @@ struct DatesScreen: View {
 
     private var surpriseCaption: String {
         if rolling { return "\(CatProfile.name()) is digging…" }
-        if didRoll { return "Nothing fits these filters" }
+        if didRoll { return "Nothing fits. Loosen a filter." }
         return "\(CatProfile.name()) will pull a date out of the hat"
     }
 
@@ -243,22 +258,20 @@ struct DatesScreen: View {
         .padding(.top, 14)
     }
 
-    private var filterRow: some View {
+    /// The Filters button, then the active filters to remove one by one, or quick picks while none is set.
+    private var filterBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {
-                ForEach(DateIdea.Place.allCases, id: \.self) { place in
-                    UsChip(title: place.displayTitle, selected: filter.places.contains(place)) {
-                        toggle(place)
+                filtersButton
+                if filter.isEmpty {
+                    ForEach(DatePreset.all) { preset in
+                        UsChip(title: preset.title, selected: false) {
+                            withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
+                        }
                     }
-                }
-                ForEach(DateIdea.Cost.allCases, id: \.self) { cost in
-                    UsChip(title: cost.rawValue.capitalized, selected: filter.costs.contains(cost)) {
-                        toggle(cost)
-                    }
-                }
-                ForEach(DateIdea.Length.allCases, id: \.self) { length in
-                    UsChip(title: length.rawValue.capitalized, selected: filter.lengths.contains(length)) {
-                        toggle(length)
+                } else {
+                    ForEach(filter.tags, id: \.self) { tag in
+                        removableChip(tag)
                     }
                 }
             }
@@ -268,22 +281,52 @@ struct DatesScreen: View {
         .padding(.top, 10)
     }
 
-    private func toggle(_ place: DateIdea.Place) {
-        withAnimation(.snappy(duration: 0.2)) {
-            if filter.places.contains(place) { filter.places.remove(place) } else { filter.places.insert(place) }
+    private var filtersButton: some View {
+        Button { filtersOpen = true } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "line.3.horizontal.decrease")
+                    .font(.system(size: 13, weight: .bold))
+                Text("Filters")
+                if !filter.isEmpty {
+                    Text("\(filter.tags.count)")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(minWidth: 20, minHeight: 20)
+                        .background(Circle().fill(.honeyGradient))
+                }
+            }
+            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .foregroundStyle(Ink.primary)
+            .padding(.leading, 14)
+            .padding(.trailing, filter.isEmpty ? 14 : 7)
+            .frame(height: 34)
+            .background(.white.opacity(0.1), in: .capsule)
+            .overlay(Capsule().stroke(Ink.hairline, lineWidth: 0.5))
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(filter.isEmpty ? "Filters" : "Filters, \(filter.tags.count) on")
     }
 
-    private func toggle(_ cost: DateIdea.Cost) {
-        withAnimation(.snappy(duration: 0.2)) {
-            if filter.costs.contains(cost) { filter.costs.remove(cost) } else { filter.costs.insert(cost) }
+    private func removableChip(_ tag: DateFilter.Tag) -> some View {
+        Button {
+            withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: tag.symbol)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(tag.title)
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundStyle(Ink.secondary)
+            }
+            .font(.system(size: 14, weight: .semibold, design: .rounded))
+            .foregroundStyle(Ink.primary)
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+            .background(Color.honey.opacity(0.32), in: .capsule)
         }
-    }
-
-    private func toggle(_ length: DateIdea.Length) {
-        withAnimation(.snappy(duration: 0.2)) {
-            if filter.lengths.contains(length) { filter.lengths.remove(length) } else { filter.lengths.insert(length) }
-        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Remove \(tag.title)")
     }
 }
 
@@ -322,7 +365,7 @@ private struct SwipeDeck: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 382)
+        .frame(height: DateIdeaCard.height + 22)
     }
 
     @ViewBuilder
@@ -428,40 +471,180 @@ private struct SwipeDeck: View {
 }
 
 private struct DateIdeaCard: View {
+    static let height: CGFloat = 420
+
     let idea: DateIdea
 
     var body: some View {
-        VStack(spacing: 12) {
-            UsIcon(glyph: idea.place.icon, size: 72)
-            Text(idea.title)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(Color(hex: 0x5B3A28))
-                .multilineTextAlignment(.center)
-            Text(idea.pitch)
-                .font(.system(size: 16))
-                .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.75))
-                .multilineTextAlignment(.center)
-                .lineLimit(4)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 6) {
-                tag(idea.place.displayTitle)
-                tag(idea.cost.rawValue.capitalized)
-                tag(idea.time.rawValue.capitalized)
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        DateScenePicture(scene: idea.scene)
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(idea.title)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(idea.pitch)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 6) {
+                        tag(idea.place.title, symbol: idea.place.icon.symbol)
+                        tag(idea.cost.title, symbol: idea.cost.symbol)
+                        tag(idea.time.title, symbol: idea.time.symbol)
+                    }
+                    .padding(.top, 4)
+                }
+                .padding(20)
             }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .frame(height: 360)
-        .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 28, style: .continuous))
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.height)
+            .clipShape(shape)
+            .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+            .accessibilityElement(children: .combine)
     }
 
-    private func tag(_ text: String) -> some View {
-        Text(text)
+    private func tag(_ text: String, symbol: String) -> some View {
+        Label(text, systemImage: symbol)
             .font(.system(size: 12, weight: .semibold, design: .rounded))
-            .foregroundStyle(Color(hex: 0x5B3A28))
+            .foregroundStyle(.white)
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color(hex: 0xF0DCC0), in: .capsule)
+            .padding(.vertical, 6)
+            .background(.white.opacity(0.18), in: .capsule)
+    }
+}
+
+/// A date scene filling its frame, darkened at the bottom so white text on it stays readable.
+private struct DateScenePicture: View {
+    let scene: DateIdea.Scene
+
+    var body: some View {
+        Color(hex: 0x6B4A35)
+            .overlay {
+                Image(decorative: scene.imageName)
+                    .resizable()
+                    .scaledToFill()
+            }
+            .overlay {
+                LinearGradient(stops: [.init(color: .clear, location: 0.35),
+                                       .init(color: Ink.sheet.opacity(0.88), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+            .clipped()
+    }
+}
+
+private struct DatePreset: Identifiable {
+    let title: String
+    let filter: DateFilter
+
+    var id: String { title }
+
+    static let all = [
+        DatePreset(title: "Night in", filter: DateFilter(places: [.home], lengths: [.hour, .evening])),
+        DatePreset(title: "Free", filter: DateFilter(costs: [.free])),
+        DatePreset(title: "Long distance", filter: DateFilter(places: [.apart])),
+    ]
+}
+
+private struct DateFilterSheet: View {
+    @Binding var filter: DateFilter
+    let count: (DateFilter) -> Int
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let fits = count(filter)
+        VStack(spacing: 0) {
+            UsSheetHeader(title: "Filters", subtitle: fits == 1 ? "1 idea fits" : "\(fits) ideas fit") {
+                if !filter.isEmpty {
+                    Button("Reset") {
+                        withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() }
+                    }
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.honey)
+                }
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    group("Quick picks") {
+                        HStack(spacing: 8) {
+                            ForEach(DatePreset.all) { preset in
+                                UsChip(title: preset.title, selected: filter == preset.filter) {
+                                    withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
+                                }
+                            }
+                        }
+                    }
+                    group("Where") {
+                        options(DateIdea.Place.allCases.map(DateFilter.Tag.place), columns: 2)
+                    }
+                    group("Budget") {
+                        options(DateIdea.Cost.allCases.map(DateFilter.Tag.cost), columns: 3)
+                    }
+                    group("Time") {
+                        options(DateIdea.Length.allCases.map(DateFilter.Tag.length), columns: 3)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 24)
+            }
+            .scrollIndicators(.hidden)
+
+            UsPrimaryButton(title: fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }
+                .disabled(fits == 0)
+                .opacity(fits == 0 ? 0.5 : 1)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 12)
+        }
+        .usSheet(detents: [.large])
+    }
+
+    private func group(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundStyle(Ink.secondary)
+            content()
+        }
+    }
+
+    private func options(_ tags: [DateFilter.Tag], columns: Int) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns), spacing: 8) {
+            ForEach(tags, id: \.self) { tag in
+                option(tag)
+            }
+        }
+    }
+
+    private func option(_ tag: DateFilter.Tag) -> some View {
+        let selected = filter.contains(tag)
+        return Button {
+            withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: tag.symbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(selected ? Color.honey : Ink.secondary)
+                Text(tag.title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Ink.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 50)
+            .background(selected ? Color.honey.opacity(0.22) : Ink.card,
+                        in: .rect(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(selected ? Color.honey : Ink.hairline, lineWidth: selected ? 1.5 : 0.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -706,5 +889,97 @@ private struct DatePlannerSheet: View {
 }
 
 private extension DateIdea.Place {
-    var displayTitle: String { rawValue.capitalized }
+    var title: String {
+        switch self {
+        case .home: "At home"
+        case .city: "In town"
+        case .nature: "Outdoors"
+        case .apart: "Long distance"
+        }
+    }
+}
+
+private extension DateIdea.Cost {
+    var title: String {
+        switch self {
+        case .free: "Free"
+        case .cheap: "Cheap"
+        case .nice: "Treat"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .free: "heart.fill"
+        case .cheap: "dollarsign.circle.fill"
+        case .nice: "sparkles"
+        }
+    }
+}
+
+private extension DateIdea.Length {
+    var title: String {
+        switch self {
+        case .hour: "1 hour"
+        case .evening: "Evening"
+        case .day: "All day"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .hour: "clock.fill"
+        case .evening: "moon.stars.fill"
+        case .day: "sun.max.fill"
+        }
+    }
+}
+
+private extension DateFilter {
+    enum Tag: Hashable {
+        case place(DateIdea.Place)
+        case cost(DateIdea.Cost)
+        case length(DateIdea.Length)
+
+        var title: String {
+            switch self {
+            case .place(let place): place.title
+            case .cost(let cost): cost.title
+            case .length(let length): length.title
+            }
+        }
+
+        var symbol: String {
+            switch self {
+            case .place(let place): place.icon.symbol
+            case .cost(let cost): cost.symbol
+            case .length(let length): length.symbol
+            }
+        }
+    }
+
+    var isEmpty: Bool { places.isEmpty && costs.isEmpty && lengths.isEmpty }
+
+    /// In the sheet's order, so the chips above the deck don't jump around.
+    var tags: [Tag] {
+        DateIdea.Place.allCases.filter(places.contains).map(Tag.place)
+            + DateIdea.Cost.allCases.filter(costs.contains).map(Tag.cost)
+            + DateIdea.Length.allCases.filter(lengths.contains).map(Tag.length)
+    }
+
+    func contains(_ tag: Tag) -> Bool {
+        switch tag {
+        case .place(let place): places.contains(place)
+        case .cost(let cost): costs.contains(cost)
+        case .length(let length): lengths.contains(length)
+        }
+    }
+
+    mutating func toggle(_ tag: Tag) {
+        switch tag {
+        case .place(let place): if places.remove(place) == nil { places.insert(place) }
+        case .cost(let cost): if costs.remove(cost) == nil { costs.insert(cost) }
+        case .length(let length): if lengths.remove(length) == nil { lengths.insert(length) }
+        }
+    }
 }
