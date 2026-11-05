@@ -44,6 +44,8 @@ export const routes = {
   getFlags: route("GET", "/v1/flags"),
   /** Maintenance, the minimum build and a notice. No session; answered without the database. */
   getStatus: route("GET", "/v1/status"),
+  /** Every date idea. No session; the same for everyone, so cached: see `DateCatalogResponse`. */
+  getDateCatalog: route("GET", "/v1/dates/catalog"),
   /** The onboarding questions: see `OnboardingResponse`. Any session, anonymous included. */
   getOnboarding: route("GET", "/v1/onboarding"),
   /** Stores one step's answer or skip, once per account and step. */

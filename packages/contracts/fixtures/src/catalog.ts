@@ -6,6 +6,7 @@ import {
   ActivityTarget,
 } from "@billet/contracts-domain/activity";
 import { CatEntry, CatEvent, CatNeeds, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
+import { DateIdea } from "@billet/contracts-domain/date-ideas";
 import { DeliveryLane } from "@billet/contracts-domain/delivery-lane";
 import {
   DeviceId,
@@ -33,6 +34,7 @@ import {
   SignInAnonymouslyRequest,
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
+import { DateCatalogResponse } from "@billet/contracts-http-api/dates";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
 import { FlagsResponse } from "@billet/contracts-http-api/flags";
@@ -269,6 +271,27 @@ const listEarnEntry = decodeCoinEntry({
   ref: "item-1",
   at: 1762350300000,
 });
+const blanketFort: DateIdea = {
+  id: 1,
+  title: "Blanket fort cinema",
+  pitch: "Build a fort, pick a movie, phones stay outside",
+  place: "home",
+  cost: "free",
+  time: "evening",
+  season: "any",
+  art: { path: "/art/dates/1-3f9a0c2b.webp", color: "#6B4A35" },
+};
+const catTrick: DateIdea = {
+  id: 42,
+  title: "Teach {cat} a trick",
+  pitch: "Ten minutes of treats and patience, then show your partner",
+  place: "apart",
+  cost: "$$",
+  time: "1h",
+  season: "winter",
+  art: { path: "/art/dates/42.webp", color: "#a1b2c3" },
+};
+
 const catalogInk = (id: string): Ink => {
   const found = inkOf(id);
   if (found === undefined) throw new Error(`no ink ${id} in the catalog`);
@@ -727,6 +750,11 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("InksResponse", InksResponse, {
     default: { inks, owned: [freeInk, rose] },
     "free-only": { inks, owned: [freeInk] },
+  }),
+  fixture("DateIdea", DateIdea, { default: blanketFort, "with-cat": catTrick }),
+  fixture("DateCatalogResponse", DateCatalogResponse, {
+    default: { version: "0123456789abcdef", ideas: [blanketFort, catTrick] },
+    empty: { version: "fedcba9876543210", ideas: [] },
   }),
   fixture("ShopOffer", ShopOffer, {
     ink: ShopOffer.cases.Ink.make({ ink: rose }),

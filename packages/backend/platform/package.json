@@ -47,6 +47,7 @@
     "@billet/backend-account": "workspace:*",
     "@billet/backend-admin": "workspace:*",
     "@billet/backend-auth": "workspace:*",
+    "@billet/backend-dates": "workspace:*",
     "@billet/backend-demo-partner": "workspace:*",
     "@billet/backend-flags": "workspace:*",
     "@billet/backend-metrics": "workspace:*",

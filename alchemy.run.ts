@@ -100,6 +100,10 @@ export default Alchemy.Stack(
     // exported by apps/api/src/worker.ts, one object per couple, SQLite-backed by default.
     const api = yield* Cloudflare.Worker("Api", {
       main: "./apps/api/src/worker.ts",
+      // Static files, such as the date cards' pictures under /art/. A path that matches a file is
+      // served from the CDN without running the Worker; any other path reaches the Worker. Keep an
+      // index.html out of it, or it would answer `/`. Cache rules are in public/_headers.
+      assets: { directory: "./apps/api/public" },
       env: {
         DB: db,
         MEDIA: media,
