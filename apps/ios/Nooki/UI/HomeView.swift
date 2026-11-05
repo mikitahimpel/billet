@@ -150,7 +150,10 @@ struct HomeView: View {
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
                 }
-            case .background: state.didEnterBackground()
+                session?.followInbox(true)
+            case .background:
+                state.didEnterBackground()
+                session?.followInbox(false)
             default: break
             }
         }

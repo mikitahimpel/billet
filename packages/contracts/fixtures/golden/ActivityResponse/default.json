@@ -1,8 +1,10 @@
 {
+  "head": "0001700000101000~cat:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
   "items": [
     {
       "actor": "Partner",
       "at": 1700000101000,
+      "cursor": "0001700000101000~cat:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       "event": {
         "_tag": "CatFed",
         "grams": 40
@@ -15,6 +17,7 @@
     {
       "actor": "Me",
       "at": 1700000100000,
+      "cursor": "0001700000100000~note:note-1",
       "event": {
         "_tag": "NoteSent",
         "kind": "Drawing",
