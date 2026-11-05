@@ -1,3 +1,5 @@
+import type { InviteCode } from "@billet/contracts-domain/ids";
+
 /**
  * Every HTTP route of the API: method and path. The Worker registers its handlers from this table
  * and a test sends a request to each entry, so a route changed here is served at the new path or
@@ -75,6 +77,13 @@ export const routes = {
   /** App Store Server Notifications V2 (refunds and the like). Apple calls it; no session. */
   appStoreNotifications: route("POST", "/v1/appstore/notifications"),
 } as const satisfies Record<string, Route>;
+
+/**
+ * Where an invite link points, on the API's host: a universal link into the app, or a page with
+ * the code where the app isn't installed. Outside `/v1/`, as iOS opens it from a browser.
+ */
+export const inviteLinkPrefix = "/i/";
+export const inviteLinkPath = (code: InviteCode): `/i/${string}` => `${inviteLinkPrefix}${code}`;
 
 /** The concrete path of `downloadImage` for a media key. */
 export const mediaPath = (key: string): string => routes.downloadImage.path.replace("*", key);

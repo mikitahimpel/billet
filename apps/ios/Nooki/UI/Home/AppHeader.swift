@@ -1,28 +1,28 @@
 import SwiftUI
 import TipKit
 
-/// The one header of every tab: the Inbox and the couple's avatars top-left (the avatars open the couple's profile and,
-/// until the two are paired, the partner invite), and the coins top-right. Nothing else sits in it.
+/// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox top-left; top-right the
+/// coins, then the couple's avatars in the corner, which open the profile. Nothing else sits in it.
 struct AppHeader: View {
     let state: HomeState
-    @State private var editing = false
+    /// Wipes everything saved on this phone and starts the app over, from the profile's settings.
+    var erase: () -> Void
     @State private var pairing = false
+    @Namespace private var zoom
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            InboxButton(unread: 0) {}
+            InboxButton(unread: session?.inbox.unread ?? 0) {
+                state.showsInbox = true
+            }
 
-            Menu {
-                Button("Couple profile", systemImage: "person.2.crop.square.stack") { editing = true }
-                if let session, !session.isPaired {
-                    Button("Invite your partner", systemImage: "heart.circle") {
-                        hints.done(InviteHint())
-                        pairing = true
-                    }
-                }
-            } label: {
+            Spacer(minLength: 0)
+
+            CoinPill(coins: state.coins)
+
+            Button { state.showsProfile = true } label: {
                 HStack(spacing: -10) {
                     Monogram(partner: state.partners.0, profile: state.profile)
                         .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
@@ -39,30 +39,32 @@ struct AppHeader: View {
                         .offset(y: 6)
                 }
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 1)
-                .contentShape(.rect)
+                .contentShape(.capsule)
             }
             .buttonStyle(PressScaleStyle())
+            // The profile grows out of the round avatars and shrinks back into them, never through a square. A zoom
+            // source clips only to a rounded rectangle; half the avatars' height makes it their capsule.
+            .matchedTransitionSource(id: "profile", in: zoom) {
+                $0.clipShape(RoundedRectangle(cornerRadius: 23)).background(.clear)
+            }
             .accessibilityLabel("Couple")
-            .accessibilityHint("Your profile and partner invite")
+            .accessibilityHint("Opens your profile")
             .popoverTip(InviteHint(), arrowEdge: .top) { action in
                 if action.id == InviteHint.inviteAction {
                     hints.done(InviteHint())
                     pairing = true
                 }
             }
-
-            Spacer(minLength: 0)
-
-            CoinPill(coins: state.coins)
         }
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
         }
-        .sheet(isPresented: $editing) {
-            ProfileSheet(profile: state.profile)
+        .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
+            ProfileHub(state: state, erase: erase)
                 .presentationBackground(Ink.sheet)
                 .presentationDragIndicator(.visible)
+                .navigationTransition(.zoom(sourceID: "profile", in: zoom))
         }
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
@@ -136,6 +138,9 @@ struct CoinPill: View {
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).
         .anchorPreference(key: CoinPillAnchor.self, value: .bounds) { $0 }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(coins) coins")
+        .accessibilityIdentifier("coins")
     }
 }
 

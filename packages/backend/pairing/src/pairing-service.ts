@@ -1,4 +1,4 @@
-import { Clock, Context, Duration, Effect, Layer, Schema } from "effect";
+import { Clock, Context, Duration, Effect, Layer, Option, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import {
   InviteCode,
@@ -82,22 +82,28 @@ export class PairingService extends Context.Service<
       ): Effect.fn.Return<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable> {
         const pairId = decodePairId(yield* random.uuidV4());
         yield* annotateRefs({ user: claimerId, pair: pairId });
-        yield* repository.claimInvite({
-          codeHash: yield* hash(code),
-          claimerId,
-          pairId,
-          now: yield* Clock.currentTimeMillis,
-        });
+        const now = yield* Clock.currentTimeMillis;
+        yield* repository.claimInvite({ codeHash: yield* hash(code), claimerId, pairId, now });
         yield* afterwards(
           repository.findMembers(pairId).pipe(
             Effect.orDie,
-            Effect.flatMap((members) => observer.paired(pairId, members)),
+            Effect.flatMap((members) =>
+              observer.paired(pairId, members, { claimer: claimerId, at: now }),
+            ),
           ),
         );
         return pairId;
       });
 
-      return PairingService.of({ createInvite, claimInvite, unpair: repository.unpair });
+      const unpair = Effect.fn("PairingService.unpair")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<void, PairingUnavailable> {
+        const pair = yield* repository.findPair(userId);
+        yield* repository.unpair(userId);
+        if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value));
+      });
+
+      return PairingService.of({ createInvite, claimInvite, unpair });
     }),
   );
 }

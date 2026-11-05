@@ -1,19 +1,18 @@
 import SwiftUI
 
-/// Shared look for the Us tab and its sheets: warm dark sheet, cream cards, honey primary buttons.
+/// Shared look for the Us tab and its sheets, on the style guide's tokens (apps/ios/docs/style.md).
 extension View {
     /// Sheet styled like the rest of the app, full height unless `detents` says otherwise.
     func usSheet(detents: Set<PresentationDetent> = [.large]) -> some View {
         presentationDetents(detents)
             .presentationDragIndicator(.visible)
-            .presentationBackground(Ink.sheet)
-            .presentationCornerRadius(36)
+            .presentationBackground(Ink.screen)
     }
 
-    /// Rounded translucent card used for rows and tiles.
-    func usCard(radius: CGFloat = 20) -> some View {
-        background(Ink.card, in: .rect(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Ink.hairline, lineWidth: 0.5))
+    /// The card for rows and tiles.
+    func usCard(radius: CGFloat = Radius.card) -> some View {
+        background(Ink.surface, in: .rect(cornerRadius: radius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Ink.separator, lineWidth: 0.5))
     }
 }
 
@@ -27,12 +26,12 @@ struct UsSheetHeader<Trailing: View>: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .font(.nookiTitle)
+                    .foregroundStyle(Ink.text)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
             Spacer(minLength: 0)
@@ -49,7 +48,7 @@ extension UsSheetHeader where Trailing == EmptyView {
     }
 }
 
-/// Honey capsule for the main action of a screen.
+/// The main action of a sheet, full width.
 struct UsPrimaryButton: View {
     let title: String
     var symbol: String?
@@ -57,18 +56,13 @@ struct UsPrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 if let symbol { Image(systemName: symbol) }
                 Text(title)
             }
-            .font(.system(size: 17, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(Capsule().fill(.honeyGradient))
-            .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .nookiPrimary()
     }
 }
 
@@ -79,11 +73,10 @@ struct UsAddButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 17, weight: .bold))
-                .foregroundStyle(.white)
+                .font(.body.weight(.bold))
+                .foregroundStyle(Ink.heroInk)
                 .frame(width: 44, height: 44)
                 .background(Circle().fill(.honeyGradient))
-                .shadow(color: Color.honeyDeep.opacity(0.4), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Add")
@@ -99,12 +92,11 @@ struct UsChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(selected ? Ink.primary : Ink.secondary)
+                .font(.nookiCallout)
+                .foregroundStyle(selected ? Ink.heroInk : Ink.textSecondary)
                 .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(selected ? Color.honey.opacity(0.32) : .white.opacity(0.1), in: .capsule)
-                .overlay(Capsule().stroke(selected ? .clear : Ink.hairline, lineWidth: 0.5))
+                .frame(minHeight: 34)
+                .background(selected ? Color.honey : Ink.surfaceRaised, in: .capsule)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -117,36 +109,28 @@ struct UsField: View {
     @Binding var text: String
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Ink.secondary.opacity(0.7)))
-            .font(.system(size: 16, weight: .medium))
-            .foregroundStyle(Ink.primary)
-            .padding(.horizontal, 16)
-            .frame(height: 50)
-            .usCard(radius: 16)
+        TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Ink.textTertiary))
+            .font(.nookiBody)
+            .foregroundStyle(Ink.text)
+            .padding(.horizontal, Space.l)
+            .frame(minHeight: 50)
+            .usCard(radius: Radius.control)
     }
 }
 
-/// App-style icon: a white SF Symbol on a glossy gradient tile, like the honey "+" buttons.
+/// The app's one row icon: an SF Symbol in its tint on a circle of the same tint.
 struct UsIcon: View {
     let glyph: UsGlyph
     var size: CGFloat = 44
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
+        let tint = Color(hex: glyph.tint.colors.top)
         Image(systemName: glyph.symbol)
-            .font(.system(size: size * 0.46, weight: .semibold))
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.18), radius: 1.5, y: 1)
+            .font(.system(size: size * 0.44, weight: .semibold))
+            .foregroundStyle(tint)
             .frame(width: size, height: size)
-            .background {
-                shape.fill(LinearGradient(colors: [Color(hex: glyph.tint.colors.top), Color(hex: glyph.tint.colors.bottom)],
-                                          startPoint: .top, endPoint: .bottom))
-                // Soft top highlight gives the clay/glossy feel of the room's objects.
-                shape.fill(LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center))
-                    .padding(1.5)
-            }
-            .overlay(shape.stroke(.white.opacity(0.3), lineWidth: 0.75))
-            .shadow(color: Color(hex: glyph.tint.colors.bottom).opacity(0.35), radius: size * 0.12, y: size * 0.06)
+            .background(tint.opacity(0.2), in: .circle)
+            .accessibilityHidden(true)
     }
 }
 
@@ -164,8 +148,8 @@ struct UsGlyphPicker: View {
                         .opacity(selection == glyph ? 1 : 0.55)
                         .scaleEffect(selection == glyph ? 1.08 : 1)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 13, style: .continuous)
-                                .stroke(.white, lineWidth: selection == glyph ? 2 : 0)
+                            Circle()
+                                .stroke(Ink.text, lineWidth: selection == glyph ? 2 : 0)
                                 .padding(-3)
                         )
                 }
@@ -173,8 +157,8 @@ struct UsGlyphPicker: View {
                 .animation(.snappy(duration: 0.2), value: selection)
             }
         }
-        .padding(12)
-        .usCard(radius: 18)
+        .padding(Space.m)
+        .usCard()
     }
 }
 
@@ -189,11 +173,11 @@ struct UsEmpty: View {
             UsIcon(glyph: icon, size: 64)
                 .padding(.bottom, 4)
             Text(title)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.text)
             Text(text)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Ink.secondary)
+                .font(.nookiCallout)
+                .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.horizontal, 32)

@@ -13,9 +13,18 @@ import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
+/** Who claimed the invite, and when. */
+export const RoomJoin = Schema.Struct({ user: UserId, at: EpochMillis });
+export type RoomJoin = typeof RoomJoin.Type;
+
 /** Everything that can change a room. Ids and times are settled before a command reaches `decide`. */
 export const RoomCommand = Schema.TaggedUnion({
-  Open: { pairId: PairId, members: Schema.Tuple([UserId, UserId]) },
+  /** `joined` is who claimed the invite, and when: present when pairing opens the room. */
+  Open: {
+    pairId: PairId,
+    members: Schema.Tuple([UserId, UserId]),
+    joined: Schema.optionalKey(RoomJoin),
+  },
   SendNote: { note: Note, key: IdempotencyKey },
   SetPresence: { user: UserId, state: PresenceState },
   /**

@@ -148,7 +148,20 @@ export const respondApi = (
       respondAdmin(request, env, ctx, { experiments, context }),
     );
   }
-  return Promise.resolve(respondAppLink(pathname) ?? respondPlaceholder());
+  const appLink = respondAppLink(pathname);
+  if (appLink === undefined) return Promise.resolve(respondPlaceholder());
+  return limitRequest(request, env.DB, now()).then((limited) =>
+    limited === undefined
+      ? appLink
+      : new Response("Too many tries. Open the link again in a minute.", {
+          status: 429,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "retry-after": limited.headers.get("retry-after") ?? "60",
+          },
+        }),
+  );
 };
 
 const routeApi = async (

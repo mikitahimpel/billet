@@ -1,8 +1,9 @@
 import PhotosUI
 import SwiftUI
 
-/// The couple's profile: each partner's photo and name, who is holding the phone, and the day they got together.
-struct ProfileSheet: View {
+/// Editing the couple's profile: each partner's photo and name, who is holding the phone, and the day they got
+/// together. Pushed from the profile; Cancel goes back without saving.
+struct ProfileEditor: View {
     let profile: CoupleStore
     @Environment(\.dismiss) private var dismiss
     @State private var names: [String: String] = [:]
@@ -11,35 +12,32 @@ struct ProfileSheet: View {
     @State private var pick: PhotosPickerItem?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 14) {
-                    ForEach(profile.couple.partners, id: \.self) { partner in
-                        partnerCard(partner)
-                    }
-                    togetherCard
+        ScrollView {
+            VStack(spacing: 14) {
+                ForEach(profile.couple.partners, id: \.self) { partner in
+                    partnerCard(partner)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 8)
+                togetherCard
             }
-            .scrollIndicators(.hidden)
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+        }
+        .scrollIndicators(.hidden)
+        .navigationTitle("Edit profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") {
+                    profile.update(names: names, togetherSince: since)
+                    dismiss()
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        profile.update(names: names, togetherSince: since)
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
+                .fontWeight(.semibold)
             }
         }
-        .tint(Color(hex: 0xFFC27A))
-        .preferredColorScheme(.dark)
         .onAppear {
             names = Dictionary(uniqueKeysWithValues: profile.couple.partners.map { ($0, profile.couple.names?[$0] ?? "") })
             since = profile.couple.togetherSince
@@ -80,37 +78,37 @@ struct ProfileSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 TextField("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }))
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .font(.nookiHeadline)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
                     .padding(.horizontal, 12)
                     .frame(height: 42)
-                    .background(.white.opacity(0.08), in: .rect(cornerRadius: 12))
+                    .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
 
                 if profile.couple.viewer == partner {
                     Label("This phone", systemImage: "iphone")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xFFC27A))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.accentText)
                 } else {
                     Button("This is me") { profile.setViewer(partner) }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.72))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
         }
         .padding(14)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 22))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
     }
 
     private var togetherCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .font(.nookiHeadline)
             Text("Day \(Couple(partners: profile.couple.partners, togetherSince: since, viewer: profile.couple.viewer).daysTogether()) together")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
+                .font(.nookiCaption)
+                .foregroundStyle(Ink.textSecondary)
         }
         .padding(14)
-        .background(.white.opacity(0.06), in: .rect(cornerRadius: 22))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
     }
 }

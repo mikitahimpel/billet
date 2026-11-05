@@ -57,6 +57,13 @@ struct PurchaseMoment: View {
         }
     }
 
+    private func detail(_ purchase: Purchase) -> String {
+        switch purchase.kind {
+        case .item: "\(state.petName) is already sniffing it. It's in your room's closet."
+        case .ink: "It's in your pens for notes and drawings, for both of you."
+        }
+    }
+
     private func card(_ purchase: Purchase) -> some View {
         HStack(spacing: Space.m) {
             MochiHop(trigger: flights)
@@ -65,7 +72,7 @@ struct PurchaseMoment: View {
                     .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
                     .lineLimit(2)
-                Text("\(state.petName) is already sniffing it. It's in your room's closet.")
+                Text(detail(purchase))
                     .font(.nookiCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .lineLimit(2)

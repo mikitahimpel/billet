@@ -71,8 +71,8 @@ struct DatesScreen: View {
             HStack(spacing: 8) {
                 Monogram(partner: state.viewer, profile: state.profile, size: 22)
                 Text("\(state.profile.name(of: state.viewer))'s turn, then \(state.profile.name(of: state.otherPartner))")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.textSecondary)
             }
 
             if deck.isEmpty {
@@ -89,8 +89,8 @@ struct DatesScreen: View {
     private func matchesRow(_ matches: [DateIdea]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Matches")
-                .font(.system(size: 17, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     ForEach(matches) { idea in
@@ -100,13 +100,13 @@ struct DatesScreen: View {
                             DateScenePicture(scene: idea.scene)
                                 .overlay(alignment: .bottomLeading) {
                                     Text(idea.title)
-                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .font(.nookiMicro)
                                         .foregroundStyle(.white)
                                         .lineLimit(2)
                                         .padding(8)
                                 }
                                 .frame(width: 104, height: 124)
-                                .clipShape(.rect(cornerRadius: 18, style: .continuous))
+                                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
                         }
                         .buttonStyle(.plain)
                     }
@@ -152,8 +152,8 @@ struct DatesScreen: View {
                     UsIcon(glyph: .init(symbol: "wand.and.stars", tint: .lilac), size: 72)
                         .rotationEffect(.degrees(hatAngle), anchor: .bottom)
                     Text(surpriseCaption)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                 }
@@ -161,7 +161,7 @@ struct DatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
                 .background { DateScenePicture(scene: .plans) }
-                .clipShape(.rect(cornerRadius: 28, style: .continuous))
+                .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
 
                 UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
@@ -179,12 +179,12 @@ struct DatesScreen: View {
     private var anotherButton: some View {
         Button(action: reroll) {
             Text(rerolls >= 3 ? "\(CatProfile.name()) is getting grumpy" : "Another one")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(.white.opacity(0.1), in: .capsule)
-                .overlay(Capsule().stroke(Ink.hairline, lineWidth: 0.5))
+                .background(Ink.surfaceRaised, in: .capsule)
+                .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }
@@ -285,23 +285,23 @@ struct DatesScreen: View {
         Button { filtersOpen = true } label: {
             HStack(spacing: 6) {
                 Image(systemName: "line.3.horizontal.decrease")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.nookiCaption.weight(.semibold))
                 Text("Filters")
                 if !filter.isEmpty {
                     Text("\(filter.tags.count)")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.heroInk)
                         .frame(minWidth: 20, minHeight: 20)
                         .background(Circle().fill(.honeyGradient))
                 }
             }
-            .font(.system(size: 14, weight: .semibold, design: .rounded))
-            .foregroundStyle(Ink.primary)
+            .font(.nookiCallout.weight(.semibold))
+            .foregroundStyle(Ink.text)
             .padding(.leading, 14)
             .padding(.trailing, filter.isEmpty ? 14 : 7)
             .frame(height: 34)
-            .background(.white.opacity(0.1), in: .capsule)
-            .overlay(Capsule().stroke(Ink.hairline, lineWidth: 0.5))
+            .background(Ink.surfaceRaised, in: .capsule)
+            .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(filter.isEmpty ? "Filters" : "Filters, \(filter.tags.count) on")
@@ -313,14 +313,14 @@ struct DatesScreen: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: tag.symbol)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.nookiMicro)
                 Text(tag.title)
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .heavy))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiMicro)
+                    .foregroundStyle(Ink.textSecondary)
             }
-            .font(.system(size: 14, weight: .semibold, design: .rounded))
-            .foregroundStyle(Ink.primary)
+            .font(.nookiCallout.weight(.semibold))
+            .foregroundStyle(Ink.text)
             .padding(.horizontal, 12)
             .frame(height: 34)
             .background(Color.honey.opacity(0.32), in: .capsule)
@@ -399,7 +399,7 @@ private struct SwipeDeck: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .overlay(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.tag, style: .continuous)
                     .stroke(tint, lineWidth: 3)
             )
             .rotationEffect(.degrees(text == "LOVE" ? -14 : 14))
@@ -410,10 +410,10 @@ private struct SwipeDeck: View {
         Button { fling(liked: false) } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Ink.primary)
+                .foregroundStyle(Ink.text)
                 .frame(width: 64, height: 64)
-                .background(.white.opacity(0.1), in: .circle)
-                .overlay(Circle().stroke(Ink.hairline, lineWidth: 0.5))
+                .background(Ink.surfaceRaised, in: .circle)
+                .overlay(Circle().stroke(Ink.separator, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Pass")
@@ -423,7 +423,7 @@ private struct SwipeDeck: View {
         Button { fling(liked: true) } label: {
             Image(systemName: "heart.fill")
                 .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Ink.heroInk)
                 .frame(width: 64, height: 64)
                 .background(Circle().fill(.honeyGradient))
                 .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
@@ -476,7 +476,7 @@ private struct DateIdeaCard: View {
     let idea: DateIdea
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
         DateScenePicture(scene: idea.scene)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -485,7 +485,7 @@ private struct DateIdeaCard: View {
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(idea.pitch)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.nookiCallout)
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -508,7 +508,7 @@ private struct DateIdeaCard: View {
 
     private func tag(_ text: String, symbol: String) -> some View {
         Label(text, systemImage: symbol)
-            .font(.system(size: 12, weight: .semibold, design: .rounded))
+            .font(.nookiMicro)
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -563,7 +563,7 @@ private struct DateFilterSheet: View {
                     Button("Reset") {
                         withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() }
                     }
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.nookiHeadline)
                     .foregroundStyle(Color.honey)
                 }
             }
@@ -606,8 +606,8 @@ private struct DateFilterSheet: View {
     private func group(_ title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.secondary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.textSecondary)
             content()
         }
     }
@@ -627,21 +627,21 @@ private struct DateFilterSheet: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: tag.symbol)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(selected ? Color.honey : Ink.secondary)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(selected ? Color.honey : Ink.textSecondary)
                 Text(tag.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Ink.primary)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
             .frame(height: 50)
-            .background(selected ? Color.honey.opacity(0.22) : Ink.card,
-                        in: .rect(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(selected ? Color.honey : Ink.hairline, lineWidth: selected ? 1.5 : 0.5))
+            .background(selected ? Color.honey.opacity(0.22) : Ink.surface,
+                        in: .rect(cornerRadius: Radius.control, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                .stroke(selected ? Color.honey : Ink.separator, lineWidth: selected ? 1.5 : 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -660,34 +660,34 @@ private struct DateMatchOverlay: View {
 
             VStack(spacing: 10) {
                 Text("It's a match!")
-                    .font(.system(size: 25, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .font(.nookiLargeTitle)
+                    .foregroundStyle(Ink.text)
                 UsIcon(glyph: .init(symbol: "heart.fill", tint: .blush), size: 72)
                 Text(idea.title)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .font(.nookiTitle)
+                    .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                 Label("+10", systemImage: "star.fill")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color.honeyDeep)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.accentText)
 
                 HStack(spacing: 10) {
                     Button(action: onKeep) {
                         Text("Keep swiping")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Color(hex: 0x5B3A28))
+                            .font(.nookiHeadline)
+                            .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .background(Color(hex: 0xF0DCC0), in: .capsule)
+                            .frame(minHeight: 44)
+                            .background(Ink.surfaceRaised, in: .capsule)
                     }
                     .buttonStyle(.plain)
 
                     Button(action: onPlan) {
                         Text("Plan it")
-                            .font(.system(size: 15, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .font(.nookiHeadline)
+                            .foregroundStyle(Ink.heroInk)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 44)
+                            .frame(minHeight: 44)
                             .background(Capsule().fill(.honeyGradient))
                     }
                     .buttonStyle(.plain)
@@ -696,7 +696,7 @@ private struct DateMatchOverlay: View {
             }
             .padding(24)
             .frame(maxWidth: 330)
-            .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 30, style: .continuous))
+            .background(Ink.surface, in: .rect(cornerRadius: Radius.hero, style: .continuous))
             .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
         }
     }
@@ -734,11 +734,11 @@ private struct DatePlanCard: View {
                                      : idea?.place.icon ?? .init(symbol: "heart.fill", tint: .blush), size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hidden ? "Surprise from \(plan.organizer)" : idea?.title ?? "Date")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
                     Text(plan.date.formatted(.dateTime.weekday().day().month().hour().minute()))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
                 Monogram(partner: plan.organizer, profile: profile, size: 26)
@@ -747,13 +747,13 @@ private struct DatePlanCard: View {
             if hidden {
                 if !plan.hint.isEmpty {
                     Text("Hint: \(plan.hint)")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             } else if !plan.place.isEmpty {
                 Label(plan.place, systemImage: "mappin.and.ellipse")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
 
             ratingRow
@@ -768,7 +768,7 @@ private struct DatePlanCard: View {
             HStack(spacing: 4) {
                 ForEach(1...3, id: \.self) { value in
                     Image(systemName: value <= rating ? "heart.fill" : "heart")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.nookiHeadline)
                         .foregroundStyle(Color.blushPink.opacity(value <= rating ? 1 : 0.4))
                 }
                 Spacer(minLength: 0)
@@ -776,12 +776,12 @@ private struct DatePlanCard: View {
         } else if plan.date < .now {
             HStack(spacing: 8) {
                 Text("How was it?")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.textSecondary)
                 ForEach(1...3, id: \.self) { value in
                     Button { onRate(value) } label: {
                         Image(systemName: "heart")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.nookiHeadline)
                             .foregroundStyle(Color.blushPink)
                     }
                     .buttonStyle(.plain)
@@ -828,8 +828,8 @@ private struct DatePlannerSheet: View {
                         .datePickerStyle(.compact)
                         .tint(.honey)
                         .colorScheme(.dark)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiBody)
+                        .foregroundStyle(Ink.text)
                         .padding(.horizontal, 16)
                         .frame(height: 50)
                         .usCard(radius: 16)
@@ -838,8 +838,8 @@ private struct DatePlannerSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Who plans it")
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Ink.secondary)
+                            .font(.nookiCaption.weight(.semibold))
+                            .foregroundStyle(Ink.textSecondary)
                         HStack(spacing: 8) {
                             ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
                                 UsChip(title: initial, selected: organizer == initial) {
@@ -850,8 +850,8 @@ private struct DatePlannerSheet: View {
                     }
 
                     Toggle("Surprise mode", isOn: $surprise)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiBody)
+                        .foregroundStyle(Ink.text)
                         .tint(.honey)
                         .padding(.horizontal, 16)
                         .frame(height: 50)

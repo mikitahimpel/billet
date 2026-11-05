@@ -5,6 +5,8 @@ struct BundleCard: View {
     let state: HomeState
     let bundle: ShopBundle
     var open: (ShopItem) -> Void
+    /// Opens the bundle's own sheet.
+    var openSet: () -> Void = {}
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -19,7 +21,10 @@ struct BundleCard: View {
                 ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
                 : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
             layout {
-                title.frame(maxWidth: .infinity, alignment: .leading)
+                Button(action: openSet) {
+                    title.frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect)
+                }
+                .buttonStyle(PressScaleStyle())
                 SetBuyButton(state: state, set: bundle)
                     .fixedSize()
             }
@@ -37,7 +42,7 @@ struct BundleCard: View {
                     .foregroundStyle(Ink.text)
                 if let quote, quote.sum > quote.price {
                     ShopTag(text: "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
-                            fill: .blushPink)
+                            fill: ShopInk.coral)
                 }
             }
             Text(bundle.blurb)
@@ -60,10 +65,11 @@ struct BundleCard: View {
                 Button { open(item) } label: {
                     RarityFrame(rarity: item.rarity) {
                         if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
-                            Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+                            Lifted { Image(uiImage: image).resizable().scaledToFit() }
+                                .padding(Space.s)
                         }
                     }
-                    .frame(width: 60, height: 60)
+                    .frame(width: 72, height: 72)
                     .overlay(alignment: .bottomTrailing) {
                         if state.owned.contains(item.id) { OwnedCheck().offset(x: 4, y: 4) }
                     }

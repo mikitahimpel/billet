@@ -347,6 +347,25 @@ describe("PairRoom close handling", () => {
 
     expect(await closed).toBe(1002);
   });
+
+  it("closes every open socket when the pair ends, and again harmlessly", async () => {
+    const room = await openRoom();
+    const sockets = await Promise.all([alice, bob].map((user) => connect(room, upgrade(user))));
+    const closed = sockets.map(
+      ({ webSocket }) =>
+        new Promise<string>((resolve) => {
+          webSocket?.addEventListener("close", (event) => {
+            resolve(`${event.code} ${event.reason}`);
+          });
+          webSocket?.accept();
+        }),
+    );
+
+    await room.endSessions();
+    await room.endSessions();
+
+    expect(await Promise.all(closed)).toEqual(["1000 pair ended", "1000 pair ended"]);
+  });
 });
 
 describe("PairRoom realtime across eviction", () => {
@@ -553,7 +572,17 @@ describe("PairRoom realtime across eviction", () => {
       "StrokeEnd",
       "Clear",
     ]);
-    expect(live(b.frames)[2]).toEqual({ _tag: "StrokePoints", id: 1, points: [{ x: 3, y: 4 }] });
+    expect(live(b.frames)[2]).toEqual({
+      _tag: "StrokePoints",
+      id: 1,
+      points: [{ x: 3, y: 4 }],
+      relayedAt: expect.any(Number),
+    });
+    // Stamped with when each frame reached the room, so the partner can pace a clump.
+    const stamps = live(b.frames)
+      .filter((f) => f._tag === "StrokePoints")
+      .flatMap((f) => ("relayedAt" in f && typeof f.relayedAt === "number" ? [f.relayedAt] : []));
+    expect(stamps[1]).toBeGreaterThanOrEqual(stamps[0] ?? Infinity);
     await settle();
     expect(live(a.frames)).toEqual([]);
   });

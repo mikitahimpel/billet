@@ -66,7 +66,7 @@ private struct NoteFace: View {
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 26))
-                    .foregroundStyle(Color(hex: 0x5B3A28))
+                    .foregroundStyle(Color(hex: note.inkHex))
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.45)
                     .padding(18)
@@ -75,7 +75,7 @@ private struct NoteFace: View {
 
             Text("— \(note.author)")
                 .font(.custom("Noteworthy-Bold", size: 15))
-                .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.7))
+                .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
                 .padding(10)
         }
         .frame(width: 240, height: 240)

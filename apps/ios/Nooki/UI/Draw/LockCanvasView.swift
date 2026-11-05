@@ -11,7 +11,6 @@ struct LockCanvasView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var choosingInk = false
-    @State private var lockedInk: DrawInk?
     @State private var canvasSize = CGSize.zero
     @State private var sent = 0
 
@@ -52,13 +51,8 @@ struct LockCanvasView: View {
         // The partner's drawings arrive as notifications; asked here, where it is plain why.
         .task { await DrawingSync.requestPushes(asking: true) }
         .onDisappear { model.disappeared() }
-        .alert(item: $lockedInk) { ink in
-            Alert(
-                title: Text("\(ink.name) ink"),
-                message: Text("\(ink.price) coins in the Shop."),
-                primaryButton: .default(Text("Open Shop")) { openShop() },
-                secondaryButton: .cancel())
-        }
+        // Over the canvas: an ink bought here plays its moment and Undo where it was tapped.
+        .overlay { PurchaseMoment(state: state) }
     }
 
     // MARK: The lock screen
@@ -183,10 +177,10 @@ struct LockCanvasView: View {
             HStack(spacing: 6) {
                 Button { choosingInk.toggle() } label: {
                     Circle()
-                        .fill(model.ink.color)
+                        .fill(model.ink.color(onDark: true))
                         .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
                         .frame(width: 26, height: 26)
-                        .shadow(color: model.ink.color.opacity(0.6), radius: 5)
+                        .shadow(color: model.ink.color(onDark: true).opacity(0.6), radius: 5)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel("Ink, \(model.ink.name)")
@@ -241,48 +235,9 @@ struct LockCanvasView: View {
     }
 
     private var inkPalette: some View {
-        HStack(spacing: 10) {
-            ForEach(DrawInks.all) { ink in
-                let owned = ink.isOwned(state.owned)
-                Button {
-                    if owned {
-                        model.ink = ink
-                        model.tool = .pen
-                        choosingInk = false
-                    } else {
-                        lockedInk = ink
-                    }
-                } label: {
-                    VStack(spacing: 3) {
-                        Circle()
-                            .fill(ink.color)
-                            .overlay(Circle().strokeBorder(.white.opacity(model.ink == ink ? 1 : 0.5),
-                                                           lineWidth: model.ink == ink ? 3 : 1))
-                            .overlay {
-                                if !owned {
-                                    Image(systemName: "lock.fill")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(.white)
-                                        .shadow(radius: 1)
-                                }
-                            }
-                            .frame(width: 30, height: 30)
-                            .opacity(owned ? 1 : 0.7)
-                        if !owned {
-                            HStack(spacing: 2) {
-                                CoinIcon(size: 9)
-                                Text("\(ink.price)")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
-                            }
-                            .foregroundStyle(.white)
-                        }
-                    }
-                    .frame(minWidth: 34, minHeight: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(owned ? "\(ink.name) ink" : "\(ink.name) ink, locked, \(ink.price) coins")
-                .accessibilityIdentifier("ink-\(ink.id)")
-            }
+        InkPalette(state: state, selection: $model.ink, onDark: true, label: .white, openShop: { openShop(at: $0) }) {
+            model.tool = .pen
+            choosingInk = false
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -301,8 +256,8 @@ struct LockCanvasView: View {
         }
     }
 
-    private func openShop() {
-        state.tab = .shop
+    private func openShop(at ink: PaletteInk) {
+        state.openShop(.ink(ink.id))
         dismiss()
     }
 }

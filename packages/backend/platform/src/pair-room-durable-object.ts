@@ -19,6 +19,7 @@ import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
+import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
@@ -219,8 +220,13 @@ export class PairRoom extends DurableObject {
     );
   }
 
-  open(pairId: PairId, members: readonly [UserId, UserId]): Promise<RoomDecision> {
-    return this.run((room) => room.dispatch({ _tag: "Open", pairId, members }), "PairRoom.open");
+  open(
+    pairId: PairId,
+    members: readonly [UserId, UserId],
+    joined?: RoomJoin,
+  ): Promise<RoomDecision> {
+    const command = joined === undefined ? { pairId, members } : { pairId, members, joined };
+    return this.run((room) => room.dispatch({ _tag: "Open", ...command }), "PairRoom.open");
   }
 
   async sendNote(author: UserId, request: SendNoteRequest): Promise<RoomDecision> {
@@ -482,6 +488,12 @@ export class PairRoom extends DurableObject {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
+    this.endSessions();
+    return forgotten;
+  }
+
+  /** Closes every open socket: the pair has ended, and the Worker won't route a new one here. */
+  endSessions(): void {
     for (const socket of this.ctx.getWebSockets()) {
       try {
         socket.close(1000, "pair ended");
@@ -489,7 +501,6 @@ export class PairRoom extends DurableObject {
         // Already closing: nothing left to end.
       }
     }
-    return forgotten;
   }
 
   /**
@@ -584,7 +595,8 @@ export class PairRoom extends DurableObject {
       case "StrokePoints":
         // Points of a stroke this socket never began would draw nothing on the partner's side.
         if (attachment.openStrokes?.includes(message.value.id) !== true) return;
-        this.toPartner(attachment.user, message.value);
+        // The Workers clock moves on at each incoming event, so this is when the frame arrived.
+        this.toPartner(attachment.user, { ...message.value, relayedAt: Date.now() });
         return;
       case "StrokeEnd": {
         const open = attachment.openStrokes ?? [];

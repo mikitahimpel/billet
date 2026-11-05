@@ -1,3 +1,4 @@
+import FeatureGames
 import Pet
 import SwiftUI
 
@@ -11,29 +12,48 @@ protocol PetNeedsSource: AnyObject {
 
 extension CatDirector: PetNeedsSource {}
 
-/// Mochi's four needs as calm bars, each with the one thing that fills it. A low bar is an invitation, never a
-/// warning: nothing turns red, blinks or shakes.
+/// Mochi's four needs as calm bars, each with the things that fill it: a mini-game, and a pet or a treat. A low bar
+/// is an invitation, never a warning: nothing turns red, blinks or shakes.
 struct NeedBars: View {
     let name: String
     let needs: PetNeeds?
-    var feed: () -> Void
+    var treat: () -> Void
     var pet: () -> Void
-    var play: () -> Void
+    var play: (MiniGame) -> Void
 
     var body: some View {
-        VStack(spacing: 14) {
-            ForEach(PetNeed.displayOrder, id: \.self) { need in
-                NeedRow(need: need, name: name, value: needs?[need], action: action(for: need))
+        if let needs {
+            VStack(spacing: 14) {
+                ForEach(PetNeed.displayOrder, id: \.self) { need in
+                    NeedRow(need: need, name: name, value: needs[need], actions: actions(for: need))
+                }
             }
+        } else {
+            // Before her needs are known: one calm line and the things to do, rather than four empty bars.
+            VStack(spacing: 14) {
+                Text("\(name) is settling in. Her needs show here soon.")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                    .multilineTextAlignment(.center)
+                NeedActions(actions: PetNeed.displayOrder.flatMap { need in actions(for: need).map { ($0, need.hue) } })
+            }
+            .frame(maxWidth: .infinity)
         }
     }
 
-    private func action(for need: PetNeed) -> NeedRow.Action? {
+    private func actions(for need: PetNeed) -> [NeedRow.Action] {
         switch need {
-        case .full: NeedRow.Action(title: "Treat", detail: "\(HomeState.treatPrice)", run: feed)
-        case .loved: NeedRow.Action(title: "Pet", detail: nil, run: pet)
-        case .playful: NeedRow.Action(title: "Play", detail: nil, run: play)
-        case .rested: nil
+        case .full: [
+            NeedRow.Action(title: "Feed", detail: nil, run: { play(.feed) }),
+            NeedRow.Action(title: "Water", detail: nil, run: { play(.water) }),
+            NeedRow.Action(title: "Treat", detail: "\(HomeState.treatPrice)", run: treat),
+        ]
+        case .loved: [
+            NeedRow.Action(title: "Brush", detail: nil, run: { play(.brush) }),
+            NeedRow.Action(title: "Pet", detail: nil, run: pet),
+        ]
+        case .playful: [NeedRow.Action(title: "Play", detail: nil, run: { play(.laser) })]
+        case .rested: []
         }
     }
 }
@@ -49,7 +69,7 @@ private struct NeedRow: View {
     let need: PetNeed
     let name: String
     let value: Double?
-    let action: Action?
+    let actions: [Action]
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -64,52 +84,114 @@ private struct NeedRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(need.title)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
                 NeedTrack(value: value ?? 0, hue: need.hue)
                     .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0.2), value: value)
                 Text(line)
                     .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .foregroundStyle(Ink.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .contentTransition(.opacity)
-            }
-
-            if let action {
-                Button(action: action.run) {
-                    HStack(spacing: 4) {
-                        Text(action.title)
-                        if let detail = action.detail {
-                            CoinIcon(size: 13)
-                            Text(detail).monospacedDigit()
-                        }
-                    }
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
-                    .padding(.horizontal, 12)
-                    .frame(minWidth: 64, minHeight: 34)
-                    .background(need.hue.opacity(0.22), in: .capsule)
-                    .overlay(Capsule().stroke(need.hue.opacity(0.35), lineWidth: 0.5))
-                    .contentShape(.capsule)
-                }
-                .buttonStyle(PressScaleStyle())
-            } else {
-                Color.clear.frame(width: 64, height: 1)
+                if !actions.isEmpty { NeedActions(actions: actions.map { ($0, need.hue) }) }
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(need.title)
         .accessibilityValue(value.map { "\(Int(($0 * 100).rounded())) percent, \(line)" } ?? line)
     }
 
     /// Gentle words for where the bar is; an empty bar asks, it never complains.
     private var line: String {
-        guard let value else { return "\(name) is settling in" }
+        guard let value else { return need.middle }
         switch value {
         case 0.7...: return need.content
         case 0.35..<0.7: return need.middle
         default: return need.invitation(name)
         }
+    }
+}
+
+/// A need's actions side by side, wrapping onto a second line when they don't fit.
+private struct NeedActions: View {
+    let actions: [(NeedRow.Action, Color)]
+
+    var body: some View {
+        FlowRow(spacing: 6) {
+            ForEach(Array(actions.enumerated()), id: \.offset) { _, item in
+                NeedActionButton(action: item.0, hue: item.1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 2)
+    }
+}
+
+/// Lays its children out left to right, starting a new line when one would overflow.
+private struct FlowRow: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = rows.map { row in row.reduce(0) { $0 + $1.width } + spacing * CGFloat(max(row.count - 1, 0)) }.max() ?? 0
+        let height = rows.map { $0.map(\.height).max() ?? 0 }.reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        var index = 0
+        for row in rows(width: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            let height = row.map(\.height).max() ?? 0
+            for size in row {
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+                index += 1
+            }
+            y += height + spacing
+        }
+    }
+
+    private func rows(width: CGFloat, subviews: Subviews) -> [[CGSize]] {
+        var rows: [[CGSize]] = [[]]
+        var x: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > width {
+                rows.append([])
+                x = 0
+            }
+            rows[rows.count - 1].append(size)
+            x += size.width + spacing
+        }
+        return rows
+    }
+}
+
+/// A need's action (Feed, Treat, Play, Pet) as a capsule in the need's hue.
+private struct NeedActionButton: View {
+    let action: NeedRow.Action
+    let hue: Color
+
+    var body: some View {
+        Button(action: action.run) {
+            HStack(spacing: 4) {
+                Text(action.title)
+                if let detail = action.detail {
+                    CoinIcon(size: 13)
+                    Text(detail).monospacedDigit()
+                }
+            }
+            .font(.system(.footnote, design: .rounded, weight: .semibold))
+            .foregroundStyle(Ink.text)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 56, minHeight: 32)
+            .background(hue.opacity(0.22), in: .capsule)
+            .overlay(Capsule().stroke(hue.opacity(0.35), lineWidth: 0.5))
+            .contentShape(.capsule)
+        }
+        .buttonStyle(PressScaleStyle())
     }
 }
 

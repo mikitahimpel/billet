@@ -62,22 +62,22 @@ struct CalendarScreen: View {
                 UsIcon(glyph: item.icon, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
                         .lineLimit(1)
                     Text(item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide)))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
                     Text(item.daysLeft == 0 ? "today" : "\(abs(item.daysLeft))")
                         .font(.system(size: item.daysLeft == 0 ? 14 : 20, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle((0...7).contains(item.daysLeft) ? Color.honey : Ink.primary)
+                        .foregroundStyle((0...7).contains(item.daysLeft) ? Color.honey : Ink.text)
                     if item.daysLeft != 0 {
                         Text((abs(item.daysLeft) == 1 ? "day" : "days") + (item.daysLeft < 0 ? " ago" : ""))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Ink.secondary)
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.textSecondary)
                     }
                 }
             }
@@ -103,24 +103,24 @@ private struct MonthGrid: View {
                 Button { shift(-1) } label: { Image(systemName: "chevron.left") }
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.nookiHeadline)
                 Spacer()
                 Button { shift(1) } label: { Image(systemName: "chevron.right") }
             }
-            .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(Ink.primary)
+            .font(.nookiHeadline)
+            .foregroundStyle(Ink.text)
             .buttonStyle(.plain)
 
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(weekdaySymbols, id: \.self) { d in
-                    Text(d).font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.secondary)
+                    Text(d).font(.nookiMicro).foregroundStyle(Ink.textSecondary)
                 }
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
                     if let day {
                         let isToday = cal.isDateInToday(day)
                         Text("\(cal.component(.day, from: day))")
                             .font(.system(size: 14, weight: isToday ? .bold : .medium, design: .rounded).monospacedDigit())
-                            .foregroundStyle(isToday ? .white : Ink.primary)
+                            .foregroundStyle(isToday ? Ink.heroInk : Ink.text)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
                             .background(isToday ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(.clear), in: .circle)
@@ -170,8 +170,8 @@ struct EventEditor: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(isNew ? "New event" : "Edit event")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.text)
                 .padding(.top, 24)
 
             HStack(spacing: 10) {
@@ -184,16 +184,16 @@ struct EventEditor: View {
                 .datePickerStyle(.compact)
                 .tint(Color.honey)
                 .colorScheme(.dark)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiBody)
+                .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
                 .usCard(radius: 16)
 
             Toggle("Every year", isOn: $event.yearly)
                 .tint(Color.honey)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiBody)
+                .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
                 .usCard(radius: 16)
@@ -219,7 +219,7 @@ struct EventEditor: View {
                     state.us.deleteEvent(event.id)
                     dismiss()
                 }
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.nookiHeadline)
                 .frame(maxWidth: .infinity)
             }
         }

@@ -4,8 +4,9 @@ import TipKit
 import Transport
 import Wire
 
-/// The hints after the onboarding (`HintTips.swift`): sets TipKit up, marks each hint done and reports what the hints
-/// do. Shared through the environment with the views the hints point at.
+/// The hints after the onboarding (`HintTips.swift`): sets TipKit up, decides at each screen visit which hint shows
+/// (`HintPlan`), remembers the ones seen and reports what the hints do. Shared through the environment with the views
+/// the hints point at.
 @MainActor
 @Observable
 final class Hints {
@@ -13,26 +14,44 @@ final class Hints {
     static let resetKey = "hintsReset"
     /// Labs: every hint shows at once, whatever its rules, from the next launch.
     static let showAllKey = "hintsShowAll"
+    /// The hints shown, closed or done: none of them comes back.
+    static let seenKey = "hintsSeen"
 
-    /// Every hint, in the order they come.
+    /// Every hint.
     static let all: [any HintTip.Type] = [
         PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self, InviteHint.self,
     ]
 
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
+    @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private var pending: [ClientEvent] = []
     @ObservationIgnored private var sending = false
-    /// Hints already reported as shown since launch, so a popover drawn again isn't counted twice.
-    @ObservationIgnored private var shown: Set<String> = []
+    @ObservationIgnored private(set) var seen: Set<String>
+    /// Hints shown since launch, toward `HintPlan.perSession`.
+    @ObservationIgnored private var shownThisSession: Set<String> = []
+    @ObservationIgnored private var visiting: Task<Void, Never>?
+    @ObservationIgnored private var lastVisit: (@MainActor () -> HintContext)?
+    @ObservationIgnored private var onboarded = false
+    @ObservationIgnored private var invitable = false
+    @ObservationIgnored private let isPresenting: @MainActor () -> Bool
 
-    init(report: @escaping @Sendable ([ClientEvent]) async throws(TransportError) -> Void) {
+    init(
+        report: @escaping @Sendable ([ClientEvent]) async throws(TransportError) -> Void,
+        defaults: UserDefaults = .standard,
+        isPresenting: @escaping @MainActor () -> Bool = Hints.keyWindowIsPresenting
+    ) {
         self.report = report
+        self.defaults = defaults
+        self.isPresenting = isPresenting
+        seen = Set(defaults.stringArray(forKey: Self.seenKey) ?? [])
     }
 
-    /// Starts TipKit, once, before any view asks for a hint. At most one new hint an hour.
+    /// Starts TipKit, once, before any view asks for a hint. Display frequency is TipKit's immediate: `HintPlan`
+    /// does the pacing.
     static func configure(defaults: UserDefaults = .standard) {
         if defaults.bool(forKey: resetKey) {
             try? Tips.resetDatastore()
+            defaults.removeObject(forKey: seenKey)
             defaults.removeObject(forKey: resetKey)
         }
         if defaults.bool(forKey: showAllKey) { Tips.showAllTipsForTesting() }
@@ -47,45 +66,79 @@ final class Hints {
         // The UI tests tap through the app; a popover would take their first tap.
         if defaults.bool(forKey: "uitestNoHints") { Tips.hideAllTipsForTesting() }
         #endif
-        try? Tips.configure([.displayFrequency(.hourly)])
+        HintStage.current = ""
+        try? Tips.configure([.displayFrequency(.immediate)])
     }
 
+    /// The end of the onboarding is the first visit to the screen under it.
     func onboardingFinished(_ finished: Bool) {
-        PetHint.onboarded = finished
+        let ended = finished && !onboarded
+        onboarded = finished
+        if ended, let lastVisit { visit(lastVisit) }
     }
 
     func canInvite(_ can: Bool) {
-        InviteHint.canInvite = can
+        invitable = can
     }
 
-    /// With a single room there is no switch to point at: its hint is put away and the next one follows.
-    func roomChoice(_ hasRoomChoice: Bool) {
-        if !hasRoomChoice { done(RoomsHint()) }
+    /// A screen came up: the hint on screen goes, and after `HintPlan.settle` the plan may show one for this
+    /// visit. `context` is read then, so a sheet opened meanwhile counts.
+    func visit(_ context: @escaping @MainActor () -> HintContext) {
+        lastVisit = context
+        visiting?.cancel()
+        HintStage.current = ""
+        visiting = Task { [weak self] in
+            try? await Task.sleep(for: HintPlan.settle)
+            guard !Task.isCancelled, let self else { return }
+            HintStage.current = plan(context()) ?? ""
+        }
     }
 
-    /// The person did the thing the hint points at, whether or not it was on screen. Later hints may follow.
+    /// What the plan picks for `context`, with what this object knows filled in.
+    func plan(_ context: HintContext) -> String? {
+        var context = context
+        context.onboarded = context.onboarded && onboarded
+        context.canInvite = invitable
+        context.busy = context.busy || isPresenting()
+        return HintPlan.next(context, seen: seen, shownThisSession: shownThisSession.count)
+    }
+
+    /// The person did the thing the hint points at, whether or not it was on screen. It won't show again.
     func done<T: HintTip>(_ tip: T) {
-        guard !tip.isInvalidated else { return }
-        if tip.shouldDisplay { record(.tipAction, T.hintId) }
+        if HintStage.current == T.hintId {
+            record(.tipAction, T.hintId)
+            HintStage.current = ""
+        }
+        see(T.hintId)
         tip.invalidate(reason: .actionPerformed)
-        Task { await T.done.donate() }
     }
 
     /// The hint's own X.
     func close(_ tip: any Tip) {
         record(.tipDismissed, tip.id)
+        if HintStage.current == tip.id { HintStage.current = "" }
+        see(tip.id)
         tip.invalidate(reason: .tipClosed)
-        Task { await Self.doneEvent(for: tip)?.donate() }
     }
 
-    /// A hint came on screen.
+    /// A hint came on screen: it counts as seen from now on.
     func appeared(_ tip: any Tip) {
-        guard shown.insert(tip.id).inserted else { return }
+        guard shownThisSession.insert(tip.id).inserted else { return }
+        see(tip.id)
         record(.tipShown, tip.id)
     }
 
-    private static func doneEvent(for tip: any Tip) -> Tips.Event<Tips.EmptyDonation>? {
-        (type(of: tip) as? any HintTip.Type)?.done
+    private func see(_ id: String) {
+        guard seen.insert(id).inserted else { return }
+        defaults.set(seen.sorted(), forKey: Self.seenKey)
+    }
+
+    /// A sheet or a cover is up over the app.
+    static func keyWindowIsPresenting() -> Bool {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .contains { $0.isKeyWindow && $0.rootViewController?.presentedViewController != nil }
     }
 
     private func record(_ name: ClientEventName, _ id: String) {
@@ -107,12 +160,5 @@ final class Hints {
             }
             pending.removeFirst(min(batch.count, pending.count))
         }
-    }
-}
-
-private extension Tip {
-    var isInvalidated: Bool {
-        if case .invalidated = status { return true }
-        return false
     }
 }

@@ -20,8 +20,6 @@ struct MomentsView: View {
     @Namespace private var zoom
 
     private let hMargin: CGFloat = 16
-    /// Same tab bar clearance as the shop.
-    private let bottomInset: CGFloat = 134
     private let columnGap: CGFloat = 14
 
     private var store: MomentStore { state.moments }
@@ -40,7 +38,7 @@ struct MomentsView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.top, 4)
-                .padding(.bottom, bottomInset)
+                .padding(.bottom, Space.l)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
@@ -50,10 +48,9 @@ struct MomentsView: View {
                     }
                     .padding(.horizontal, hMargin)
                     .padding(.top, 4)
-                    .padding(.bottom, bottomInset)
+                    .padding(.bottom, Space.l)
                 }
                 .scrollIndicators(.hidden)
-                .ignoresSafeArea(.container, edges: .bottom)
             }
         }
         .onChange(of: pick) { _, item in
@@ -151,7 +148,7 @@ struct MomentsView: View {
                     .padding(.horizontal, 18)
                     .frame(height: 42)
                     .glass(.capsule)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, Space.l)
             }
         }
     }
@@ -338,7 +335,7 @@ private struct NoteCard: View {
                 } else if note.doodle == nil {
                     Text(note.text)
                         .font(.custom("Noteworthy-Bold", size: 18))
-                        .foregroundStyle(Color(hex: 0x5B3A28))
+                        .foregroundStyle(Color(hex: note.inkHex))
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                         .padding(14)
@@ -347,7 +344,7 @@ private struct NoteCard: View {
             .overlay(alignment: .bottomTrailing) {
                 Text("— \(note.author)")
                     .font(.custom("Noteworthy-Bold", size: 13))
-                    .foregroundStyle(Color(hex: 0x5B3A28).opacity(0.7))
+                    .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
                     .padding(8)
             }
             .compositingGroup()

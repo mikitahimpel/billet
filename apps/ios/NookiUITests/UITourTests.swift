@@ -11,7 +11,7 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheApp() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
@@ -39,8 +39,18 @@ final class UITourTests: XCTestCase {
             shot("07-shop-scrolled")
         }
         if tap(app.buttons["Couple"]) {
-            shot("08-couple-menu")
-            closeMenu(app)
+            shot("08-profile")
+            if tap(app.buttons["Settings"]) {
+                shot("13-settings")
+                app.swipeUp()
+                shot("14-settings-scrolled")
+                if tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Style'")).firstMatch) {
+                    shot("15-style")
+                    app.swipeUp()
+                    shot("16-style-scrolled")
+                }
+            }
+            dismissSheet(app)
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
@@ -56,16 +66,6 @@ final class UITourTests: XCTestCase {
                     dismissSheet(app)
                 }
             }
-            if tap(app.buttons["Settings"]) {
-                shot("13-settings")
-                app.swipeUp()
-                shot("14-settings-scrolled")
-                if tap(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Style'")).firstMatch) {
-                    shot("15-style")
-                    app.swipeUp()
-                    shot("16-style-scrolled")
-                }
-            }
         }
         app.terminate()
     }
@@ -73,7 +73,7 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheOnboarding() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "NO", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "NO", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
         Thread.sleep(forTimeInterval: 10)
         shot("20-onboarding")

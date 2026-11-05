@@ -4,8 +4,8 @@ import StoreKit
 import SwiftUI
 import WidgetBridge
 
-/// Settings, grouped the way iOS groups its own: the couple first, then how the app feels, then support, privacy and
-/// what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on this phone
+/// Settings, pushed from the profile and grouped the way iOS groups its own: how the app feels, the account, then
+/// support, privacy and what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on this phone
 /// stands in for account deletion until it has its own row.
 struct SettingsView: View {
     let state: HomeState
@@ -22,9 +22,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
-    @State private var editingProfile = false
     @State private var confirmingErase = false
-    @State private var pairing = false
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -32,178 +30,120 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Button { editingProfile = true } label: { coupleCard }
-                }
-                .listRowBackground(rowBackground)
-
-                Section {
-                    Toggle(isOn: $haptics) { row("Haptics", symbol: "hand.tap.fill", tint: .lilac) }
-                    Button { hintsReset = true } label: {
-                        HStack {
-                            row("Show hints again", symbol: "lightbulb.fill", tint: .sun)
-                            Spacer(minLength: 0)
-                            if hintsReset {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(Color.honey)
-                            }
+        List {
+            Section {
+                Toggle(isOn: $haptics) { row("Haptics", symbol: "hand.tap.fill", tint: .lilac) }
+                Button { hintsReset = true } label: {
+                    HStack {
+                        row("Show hints again", symbol: "lightbulb.fill", tint: .sun)
+                        Spacer(minLength: 0)
+                        if hintsReset {
+                            Image(systemName: "checkmark")
+                                .font(.nookiCallout)
+                                .foregroundStyle(Ink.accentText)
                         }
                     }
-                    .disabled(hintsReset)
-                } header: {
-                    Text("General")
-                } footer: {
-                    Text(hintsReset
-                         ? "The hints start over the next time you open Nooki."
-                         : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.")
                 }
-                .listRowBackground(rowBackground)
-
-                if let session {
-                    Section("Account") {
-                        AccountRow(state: session.signIn.state, retry: session.signIn.retry)
-                        if session.isPaired {
-                            row("Paired with your partner", symbol: "heart.fill", tint: .blush)
-                        } else if session.signIn.state == .signedIn {
-                            Button { pairing = true } label: {
-                                row("Pair with your partner", symbol: "heart.circle.fill", tint: .blush)
-                            }
-                        }
-                    }
-                    .listRowBackground(rowBackground)
-                }
-
-                Section {
-                    Picker(selection: $windowView) {
-                        ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
-                    } label: {
-                        row("View", symbol: "window.horizontal", tint: .sky)
-                    }
-                    if windowView == .suburbia {
-                        Picker(selection: $windowWeather) {
-                            ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
-                        } label: {
-                            row("Weather", symbol: "cloud.rain.fill", tint: .sky)
-                        }
-                    }
-                } header: {
-                    Text("Window")
-                } footer: {
-                    Text("What the City room's window looks out on. Suburbia follows the time of day.")
-                }
-                .listRowBackground(rowBackground)
-
-                Section("Support") {
-                    Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }
-                }
-                .listRowBackground(rowBackground)
-
-                Section {
-                    row("Stays on this iPhone", symbol: "lock.fill", tint: .sage)
-                    Button(role: .destructive) { confirmingErase = true } label: {
-                        row("Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
-                    }
-                } header: {
-                    Text("Privacy")
-                } footer: {
-                    Text(session == nil
-                         ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
-                           + "are saved only on this phone."
-                         : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
-                           + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
-                }
-                .listRowBackground(rowBackground)
-
-                Section {
-                    Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
-                    Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
-                    Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
-                    Picker(selection: roomsOverride) {
-                        Text("Follow the test").tag(RoomsVariant?.none)
-                        ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
-                    } label: {
-                        row("Rooms", symbol: "square.split.2x1", tint: .lilac)
-                    }
-                } header: {
-                    Text("Labs")
-                } footer: {
-                    Text("With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The card shows what the "
-                         + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
-                         + "show at once from the next launch, for testing. Rooms shows one room or both on this "
-                         + "phone, whatever the test gave your pair.")
-                }
-                .listRowBackground(rowBackground)
-
-                Section {
-                    LabeledContent("Version", value: version)
-                } footer: {
-                    Text("Made with love by Jutsu Studio")
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 12)
-                }
-                .listRowBackground(rowBackground)
+                .disabled(hintsReset)
+            } header: {
+                Text("General")
+            } footer: {
+                Text(hintsReset
+                     ? "The hints start over the next time you open Nooki."
+                     : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.")
             }
-            .scrollContentBackground(.hidden)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
-            .confirmationDialog("Erase all data?", isPresented: $confirmingErase, titleVisibility: .visible) {
-                Button("Erase All Data", role: .destructive) {
-                    dismiss()
-                    erase()
-                }
-            } message: {
-                Text("Your profile, photos, moments, lists, wishes and dates will be deleted from this phone. "
-                     + "This can't be undone.")
-            }
-        }
-        .tint(Color(hex: 0xFFC27A))
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $pairing) {
+            .nookiRow()
+
             if let session {
-                PairingSheet(model: session.pairing) { session.pairingFinished() }
-                    .presentationBackground(Ink.sheet)
-                    .presentationDragIndicator(.visible)
+                Section("Account") {
+                    AccountRow(state: session.signIn.state, retry: session.signIn.retry)
+                }
+                .nookiRow()
             }
-        }
-        .sheet(isPresented: $editingProfile) {
-            ProfileSheet(profile: state.profile)
-                .presentationBackground(Ink.sheet)
-                .presentationDragIndicator(.visible)
-        }
-    }
 
-    private let rowBackground = Color.white.opacity(0.06)
+            Section {
+                Picker(selection: $windowView) {
+                    ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
+                } label: {
+                    row("View", symbol: "window.horizontal", tint: .sky)
+                }
+                if windowView == .suburbia {
+                    Picker(selection: $windowWeather) {
+                        ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
+                    } label: {
+                        row("Weather", symbol: "cloud.rain.fill", tint: .sky)
+                    }
+                }
+            } header: {
+                Text("Window")
+            } footer: {
+                Text("What the City room's window looks out on. Suburbia follows the time of day.")
+            }
+            .nookiRow()
 
-    private var coupleCard: some View {
-        HStack(spacing: 14) {
-            HStack(spacing: -12) {
-                Monogram(partner: state.partners.0, profile: state.profile, size: 52)
-                Monogram(partner: state.partners.1, profile: state.profile, size: 52)
+            Section("Support") {
+                Button { requestReview() } label: { row("Rate Nooki", symbol: "star.fill", tint: .sun) }
             }
-            VStack(alignment: .leading, spacing: 3) {
-                Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                Text("Day \(state.daysTogether) together · Edit profile")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
+            .nookiRow()
+
+            Section {
+                row("Stays on this iPhone", symbol: "lock.fill", tint: .sage)
+                Button(role: .destructive) { confirmingErase = true } label: {
+                    row("Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+                }
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text(session == nil
+                     ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
+                       + "are saved only on this phone."
+                     : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
+                       + "with an anonymous key kept in your iCloud Keychain, without your name or email.")
             }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.35))
+            .nookiRow()
+
+            Section {
+                Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
+                Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
+                Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
+                NavigationLink { StyleGallery() } label: { row("Style", symbol: "paintpalette.fill", tint: .sun) }
+                Picker(selection: roomsOverride) {
+                    Text("Follow the test").tag(RoomsVariant?.none)
+                    ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+                } label: {
+                    row("Rooms", symbol: "square.split.2x1", tint: .lilac)
+                }
+            } header: {
+                Text("Labs")
+            } footer: {
+                Text("With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The card shows what the "
+                     + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
+                     + "show at once from the next launch, for testing. Rooms shows one room or both on this "
+                     + "phone, whatever the test gave your pair.")
+            }
+            .nookiRow()
+
+            Section {
+                LabeledContent("Version", value: version)
+            } footer: {
+                Text("Made with love by Jutsu Studio")
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 12)
+            }
+            .nookiRow()
         }
-        .padding(.vertical, 6)
+        .scrollContentBackground(.hidden)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog("Erase all data?", isPresented: $confirmingErase, titleVisibility: .visible) {
+            Button("Erase All Data", role: .destructive) {
+                dismiss()
+                erase()
+            }
+        } message: {
+            Text("Your profile, photos, moments, lists, wishes and dates will be deleted from this phone. "
+                 + "This can't be undone.")
+        }
     }
 
     /// The Labs choice of rooms on this phone; "Follow the test" clears it.
@@ -215,7 +155,7 @@ struct SettingsView: View {
         HStack(spacing: 14) {
             UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
             Text(title)
-                .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : .white)
+                .foregroundStyle(destructive ? Color(hex: 0xFF8A7A) : Ink.text)
         }
     }
 }
@@ -229,17 +169,17 @@ private struct AccountRow: View {
         HStack(spacing: 14) {
             UsIcon(glyph: .init(symbol: symbol, tint: tint), size: 30)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).foregroundStyle(.white)
+                Text(title).foregroundStyle(Ink.text)
                 if let detail {
                     Text(detail)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
             Spacer(minLength: 0)
             if case .failed = state {
                 Button("Try Again", action: retry)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.nookiCallout.weight(.semibold))
             } else if case .signingIn = state {
                 ProgressView()
             }

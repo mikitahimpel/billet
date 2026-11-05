@@ -10,6 +10,14 @@ struct Purchase: Identifiable, Hashable {
     let cost: Int
     let date: Date
     var title: String
+    var kind = Kind.item
+
+    enum Kind: Hashable {
+        /// Room pieces, kept on the phone.
+        case item
+        /// An ink colour for notes and drawings; the server takes the coins once Undo has passed.
+        case ink
+    }
 
     static let undoWindow: TimeInterval = 5
 
@@ -19,14 +27,16 @@ struct Purchase: Identifiable, Hashable {
 extension Wallet {
     /// Takes the cost and adds the pieces not owned yet. Nil, and nothing changes, when the coins don't cover it or
     /// every piece is owned already.
-    mutating func buy(_ itemIDs: [String], cost: Int, title: String, giftTo: Bool = false, at date: Date) -> Purchase? {
+    mutating func buy(
+        _ itemIDs: [String], cost: Int, title: String, kind: Purchase.Kind = .item, giftTo: Bool = false, at date: Date
+    ) -> Purchase? {
         let added = itemIDs.filter { !owned.contains($0) }
         guard coins >= cost, !added.isEmpty else { return nil }
         coins -= cost
         owned.formUnion(added)
         wishlist.subtract(added)
         if giftTo { gifted.formUnion(added) }
-        return Purchase(itemIDs: itemIDs, added: added, cost: cost, date: date, title: title)
+        return Purchase(itemIDs: itemIDs, added: added, cost: cost, date: date, title: title, kind: kind)
     }
 
     /// Gives the coins back and takes back only what that buy added.

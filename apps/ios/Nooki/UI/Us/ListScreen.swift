@@ -33,10 +33,10 @@ struct ListScreen: View {
                     Button("Delete list", role: .destructive) { confirmingDelete = true }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
                         .frame(width: 44, height: 44)
-                        .background(Circle().fill(.white.opacity(0.1)))
+                        .background(Circle().fill(Ink.surfaceRaised))
                 }
                 .accessibilityLabel("List options")
             }
@@ -135,7 +135,7 @@ struct ListScreen: View {
                 Button("Clear bought") {
                     withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
                 }
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.nookiCallout.weight(.semibold))
                 .foregroundStyle(Color.honey)
                 .buttonStyle(.plain)
             }
@@ -147,8 +147,8 @@ struct ListScreen: View {
         if !list.finished.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Done together")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.textSecondary)
                     .padding(.top, 6)
                 VStack(spacing: 0) {
                     ForEach(Array(list.finished.enumerated()), id: \.element.id) { index, item in
@@ -165,15 +165,15 @@ struct ListScreen: View {
         HStack(spacing: 12) {
             checkButton(item, list: list, done: item.done != nil)
             Text(item.text)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
                 .strikethrough(doneStyle)
                 .opacity(doneStyle ? 0.55 : 1)
             Spacer(minLength: 8)
             if showDate, let done = item.done {
                 Text(done.formatted(.dateTime.day().month()))
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiMicro)
+                    .foregroundStyle(Ink.textSecondary)
             }
             Monogram(partner: item.author, profile: state.profile, size: 20)
         }
@@ -196,12 +196,12 @@ struct ListScreen: View {
         } label: {
             ZStack {
                 Circle()
-                    .strokeBorder(done ? .clear : Ink.secondary, lineWidth: 1.5)
+                    .strokeBorder(done ? .clear : Ink.textSecondary, lineWidth: 1.5)
                 if done {
                     Circle().fill(Color.honey)
                     Image(systemName: "checkmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.heroInk)
                 }
             }
             .frame(width: 26, height: 26)
@@ -230,7 +230,7 @@ struct ListScreen: View {
 
     private var rewardBadge: some View {
         Label("+5", systemImage: "star.fill")
-            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .font(.nookiMicro)
             .foregroundStyle(Color.honey)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -242,7 +242,7 @@ struct ListScreen: View {
     }
 
     private var divider: some View {
-        Divider().overlay(Ink.hairline).padding(.leading, 52)
+        Divider().overlay(Ink.separator).padding(.leading, 52)
     }
 }
 
@@ -264,8 +264,8 @@ private struct RenameListSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Rename list")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.text)
             HStack(spacing: 10) {
                 UsIcon(glyph: icon, size: 50)
                 UsField(placeholder: "List name", text: $title)
@@ -306,8 +306,8 @@ struct NewListSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("New list")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.text)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(templates) { kind in
@@ -317,8 +317,8 @@ struct NewListSheet: View {
                         VStack(spacing: 6) {
                             UsIcon(glyph: kind.icon, size: 40)
                             Text(kind.defaultTitle)
-                                .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Ink.primary)
+                                .font(.nookiMicro)
+                                .foregroundStyle(Ink.text)
                                 .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity)
@@ -330,8 +330,8 @@ struct NewListSheet: View {
             }
 
             Text("Or make your own")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(Ink.secondary)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.textSecondary)
                 .padding(.top, 4)
 
             HStack(spacing: 10) {

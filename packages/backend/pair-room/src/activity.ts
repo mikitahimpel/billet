@@ -135,6 +135,16 @@ export const activityOf = (
             ];
       }
       case "RoomOpened":
+        return output.joined === undefined
+          ? []
+          : [
+              {
+                id: decodeId("pair:joined"),
+                at: output.joined.at,
+                doer: member(output.joined.user),
+                event: { _tag: "PartnerJoined" },
+              },
+            ];
       case "ReactionRepeated":
       case "NoteRepeated":
       case "PresenceChanged":
