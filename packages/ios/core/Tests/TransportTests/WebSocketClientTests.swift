@@ -18,6 +18,9 @@ import Wire
 
     var sent = second.sent.makeAsyncIterator()
     #expect(await sent.next() == .resume(lastSeq: 7))
+    // The runner queues Resume before it reports `opened`, so the socket can see it before the
+    // client's state has moved on.
+    while !client.state.isConnected { await Task.yield() }
     #expect(client.state.phase == .connected(failures: 1))
     #expect(client.state.lastSeq == 7)
 

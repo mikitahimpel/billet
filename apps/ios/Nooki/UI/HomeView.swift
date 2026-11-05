@@ -1,5 +1,7 @@
 import SwiftUI
 import TipKit
+import WidgetBridge
+import Wire
 
 struct HomeView: View {
     @State private var state = HomeState()
@@ -17,7 +19,9 @@ struct HomeView: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     /// Whether this pair has both rooms to switch between.
-    var hasRoomChoice = true
+    private var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
+    /// The rooms already counted as opened since the app came to the front, so each is reported once.
+    @State private var reportedRooms: Set<RoomKind> = []
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -131,7 +135,14 @@ struct HomeView: View {
             previous?.stop()
             if new, board == nil { board = makeBoard() }
         }
-        .onChange(of: state.room) { showcase = nil }
+        .onChange(of: state.room) {
+            showcase = nil
+            reportOpened(state.room)
+        }
+        // A variant with one room never leaves Home on a room it lacks.
+        .onChange(of: state.rooms.variant) { _, variant in
+            if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
+        }
         .onChange(of: state.tab) { _, tab in
             NookiPerf.tabShown(tab)
             if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
@@ -162,9 +173,12 @@ struct HomeView: View {
                     await session?.inbox.refreshCount()
                 }
                 session?.followInbox(true)
+                refreshRooms()
+                if !launching { reportOpened(state.room) }
             case .background:
                 state.didEnterBackground()
                 session?.followInbox(false)
+                reportedRooms = []
             default: break
             }
         }
@@ -225,7 +239,7 @@ struct HomeView: View {
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
         // `-room city` on launch opens the City room, for recordings and screenshots.
-        if UserDefaults.standard.string(forKey: "room") == "city" {
+        if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
             select(.city)
         } else if let home {
             NookiPerf.shown(home, kind: .home)
@@ -234,6 +248,22 @@ struct HomeView: View {
         // `-tab shop` opens the Shop, for screenshots.
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
         #endif
+        reportOpened(state.room)
+    }
+
+    /// Reads the pair's variants while the account has a partner, and forgets them when it has none.
+    private func refreshRooms() {
+        guard let session else { return }
+        guard session.isPaired else { return state.rooms.forget() }
+        let rooms = state.rooms
+        Task { await rooms.refresh(session.api) }
+    }
+
+    /// Counts `RoomOpened` once per room each time the app is in front, so the test can compare the rooms.
+    private func reportOpened(_ room: RoomKind) {
+        guard let session, state.tab == .world, reportedRooms.insert(room).inserted else { return }
+        let api = session.api
+        Task { try? await api.reportEvents([ClientEvent(.roomOpened, detail: room.eventDetail)]) }
     }
 
     private func select(_ room: RoomKind) {
@@ -290,23 +320,10 @@ private struct RoomControls: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 2) {
-                ForEach(RoomKind.allCases, id: \.self) { room in
-                    Button { select(room) } label: {
-                        Text(room.title)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.white.opacity(state.room == room ? 0.96 : 0.6))
-                            .padding(.horizontal, 14)
-                            .frame(height: 34)
-                            .background(state.room == room ? Color.honey.opacity(0.45) : .clear, in: .capsule)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(state.room == room ? .isSelected : [])
-                }
+            // One room has no switch: its name would be the only choice.
+            if state.rooms.variant.hasRoomChoice {
+                roomSwitch
             }
-            .padding(3)
-            .warmGlass(.capsule)
-            .popoverTip(RoomsHint(), arrowEdge: .top)
 
             Spacer(minLength: 0)
 
@@ -326,6 +343,26 @@ private struct RoomControls: View {
             .disabled(showcase != nil)
             .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
         }
+    }
+
+    private var roomSwitch: some View {
+        HStack(spacing: 2) {
+            ForEach(state.rooms.variant.kinds, id: \.self) { room in
+                Button { select(room) } label: {
+                    Text(room.title)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(state.room == room ? 0.96 : 0.6))
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .background(state.room == room ? Color.honey.opacity(0.45) : .clear, in: .capsule)
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(state.room == room ? .isSelected : [])
+            }
+        }
+        .padding(3)
+        .warmGlass(.capsule)
+        .popoverTip(RoomsHint(), arrowEdge: .top)
     }
 }
 
