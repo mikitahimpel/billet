@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 const nonEmpty = Schema.String.check(Schema.isNonEmpty());
-const stampCount = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+const coinCount = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 /** `POST /v1/purchases`: StoreKit 2's `Transaction.jwsRepresentation`, as the app received it. */
 export const PurchaseRequest = Schema.Struct({ signedTransaction: nonEmpty });
@@ -19,15 +19,15 @@ export const MockPurchaseRequest = Schema.Struct({
 export type MockPurchaseRequest = typeof MockPurchaseRequest.Type;
 
 /**
- * What a purchase did. `stamps` is what this transaction credited, or for a mock refund what it
+ * What a purchase did. `coins` is what this transaction credited, or for a mock refund what it
  * took back, as a positive number. `duplicate` is true when the transaction had already been
  * handled: nothing changed, and `balance` is the current one.
  */
 export const PurchaseResponse = Schema.Struct({
   transactionId: nonEmpty,
   productId: nonEmpty,
-  stamps: stampCount,
-  balance: stampCount,
+  coins: coinCount,
+  balance: coinCount,
   duplicate: Schema.Boolean,
 });
 export type PurchaseResponse = typeof PurchaseResponse.Type;
@@ -37,21 +37,21 @@ export type PurchaseResponse = typeof PurchaseResponse.Type;
  * `refund:<originalTransactionId>`), so a client can merge entries it already holds. `amount` is
  * negative for a refund. `at` is ISO 8601 in UTC.
  */
-export const StampEntry = Schema.Struct({
+export const PurchaseEntry = Schema.Struct({
   id: nonEmpty,
   kind: Schema.Literals(["purchase", "refund"]),
   amount: Schema.Int,
   productId: nonEmpty,
   at: nonEmpty,
 });
-export type StampEntry = typeof StampEntry.Type;
+export type PurchaseEntry = typeof PurchaseEntry.Type;
 
-/** `GET /v1/stamps`: the bought stamps of the caller's pair. `balance` is never below 0. */
-export const StampsResponse = Schema.Struct({
-  balance: stampCount,
-  entries: Schema.Array(StampEntry),
+/** `GET /v1/purchases`: the bought coins of the caller's pair. `balance` is never below 0. */
+export const PurchasesResponse = Schema.Struct({
+  balance: coinCount,
+  entries: Schema.Array(PurchaseEntry),
 });
-export type StampsResponse = typeof StampsResponse.Type;
+export type PurchasesResponse = typeof PurchasesResponse.Type;
 
 /** `POST /v1/appstore/notifications`: an App Store Server Notification V2, as Apple sends it. */
 export const AppStoreNotificationRequest = Schema.Struct({ signedPayload: nonEmpty });

@@ -254,7 +254,7 @@ export const pairEvents = sqliteTable(
 
 // What the detailed app events carried, per UTC day: how many times each name came with each
 // detail (a catalogue id such as a cat or an item, or a word from a closed list), and the sum of
-// their values (a price in stamps). No user and no pair: only which things are chosen, for the
+// their values (a price in coins). No user and no pair: only which things are chosen, for the
 // admin's top lists. The rules for each name are `clientEventRules` in `contracts-domain/metrics`.
 export const eventDetails = sqliteTable(
   "event_details",
@@ -324,8 +324,8 @@ export const pairFlagOverrides = sqliteTable(
   (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
 );
 
-// App Store purchases of stamp packs (and the dev stage's mock ones), one row per original
-// transaction, so each is credited once. `owner_id` is the pair the stamps went to, or
+// App Store purchases of coin packs (and the dev stage's mock ones), one row per original
+// transaction, so each is credited once. `owner_id` is the pair the coins went to, or
 // `demo:<code>` for a demo room on the dev stage; not a foreign key, so the record outlives the
 // pair. No user, Apple account or receipt is kept. `flagged` is 1 when a refund could not take the
 // whole pack back, for the admin to look at.
@@ -336,7 +336,7 @@ export const purchases = sqliteTable(
     transactionId: text("transaction_id").notNull(),
     ownerId: text("owner_id").notNull(),
     productId: text("product_id").notNull(),
-    stamps: integer("stamps").notNull(),
+    coins: integer("coins").notNull(),
     environment: text("environment").notNull(),
     status: text("status").notNull(),
     refunds: integer("refunds").notNull(),
@@ -348,10 +348,10 @@ export const purchases = sqliteTable(
   (table) => [index("purchases_owner_id_index").on(table.ownerId)],
 );
 
-// Every change to an owner's bought stamps; the balance is the sum of `amount`. Ids are stable
+// Every change to an owner's bought coins; the balance is the sum of `amount`. Ids are stable
 // (`purchase:<id>`, `refund:<id>`, `restore:<id>`), and the app merges entries by them.
-export const stampLedger = sqliteTable(
-  "stamp_ledger",
+export const coinLedger = sqliteTable(
+  "coin_ledger",
   {
     id: text("id").primaryKey(),
     ownerId: text("owner_id").notNull(),
@@ -361,7 +361,7 @@ export const stampLedger = sqliteTable(
     originalTransactionId: text("original_transaction_id").notNull(),
     at: integer("at").notNull(),
   },
-  (table) => [index("stamp_ledger_owner_id_index").on(table.ownerId, table.at)],
+  (table) => [index("coin_ledger_owner_id_index").on(table.ownerId, table.at)],
 );
 
 // The App Store Server Notifications handled, by Apple's UUID, so a retried one is applied once.
