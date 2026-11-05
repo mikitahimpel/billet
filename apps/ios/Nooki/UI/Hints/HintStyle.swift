@@ -10,7 +10,7 @@ struct HintStyle: TipViewStyle {
         HStack(alignment: .top, spacing: 12) {
             configuration.image?
                 .font(.system(.title2, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
+                .symbolRenderingMode(.monochrome)
                 .foregroundStyle(Color.honey)
                 .frame(width: 30)
 

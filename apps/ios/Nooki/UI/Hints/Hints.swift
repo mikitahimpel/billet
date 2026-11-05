@@ -40,6 +40,7 @@ final class Hints {
         // For screenshots: `-hint treat` shows only that hint, whatever its rules.
         if let only = defaults.string(forKey: "hint"), let hint = all.first(where: { $0.hintId == only }) {
             Tips.showTipsForTesting([hint])
+            Tips.hideTipsForTesting(all.filter { $0.hintId != only })
         }
         #endif
         try? Tips.configure([.displayFrequency(.hourly)])
