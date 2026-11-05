@@ -151,6 +151,14 @@ final class ServerSession {
         try await backend.api.pair()
     }
 
+    /// Keeps the server's date ideas for the next launch when they differ from the ones this launch has. Offline,
+    /// the cards stay as they are.
+    func refreshDateCatalog() async {
+        guard let catalog = try? await backend.api.dateCatalog(),
+              catalog.version != (DateCatalog.saved ?? DateCatalog.bundled)?.version else { return }
+        SharedFile.write(catalog, to: DateCatalog.file)
+    }
+
     /// The pair's shop in its room; nil until this account has a partner.
     var shopSync: ShopSync? {
         isPaired ? .live(backend.api) : nil

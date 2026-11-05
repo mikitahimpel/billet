@@ -71,6 +71,27 @@ to it in #67.
   its domain type added to `test/schema-drift.test.ts`. Other tests apply the migrations to an empty
   database and compare `PRAGMA table_info` with each table's columns.
 
+### Date ideas and their pictures
+
+The date ideas are data in `packages/backend/dates/src/date-catalog.json`, checked against
+`DateCatalogResponse` (`packages/contracts/http-api/src/dates.ts`) when the Worker loads. The app
+fetches them from `GET /v1/dates/catalog`, which needs no session. The answer is the same for
+everyone and changes only with a deploy, so it carries `cache-control: public, max-age=3600` and an
+`etag` of its `version`, the first 16 hex digits of the SHA-256 of the ideas. A client that sends
+that tag in `if-none-match` gets a 304. `pnpm --filter @billet/backend-dates catalog:version`
+recomputes the version, and a test fails when it is stale.
+
+Each idea's `art.path` names a WebP picture under `/art/dates/`, a static asset of the `Api`
+Worker (`apps/api/public`), served from Cloudflare's CDN without running the Worker. The file name
+carries a hash of its content, so a changed picture gets a new path and every `/art/*` file is
+`public, max-age=31536000, immutable`. `art.color` is the picture's average colour, which the app
+shows while the picture loads. `pnpm --filter @billet/backend-dates catalog:art <id> <image>` turns
+a picture into that file and updates the idea and the version.
+
+The app ships the catalog file as its first catalog and keeps the last one the server sent in the
+app group for the next launch. It ships no date pictures: the cards fetch them through the shared
+`URLCache`, which keeps them on disk.
+
 ### R2: note images
 
 Images live in a private R2 bucket, each couple's under `pairs/<pairId>/`: rendered drawings as PNG,

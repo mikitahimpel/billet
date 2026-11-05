@@ -287,7 +287,7 @@ struct Upcoming: Identifiable, Hashable {
 
 // MARK: - Dates
 
-struct DateIdea: Identifiable, Codable, Hashable {
+nonisolated struct DateIdea: Identifiable, Codable, Hashable {
     enum Place: String, Codable, CaseIterable {
         case home, city, nature, apart
 
@@ -303,11 +303,10 @@ struct DateIdea: Identifiable, Codable, Hashable {
     enum Cost: String, Codable, CaseIterable { case free, cheap = "$", nice = "$$" }
     enum Length: String, Codable, CaseIterable { case hour = "1h", evening, day }
     enum Season: String, Codable { case any, spring, summer, autumn, winter }
-    /// The card's background picture, `DateScene-<scene>` in the app's asset catalog.
-    enum Scene: String, Codable, CaseIterable {
-        case movie, kitchen, cozy, games, craft, cafe, city, nature, night, winter, apart, plans
-
-        var imageName: String { "DateScene-\(rawValue)" }
+    /// The card's picture on the API's host, and its average colour, `#RRGGBB`, shown while it loads.
+    struct Art: Codable, Hashable {
+        let path: String
+        let color: String
     }
 
     let id: Int
@@ -317,20 +316,18 @@ struct DateIdea: Identifiable, Codable, Hashable {
     let cost: Cost
     let time: Length
     let season: Season
-    let scene: Scene
+    let art: Art
 
     var title: String { CatProfile.named(rawTitle) }
     var pitch: String { CatProfile.named(rawPitch) }
 
     private enum CodingKeys: String, CodingKey {
-        case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season, scene
+        case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season, art
     }
 
-    static let all: [DateIdea] = {
-        guard let url = Bundle.main.url(forResource: "DateIdeas", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else { return [] }
-        return (try? JSONDecoder().decode([DateIdea].self, from: data)) ?? []
-    }()
+    /// The last catalog the server sent, else the one the build ships with. Read once per launch, so a newer
+    /// catalog shows from the next one.
+    static let all: [DateIdea] = DateCatalog.saved?.ideas ?? DateCatalog.bundled?.ideas ?? []
 
     static func idea(_ id: Int) -> DateIdea? { all.first { $0.id == id } }
 

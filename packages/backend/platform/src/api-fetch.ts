@@ -8,6 +8,7 @@ import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
 import { DemoPartnerRoutes } from "@billet/backend-demo-partner/demo-partner-routes";
 import { DemoPartnerService } from "@billet/backend-demo-partner/demo-partner-service";
+import { DatesRoutes } from "@billet/backend-dates/dates-routes";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsRoutes } from "@billet/backend-flags/flags-routes";
 import { FlagsService } from "@billet/backend-flags/flags-service";
@@ -93,6 +94,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     GiftsRoutes,
     ListsRoutes,
     FlagsRoutes,
+    DatesRoutes,
     MetricsRoutes,
     PaymentsRoutes,
     OnboardingRoutes,
