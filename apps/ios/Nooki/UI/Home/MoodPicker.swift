@@ -23,16 +23,20 @@ struct MoodButton: View {
                 }
             }
             .frame(width: 42, height: 42)
-            .warmGlass(.circle, interactive: true)
+            // Not interactive, as the Inbox beside it: the button style answers the press.
+            .warmGlass(.circle)
             .overlay(alignment: .topTrailing) {
                 if let theirs {
                     Text(theirs.mood.emoji)
                         .font(.system(size: 11))
                         .frame(width: 20, height: 20)
                         .background(.white, in: .circle)
+                        .overlay(Circle().strokeBorder(Color.honey, lineWidth: 1.5))
                         .offset(x: 4, y: -4)
                 }
             }
+            .frame(width: 44, height: 44)
+            .contentShape(.circle)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel("How are you?")
@@ -73,6 +77,7 @@ struct MoodPicker: View {
             TextField("A few words (optional)", text: $note, axis: .vertical)
                 .lineLimit(1...3)
                 .font(.nookiCallout)
+                .foregroundStyle(Ink.text)
                 .padding(Space.m)
                 .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
                 .onChange(of: note) { _, new in
@@ -96,7 +101,9 @@ struct MoodPicker: View {
                 PartnerLine(name: state.profile.name(of: state.otherPartner), check: theirs)
             }
         }
-        .padding(Space.l)
+        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.l)
+        .tint(.honey)
         .shopSheet(height: $height)
         .onAppear {
             let current = state.partnerMoods.latest[state.viewer]
@@ -114,14 +121,16 @@ private struct MoodChip: View {
     var body: some View {
         Button(action: pick) {
             VStack(spacing: Space.xs) {
-                Text(mood.emoji).font(.system(size: 34))
+                Text(mood.emoji)
+                    .font(.system(size: 30))
+                    .frame(width: 52, height: 52)
+                    .background(Circle().fill(.white.opacity(picked ? 0.7 : 0.12)))
                 Text(mood.title.capitalized)
                     .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
-            .frame(maxWidth: .infinity, minHeight: 92)
-            .background(picked ? Color.honey.opacity(0.22) : Ink.surfaceRaised,
-                        in: .rect(cornerRadius: Radius.card, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 96)
+            .nookiCard(warm: picked)
             .overlay {
                 if picked {
                     RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -157,7 +166,10 @@ private struct PartnerLine: View {
                     .font(.nookiCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
+            Spacer(minLength: 0)
         }
+        .padding(Space.l)
+        .nookiCard()
         .accessibilityElement(children: .combine)
     }
 }
