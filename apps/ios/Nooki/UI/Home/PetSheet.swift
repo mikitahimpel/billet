@@ -87,6 +87,7 @@ private struct PetSheet: View {
     @Binding var height: CGFloat
     var onPlay: (MiniGame) -> Void
     @State private var short = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ScrollView {
@@ -118,6 +119,8 @@ private struct PetSheet: View {
         .scrollBounceBehavior(.basedOnSize)
         .scrollIndicators(.hidden)
         .haptic(.impact(weight: .light), trigger: state.care.petPulse)
+        // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
+        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
     private func hero(mood: String?) -> some View {

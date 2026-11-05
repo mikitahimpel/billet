@@ -23,9 +23,10 @@ import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
-import { RoomService } from "@billet/backend-pair-room/room-service";
+import { type PurchaseCredit, RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
+import { GiftsRoom, type GiftCommand, type GiftsResult } from "@billet/backend-pair-room/gifts";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -232,6 +233,18 @@ export class PairRoom extends DurableObject {
       name === undefined
         ? effect
         : effect.pipe(Effect.withSpan(name, { root: true, attributes: this.spanAttributes })),
+    );
+  }
+
+  /** Runs one gift command for `by` and answers with what they may see after it. */
+  async gifts(by: UserId, command: GiftCommand): Promise<GiftsResult> {
+    return (await this.runtime).runPromise(
+      GiftsRoom.use((gifts) => gifts.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.gifts.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
     );
   }
 
@@ -571,6 +584,11 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
+  /** Pays in or takes back coins bought with money, once per entry id. No Inbox item. */
+  creditPurchase(credit: PurchaseCredit): Promise<RoomDecision> {
+    return this.run((room) => room.creditPurchase(credit), "PairRoom.creditPurchase");
+  }
+
   /** A treat's meal goes to the journal's followers; an order, gift or bonus is an Inbox item. */
   private async afterCoins(decision: RoomDecision, by: UserId): Promise<RoomDecision> {
     if (decision._tag === "Accepted" && decision.outputs.some((o) => o._tag !== "CoinsRepeated")) {
@@ -601,6 +619,7 @@ export class PairRoom extends DurableObject {
    */
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
+    await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
     this.endSessions();

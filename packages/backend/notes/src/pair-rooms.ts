@@ -17,8 +17,10 @@ import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
+import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
 import type { NotesUnavailable } from "./notes-error.ts";
 
@@ -95,6 +97,11 @@ export class PairRooms extends Context.Service<
       event: EarnEvent,
       utcOffsetSeconds: number | undefined,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Pays in or takes back coins bought with money, once per entry id. */
+    readonly creditPurchase: (
+      pairId: PairId,
+      credit: PurchaseCredit,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly setWish: (
       pairId: PairId,
       by: UserId,
@@ -156,6 +163,12 @@ export class PairRooms extends Context.Service<
       afterRev: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
+    /** Runs one gift command for `by`: see `GiftsRoom`. */
+    readonly gifts: (
+      pairId: PairId,
+      by: UserId,
+      command: GiftCommand,
+    ) => Effect.Effect<GiftsResult, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,

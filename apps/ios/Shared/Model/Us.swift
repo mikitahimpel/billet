@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Wire
 
 // MARK: - Icons
 
@@ -97,6 +98,20 @@ nonisolated struct UsList: Identifiable, Codable, Hashable {
 
 // MARK: - Wishlists
 
+/// The day a wish is for, such as a birthday, picked from the calendar. A title and a day rather than a calendar
+/// entry, since each partner's phone keeps its own calendar.
+nonisolated struct WishOccasion: Codable, Hashable {
+    var title: String
+    var date: Date
+
+    /// Negative once the day has passed.
+    func daysLeft(from now: Date = .now) -> Int {
+        let calendar = Calendar.current
+        return calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
+                                       to: calendar.startOfDay(for: date)).day ?? 0
+    }
+}
+
 /// What the owner wants. It carries nothing about who plans to gift it: that is the giver's `GiftPlan`, so the owner's
 /// copy can never spoil the surprise.
 nonisolated struct WishItem: Identifiable, Codable, Hashable {
@@ -110,6 +125,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var note = ""
     /// Pinned to the top of the list.
     var mostWanted = false
+    var occasion: WishOccasion?
     var added = Date.now
     /// When the owner said it arrived.
     var gifted: Date?
@@ -121,7 +137,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var legacyGiver: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id, owner, title, link, price, note, mostWanted, added, gifted, giftedBy, rewarded
+        case id, owner, title, link, price, note, mostWanted, occasion, added, gifted, giftedBy, rewarded
     }
 
     private enum LegacyKeys: String, CodingKey { case want, reservedBy }
@@ -150,6 +166,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
         // Three hearts was the top of the old scale.
         mostWanted = try c.decodeIfPresent(Bool.self, forKey: .mostWanted)
             ?? (try legacy.decodeIfPresent(Int.self, forKey: .want) == 3)
+        occasion = try c.decodeIfPresent(WishOccasion.self, forKey: .occasion)
         added = try c.decodeIfPresent(Date.self, forKey: .added) ?? .distantPast
         gifted = try c.decodeIfPresent(Date.self, forKey: .gifted)
         giftedBy = try c.decodeIfPresent(String.self, forKey: .giftedBy)
@@ -165,6 +182,16 @@ nonisolated struct GiftPlan: Codable, Hashable {
     var wishID: UUID
     var giver: String
     var stage = Stage.planning
+}
+
+/// A change to the gifts, for the pair's room to make too while the phone is paired.
+nonisolated enum GiftChange: Hashable {
+    case save(WishItem)
+    case delete(UUID)
+    /// Nil lets the plan go.
+    case plan(UUID, GiftPlan.Stage?)
+    case received(UUID, Bool)
+    case loves(Loves, of: String)
 }
 
 /// "Forget-me-nots": what a partner likes, filled in by that partner.
@@ -307,12 +334,16 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
     var hint = ""
     /// 1...3 hearts after it happened; nil until rated.
     var rating: Int?
+    /// Local reminders a day and an hour before; nil on dates saved before reminders existed.
+    var remind: Bool?
+    /// The photo from this date in Moments, when it was marked done with one.
+    var momentID: UUID?
 }
 
 // MARK: - Store
 
-/// Everything on the Us tab. Local-only JSON in the app group for now (docs/together-concept.md, section 6), shared
-/// with the widgets; both partners share this device's copy until sync lands.
+/// Everything on the Us tab, as JSON in the app group shared with the widgets (docs/together-concept.md, section 6).
+/// Once paired, the gifts mirror the pair's room through `GiftsModel`; the rest stays on this phone.
 @Observable
 final class UsStore {
     private(set) var lists: [UsList] = []
@@ -321,13 +352,18 @@ final class UsStore {
     /// phone.
     private(set) var plans: [GiftPlan] = []
     private(set) var loves: [String: Loves] = [:]
+    /// Owners the pair's room says a surprise is coming for. The room never says which wish, and the plan behind it
+    /// is on the giver's phone only.
+    private(set) var surprises: Set<String> = []
     private(set) var events: [UsEvent] = []
     private(set) var planned: [PlannedDate] = []
     /// Per partner: idea id -> liked (true) or skipped (false).
     private(set) var swipes: [String: [Int: Bool]] = [:]
 
-    /// Where the coins the couple earns here go; HomeState passes its own.
-    @ObservationIgnored let wallet: WalletStore
+    /// Told of each thing done here that the server pays coins for. The app sends it there; the widgets pass none.
+    @ObservationIgnored var onEarn: (EarnEvent) -> Void
+    /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
+    @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
 
     private let file: String
 
@@ -340,10 +376,11 @@ final class UsStore {
         var swipes: [String: [Int: Bool]]
         /// Missing in files from builds before gift plans.
         var plans: [GiftPlan]?
+        var surprises: Set<String>?
     }
 
-    init(wallet: WalletStore, file: String = "Us/us.json") {
-        self.wallet = wallet
+    init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
+        self.onEarn = onEarn
         self.file = file
         reload()
     }
@@ -358,6 +395,7 @@ final class UsStore {
             planned = saved.planned
             swipes = saved.swipes
             plans = saved.plans ?? []
+            surprises = saved.surprises ?? []
             for i in wishes.indices {
                 guard let giver = wishes[i].legacyGiver else { continue }
                 wishes[i].legacyGiver = nil
@@ -373,7 +411,7 @@ final class UsStore {
 
     private func save() {
         SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
-                                  plans: plans),
+                                  plans: plans, surprises: surprises),
                          to: file)
     }
 
@@ -413,13 +451,13 @@ final class UsStore {
         setItem(itemID, in: listID, done: item.done == nil)
     }
 
-    /// Ticking a "we want to" item earns 5 coins, at most 3 times a day; groceries earn nothing.
+    /// Ticking a "we want to" item earns coins, within the server's daily cap; groceries earn nothing.
     func setItem(_ itemID: UUID, in listID: UUID, done: Bool) {
         guard let l = lists.firstIndex(where: { $0.id == listID }),
               let i = lists[l].items.firstIndex(where: { $0.id == itemID }),
               (lists[l].items[i].done != nil) != done else { return }
         lists[l].items[i].done = done ? .now : nil
-        if done && !lists[l].kind.isChecklist { wallet.update { $0.tickList() } }
+        if done && !lists[l].kind.isChecklist { onEarn(.listTicked(item: itemID.uuidString)) }
         save()
     }
 
@@ -451,12 +489,14 @@ final class UsStore {
     func upsertWish(_ wish: WishItem) {
         if let i = wishes.firstIndex(where: { $0.id == wish.id }) { wishes[i] = wish } else { wishes.append(wish) }
         save()
+        onGiftChange?(.save(wish))
     }
 
     func deleteWish(_ id: UUID) {
         wishes.removeAll { $0.id == id }
         plans.removeAll { $0.wishID == id }
         save()
+        onGiftChange?(.delete(id))
     }
 
     /// The viewer's own plan for this wish. Nobody else's plan is ever returned, so the owner gets nil for their own wishes.
@@ -467,7 +507,7 @@ final class UsStore {
     /// The owner may learn that a surprise is coming, never for which wish.
     func surpriseComing(for owner: String) -> Bool {
         let open = Set(wishes(of: owner).map(\.id))
-        return plans.contains { open.contains($0.wishID) && $0.giver != owner }
+        return surprises.contains(owner) || plans.contains { open.contains($0.wishID) && $0.giver != owner }
     }
 
     /// The giver secretly promises to gift it. One plan per wish; the owner can't plan their own.
@@ -476,17 +516,20 @@ final class UsStore {
               !plans.contains(where: { $0.wishID == id }) else { return }
         plans.append(GiftPlan(wishID: id, giver: giver))
         save()
+        onGiftChange?(.plan(id, .planning))
     }
 
     func setStage(_ stage: GiftPlan.Stage, of id: UUID, by giver: String) {
         guard let i = plans.firstIndex(where: { $0.wishID == id && $0.giver == giver }) else { return }
         plans[i].stage = stage
         save()
+        onGiftChange?(.plan(id, stage))
     }
 
     func release(_ id: UUID, by giver: String) {
         plans.removeAll { $0.wishID == id && $0.giver == giver }
         save()
+        onGiftChange?(.plan(id, nil))
     }
 
     /// Only the owner says it arrived: it moves to "Gifted", the giver's plan closes and the couple earns 20 coins once.
@@ -498,9 +541,10 @@ final class UsStore {
         plans.removeAll { $0.wishID == id }
         if !wishes[i].rewarded {
             wishes[i].rewarded = true
-            wallet.earn(20)
+            onEarn(.wishReceived(wish: id.uuidString))
         }
         save()
+        onGiftChange?(.received(id, true))
     }
 
     /// Puts a wish marked by mistake back on the list. The coins stay paid.
@@ -509,12 +553,29 @@ final class UsStore {
         wishes[i].gifted = nil
         wishes[i].giftedBy = nil
         save()
+        onGiftChange?(.received(id, false))
     }
 
     func loves(of partner: String) -> Loves { loves[partner] ?? Loves() }
 
     func setLoves(_ value: Loves, for partner: String) {
         loves[partner] = value
+        save()
+        onGiftChange?(.loves(value, of: partner))
+    }
+
+    /// Takes the pair's room as the truth for gifts. `plans` are only the viewer's own; `surprise` names the owner a
+    /// surprise is coming for, if any. Whether a wish's coins were paid is the phone's own and stays.
+    func mirrorGifts(wishes remote: [WishItem], plans: [GiftPlan], loves: [String: Loves], surprise: String?) {
+        let paid = Set(wishes.filter(\.rewarded).map(\.id))
+        wishes = remote.map { wish in
+            var wish = wish
+            wish.rewarded = paid.contains(wish.id) || wish.gifted != nil
+            return wish
+        }
+        self.plans = plans
+        self.loves = loves
+        surprises = surprise.map { [$0] } ?? []
         save()
     }
 
@@ -625,7 +686,7 @@ final class UsStore {
     func swipe(_ ideaID: Int, liked: Bool, by partner: String) {
         let wasMatch = isMatch(ideaID)
         swipes[partner, default: [:]][ideaID] = liked
-        if !wasMatch && isMatch(ideaID) { wallet.earn(10) }
+        if !wasMatch && isMatch(ideaID) { onEarn(.dateMatched(idea: String(ideaID))) }
         save()
     }
 
@@ -676,18 +737,21 @@ final class UsStore {
         save()
     }
 
-    /// Rating a date marks it as done and earns the couple 30 coins once.
-    func rate(_ id: UUID, hearts: Int) {
+    /// Rating a date marks it as done and earns the couple coins once.
+    func rate(_ id: UUID, hearts: Int, momentID: UUID? = nil) {
         guard let i = planned.firstIndex(where: { $0.id == id }) else { return }
-        if planned[i].rating == nil { wallet.earn(30) }
+        if planned[i].rating == nil { onEarn(.dateRated(plan: id.uuidString)) }
         planned[i].rating = min(max(hearts, 1), 3)
+        if let momentID { planned[i].momentID = momentID }
         save()
     }
 
+    /// Not done yet, soonest first; the ones already past wait on top for "How was it?".
+    var comingUp: [PlannedDate] { planned.filter { $0.rating == nil }.sorted { $0.date < $1.date } }
+
+    /// Rated, newest first.
+    var done: [PlannedDate] { planned.filter { $0.rating != nil }.sorted { $0.date > $1.date } }
+
     /// Not yet rated first (soonest on top), then rated ones newest first.
-    var plannedSorted: [PlannedDate] {
-        let next = planned.filter { $0.rating == nil }.sorted { $0.date < $1.date }
-        let past = planned.filter { $0.rating != nil }.sorted { $0.date > $1.date }
-        return next + past
-    }
+    var plannedSorted: [PlannedDate] { comingUp + done }
 }

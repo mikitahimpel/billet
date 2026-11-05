@@ -99,7 +99,7 @@ final class BrushStage: GameStage {
     func update(_ dt: Float) {
         sinceTap += dt
         strokes.update(dt: Double(dt))
-        deck.bar = (strokes.groom, "Groom")
+        deck.show(strokes.groom, "Groom")
         for index in tufts.indices.reversed() {
             tufts[index].life -= dt
             tufts[index].velocity.y -= 0.02 * dt

@@ -19,7 +19,13 @@ struct AppHeader: View {
 
                 Spacer(minLength: 0)
 
-                CoinPill(coins: state.shop.coins)
+                Button { state.shop.askForCoins() } label: {
+                    CoinPill(coins: state.shop.coins)
+                }
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("\(state.shop.coins) coins")
+                .accessibilityHint("Shows your coins, how to get more and where they went")
+                .accessibilityIdentifier("coins")
 
                 Button { state.showsProfile = true } label: {
                     HStack(spacing: -10) {
@@ -128,9 +134,6 @@ struct CoinPill: View {
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).
         .anchorPreference(key: CoinPillAnchor.self, value: .bounds) { $0 }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(coins) coins")
-        .accessibilityIdentifier("coins")
     }
 }
 

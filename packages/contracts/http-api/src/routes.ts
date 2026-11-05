@@ -82,10 +82,27 @@ export const routes = {
   claimBonus: route("POST", "/v1/shop/bonus"),
   /** Pays something the couple did in the app, once per ref and within the day's caps. */
   earnCoins: route("POST", "/v1/coins/earn"),
+  /** The pair's gift wishes, the caller's own gift plans and both partners' "What I love". */
+  getGifts: route("GET", "/v1/gifts"),
+  /** Makes or changes one of the caller's gift wishes. */
+  saveGiftWish: route("PUT", "/v1/gifts/wishes"),
+  deleteGiftWish: route("DELETE", "/v1/gifts/wishes"),
+  /** Plans, moves on or lets go the caller's secret plan for one of the partner's wishes. */
+  setGiftPlan: route("PUT", "/v1/gifts/plans"),
+  /** The owner says a wish arrived, or takes that back. */
+  markGiftReceived: route("PUT", "/v1/gifts/received"),
+  saveLoves: route("PUT", "/v1/gifts/loves"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
   mockPurchase: route("POST", "/v1/purchases/mock"),
+  /**
+   * The dev stage only: pairs the caller, who has no partner, with a new bot, and answers the pair
+   * as `getPair` does. Elsewhere a 404.
+   */
+  createDemoPartner: route("POST", "/v1/dev/demo-partner"),
+  /** The dev stage only: unpairs the caller from their bot and deletes it. Elsewhere a 404. */
+  removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
   /** The pair's bought coins: the balance and every ledger entry. */
   getPurchases: route("GET", "/v1/purchases"),
   /** App Store Server Notifications V2 (refunds and the like). Apple calls it; no session. */

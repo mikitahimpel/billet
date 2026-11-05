@@ -12,6 +12,12 @@ import { Metrics, type MetricEvent } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
+import {
+  applyGiftWrites,
+  type GiftRows,
+  GiftsRoom,
+  GiftsStore,
+} from "@billet/backend-pair-room/gifts";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
@@ -117,7 +123,15 @@ const makeRoom = () => {
   const ids = Layer.succeed(NoteIdSource, {
     next: Effect.sync(() => Schema.decodeSync(NoteId)(`note-${(nextNote += 1)}`)),
   });
-  return Effect.runSync(RoomService.make.pipe(Effect.provide(Layer.merge(store, ids))));
+  let giftRows: GiftRows = { wishes: [], plans: [], loves: [] };
+  const giftsStore = Layer.succeed(GiftsStore, {
+    load: Effect.sync(() => giftRows),
+    apply: (writes) => Effect.sync(() => void (giftRows = applyGiftWrites(giftRows, writes))),
+    forget: Effect.sync(() => void (giftRows = { wishes: [], plans: [], loves: [] })),
+  });
+  const room = Effect.runSync(RoomService.make.pipe(Effect.provide(Layer.merge(store, ids))));
+  const gifts = Effect.runSync(GiftsRoom.make.pipe(Effect.provide(Layer.merge(store, giftsStore))));
+  return { ...room, gifts };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -196,6 +210,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     openGift: (pairId, by, utcOffsetSeconds) => roomOf(pairId).openGift(by, utcOffsetSeconds),
     claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
     earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
+    creditPurchase: (pairId, credit) => roomOf(pairId).creditPurchase(credit),
     setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
@@ -208,6 +223,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     reactions: (pairId, afterRev, limit) => roomOf(pairId).reactionsAfter(afterRev, limit),
     activity: (pairId, caller, before, limit) => roomOf(pairId).activityPage(caller, before, limit),
     markActivityRead: (pairId, user, upTo) => roomOf(pairId).markActivityRead(user, upTo),
+    gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
   };
 
   return {

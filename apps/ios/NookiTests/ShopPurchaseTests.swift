@@ -1,48 +1,31 @@
 import Foundation
 import Testing
+import Wire
 @testable import Billet
 
 private let t0 = Date(timeIntervalSinceReferenceDate: 815_000_000)
 
 @Suite struct ShopPurchaseTests {
-    @Test func buyingTakesTheCostAndAddsOnlyNewPieces() {
-        var wallet = Wallet(coins: 500, owned: ["lamp"], wishlist: ["armchair"])
-        let purchase = wallet.buy(["lamp", "armchair", "print"], cost: 300, title: "Rainy Evening", at: t0)!
-        #expect(wallet.coins == 200)
-        #expect(wallet.owned == ["lamp", "armchair", "print"])
-        #expect(wallet.wishlist.isEmpty)
-        #expect(purchase.added.sorted() == ["armchair", "print"])
-    }
-
-    @Test func aBuyThatCannotBePaidOrAddsNothingChangesNothing() {
-        var wallet = Wallet(coins: 100, owned: ["lamp"])
-        #expect(wallet.buy(["armchair"], cost: 320, title: "Cloud Armchair", at: t0) == nil)
-        #expect(wallet.buy(["lamp"], cost: 50, title: "Mushroom Lamp", at: t0) == nil)
-        #expect(wallet.coins == 100)
-        #expect(wallet.owned == ["lamp"])
-    }
-
-    @Test func undoGivesTheCoinsBackAndKeepsWhatWasOwnedBefore() {
-        var wallet = Wallet(coins: 500, owned: ["lamp"])
-        let purchase = wallet.buy(["lamp", "armchair"], cost: 230, title: "Set", at: t0)!
-        wallet.undo(purchase)
-        #expect(wallet.coins == 500)
-        #expect(wallet.owned == ["lamp"])
-    }
-
-    @Test func aGiftIsMarkedAndItsUndoUnmarksIt() {
-        var wallet = Wallet(coins: 200, owned: [])
-        let purchase = wallet.buy(["yarn"], cost: 60, title: "Yarn Ball", giftTo: true, at: t0)!
-        #expect(wallet.gifted == ["yarn"])
-        wallet.undo(purchase)
-        #expect(wallet.gifted.isEmpty)
+    private func purchase(kind: Purchase.Kind = .item) -> Purchase {
+        Purchase(
+            offer: .item(RoomItemId("yarn")), itemIDs: ["yarn"], added: ["yarn"], cost: 60, date: t0, title: "Yarn Ball",
+            kind: kind)
     }
 
     @Test func undoLastsFiveSeconds() {
-        var wallet = Wallet(coins: 200, owned: [])
-        let purchase = wallet.buy(["yarn"], cost: 60, title: "Yarn Ball", at: t0)!
+        let purchase = purchase()
         #expect(purchase.canUndo(at: t0.addingTimeInterval(4.9)))
         #expect(!purchase.canUndo(at: t0.addingTimeInterval(5)))
+    }
+
+    @Test func aTreatHasNoUndo() {
+        #expect(!purchase(kind: .treat).canUndo(at: t0))
+    }
+
+    @Test func eachTapIsItsOwnOrderId() {
+        let first = purchase(), second = purchase()
+        #expect(first.key != second.key)
+        #expect(first.key == IdempotencyKey(first.id.uuidString))
     }
 
     @Test func openingTheShopAtAnInkSwitchesTabAndLeavesTheFocus() {

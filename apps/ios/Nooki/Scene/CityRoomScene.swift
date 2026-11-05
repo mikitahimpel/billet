@@ -1,5 +1,7 @@
 import RealityKit
+import SwiftUI
 import UIKit
+import WindowViews
 
 private enum Tone {
     static let wall: UInt32 = 0xECD9C0
@@ -25,8 +27,9 @@ private enum Tone {
 
 /// The second room, ported from nooki-scene/src/three/cityRoom.js: a bedroom with a wide window onto a living town,
 /// lit by the time of day (the real local hour), where Mochi wanders between her bed and the windowsill.
-/// The window looks out on one of the suburb views, painted for the hour in layers at their own depths with its life
-/// moving (see WindowPane). Ilya's TownPicture stays as the fallback when a view can't be painted.
+/// The window is a hole in the wall: the suburb view is drawn flat behind the room at the screen's own pixels
+/// (`windowView`, which HomeView puts under the room), told each frame where the window lands on screen. Ilya's
+/// TownPicture fills the hole on a plane of its own until that view is showing, or wherever it isn't hosted.
 final class CityRoomScene: CatRoom {
     private enum Clock {
         case live
@@ -43,10 +46,15 @@ final class CityRoomScene: CatRoom {
     /// cat-standing.ply is 0.26 m tall on all fours; here Mochi sits about as tall as the nightstand.
     private let catScale: Float = 0.5 * (0.162 / 0.152)
 
-    /// The view behind the glass, repainted as the light changes and the view's life moves.
-    private var pane: WindowPane?
-    /// True once a suburb view has been shown; the town is painted only before that, or if one can't be.
-    private var showsView = false
+    /// The view behind the glass, to be shown under the room at the same size.
+    let windowView = FlatWindowView()
+    /// The town in the hole until `windowView` shows.
+    private var fallback: ModelEntity?
+    private var fallbackTexture: TextureResource?
+    private var choice = WindowChoice.current
+    private var weather = WindowChoice.weather
+    private var choiceAge: Float = .infinity
+    private var lampsOn = false
     private var townHour: Float = -1
     private var townAge: Float = 0
     private var painting = false
@@ -129,6 +137,7 @@ final class CityRoomScene: CatRoom {
 
         // People switch the lamps on as it gets dark.
         let lamps = smoothstep(darkness, 0.2, 0.7)
+        lampsOn = lamps > 0.5
         setPoint(lampLight, color: Daylight.rgb(0xFFC27A), lumens: 2200 * lamps, radius: 1.1)
         setPoint(fairyLight, color: Daylight.rgb(0xFFC27A), lumens: 900 * lamps, radius: 1)
         setPoint(candleLight, color: Daylight.rgb(0xFFAA55), lumens: 500 * (0.3 + 0.7 * lamps), radius: 0.5)
@@ -164,17 +173,25 @@ final class CityRoomScene: CatRoom {
                                                     intensityExponent: log2(max(light.env, 0.05) / 0.85) - 0.4))
     }
 
-    /// Shows the next frame of the window's view, a few times a second. Without one, the town is repainted once the
-    /// hour has moved on a little, at most five times a second while the day is cycling, in the background.
+    /// Keeps the flat view on the chosen look and its life moving. Until it shows, the town is repainted once the hour
+    /// has moved on a little, at most five times a second while the day is cycling, in the background.
     private func paintTown(_ dt: Float) {
-        if let pane, !painting, pane.tick(dt, hour: hour) {
-            showsView = true
-            return
+        choiceAge += dt
+        // The settings and the hour's look are checked once a second rather than every frame.
+        if choiceAge > 1 {
+            choiceAge = 0
+            choice = WindowChoice.current
+            weather = WindowChoice.weather
+            let look = choice.look(hour: hour, weather: weather)
+            windowView.show(look.view, hour: look.hour, weather: look.weather, lampOn: lampsOn)
         }
+        windowView.tick(Double(dt))
+        let showsView = windowView.isReady && windowView.window != nil
+        fallback?.isEnabled = !showsView
         guard !showsView else { return }
         townAge += dt
         let moved = abs(hour - townHour)
-        guard min(moved, 24 - moved) > 0.05, townAge > 0.2, !painting, pane != nil else { return }
+        guard min(moved, 24 - moved) > 0.05, townAge > 0.2, !painting else { return }
         townHour = hour
         townAge = 0
         painting = true
@@ -183,14 +200,48 @@ final class CityRoomScene: CatRoom {
             let picture = await Task.detached { TownPicture.image(light) }.value
             guard let self else { return }
             painting = false
-            guard !showsView, let image = picture.cgImage else { return }
+            guard let image = picture.cgImage else { return }
             show(image)
         }
     }
 
-    /// Puts `image` on the window's pane, flat, until a view is painted.
+    /// Puts `image` on the plane in the window's hole.
     private func show(_ image: CGImage) {
-        pane?.showFlat(image)
+        guard let fallback else { return }
+        if let fallbackTexture {
+            try? fallbackTexture.replace(withImage: image, options: .init(semantic: .color))
+        } else if let texture = try? TextureResource(image: image, options: .init(semantic: .color)) {
+            fallbackTexture = texture
+            var material = UnlitMaterial(color: .white, applyPostProcessToneMap: false)
+            material.color = .init(tint: .white, texture: .init(texture))
+            fallback.model?.materials = [material]
+        }
+    }
+
+    // MARK: - The window on screen
+
+    override func start(updatesFrom content: RealityViewCameraContent, viewer: Entity,
+                        beforeProjecting: @escaping (Float) -> Void, onFrame: @escaping (CGPoint?) -> Void) {
+        super.start(updatesFrom: content, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
+            onFrame(head)
+            self?.placeWindow(content)
+        }
+    }
+
+    /// Tells the flat view where the window is on screen this frame, after the camera has moved: the glass as it is
+    /// and as it would be with the room unturned, which the planes' parallax runs between, and the hole in the wall's
+    /// front face, which the view is clipped to. The wall around the hole, drawn over the view, hides its edges.
+    private func placeWindow(_ content: RealityViewCameraContent) {
+        let o = opening
+        let corners: [SIMD2<Float>] = [[o.left, o.top], [o.right, o.top], [o.right, o.bottom], [o.left, o.bottom]]
+        let glass = corners.map { SIMD3<Float>($0.x, $0.y, -0.54) }
+        let face = corners.map { SIMD3<Float>($0.x, $0.y, -0.5) }
+        let project = { (point: SIMD3<Float>) in content.project(point: point, to: .local) }
+        let window = glass.compactMap { project(pivot.convert(position: $0, to: nil)) }
+        let home = glass.compactMap { project(root.convert(position: $0, to: nil)) }
+        let hole = face.compactMap { project(pivot.convert(position: $0, to: nil)) }
+        guard window.count == 4, hole.count == 4 else { return windowView.place(window: [], home: [], hole: []) }
+        windowView.place(window: window, home: home.count == 4 ? home : window, hole: hole)
     }
 
     private func setPoint(_ entity: Entity, color: SIMD3<Float>, lumens: Float, radius: Float) {
@@ -226,16 +277,18 @@ final class CityRoomScene: CatRoom {
         pivot.box(1.0, 0.045, 0.014, r: 0.004, wood, at: [0, 0.0225, -0.493])
     }
 
-    /// The window: the town painted on a pane just behind the glass.
+    /// The window: a hole the flat view shows through, with the town on a plane in it until then.
     private func buildWindow() {
         let o = opening
         let width = o.right - o.left, height = o.top - o.bottom
         let c = windowCenter
 
-        let pane = WindowPane(width: width, height: height, eye: framing.direction)
-        pane.entity.position = [0, c.y, -0.545]
-        pivot.addChild(pane.entity)
-        self.pane = pane
+        let fallback = ModelEntity(mesh: .generatePlane(width: width, height: height),
+                                   materials: [UnlitMaterial(color: UIColor(red: 0.55, green: 0.62, blue: 0.72, alpha: 1),
+                                                             applyPostProcessToneMap: false)])
+        fallback.position = [0, c.y, -0.545]
+        pivot.addChild(fallback)
+        self.fallback = fallback
 
         let frame = Clay.matte(Tone.frame, roughness: 0.6)
         let d: Float = 0.05

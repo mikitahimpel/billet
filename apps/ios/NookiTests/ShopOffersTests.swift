@@ -88,12 +88,10 @@ private func offers(_ seed: String = "L+M") -> ShopOffers { ShopOffers(pairSeed:
         }
     }
 
-    @Test func giftOpensOncePerLocalDay() {
-        var log = GiftLog()
-        #expect(log.canClaim(on: at(5, 9), calendar: cal))
-        log.claimedDay = at(5, 9)
-        #expect(!log.canClaim(on: at(5, 23, minute: 59), calendar: cal))
-        #expect(log.canClaim(on: at(6, 0, minute: 1), calendar: cal))
+    @Test func theGiftDayIsTheServersLocalDay() {
+        #expect(ShopModel.localDay(at(5, 0, minute: 1), calendar: cal) == "2026-11-05")
+        #expect(ShopModel.localDay(at(5, 23, minute: 59), calendar: cal) == "2026-11-05")
+        #expect(ShopModel.localDay(at(6, 0, minute: 1), calendar: cal) == "2026-11-06")
     }
 
     @Test func everyItemHasARarityAndTheTopTwoShine() {
@@ -134,5 +132,68 @@ private func offers(_ seed: String = "L+M") -> ShopOffers { ShopOffers(pairSeed:
             #expect(collection.owned(of: ["unrelated"]) == 0)
         }
         #expect(Set(Catalog.collections.map(\.id)).count == Catalog.collections.count)
+    }
+}
+
+/// The server's answers for (pair id, day), from `@billet/contracts-domain/shop`.
+private struct OffersFixture: Decodable {
+    struct Case: Decodable {
+        struct Deal: Decodable {
+            let item: String
+            let discount: Double
+            let price: Int
+        }
+
+        struct Gift: Decodable, Equatable {
+            let _tag: String
+            let coins: Int?
+            let item: String?
+        }
+
+        let seed: String
+        let day: String
+        let deals: [Deal]
+        let featured: String
+        let gift: Gift
+        let giftOwningGiftItems: Gift
+    }
+
+    let cases: [Case]
+
+    static func load() throws -> OffersFixture {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appending(path: "../../../packages/contracts/fixtures/shop-offers.json").standardizedFileURL
+        return try JSONDecoder().decode(OffersFixture.self, from: Data(contentsOf: url))
+    }
+}
+
+@Suite struct ShopOffersFixtureTests {
+    private func gift(_ reward: GiftReward) -> OffersFixture.Case.Gift {
+        switch reward {
+        case .coins(let coins): .init(_tag: "Coins", coins: coins, item: nil)
+        case .item(let item): .init(_tag: "Item", coins: nil, item: item)
+        }
+    }
+
+    /// The server prices the deals and opens the gift by the same rotation: a drift would show one price and charge
+    /// another.
+    @Test func theRotationsAreTheServers() throws {
+        let fixture = try OffersFixture.load()
+        #expect(!fixture.cases.isEmpty)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        for entry in fixture.cases {
+            let parts = entry.day.split(separator: "-").compactMap { Int($0) }
+            let noon = try #require(utc.date(from: DateComponents(
+                year: parts[0], month: parts[1], day: parts[2], hour: 12)))
+            let offers = ShopOffers(pairSeed: entry.seed, calendar: utc)
+            let deals = offers.deals(on: noon)
+            #expect(deals.map(\.itemID) == entry.deals.map(\.item), "\(entry.seed) \(entry.day)")
+            #expect(deals.map(\.discount) == entry.deals.map(\.discount))
+            #expect(deals.compactMap { deal in Catalog.item(deal.itemID).map { deal.price(of: $0) } } == entry.deals.map(\.price))
+            #expect(offers.featured(on: noon).id == entry.featured, "\(entry.day)")
+            #expect(gift(offers.gift(on: noon, owned: [])) == entry.gift, "\(entry.seed) \(entry.day)")
+            #expect(gift(offers.gift(on: noon, owned: Set(ShopOffers.giftItems))) == entry.giftOwningGiftItems)
+        }
     }
 }

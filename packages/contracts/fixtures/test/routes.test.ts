@@ -43,6 +43,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/invites/claim",
       },
+      "createDemoPartner": {
+        "method": "POST",
+        "path": "/v1/dev/demo-partner",
+      },
       "createInvite": {
         "method": "POST",
         "path": "/v1/invites",
@@ -50,6 +54,10 @@ it("pins the routes that clients call", () => {
       "deleteAccount": {
         "method": "DELETE",
         "path": "/v1/account",
+      },
+      "deleteGiftWish": {
+        "method": "DELETE",
+        "path": "/v1/gifts/wishes",
       },
       "downloadImage": {
         "method": "GET",
@@ -74,6 +82,10 @@ it("pins the routes that clients call", () => {
       "getFlags": {
         "method": "GET",
         "path": "/v1/flags",
+      },
+      "getGifts": {
+        "method": "GET",
+        "path": "/v1/gifts",
       },
       "getOnboarding": {
         "method": "GET",
@@ -119,6 +131,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/activity/read",
       },
+      "markGiftReceived": {
+        "method": "PUT",
+        "path": "/v1/gifts/received",
+      },
       "mockPurchase": {
         "method": "POST",
         "path": "/v1/purchases/mock",
@@ -147,6 +163,10 @@ it("pins the routes that clients call", () => {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
       },
+      "removeDemoPartner": {
+        "method": "DELETE",
+        "path": "/v1/dev/demo-partner",
+      },
       "reportEvents": {
         "method": "POST",
         "path": "/v1/events",
@@ -155,6 +175,14 @@ it("pins the routes that clients call", () => {
         "method": "PUT",
         "path": "/v1/cat",
       },
+      "saveGiftWish": {
+        "method": "PUT",
+        "path": "/v1/gifts/wishes",
+      },
+      "saveLoves": {
+        "method": "PUT",
+        "path": "/v1/gifts/loves",
+      },
       "saveOnboardingAnswer": {
         "method": "POST",
         "path": "/v1/onboarding/answers",
@@ -162,6 +190,10 @@ it("pins the routes that clients call", () => {
       "sendNote": {
         "method": "POST",
         "path": "/v1/notes",
+      },
+      "setGiftPlan": {
+        "method": "PUT",
+        "path": "/v1/gifts/plans",
       },
       "setWish": {
         "method": "PUT",

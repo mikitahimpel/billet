@@ -6,7 +6,8 @@ import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    @State private var state = HomeState(stores: .live())
+    /// Owned by NookiApp: a `@State` default here would read every store again on each pass of the app's `body`.
+    @Binding var state: HomeState
     /// Built after the first frame, so launch shows the backdrop at once.
     @State private var home: DioramaScene?
     /// Built each time the City room is opened, released when it is left.
@@ -21,6 +22,10 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// The Coins sheet's packs, once there is a server to buy them through.
+    @State private var coinPacks: CoinPacksModel?
+    /// The Coins sheet on screen, a moment after the shop asked for it.
+    @State private var coinsShown: CoinsAsk?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -34,12 +39,28 @@ struct HomeView: View {
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
     /// The World tab and the board show a room; the others get their own screens over the backdrop.
     private var showsRoom: Bool { state.tab == .world || showsBoard }
+    /// Something hides the room whole: the canvas, the Inbox or the composer over it, or the app not in front.
+    private var roomCovered: Bool {
+        state.drawing || state.showsInbox || state.composingNote != nil || scenePhase != .active
+    }
+    /// The room is mounted only while it can be seen.
+    private var roomOnScreen: Bool { showsRoom && !roomCovered }
+    /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
+    private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
     var body: some View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: showsRoom)
+            WarmBackdrop(drifts: roomOnScreen)
+
+            // The City window's view, seen through the hole in the room's wall; never takes a touch.
+            if !Self.noRoom, showsRoom, !showsBoard, state.room == .city, let city {
+                CityWindowLayer(view: city.windowView)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .ignoresSafeArea()
+            }
 
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
@@ -48,10 +69,10 @@ struct HomeView: View {
                     .allowsHitTesting(showsRoom)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if let scene, showsRoom {
-                // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
-                // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
-                // (CatRoom), so coming back only makes a new view for it.
+            } else if let scene, roomOnScreen {
+                // Only while a room can be seen: a paused RealityView left in place under the Shop, Moments, Us or a
+                // cover still runs its render loop and composites a full-screen layer every frame. The room itself
+                // stays loaded (CatRoom), so coming back only makes a new view for it.
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.care.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
@@ -62,7 +83,7 @@ struct HomeView: View {
             }
 
             // A new RealityView takes a moment to draw its first frame; the last one shows meanwhile.
-            if state.tab == .world, !roomLive, let worldSnapshot {
+            if state.tab == .world, !roomLive || roomCovered, let worldSnapshot {
                 SnapshotView(view: worldSnapshot)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
@@ -159,13 +180,13 @@ struct HomeView: View {
         }
         .task {
             guard home == nil, !Self.noRoom else { return }
-            let room = DioramaScene()
-            home = room
-            room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
+            home = DioramaScene()
         }
-        .task(id: state.moments.pinned) {
+        // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
+        .task(id: wallPins) {
+            guard let home else { return }
             let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
-            if !Task.isCancelled { home?.setPolaroids(images) }
+            if !Task.isCancelled { home.setPolaroids(images) }
         }
         .task(id: boardKey) {
             guard board != nil else { return }
@@ -186,14 +207,15 @@ struct HomeView: View {
         .onChange(of: state.rooms.variant) { _, variant in
             if !variant.kinds.contains(state.room) { select(variant.kinds[0]) }
         }
-        .onChange(of: state.tab) { old, new in
-            // The room view goes with the World (see above): keep what it showed, to show again on the way back.
-            // Not while something is presented, a hint's popover say: the snapshot would bring it back with the room.
-            if old == .world, !showsRoom {
+        .onChange(of: worldOnScreen) { old, new in
+            // The room view goes when the World can't be seen (see above): keep what it showed, to show again on the
+            // way back and under a cover. Not while something is presented, a hint's popover say: the snapshot would
+            // bring it back with the room.
+            if old, !new, !(showsBoard && !roomCovered) {
                 worldSnapshot =
                     Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             }
-            if new == .world, let scene, worldSnapshot != nil {
+            if new, let scene, worldSnapshot != nil {
                 roomLive = false
                 let start = scene.frame
                 Task {
@@ -224,11 +246,6 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
-        .onChange(of: state.shop.lastPurchase) { _, purchase in
-            // A synced shop has sent the order already.
-            guard let purchase, purchase.kind == .ink, !state.shop.isSynced, let inkSync else { return }
-            Task { await inkSync.settle(purchase, state.shop) }
-        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -243,7 +260,6 @@ struct HomeView: View {
                     await photoSync?.receive()
                     await textSync?.receive()
                     await state.shop.refresh()
-                    await inkSync?.refresh(state.shop)
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(true, photos: photoSync, texts: textSync, shop: state.shop)
@@ -273,6 +289,17 @@ struct HomeView: View {
                     .presentationDragIndicator(.visible)
             }
         }
+        .onChange(of: state.shop.coinsAsk) { _, ask in
+            guard let ask else { return coinsShown = nil }
+            Task {
+                // A short buy comes from a sheet that closes first: the Coins sheet waits for it to go.
+                if ask.missing > 0 { try? await Task.sleep(for: .milliseconds(450)) }
+                coinsShown = ask
+            }
+        }
+        .sheet(item: $coinsShown, onDismiss: { state.shop.coinsAsk = nil }) { ask in
+            CoinsSheet(state: state, packs: coinPacks, ask: ask)
+        }
         .sheet(item: $state.openedShopItem) { item in
             ItemSheet(item: item, state: state)
         }
@@ -282,6 +309,14 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .task { await DrawingSync.watchLiveActivities() }
+        .task {
+            guard coinPacks == nil, let payments = session?.payments else { return }
+            let shop = state.shop
+            coinPacks = CoinPacksModel(payments: payments) {
+                await shop.refresh()
+                await shop.loadHistory()
+            }
+        }
         .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
@@ -368,12 +403,18 @@ struct HomeView: View {
         return room
     }
 
+    /// The moments on the room's wall, nil until the room exists.
+    private var wallPins: [Moment]? { home == nil ? nil : state.moments.pinned }
+
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
-    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop and the gifts follow the pair's room.
     private func followPair() async {
+        #if DEBUG
+        if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
+        #endif
         guard let session, let sync = session.shopSync else { return await leavePair() }
         do throws(TransportError) {
             let pair = try await session.pair()
@@ -385,11 +426,13 @@ struct HomeView: View {
             guard state.profile.couple.pair != nil else { return }
         }
         await state.shop.connect(sync)
+        await state.gifts.connect(session.giftSync)
     }
 
     private func leavePair() async {
         state.profile.leavePair()
         await state.shop.connect(nil)
+        await state.gifts.connect(nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.
@@ -410,11 +453,7 @@ struct HomeView: View {
         }
     }
 
-    private var inkSync: InkSync? {
-        guard let session, session.isPaired else { return nil }
-        return InkSync(api: session.api)
-    }
-
+    /// Photos to and from the partner; nil until this phone is paired with them.
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }
@@ -532,7 +571,9 @@ private struct WarmBackdrop: View {
                 startRadius: 10,
                 endRadius: 520
             )
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: paused)) { context in
+            // 10 Hz: the drift is at most 18–24 pt over half a minute, a fraction of a pixel a step, and each step
+            // redraws the full screen under the room and its glass.
+            TimelineView(.animation(minimumInterval: 1 / 10, paused: paused)) { context in
                 Canvas { ctx, size in
                     let t = context.date.timeIntervalSinceReferenceDate
                     for i in 0..<14 {

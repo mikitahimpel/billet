@@ -8,10 +8,11 @@ struct CollectionCard: View {
     var open: (ShopItem) -> Void
 
     @State private var claims = 0
+    @State private var collecting = false
 
     private var items: [ShopItem] { collection.itemIDs.compactMap(Catalog.item) }
     private var have: Int { collection.owned(of: state.shop.owned) }
-    private var claimed: Bool { state.shop.collectionLog.claimed.contains(collection.id) }
+    private var claimed: Bool { state.shop.bonuses.contains(collection.id) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
@@ -82,9 +83,14 @@ struct CollectionCard: View {
 
             if state.shop.canClaimBonus(collection) {
                 Button("Collect") {
-                    if state.shop.claimBonus(collection) { claims += 1 }
+                    collecting = true
+                    Task {
+                        if await state.shop.claimBonus(collection) { claims += 1 }
+                        collecting = false
+                    }
                 }
                 .shopButton()
+                .disabled(collecting)
             }
         }
         .padding(Space.m)

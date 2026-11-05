@@ -66,14 +66,12 @@ struct PhotoSync {
     private func keep(_ note: Wire.Note, viewer: String?) async -> Bool {
         guard case .photo(let id, let author, let sentAt, let image, _, _, _, let caption) = note,
               author.rawValue != viewer, !moments.contains(noteID: id.rawValue) else { return true }
-        let maxPixels = MomentStore.storedPixels
-        guard let data = try? await api.downloadImage(image),
-              let photo = await Task.detached(priority: .utility, operation: {
-                  Downsample.image(data: data, maxPixels: maxPixels)
-              }).value else { return false }
-        moments.add(photo, caption: caption?.rawValue ?? "", author: partner,
-                    date: Date(timeIntervalSince1970: Double(sentAt) / 1000), noteID: id.rawValue)
-        return true
+        guard let data = try? await api.downloadImage(image) else { return false }
+        let date = Date(timeIntervalSince1970: Double(sentAt) / 1000)
+        await moments.addReceived(data, caption: caption?.rawValue ?? "", author: partner, date: date,
+                                  noteID: id.rawValue)
+        // False when it couldn't be stored, so the next receive tries it again.
+        return moments.contains(noteID: id.rawValue)
     }
 }
 
