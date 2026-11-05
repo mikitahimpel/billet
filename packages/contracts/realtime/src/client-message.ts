@@ -1,14 +1,38 @@
 import { Schema } from "effect";
-import { Stroke } from "@billet/contracts-domain/ink";
+import { Color, Point, Stroke } from "@billet/contracts-domain/ink";
 
 export const PresenceState = Schema.Literals(["idle", "drawing"]);
 export type PresenceState = typeof PresenceState.Type;
 
-/** Provisional until the realtime protocol (#17) is built; keeps only what the docs name. */
+/**
+ * Names one stroke while it is being drawn. The sender picks it, and it only has to be unique
+ * among that sender's open strokes.
+ */
+export const LiveStrokeId = Schema.Int.check(
+  Schema.isBetween({ minimum: 0, maximum: 2_147_483_647 }),
+);
+export type LiveStrokeId = typeof LiveStrokeId.Type;
+
+/** The most points one `StrokePoints` frame may carry; a sender batches every 30 to 50 ms. */
+export const maxLivePoints = 64;
+
+export const LivePoints = Schema.Array(Point).check(
+  Schema.isNonEmpty(),
+  Schema.isMaxLength(maxLivePoints),
+);
+
 export const ClientMessage = Schema.TaggedUnion({
   /** Reconnect, asking for everything after `lastSeq`. */
   Resume: { lastSeq: Schema.Int },
+  /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },
   Presence: { state: PresenceState },
+  /** A stroke starts on the shared canvas; its points follow in `StrokePoints`. */
+  StrokeBegin: { id: LiveStrokeId, color: Color, width: Schema.Finite },
+  /** The next points of an open stroke, in canvas coordinates. */
+  StrokePoints: { id: LiveStrokeId, points: LivePoints },
+  StrokeEnd: { id: LiveStrokeId },
+  /** Wipes the shared canvas for both partners. */
+  Clear: {},
 });
 export type ClientMessage = typeof ClientMessage.Type;

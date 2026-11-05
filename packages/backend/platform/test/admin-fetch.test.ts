@@ -179,6 +179,8 @@ describe("the read-only agent API", () => {
     "/admin/api/agent/retention",
     "/admin/api/agent/funnel?steps=AppOpened,NoteSent&window=day&unit=person",
     "/admin/api/agent/funnels",
+    "/admin/api/agent/trends?event=AppOpened&metric=count&interval=day&range=30&split=none",
+    "/admin/api/agent/features?split=home-layout",
   ];
 
   afterEach(() => vi.restoreAllMocks());

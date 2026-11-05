@@ -1171,7 +1171,10 @@ async function renderExperiments([key]) {
         {
           label: "Result",
           value: (i) => i.results?.verdict?.kind ?? null,
-          cell: (i) => verdictShort(i.results),
+          cell: (i) => [
+            verdictShort(i.results),
+            i.results?.warnings?.length ? [" ", pill("bad", "guardrail worse")] : null,
+          ],
         },
         { label: "Changed", value: (i) => i.updatedAt, cell: (i) => ago(i.updatedAt) },
       ],
@@ -1239,6 +1242,109 @@ function forest(variants, leader) {
     if (w > 0 && w !== W) draw((W = Math.max(320, w)));
   }).observe(box);
   return box;
+}
+
+const fmtMetric = (unit, v) => (v == null ? "—" : unit === "share" ? fmtPct(v) : v.toFixed(2));
+const fmtMetricDiff = (unit, v) => {
+  const sign = v > 0 ? "+" : v < 0 ? "−" : "±";
+  const abs = Math.abs(v);
+  return `${sign}${unit === "share" ? `${(abs * 100).toFixed(1)} pts` : abs.toFixed(2)}`;
+};
+const CHANGE_TONE = { better: "good", worse: "bad", unclear: "" };
+
+/** Secondary and guardrail metrics: a row each, a column per variant, against the baseline. */
+function moreMetrics(r) {
+  const variants = r.metrics[0].variants.map((v) => v.variant);
+  const cell = (m, v) => {
+    if (m.status === "waiting") return h("td", { class: "faint", text: "—" });
+    if (!v.estimate)
+      return h(
+        "td",
+        { class: "faint" },
+        "too few",
+        h("span", { class: "sub", text: `${v.pairs} pairs` }),
+      );
+    const e = v.estimate;
+    const d = v.vsBaseline;
+    return h(
+      "td",
+      null,
+      h("b", { text: fmtMetric(m.unit, e.value) }),
+      h("span", {
+        class: "sub",
+        text: `95% ${fmtMetric(m.unit, e.low)}–${fmtMetric(m.unit, e.high)} · ${v.pairs} pairs`,
+      }),
+      d &&
+        h(
+          "span",
+          { class: "sub metric-diff" },
+          pill(
+            CHANGE_TONE[v.change],
+            v.change === "unclear" ? "no clear change" : v.change,
+            v.change === "unclear",
+          ),
+          ` ${fmtMetricDiff(m.unit, d.value)} vs ${r.baseline} (95% ${fmtMetricDiff(m.unit, d.low)} to ${fmtMetricDiff(m.unit, d.high)})`,
+        ),
+    );
+  };
+  return section(
+    "Secondary and guardrail metrics",
+    `Over each pair's first week, pairs at least 7 days old. Differences are against ${r.baseline}, the default. Under 5 pairs: too few.`,
+    r.warnings.length
+      ? r.warnings.map((w) => callout("bad", "Guardrail worse", w.text))
+      : callout(
+          "good",
+          "No guardrail is worse",
+          "Every guardrail's interval of change still includes no change, or better.",
+        ),
+    h(
+      "div",
+      { class: "box table-wrap", style: { "margin-top": "16px" } },
+      h(
+        "table",
+        { class: "metrics" },
+        h("caption", { class: "sr-only", text: "Secondary and guardrail metrics by variant" }),
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: "Metric" }),
+            variants.map((v) =>
+              h("th", { scope: "col", text: v === r.baseline ? `${v} (baseline)` : v }),
+            ),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          r.metrics.map((m) =>
+            h(
+              "tr",
+              null,
+              h(
+                "th",
+                { scope: "row" },
+                h(
+                  "span",
+                  { class: "metric-name" },
+                  m.label,
+                  " ",
+                  pill(m.role === "guardrail" ? "warn" : "", m.role, true),
+                ),
+                h("span", {
+                  class: "sub",
+                  text: m.status === "waiting" ? `Waiting for ${m.waitingFor}` : m.description,
+                }),
+              ),
+              m.variants.map((v) => cell(m, v)),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 async function renderExperiment(key) {
@@ -1341,6 +1447,7 @@ async function renderExperiment(key) {
         : callout("info", "Not enough data yet", "No pair has been assigned to this experiment."),
       r && r.variants.length ? forest(r.variants, leader) : null,
     ),
+    r && r.metrics?.length ? moreMetrics(r) : null,
     section("Variants", null, h("div", { class: "variants" }, variants)),
     section("History", null, h("div", { class: "box" }, historyList(changes, { showKey: false }))),
   ];
@@ -3347,6 +3454,473 @@ async function renderFunnels(args) {
   ];
 }
 
+/* ---------- Trends ---------- */
+
+const TREND_METRICS = [
+  ["count", "Count"],
+  ["people", "Unique people"],
+  ["pairs", "Unique pairs"],
+  ["perPair", "Per pair"],
+];
+const TREND_INTERVALS = [
+  ["day", "By day"],
+  ["week", "By week"],
+];
+const TREND_RANGES = [
+  ["30", "30 days"],
+  ["90", "90 days"],
+  ["180", "180 days"],
+  ["365", "365 days"],
+];
+const TREND_SPLITS = [
+  ["none", "No split"],
+  ["version", "App version"],
+  ["os", "System"],
+  ["variant", "Variant"],
+];
+const SERIES_CLASSES = 8;
+
+/** `#/trends/<event>/<metric>/<interval>/<range>/<split>/<key or ->`. */
+const trendHref = (t) =>
+  `#/trends/${enc(t.event)}/${t.metric}/${t.interval}/${t.range}/${t.split}/${enc(t.key || "-")}`;
+
+function trendFromArgs([event, metric, interval, range, split, key]) {
+  const pick = (value, options, fallback) =>
+    options.some(([v]) => v === value) ? value : fallback;
+  return {
+    event: event || "AppOpened",
+    metric: pick(metric, TREND_METRICS, "count"),
+    interval: pick(interval, TREND_INTERVALS, "day"),
+    range: pick(range, TREND_RANGES, "90"),
+    split: pick(split, TREND_SPLITS, "none"),
+    key: key && key !== "-" ? key : "",
+  };
+}
+
+const fmtTrend = (v, metric) =>
+  v == null ? "too few" : metric === "perPair" ? v.toFixed(2) : fmtNum(v, 0);
+
+/**
+ * A line per group over time, with gaps where a point is "too few". With one group the period
+ * before is a dashed line behind it. Hover or arrow keys read a point.
+ */
+function trendChart(result, colourOf) {
+  const { groups } = result;
+  const metric = result.query.metric;
+  const starts = groups[0]?.points.map((p) => p.start) ?? [];
+  const n = starts.length;
+  const single = groups.length === 1;
+  const values = groups.flatMap((g) =>
+    g.points.flatMap((p) => [p.value, single ? p.previous : null]).filter((v) => v != null),
+  );
+  const max = niceMax(Math.max(0, ...values));
+  const W = 960;
+  const H = 260;
+  const m = { t: 12, r: 12, b: 28, l: 48 };
+  const iw = W - m.l - m.r;
+  const ih = H - m.t - m.b;
+  const x = (i) => m.l + (n <= 1 ? iw / 2 : (i * iw) / (n - 1));
+  const y = (v) => m.t + ih - (max ? (v / max) * ih : 0);
+  const path = (vals) => {
+    let d = "";
+    let pen = false;
+    vals.forEach((v, i) => {
+      if (v == null) {
+        pen = false;
+        return;
+      }
+      d += `${pen ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      pen = true;
+    });
+    return d;
+  };
+  const axis = s("g", { class: "axis" });
+  for (let k = 0; k <= 4; k++) {
+    const v = (max / 4) * k;
+    axis.append(
+      s("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), class: k ? null : "base" }),
+      s("text", {
+        x: m.l - 8,
+        y: y(v) + 4,
+        "text-anchor": "end",
+        text: fmtTrend(v, metric === "perPair" ? "perPair" : "count"),
+      }),
+    );
+  }
+  for (const i of [...new Set([0, Math.floor((n - 1) / 2), n - 1])].filter((i) => i >= 0)) {
+    const anchor = i === 0 ? "start" : i === n - 1 ? "end" : "middle";
+    axis.append(s("text", { x: x(i), y: H - 6, "text-anchor": anchor, text: fmtDay(starts[i]) }));
+  }
+  const lines = s(
+    "g",
+    null,
+    single &&
+      s("path", {
+        class: "mark-line trend-previous",
+        d: path(groups[0].points.map((p) => p.previous)),
+      }),
+    groups.map((g) =>
+      s("path", { class: `mark-line ${colourOf(g.group)}`, d: path(g.points.map((p) => p.value)) }),
+    ),
+  );
+  const cursorLine = s("line", { y1: m.t, y2: m.t + ih });
+  const dots = groups.map((g) => s("circle", { r: 4, class: `trend-dot ${colourOf(g.group)}` }));
+  const cursor = s("g", { class: "cursor", visibility: "hidden" }, cursorLine, dots);
+  const svg = s(
+    "svg",
+    {
+      viewBox: `0 0 ${W} ${H}`,
+      role: "img",
+      tabindex: "0",
+      "aria-label": `${result.query.event}, ${TREND_METRICS.find(([k]) => k === metric)[1].toLowerCase()}, ${groups.length} line${groups.length === 1 ? "" : "s"}. The table below has every value.`,
+    },
+    axis,
+    lines,
+    cursor,
+  );
+  const readout = h("p", {
+    class: "readout",
+    "aria-live": "polite",
+    text: "Hover, or focus the chart and use the arrow keys, to read a point.",
+  });
+  let active = -1;
+  const show = (i) => {
+    if (!n) return;
+    active = Math.max(0, Math.min(n - 1, i));
+    cursor.setAttribute("visibility", "visible");
+    cursorLine.setAttribute("x1", x(active));
+    cursorLine.setAttribute("x2", x(active));
+    groups.forEach((g, j) => {
+      const v = g.points[active].value;
+      dots[j].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) {
+        dots[j].setAttribute("cx", x(active));
+        dots[j].setAttribute("cy", y(v));
+      }
+    });
+    const p0 = groups[0].points[active];
+    readout.textContent = `${result.query.interval === "week" ? "Week of " : ""}${fmtDay(p0.start)}: ${groups
+      .map(
+        (g) =>
+          `${g.group === "all" ? "" : `${g.group} `}${fmtTrend(g.points[active].value, metric)}`,
+      )
+      .join(" · ")}${single ? ` (period before: ${fmtTrend(p0.previous, metric)})` : ""}${
+      p0.source === "analytics-engine" ? " · from Analytics Engine" : ""
+    }`;
+  };
+  svg.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    show(Math.round(((px - m.l) / iw) * (n - 1)));
+  });
+  svg.addEventListener("pointerleave", () => cursor.setAttribute("visibility", "hidden"));
+  svg.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      e.preventDefault();
+      show(active < 0 ? n - 1 : active + (e.key === "ArrowRight" ? 1 : -1));
+    }
+  });
+  return h("div", { class: "chart trend-chart" }, svg, readout);
+}
+
+async function renderTrends(args) {
+  const t = trendFromArgs(args);
+  if (t.split === "variant" && !t.key) t.split = "none";
+  const query = new URLSearchParams({
+    event: t.event,
+    metric: t.metric,
+    interval: t.interval,
+    range: t.range,
+    split: t.split,
+  });
+  if (t.split === "variant") query.set("key", t.key);
+  // The saved-funnels answer carries the closed event list.
+  const [{ events }, result] = await Promise.all([api("/funnels"), api(`/trends?${query}`)]);
+  const go = (patch) => (location.hash = trendHref({ ...t, ...patch }));
+  const names = result.groups
+    .map((g) => g.group)
+    .filter((g) => g !== "other")
+    .toSorted();
+  // A colour follows the group's name, not its rank: the same build keeps its colour as others
+  // come and go. One line wears the panel's accent; the rest are folded into a grey "other".
+  const colourOf = (group) => {
+    if (group === "other") return "series-other";
+    if (result.groups.length === 1) return "series-accent";
+    return `series-${(names.indexOf(group) % SERIES_CLASSES) + 1}`;
+  };
+  const metricLabel = TREND_METRICS.find(([k]) => k === t.metric)[1];
+
+  const controls = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Event" }),
+      h(
+        "select",
+        { onchange: (e) => go({ event: e.target.value }) },
+        events.map((ev) => h("option", { value: ev, text: ev, selected: ev === t.event })),
+      ),
+    ),
+    segOf("Measure", TREND_METRICS, t.metric, (v) => trendHref({ ...t, metric: v })),
+    segOf("Interval", TREND_INTERVALS, t.interval, (v) => trendHref({ ...t, interval: v })),
+    segOf("Range", TREND_RANGES, t.range, (v) => trendHref({ ...t, range: v })),
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        {
+          onchange: (e) => {
+            const [split, key] = e.target.value.split(":");
+            go({ split, key: key || "" });
+          },
+        },
+        TREND_SPLITS.filter(([v]) => v !== "variant").map(([v, text]) =>
+          h("option", { value: v, text, selected: v === t.split }),
+        ),
+        result.experiments.map((key) =>
+          h("option", {
+            value: `variant:${key}`,
+            text: `Variant of ${key}`,
+            selected: t.split === "variant" && t.key === key,
+          }),
+        ),
+      ),
+    ),
+  );
+
+  const sourceNote = {
+    used: "The last 90 days come from Analytics Engine, older days from D1.",
+    unavailable:
+      "All from D1: Analytics Engine can't be read from the panel (no read token), or didn't answer.",
+    "not-applicable":
+      "All from D1: Analytics Engine has no person, no variant, and none of the names the server records, so it can't answer this.",
+  }[result.engine];
+
+  const legend = h(
+    "p",
+    { class: "legend trend-legend" },
+    result.groups.map((g) =>
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: `swatch ${colourOf(g.group)}`, "aria-hidden": "true" }),
+        g.group === "all" ? metricLabel : g.group,
+      ),
+    ),
+    result.groups.length === 1 &&
+      h(
+        "span",
+        { class: "legend-item" },
+        h("span", { class: "swatch series-previous", "aria-hidden": "true" }),
+        "Period before",
+      ),
+  );
+
+  const totals = h(
+    "div",
+    { class: "stats" },
+    result.groups.slice(0, 4).map((g) =>
+      statCard({
+        label: g.group === "all" ? `${metricLabel}, ${t.range} days` : g.group,
+        value: fmtTrend(g.total, t.metric),
+        delta:
+          g.total != null && g.previousTotal != null ? deltaOf(g.total, g.previousTotal) : null,
+        foot: `vs previous ${t.range} days`,
+      }),
+    ),
+  );
+
+  const table = h(
+    "details",
+    { class: "box trend-table" },
+    h("summary", { text: "Every value as a table" }),
+    h(
+      "div",
+      { class: "table-wrap" },
+      h(
+        "table",
+        null,
+        h(
+          "thead",
+          null,
+          h(
+            "tr",
+            null,
+            h("th", { scope: "col", text: t.interval === "week" ? "Week of" : "Day" }),
+            result.groups.map((g) =>
+              h("th", {
+                scope: "col",
+                class: "num",
+                text: g.group === "all" ? metricLabel : g.group,
+              }),
+            ),
+            result.groups.length === 1 &&
+              h("th", { scope: "col", class: "num", text: "Period before" }),
+            h("th", { scope: "col", text: "Source" }),
+          ),
+        ),
+        h(
+          "tbody",
+          null,
+          (result.groups[0]?.points ?? []).map((p, i) =>
+            h(
+              "tr",
+              null,
+              h("th", { scope: "row", text: fmtDay(p.start) }),
+              result.groups.map((g) =>
+                h("td", { class: "num", text: fmtTrend(g.points[i].value, t.metric) }),
+              ),
+              result.groups.length === 1 &&
+                h("td", { class: "num", text: fmtTrend(p.previous, t.metric) }),
+              h("td", { text: p.source === "d1" ? "D1" : "Analytics Engine" }),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Trends",
+      "Any event over time. Points resting on fewer than 5 pairs (or people, before pairing) show as gaps.",
+    ),
+    controls,
+    result.groups.length === 0
+      ? empty("Nothing yet", `No ${t.event} in this range or the one before.`)
+      : [
+          totals,
+          section(
+            `${t.event}: ${metricLabel.toLowerCase()}`,
+            sourceNote,
+            h("div", { class: "box box-pad" }, legend, trendChart(result, colourOf)),
+            table,
+          ),
+        ],
+  ];
+}
+
+/* ---------- Feature usage ---------- */
+
+const featuresHref = (split) => `#/features/${enc(split || "-")}`;
+
+function usageCell(u, groupLabel, windowLabel) {
+  if (!u) return h("td", { class: "num faint", text: "too few" });
+  return h(
+    "td",
+    {
+      class: "num usage",
+      title: `${groupLabel}, ${windowLabel}: ${u.count} of ${u.of} pairs; 95% ${fmtPct(u.low, 0)}–${fmtPct(u.high, 0)}`,
+    },
+    h("span", { text: fmtPct(u.share) }),
+    h(
+      "span",
+      { class: "use-track", "aria-hidden": "true" },
+      h("span", { class: "use-fill", style: { "--w": `${(u.share * 100).toFixed(1)}%` } }),
+    ),
+  );
+}
+
+async function renderFeatures([splitArg]) {
+  const split = splitArg && splitArg !== "-" ? splitArg : "";
+  const usage = await api(`/features${split ? `?split=${enc(split)}` : ""}`);
+  const groupLabel = (g) => (g.variant == null ? "Every pair" : g.variant);
+  const areaLabel = new Map(usage.areas.map((a) => [a.area, a.label]));
+  const activeText = (n) => (n == null ? "too few" : `${fmtNum(n, 0)} pairs`);
+
+  const picker = h(
+    "div",
+    { class: "filters" },
+    h(
+      "label",
+      { class: "inline-field" },
+      h("span", { text: "Split by" }),
+      h(
+        "select",
+        { onchange: (e) => (location.hash = featuresHref(e.target.value)) },
+        h("option", { value: "", text: "Nothing", selected: !split }),
+        usage.experiments.map((key) =>
+          h("option", { value: key, text: `Variant of ${key}`, selected: key === split }),
+        ),
+      ),
+    ),
+  );
+
+  const table = h(
+    "div",
+    { class: "box table-wrap" },
+    h(
+      "table",
+      { class: "features" },
+      h("caption", { class: "sr-only", text: "Share of active pairs using each feature" }),
+      h(
+        "thead",
+        null,
+        h(
+          "tr",
+          null,
+          h("th", { scope: "col", rowspan: "2", text: "Feature" }),
+          usage.groups.map((g) =>
+            h("th", { scope: "colgroup", colspan: "2", class: "group-head", text: groupLabel(g) }),
+          ),
+        ),
+        h(
+          "tr",
+          null,
+          usage.groups.map((g) => [
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "7 days",
+              h("span", { class: "sub", text: activeText(g.active.d7) }),
+            ),
+            h(
+              "th",
+              { scope: "col", class: "num" },
+              "30 days",
+              h("span", { class: "sub", text: activeText(g.active.d30) }),
+            ),
+          ]),
+        ),
+      ),
+      h(
+        "tbody",
+        null,
+        usage.rows.map((row) =>
+          h(
+            "tr",
+            { class: row.event == null ? "area" : null },
+            h(
+              "th",
+              { scope: "row" },
+              row.event == null
+                ? h("b", { text: `${areaLabel.get(row.area)}: any` })
+                : h("span", { class: "mono event", text: row.event }),
+            ),
+            row.cells.map((c, i) => [
+              usageCell(c.d7, groupLabel(usage.groups[i]), "last 7 days"),
+              usageCell(c.d30, groupLabel(usage.groups[i]), "last 30 days"),
+            ]),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  return [
+    pageHead(
+      "Feature usage",
+      `Of the pairs active in each window (any event after pairing), the share that used each feature: the last 7 days from ${fmtDay(usage.from.d7)}, the last 30 from ${fmtDay(usage.from.d30)}. Under 5 pairs: too few.`,
+    ),
+    picker,
+    table,
+  ];
+}
+
 /* ---------- Router ---------- */
 
 const ROUTES = {
@@ -3354,6 +3928,8 @@ const ROUTES = {
   events: renderEvents,
   retention: renderRetention,
   funnels: renderFunnels,
+  trends: renderTrends,
+  features: renderFeatures,
   experiments: renderExperiments,
   flags: renderFlags,
   pairs: renderPairs,

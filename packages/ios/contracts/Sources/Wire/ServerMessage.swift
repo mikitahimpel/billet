@@ -1,8 +1,15 @@
-/// Provisional until the realtime protocol is built. `seq` supports reconnect.
+/// A frame the room sends this device. `seq` supports reconnect. The live stroke frames are the
+/// partner's, relayed as they arrive and never stored or replayed.
 public enum ServerMessage: Codable, Hashable, Sendable {
   case stroke(seq: Int, stroke: Stroke)
   case presence(PresenceState)
   case noteReceived(seq: Int, note: Note)
+  case strokeBegin(LiveStrokeStart)
+  case strokePoints(id: Int, points: [Point])
+  case strokeEnd(id: Int)
+  /// The partner's device left with this stroke still open: discard it, it will not end.
+  case strokeDropped(id: Int)
+  case clear
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -10,6 +17,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case stroke
     case state
     case note
+    case id
+    case points
   }
 
   public init(from decoder: any Decoder) throws {
@@ -26,6 +35,18 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .noteReceived(
         seq: try container.decode(Int.self, forKey: .seq),
         note: try container.decode(Note.self, forKey: .note))
+    case "StrokeBegin":
+      self = .strokeBegin(try LiveStrokeStart(from: decoder))
+    case "StrokePoints":
+      self = .strokePoints(
+        id: try container.decode(Int.self, forKey: .id),
+        points: try LiveStrokeStart.decodePoints(container, forKey: .points))
+    case "StrokeEnd":
+      self = .strokeEnd(id: try container.decode(Int.self, forKey: .id))
+    case "StrokeDropped":
+      self = .strokeDropped(id: try container.decode(Int.self, forKey: .id))
+    case "Clear":
+      self = .clear
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -46,6 +67,21 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       try container.encode("NoteReceived", forKey: .tag)
       try container.encode(seq, forKey: .seq)
       try container.encode(note, forKey: .note)
+    case .strokeBegin(let start):
+      try container.encode("StrokeBegin", forKey: .tag)
+      try start.encode(to: encoder)
+    case .strokePoints(let id, let points):
+      try container.encode("StrokePoints", forKey: .tag)
+      try container.encode(id, forKey: .id)
+      try container.encode(points, forKey: .points)
+    case .strokeEnd(let id):
+      try container.encode("StrokeEnd", forKey: .tag)
+      try container.encode(id, forKey: .id)
+    case .strokeDropped(let id):
+      try container.encode("StrokeDropped", forKey: .tag)
+      try container.encode(id, forKey: .id)
+    case .clear:
+      try container.encode("Clear", forKey: .tag)
     }
   }
 }
