@@ -1,10 +1,11 @@
 import SwiftUI
 import TipKit
 
-/// The one header of every top-level screen (World, Moments, Shop): the Inbox and the couple's avatars top-left (the
-/// avatars open Us: plans, profile and settings), and the coins top-right. Nothing else sits in it.
+/// The one header of every tab: the Inbox and the couple's avatars top-left (the avatars open the couple's profile and,
+/// until the two are paired, the partner invite), and the coins top-right. Nothing else sits in it.
 struct AppHeader: View {
     let state: HomeState
+    @State private var editing = false
     @State private var pairing = false
     @Environment(Hints.self) private var hints
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -13,7 +14,12 @@ struct AppHeader: View {
         HStack(alignment: .center, spacing: 10) {
             InboxButton(unread: 0) {}
 
-            Button { state.showsUs = true } label: {
+            Menu {
+                Button("Couple profile", systemImage: "person.2.crop.square.stack") { editing = true }
+                if let session, !session.isPaired {
+                    Button("Invite your partner", systemImage: "heart.circle") { pairing = true }
+                }
+            } label: {
                 HStack(spacing: -10) {
                     Monogram(partner: state.partners.0, profile: state.profile)
                         .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
@@ -33,8 +39,8 @@ struct AppHeader: View {
                 .contentShape(.rect)
             }
             .buttonStyle(PressScaleStyle())
-            .accessibilityLabel("Us")
-            .accessibilityHint("Your plans, profile and settings")
+            .accessibilityLabel("Couple")
+            .accessibilityHint("Your profile and partner invite")
             .popoverTip(InviteHint(), arrowEdge: .top) { action in
                 if action.id == InviteHint.inviteAction {
                     hints.done(InviteHint())
@@ -49,6 +55,11 @@ struct AppHeader: View {
         .frame(height: 48)
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
+        }
+        .sheet(isPresented: $editing) {
+            ProfileSheet(profile: state.profile)
+                .presentationBackground(Ink.sheet)
+                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {

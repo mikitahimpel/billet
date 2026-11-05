@@ -3,7 +3,7 @@ import SwiftUI
 import WidgetKit
 
 enum HomeTab: CaseIterable {
-    case world, moments, shop
+    case world, moments, shop, us
 }
 
 /// Which of Mochi's rooms the World tab shows.
@@ -44,8 +44,6 @@ final class HomeState {
     /// Treats given since launch.
     private(set) var treatsGiven = 0
     var showsSettings = false
-    /// Us (plans, profile and settings) opens from the couple's avatars in the header, over any tab.
-    var showsUs = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
     var invitedCode: String?
@@ -321,7 +319,7 @@ final class HomeState {
         switch link {
         case .room: tab = .world
         case .moments: tab = .moments
-        case .us: showsUs = true
+        case .us: tab = .us
         case .calendar: showUs(.calendar)
         case .dates: showUs(.dates)
         case .newNote:
@@ -337,7 +335,7 @@ final class HomeState {
     }
 
     private func showUs(_ route: UsView.Route?) {
-        showsUs = true
+        tab = .us
         usRoute = route
     }
 }

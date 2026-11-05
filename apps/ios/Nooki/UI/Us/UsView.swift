@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Us, opened from the couple's avatars: the couple's plans (countdown hero, love streak, three feature tiles,
-/// shared lists), with today's mood, profile and settings in its header.
+/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
+/// and the settings are in its header.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -20,7 +20,8 @@ struct UsView: View {
     }
 
     private let hMargin: CGFloat = 16
-    private let bottomInset: CGFloat = 32
+    /// Same tab bar clearance as the shop.
+    private let bottomInset: CGFloat = 134
     private var us: UsStore { state.us }
 
     var body: some View {
@@ -34,7 +35,7 @@ struct UsView: View {
                 lists
             }
             .padding(.horizontal, hMargin)
-            .padding(.top, 20)
+            .padding(.top, 4)
             .padding(.bottom, bottomInset)
         }
         .scrollIndicators(.hidden)

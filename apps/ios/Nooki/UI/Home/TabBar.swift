@@ -13,6 +13,7 @@ struct TabBar: View {
         (.world, "World", "house.fill"),
         (.moments, "Moments", "photo.on.rectangle"),
         (.shop, "Shop", "bag"),
+        (.us, "Us", "heart"),
     ]
     private static let inset: CGFloat = 6
 

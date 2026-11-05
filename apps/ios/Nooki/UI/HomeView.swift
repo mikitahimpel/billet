@@ -62,6 +62,8 @@ struct HomeView: View {
                         ShopView(state: state)
                     case .moments:
                         MomentsView(state: state)
+                    case .us:
+                        UsView(state: state)
                     case .world:
                         VStack(spacing: 16) {
                             RoomControls(state: state, showcase: showcase, select: select) { scene?.playAll() }
@@ -158,7 +160,7 @@ struct HomeView: View {
             switch tab {
             case .moments: hints.done(MomentsHint())
             case .shop: hints.done(ShopHint())
-            case .world: break
+            case .world, .us: break
             }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
@@ -183,19 +185,14 @@ struct HomeView: View {
             default: break
             }
         }
-        .sheet(isPresented: $state.showsUs) {
-            UsView(state: state)
-                .usSheet()
-                // Settings opens from Us, so it is presented over the Us sheet.
-                .sheet(isPresented: $state.showsSettings) {
-                    SettingsView(state: state) {
-                        scene?.stop()
-                        HomeState.eraseAll()
-                        state = HomeState()
-                    }
-                    .presentationBackground(Ink.sheet)
-                    .presentationDragIndicator(.visible)
-                }
+        .sheet(isPresented: $state.showsSettings) {
+            SettingsView(state: state) {
+                scene?.stop()
+                HomeState.eraseAll()
+                state = HomeState()
+            }
+            .presentationBackground(Ink.sheet)
+            .presentationDragIndicator(.visible)
         }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
