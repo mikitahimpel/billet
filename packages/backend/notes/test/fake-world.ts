@@ -1,5 +1,6 @@
 import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
+import type { CatEntry } from "@billet/contracts-domain/cat";
 import { NoteId, UserId, type MediaKey } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { Metrics, type MetricEvent } from "@billet/backend-metrics/metrics";
@@ -20,12 +21,18 @@ const makeRoom = () => {
   let state: RoomState = { _tag: "Vacant" };
   let notes: Array<SequencedNote> = [];
   let nextNote = 0;
+  let cat: Array<CatEntry> = [];
   const keys = new Map<string, SequencedNote>();
   const store = Layer.succeed(RoomStore, {
     load: Effect.sync(() => state),
-    commit: (room: ActiveRoom, appended: ReadonlyArray<AppendedNote>) =>
+    commit: (
+      room: ActiveRoom,
+      appended: ReadonlyArray<AppendedNote>,
+      catEntries: ReadonlyArray<CatEntry>,
+    ) =>
       Effect.sync(() => {
         state = room;
+        cat.push(...catEntries);
         for (const { entry, key } of appended) {
           notes.push(entry);
           keys.set(`${entry.note.author}/${key}`, entry);
@@ -35,6 +42,17 @@ const makeRoom = () => {
       Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    catEntryById: (id) => Effect.sync(() => Option.fromNullishOr(cat.find((e) => e.id === id))),
+    catEntriesAfter: (afterSeq: number, limit: number) =>
+      Effect.sync(() => cat.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    catEntriesSince: (since: number) => Effect.sync(() => cat.filter(({ at }) => at >= since)),
+    forgetCat: Effect.sync(() => {
+      cat = [];
+      if (state._tag === "Active") {
+        const { cat: _, ...rest } = state;
+        state = rest;
+      }
+    }),
     forgetAuthor: (author) =>
       Effect.sync(() => {
         const forgotten = notes.filter(({ note }) => note.author === author);
@@ -106,6 +124,10 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
+    recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),
+    cat: (pairId) => roomOf(pairId).catView,
+    catJournal: (pairId, afterSeq, limit) => roomOf(pairId).catEntriesAfter(afterSeq, limit),
   };
 
   return {

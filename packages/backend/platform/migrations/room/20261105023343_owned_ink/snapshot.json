@@ -1,0 +1,508 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "3f98bbe7-66e6-4185-8d38-c9580cabb365",
+  "prevIds": [
+    "213b7331-e8ee-4350-8291-d6a981a03549"
+  ],
+  "ddl": [
+    {
+      "name": "cat",
+      "entityType": "tables"
+    },
+    {
+      "name": "cat_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "delivery",
+      "entityType": "tables"
+    },
+    {
+      "name": "note",
+      "entityType": "tables"
+    },
+    {
+      "name": "owned_ink",
+      "entityType": "tables"
+    },
+    {
+      "name": "room",
+      "entityType": "tables"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "coat",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "born_at",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "nature_seed",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "utc_offset_seconds",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "curious",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lazy",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cuddly",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_seq",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_at",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "by",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "at",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note_id",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lane",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "attempts",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "next_attempt_at",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ink_id",
+      "entityType": "columns",
+      "table": "owned_ink"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "owned_ink"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pair_id",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_user",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_presence",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_user",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_presence",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_seq",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "streak_days",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "columns": [
+        "note_id",
+        "lane"
+      ],
+      "nameExplicit": false,
+      "name": "delivery_pk",
+      "entityType": "pks",
+      "table": "delivery"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "cat_pk",
+      "table": "cat",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "seq"
+      ],
+      "nameExplicit": false,
+      "name": "cat_entry_pk",
+      "table": "cat_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "seq"
+      ],
+      "nameExplicit": false,
+      "name": "note_pk",
+      "table": "note",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "ink_id"
+      ],
+      "nameExplicit": false,
+      "name": "owned_ink_pk",
+      "table": "owned_ink",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "room_pk",
+      "table": "room",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "cat_entry_id",
+      "entityType": "indexes",
+      "table": "cat_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "cat_entry_at",
+      "entityType": "indexes",
+      "table": "cat_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "author",
+          "isExpression": false
+        },
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "note_author_key",
+      "entityType": "indexes",
+      "table": "note"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "cat_single_row",
+      "entityType": "checks",
+      "table": "cat"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "room_single_row",
+      "entityType": "checks",
+      "table": "room"
+    }
+  ],
+  "renames": []
+}

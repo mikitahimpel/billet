@@ -4,11 +4,15 @@ import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { InkId } from "@billet/contracts-domain/inks";
 import { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { SequencedNote } from "@billet/backend-pair-room/room-state";
+import { CatEntry } from "@billet/contracts-domain/cat";
+import { CatResponse } from "@billet/contracts-http-api/cat";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const decodeDecision = Schema.decodeUnknownEffect(RoomDecision);
 const decodeNotes = Schema.decodeUnknownEffect(Schema.Array(SequencedNote));
+const decodeCat = Schema.decodeUnknownEffect(Schema.NullOr(CatResponse));
+const decodeJournal = Schema.decodeUnknownEffect(Schema.Array(CatEntry));
 const decodeInks = Schema.decodeUnknownEffect(Schema.Array(InkId));
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
@@ -40,6 +44,16 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
         forgetMember: (pairId, user) =>
           callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
+        saveCat: (pairId, user, request, natureSeed) =>
+          callRoom(
+            () => rooms.getByName(pairId).saveCat(user, request, natureSeed),
+            decodeDecision,
+          ),
+        recordCatEvent: (pairId, user, request) =>
+          callRoom(() => rooms.getByName(pairId).recordCatEvent(user, request), decodeDecision),
+        cat: (pairId) => callRoom(() => rooms.getByName(pairId).cat(), decodeCat),
+        catJournal: (pairId, afterSeq, limit) =>
+          callRoom(() => rooms.getByName(pairId).catJournal(afterSeq, limit), decodeJournal),
       }),
     ),
   );

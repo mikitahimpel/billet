@@ -44,6 +44,14 @@ export const routes = {
   saveOnboardingAnswer: route("POST", "/v1/onboarding/answers"),
   sendNote: route("POST", "/v1/notes"),
   listNotes: route("GET", "/v1/notes"),
+  /** The couple's cat: its profile, temper and needs now. See docs/cat-state.md. */
+  getCat: route("GET", "/v1/cat"),
+  /** Adopts the cat the first time, then renames it or changes its look. */
+  saveCat: route("PUT", "/v1/cat"),
+  /** The cat's journal after `after`, oldest first. */
+  listCatJournal: route("GET", "/v1/cat/journal"),
+  /** Appends one thing the caller did for the cat, once per `id`. */
+  recordCatEvent: route("POST", "/v1/cat/events"),
   /** Every ink colour the shop sells, and the ones the pair owns. */
   listInks: route("GET", "/v1/inks"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */

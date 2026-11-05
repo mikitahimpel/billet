@@ -59,13 +59,15 @@ import {
 } from "../src/flag-config-repository-live.ts";
 import {
   SampleRow,
+  StoredCat,
+  StoredCatEntry,
   StoredDelivery,
   StoredNote,
   StoredOwnedInk,
   StoredRoom,
 } from "../src/room-rows.ts";
 import * as roomSchema from "../src/room-schema.ts";
-import { delivery, note, ownedInk, room } from "../src/room-schema.ts";
+import { cat, catEntry, delivery, note, ownedInk, room } from "../src/room-schema.ts";
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
@@ -96,6 +98,8 @@ const checked = [
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
   ["coin_ledger", coinLedger, StoredPurchaseEntry],
+  ["cat", cat, StoredCat],
+  ["cat_entry", catEntry, StoredCatEntry],
   ["delivery", delivery, StoredDelivery],
   ["note", note, StoredNote],
   ["owned_ink", ownedInk, StoredOwnedInk],

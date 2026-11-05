@@ -51,6 +51,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/account",
       },
+      "getCat": {
+        "method": "GET",
+        "path": "/v1/cat",
+      },
       "getFlags": {
         "method": "GET",
         "path": "/v1/flags",
@@ -66,6 +70,10 @@ it("pins the routes that clients call", () => {
       "getStatus": {
         "method": "GET",
         "path": "/v1/status",
+      },
+      "listCatJournal": {
+        "method": "GET",
+        "path": "/v1/cat/journal",
       },
       "listInks": {
         "method": "GET",
@@ -83,6 +91,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/purchases",
       },
+      "recordCatEvent": {
+        "method": "POST",
+        "path": "/v1/cat/events",
+      },
       "registerPushToken": {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
@@ -90,6 +102,10 @@ it("pins the routes that clients call", () => {
       "reportEvents": {
         "method": "POST",
         "path": "/v1/events",
+      },
+      "saveCat": {
+        "method": "PUT",
+        "path": "/v1/cat",
       },
       "saveOnboardingAnswer": {
         "method": "POST",

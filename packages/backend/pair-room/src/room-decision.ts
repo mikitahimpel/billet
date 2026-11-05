@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { CatEntry, CatProfile } from "@billet/contracts-domain/cat";
 import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -15,6 +16,11 @@ export const RoomOutput = Schema.TaggedUnion({
   NoteAppended: { entry: SequencedNote, key: IdempotencyKey },
   NoteRepeated: { entry: SequencedNote },
   PresenceChanged: { user: UserId, state: PresenceState },
+  CatSaved: { cat: CatProfile },
+  /** A journal entry to store: one a phone recorded, or the room's own for a stored note. */
+  CatEntryAppended: { entry: CatEntry },
+  /** A record whose `id` the room already holds: nothing is stored or fanned out. */
+  CatEntryRepeated: { entry: CatEntry },
   /** Inks the pair did not have before, now its own. A grant of inks it had lists none. */
   InksGranted: { inks: Schema.Array(InkId) },
 });
@@ -27,6 +33,10 @@ export const RoomRejection = Schema.TaggedUnion({
   /** The room already belongs to a different couple. */
   RoomAlreadyOpen: {},
   NotAMember: { user: UserId },
+  /** There is no cat to care for until one of the couple adopts it. */
+  CatNotAdopted: {},
+  /** The other partner already recorded an entry under this `id`. */
+  CatEntryIdTaken: {},
   /** A text note in an ink colour the pair has not bought. */
   InkNotOwned: { ink: InkId },
 });
