@@ -20,21 +20,31 @@ struct ShopView: View {
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.section) {
-                chips
-                if selected == .today {
-                    today
-                } else {
-                    grid(Catalog.items(in: selected))
-                        .padding(.horizontal, Space.l)
+        ScrollViewReader { reader in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.section) {
+                    chips
+                    if selected == .today {
+                        today
+                    } else {
+                        grid(Catalog.items(in: selected))
+                            .padding(.horizontal, Space.l)
+                    }
                 }
+                .padding(.top, 4)
+                .padding(.bottom, bottomInset)
+                .animation(.spring(duration: 0.35), value: selected)
             }
-            .padding(.top, 4)
-            .padding(.bottom, bottomInset)
-            .animation(.spring(duration: 0.35), value: selected)
+            .scrollIndicators(.hidden)
+            .task {
+                #if DEBUG
+                // `-shopSection bundles` (or deals, collections) on launch scrolls Today there, for screenshots.
+                guard let section = UserDefaults.standard.string(forKey: "shopSection") else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                reader.scrollTo(section, anchor: .top)
+                #endif
+            }
         }
-        .scrollIndicators(.hidden)
         .ignoresSafeArea(.container, edges: .bottom)
         .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
@@ -84,6 +94,7 @@ struct ShopView: View {
             grid(state.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
         .padding(.horizontal, Space.l)
+        .id("deals")
 
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Bundles") { Text("Less than one by one") }
@@ -92,6 +103,7 @@ struct ShopView: View {
             }
         }
         .padding(.horizontal, Space.l)
+        .id("bundles")
 
         VStack(alignment: .leading, spacing: Space.m) {
             sectionHeader("Collections") { Text("A bonus for each full set") }
@@ -100,6 +112,7 @@ struct ShopView: View {
             }
         }
         .padding(.horizontal, Space.l)
+        .id("collections")
 
         Text("Earn coins by answering together, keeping your streak, opening the daily gift and completing collections.")
             .font(.nookiCaption)
