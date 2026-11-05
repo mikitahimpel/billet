@@ -29,6 +29,9 @@ targets:
     sources:
       - path: Nooki
       - path: Shared
+      # The coin packs, as the server and the store sell them (docs/payments.md).
+      - path: ../../packages/ios/payments/Sources/Payments/Resources/coin-packs.json
+        buildPhase: resources
     # The launch screen is the splash's own dark warm color (Assets LaunchBackground), see LaunchSplash; the rest
     # of Info.plist is generated from the INFOPLIST_KEY_ settings below.
     info:

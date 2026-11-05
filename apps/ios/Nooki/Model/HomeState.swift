@@ -14,6 +14,8 @@ enum ShopFocus: Hashable {
     case ink(String)
     /// That item's sheet.
     case item(String)
+    /// The Coins block in Today: how to earn coins and where they went.
+    case coins
 }
 
 /// Which of Mochi's rooms the World tab shows.
@@ -81,7 +83,7 @@ final class HomeState {
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
 
-    /// Opens the Shop at an ink or an item.
+    /// Opens the Shop at an ink, an item or the coins.
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop

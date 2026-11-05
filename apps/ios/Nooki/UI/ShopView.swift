@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Shop
 
 /// The Shop tab under the app header: category chips, then Today's offers (the week's featured set as the hero, the
-/// daily deals, the free gift, bundles, inks and collections) or a category's grid. Every price is in coins and every
+/// daily deals, the free gift, bundles, inks, collections and the coins) or a category's grid. Every price is in coins and every
 /// countdown ends at a real rotation.
 struct ShopView: View {
     let state: HomeState
@@ -62,6 +62,12 @@ struct ShopView: View {
                 case .item(let id):
                     sheetItem = Catalog.item(id)
                     state.shopFocus = nil
+                case .coins:
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(100))
+                        withAnimation(.spring(duration: 0.45)) { reader.scrollTo("coins", anchor: .top) }
+                        state.shopFocus = nil
+                    }
                 }
             }
             .task {
@@ -177,6 +183,9 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
         .id("collections")
+
+        CoinsBlock(state: state)
+            .id("coins")
 
         Text("Earn coins by answering together, keeping your streak, opening the daily gift and completing collections.")
             .font(.nookiCaption)

@@ -119,7 +119,7 @@ final class TabBarTouchTests: XCTestCase {
             app.buttons[tab].tap()
             Thread.sleep(forTimeInterval: 1.5)
             let inbox = app.buttons["Inbox"].firstMatch
-            let coins = app.otherElements["coins"].firstMatch
+            let coins = app.buttons["coins"].firstMatch
             let couple = app.buttons["Couple"].firstMatch
             XCTAssertTrue(inbox.waitForExistence(timeout: 10) && coins.exists && couple.exists, "the header should show on \(tab)")
             let frames = [inbox.frame, coins.frame, couple.frame].map(\.integral)
