@@ -90,6 +90,8 @@ import Wire
     private var saved: (String, AccountRecord)?
     var failSaving = false
 
+    init(saved: (String, AccountRecord)? = nil) { self.saved = saved }
+
     var value: (String, AccountRecord)? { lock.withLock { saved } }
 
     var store: AccountStore {
