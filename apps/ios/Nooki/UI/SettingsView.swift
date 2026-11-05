@@ -121,6 +121,7 @@ struct SettingsView: View {
                     Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
                     Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
                     Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
+                    NavigationLink { StyleGallery() } label: { row("Style", symbol: "paintpalette.fill", tint: .sun) }
                     Picker(selection: roomsOverride) {
                         Text("Follow the test").tag(RoomsVariant?.none)
                         ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
