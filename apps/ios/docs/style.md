@@ -94,6 +94,10 @@ Navigation titles use SF Rounded through `NavigationBarStyle.apply()` at launch.
 
 `.plain` is only for whole-row or whole-card taps, with `PressScaleStyle` for feedback.
 
+Buttons inside cards that scroll (the Shop's prices, claims and chips: `shopButton()`) are flat capsules, honey or
+raised clay, never glass: glass is for chrome that floats over the room, grouped in a `GlassGroup`. Shadows are cast
+by a shape behind the content, not traced from the content.
+
 ## Lists, cards, chips, sheets
 - **Forms and settings**: `NookiForm` (a scroll view on `Ink.screen`, honey tint) of `NookiSection`s: a caption
   header, rows on one clay card with hairlines, a footer that explains in one or two sentences. Rows are

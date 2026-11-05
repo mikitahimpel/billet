@@ -47,7 +47,14 @@ struct PetButton: View {
                     SpringKeyframe(1.12, duration: 0.15)
                     SpringKeyframe(1.0, duration: 0.35)
                 }
-                .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+                // A soft dark disc under the glass, instead of a shadow traced from it on every frame over the room.
+                .background {
+                    Circle()
+                        .fill(RadialGradient(colors: [.black.opacity(0.32), .clear], center: .center,
+                                             startRadius: 30, endRadius: 46))
+                        .frame(width: 92, height: 92)
+                        .offset(y: 4)
+                }
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")

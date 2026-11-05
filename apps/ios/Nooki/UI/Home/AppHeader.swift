@@ -12,41 +12,43 @@ struct AppHeader: View {
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            InboxButton(unread: session?.inbox.unread ?? 0) {
-                state.showsInbox = true
-            }
-
-            Spacer(minLength: 0)
-
-            CoinPill(coins: state.shop.coins)
-
-            Button { state.showsProfile = true } label: {
-                HStack(spacing: -10) {
-                    Monogram(partner: state.partners.0, profile: state.profile)
-                        .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
-                    Monogram(partner: state.partners.1, profile: state.profile)
-                        .overlay(alignment: .topTrailing) { moodBadge(state.partners.1) }
+        // One container for the header's glass, as the tab bar has, so it is sampled together.
+        GlassGroup(spacing: Space.s) {
+            HStack(alignment: .center, spacing: 10) {
+                InboxButton(unread: session?.inbox.unread ?? 0) {
+                    state.showsInbox = true
                 }
-                .overlay(alignment: .bottom) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Ink.heroInk)
-                        .frame(width: 20, height: 20)
-                        .background(.honeyGradient, in: .circle)
-                        .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                        .offset(y: 6)
+
+                Spacer(minLength: 0)
+
+                CoinPill(coins: state.shop.coins)
+
+                Button { state.showsProfile = true } label: {
+                    HStack(spacing: -10) {
+                        Monogram(partner: state.partners.0, profile: state.profile)
+                            .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
+                        Monogram(partner: state.partners.1, profile: state.profile)
+                            .overlay(alignment: .topTrailing) { moodBadge(state.partners.1) }
+                    }
+                    .overlay(alignment: .bottom) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Ink.heroInk)
+                            .frame(width: 20, height: 20)
+                            .background(.honeyGradient, in: .circle)
+                            .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                            .offset(y: 6)
+                    }
+                    .contentShape(.capsule)
                 }
-                .shadow(color: .black.opacity(0.2), radius: 4, y: 1)
-                .contentShape(.capsule)
-            }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityLabel("Couple")
-            .accessibilityHint("Opens your profile")
-            .popoverTip(InviteHint(), arrowEdge: .top) { action in
-                if action.id == InviteHint.inviteAction {
-                    hints.done(InviteHint())
-                    pairing = true
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("Couple")
+                .accessibilityHint("Opens your profile")
+                .popoverTip(InviteHint(), arrowEdge: .top) { action in
+                    if action.id == InviteHint.inviteAction {
+                        hints.done(InviteHint())
+                        pairing = true
+                    }
                 }
             }
         }
