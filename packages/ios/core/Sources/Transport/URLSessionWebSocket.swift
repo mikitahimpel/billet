@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Wire
 
 extension WebSocketConnection {
@@ -66,10 +67,18 @@ extension WebSocketConnection {
 }
 
 extension URLSessionWebSocketTask {
+  /// `sendPing` can call its handler a second time, with an error, when the task is cancelled after
+  /// the pong; only the first answer resumes.
   fileprivate func ping() async throws {
+    let answered = Mutex(false)
     try await withCheckedThrowingContinuation {
       (continuation: CheckedContinuation<Void, any Error>) in
       sendPing { error in
+        let first = answered.withLock { done in
+          defer { done = true }
+          return !done
+        }
+        guard first else { return }
         if let error {
           continuation.resume(throwing: error)
         } else {
