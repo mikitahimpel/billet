@@ -10,7 +10,6 @@ struct MomentsView: View {
 
     @State private var pick: PhotosPickerItem?
     @State private var draft: Draft?
-    @State private var showsPicker = false
     @State private var showsHistory = false
     /// The open photo, from the feed or the board.
     @State private var viewing: PinRoute?
@@ -56,7 +55,6 @@ struct MomentsView: View {
                 .ignoresSafeArea(.container, edges: .bottom)
             }
         }
-        .photosPicker(isPresented: $showsPicker, selection: $pick, matching: .images)
         .onChange(of: pick) { _, item in
             guard let item else { return }
             Task {
@@ -194,24 +192,20 @@ struct MomentsView: View {
                     .accessibilityLabel("All notes")
                 }
 
-                Group {
-                    if state.momentsMode == .board {
-                        Menu {
-                            Button { state.composingNote = .write } label: {
-                                Label("Note", systemImage: "note.text")
-                                Text("+5")
-                            }
-                            Button { state.composingNote = .draw } label: {
-                                Label("Doodle", systemImage: "scribble")
-                                Text("+5")
-                            }
-                        } label: { plus }
-                    } else {
-                        Button { showsPicker = true } label: { plus }
-                            .buttonStyle(.plain)
-                    }
+                // Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
+                if state.momentsMode == .board {
+                    Menu {
+                        Button { state.composingNote = .write } label: {
+                            Label("Note", systemImage: "note.text")
+                            Text("+5")
+                        }
+                        Button { state.composingNote = .draw } label: {
+                            Label("Doodle", systemImage: "scribble")
+                            Text("+5")
+                        }
+                    } label: { plus }
+                    .accessibilityLabel("Add a note")
                 }
-                .accessibilityLabel(state.momentsMode == .board ? "Add a note" : "Add a moment")
             }
             .frame(height: 48)
 
@@ -222,7 +216,7 @@ struct MomentsView: View {
     private var plus: some View {
         Image(systemName: "plus")
             .font(.system(size: 17, weight: .bold))
-            .foregroundStyle(.white)
+            .foregroundStyle(Ink.heroInk)
             .frame(width: 44, height: 44)
             .background(Circle().fill(.honeyGradient))
             .shadow(color: Color.honeyDeep.opacity(0.4), radius: 8, y: 3)
@@ -399,18 +393,14 @@ private struct EmptyMoments: View {
                     Image(systemName: "photo.badge.plus")
                     Text("Add a photo")
                     Text("+10")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .font(.nookiMicro)
                         .padding(.horizontal, 8)
                         .frame(height: 22)
-                        .background(.white.opacity(0.22), in: .capsule)
+                        .background(Ink.heroInk.opacity(0.12), in: .capsule)
                 }
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Capsule().fill(.honeyGradient))
-                .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
             }
+            .nookiPrimary()
             .padding(.top, 6)
         }
     }
