@@ -353,7 +353,13 @@ describe("RoomService: the cat", () => {
 
   it("journals a note once the cat exists, and forgets the cat when the pair ends", async () => {
     const store = memoryStore();
-    const photo = SendNoteRequest.cases.Photo.make({ key: uuid(40), image });
+    const photo = SendNoteRequest.cases.Photo.make({
+      key: uuid(40),
+      image,
+      width: 1200,
+      height: 1600,
+      preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+    });
     const result = await run(
       store,
       RoomService.use((room) =>
