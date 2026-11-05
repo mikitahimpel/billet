@@ -70,6 +70,9 @@ public struct APIClient: Sendable {
     @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse
   /// Pays something the couple did in the app, once per ref and within the day's cap.
   public var earnCoins: @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse
+  /// Replaces this user's check-in and answers with it as stored, the note trimmed.
+  /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
+  public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -158,6 +161,10 @@ public struct APIClient: Sendable {
     earnCoins:
       @escaping @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse = {
         (_) async throws(TransportError) in throw .network("offline")
+      },
+    setMood:
+      @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
+        (_) async throws(TransportError) in throw .network("offline")
       }
   ) {
     self.authChallenge = authChallenge
@@ -192,6 +199,7 @@ public struct APIClient: Sendable {
     self.openGift = openGift
     self.claimBonus = claimBonus
     self.earnCoins = earnCoins
+    self.setMood = setMood
   }
 }
 
@@ -367,6 +375,10 @@ extension APIClient {
       earnCoins: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.earnCoins, signed: true, body: body), as: EarnResponse.self)
+      },
+      setMood: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.setMood, signed: true, body: body), as: PartnerCheckIn.self)
       })
   }
 }
