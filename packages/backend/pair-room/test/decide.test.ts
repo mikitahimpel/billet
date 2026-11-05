@@ -23,7 +23,7 @@ import {
   withCat,
 } from "./samples.ts";
 import { freeInk } from "@billet/contracts-domain/inks";
-import { CoinEntry, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
+import { CoinEntry, CoinEntryId, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
 import { CollectionId } from "@billet/contracts-domain/shop";
 
 const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
@@ -345,6 +345,13 @@ describe("tagged unions", () => {
       at: 1_700_000_000_000,
       utcOffsetSeconds: 0,
       event: { _tag: "ListTicked", item: Schema.decodeSync(EarnRef)("item-1") },
+    }),
+    CreditPurchase: RoomCommand.cases.CreditPurchase.make({
+      id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
+      kind: "buy",
+      coins: 550,
+      ref: "com.mikitahimpel.billet.coins.550",
+      at: 1_700_000_000_000,
     }),
   };
   const spend = Schema.decodeUnknownSync(CoinEntry)({

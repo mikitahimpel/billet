@@ -276,11 +276,11 @@ jobs:
     # What each part of the room costs to draw on a small and a large screen: one build, each part
     # switched off and back on in turn within a launch. After the other jobs, on one runner.
     needs: [ab, shots]
-    # Off: Nooki's rooms have no switches for a cost run to turn yet. ScenePerf.Scene.switches is where they go.
-    if: false
-    # was: >-
-    #  !cancelled() && github.event_name == 'workflow_dispatch'
-    #  && (inputs.jobs == 'cost' || inputs.jobs == 'all')
+    # The parts it switches are NookiPerf's `switches`: Mochi's shadow and the room's shadows, lights,
+    # particles and bloom.
+    if: >-
+      !cancelled() && github.event_name == 'workflow_dispatch'
+      && (inputs.jobs == 'cost' || inputs.jobs == 'all')
     runs-on: ${{ inputs.image || 'macos-26' }}
     timeout-minutes: 60
     strategy:

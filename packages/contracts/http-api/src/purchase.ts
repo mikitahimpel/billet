@@ -20,8 +20,9 @@ export type MockPurchaseRequest = typeof MockPurchaseRequest.Type;
 
 /**
  * What a purchase did. `coins` is what this transaction credited, or for a mock refund what it
- * took back, as a positive number. `duplicate` is true when the transaction had already been
- * handled: nothing changed, and `balance` is the current one.
+ * took back, as a positive number. `balance` is the pair's wallet after it (`GET /v1/coins`: coins
+ * earned, bought and spent), or a demo room's bought coins. `duplicate` is true when the
+ * transaction had already been handled: nothing changed, and `balance` is the current one.
  */
 export const PurchaseResponse = Schema.Struct({
   transactionId: nonEmpty,

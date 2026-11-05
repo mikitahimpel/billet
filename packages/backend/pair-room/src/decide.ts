@@ -371,6 +371,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "OpenGift":
     case "ClaimBonus":
     case "Earn":
+    case "CreditPurchase":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -548,6 +549,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         { ...room, wallet: { ...today, balance: today.balance + amount, ...counted } },
         [RoomOutput.cases.CoinsEntered.make({ entry })],
       );
+    }
+    case "CreditPurchase": {
+      const { id, kind, coins, ref, at } = command;
+      // Apple refunds a pack after its coins may be spent, so a refund takes at most the balance
+      // and its entry records what it took.
+      const amount = kind === "buy" ? coins : -Math.min(coins, room.wallet.balance);
+      const entry = coinEntry(id, kind, amount === 0 ? 0 : amount, ref, at);
+      return accepted(withCoins(room, amount), [RoomOutput.cases.CoinsEntered.make({ entry })]);
     }
   }
 };

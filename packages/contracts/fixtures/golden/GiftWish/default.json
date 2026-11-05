@@ -4,6 +4,10 @@
   "link": "https://example.com/bracelet",
   "mostWanted": true,
   "note": "the one with the little moon",
+  "occasion": {
+    "date": 1700600000000,
+    "title": "Alice's birthday"
+  },
   "owner": "user-alice",
   "price": "$65",
   "title": "Silver charm bracelet"

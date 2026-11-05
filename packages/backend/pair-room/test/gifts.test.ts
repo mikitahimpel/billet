@@ -56,6 +56,31 @@ describe("gift wishes", () => {
     const renamed = run(aliceWish, alice, saveWish(1, "Silver bracelet"), 2000);
     expect(renamed.wishes[0]).toMatchObject({ title: "Silver bracelet", addedAt: 1000 });
   });
+
+  it("keeps the occasion the owner set, and drops it once the owner clears it", () => {
+    const occasion = { title: "Birthday", date: 9000 };
+    const save = (withOccasion: boolean): GiftCommand => ({
+      _tag: "SaveWish",
+      wish: {
+        id: uuid(1),
+        title: "Bracelet",
+        link: "",
+        price: "$65",
+        note: "",
+        mostWanted: false,
+        ...(withOccasion ? { occasion } : {}),
+      },
+    });
+    const forBirthday = run(aliceWish, alice, save(true), 2000);
+    expect(forBirthday.wishes[0]).toMatchObject({ occasion, addedAt: 1000 });
+    const received = run(forBirthday, alice, {
+      _tag: "MarkReceived",
+      wish: uuid(1),
+      received: true,
+    });
+    expect(received.wishes[0]).toMatchObject({ occasion });
+    expect(run(forBirthday, alice, save(false)).wishes[0]).not.toHaveProperty("occasion");
+  });
 });
 
 describe("gift plans", () => {

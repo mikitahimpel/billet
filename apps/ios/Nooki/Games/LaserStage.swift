@@ -84,7 +84,7 @@ final class LaserStage: GameStage {
                 }
             }
         }
-        deck.bar = (laser.play, "Play")
+        deck.show(laser.play, "Play")
     }
 
     /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.

@@ -64,13 +64,13 @@ struct HomeStores {
         let moments = MomentStore()
         let notes = NoteStore()
         let care = CatCare(wallet: wallet, streak: streak)
-        let us = UsStore(wallet: wallet)
+        let shop = ShopModel(wallet: wallet, couple: profile, care: care)
+        let us = UsStore { shop.earn($0) }
         return HomeStores(
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
-            moments: moments, notes: notes, rooms: RoomsChoice(), care: care,
-            shop: ShopModel(wallet: wallet, couple: profile, care: care),
+            moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us) { profile.couple.pair.map { (profile.couple.viewer, $0.users) } },
-            journal: Journal(moments: moments, notes: notes, wallet: wallet, streak: streak, couple: profile))
+            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
     }
 }
 

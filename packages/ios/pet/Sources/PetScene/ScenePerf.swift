@@ -9,7 +9,8 @@ import Pet
 /// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
 ///
 /// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches lighting and tabs, scrolls the Shop, then idles and orbits again once settled, and
+/// also orbits, zooms, switches lighting and tabs, scrolls the Shop and the Moments feed, opens
+/// each cover over the room, then idles and orbits again once settled, and
 /// last switches the cat through four models and back, as `-perf.script cats` does alone.
 /// `-perf.script steady` leaves Home alone for 20 seconds and then records it for a minute, untouched:
 /// what a phone lying on a table with the app open spends. `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
@@ -77,6 +78,11 @@ public enum ScenePerf {
     /// Scrolls the tab on screen to `y` points from its top; a `full` run scrolls the Shop with it. An
     /// app that cannot leaves it doing nothing, and the run records a Shop held still.
     public var scroll: @MainActor (_ y: Double) -> Void = { _ in }
+    /// Screens that cover the room whole, such as a full-screen canvas; a `full` run opens each and
+    /// records the frames under it.
+    public var covers: [String] = []
+    /// Shows the named cover, or none for `nil`.
+    public var setCover: @MainActor (_ name: String?) -> Void = { _ in }
     public init() {}
   }
 
@@ -170,13 +176,16 @@ public enum ScenePerf {
       host.setLighting(lighting)
       await record("light.\(lighting.rawValue)", seconds: 2)
     }
-    for tab in ["shop", "notes", "home", "shop", "notes", "home"] {
+    for tab in ["shop", "notes", "us", "home", "shop", "notes", "us", "home"] {
       await timed("tab.\(tab)", until: tab == "home" ? "room on screen" : "\(tab) on screen") {
         host.selectTab(tab)
       }
       if tab != "home" { census() }
     }
-    await shopScroll()
+    await scroll("shop")
+    await scroll("notes")
+    await timed("tab.home.scroll", until: "room on screen") { host.selectTab("home") }
+    await covers()
     // Home again, long after launch and the switches, when nothing started earlier still runs:
     // what the room costs for good.
     await pause(20)
@@ -185,20 +194,31 @@ public enum ScenePerf {
     await cats()
   }
 
-  /// The Shop held still, then scrolled down its page and back up, again and again: the frames a
-  /// thumb flicking through the offers gets. The pace is per frame, so a slow runner scrolls slower
-  /// and two builds compare under the same drive.
-  private static func shopScroll() async {
-    await timed("tab.shop.scroll", until: "shop on screen") { host.selectTab("shop") }
+  /// A tab held still, then scrolled down its page and back up, again and again: the frames a
+  /// thumb flicking through it gets. The pace is per frame, so a slow runner scrolls slower and two
+  /// builds compare under the same drive.
+  private static func scroll(_ tab: String) async {
+    await timed("tab.\(tab).scroll", until: "\(tab) on screen") { host.selectTab(tab) }
     await pause(2)
-    await record("shop.still", seconds: 3)
-    await record("shop.scroll", seconds: 10) { frame in
+    await record("\(tab).still", seconds: 3)
+    await record("\(tab).scroll", seconds: 10) { frame in
       // 2 s down 2,400 pt and 2 s back up, at 60 frames a second.
       let t = Double(frame % 240) / 120
       host.scroll(t <= 1 ? t * 2400 : (2 - t) * 2400)
     }
     host.scroll(0)
-    await timed("tab.home.scroll", until: "room on screen") { host.selectTab("home") }
+  }
+
+  /// Each cover over the room, held open, then closed again; with the room on screen underneath,
+  /// what it still draws there shows in the cover's frames and CPU.
+  private static func covers() async {
+    for name in host.covers {
+      host.setCover(name)
+      await pause(2)
+      await record("cover.\(name)", seconds: 5)
+      host.setCover(nil)
+      await pause(2)
+    }
   }
 
   private static func orbit(_ name: String) async {

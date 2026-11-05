@@ -391,6 +391,49 @@ importers:
         specifier: 'catalog:'
         version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
 
+  packages/backend/demo-partner:
+    dependencies:
+      '@billet/backend-account':
+        specifier: workspace:*
+        version: link:../account
+      '@billet/backend-auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@billet/backend-observability':
+        specifier: workspace:*
+        version: link:../observability
+      '@billet/backend-pairing':
+        specifier: workspace:*
+        version: link:../pairing
+      '@billet/contracts-domain':
+        specifier: workspace:*
+        version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
+    devDependencies:
+      '@billet/config-typescript':
+        specifier: workspace:*
+        version: link:../../config/typescript
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 5.20261101.1
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.75.0(@astrojs/compiler-rs@0.5.2)
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.90.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+
   packages/backend/flags:
     dependencies:
       '@billet/backend-auth':
@@ -646,6 +689,9 @@ importers:
       '@billet/backend-observability':
         specifier: workspace:*
         version: link:../observability
+      '@billet/backend-pair-room':
+        specifier: workspace:*
+        version: link:../pair-room
       '@billet/backend-pairing':
         specifier: workspace:*
         version: link:../pairing
@@ -692,6 +738,9 @@ importers:
       '@billet/backend-auth':
         specifier: workspace:*
         version: link:../auth
+      '@billet/backend-demo-partner':
+        specifier: workspace:*
+        version: link:../demo-partner
       '@billet/backend-flags':
         specifier: workspace:*
         version: link:../flags

@@ -133,6 +133,8 @@ export const StoredGiftWish = Schema.Struct({
   price: Schema.String,
   note: Schema.String,
   mostWanted: Schema.Int,
+  occasionTitle: Schema.NullOr(Schema.String),
+  occasionDate: Schema.NullOr(Schema.Int),
   addedAt: Schema.Int,
   receivedAt: Schema.NullOr(Schema.Int),
   giftedBy: Schema.NullOr(Schema.String),
