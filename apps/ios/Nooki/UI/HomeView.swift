@@ -216,11 +216,6 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
-        .onChange(of: state.shop.lastPurchase) { _, purchase in
-            // A synced shop has sent the order already.
-            guard let purchase, purchase.kind == .ink, !state.shop.isSynced, let inkSync else { return }
-            Task { await inkSync.settle(purchase, state.shop) }
-        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -235,7 +230,6 @@ struct HomeView: View {
                     await photoSync?.receive()
                     await textSync?.receive()
                     await state.shop.refresh()
-                    await inkSync?.refresh(state.shop)
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(true, photos: photoSync, texts: textSync)
@@ -363,7 +357,6 @@ struct HomeView: View {
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
-    /// Photos to and from the partner; nil until this phone is paired with them.
     /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
     private func followPair() async {
         guard let session, let sync = session.shopSync else { return await leavePair() }
@@ -402,11 +395,7 @@ struct HomeView: View {
         }
     }
 
-    private var inkSync: InkSync? {
-        guard let session, session.isPaired else { return nil }
-        return InkSync(api: session.api)
-    }
-
+    /// Photos to and from the partner; nil until this phone is paired with them.
     private var photoSync: PhotoSync? {
         session?.photoSync(moments: state.moments, partner: state.otherPartner)
     }

@@ -141,12 +141,9 @@ struct ShopView: View {
         }
         .id("deals")
 
-        // The server has no daily gift yet; a synced pair's coins come only from the room.
-        if !state.shop.isSynced {
-            DailyGiftCard(state: state)
-                .padding(.horizontal, Space.l)
-                .shopAppear()
-        }
+        DailyGiftCard(state: state)
+            .padding(.horizontal, Space.l)
+            .shopAppear()
 
         VStack(alignment: .leading, spacing: Space.m) {
             ShopSectionHeader(title: "Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {

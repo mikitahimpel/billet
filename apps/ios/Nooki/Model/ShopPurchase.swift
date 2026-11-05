@@ -1,48 +1,51 @@
 import Foundation
+import Wire
 
-/// One buy in the Shop, kept for the purchase moment and its Undo.
+/// One buy in the Shop, shown on the phone from the tap until the server answers: the purchase moment plays for it,
+/// it offers Undo for a few seconds, and only then is it ordered.
 struct Purchase: Identifiable, Hashable {
-    let id = UUID()
+    /// Made once per tap; its string is the order's idempotency key on every retry.
+    let id: UUID
+    let offer: ShopOffer
     /// What the couple bought: one item, or a set's pieces.
     let itemIDs: [String]
-    /// The pieces this buy added; pieces owned before stay owned on Undo.
+    /// The pieces this buy adds; pieces owned before stay owned when it is undone or refused.
     let added: [String]
+    /// The price shown; the server charges its own.
     let cost: Int
     let date: Date
     var title: String
     var kind = Kind.item
+    /// Bought for the partner: it arrives wrapped and they unwrap it.
+    var asGift = false
+
+    init(
+        id: UUID = UUID(), offer: ShopOffer, itemIDs: [String], added: [String], cost: Int, date: Date, title: String,
+        kind: Kind = .item, asGift: Bool = false
+    ) {
+        self.id = id
+        self.offer = offer
+        self.itemIDs = itemIDs
+        self.added = added
+        self.cost = cost
+        self.date = date
+        self.title = title
+        self.kind = kind
+        self.asGift = asGift
+    }
 
     enum Kind: Hashable {
-        /// Room pieces, kept on the phone.
+        /// Room pieces.
         case item
-        /// An ink colour for notes and drawings; the server takes the coins once Undo has passed.
+        /// An ink colour for notes and drawings.
         case ink
+        /// A treat for the cat: no purchase moment and no Undo.
+        case treat
     }
 
     static let undoWindow: TimeInterval = 5
 
-    func canUndo(at now: Date) -> Bool { now.timeIntervalSince(date) < Self.undoWindow }
-}
+    var key: IdempotencyKey { IdempotencyKey(id.uuidString) }
 
-extension Wallet {
-    /// Takes the cost and adds the pieces not owned yet. Nil, and nothing changes, when the coins don't cover it or
-    /// every piece is owned already.
-    mutating func buy(
-        _ itemIDs: [String], cost: Int, title: String, kind: Purchase.Kind = .item, giftTo: Bool = false, at date: Date
-    ) -> Purchase? {
-        let added = itemIDs.filter { !owned.contains($0) }
-        guard coins >= cost, !added.isEmpty else { return nil }
-        coins -= cost
-        owned.formUnion(added)
-        wishlist.subtract(added)
-        if giftTo { gifted.formUnion(added) }
-        return Purchase(itemIDs: itemIDs, added: added, cost: cost, date: date, title: title, kind: kind)
-    }
-
-    /// Gives the coins back and takes back only what that buy added.
-    mutating func undo(_ purchase: Purchase) {
-        coins += purchase.cost
-        owned.subtract(purchase.added)
-        gifted.subtract(purchase.added)
-    }
+    func canUndo(at now: Date) -> Bool { kind != .treat && now.timeIntervalSince(date) < Self.undoWindow }
 }

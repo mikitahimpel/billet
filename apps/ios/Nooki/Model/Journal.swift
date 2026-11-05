@@ -1,49 +1,53 @@
 import Observation
 import UIKit
+import Wire
 
-/// What the couple adds to Moments and the board. Each earns a few coins on a phone that keeps its own wallet; on a
-/// synced pair the server pays for the photo or note when it arrives there.
+/// What the couple adds to Moments and the board. The server pays for each: a photo or text note that goes to the
+/// partner earns when it arrives there, and anything that stays on this phone is reported as an earn.
 @Observable
 final class Journal {
     @ObservationIgnored private let moments: MomentStore
     @ObservationIgnored private let notes: NoteStore
-    @ObservationIgnored private let wallet: WalletStore
     @ObservationIgnored private let streak: StreakStore
     @ObservationIgnored private let couple: CoupleStore
+    @ObservationIgnored private let earn: (EarnEvent) -> Void
 
-    init(moments: MomentStore, notes: NoteStore, wallet: WalletStore, streak: StreakStore, couple: CoupleStore) {
+    init(
+        moments: MomentStore, notes: NoteStore, streak: StreakStore, couple: CoupleStore,
+        earn: @escaping (EarnEvent) -> Void
+    ) {
         self.moments = moments
         self.notes = notes
-        self.wallet = wallet
         self.streak = streak
         self.couple = couple
+        self.earn = earn
     }
 
     private var viewer: String { couple.couple.viewer }
 
-    /// Adding a moment earns the couple 10 coins (see docs/shop-concept.md). A photo that `shares` also goes to the
-    /// partner once this phone is paired (`PhotoSync`); a drawing's keepsake does not, as the drawing went already.
+    /// A photo that `shares` also goes to the partner once this phone is paired (`PhotoSync`), and earns there; a
+    /// drawing's keepsake does not, as the drawing went already, so it earns as a moment.
     @discardableResult
     func addMoment(_ image: UIImage, caption: String, shares: Bool = false) -> Bool {
-        guard moments.add(image, caption: caption, author: viewer, unsent: shares) != nil else { return false }
-        wallet.earn(10)
+        guard let moment = moments.add(image, caption: caption, author: viewer, unsent: shares) else { return false }
+        if !shares { earn(.momentAdded(moment: moment.id.uuidString)) }
         streak.record()
         return true
     }
 
-    /// Adding a note earns the couple 5 coins.
+    /// A text note always goes to the partner (`TextNoteSync`), so the server pays for it when it arrives.
     @discardableResult
     func addNote(text: String, paper: Note.Paper, ink: UInt32? = nil) -> Bool {
         guard notes.add(text: text, paper: paper, author: viewer, ink: ink) != nil else { return false }
-        wallet.earn(5)
         streak.record()
         return true
     }
 
+    /// A doodle stays on this phone, so it earns as a note.
     @discardableResult
     func addNote(doodle: UIImage, paper: Note.Paper) -> Bool {
-        guard notes.add(doodle: doodle, paper: paper, author: viewer) != nil else { return false }
-        wallet.earn(5)
+        guard let note = notes.add(doodle: doodle, paper: paper, author: viewer) else { return false }
+        earn(.noteAdded(note: note.id.uuidString))
         streak.record()
         return true
     }
