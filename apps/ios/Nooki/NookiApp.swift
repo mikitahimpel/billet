@@ -6,6 +6,7 @@ struct NookiApp: App {
     /// Nil when the build has no server; the app then keeps everything on the phone.
     @State private var session: ServerSession?
     @State private var onboarding: OnboardingFlow
+    @State private var hints: Hints
 
     init() {
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
@@ -13,6 +14,8 @@ struct NookiApp: App {
         let api: APIClient = session?.api ?? .offline
         let canInvite = session.map { !$0.isPaired } ?? false
         _session = State(initialValue: session)
+        Hints.configure()
+        _hints = State(initialValue: Hints(report: api.reportEvents))
         _onboarding = State(initialValue: OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
             coatChanged: { CatRoom.forgetMochi() }))
@@ -29,6 +32,8 @@ struct NookiApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
+                    .environment(hints)
+                    .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false)
@@ -38,8 +43,19 @@ struct NookiApp: App {
                     .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
+                    .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
+                    .onChange(of: canInvite, initial: true) { hints.canInvite(canInvite) }
+                    .onChange(of: session?.isPaired == true, initial: true) { _, paired in
+                        if paired { hints.done(InviteHint()) }
+                    }
             }
         }
+    }
+
+    /// Someone to invite: signed in, and not paired yet.
+    private var canInvite: Bool {
+        guard let session else { return false }
+        return session.isSignedIn && !session.isPaired
     }
 
     /// The app was launched to host NookiTests.

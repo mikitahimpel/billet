@@ -39,6 +39,8 @@ final class HomeState {
     var tab: HomeTab = .world
     var room: RoomKind = .home
     var petPulse = 0
+    /// Treats given since launch.
+    private(set) var treatsGiven = 0
     var showsSettings = false
 
     let moods = [
@@ -159,6 +161,7 @@ final class HomeState {
     func treat() -> Bool {
         guard coins >= Self.treatPrice else { return false }
         wallet.update { $0.coins -= Self.treatPrice }
+        treatsGiven += 1
         petPulse += 1
         care(0.1)
         streak.record()

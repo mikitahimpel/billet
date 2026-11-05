@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 
 struct HomeView: View {
     @State private var state = HomeState()
@@ -12,7 +13,10 @@ struct HomeView: View {
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(Hints.self) private var hints
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    /// Whether this pair has both rooms to switch between.
+    var hasRoomChoice = true
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -111,7 +115,19 @@ struct HomeView: View {
         }
         .onChange(of: state.room) { showcase = nil }
         // Pets from the widget and the control reach Mochi when the app comes back.
-        .onChange(of: state.petPulse) { scene?.purr() }
+        .onChange(of: state.petPulse) {
+            scene?.purr()
+            hints.done(PetHint())
+        }
+        .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: hasRoomChoice, initial: true) { hints.roomChoice(hasRoomChoice) }
+        .onChange(of: state.tab) { _, tab in
+            switch tab {
+            case .moments: hints.done(MomentsHint())
+            case .shop: hints.done(ShopHint())
+            case .world, .us: break
+            }
+        }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
             case .active:
@@ -156,6 +172,7 @@ struct HomeView: View {
 
     private func select(_ room: RoomKind) {
         guard room != state.room else { return }
+        if room == .city { hints.done(RoomsHint()) }
         scene?.stop()
         if room == .city {
             // After the tap has drawn; until then the home room stays on screen.
@@ -218,6 +235,7 @@ private struct RoomControls: View {
             }
             .padding(3)
             .warmGlass(.capsule)
+            .popoverTip(RoomsHint(), arrowEdge: .top)
 
             Spacer(minLength: 0)
 
