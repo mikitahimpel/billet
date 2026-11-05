@@ -1,11 +1,9 @@
 import XCTest
 
-/// Screenshots of the cat sheet's four need bars, full, in the middle and low. Each state needs its own launch
-/// (`-uitestNeeds` is read at launch), which is slow and flaky on CI's virtual Macs, so these run only in the ios.yml
-/// shots job (`UISHOTS=1`), never in pull request CI.
+/// The cat sheet shows her four need bars, full, in the middle and low, with a screenshot of each. Each state needs its
+/// own launch, as `-uitestNeeds` is read at launch.
 final class NeedBarsTests: XCTestCase {
     override func setUpWithError() throws {
-        try XCTSkipUnless(ProcessInfo.processInfo.environment["UISHOTS"] == "1", "screenshots run only in the shots job")
         continueAfterFailure = false
     }
 
@@ -16,7 +14,7 @@ final class NeedBarsTests: XCTestCase {
     @MainActor
     private func shoot(_ name: String, needs value: String) throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES", "-uitestNeeds", value]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES", "-uitestNeeds", value]
         app.launch()
         defer { app.terminate() }
 

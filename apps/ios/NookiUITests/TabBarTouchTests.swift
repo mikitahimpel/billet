@@ -6,7 +6,7 @@ final class TabBarTouchTests: XCTestCase {
     func testTapsOnTheBarNeverReachTheRoom() throws {
         let app = XCUIApplication()
         // Skips onboarding, and has the room report the taps it gets as its accessibility value.
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestRoomTaps", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestRoomTaps", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
 
         let bar = app.otherElements["tabbar"]
@@ -48,7 +48,7 @@ final class TabBarTouchTests: XCTestCase {
     @MainActor
     func testDragAcrossTheBarAndOpenTheProfile() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
 
         let world = app.buttons["World"]
@@ -109,7 +109,7 @@ final class TabBarTouchTests: XCTestCase {
     @MainActor
     func testTheHeaderIsTheSameOnEveryTab() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         Thread.sleep(forTimeInterval: 8)
