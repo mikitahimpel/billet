@@ -29,6 +29,8 @@ public enum Routes {
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
   public static let listInks = Route(.get, "/v1/inks")
+  public static let getCoins = Route(.get, "/v1/coins")
+  public static let buyItem = Route(.post, "/v1/shop/buy")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let reportEvents = Route(.post, "/v1/events")

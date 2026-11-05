@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, gt, gte, isNull, lt, max, ne, or, sql } from
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { ActivityCursor, ActivityEvent, ActivityTarget } from "@billet/contracts-domain/activity";
 import { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
+import { CoinEntry, type CoinEntryId } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { Note } from "@billet/contracts-domain/note";
 import {
@@ -12,7 +13,17 @@ import {
 import { ActivityRow, activityRetentionMillis, cursorOf } from "@billet/backend-pair-room/activity";
 import { RoomStore, type AppendedNote } from "@billet/backend-pair-room/room-store";
 import type { RoomDatabase } from "./room-database.ts";
-import { activity, activityRead, cat, catEntry, note, ownedInk, room } from "./room-schema.ts";
+import {
+  activity,
+  activityRead,
+  cat,
+  catEntry,
+  coinEntry,
+  note,
+  ownedInk,
+  room,
+  wallet,
+} from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
 export class RoomDb extends Context.Service<RoomDb, RoomDatabase>()(
@@ -32,6 +43,35 @@ const decodeRoom = Schema.decodeUnknownSync(RoomState);
 type RoomRow = typeof room.$inferSelect;
 type CatRow = typeof cat.$inferSelect;
 type CatEntryRow = typeof catEntry.$inferSelect;
+type WalletRow = typeof wallet.$inferSelect;
+
+const decodeCoinEntry = Schema.decodeUnknownOption(CoinEntry);
+
+/** A row this code cannot read, such as a kind a newer build added, is left out. */
+const coinEntriesFrom = (rows: ReadonlyArray<typeof coinEntry.$inferSelect>) =>
+  rows.flatMap(({ id, kind, amount, ref, at }) =>
+    Option.toArray(decodeCoinEntry({ id, kind, amount, ref, at })),
+  );
+
+const walletFrom = (row: WalletRow | undefined) =>
+  row === undefined
+    ? { balance: 0, care: 0, notes: 0, games: 0 }
+    : {
+        balance: row.balance,
+        ...(row.day === null ? {} : { day: row.day }),
+        care: row.care,
+        notes: row.notes,
+        games: row.games,
+      };
+
+const walletValues = ({ wallet: w }: ActiveRoom): typeof wallet.$inferInsert => ({
+  id: 1,
+  balance: w.balance,
+  day: w.day ?? null,
+  care: w.care,
+  notes: w.notes,
+  games: w.games,
+});
 
 const CatEventJson = Schema.fromJsonString(CatEvent);
 const encodeCatEvent = Schema.encodeSync(CatEventJson);
@@ -124,6 +164,7 @@ const roomFrom = (
   row: RoomRow | undefined,
   catRow: CatRow | undefined,
   inks: ReadonlyArray<string>,
+  walletRow: WalletRow | undefined,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -138,6 +179,7 @@ const roomFrom = (
           lastSeq: row.lastSeq,
           streakDays: row.streakDays,
           inks,
+          wallet: walletFrom(walletRow),
           ...catFrom(catRow),
         },
   );
@@ -170,12 +212,14 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(room),
         db.select().from(cat),
         db.select().from(ownedInk).orderBy(asc(ownedInk.position)),
+        db.select().from(wallet),
       ]).pipe(
-        Effect.map(([[row], [catRow], inks]) =>
+        Effect.map(([[row], [catRow], inks, [walletRow]]) =>
           roomFrom(
             row,
             catRow,
             inks.map(({ inkId }) => inkId),
+            walletRow,
           ),
         ),
         Effect.orDie,
@@ -185,6 +229,7 @@ export const SqliteRoomStore = Layer.effect(
         notes: ReadonlyArray<AppendedNote>,
         catEntries: ReadonlyArray<CatEntry>,
         items: ReadonlyArray<ActivityRow>,
+        coins: ReadonlyArray<CoinEntry>,
       ) =>
         db
           .transaction((tx) =>
@@ -198,6 +243,12 @@ export const SqliteRoomStore = Layer.effect(
               for (const [position, inkId] of state.inks.entries()) {
                 yield* tx.insert(ownedInk).values({ inkId, position }).onConflictDoNothing();
               }
+              const purse = walletValues(state);
+              yield* tx
+                .insert(wallet)
+                .values(purse)
+                .onConflictDoUpdate({ target: wallet.id, set: purse });
+              for (const entry of coins) yield* tx.insert(coinEntry).values(entry);
               for (const { entry, key } of notes) {
                 yield* tx.insert(note).values({
                   seq: entry.seq,
@@ -277,6 +328,32 @@ export const SqliteRoomStore = Layer.effect(
             Effect.map(([row]) => (row === undefined ? Option.none() : catEntryFrom(row))),
             Effect.orDie,
           ),
+      coinEntryById: (id: CoinEntryId) =>
+        db
+          .select()
+          .from(coinEntry)
+          .where(eq(coinEntry.id, id))
+          .pipe(
+            Effect.map((rows) => Option.fromNullishOr(coinEntriesFrom(rows)[0])),
+            Effect.orDie,
+          ),
+      coinEntriesAfter: (after: CoinEntryId | undefined, limit: number) =>
+        Effect.gen(function* () {
+          const [mark] =
+            after === undefined
+              ? []
+              : yield* db
+                  .select({ seq: coinEntry.seq })
+                  .from(coinEntry)
+                  .where(eq(coinEntry.id, after));
+          const rows = yield* db
+            .select()
+            .from(coinEntry)
+            .where(gt(coinEntry.seq, mark?.seq ?? 0))
+            .orderBy(asc(coinEntry.seq))
+            .limit(pageSize(limit));
+          return coinEntriesFrom(rows);
+        }).pipe(Effect.orDie),
       catEntriesAfter: (afterSeq: number, limit: number) =>
         db
           .select()

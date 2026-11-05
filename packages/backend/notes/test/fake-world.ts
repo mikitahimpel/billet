@@ -2,6 +2,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry } from "@billet/contracts-domain/cat";
+import type { CoinEntry } from "@billet/contracts-domain/coins";
 import { countsAsUnread, cursorOf, type ActivityRow } from "@billet/backend-pair-room/activity";
 import { NoteId, UserId, type MediaKey } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -24,6 +25,7 @@ const makeRoom = () => {
   let notes: Array<SequencedNote> = [];
   let nextNote = 0;
   let cat: Array<CatEntry> = [];
+  const coins: Array<CoinEntry> = [];
   const activity = new Map<string, ActivityRow>();
   const marks = new Map<string, ActivityCursor>();
   const newestFirst = () =>
@@ -36,10 +38,12 @@ const makeRoom = () => {
       appended: ReadonlyArray<AppendedNote>,
       catEntries: ReadonlyArray<CatEntry>,
       rows: ReadonlyArray<ActivityRow>,
+      coinEntries: ReadonlyArray<CoinEntry>,
     ) =>
       Effect.sync(() => {
         state = room;
         cat.push(...catEntries);
+        coins.push(...coinEntries);
         for (const row of rows) activity.set(row.id, row);
         for (const { entry, key } of appended) {
           notes.push(entry);
@@ -50,6 +54,12 @@ const makeRoom = () => {
       Effect.sync(() => Option.fromNullishOr(keys.get(`${author}/${key}`))),
     notesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => notes.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
+    coinEntryById: (id) => Effect.sync(() => Option.fromNullishOr(coins.find((e) => e.id === id))),
+    coinEntriesAfter: (after, limit) =>
+      Effect.sync(() => {
+        const at = coins.findIndex((e) => e.id === after);
+        return coins.slice(at + 1, at + 1 + limit);
+      }),
     catEntryById: (id) => Effect.sync(() => Option.fromNullishOr(cat.find((e) => e.id === id))),
     catEntriesAfter: (afterSeq: number, limit: number) =>
       Effect.sync(() => cat.filter(({ seq }) => seq > afterSeq).slice(0, limit)),
@@ -149,6 +159,14 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     inks: (pairId) =>
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
+    coins: (pairId, after, limit) =>
+      Effect.all([roomOf(pairId).state, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
+        Effect.map(([state, entries]) => ({
+          balance: state._tag === "Active" ? state.wallet.balance : 0,
+          entries,
+        })),
+      ),
+    buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),

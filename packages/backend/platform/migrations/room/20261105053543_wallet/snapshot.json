@@ -1,0 +1,808 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "77558b28-53e0-4097-b3d2-71491d1c1a88",
+  "prevIds": [
+    "4e04dfec-5634-4984-b767-7425b2933b9a"
+  ],
+  "ddl": [
+    {
+      "name": "activity",
+      "entityType": "tables"
+    },
+    {
+      "name": "activity_read",
+      "entityType": "tables"
+    },
+    {
+      "name": "cat",
+      "entityType": "tables"
+    },
+    {
+      "name": "cat_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "coin_entry",
+      "entityType": "tables"
+    },
+    {
+      "name": "delivery",
+      "entityType": "tables"
+    },
+    {
+      "name": "note",
+      "entityType": "tables"
+    },
+    {
+      "name": "owned_ink",
+      "entityType": "tables"
+    },
+    {
+      "name": "room",
+      "entityType": "tables"
+    },
+    {
+      "name": "wallet",
+      "entityType": "tables"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "sort_key",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "at",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doer_kind",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "doer_user",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "activity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "user",
+      "entityType": "columns",
+      "table": "activity_read"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "up_to",
+      "entityType": "columns",
+      "table": "activity_read"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "name",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "model",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "coat",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "born_at",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "nature_seed",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "utc_offset_seconds",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "curious",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lazy",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "real",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "cuddly",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_seq",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_at",
+      "entityType": "columns",
+      "table": "cat"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "by",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "at",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "cat_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": true,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "kind",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "amount",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ref",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "at",
+      "entityType": "columns",
+      "table": "coin_entry"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "note_id",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "lane",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "status",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "attempts",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "next_attempt_at",
+      "entityType": "columns",
+      "table": "delivery"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "seq",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "body",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "author",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "idempotency_key",
+      "entityType": "columns",
+      "table": "note"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "ink_id",
+      "entityType": "columns",
+      "table": "owned_ink"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "position",
+      "entityType": "columns",
+      "table": "owned_ink"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pair_id",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_user",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "first_presence",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_user",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "second_presence",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "last_seq",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "streak_days",
+      "entityType": "columns",
+      "table": "room"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "balance",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "day",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "care",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "notes",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "games",
+      "entityType": "columns",
+      "table": "wallet"
+    },
+    {
+      "columns": [
+        "note_id",
+        "lane"
+      ],
+      "nameExplicit": false,
+      "name": "delivery_pk",
+      "entityType": "pks",
+      "table": "delivery"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "activity_pk",
+      "table": "activity",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "user"
+      ],
+      "nameExplicit": false,
+      "name": "activity_read_pk",
+      "table": "activity_read",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "cat_pk",
+      "table": "cat",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "seq"
+      ],
+      "nameExplicit": false,
+      "name": "cat_entry_pk",
+      "table": "cat_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "seq"
+      ],
+      "nameExplicit": false,
+      "name": "coin_entry_pk",
+      "table": "coin_entry",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "seq"
+      ],
+      "nameExplicit": false,
+      "name": "note_pk",
+      "table": "note",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "ink_id"
+      ],
+      "nameExplicit": false,
+      "name": "owned_ink_pk",
+      "table": "owned_ink",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "room_pk",
+      "table": "room",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "wallet_pk",
+      "table": "wallet",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "sort_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "activity_sort_key",
+      "entityType": "indexes",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        {
+          "value": "at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "activity_at",
+      "entityType": "indexes",
+      "table": "activity"
+    },
+    {
+      "columns": [
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "cat_entry_id",
+      "entityType": "indexes",
+      "table": "cat_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "cat_entry_at",
+      "entityType": "indexes",
+      "table": "cat_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "id",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "coin_entry_id",
+      "entityType": "indexes",
+      "table": "coin_entry"
+    },
+    {
+      "columns": [
+        {
+          "value": "author",
+          "isExpression": false
+        },
+        {
+          "value": "idempotency_key",
+          "isExpression": false
+        }
+      ],
+      "isUnique": true,
+      "where": null,
+      "origin": "manual",
+      "name": "note_author_key",
+      "entityType": "indexes",
+      "table": "note"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "cat_single_row",
+      "entityType": "checks",
+      "table": "cat"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "room_single_row",
+      "entityType": "checks",
+      "table": "room"
+    },
+    {
+      "value": "\"id\" = 1",
+      "name": "wallet_single_row",
+      "entityType": "checks",
+      "table": "wallet"
+    }
+  ],
+  "renames": []
+}

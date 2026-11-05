@@ -1,0 +1,17 @@
+{
+  "balance": 65,
+  "entry": {
+    "amount": -60,
+    "at": 1762350060000,
+    "id": "spend:0c9a8b7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d",
+    "kind": "spend",
+    "ref": "ink-rose"
+  },
+  "granted": [
+    "ink-rose"
+  ],
+  "owned": [
+    "ink-graphite",
+    "ink-rose"
+  ]
+}

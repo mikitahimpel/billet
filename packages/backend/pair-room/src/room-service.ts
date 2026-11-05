@@ -1,6 +1,8 @@
-import { Clock, Context, Effect, Layer, Option, Semaphore } from "effect";
+import { Clock, Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
-import type { EpochMillis, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { type CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
+import type { InkId } from "@billet/contracts-domain/inks";
+import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -31,9 +33,16 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "CatEntryAppended":
       case "CatEntryRepeated":
       case "InksGranted":
+      case "CoinsEntered":
+      case "CoinsRepeated":
         return [];
     }
   });
+
+const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =>
+  outputs.flatMap((output) => (output._tag === "CoinsEntered" ? [output.entry] : []));
+
+const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
 const catEntriesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CatEntry> =>
   outputs.flatMap((output) => (output._tag === "CatEntryAppended" ? [output.entry] : []));
@@ -91,6 +100,7 @@ export class RoomService extends Context.Service<RoomService>()(
                 notesIn(decision.outputs),
                 catEntriesIn(decision.outputs),
                 activityOf(decision.outputs, yield* Clock.currentTimeMillis),
+                coinsIn(decision.outputs),
               );
               return decision;
             case "Rejected":
@@ -193,6 +203,23 @@ export class RoomService extends Context.Service<RoomService>()(
           return yield* decideAndCommit({ _tag: "RecordCatEvent", by, at, ...request });
         }).pipe(lock.withPermits(1));
 
+      // Like a cat entry: a repeated `id` answers with the spend already stored, charging nothing.
+      const buy = (by: UserId, id: IdempotencyKey, ink: InkId) =>
+        Effect.gen(function* () {
+          const state = yield* store.load;
+          if (state._tag === "Active") {
+            const earlier = yield* store.coinEntryById(decodeEntryId(`spend:${id}`));
+            if (Option.isSome(earlier)) {
+              return RoomDecision.cases.Accepted.make({
+                state,
+                outputs: [RoomOutput.cases.CoinsRepeated.make({ entry: earlier.value })],
+              });
+            }
+          }
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "Buy", id, by, ink, at });
+        }).pipe(lock.withPermits(1));
+
       /**
        * The cat at the room's clock now, or null while the room is not open. Before adoption, a
        * cat born now, so the answer has one shape.
@@ -225,6 +252,7 @@ export class RoomService extends Context.Service<RoomService>()(
         forgetAuthor,
         saveCat,
         recordCatEvent,
+        buy,
         catView,
         activityPage,
         markActivityRead,
@@ -232,6 +260,7 @@ export class RoomService extends Context.Service<RoomService>()(
         state: store.load,
         notesAfter: store.notesAfter,
         catEntriesAfter: store.catEntriesAfter,
+        coinEntriesAfter: store.coinEntriesAfter,
       };
     }),
   },
