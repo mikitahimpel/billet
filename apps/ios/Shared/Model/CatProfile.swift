@@ -10,7 +10,7 @@ nonisolated enum CatProfile {
     /// Stands for the cat's name in bundled copy, such as DateIdeas.json.
     static let placeholder = "{cat}"
 
-    static var store: UserDefaults { UserDefaults(suiteName: AppGroup.id) ?? .standard }
+    static let store = UserDefaults(suiteName: AppGroup.id) ?? .standard
 
     static func name(in defaults: UserDefaults = store) -> String {
         let saved = defaults.string(forKey: nameKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

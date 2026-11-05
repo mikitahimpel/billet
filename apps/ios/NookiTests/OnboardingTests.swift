@@ -46,7 +46,8 @@ private func makeFlow(
     let flow = OnboardingFlow(
         client: client,
         report: { [sent] (events) async throws(TransportError) in sent.events.withLock { $0.append(contentsOf: events) } },
-        queue: AnswerQueue(file: file), defaults: defaults, catNames: defaults, canInvite: canInvite, bundled: catalogue,
+        queue: AnswerQueue(file: file), defaults: defaults, catNames: defaults, canInvite: canInvite,
+        bundled: catalogue,
         now: { Date(timeIntervalSince1970: 1_000) })
     return (flow, defaults, file)
 }
@@ -135,7 +136,8 @@ struct OnboardingFlowTests {
         let coated = OnboardingFlow(
             client: .offline, report: { (_) async throws(TransportError) in }, queue: AnswerQueue(
                 file: URL.temporaryDirectory.appending(path: "coat-\(UUID().uuidString)/a.json")),
-            defaults: defaults, canInvite: false, bundled: OnboardingResponse(version: "v1", steps: []),
+            defaults: defaults, catNames: defaults, canInvite: false,
+            bundled: OnboardingResponse(version: "v1", steps: []),
             coatChanged: { changes += 1 })
         coated.start()
         #expect(coated.page == .catCoat)
