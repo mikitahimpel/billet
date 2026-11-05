@@ -44,6 +44,7 @@ public enum Routes {
   public static let earnCoins = Route(.post, "/v1/coins/earn")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
+  public static let getDateCatalog = Route(.get, "/v1/dates/catalog")
   public static let reportEvents = Route(.post, "/v1/events")
   public static let getOnboarding = Route(.get, "/v1/onboarding")
   public static let saveOnboardingAnswer = Route(.post, "/v1/onboarding/answers")

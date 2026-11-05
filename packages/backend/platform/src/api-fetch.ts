@@ -6,6 +6,7 @@ import { AccountDeletion } from "@billet/backend-account/account-deletion";
 import { AccountRoutes } from "@billet/backend-account/account-routes";
 import { AuthRoutes } from "@billet/backend-auth/auth-routes";
 import { AuthService } from "@billet/backend-auth/auth-service";
+import { DatesRoutes } from "@billet/backend-dates/dates-routes";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsRoutes } from "@billet/backend-flags/flags-routes";
 import { FlagsService } from "@billet/backend-flags/flags-service";
@@ -70,6 +71,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     CatRoutes,
     ReactionRoutes,
     FlagsRoutes,
+    DatesRoutes,
     MetricsRoutes,
     PaymentsRoutes,
     OnboardingRoutes,

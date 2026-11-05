@@ -44,6 +44,8 @@ let roundTrips: [String: RoundTrip] = [
   "ApiError": codec(ApiError.self),
   "Ink": codec(Ink.self),
   "InksResponse": codec(InksResponse.self),
+  "DateIdea": codec(DateIdea.self),
+  "DateCatalogResponse": codec(DateCatalogResponse.self),
   "CoinEntry": codec(CoinEntry.self),
   "CoinsResponse": codec(CoinsResponse.self),
   "BuyRequest": codec(BuyRequest.self),

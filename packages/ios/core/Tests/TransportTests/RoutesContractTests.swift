@@ -54,6 +54,7 @@ import Testing
       "earnCoins": Routes.earnCoins,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
+      "getDateCatalog": Routes.getDateCatalog,
       "getCat": Routes.getCat,
       "saveCat": Routes.saveCat,
       "listCatJournal": Routes.listCatJournal,

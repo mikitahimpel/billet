@@ -71,6 +71,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/coins",
       },
+      "getDateCatalog": {
+        "method": "GET",
+        "path": "/v1/dates/catalog",
+      },
       "getFlags": {
         "method": "GET",
         "path": "/v1/flags",

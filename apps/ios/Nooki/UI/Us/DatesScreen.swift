@@ -97,7 +97,7 @@ struct DatesScreen: View {
                         Button {
                             planner = PlannerTarget(ideaID: idea.id)
                         } label: {
-                            DateScenePicture(scene: idea.scene)
+                            DateScenePicture(art: idea.art)
                                 .overlay(alignment: .bottomLeading) {
                                     Text(idea.title)
                                         .font(.nookiMicro)
@@ -160,7 +160,7 @@ struct DatesScreen: View {
                 .padding(.bottom, 32)
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
-                .background { DateScenePicture(scene: .plans) }
+                .background { DateScenePicture() }
                 .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
 
                 UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
@@ -477,7 +477,7 @@ private struct DateIdeaCard: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-        DateScenePicture(scene: idea.scene)
+        DateScenePicture(art: idea.art)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(idea.title)
@@ -518,14 +518,26 @@ private struct DateIdeaCard: View {
 
 /// A date scene filling its frame, darkened at the bottom so white text on it stays readable.
 private struct DateScenePicture: View {
-    let scene: DateIdea.Scene
+    /// An idea's picture, fetched from the server; nil for the Plans backdrop, which ships with the app.
+    var art: DateIdea.Art?
+
+    /// The pictures are immutable, so `URLCache` keeps them across launches. A build without a server shows only
+    /// each picture's colour.
+    private static let host = Backend.baseURL(host: Bundle.main.object(forInfoDictionaryKey: Backend.infoKey) as? String)
 
     var body: some View {
-        Color(hex: 0x6B4A35)
+        Color(hex: art.flatMap { UInt32($0.color.dropFirst(), radix: 16) } ?? 0x6B4A35)
             .overlay {
-                Image(decorative: scene.imageName)
-                    .resizable()
-                    .scaledToFill()
+                if let art {
+                    AsyncImage(url: Self.host?.appending(path: art.path),
+                               transaction: Transaction(animation: .easeOut(duration: 0.2))) { phase in
+                        phase.image?.resizable().scaledToFill()
+                    }
+                } else {
+                    Image(decorative: "DateScene-plans")
+                        .resizable()
+                        .scaledToFill()
+                }
             }
             .overlay {
                 LinearGradient(stops: [.init(color: .clear, location: 0.35),

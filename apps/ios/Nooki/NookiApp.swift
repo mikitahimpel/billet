@@ -11,6 +11,8 @@ struct NookiApp: App {
 
     init() {
         NavigationBarStyle.apply()
+        // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
+        URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline
@@ -59,6 +61,7 @@ struct NookiApp: App {
                     }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
                     .task { session?.signIn.appeared() }
+                    .task { await session?.refreshDateCatalog() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }

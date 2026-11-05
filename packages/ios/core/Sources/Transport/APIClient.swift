@@ -70,6 +70,8 @@ public struct APIClient: Sendable {
     @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse
   /// Pays something the couple did in the app, once per ref and within the day's cap.
   public var earnCoins: @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse
+  /// Every date idea. Needs no session.
+  public var dateCatalog: @Sendable () async throws(TransportError) -> DateCatalogResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -158,7 +160,10 @@ public struct APIClient: Sendable {
     earnCoins:
       @escaping @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse = {
         (_) async throws(TransportError) in throw .network("offline")
-      }
+      },
+    dateCatalog: @escaping @Sendable () async throws(TransportError) -> DateCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -192,6 +197,7 @@ public struct APIClient: Sendable {
     self.openGift = openGift
     self.claimBonus = claimBonus
     self.earnCoins = earnCoins
+    self.dateCatalog = dateCatalog
   }
 }
 
@@ -367,6 +373,10 @@ extension APIClient {
       earnCoins: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.earnCoins, signed: true, body: body), as: EarnResponse.self)
+      },
+      dateCatalog: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getDateCatalog, signed: false), as: DateCatalogResponse.self)
       })
   }
 }
