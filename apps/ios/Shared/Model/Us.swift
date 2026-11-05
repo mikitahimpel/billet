@@ -166,6 +166,12 @@ struct DateIdea: Identifiable, Codable, Hashable {
     enum Cost: String, Codable, CaseIterable { case free, cheap = "$", nice = "$$" }
     enum Length: String, Codable, CaseIterable { case hour = "1h", evening, day }
     enum Season: String, Codable { case any, spring, summer, autumn, winter }
+    /// The card's background picture, `DateScene-<scene>` in the app's asset catalog.
+    enum Scene: String, Codable, CaseIterable {
+        case movie, kitchen, cozy, games, craft, cafe, city, nature, night, winter, apart, plans
+
+        var imageName: String { "DateScene-\(rawValue)" }
+    }
 
     let id: Int
     private let rawTitle: String
@@ -174,12 +180,13 @@ struct DateIdea: Identifiable, Codable, Hashable {
     let cost: Cost
     let time: Length
     let season: Season
+    let scene: Scene
 
     var title: String { CatProfile.named(rawTitle) }
     var pitch: String { CatProfile.named(rawPitch) }
 
     private enum CodingKeys: String, CodingKey {
-        case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season
+        case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season, scene
     }
 
     static let all: [DateIdea] = {
