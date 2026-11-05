@@ -22,15 +22,15 @@ struct StreakCard: View {
                 Flame(days: days, lit: status == .done)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Love streak")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                     Text(days == 1 ? "1 day" : "\(days) days")
-                        .font(.system(size: 28, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(Ink.primary)
+                        .font(.nookiTitle.monospacedDigit())
+                        .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
                     Text(caption(status, now: now))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 }
                 Spacer(minLength: 0)
@@ -42,34 +42,30 @@ struct StreakCard: View {
                     withAnimation(.snappy(duration: 0.3)) { store.restore() }
                 } label: {
                     Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Capsule().fill(.honeyGradient))
                 }
-                .buttonStyle(.plain)
+                .nookiPrimary()
             }
 
             HStack(spacing: 10) {
                 Badge(reached: milestone.reached)
                 Spacer(minLength: 0)
                 Label("Best \(streak.best)", systemImage: "trophy.fill")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption.monospacedDigit())
+                    .foregroundStyle(Ink.textSecondary)
             }
 
             if let next = milestone.next {
                 VStack(alignment: .leading, spacing: 6) {
                     ProgressCapsule(value: Double(days) / Double(next))
                     Text("\(next - days) to the \(next)-day badge")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.textSecondary)
                 }
             }
         }
-        .padding(16)
-        .glass(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(Space.l)
+        .usCard()
         .animation(.snappy(duration: 0.3), value: days)
     }
 
@@ -133,10 +129,10 @@ private struct StatusPill: View {
 
     private func pill(_ title: String, symbol: String, tint: Color) -> some View {
         Label(title, systemImage: symbol)
-            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .font(.nookiMicro)
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
-            .frame(height: 28)
+            .frame(minHeight: 28)
             .background(tint.opacity(0.18), in: .capsule)
     }
 }
@@ -150,10 +146,10 @@ private struct Badge: View {
             Image(systemName: reached == nil ? "lock.fill" : "rosette")
             Text(reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days")
         }
-        .font(.system(size: 13, weight: .bold, design: .rounded))
-        .foregroundStyle(reached == nil ? Ink.secondary : Color.honey)
+        .font(.nookiMicro)
+        .foregroundStyle(reached == nil ? Ink.textSecondary : Ink.accentText)
         .padding(.horizontal, 10)
-        .frame(height: 28)
-        .background((reached == nil ? Color.white : Color.honey).opacity(0.14), in: .capsule)
+        .frame(minHeight: 28)
+        .background(reached == nil ? Ink.surfaceRaised : Color.honey.opacity(0.18), in: .capsule)
     }
 }

@@ -5,6 +5,8 @@ import SwiftUI
 struct FeaturedCard: View {
     let state: HomeState
     let offer: FeaturedOffer
+    /// Opens the set's sheet.
+    var openSet: (FeaturedOffer) -> Void = { _ in }
 
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.owned) }
     private var items: [ShopItem] { offer.itemIDs.compactMap(Catalog.item) }
@@ -32,9 +34,14 @@ struct FeaturedCard: View {
                 Spacer(minLength: 0)
             }
 
-            art
-                .frame(maxWidth: .infinity)
-                .frame(height: 150)
+            Button { openSet(offer) } label: {
+                art
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 150)
+                    .contentShape(.rect)
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityLabel("\(offer.name), see the pieces")
 
             HStack(alignment: .center, spacing: Space.m) {
                 VStack(alignment: .leading, spacing: 2) {

@@ -55,7 +55,7 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureMoments, FeatureOnboarding, FeaturePairing, WidgetBridge]
+        products: [FeatureCanvas, FeatureGames, FeatureMoments, FeatureOnboarding, FeaturePairing, WidgetBridge]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
