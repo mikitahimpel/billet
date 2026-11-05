@@ -16,8 +16,8 @@ struct SetSheet: View {
     @State private var height: CGFloat = 600
 
     private var items: [ShopItem] { pieces.itemIDs.compactMap(Catalog.item) }
-    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: pieces, owned: state.owned) }
-    private var affordable: Bool { quote.map { state.coins >= $0.price } ?? false }
+    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: pieces, owned: state.shop.owned) }
+    private var affordable: Bool { quote.map { state.shop.coins >= $0.price } ?? false }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.l) {
@@ -65,7 +65,7 @@ struct SetSheet: View {
                 }
                 .frame(width: centre ? 136 : 96, height: centre ? 136 : 96)
                 .zIndex(centre ? 1 : 0)
-                .opacity(state.owned.contains(item.id) ? 0.45 : 1)
+                .opacity(state.shop.owned.contains(item.id) ? 0.45 : 1)
             }
         }
         .padding(.horizontal, Space.m)
@@ -76,7 +76,7 @@ struct SetSheet: View {
     }
 
     private func row(_ item: ShopItem) -> some View {
-        let owned = state.owned.contains(item.id)
+        let owned = state.shop.owned.contains(item.id)
         return HStack(spacing: Space.m) {
             RarityFrame(rarity: item.rarity) {
                 if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
@@ -100,7 +100,7 @@ struct SetSheet: View {
                     .font(.nookiCallout)
                     .foregroundStyle(Ink.textSecondary)
             } else {
-                CoinPrice(price: state.price(of: item))
+                CoinPrice(price: state.shop.price(of: item))
                     .font(.nookiCallout)
                     .foregroundStyle(Ink.textSecondary)
             }
@@ -119,7 +119,7 @@ struct SetSheet: View {
                             CoinPrice(price: quote.price, was: quote.sum)
                         } else {
                             Image(systemName: "lock.fill")
-                            Text("Need \(quote.price - state.coins) more coins").monospacedDigit()
+                            Text("Need \(quote.price - state.shop.coins) more coins").monospacedDigit()
                         }
                     }
                     .lineLimit(1)
@@ -152,7 +152,7 @@ struct SetSheet: View {
     }
 
     private func buy() {
-        guard state.buy(pieces) else { return }
+        guard state.shop.buy(pieces) else { return }
         // The purchase moment plays over the app once the sheet is out of the way.
         Task {
             try? await Task.sleep(for: .milliseconds(350))

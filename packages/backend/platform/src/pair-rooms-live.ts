@@ -8,6 +8,7 @@ import { CatEntry } from "@billet/contracts-domain/cat";
 import { ActivityResponse } from "@billet/contracts-http-api/activity";
 import { CatResponse } from "@billet/contracts-http-api/cat";
 import { CoinsResponse } from "@billet/contracts-http-api/coins";
+import { ShopResponse } from "@billet/contracts-http-api/shop";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
@@ -21,6 +22,7 @@ const decodeActivity = Schema.decodeUnknownEffect(ActivityResponse);
 const decodeUnread = Schema.decodeUnknownEffect(Schema.Int);
 const decodeInks = Schema.decodeUnknownEffect(Schema.Array(InkId));
 const decodeCoins = Schema.decodeUnknownEffect(CoinsResponse);
+const decodeShop = Schema.decodeUnknownEffect(ShopResponse);
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
@@ -51,6 +53,11 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).coins(after, limit), decodeCoins),
         buy: (pairId, by, id, ink) =>
           callRoom(() => rooms.getByName(pairId).buy(by, id, ink), decodeDecision),
+        shop: (pairId) => callRoom(() => rooms.getByName(pairId).shop(), decodeShop),
+        order: (pairId, by, id, offer) =>
+          callRoom(() => rooms.getByName(pairId).order(by, id, offer), decodeDecision),
+        setWish: (pairId, by, item, wished) =>
+          callRoom(() => rooms.getByName(pairId).setWish(by, item, wished), decodeDecision),
         notesAfter: (pairId, afterSeq, limit) =>
           callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
         forgetMember: (pairId, user) =>

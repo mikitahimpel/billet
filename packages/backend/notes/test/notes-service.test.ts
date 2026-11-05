@@ -352,7 +352,7 @@ describe("sendNote", () => {
         );
         const seed = Schema.decodeUnknownSync(NatureSeed)("7");
         yield* pairRooms.saveCat(pairA, ana, { name: catName, look, utcOffsetSeconds: 0 }, seed);
-        // Four wins (40) and four notes (20) make 60, the price of rose.
+        // The note before the cat (5), four wins (40) and four notes (20): 65, rose costs 60.
         for (let n = 0; n < 4; n++) {
           yield* pairRooms.recordCatEvent(pairA, ben, {
             id: newKey(),
@@ -376,17 +376,17 @@ describe("sendNote", () => {
     if (Exit.isSuccess(outcome)) {
       const { broke, earned, bought, retried, twice, after } = outcome.value;
       expect(broke).toEqual(new NotEnoughCoins({ needed: 60, have: 0 }));
-      expect(earned.balance).toBe(60);
-      expect(earned.entries.map((e) => e.kind)).toEqual(Array(8).fill("earn"));
+      expect(earned.balance).toBe(65);
+      expect(earned.entries.map((e) => e.kind)).toEqual(Array(9).fill("earn"));
       expect(bought).toMatchObject({
         entry: { kind: "spend", amount: -60, ref: rose },
-        balance: 0,
+        balance: 5,
         granted: [rose],
         owned: [freeInk, rose],
       });
       expect(retried).toEqual(bought);
-      expect(twice).toEqual(new AlreadyOwned({ ink: rose }));
-      expect(after).toEqual({ balance: 0, entries: [bought.entry] });
+      expect(twice).toEqual(new AlreadyOwned({ itemId: rose }));
+      expect(after).toEqual({ balance: 5, entries: [bought.entry] });
     }
   });
 

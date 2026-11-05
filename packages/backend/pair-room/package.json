@@ -15,7 +15,8 @@
     "./room-decision": "./src/room-decision.ts",
     "./room-service": "./src/room-service.ts",
     "./room-state": "./src/room-state.ts",
-    "./room-store": "./src/room-store.ts"
+    "./room-store": "./src/room-store.ts",
+    "./shop-view": "./src/shop-view.ts"
   },
   "scripts": {
     "lint": "oxlint .",

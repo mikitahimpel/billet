@@ -119,6 +119,16 @@ final class ServerSession {
                          receiving: photoReceiving)
     }
 
+    /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
+    func pair() async throws(TransportError) -> PairResponse {
+        try await backend.api.pair()
+    }
+
+    /// The pair's shop in its room; nil until this account has a partner.
+    var shopSync: ShopSync? {
+        isPaired ? .live(backend.api) : nil
+    }
+
     /// Sends the text notes written here to the partner and keeps theirs in `notes` as from `partner`; nil until this
     /// account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {

@@ -16,8 +16,8 @@ export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
   readonly have: number;
 }> {}
 
-/** A buy of an ink the pair already owns. */
-export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly ink: InkId }> {}
+/** A buy of something the pair already owns: an ink, a piece, or every piece of a set. */
+export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly itemId: string }> {}
 
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{

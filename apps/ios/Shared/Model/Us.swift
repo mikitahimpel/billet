@@ -267,7 +267,7 @@ final class UsStore {
         var swipes: [String: [Int: Bool]]
     }
 
-    init(wallet: WalletStore = WalletStore(), file: String = "Us/us.json") {
+    init(wallet: WalletStore, file: String = "Us/us.json") {
         self.wallet = wallet
         self.file = file
         reload()

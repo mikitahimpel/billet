@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { RoomItemId } from "@billet/contracts-domain/shop";
 import { NatureSeed } from "@billet/contracts-domain/cat";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
@@ -36,6 +37,8 @@ const photo = () =>
 
 const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
 const sea = Schema.decodeUnknownSync(InkId)("ink-sea");
+const tower = Schema.decodeUnknownSync(RoomItemId)("tower");
+const yarn = Schema.decodeUnknownSync(RoomItemId)("yarn");
 const text = (ink: InkId) => SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
@@ -144,7 +147,9 @@ describe("PairRoom storage", () => {
       lastSeq: 1,
       streakDays: 4,
       inks: [],
-      wallet: { balance: 0, care: 0, notes: 0, games: 0 },
+      items: [],
+      wishlist: [],
+      wallet: { balance: 10, day: expect.anything(), care: 0, notes: 10, games: 0 },
     });
     await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
@@ -169,6 +174,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_owned_ink"),
       expect.stringContaining("_wallet"),
       expect.stringContaining("_reactions"),
+      expect.stringContaining("_shop"),
     ]);
   });
 
@@ -182,6 +188,27 @@ describe("PairRoom storage", () => {
     await evictDurableObject(room);
     expect(await room.inks()).toEqual([rose, sea]);
     expect(await room.sendNote(bob, text(sea))).toMatchObject({ _tag: "Accepted" });
+  });
+
+  it("keeps the pair's pieces and wishlist across eviction", async () => {
+    const room = await openRoom();
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec(
+        "INSERT OR REPLACE INTO wallet (id, balance, care, notes, games) VALUES (1, 1000, 0, 0, 0)",
+      );
+    });
+    await room.setWish(alice, tower, true);
+    await room.setWish(bob, yarn, true);
+    expect(await room.order(bob, newKey(), { _tag: "Item", item: tower })).toMatchObject({
+      _tag: "Accepted",
+    });
+    await evictDurableObject(room);
+    expect(await room.shop()).toEqual({
+      balance: 460,
+      inks: [freeInk],
+      items: ["lamp", "rug", tower],
+      wishlist: [yarn],
+    });
   });
 
   it("refuses a text note in an ink the pair has not bought", async () => {

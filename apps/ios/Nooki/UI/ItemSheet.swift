@@ -21,9 +21,9 @@ struct ItemSheet: View {
     /// On a short screen the stage gives up some height so the sheet fits without scrolling.
     @State private var tight = false
 
-    private var cost: Int { state.price(of: item) }
-    private var affordable: Bool { state.coins >= cost }
-    private var owned: Bool { state.owned.contains(item.id) }
+    private var cost: Int { state.shop.price(of: item) }
+    private var affordable: Bool { state.shop.coins >= cost }
+    private var owned: Bool { state.shop.owned.contains(item.id) }
     private var isDeal: Bool { cost < item.price }
 
     var body: some View {
@@ -171,7 +171,7 @@ struct ItemSheet: View {
                 CoinPrice(price: cost, was: isDeal ? item.price : nil)
             } else {
                 Image(systemName: "lock.fill")
-                Text("Need \(cost - state.coins) more")
+                Text("Need \(cost - state.shop.coins) more")
                     .monospacedDigit()
             }
         }
@@ -180,7 +180,7 @@ struct ItemSheet: View {
     }
 
     private func buy() {
-        guard state.buy(item) else { return }
+        guard state.shop.buy(item) else { return }
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
         withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }

@@ -11,7 +11,7 @@ struct BundleCard: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var items: [ShopItem] { bundle.itemIDs.compactMap(Catalog.item) }
-    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: bundle, owned: state.owned) }
+    private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: bundle, owned: state.shop.owned) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
@@ -71,11 +71,11 @@ struct BundleCard: View {
                     }
                     .frame(width: 72, height: 72)
                     .overlay(alignment: .bottomTrailing) {
-                        if state.owned.contains(item.id) { OwnedCheck().offset(x: 4, y: 4) }
+                        if state.shop.owned.contains(item.id) { OwnedCheck().offset(x: 4, y: 4) }
                     }
                 }
                 .buttonStyle(PressScaleStyle())
-                .accessibilityLabel(item.name + (state.owned.contains(item.id) ? ", owned" : ""))
+                .accessibilityLabel(item.name + (state.shop.owned.contains(item.id) ? ", owned" : ""))
             }
         }
     }

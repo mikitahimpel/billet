@@ -22,9 +22,11 @@ import {
   coinEntry,
   note,
   ownedInk,
+  ownedItem,
   reaction,
   room,
   wallet,
+  wish,
 } from "./room-schema.ts";
 
 /** The Drizzle handle of the Durable Object that owns this runtime, already migrated. */
@@ -182,6 +184,8 @@ const roomFrom = (
   row: RoomRow | undefined,
   catRow: CatRow | undefined,
   inks: ReadonlyArray<string>,
+  items: ReadonlyArray<string>,
+  wishlist: ReadonlyArray<string>,
   walletRow: WalletRow | undefined,
 ): RoomState =>
   decodeRoom(
@@ -198,6 +202,8 @@ const roomFrom = (
           streakDays: row.streakDays,
           ...(row.lastReactionRev === null ? {} : { lastReactionRev: row.lastReactionRev }),
           inks,
+          items,
+          wishlist,
           wallet: walletFrom(walletRow),
           ...catFrom(catRow),
         },
@@ -232,13 +238,17 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(room),
         db.select().from(cat),
         db.select().from(ownedInk).orderBy(asc(ownedInk.position)),
+        db.select().from(ownedItem).orderBy(asc(ownedItem.position)),
+        db.select().from(wish).orderBy(asc(wish.position)),
         db.select().from(wallet),
       ]).pipe(
-        Effect.map(([[row], [catRow], inks, [walletRow]]) =>
+        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow]]) =>
           roomFrom(
             row,
             catRow,
             inks.map(({ inkId }) => inkId),
+            items.map(({ itemId }) => itemId),
+            wishes.map(({ itemId }) => itemId),
             walletRow,
           ),
         ),
@@ -263,6 +273,13 @@ export const SqliteRoomStore = Layer.effect(
               // Inks are only ever added, so the ones already stored keep their place.
               for (const [position, inkId] of state.inks.entries()) {
                 yield* tx.insert(ownedInk).values({ inkId, position }).onConflictDoNothing();
+              }
+              for (const [position, itemId] of state.items.entries()) {
+                yield* tx.insert(ownedItem).values({ itemId, position }).onConflictDoNothing();
+              }
+              yield* tx.delete(wish);
+              for (const [position, itemId] of state.wishlist.entries()) {
+                yield* tx.insert(wish).values({ itemId, position });
               }
               const purse = walletValues(state);
               yield* tx

@@ -1,3 +1,4 @@
+import { RoomItemId } from "@billet/contracts-domain/shop";
 import { Schema } from "effect";
 import { CatProfile } from "@billet/contracts-domain/cat";
 import { IdempotencyKey, MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
@@ -33,6 +34,8 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   lastSeq: 0,
   streakDays: 0,
   inks: [],
+  items: [],
+  wishlist: [],
   wallet: emptyWallet,
 });
 
@@ -53,6 +56,7 @@ export const uuid = (n: number) =>
   Schema.decodeSync(IdempotencyKey)(`00000000-0000-4000-8000-${String(n).padStart(12, "0")}`);
 export const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
 export const sea = Schema.decodeUnknownSync(InkId)("ink-sea");
+export const tower = Schema.decodeUnknownSync(RoomItemId)("tower");
 
 export const textFrom = (author: UserId, ink: InkId, id = "note-1"): Note =>
   Note.cases.Text.make({

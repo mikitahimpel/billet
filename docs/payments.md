@@ -81,18 +81,29 @@ the phone adds coins.
   a day), a note 5 and a photo 10 (notes, 30 a day), a game won 10 and lost 3 (games, 40 a day);
   sleep and shooing earn nothing. The entry that crosses a cap is cut to what is left. The day is
   the cat's local day (`utcOffsetSeconds`), so the caps reset at the couple's midnight. A note
-  sent before the cat is adopted is not journalled, so it earns nothing.
+  sent before the cat is adopted is not journalled but earns all the same, as `earn:<note id>` on
+  the UTC day.
 - **Buying:** `POST /v1/shop/buy {id, item}` (session, paired) buys one ink at its catalog price;
   the client never sends a price. The room takes the coins (`spend:<id>`, a negative amount) and
   adds the ink in one decision, and answers `BuyResponse {entry, balance, granted, owned}`. A retry
   with the same `id` answers with the first buy and charges nothing. `409 NotEnoughCoins {needed,
   have}` and `409 AlreadyOwned {itemId}` (also for the free ink) refuse it; an ink the catalog
   does not sell is a `400 InvalidRequest`.
+- **The shop:** the furniture catalog (`roomItems`, `bundles`, `featuredSets`, `treatPrice`) is in
+  `@billet/contracts-domain/shop`; every room starts with `starterItems`. `GET /v1/shop` answers
+  `ShopResponse {balance, inks, items, wishlist}`. `POST /v1/shop/orders {id, offer}` buys an ink,
+  a room piece, a set's missing pieces at the set price, or a treat; the room prices it, takes
+  `spend:<id>`, adds what was bought, drops it from the wishlist and answers `OrderResponse {entry,
+  shop}`. The week's featured set sells at half price, and its week is read 12 hours either side of
+  the order so a couple in any time zone gets the week they see. A set with nothing missing or an
+  item already owned is `409 AlreadyOwned {itemId}`, a set that is not on sale this week `409
+  NotOffered`. `PUT /v1/shop/wishlist {item, wished}` answers the new `ShopResponse`. All are
+  `no-store`. A paired app mirrors the room in its wallet file and earns nothing on the phone.
 - **`GET /v1/coins?after=<entry id>&limit=<1-100>`:** `CoinsResponse {balance, entries}`, oldest
   first, `no-store`.
 - **Bought coins** (`coin_ledger` in D1, through `/v1/purchases*`) are not in this wallet yet. They
   join it when payments are switched on; until then the flag is off and nothing is bought.
-- **Still to come:** shop offers, the daily gift, undo, Inbox items for buys, and a
+- **Still to come:** daily deals, the daily gift, collection bonuses, undo, Inbox items for buys, and a
   `CoinsChanged` message on the room socket. Until then the app reads `GET /v1/coins` again after a
   buy or a care action.
 
@@ -269,10 +280,8 @@ balance never goes below 0. If it took less than the pack, the purchase is flagg
 copies of the same refund apply once.
 
 This D1 ledger counts only bought coins. The pair's wallet (coins earned in play plus coins bought,
-minus coins spent in the shop) moves to the server next, in the pair's `PairRoom` next to the
-cat's journal; until then coins are earned and spent in the app. A pair that spent its coins and
-then got a refund keeps them on the server's side; a refund only finds fewer coins than the pack
-once spending moves to the server.
+minus coins spent in the shop) is in the pair's `PairRoom`, next to the cat's journal; a phone
+with no partner keeps its own. Bought coins join the room's wallet when payments are switched on.
 
 ### App Store Server Notifications
 

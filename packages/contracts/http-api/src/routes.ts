@@ -31,6 +31,8 @@ export const routes = {
   createInvite: route("POST", "/v1/invites"),
   claimInvite: route("POST", "/v1/invites/claim"),
   unpair: route("DELETE", "/v1/pair"),
+  /** The caller's pair and both members. 404 while the caller has no partner. */
+  getPair: route("GET", "/v1/pair"),
   uploadImage: route("POST", "/v1/media"),
   /** A media key has slashes in it, so it is the rest of the path: see `mediaPath`. */
   downloadImage: route("GET", "/v1/media/*"),
@@ -68,6 +70,12 @@ export const routes = {
   getCoins: route("GET", "/v1/coins"),
   /** Buys one item with the pair's coins. */
   buyItem: route("POST", "/v1/shop/buy"),
+  /** The pair's balance, inks, room pieces and wishlist. */
+  getShop: route("GET", "/v1/shop"),
+  /** Buys one offer (an ink, a piece, a set or a treat) with the pair's coins. */
+  placeOrder: route("POST", "/v1/shop/orders"),
+  /** Adds a piece to the pair's wishlist or takes it off. */
+  setWish: route("PUT", "/v1/shop/wishlist"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
