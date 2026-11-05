@@ -11,7 +11,7 @@ import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-
 import {
   StoredNotification,
   StoredPurchase,
-  StoredStampEntry,
+  StoredPurchaseEntry,
 } from "@billet/backend-payments/payments-repository";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
@@ -39,7 +39,7 @@ import {
   purchases,
   pushTokens,
   rateLimits,
-  stampLedger,
+  coinLedger,
   users,
 } from "../src/directory-schema.ts";
 import {
@@ -96,7 +96,7 @@ const checked = [
   ["purchases", purchases, StoredPurchase],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
-  ["stamp_ledger", stampLedger, StoredStampEntry],
+  ["coin_ledger", coinLedger, StoredPurchaseEntry],
   ["cat", cat, StoredCat],
   ["cat_entry", catEntry, StoredCatEntry],
   ["delivery", delivery, StoredDelivery],

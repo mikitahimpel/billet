@@ -183,6 +183,20 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
+  // The server's switch for buying coins (docs/payments.md, `payments.enabled`). Off: the
+  // purchase routes answer 404 and the app offers no coin packs. Draft, so it stays off on every
+  // stage until the owner overrides it for a test pair or starts it with `on` weighted.
+  {
+    key: "payments",
+    kind: "flag",
+    description:
+      "Whether coins can be bought for money (the purchase routes and the shop's packs).",
+    variants: { off: 1, on: 0 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
   {
     key: "home-layout",
     kind: "flag",

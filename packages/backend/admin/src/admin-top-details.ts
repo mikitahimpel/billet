@@ -13,7 +13,7 @@ export interface DetailRow {
 export interface TopDetail {
   readonly detail: string;
   readonly count: number;
-  /** The sum of the values, a price in stamps. Only for names that carry one. */
+  /** The sum of the values, a price in coins. Only for names that carry one. */
   readonly total?: number;
 }
 
