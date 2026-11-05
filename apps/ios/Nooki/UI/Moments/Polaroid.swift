@@ -109,7 +109,7 @@ struct PaperSheet: View {
                 Image(uiImage: PaperGrain.tile)
                     .resizable(resizingMode: .tile)
                     .blendMode(.multiply)
-                    .opacity(0.55)
+                    .opacity(0.4)
                     .clipShape(.rect(cornerRadius: cornerRadius))
                     .allowsHitTesting(false)
             }

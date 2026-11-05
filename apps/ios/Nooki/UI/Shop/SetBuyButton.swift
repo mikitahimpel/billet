@@ -9,7 +9,6 @@ struct SetBuyButton<Pieces: PieceSet>: View {
     var ownedInk: Color = Ink.text
 
     @State private var confirming = false
-    @State private var purchases = 0
 
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: set, owned: state.owned) }
 
@@ -29,10 +28,9 @@ struct SetBuyButton<Pieces: PieceSet>: View {
                     .foregroundStyle(ownedInk)
             }
         }
-        .haptic(.success, trigger: purchases)
         .confirmationDialog(dialogTitle, isPresented: $confirming, titleVisibility: .visible) {
             Button("Buy for \(quote?.price ?? 0) coins") {
-                if state.buy(set) { purchases += 1 }
+                state.buy(set)
             }
             Button("Not now", role: .cancel) {}
         }
