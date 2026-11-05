@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox top-left; top-right the
-/// coins, then the couple's avatars in the corner, which open the profile. Nothing else sits in it.
+/// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox and "How are you?"
+/// top-left; top-right the coins, then the couple's avatars in the corner, which open the profile. Nothing else sits
+/// in it.
 struct AppHeader: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over, from the profile's settings.
     var erase: () -> Void
     @State private var pairing = false
+    @State private var checkingIn = false
     @Namespace private var zoom
     @Environment(ServerSession.self) private var session: ServerSession?
 
@@ -15,6 +17,7 @@ struct AppHeader: View {
             InboxButton(unread: session?.inbox.unread ?? 0) {
                 state.showsInbox = true
             }
+            MoodButton(state: state) { checkingIn = true }
 
             Spacer(minLength: 0)
 
@@ -29,9 +32,7 @@ struct AppHeader: View {
             Button { state.showsProfile = true } label: {
                 HStack(spacing: -10) {
                     Monogram(partner: state.partners.0, profile: state.profile)
-                        .overlay(alignment: .topLeading) { moodBadge(state.partners.0) }
                     Monogram(partner: state.partners.1, profile: state.profile)
-                        .overlay(alignment: .topTrailing) { moodBadge(state.partners.1) }
                 }
                 .overlay(alignment: .bottom) {
                     Image(systemName: "heart.fill")
@@ -64,6 +65,9 @@ struct AppHeader: View {
                 .presentationDragIndicator(.visible)
                 .navigationTransition(.zoom(sourceID: "profile", in: zoom))
         }
+        .sheet(isPresented: $checkingIn) {
+            MoodPicker(state: state)
+        }
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
                 PairingSheet(model: session.pairing, prefill: state.invitedCode ?? "") { session.pairingFinished() }
@@ -73,17 +77,6 @@ struct AppHeader: View {
         }
     }
 
-    /// A partner's check-in from the last day, the same one the widgets show.
-    @ViewBuilder
-    private func moodBadge(_ partner: String) -> some View {
-        if let check = state.partnerMoods.latest[partner], check.date > .now.addingTimeInterval(-86_400) {
-            Text(check.mood.emoji)
-                .font(.system(size: 13))
-                .frame(width: 22, height: 22)
-                .background(.white, in: .circle)
-                .offset(x: partner == state.partners.0 ? -6 : 6, y: -6)
-        }
-    }
 }
 
 /// The Inbox, leftmost in the header: a glass circle with a tray and a count of what is unread.
