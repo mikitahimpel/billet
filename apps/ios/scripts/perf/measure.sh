@@ -136,7 +136,7 @@ room_args=()
 [[ $room == city ]] && room_args=(-room city)
 
 # One run of the app with a script. Prints screenshots when the run asks for them.
-run() {
+attempt() {
   local name=$1 script=$2 log=$out/$1-$stamp.log
   rm -rf $containers/perf-shots
   xcrun simctl terminate $udid $bundle > /dev/null 2>&1 || true
@@ -149,7 +149,8 @@ run() {
   while ! grep -q '^PERF done' $log 2>/dev/null; do
     if grep -q '^PERF shot' $log 2>/dev/null; then
       grep '^PERF shot' $log | tr -d '\r' | while read -r _ _ shot; do
-        [[ -f $out/shots/$shot.png ]] && continue
+        # Answered already in this attempt; a retried run takes its shots again.
+        [[ -f $containers/perf-shots/$shot ]] && continue
         mkdir -p $out/shots
         # Twice at most: a busy runner's first try can hang until the alarm.
         for try in 1 2; do
@@ -174,6 +175,33 @@ run() {
   done
   kill $pid 2> /dev/null || true
   wait $pid 2> /dev/null || true
+}
+
+# The Simulator's Metal host on a busy CI VM can drop the app's GPU work ("Ignored (for causing
+# prior/excessive GPU errors)"); the app then aborts with a lost SimMetalHost connection. That is
+# the runner, not the app, so such a run is tried once more. Its log is kept as crashed-<name>.
+run() {
+  local name=$1 log=$out/$1-$stamp.log mark=$out/.started-$1
+  touch $mark
+  attempt "$@"
+  metal_crash() {
+    find $HOME/Library/Logs/DiagnosticReports -name 'Billet-*.ips' -newer $mark 2> /dev/null \
+      | xargs grep -l -s 'SimMetalHost' | grep -q .
+  }
+  local lost=0
+  if tail -1 $log | grep -q '^PERF error app exited'; then
+    # The crash report lands a few seconds after the app goes.
+    for _ in {1..20}; do
+      metal_crash && { lost=1; break; }
+      python3 -c 'import time; time.sleep(0.5)'
+    done
+  fi
+  if ((lost)); then
+    echo "$name: the app lost the Simulator's Metal host; trying once more" >&2
+    mv $log $out/crashed-$name-$stamp.log
+    attempt "$@"
+  fi
+  rm -f $mark
 }
 
 uptime >> $out/load.txt
