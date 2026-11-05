@@ -76,3 +76,23 @@ export const StoredActivity = Schema.Struct({
 
 /** What an `activity_read` row holds. */
 export const StoredActivityRead = Schema.Struct({ user: Schema.String, upTo: Schema.String });
+
+/** The one `wallet` row: the balance, and what care earned on `day` against each daily cap. */
+export const StoredWallet = Schema.Struct({
+  id: Schema.Int,
+  balance: Schema.Int,
+  day: Schema.NullOr(Schema.String),
+  care: Schema.Int,
+  notes: Schema.Int,
+  games: Schema.Int,
+});
+
+/** A `coin_entry` row: one wallet entry, in the order it was stored. */
+export const StoredCoinEntry = Schema.Struct({
+  seq: Schema.Int,
+  id: Schema.String,
+  kind: Schema.String,
+  amount: Schema.Int,
+  ref: Schema.String,
+  at: Schema.Int,
+});

@@ -43,6 +43,8 @@ import Testing
       "saveOnboardingAnswer": Routes.saveOnboardingAnswer,
       "listNotes": Routes.listNotes,
       "listInks": Routes.listInks,
+      "getCoins": Routes.getCoins,
+      "buyItem": Routes.buyItem,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
       "getCat": Routes.getCat,

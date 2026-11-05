@@ -4,15 +4,24 @@ import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import type { BuyRequest, BuyResponse, CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { InksResponse } from "@billet/contracts-http-api/inks";
 import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
-import { freeInk, inks as inkCatalog } from "@billet/contracts-domain/inks";
+import { freeInk, type InkId, inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
-import { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
+import {
+  AlreadyOwned,
+  InkNotOwned,
+  InvalidNote,
+  NotEnoughCoins,
+  NotesNotFound,
+  NotesUnavailable,
+} from "./notes-error.ts";
 import { PairRooms } from "./pair-rooms.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
@@ -62,6 +71,20 @@ export class NotesService extends Context.Service<
     readonly inks: (
       userId: UserId,
     ) => Effect.Effect<InksResponse, NotesNotFound | NotesUnavailable>;
+    /** The pair's coin balance and its wallet entries after `after`, oldest first. */
+    readonly coins: (
+      userId: UserId,
+      after: CoinEntryId | undefined,
+      limit: number,
+    ) => Effect.Effect<CoinsResponse, NotesNotFound | NotesUnavailable>;
+    /** Buys one ink with the pair's coins. A retried `id` answers with the first buy. */
+    readonly buy: (
+      userId: UserId,
+      request: BuyRequest,
+    ) => Effect.Effect<
+      BuyResponse,
+      NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+    >;
     /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
@@ -182,15 +205,90 @@ export class NotesService extends Context.Service<
         return yield* rooms.notesAfter(pairId, afterSeq, limit);
       });
 
+      const owned = (bought: ReadonlyArray<InkId>) => [
+        freeInk,
+        ...bought.filter((ink) => ink !== freeInk),
+      ];
+
       const inks = Effect.fn("NotesService.inks")(function* (
         userId: UserId,
       ): Effect.fn.Return<InksResponse, NotesNotFound | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
         const bought = yield* rooms.inks(pairId);
-        return { inks: inkCatalog, owned: [freeInk, ...bought.filter((ink) => ink !== freeInk)] };
+        return { inks: inkCatalog, owned: owned(bought) };
       });
 
-      return NotesService.of({ uploadImage, readImage, sendNote, inks, history });
+      const coins = Effect.fn("NotesService.coins")(function* (
+        userId: UserId,
+        after: CoinEntryId | undefined,
+        limit: number,
+      ): Effect.fn.Return<CoinsResponse, NotesNotFound | NotesUnavailable> {
+        return yield* rooms.coins(yield* pairOf(userId), after, limit);
+      });
+
+      // The room prices the buy from the catalog; the client's idea of the price never reaches it.
+      const buy = Effect.fn("NotesService.buy")(function* (
+        userId: UserId,
+        request: BuyRequest,
+      ): Effect.fn.Return<
+        BuyResponse,
+        NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+      > {
+        const pairId = yield* pairOf(userId);
+        const attempt = yield* rooms.buy(pairId, userId, request.id, request.item);
+        // Pairing never reaches the room, so a buy before the first note opens it.
+        const decision = isNotOpen(attempt)
+          ? yield* openRoom(pairId).pipe(
+              Effect.andThen(rooms.buy(pairId, userId, request.id, request.item)),
+            )
+          : attempt;
+        if (decision._tag === "Rejected") {
+          const { rejection } = decision;
+          switch (rejection._tag) {
+            case "NotEnoughCoins":
+              return yield* Effect.fail(
+                new NotEnoughCoins({ needed: rejection.needed, have: rejection.have }),
+              );
+            case "AlreadyOwned":
+              return yield* Effect.fail(new AlreadyOwned({ ink: rejection.ink }));
+            case "NotSold":
+              return yield* Effect.fail(new NotesNotFound());
+            case "RoomNotOpen":
+            case "NotAMember":
+            case "DuplicateMember":
+            case "RoomAlreadyOpen":
+            case "CatNotAdopted":
+            case "CatEntryIdTaken":
+            case "InkNotOwned":
+              return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-buy" }));
+          }
+        }
+        const { state, outputs } = decision;
+        for (const output of outputs) {
+          if (output._tag === "CoinsEntered" && output.entry.kind === "spend") {
+            const granted = outputs.flatMap((o) => (o._tag === "InksGranted" ? o.inks : []));
+            return {
+              entry: output.entry,
+              balance: state.wallet.balance,
+              granted,
+              owned: owned(state.inks),
+            };
+          }
+          // A retry answers as the first buy did, with today's balance.
+          if (output._tag === "CoinsRepeated") {
+            const granted = state.inks.filter((ink) => ink === output.entry.ref);
+            return {
+              entry: output.entry,
+              balance: state.wallet.balance,
+              granted,
+              owned: owned(state.inks),
+            };
+          }
+        }
+        return yield* Effect.fail(new NotesUnavailable({ reason: "buy-not-entered" }));
+      });
+
+      return NotesService.of({ uploadImage, readImage, sendNote, inks, coins, buy, history });
     }),
   );
 }

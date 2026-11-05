@@ -93,7 +93,7 @@ describe("decide: the cat", () => {
       record(bob, { _tag: "Fed", grams: 40 }, start + 2 * hour, 2),
     );
     if (second._tag !== "Accepted") throw new Error("rejected");
-    expect(second.outputs).toEqual([
+    expect(second.outputs.filter((o) => o._tag !== "CoinsEntered")).toEqual([
       {
         _tag: "CatEntryAppended",
         entry: {
@@ -338,7 +338,10 @@ describe("RoomService: the cat", () => {
     );
     expect(result.before).toEqual({ _tag: "Rejected", rejection: { _tag: "CatNotAdopted" } });
     expect(result.view?.cat?.bornAt).toBe(start + 5 * 60_000);
-    expect(result.petted._tag === "Accepted" && result.petted.outputs).toEqual([
+    expect(
+      result.petted._tag === "Accepted" &&
+        result.petted.outputs.filter((o) => o._tag !== "CoinsEntered"),
+    ).toEqual([
       {
         _tag: "CatEntryAppended",
         entry: { seq: 1, id: uuid(2), by: bob, at: start + 65 * 60_000, event: { _tag: "Petted" } },

@@ -11,10 +11,17 @@ public enum ApiError: Codable, Hashable, Sendable {
   case invalidPurchase
   /// A text note in an ink colour the pair has not bought.
   case inkNotOwned(ink: InkId)
+  /// A buy that costs more than the pair's balance.
+  case notEnoughCoins(needed: Int, have: Int)
+  /// A buy of an item the pair already owns.
+  case alreadyOwned(itemId: String)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case ink
+    case needed
+    case have
+    case itemId
   }
 
   public init(from decoder: any Decoder) throws {
@@ -30,6 +37,12 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "AppleIdInUse": self = .appleIdInUse
     case "InvalidPurchase": self = .invalidPurchase
     case "InkNotOwned": self = .inkNotOwned(ink: try container.decode(InkId.self, forKey: .ink))
+    case "NotEnoughCoins":
+      self = .notEnoughCoins(
+        needed: try container.decode(Int.self, forKey: .needed),
+        have: try container.decode(Int.self, forKey: .have))
+    case "AlreadyOwned":
+      self = .alreadyOwned(itemId: try container.decode(String.self, forKey: .itemId))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -50,6 +63,13 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .inkNotOwned(let ink):
       try container.encode("InkNotOwned", forKey: .tag)
       try container.encode(ink, forKey: .ink)
+    case .notEnoughCoins(let needed, let have):
+      try container.encode("NotEnoughCoins", forKey: .tag)
+      try container.encode(needed, forKey: .needed)
+      try container.encode(have, forKey: .have)
+    case .alreadyOwned(let itemId):
+      try container.encode("AlreadyOwned", forKey: .tag)
+      try container.encode(itemId, forKey: .itemId)
     }
   }
 }

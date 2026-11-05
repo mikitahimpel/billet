@@ -1,12 +1,27 @@
+import { Schema } from "effect";
 import type { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
+import {
+  type CoinEntry,
+  CoinEntryId,
+  dailyEarnCaps,
+  localDayOf,
+  rewardFor,
+} from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
-import { freeInk, type InkId } from "@billet/contracts-domain/inks";
+import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import type { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
-import type { ActiveRoom, Member, RoomCat, RoomState } from "./room-state.ts";
+import {
+  type ActiveRoom,
+  emptyWallet,
+  type Member,
+  type RoomCat,
+  type RoomState,
+  type RoomWallet,
+} from "./room-state.ts";
 import { newTemper, nextTemper } from "./cat-temper.ts";
 
 const accepted = (state: ActiveRoom, outputs: ReadonlyArray<RoomOutput> = []): RoomDecision =>
@@ -66,6 +81,54 @@ const journal = (
   };
 };
 
+const decodeEntryId = Schema.decodeSync(CoinEntryId);
+
+/**
+ * What a journal entry earns the pair: its reward, cut to what is left of the day's cap. The day is
+ * the cat's local day, so the caps reset at the couple's midnight. Nothing when the cap is met.
+ */
+export const earnFor = (
+  wallet: RoomWallet,
+  entry: CatEntry,
+  utcOffsetSeconds: number,
+): { wallet: RoomWallet; coins?: CoinEntry } => {
+  const reward = rewardFor(entry.event);
+  if (reward === undefined) return { wallet };
+  const day = localDayOf(entry.at, utcOffsetSeconds);
+  const today: RoomWallet =
+    wallet.day === day ? wallet : { balance: wallet.balance, day, care: 0, notes: 0, games: 0 };
+  const amount = Math.min(reward.coins, dailyEarnCaps[reward.source] - today[reward.source]);
+  if (amount <= 0) return { wallet: today };
+  return {
+    wallet: {
+      ...today,
+      balance: today.balance + amount,
+      [reward.source]: today[reward.source] + amount,
+    },
+    coins: {
+      id: decodeEntryId(`earn:${entry.id}`),
+      kind: "earn",
+      amount,
+      ref: entry.id,
+      at: entry.at,
+    },
+  };
+};
+
+/** The room after a journal entry: the cat moved on, and the coins the entry earned. */
+const cared = (room: ActiveRoom, cat: RoomCat, entry: CatEntry) => {
+  const earned = earnFor(room.wallet, entry, cat.profile.utcOffsetSeconds);
+  return {
+    room: { ...room, cat, wallet: earned.wallet },
+    outputs: [
+      RoomOutput.cases.CatEntryAppended.make({ entry }),
+      ...(earned.coins === undefined
+        ? []
+        : [RoomOutput.cases.CoinsEntered.make({ entry: earned.coins })]),
+    ],
+  };
+};
+
 const decideVacant = (command: RoomCommand): RoomDecision => {
   switch (command._tag) {
     case "Open": {
@@ -83,6 +146,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           lastSeq: 0,
           streakDays: 0,
           inks: [],
+          wallet: emptyWallet,
         },
         [RoomOutput.cases.RoomOpened.make({ pairId })],
       );
@@ -92,6 +156,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "SaveCat":
     case "RecordCatEvent":
     case "GrantInks":
+    case "Buy":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -122,10 +187,8 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         at: note.sentAt,
         event: { _tag: "NoteShared", note: note.id, kind: note._tag },
       });
-      return accepted({ ...room, lastSeq: seq, cat: shared.cat }, [
-        appended,
-        RoomOutput.cases.CatEntryAppended.make({ entry: shared.entry }),
-      ]);
+      const after = cared({ ...room, lastSeq: seq }, shared.cat, shared.entry);
+      return accepted(after.room, [appended, ...after.outputs]);
     }
     case "SaveCat": {
       const { user, name, look, utcOffsetSeconds, natureSeed, at } = command;
@@ -153,9 +216,8 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (room.cat === undefined) return rejected(RoomRejection.cases.CatNotAdopted.make({}));
       const { id, at, event } = command;
       const next = journal(room.cat, { id, by, at, event });
-      return accepted({ ...room, cat: next.cat }, [
-        RoomOutput.cases.CatEntryAppended.make({ entry: next.entry }),
-      ]);
+      const after = cared(room, next.cat, next.entry);
+      return accepted(after.room, after.outputs);
     }
     case "SetPresence": {
       const { user, state } = command;
@@ -179,6 +241,35 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         : accepted({ ...room, inks: [...room.inks, ...added] }, [
             RoomOutput.cases.InksGranted.make({ inks: added }),
           ]);
+    }
+    case "Buy": {
+      const { id, by, ink, at } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const sold = inkOf(ink);
+      if (sold === undefined) return rejected(RoomRejection.cases.NotSold.make({ ink }));
+      if (ownsInk(room, ink)) return rejected(RoomRejection.cases.AlreadyOwned.make({ ink }));
+      const have = room.wallet.balance;
+      if (sold.price > have) {
+        return rejected(RoomRejection.cases.NotEnoughCoins.make({ needed: sold.price, have }));
+      }
+      const entry: CoinEntry = {
+        id: decodeEntryId(`spend:${id}`),
+        kind: "spend",
+        amount: -sold.price,
+        ref: ink,
+        at,
+      };
+      return accepted(
+        {
+          ...room,
+          inks: [...room.inks, ink],
+          wallet: { ...room.wallet, balance: have - sold.price },
+        },
+        [
+          RoomOutput.cases.CoinsEntered.make({ entry }),
+          RoomOutput.cases.InksGranted.make({ inks: [ink] }),
+        ],
+      );
     }
   }
 };

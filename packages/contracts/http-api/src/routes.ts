@@ -58,6 +58,10 @@ export const routes = {
   markActivityRead: route("POST", "/v1/activity/read"),
   /** Every ink colour the shop sells, and the ones the pair owns. */
   listInks: route("GET", "/v1/inks"),
+  /** The pair's coin balance and wallet entries. */
+  getCoins: route("GET", "/v1/coins"),
+  /** Buys one item with the pair's coins. */
+  buyItem: route("POST", "/v1/shop/buy"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

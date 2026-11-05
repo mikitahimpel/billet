@@ -108,6 +108,7 @@ extension PaymentsServer {
     case .api(.invalidPurchase), .api(.invalidRequest): .rejected
     case .api(.unauthorized), .api(.notFound), .api(.unavailable), .api(.invalidInvite),
       .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned), .network, .status,
+      .api(.notEnoughCoins), .api(.alreadyOwned),
       .maintenance, .encoding, .decoding:
       .unavailable
     }

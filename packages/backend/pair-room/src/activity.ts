@@ -123,6 +123,8 @@ export const activityOf = (
       case "PresenceChanged":
       case "CatEntryRepeated":
       case "InksGranted":
+      case "CoinsEntered":
+      case "CoinsRepeated":
         return [];
     }
   });

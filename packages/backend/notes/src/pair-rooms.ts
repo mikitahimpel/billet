@@ -2,7 +2,8 @@ import { Context, type Effect } from "effect";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
 import type { ActivityResponse } from "@billet/contracts-http-api/activity";
-import type { UserId } from "@billet/contracts-domain/ids";
+import type { CoinEntryId } from "@billet/contracts-domain/coins";
+import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type {
@@ -10,6 +11,7 @@ import type {
   RecordCatEventRequest,
   SaveCatRequest,
 } from "@billet/contracts-http-api/cat";
+import type { CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
@@ -34,6 +36,19 @@ export class PairRooms extends Context.Service<
     readonly grantInks: (
       pairId: PairId,
       inks: ReadonlyArray<InkId>,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** The pair's balance and wallet entries after `after`, oldest first. */
+    readonly coins: (
+      pairId: PairId,
+      after: CoinEntryId | undefined,
+      limit: number,
+    ) => Effect.Effect<CoinsResponse, NotesUnavailable>;
+    /** Buys one ink with the pair's coins, once per `id`. */
+    readonly buy: (
+      pairId: PairId,
+      by: UserId,
+      id: IdempotencyKey,
+      ink: InkId,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (
