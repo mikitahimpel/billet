@@ -1,4 +1,4 @@
-import { Clock, Context, Data, Effect, Layer, Schema } from "effect";
+import { Clock, Context, Data, Effect, Layer, Option, Schema } from "effect";
 import { Digest } from "effect/crypto";
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
 import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
@@ -15,7 +15,7 @@ import { FlagConfigRepository } from "@billet/backend-flags/flag-config-reposito
 import { FlagsRepository } from "@billet/backend-flags/flags-repository";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { pairHashOf } from "@billet/backend-metrics/analytics";
-import { buildReport } from "@billet/backend-metrics/funnel";
+import { addDays, buildReport } from "@billet/backend-metrics/funnel";
 import { utcDay } from "@billet/backend-metrics/metrics";
 import { AppStatus } from "@billet/contracts-http-api/status";
 import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
@@ -25,7 +25,29 @@ import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
 import { buildOverview } from "./admin-overview.ts";
 import { buildRetentionGrid } from "./admin-retention.ts";
+import {
+  buildFunnel,
+  FunnelDefinition,
+  funnelEventNames,
+  FunnelRange,
+  FunnelUnit,
+  FunnelWindow,
+} from "./admin-funnel.ts";
+import { FunnelStore } from "./funnel-store.ts";
+import {
+  analyticsEngineDays,
+  buildTrends,
+  engineCanAnswer,
+  TrendEvent,
+  TrendInterval,
+  TrendMetric,
+  TrendRange,
+  TrendSplit,
+} from "./admin-trends.ts";
+import { AnalyticsEngineReader } from "./analytics-engine-reader.ts";
 import { AppStatusStore } from "./app-status-store.ts";
+import { buildExperimentMetrics } from "./admin-experiment-metrics.ts";
+import { buildFeatureUsage } from "./admin-features.ts";
 import { verdictOf } from "./experiment-verdict.ts";
 
 /** Who is using the panel, as Cloudflare Access verified them. Every change is logged under it. */
@@ -48,6 +70,11 @@ export const adminApi = {
   overview: "/admin/api/overview",
   appEvents: "/admin/api/app-events",
   retention: "/admin/api/retention",
+  funnel: "/admin/api/funnel",
+  funnels: "/admin/api/funnels",
+  savedFunnel: "/admin/api/funnels/:id",
+  trends: "/admin/api/trends",
+  features: "/admin/api/features",
   flags: "/admin/api/flags",
   flag: "/admin/api/flags/:key",
   experiments: "/admin/api/experiments",
@@ -66,6 +93,10 @@ export const agentApiPrefix = "/admin/api/agent/";
 export const agentApi = {
   overview: "/admin/api/agent/overview",
   retention: "/admin/api/agent/retention",
+  funnel: "/admin/api/agent/funnel",
+  funnels: "/admin/api/agent/funnels",
+  trends: "/admin/api/agent/trends",
+  features: "/admin/api/agent/features",
   experiments: "/admin/api/agent/experiments",
   flags: "/admin/api/agent/flags",
   flagHistory: "/admin/api/agent/flag-history",
@@ -136,6 +167,32 @@ const RetentionQuery = Schema.Struct({
     Schema.String.check(Schema.isPattern(/^(?:unknown|\d{1,4}(?:\.\d{1,4}){0,3}(?:\+\d{1,8})?)$/)),
   ),
 });
+const ExperimentKeyText = Schema.String.check(Schema.isPattern(/^[a-z0-9]+(?:-[a-z0-9]+)*$/));
+// `steps` is the names joined by commas; the definition checks each against the closed list.
+const FunnelQuery = Schema.Struct({
+  steps: Schema.String,
+  window: FunnelWindow,
+  unit: FunnelUnit,
+  range: Schema.optional(FunnelRange),
+  split: Schema.optional(ExperimentKeyText),
+});
+const decodeDefinition = Schema.decodeUnknownEffect(FunnelDefinition);
+const SaveFunnelBody = Schema.Struct({
+  name: Schema.String.check(Schema.isTrimmed(), Schema.isMinLength(1), Schema.isMaxLength(80)),
+  definition: FunnelDefinition,
+});
+const FunnelParams = Schema.Struct({
+  id: Schema.String.check(Schema.isPattern(/^[0-9a-f-]{36}$/)),
+});
+const TrendsQuery = Schema.Struct({
+  event: TrendEvent,
+  metric: TrendMetric,
+  interval: TrendInterval,
+  range: TrendRange,
+  split: TrendSplit,
+  key: Schema.optional(ExperimentKeyText),
+});
+const FeaturesQuery = Schema.Struct({ split: Schema.optional(ExperimentKeyText) });
 const ActionBody = Schema.Struct({ expectedVersion: Schema.Int });
 const OverrideBody = Schema.Struct({ variant: VariantId });
 const KeyParams = Schema.Struct({ key: ExperimentKey });
@@ -189,6 +246,8 @@ const readHandlers = Effect.gen(function* () {
   const data = yield* AdminData;
   const digest = yield* Digest.Digest;
   const appStatus = yield* AppStatusStore;
+  const funnelStore = yield* FunnelStore;
+  const engine = yield* AnalyticsEngineReader;
   const catalogue = yield* OnboardingCatalogue;
 
   const items = Effect.gen(function* () {
@@ -246,17 +305,70 @@ const readHandlers = Effect.gen(function* () {
     );
   }).pipe(guarded);
 
+  const funnel = Effect.gen(function* () {
+    const query = yield* HttpServerRequest.schemaSearchParams(FunnelQuery);
+    const definition = yield* decodeDefinition({
+      steps: query.steps.split(","),
+      window: query.window,
+      unit: query.unit,
+    });
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(
+      buildFunnel(events, rows, utcDay(yield* Clock.currentTimeMillis), definition, {
+        range: query.range,
+        split: query.split,
+      }),
+    );
+  }).pipe(guarded);
+
+  const trends = Effect.gen(function* () {
+    const query = yield* HttpServerRequest.schemaSearchParams(TrendsQuery);
+    const today = utcDay(yield* Clock.currentTimeMillis);
+    // Analytics Engine only for what it can answer; a failure there falls back to D1, logged once.
+    const fromEngine = engineCanAnswer(query)
+      ? yield* engine.trend(query, addDays(today, -analyticsEngineDays + 1), today).pipe(
+          Effect.map((rows) => (Option.isSome(rows) ? { rows: rows.value } : undefined)),
+          Effect.catch((error) =>
+            Effect.logWarning("admin trends: analytics engine unavailable", error.reason).pipe(
+              Effect.as("unavailable" as const),
+            ),
+          ),
+        )
+      : undefined;
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(buildTrends(events, rows, today, query, fromEngine));
+  }).pipe(guarded);
+
+  const features = Effect.gen(function* () {
+    const { split } = yield* HttpServerRequest.schemaSearchParams(FeaturesQuery);
+    const [events, rows] = yield* Effect.all([data.events, data.assignments]);
+    return respondJson(
+      buildFeatureUsage(events, rows, utcDay(yield* Clock.currentTimeMillis), { split }),
+    );
+  }).pipe(guarded);
+
+  const savedFunnels = Effect.gen(function* () {
+    // With the names a step may be, so the page offers the closed list and nothing else.
+    return respondJson({ funnels: yield* funnelStore.all, events: funnelEventNames });
+  }).pipe(guarded);
+
   const flagList = Effect.gen(function* () {
     return respondJson({ items: yield* items });
   }).pipe(guarded);
 
   const experiments = Effect.gen(function* () {
     const [list, events, rows] = yield* Effect.all([items, data.events, data.assignments]);
-    const report = buildReport(events, rows, utcDay(yield* Clock.currentTimeMillis));
+    const today = utcDay(yield* Clock.currentTimeMillis);
+    const report = buildReport(events, rows, today);
     const results = new Map(report.experiments.map((experiment) => [experiment.key, experiment]));
+    const baselines = new Map(list.map((item) => [item.key, item.config.default]));
+    const metrics = new Map(
+      buildExperimentMetrics(events, rows, today, baselines).map((entry) => [entry.key, entry]),
+    );
     return respondJson({
       items: list.map((item) => {
         const result = results.get(item.key);
+        const more = metrics.get(item.key);
         return {
           ...item,
           results:
@@ -266,6 +378,9 @@ const readHandlers = Effect.gen(function* () {
                   variants: result.variants,
                   caution: result.caution,
                   verdict: verdictOf(result.variants),
+                  baseline: more?.baseline ?? null,
+                  metrics: more?.metrics ?? [],
+                  warnings: more?.warnings ?? [],
                 },
         };
       }),
@@ -345,6 +460,11 @@ const readHandlers = Effect.gen(function* () {
     overview,
     appEvents,
     retention,
+    funnel,
+    trends,
+    features,
+    savedFunnels,
+    funnelStore,
     flagList,
     experiments,
     history,
@@ -361,7 +481,7 @@ const readHandlers = Effect.gen(function* () {
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const { flags, configs, appStatus, entryOf, ...reads } = yield* readHandlers;
+    const { flags, configs, appStatus, entryOf, funnelStore, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
     const environment = yield* PanelEnvironment;
 
@@ -396,6 +516,37 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.overview, reads.overview);
     yield* router.add("GET", adminApi.appEvents, reads.appEvents);
     yield* router.add("GET", adminApi.retention, reads.retention);
+    yield* router.add("GET", adminApi.funnel, reads.funnel);
+    yield* router.add("GET", adminApi.funnels, reads.savedFunnels);
+    yield* router.add("GET", adminApi.trends, reads.trends);
+    yield* router.add("GET", adminApi.features, reads.features);
+
+    // A saved funnel is a definition and a name, never a count. Saved with the Access email.
+    yield* router.add(
+      "POST",
+      adminApi.funnels,
+      Effect.gen(function* () {
+        const body = yield* HttpServerRequest.schemaBodyJson(SaveFunnelBody);
+        const saved = {
+          id: crypto.randomUUID(),
+          name: body.name,
+          definition: body.definition,
+          createdAt: yield* Clock.currentTimeMillis,
+          createdBy: admin.email,
+        };
+        yield* funnelStore.save(saved);
+        return respondJson(saved, 201);
+      }).pipe(guarded),
+    );
+    yield* router.add(
+      "DELETE",
+      adminApi.savedFunnel,
+      Effect.gen(function* () {
+        const { id } = yield* HttpRouter.schemaPathParams(FunnelParams);
+        if (!(yield* funnelStore.remove(id))) return yield* new NotFound();
+        return HttpServerResponse.empty({ status: 204 });
+      }).pipe(guarded),
+    );
     yield* router.add("GET", adminApi.flags, reads.flagList);
     yield* router.add("GET", adminApi.experiments, reads.experiments);
     yield* router.add("GET", adminApi.history, reads.history);
@@ -497,6 +648,10 @@ export const AgentRoutes = HttpRouter.use((router) =>
     const reads = yield* readHandlers;
     yield* router.add("GET", agentApi.overview, reads.overview);
     yield* router.add("GET", agentApi.retention, reads.retention);
+    yield* router.add("GET", agentApi.funnel, reads.funnel);
+    yield* router.add("GET", agentApi.funnels, reads.savedFunnels);
+    yield* router.add("GET", agentApi.trends, reads.trends);
+    yield* router.add("GET", agentApi.features, reads.features);
     yield* router.add("GET", agentApi.experiments, reads.experiments);
     yield* router.add("GET", agentApi.flags, reads.flagList);
     yield* router.add("GET", agentApi.flagHistory, reads.history);

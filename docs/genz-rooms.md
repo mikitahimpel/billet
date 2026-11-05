@@ -34,14 +34,14 @@ prints; and his Shop items, which were never placed in his room.
 
 ## Where the code is
 
-- `packages/ios/Sources/PetScene/PetSceneRooms.swift`: the contract. `RoomLayerSlot` names every
+- `packages/ios/pet/Sources/PetScene/PetSceneRooms.swift`: the contract. `RoomLayerSlot` names every
   flat layer, `RoomLayerArt` is the protocol a Rive file plugs in through, and
   `PetSceneCatAnchorKey` tells the host where the cat is.
 - `packages/pet-scenes/reality/Sources/PetSceneReality/Genz*.swift`: the room. `GenzKit` makes
   flat-shaded meshes and shared materials, `GenzPieces` the furniture, `GenzLayout` where things
   stand, `GenzRoom` the room and its opening, `GenzArt` the native flat layers, `GenzRoomView` the
   stack of layers. `NookiPetScene` shows it through `NookiRoom`.
-- `packages/ios/Sources/FeatureHome/StyledHome.swift`: the controls over the room: the streak, the
+- `packages/ios/features/Sources/FeatureHome/StyledHome.swift`: the controls over the room: the streak, the
   decorate button and the caption ("A note from your partner · 5 min ago", or "No notes yet").
   Notes are drawn in the Notes tab; treats are given in the room, from the bowl.
 

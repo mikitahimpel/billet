@@ -39,6 +39,7 @@ import {
   type Reminded,
 } from "./daily-drawing.ts";
 import { traced } from "./demo-trace.ts";
+import { systemNow } from "./wall-clock.ts";
 
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
@@ -99,7 +100,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
 
   /** The room's clock; tests replace it. */
   protected clock(): number {
-    return Date.now();
+    return systemNow();
   }
 
   /** Names the room in spans by the start of its object id, never by its code. */
@@ -214,7 +215,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
         id: id.toLowerCase(),
         kind: "note",
         by: sender,
-        at: isTime(at) ? at : new Date().toISOString(),
+        at: isTime(at) ? at : new Date(this.clock()).toISOString(),
       });
       socket.send(JSON.stringify({ type: "ack", id }));
       // The ack means "stored"; it must not wait on APNs, which is external and can stall.
@@ -484,6 +485,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
           token,
           { aps: { alert: { body } }, daily: day },
           this.apnsFetch,
+          () => this.clock(),
         );
       }
     }
@@ -628,7 +630,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     const origin = await this.ctx.storage.get<string>("origin");
     if (token === undefined || code === undefined || origin === undefined) return;
     const noteURL = `${origin}/demo/rooms/${code}/notes/${note.id}`;
-    await sendNoteAlert(credentials, token, noteURL, this.apnsFetch);
+    await sendNoteAlert(credentials, token, noteURL, this.apnsFetch, () => this.clock());
   }
 
   private async readNote(device: string, noteId: string): Promise<Response> {
