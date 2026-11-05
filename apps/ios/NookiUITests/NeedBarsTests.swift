@@ -2,9 +2,13 @@ import XCTest
 
 /// The cat sheet shows her four needs as bars; screenshots of it full, in the middle and low.
 final class NeedBarsTests: XCTestCase {
+    @MainActor func testNeedBarsFull() throws { try shoot("full", needs: "1") }
+    @MainActor func testNeedBarsMiddle() throws { try shoot("middle", needs: "0.5") }
+    @MainActor func testNeedBarsLow() throws { try shoot("low", needs: "0.15") }
+
     @MainActor
-    func testNeedBarsFullMiddleLow() throws {
-        for (name, value) in [("full", "1"), ("middle", "0.5"), ("low", "0.15")] {
+    private func shoot(_ name: String, needs value: String) throws {
+        do {
             let app = XCUIApplication()
             app.launchArguments += ["-onboardingDone", "YES", "-uitestNeeds", value]
             app.launch()
