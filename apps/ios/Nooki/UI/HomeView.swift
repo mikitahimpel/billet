@@ -359,6 +359,9 @@ struct HomeView: View {
 
     /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
     private func followPair() async {
+        #if DEBUG
+        if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
+        #endif
         guard let session, let sync = session.shopSync else { return await leavePair() }
         do throws(TransportError) {
             let pair = try await session.pair()

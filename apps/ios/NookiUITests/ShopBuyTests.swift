@@ -6,7 +6,9 @@ final class ShopBuyTests: XCTestCase {
     func testThePricePillBuysInOneTap() throws {
         let app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestNoHints", "YES",
-                                "-tab", "shop", "-shopCoins", "5000", "-shopOwned", ""]
+                                "-tab", "shop", "-shopCoins", "5000", "-shopOwned", "",
+                                // A pair's room in memory, as buying needs one.
+                                "-shopFixture", "YES"]
         app.launch()
         XCTAssertTrue(app.buttons["Shop"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
