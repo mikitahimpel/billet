@@ -29,9 +29,9 @@ struct PolaroidTests {
 
     @Test func aBylineIsWhoAndWhen() {
         let date = Calendar(identifier: .gregorian).date(from: DateComponents(year: 2026, month: 11, day: 5, hour: 12))!
-        let moment = Moment(id: UUID(), author: "Anya", date: date, caption: "", file: "a.jpg", pinned: false, loved: false)
-        #expect(moment.byline.hasPrefix("Anya · "))
-        #expect(moment.byline.contains("5"))
+        let moment = Moment(id: UUID(), author: "M", date: date, caption: "", file: "a.jpg", pinned: false, loved: false)
+        #expect(moment.byline(by: "Anya").hasPrefix("Anya · "))
+        #expect(moment.byline(by: "Anya").contains("5"))
     }
 
     private func pixel(of image: UIImage, at point: CGPoint) -> (red: Double, blue: Double)? {

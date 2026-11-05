@@ -21,7 +21,7 @@ enum BoardFaces {
                 }
             case .photo(let moment):
                 guard let photo = await state.moments.filmPrint(for: moment, maxPixels: MomentStore.wallPixels) else { continue }
-                let polaroid = Polaroid(width: 240, caption: moment.caption, byline: moment.byline, lifted: false) {
+                let polaroid = Polaroid(width: 240, caption: moment.caption, byline: state.profile.byline(of: moment), lifted: false) {
                     Image(uiImage: photo).resizable().scaledToFill()
                 }
                 if let face = render(polaroid) {

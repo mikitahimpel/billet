@@ -172,6 +172,10 @@ enum PaperGrain {
 }
 
 extension Moment {
-    /// Who and when, as the print's strip shows it: "Anya · Nov 5".
-    var byline: String { "\(author) · \(date.formatted(.dateTime.month(.abbreviated).day()))" }
+    /// Who and when, as the print's strip shows it: "Anya · Nov 5". `name` is the author's own name.
+    func byline(by name: String) -> String { "\(name) · \(date.formatted(.dateTime.month(.abbreviated).day()))" }
+}
+
+extension CoupleStore {
+    func byline(of moment: Moment) -> String { moment.byline(by: name(of: moment.author)) }
 }

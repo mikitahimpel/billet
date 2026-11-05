@@ -128,7 +128,7 @@ struct MomentsView: View {
         return LazyVStack(spacing: -width * 0.05) {
             ForEach(moments) { moment in
                 Button { viewing = PinRoute(id: moment.id) } label: {
-                    MomentPrint(moment: moment, store: store, width: width, undeveloped: undeveloped.contains(moment.id))
+                    MomentPrint(moment: moment, store: store, profile: state.profile, width: width, undeveloped: undeveloped.contains(moment.id))
                         .rotationEffect(moment.id.polaroidTilt)
                         .padding(.vertical, width * 0.04)
                 }
@@ -442,6 +442,7 @@ private struct BlankPolaroid: View {
 struct MomentPrint: View {
     let moment: Moment
     let store: MomentStore
+    let profile: CoupleStore
     let width: CGFloat
     var undeveloped = false
     var maxPixels = 512
@@ -449,7 +450,7 @@ struct MomentPrint: View {
     var captionFocus: FocusState<Bool>.Binding?
 
     var body: some View {
-        Polaroid(width: width, caption: moment.caption, byline: moment.byline, undeveloped: undeveloped,
+        Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
                  captionEditor: captionEditor, captionFocus: captionFocus) {
             MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }
@@ -643,7 +644,7 @@ private struct MomentViewer: View {
                 Spacer(minLength: 12)
 
                 GeometryReader { geo in
-                    MomentPrint(moment: moment, store: store, width: min(geo.size.width - 40, 520),
+                    MomentPrint(moment: moment, store: store, profile: state.profile, width: min(geo.size.width - 40, 520),
                                 maxPixels: MomentStore.storedPixels, captionEditor: $caption, captionFocus: $editing)
                         .rotationEffect(.degrees(editing ? 0 : -1))
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -726,7 +727,7 @@ private struct MomentViewer: View {
     /// The print as an image to share: graded photo, frame, caption and byline, without the tilt and shadow.
     private func renderPolaroid() async -> Image? {
         guard let moment, let photo = await store.filmPrint(for: moment, maxPixels: 1024) else { return nil }
-        let renderer = ImageRenderer(content: Polaroid(width: 540, caption: moment.caption, byline: moment.byline,
+        let renderer = ImageRenderer(content: Polaroid(width: 540, caption: moment.caption, byline: state.profile.byline(of: moment),
                                                        lifted: false) {
             Image(uiImage: photo).resizable().scaledToFill()
         })
