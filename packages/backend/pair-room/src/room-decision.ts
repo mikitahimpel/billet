@@ -4,6 +4,7 @@ import { CoinEntry } from "@billet/contracts-domain/coins";
 import { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomJoin } from "./room-command.ts";
@@ -31,6 +32,10 @@ export const RoomOutput = Schema.TaggedUnion({
   CatEntryRepeated: { entry: CatEntry },
   /** Inks the pair did not have before, now its own. A grant of inks it had lists none. */
   InksGranted: { inks: Schema.Array(InkId) },
+  /** Room pieces the pair did not have before, now its own. */
+  ItemsGranted: { items: Schema.Array(RoomItemId) },
+  /** The pair's wishlist after a wish, or after a buy took pieces off it. */
+  WishlistChanged: { wishlist: Schema.Array(RoomItemId) },
   /** A wallet entry to store: coins care earned, or a spend. */
   CoinsEntered: { entry: CoinEntry },
   /** A buy whose `id` the room already holds: nothing is stored or charged again. */
@@ -61,6 +66,10 @@ export const RoomRejection = Schema.TaggedUnion({
   AlreadyOwned: { ink: InkId },
   /** A buy of an ink the catalog does not sell. */
   NotSold: { ink: InkId },
+  /** An order of a piece or a set the pair owns all of already. */
+  OfferOwned: { offer: Schema.Union([RoomItemId, PieceSetId]) },
+  /** An order the catalog does not sell now: an unknown piece, or a featured set out of its week. */
+  NotOffered: {},
   /** A reaction to a note the room does not hold. */
   NoteNotFound: {},
   /** A reaction to the reactor's own note. */

@@ -6,6 +6,7 @@ import type { CoinEntryId } from "@billet/contracts-domain/coins";
 import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -13,6 +14,7 @@ import type {
 } from "@billet/contracts-http-api/cat";
 import type { CoinsResponse } from "@billet/contracts-http-api/coins";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
+import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
@@ -54,6 +56,21 @@ export class PairRooms extends Context.Service<
       by: UserId,
       id: IdempotencyKey,
       ink: InkId,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** What the pair has: balance, inks, room pieces and wishlist. */
+    readonly shop: (pairId: PairId) => Effect.Effect<ShopResponse, NotesUnavailable>;
+    /** Buys one offer with the pair's coins, once per `id`. */
+    readonly order: (
+      pairId: PairId,
+      by: UserId,
+      id: IdempotencyKey,
+      offer: ShopOffer,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    readonly setWish: (
+      pairId: PairId,
+      by: UserId,
+      item: RoomItemId,
+      wished: boolean,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (

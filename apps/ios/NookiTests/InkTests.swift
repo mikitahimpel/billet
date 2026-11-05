@@ -42,9 +42,9 @@ import Wire
     }
 }
 
-/// One HomeState, whose wallet lives in the app group, so these run one at a time.
+/// One shop, whose wallet lives in the app group, so these run one at a time.
 @MainActor @Suite(.serialized) struct InkSyncTests {
-    let state = HomeState()
+    let state = HomeStores.live().shop
 
     init() {
         state.wallet.update {

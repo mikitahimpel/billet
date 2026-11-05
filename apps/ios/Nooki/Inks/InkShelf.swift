@@ -11,7 +11,7 @@ struct InkShelf: View {
         ScrollViewReader { reader in
             ScrollView(.horizontal) {
                 HStack(spacing: Space.m) {
-                    ForEach(state.inks) { ink in
+                    ForEach(state.shop.inks) { ink in
                         card(ink).id(ink.id)
                     }
                 }
@@ -27,7 +27,7 @@ struct InkShelf: View {
     }
 
     private func card(_ ink: PaletteInk) -> some View {
-        let owned = ink.isOwned(state.owned)
+        let owned = ink.isOwned(state.shop.owned)
         return VStack(spacing: Space.s) {
             // A glossy drop of the ink, lit from the top left like the room's clay.
             Circle()
@@ -48,7 +48,7 @@ struct InkShelf: View {
                     .frame(minHeight: 36)
             } else {
                 PriceButton(state: state, quote: (ink.price, ink.price), name: "\(ink.name) ink") {
-                    state.buy(ink)
+                    state.shop.buy(ink)
                 }
             }
         }

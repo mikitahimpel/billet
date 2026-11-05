@@ -23,14 +23,14 @@ struct PetButton: View {
                 .padding(3)
                 .overlay {
                     Circle()
-                        .trim(from: 0, to: min(max(state.progress, 0.02), 1))
+                        .trim(from: 0, to: min(max(state.care.progress, 0.02), 1))
                         .stroke(.honeyGradient, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                        .animation(.spring(duration: 0.5), value: state.progress)
+                        .animation(.spring(duration: 0.5), value: state.care.progress)
                 }
                 .glass(.circle, interactive: true)
                 .overlay(alignment: .bottom) {
-                    Text("Lv.\(state.level)")
+                    Text("Lv.\(state.care.level)")
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .foregroundStyle(Color(hex: 0x4A2A14))
                         .padding(.horizontal, 7)
@@ -41,7 +41,7 @@ struct PetButton: View {
                         .offset(y: 8)
                 }
                 // A little hop each time she is cared for.
-                .keyframeAnimator(initialValue: 1.0, trigger: state.petPulse) { view, scale in
+                .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                     view.scaleEffect(scale)
                 } keyframes: { _ in
                     SpringKeyframe(1.12, duration: 0.15)
@@ -50,7 +50,7 @@ struct PetButton: View {
                 .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(state.petName), Lv. \(state.level)")
+        .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")
         .accessibilityIdentifier("pet")
         // Both hints live on her portrait; the second waits for the first, so only one shows at a time.
         .popoverTip(PetHint(), arrowEdge: .bottom)
@@ -88,7 +88,7 @@ private struct PetSheet: View {
                     HStack(spacing: 8) {
                         Text(state.petName)
                             .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Lv. \(state.level)")
+                        Text("Lv. \(state.care.level)")
                             .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(Color(hex: 0x4A2A14))
                             .padding(.horizontal, 8)
@@ -96,8 +96,8 @@ private struct PetSheet: View {
                             .background(.honeyGradient, in: .capsule)
                             .contentTransition(.numericText())
                     }
-                    ProgressCapsule(value: state.progress)
-                    Text("\(Int((state.progress * 100).rounded()))% to Lv. \(state.level + 1)")
+                    ProgressCapsule(value: state.care.progress)
+                    Text("\(Int((state.care.progress * 100).rounded()))% to Lv. \(state.care.level + 1)")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Ink.secondary)
                         .contentTransition(.numericText())
@@ -110,14 +110,14 @@ private struct PetSheet: View {
                     name: state.petName,
                     needs: (FixedNeeds.fromLaunch ?? needs())?.needs,
                     treat: {
-                        withAnimation(.spring(duration: 0.4)) { short = !state.treat() }
+                        withAnimation(.spring(duration: 0.4)) { short = !state.shop.treat() }
                         if !short { needs()?.feed() }
                     },
-                    pet: { withAnimation(.spring(duration: 0.4)) { state.pet() } },
+                    pet: { withAnimation(.spring(duration: 0.4)) { state.care.pet() } },
                     play: onPlay
                 )
             }
-            .haptic(.impact(weight: .light), trigger: state.petPulse)
+            .haptic(.impact(weight: .light), trigger: state.care.petPulse)
 
             Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
                 .font(.system(size: 13, weight: .medium))

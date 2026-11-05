@@ -1,11 +1,12 @@
 import FeatureGames
 import SwiftUI
 import TipKit
+import Transport
 import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    @State private var state = HomeState()
+    @State private var state = HomeState(stores: .live())
     /// Built after the first frame, so launch shows the backdrop at once.
     @State private var home: DioramaScene?
     /// Built each time the City room is opened, released when it is left.
@@ -51,8 +52,8 @@ struct HomeView: View {
                 // Only while a room shows: a paused RealityView left in place under the Shop, Moments and Us still
                 // runs its render loop and composites a full-screen layer every frame. The room itself stays loaded
                 // (CatRoom), so coming back only makes a new view for it.
-                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
-                    withAnimation(.spring(duration: 0.4)) { state.pet() }
+                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.care.petPulse) {
+                    withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
                 .allowsHitTesting(showsRoom && state.game == nil)
@@ -92,7 +93,8 @@ struct HomeView: View {
                 AppHeader(state: state) {
                     scene?.stop()
                     HomeState.eraseAll()
-                    state = HomeState()
+                    state = HomeState(stores: .live())
+                    Task { await followPair() }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
@@ -202,21 +204,22 @@ struct HomeView: View {
             if tab == .world, let scene { NookiPerf.shown(scene, kind: state.room) }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
-        .onChange(of: state.petPulse) {
+        .onChange(of: state.care.petPulse) {
             scene?.purr()
             hints.done(PetHint())
         }
-        .onChange(of: state.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: state.care.treatsGiven) { hints.done(TreatHint()) }
         // A run of pets is one in the pair's journal and Inbox: one every 10 minutes at most.
-        .onChange(of: state.petsGiven) {
+        .onChange(of: state.care.petsGiven) {
             guard let session, Date.now.timeIntervalSince(petSentAt) > 600 else { return }
             petSentAt = .now
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
-        .onChange(of: state.lastPurchase) { _, purchase in
-            guard let purchase, purchase.kind == .ink, let inkSync else { return }
-            Task { await inkSync.settle(purchase, state) }
+        .onChange(of: state.shop.lastPurchase) { _, purchase in
+            // A synced shop has sent the order already.
+            guard let purchase, purchase.kind == .ink, !state.shop.isSynced, let inkSync else { return }
+            Task { await inkSync.settle(purchase, state.shop) }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {
@@ -231,7 +234,8 @@ struct HomeView: View {
                     await session?.inbox.refreshCount()
                     await photoSync?.receive()
                     await textSync?.receive()
-                    await inkSync?.refresh(state)
+                    await state.shop.refresh()
+                    await inkSync?.refresh(state.shop)
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(true, photos: photoSync, texts: textSync)
@@ -270,6 +274,7 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
         }
         .task { await DrawingSync.watchLiveActivities() }
+        .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
         .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
@@ -359,6 +364,26 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    private func followPair() async {
+        guard let session, let sync = session.shopSync else { return await leavePair() }
+        do throws(TransportError) {
+            let pair = try await session.pair()
+            state.profile.adopt(
+                pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
+        } catch {
+            if error == .api(.notFound) { return await leavePair() }
+            // Offline: a phone that already took the pair keeps following it.
+            guard state.profile.couple.pair != nil else { return }
+        }
+        await state.shop.connect(sync)
+    }
+
+    private func leavePair() async {
+        state.profile.leavePair()
+        await state.shop.connect(nil)
+    }
+
     /// Each tab shown, and each return to the app, is a visit that may show one hint.
     private func visitHints() {
         hints.visit {
@@ -370,10 +395,10 @@ struct HomeView: View {
             }
             let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
                 || state.openedShopItem != nil
-            let buying = state.lastPurchase?.canUndo(at: .now) == true
+            let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
             return HintContext(
                 screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
-                canAffordTreat: state.coins >= HomeState.treatPrice)
+                canAffordTreat: state.shop.coins >= ShopModel.treatPrice)
         }
     }
 

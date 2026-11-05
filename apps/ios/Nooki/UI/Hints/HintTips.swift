@@ -75,7 +75,7 @@ nonisolated struct TreatHint: HintTip {
     static let hintId = "treat"
 
     var title: Text { Text("A treat goes further") }
-    var message: Text? { Text("Her card has treats: one fills her bar more than a pet, for \(HomeState.treatPrice) coins.") }
+    var message: Text? { Text("Her card has treats: one fills her bar more than a pet, for \(ShopModel.treatPrice) coins.") }
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "treat" }] }
 }

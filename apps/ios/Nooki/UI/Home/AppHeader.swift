@@ -20,7 +20,7 @@ struct AppHeader: View {
 
             Spacer(minLength: 0)
 
-            CoinPill(coins: state.coins)
+            CoinPill(coins: state.shop.coins)
 
             Button { state.showsProfile = true } label: {
                 HStack(spacing: -10) {

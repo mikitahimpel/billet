@@ -9,14 +9,14 @@ struct InkSync {
     var undoWindow: Duration = .seconds(Purchase.undoWindow)
 
     /// The catalog, what the pair owns and the balance. A failure keeps what the phone has.
-    func refresh(_ state: HomeState) async {
+    func refresh(_ state: ShopModel) async {
         if let inks = try? await api.listInks() { state.apply(inks) }
         if let coins = try? await api.getCoins() { state.apply(balance: coins.balance) }
     }
 
     /// Sends `purchase` once Undo is over, under one key for every retry. Undone by then, nothing is sent; a
     /// refusal puts the server's balance and inks back.
-    func settle(_ purchase: Purchase, _ state: HomeState) async {
+    func settle(_ purchase: Purchase, _ state: ShopModel) async {
         guard purchase.kind == .ink else { return }
         try? await Task.sleep(for: undoWindow)
         for id in purchase.added where state.owned.contains(id) {

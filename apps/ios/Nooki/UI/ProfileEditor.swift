@@ -89,7 +89,7 @@ struct ProfileEditor: View {
                     Label("This phone", systemImage: "iphone")
                         .font(.nookiCaption)
                         .foregroundStyle(Ink.accentText)
-                } else {
+                } else if profile.couple.pair == nil {
                     Button("This is me") { profile.setViewer(partner) }
                         .font(.nookiCaption)
                         .foregroundStyle(Ink.textSecondary)

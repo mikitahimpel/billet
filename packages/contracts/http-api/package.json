@@ -22,7 +22,9 @@
     "./status": "./src/status.ts",
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
-    "./reaction": "./src/reaction.ts"
+    "./pair": "./src/pair.ts",
+    "./reaction": "./src/reaction.ts",
+    "./shop": "./src/shop.ts"
   },
   "scripts": {
     "lint": "oxlint .",

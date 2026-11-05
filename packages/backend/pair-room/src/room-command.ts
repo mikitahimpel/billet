@@ -11,6 +11,7 @@ import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
 /** Who claimed the invite, and when. */
@@ -52,5 +53,8 @@ export const RoomCommand = Schema.TaggedUnion({
   GrantInks: { inks: Schema.Array(InkId) },
   /** Buys one ink with the pair's coins, at its catalog price. `id` is the buyer's, once. */
   Buy: { id: IdempotencyKey, by: UserId, ink: InkId, at: EpochMillis },
+  /** Buys one offer with the pair's coins, at the catalog's price. `id` is the buyer's, once. */
+  Order: { id: IdempotencyKey, by: UserId, offer: ShopOffer, at: EpochMillis },
+  SetWish: { by: UserId, item: RoomItemId, wished: Schema.Boolean },
 });
 export type RoomCommand = typeof RoomCommand.Type;

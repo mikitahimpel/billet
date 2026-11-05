@@ -221,3 +221,50 @@ describe("the notes routes", () => {
     expect(await response.json()).toEqual({ _tag: "Unavailable" });
   });
 });
+
+describe("the shop routes", () => {
+  const json = (body: unknown): RequestInit => ({
+    method: "PUT",
+    body: JSON.stringify(body),
+    headers: { "content-type": "application/json" },
+  });
+
+  it("answers a new pair the free ink and the starter pieces, never cached", async () => {
+    const response = await handler(request("/v1/shop", "cal"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      balance: 0,
+      inks: ["ink-graphite"],
+      items: ["lamp", "rug"],
+      wishlist: [],
+    });
+  });
+
+  it("keeps one wishlist for both partners", async () => {
+    const wished = await handler(
+      request("/v1/shop/wishlist", "ana", json({ item: "tower", wished: true })),
+    );
+    expect(wished.status).toBe(200);
+    const seen = await (await handler(request("/v1/shop", "ben"))).json();
+    expect(seen).toMatchObject({ wishlist: ["tower"] });
+  });
+
+  it("answers 409 to an order the balance cannot pay, and 400 to an unknown piece", async () => {
+    const order = (item: string) =>
+      handler(
+        request("/v1/shop/orders", "dee", {
+          ...json({ id: "00000000-0000-4000-8000-000000000001", offer: { _tag: "Item", item } }),
+          method: "POST",
+        }),
+      );
+    const poor = await order("tower");
+    expect(poor.status).toBe(409);
+    expect(await poor.json()).toEqual({ _tag: "NotEnoughCoins", needed: 540, have: 0 });
+    expect((await order("throne")).status).toBe(400);
+  });
+
+  it("answers a stranger 404", async () => {
+    expect((await handler(request("/v1/shop", "eve"))).status).toBe(404);
+  });
+});
