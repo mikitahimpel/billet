@@ -163,6 +163,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/notes",
       },
+      "setMood": {
+        "method": "PUT",
+        "path": "/v1/mood",
+      },
       "setWish": {
         "method": "PUT",
         "path": "/v1/shop/wishlist",

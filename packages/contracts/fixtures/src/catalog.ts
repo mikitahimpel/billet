@@ -107,6 +107,8 @@ import { ClientMessage } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { PushPayload } from "@billet/contracts-push/push-payload";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import {
   ListReactionsResponse,
   ReactRequest,
@@ -383,6 +385,14 @@ const heart: NoteReaction = {
 };
 const takenBack: NoteReaction = { rev: 4, note: noteId, by: alice, at: 1_700_000_003_000 };
 
+const sleepy: MoodCheckIn = { user: bob, mood: "sleepy", at: 1_700_000_004_000 };
+const missingAlice: MoodCheckIn = {
+  user: alice,
+  mood: "missing",
+  note: "come home soon 🌙",
+  at: 1_700_000_005_000,
+};
+
 const activityEvents = {
   "cat-fed": { _tag: "CatFed", grams: 40 },
   "cat-petted": { _tag: "CatPetted" },
@@ -397,6 +407,7 @@ const activityEvents = {
   "partner-joined": { _tag: "PartnerJoined" },
   "note-sent": { _tag: "NoteSent", note: "note-1", kind: "Drawing" },
   reacted: { _tag: "Reacted", note: "note-1", reaction: "heart" },
+  "mood-shared": { _tag: "MoodShared", mood: "sleepy" },
   purchased: {
     _tag: "Purchased",
     offer: "bundle:starter-ink",
@@ -738,7 +749,15 @@ export const catalog: ReadonlyArray<Fixture> = [
     wished: { item: tower, wished: true },
     unwished: { item: tower, wished: false },
   }),
-  fixture("PairResponse", PairResponse, { default: { pairId, members: [alice, bob] } }),
+  fixture("PairResponse", PairResponse, {
+    default: { pairId, members: [alice, bob], moods: [missingAlice, sleepy] },
+    "no-moods": { pairId, members: [alice, bob], moods: [] },
+  }),
+  fixture("MoodCheckIn", MoodCheckIn, { default: sleepy, "with-note": missingAlice }),
+  fixture("SetMoodRequest", SetMoodRequest, {
+    default: { mood: "happy" },
+    "with-note": { mood: "busy", note: "  deadline till 6  " },
+  }),
   // A JWS's shape only: never signed by anyone.
   fixture("PurchaseRequest", PurchaseRequest, {
     default: {
@@ -916,6 +935,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       lastReactionRev: 2,
     }),
     "resume-with-shop": ClientMessage.cases.Resume.make({ lastSeq: 7, activity: true, shop: true }),
+    "resume-with-moods": ClientMessage.cases.Resume.make({
+      lastSeq: 7,
+      activity: true,
+      lastReactionRev: 2,
+      moods: true,
+    }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -957,6 +982,7 @@ export const catalog: ReadonlyArray<Fixture> = [
         bonuses: [],
       },
     }),
+    "mood-changed": ServerMessage.cases.MoodChanged.make({ checkIn: missingAlice }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

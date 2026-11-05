@@ -33,6 +33,8 @@ export const routes = {
   unpair: route("DELETE", "/v1/pair"),
   /** The caller's pair and both members. 404 while the caller has no partner. */
   getPair: route("GET", "/v1/pair"),
+  /** Replaces the caller's check-in with how they feel now. */
+  setMood: route("PUT", "/v1/mood"),
   uploadImage: route("POST", "/v1/media"),
   /** A media key has slashes in it, so it is the rest of the path: see `mediaPath`. */
   downloadImage: route("GET", "/v1/media/*"),

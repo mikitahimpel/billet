@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { CatGameId, CatName } from "./cat.ts";
 import { EpochMillis, NoteId } from "./ids.ts";
+import { Mood } from "./mood.ts";
 import { Reaction } from "./reaction.ts";
 
 /**
@@ -57,6 +58,8 @@ export const ActivityEvent = Schema.TaggedUnion({
   NoteSent: { note: NoteId, kind: Schema.Literals(["Drawing", "Photo", "Text"]) },
   /** A partner reacted to the other's photo. */
   Reacted: { note: NoteId, reaction: Reaction },
+  /** A partner checked in with how they feel. */
+  MoodShared: { mood: Mood },
   Purchased: {
     offer: Schema.optionalKey(ActivityOfferId),
     items: Schema.Array(ActivityShopItemId).check(Schema.isNonEmpty()),
