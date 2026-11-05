@@ -22,6 +22,7 @@ import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
 import { makeInMemoryFunnelStore } from "./in-memory-funnel-store.ts";
 import { FunnelStore } from "../src/funnel-store.ts";
+import { AnalyticsEngineReader } from "../src/analytics-engine-reader.ts";
 
 const experiments = defineExperiments([
   {
@@ -120,6 +121,7 @@ const handlerFor = (email: string) =>
                   ),
               }),
               Layer.succeed(FunnelStore, funnels.store),
+              AnalyticsEngineReader.none,
               Layer.succeed(AppStatusStore, {
                 current: Effect.suspend(() => appStatus.store.current),
                 history: (limit) => appStatus.store.history(limit),
@@ -350,6 +352,25 @@ describe("the admin API", () => {
     expect((await call(path, "DELETE")).status).toBe(204);
     expect((await call(path, "DELETE")).status).toBe(404);
     expect((await call(adminApi.funnels)).body.funnels).toEqual([]);
+  });
+
+  it("serves trends from D1 when there is no Analytics Engine, and refuses a bad query", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const ok = await call(
+      `${adminApi.trends}?event=AppOpened&metric=count&interval=week&range=90&split=version`,
+    );
+    expect(ok.status).toBe(200);
+    expect(ok.body.engine).toBe("unavailable");
+    expect(ok.body.groups.length).toBeGreaterThan(0);
+    for (const bad of [
+      "event=Nope&metric=count&interval=day&range=30&split=none",
+      "event=AppOpened&metric=sum&interval=day&range=30&split=none",
+      "event=AppOpened&metric=count&interval=hour&range=30&split=none",
+      "event=AppOpened&metric=count&interval=day&range=31&split=none",
+      "event=AppOpened&metric=count&interval=day&range=30&split=country",
+    ]) {
+      expect((await call(`${adminApi.trends}?${bad}`)).status).toBe(400);
+    }
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

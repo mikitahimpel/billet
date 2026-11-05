@@ -12,6 +12,8 @@
     "./admin-overview": "./src/admin-overview.ts",
     "./admin-retention": "./src/admin-retention.ts",
     "./admin-routes": "./src/admin-routes.ts",
+    "./admin-trends": "./src/admin-trends.ts",
+    "./analytics-engine-reader": "./src/analytics-engine-reader.ts",
     "./app-status-store": "./src/app-status-store.ts",
     "./funnel-store": "./src/funnel-store.ts",
     "./seed-data": "./src/seed-data.ts",
