@@ -87,14 +87,14 @@ struct ShopOffers {
     static let featuredShare = 0.5
 
     /// Bundles that stay in the Shop; unlike the featured set they don't rotate.
-    static let bundles = [
-        ShopBundle(id: "mochi-playday", name: "Mochi's Playday", blurb: "Yarn, a toy mouse and the cat tower",
+    static var bundles: [ShopBundle] { [
+        ShopBundle(id: "mochi-playday", name: "\(CatProfile.name())'s Playday", blurb: "Yarn, a toy mouse and the cat tower",
                    itemIDs: ["yarn", "mouse", "tower"], share: 0.7),
         ShopBundle(id: "reading-nook", name: "Reading Nook", blurb: "Bookcase, armchair and a mushroom lamp",
                    itemIDs: ["bookcase", "armchair", "lamp"], share: 0.75),
         ShopBundle(id: "window-glow", name: "Window Glow", blurb: "Paper lantern, monstera and a sunset print",
                    itemIDs: ["lantern", "monstera", "print"], share: 0.75),
-    ]
+    ] }
 
     /// Gift coins are 20, 30 or 40; one day in four it's a small item instead.
     static let giftCoins = [20, 30, 40]

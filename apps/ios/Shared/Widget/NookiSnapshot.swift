@@ -68,6 +68,7 @@ struct NookiSnapshot: Hashable {
     var moment: MomentPreview?
     var isPurring: Bool
     var isNight: Bool
+    var catName = CatProfile.defaultName
 
     /// Rows a list shows at most, sized for the smallest widget.
     static let listRows = 3
@@ -104,6 +105,7 @@ extension NookiSnapshot {
         self.moment = moment
         isPurring = activity.isPurring(at: date)
         isNight = Self.isNight(date)
+        catName = CatProfile.name()
 
         let today = cal.startOfDay(for: date)
         next = us.upcoming(togetherSince: couple.togetherSince, limit: 1, from: date).first.map {

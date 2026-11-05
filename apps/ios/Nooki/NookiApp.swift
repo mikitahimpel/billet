@@ -17,6 +17,7 @@ struct NookiApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         _session = State(initialValue: session)
         Hints.configure()
+        CatProfile.moveToAppGroup()
         _hints = State(initialValue: Hints(report: api.reportEvents))
         _onboarding = State(initialValue: OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,

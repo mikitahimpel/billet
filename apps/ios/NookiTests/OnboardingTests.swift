@@ -46,7 +46,7 @@ private func makeFlow(
     let flow = OnboardingFlow(
         client: client,
         report: { [sent] (events) async throws(TransportError) in sent.events.withLock { $0.append(contentsOf: events) } },
-        queue: AnswerQueue(file: file), defaults: defaults, canInvite: canInvite, bundled: catalogue,
+        queue: AnswerQueue(file: file), defaults: defaults, catNames: defaults, canInvite: canInvite, bundled: catalogue,
         now: { Date(timeIntervalSince1970: 1_000) })
     return (flow, defaults, file)
 }

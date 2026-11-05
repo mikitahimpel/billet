@@ -596,7 +596,7 @@
  {
   "id": 67,
   "title": "Cat café",
-  "pitch": "Mochi won't be jealous, promise",
+  "pitch": "{cat} won't be jealous, promise",
   "place": "city",
   "cost": "$",
   "time": "1h",
@@ -1342,7 +1342,7 @@
  },
  {
   "id": 150,
-  "title": "Give Mochi a party",
+  "title": "Give {cat} a party",
   "pitch": "Buy one room item together and celebrate it",
   "place": "home",
   "cost": "free",

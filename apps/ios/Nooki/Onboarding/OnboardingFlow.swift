@@ -3,19 +3,6 @@ import Observation
 import Transport
 import Wire
 
-/// What the cat is called. Saved on this phone; the server gets it as the `cat_name` answer.
-nonisolated enum CatProfile {
-    static let nameKey = "catName"
-    static let defaultName = "Mochi"
-    /// The server's limit for the `cat_name` answer.
-    static let nameLimit = 24
-
-    static func name(in defaults: UserDefaults = .standard) -> String {
-        let saved = defaults.string(forKey: nameKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return saved.isEmpty ? defaultName : saved
-    }
-}
-
 /// The first launch: a welcome over the room, the server's questions, the cat's coat and name, an invite for the partner,
 /// then home. Every step can be skipped. Answers are queued in a file and sent when the server can be reached
 /// (`AnswerQueue`); the questions come from the server, or from the copy in the app when it can't be reached.
@@ -55,6 +42,7 @@ final class OnboardingFlow {
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
     @ObservationIgnored private let queue: AnswerQueue
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let catNames: UserDefaults
     @ObservationIgnored private let canInvite: Bool
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let coatChanged: () -> Void
@@ -67,6 +55,7 @@ final class OnboardingFlow {
         report: @escaping @Sendable ([ClientEvent]) async throws(TransportError) -> Void,
         queue: AnswerQueue,
         defaults: UserDefaults = .standard,
+        catNames: UserDefaults = CatProfile.store,
         canInvite: Bool,
         bundled: OnboardingResponse = BundledOnboarding.load(),
         now: @escaping () -> Date = Date.init,
@@ -79,6 +68,7 @@ final class OnboardingFlow {
         self.report = report
         self.queue = queue
         self.defaults = defaults
+        self.catNames = catNames
         self.canInvite = canInvite
         self.now = now
         catalogue = bundled
@@ -205,9 +195,9 @@ final class OnboardingFlow {
         case .catName:
             let answer = answer
             if case .text(let name) = answer {
-                defaults.set(name, forKey: CatProfile.nameKey)
+                catNames.set(name, forKey: CatProfile.nameKey)
             } else {
-                defaults.removeObject(forKey: CatProfile.nameKey)
+                catNames.removeObject(forKey: CatProfile.nameKey)
             }
             record(answer ?? .skipped)
             advance()
@@ -220,7 +210,7 @@ final class OnboardingFlow {
 
     func skip() {
         guard canSkip else { return }
-        if page == .catName { defaults.removeObject(forKey: CatProfile.nameKey) }
+        if page == .catName { catNames.removeObject(forKey: CatProfile.nameKey) }
         if page == .catCoat {
             coat = .grey
             wear(.grey)

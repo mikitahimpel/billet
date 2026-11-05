@@ -168,12 +168,19 @@ struct DateIdea: Identifiable, Codable, Hashable {
     enum Season: String, Codable { case any, spring, summer, autumn, winter }
 
     let id: Int
-    let title: String
-    let pitch: String
+    private let rawTitle: String
+    private let rawPitch: String
     let place: Place
     let cost: Cost
     let time: Length
     let season: Season
+
+    var title: String { CatProfile.named(rawTitle) }
+    var pitch: String { CatProfile.named(rawPitch) }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season
+    }
 
     static let all: [DateIdea] = {
         guard let url = Bundle.main.url(forResource: "DateIdeas", withExtension: "json"),

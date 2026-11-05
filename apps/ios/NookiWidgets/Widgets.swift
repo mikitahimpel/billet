@@ -35,7 +35,7 @@ struct CornerWidget: Widget {
             .containerBackground(WidgetInk.background, for: .widget)
         }
         .configurationDisplayName("Our Corner")
-        .description("Mochi's room with two blocks of your choice.")
+        .description("Your cat's room with two blocks of your choice.")
         .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()
     }
@@ -54,7 +54,7 @@ struct MochiWidget: Widget {
             .containerBackground(WidgetInk.background, for: .widget)
         }
         .configurationDisplayName("Nooki")
-        .description("Mochi and what matters right now.")
+        .description("Your cat and what matters right now.")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
     }

@@ -6,10 +6,10 @@ struct PetMochiControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "com.mikitahimpel.billet.pet") {
             ControlWidgetButton(action: PetMochiIntent()) {
-                Label("Pet Mochi", systemImage: "pawprint.fill")
+                Label("Pet \(CatProfile.name())", systemImage: "pawprint.fill")
             }
         }
-        .displayName("Pet Mochi")
-        .description("Mochi purrs, no need to open Nooki.")
+        .displayName("Pet Your Cat")
+        .description("Your cat purrs, no need to open Nooki.")
     }
 }
