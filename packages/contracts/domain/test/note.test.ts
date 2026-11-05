@@ -7,6 +7,9 @@ import {
   noteTextMaxCharacters,
   noteTextMaxUnits,
   PaperColor,
+  PhotoPreview,
+  photoPreviewMaxLength,
+  PhotoSide,
 } from "@billet/contracts-domain/note";
 
 const accepts = Schema.is(NoteText);
@@ -36,6 +39,37 @@ describe("NoteText", () => {
   });
 });
 
+describe("PhotoSide", () => {
+  const side = Schema.is(PhotoSide);
+
+  it("takes whole pixels from 1 to 8192", () => {
+    expect([1, 4032, 8192].map(side)).toEqual([true, true, true]);
+    expect([0, -1, 8193, 1.5, Number.NaN].map(side)).toEqual([false, false, false, false, false]);
+  });
+});
+
+describe("PhotoPreview", () => {
+  const preview = Schema.is(PhotoPreview);
+
+  it("takes a BlurHash as long as its header says", () => {
+    // 4 by 3 components, the default of most encoders.
+    expect(preview("LEHV6nWB2yk8pyo0adR*.7kCMdnj")).toBe(true);
+    // 1 by 1, the smallest; and 9 by 9, the largest.
+    expect(preview("00TI:j")).toBe(true);
+    expect(preview(`|${"0".repeat(photoPreviewMaxLength - 1)}`)).toBe(true);
+  });
+
+  it("refuses a hash of the wrong length, outside base 83, or not a hash at all", () => {
+    expect(preview("LEHV6nWB2yk8pyo0adR*.7kCMdn")).toBe(false);
+    expect(preview("LEHV6nWB2yk8pyo0adR*.7kCMdnjj")).toBe(false);
+    expect(preview("LEHV6nWB2yk8pyo0adR*.7kCMd/j")).toBe(false);
+    expect(preview("")).toBe(false);
+    // A size flag past 9 by 9.
+    expect(preview(`~${"0".repeat(4 + 2 * 2 * 10 - 1)}`)).toBe(false);
+    expect(preview("/9j/4AAQSkZJRgABAQ==")).toBe(false);
+  });
+});
+
 describe("PaperColor", () => {
   it("is one of the five papers", () => {
     expect(PaperColor.literals).toEqual(["butter", "blush", "sage", "sky", "cream"]);
@@ -51,6 +85,26 @@ describe("Note", () => {
       paper: "sky",
     });
     expect(decode({ _tag: "Text", ...base, text: "hi" })).not.toHaveProperty("paper");
+  });
+
+  it("decodes a photo stored before it carried a size and a preview", () => {
+    const stored = { _tag: "Photo", ...base, image: "pairs/p/notes/n.png" };
+    expect(decode(stored)).toEqual(stored);
+  });
+
+  it("decodes a photo with its size, preview and caption", () => {
+    const photo = {
+      _tag: "Photo",
+      ...base,
+      image: "pairs/p/notes/n.jpg",
+      width: 3024,
+      height: 4032,
+      preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      caption: "hello",
+    };
+    expect(decode(photo)).toEqual(photo);
+    expect(() => decode({ ...photo, caption: " " })).toThrow();
+    expect(() => decode({ ...photo, width: 9000 })).toThrow();
   });
 
   it("refuses an unknown paper and a null one", () => {

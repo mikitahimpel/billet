@@ -170,7 +170,7 @@ extension HistoryMachine {
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt),
         content: strokes.map(HistoryNote.Content.drawing) ?? .other)
-    case .photo(_, let author, let sentAt, _):
+    case .photo(_, let author, let sentAt, _, _, _, _, _):
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt), content: .other)
     // The Nooki notes screen shows text notes; this list keeps to drawings.
