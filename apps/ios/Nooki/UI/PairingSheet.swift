@@ -20,10 +20,11 @@ struct PairingSheet: View {
                 VStack(spacing: 18) {
                     content
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.horizontal, Space.gutter)
+                .padding(.vertical, Space.m)
             }
             .scrollIndicators(.hidden)
+            .background(Ink.screen.ignoresSafeArea())
             .navigationTitle("Pair with your partner")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -56,7 +57,7 @@ struct PairingSheet: View {
             if let failure {
                 Text(PairingCopy.message(for: failure))
                     .font(.nookiCallout)
-                    .foregroundStyle(Color(hex: 0xFF8A7A))
+                    .foregroundStyle(ShopInk.coral)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
@@ -65,6 +66,7 @@ struct PairingSheet: View {
         case .creating, .claiming:
             ProgressView()
                 .controlSize(.large)
+                .tint(Ink.accentText)
                 .frame(maxWidth: .infinity, minHeight: 260)
         case .waiting(let code, let expiresAt, _):
             waitingCard(code: code, expiresAt: expiresAt)
@@ -75,9 +77,7 @@ struct PairingSheet: View {
 
     private var showCard: some View {
         card {
-            Image(systemName: "qrcode")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Ink.accentText)
+            UsIcon(glyph: .init(symbol: "qrcode", tint: .honey), size: 52)
             Text("Show my code")
                 .font(.nookiTitle)
                 .foregroundStyle(Ink.text)
@@ -97,27 +97,23 @@ struct PairingSheet: View {
 
     private var enterCard: some View {
         card {
-            Image(systemName: "keyboard")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Color(hex: 0xFFB3C1))
+            UsIcon(glyph: .init(symbol: "keyboard", tint: .blush), size: 52)
             Text("I have their code")
                 .font(.nookiTitle)
                 .foregroundStyle(Ink.text)
             TextField("Code", text: $code)
-                .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                .font(.system(.title2, design: .monospaced, weight: .semibold))
+                .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .focused($typing)
                 .submitLabel(.join)
                 .onSubmit(submit)
-                .padding(.vertical, 12)
+                .padding(.vertical, Space.m)
                 .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
-            Button(action: submit) {
-                Text("Pair").frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            Button("Pair", action: submit)
+                .buttonStyle(NookiSecondaryStyle())
             .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
@@ -128,7 +124,7 @@ struct PairingSheet: View {
                 .font(.nookiHeadline)
                 .foregroundStyle(Ink.textSecondary)
             Text(PairingCopy.spaced(code))
-                .font(.system(size: 40, weight: .bold, design: .monospaced))
+                .font(.system(.largeTitle, design: .monospaced, weight: .bold))
                 .foregroundStyle(Ink.text)
                 .textSelection(.enabled)
                 .minimumScaleFactor(0.5)
@@ -139,8 +135,8 @@ struct PairingSheet: View {
                     .foregroundStyle(Ink.textSecondary)
                     .monospacedDigit()
             }
-            HStack(spacing: 8) {
-                ProgressView()
+            HStack(spacing: Space.s) {
+                ProgressView().tint(Ink.accentText)
                 Text("Waiting for your partner…")
                     .font(.nookiCallout)
                     .foregroundStyle(Ink.text)
@@ -148,18 +144,14 @@ struct PairingSheet: View {
             .padding(.top, 4)
             ShareLink(item: "Pair with me on Nooki: \(code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
-                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+            .buttonStyle(NookiSecondaryStyle())
         }
     }
 
     private var pairedCard: some View {
         card {
-            Image(systemName: "heart.fill")
-                .font(.system(size: 46))
-                .foregroundStyle(Color(hex: 0xFFB3C1))
+            UsIcon(glyph: .init(symbol: "heart.fill", tint: .blush), size: 64)
                 .symbolEffect(.bounce, options: .nonRepeating)
             Text("You're paired!")
                 .font(.nookiTitle)
@@ -179,10 +171,10 @@ struct PairingSheet: View {
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(spacing: 12, content: content)
-            .padding(20)
+        VStack(spacing: Space.m, content: content)
+            .padding(Space.gutter)
             .frame(maxWidth: .infinity)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+            .nookiCard()
     }
 
     private var isPaired: Bool {
