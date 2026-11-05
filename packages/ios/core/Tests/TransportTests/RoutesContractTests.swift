@@ -48,6 +48,8 @@ import Testing
       "saveCat": Routes.saveCat,
       "listCatJournal": Routes.listCatJournal,
       "recordCatEvent": Routes.recordCatEvent,
+      "listActivity": Routes.listActivity,
+      "markActivityRead": Routes.markActivityRead,
       "reportEvents": Routes.reportEvents,
       "purchase": Routes.purchase,
       "mockPurchase": Routes.mockPurchase,
