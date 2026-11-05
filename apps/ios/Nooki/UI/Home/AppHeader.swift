@@ -17,7 +17,10 @@ struct AppHeader: View {
             Menu {
                 Button("Couple profile", systemImage: "person.2.crop.square.stack") { editing = true }
                 if let session, !session.isPaired {
-                    Button("Invite your partner", systemImage: "heart.circle") { pairing = true }
+                    Button("Invite your partner", systemImage: "heart.circle") {
+                        hints.done(InviteHint())
+                        pairing = true
+                    }
                 }
             } label: {
                 HStack(spacing: -10) {
