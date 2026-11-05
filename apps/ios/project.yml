@@ -13,8 +13,14 @@ settings:
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "23"
 packages:
-  BilletPackages:
-    path: ../../packages/ios
+  BilletContracts:
+    path: ../../packages/ios/contracts
+  BilletCore:
+    path: ../../packages/ios/core
+  BilletPet:
+    path: ../../packages/ios/pet
+  BilletFeatures:
+    path: ../../packages/ios/features
 targets:
   Billet:
     type: application
@@ -40,8 +46,15 @@ targets:
             CFBundleURLSchemes: [nooki]
     dependencies:
       - target: NookiWidgets
-      - package: BilletPackages
-        products: [FeatureOnboarding, FeaturePairing, Persistence, Pet, Transport, Wire]
+      - target: WindowViews
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Persistence, Transport]
+      - package: BilletPet
+        products: [Pet]
+      - package: BilletFeatures
+        products: [FeatureOnboarding, FeaturePairing]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
@@ -58,6 +71,18 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  # The old app's flat window views, compiled from packages/pet-scenes/reality without RealityKit or its
+  # resources, plus a painter that turns one into images for the City room's window (WindowViews/).
+  WindowViews:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: ../../packages/pet-scenes/reality/Sources/PetSceneReality/Views
+        excludes: [NativeWindowView.swift, Street3D.swift]
+      - path: WindowViews
+    dependencies:
+      - package: BilletPet
+        product: Pet
   NookiWidgets:
     type: app-extension
     platform: iOS

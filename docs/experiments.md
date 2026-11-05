@@ -93,7 +93,9 @@ reads.
    a whole number, exposure outside 0 to 100, a malformed version bound, a key that is not
    lowercase hyphenated words), and a test loads the registry.
 3. For an experiment, choose **one primary metric** before you start and write it in the
-   description.
+   description. The panel also shows a fixed set of secondary and guardrail metrics for every
+   experiment, and warns when a guardrail gets worse ([admin.md](admin.md#experiment-metrics)).
+   They never pick the winner.
 4. Deploy. Then start, stop and kill it from the admin panel, without a deploy and without an App
    Store release if the build already has the variants.
 5. Leave the entry in the registry after it ends, so the key is never reused.
@@ -116,7 +118,7 @@ is ignored, so nothing needs cleaning up.
 
 ## On the phone
 
-`packages/ios`, module `WidgetBridge` and `FeatureHome`.
+`packages/ios/features`, modules `WidgetBridge` and `FeatureHome`.
 
 - **What the build contains.** `Experiments` (in `RemoteFlags.swift`) lists each experiment's key and
   the variants this build can show. The server can name only those: any other variant is ignored,
@@ -150,8 +152,11 @@ the mapping (every variant has a screen; an unknown one has none), then add the 
 First-party only: counts kept on our own backend, no third-party SDK, nothing sent anywhere else.
 
 **What is recorded.** One row per person, event name and UTC day in `pair_events` (D1): the pair
-(empty before pairing), the person, the name, the day, how many times, and the first and last
-moment. Nothing else: no note, image, stroke, text, device, address or place. The names are a closed
+(empty before pairing), the person, the name, the day, how many times, the first and last moment,
+and for what the app reports, the build and system it sent with its latest report that day
+(`app_version`, `os`: the same values Analytics Engine gets, in the same shapes; null for what the
+server records itself, and for rows from before 2026-11-04). Nothing else: no note, image, stroke,
+text, device, address or place. The names are a closed
 list in `packages/contracts/domain/src/metrics.ts`:
 
 | Name | Who records it | When |

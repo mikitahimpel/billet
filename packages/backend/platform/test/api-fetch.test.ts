@@ -1545,12 +1545,15 @@ describe("metrics", () => {
     }
     const columns = (await env.DB.prepare("PRAGMA table_info(pair_events)").all<{ name: string }>())
       .results;
+    // The build and system are the app's own headers, in the shapes `clientInfoOf` allows.
     expect(columns.map(({ name }) => name).toSorted()).toEqual([
+      "app_version",
       "count",
       "day",
       "first_at",
       "last_at",
       "name",
+      "os",
       "pair_id",
       "user_id",
     ]);

@@ -12,13 +12,17 @@ import { makeInMemoryFlagConfigRepository } from "@billet/backend-flags/test/in-
 import { makeInMemoryFlagsRepository } from "@billet/backend-flags/test/in-memory-flags-repository";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
-import type { EventRow } from "@billet/backend-metrics/funnel";
+import type { EventRow, FlagRow } from "@billet/backend-metrics/funnel";
 import { AdminData } from "../src/admin-data.ts";
+import { makeSeed } from "../src/seed-data.ts";
 import type { DetailRow } from "../src/admin-top-details.ts";
 import { OnboardingCatalogue, seedCatalogue } from "@billet/backend-onboarding/catalogue";
 import { adminApi, AdminRoutes, CurrentAdmin, PanelEnvironment } from "../src/admin-routes.ts";
 import { AppStatusStore } from "../src/app-status-store.ts";
 import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
+import { makeInMemoryFunnelStore } from "./in-memory-funnel-store.ts";
+import { FunnelStore } from "../src/funnel-store.ts";
+import { AnalyticsEngineReader } from "../src/analytics-engine-reader.ts";
 
 const experiments = defineExperiments([
   {
@@ -56,10 +60,12 @@ const fixedClock: Clock.Clock = {
 };
 const events: Array<EventRow> = [];
 const details: Array<DetailRow> = [];
+const flagRows: Array<FlagRow> = [];
 const pairing = makeInMemoryPairingRepository();
 let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
 let appStatus = makeInMemoryAppStatusStore();
+const funnels = makeInMemoryFunnelStore();
 
 const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
@@ -88,7 +94,7 @@ const handlerFor = (email: string) =>
               Layer.succeed(AdminData, {
                 events: Effect.sync(() => events),
                 details: Effect.sync(() => details),
-                assignments: Effect.succeed([]),
+                assignments: Effect.sync(() => flagRows),
                 userCount: Effect.succeed(3),
                 purchases: (limit) =>
                   Effect.succeed({
@@ -126,6 +132,8 @@ const handlerFor = (email: string) =>
                       : { members: 0, pairedAt: null },
                   ),
               }),
+              Layer.succeed(FunnelStore, funnels.store),
+              AnalyticsEngineReader.none,
               Layer.succeed(AppStatusStore, {
                 current: Effect.suspend(() => appStatus.store.current),
                 history: (limit) => appStatus.store.history(limit),
@@ -170,6 +178,7 @@ beforeEach(() => {
   appStatus = makeInMemoryAppStatusStore();
   events.length = 0;
   details.length = 0;
+  flagRows.length = 0;
 });
 
 describe("the admin API", () => {
@@ -295,6 +304,118 @@ describe("the admin API", () => {
       0,
     ]);
     expect(body.pairCompletion).toMatchObject({ of: 0, share: null, interval: null });
+  });
+
+  it("serves the retention grid, filtered, and refuses a malformed filter", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const { status, body } = await call(adminApi.retention);
+    expect(status).toBe(200);
+    expect(body.days).toEqual([1, 3, 7, 14, 30, 60]);
+    expect(body.rows.at(-1).week).toBe("all");
+    expect(body.options.appVersions.length).toBeGreaterThan(0);
+    const filtered = await call(
+      `${adminApi.retention}?variant=home-layout%3Dimmersive&version=1.0.0%2B10`,
+    );
+    expect(filtered.status).toBe(200);
+    expect(filtered.body.filter).toEqual({
+      variant: "home-layout=immersive",
+      appVersion: "1.0.0+10",
+    });
+    expect((await call(`${adminApi.retention}?variant=Home+Layout`)).status).toBe(400);
+    expect((await call(`${adminApi.retention}?version=my%20phone`)).status).toBe(400);
+  });
+
+  it("builds a funnel, refuses a bad one, and saves, lists and removes funnels", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const built = await call(
+      `${adminApi.funnel}?steps=PairClaimed,NoteSent&window=7d&unit=pair&range=all&split=home-layout`,
+    );
+    expect(built.status).toBe(200);
+    expect(built.body.definition).toEqual({
+      steps: ["PairClaimed", "NoteSent"],
+      window: "7d",
+      unit: "pair",
+    });
+    expect(built.body.groups[0].entered).toBeGreaterThan(5);
+    for (const bad of [
+      "steps=PairClaimed&window=7d&unit=pair",
+      "steps=PairClaimed,Nope&window=7d&unit=pair",
+      "steps=PairClaimed,NoteSent&window=2d&unit=pair",
+      "steps=PairClaimed,NoteSent&window=7d&unit=couple",
+      "steps=PairClaimed,NoteSent&window=7d&unit=pair&split=Not%20A%20Key",
+    ]) {
+      expect((await call(`${adminApi.funnel}?${bad}`)).status).toBe(400);
+    }
+
+    const definition = { steps: ["AppOpened", "NoteSent"], window: "day", unit: "person" };
+    const saved = await call(adminApi.funnels, "POST", { name: "Open to note", definition });
+    expect(saved.status).toBe(201);
+    expect(saved.body).toMatchObject({ name: "Open to note", createdBy: "owner@example.com" });
+    const listed = (await call(adminApi.funnels)).body;
+    expect(listed.funnels).toEqual([saved.body]);
+    expect(listed.events).toContain("PairClaimed");
+    expect(listed.events).not.toContain("AccountDeleted");
+    expect((await call(adminApi.funnels, "POST", { name: "", definition })).status).toBe(400);
+    expect(
+      (
+        await call(adminApi.funnels, "POST", {
+          name: "x",
+          definition: { ...definition, steps: [] },
+        })
+      ).status,
+    ).toBe(400);
+    const path = adminApi.savedFunnel.replace(":id", saved.body.id);
+    expect((await call(path, "DELETE")).status).toBe(204);
+    expect((await call(path, "DELETE")).status).toBe(404);
+    expect((await call(adminApi.funnels)).body.funnels).toEqual([]);
+  });
+
+  it("serves trends from D1 when there is no Analytics Engine, and refuses a bad query", async () => {
+    events.push(...makeSeed({ today, weeks: 4 }).events);
+    const ok = await call(
+      `${adminApi.trends}?event=AppOpened&metric=count&interval=week&range=90&split=version`,
+    );
+    expect(ok.status).toBe(200);
+    expect(ok.body.engine).toBe("unavailable");
+    expect(ok.body.groups.length).toBeGreaterThan(0);
+    for (const bad of [
+      "event=Nope&metric=count&interval=day&range=30&split=none",
+      "event=AppOpened&metric=sum&interval=day&range=30&split=none",
+      "event=AppOpened&metric=count&interval=hour&range=30&split=none",
+      "event=AppOpened&metric=count&interval=day&range=31&split=none",
+      "event=AppOpened&metric=count&interval=day&range=30&split=country",
+    ]) {
+      expect((await call(`${adminApi.trends}?${bad}`)).status).toBe(400);
+    }
+  });
+
+  it("adds secondary and guardrail metrics to each experiment's results, against its default", async () => {
+    const seed = makeSeed({ today, weeks: 6 });
+    events.push(...seed.events);
+    // The seed's two variants, as `home-direction`'s: classic is the default's place.
+    const renamed: Record<string, string> = { classic: "window-seat", immersive: "sunset-lamp" };
+    flagRows.push(
+      ...seed.flags.map((flag) => ({
+        ...flag,
+        experimentKey: "home-direction",
+        variant: renamed[flag.variant] ?? flag.variant,
+      })),
+    );
+    const { body } = await call(adminApi.experiments);
+    const results = body.items.find(
+      (item: { key: string }) => item.key === "home-direction",
+    ).results;
+    expect(results.baseline).toBe("window-seat");
+    expect(results.metrics.map((metric: { id: string }) => metric.id)).toEqual([
+      "d7BothActive",
+      "widgetAdded",
+      "notesPerDay",
+      "opensPerDay",
+      "crashFree",
+    ]);
+    expect(results.warnings).toEqual([
+      expect.objectContaining({ metric: "opensPerDay", variant: "sunset-lamp" }),
+    ]);
   });
 
   it("builds the overview over 7 or 90 days, and refuses any other range", async () => {

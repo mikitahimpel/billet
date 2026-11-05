@@ -61,7 +61,7 @@ private func settle(_ done: () -> Bool) async {
 struct OnboardingFlowTests {
     @Test func walksWelcomeQuestionsNameAndInvite() {
         let (flow, _, _) = makeFlow()
-        #expect(flow.pages == [.welcome, .question(age), .question(goals), .catName, .invite])
+        #expect(flow.pages == [.welcome, .question(age), .question(goals), .catCoat, .catName, .invite])
         #expect(makeFlow(canInvite: false).0.pages.last == .catName)
     }
 
@@ -69,12 +69,12 @@ struct OnboardingFlowTests {
         let sent = Sent()
         let (flow, defaults, _) = makeFlow(sent: sent)
         flow.start()
-        for _ in 0..<4 { flow.skip() }
+        for _ in 0..<5 { flow.skip() }
         #expect(flow.isFinished)
         #expect(defaults.bool(forKey: OnboardingFlow.doneKey))
-        await settle { sent.answers.withLock { $0.count } == 4 }
+        await settle { sent.answers.withLock { $0.count } == 5 }
         let answers = sent.answers.withLock { $0 }
-        #expect(answers.map(\.stepId) == ["age", "goals", "cat_name", "invite_partner"])
+        #expect(answers.map(\.stepId) == ["age", "goals", "cat_coat", "cat_name", "invite_partner"])
         #expect(answers.allSatisfy { $0.answer == .skipped && $0.answeredAt == 1_000_000 && $0.version == "v1" })
         #expect(sent.events.withLock { $0 }.contains(ClientEvent(.onboardingStepSkipped, detail: "goals")))
     }
@@ -107,6 +107,7 @@ struct OnboardingFlowTests {
         flow.start()
         flow.skip()
         flow.skip()
+        flow.skip()
         flow.catName = "  Tofu "
         flow.continueTapped()
         #expect(CatProfile.name(in: defaults) == "Tofu")
@@ -125,6 +126,36 @@ struct OnboardingFlowTests {
         started.start()
         await started.load()
         #expect(started.catalogue == catalogue)
+    }
+
+    @Test func aPickedCoatIsWornAndSentAndASkippedOneIsGrey() async {
+        let sent = Sent()
+        let (flow, defaults, _) = makeFlow(sent: sent)
+        var changes = 0
+        let coated = OnboardingFlow(
+            client: .offline, report: { (_) async throws(TransportError) in }, queue: AnswerQueue(
+                file: URL.temporaryDirectory.appending(path: "coat-\(UUID().uuidString)/a.json")),
+            defaults: defaults, canInvite: false, bundled: OnboardingResponse(version: "v1", steps: []),
+            coatChanged: { changes += 1 })
+        coated.start()
+        #expect(coated.page == .catCoat)
+        coated.coat = .ginger
+        coated.continueTapped()
+        #expect(CatCoat.current(in: defaults) == .ginger)
+        #expect(coated.wornCoat == .ginger)
+        #expect(changes == 1)
+        coated.back()
+        coated.skip()
+        #expect(CatCoat.current(in: defaults) == .grey)
+        #expect(changes == 2)
+
+        flow.start()
+        flow.skip()
+        flow.skip()
+        flow.coat = .cream
+        flow.continueTapped()
+        await settle { sent.answers.withLock { $0.count } == 3 }
+        #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
     }
 
     @Test func aRangeStartsInTheMiddleOnAStep() {

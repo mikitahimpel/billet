@@ -42,7 +42,7 @@ struct LaunchSplash: View {
 
     private var portrait: some View {
         Group {
-            if let image = UIImage(named: "MochiPortrait") {
+            if let image = UIImage(named: CatCoat.current().avatar) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 Image(systemName: "cat.fill").font(.system(size: 54)).foregroundStyle(.white)

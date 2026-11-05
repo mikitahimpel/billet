@@ -27,13 +27,15 @@
         "Tests/**",
         "Package.swift",
         "scripts/**",
+        "$TURBO_ROOT$/packages/ios/scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format",
         "App/**",
         "Widget/**",
         "NotificationService/**",
         "project.yml"
-      ]
+      ],
+      "dependsOn": ["transit"]
     },
     "ios:format": {
       "cache": false
@@ -65,9 +67,11 @@
         "Tests/**",
         "Package.swift",
         "scripts/**",
+        "$TURBO_ROOT$/packages/ios/scripts/**",
         "$TURBO_ROOT$/.xcode-version",
         "$TURBO_ROOT$/.swift-format"
-      ]
+      ],
+      "dependsOn": ["transit"]
     },
     "lint": {
       "inputs": [

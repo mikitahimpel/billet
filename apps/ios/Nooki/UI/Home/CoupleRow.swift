@@ -42,7 +42,13 @@ struct CoupleRow: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Ink.secondary)
                 }
+                // The clear glass lets the light cushions through; a soft shadow keeps the lines legible over them.
+                .shadow(color: .black.opacity(0.25), radius: 2)
             }
+            .padding(.leading, 5)
+            .padding(.trailing, 18)
+            .padding(.vertical, 5)
+            .warmGlass(.capsule)
 
             Spacer(minLength: 0)
 
@@ -83,6 +89,6 @@ struct CoinPill: View {
         .padding(.leading, 8)
         .padding(.trailing, 14)
         .frame(height: 40)
-        .glass(.capsule, interactive: true)
+        .warmGlass(.capsule, interactive: true)
     }
 }

@@ -150,6 +150,8 @@ struct HomeView: View {
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
+        // `-room city` on launch opens the City room, for recordings and screenshots.
+        if UserDefaults.standard.string(forKey: "room") == "city" { select(.city) }
     }
 
     private func select(_ room: RoomKind) {
@@ -215,7 +217,7 @@ private struct RoomControls: View {
                 }
             }
             .padding(3)
-            .glass(.capsule)
+            .warmGlass(.capsule)
 
             Spacer(minLength: 0)
 
@@ -229,7 +231,7 @@ private struct RoomControls: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .frame(height: 40)
-                .glass(.capsule, interactive: true)
+                .warmGlass(.capsule, interactive: true)
             }
             .buttonStyle(.plain)
             .disabled(showcase != nil)

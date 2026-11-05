@@ -32,6 +32,9 @@ const decodeEvents = Schema.decodeUnknownEffect(
       day: Schema.String,
       count: Schema.Int,
       firstAt: Schema.Int,
+      lastAt: Schema.Int,
+      appVersion: Schema.NullOr(Schema.String),
+      os: Schema.NullOr(Schema.String),
     }),
   ),
 );
@@ -49,6 +52,9 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
             day: pairEvents.day,
             count: pairEvents.count,
             firstAt: pairEvents.firstAt,
+            lastAt: pairEvents.lastAt,
+            appVersion: pairEvents.appVersion,
+            os: pairEvents.os,
           })
           .from(pairEvents)
           .orderBy(asc(pairEvents.day))

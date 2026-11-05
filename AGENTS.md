@@ -9,8 +9,8 @@ Design is in [docs/architecture.md](docs/architecture.md), scope in [docs/plan.m
 pnpm install                              # Node 24, pnpm from packageManager
 pnpm turbo run lint typecheck test        # TypeScript checks, safe on Linux (no Swift)
 pnpm format:check                         # oxfmt check; `pnpm format` writes
-pnpm ios:test                             # swift test in packages/ios (Mac only)
-pnpm ios:build                            # swift build in packages/ios (Mac only)
+pnpm ios:test                             # swift test in each packages/ios/<layer> (Mac only)
+pnpm ios:build                            # swift build in each packages/ios/<layer> (Mac only)
 pnpm alchemy dev                          # local infrastructure, no credentials (docs/alchemy.md)
 pnpm db:generate                          # Drizzle migrations for D1 and Durable Object SQLite
 ```
@@ -20,7 +20,8 @@ Versions come from the catalog in `pnpm-workspace.yaml`: use `"catalog:"` in `pa
 
 ## Layout and boundaries
 
-- Workspaces are `apps/*`, `packages/<context>/<name>` and `packages/ios`.
+- Workspaces are `apps/*` and `packages/<context>/<name>`; Swift packages are `packages/ios/<layer>`
+  (docs/architecture.md, "Swift package layers").
 - kebab-case for folders, `exports` subpaths, and TypeScript and config files. Swift files are the exception (see Swift).
 - No barrels: no `index.ts` that re-exports. Import the module you need.
 - Explicit `exports` is the only package boundary. Never import across packages by relative path.

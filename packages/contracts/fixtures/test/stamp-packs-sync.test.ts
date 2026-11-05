@@ -30,7 +30,7 @@ const canonical = stampPacks
 describe("the stamp packs everywhere", () => {
   it("the app's stamp-packs.json sells the canonical packs", () => {
     const { packs } = Schema.decodeUnknownSync(AppPacks)(
-      readJson("packages/ios/Sources/Payments/Resources/stamp-packs.json"),
+      readJson("packages/ios/payments/Sources/Payments/Resources/stamp-packs.json"),
     );
     expect(
       packs

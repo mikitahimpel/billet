@@ -240,6 +240,11 @@ export const pairEvents = sqliteTable(
     count: integer("count").notNull(),
     firstAt: integer("first_at").notNull(),
     lastAt: integer("last_at").notNull(),
+    // The build (`1.2.0+14`) and system (`iOS 26.1`) the app sent with its latest report that day,
+    // as `clientInfoOf` reads the headers. Null for names the server records itself. The same
+    // values Analytics Engine gets; here so the admin can split cohorts by build past its 90 days.
+    appVersion: text("app_version"),
+    os: text("os"),
   },
   (table) => [
     primaryKey({ columns: [table.pairId, table.userId, table.name, table.day] }),
@@ -265,6 +270,16 @@ export const eventDetails = sqliteTable(
     index("event_details_day_index").on(table.day),
   ],
 );
+
+// Funnels the owner saved in the admin panel: a name and the definition (steps, window, unit) as
+// JSON, with who saved it (the Cloudflare Access email). Nothing about any pair or person.
+export const adminFunnels = sqliteTable("admin_funnels", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  definition: text("definition").notNull(),
+  createdAt: integer("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+});
 
 // The live configuration of each experiment and remote flag, as the admin panel last saved it.
 // The registry in `backend-flags/experiments` defines the keys and variants; a row here only

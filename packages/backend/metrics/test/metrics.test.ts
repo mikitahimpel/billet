@@ -42,6 +42,9 @@ describe("Metrics", () => {
         count: 1,
         firstAt: Date.UTC(2026, 10, 2, 9),
         lastAt: Date.UTC(2026, 10, 2, 9),
+        // The server recorded it, so there is no build or system.
+        appVersion: null,
+        os: null,
       },
     ]);
   });

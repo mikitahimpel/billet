@@ -177,6 +177,10 @@ describe("the read-only agent API", () => {
     "/admin/api/agent/flag-history",
     "/admin/api/agent/purchases",
     "/admin/api/agent/onboarding",
+    "/admin/api/agent/retention",
+    "/admin/api/agent/funnel?steps=AppOpened,NoteSent&window=day&unit=person",
+    "/admin/api/agent/funnels",
+    "/admin/api/agent/trends?event=AppOpened&metric=count&interval=day&range=30&split=none",
   ];
 
   afterEach(() => vi.restoreAllMocks());
@@ -279,6 +283,9 @@ describe("the read-only agent API", () => {
     ["POST", "/admin/api/agent/flags"],
     ["PUT", "/admin/api/agent/flags"],
     ["DELETE", "/admin/api/agent/flags"],
+    ["POST", "/admin/api/funnels"],
+    ["DELETE", "/admin/api/funnels/00000000-0000-4000-8000-000000000001"],
+    ["POST", "/admin/api/agent/funnels"],
   ])(
     "refuses a service token's %s %s with 403, even from the panel's origin",
     async (method, path) => {
