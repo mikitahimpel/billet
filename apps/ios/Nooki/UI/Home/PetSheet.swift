@@ -31,8 +31,8 @@ struct PetButton: View {
                 .glass(.circle, interactive: true)
                 .overlay(alignment: .bottom) {
                     Text("Lv.\(state.care.level)")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color(hex: 0x4A2A14))
+                        .font(.nookiMicro)
+                        .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 7)
                         .frame(height: 17)
                         .background(.honeyGradient, in: .capsule)
@@ -66,13 +66,14 @@ struct PetButton: View {
                 onPlay(game)
             }
             .presentationDetents([.height(sheetHeight)])
-            .presentationBackground(Ink.sheet)
+            .presentationBackground(Ink.screen)
             .presentationDragIndicator(.visible)
         }
     }
 }
 
-/// Mochi up close: her level, her four needs, and the way to fill each.
+/// Mochi up close: her face big on a warm stage, her name, mood and level, her four needs, and the things to do for
+/// her. It scrolls only when its content is taller than the screen allows.
 private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
@@ -81,55 +82,114 @@ private struct PetSheet: View {
     @State private var short = false
 
     var body: some View {
-        VStack(spacing: 18) {
-            HStack(spacing: 16) {
-                PetPortrait(size: 92)
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Text(state.petName)
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                        Text("Lv. \(state.care.level)")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color(hex: 0x4A2A14))
-                            .padding(.horizontal, 8)
-                            .frame(height: 22)
-                            .background(.honeyGradient, in: .capsule)
-                            .contentTransition(.numericText())
-                    }
-                    ProgressCapsule(value: state.care.progress)
-                    Text("\(Int((state.care.progress * 100).rounded()))% to Lv. \(state.care.level + 1)")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Ink.secondary)
-                        .contentTransition(.numericText())
-                }
-            }
-
+        ScrollView {
             // The brain starts after the room has loaded and keeps changing; look again each second.
             TimelineView(.periodic(from: .now, by: 1)) { _ in
-                NeedBars(
-                    name: state.petName,
-                    needs: (FixedNeeds.fromLaunch ?? needs())?.needs,
-                    treat: {
-                        withAnimation(.spring(duration: 0.4)) { short = !state.shop.treat() }
-                        if !short { needs()?.feed() }
-                    },
-                    pet: { withAnimation(.spring(duration: 0.4)) { state.care.pet() } },
-                    play: onPlay
-                )
+                let current = (FixedNeeds.fromLaunch ?? needs())?.needs
+                VStack(spacing: Space.l) {
+                    hero(mood: current?.moodLine(name: state.petName))
+                    NeedBars(name: state.petName, needs: current)
+                    PetActions(
+                        treat: {
+                            withAnimation(.spring(duration: 0.4)) { short = !state.shop.treat() }
+                            if !short { needs()?.feed() }
+                        },
+                        pet: { withAnimation(.spring(duration: 0.4)) { state.care.pet() } },
+                        play: onPlay
+                    )
+                    Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
+                        .font(.nookiCaption)
+                        .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
+                        .contentTransition(.opacity)
+                }
+                .padding(.horizontal, Space.gutter)
+                .padding(.top, Space.section)
+                .padding(.bottom, Space.l)
             }
-            .haptic(.impact(weight: .light), trigger: state.care.petPulse)
-
-            Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(Ink.secondary)
-                .contentTransition(.opacity)
+            .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         }
-        .foregroundStyle(Ink.primary)
-        .padding(.horizontal, 20)
-        .padding(.top, 28)
-        .padding(.bottom, 20)
-        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
-        .frame(maxHeight: .infinity, alignment: .top)
+        .scrollBounceBehavior(.basedOnSize)
+        .scrollIndicators(.hidden)
+        .haptic(.impact(weight: .light), trigger: state.care.petPulse)
+    }
+
+    private func hero(mood: String?) -> some View {
+        VStack(spacing: Space.s) {
+            PetPortrait(size: 112)
+                .shadow(color: Color(hex: 0x8A3A1E).opacity(0.35), radius: 14, y: 8)
+                .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
+                    view.scaleEffect(scale)
+                } keyframes: { _ in
+                    SpringKeyframe(1.08, duration: 0.15)
+                    SpringKeyframe(1.0, duration: 0.35)
+                }
+                .padding(.top, Space.s)
+            Text(state.petName)
+                .font(.nookiLargeTitle)
+                .foregroundStyle(Ink.heroInk)
+            if let mood {
+                Text(mood)
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.heroInk.opacity(0.75))
+                    .contentTransition(.opacity)
+            }
+            HStack(spacing: Space.s) {
+                Text("Lv. \(state.care.level)")
+                    .font(.nookiMicro)
+                    .foregroundStyle(Ink.heroInk)
+                    .padding(.horizontal, Space.s)
+                    .frame(height: 22)
+                    .background(.white.opacity(0.7), in: .capsule)
+                    .contentTransition(.numericText())
+                LevelTrack(value: state.care.progress)
+                Text("\(Int((state.care.progress * 100).rounded()))%")
+                    .font(.nookiMicro)
+                    .foregroundStyle(Ink.heroInk.opacity(0.75))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+            .padding(.horizontal, Space.l)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Level \(state.care.level)")
+            .accessibilityValue("\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
+        }
+        .padding(.bottom, Space.l)
+        .frame(maxWidth: .infinity)
+        .background {
+            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0xFFE2B0), Color(hex: 0xF6B77A)],
+                                     startPoint: .top, endPoint: .bottom))
+                .overlay {
+                    // Lamplight from above, as on her in the room.
+                    RadialGradient(colors: [.white.opacity(0.6), .clear], center: UnitPoint(x: 0.5, y: 0.2),
+                                   startRadius: 0, endRadius: 150)
+                        .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                        .strokeBorder(.white.opacity(0.5), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
+        }
+    }
+}
+
+/// The level bar on the warm stage: honey on a white groove.
+private struct LevelTrack: View {
+    let value: Double
+
+    var body: some View {
+        Capsule()
+            .fill(.white.opacity(0.55))
+            .overlay(alignment: .leading) {
+                GeometryReader { proxy in
+                    Capsule()
+                        .fill(LinearGradient(colors: [Color.honey, .honeyDeep], startPoint: .top, endPoint: .bottom))
+                        .frame(width: max(proxy.size.height, proxy.size.width * min(max(value, 0), 1)))
+                }
+            }
+            .frame(height: 10)
+            .animation(.spring(duration: 0.5), value: value)
     }
 }
 
