@@ -42,6 +42,8 @@ let roundTrips: [String: RoundTrip] = [
   "SessionResponse": codec(SessionResponse.self),
   "RegisterPushTokenRequest": codec(RegisterPushTokenRequest.self),
   "ApiError": codec(ApiError.self),
+  "Ink": codec(Ink.self),
+  "InksResponse": codec(InksResponse.self),
   "ClientMessage": codec(ClientMessage.self),
   "ServerMessage": codec(ServerMessage.self),
   "PushPayload": codec(PushPayload.self),

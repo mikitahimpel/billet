@@ -79,6 +79,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/cat/journal",
       },
+      "listInks": {
+        "method": "GET",
+        "path": "/v1/inks",
+      },
       "listNotes": {
         "method": "GET",
         "path": "/v1/notes",

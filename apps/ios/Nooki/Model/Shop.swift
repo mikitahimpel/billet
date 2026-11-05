@@ -31,10 +31,15 @@ struct ShopItem: Identifiable, Hashable {
     var thumbnail: String { "Item_\(id)" }
 }
 
-struct ShopCollection {
+/// Pieces that belong together; owning them all earns a coin bonus, collected once.
+struct ShopCollection: Identifiable, Hashable {
+    let id: String
     let name: String
-    let subtitle: String
     let itemIDs: [String]
+    let bonus: Int
+
+    func owned(of owned: Set<String>) -> Int { itemIDs.count { owned.contains($0) } }
+    func isComplete(_ owned: Set<String>) -> Bool { itemIDs.allSatisfy(owned.contains) }
 }
 
 /// Bundled mock catalog; later served as catalog.json (see docs/shop-concept.md).
@@ -66,11 +71,12 @@ enum Catalog {
                  blurb: "Hangs by the window and hums with light.", rarity: .legendary, isPlus: true),
     ]
 
-    static let featured = ShopCollection(
-        name: "Cozy Cabin",
-        subtitle: "Collect all 4 for a fireplace glow",
-        itemIDs: ["lamp", "teatable", "rug", "lantern"]
-    )
+    static let collections = [
+        ShopCollection(id: "cozy-autumn", name: "Cozy Autumn",
+                       itemIDs: ["lamp", "lantern", "armchair", "rug", "teatable", "print", "monstera"], bonus: 150),
+        ShopCollection(id: "mochis-corner", name: "Mochi's Corner",
+                       itemIDs: ["yarn", "mouse", "tower", "donutbed"], bonus: 100),
+    ]
 
     static func item(_ id: String) -> ShopItem? { items.first { $0.id == id } }
 

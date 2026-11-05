@@ -6,9 +6,6 @@ struct FeaturedCard: View {
     let state: HomeState
     let offer: FeaturedOffer
 
-    @State private var confirming = false
-    @State private var purchases = 0
-
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.owned) }
     private var items: [ShopItem] { offer.itemIDs.compactMap(Catalog.item) }
 
@@ -50,7 +47,7 @@ struct FeaturedCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                buyButton
+                SetBuyButton(state: state, set: offer, ownedInk: .white)
             }
             .padding(Space.m)
             .glass(.rect(cornerRadius: Radius.card, style: .continuous), tint: Ink.heroInk.opacity(0.3))
@@ -58,34 +55,6 @@ struct FeaturedCard: View {
         .padding(Space.m)
         .background(backdrop, in: .rect(cornerRadius: Radius.hero, style: .continuous))
         .shadow(color: Color.honeyDeep.opacity(0.35), radius: 16, y: 8)
-        .haptic(.success, trigger: purchases)
-        .confirmationDialog(dialogTitle, isPresented: $confirming, titleVisibility: .visible) {
-            Button("Buy for \(quote?.price ?? 0) coins") {
-                if state.buy(offer) { purchases += 1 }
-            }
-            Button("Not now", role: .cancel) {}
-        }
-    }
-
-    @ViewBuilder private var buyButton: some View {
-        if let quote {
-            let affordable = state.coins >= quote.price
-            Button { confirming = true } label: {
-                CoinPrice(price: quote.price, was: quote.sum)
-            }
-            .shopButton()
-            .disabled(!affordable)
-            .accessibilityHint(affordable ? "Buys the \(offer.name) set" : "Needs \(quote.price - state.coins) more coins")
-        } else {
-            Label("Owned", systemImage: "checkmark")
-                .font(.nookiHeadline)
-                .foregroundStyle(.white)
-        }
-    }
-
-    private var dialogTitle: String {
-        let names = items.filter { !state.owned.contains($0.id) }.map(\.name).formatted(.list(type: .and))
-        return "\(offer.name): \(names)"
     }
 
     /// The set against its parts, e.g. "2" for half price; one decimal when it isn't whole.

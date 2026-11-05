@@ -1,10 +1,14 @@
 import { Data } from "effect";
+import type { InkId } from "@billet/contracts-domain/inks";
 
 /** The caller has no partner, or the couple has no such image: the client can't tell which. */
 export class NotesNotFound extends Data.TaggedError("NotesNotFound") {}
 
 /** The bytes aren't a PNG, or a compact rendition is over budget. */
 export class InvalidNote extends Data.TaggedError("InvalidNote") {}
+
+/** A text note in an ink colour the pair has not bought. */
+export class InkNotOwned extends Data.TaggedError("InkNotOwned")<{ readonly ink: InkId }> {}
 
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{

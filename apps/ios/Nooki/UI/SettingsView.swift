@@ -19,6 +19,8 @@ struct SettingsView: View {
     @AppStorage(WindowChoice.weatherKey) private var windowWeather = ViewWeather.clear
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
+    @AppStorage(Hints.resetKey) private var hintsReset = false
+    @AppStorage(Hints.showAllKey) private var showAllHints = false
     @State private var editingProfile = false
     @State private var confirmingErase = false
     @State private var pairing = false
@@ -38,10 +40,24 @@ struct SettingsView: View {
 
                 Section {
                     Toggle(isOn: $haptics) { row("Haptics", symbol: "hand.tap.fill", tint: .lilac) }
+                    Button { hintsReset = true } label: {
+                        HStack {
+                            row("Show hints again", symbol: "lightbulb.fill", tint: .sun)
+                            Spacer(minLength: 0)
+                            if hintsReset {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(Color.honey)
+                            }
+                        }
+                    }
+                    .disabled(hintsReset)
                 } header: {
                     Text("General")
                 } footer: {
-                    Text("Small taps when you pet Mochi, buy something or add a wish.")
+                    Text(hintsReset
+                         ? "The hints start over the next time you open Nooki."
+                         : "Small taps when you pet Mochi, buy something or add a wish.")
                 }
                 .listRowBackground(rowBackground)
 
@@ -103,12 +119,14 @@ struct SettingsView: View {
                 Section {
                     Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
                     Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
+                    Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
                     NavigationLink { StyleGallery() } label: { row("Style", symbol: "paintpalette.fill", tint: .sun) }
                 } header: {
                     Text("Labs")
                 } footer: {
                     Text("With the brain off, Mochi lives on her own timers as Ilya made her. The card shows what the "
-                         + "brain has her doing and why: her state, needs and the last thing she heard.")
+                         + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
+                         + "show at once from the next launch, for testing.")
                 }
                 .listRowBackground(rowBackground)
 

@@ -2,11 +2,12 @@ import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
+import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingUnavailable } from "@billet/backend-pairing/pairing-error";
 import { MediaStore, mediaPrefix } from "../src/media-store.ts";
-import { InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error.ts";
+import { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "../src/notes-error.ts";
 import { compactBudget, NotesService } from "../src/notes-service.ts";
 import { PairRooms } from "../src/pair-rooms.ts";
 import { makeWorld, pair, user } from "./fake-world.ts";
@@ -261,11 +262,16 @@ describe("sendNote", () => {
       Effect.gen(function* () {
         const sent = yield* notes.sendNote(
           ana,
-          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi 💛", paper: "blush" }),
+          SendNoteRequest.cases.Text.make({
+            key: newKey(),
+            text: "hi 💛",
+            paper: "blush",
+            ink: freeInk,
+          }),
         );
         const bare = yield* notes.sendNote(
           ben,
-          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hey" }),
+          SendNoteRequest.cases.Text.make({ key: newKey(), text: "hey", ink: freeInk }),
         );
         return { sent, bare, history: yield* notes.history(ben, 0, 10) };
       }),
@@ -281,6 +287,49 @@ describe("sendNote", () => {
         { seq: 2, note: bare },
       ]);
     }
+  });
+
+  it("refuses a text note in an ink the pair has not bought, then takes it once granted", async () => {
+    const { layer, pairRooms } = world();
+    const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
+    const write = (notes: NotesService["Service"], author: UserId) =>
+      notes.sendNote(
+        author,
+        SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: rose }),
+      );
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const refused = yield* Effect.flip(write(notes, ana));
+        const before = yield* notes.inks(ben);
+        yield* pairRooms.grantInks(pairA, [rose]);
+        const sent = yield* write(notes, ben);
+        const after = yield* notes.inks(ana);
+        const elsewhere = yield* notes.inks(cal);
+        return {
+          refused,
+          before,
+          sent,
+          after,
+          elsewhere,
+          history: yield* notes.history(ana, 0, 10),
+        };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { refused, before, sent, after, elsewhere, history } = outcome.value;
+      expect(refused).toEqual(new InkNotOwned({ ink: rose }));
+      expect(before).toEqual({ inks, owned: [freeInk] });
+      expect(sent).toMatchObject({ _tag: "Text", author: ben, ink: rose });
+      expect(after.owned).toEqual([freeInk, rose]);
+      expect(elsewhere.owned).toEqual([freeInk]);
+      expect(history).toEqual([{ seq: 1, note: sent }]);
+    }
+  });
+
+  it("answers inks with NotesNotFound for a caller with no pair", async () => {
+    const outcome = await run(world().layer, (notes) => notes.inks(eve));
+    expect(outcome).toEqual(failed(new NotesNotFound()));
   });
 
   it("takes a compact rendition at the budget and refuses one byte more", async () => {

@@ -39,6 +39,8 @@ final class HomeState {
     var tab: HomeTab = .world
     var room: RoomKind = .home
     var petPulse = 0
+    /// Treats given since launch.
+    private(set) var treatsGiven = 0
     var showsSettings = false
 
     let moods = [
@@ -85,15 +87,32 @@ final class HomeState {
         return reward
     }
 
-    /// Buys the featured set's missing pieces at the set price.
+    /// Buys a set's missing pieces at the set price: the featured set or a bundle.
     @discardableResult
-    func buy(_ offer: FeaturedOffer) -> Bool {
-        guard let quote = ShopOffers.price(of: offer, owned: owned), coins >= quote.price else { return false }
+    func buy(_ set: some PieceSet) -> Bool {
+        guard let quote = ShopOffers.price(of: set, owned: owned), coins >= quote.price else { return false }
         wallet.update {
             $0.coins -= quote.price
-            $0.owned.formUnion(offer.itemIDs)
-            $0.wishlist.subtract(offer.itemIDs)
+            $0.owned.formUnion(set.itemIDs)
+            $0.wishlist.subtract(set.itemIDs)
         }
+        return true
+    }
+
+    private static let collectionsFile = "Shop/collections.json"
+    private(set) var collectionLog = SharedFile.read(CollectionLog.self, from: collectionsFile) ?? CollectionLog()
+
+    /// The bonus waits until every piece is owned, and is collected once.
+    func canClaimBonus(_ collection: ShopCollection) -> Bool {
+        collection.isComplete(owned) && !collectionLog.claimed.contains(collection.id)
+    }
+
+    @discardableResult
+    func claimBonus(_ collection: ShopCollection) -> Bool {
+        guard canClaimBonus(collection) else { return false }
+        wallet.earn(collection.bonus)
+        collectionLog.claimed.insert(collection.id)
+        SharedFile.write(collectionLog, to: Self.collectionsFile)
         return true
     }
 
@@ -196,12 +215,13 @@ final class HomeState {
         streak.record()
     }
 
-    static let treatPrice = 10
+    nonisolated static let treatPrice = 10
 
     /// A treat from the shared wallet; it fills more of her bar than a pet.
     func treat() -> Bool {
         guard coins >= Self.treatPrice else { return false }
         wallet.update { $0.coins -= Self.treatPrice }
+        treatsGiven += 1
         petPulse += 1
         care(0.1)
         streak.record()
@@ -223,6 +243,7 @@ final class HomeState {
         profile.reload()
         wallet.reload()
         giftLog = SharedFile.read(GiftLog.self, from: Self.giftFile) ?? giftLog
+        collectionLog = SharedFile.read(CollectionLog.self, from: Self.collectionsFile) ?? collectionLog
         partnerMoods.reload()
         us.reload()
         moments.reload()

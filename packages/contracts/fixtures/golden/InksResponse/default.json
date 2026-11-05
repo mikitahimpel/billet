@@ -1,0 +1,57 @@
+{
+  "inks": [
+    {
+      "dark": "#ECEAE4",
+      "id": "ink-graphite",
+      "light": "#2B2B2E",
+      "name": "Graphite",
+      "price": 0
+    },
+    {
+      "dark": "#FF8FAB",
+      "id": "ink-rose",
+      "light": "#D2456B",
+      "name": "Rose",
+      "price": 60
+    },
+    {
+      "dark": "#7CC4FF",
+      "id": "ink-sea",
+      "light": "#1F6FB2",
+      "name": "Sea",
+      "price": 60
+    },
+    {
+      "dark": "#9BD88F",
+      "id": "ink-moss",
+      "light": "#3E7D3A",
+      "name": "Moss",
+      "price": 60
+    },
+    {
+      "dark": "#FFA36E",
+      "id": "ink-ember",
+      "light": "#D9622B",
+      "name": "Ember",
+      "price": 60
+    },
+    {
+      "dark": "#C3A2F0",
+      "id": "ink-plum",
+      "light": "#6B3FA0",
+      "name": "Plum",
+      "price": 90
+    },
+    {
+      "dark": "#F2CF5B",
+      "id": "ink-gold",
+      "light": "#B08A1E",
+      "name": "Gold",
+      "price": 120
+    }
+  ],
+  "owned": [
+    "ink-graphite",
+    "ink-rose"
+  ]
+}

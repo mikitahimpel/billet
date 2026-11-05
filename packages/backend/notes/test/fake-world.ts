@@ -146,6 +146,9 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
   const pairRooms: PairRooms["Service"] = {
     open: (pairId, members) => roomOf(pairId).dispatch({ _tag: "Open", pairId, members }),
     sendNote: (pairId, author, request) => roomOf(pairId).sendNote(author, request),
+    inks: (pairId) =>
+      roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
+    grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
