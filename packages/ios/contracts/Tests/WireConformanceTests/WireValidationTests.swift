@@ -81,22 +81,25 @@ import Testing
 
   // MARK: idempotency key and invite expiry
 
+  /// A photo send with the size and preview it must carry, so these cases test only the key.
+  private func photoSend(key: String?) -> String {
+    let keyField = key.map { #","key":"\#($0)""# } ?? ""
+    return #"{"_tag":"Photo","image":"k1""# + keyField
+      + #","width":3,"height":4,"preview":"LEHV6nWB2yk8pyo0adR*.7kCMdnj"}"#
+  }
+
   @Test(arguments: ["", "not-a-uuid", "6f1c2d3e4a5b4c6d8e7f0a1b2c3d4e5f"])
   func aKeyThatIsNotAUUIDIsRejected(_ key: String) {
-    expectRejected(SendNoteRequest.self, ##"{"_tag":"Photo","key":"\##(key)","image":"k1"}"##)
+    expectRejected(SendNoteRequest.self, photoSend(key: key))
   }
 
   @Test func aNoteRequestNeedsItsKey() {
-    expectRejected(SendNoteRequest.self, ##"{"_tag":"Photo","image":"k1"}"##)
+    expectRejected(SendNoteRequest.self, photoSend(key: nil))
   }
 
   @Test func aUUIDKeyIsAcceptedInEitherCase() throws {
-    _ = try decode(
-      SendNoteRequest.self,
-      ##"{"_tag":"Photo","key":"6F1C2D3E-4A5B-4C6D-8E7F-0A1B2C3D4E5F","image":"k1"}"##)
-    _ = try decode(
-      SendNoteRequest.self,
-      ##"{"_tag":"Photo","key":"6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f","image":"k1"}"##)
+    _ = try decode(SendNoteRequest.self, photoSend(key: "6F1C2D3E-4A5B-4C6D-8E7F-0A1B2C3D4E5F"))
+    _ = try decode(SendNoteRequest.self, photoSend(key: "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f"))
   }
 
   @Test func aNegativeInviteExpiryIsRejected() {

@@ -24,7 +24,7 @@ public protocol Payments: Sendable {
 
 /// One stamp pack as the store sells it.
 public struct StampPack: Hashable, Sendable, Identifiable {
-  /// The App Store product ID, such as `com.mikitahimpel.billet.stamps.100`.
+  /// The App Store product ID, such as `com.mikitahimpel.billet.coins.100`.
   public let id: String
   public let stamps: Int
   public let displayName: String

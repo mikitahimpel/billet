@@ -20,7 +20,7 @@ let package = Package(
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: targets.map { .library(name: $0, targets: [$0]) },
   targets: [
-    .target(name: "Payments", resources: [.copy("Resources/stamp-packs.json")]),
+    .target(name: "Payments", resources: [.copy("Resources/coin-packs.json")]),
     .target(name: "PaymentsMock", dependencies: ["Payments"]),
     .target(name: "PaymentsStoreKit", dependencies: ["Payments"]),
     .target(

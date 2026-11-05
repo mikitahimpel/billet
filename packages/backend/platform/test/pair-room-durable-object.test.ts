@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { maxFramesPerSecond } from "../src/frame-window.ts";
 import { ROOM_USER_HEADER, type PairRoom } from "../src/pair-room-durable-object.ts";
+import { testNowOf } from "./test-now.ts";
 
 const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
 
@@ -21,7 +22,14 @@ const newKey = () =>
   Schema.decodeSync(IdempotencyKey)(
     `00000000-0000-4000-8000-${String((keyCount += 1)).padStart(12, "0")}`,
   );
-const photo = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+const photo = () =>
+  SendNoteRequest.cases.Photo.make({
+    key: newKey(),
+    image,
+    width: 4032,
+    height: 3024,
+    preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+  });
 
 const newRoom = () => PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
 
@@ -55,12 +63,11 @@ describe("PairRoom state", () => {
 
   it("assigns the id, author and time of a note on the server", async () => {
     const room = await openRoom();
-    const before = Date.now();
     await room.sendNote(bob, photo());
     const [entry] = await room.notes(0, 10);
     expect(entry).toMatchObject({ seq: 1, note: { _tag: "Photo", author: bob, image } });
     expect(entry?.note.id).toMatch(/^[0-9a-f-]{36}$/);
-    expect(entry?.note.sentAt).toBeGreaterThanOrEqual(before);
+    expect(entry?.note.sentAt).toBe(testNowOf(env));
   });
 
   it("round-trips a drawing through SQLite", async () => {
@@ -238,7 +245,7 @@ describe("PairRoom sockets", () => {
 });
 
 describe("PairRoom notes page", () => {
-  const drawing = () => SendNoteRequest.cases.Photo.make({ key: newKey(), image });
+  const drawing = photo;
 
   it("skips a note body it cannot decode instead of failing the page", async () => {
     const room = await openRoom();
@@ -318,13 +325,13 @@ describe("PairRoom realtime across eviction", () => {
     return { socket: webSocket!, frames };
   };
 
-  const until = async (check: () => boolean) => {
-    const end = Date.now() + 4000;
-    while (!check()) {
-      if (Date.now() > end) throw new Error("Never saw the expected frame");
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-  };
+  const until = (check: () => boolean) =>
+    vi.waitFor(
+      () => {
+        if (!check()) throw new Error("Never saw the expected frame");
+      },
+      { timeout: 4000, interval: 5 },
+    );
 
   it("keeps relaying, and keeps each socket's place in the notes, after the object is evicted", async () => {
     const room = await openRoom();
@@ -440,7 +447,7 @@ describe("PairRoom realtime across eviction", () => {
     await until(() => live(b.frames).length >= maxFramesPerSecond);
     await settle();
 
-    // The window may roll over once on a slow runner; the exact budget is tested in frame-window.
-    expect(live(b.frames).length).toBeLessThan(100);
+    // The room lives at the fixed TEST_NOW, so its window never rolls over: exactly the budget.
+    expect(live(b.frames)).toHaveLength(maxFramesPerSecond);
   });
 });

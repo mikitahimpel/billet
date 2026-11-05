@@ -1,15 +1,19 @@
 import { Schema } from "effect";
 import { IdempotencyKey, MediaKey } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
-import { Note, NoteText, PaperColor } from "@billet/contracts-domain/note";
+import { Note, NoteText, PaperColor, PhotoPreview, PhotoSide } from "@billet/contracts-domain/note";
 
-/** Where `POST /v1/media` stored a PNG. A note sends this key back as its `image`. */
+/** Where `POST /v1/media` stored a PNG, JPEG or HEIC. A note sends this key back as its `image`. */
 export const UploadImageResponse = Schema.Struct({ image: MediaKey });
 export type UploadImageResponse = typeof UploadImageResponse.Type;
 
 /**
  * The server assigns id, author and time. Sending the same `key` again returns the first note
  * instead of storing another.
+ *
+ * A photo names its uploaded image and carries its size in pixels and a BlurHash `preview`, so the
+ * partner can lay it out and show a blur before the bytes arrive. `caption` follows the rules of a
+ * text note's words and is optional.
  */
 export const SendNoteRequest = Schema.TaggedUnion({
   Drawing: {
@@ -18,7 +22,14 @@ export const SendNoteRequest = Schema.TaggedUnion({
     image: MediaKey,
     paper: Schema.optionalKey(PaperColor),
   },
-  Photo: { key: IdempotencyKey, image: MediaKey },
+  Photo: {
+    key: IdempotencyKey,
+    image: MediaKey,
+    width: PhotoSide,
+    height: PhotoSide,
+    preview: PhotoPreview,
+    caption: Schema.optionalKey(NoteText),
+  },
   Text: { key: IdempotencyKey, text: NoteText, paper: Schema.optionalKey(PaperColor) },
 });
 export type SendNoteRequest = typeof SendNoteRequest.Type;

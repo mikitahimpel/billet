@@ -8,6 +8,9 @@ public enum PushPayload: Codable, Hashable, Sendable {
   case alert(
     noteId: NoteId, author: UserId, compact: CompactStrokes?, text: NoteText? = nil,
     paper: PaperColor? = nil)
+  /// The `content-state` of a drawing's Live Activity: always the strokes, as it has no network.
+  case liveActivity(
+    noteId: NoteId, author: UserId, compact: CompactStrokes, paper: PaperColor? = nil)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -31,6 +34,14 @@ public enum PushPayload: Codable, Hashable, Sendable {
       self = .widget(noteId: noteId, author: author, compact: compact, text: text, paper: paper)
     case "Alert":
       self = .alert(noteId: noteId, author: author, compact: compact, text: text, paper: paper)
+    case "LiveActivity":
+      guard let compact else {
+        throw DecodingError.keyNotFound(
+          CodingKeys.compact,
+          .init(
+            codingPath: container.codingPath, debugDescription: "a Live Activity needs strokes"))
+      }
+      self = .liveActivity(noteId: noteId, author: author, compact: compact, paper: paper)
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -47,6 +58,9 @@ public enum PushPayload: Codable, Hashable, Sendable {
     case .alert(let noteId, let author, let compact, let text, let paper):
       try container.encode("Alert", forKey: .tag)
       fields = (noteId, author, compact, text, paper)
+    case .liveActivity(let noteId, let author, let compact, let paper):
+      try container.encode("LiveActivity", forKey: .tag)
+      fields = (noteId, author, compact, nil, paper)
     }
     try container.encode(fields.0, forKey: .noteId)
     try container.encode(fields.1, forKey: .author)

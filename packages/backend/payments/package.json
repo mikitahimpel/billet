@@ -12,6 +12,7 @@
     "./payments-repository": "./src/payments-repository.ts",
     "./payments-routes": "./src/payments-routes.ts",
     "./payments-service": "./src/payments-service.ts",
+    "./payments-switch": "./src/payments-switch.ts",
     "./x509": "./src/x509.ts",
     "./test/app-store-signer": "./test/app-store-signer.ts",
     "./test/in-memory-payments-repository": "./test/in-memory-payments-repository.ts",

@@ -74,7 +74,32 @@ final class MomentStore {
         return images
     }
 
-    private static func key(_ moment: Moment, _ maxPixels: Int) -> NSString { "\(moment.file)@\(maxPixels)" as NSString }
+    func cachedFilmPrint(for moment: Moment, maxPixels: Int) -> UIImage? {
+        cache.object(forKey: Self.key(moment, maxPixels, film: true))
+    }
+
+    /// The photo with the instant-film grade, as polaroids show it; graded off the main thread, then cached.
+    func filmPrint(for moment: Moment, maxPixels: Int) async -> UIImage? {
+        if let hit = cachedFilmPrint(for: moment, maxPixels: maxPixels) { return hit }
+        guard let photo = await thumbnail(for: moment, maxPixels: maxPixels) else { return nil }
+        let graded = await Task.detached(priority: .userInitiated) { InstantFilm.develop(photo) }.value ?? photo
+        if let cg = graded.cgImage {
+            cache.setObject(graded, forKey: Self.key(moment, maxPixels, film: true), cost: cg.bytesPerRow * cg.height)
+        }
+        return graded
+    }
+
+    func filmPrints(for moments: [Moment], maxPixels: Int) async -> [UIImage] {
+        var images: [UIImage] = []
+        for moment in moments {
+            if let image = await filmPrint(for: moment, maxPixels: maxPixels) { images.append(image) }
+        }
+        return images
+    }
+
+    private static func key(_ moment: Moment, _ maxPixels: Int, film: Bool = false) -> NSString {
+        "\(moment.file)@\(maxPixels)\(film ? "~film" : "")" as NSString
+    }
 
     @discardableResult
     func add(_ image: UIImage, caption: String, author: String) -> Moment? {
@@ -112,6 +137,12 @@ final class MomentStore {
     func toggleLove(_ moment: Moment) {
         guard let i = moments.firstIndex(of: moment) else { return }
         moments[i].loved.toggle()
+        save()
+    }
+
+    func setCaption(_ caption: String, of moment: Moment) {
+        guard let i = moments.firstIndex(of: moment) else { return }
+        moments[i].caption = caption
         save()
     }
 

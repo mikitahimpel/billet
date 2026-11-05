@@ -43,7 +43,7 @@ import {
   MockPurchaseRequest,
   PurchaseRequest,
   PurchaseResponse,
-  StampsResponse,
+  PurchasesResponse,
 } from "@billet/contracts-http-api/purchase";
 import {
   ListNotesResponse,
@@ -123,7 +123,28 @@ const drawing = Note.cases.Drawing.make({
   compact,
   image,
 });
+// Stored before photos carried a size and a preview: it must still decode.
 const photo = Note.cases.Photo.make({ id: noteId, author: bob, sentAt: 1_700_000_001_000, image });
+const photoImage = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-2.jpg");
+const photoShape = {
+  image: photoImage,
+  width: 3024,
+  height: 4032,
+  preview: "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+} as const;
+const photoWithCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+  caption: "sunset from the bridge 🌉",
+});
+const photoWithoutCaption = Note.cases.Photo.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_001_000,
+  ...photoShape,
+});
 const drawingOnPaper = Note.cases.Drawing.make({
   id: noteId,
   author: alice,
@@ -210,6 +231,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     drawing,
     "drawing-on-paper": drawingOnPaper,
     photo,
+    "photo-with-caption": photoWithCaption,
+    "photo-without-caption": photoWithoutCaption,
     text,
     "text-without-paper": plainText,
   }),
@@ -218,6 +241,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "widget-push": DeliveryLane.cases.WidgetPush.make({}),
     "alert-push": DeliveryLane.cases.AlertPush.make({}),
     "timeline-refresh": DeliveryLane.cases.TimelineRefresh.make({}),
+    "live-activity-push": DeliveryLane.cases.LiveActivityPush.make({}),
   }),
   fixture("CreateInviteResponse", CreateInviteResponse, {
     default: { code, expiresAt: 1_700_086_400_000 },
@@ -233,7 +257,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       image,
       paper: "blush",
     }),
-    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, image }),
+    photo: SendNoteRequest.cases.Photo.make({ key: idempotencyKey, ...photoShape }),
+    "photo-with-caption": SendNoteRequest.cases.Photo.make({
+      key: idempotencyKey,
+      ...photoShape,
+      caption: "sunset from the bridge 🌉",
+    }),
     text: SendNoteRequest.cases.Text.make({
       key: idempotencyKey,
       text: "miss you already 💛",
@@ -321,6 +350,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("RegisterPushTokenRequest", RegisterPushTokenRequest, {
     alert: { kind: "alert", environment: "production", token: pushToken },
     widget: { kind: "widget", environment: "sandbox", token: pushToken },
+    "live-activity": { kind: "liveactivity", environment: "production", token: pushToken },
   }),
   fixture("ApiError", ApiError, {
     unauthorized: ApiError.cases.Unauthorized.make({}),
@@ -340,12 +370,12 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("MockPurchaseRequest", MockPurchaseRequest, {
     purchase: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "purchase",
     },
     refund: {
-      productId: "com.mikitahimpel.billet.stamps.100",
+      productId: "com.mikitahimpel.billet.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "refund",
     },
@@ -353,20 +383,20 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("PurchaseResponse", PurchaseResponse, {
     default: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: false,
     },
     duplicate: {
       transactionId: "2000000812345678",
-      productId: "com.mikitahimpel.billet.stamps.550",
-      stamps: 550,
+      productId: "com.mikitahimpel.billet.coins.550",
+      coins: 550,
       balance: 1234,
       duplicate: true,
     },
   }),
-  fixture("StampsResponse", StampsResponse, {
+  fixture("PurchasesResponse", PurchasesResponse, {
     default: {
       balance: 550,
       entries: [
@@ -374,21 +404,21 @@ export const catalog: ReadonlyArray<Fixture> = [
           id: "purchase:2000000812345678",
           kind: "purchase",
           amount: 100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-04T15:00:00.000Z",
         },
         {
           id: "purchase:2000000812345679",
           kind: "purchase",
           amount: 550,
-          productId: "com.mikitahimpel.billet.stamps.550",
+          productId: "com.mikitahimpel.billet.coins.550",
           at: "2026-11-04T15:05:00.000Z",
         },
         {
           id: "refund:2000000812345678",
           kind: "refund",
           amount: -100,
-          productId: "com.mikitahimpel.billet.stamps.100",
+          productId: "com.mikitahimpel.billet.coins.100",
           at: "2026-11-05T09:30:00.000Z",
         },
       ],
@@ -445,6 +475,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
     "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
+    "photo-note-received": ServerMessage.cases.NoteReceived.make({
+      seq: 11,
+      note: photoWithCaption,
+    }),
     "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
     "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
     "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
@@ -463,5 +497,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       paper: "butter",
     }),
     "alert-text": PushPayload.cases.Alert.make({ noteId, author: alice, text: "home soon" }),
+    "live-activity": PushPayload.cases.LiveActivity.make({ noteId, author: alice, compact }),
+    "live-activity-on-paper": PushPayload.cases.LiveActivity.make({
+      noteId,
+      author: bob,
+      compact,
+      paper: "sky",
+    }),
   }),
 ];

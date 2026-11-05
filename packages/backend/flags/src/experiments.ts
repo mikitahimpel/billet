@@ -26,6 +26,12 @@ export const AppVersionBound = Schema.String.check(
   Schema.isPattern(/^\d{1,4}(\.\d{1,4}){0,3}(\+\d{1,8})?$/),
 );
 
+/** A UTC moment to the minute or finer, as the admin writes it: `2026-11-05T09:30Z`. */
+export const PairedSince = Schema.String.check(
+  Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?Z$/),
+  Schema.makeFilter((value) => !Number.isNaN(Date.parse(value)) || "not a real moment"),
+);
+
 /**
  * Who may enter. Every rule left out lets everyone through; every rule given must hold. A pair the
  * rules leave out is not listed at all, so its app keeps its built-in default.
@@ -36,6 +42,11 @@ export const Targeting = Schema.Struct({
   maxAppVersion: Schema.optional(AppVersionBound),
   /** Pairs whose band is known and listed. Empty or absent: every pair, known band or not. */
   ageBands: Schema.optional(Schema.Array(AgeBand)),
+  /**
+   * Only pairs formed at or after this moment, so an experiment can be kept to new pairs: set it to
+   * when the experiment starts. A pair whose formation time is unknown is left out.
+   */
+  pairedSince: Schema.optional(PairedSince),
   /** Only these pairs, for a test on the owner's own pair. Empty or absent: every pair. */
   pairIds: Schema.optional(Schema.Array(PairId).check(Schema.isMaxLength(200))),
 });
@@ -179,6 +190,32 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
       "desert-stars": 0,
     },
     default: "suburb-night",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  // The server's switch for buying coins (docs/payments.md, `payments.enabled`). Off: the
+  // purchase routes answer 404 and the app offers no coin packs. Draft, so it stays off on every
+  // stage until the owner overrides it for a test pair or starts it with `on` weighted.
+  {
+    key: "payments",
+    kind: "flag",
+    description:
+      "Whether coins can be bought for money (the purchase routes and the shop's packs).",
+    variants: { off: 1, on: 0 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
+    key: "rooms",
+    kind: "experiment",
+    description:
+      "Which rooms a new pair gets in Nooki: both (Room and City), only the Room, or only the City. " +
+      "Primary metric: both partners active on day 7. Set Paired since to the start, so only new pairs enter.",
+    variants: { both: 1, "room-only": 1, "city-only": 1 },
+    default: "both",
     exposure: 100,
     status: "draft",
     killed: false,

@@ -25,9 +25,10 @@ Everything lives in one place, `registry` in `packages/backend/flags/src/experim
 - A **kill switch** (`killed`): the server stops delivering it to anyone, overrides included, and
   every app falls back to its built-in default.
 - **Targeting**: `minAppVersion` / `maxAppVersion` (inclusive; `1.2` covers every build of 1.2;
-  a build that sent no version is left out by either bound), `ageBands` (`13-17`, `18+`), and
-  `pairIds` (an allow-list, at most 200). Each rule given must hold. A pair the rules leave out is
-  not listed at all.
+  a build that sent no version is left out by either bound), `ageBands` (`13-17`, `18+`),
+  `pairedSince` (a UTC moment such as `2026-11-05T09:30Z`: only pairs formed at or after it; see
+  "New pairs only") and `pairIds` (an allow-list, at most 200). Each rule given must hold. A pair the
+  rules leave out is not listed at all.
 
 **Code fixes the shape, D1 holds the settings.** Key, kind and variant ids come only from the
 registry, because the app must contain every variant (see "App Store rules"). Everything else
@@ -51,6 +52,13 @@ every pair out. It starts to work when the age gate stores the declared band
 
 The unit is the **pair**. Both partners always get the same variant, because the assignment is a
 function of the pair id and the key, not of a phone.
+
+**New pairs only.** `pairedSince` keeps an experiment to pairs formed after it started: set it to the
+start when switching the experiment to `running` (the admin's "Now" button fills in the current
+minute). A pair's formation time is when its invite was claimed (the earliest `pair_members` row).
+A pair formed earlier, or one the server no longer has (it ended), is not targeted, so its app keeps
+the default. Like every assignment, a new pair's variant is stored and kept: moving `pairedSince`
+later moves nobody who is already in.
 
 ## How assignment works
 
@@ -93,7 +101,9 @@ reads.
    a whole number, exposure outside 0 to 100, a malformed version bound, a key that is not
    lowercase hyphenated words), and a test loads the registry.
 3. For an experiment, choose **one primary metric** before you start and write it in the
-   description.
+   description. The panel also shows a fixed set of secondary and guardrail metrics for every
+   experiment, and warns when a guardrail gets worse ([admin.md](admin.md#experiment-metrics)).
+   They never pick the winner.
 4. Deploy. Then start, stop and kill it from the admin panel, without a deploy and without an App
    Store release if the build already has the variants.
 5. Leave the entry in the registry after it ends, so the key is never reused.
@@ -108,6 +118,16 @@ all its weight on today's standard value, so starting one changes nothing until 
 | `room-lighting` | Lighting | `amber-lantern`, `off`, `fairy-lights`, `golden-hour`, `neon-night`, `candle` |
 | `window-view` | Window view (the view only; weather and hour stay local) | `suburb-night`, `rainy-suburb`, `snowy-december`, `summer-cul-de-sac`, `dorm-quad`, `fire-escape`, `pink-dusk`, `sunset-beach`, `forest-cabin`, `moonlit-peaks`, `neon-street`, `rooftops-dusk`, `autumn-park`, `misty-lake`, `desert-stars` |
 | `home-layout` | Home | `classic`, `immersive`, `living-window`, `night-and-day` |
+
+### `rooms`: one room or two for new pairs
+
+An experiment, in `draft` until the owner starts it. Variants: `both` (the default and the control:
+Room and City, as before), `room-only` (Ilya's diorama) and `city-only` (the City room with the big
+window). Set `pairedSince` to the start, so only new pairs enter and every existing pair keeps both.
+Primary metric: both partners active on day 7 (the retention grid, filtered by variant). Also
+compare notes per pair, and `RoomOpened` (which room came on screen) in the funnel builder, split
+by `rooms`. On the phone it is `RoomsVariant` in `WidgetBridge`; an unknown or missing value means
+`both`.
 
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
 tester tools or not yet complete and reviewable). `home-direction` (Window Seat or Sunset Lamp) is
@@ -190,7 +210,7 @@ system with the SQL API. A refused request writes nothing. The row is fixed by
 | `blob5` | system from `x-billet-os`, such as `iOS 26.1`, else `unknown` |
 | `blob6` | the event's detail (a catalogue id or a word from a closed list); empty when none |
 | `double1` | `1` (sum it; read `_sample_interval` too when the dataset is sampled) |
-| `double2` | the event's value: stamps for `ShopItemBought`, `ShopBundleBought`, `ShopGiftSent`, `ShopPurchaseUndone` and `ShopDailyGiftClaimed`, else `0` |
+| `double2` | the event's value: coins for `ShopItemBought`, `ShopBundleBought`, `ShopGiftSent`, `ShopPurchaseUndone` and `ShopDailyGiftClaimed`, else `0` |
 
 Not in the row: the user id, the Apple subject, any email, the IP address, the country or city,
 and anything a note says or shows. The two headers are accepted only in exactly the shapes above;

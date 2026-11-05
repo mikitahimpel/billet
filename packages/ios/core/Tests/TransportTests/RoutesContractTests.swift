@@ -47,7 +47,7 @@ import Testing
       "reportEvents": Routes.reportEvents,
       "purchase": Routes.purchase,
       "mockPurchase": Routes.mockPurchase,
-      "getStamps": Routes.getStamps,
+      "getPurchases": Routes.getPurchases,
       "appStoreNotifications": Routes.appStoreNotifications,
     ]
     #expect(contract == mirrored)

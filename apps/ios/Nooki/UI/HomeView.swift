@@ -93,10 +93,10 @@ struct HomeView: View {
             guard home == nil else { return }
             let room = DioramaScene()
             home = room
-            room.setPolaroids(await state.moments.thumbnails(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
+            room.setPolaroids(await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
         }
         .task(id: state.moments.pinned) {
-            let images = await state.moments.thumbnails(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
+            let images = await state.moments.filmPrints(for: state.moments.pinned, maxPixels: MomentStore.wallPixels)
             if !Task.isCancelled { home?.setPolaroids(images) }
         }
         .task(id: boardKey) {
@@ -165,8 +165,9 @@ struct HomeView: View {
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false }
-        // `-room city` on launch opens the City room, for recordings and screenshots.
+        // `-room city` on launch opens the City room and `-tab shop` the Shop, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" { select(.city) }
+        if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
     }
 
     private func select(_ room: RoomKind) {
@@ -190,9 +191,7 @@ struct HomeView: View {
     }
 
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
-    private var boardKey: [UUID] {
-        state.notes.notes.prefix(BoardRoomScene.slots).map(\.id)
-    }
+    private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
     private func makeBoard() -> BoardRoomScene {
