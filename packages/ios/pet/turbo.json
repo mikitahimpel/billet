@@ -1,0 +1,9 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "ios:test": {
+      "inputs": ["$TURBO_EXTENDS$", "$TURBO_ROOT$/docs/cat-brain.md"]
+    }
+  }
+}

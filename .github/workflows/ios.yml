@@ -98,6 +98,7 @@ jobs:
       # The app's own tests (NookiTests) on a Simulator of the newest iOS this Xcode has.
       - name: App tests (Simulator)
         run: |
+          (cd apps/ios && xcodegen generate --quiet)
           udid=$(xcrun simctl list -j devices available | python3 -c '
           import json, sys
           devices = json.load(sys.stdin)["devices"]
