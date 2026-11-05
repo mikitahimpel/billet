@@ -30,7 +30,9 @@ struct DrawingProvider: TimelineProvider {
 
 /// The partner's latest drawing, full-bleed on the wallpaper it was drawn on, like their lock screen.
 struct DrawingWidget: Widget {
-    var body: some WidgetConfiguration {
+    var body: some WidgetConfiguration { Self.configuration() }
+
+    static func configuration() -> some WidgetConfiguration {
         StaticConfiguration(kind: LatestDrawing.widgetKind, provider: DrawingProvider()) { entry in
             DrawingWidgetView(entry: entry)
                 .widgetURL(DeepLink.draw.url)
@@ -39,7 +41,14 @@ struct DrawingWidget: Widget {
         .description("The latest drawing from your partner. Tap to draw one back.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
         .contentMarginsDisabled()
-        .pushHandler(DrawingPushHandler.self)
+    }
+}
+
+/// The same widget on iOS 26, where WidgetKit can wake it with a push.
+@available(iOS 26, *)
+struct DrawingPushWidget: Widget {
+    var body: some WidgetConfiguration {
+        DrawingWidget.configuration().pushHandler(DrawingPushHandler.self)
     }
 }
 
@@ -105,6 +114,7 @@ private struct DrawingWidgetView: View {
 
 /// Keeps the widgets' APNs push token in the App Group; the app registers it with the server on its next launch,
 /// as the extension has no session of its own.
+@available(iOS 26, *)
 struct DrawingPushHandler: WidgetPushHandler {
     func pushTokenDidChange(_ pushInfo: WidgetPushInfo, widgets: [WidgetInfo]) {
         let token = pushInfo.token.map { String(format: "%02x", $0) }.joined()

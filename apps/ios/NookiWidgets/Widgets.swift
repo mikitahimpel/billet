@@ -11,7 +11,11 @@ struct NookiWidgetBundle: WidgetBundle {
         PetMochiControl()
         NoteAccessoryWidget()
         NewNoteControl()
-        DrawingWidget()
+        if #available(iOS 26, *) {
+            DrawingPushWidget()
+        } else {
+            DrawingWidget()
+        }
     }
 }
 
