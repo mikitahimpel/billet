@@ -133,7 +133,7 @@ jobs:
           set -o pipefail
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
-          TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples" \
+          export TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples"
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
