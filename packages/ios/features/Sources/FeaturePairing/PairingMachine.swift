@@ -20,7 +20,8 @@ public enum PairingFailure: Equatable, Sendable {
     case .api(.unauthorized): self = .signedOut
     case .api(.invalidRequest): self = .invalidCode
     case .api(.unavailable), .api(.notFound), .api(.appleIdInUse), .api(.invalidPurchase),
-      .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned), .network,
+      .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
+      .api(.collectionIncomplete), .api(.catNotAdopted), .network,
       .status, .maintenance,
       .encoding,
       .decoding:

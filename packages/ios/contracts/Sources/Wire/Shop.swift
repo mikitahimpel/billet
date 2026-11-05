@@ -85,29 +85,70 @@ public enum ShopOffer: Codable, Hashable, Sendable {
 }
 
 /// `GET /v1/shop`: what the pair has. `inks` starts with the free ink and `items` with the starter
-/// pieces; `wishlist` is in the order it was wished.
+/// pieces; `wishlist` is in the order it was wished. `giftDay` is the pair's local day it last
+/// opened the daily gift on (`nil` before the first), and `bonuses` the collections paid.
 public struct ShopResponse: Codable, Hashable, Sendable {
   public let balance: Int
   public let inks: [InkId]
   public let items: [RoomItemId]
   public let wishlist: [RoomItemId]
+  public let giftDay: String?
+  public let bonuses: [String]
 
-  public init(balance: Int, inks: [InkId], items: [RoomItemId], wishlist: [RoomItemId]) {
+  public init(
+    balance: Int,
+    inks: [InkId],
+    items: [RoomItemId],
+    wishlist: [RoomItemId],
+    giftDay: String? = nil,
+    bonuses: [String] = []
+  ) {
     self.balance = balance
     self.inks = inks
     self.items = items
     self.wishlist = wishlist
+    self.giftDay = giftDay
+    self.bonuses = bonuses
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case balance, inks, items, wishlist, giftDay, bonuses
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    balance = try container.decode(Int.self, forKey: .balance)
+    inks = try container.decode([InkId].self, forKey: .inks)
+    items = try container.decode([RoomItemId].self, forKey: .items)
+    wishlist = try container.decode([RoomItemId].self, forKey: .wishlist)
+    giftDay = try container.decodeOptionalKey(String.self, forKey: .giftDay)
+    // A server from before collection bonuses sends none.
+    bonuses = try container.decodeIfPresent([String].self, forKey: .bonuses) ?? []
   }
 }
 
-/// `POST /v1/shop/orders`. Repeat `id` on every retry of the same order.
+/// `POST /v1/shop/orders`. Repeat `id` on every retry of the same order. `utcOffsetSeconds` is the
+/// phone's clock, so a piece is priced at the deal of the pair's local day.
 public struct OrderRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let offer: ShopOffer
+  public let utcOffsetSeconds: Int?
 
-  public init(id: IdempotencyKey, offer: ShopOffer) {
+  public init(id: IdempotencyKey, offer: ShopOffer, utcOffsetSeconds: Int? = nil) {
     self.id = id
     self.offer = offer
+    self.utcOffsetSeconds = utcOffsetSeconds
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id, offer, utcOffsetSeconds
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(IdempotencyKey.self, forKey: .id)
+    offer = try container.decode(ShopOffer.self, forKey: .offer)
+    utcOffsetSeconds = try container.decodeOptionalKey(Int.self, forKey: .utcOffsetSeconds)
   }
 }
 
@@ -130,5 +171,93 @@ public struct WishRequest: Codable, Hashable, Sendable {
   public init(item: RoomItemId, wished: Bool) {
     self.item = item
     self.wished = wished
+  }
+}
+
+/// The day's free gift: coins, or a piece the pair didn't own.
+public enum GiftReward: Codable, Hashable, Sendable {
+  case coins(Int)
+  case item(RoomItemId)
+
+  private enum CodingKeys: String, CodingKey {
+    case tag = "_tag"
+    case coins
+    case item
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let tag = try container.decode(String.self, forKey: .tag)
+    switch tag {
+    case "Coins": self = .coins(try container.decode(Int.self, forKey: .coins))
+    case "Item": self = .item(try container.decode(RoomItemId.self, forKey: .item))
+    default:
+      throw DecodingError.dataCorruptedError(
+        forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
+    }
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    switch self {
+    case .coins(let coins):
+      try container.encode("Coins", forKey: .tag)
+      try container.encode(coins, forKey: .coins)
+    case .item(let item):
+      try container.encode("Item", forKey: .tag)
+      try container.encode(item, forKey: .item)
+    }
+  }
+}
+
+/// `POST /v1/shop/gift`: opens the day's gift, once a day for the pair. `utcOffsetSeconds` is the
+/// phone's clock; without it the server counts the day on the cat's clock, else UTC.
+public struct OpenGiftRequest: Codable, Hashable, Sendable {
+  public let utcOffsetSeconds: Int?
+
+  public init(utcOffsetSeconds: Int? = nil) {
+    self.utcOffsetSeconds = utcOffsetSeconds
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case utcOffsetSeconds
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    utcOffsetSeconds = try container.decodeOptionalKey(Int.self, forKey: .utcOffsetSeconds)
+  }
+}
+
+/// The gift's entry (amount 0 for a piece, which `ref` names), what it gave, and the pair after.
+public struct OpenGiftResponse: Codable, Hashable, Sendable {
+  public let entry: CoinEntry
+  public let reward: GiftReward
+  public let shop: ShopResponse
+
+  public init(entry: CoinEntry, reward: GiftReward, shop: ShopResponse) {
+    self.entry = entry
+    self.reward = reward
+    self.shop = shop
+  }
+}
+
+/// `POST /v1/shop/bonus`: collects a complete collection's bonus, such as `cozy-autumn`, once.
+public struct ClaimBonusRequest: Codable, Hashable, Sendable {
+  public let collection: String
+
+  public init(collection: String) {
+    self.collection = collection
+  }
+}
+
+/// The bonus entry, and the pair after it.
+public struct ClaimBonusResponse: Codable, Hashable, Sendable {
+  public let entry: CoinEntry
+  public let shop: ShopResponse
+
+  public init(entry: CoinEntry, shop: ShopResponse) {
+    self.entry = entry
+    self.shop = shop
   }
 }
