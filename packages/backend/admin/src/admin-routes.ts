@@ -46,6 +46,7 @@ import {
 } from "./admin-trends.ts";
 import { AnalyticsEngineReader } from "./analytics-engine-reader.ts";
 import { AppStatusStore } from "./app-status-store.ts";
+import { buildExperimentMetrics } from "./admin-experiment-metrics.ts";
 import { verdictOf } from "./experiment-verdict.ts";
 
 /** Who is using the panel, as Cloudflare Access verified them. Every change is logged under it. */
@@ -345,11 +346,17 @@ const readHandlers = Effect.gen(function* () {
 
   const experiments = Effect.gen(function* () {
     const [list, events, rows] = yield* Effect.all([items, data.events, data.assignments]);
-    const report = buildReport(events, rows, utcDay(yield* Clock.currentTimeMillis));
+    const today = utcDay(yield* Clock.currentTimeMillis);
+    const report = buildReport(events, rows, today);
     const results = new Map(report.experiments.map((experiment) => [experiment.key, experiment]));
+    const baselines = new Map(list.map((item) => [item.key, item.config.default]));
+    const metrics = new Map(
+      buildExperimentMetrics(events, rows, today, baselines).map((entry) => [entry.key, entry]),
+    );
     return respondJson({
       items: list.map((item) => {
         const result = results.get(item.key);
+        const more = metrics.get(item.key);
         return {
           ...item,
           results:
@@ -359,6 +366,9 @@ const readHandlers = Effect.gen(function* () {
                   variants: result.variants,
                   caution: result.caution,
                   verdict: verdictOf(result.variants),
+                  baseline: more?.baseline ?? null,
+                  metrics: more?.metrics ?? [],
+                  warnings: more?.warnings ?? [],
                 },
         };
       }),

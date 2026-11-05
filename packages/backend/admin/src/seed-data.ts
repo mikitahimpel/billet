@@ -127,7 +127,8 @@ const pad = (n: number) => String(n).padStart(4, "0");
 /**
  * Makes the rows. About 170 pairs (at `scale` 1) form over the weeks, more each week as the app
  * grows, plus inviters who never pair. Each pair has a pull (how much it uses the app) and a day it
- * drifts off; `immersive` pairs hold on a little longer, so the experiment has something to find.
+ * drifts off; `immersive` pairs hold on a little longer but open the app less often, so the
+ * experiment has a result and a guardrail to find.
  */
 export const makeSeed = (options: SeedOptions): Seed => {
   const weeks = options.weeks ?? 10;
@@ -283,7 +284,8 @@ export const makeSeed = (options: SeedOptions): Seed => {
           const pActive = drifted ? person.pull * 0.12 : person.pull * (offset === 0 ? 1 : 0.92);
           if (offset > 0 && !chance(pActive)) continue;
 
-          const opens = between(1, drifted ? 1 : 4);
+          // Immersive pairs stay longer each time and open the app less: a guardrail to catch.
+          const opens = between(1, drifted ? 1 : variant === "immersive" ? 2 : 4);
           record({ ...base, name: "AppOpened", count: opens }, at(between(7, 22)));
           if (chance(drifted ? 0.3 : 0.55 + person.pull * 0.4)) {
             record({ ...base, name: "NoteSent", count: between(1, 3) }, at(between(8, 23)));
