@@ -209,7 +209,9 @@ public enum ScenePerf {
   }
 
   /// Models a `cats` step switches through: four of different builds, so each is a model of its own.
-  public static let catModels: [CatModel] = [.detailedKitten, .mooCat, .britishGrey, .bengal]
+  public nonisolated static let catModels: [CatModel] = [
+    .detailedKitten, .mooCat, .britishGrey, .bengal,
+  ]
 
   /// Shows four other cat models and then the first again, with the memory in use after each. What
   /// a model costs to hold shows as the rise after it; one let go when the next comes shows as
