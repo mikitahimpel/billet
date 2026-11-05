@@ -23,7 +23,14 @@ struct HomeView: View {
         ZStack {
             WarmBackdrop()
 
-            if let scene {
+            if Self.noRoom {
+                // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
+                Color.clear
+                    .contentShape(.rect)
+                    .allowsHitTesting(showsRoom)
+                    .modifier(RoomTapCounter())
+                    .ignoresSafeArea()
+            } else if let scene {
                 DioramaView(scene: scene, paused: !showsRoom, petPulse: state.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.pet() }
                 }
@@ -94,7 +101,7 @@ struct HomeView: View {
         }
         .task { await lift() }
         .task {
-            guard home == nil else { return }
+            guard home == nil, !Self.noRoom else { return }
             let room = DioramaScene()
             home = room
             room.setPolaroids(await state.moments.thumbnails(for: state.moments.pinned, maxPixels: MomentStore.wallPixels))
@@ -176,6 +183,9 @@ struct HomeView: View {
         }
         withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }
+
+    /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
+    private static let noRoom = UserDefaults.standard.bool(forKey: "uitestNoRoom")
 
     private var scene: CatRoom? {
         guard let home else { return nil }

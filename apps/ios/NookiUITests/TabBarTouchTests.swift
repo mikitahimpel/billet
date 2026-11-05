@@ -6,7 +6,7 @@ final class TabBarTouchTests: XCTestCase {
     func testTapsOnTheBarNeverReachTheRoom() throws {
         let app = XCUIApplication()
         // Skips onboarding, and has the room report the taps it gets as its accessibility value.
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestRoomTaps", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestRoomTaps", "YES", "-uitestNoRoom", "YES"]
         app.launch()
 
         let bar = app.otherElements["tabbar"]
@@ -46,7 +46,7 @@ final class TabBarTouchTests: XCTestCase {
     @MainActor
     func testDragAcrossTheBarAndOpenUs() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES"]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES"]
         app.launch()
 
         let world = app.buttons["World"]
