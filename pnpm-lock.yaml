@@ -646,6 +646,9 @@ importers:
       '@billet/backend-observability':
         specifier: workspace:*
         version: link:../observability
+      '@billet/backend-pair-room':
+        specifier: workspace:*
+        version: link:../pair-room
       '@billet/backend-pairing':
         specifier: workspace:*
         version: link:../pairing

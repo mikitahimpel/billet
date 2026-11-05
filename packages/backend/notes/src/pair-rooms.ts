@@ -19,6 +19,7 @@ import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
+import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
 import type { NotesUnavailable } from "./notes-error.ts";
 
@@ -94,6 +95,11 @@ export class PairRooms extends Context.Service<
       by: UserId,
       event: EarnEvent,
       utcOffsetSeconds: number | undefined,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Pays in or takes back coins bought with money, once per entry id. */
+    readonly creditPurchase: (
+      pairId: PairId,
+      credit: PurchaseCredit,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly setWish: (
       pairId: PairId,

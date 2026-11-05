@@ -64,6 +64,26 @@ const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =
 
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
+/**
+ * A change to the coins a pair bought, under the payments ledger's entry id. A credit names its
+ * coins. A reversal (a refund, or a refund Apple reversed) takes back or gives back what the entry
+ * it `reverses` moved, so a restore returns only what its refund took; nothing when the room lacks
+ * that entry.
+ */
+export type PurchaseCredit =
+  | {
+      readonly kind: "buy";
+      readonly id: CoinEntryId;
+      readonly ref: string;
+      readonly coins: number;
+    }
+  | {
+      readonly kind: "buy" | "refund";
+      readonly id: CoinEntryId;
+      readonly ref: string;
+      readonly reverses: CoinEntryId;
+    };
+
 const catEntriesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CatEntry> =>
   outputs.flatMap((output) => (output._tag === "CatEntryAppended" ? [output.entry] : []));
 
@@ -352,6 +372,28 @@ export class RoomService extends Context.Service<RoomService>()(
           });
         }).pipe(lock.withPermits(1));
 
+      // Once per entry id: the payments side calls again for a retry or a duplicate transaction.
+      const creditPurchase = (credit: PurchaseCredit) =>
+        Effect.gen(function* () {
+          const earlier = yield* repeated(yield* store.load, credit.id);
+          if (earlier !== undefined) return earlier;
+          const coins =
+            "coins" in credit
+              ? credit.coins
+              : Option.match(yield* store.coinEntryById(credit.reverses), {
+                  onNone: () => 0,
+                  onSome: (entry) => Math.abs(entry.amount),
+                });
+          return yield* decideAndCommit({
+            _tag: "CreditPurchase",
+            id: credit.id,
+            kind: credit.kind,
+            coins,
+            ref: credit.ref,
+            at: yield* Clock.currentTimeMillis,
+          });
+        }).pipe(lock.withPermits(1));
+
       const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
         dispatch({ _tag: "SetWish", by, item, wished });
 
@@ -394,6 +436,7 @@ export class RoomService extends Context.Service<RoomService>()(
         openGift,
         claimBonus,
         earn,
+        creditPurchase,
         settled,
         catView,
         activityPage,

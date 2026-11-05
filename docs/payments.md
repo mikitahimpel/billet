@@ -203,8 +203,10 @@ The first three routes are behind the `payments` flag: off for the caller, they 
 above).
 
 - `PurchaseResponse` is `{transactionId, productId, coins, balance, duplicate}`. `coins` is what
-  the transaction credited (or what a mock refund took back, as a positive number). `duplicate` is
-  true when the transaction was already credited: nothing changed and `balance` is the current one.
+  the transaction credited (or what a mock refund took back, as a positive number). `balance` is
+  the pair's wallet after it, the `GET /v1/coins` balance (a demo room's: its bought coins).
+  `duplicate` is true when the transaction was already credited: nothing changed and `balance` is
+  the current one.
 - `PurchasesResponse` is `{balance, entries}`, entries oldest first:
   `{id, kind: "purchase" | "refund", amount, productId, at}` with `at` in ISO 8601 UTC. Ids are
   stable, so the app merges its local ledger by them.
@@ -283,7 +285,13 @@ copies of the same refund apply once.
 
 This D1 ledger counts only bought coins. The pair's wallet (coins earned in play plus coins bought,
 minus coins spent in the shop) is in the pair's `PairRoom`, next to the cat's journal; a phone
-with no partner keeps its own. Bought coins join the room's wallet when payments are switched on.
+with no partner keeps its own. Every purchase, refund and restore is entered there too
+(`CreditPurchase`, through `PairWallet`), under the same entry id, kind `buy` or `refund`: once
+per id, so the server always calls the room again for a repeated transaction or a retry. A credit
+goes to the room after D1, a refund or restore before it (D1 records the notification, which stops
+Apple's retries). A refund in the room takes at most the wallet's balance, which coins spent
+already may have lowered; a restore gives back what that refund took. A demo room has no wallet
+and keeps only the D1 ledger.
 
 ### App Store Server Notifications
 

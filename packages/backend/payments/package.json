@@ -7,6 +7,7 @@
   "exports": {
     "./app-store-signed-data": "./src/app-store-signed-data.ts",
     "./apple-root-certificates": "./src/apple-root-certificates.ts",
+    "./pair-wallet": "./src/pair-wallet.ts",
     "./payments-config": "./src/payments-config.ts",
     "./payments-error": "./src/payments-error.ts",
     "./payments-repository": "./src/payments-repository.ts",
@@ -27,6 +28,7 @@
   "dependencies": {
     "@billet/backend-auth": "workspace:*",
     "@billet/backend-observability": "workspace:*",
+    "@billet/backend-pair-room": "workspace:*",
     "@billet/backend-pairing": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
