@@ -30,7 +30,9 @@ struct HomeView: View {
 
     var body: some View {
         ZStack {
-            WarmBackdrop()
+            // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
+            // and the glass over them never redraw a moving backdrop every frame.
+            WarmBackdrop(drifts: showsRoom)
 
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
@@ -385,6 +387,8 @@ private struct PlayAllButton: View {
 
 /// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
 private struct WarmBackdrop: View {
+    /// Whether the bokeh moves; when it doesn't, it stays where it was.
+    var drifts = true
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
@@ -395,7 +399,7 @@ private struct WarmBackdrop: View {
                 startRadius: 10,
                 endRadius: 520
             )
-            TimelineView(.animation(minimumInterval: 1 / 30, paused: scenePhase != .active)) { context in
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: scenePhase != .active || !drifts)) { context in
                 Canvas { ctx, size in
                     let t = context.date.timeIntervalSinceReferenceDate
                     for i in 0..<14 {
