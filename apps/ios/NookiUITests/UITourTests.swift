@@ -11,7 +11,9 @@ final class UITourTests: XCTestCase {
     @MainActor
     func testTourOfTheApp() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
+        // Needs half full, so the cat's sheet shows its bars rather than "settling in".
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
+                                "-uitestNeeds", "0.5"]
         app.launch()
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
         // The launch splash covers everything for up to 6 s.
@@ -26,17 +28,12 @@ final class UITourTests: XCTestCase {
             shot("03-pet-sheet")
             dismissSheet(app)
         }
-        if tap(app.buttons["Moments"]) {
-            shot("04-moments")
-            if tap(app.buttons["All notes"]) {
-                shot("05-moments-notes")
-                dismissSheet(app)
-            }
-        }
-        if tap(app.buttons["Shop"]) {
-            shot("06-shop")
+        // The Coins sheet and the profile come before the Shop, whose scroll can open an item sheet on the way.
+        if tap(app.buttons["coins"]) {
+            shot("18-coins")
             app.swipeUp()
-            shot("07-shop-scrolled")
+            shot("19-coins-scrolled")
+            dismissSheet(app)
         }
         if tap(app.buttons["Couple"]) {
             shot("08-profile")
@@ -54,6 +51,20 @@ final class UITourTests: XCTestCase {
                     shot("16-style-scrolled")
                 }
             }
+            closeProfile(app)
+        }
+        if tap(app.buttons["Moments"]) {
+            shot("04-moments")
+            if tap(app.buttons["All notes"]) {
+                shot("05-moments-notes")
+                dismissSheet(app)
+            }
+        }
+        if tap(app.buttons["Shop"]) {
+            shot("06-shop")
+            app.swipeUp()
+            shot("07-shop-scrolled")
+            // In case the swipe landed on a card and opened its sheet.
             dismissSheet(app)
         }
         if tap(app.buttons["Us"]) {
@@ -107,6 +118,25 @@ final class UITourTests: XCTestCase {
         // status bar doesn't close a menu.
         if region.exists { region.tap() } else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.42)).tap() }
         Thread.sleep(forTimeInterval: 1)
+    }
+
+    /// Backs out of whatever the profile pushed, then closes it with Done; a swipe on a pushed screen can scroll it
+    /// instead of closing the sheet.
+    @MainActor
+    private func closeProfile(_ app: XCUIApplication) {
+        for _ in 0..<3 {
+            let done = app.buttons["Done"]
+            if done.exists, done.isHittable {
+                done.tap()
+                Thread.sleep(forTimeInterval: 1.5)
+                return
+            }
+            let back = app.navigationBars.buttons.element(boundBy: 0)
+            guard back.exists else { break }
+            back.tap()
+            Thread.sleep(forTimeInterval: 1)
+        }
+        dismissSheet(app)
     }
 
     @MainActor
