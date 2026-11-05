@@ -72,6 +72,8 @@ import Testing
       "reportEvents": Routes.reportEvents,
       "purchase": Routes.purchase,
       "mockPurchase": Routes.mockPurchase,
+      "createDemoPartner": Routes.createDemoPartner,
+      "removeDemoPartner": Routes.removeDemoPartner,
       "getPurchases": Routes.getPurchases,
       "appStoreNotifications": Routes.appStoreNotifications,
     ]

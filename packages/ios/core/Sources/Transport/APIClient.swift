@@ -50,8 +50,9 @@ public struct APIClient: Sendable {
     @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse
   /// Every ink the shop sells and the ones the pair owns.
   public var listInks: @Sendable () async throws(TransportError) -> InksResponse
-  /// The pair's coin balance, as the server keeps it.
-  public var getCoins: @Sendable () async throws(TransportError) -> CoinsResponse
+  /// The pair's coin balance, as the server keeps it, and its wallet entries after the entry id
+  /// `after` (from the first when nil), oldest first, a page at a time.
+  public var getCoins: @Sendable (_ after: String?) async throws(TransportError) -> CoinsResponse
   /// Buys one ink at its catalog price: `.api(.notEnoughCoins)` when the balance is short,
   /// `.api(.alreadyOwned)` when the pair has it. A retry with the same `id` buys nothing twice.
   public var buyItem: @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse
@@ -143,9 +144,10 @@ public struct APIClient: Sendable {
     listInks: @escaping @Sendable () async throws(TransportError) -> InksResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
-    getCoins: @escaping @Sendable () async throws(TransportError) -> CoinsResponse = {
-      () async throws(TransportError) in throw .network("offline")
-    },
+    getCoins:
+      @escaping @Sendable (_ after: String?) async throws(TransportError) -> CoinsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     buyItem: @escaping @Sendable (BuyRequest) async throws(TransportError) -> BuyResponse = {
       (_) async throws(TransportError) in throw .network("offline")
     },
@@ -379,9 +381,15 @@ extension APIClient {
         try await http.perform(
           try await request(Routes.listInks, signed: true), as: InksResponse.self)
       },
-      getCoins: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getCoins, signed: true), as: CoinsResponse.self)
+      getCoins: { (after) async throws(TransportError) in
+        var path = Routes.getCoins.path
+        if let after, let query = after.addingPercentEncoding(withAllowedCharacters: .alphanumerics)
+        {
+          path += "?after=\(query)"
+        }
+        return try await http.perform(
+          try await request(Route(Routes.getCoins.method, path), signed: true),
+          as: CoinsResponse.self)
       },
       buyItem: { (body) async throws(TransportError) in
         try await http.perform(

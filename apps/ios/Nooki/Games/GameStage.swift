@@ -54,6 +54,13 @@ final class GameDeck {
     var bar: (value: Double, label: String)?
     /// Set once the game is done.
     var result: GameResult?
+
+    /// Sets `bar` when it has moved by a percent, reached an end or changed its label: a stage reports it every
+    /// frame, and each write re-renders the bar.
+    func show(_ value: Double, _ label: String) {
+        if let bar, bar.label == label, abs(bar.value - value) < 0.01, value > 0, value < 1 { return }
+        bar = (value, label)
+    }
     /// Where a point in the pivot's space shows on screen, and how many points a meter there spans.
     @ObservationIgnored var project: (SIMD3<Float>) -> CGPoint? = { _ in nil }
     @ObservationIgnored var pointsPerMeter: (SIMD3<Float>) -> CGFloat = { _ in 1 }

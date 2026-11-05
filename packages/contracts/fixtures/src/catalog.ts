@@ -489,6 +489,7 @@ const braceletWish: GiftWish = {
   price: "$65",
   note: "the one with the little moon",
   mostWanted: true,
+  occasion: { title: "Alice's birthday", date: 1_700_600_000_000 },
   addedAt: 1_700_000_000_000,
 };
 
@@ -595,6 +596,15 @@ export const catalog: ReadonlyArray<Fixture> = [
       price: "$65",
       note: "the one with the little moon",
       mostWanted: true,
+    },
+    occasion: {
+      id: idempotencyKey,
+      title: "Peonies",
+      link: "",
+      price: "",
+      note: "",
+      mostWanted: false,
+      occasion: { title: "Our anniversary", date: 1_700_600_000_000 },
     },
   }),
   fixture("DeleteGiftWishRequest", DeleteGiftWishRequest, { default: { id: idempotencyKey } }),

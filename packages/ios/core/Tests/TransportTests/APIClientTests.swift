@@ -166,9 +166,11 @@ import Wire
     #expect(inks.requests.first?.headers["Authorization"] == "Bearer tok")
 
     let coins = Server(body: #"{"balance":140,"entries":[]}"#)
-    #expect(try await Self.client(coins).getCoins().balance == 140)
+    #expect(try await Self.client(coins).getCoins(nil).balance == 140)
     #expect(coins.requests.first?.method == .get)
     #expect(coins.requests.first?.path == "/v1/coins")
+    _ = try await Self.client(coins).getCoins("spend:k1")
+    #expect(coins.requests.last?.path == "/v1/coins?after=spend%3Ak1")
   }
 
   @Test func buyingSendsTheKeyAndTheInk() async throws {

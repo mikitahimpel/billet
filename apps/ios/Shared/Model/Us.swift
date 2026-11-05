@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Wire
 
 // MARK: - Icons
 
@@ -97,6 +98,20 @@ nonisolated struct UsList: Identifiable, Codable, Hashable {
 
 // MARK: - Wishlists
 
+/// The day a wish is for, such as a birthday, picked from the calendar. A title and a day rather than a calendar
+/// entry, since each partner's phone keeps its own calendar.
+nonisolated struct WishOccasion: Codable, Hashable {
+    var title: String
+    var date: Date
+
+    /// Negative once the day has passed.
+    func daysLeft(from now: Date = .now) -> Int {
+        let calendar = Calendar.current
+        return calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
+                                       to: calendar.startOfDay(for: date)).day ?? 0
+    }
+}
+
 /// What the owner wants. It carries nothing about who plans to gift it: that is the giver's `GiftPlan`, so the owner's
 /// copy can never spoil the surprise.
 nonisolated struct WishItem: Identifiable, Codable, Hashable {
@@ -110,6 +125,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var note = ""
     /// Pinned to the top of the list.
     var mostWanted = false
+    var occasion: WishOccasion?
     var added = Date.now
     /// When the owner said it arrived.
     var gifted: Date?
@@ -121,7 +137,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var legacyGiver: String?
 
     private enum CodingKeys: String, CodingKey {
-        case id, owner, title, link, price, note, mostWanted, added, gifted, giftedBy, rewarded
+        case id, owner, title, link, price, note, mostWanted, occasion, added, gifted, giftedBy, rewarded
     }
 
     private enum LegacyKeys: String, CodingKey { case want, reservedBy }
@@ -150,6 +166,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
         // Three hearts was the top of the old scale.
         mostWanted = try c.decodeIfPresent(Bool.self, forKey: .mostWanted)
             ?? (try legacy.decodeIfPresent(Int.self, forKey: .want) == 3)
+        occasion = try c.decodeIfPresent(WishOccasion.self, forKey: .occasion)
         added = try c.decodeIfPresent(Date.self, forKey: .added) ?? .distantPast
         gifted = try c.decodeIfPresent(Date.self, forKey: .gifted)
         giftedBy = try c.decodeIfPresent(String.self, forKey: .giftedBy)
@@ -343,8 +360,8 @@ final class UsStore {
     /// Per partner: idea id -> liked (true) or skipped (false).
     private(set) var swipes: [String: [Int: Bool]] = [:]
 
-    /// Where the coins the couple earns here go; HomeState passes its own.
-    @ObservationIgnored let wallet: WalletStore
+    /// Told of each thing done here that the server pays coins for. The app sends it there; the widgets pass none.
+    @ObservationIgnored var onEarn: (EarnEvent) -> Void
     /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
     @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
 
@@ -362,8 +379,8 @@ final class UsStore {
         var surprises: Set<String>?
     }
 
-    init(wallet: WalletStore, file: String = "Us/us.json") {
-        self.wallet = wallet
+    init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
+        self.onEarn = onEarn
         self.file = file
         reload()
     }
@@ -434,13 +451,13 @@ final class UsStore {
         setItem(itemID, in: listID, done: item.done == nil)
     }
 
-    /// Ticking a "we want to" item earns 5 coins, at most 3 times a day; groceries earn nothing.
+    /// Ticking a "we want to" item earns coins, within the server's daily cap; groceries earn nothing.
     func setItem(_ itemID: UUID, in listID: UUID, done: Bool) {
         guard let l = lists.firstIndex(where: { $0.id == listID }),
               let i = lists[l].items.firstIndex(where: { $0.id == itemID }),
               (lists[l].items[i].done != nil) != done else { return }
         lists[l].items[i].done = done ? .now : nil
-        if done && !lists[l].kind.isChecklist { wallet.update { $0.tickList() } }
+        if done && !lists[l].kind.isChecklist { onEarn(.listTicked(item: itemID.uuidString)) }
         save()
     }
 
@@ -524,7 +541,7 @@ final class UsStore {
         plans.removeAll { $0.wishID == id }
         if !wishes[i].rewarded {
             wishes[i].rewarded = true
-            wallet.earn(20)
+            onEarn(.wishReceived(wish: id.uuidString))
         }
         save()
         onGiftChange?(.received(id, true))
@@ -669,7 +686,7 @@ final class UsStore {
     func swipe(_ ideaID: Int, liked: Bool, by partner: String) {
         let wasMatch = isMatch(ideaID)
         swipes[partner, default: [:]][ideaID] = liked
-        if !wasMatch && isMatch(ideaID) { wallet.earn(10) }
+        if !wasMatch && isMatch(ideaID) { onEarn(.dateMatched(idea: String(ideaID))) }
         save()
     }
 
@@ -720,10 +737,10 @@ final class UsStore {
         save()
     }
 
-    /// Rating a date marks it as done and earns the couple 30 coins once.
+    /// Rating a date marks it as done and earns the couple coins once.
     func rate(_ id: UUID, hearts: Int, momentID: UUID? = nil) {
         guard let i = planned.firstIndex(where: { $0.id == id }) else { return }
-        if planned[i].rating == nil { wallet.earn(30) }
+        if planned[i].rating == nil { onEarn(.dateRated(plan: id.uuidString)) }
         planned[i].rating = min(max(hearts, 1), 3)
         if let momentID { planned[i].momentID = momentID }
         save()

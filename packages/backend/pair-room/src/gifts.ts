@@ -75,7 +75,18 @@ export const decideGift = (
         return done({ _tag: "PutWish", wish: { id, owner: by, ...fields, addedAt: at } });
       }
       if (existing.owner !== by) return refused("NotAllowed");
-      return done({ _tag: "PutWish", wish: { ...existing, ...fields } });
+      const { receivedAt, giftedBy } = existing;
+      return done({
+        _tag: "PutWish",
+        wish: {
+          id,
+          owner: existing.owner,
+          ...fields,
+          addedAt: existing.addedAt,
+          ...(receivedAt === undefined ? {} : { receivedAt }),
+          ...(giftedBy === undefined ? {} : { giftedBy }),
+        },
+      });
     }
     case "DeleteWish": {
       const existing = wishOf(command.id);
@@ -105,6 +116,7 @@ export const decideGift = (
         price: wish.price,
         note: wish.note,
         mostWanted: wish.mostWanted,
+        ...(wish.occasion === undefined ? {} : { occasion: wish.occasion }),
         addedAt: wish.addedAt,
       };
       if (!command.received) return done({ _tag: "PutWish", wish: open });

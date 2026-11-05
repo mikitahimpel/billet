@@ -67,6 +67,10 @@ public enum Routes {
   public static let purchase = Route(.post, "/v1/purchases")
   /// Dev server only: the mock store's purchases and refunds.
   public static let mockPurchase = Route(.post, "/v1/purchases/mock")
+  /// Dev server only: pairs the signed-in, unpaired caller with a bot partner.
+  public static let createDemoPartner = Route(.post, "/v1/dev/demo-partner")
+  /// Dev server only: unpairs the caller from their bot partner and deletes it.
+  public static let removeDemoPartner = Route(.delete, "/v1/dev/demo-partner")
   public static let getPurchases = Route(.get, "/v1/purchases")
   /// Called by Apple, never by the app. Mirrored so the contract test covers every route.
   public static let appStoreNotifications = Route(.post, "/v1/appstore/notifications")

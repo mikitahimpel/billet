@@ -213,6 +213,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     openGift: (pairId, by, utcOffsetSeconds) => roomOf(pairId).openGift(by, utcOffsetSeconds),
     claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
     earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
+    creditPurchase: (pairId, credit) => roomOf(pairId).creditPurchase(credit),
     setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),

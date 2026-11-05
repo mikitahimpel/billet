@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "3f13b6bf-7f2c-4061-80ea-0454e3044599",
+  "id": "1adb3d16-e6c4-46df-8589-bfe5079dbcb6",
   "prevIds": [
     "16038125-5fb7-46e1-b004-09ef955a0e37"
   ],
@@ -44,10 +44,6 @@
     },
     {
       "name": "gift_wish",
-      "entityType": "tables"
-    },
-    {
-      "name": "mood",
       "entityType": "tables"
     },
     {
@@ -579,6 +575,26 @@
       "table": "gift_wish"
     },
     {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occasion_title",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "occasion_date",
+      "entityType": "columns",
+      "table": "gift_wish"
+    },
+    {
       "type": "integer",
       "notNull": true,
       "autoincrement": false,
@@ -607,46 +623,6 @@
       "name": "gifted_by",
       "entityType": "columns",
       "table": "gift_wish"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "user",
-      "entityType": "columns",
-      "table": "mood"
-    },
-    {
-      "type": "text",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "mood",
-      "entityType": "columns",
-      "table": "mood"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "note",
-      "entityType": "columns",
-      "table": "mood"
-    },
-    {
-      "type": "integer",
-      "notNull": true,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "at",
-      "entityType": "columns",
-      "table": "mood"
     },
     {
       "type": "integer",
@@ -1078,15 +1054,6 @@
       "nameExplicit": false,
       "name": "gift_wish_pk",
       "table": "gift_wish",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "user"
-      ],
-      "nameExplicit": false,
-      "name": "mood_pk",
-      "table": "mood",
       "entityType": "pks"
     },
     {

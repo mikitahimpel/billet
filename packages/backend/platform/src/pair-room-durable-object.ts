@@ -25,7 +25,7 @@ import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import { isMember } from "@billet/backend-pair-room/decide";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
-import { RoomService } from "@billet/backend-pair-room/room-service";
+import { type PurchaseCredit, RoomService } from "@billet/backend-pair-room/room-service";
 import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { GiftsRoom, type GiftCommand, type GiftsResult } from "@billet/backend-pair-room/gifts";
@@ -612,6 +612,11 @@ export class PairRoom extends DurableObject {
     );
     await this.pushShop(decision);
     return decision;
+  }
+
+  /** Pays in or takes back coins bought with money, once per entry id. No Inbox item. */
+  creditPurchase(credit: PurchaseCredit): Promise<RoomDecision> {
+    return this.run((room) => room.creditPurchase(credit), "PairRoom.creditPurchase");
   }
 
   /** A treat's meal goes to the journal's followers; an order, gift or bonus is an Inbox item. */

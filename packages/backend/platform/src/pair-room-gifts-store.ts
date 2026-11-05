@@ -21,6 +21,8 @@ const wishValues = (wish: GiftWish): typeof giftWish.$inferInsert => ({
   price: wish.price,
   note: wish.note,
   mostWanted: wish.mostWanted ? 1 : 0,
+  occasionTitle: wish.occasion?.title ?? null,
+  occasionDate: wish.occasion?.date ?? null,
   addedAt: wish.addedAt,
   receivedAt: wish.receivedAt ?? null,
   giftedBy: wish.giftedBy ?? null,
@@ -36,6 +38,9 @@ const wishFrom = (row: typeof giftWish.$inferSelect) =>
     price: row.price,
     note: row.note,
     mostWanted: row.mostWanted === 1,
+    ...(row.occasionTitle === null || row.occasionDate === null
+      ? {}
+      : { occasion: { title: row.occasionTitle, date: row.occasionDate } }),
     addedAt: row.addedAt,
     ...(row.receivedAt === null ? {} : { receivedAt: row.receivedAt }),
     ...(row.giftedBy === null ? {} : { giftedBy: row.giftedBy }),

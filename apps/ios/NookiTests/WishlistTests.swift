@@ -1,19 +1,18 @@
 import Foundation
 import Testing
+import Wire
 @testable import Billet
 
 @Suite struct WishlistTests {
     private let path = "Tests/\(UUID().uuidString)-us.json"
-    private let walletPath = "Tests/\(UUID().uuidString)-wallet.json"
 
-    private func store() -> UsStore {
-        UsStore(wallet: WalletStore(file: walletPath), file: path)
+    private func store(onEarn: @escaping (EarnEvent) -> Void = { _ in }) -> UsStore {
+        UsStore(file: path, onEarn: onEarn)
     }
 
     private func cleanUp() {
         SharedFile.flush()
         try? FileManager.default.removeItem(at: SharedFile.url(path))
-        try? FileManager.default.removeItem(at: SharedFile.url(walletPath))
     }
 
     private func wish(_ us: UsStore, owner: String = "L", _ title: String = "Bracelet") -> UUID {
@@ -64,9 +63,9 @@ import Testing
 
     @Test func receivingClosesThePlanAndPaysOnce() {
         defer { cleanUp() }
-        let us = store()
+        var earns: [EarnEvent] = []
+        let us = store { earns.append($0) }
         let id = wish(us)
-        let start = us.wallet.wallet.coins
         us.pick(id, by: "M")
 
         us.markReceived(id, by: "M")
@@ -75,12 +74,12 @@ import Testing
         us.markReceived(id, by: "L")
         #expect(us.gifted(to: "L").first?.giftedBy == "M")
         #expect(us.plans.isEmpty)
-        #expect(us.wallet.wallet.coins == start + 20)
+        #expect(earns == [.wishReceived(wish: id.uuidString)])
 
         us.unmarkReceived(id, by: "L")
         #expect(us.wishes(of: "L").map(\.id) == [id])
         us.markReceived(id, by: "L")
-        #expect(us.wallet.wallet.coins == start + 20)
+        #expect(earns == [.wishReceived(wish: id.uuidString)])
     }
 
     @Test func mostWantedComesFirstThenNewest() {

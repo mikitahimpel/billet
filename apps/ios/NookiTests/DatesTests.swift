@@ -1,14 +1,20 @@
 import Foundation
 import Testing
+import Wire
 @testable import Billet
 
 @Suite struct DatesTests {
     private let now = Date(timeIntervalSince1970: 1_793_000_000)
 
-    private func store() -> (UsStore, WalletStore, [String]) {
-        let walletPath = scratchFile("wallet.json"), usPath = scratchFile("us.json")
-        let wallet = WalletStore(file: walletPath)
-        return (UsStore(wallet: wallet, file: usPath), wallet, [walletPath, usPath])
+    /// The earns a store asks the server for.
+    private final class Earns {
+        var events: [EarnEvent] = []
+    }
+
+    private func store() -> (UsStore, Earns, [String]) {
+        let usPath = scratchFile("us.json")
+        let earns = Earns()
+        return (UsStore(file: usPath) { earns.events.append($0) }, earns, [usPath])
     }
 
     private func plan(_ ideaID: Int, at date: Date) -> PlannedDate {
@@ -16,9 +22,8 @@ import Testing
     }
 
     @Test func aMatchNeedsBothPartnersToLoveTheIdea() {
-        let (us, wallet, paths) = store()
+        let (us, earns, paths) = store()
         defer { paths.forEach(removeScratch) }
-        let coins = wallet.wallet.coins
 
         us.swipe(1, liked: true, by: "L")
         #expect(!us.isMatch(1))
@@ -27,7 +32,7 @@ import Testing
         us.swipe(1, liked: true, by: "M")
         #expect(us.isMatch(1))
         #expect(us.matches.map(\.id) == [1])
-        #expect(wallet.wallet.coins == coins + 10)
+        #expect(earns.events == [.dateMatched(idea: "1")])
     }
 
     @Test func onePassMeansNoMatch() {
@@ -62,7 +67,7 @@ import Testing
     }
 
     @Test func doneDatesMoveOutOfComingUpWithTheirPhoto() {
-        let (us, wallet, paths) = store()
+        let (us, earns, paths) = store()
         defer { paths.forEach(removeScratch) }
         let later = plan(4, at: now.addingTimeInterval(86_400))
         let past = plan(5, at: now.addingTimeInterval(-86_400))
@@ -70,7 +75,6 @@ import Testing
         us.upsertPlan(past)
         #expect(us.comingUp.map(\.id) == [past.id, later.id])
 
-        let coins = wallet.wallet.coins
         let photo = UUID()
         us.rate(past.id, hearts: 3, momentID: photo)
         us.rate(past.id, hearts: 2)
@@ -79,7 +83,7 @@ import Testing
         #expect(us.done.first?.rating == 2)
         #expect(us.done.first?.momentID == photo)
         // Rating again changes the hearts but pays once.
-        #expect(wallet.wallet.coins == coins + 30)
+        #expect(earns.events == [.dateRated(plan: past.id.uuidString)])
     }
 
     @Test func remindersSkipLeadsAlreadyPast() {

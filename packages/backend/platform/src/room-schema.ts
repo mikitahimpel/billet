@@ -209,6 +209,8 @@ export const giftWish = sqliteTable("gift_wish", {
   price: text("price").notNull(),
   note: text("note").notNull(),
   mostWanted: integer("most_wanted").notNull(),
+  occasionTitle: text("occasion_title"),
+  occasionDate: integer("occasion_date"),
   addedAt: integer("added_at").notNull(),
   receivedAt: integer("received_at"),
   giftedBy: text("gifted_by"),

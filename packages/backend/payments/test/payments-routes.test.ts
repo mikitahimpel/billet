@@ -8,6 +8,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PurchaseResponse, PurchasesResponse } from "@billet/contracts-http-api/purchase";
+import { PairWallet } from "../src/pair-wallet.ts";
 import { PaymentsConfig, settingsForStage } from "../src/payments-config.ts";
 import { PaymentsRepository, CoinOwner } from "../src/payments-repository.ts";
 import { PaymentsRoutes } from "../src/payments-routes.ts";
@@ -20,6 +21,7 @@ import {
   signJws,
   transactionPayload,
 } from "./app-store-signer.ts";
+import { makeInMemoryPairWallet } from "./in-memory-pair-wallet.ts";
 import { makeInMemoryPaymentsRepository } from "./in-memory-payments-repository.ts";
 
 // Callers are `<user>` bearer tokens; users whose name starts with `paired` are in the pair
@@ -67,6 +69,7 @@ const cryptoLayer = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.lay
 // Payments on unless a test says otherwise: these tests are about buying, not the flag.
 const setup = (stage: string, payments: Layer.Layer<PaymentsSwitch> = PaymentsSwitch.on) => {
   const memory = makeInMemoryPaymentsRepository();
+  const rooms = makeInMemoryPairWallet();
   const config = PaymentsConfig.with(settingsForStage(stage, [apple.root]));
   const app = HttpRouter.toWebHandler(
     PaymentsRoutes.pipe(
@@ -74,6 +77,7 @@ const setup = (stage: string, payments: Layer.Layer<PaymentsSwitch> = PaymentsSw
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PaymentsRepository, memory.repository),
+          Layer.succeed(PairWallet, rooms.wallet),
           FakePairing,
           config,
           cryptoLayer,
@@ -82,7 +86,7 @@ const setup = (stage: string, payments: Layer.Layer<PaymentsSwitch> = PaymentsSw
     ),
     { disableLogger: true },
   );
-  return { ...app, memory };
+  return { ...app, memory, rooms };
 };
 
 const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
@@ -351,6 +355,69 @@ describe("purchases on dev", () => {
         await Effect.runPromise(app.memory.repository.findPurchase(transactionId)),
       );
       expect(purchase.environment).toBe("Mock");
+      expect(app.rooms.entries("pair-paired-mock")).toEqual([
+        [`purchase:${transactionId}`, 1200],
+        [`refund:${transactionId}`, -1200],
+      ]);
+    });
+
+    it("answers with the pair's wallet, coins earned and spent included", async () => {
+      const headers = bearer("paired-wallet");
+      app.rooms.adjust("pair-paired-wallet", 60);
+      const transactionId = `mock-${crypto.randomUUID()}`;
+      const bought = decodePurchase(
+        await (await mock({ productId, transactionId, kind: "purchase" }, headers)).json(),
+      );
+      expect(bought.balance).toBe(1260);
+      app.rooms.adjust("pair-paired-wallet", -1000);
+      const refunded = decodePurchase(
+        await (await mock({ productId, transactionId, kind: "refund" }, headers)).json(),
+      );
+      expect({ coins: refunded.coins, balance: refunded.balance }).toEqual({
+        coins: 260,
+        balance: 0,
+      });
+      const ledger = await Effect.runPromise(
+        app.memory.repository.ledger(owner("pair-paired-wallet")),
+      );
+      expect(ledger.balance).toBe(0);
+    });
+
+    it("credits the wallet on a retry after the room failed", async () => {
+      const headers = bearer("paired-retry");
+      const transactionId = `mock-${crypto.randomUUID()}`;
+      app.rooms.failNext(1);
+      const failed = await mock({ productId, transactionId, kind: "purchase" }, headers);
+      expect(failed.status).toBe(503);
+      expect(app.rooms.balance("pair-paired-retry")).toBe(0);
+      const retried = decodePurchase(
+        await (await mock({ productId, transactionId, kind: "purchase" }, headers)).json(),
+      );
+      expect(retried).toMatchObject({ duplicate: true, balance: 1200 });
+      await mock({ productId, transactionId, kind: "purchase" }, headers);
+      expect(app.rooms.entries("pair-paired-retry")).toEqual([[`purchase:${transactionId}`, 1200]]);
+    });
+
+    it("never credits the wallet of a pair that sends another pair's transaction", async () => {
+      const transactionId = `mock-${crypto.randomUUID()}`;
+      await mock({ productId, transactionId, kind: "purchase" }, bearer("paired-first"));
+      const other = decodePurchase(
+        await (
+          await mock({ productId, transactionId, kind: "purchase" }, bearer("paired-second"))
+        ).json(),
+      );
+      expect(other).toMatchObject({ duplicate: true, balance: 0 });
+      expect(app.rooms.entries("pair-paired-second")).toEqual([]);
+    });
+
+    it("keeps a demo room out of any wallet", async () => {
+      const transactionId = `mock-${crypto.randomUUID()}`;
+      const response = await mock(
+        { productId, transactionId, kind: "purchase" },
+        { "x-billet-demo-room": "R2" },
+      );
+      expect(decodePurchase(await response.json()).balance).toBe(1200);
+      expect(app.rooms.entries("demo:R2")).toEqual([]);
     });
 
     it("works for a demo room", async () => {
@@ -525,6 +592,48 @@ describe("App Store server notifications", () => {
       status: "refunded",
       flagged: 1,
     });
+  });
+
+  it("takes the pack out of the pair's wallet, at most its balance, once", async () => {
+    const { signed, transactionId, balance } = await bought("paired-wallet-refund", {
+      productId: "com.mikitahimpel.billet.coins.550",
+    });
+    expect(balance).toBe(550);
+    app.rooms.adjust("pair-paired-wallet-refund", -500);
+    const body = await notification("REFUND", signed);
+    await notify(body);
+    await notify(body);
+    await notify(await notification("REFUND", signed));
+    expect(app.rooms.entries("pair-paired-wallet-refund")).toEqual([
+      [`purchase:${transactionId}`, 550],
+      ["app:1", -500],
+      [`refund:${transactionId}`, -50],
+    ]);
+    expect(app.rooms.balance("pair-paired-wallet-refund")).toBe(0);
+  });
+
+  it("gives the wallet back what the refund took when Apple reverses it", async () => {
+    const { signed, transactionId } = await bought("paired-wallet-reversed");
+    app.rooms.adjust("pair-paired-wallet-reversed", -70);
+    await notify(await notification("REFUND", signed));
+    await notify(await notification("REFUND_REVERSED", signed));
+    await notify(await notification("REFUND", signed));
+    expect(app.rooms.entries("pair-paired-wallet-reversed").slice(2)).toEqual([
+      [`refund:${transactionId}`, -30],
+      [`restore:${transactionId}`, 30],
+      [`refund:${transactionId}:2`, -30],
+    ]);
+  });
+
+  it("refunds the wallet on Apple's retry after the room failed", async () => {
+    const { signed } = await bought("paired-wallet-retry");
+    const body = await notification("REFUND", signed);
+    app.rooms.failNext(1);
+    expect((await notify(body)).status).toBe(503);
+    expect((await ledgerOf("paired-wallet-retry")).balance).toBe(100);
+    expect((await notify(body)).status).toBe(200);
+    expect(app.rooms.balance("pair-paired-wallet-retry")).toBe(0);
+    expect((await ledgerOf("paired-wallet-retry")).balance).toBe(0);
   });
 
   it("gives the coins back when Apple reverses a refund", async () => {

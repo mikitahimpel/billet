@@ -3,10 +3,12 @@ import SwiftUI
 
 /// What plays over the app after a buy: coins burst where it happened, the pieces fly down into a card where Mochi
 /// hops at the news, a tink and a success haptic, and Undo for five seconds. Under Reduce Motion only the card shows.
+/// A buy the server then refuses is taken back with a gentle line in the same place.
 struct PurchaseMoment: View {
     let state: HomeState
 
     @State private var shown: Purchase?
+    @State private var refused: Purchase?
     @State private var flights = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -33,6 +35,11 @@ struct PurchaseMoment: View {
                             .padding(.horizontal, Space.l)
                             .padding(.bottom, 92)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else if let refused {
+                        refusal(refused)
+                            .padding(.horizontal, Space.l)
+                            .padding(.bottom, 92)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
@@ -48,6 +55,17 @@ struct PurchaseMoment: View {
             flights += 1
             AudioServicesPlaySystemSound(1057)
         }
+        .onChange(of: state.shop.refused) { _, purchase in
+            withAnimation(.spring(duration: 0.35)) {
+                if purchase != nil { shown = nil }
+                refused = purchase
+            }
+        }
+        .task(id: refused?.id) {
+            guard let current = refused else { return }
+            try? await Task.sleep(for: .seconds(4))
+            if refused?.id == current.id { withAnimation(.spring(duration: 0.35)) { refused = nil } }
+        }
         .task(id: shown?.id) {
             // The card leaves when Undo would no longer work, counted from the buy itself.
             guard let current = shown else { return }
@@ -61,6 +79,7 @@ struct PurchaseMoment: View {
         switch purchase.kind {
         case .item: "\(state.petName) is already sniffing it. It's in your room's closet."
         case .ink: "It's in your pens for notes and drawings, for both of you."
+        case .treat: "\(state.petName) loved it."
         }
     }
 
@@ -87,6 +106,24 @@ struct PurchaseMoment: View {
         .padding(Space.m)
         .shopCard(radius: Radius.card)
         .accessibilityElement(children: .contain)
+    }
+
+    private func refusal(_ purchase: Purchase) -> some View {
+        HStack(spacing: Space.m) {
+            Image(systemName: "arrow.uturn.backward.circle.fill")
+                .font(.nookiTitle)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.honey)
+                .accessibilityHidden(true)
+            Text("Couldn't buy \(purchase.title). Your coins are back.")
+                .font(.nookiCallout)
+                .foregroundStyle(Ink.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(Space.m)
+        .shopCard(radius: Radius.card)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("purchaseRefused")
     }
 }
 

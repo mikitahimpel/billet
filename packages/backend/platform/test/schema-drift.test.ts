@@ -7,6 +7,7 @@ import {
 } from "@billet/backend-auth/auth-repository";
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
 import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
+import { StoredDemoPartner } from "@billet/backend-demo-partner/demo-partner-repository";
 import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
 import {
   StoredNotification,
@@ -25,6 +26,7 @@ import {
   authSessions,
   authUsers,
   authVerifications,
+  demoPartners,
   devices,
   flagChanges,
   flagConfigs,
@@ -114,6 +116,7 @@ const checked = [
   ["auth_session", authSessions, AuthSessionRow],
   ["auth_user", authUsers, AuthUserRow],
   ["auth_verification", authVerifications, AuthVerificationRow],
+  ["demo_partners", demoPartners, StoredDemoPartner],
   ["devices", devices, StoredDevice],
   ["flag_changes", flagChanges, FlagChangeRow],
   ["flag_configs", flagConfigs, FlagConfigRow],

@@ -98,6 +98,13 @@ export const routes = {
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
   mockPurchase: route("POST", "/v1/purchases/mock"),
+  /**
+   * The dev stage only: pairs the caller, who has no partner, with a new bot, and answers the pair
+   * as `getPair` does. Elsewhere a 404.
+   */
+  createDemoPartner: route("POST", "/v1/dev/demo-partner"),
+  /** The dev stage only: unpairs the caller from their bot and deletes it. Elsewhere a 404. */
+  removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
   /** The pair's bought coins: the balance and every ledger entry. */
   getPurchases: route("GET", "/v1/purchases"),
   /** App Store Server Notifications V2 (refunds and the like). Apple calls it; no session. */
