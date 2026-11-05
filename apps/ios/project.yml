@@ -47,6 +47,7 @@ targets:
     dependencies:
       - target: NookiWidgets
       - target: NookiNotifications
+      - target: NookiShare
       - target: WindowViews
       - package: BilletContracts
         products: [Wire]
@@ -145,6 +146,42 @@ targets:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
+        SKIP_INSTALL: YES
+  # The share sheet's "Nooki" action: a page shared from Safari or another app becomes a wish.
+  NookiShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: NookiShare
+      - path: Shared
+        excludes: [Draw/DrawingActivity.swift]
+      - path: Nooki/UI/Kit/Style.swift
+      - path: Nooki/UI/Us/UsKit.swift
+    info:
+      path: NookiShare/Info.plist
+      properties:
+        CFBundleDisplayName: Nooki
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+    entitlements:
+      path: NookiShare/NookiShare.entitlements
+      properties:
+        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+    dependencies:
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Ink]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.share
         SKIP_INSTALL: YES
   # The widgets' views rendered into BILLET_SAMPLES for review (WidgetGalleryTests). An extension can't host tests, so
   # the widget sources are compiled in, without their @main bundle; the app hosts it so their images load.
