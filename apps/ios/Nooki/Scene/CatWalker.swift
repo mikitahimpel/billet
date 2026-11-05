@@ -104,8 +104,9 @@ final class CatWalker {
         didSet { behavior.directed = directed }
     }
     /// Her lying splats, the loaf and the curled sleep, cut to in one frame from sitting. Without one she lies down
-    /// in her loaf on the standing splat instead.
-    let bodies: [NookiRestPose: CatRig]
+    /// in her loaf on the standing splat instead, and asks for it (`needsBody`); one that comes takes over.
+    private(set) var bodies: [NookiRestPose: CatRig]
+    var needsBody: ((NookiRestPose) -> Void)?
     /// The body the brain has her rest in; `sit` whenever she is on the move.
     private(set) var rest = NookiRestPose.sit
     /// Seconds since the last cut between rest bodies, for the settle squash.
@@ -200,9 +201,11 @@ final class CatWalker {
     /// Rests her in `pose`: a lying splat is cut to in one frame with a little squash as she settles, as the web lab
     /// does; without one she lies down in her loaf on the standing splat. Only while she is still.
     func settle(_ pose: NookiRestPose) {
+        takeOver()
         guard !moving, pose != rest else { return }
         let from = rest
         rest = pose
+        if pose != .sit, bodies[pose] == nil { needsBody?(pose) }
         if bodies[pose] != nil || bodies[from] != nil {
             settleTime = 0
             if lying { getUp() } else { fade(seatAmount) }
@@ -211,6 +214,23 @@ final class CatWalker {
             if pose == .sit, lying { getUp() }
             if pose != .sit, !lying { lieDown() }
         }
+    }
+
+    /// Gives her a lying body loaded after she was built, or takes one she is not resting in back with nil.
+    func setBody(_ pose: NookiRestPose, _ rig: CatRig?) {
+        guard pose != .sit, rig != nil || pose != rest else { return }
+        bodies[pose] = rig
+        if let rig { rig.entity?.position = rig.mount }
+        takeOver()
+    }
+
+    /// A body that came while she lay in her loaf on the standing splat is cut to in one frame.
+    private func takeOver() {
+        guard !moving, lying, rest != .sit, bodies[rest] != nil else { return }
+        lying = false
+        posture = .sit
+        settleTime = 0
+        fade(1)
     }
 
     /// Gets up for a couple of paw pats on what she is on, and sits again.
@@ -349,6 +369,7 @@ final class CatWalker {
         // Tired she lies down to doze, and gets up again once rested.
         if !directed && !moving && !lying && behavior.drowse > 0.7 && behavior.mood.energy < 0.3 { lieDown() }
         else if !directed && !moving && lying && behavior.mood.energy > 0.5 { getUp() }
+        takeOver()
         behavior.napping = lying || rest != .sit
         // Walking winds her a little, jumping more; resting she gets her breath back over half a minute or so.
         let winding: Float = free ? 0.6 : stepping ? 0.1 : 0

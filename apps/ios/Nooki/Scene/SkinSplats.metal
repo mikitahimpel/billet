@@ -11,9 +11,10 @@ static float4 multiply(float4 a, float4 b) {
     return float4(a.w * b.xyz + b.w * a.xyz + cross(a.xyz, b.xyz), a.w * b.w - dot(a.xyz, b.xyz));
 }
 
-/// Writes every splat of `out` from its rest pose in `rest`, 14 floats each in GaussianSplatResource's layout: the
-/// center and rotation follow the blend of its four bones, scale, opacity and color are copied as trained. `skin` holds
-/// per splat four bone indices, then four weights out of 255.
+/// Writes every splat's moving part in `out` from its rest pose in `rest`, 8 floats each: center, a pad, rotation
+/// (w first, as the splat file stores it). The center and rotation follow the blend of its four bones; scale, opacity
+/// and color sit in a buffer of their own that never changes. `skin` holds per splat four bone indices, then four
+/// weights out of 255.
 kernel void skinSplats(device const float *rest [[buffer(0)]],
                        device const uchar4 *skin [[buffer(1)]],
                        constant DualQuat *bones [[buffer(2)]],
@@ -38,20 +39,17 @@ kernel void skinSplats(device const float *rest [[buffer(0)]],
     dual /= n;
     float3 t = 2 * multiply(dual, float4(-real.xyz, real.w)).xyz;
 
-    device const float *r = rest + 14 * i;
-    device float *o = out + 14 * i;
+    device const float *r = rest + 8 * i;
+    device float *o = out + 8 * i;
     float3 p = float3(r[0], r[1], r[2]);
     p += 2 * cross(real.xyz, cross(real.xyz, p) + real.w * p) + t;
-    float4 q = multiply(real, float4(r[7], r[8], r[9], r[6]));
+    float4 q = multiply(real, float4(r[5], r[6], r[7], r[4]));
     o[0] = p.x;
     o[1] = p.y;
     o[2] = p.z;
-    o[3] = r[3];
-    o[4] = r[4];
-    o[5] = r[5];
-    o[6] = q.w;
-    o[7] = q.x;
-    o[8] = q.y;
-    o[9] = q.z;
-    for (int k = 10; k < 14; k++) o[k] = r[k];
+    o[3] = 0;
+    o[4] = q.w;
+    o[5] = q.x;
+    o[6] = q.y;
+    o[7] = q.z;
 }

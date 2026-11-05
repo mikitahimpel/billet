@@ -1,4 +1,5 @@
 import PetScene
+import Synchronization
 
 /// Nooki's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
 /// is the scene a run drives, and the tabs are the ones it switches. Silent without the launch argument.
@@ -36,8 +37,19 @@ enum NookiPerf {
                 orbit: { deltaX, _ in room.setYaw(room.settledYaw - deltaX * 0.004) },
                 zoom: { _ in },
                 release: { room.setYaw(0) },
-                census: { "kind=\(kind == .city ? "city" : "room")" }
+                census: {
+                    let skin = SplatSkinner.stats.withLock { $0 }
+                    return "kind=\(kind == .city ? "city" : "room") skin_passes=\(skin.passes) skin_skipped=\(skin.skipped)"
+                        + " skin_ms=\(String(format: "%.2f", skin.milliseconds))"
+                },
+                switches: ["cat shadow"],
+                setSwitch: { _, isOn in room.setCatShadow(isOn) }
             ))
+    }
+
+    /// Mochi stands in a room, posed and ready to draw.
+    static func catPlaced() {
+        ScenePerf.trace("styled cat placed")
     }
 
     /// A tab other than the World came on screen, under the names a run waits for.
