@@ -54,6 +54,14 @@ struct HomeView: View {
             // and the glass over them never redraw a moving backdrop every frame.
             WarmBackdrop(drifts: roomOnScreen)
 
+            // The City window's view, seen through the hole in the room's wall; never takes a touch.
+            if !Self.noRoom, showsRoom, !showsBoard, state.room == .city, let city {
+                CityWindowLayer(view: city.windowView)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .ignoresSafeArea()
+            }
+
             if Self.noRoom {
                 // A stand-in for the room under the UI tests, which cannot draw RealityKit on CI's virtual Macs.
                 Color.clear

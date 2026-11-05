@@ -88,7 +88,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
   # The old app's flat window views (WindowViews/Views, without RealityKit or its resources), plus a
-  # painter that turns one into images for the City room's window.
+  # view that draws one at screen pixels behind the City room's window.
   WindowViews:
     type: library.static
     platform: iOS
