@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { IdempotencyKey, MediaKey } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
+import { NoteInk } from "@billet/contracts-domain/inks";
 import { Note, NoteText, PaperColor, PhotoPreview, PhotoSide } from "@billet/contracts-domain/note";
 
 /** Where `POST /v1/media` stored a PNG, JPEG or HEIC. A note sends this key back as its `image`. */
@@ -30,7 +31,13 @@ export const SendNoteRequest = Schema.TaggedUnion({
     preview: PhotoPreview,
     caption: Schema.optionalKey(NoteText),
   },
-  Text: { key: IdempotencyKey, text: NoteText, paper: Schema.optionalKey(PaperColor) },
+  /** `ink` must be one the pair owns (`InkNotOwned` otherwise); left out, it is the free ink. */
+  Text: {
+    key: IdempotencyKey,
+    text: NoteText,
+    paper: Schema.optionalKey(PaperColor),
+    ink: NoteInk,
+  },
 });
 export type SendNoteRequest = typeof SendNoteRequest.Type;
 

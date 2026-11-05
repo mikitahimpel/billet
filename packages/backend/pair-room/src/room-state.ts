@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { CatEntry, CatProfile, CatTemper } from "@billet/contracts-domain/cat";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import { InkId } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
@@ -36,6 +37,9 @@ export type RoomCat = typeof RoomCat.Type;
  * in the store and `lastSeq` is the only part of them that a decision needs.
  *
  * `streakDays` is stored but nothing changes it yet: the rules arrive with #20.
+ *
+ * `inks` are the ink colours the pair has bought, in the order it got them. The free ink is
+ * everyone's and never listed.
  */
 export const RoomState = Schema.TaggedUnion({
   /** A new object, not given to a couple yet. */
@@ -47,6 +51,7 @@ export const RoomState = Schema.TaggedUnion({
     streakDays: Count,
     /** Absent until one of the couple adopts the cat. */
     cat: Schema.optionalKey(RoomCat),
+    inks: Schema.Array(InkId),
   },
 });
 export type RoomState = typeof RoomState.Type;

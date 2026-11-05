@@ -4,13 +4,15 @@ import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { InksResponse } from "@billet/contracts-http-api/inks";
 import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
+import { freeInk, inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { Metrics } from "@billet/backend-metrics/metrics";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
-import { InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
+import { InkNotOwned, InvalidNote, NotesNotFound, NotesUnavailable } from "./notes-error.ts";
 import { PairRooms } from "./pair-rooms.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
@@ -55,7 +57,11 @@ export class NotesService extends Context.Service<
     readonly sendNote: (
       userId: UserId,
       request: SendNoteRequest,
-    ) => Effect.Effect<Note, NotesNotFound | InvalidNote | NotesUnavailable>;
+    ) => Effect.Effect<Note, NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable>;
+    /** Every ink the shop sells, and the ones the caller's pair owns: the free ink first. */
+    readonly inks: (
+      userId: UserId,
+    ) => Effect.Effect<InksResponse, NotesNotFound | NotesUnavailable>;
     /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
@@ -130,7 +136,7 @@ export class NotesService extends Context.Service<
       const sendNote = Effect.fn("NotesService.sendNote")(function* (
         userId: UserId,
         request: SendNoteRequest,
-      ): Effect.fn.Return<Note, NotesNotFound | InvalidNote | NotesUnavailable> {
+      ): Effect.fn.Return<Note, NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
         if (request._tag === "Drawing" && !compactFits(request.compact)) {
           return yield* Effect.fail(new InvalidNote());
@@ -161,7 +167,9 @@ export class NotesService extends Context.Service<
             return yield* Effect.fail(new NotesUnavailable({ reason: "note-not-appended" }));
           }
           case "Rejected":
-            return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-note" }));
+            return yield* decision.rejection._tag === "InkNotOwned"
+              ? Effect.fail(new InkNotOwned({ ink: decision.rejection.ink }))
+              : Effect.fail(new NotesUnavailable({ reason: "room-refused-note" }));
         }
       });
 
@@ -174,7 +182,15 @@ export class NotesService extends Context.Service<
         return yield* rooms.notesAfter(pairId, afterSeq, limit);
       });
 
-      return NotesService.of({ uploadImage, readImage, sendNote, history });
+      const inks = Effect.fn("NotesService.inks")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<InksResponse, NotesNotFound | NotesUnavailable> {
+        const pairId = yield* pairOf(userId);
+        const bought = yield* rooms.inks(pairId);
+        return { inks: inkCatalog, owned: [freeInk, ...bought.filter((ink) => ink !== freeInk)] };
+      });
+
+      return NotesService.of({ uploadImage, readImage, sendNote, inks, history });
     }),
   );
 }

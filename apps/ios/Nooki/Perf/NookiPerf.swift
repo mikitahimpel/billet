@@ -40,13 +40,12 @@ enum NookiPerf {
             ))
     }
 
-    /// A tab other than the World came on screen, under the names a run waits for.
+    /// A tab other than the World came on screen, under the names a run waits for. Us is a sheet, not a tab.
     static func tabShown(_ tab: HomeTab) {
         guard ScenePerf.isOn else { return }
         switch tab {
         case .shop: ScenePerf.mark("shop on screen")
         case .moments: ScenePerf.mark("notes on screen")
-        case .us: ScenePerf.mark("us on screen")
         case .world: break
         }
     }

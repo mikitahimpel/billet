@@ -1,4 +1,5 @@
 import SwiftUI
+import TipKit
 
 /// Mochi's avatar in the room's corner: her face inside a ring that fills toward the next level. A tap opens her sheet.
 struct PetButton: View {
@@ -9,10 +10,12 @@ struct PetButton: View {
     @State private var showsSheet = false
     /// The sheet's content height, measured, so the sheet ends just under its last line.
     @State private var sheetHeight: CGFloat = 520
+    @Environment(Hints.self) private var hints
 
     var body: some View {
         Button {
             showsSheet = true
+            hints.done(PetHint())
         } label: {
             PetPortrait(size: 58)
                 .padding(3)
@@ -47,6 +50,9 @@ struct PetButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(state.petName), Lv. \(state.level)")
         .accessibilityIdentifier("pet")
+        // Both hints live on her portrait; the second waits for the first, so only one shows at a time.
+        .popoverTip(PetHint(), arrowEdge: .bottom)
+        .popoverTip(TreatHint(), arrowEdge: .bottom)
         .sheet(isPresented: $showsSheet) {
             PetSheet(state: state, needs: needs, height: $sheetHeight) {
                 showsSheet = false

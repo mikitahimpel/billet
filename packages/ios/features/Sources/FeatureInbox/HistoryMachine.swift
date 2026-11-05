@@ -38,7 +38,7 @@ public enum HistoryFailure: Equatable, Sendable {
     case .api(.unauthorized): self = .signedOut
     case .api(.notFound): self = .notPaired
     case .api(.invalidRequest), .api(.unavailable), .api(.invalidInvite), .api(.alreadyPaired),
-      .api(.invalidPurchase),
+      .api(.invalidPurchase), .api(.inkNotOwned),
       .api(.appleIdInUse), .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }
@@ -174,7 +174,7 @@ extension HistoryMachine {
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt), content: .other)
     // The Nooki notes screen shows text notes; this list keeps to drawings.
-    case .text(_, let author, let sentAt, _, _):
+    case .text(_, let author, let sentAt, _, _, _):
       return HistoryNote(
         seq: entry.seq, authorID: author.rawValue, sentAt: date(sentAt), content: .other)
     }

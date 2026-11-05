@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import TipKit
 
 struct TabBar: View {
     let state: HomeState
@@ -21,7 +22,13 @@ struct TabBar: View {
         GlassGroup(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 0) {
-                    ForEach(Self.tabs, id: \.tab) { item($0.tab, $0.title, $0.symbol) }
+                    ForEach(Self.tabs, id: \.tab) { entry in
+                        switch entry.tab {
+                        case .moments: item(entry.tab, entry.title, entry.symbol).popoverTip(MomentsHint(), arrowEdge: .bottom)
+                        case .shop: item(entry.tab, entry.title, entry.symbol).popoverTip(ShopHint(), arrowEdge: .bottom)
+                        default: item(entry.tab, entry.title, entry.symbol)
+                        }
+                    }
                 }
                 .padding(Self.inset)
                 .contentShape(.capsule)
@@ -117,6 +124,10 @@ struct AddButton: View {
     @State private var route: Route?
     @State private var picking = false
     @State private var pick: PhotosPickerItem?
+    @Environment(Hints.self) private var hints
+
+    /// Something was picked from the menu.
+    private var adding: Bool { route != nil || picking || state.composingNote != nil }
 
     var body: some View {
         Menu {
@@ -162,6 +173,10 @@ struct AddButton: View {
         }
         .modifier(PlusGlass())
         .accessibilityLabel("Add")
+        .popoverTip(AddHint(), arrowEdge: .bottom)
+        .onChange(of: adding) { _, adding in
+            if adding { hints.done(AddHint()) }
+        }
         .photosPicker(isPresented: $picking, selection: $pick, matching: .images)
         .onChange(of: pick) { _, item in
             guard let item else { return }

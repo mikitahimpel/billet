@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import { InkId } from "@billet/contracts-domain/inks";
 
 /** Errors named by the auth, pairing, notes and payments flows. Each can grow fields later. */
 export const ApiError = Schema.TaggedUnion({
@@ -18,5 +19,7 @@ export const ApiError = Schema.TaggedUnion({
    * product that isn't a coin pack. Retrying the same one fails the same way.
    */
   InvalidPurchase: {},
+  /** A text note in an ink colour the pair has not bought. Buy it in the shop, or use another. */
+  InkNotOwned: { ink: InkId },
 });
 export type ApiError = typeof ApiError.Type;
