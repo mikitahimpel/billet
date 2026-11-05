@@ -272,18 +272,20 @@ final class DioramaScene: CatRoom {
     /// Mochi sits about as tall as the nightstand, on the bed's cushion; Mochi.ply itself is 0.26 m tall.
     private let catScale: Float = 0.68
 
-    /// The furniture, then the two toys, each loaded in the background and lit like the rest of the room.
+    /// The furniture and the two toys, loaded in the background side by side and lit like the rest of the room.
     private func loadFurniture() {
+        let pieces = [("Room_furniture", pivot), ("Room_ball", ball), ("Room_yarn", basket)]
+        let loads = pieces.map { name, _ in Task { try await Entity(named: name, in: .main) } }
         Task { [weak self] in
-            for (name, parent) in [("Room_furniture", self?.pivot), ("Room_ball", self?.ball), ("Room_yarn", self?.basket)] {
-                guard let self, let parent else { return }
+            for ((name, parent), load) in zip(pieces, loads) {
                 let model: Entity
                 do {
-                    model = try await Entity(named: name, in: .main)
+                    model = try await load.value
                 } catch {
                     print("\(name) failed to load: \(error)")
                     continue
                 }
+                guard let self else { return }
                 model.forEachDescendant { entity in
                     if let iblReceiver { entity.components.set(iblReceiver) }
                     entity.components.set(GroundingShadowComponent(castsShadow: true))
