@@ -102,7 +102,7 @@ public final class WindowPainter {
 
   /// Air between the planes, as the old room drew it: haze far off, thicker in rain, snow and fog,
   /// slowly thickening and thinning so fog seems to move.
-  private static func haze(
+  static func haze(
     _ context: GraphicsContext, after plane: ViewPlane, frame: ViewStage.Frame, moment: ViewMoment,
     width: CGFloat
   ) {
