@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Shop
 
 /// The Shop tab under the app header: category chips, then Today's offers (the week's featured set as the hero, the
-/// daily deals, the free gift, bundles, inks and collections) or a category's grid. Every price is in coins and every
+/// daily deals, the free gift, bundles, inks, collections and the coins) or a category's grid. Every price is in coins and every
 /// countdown ends at a real rotation.
 struct ShopView: View {
     let state: HomeState
@@ -139,12 +139,9 @@ struct ShopView: View {
         .padding(.horizontal, Space.l)
         .id("deals")
 
-        // The server has no daily gift yet; a synced pair's coins come only from the room.
-        if !state.shop.isSynced {
-            DailyGiftCard(state: state)
-                .padding(.horizontal, Space.l)
-                .shopAppear()
-        }
+        DailyGiftCard(state: state)
+            .padding(.horizontal, Space.l)
+            .shopAppear()
 
         VStack(alignment: .leading, spacing: Space.m) {
             ShopSectionHeader(title: "Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {

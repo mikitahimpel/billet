@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Wire
 
 // MARK: - Icons
 
@@ -343,8 +344,8 @@ final class UsStore {
     /// Per partner: idea id -> liked (true) or skipped (false).
     private(set) var swipes: [String: [Int: Bool]] = [:]
 
-    /// Where the coins the couple earns here go; HomeState passes its own.
-    @ObservationIgnored let wallet: WalletStore
+    /// Told of each thing done here that the server pays coins for. The app sends it there; the widgets pass none.
+    @ObservationIgnored var onEarn: (EarnEvent) -> Void
     /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
     @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
 
@@ -362,8 +363,8 @@ final class UsStore {
         var surprises: Set<String>?
     }
 
-    init(wallet: WalletStore, file: String = "Us/us.json") {
-        self.wallet = wallet
+    init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
+        self.onEarn = onEarn
         self.file = file
         reload()
     }
@@ -434,13 +435,13 @@ final class UsStore {
         setItem(itemID, in: listID, done: item.done == nil)
     }
 
-    /// Ticking a "we want to" item earns 5 coins, at most 3 times a day; groceries earn nothing.
+    /// Ticking a "we want to" item earns coins, within the server's daily cap; groceries earn nothing.
     func setItem(_ itemID: UUID, in listID: UUID, done: Bool) {
         guard let l = lists.firstIndex(where: { $0.id == listID }),
               let i = lists[l].items.firstIndex(where: { $0.id == itemID }),
               (lists[l].items[i].done != nil) != done else { return }
         lists[l].items[i].done = done ? .now : nil
-        if done && !lists[l].kind.isChecklist { wallet.update { $0.tickList() } }
+        if done && !lists[l].kind.isChecklist { onEarn(.listTicked(item: itemID.uuidString)) }
         save()
     }
 
@@ -524,7 +525,7 @@ final class UsStore {
         plans.removeAll { $0.wishID == id }
         if !wishes[i].rewarded {
             wishes[i].rewarded = true
-            wallet.earn(20)
+            onEarn(.wishReceived(wish: id.uuidString))
         }
         save()
         onGiftChange?(.received(id, true))
@@ -669,7 +670,7 @@ final class UsStore {
     func swipe(_ ideaID: Int, liked: Bool, by partner: String) {
         let wasMatch = isMatch(ideaID)
         swipes[partner, default: [:]][ideaID] = liked
-        if !wasMatch && isMatch(ideaID) { wallet.earn(10) }
+        if !wasMatch && isMatch(ideaID) { onEarn(.dateMatched(idea: String(ideaID))) }
         save()
     }
 
@@ -720,10 +721,10 @@ final class UsStore {
         save()
     }
 
-    /// Rating a date marks it as done and earns the couple 30 coins once.
+    /// Rating a date marks it as done and earns the couple coins once.
     func rate(_ id: UUID, hearts: Int, momentID: UUID? = nil) {
         guard let i = planned.firstIndex(where: { $0.id == id }) else { return }
-        if planned[i].rating == nil { wallet.earn(30) }
+        if planned[i].rating == nil { onEarn(.dateRated(plan: id.uuidString)) }
         planned[i].rating = min(max(hearts, 1), 3)
         if let momentID { planned[i].momentID = momentID }
         save()

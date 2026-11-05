@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import Wire
 @testable import Billet
 
 private let cal = Calendar.current
@@ -136,12 +137,12 @@ func removeScratch(_ path: String) {
 }
 
 @Suite struct WalletTests {
-    @Test func aFreshWalletHasOnlyTheStarterPieces() {
+    @Test func aFreshWalletHasNoCoinsUntilTheServerSays() {
         let path = scratchFile("wallet.json")
         defer { removeScratch(path) }
         #expect(WalletStore(file: path).wallet == Wallet())
         #expect(Wallet().coins == 0)
-        #expect(Wallet().owned == ["lamp", "rug"])
+        #expect(!Wallet().isSynced)
     }
 
     @Test func roundTripsThroughTheSharedFile() {
@@ -153,7 +154,6 @@ func removeScratch(_ path: String) {
             $0.level = 7
             $0.owned.insert("tower")
             $0.gifted.insert("yarn")
-            $0.tickList(on: noon)
         }
         // A pending write is visible to this process before it lands, and on disk after a flush.
         #expect(WalletStore(file: path).wallet == store.wallet)
@@ -176,30 +176,27 @@ func removeScratch(_ path: String) {
         #expect(try Data(contentsOf: aside) == Data(#"{"coins": 9000, "#.utf8))
     }
 
-    @Test func listCoinsCapAtThreeADay() {
-        var wallet = Wallet()
-        for _ in 0..<5 { wallet.tickList(on: noon) }
-        #expect(wallet.coins == 15)
-        wallet.tickList(on: noon.addingTimeInterval(86_400))
-        #expect(wallet.coins == 20)
-    }
-
-    @Test func listTicksEarnThroughTheStore() {
-        let walletPath = scratchFile("wallet.json"), usPath = scratchFile("us.json")
-        defer { removeScratch(walletPath); removeScratch(usPath) }
-        let us = UsStore(wallet: WalletStore(file: walletPath), file: usPath)
+    @Test func aTickedWantToItemAsksTheServerToPayForIt() {
+        let usPath = scratchFile("us.json")
+        defer { removeScratch(usPath) }
+        var earned: [EarnEvent] = []
+        let us = UsStore(file: usPath) { earned.append($0) }
         let watch = us.lists.first { $0.kind == .watch }!.id
+        let groceries = us.lists.first { $0.kind == .groceries }!.id
         us.addItem("Paddington", to: watch, author: "L")
-        us.setItem(us.list(watch)!.items[0].id, in: watch, done: true)
-        // A widget intent builds its own stores and sees the coins.
-        #expect(WalletStore(file: walletPath).wallet.coins == 5)
+        us.addItem("Milk", to: groceries, author: "L")
+        let film = us.list(watch)!.items[0].id
+        us.setItem(film, in: watch, done: true)
+        us.setItem(film, in: watch, done: true)
+        us.setItem(us.list(groceries)!.items[0].id, in: groceries, done: true)
+        #expect(earned == [.listTicked(item: film.uuidString)])
     }
 }
 
 @Suite struct CalendarTests {
     private func store(_ events: [UsEvent]) -> (UsStore, String) {
         let path = scratchFile("us.json")
-        let us = UsStore(wallet: WalletStore(file: scratchFile("wallet.json")), file: path)
+        let us = UsStore(file: path)
         events.forEach(us.upsertEvent)
         return (us, path)
     }

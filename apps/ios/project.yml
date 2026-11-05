@@ -11,6 +11,10 @@ settings:
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "0.1.0"
+    # Which store sells coin packs: "mock" (the default: fake store, the dev server credits) or "storekit". Set it
+    # in the ENVIRONMENT, not as an xcodebuild argument: Package.swift reads the same variable to link only that
+    # store (docs/payments.md).
+    BILLET_PAYMENTS_MODE: $(BILLET_PAYMENTS:default=mock)
     CURRENT_PROJECT_VERSION: "23"
 packages:
   BilletContracts:
@@ -21,6 +25,8 @@ packages:
     path: ../../packages/ios/pet
   BilletFeatures:
     path: ../../packages/ios/features
+  BilletPayments:
+    path: ../../packages/ios/payments
 targets:
   Billet:
     type: application
@@ -56,6 +62,8 @@ targets:
         products: [Pet, PetScene]
       - package: BilletFeatures
         products: [FeatureCanvas, FeatureGames, FeatureMoments, FeatureOnboarding, FeaturePairing, WidgetBridge]
+      - package: BilletPayments
+        products: [Payments, PaymentsLive]
     entitlements:
       path: Nooki/Nooki.entitlements
       properties:
@@ -68,6 +76,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES

@@ -55,7 +55,7 @@ private nonisolated final class FakeRoom: @unchecked Sendable {
     private let users = ["L": "user-l", "M": "user-m"]
 
     private func phone(_ me: String, file: Int) -> (UsStore, GiftsModel) {
-        let us = UsStore(wallet: WalletStore(file: files[file * 2 + 1]), file: files[file * 2])
+        let us = UsStore(file: files[file * 2])
         let users = users
         return (us, GiftsModel(us: us) { (me, users) })
     }

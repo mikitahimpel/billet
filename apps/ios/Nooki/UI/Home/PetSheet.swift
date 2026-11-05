@@ -79,6 +79,7 @@ private struct PetSheet: View {
     @Binding var height: CGFloat
     var onPlay: (MiniGame) -> Void
     @State private var short = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 18) {
@@ -130,6 +131,8 @@ private struct PetSheet: View {
         .padding(.bottom, 20)
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         .frame(maxHeight: .infinity, alignment: .top)
+        // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
+        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 }
 
