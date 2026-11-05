@@ -157,6 +157,17 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+  NookiUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [NookiUITests]
+    dependencies:
+      - target: Billet
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Billet
 schemes:
   Billet:
     build:
@@ -166,6 +177,6 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets: [NookiTests]
+      targets: [NookiTests, NookiUITests]
     archive:
       config: Release

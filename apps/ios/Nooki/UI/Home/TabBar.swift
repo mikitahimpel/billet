@@ -5,6 +5,17 @@ import TipKit
 struct TabBar: View {
     let state: HomeState
     @Namespace private var selection
+    /// The tab under the finger while it drags along the bar; the selection follows it and switches on release.
+    @State private var hovered: HomeTab?
+    @State private var barWidth: CGFloat = 0
+
+    private static let tabs: [(tab: HomeTab, title: String, symbol: String)] = [
+        (.world, "World", "house.fill"),
+        (.moments, "Moments", "photo.on.rectangle"),
+        (.shop, "Shop", "bag"),
+        (.us, "Us", "heart"),
+    ]
+    private static let inset: CGFloat = 6
 
     /// The tabs only navigate; adding lives in its own button beside them, as iOS 26 places search.
     var body: some View {
@@ -12,42 +23,81 @@ struct TabBar: View {
         GlassGroup(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 0) {
-                    item(.world, "World", "house.fill")
-                    item(.moments, "Moments", "photo.on.rectangle")
-                        .popoverTip(MomentsHint(), arrowEdge: .bottom)
-                    item(.shop, "Shop", "bag")
-                        .popoverTip(ShopHint(), arrowEdge: .bottom)
-                    item(.us, "Us", "heart")
+                    ForEach(Self.tabs, id: \.tab) { entry in
+                        switch entry.tab {
+                        case .moments: item(entry.tab, entry.title, entry.symbol).popoverTip(MomentsHint(), arrowEdge: .bottom)
+                        case .shop: item(entry.tab, entry.title, entry.symbol).popoverTip(ShopHint(), arrowEdge: .bottom)
+                        default: item(entry.tab, entry.title, entry.symbol)
+                        }
+                    }
                 }
-                .padding(6)
+                .padding(Self.inset)
+                .contentShape(.capsule)
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { barWidth = $0 }
+                // Like the system tab bar: touch down anywhere on the capsule, slide the selection along under the
+                // finger, switch on release. A plain tap is the same gesture without the slide.
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { drag in
+                            let tab = tab(at: drag.location.x)
+                            if tab != hovered { withAnimation(.snappy(duration: 0.2)) { hovered = tab } }
+                        }
+                        .onEnded { drag in
+                            let tab = tab(at: drag.location.x)
+                            withAnimation(.spring(duration: 0.35)) {
+                                hovered = nil
+                                state.tab = tab
+                            }
+                        }
+                )
                 .warmGlass(.capsule, interactive: true)
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("tabbar")
 
                 AddButton(state: state)
             }
+            // The gap between the bar and the "+", and anything else in the row, belongs to the bar: a tap there
+            // never reaches the room underneath.
+            .background {
+                Color.clear
+                    .contentShape(.rect)
+                    .onTapGesture {}
+                    .accessibilityHidden(true)
+            }
         }
+        .sensoryFeedback(.selection, trigger: hovered ?? state.tab)
+    }
+
+    /// The tab whose slot holds `x`, measured from the capsule's leading edge; past the ends it is the first or last.
+    private func tab(at x: CGFloat) -> HomeTab {
+        let slot = (barWidth - Self.inset * 2) / CGFloat(Self.tabs.count)
+        guard slot > 0 else { return state.tab }
+        let index = Int(((x - Self.inset) / slot).rounded(.down))
+        return Self.tabs[min(max(index, 0), Self.tabs.count - 1)].tab
     }
 
     private func item(_ tab: HomeTab, _ title: String, _ symbol: String) -> some View {
-        let selected = state.tab == tab
-        return Button {
-            withAnimation(.spring(duration: 0.35)) { state.tab = tab }
-        } label: {
-            VStack(spacing: 3) {
-                Image(systemName: symbol).font(.system(size: 18, weight: .semibold))
-                Text(title).font(.system(size: 11, weight: .medium))
-            }
-            .foregroundStyle(selected ? Ink.primary : Ink.secondary)
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .background {
-                if selected {
-                    Capsule()
-                        .fill(Color.honey.opacity(0.32))
-                        .matchedGeometryEffect(id: "tab", in: selection)
-                }
+        let shown = (hovered ?? state.tab) == tab
+        return VStack(spacing: 3) {
+            Image(systemName: symbol).font(.system(size: 18, weight: .semibold))
+            Text(title).font(.system(size: 11, weight: .medium))
+        }
+        .foregroundStyle(shown ? Ink.primary : Ink.secondary)
+        .frame(maxWidth: .infinity)
+        .frame(height: 54)
+        .background {
+            if shown {
+                Capsule()
+                    .fill(Color.honey.opacity(hovered == nil ? 0.32 : 0.42))
+                    .matchedGeometryEffect(id: "tab", in: selection)
             }
         }
-        .buttonStyle(.plain)
+        .scaleEffect(hovered == tab ? 1.06 : 1)
+        // The drag on the bar does the switching; VoiceOver and the UI tests get each tab as a button.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(state.tab == tab ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { withAnimation(.spring(duration: 0.35)) { state.tab = tab } }
     }
 }
 
