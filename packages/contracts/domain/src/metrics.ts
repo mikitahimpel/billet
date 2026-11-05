@@ -43,6 +43,8 @@ export const ClientEventName = Schema.Literals([
   "RoomItemPutAway",
   /** The room itself was changed: walls, floor, window (detail: what was changed). */
   "RoomCustomised",
+  /** One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which). */
+  "RoomOpened",
 
   /** The shop was opened. */
   "ShopOpened",
@@ -126,6 +128,7 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   RoomItemMoved: { detail: "id", required: true },
   RoomItemPutAway: { detail: "id", required: true },
   RoomCustomised: { detail: "id" },
+  RoomOpened: { detail: ["room", "city"], required: true },
   ShopOpened: { detail: "none" },
   ShopItemViewed: { detail: "id", required: true },
   ShopItemBought: { detail: "id", required: true, value: true },

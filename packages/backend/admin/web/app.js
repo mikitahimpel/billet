@@ -1485,6 +1485,7 @@ async function renderFlags([key]) {
 }
 
 const VERSION_PATTERN = "^\\d{1,4}(\\.\\d{1,4}){0,3}(\\+\\d{1,8})?$";
+const PAIRED_SINCE_PATTERN = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d{1,3})?)?Z$";
 let fieldSeq = 0;
 const fid = () => `f${++fieldSeq}`;
 
@@ -1583,6 +1584,23 @@ async function renderFlag(key) {
     b,
     h("input", { type: "checkbox", checked: (t.ageBands || []).includes(b) }),
   ]);
+  const pairedSince = h("input", {
+    type: "text",
+    class: "mono",
+    pattern: PAIRED_SINCE_PATTERN,
+    placeholder: "e.g. 2026-11-05T09:30Z",
+    value: t.pairedSince || "",
+    autocomplete: "off",
+    spellcheck: "false",
+  });
+  const pairedSinceNow = h("button", {
+    type: "button",
+    class: "btn quiet",
+    text: "Now",
+    onclick: () => {
+      pairedSince.value = new Date().toISOString().slice(0, 16) + "Z";
+    },
+  });
   const pairIds = h("textarea", {
     class: "mono",
     rows: "3",
@@ -1605,6 +1623,7 @@ async function renderFlag(key) {
     if (maxV.value.trim()) targeting.maxAppVersion = maxV.value.trim();
     const ageBands = bands.filter(([, el]) => el.checked).map(([b]) => b);
     if (ageBands.length) targeting.ageBands = ageBands;
+    if (pairedSince.value.trim()) targeting.pairedSince = pairedSince.value.trim();
     const ids = pairIds.value
       .split(/\r?\n/)
       .map((x) => x.trim())
@@ -1768,6 +1787,12 @@ async function renderFlag(key) {
           class: "hint",
           text: "None checked means everyone. The server doesn't know age bands yet, so checking one excludes everyone for now.",
         }),
+      ),
+      field(
+        "Paired since (UTC)",
+        h("div", { class: "row" }, pairedSince, pairedSinceNow),
+        "Only pairs formed at or after this moment enter, so set it to when the experiment starts to keep it to new pairs. Blank means pairs of any age.",
+        pairedSince,
       ),
       field("Pair ids", pairIds, "One per line. Blank means all pairs."),
     ),

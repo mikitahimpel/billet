@@ -6,7 +6,7 @@ import {
   PairingUnavailable,
 } from "@billet/backend-pairing/pairing-error";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
-import { UserId } from "@billet/contracts-domain/ids";
+import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
 import { invites, pairMembers, partnerNotices, users } from "./directory-schema.ts";
@@ -19,6 +19,9 @@ const unavailable = (cause: unknown) =>
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
 const decodePairIds = Schema.decodeUnknownEffect(Schema.Array(Schema.Struct({ pairId: PairId })));
+const decodePairedAt = Schema.decodeUnknownEffect(
+  Schema.Array(Schema.Struct({ pairedAt: Schema.NullOr(EpochMillis) })),
+);
 const decodeMemberIds = Schema.decodeUnknownEffect(Schema.Array(Schema.Struct({ userId: UserId })));
 // A batch returns rows as stored, keyed by column name rather than by Drizzle field.
 const decodeClaimerRows = Schema.decodeUnknownEffect(
@@ -129,6 +132,15 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
             .where(eq(pairMembers.userId, userId))
             .pipe(Effect.flatMap(decodePairIds)),
         ).pipe(Effect.map(([member]) => Option.fromNullishOr(member?.pairId))),
+
+      pairedAt: (pairId) =>
+        guarded(
+          db
+            .select({ pairedAt: sql<number | null>`min(${pairMembers.createdAt})` })
+            .from(pairMembers)
+            .where(eq(pairMembers.pairId, pairId))
+            .pipe(Effect.flatMap(decodePairedAt)),
+        ).pipe(Effect.map(([row]) => Option.fromNullishOr(row?.pairedAt))),
 
       findMembers: (pairId) =>
         guarded(

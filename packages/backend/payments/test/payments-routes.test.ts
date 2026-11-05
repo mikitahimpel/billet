@@ -48,6 +48,7 @@ const FakeAuth = Layer.succeed(
 const FakePairing = Layer.succeed(PairingRepository, {
   saveInvite: () => Effect.die("unused"),
   claimInvite: () => Effect.die("unused"),
+  pairedAt: () => Effect.die("unused"),
   findMembers: () => Effect.die("unused"),
   unpair: () => Effect.die("unused"),
   findPair: (userId) =>

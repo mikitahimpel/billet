@@ -25,6 +25,7 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `DecoratingOpened` | none | | Do people decorate the room? |
 | `RoomItemPlaced`, `RoomItemMoved`, `RoomItemPutAway` | the item's id | | Which pieces go into rooms, and which come back out? |
 | `RoomCustomised` | what was changed, when that exists | | Do people change the room itself? |
+| `RoomOpened` | `room` or `city` | | Which of Nooki's rooms do people spend time in? With the `rooms` experiment: does one room hold a pair as well as two? |
 | `ShopOpened` | none | | Is the shop found? |
 | `ShopItemViewed` | the item's id | | Which items draw a look? |
 | `ShopItemBought` | the item's id | price in stamps | What do people spend their stamps on? |
