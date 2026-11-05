@@ -2,6 +2,7 @@ import FeatureOnboarding
 import Pet
 import StoreKit
 import SwiftUI
+import WidgetBridge
 
 /// Settings, grouped the way iOS groups its own: the couple first, then how the app feels, then support, privacy and
 /// what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on this phone
@@ -120,12 +121,19 @@ struct SettingsView: View {
                     Toggle(isOn: $catBrain) { row("Cat brain", symbol: "brain", tint: .lilac) }
                     Toggle(isOn: $brainCard) { row("Cat brain card", symbol: "brain.head.profile", tint: .lilac) }
                     Toggle(isOn: $showAllHints) { row("Show all hints now", symbol: "lightbulb.max.fill", tint: .sun) }
+                    Picker(selection: roomsOverride) {
+                        Text("Follow the test").tag(RoomsVariant?.none)
+                        ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+                    } label: {
+                        row("Rooms", symbol: "square.split.2x1", tint: .lilac)
+                    }
                 } header: {
                     Text("Labs")
                 } footer: {
                     Text("With the brain off, Mochi lives on her own timers as Ilya made her. The card shows what the "
                          + "brain has her doing and why: her state, needs and the last thing she heard. All hints "
-                         + "show at once from the next launch, for testing.")
+                         + "show at once from the next launch, for testing. Rooms shows one room or both on this "
+                         + "phone, whatever the test gave your pair.")
                 }
                 .listRowBackground(rowBackground)
 
@@ -196,6 +204,11 @@ struct SettingsView: View {
                 .foregroundStyle(.white.opacity(0.35))
         }
         .padding(.vertical, 6)
+    }
+
+    /// The Labs choice of rooms on this phone; "Follow the test" clears it.
+    private var roomsOverride: Binding<RoomsVariant?> {
+        Binding(get: { state.rooms.labs }, set: { state.rooms.labs = $0 })
     }
 
     private func row(_ title: String, symbol: String, tint: UsTint, destructive: Bool = false) -> some View {
