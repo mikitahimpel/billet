@@ -42,6 +42,11 @@ final class HomeState {
     /// Treats given since launch.
     private(set) var treatsGiven = 0
     var showsSettings = false
+    var showsInbox = false
+    /// Asks the World tab to open the cat's sheet, as an Inbox row does.
+    var showsPetSheet = false
+    /// A shop item opened from outside the Shop, such as an Inbox row.
+    var openedShopItem: ShopItem?
 
     let moods = [
         Mood(title: "Happy", symbol: "heart.fill", tint: Color(hex: 0xFF7A93)),
@@ -315,6 +320,7 @@ final class HomeState {
             tab = .moments
             composingNote = .write
         case .draw: drawing = true
+        case .inbox: showsInbox = true
         case .list(let id): showUs(us.list(id) == nil ? nil : .list(id))
         }
     }
