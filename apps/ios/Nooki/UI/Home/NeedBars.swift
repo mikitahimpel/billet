@@ -21,10 +21,26 @@ struct NeedBars: View {
     var play: () -> Void
 
     var body: some View {
-        VStack(spacing: 14) {
-            ForEach(PetNeed.displayOrder, id: \.self) { need in
-                NeedRow(need: need, name: name, value: needs?[need], action: action(for: need))
+        if let needs {
+            VStack(spacing: 14) {
+                ForEach(PetNeed.displayOrder, id: \.self) { need in
+                    NeedRow(need: need, name: name, value: needs[need], action: action(for: need))
+                }
             }
+        } else {
+            // Before her needs are known: one calm line and the things to do, rather than four empty bars.
+            VStack(spacing: 14) {
+                Text("\(name) is settling in. Her needs show here soon.")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                    .multilineTextAlignment(.center)
+                HStack(spacing: Space.s) {
+                    ForEach(PetNeed.displayOrder, id: \.self) { need in
+                        if let action = action(for: need) { NeedActionButton(action: action, hue: need.hue) }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -64,35 +80,19 @@ private struct NeedRow: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(need.title)
                     .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.text)
                 NeedTrack(value: value ?? 0, hue: need.hue)
                     .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0.2), value: value)
                 Text(line)
                     .font(.system(.caption, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .foregroundStyle(Ink.textSecondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                     .contentTransition(.opacity)
             }
 
             if let action {
-                Button(action: action.run) {
-                    HStack(spacing: 4) {
-                        Text(action.title)
-                        if let detail = action.detail {
-                            CoinIcon(size: 13)
-                            Text(detail).monospacedDigit()
-                        }
-                    }
-                    .font(.system(.footnote, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
-                    .padding(.horizontal, 12)
-                    .frame(minWidth: 64, minHeight: 34)
-                    .background(need.hue.opacity(0.22), in: .capsule)
-                    .overlay(Capsule().stroke(need.hue.opacity(0.35), lineWidth: 0.5))
-                    .contentShape(.capsule)
-                }
-                .buttonStyle(PressScaleStyle())
+                NeedActionButton(action: action, hue: need.hue)
             } else {
                 Color.clear.frame(width: 64, height: 1)
             }
@@ -104,12 +104,38 @@ private struct NeedRow: View {
 
     /// Gentle words for where the bar is; an empty bar asks, it never complains.
     private var line: String {
-        guard let value else { return "\(name) is settling in" }
+        guard let value else { return need.middle }
         switch value {
         case 0.7...: return need.content
         case 0.35..<0.7: return need.middle
         default: return need.invitation(name)
         }
+    }
+}
+
+/// A need's action (Treat, Play, Pet) as a capsule in the need's hue.
+private struct NeedActionButton: View {
+    let action: NeedRow.Action
+    let hue: Color
+
+    var body: some View {
+        Button(action: action.run) {
+            HStack(spacing: 4) {
+                Text(action.title)
+                if let detail = action.detail {
+                    CoinIcon(size: 13)
+                    Text(detail).monospacedDigit()
+                }
+            }
+            .font(.system(.footnote, design: .rounded, weight: .semibold))
+            .foregroundStyle(Ink.text)
+            .padding(.horizontal, 12)
+            .frame(minWidth: 64, minHeight: 34)
+            .background(hue.opacity(0.22), in: .capsule)
+            .overlay(Capsule().stroke(hue.opacity(0.35), lineWidth: 0.5))
+            .contentShape(.capsule)
+        }
+        .buttonStyle(PressScaleStyle())
     }
 }
 

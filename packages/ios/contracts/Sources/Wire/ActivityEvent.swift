@@ -14,6 +14,8 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
   case catRenamed(name: String)
   /// `kind` is the note's `_tag`: `Drawing`, `Photo` or `Text`.
   case noteSent(note: NoteId, kind: String)
+  /// The partner reacted to a photo.
+  case reacted(note: NoteId, reaction: PhotoReaction)
   /// `offer` is set when the buy was a bundle or a deal; `items` is never empty.
   case purchased(offer: String?, items: [String], coins: Int)
   case giftClaimed(coins: Int)
@@ -32,6 +34,7 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
     case name
     case note
     case kind
+    case reaction
     case offer
     case items
     case coins
@@ -69,6 +72,10 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
       self = .noteSent(
         note: try container.decode(NoteId.self, forKey: .note),
         kind: try container.decode(String.self, forKey: .kind))
+    case "Reacted":
+      self = .reacted(
+        note: try container.decode(NoteId.self, forKey: .note),
+        reaction: try container.decode(PhotoReaction.self, forKey: .reaction))
     case "Purchased":
       self = .purchased(
         offer: try container.decodeOptionalKey(String.self, forKey: .offer),
@@ -128,6 +135,10 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
       try container.encode("NoteSent", forKey: .tag)
       try container.encode(note, forKey: .note)
       try container.encode(kind, forKey: .kind)
+    case .reacted(let note, let reaction):
+      try container.encode("Reacted", forKey: .tag)
+      try container.encode(note, forKey: .note)
+      try container.encode(reaction, forKey: .reaction)
     case .purchased(let offer, let items, let coins):
       try container.encode("Purchased", forKey: .tag)
       try container.encodeIfPresent(offer, forKey: .offer)

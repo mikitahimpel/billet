@@ -33,20 +33,15 @@ nonisolated struct LatestDrawing: Codable, Hashable, Sendable {
                   compact: compact, paper: paper)
     }
 
-    /// The key under a push's custom data that holds a `PushPayload` (packages/contracts/push).
-    static let pushKey = "billet"
-
     /// The drawing in a push's custom data, or nil for any other note. A push says nothing of when the note was sent,
     /// so it counts as sent `now`.
     init?(push userInfo: [AnyHashable: Any], now: Date = .now) {
-        guard let object = userInfo[Self.pushKey], JSONSerialization.isValidJSONObject(object),
-              let data = try? JSONSerialization.data(withJSONObject: object),
-              let payload = try? JSONDecoder().decode(PushPayload.self, from: data) else { return nil }
+        guard let payload = PushPayload(push: userInfo) else { return nil }
         switch payload {
         case .alert(let noteId, _, let compact?, _, let paper), .widget(let noteId, _, let compact?, _, let paper),
              .liveActivity(let noteId, _, let compact, let paper):
             self.init(noteID: noteId.rawValue, seq: nil, sentAt: now, compact: compact, paper: paper)
-        case .alert, .widget:
+        case .alert, .widget, .reaction:
             return nil
         }
     }
