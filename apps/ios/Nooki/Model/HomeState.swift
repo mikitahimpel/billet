@@ -155,7 +155,7 @@ final class HomeState {
         streak.record()
     }
 
-    static let treatPrice = 10
+    nonisolated static let treatPrice = 10
 
     /// A treat from the shared wallet; it fills more of her bar than a pet.
     func treat() -> Bool {
