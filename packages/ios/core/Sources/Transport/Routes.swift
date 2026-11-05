@@ -39,6 +39,14 @@ public enum Routes {
   public static let getShop = Route(.get, "/v1/shop")
   public static let placeOrder = Route(.post, "/v1/shop/orders")
   public static let setWish = Route(.put, "/v1/shop/wishlist")
+  /// The pair's gift wishes, the caller's own gift plans and both partners' "What I love". Every
+  /// change answers the same view.
+  public static let getGifts = Route(.get, "/v1/gifts")
+  public static let saveGiftWish = Route(.put, "/v1/gifts/wishes")
+  public static let deleteGiftWish = Route(.delete, "/v1/gifts/wishes")
+  public static let setGiftPlan = Route(.put, "/v1/gifts/plans")
+  public static let markGiftReceived = Route(.put, "/v1/gifts/received")
+  public static let saveLoves = Route(.put, "/v1/gifts/loves")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let reportEvents = Route(.post, "/v1/events")

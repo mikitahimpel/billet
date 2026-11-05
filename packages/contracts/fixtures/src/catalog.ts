@@ -96,6 +96,15 @@ import {
   ReactRequest,
   ReactResponse,
 } from "@billet/contracts-http-api/reaction";
+import {
+  DeleteGiftWishRequest,
+  GiftsResponse,
+  GiftWish,
+  MarkGiftReceivedRequest,
+  SaveGiftWishRequest,
+  SaveLovesRequest,
+  SetGiftPlanRequest,
+} from "@billet/contracts-http-api/gifts";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -414,6 +423,39 @@ const refundItem = activityItem({
 });
 const activityCursor = Schema.decodeUnknownSync(ActivityCursor)(`0001700000100000~note:note-1`);
 
+const braceletWish: GiftWish = {
+  id: idempotencyKey,
+  owner: alice,
+  title: "Silver charm bracelet",
+  link: "https://example.com/bracelet",
+  price: "$65",
+  note: "the one with the little moon",
+  mostWanted: true,
+  addedAt: 1_700_000_000_000,
+};
+
+const sunflowers: GiftWish = {
+  id: Schema.decodeUnknownSync(IdempotencyKey)("00000000-0000-4000-8000-0000000000b2"),
+  owner: alice,
+  title: "Sunflowers",
+  link: "",
+  price: "",
+  note: "",
+  mostWanted: false,
+  addedAt: 1_700_000_000_000,
+  receivedAt: 1_700_086_400_000,
+  giftedBy: bob,
+};
+
+const aliceLoves = {
+  sizes: "S, shoes 38",
+  flowers: "Peonies",
+  coffee: "Iced oat latte",
+  sweets: "",
+  allergies: "",
+  avoid: "Lilies",
+};
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -477,6 +519,35 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { reactions: [heart, takenBack] },
     empty: { reactions: [] },
   }),
+  fixture("GiftWish", GiftWish, { default: braceletWish, received: sunflowers }),
+  fixture("GiftsResponse", GiftsResponse, {
+    default: {
+      wishes: [braceletWish, sunflowers],
+      plans: [{ wish: idempotencyKey, stage: "planning" }],
+      surprise: true,
+      loves: [{ user: alice, loves: aliceLoves }],
+    },
+    empty: { wishes: [], plans: [], surprise: false, loves: [] },
+  }),
+  fixture("SaveGiftWishRequest", SaveGiftWishRequest, {
+    default: {
+      id: idempotencyKey,
+      title: "Silver charm bracelet",
+      link: "https://example.com/bracelet",
+      price: "$65",
+      note: "the one with the little moon",
+      mostWanted: true,
+    },
+  }),
+  fixture("DeleteGiftWishRequest", DeleteGiftWishRequest, { default: { id: idempotencyKey } }),
+  fixture("SetGiftPlanRequest", SetGiftPlanRequest, {
+    default: { wish: idempotencyKey, stage: "bought" },
+    release: { wish: idempotencyKey },
+  }),
+  fixture("MarkGiftReceivedRequest", MarkGiftReceivedRequest, {
+    default: { wish: idempotencyKey, received: true },
+  }),
+  fixture("SaveLovesRequest", SaveLovesRequest, { default: { loves: aliceLoves } }),
   fixture("ReportEventsRequest", ReportEventsRequest, {
     default: { events: ["AppOpened", "WidgetAdded"] },
     none: { events: [] },

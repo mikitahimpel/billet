@@ -129,6 +129,11 @@ final class ServerSession {
         isPaired ? .live(backend.api) : nil
     }
 
+    /// The pair's gift wishes in its room; nil until this account has a partner.
+    var giftSync: GiftSync? {
+        isPaired ? .live(backend.api) : nil
+    }
+
     /// Sends the text notes written here to the partner and keeps theirs in `notes` as from `partner`; nil until this
     /// account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {

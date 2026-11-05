@@ -167,6 +167,16 @@ nonisolated struct GiftPlan: Codable, Hashable {
     var stage = Stage.planning
 }
 
+/// A change to the gifts, for the pair's room to make too while the phone is paired.
+nonisolated enum GiftChange: Hashable {
+    case save(WishItem)
+    case delete(UUID)
+    /// Nil lets the plan go.
+    case plan(UUID, GiftPlan.Stage?)
+    case received(UUID, Bool)
+    case loves(Loves, of: String)
+}
+
 /// "Forget-me-nots": what a partner likes, filled in by that partner.
 nonisolated struct Loves: Codable, Hashable {
     var sizes = ""
@@ -311,8 +321,8 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
 
 // MARK: - Store
 
-/// Everything on the Us tab. Local-only JSON in the app group for now (docs/together-concept.md, section 6), shared
-/// with the widgets; both partners share this device's copy until sync lands.
+/// Everything on the Us tab, as JSON in the app group shared with the widgets (docs/together-concept.md, section 6).
+/// Once paired, the gifts mirror the pair's room through `GiftsModel`; the rest stays on this phone.
 @Observable
 final class UsStore {
     private(set) var lists: [UsList] = []
@@ -321,6 +331,9 @@ final class UsStore {
     /// phone.
     private(set) var plans: [GiftPlan] = []
     private(set) var loves: [String: Loves] = [:]
+    /// Owners the pair's room says a surprise is coming for. The room never says which wish, and the plan behind it
+    /// is on the giver's phone only.
+    private(set) var surprises: Set<String> = []
     private(set) var events: [UsEvent] = []
     private(set) var planned: [PlannedDate] = []
     /// Per partner: idea id -> liked (true) or skipped (false).
@@ -328,6 +341,8 @@ final class UsStore {
 
     /// Where the coins the couple earns here go; HomeState passes its own.
     @ObservationIgnored let wallet: WalletStore
+    /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
+    @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
 
     private let file: String
 
@@ -340,6 +355,7 @@ final class UsStore {
         var swipes: [String: [Int: Bool]]
         /// Missing in files from builds before gift plans.
         var plans: [GiftPlan]?
+        var surprises: Set<String>?
     }
 
     init(wallet: WalletStore, file: String = "Us/us.json") {
@@ -358,6 +374,7 @@ final class UsStore {
             planned = saved.planned
             swipes = saved.swipes
             plans = saved.plans ?? []
+            surprises = saved.surprises ?? []
             for i in wishes.indices {
                 guard let giver = wishes[i].legacyGiver else { continue }
                 wishes[i].legacyGiver = nil
@@ -373,7 +390,7 @@ final class UsStore {
 
     private func save() {
         SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
-                                  plans: plans),
+                                  plans: plans, surprises: surprises),
                          to: file)
     }
 
@@ -451,12 +468,14 @@ final class UsStore {
     func upsertWish(_ wish: WishItem) {
         if let i = wishes.firstIndex(where: { $0.id == wish.id }) { wishes[i] = wish } else { wishes.append(wish) }
         save()
+        onGiftChange?(.save(wish))
     }
 
     func deleteWish(_ id: UUID) {
         wishes.removeAll { $0.id == id }
         plans.removeAll { $0.wishID == id }
         save()
+        onGiftChange?(.delete(id))
     }
 
     /// The viewer's own plan for this wish. Nobody else's plan is ever returned, so the owner gets nil for their own wishes.
@@ -467,7 +486,7 @@ final class UsStore {
     /// The owner may learn that a surprise is coming, never for which wish.
     func surpriseComing(for owner: String) -> Bool {
         let open = Set(wishes(of: owner).map(\.id))
-        return plans.contains { open.contains($0.wishID) && $0.giver != owner }
+        return surprises.contains(owner) || plans.contains { open.contains($0.wishID) && $0.giver != owner }
     }
 
     /// The giver secretly promises to gift it. One plan per wish; the owner can't plan their own.
@@ -476,17 +495,20 @@ final class UsStore {
               !plans.contains(where: { $0.wishID == id }) else { return }
         plans.append(GiftPlan(wishID: id, giver: giver))
         save()
+        onGiftChange?(.plan(id, .planning))
     }
 
     func setStage(_ stage: GiftPlan.Stage, of id: UUID, by giver: String) {
         guard let i = plans.firstIndex(where: { $0.wishID == id && $0.giver == giver }) else { return }
         plans[i].stage = stage
         save()
+        onGiftChange?(.plan(id, stage))
     }
 
     func release(_ id: UUID, by giver: String) {
         plans.removeAll { $0.wishID == id && $0.giver == giver }
         save()
+        onGiftChange?(.plan(id, nil))
     }
 
     /// Only the owner says it arrived: it moves to "Gifted", the giver's plan closes and the couple earns 20 coins once.
@@ -501,6 +523,7 @@ final class UsStore {
             wallet.earn(20)
         }
         save()
+        onGiftChange?(.received(id, true))
     }
 
     /// Puts a wish marked by mistake back on the list. The coins stay paid.
@@ -509,12 +532,29 @@ final class UsStore {
         wishes[i].gifted = nil
         wishes[i].giftedBy = nil
         save()
+        onGiftChange?(.received(id, false))
     }
 
     func loves(of partner: String) -> Loves { loves[partner] ?? Loves() }
 
     func setLoves(_ value: Loves, for partner: String) {
         loves[partner] = value
+        save()
+        onGiftChange?(.loves(value, of: partner))
+    }
+
+    /// Takes the pair's room as the truth for gifts. `plans` are only the viewer's own; `surprise` names the owner a
+    /// surprise is coming for, if any. Whether a wish's coins were paid is the phone's own and stays.
+    func mirrorGifts(wishes remote: [WishItem], plans: [GiftPlan], loves: [String: Loves], surprise: String?) {
+        let paid = Set(wishes.filter(\.rewarded).map(\.id))
+        wishes = remote.map { wish in
+            var wish = wish
+            wish.rewarded = paid.contains(wish.id) || wish.gifted != nil
+            return wish
+        }
+        self.plans = plans
+        self.loves = loves
+        surprises = surprise.map { [$0] } ?? []
         save()
     }
 

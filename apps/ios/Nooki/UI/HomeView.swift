@@ -364,7 +364,7 @@ struct HomeView: View {
     private var boardKey: [String] { BoardFaces.key(state: state) }
 
     /// Photos to and from the partner; nil until this phone is paired with them.
-    /// Once paired, the monograms belong to the pair's two accounts and the shop follows the pair's room.
+    /// Once paired, the monograms belong to the pair's two accounts and the shop and the gifts follow the pair's room.
     private func followPair() async {
         guard let session, let sync = session.shopSync else { return await leavePair() }
         do throws(TransportError) {
@@ -377,11 +377,13 @@ struct HomeView: View {
             guard state.profile.couple.pair != nil else { return }
         }
         await state.shop.connect(sync)
+        await state.gifts.connect(session.giftSync)
     }
 
     private func leavePair() async {
         state.profile.leavePair()
         await state.shop.connect(nil)
+        await state.gifts.connect(nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.

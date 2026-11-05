@@ -116,3 +116,27 @@ export const StoredCoinEntry = Schema.Struct({
   ref: Schema.String,
   at: Schema.Int,
 });
+
+export const StoredGiftWish = Schema.Struct({
+  id: Schema.String,
+  owner: Schema.String,
+  title: Schema.String,
+  link: Schema.String,
+  price: Schema.String,
+  note: Schema.String,
+  mostWanted: Schema.Int,
+  addedAt: Schema.Int,
+  receivedAt: Schema.NullOr(Schema.Int),
+  giftedBy: Schema.NullOr(Schema.String),
+});
+
+export const StoredGiftPlan = Schema.Struct({
+  wishId: Schema.String,
+  giver: Schema.String,
+  stage: Schema.String,
+});
+
+export const StoredGiftLoves = Schema.Struct({
+  user: Schema.String,
+  body: Schema.String,
+});

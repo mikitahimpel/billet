@@ -16,6 +16,8 @@ import { MetricsRoutes } from "@billet/backend-metrics/metrics-routes";
 import { ActivityRoutes } from "@billet/backend-notes/activity-routes";
 import { ActivityService } from "@billet/backend-notes/activity-service";
 import { CatRoutes } from "@billet/backend-notes/cat-routes";
+import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
+import { GiftsService } from "@billet/backend-notes/gifts-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -69,6 +71,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ActivityRoutes,
     CatRoutes,
     ReactionRoutes,
+    GiftsRoutes,
     FlagsRoutes,
     MetricsRoutes,
     PaymentsRoutes,
@@ -86,6 +89,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ActivityService.layer,
         CatService.layer,
         ReactionService.layer,
+        GiftsService.layer,
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),

@@ -62,6 +62,18 @@ public struct APIClient: Sendable {
   /// Buys one offer at the server's price. Repeat the request's `id` on a retry.
   public var placeOrder: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var setWish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
+  /// The pair's gifts as the caller may see them. `.api(.notFound)` while unpaired; every change
+  /// answers the view after it, and `.api(.invalidRequest)` for a change that is not the caller's.
+  public var gifts: @Sendable () async throws(TransportError) -> GiftsResponse
+  public var saveGiftWish:
+    @Sendable (SaveGiftWishRequest) async throws(TransportError) -> GiftsResponse
+  public var deleteGiftWish:
+    @Sendable (DeleteGiftWishRequest) async throws(TransportError) -> GiftsResponse
+  public var setGiftPlan:
+    @Sendable (SetGiftPlanRequest) async throws(TransportError) -> GiftsResponse
+  public var markGiftReceived:
+    @Sendable (MarkGiftReceivedRequest) async throws(TransportError) -> GiftsResponse
+  public var saveLoves: @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -139,6 +151,28 @@ public struct APIClient: Sendable {
     setWish:
       @escaping @Sendable (WishRequest) async throws(TransportError) -> ShopResponse = {
         (_) async throws(TransportError) in throw .network("offline")
+      },
+    gifts: @escaping @Sendable () async throws(TransportError) -> GiftsResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    saveGiftWish:
+      @escaping @Sendable (SaveGiftWishRequest) async throws(TransportError) -> GiftsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    deleteGiftWish:
+      @escaping @Sendable (DeleteGiftWishRequest) async throws(TransportError) -> GiftsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    setGiftPlan:
+      @escaping @Sendable (SetGiftPlanRequest) async throws(TransportError) -> GiftsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    markGiftReceived:
+      @escaping @Sendable (MarkGiftReceivedRequest) async throws(TransportError) ->
+      GiftsResponse = { (_) async throws(TransportError) in throw .network("offline") },
+    saveLoves:
+      @escaping @Sendable (SaveLovesRequest) async throws(TransportError) -> GiftsResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
       }
   ) {
     self.authChallenge = authChallenge
@@ -170,6 +204,12 @@ public struct APIClient: Sendable {
     self.shop = shop
     self.placeOrder = placeOrder
     self.setWish = setWish
+    self.gifts = gifts
+    self.saveGiftWish = saveGiftWish
+    self.deleteGiftWish = deleteGiftWish
+    self.setGiftPlan = setGiftPlan
+    self.markGiftReceived = markGiftReceived
+    self.saveLoves = saveLoves
   }
 }
 
@@ -332,6 +372,31 @@ extension APIClient {
       setWish: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.setWish, signed: true, body: body), as: ShopResponse.self)
+      },
+      gifts: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getGifts, signed: true), as: GiftsResponse.self)
+      },
+      saveGiftWish: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.saveGiftWish, signed: true, body: body), as: GiftsResponse.self)
+      },
+      deleteGiftWish: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.deleteGiftWish, signed: true, body: body), as: GiftsResponse.self)
+      },
+      setGiftPlan: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.setGiftPlan, signed: true, body: body), as: GiftsResponse.self)
+      },
+      markGiftReceived: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.markGiftReceived, signed: true, body: body),
+          as: GiftsResponse.self)
+      },
+      saveLoves: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.saveLoves, signed: true, body: body), as: GiftsResponse.self)
       })
   }
 }

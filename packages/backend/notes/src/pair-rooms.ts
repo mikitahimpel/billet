@@ -17,6 +17,7 @@ import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
 import type { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import type { SequencedNote } from "@billet/backend-pair-room/room-state";
@@ -127,6 +128,12 @@ export class PairRooms extends Context.Service<
       afterRev: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
+    /** Runs one gift command for `by`: see `GiftsRoom`. */
+    readonly gifts: (
+      pairId: PairId,
+      by: UserId,
+      command: GiftCommand,
+    ) => Effect.Effect<GiftsResult, NotesUnavailable>;
     /** Moves `user`'s read mark up to `upTo` and answers their unread count. */
     readonly markActivityRead: (
       pairId: PairId,
