@@ -40,7 +40,7 @@ enum NookiPerf {
             ))
     }
 
-    /// A tab other than the World came on screen, under the names a run waits for. Us is a sheet now, not a tab.
+    /// A tab other than the World came on screen, under the names a run waits for. Us is a sheet, not a tab.
     static func tabShown(_ tab: HomeTab) {
         guard ScenePerf.isOn else { return }
         switch tab {

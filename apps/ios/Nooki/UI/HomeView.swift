@@ -145,7 +145,7 @@ struct HomeView: View {
             switch tab {
             case .moments: hints.done(MomentsHint())
             case .shop: hints.done(ShopHint())
-            case .world, .us: break
+            case .world: break
             }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
