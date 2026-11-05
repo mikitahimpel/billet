@@ -1,3 +1,4 @@
+import PetScene
 import SwiftUI
 
 // MARK: - Shop
@@ -10,6 +11,8 @@ struct ShopView: View {
 
     @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
+    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.shopScroll`).
+    @State private var position = ScrollPosition(edge: .top)
 
     /// Tab bar (66pt) + home-indicator area + breathing room, so the last row clears it.
     private let bottomInset: CGFloat = 134
@@ -36,6 +39,12 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
+            .scrollPosition($position)
+            .onAppear {
+                guard ScenePerf.isOn else { return }
+                NookiPerf.shopScroll = { position.scrollTo(y: $0) }
+            }
+            .onDisappear { NookiPerf.shopScroll = nil }
             .task {
                 #if DEBUG
                 // `-shopSection bundles` (or deals, collections) on launch scrolls Today there, for screenshots.
