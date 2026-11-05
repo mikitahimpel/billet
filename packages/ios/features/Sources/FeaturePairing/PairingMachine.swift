@@ -21,7 +21,8 @@ public enum PairingFailure: Equatable, Sendable {
     case .api(.invalidRequest): self = .invalidCode
     case .api(.unavailable), .api(.notFound), .api(.appleIdInUse), .api(.invalidPurchase),
       .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
-      .api(.collectionIncomplete), .api(.catNotAdopted), .network,
+      .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken), .api(.catNotAdopted),
+      .network,
       .status, .maintenance,
       .encoding,
       .decoding:

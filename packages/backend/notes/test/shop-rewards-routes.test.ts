@@ -2,12 +2,15 @@ import { Effect, Layer, Redacted, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
+import { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
+import { LocalDay } from "@billet/contracts-domain/coins";
 import { DeviceId } from "@billet/contracts-domain/ids";
 import { collectionOf, starterItems, welcomeCoins } from "@billet/contracts-domain/shop";
 import { CoinsResponse, EarnResponse } from "@billet/contracts-http-api/coins";
 import { ClaimBonusResponse, OpenGiftResponse } from "@billet/contracts-http-api/shop";
 import { NotesRoutes } from "../src/notes-routes.ts";
 import { NotesService } from "../src/notes-service.ts";
+import { PairRooms } from "../src/pair-rooms.ts";
 import { makeWorld, pair, user } from "./fake-world.ts";
 
 const tokenOf = (name: string) => name.padEnd(43, "x");
@@ -144,5 +147,57 @@ describe("the coin routes", () => {
     });
     const again = await call("POST", "/v1/shop/bonus", "gus", { collection: "cozy-autumn" });
     expect(decodeBonus(await again.json())).toEqual(bonus);
+  });
+});
+
+// A room refuses these only once the first entry is gone, so a stub stands in for that room.
+const taken = makeWorld([[pair("pair-t"), user("hal"), user("ivy")]]);
+const takenRooms: PairRooms["Service"] = {
+  ...taken.pairRooms,
+  openGift: () =>
+    Effect.succeed(
+      RoomDecision.cases.Rejected.make({
+        rejection: RoomRejection.cases.GiftTaken.make({
+          day: Schema.decodeSync(LocalDay)("2026-11-05"),
+        }),
+      }),
+    ),
+  claimBonus: (_pairId, _by, collection) =>
+    Effect.succeed(
+      RoomDecision.cases.Rejected.make({
+        rejection: RoomRejection.cases.BonusTaken.make({ collection }),
+      }),
+    ),
+};
+const refusing = HttpRouter.toWebHandler(
+  NotesRoutes.pipe(
+    Layer.provide(Layer.merge(FakeAuth, NotesService.layer)),
+    Layer.provide(Layer.merge(taken.layer, Layer.succeed(PairRooms, takenRooms))),
+  ),
+  { disableLogger: true },
+);
+
+afterAll(refusing.dispose);
+
+const callRefusing = (path: string, body: unknown) =>
+  refusing.handler(
+    new Request(`http://billet.test${path}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${tokenOf("hal")}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  );
+
+describe("a room that refuses a repeat", () => {
+  it("answers a taken gift with 409 and its day", async () => {
+    const response = await callRefusing("/v1/shop/gift", {});
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ _tag: "GiftTaken", day: "2026-11-05" });
+  });
+
+  it("answers a paid bonus with 409 and its collection", async () => {
+    const response = await callRefusing("/v1/shop/bonus", { collection: "cozy-autumn" });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ _tag: "BonusTaken", collection: "cozy-autumn" });
   });
 });

@@ -17,6 +17,10 @@ public enum ApiError: Codable, Hashable, Sendable {
   case alreadyOwned(itemId: String)
   /// A bonus for a collection with a piece still missing.
   case collectionIncomplete(collection: String)
+  /// The day's gift is already open. Come back tomorrow.
+  case giftTaken(day: String)
+  /// A collection's bonus already paid.
+  case bonusTaken(collection: String)
   /// A buy for the cat, such as a treat, before the couple adopted one.
   case catNotAdopted
 
@@ -27,6 +31,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case have
     case itemId
     case collection
+    case day
   }
 
   public init(from decoder: any Decoder) throws {
@@ -51,6 +56,9 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "CollectionIncomplete":
       self = .collectionIncomplete(
         collection: try container.decode(String.self, forKey: .collection))
+    case "GiftTaken": self = .giftTaken(day: try container.decode(String.self, forKey: .day))
+    case "BonusTaken":
+      self = .bonusTaken(collection: try container.decode(String.self, forKey: .collection))
     case "CatNotAdopted": self = .catNotAdopted
     default:
       throw DecodingError.dataCorruptedError(
@@ -81,6 +89,12 @@ public enum ApiError: Codable, Hashable, Sendable {
       try container.encode(itemId, forKey: .itemId)
     case .collectionIncomplete(let collection):
       try container.encode("CollectionIncomplete", forKey: .tag)
+      try container.encode(collection, forKey: .collection)
+    case .giftTaken(let day):
+      try container.encode("GiftTaken", forKey: .tag)
+      try container.encode(day, forKey: .day)
+    case .bonusTaken(let collection):
+      try container.encode("BonusTaken", forKey: .tag)
       try container.encode(collection, forKey: .collection)
     case .catNotAdopted: try container.encode("CatNotAdopted", forKey: .tag)
     }

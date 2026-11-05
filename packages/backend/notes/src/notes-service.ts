@@ -34,8 +34,10 @@ import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import {
   AlreadyOwned,
+  BonusTaken,
   CatNotAdopted,
   CollectionIncomplete,
+  GiftTaken,
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
@@ -123,12 +125,15 @@ export class NotesService extends Context.Service<
     readonly openGift: (
       userId: UserId,
       request: OpenGiftRequest,
-    ) => Effect.Effect<OpenGiftResponse, NotesNotFound | NotesUnavailable>;
+    ) => Effect.Effect<OpenGiftResponse, NotesNotFound | GiftTaken | NotesUnavailable>;
     /** Collects a complete collection's bonus. Asking again answers with the bonus paid. */
     readonly claimBonus: (
       userId: UserId,
       request: ClaimBonusRequest,
-    ) => Effect.Effect<ClaimBonusResponse, NotesNotFound | CollectionIncomplete | NotesUnavailable>;
+    ) => Effect.Effect<
+      ClaimBonusResponse,
+      NotesNotFound | CollectionIncomplete | BonusTaken | NotesUnavailable
+    >;
     /** Pays an app earn once per ref, within the day's cap. */
     readonly earn: (
       userId: UserId,
@@ -433,13 +438,18 @@ export class NotesService extends Context.Service<
       const openGift = Effect.fn("NotesService.openGift")(function* (
         userId: UserId,
         request: OpenGiftRequest,
-      ): Effect.fn.Return<OpenGiftResponse, NotesNotFound | NotesUnavailable> {
+      ): Effect.fn.Return<OpenGiftResponse, NotesNotFound | GiftTaken | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
         const decision = yield* inOpenRoom(pairId, () =>
           rooms.openGift(pairId, userId, request.utcOffsetSeconds),
         );
         if (decision._tag === "Rejected") {
-          return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-gift" }));
+          const { rejection } = decision;
+          return yield* Effect.fail(
+            rejection._tag === "GiftTaken"
+              ? new GiftTaken({ day: rejection.day })
+              : new NotesUnavailable({ reason: "room-refused-gift" }),
+          );
         }
         const entry = entryOf(decision, "gift");
         if (entry === undefined) {
@@ -455,7 +465,7 @@ export class NotesService extends Context.Service<
         request: ClaimBonusRequest,
       ): Effect.fn.Return<
         ClaimBonusResponse,
-        NotesNotFound | CollectionIncomplete | NotesUnavailable
+        NotesNotFound | CollectionIncomplete | BonusTaken | NotesUnavailable
       > {
         const pairId = yield* pairOf(userId);
         const decision = yield* inOpenRoom(pairId, () =>
@@ -466,9 +476,11 @@ export class NotesService extends Context.Service<
           return yield* Effect.fail(
             rejection._tag === "CollectionIncomplete"
               ? new CollectionIncomplete({ collection: rejection.collection })
-              : rejection._tag === "NotOffered"
-                ? new NotesNotFound()
-                : new NotesUnavailable({ reason: "room-refused-bonus" }),
+              : rejection._tag === "BonusTaken"
+                ? new BonusTaken({ collection: rejection.collection })
+                : rejection._tag === "NotOffered"
+                  ? new NotesNotFound()
+                  : new NotesUnavailable({ reason: "room-refused-bonus" }),
           );
         }
         const entry = entryOf(decision, "bonus");

@@ -1,4 +1,5 @@
 import { Data } from "effect";
+import type { LocalDay } from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { CollectionId } from "@billet/contracts-domain/shop";
 
@@ -22,6 +23,14 @@ export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly it
 
 /** A bonus for a collection with a piece still missing. */
 export class CollectionIncomplete extends Data.TaggedError("CollectionIncomplete")<{
+  readonly collection: CollectionId;
+}> {}
+
+/** The day's gift is already open, and its entry is no longer there to repeat. */
+export class GiftTaken extends Data.TaggedError("GiftTaken")<{ readonly day: LocalDay }> {}
+
+/** A collection's bonus already paid, and its entry is no longer there to repeat. */
+export class BonusTaken extends Data.TaggedError("BonusTaken")<{
   readonly collection: CollectionId;
 }> {}
 

@@ -37,8 +37,10 @@ import {
 } from "@billet/contracts-http-api/note";
 import type {
   AlreadyOwned,
+  BonusTaken,
   CatNotAdopted,
   CollectionIncomplete,
+  GiftTaken,
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
@@ -114,6 +116,8 @@ const respondNotesFailures = <R>(
     | NotEnoughCoins
     | AlreadyOwned
     | CollectionIncomplete
+    | GiftTaken
+    | BonusTaken
     | CatNotAdopted
     | NotesUnavailable,
     R
@@ -131,6 +135,9 @@ const respondNotesFailures = <R>(
         respondError(ApiError.cases.AlreadyOwned.make({ itemId }), { status: 409 }),
       CollectionIncomplete: ({ collection }) =>
         respondError(ApiError.cases.CollectionIncomplete.make({ collection }), { status: 409 }),
+      GiftTaken: ({ day }) => respondError(ApiError.cases.GiftTaken.make({ day }), { status: 409 }),
+      BonusTaken: ({ collection }) =>
+        respondError(ApiError.cases.BonusTaken.make({ collection }), { status: 409 }),
       CatNotAdopted: () => respondError(ApiError.cases.CatNotAdopted.make({}), { status: 409 }),
       NotesUnavailable: (error) =>
         Effect.logError("notes unavailable", error).pipe(
