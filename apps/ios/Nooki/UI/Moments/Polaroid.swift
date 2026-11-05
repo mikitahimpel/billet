@@ -134,7 +134,7 @@ struct WashiTape: View {
     }
 }
 
-private struct RaggedStrip: Shape {
+private nonisolated struct RaggedStrip: Shape {
     func path(in rect: CGRect) -> Path {
         let teeth = 5
         let depth = rect.width * 0.03
