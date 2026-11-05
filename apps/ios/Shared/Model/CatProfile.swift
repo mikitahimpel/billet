@@ -10,7 +10,8 @@ nonisolated enum CatProfile {
     /// Stands for the cat's name in bundled copy, such as DateIdeas.json.
     static let placeholder = "{cat}"
 
-    static let store = UserDefaults(suiteName: AppGroup.id) ?? .standard
+    /// UserDefaults is thread-safe, though the SDK doesn't mark it Sendable.
+    nonisolated(unsafe) static let store = UserDefaults(suiteName: AppGroup.id) ?? .standard
 
     static func name(in defaults: UserDefaults = store) -> String {
         let saved = defaults.string(forKey: nameKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
