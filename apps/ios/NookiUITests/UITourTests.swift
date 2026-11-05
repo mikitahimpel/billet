@@ -37,6 +37,12 @@ final class UITourTests: XCTestCase {
             shot("06-shop")
             app.swipeUp()
             shot("07-shop-scrolled")
+            if tap(app.buttons["coins"]) {
+                shot("18-coins")
+                app.swipeUp()
+                shot("19-coins-scrolled")
+                dismissSheet(app)
+            }
         }
         if tap(app.buttons["Couple"]) {
             shot("08-profile")
@@ -54,7 +60,7 @@ final class UITourTests: XCTestCase {
                     shot("16-style-scrolled")
                 }
             }
-            dismissSheet(app)
+            closeProfile(app)
         }
         if tap(app.buttons["Us"]) {
             shot("08-us")
@@ -107,6 +113,25 @@ final class UITourTests: XCTestCase {
         // status bar doesn't close a menu.
         if region.exists { region.tap() } else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.42)).tap() }
         Thread.sleep(forTimeInterval: 1)
+    }
+
+    /// Backs out of whatever the profile pushed, then closes it with Done; a swipe on a pushed screen can scroll it
+    /// instead of closing the sheet.
+    @MainActor
+    private func closeProfile(_ app: XCUIApplication) {
+        for _ in 0..<3 {
+            let done = app.buttons["Done"]
+            if done.exists, done.isHittable {
+                done.tap()
+                Thread.sleep(forTimeInterval: 1.5)
+                return
+            }
+            let back = app.navigationBars.buttons.element(boundBy: 0)
+            guard back.exists else { break }
+            back.tap()
+            Thread.sleep(forTimeInterval: 1)
+        }
+        dismissSheet(app)
     }
 
     @MainActor
