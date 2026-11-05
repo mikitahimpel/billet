@@ -765,6 +765,11 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
     "stroke-begin": ServerMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
     "stroke-points": ServerMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
+    "stroke-points-relayed": ServerMessage.cases.StrokePoints.make({
+      id: 3,
+      points: stroke.points,
+      relayedAt: 1_762_300_000_123,
+    }),
     "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
     "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
     clear: ServerMessage.cases.Clear.make({}),
