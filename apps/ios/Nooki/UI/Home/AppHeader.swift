@@ -9,6 +9,7 @@ struct AppHeader: View {
     var erase: () -> Void
     @State private var pairing = false
     @State private var checkingIn = false
+    @AppStorage(PlusPass.key) private var plus = false
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
@@ -43,6 +44,17 @@ struct AppHeader: View {
                             .background(.honeyGradient, in: .circle)
                             .overlay(Circle().stroke(.white, lineWidth: 1.5))
                             .offset(y: 6)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if plus {
+                            Image(systemName: "crown.fill")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Ink.heroInk)
+                                .frame(width: 20, height: 20)
+                                .background(.honeyGradient, in: .circle)
+                                .overlay(Circle().stroke(.white, lineWidth: 1.5))
+                                .offset(x: 4, y: -4)
+                        }
                     }
                     .contentShape(.capsule)
                 }
@@ -87,8 +99,7 @@ struct InboxButton: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Ink.primary)
                 .frame(width: 42, height: 42)
-                // Not interactive: the button style answers the press; interactive glass would track the same touch.
-                .warmGlass(.circle)
+                .warmGlassBacking(.circle)
                 .overlay(alignment: .topTrailing) {
                     if unread > 0 {
                         Text(unread > 9 ? "9+" : "\(unread)")
@@ -124,7 +135,7 @@ struct CoinPill: View {
         .padding(.leading, 8)
         .padding(.trailing, 14)
         .frame(height: 40)
-        .warmGlass(.capsule, interactive: true)
+        .warmGlassBacking(.capsule)
         .animation(.snappy(duration: 0.4), value: coins)
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).

@@ -3,8 +3,8 @@ import SwiftUI
 import WidgetBridge
 import Wire
 
-/// What the header's coins open, on any tab: the balance, the coin packs and Billet Plus, then how the couple earns
-/// coins and where the latest went. The one place that sells coins; Home itself never does.
+/// What the header's coins open, on any tab, as a store: the balance, Billet Plus on top, the coin packs as cards, then
+/// how the couple earns coins and where the latest went. The one place that sells coins; Home itself never does.
 struct CoinsSheet: View {
     let state: HomeState
     /// Nil in a build without a server: then nothing is sold.
@@ -22,9 +22,9 @@ struct CoinsSheet: View {
                 SheetHeader(title: "Coins", chips: { EmptyView() }, close: { dismiss() })
                 balance
                 if let retry = ask.retry { ShortBanner(state: state, retry: retry) { dismiss() } }
+                if packs != nil, sellsPacks { PlusHero(mockStore: AppPayments.isMock) }
                 if let packs, sellsPacks {
-                    PacksList(model: packs, fit: CoinPacksModel.fit(for: missing, in: packs.packs))
-                    PlusCard(mockStore: AppPayments.isMock)
+                    PackStore(model: packs, fit: CoinPacksModel.fit(for: missing, in: packs.packs))
                 }
                 waysCard
                 recent
@@ -221,128 +221,5 @@ private struct ShortBanner: View {
         .shopCard()
         .animation(.snappy, value: missing)
         .accessibilityIdentifier("shortBanner")
-    }
-}
-
-/// The packs on sale, each a button with the store's price.
-private struct PacksList: View {
-    let model: CoinPacksModel
-    /// The pack that covers a waiting buy, shown first among equals.
-    let fit: StampPack?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            Text("Get more coins")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textSecondary)
-                .padding(.horizontal, Space.l)
-                .accessibilityAddTraits(.isHeader)
-            ForEach(model.packs) { pack in
-                PackRow(pack: pack, buying: model.status == .buying(pack.id), isFit: pack.id == fit?.id) {
-                    Task { await model.buy(pack) }
-                }
-            }
-            if let line = statusLine {
-                Text(line)
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-                    .accessibilityIdentifier("packStatus")
-            }
-        }
-        .sensoryFeedback(.success, trigger: model.status) { _, new in
-            if case .bought = new { true } else { false }
-        }
-    }
-
-    private var statusLine: String? {
-        switch model.status {
-        case .idle, .buying: nil
-        case .waiting: "Waiting for approval. The coins arrive once it's given."
-        case .bought(let coins): "+\(coins) coins. Enjoy!"
-        case .failed(let message): message
-        }
-    }
-}
-
-private struct PackRow: View {
-    let pack: StampPack
-    let buying: Bool
-    let isFit: Bool
-    let buy: () -> Void
-
-    var body: some View {
-        HStack(spacing: Space.m) {
-            CoinIcon(size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(pack.displayName)
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                if isFit {
-                    Text("Covers it")
-                        .font(.nookiCaption.weight(.semibold))
-                        .foregroundStyle(Ink.accentText)
-                }
-                Text(pack.description)
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Button(action: buy) {
-                if buying {
-                    ProgressView().frame(minWidth: 56)
-                } else {
-                    Text(pack.displayPrice).monospacedDigit().frame(minWidth: 56)
-                }
-            }
-            .shopButton(prominent: isFit)
-            .disabled(buying)
-            .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
-        }
-        .padding(Space.l)
-        .shopCard()
-        .overlay {
-            if isFit {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.honey, lineWidth: 2)
-            }
-        }
-        .accessibilityIdentifier(isFit ? "fitPack" : pack.id)
-    }
-}
-
-/// Billet Plus, the subscription. What it costs and gives isn't settled yet, so the card is a placeholder: a mock
-/// build turns it on for this phone only, and a StoreKit build says it is coming.
-private struct PlusCard: View {
-    let mockStore: Bool
-    @AppStorage("plus.mockOn") private var mockOn = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            HStack(spacing: Space.m) {
-                UsIcon(glyph: .init(symbol: "sparkles", tint: .lilac), size: 34)
-                Text("Billet Plus")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                if mockOn {
-                    Text("On (test)")
-                        .font(.nookiCaption.weight(.semibold))
-                        .foregroundStyle(Ink.accentText)
-                }
-            }
-            Text("More for the two of you, every month. Details soon.")
-                .font(.nookiCallout)
-                .foregroundStyle(Ink.textSecondary)
-            if mockStore {
-                Button(mockOn ? "Turn off (test)" : "Try Billet Plus (test)") { mockOn.toggle() }
-                    .shopButton(prominent: !mockOn)
-                    .accessibilityIdentifier("plusMock")
-            } else {
-                Text("Coming soon")
-                    .font(.nookiCaption.weight(.semibold))
-                    .foregroundStyle(Ink.textSecondary)
-            }
-        }
-        .padding(Space.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .shopCard()
     }
 }

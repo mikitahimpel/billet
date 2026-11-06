@@ -20,6 +20,13 @@ extension View {
     }
 }
 
+extension View {
+    /// Warm glass behind a button's label that never takes a touch itself, so the button always gets it.
+    func warmGlassBacking<S: Shape>(_ shape: S) -> some View {
+        background { Color.clear.warmGlass(shape).allowsHitTesting(false) }
+    }
+}
+
 /// GlassEffectContainer from iOS 26; earlier systems show the content as is.
 struct GlassGroup<Content: View>: View {
     let spacing: CGFloat

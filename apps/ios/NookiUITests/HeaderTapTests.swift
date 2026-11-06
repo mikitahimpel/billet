@@ -1,71 +1,47 @@
 import XCTest
 
-/// Every tap on the World's controls does its thing, wherever on the control it lands and however quickly the taps
-/// follow each other: the room switch, the Inbox and the avatars in the header. A tap that misses a control's hit area
-/// falls through to the room underneath, so the taps land off-centre, where only the control's shape can catch them.
+/// Every header button opens what it names, with the real room under it: the room draws with RealityKit and takes its
+/// own touches, which the other header tests leave out with `-uitestNoRoom`.
 final class HeaderTapTests: XCTestCase {
-    /// Off-centre spots inside a control's frame, as fractions of it, one per tap.
-    private static let spots: [CGVector] = [
-        CGVector(dx: 0.12, dy: 0.2), CGVector(dx: 0.88, dy: 0.8), CGVector(dx: 0.15, dy: 0.85),
-        CGVector(dx: 0.85, dy: 0.15), CGVector(dx: 0.5, dy: 0.1), CGVector(dx: 0.5, dy: 0.9),
-    ]
-
     @MainActor
-    private func launch() -> XCUIApplication {
+    func testEveryHeaderButtonOpensItsSheetOverTheRealRoom() throws {
+        // RealityKit cannot draw on CI's virtual Macs.
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
         let app = XCUIApplication()
-        // `-uitestNoRoom`: CI's virtual Macs can't draw RealityKit; the stand-in takes the taps the room would.
-        app.launchArguments += [
-            "-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
-            "-uitestRoomTaps", "YES",
-        ]
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoHints", "YES"]
         app.launch()
-        // Home is hidden from accessibility under the launch splash, so this also waits for the splash to go.
-        XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
-        return app
-    }
 
-    @MainActor
-    func testEveryTapOnTheRoomSwitchSwitches() throws {
-        let app = launch()
-        let room = app.buttons["Room"], city = app.buttons["City"]
-        XCTAssertTrue(room.waitForExistence(timeout: 10) && city.exists, "an unpaired phone has both rooms")
-        XCTAssertTrue(room.isSelected)
+        let splash = app.otherElements["launch-splash"]
+        let coins = app.buttons["coins"]
+        XCTAssertTrue(coins.waitForExistence(timeout: 60))
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: splash)
+        wait(for: [gone], timeout: 60)
 
-        // The pills are 34 pt to the eye; the spots near the top and bottom land outside them, in the hit area.
-        XCTAssertGreaterThanOrEqual(room.frame.height, 44, "the switch should be 44 pt tall to the finger")
-        for (tap, spot) in Self.spots.enumerated() {
-            let target = tap.isMultiple(of: 2) ? city : room
-            target.coordinate(withNormalizedOffset: spot).tap()
-            XCTAssertTrue(target.isSelected, "tap \(tap + 1) on \(target.label) at \(spot) should switch to it")
+        // What each sheet shows that nothing else on screen does.
+        func text(_ format: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(format: format)).firstMatch
         }
-        XCTAssertEqual(app.otherElements["room"].value as? String, "0", "no tap on the switch should reach the room")
-    }
-
-    @MainActor
-    func testEveryTapOnTheInboxOpensIt() throws {
-        let app = launch()
-        let inbox = app.buttons["Inbox"].firstMatch
-        let sheet = app.navigationBars["Inbox"]
-        XCTAssertGreaterThanOrEqual(inbox.frame.height, 44, "the Inbox should be 44 pt to the finger")
-        for (tap, spot) in Self.spots.enumerated() {
-            inbox.coordinate(withNormalizedOffset: spot).tap()
-            XCTAssertTrue(sheet.waitForExistence(timeout: 3), "tap \(tap + 1) on the Inbox at \(spot) should open it")
-            sheet.buttons["Done"].tap()
-            XCTAssertTrue(sheet.waitForNonExistence(timeout: 5))
+        let sheets: [(button: String, shows: XCUIElement, name: String)] = [
+            ("Couple", app.navigationBars["Profile"], "the profile"),
+            ("coins", text("label CONTAINS 'coins for the two of you'"), "the Coins sheet"),
+            ("mood", text("label BEGINSWITH 'How are you,'"), "the mood picker"),
+            ("Inbox", text("label == 'Inbox' AND NOT (elementType == 9) OR label CONTAINS 'Once you'"), "the Inbox"),
+        ]
+        var report: [String] = []
+        for sheet in sheets {
+            let button = app.buttons[sheet.button]
+            var taps = 0
+            while taps < 3, !sheet.shows.exists {
+                button.tap()
+                taps += 1
+                _ = sheet.shows.waitForExistence(timeout: 3)
+            }
+            report.append("\(sheet.button): \(sheet.shows.exists ? "opened after \(taps) tap(s)" : "never opened")")
+            app.swipeDown(velocity: .fast)
+            Thread.sleep(forTimeInterval: 1.5)
+            if sheet.shows.exists { app.coordinate(withNormalizedOffset: CGVector(dx: 0.02, dy: 0.3)).tap() }
+            XCTAssertTrue(button.waitForExistence(timeout: 5))
         }
-    }
-
-    @MainActor
-    func testEveryTapOnTheAvatarsOpensTheProfile() throws {
-        let app = launch()
-        let couple = app.buttons["Couple"].firstMatch
-        let profile = app.navigationBars["Profile"]
-        for (tap, spot) in Self.spots.enumerated() {
-            couple.coordinate(withNormalizedOffset: spot).tap()
-            XCTAssertTrue(
-                profile.waitForExistence(timeout: 3), "tap \(tap + 1) on the avatars at \(spot) should open the profile")
-            profile.buttons["Done"].tap()
-            XCTAssertTrue(profile.waitForNonExistence(timeout: 5))
-        }
+        XCTAssertEqual(report.filter { !$0.contains("after 1 tap") }, [], report.joined(separator: "; "))
     }
 }
