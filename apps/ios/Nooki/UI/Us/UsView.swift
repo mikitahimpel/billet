@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
-/// is in its header. Every card is a `usCard`, every icon a `UsIcon`.
+/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, the games, then shared lists;
+/// today's mood is in its header. Every card is a `usCard`, every icon a `UsIcon`.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -35,6 +35,7 @@ struct UsView: View {
                 CountdownHero(next: upcoming.first, days: state.daysTogether) { state.usRoute = .calendar }
                 StreakCard(store: state.streak)
                 tiles(upcoming: upcoming.count)
+                games
                 lists
             }
             .padding(.horizontal, hMargin)
@@ -75,12 +76,6 @@ struct UsView: View {
             }
             .buttonStyle(.plain)
 
-            Button { state.usRoute = .whoKnows } label: {
-                WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
-                             partner: state.profile.name(of: state.otherPartner))
-            }
-            .buttonStyle(.plain)
-
             HStack(spacing: Space.m) {
                 Button { state.usRoute = .wishlists } label: {
                     SmallTile(icon: .init(symbol: "gift.fill", tint: .coral), title: "Wishlists",
@@ -93,6 +88,22 @@ struct UsView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private var games: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Games")
+                .font(.nookiTitle)
+                .foregroundStyle(Ink.primary)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, 6)
+
+            Button { state.usRoute = .whoKnows } label: {
+                WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
+                             partner: state.profile.name(of: state.otherPartner))
+            }
+            .buttonStyle(.plain)
         }
     }
 
