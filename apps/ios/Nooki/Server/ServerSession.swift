@@ -174,6 +174,11 @@ final class ServerSession {
         isPaired ? .live(backend.api) : nil
     }
 
+    /// Films and shows from TMDB for the To watch list; nil until this phone has signed in.
+    var titles: TitleSource? {
+        isSignedIn ? .live(backend.api) : nil
+    }
+
     /// Sends the text notes written here to the partner and keeps theirs in `notes` as from `partner`; nil until this
     /// account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {

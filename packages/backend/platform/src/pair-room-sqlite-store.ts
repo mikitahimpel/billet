@@ -186,6 +186,8 @@ const listItemValues = (
   aisle: item.aisle ?? null,
   mediaKind: item.media?.kind ?? null,
   mediaTmdb: item.media?.tmdb ?? null,
+  mediaYear: item.media?.year ?? null,
+  mediaPoster: item.media?.posterPath ?? null,
   country: item.country ?? null,
   wants: encodeWants(item.wants),
 });
@@ -207,7 +209,14 @@ const listItemFrom = (row: ListItemRow): Option.Option<ListItem> =>
       ...(row.aisle === null ? {} : { aisle: row.aisle }),
       ...(row.mediaKind === null || row.mediaTmdb === null
         ? {}
-        : { media: { kind: row.mediaKind, tmdb: row.mediaTmdb } }),
+        : {
+            media: {
+              kind: row.mediaKind,
+              tmdb: row.mediaTmdb,
+              ...(row.mediaYear === null ? {} : { year: row.mediaYear }),
+              ...(row.mediaPoster === null ? {} : { posterPath: row.mediaPoster }),
+            },
+          }),
       ...(row.country === null ? {} : { country: row.country }),
       wants,
     }),

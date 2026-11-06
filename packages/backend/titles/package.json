@@ -1,0 +1,35 @@
+{
+  "name": "@billet/backend-titles",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./tmdb": "./src/tmdb.ts",
+    "./tmdb-stub": "./src/tmdb-stub.ts",
+    "./title-cache": "./src/title-cache.ts",
+    "./title-catalog": "./src/title-catalog.ts",
+    "./titles-error": "./src/titles-error.ts",
+    "./titles-routes": "./src/titles-routes.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

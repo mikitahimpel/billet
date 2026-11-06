@@ -75,11 +75,14 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
     var isChecklist: Bool { self == .groceries }
 }
 
-/// A film or a show on TMDB.
+/// A film or a show on TMDB, with what the poster grid draws without asking TMDB.
 nonisolated struct ItemMedia: Codable, Hashable {
     enum Kind: String, Codable { case movie, tv }
     var kind: Kind
     var tmdb: Int
+    var year: Int?
+    /// A TMDB image file such as `/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg`.
+    var posterPath: String?
 }
 
 nonisolated struct ListItem: Identifiable, Codable, Hashable {
@@ -408,6 +411,8 @@ final class UsStore {
     private var roomLists: [UsList]?
     /// List changes made here, a widget's included, that the room has not answered yet, oldest first.
     private(set) var pendingLists: [PendingListChange] = []
+    /// What the pair buys, for the grocery suggestions and the aisle a partner picked.
+    private(set) var groceries = GroceryHistory()
 
     private let file: String
 
@@ -424,6 +429,8 @@ final class UsStore {
         /// Missing in files from builds before shared lists.
         var roomLists: [UsList]?
         var pendingLists: [PendingListChange]?
+        /// Missing in files from builds before grocery tiles.
+        var groceries: GroceryHistory?
     }
 
     init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
@@ -445,6 +452,7 @@ final class UsStore {
             surprises = saved.surprises ?? []
             roomLists = saved.roomLists
             pendingLists = saved.pendingLists ?? []
+            groceries = saved.groceries ?? GroceryHistory()
             for i in wishes.indices {
                 guard let giver = wishes[i].legacyGiver else { continue }
                 wishes[i].legacyGiver = nil
@@ -459,8 +467,10 @@ final class UsStore {
     }
 
     private func save() {
+        groceries.observe(lists)
         SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
-                                  plans: plans, surprises: surprises, roomLists: roomLists, pendingLists: pendingLists),
+                                  plans: plans, surprises: surprises, roomLists: roomLists, pendingLists: pendingLists,
+                                  groceries: groceries),
                          to: file)
     }
 
@@ -488,10 +498,30 @@ final class UsStore {
         perform(.deleteList(key: .make(), list: Self.key(id)), by: nil)
     }
 
-    func addItem(_ text: String, to listID: UUID, author: String) {
+    /// A film or show added with its `media` is one the author wants to watch, so it starts with their want.
+    func addItem(_ text: String, to listID: UUID, author: String, details: ListItemDetails = ListItemDetails(),
+                 media: ItemMedia? = nil) {
         guard let text = PendingListChange.line(text, max: 300), list(listID) != nil else { return }
-        perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(UUID()), text: text,
-                         details: ListItemDetails()), by: author)
+        let item = UUID()
+        var details = details
+        if let media { details.media = ListMedia(media) }
+        perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(item), text: text, details: details),
+                by: author)
+        if media != nil { setWant(item, in: listID, wants: true, by: author) }
+    }
+
+    /// Sets every detail, so one left nil is cleared.
+    func editItem(_ itemID: UUID, in listID: UUID, details: ListItemDetails) {
+        guard let item = list(listID)?.items.first(where: { $0.id == itemID }), item.details != details else { return }
+        perform(.editItem(key: .make(), list: Self.key(listID), item: Self.key(itemID), text: item.text, details: details),
+                by: nil)
+    }
+
+    /// Says `partner` wants the item, or no longer does.
+    func setWant(_ itemID: UUID, in listID: UUID, wants: Bool, by partner: String) {
+        guard let item = list(listID)?.items.first(where: { $0.id == itemID }),
+              item.wants.contains(partner) != wants else { return }
+        perform(.wantItem(key: .make(), list: Self.key(listID), item: Self.key(itemID), wants: wants), by: partner)
     }
 
     func toggleItem(_ itemID: UUID, in listID: UUID, by partner: String? = nil) {

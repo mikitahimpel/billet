@@ -23,8 +23,7 @@ struct MoodButton: View {
                 }
             }
             .frame(width: 42, height: 42)
-            // Not interactive, as the Inbox beside it: the button style answers the press.
-            .warmGlass(.circle)
+            .warmGlassBacking(.circle)
             .overlay(alignment: .topTrailing) {
                 if let theirs {
                     Text(theirs.mood.emoji)
@@ -104,6 +103,7 @@ struct MoodPicker: View {
         .padding(.horizontal, Space.gutter)
         .padding(.vertical, Space.l)
         .tint(.honey)
+        .accessibilityIdentifier("moodPicker")
         .shopSheet(height: $height)
         .onAppear {
             let current = state.partnerMoods.latest[state.viewer]

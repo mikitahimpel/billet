@@ -109,6 +109,8 @@ let roundTrips: [String: RoundTrip] = [
   "ListCommand": codec(ListCommand.self),
   "ListsResponse": codec(ListsResponse.self),
   "ChangeListRequest": codec(ChangeListRequest.self),
+  "TitleSearchResponse": codec(TitleSearchResponse.self),
+  "TitleDetails": codec(TitleDetails.self),
   "SaveLovesRequest": codec(SaveLovesRequest.self),
 ]
 
