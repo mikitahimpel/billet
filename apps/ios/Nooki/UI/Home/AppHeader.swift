@@ -136,6 +136,8 @@ struct CoinPill: View {
         .padding(.trailing, 14)
         .frame(height: 40)
         .warmGlassBacking(.capsule)
+        // The backing takes no touches, so the gap between the coin and the number would.
+        .contentShape(.capsule)
         .animation(.snappy(duration: 0.4), value: coins)
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).
