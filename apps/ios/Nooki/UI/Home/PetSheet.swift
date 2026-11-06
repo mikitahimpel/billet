@@ -59,9 +59,6 @@ struct PetButton: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")
         .accessibilityIdentifier("pet")
-        // Both hints live on her portrait; the second waits for the first, so only one shows at a time.
-        .popoverTip(PetHint(), arrowEdge: .bottom)
-        .popoverTip(TreatHint(), arrowEdge: .bottom)
         .onChange(of: state.showsPetSheet) { _, asked in
             guard asked else { return }
             showsSheet = true
@@ -110,9 +107,9 @@ private struct PetSheet: View {
                         .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
                         .contentTransition(.opacity)
                 }
-                .padding(.horizontal, Space.gutter)
-                .padding(.top, Space.gutter)
-                .padding(.bottom, Space.m)
+                .padding(.horizontal, Space.l)
+                .padding(.top, Space.l)
+                .padding(.bottom, Space.s)
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         }

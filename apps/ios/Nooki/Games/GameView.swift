@@ -39,17 +39,6 @@ struct GameView: View {
     private var controls: some View {
         VStack(spacing: Space.m) {
             HStack(alignment: .top) {
-                if let hint = session.deck.hint {
-                    Text(hint)
-                        .font(.nookiCallout)
-                        .foregroundStyle(Ink.text)
-                        .padding(.horizontal, Space.l)
-                        .padding(.vertical, Space.s)
-                        .glass(.capsule)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                        .id(hint)
-                        .accessibilityAddTraits(.updatesFrequently)
-                }
                 Spacer(minLength: Space.m)
                 Button("Close", systemImage: "xmark", action: end)
                     .labelStyle(.iconOnly)
@@ -60,7 +49,6 @@ struct GameView: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, 60)
-            .animation(reduceMotion ? nil : .spring(duration: 0.35), value: session.deck.hint)
 
             Spacer(minLength: 0)
 
@@ -69,6 +57,11 @@ struct GameView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
                 VStack(spacing: Space.m) {
+                    if let hint = session.deck.hint {
+                        HintCard(text: hint)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .id(hint)
+                    }
                     if let bar = session.deck.bar {
                         GameBar(value: bar.value, label: bar.label)
                     }
@@ -82,10 +75,36 @@ struct GameView: View {
         }
         .padding(.bottom, 40)
         .animation(reduceMotion ? nil : .spring(duration: 0.45), value: session.finished)
+        .animation(reduceMotion ? nil : .spring(duration: 0.35), value: session.deck.hint)
     }
 
     private func end() {
         session.close(close)
+    }
+}
+
+/// What to do next, above the play area on a solid card: the first sentence as the line, the rest under it.
+private struct HintCard: View {
+    let text: String
+
+    var body: some View {
+        let parts = text.components(separatedBy: ". ")
+        VStack(alignment: .leading, spacing: 2) {
+            Text(parts[0])
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
+            if parts.count > 1 {
+                Text(parts.dropFirst().joined(separator: ". "))
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.textSecondary)
+            }
+        }
+        .padding(.horizontal, Space.l)
+        .padding(.vertical, Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Ink.sheet, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

@@ -31,7 +31,7 @@ export default defineConfig({
               bindings,
               d1Databases: ["DB"],
               r2Buckets: ["MEDIA"],
-              kvNamespaces: ["STATUS"],
+              kvNamespaces: ["STATUS", "TITLES"],
               durableObjects: {
                 PAIR_ROOM: { className: "PairRoom", useSQLite: true },
                 ACTIVATED_ROOM: { className: "ActivatedRoom", useSQLite: true },

@@ -230,17 +230,18 @@ struct MomentsView: View {
     }
 }
 
-/// Photos as a feed, or the board in Mochi's desk room; styled like the World tab's room switcher.
+/// Photos as a feed, or the board in Mochi's desk room: the system's segmented picker.
 private struct ModePicker: View {
     @Binding var mode: MomentsMode
 
     var body: some View {
-        HStack(spacing: 2) {
-            item(.photos, "Photos", "photo.on.rectangle")
-            item(.board, "Board", "pin")
+        Picker("Show", selection: $mode.animation(.snappy(duration: 0.25))) {
+            Text("Photos").tag(MomentsMode.photos)
+            Text("Board").tag(MomentsMode.board)
         }
-        .padding(3)
-        .glass(.capsule)
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 260)
+        .environment(\.colorScheme, .dark)
     }
 
     private func item(_ value: MomentsMode, _ title: String, _ symbol: String) -> some View {
@@ -487,13 +488,12 @@ private struct WallStrip: View {
     let store: MomentStore
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "house.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.honey)
-            Text("On \(CatProfile.name())'s wall")
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
+        HStack(spacing: Space.s) {
+            Label("On \(CatProfile.name())'s wall", systemImage: "house.fill")
+                .font(.nookiCallout)
+                .foregroundStyle(Ink.text)
+                .labelStyle(.titleAndIcon)
+                .tint(.honey)
             Spacer(minLength: 0)
             HStack(spacing: 4) {
                 ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
@@ -510,10 +510,9 @@ private struct WallStrip: View {
                 }
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(height: 50)
-        .background(.white.opacity(0.1), in: .rect(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Ink.hairline, lineWidth: 0.5))
+        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
     }
 }
 

@@ -35,6 +35,8 @@ describe("rate limit groups", () => {
     ["/v1/purchases/mock", "purchases"],
     ["/v1/appstore/notifications", undefined],
     ["/v1/notes", undefined],
+    ["/v1/titles/search", "titles"],
+    ["/v1/titles/movie/329865", "titles"],
     ["/i/K7QM4R2XHP", "links"],
     ["/i/not-a-code", "links"],
     ["/i/K7QM4R2XHP/more", undefined],

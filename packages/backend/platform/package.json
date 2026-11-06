@@ -57,6 +57,7 @@
     "@billet/backend-pair-room": "workspace:*",
     "@billet/backend-pairing": "workspace:*",
     "@billet/backend-payments": "workspace:*",
+    "@billet/backend-titles": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
     "@billet/contracts-push": "workspace:*",
