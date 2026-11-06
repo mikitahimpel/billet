@@ -187,6 +187,9 @@ export const StoredListItem = Schema.Struct({
   mediaYear: Schema.NullOr(Schema.Int),
   mediaPoster: Schema.NullOr(Schema.String),
   country: Schema.NullOr(Schema.String),
+  place: Schema.NullOr(Schema.Boolean),
+  visitedIn: Schema.NullOr(Schema.String),
+  moments: Schema.NullOr(Schema.String),
   wants: Schema.String,
 });
 

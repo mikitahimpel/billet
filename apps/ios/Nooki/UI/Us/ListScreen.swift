@@ -17,6 +17,8 @@ struct ListScreen: View {
     @State private var watchDetails = WatchDetails()
     @State private var addingTitle = false
     @State private var openedTitle: OpenedTitle?
+    @State private var addingPlace = false
+    @State private var markingBeen: ListItem?
     @FocusState private var focused: Bool
 
     private struct OpenedTitle: Identifiable {
@@ -39,6 +41,8 @@ struct ListScreen: View {
             UsSheetHeader(title: list.title, subtitle: subtitle(of: list)) {
                 if list.kind == .watch {
                     UsAddButton { addingTitle = true }
+                } else if list.kind == .travel {
+                    UsAddButton { addingPlace = true }
                 }
                 Menu {
                     Button("Rename") { renaming = true }
@@ -53,7 +57,7 @@ struct ListScreen: View {
                 .accessibilityLabel("List options")
             }
 
-            if list.kind != .watch {
+            if !usesSheetToAdd(list) {
                 UsField(placeholder: placeholder(for: list.kind), text: $draft)
                     .focused($focused)
                     .submitLabel(.done)
@@ -75,6 +79,8 @@ struct ListScreen: View {
                             WatchListBody(state: state, list: list, details: watchDetails) {
                                 openedTitle = OpenedTitle(id: $0.id)
                             }
+                        } else if list.kind == .travel {
+                            PlacesListBody(state: state, list: list) { markingBeen = $0 }
                         } else if list.items.isEmpty {
                             if !adding(to: list) {
                                 UsEmpty(icon: list.icon,
@@ -108,7 +114,11 @@ struct ListScreen: View {
             }
         }
         .usSheet()
-        .onAppear { if focusesField && list.kind == .watch { addingTitle = true } }
+        .onAppear {
+            guard focusesField else { return }
+            if list.kind == .watch { addingTitle = true }
+            if list.kind == .travel { addingPlace = true }
+        }
         .sheet(item: $editing) { item in
             GroceryItemSheet(state: state, listID: listID, item: item)
         }
@@ -117,6 +127,12 @@ struct ListScreen: View {
         }
         .sheet(isPresented: $addingTitle) {
             AddTitleSheet(state: state, listID: listID)
+        }
+        .sheet(isPresented: $addingPlace) {
+            AddPlaceSheet(state: state, listID: listID)
+        }
+        .sheet(item: $markingBeen) { item in
+            BeenSheet(state: state, listID: listID, item: item)
         }
         .sheet(item: $openedTitle) { opened in
             MovieCard(state: state, listID: listID, itemID: opened.id, details: watchDetails)
@@ -137,8 +153,15 @@ struct ListScreen: View {
     /// Groceries show suggestions and "You often buy" while the field is in use.
     private func adding(to list: UsList) -> Bool { list.kind.isChecklist && focused }
 
+    /// To watch and Places to go add through a search sheet rather than a field.
+    private func usesSheetToAdd(_ list: UsList) -> Bool { list.kind == .watch || list.kind == .travel }
+
     private func subtitle(of list: UsList) -> String {
         if list.kind.isChecklist { return "\(list.open.count) to buy" }
+        if list.kind == .travel {
+            let rows = PlaceRow.rows(of: list)
+            return "\(rows.want.count) to go · \(rows.been.count) been"
+        }
         if list.kind == .watch { return "\(list.open.count) to go · \(list.finished.count) watched" }
         return "\(list.open.count) to go · \(list.finished.count) done"
     }

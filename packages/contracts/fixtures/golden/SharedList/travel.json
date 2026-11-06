@@ -1,0 +1,34 @@
+{
+  "icon": {
+    "symbol": "airplane",
+    "tint": "sky"
+  },
+  "id": "00000000-0000-4000-8000-0000000000c6",
+  "items": [
+    {
+      "addedAt": 1700000300000,
+      "author": "user-alice",
+      "country": "JP",
+      "doneAt": 1700000900000,
+      "doneBy": "user-bob",
+      "id": "00000000-0000-4000-8000-0000000000c7",
+      "moments": [
+        "00000000-0000-4000-8000-0000000000d1"
+      ],
+      "text": "Japan",
+      "visitedIn": "2026-10",
+      "wants": []
+    },
+    {
+      "addedAt": 1700000400000,
+      "author": "user-bob",
+      "country": "JP",
+      "id": "00000000-0000-4000-8000-0000000000c8",
+      "place": true,
+      "text": "Kyoto",
+      "wants": []
+    }
+  ],
+  "kind": "travel",
+  "title": "Places to go"
+}

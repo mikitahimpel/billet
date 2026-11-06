@@ -187,6 +187,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_mood"),
       expect.stringContaining("_lists"),
       expect.stringContaining("_list_media"),
+      expect.stringContaining("_list_travel"),
     ]);
   });
 
@@ -610,6 +611,23 @@ describe("PairRoom realtime across eviction", () => {
       lists: [{ id: list, items: [{ text: "Dune", author: alice, doneBy: bob, media: dune }] }],
     });
     expect(await room.lists(bob, tick)).toMatchObject({ _tag: "Done" });
+    const been = {
+      country: "JP",
+      place: true,
+      visitedIn: "2026-10",
+      moments: ["00000000-0000-4000-8000-00000000f0d1"],
+    };
+    expect(
+      await room.lists(
+        bob,
+        change({ _tag: "EditItem", key: newKey(), list, item, text: "Kyoto", ...been }),
+      ),
+    ).toMatchObject({ _tag: "Done" });
+    await evictDurableObject(room);
+    expect(await room.lists(bob)).toMatchObject({
+      _tag: "Done",
+      lists: [{ id: list, items: [{ text: "Kyoto", ...been }] }],
+    });
     expect(
       await room.lists(bob, change({ _tag: "UntickItem", key: newKey(), list, item })),
     ).toMatchObject({ _tag: "Done" });

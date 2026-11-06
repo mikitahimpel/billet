@@ -103,6 +103,12 @@ nonisolated struct ListItem: Identifiable, Codable, Hashable {
     var media: ItemMedia?
     /// ISO 3166-1 alpha-2, for places.
     var country: String?
+    /// A city or place in `country`, rather than the country itself.
+    var place = false
+    /// The month the pair went, such as `2026-10`.
+    var visitedIn: String?
+    /// Photos in Moments from the trip.
+    var moments: [UUID] = []
     /// Monograms of the partners who want it.
     var wants: [String] = []
 }
@@ -123,6 +129,9 @@ extension ListItem {
         aisle = try container.decodeIfPresent(String.self, forKey: .aisle)
         media = try container.decodeIfPresent(ItemMedia.self, forKey: .media)
         country = try container.decodeIfPresent(String.self, forKey: .country)
+        place = try container.decodeIfPresent(Bool.self, forKey: .place) ?? false
+        visitedIn = try container.decodeIfPresent(String.self, forKey: .visitedIn)
+        moments = try container.decodeIfPresent([UUID].self, forKey: .moments) ?? []
         wants = try container.decodeIfPresent([String].self, forKey: .wants) ?? []
     }
 }
@@ -508,6 +517,27 @@ final class UsStore {
         perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(item), text: text, details: details),
                 by: author)
         if media != nil { setWant(item, in: listID, wants: true, by: author) }
+    }
+
+    /// Adds a country, or a place in one, to a travel list. A place brings its country along, so it shows under it;
+    /// a country already on the list isn't added again.
+    func addTravel(country code: String, place: String? = nil, to listID: UUID, author: String) {
+        guard let list = list(listID) else { return }
+        if !list.items.contains(where: { $0.isCountry && $0.country == code }) {
+            addItem(Country.name(code), to: listID, author: author, details: ListItemDetails(country: code))
+        }
+        if let place {
+            addItem(place, to: listID, author: author, details: ListItemDetails(country: code, place: true))
+        }
+    }
+
+    /// Marks a travel item been to, with the month and the photos from Moments; nil and empty clear them.
+    func markBeen(_ itemID: UUID, in listID: UUID, month: TravelMonth?, moments: [UUID], by partner: String) {
+        guard var details = list(listID)?.items.first(where: { $0.id == itemID })?.details else { return }
+        details.visitedIn = month?.text
+        details.moments = moments.isEmpty ? nil : moments.map(\.uuidString)
+        setItem(itemID, in: listID, done: true, by: partner)
+        editItem(itemID, in: listID, details: details)
     }
 
     /// Sets every detail, so one left nil is cleared.

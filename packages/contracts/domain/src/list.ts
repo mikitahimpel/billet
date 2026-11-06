@@ -102,9 +102,19 @@ export type ListMedia = typeof ListMedia.Type;
 export const CountryCode = Schema.String.check(Schema.isPattern(/^[A-Z]{2}$/));
 export type CountryCode = typeof CountryCode.Type;
 
+/** A month such as `2026-10`. */
+export const YearMonth = Schema.String.check(Schema.isPattern(/^\d{4}-(0[1-9]|1[0-2])$/));
+export type YearMonth = typeof YearMonth.Type;
+
+/** A shared moment, named by the idempotency key of the photo note that brought it. */
+export const MomentId = Schema.String.check(Schema.isPattern(uuid));
+export type MomentId = typeof MomentId.Type;
+
 /**
  * What a partner says about an item, apart from its tick. Every field may be left out; `icon` and
- * `aisle` override what the phone would pick from the text.
+ * `aisle` override what the phone would pick from the text. On a travel list an item with a
+ * `country` is that country, or with `place` a city or place in it; `visitedIn` and `moments` are
+ * the month the pair went and the photos from it.
  */
 export const ListItemDetails = {
   quantity: Schema.optionalKey(Text(40)),
@@ -113,6 +123,9 @@ export const ListItemDetails = {
   aisle: Schema.optionalKey(Slug),
   media: Schema.optionalKey(ListMedia),
   country: Schema.optionalKey(CountryCode),
+  place: Schema.optionalKey(Schema.Boolean),
+  visitedIn: Schema.optionalKey(YearMonth),
+  moments: Schema.optionalKey(Schema.Array(MomentId).check(Schema.isMaxLength(10))),
 };
 
 /**
