@@ -186,6 +186,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_gift_occasion"),
       expect.stringContaining("_mood"),
       expect.stringContaining("_lists"),
+      expect.stringContaining("_list_media"),
     ]);
   });
 
@@ -574,6 +575,12 @@ describe("PairRoom realtime across eviction", () => {
     const item = "00000000-0000-4000-8000-00000000f002";
     const change = (body: unknown) =>
       Schema.decodeUnknownSync(ChangeListRequest)({ change: body, utcOffsetSeconds: 0 });
+    const dune = {
+      kind: "movie",
+      tmdb: 438631,
+      year: 2021,
+      posterPath: "/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+    };
     const create = change({
       _tag: "CreateList",
       key: newKey(),
@@ -584,7 +591,10 @@ describe("PairRoom realtime across eviction", () => {
     });
     expect(await room.lists(alice, create)).toMatchObject({ _tag: "Done" });
     expect(
-      await room.lists(alice, change({ _tag: "AddItem", key: newKey(), list, item, text: "Dune" })),
+      await room.lists(
+        alice,
+        change({ _tag: "AddItem", key: newKey(), list, item, text: "Dune", media: dune }),
+      ),
     ).toMatchObject({ _tag: "Done" });
     await until(() =>
       follower.frames.some(
@@ -597,7 +607,7 @@ describe("PairRoom realtime across eviction", () => {
     const tick = change({ _tag: "TickItem", key: newKey(), list, item });
     expect(await room.lists(bob, tick)).toMatchObject({
       _tag: "Done",
-      lists: [{ id: list, items: [{ text: "Dune", author: alice, doneBy: bob }] }],
+      lists: [{ id: list, items: [{ text: "Dune", author: alice, doneBy: bob, media: dune }] }],
     });
     expect(await room.lists(bob, tick)).toMatchObject({ _tag: "Done" });
     expect(

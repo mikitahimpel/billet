@@ -71,10 +71,30 @@ export const ListIcon = Schema.Struct({
 });
 export type ListIcon = typeof ListIcon.Type;
 
-/** A film or a show on TMDB. Its ids are counted per kind, so the kind is part of the id. */
+export const MediaKind = Schema.Literals(["movie", "tv"]);
+export type MediaKind = typeof MediaKind.Type;
+
+export const TmdbId = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
+
+/** A TMDB image file such as `/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg`, served by `image.tmdb.org`. */
+export const TmdbImagePath = Schema.String.check(
+  Schema.isPattern(/^\/[A-Za-z0-9_-]{1,64}\.(jpg|jpeg|png|svg|webp)$/),
+);
+export type TmdbImagePath = typeof TmdbImagePath.Type;
+
+/** The year a film came out or a show began. */
+export const ReleaseYear = Schema.Int.check(Schema.isBetween({ minimum: 1870, maximum: 2200 }));
+
+/**
+ * A film or a show on TMDB. Its ids are counted per kind, so the kind is part of the id. The item's
+ * text is its title; `year` and `posterPath` are what the grid draws without asking TMDB. Every
+ * other detail is fetched when shown, never kept in the room.
+ */
 export const ListMedia = Schema.Struct({
-  kind: Schema.Literals(["movie", "tv"]),
-  tmdb: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+  kind: MediaKind,
+  tmdb: TmdbId,
+  year: Schema.optionalKey(ReleaseYear),
+  posterPath: Schema.optionalKey(TmdbImagePath),
 });
 export type ListMedia = typeof ListMedia.Type;
 

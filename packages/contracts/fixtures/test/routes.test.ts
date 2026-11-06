@@ -123,6 +123,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/status",
       },
+      "getTitle": {
+        "method": "GET",
+        "path": "/v1/titles/:kind/:tmdb",
+      },
       "listActivity": {
         "method": "GET",
         "path": "/v1/activity",
@@ -202,6 +206,10 @@ it("pins the routes that clients call", () => {
       "saveOnboardingAnswer": {
         "method": "POST",
         "path": "/v1/onboarding/answers",
+      },
+      "searchTitles": {
+        "method": "GET",
+        "path": "/v1/titles/search",
       },
       "sendNote": {
         "method": "POST",

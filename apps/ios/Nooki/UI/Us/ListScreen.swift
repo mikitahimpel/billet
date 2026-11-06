@@ -12,7 +12,14 @@ struct ListScreen: View {
     @State private var confirmingDelete = false
     @State private var reward: UUID?
     @State private var rewardRising = false
+    @State private var watchDetails = WatchDetails()
+    @State private var addingTitle = false
+    @State private var openedTitle: OpenedTitle?
     @FocusState private var focused: Bool
+
+    private struct OpenedTitle: Identifiable {
+        let id: UUID
+    }
 
     var body: some View {
         Group {
@@ -28,6 +35,9 @@ struct ListScreen: View {
     private func content(_ list: UsList) -> some View {
         VStack(spacing: 0) {
             UsSheetHeader(title: list.title, subtitle: subtitle(of: list)) {
+                if list.kind == .watch {
+                    UsAddButton { addingTitle = true }
+                }
                 Menu {
                     Button("Rename") { renaming = true }
                     Button("Delete list", role: .destructive) { confirmingDelete = true }
@@ -41,17 +51,23 @@ struct ListScreen: View {
                 .accessibilityLabel("List options")
             }
 
-            UsField(placeholder: placeholder(for: list.kind), text: $draft)
-                .focused($focused)
-                .submitLabel(.done)
-                .onSubmit { addItem(list) }
-                .onAppear { if focusesField { focused = true } }
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
+            if list.kind != .watch {
+                UsField(placeholder: placeholder(for: list.kind), text: $draft)
+                    .focused($focused)
+                    .submitLabel(.done)
+                    .onSubmit { addItem(list) }
+                    .onAppear { if focusesField { focused = true } }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+            }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if list.items.isEmpty {
+                    if list.kind == .watch {
+                        WatchListBody(state: state, list: list, details: watchDetails) {
+                            openedTitle = OpenedTitle(id: $0.id)
+                        }
+                    } else if list.items.isEmpty {
                         UsEmpty(icon: list.icon,
                                 title: "Nothing here yet",
                                 text: "Add the first one above. You both see this list.")
@@ -69,8 +85,15 @@ struct ListScreen: View {
             .scrollIndicators(.hidden)
         }
         .usSheet()
+        .onAppear { if focusesField && list.kind == .watch { addingTitle = true } }
         .sheet(isPresented: $renaming) {
             RenameListSheet(state: state, list: list)
+        }
+        .sheet(isPresented: $addingTitle) {
+            AddTitleSheet(state: state, listID: listID)
+        }
+        .sheet(item: $openedTitle) { opened in
+            MovieCard(state: state, listID: listID, itemID: opened.id, details: watchDetails)
         }
         .confirmationDialog("Delete this list?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete list", role: .destructive) {
@@ -85,6 +108,7 @@ struct ListScreen: View {
 
     private func subtitle(of list: UsList) -> String {
         if list.kind.isChecklist { return "\(list.open.count) left" }
+        if list.kind == .watch { return "\(list.open.count) to go · \(list.finished.count) watched" }
         return "\(list.open.count) to go · \(list.finished.count) done"
     }
 

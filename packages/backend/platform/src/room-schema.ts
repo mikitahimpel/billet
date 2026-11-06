@@ -245,8 +245,8 @@ export const lists = sqliteTable("lists", {
 });
 
 // The items of each list, in the order they were added (`position`). `done_by` and `done_at` are
-// both set once ticked. `media_kind` and `media_tmdb` name a film or show on TMDB; `wants` is the
-// JSON array of the members who want it.
+// both set once ticked. `media_kind` and `media_tmdb` name a film or show on TMDB, with its year
+// and poster file when known; `wants` is the JSON array of the members who want it.
 export const listItems = sqliteTable(
   "list_items",
   {
@@ -264,6 +264,8 @@ export const listItems = sqliteTable(
     aisle: text("aisle"),
     mediaKind: text("media_kind"),
     mediaTmdb: integer("media_tmdb"),
+    mediaYear: integer("media_year"),
+    mediaPoster: text("media_poster"),
     country: text("country"),
     wants: text("wants").notNull(),
   },

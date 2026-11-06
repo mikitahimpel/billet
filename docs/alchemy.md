@@ -25,6 +25,7 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 | `DirectorySchema` | `Drizzle.Schema`, the D1 tables and their migrations | |
 | `Database` | `Cloudflare.D1.Database`, the cross-couple directory | `DB` |
 | `Media` | `Cloudflare.R2.Bucket`, private: no public access, no custom domain | `MEDIA` |
+| `Titles` | `Cloudflare.KV.Namespace`, TMDB's answers for the To watch list, keyed by hash | `TITLES` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
 | `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `billet_<stage>_events` | `EVENTS` |
 | `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public` | `ASSETS` |

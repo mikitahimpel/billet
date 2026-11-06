@@ -61,6 +61,8 @@ import Testing
       "saveLoves": Routes.saveLoves,
       "getLists": Routes.getLists,
       "changeList": Routes.changeList,
+      "searchTitles": Routes.searchTitles,
+      "getTitle": Routes.getTitle,
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
       "getDateCatalog": Routes.getDateCatalog,

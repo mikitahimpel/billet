@@ -19,6 +19,7 @@
     "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",
     "./lists": "./src/lists.ts",
+    "./titles": "./src/titles.ts",
     "./mood": "./src/mood.ts",
     "./note": "./src/note.ts",
     "./purchase": "./src/purchase.ts",
