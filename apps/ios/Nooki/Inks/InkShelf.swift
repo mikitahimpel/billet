@@ -35,19 +35,15 @@ struct InkShelf: View {
                 .font(.nookiHeadline)
                 .foregroundStyle(Ink.text)
             if owned {
-                Label("Yours", systemImage: "checkmark")
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
+                Chip("Yours", symbol: "checkmark")
                     .frame(minHeight: 36)
             } else {
-                PriceButton(state: state, quote: (ink.price, ink.price), name: "\(ink.name) ink") {
-                    state.shop.buy(ink)
-                }
+                Design.PriceButton(ink.price) { state.shop.buy(ink) }
             }
         }
         .padding(Space.m)
         .frame(maxWidth: .infinity)
-        .shopCard()
+        .cardSurface()
         .overlay {
             if highlighted == ink.id {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous)

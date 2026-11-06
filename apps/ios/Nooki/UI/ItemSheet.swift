@@ -18,9 +18,6 @@ struct ItemSheet: View {
     /// Still frame stays up until the 3D preview has really had a chance to draw.
     @State private var showsPlaceholder = true
     @State private var celebrating = false
-    @State private var height: CGFloat = 640
-    /// On a short screen the stage gives up some height so the sheet fits without scrolling.
-    @State private var tight = false
 
     private var cost: Int { state.shop.price(of: item) }
     private var affordable: Bool { state.shop.coins >= cost }
@@ -28,34 +25,32 @@ struct ItemSheet: View {
     private var isDeal: Bool { cost < item.price }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.l) {
-            SheetHeader(title: item.name) {
-                ShopTag(text: item.rarity.title, fill: item.rarity.tint)
-                if isDeal, !owned {
-                    ShopTag(text: "−\(Int(((1 - Double(cost) / Double(item.price)) * 100).rounded()))%", fill: ShopInk.coral)
-                } else if item.isNew, !owned {
-                    ShopTag(text: "New", fill: .honey, ink: Ink.heroInk)
+        BilletSheet(item.name, size: .fit) {
+            VStack(alignment: .leading, spacing: Space.l) {
+                HStack(spacing: Space.s) {
+                    item.rarity.chip
+                    if isDeal, !owned {
+                        Chip("−\(Int(((1 - Double(cost) / Double(item.price)) * 100).rounded()))%", style: .honey)
+                    } else if item.isNew, !owned {
+                        Chip("New", style: .honey)
+                    }
                 }
-            } close: { dismiss() }
 
-            stage
+                stage
 
-            VStack(alignment: .leading, spacing: Space.m) {
-                if let mood = item.mood {
-                    MochiReaction(name: state.petName, mood: mood)
+                VStack(alignment: .leading, spacing: Space.m) {
+                    if let mood = item.mood {
+                        MochiReaction(name: state.petName, mood: mood)
+                    }
+                    Text(item.blurb)
+                        .font(.nookiCallout)
+                        .foregroundStyle(Ink.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(item.blurb)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+
+                actions
             }
-
-            actions
         }
-        .padding(.horizontal, Space.gutter)
-        .padding(.top, Space.gutter)
-        .padding(.bottom, Space.s)
-        .shopSheet(height: $height, tight: $tight)
         // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
@@ -97,8 +92,7 @@ struct ItemSheet: View {
                 onEnded: { turntable.isDragging = false }
             )
         }
-        // The camera is framed for the full stage; a shorter one shows the same view, a little closer to its edges.
-        .frame(height: tight ? 200 : CGFloat(ItemTurntable.stageHeight))
+                .frame(height: CGFloat(ItemTurntable.stageHeight))
         .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
@@ -127,10 +121,9 @@ struct ItemSheet: View {
             HStack(spacing: Space.s) {
                 // Icon-only, so the primary button keeps its label on one line on a small phone.
                 Button(action: reveal) {
-                    Label("Preview in 3D", systemImage: "cube").labelStyle(.iconOnly).frame(width: 28)
+                    Label("Preview in 3D", systemImage: "cube").labelStyle(.iconOnly)
                 }
-                .shopButton(prominent: false)
-                .controlSize(.large)
+                .buttonStyle(SecondaryButtonStyle(fullWidth: false))
                 .disabled(!showsPlaceholder || !turntable.isDrawn)
                 .accessibilityHint("Drag the item to turn it")
 
@@ -224,7 +217,7 @@ private struct MochiReaction: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Space.m)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .cardSurface(radius: Radius.control)
         .accessibilityElement(children: .combine)
     }
 

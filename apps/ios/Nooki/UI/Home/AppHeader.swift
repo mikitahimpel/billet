@@ -16,65 +16,28 @@ struct AppHeader: View {
     var body: some View {
         // One container for the header's glass, as the tab bar has, so it is sampled together.
         GlassGroup(spacing: Space.s) {
-            HStack(alignment: .center, spacing: 10) {
-                InboxButton(unread: session?.inbox.unread ?? 0) {
-                    state.showsInbox = true
-                }
-                MoodButton(state: state) { checkingIn = true }
+            HStack(alignment: .center, spacing: Space.s + 2) {
+                InboxButton(unread: session?.inbox.unread ?? 0) { state.showsInbox = true }
+                MoodHeaderButton(state: state) { checkingIn = true }
 
                 Spacer(minLength: 0)
 
-                Button { state.shop.askForCoins() } label: {
-                    CoinPill(coins: state.shop.coins)
-                }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityLabel("\(state.shop.coins) coins")
-                .accessibilityHint("Shows your coins, how to get more and where they went")
-                .accessibilityIdentifier("coins")
+                Button { state.shop.askForCoins() } label: { CoinPill(coins: state.shop.coins) }
+                    .buttonStyle(PressScaleStyle())
+                    .accessibilityLabel("\(state.shop.coins) coins")
+                    .accessibilityHint("Shows your coins, how to get more and where they went")
+                    .accessibilityIdentifier("coins")
 
-                Button { state.showsProfile = true } label: {
-                    HStack(spacing: -10) {
-                        Monogram(partner: state.partners.0, profile: state.profile)
-                        Monogram(partner: state.partners.1, profile: state.profile)
-                    }
-                    .overlay(alignment: .bottom) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Ink.heroInk)
-                            .frame(width: 20, height: 20)
-                            .background(.honeyGradient, in: .circle)
-                            .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                            .offset(y: 6)
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        if plus {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Ink.heroInk)
-                                .frame(width: 20, height: 20)
-                                .background(.honeyGradient, in: .circle)
-                                .overlay(Circle().stroke(.white, lineWidth: 1.5))
-                                .offset(x: 4, y: -4)
-                        }
-                    }
-                    .contentShape(.capsule)
-                }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityLabel("Couple")
-                .accessibilityHint("Opens your profile")
+                CoupleButton(state: state, plus: plus) { state.showsProfile = true }
             }
         }
-        .frame(height: 48)
+        .frame(height: Size.control)
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
         }
         .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
-            // A plain slide-up: a zoom out of the round avatars would morph through the sheet's rectangle. Medium
-            // fits its few rows; large is there for the Settings it pushes.
+            // A plain slide-up: a zoom out of the round avatars would morph through the sheet's rectangle.
             ProfileHub(state: state, erase: erase)
-                .presentationDetents([.medium, .large])
-                .presentationBackground(Ink.screen)
-                .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $checkingIn) {
             MoodPicker(state: state)
@@ -82,74 +45,7 @@ struct AppHeader: View {
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
                 PairingSheet(model: session.pairing, prefill: state.invitedCode ?? "") { session.pairingFinished() }
-                    .presentationBackground(Ink.screen)
-                    .presentationDragIndicator(.visible)
             }
         }
-    }
-}
-
-/// The Inbox, leftmost in the header: a glass circle with a tray and a count of what is unread.
-struct InboxButton: View {
-    let unread: Int
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "tray.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Ink.primary)
-                .frame(width: 42, height: 42)
-                .warmGlassBacking(.circle)
-                .overlay(alignment: .topTrailing) {
-                    if unread > 0 {
-                        Text(unread > 9 ? "9+" : "\(unread)")
-                            .font(.system(size: 11, weight: .bold, design: .rounded).monospacedDigit())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .frame(minWidth: 18, minHeight: 18)
-                            .background(Color.blushPink, in: .capsule)
-                            .offset(x: 4, y: -4)
-                    }
-                }
-                .frame(width: 44, height: 44)
-                .contentShape(.circle)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Inbox")
-        .accessibilityValue(unread > 0 ? "\(unread) unread" : "")
-    }
-}
-
-struct CoinPill: View {
-    let coins: Int
-
-    var body: some View {
-        HStack(spacing: 8) {
-            CoinIcon(size: 24)
-
-            Text("\(coins)")
-                .font(.system(size: 16, weight: .semibold, design: .rounded).monospacedDigit())
-                .contentTransition(.numericText())
-        }
-        .foregroundStyle(Ink.primary)
-        .padding(.leading, 8)
-        .padding(.trailing, 14)
-        .frame(height: 40)
-        .warmGlassBacking(.capsule)
-        // The backing takes no touches, so the gap between the coin and the number would.
-        .contentShape(.capsule)
-        .animation(.snappy(duration: 0.4), value: coins)
-        // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
-        // `.overlayPreferenceValue(CoinPillAnchor.self)`).
-        .anchorPreference(key: CoinPillAnchor.self, value: .bounds) { $0 }
-    }
-}
-
-/// The coin pill's bounds, published by `CoinPill` for effects drawn over the whole screen.
-struct CoinPillAnchor: PreferenceKey {
-    static let defaultValue: Anchor<CGRect>? = nil
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        value = value ?? nextValue()
     }
 }

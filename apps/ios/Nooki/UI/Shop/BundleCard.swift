@@ -32,7 +32,7 @@ struct BundleCard: View {
         }
         .padding(Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .shopCard()
+        .cardSurface()
     }
 
     private var title: some View {
@@ -42,8 +42,7 @@ struct BundleCard: View {
                     .font(.nookiHeadline)
                     .foregroundStyle(Ink.text)
                 if let quote, quote.sum > quote.price {
-                    ShopTag(text: "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
-                            fill: ShopInk.coral)
+                    Chip("−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%", style: .honey)
                 }
             }
             Text(bundle.blurb)
@@ -66,7 +65,7 @@ struct BundleCard: View {
                 Button { open(item) } label: {
                     RarityFrame(rarity: item.rarity) {
                         if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
-                            Lifted { Image(uiImage: image).resizable().scaledToFit() }
+                            Image(uiImage: image).resizable().scaledToFit()
                                 .padding(Space.s)
                         }
                     }

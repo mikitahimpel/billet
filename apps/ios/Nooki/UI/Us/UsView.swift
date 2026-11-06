@@ -2,7 +2,7 @@ import SwiftUI
 import Design
 
 /// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
-/// is in its header. Every card is a `usCard`, every icon a `UsIcon`.
+/// is in its header. Every card is a `Card` or `cardSurface`, every icon a `UsIcon`.
 struct UsView: View {
     @Bindable var state: HomeState
 

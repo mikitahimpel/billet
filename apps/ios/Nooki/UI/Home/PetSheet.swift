@@ -11,8 +11,6 @@ struct PetButton: View {
     /// Starts one of the mini-games, once the sheet is down.
     var onPlay: (MiniGame) -> Void
     @State private var showsSheet = false
-    /// The sheet's content height, measured, so the sheet ends just under its last line.
-    @State private var sheetHeight: CGFloat = 520
     @Environment(Hints.self) private var hints
 
     var body: some View {
@@ -66,13 +64,10 @@ struct PetButton: View {
             state.showsPetSheet = false
         }
         .sheet(isPresented: $showsSheet) {
-            PetSheet(state: state, needs: needs, height: $sheetHeight) { game in
+            PetSheet(state: state, needs: needs) { game in
                 showsSheet = false
                 onPlay(game)
             }
-            .presentationDetents([.height(sheetHeight)])
-            .presentationBackground(Ink.screen)
-            .presentationDragIndicator(.visible)
         }
     }
 }
@@ -82,13 +77,12 @@ struct PetButton: View {
 private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
-    @Binding var height: CGFloat
     var onPlay: (MiniGame) -> Void
     @State private var short = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        ScrollView {
+        BilletSheet(state.petName, size: .fit) {
             // The brain starts after the room has loaded and keeps changing; look again each second.
             TimelineView(.periodic(from: .now, by: 1)) { _ in
                 let current = (FixedNeeds.fromLaunch ?? needs())?.needs
@@ -108,14 +102,8 @@ private struct PetSheet: View {
                         .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
                         .contentTransition(.opacity)
                 }
-                .padding(.horizontal, Space.l)
-                .padding(.top, Space.l)
-                .padding(.bottom, Space.s)
             }
-            .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollIndicators(.hidden)
         .haptic(.impact(weight: .light), trigger: state.care.petPulse)
         // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
@@ -131,28 +119,19 @@ private struct PetSheet: View {
                     SpringKeyframe(1.08, duration: 0.15)
                     SpringKeyframe(1.0, duration: 0.35)
                 }
-                .padding(.top, Space.s)
-            Text(state.petName)
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.heroInk)
             if let mood {
                 Text(mood)
                     .font(.nookiCallout)
-                    .foregroundStyle(Ink.heroInk.opacity(0.75))
+                    .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.opacity)
             }
             HStack(spacing: Space.s) {
-                Text("Lv. \(state.care.level)")
-                    .font(.nookiMicro)
-                    .foregroundStyle(Ink.heroInk)
-                    .padding(.horizontal, Space.s)
-                    .frame(height: 22)
-                    .background(.white.opacity(0.7), in: .capsule)
+                Chip("Lv. \(state.care.level)", style: .honey)
                     .contentTransition(.numericText())
                 LevelTrack(value: state.care.progress)
                 Text("\(Int((state.care.progress * 100).rounded()))%")
                     .font(.nookiMicro)
-                    .foregroundStyle(Ink.heroInk.opacity(0.75))
+                    .foregroundStyle(Ink.textSecondary)
                     .monospacedDigit()
                     .contentTransition(.numericText())
             }
@@ -161,34 +140,19 @@ private struct PetSheet: View {
             .accessibilityLabel("Level \(state.care.level)")
             .accessibilityValue("\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
         }
-        .padding(.bottom, Space.m + 2)
+        .padding(.vertical, Space.l)
         .frame(maxWidth: .infinity)
-        .background {
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0xFFE2B0), Color(hex: 0xF6B77A)],
-                                     startPoint: .top, endPoint: .bottom))
-                .overlay {
-                    // Lamplight from above, as on her in the room.
-                    RadialGradient(colors: [.white.opacity(0.6), .clear], center: UnitPoint(x: 0.5, y: 0.2),
-                                   startRadius: 0, endRadius: 150)
-                        .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                        .strokeBorder(.white.opacity(0.5), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
-        }
+        .cardSurface(radius: Radius.card, warm: true)
     }
 }
 
-/// The level bar on the warm stage: honey on a white groove.
+/// The level bar: honey on a raised groove.
 private struct LevelTrack: View {
     let value: Double
 
     var body: some View {
         Capsule()
-            .fill(.white.opacity(0.55))
+            .fill(Ink.surfaceRaised)
             .overlay(alignment: .leading) {
                 GeometryReader { proxy in
                     Capsule()
@@ -210,7 +174,7 @@ private struct PetPortrait: View {
             if let image = UIImage(named: CatCoat.current().avatar) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Image(systemName: "cat.fill").font(.system(size: size * 0.45)).foregroundStyle(.white)
+                Image(systemName: "cat.fill").font(.title).foregroundStyle(Ink.heroInk)
             }
         }
         .frame(width: size, height: size)

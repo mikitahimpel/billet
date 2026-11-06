@@ -16,18 +16,11 @@ struct AddPlaceSheet: View {
     private var list: UsList? { state.us.list(listID) }
 
     var body: some View {
+        BilletSheet(place.map { "Where is “\($0)”?" } ?? "Add a place", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: place.map { "Where is “\($0)”?" } ?? "Add a place",
-                          subtitle: place == nil ? nil : "Pick its country") {
-                Button { place == nil ? dismiss() : back() } label: {
-                    Image(systemName: place == nil ? "xmark" : "chevron.left")
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(Ink.surfaceRaised))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(place == nil ? "Close" : "Back")
+            if place != nil {
+                SheetSubtitle(text: "Pick its country")
+                    .padding(.horizontal, Space.gutter)
             }
 
             HStack(spacing: Space.s) {
@@ -78,7 +71,15 @@ struct AddPlaceSheet: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        .usSheet()
+        }
+        .toolbar {
+            if place != nil {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { back() } label: { Image(systemName: "chevron.left") }
+                        .accessibilityLabel("Back")
+                }
+            }
+        }
         .onAppear { focused = true }
     }
 
@@ -227,8 +228,7 @@ struct BeenSheet: View {
     private var name: String { item.isCountry ? Country.name(item.country ?? "") : item.text }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
+        BilletSheet("Been there", size: .mediumLarge, onConfirm: { save() }) {
                 VStack(spacing: Space.l) {
                     VStack(spacing: Space.s) {
                         if item.isCountry, let code = item.country {
@@ -237,30 +237,22 @@ struct BeenSheet: View {
                             UsIcon(glyph: UsGlyph(symbol: "mappin", tint: .sky), size: 84)
                         }
                         Text("\(name), been there!")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .font(.nookiTitle)
                             .foregroundStyle(Ink.text)
                             .multilineTextAlignment(.center)
                             .padding(.top, Space.s)
                         subtitle
                     }
-                    .padding(.top, 34)
 
                     MonthField(month: $month)
                     photos
-                    PrimaryButton("Save") { save() }
-                        .padding(.top, Space.s)
                     if been {
                         Button("Not been yet", role: .destructive) { unmark() }
                             .font(.nookiCallout.weight(.semibold))
                             .frame(minHeight: 44)
                     }
                 }
-                .padding(.horizontal, Space.gutter)
-                .padding(.bottom, 40)
-            }
-            .scrollIndicators(.hidden)
         }
-        .usSheet(detents: [.fraction(0.72), .large])
         .sheet(isPresented: $picking) {
             MomentsPicker(moments: state.moments, selection: $moments)
         }
@@ -392,16 +384,13 @@ private struct MomentsPicker: View {
     private static let limit = 10
 
     var body: some View {
+        BilletSheet("Photos from Moments", scrolls: false, onConfirm: { dismiss() }) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Photos from Moments", subtitle: "\(selection.count) of \(Self.limit)") {
-                Button("Done") { dismiss() }
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Color.honey)
-            }
+            SheetSubtitle(text: "\(selection.count) of \(Self.limit)")
+                .padding(.horizontal, Space.gutter)
             if moments.moments.isEmpty {
-                UsEmpty(icon: UsGlyph(symbol: "photo.fill", tint: .lilac), title: "No moments yet",
-                        text: "Photos you share in Moments can go with a trip.")
-                Spacer(minLength: 0)
+                EmptyState(icon: UsGlyph(symbol: "photo.fill", tint: .lilac), title: "No moments yet",
+                           text: "Photos you share in Moments can go with a trip.")
             } else {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 4) {
@@ -430,7 +419,7 @@ private struct MomentsPicker: View {
                 }
             }
         }
-        .usSheet(detents: [.large])
+        }
     }
 
     private func toggle(_ id: UUID) {

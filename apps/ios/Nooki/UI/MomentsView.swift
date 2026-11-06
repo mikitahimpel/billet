@@ -153,7 +153,7 @@ struct MomentsView: View {
             Spacer(minLength: 0)
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 18)
                     .frame(height: 42)
@@ -172,92 +172,72 @@ struct MomentsView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Moments")
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .foregroundStyle(Ink.primary)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Ink.secondary)
-                    }
-                }
-                .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
-
-                Spacer(minLength: 0)
-
-                if state.momentsMode == .board, !notes.isEmpty {
-                    Button { showsHistory = true } label: {
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .glass(.circle, interactive: true)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("All notes")
-                }
-
-                // Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
-                if state.momentsMode == .board {
-                    Menu {
-                        Button { state.composingNote = .write } label: {
-                            Label("Note", systemImage: "note.text")
-                            Text("+5")
-                        }
-                        Button { state.composingNote = .draw } label: {
-                            Label("Doodle", systemImage: "scribble")
-                            Text("+5")
-                        }
-                    } label: { plus }
-                    .accessibilityLabel("Add a note")
+        HStack(alignment: .center, spacing: Space.m) {
+            VStack(alignment: .leading, spacing: 1) {
+                titleMenu
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.nookiCaption)
+                        .foregroundStyle(Ink.secondary)
                 }
             }
-            .frame(height: 48)
+            .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
 
-            ModePicker(mode: $state.momentsMode)
+            Spacer(minLength: 0)
+
+            if state.momentsMode == .board, !notes.isEmpty {
+                GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
+            }
+
+            // Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
+            if state.momentsMode == .board {
+                Menu {
+                    Button { state.composingNote = .write } label: {
+                        Label("Note", systemImage: "note.text")
+                        Text("+5")
+                    }
+                    Button { state.composingNote = .draw } label: {
+                        Label("Doodle", systemImage: "scribble")
+                        Text("+5")
+                    }
+                } label: { plus }
+                .accessibilityLabel("Add a note")
+            }
         }
+        .frame(minHeight: Size.control)
+    }
+
+    /// The large title is the switch between the photo feed and the board, as in Photos and Notes.
+    private var titleMenu: some View {
+        Menu {
+            Picker("Show", selection: $state.momentsMode.animation(.snappy(duration: 0.25))) {
+                Label("Photos", systemImage: "photo.on.rectangle").tag(MomentsMode.photos)
+                Label("Board", systemImage: "square.grid.2x2").tag(MomentsMode.board)
+            }
+        } label: {
+            HStack(spacing: Space.xs + 2) {
+                Text("Moments")
+                    .font(.nookiLargeTitle)
+                    .foregroundStyle(Ink.primary)
+                Image(systemName: "chevron.down")
+                    .font(.nookiCallout.weight(.bold))
+                    .foregroundStyle(Ink.secondary)
+            }
+            .contentShape(.rect)
+        }
+        .menuOrder(.fixed)
+        .accessibilityLabel("Moments")
+        .accessibilityValue(state.momentsMode == .board ? "Board" : "Photos")
+        .accessibilityHint("Switches between Photos and Board")
+        .accessibilityIdentifier("momentsMode")
     }
 
     private var plus: some View {
         Image(systemName: "plus")
-            .font(.system(size: 17, weight: .bold))
+            .font(.body.weight(.bold))
             .foregroundStyle(Ink.heroInk)
-            .frame(width: 44, height: 44)
-            .background(Circle().fill(.honeyGradient))
-            .shadow(color: Color.honeyDeep.opacity(0.4), radius: 8, y: 3)
-    }
-}
-
-/// Photos as a feed, or the board in Mochi's desk room: the system's segmented picker.
-private struct ModePicker: View {
-    @Binding var mode: MomentsMode
-
-    var body: some View {
-        Picker("Show", selection: $mode.animation(.snappy(duration: 0.25))) {
-            Text("Photos").tag(MomentsMode.photos)
-            Text("Board").tag(MomentsMode.board)
-        }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 260)
-        .environment(\.colorScheme, .dark)
-    }
-
-    private func item(_ value: MomentsMode, _ title: String, _ symbol: String) -> some View {
-        Button {
-            withAnimation(.snappy(duration: 0.25)) { mode = value }
-        } label: {
-            Label(title, systemImage: symbol)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(mode == value ? 0.96 : 0.6))
-                .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(mode == value ? Color.honey.opacity(0.45) : .clear, in: .capsule)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(mode == value ? .isSelected : [])
+            .frame(width: Size.control, height: Size.control)
+            .background(Color.honey, in: .circle)
     }
 }
 
@@ -267,7 +247,6 @@ private struct ModePicker: View {
 private struct NotesHistory: View {
     let state: HomeState
 
-    @Environment(\.dismiss) private var dismiss
     @State private var opened: PinRoute?
 
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
@@ -281,34 +260,16 @@ private struct NotesHistory: View {
     }
 
     var body: some View {
-        ScrollView {
+        BilletSheet("All notes") {
             VStack(alignment: .leading, spacing: 18) {
-                HStack(spacing: 12) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundStyle(Ink.primary)
-                            .frame(width: 36, height: 36)
-                            .background(.white.opacity(0.12), in: .circle)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("All notes")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(Ink.primary)
-                        Text("\(state.notes.notes.count) \(state.notes.notes.count == 1 ? "note" : "notes")")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Ink.secondary)
-                    }
-                }
-                .padding(.top, 22)
+                Text("\(state.notes.notes.count) \(state.notes.notes.count == 1 ? "note" : "notes")")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
 
                 ForEach(months, id: \.title) { month in
                     Text(month.title)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Ink.secondary)
+                        .font(.nookiCallout.weight(.semibold))
+                        .foregroundStyle(Ink.textSecondary)
                         .padding(.top, 4)
                     LazyVGrid(columns: columns, spacing: 18) {
                         ForEach(month.notes) { note in
@@ -321,12 +282,9 @@ private struct NotesHistory: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .scrollIndicators(.hidden)
         .sheet(item: $opened) { route in NoteSheet(state: state, id: route.id) }
-        .usSheet()
     }
 }
 
@@ -386,10 +344,10 @@ private struct EmptyMoments: View {
 
             VStack(spacing: 8) {
                 Text("Your first moment")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.nookiTitle)
                     .foregroundStyle(Ink.primary)
                 Text("Add a photo of the two of you. It goes up on \(CatProfile.name())'s wall as a little polaroid.")
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.nookiCallout)
                     .foregroundStyle(Ink.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -419,7 +377,7 @@ private struct BlankPolaroid: View {
         VStack(spacing: 0) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(LinearGradient(colors: [Color(hex: 0xF0DCC0), Color(hex: 0xE2C29C)], startPoint: .top, endPoint: .bottom))
-                .overlay(Image(systemName: symbol).font(.system(size: 22)).foregroundStyle(Color(hex: 0xC99A6B)))
+                .overlay(Image(systemName: symbol).font(.title2).foregroundStyle(Color(hex: 0xC99A6B)))
                 .frame(width: 92, height: 92)
             Spacer().frame(height: 22)
         }
@@ -568,56 +526,40 @@ struct ComposeSheet: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("New moment")
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundStyle(Ink.primary)
-                .padding(.top, 22)
+        BilletSheet("New moment", size: .fit) {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Image(uiImage: film ?? image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 220, height: 220)
+                        .clipped()
+                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(Color(hex: 0xB8957A)))
+                        .font(.custom("Noteworthy-Bold", size: 17))
+                        .foregroundStyle(PolaroidPaper.ink)
+                        .focused($focused)
+                        .submitLabel(.done)
+                        .frame(width: 220)
+                        .onChange(of: caption) { _, text in
+                            if text.count > 40 { caption = String(text.prefix(40)) }
+                        }
+                }
+                .padding(12)
+                .padding(.bottom, 14)
+                .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
+                .rotationEffect(.degrees(-2))
 
-            VStack(alignment: .leading, spacing: 10) {
-                Image(uiImage: film ?? image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 220, height: 220)
-                    .clipped()
-                TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(Color(hex: 0xB8957A)))
-                    .font(.custom("Noteworthy-Bold", size: 17))
-                    .foregroundStyle(PolaroidPaper.ink)
-                    .focused($focused)
-                    .submitLabel(.done)
-                    .frame(width: 220)
-                    .onChange(of: caption) { _, text in
-                        if text.count > 40 { caption = String(text.prefix(40)) }
-                    }
+                PrimaryButton("Add to Moments · +10") {
+                    onSave(caption.trimmingCharacters(in: .whitespacesAndNewlines))
+                    dismiss()
+                }
             }
-            .padding(12)
-            .padding(.bottom, 14)
-            .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
-            .rotationEffect(.degrees(-2))
-
-            Spacer(minLength: 0)
-
-            Button {
-                onSave(caption.trimmingCharacters(in: .whitespacesAndNewlines))
-                dismiss()
-            } label: {
-                Text("Add to Moments · +10")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded).monospacedDigit())
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Capsule().fill(.honeyGradient))
-                    .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
+            .frame(maxWidth: .infinity)
         }
         .task {
             let image = image
             film = await Task.detached(priority: .userInitiated) { InstantFilm.develop(image) }.value
         }
-        .usSheet()
     }
 }
 
@@ -702,15 +644,7 @@ private struct MomentViewer: View {
 
     private func topBar(_ moment: Moment) -> some View {
         HStack(spacing: 12) {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Ink.text)
-                    .frame(width: 44, height: 44)
-                    .background(Ink.surfaceRaised, in: .circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
+            GlassIconButton(symbol: "xmark", label: "Close") { dismiss() }
 
             Spacer(minLength: 0)
 
@@ -729,10 +663,10 @@ private struct MomentViewer: View {
                 Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Ink.text)
-                    .frame(width: 44, height: 44)
-                    .background(Ink.surfaceRaised, in: .circle)
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Ink.primary)
+                    .frame(width: Size.control, height: Size.control)
+                    .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
             }
             .accessibilityLabel("Share and more")
         }
@@ -760,15 +694,15 @@ private struct MomentViewer: View {
         Button(action: perform) {
             HStack(spacing: 7) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(tint)
                     .contentTransition(.symbolEffect(.replace))
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 52)
+            .frame(height: Size.button)
             .background(active ? tint.opacity(0.22) : Ink.surfaceRaised, in: .capsule)
         }
         .buttonStyle(.plain)
@@ -785,10 +719,10 @@ private struct ReactionPicker: View {
             ForEach(PhotoReaction.allCases, id: \.self) { reaction in
                 Button { choose(reaction) } label: {
                     Text(reaction.emoji)
-                        .font(.system(size: 26))
+                        .font(.title)
                         .scaleEffect(selected == reaction ? 1.15 : 1)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
+                        .frame(height: Size.button)
                         .background(selected == reaction ? Color.honey.opacity(0.26) : Ink.surfaceRaised, in: .capsule)
                 }
                 .buttonStyle(.plain)

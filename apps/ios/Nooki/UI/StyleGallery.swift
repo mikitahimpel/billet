@@ -51,7 +51,7 @@ struct StyleGallery: View {
             Card {
                 HStack {
                     GlassIconButton(symbol: "face.smiling", label: "Mood") {}
-                    GlassIconButton(symbol: "tray", label: "Inbox", badge: true) {}
+                    GlassIconButton(symbol: "tray", label: "Inbox", badge: .dot) {}
                     Spacer()
                     Design.PriceButton(120) {}
                 }

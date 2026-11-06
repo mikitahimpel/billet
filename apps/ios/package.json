@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "ios:generate": "xcodegen generate"
+    "ios:generate": "xcodegen generate",
+    "ios:format:check": "node ../../packages/ios/scripts/check-design.mjs"
   }
 }

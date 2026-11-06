@@ -16,8 +16,8 @@ struct PlacesListBody: View {
         VStack(alignment: .leading, spacing: Space.m) {
             hero
             HStack(spacing: Space.s) {
-                UsChip(title: "Want to go · \(rows.want.count)", selected: tab == .want) { select(.want) }
-                UsChip(title: "Been · \(rows.been.count)", selected: tab == .been) { select(.been) }
+                FilterChip("Want to go · \(rows.want.count)", isSelected: tab == .want) { select(.want) }
+                FilterChip("Been · \(rows.been.count)", isSelected: tab == .been) { select(.been) }
             }
             .padding(.top, 2)
             let shown = tab == .want ? rows.want : rows.been
@@ -49,7 +49,7 @@ struct PlacesListBody: View {
         return VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(summary.been)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Ink.text)
                 Text("of \(Country.count) countries together · \(summary.percent)%")
                     .font(.nookiCallout)

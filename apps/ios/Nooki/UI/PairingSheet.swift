@@ -16,31 +16,13 @@ struct PairingSheet: View {
     @FocusState private var typing: Bool
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    content
-                }
-                .padding(.horizontal, Space.gutter)
-                .padding(.vertical, Space.m)
-            }
-            .scrollIndicators(.hidden)
-            .background(Ink.screen.ignoresSafeArea())
-            .navigationTitle("Pair with your partner")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    if !isPaired {
-                        Button("Cancel") {
-                            model.cancel()
-                            dismiss()
-                        }
-                    }
-                }
+        BilletSheet("Pair with your partner") {
+            VStack(spacing: Space.l + 2) {
+                content
             }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
+        // Closing a sheet that is not paired yet gives up on the code it started.
+        .onDisappear { if !isPaired { model.cancel() } }
         .interactiveDismissDisabled(isPaired)
         .onAppear { if code.isEmpty { code = prefill } }
         .task(id: waitingCode) {

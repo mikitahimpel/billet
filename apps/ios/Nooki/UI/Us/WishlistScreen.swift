@@ -16,12 +16,10 @@ struct WishlistScreen: View {
     private var owner: String { mine ? viewer : other }
 
     var body: some View {
+        BilletSheet("Wishlists", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Wishlists", subtitle: "Little hints for each other") {
-                if mine {
-                    UsAddButton { adding = true }
-                }
-            }
+            SheetSubtitle(text: "Little hints for each other")
+                .padding(.horizontal, Space.gutter)
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     chips
@@ -35,7 +33,15 @@ struct WishlistScreen: View {
             }
             .scrollIndicators(.hidden)
         }
-        .usSheet()
+        }
+        .toolbar {
+            if mine {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { adding = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add")
+                }
+            }
+        }
         .task { await state.gifts.refresh() }
         .sheet(isPresented: $adding) {
             WishEditor(state: state, existing: nil)
@@ -50,10 +56,10 @@ struct WishlistScreen: View {
 
     private var chips: some View {
         HStack(spacing: 8) {
-            UsChip(title: String(localized: "Mine"), selected: mine) {
+            FilterChip(String(localized: "Mine"), isSelected: mine) {
                 withAnimation(.snappy(duration: 0.25)) { mine = true }
             }
-            UsChip(title: String(localized: "\(otherName)'s"), selected: !mine) {
+            FilterChip(String(localized: "\(otherName)'s"), isSelected: !mine) {
                 withAnimation(.snappy(duration: 0.25)) { mine = false }
             }
         }
@@ -73,7 +79,7 @@ struct WishlistScreen: View {
                     .background(Ink.surfaceRaised, in: .capsule)
             }
             if wishes.isEmpty {
-                UsEmpty(
+                EmptyState(
                     icon: .init(symbol: "heart.fill", tint: .blush),
                     title: String(localized: "What would make you smile?"),
                     text: String(
@@ -109,7 +115,7 @@ struct WishlistScreen: View {
         let wishes = us.wishes(of: other)
         return VStack(alignment: .leading, spacing: 12) {
             if wishes.isEmpty {
-                UsEmpty(
+                EmptyState(
                     icon: .init(symbol: "gift.fill", tint: .coral),
                     title: String(localized: "No hints yet"),
                     text: String(localized: "When \(otherName) adds wishes, you'll see them here.")
@@ -448,11 +454,9 @@ private struct LovesEditor: View {
     @State private var loves = Loves()
 
     var body: some View {
-        VStack(spacing: 0) {
-            UsSheetHeader(title: "What I love",
-                          subtitle: "So \(state.profile.name(of: state.otherPartner)) always gets it right")
-            ScrollView {
+        BilletSheet("What I love", onConfirm: save) {
                 VStack(alignment: .leading, spacing: 14) {
+                    SheetSubtitle(text: "So \(state.profile.name(of: state.otherPartner)) always gets it right")
                     ForEach(LovesRow.all, id: \.label) { row in
                         VStack(alignment: .leading, spacing: 6) {
                             Label {
@@ -465,21 +469,14 @@ private struct LovesEditor: View {
                             UsField(placeholder: row.example, text: $loves[dynamicMember: row.keyPath])
                         }
                     }
-                    PrimaryButton(String(localized: "Save")) {
-                        state.us.setLoves(loves, for: state.viewer)
-                        dismiss()
-                    }
-                    .padding(.top, 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 40)
-            }
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
         }
-        .usSheet()
         .onAppear { loves = state.us.loves(of: state.viewer) }
+    }
+
+    private func save() {
+        state.us.setLoves(loves, for: state.viewer)
+        dismiss()
     }
 }
 
@@ -526,13 +523,9 @@ struct WishEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            UsSheetHeader(
-                title: existing == nil ? "New wish" : "Edit wish",
-                subtitle: "Paste a link and we'll fill in the rest"
-            )
-            ScrollView {
+        BilletSheet(existing == nil ? "New wish" : "Edit wish", onConfirm: { save() }, canConfirm: !trimmedTitle.isEmpty) {
                 VStack(alignment: .leading, spacing: 14) {
+                    SheetSubtitle(text: "Paste a link and we'll fill in the rest")
                     linkRow
                     if image != nil || loadingPreview { preview }
                     UsField(placeholder: String(localized: "What would you love?"), text: $title)
@@ -540,20 +533,9 @@ struct WishEditor: View {
                     UsField(placeholder: String(localized: "Colour, size, details (optional)"), text: $note)
                     mostWantedToggle
                     occasionPicker
-                    PrimaryButton(String(localized: "Save")) { save() }
-                        .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
-                        .disabled(trimmedTitle.isEmpty)
-                        .padding(.top, 4)
                     if let existing { existingActions(existing) }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 40)
-            }
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
         }
-        .usSheet(detents: [.large])
         .task(id: link) { await fetchPreview() }
     }
 
@@ -596,7 +578,7 @@ struct WishEditor: View {
                     }
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.caption.weight(.bold))
+                        .font(.nookiMicro)
                         .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                         .background(.black.opacity(0.45), in: .circle)

@@ -21,12 +21,28 @@ struct ShareWishView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            UsSheetHeader(title: String(localized: "Add to my wishlist"),
-                          subtitle: url?.host().map { $0.replacingOccurrences(of: "www.", with: "") }) {
-                Button(String(localized: "Cancel"), action: done)
-                    .font(.nookiCallout.weight(.semibold))
-                    .foregroundStyle(Ink.accentText)
+            ZStack {
+                VStack(spacing: 2) {
+                    Text("Add to my wishlist")
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
+                    if let host = url?.host().map({ $0.replacingOccurrences(of: "www.", with: "") }) {
+                        Text(host)
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
+                    }
+                }
+                HStack {
+                    Spacer()
+                    GlassIconButton(label: String(localized: "Close"), action: done) {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Ink.text)
+                    }
+                }
             }
+            .padding(.horizontal, Space.gutter)
+            .padding(.vertical, Space.m)
             if saved {
                 savedNote
             } else {
@@ -92,7 +108,7 @@ struct ShareWishView: View {
     private var savedNote: some View {
         VStack(spacing: 12) {
             Image(systemName: "heart.fill")
-                .font(.system(size: 40, weight: .semibold))
+                .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(Color.blushPink)
             Text("On your wishlist")
                 .font(.nookiTitle)

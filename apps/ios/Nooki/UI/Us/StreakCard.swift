@@ -96,7 +96,7 @@ private struct Flame: View {
 
     var body: some View {
         Image(systemName: "flame.fill")
-            .font(.system(size: 34, weight: .semibold))
+            .font(.system(.largeTitle, weight: .semibold))
             .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
             .opacity(lit || days == 0 ? 1 : 0.45)
             .symbolEffect(.bounce, value: days)

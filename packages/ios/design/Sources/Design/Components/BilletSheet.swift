@@ -152,6 +152,18 @@ public struct Page<Content: View>: View {
     .scrollDismissesKeyboard(.interactively)
     .background(Ink.screen.ignoresSafeArea())
     .tint(.honey)
+    .modifier(SoftTopEdge())
+  }
+}
+
+/// Text scrolling up under the glass bar and its back button fades out instead of showing through.
+private struct SoftTopEdge: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 26, macOS 26, *) {
+      content.scrollEdgeEffectStyle(.soft, for: .top)
+    } else {
+      content
+    }
   }
 }
 

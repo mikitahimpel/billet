@@ -35,11 +35,12 @@ struct ShopView: View {
                             .padding(.horizontal, Space.l)
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, Space.s)
                 .padding(.bottom, Space.l)
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
+            .shopScrollEdges()
             .scrollPosition($position)
             .onAppear {
                 guard ScenePerf.isOn else { return }
@@ -108,9 +109,7 @@ struct ShopView: View {
             HStack(spacing: Space.s) {
                 ForEach(ShopCategory.allCases) { category in
                     let isSelected = selected == category
-                    Button(category.title) { selected = category }
-                        .shopButton(prominent: isSelected)
-                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    FilterChip(category.title, isSelected: isSelected) { selected = category }
                 }
             }
             .padding(.horizontal, Space.l)
@@ -129,7 +128,7 @@ struct ShopView: View {
             .shopAppear()
 
         VStack(alignment: .leading, spacing: Space.m) {
-            ShopSectionHeader(title: "Daily deals", symbol: "tag.fill", tint: ShopInk.coral) {
+            SectionHeader("Daily deals", symbol: "tag.fill", tint: ShopInk.coral) {
                 // Deals change at the couple's local midnight, the same for both of them.
                 Label {
                     Text(timerInterval: now...state.shop.offers.nextDay(after: now), countsDown: true)
@@ -149,7 +148,7 @@ struct ShopView: View {
             .shopAppear()
 
         VStack(alignment: .leading, spacing: Space.m) {
-            ShopSectionHeader(title: "Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {
+            SectionHeader("Bundles", symbol: "shippingbox.fill", tint: ShopInk.plum) {
                 Text("Less than one by one")
             }
             ForEach(ShopOffers.bundles, id: \.id) { bundle in
@@ -161,7 +160,7 @@ struct ShopView: View {
         .id("bundles")
 
         VStack(alignment: .leading, spacing: Space.m) {
-            ShopSectionHeader(title: "Inks", symbol: "paintpalette.fill", tint: .honey) {
+            SectionHeader("Inks", symbol: "paintpalette.fill", tint: .honey) {
                 Text("For notes and drawings")
             }
             .padding(.horizontal, Space.l)
@@ -170,7 +169,7 @@ struct ShopView: View {
         .id("inks")
 
         VStack(alignment: .leading, spacing: Space.m) {
-            ShopSectionHeader(title: "Collections", symbol: "square.grid.2x2.fill", tint: ShopInk.teal) {
+            SectionHeader("Collections", symbol: "square.grid.2x2.fill", tint: ShopInk.teal) {
                 Text("A bonus for each full set")
             }
             ForEach(Catalog.collections) { collection in
@@ -193,6 +192,19 @@ struct ShopView: View {
                 ShopItemCard(item: item, state: state) { sheetItem = item }
                     .shopAppear()
             }
+        }
+    }
+}
+
+private extension View {
+    /// A solid fade under the header and the tab bar instead of the soft one: cards scrolling under clear glass
+    /// would otherwise show through it as a ghost.
+    @ViewBuilder
+    func shopScrollEdges() -> some View {
+        if #available(iOS 26, *) {
+            scrollEdgeEffectStyle(.hard, for: .vertical)
+        } else {
+            self
         }
     }
 }

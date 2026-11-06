@@ -3,7 +3,7 @@ import SwiftUI
 import Design
 
 /// Editing the couple's profile: each partner's photo and name, who is holding the phone, and the day they got
-/// together. Pushed from the profile; Cancel goes back without saving.
+/// together. Pushed from the profile; the back button leaves without saving.
 struct ProfileEditor: View {
     let profile: CoupleStore
     @Environment(\.dismiss) private var dismiss
@@ -13,32 +13,20 @@ struct ProfileEditor: View {
     @State private var pick: PhotosPickerItem?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Space.m + 2) {
-                ForEach(profile.couple.partners, id: \.self) { partner in
-                    partnerCard(partner)
-                }
-                togetherCard
+        Page {
+            ForEach(profile.couple.partners, id: \.self) { partner in
+                partnerCard(partner)
             }
-            .padding(.horizontal, Space.gutter)
-            .padding(.vertical, Space.s)
+            togetherCard
         }
-        .scrollIndicators(.hidden)
-        .background(Ink.screen.ignoresSafeArea())
-        .tint(.honey)
         .navigationTitle("Edit profile")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden()
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Save") {
+                ConfirmButton {
                     profile.update(names: names, togetherSince: since)
                     dismiss()
                 }
-                .fontWeight(.semibold)
             }
         }
         .onAppear {
@@ -75,7 +63,7 @@ struct ProfileEditor: View {
                             .foregroundStyle(Ink.heroInk)
                             .frame(width: 24, height: 24)
                             .background(.honeyGradient, in: .circle)
-                            .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 1.5))
+                            .overlay(Circle().strokeBorder(Ink.screen, lineWidth: 1.5))
                     }
             }
 
@@ -99,7 +87,7 @@ struct ProfileEditor: View {
                 }
             }
         }
-        .padding(Space.m + 2)
+        .padding(Space.l)
         .cardSurface()
     }
 
@@ -112,7 +100,7 @@ struct ProfileEditor: View {
                 .font(.nookiCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
-        .padding(Space.m + 2)
+        .padding(Space.l)
         .cardSurface()
     }
 }

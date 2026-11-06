@@ -18,7 +18,7 @@ struct ProfileHub: View {
     }
 
     var body: some View {
-        NavigationStack {
+        BilletSheet("Profile", size: .mediumLarge, scrolls: false) {
             Page {
                 couple
                 GroupedSection {
@@ -45,22 +45,10 @@ struct ProfileHub: View {
                 }
                 .buttonStyle(.plain)
             }
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $pairing) {
             if let session {
                 PairingSheet(model: session.pairing) { session.pairingFinished() }
-                    .presentationBackground(Ink.screen)
-                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -74,12 +62,11 @@ struct ProfileHub: View {
             .overlay(alignment: .bottom) {
                 // The honey link between the two.
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.nookiMicro)
                     .foregroundStyle(Ink.heroInk)
                     .frame(width: 30, height: 30)
                     .background(.honeyGradient, in: .circle)
-                    .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
-                    .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                    .overlay(Circle().strokeBorder(Ink.screen, lineWidth: 2))
                     .offset(y: 8)
             }
             .padding(.bottom, Space.s)

@@ -53,7 +53,7 @@ struct FeaturedCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                SetBuyButton(state: state, set: offer, ownedInk: .white)
+                SetBuyButton(state: state, set: offer)
             }
             .padding(Space.m)
             .glass(.rect(cornerRadius: Radius.card, style: .continuous), tint: Ink.heroInk.opacity(0.3))
@@ -88,7 +88,7 @@ struct FeaturedCard: View {
             HStack(alignment: .bottom, spacing: -overlap) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     let isCentre = index == items.count / 2
-                    Lifted {
+                    Group {
                         if let image = Thumbnails.trimmed(item.thumbnail) {
                             Image(uiImage: image).resizable().scaledToFit()
                         } else {

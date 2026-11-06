@@ -16,17 +16,16 @@ struct CalendarScreen: View {
     }
 
     var body: some View {
+        BilletSheet("Calendar", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Calendar", subtitle: "Day \(state.daysTogether) together") {
-                UsAddButton { editing = UsEvent(title: "", icon: UsGlyph.palette[0], date: .now) }
-            }
+            SheetSubtitle(text: "Day \(state.daysTogether) together")
+                .padding(.horizontal, Space.gutter)
             HStack(spacing: 8) {
-                UsChip(title: "Soon", selected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
-                UsChip(title: "Month", selected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
+                FilterChip("Soon", isSelected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
+                FilterChip("Month", isSelected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 14)
+            .padding(.horizontal, Space.gutter)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -37,7 +36,7 @@ struct CalendarScreen: View {
                     } else {
                         let soon = us.upcoming(togetherSince: state.togetherSince, limit: 60)
                         if soon.isEmpty {
-                            UsEmpty(icon: .init(symbol: "calendar", tint: .sky), title: "Nothing coming up", text: "Add a birthday, a trip or anything you're both waiting for.")
+                            EmptyState(icon: .init(symbol: "calendar", tint: .sky), title: "Nothing coming up", text: "Add a birthday, a trip or anything you're both waiting for.")
                         } else {
                             ForEach(soon) { row($0) }
                         }
@@ -49,7 +48,8 @@ struct CalendarScreen: View {
             }
             .scrollIndicators(.hidden)
         }
-        .usSheet()
+        }
+        .addToolbarButton { editing = UsEvent(title: "", icon: UsGlyph.palette[0], date: .now) }
         .sheet(item: $editing) { event in
             EventEditor(state: state, event: event, isNew: !us.events.contains { $0.id == event.id })
         }
@@ -73,7 +73,7 @@ struct CalendarScreen: View {
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
                     Text(item.daysLeft == 0 ? "today" : "\(abs(item.daysLeft))")
-                        .font(.system(size: item.daysLeft == 0 ? 14 : 20, weight: .bold, design: .rounded).monospacedDigit())
+                        .font((item.daysLeft == 0 ? Font.nookiCaption : Font.nookiTitle).monospacedDigit())
                         .foregroundStyle((0...7).contains(item.daysLeft) ? Color.honey : Ink.text)
                     if item.daysLeft != 0 {
                         Text((abs(item.daysLeft) == 1 ? "day" : "days") + (item.daysLeft < 0 ? " ago" : ""))
@@ -120,7 +120,7 @@ private struct MonthGrid: View {
                     if let day {
                         let isToday = cal.isDateInToday(day)
                         Text("\(cal.component(.day, from: day))")
-                            .font(.system(size: 14, weight: isToday ? .bold : .medium, design: .rounded).monospacedDigit())
+                            .font(.nookiCallout.weight(isToday ? .bold : .medium).monospacedDigit())
                             .foregroundStyle(isToday ? Ink.heroInk : Ink.text)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
@@ -169,11 +169,8 @@ struct EventEditor: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        BilletSheet(isNew ? "New event" : "Edit event", onConfirm: save, canConfirm: canSave) {
         VStack(alignment: .leading, spacing: 14) {
-            Text(isNew ? "New event" : "Edit event")
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-                .padding(.top, 24)
 
             HStack(spacing: 10) {
                 UsIcon(glyph: event.icon, size: 50)
@@ -184,12 +181,11 @@ struct EventEditor: View {
             DatePicker("Date", selection: $event.date)
                 .datePickerStyle(.compact)
                 .tint(Color.honey)
-                .colorScheme(.dark)
                 .font(.nookiBody)
                 .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
-                .cardSurface(radius: 16)
+                .cardSurface(radius: Radius.control)
 
             Toggle("Every year", isOn: $event.yearly)
                 .tint(Color.honey)
@@ -197,23 +193,14 @@ struct EventEditor: View {
                 .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
-                .cardSurface(radius: 16)
+                .cardSurface(radius: Radius.control)
 
             HStack(spacing: 8) {
-                UsChip(title: "Ours", selected: event.owner == nil) { event.owner = nil }
+                FilterChip("Ours", isSelected: event.owner == nil) { event.owner = nil }
                 ForEach([state.partners.0, state.partners.1], id: \.self) { p in
-                    UsChip(title: p, selected: event.owner == p) { event.owner = p }
+                    FilterChip(p, isSelected: event.owner == p) { event.owner = p }
                 }
             }
-
-            Spacer(minLength: 0)
-
-            PrimaryButton("Save") {
-                state.us.upsertEvent(event)
-                dismiss()
-            }
-            .opacity(event.title.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
-            .disabled(event.title.trimmingCharacters(in: .whitespaces).isEmpty)
 
             if !isNew {
                 Button("Delete event", role: .destructive) {
@@ -224,8 +211,13 @@ struct EventEditor: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
-        .usSheet()
+        }
+    }
+
+    private var canSave: Bool { !event.title.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    private func save() {
+        state.us.upsertEvent(event)
+        dismiss()
     }
 }

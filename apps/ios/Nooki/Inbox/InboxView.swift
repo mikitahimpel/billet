@@ -13,22 +13,19 @@ struct InboxView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        BilletSheet("Inbox", size: size, scrolls: false) {
             content
-                .scrollContentBackground(.hidden)
-                .background(Ink.screen)
-                .navigationTitle("Inbox")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
-                            .fontWeight(.semibold)
-                    }
-                }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
         .task { await model.open() }
+    }
+
+    /// Short states hug their content; the list takes the whole sheet.
+    private var size: SheetSize {
+        switch model.phase {
+        case .loaded where !model.items.isEmpty: .large
+        case .failed where !model.items.isEmpty: .large
+        case .idle, .loading, .unpaired, .failed, .loaded: .medium
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -37,22 +34,19 @@ struct InboxView: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .unpaired:
-            ContentUnavailableView(
-                "Nothing here yet", systemImage: "tray",
-                description: Text("Once your partner joins, what you both do with \(state.petName) shows up here."))
+            EmptyState(
+                symbol: "tray", title: "Nothing here yet",
+                text: "Once your partner joins, what you both do with \(state.petName) shows up here.")
         case .failed where model.items.isEmpty:
-            ContentUnavailableView {
-                Label("Couldn't load the Inbox", systemImage: "wifi.exclamationmark")
-            } description: {
-                Text("Check your connection and try again.")
-            } actions: {
-                Button("Try Again") { Task { await model.open() } }
-            }
+            EmptyState(
+                symbol: "wifi.exclamationmark", title: "Couldn't load the Inbox",
+                text: "Check your connection and try again.") {
+                    SecondaryButton("Try Again", fullWidth: false) { Task { await model.open() } }
+                }
         case .loaded where model.items.isEmpty:
-            ContentUnavailableView(
-                "All quiet", systemImage: "tray",
-                description: Text("Feeding \(state.petName), notes and gifts from you two will show up here."))
-                .refreshable { await model.open() }
+            EmptyState(
+                symbol: "tray", title: "All quiet",
+                text: "Feeding \(state.petName), notes and gifts from you two will show up here.")
         case .loaded, .failed:
             list
         }
@@ -69,10 +63,11 @@ struct InboxView: View {
                             }
                     }
                 }
-                .listRowBackground(Color.white.opacity(0.06))
+                .listRowBackground(Ink.surface)
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .refreshable { await model.open() }
     }
 
@@ -86,8 +81,8 @@ struct InboxView: View {
                 HStack {
                     rowView
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Ink.secondary.opacity(0.6))
+                        .font(.nookiCaption.weight(.semibold))
+                        .foregroundStyle(Ink.textTertiary)
                 }
             }
             .buttonStyle(.plain)
@@ -100,26 +95,13 @@ struct InboxView: View {
 /// The Inbox on a phone that isn't connected to the server: nothing can arrive yet, and that is all it says.
 struct InboxSignedOut: View {
     let petName: String
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
-            ContentUnavailableView(
-                "Nothing here yet", systemImage: "tray",
-                description: Text("Once you're connected and your partner joins, what you both do with \(petName) "
-                                  + "shows up here."))
-                .background(Ink.screen)
-                .navigationTitle("Inbox")
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
-                            .fontWeight(.semibold)
-                    }
-                }
+        BilletSheet("Inbox", size: .medium) {
+            EmptyState(
+                symbol: "tray", title: "Nothing here yet",
+                text: "Once you're connected and your partner joins, what you both do with \(petName) shows up here.")
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
     }
 }
 
@@ -135,21 +117,21 @@ private struct InboxRow: View {
             avatar
                 .overlay(alignment: .bottomTrailing) {
                     Image(systemName: line.symbol)
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.nookiMicro)
                         .foregroundStyle(Ink.heroInk)
                         .frame(width: 20, height: 20)
                         .background(Color.honey, in: .circle)
-                        .overlay(Circle().stroke(Ink.screen, lineWidth: 1.5))
+                        .overlay(Circle().stroke(Ink.surface, lineWidth: 1.5))
                         .offset(x: 4, y: 4)
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.text)
-                    .font(.system(.subheadline, weight: isNew ? .semibold : .medium))
-                    .foregroundStyle(Ink.primary)
+                    .font(.nookiCallout.weight(isNew ? .semibold : .medium))
+                    .foregroundStyle(Ink.text)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(date, format: .relative(presentation: .named))
-                    .font(.system(.footnote, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)
             if isNew {
@@ -189,10 +171,10 @@ private struct InboxRow: View {
             .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
         case .store:
             Image(systemName: "applelogo")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.white)
+                .font(.nookiHeadline)
+                .foregroundStyle(Ink.text)
                 .frame(width: 40, height: 40)
-                .background(Color.white.opacity(0.14), in: .circle)
+                .background(Ink.surfaceRaised, in: .circle)
         }
     }
 }

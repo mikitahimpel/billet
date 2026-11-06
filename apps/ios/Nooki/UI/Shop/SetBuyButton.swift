@@ -6,11 +6,9 @@ import Design
 struct SetBuyButton<Pieces: PieceSet>: View {
     let state: HomeState
     let set: Pieces
-    /// The owned label's colour: white on the featured art, the text colour on a card.
-    var ownedInk: Color = Ink.text
 
     var body: some View {
-        PriceButton(state: state, quote: ShopOffers.price(of: set, owned: state.shop.owned), name: set.name,
-                    buy: { state.shop.buy(set) }, ownedInk: ownedInk)
+        BuyButton(state: state, quote: ShopOffers.price(of: set, owned: state.shop.owned), name: set.name,
+                  buy: { state.shop.buy(set) })
     }
 }

@@ -40,7 +40,7 @@ struct CollectionCard: View {
             bonus
         }
         .padding(Space.m)
-        .shopCard()
+        .cardSurface()
         .haptic(.success, trigger: claims)
         .animation(.spring(duration: 0.35), value: have)
     }
@@ -83,14 +83,13 @@ struct CollectionCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if state.shop.canClaimBonus(collection) {
-                Button("Collect") {
+                PrimaryButton("Collect", fullWidth: false) {
                     collecting = true
                     Task {
                         if await state.shop.claimBonus(collection) { claims += 1 }
                         collecting = false
                     }
                 }
-                .shopButton()
                 .disabled(collecting)
             }
         }

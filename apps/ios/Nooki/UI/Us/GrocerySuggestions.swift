@@ -32,7 +32,7 @@ struct GrocerySuggestions: View {
                 GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
                 WrapLayout(spacing: 8) {
                     ForEach(often, id: \.self) { text in
-                        UsChip(title: text, selected: false) { onAdd(text) }
+                        FilterChip(text, isSelected: false) { onAdd(text) }
                             .accessibilityLabel("Add \(text)")
                     }
                 }

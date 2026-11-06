@@ -98,13 +98,20 @@ private struct ButtonLabel: View {
 /// A round glass button for a header: one size, the same as the avatars and the coin pill. Its symbol is a
 /// plain SF Symbol, or any view of the same size through `init(label:action:content:)`.
 public struct GlassIconButton<Content: View>: View {
+  /// What sits on the corner of a header button.
+  public enum Badge: Equatable, Sendable {
+    case none
+    case dot
+    case count(Int)
+  }
+
   let label: String
-  let badge: Bool
+  let badge: Badge
   let action: () -> Void
   let content: Content
 
   public init(
-    label: String, badge: Bool = false, action: @escaping () -> Void,
+    label: String, badge: Badge = .none, action: @escaping () -> Void,
     @ViewBuilder content: () -> Content
   ) {
     self.label = label
@@ -117,25 +124,49 @@ public struct GlassIconButton<Content: View>: View {
     Button(action: action) {
       content
         .frame(width: Size.control, height: Size.control)
-        .overlay(alignment: .topTrailing) {
-          if badge {
-            Circle()
-              .fill(Color.blushPink)
-              .frame(width: 9, height: 9)
-              .offset(x: -9, y: 9)
-              .accessibilityHidden(true)
-          }
-        }
         .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
+        .overlay(alignment: .topTrailing) { badgeView }
         .contentShape(.circle)
     }
     .buttonStyle(.plain)
     .accessibilityLabel(label)
+    .accessibilityValue(badge.spoken)
+  }
+
+  @ViewBuilder private var badgeView: some View {
+    switch badge {
+    case .none:
+      EmptyView()
+    case .dot:
+      Circle()
+        .fill(Color.blushPink)
+        .frame(width: 10, height: 10)
+        .offset(x: -3, y: 3)
+        .accessibilityHidden(true)
+    case .count(let count):
+      Text(count > 9 ? "9+" : "\(count)")
+        .font(.nookiMicro.monospacedDigit())
+        .foregroundStyle(Ink.heroInk)
+        .padding(.horizontal, 5)
+        .frame(minWidth: 18, minHeight: 18)
+        .background(Color.blushPink, in: .capsule)
+        .offset(x: 4, y: -4)
+        .accessibilityHidden(true)
+    }
+  }
+}
+
+extension GlassIconButton.Badge {
+  fileprivate var spoken: String {
+    switch self {
+    case .none, .dot: ""
+    case .count(let count): count > 0 ? "\(count) unread" : ""
+    }
   }
 }
 
 extension GlassIconButton where Content == GlassSymbol {
-  public init(symbol: String, label: String, badge: Bool = false, action: @escaping () -> Void) {
+  public init(symbol: String, label: String, badge: Badge = .none, action: @escaping () -> Void) {
     self.init(label: label, badge: badge, action: action) { GlassSymbol(name: symbol) }
   }
 }
@@ -189,7 +220,7 @@ public struct PriceButton: View {
     SecondaryButton("Owned · Place", symbol: "mappin") {}
     HStack {
       GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
-      GlassIconButton(symbol: "tray", label: "Inbox", badge: true) {}
+      GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
       PriceButton(120) {}
     }
   }

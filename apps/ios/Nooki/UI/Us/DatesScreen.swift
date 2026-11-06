@@ -31,8 +31,10 @@ struct DatesScreen: View {
     private var us: UsStore { state.us }
 
     var body: some View {
+        BilletSheet("Date night", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Date night", subtitle: "Swipe together, or let \(CatProfile.name()) pick")
+            SheetSubtitle(text: "Swipe together, or let \(CatProfile.name()) pick")
+                .padding(.horizontal, Space.gutter)
             modeRow
             if mode != .dates { filterBar }
             ScrollView {
@@ -50,7 +52,7 @@ struct DatesScreen: View {
             .scrollIndicators(.hidden)
         }
         .overlay { matchOverlay }
-        .usSheet()
+        }
         .sheet(item: $planner) { target in
             DatePlannerSheet(state: state, target: target) { mode = .dates }
         }
@@ -112,8 +114,8 @@ struct DatesScreen: View {
             "Loosen a filter for more."
         }
         return VStack(spacing: 12) {
-            UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
-                    text: text)
+            EmptyState(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
+                       text: text)
             if toPlan > 0 {
                 PrimaryButton(toPlan == 1 ? "Plan your match" : "Plan one of \(toPlan) matches") {
                     withAnimation(.snappy(duration: 0.25)) { mode = .dates }
@@ -273,8 +275,8 @@ struct DatesScreen: View {
         let toPlan = us.matches, comingUp = us.comingUp, done = us.done
         if toPlan.isEmpty, comingUp.isEmpty, done.isEmpty {
             VStack(spacing: 12) {
-                UsEmpty(icon: .init(symbol: "heart.text.square.fill", tint: .blush), title: "No dates yet",
-                        text: "Swipe together. When you both love an idea, it lands here.")
+                EmptyState(icon: .init(symbol: "heart.text.square.fill", tint: .blush), title: "No dates yet",
+                           text: "Swipe together. When you both love an idea, it lands here.")
                 PrimaryButton("Start swiping") {
                     withAnimation(.snappy(duration: 0.25)) { mode = .swipe }
                 }
@@ -332,7 +334,7 @@ struct DatesScreen: View {
         HStack(spacing: 8) {
             ForEach(Mode.allCases, id: \.self) { item in
                 let waiting = item == .dates ? us.matches.count : 0
-                UsChip(title: waiting > 0 ? "\(item.rawValue) · \(waiting)" : item.rawValue, selected: mode == item) {
+                FilterChip(waiting > 0 ? "\(item.rawValue) · \(waiting)" : item.rawValue, isSelected: mode == item) {
                     withAnimation(.snappy(duration: 0.25)) { mode = item }
                 }
             }
@@ -349,7 +351,7 @@ struct DatesScreen: View {
                 filtersButton
                 if filter.isEmpty {
                     ForEach(DatePreset.all) { preset in
-                        UsChip(title: preset.title, selected: false) {
+                        FilterChip(preset.title, isSelected: false) {
                             withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
                         }
                     }
@@ -485,7 +487,7 @@ private struct SwipeDeck: View {
 
     private func stamp(_ text: String, tint: Color, strength: CGFloat) -> some View {
         Text(text)
-            .font(.system(size: 28, weight: .heavy, design: .rounded))
+            .font(.system(.title, design: .rounded, weight: .heavy))
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
@@ -500,7 +502,7 @@ private struct SwipeDeck: View {
     private var passButton: some View {
         Button { fling(liked: false) } label: {
             Image(systemName: "xmark")
-                .font(.system(size: 22, weight: .bold))
+                .font(.system(.title2, weight: .bold))
                 .foregroundStyle(Ink.text)
                 .frame(width: 64, height: 64)
                 .background(Ink.surfaceRaised, in: .circle)
@@ -513,7 +515,7 @@ private struct SwipeDeck: View {
     private var likeButton: some View {
         Button { fling(liked: true) } label: {
             Image(systemName: "heart.fill")
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(.title2, weight: .bold))
                 .foregroundStyle(Ink.heroInk)
                 .frame(width: 64, height: 64)
                 .background(Circle().fill(.honeyGradient))
@@ -580,7 +582,7 @@ private struct DateIdeaCard: View {
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(idea.title)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(idea.pitch)
@@ -668,22 +670,16 @@ private struct DateFilterSheet: View {
 
     var body: some View {
         let fits = count(filter)
+        BilletSheet("Filters", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Filters", subtitle: fits == 1 ? "1 idea fits" : "\(fits) ideas fit") {
-                if !filter.isEmpty {
-                    Button("Reset") {
-                        withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() }
-                    }
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Color.honey)
-                }
-            }
+            SheetSubtitle(text: fits == 1 ? "1 idea fits" : "\(fits) ideas fit")
+                .padding(.horizontal, Space.gutter)
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     group("Quick picks") {
                         HStack(spacing: 8) {
                             ForEach(DatePreset.all) { preset in
-                                UsChip(title: preset.title, selected: filter == preset.filter) {
+                                FilterChip(preset.title, isSelected: filter == preset.filter) {
                                     withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
                                 }
                             }
@@ -708,10 +704,17 @@ private struct DateFilterSheet: View {
             PrimaryButton(fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }
                 .disabled(fits == 0)
                 .opacity(fits == 0 ? 0.5 : 1)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.horizontal, Space.gutter)
+                .padding(.bottom, Space.m)
         }
-        .usSheet(detents: [.large])
+        }
+        .toolbar {
+            if !filter.isEmpty {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Reset") { withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() } }
+                }
+            }
+        }
     }
 
     private func group(_ title: String, @ViewBuilder content: () -> some View) -> some View {
@@ -946,17 +949,16 @@ private struct DateDoneSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            UsSheetHeader(title: "How was it?", subtitle: DateIdea.idea(plan.ideaID)?.title)
-            ScrollView {
+        BilletSheet("How was it?") {
                 VStack(spacing: 14) {
+                    if let title = DateIdea.idea(plan.ideaID)?.title { SheetSubtitle(text: title) }
                     HStack(spacing: 18) {
                         ForEach(1...3, id: \.self) { value in
                             Button {
                                 withAnimation(.snappy(duration: 0.2)) { hearts = value }
                             } label: {
                                 Image(systemName: value <= hearts ? "heart.fill" : "heart")
-                                    .font(.system(size: 34, weight: .semibold))
+                                    .font(.system(.largeTitle, weight: .semibold))
                                     .foregroundStyle(Color.blushPink)
                                     .symbolEffect(.bounce, value: hearts == value)
                             }
@@ -980,13 +982,7 @@ private struct DateDoneSheet: View {
                     PrimaryButton(photo == nil ? "Done" : "Done, add to Moments") { save() }
                         .padding(.top, 4)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
-            }
-            .scrollIndicators(.hidden)
         }
-        .usSheet(detents: [.large])
         .onChange(of: pick) { _, item in
             guard let item else { return }
             Task {
@@ -1019,7 +1015,7 @@ private struct DateDoneSheet: View {
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "photo.badge.plus")
-                    .font(.system(size: 30, weight: .semibold))
+                    .font(.system(.title, weight: .semibold))
                     .foregroundStyle(Color.honey)
                 Text("Add a photo from the date")
                     .font(.nookiHeadline)
@@ -1077,20 +1073,17 @@ private struct DatePlannerSheet: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            UsSheetHeader(title: DateIdea.idea(ideaID)?.title ?? "Plan a date",
-                          subtitle: "Pick a day and what you'll do")
-            ScrollView {
+        BilletSheet(DateIdea.idea(ideaID)?.title ?? "Plan a date", size: .mediumLarge, onConfirm: { save() }) {
                 VStack(alignment: .leading, spacing: 12) {
+                    SheetSubtitle(text: "Pick a day and what you'll do")
                     DatePicker("When", selection: $date, displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.compact)
                         .tint(.honey)
-                        .colorScheme(.dark)
                         .font(.nookiBody)
                         .foregroundStyle(Ink.text)
                         .padding(.horizontal, 16)
                         .frame(height: 50)
-                        .cardSurface(radius: 16)
+                        .cardSurface(radius: Radius.control)
 
                     UsField(placeholder: "Place, e.g. our kitchen", text: $place)
 
@@ -1100,7 +1093,7 @@ private struct DatePlannerSheet: View {
                             .foregroundStyle(Ink.textSecondary)
                         HStack(spacing: 8) {
                             ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
-                                UsChip(title: initial, selected: organizer == initial) {
+                                FilterChip(initial, isSelected: organizer == initial) {
                                     organizer = initial
                                 }
                             }
@@ -1113,7 +1106,7 @@ private struct DatePlannerSheet: View {
                         .tint(.honey)
                         .padding(.horizontal, 16)
                         .frame(height: 50)
-                        .cardSurface(radius: 16)
+                        .cardSurface(radius: Radius.control)
 
                     if surprise {
                         UsField(placeholder: "Hint, e.g. dress warm", text: $hint)
@@ -1125,18 +1118,10 @@ private struct DatePlannerSheet: View {
                         .tint(.honey)
                         .padding(.horizontal, 16)
                         .frame(minHeight: 50)
-                        .cardSurface(radius: 16)
+                        .cardSurface(radius: Radius.control)
 
-                    PrimaryButton("Save date") { save() }
-                        .padding(.top, 6)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
-            }
-            .scrollIndicators(.hidden)
         }
-        .usSheet(detents: [.medium, .large])
     }
 
     private func save() {

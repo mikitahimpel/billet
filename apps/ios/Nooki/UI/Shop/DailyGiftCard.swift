@@ -26,14 +26,13 @@ struct DailyGiftCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if ready {
-                Button("Open") { Task { await claim() } }
-                    .shopButton()
+                PrimaryButton("Open", fullWidth: false) { Task { await claim() } }
                     .disabled(opening)
                     .accessibilityHint("Opens today's free gift")
             }
         }
         .padding(Space.m)
-        .shopCard()
+        .cardSurface()
         .overlay { GiftBurst(trigger: bursts) }
         .haptic(.success, trigger: bursts)
         .accessibilityElement(children: .contain)

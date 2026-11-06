@@ -98,14 +98,14 @@ struct PurchaseMoment: View {
                     .lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            Button("Undo") {
+            SecondaryButton("Undo", fullWidth: false) {
                 if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
             }
-            .shopButton(prominent: false)
             .accessibilityHint("Gives back \(purchase.cost) coins")
         }
         .padding(Space.m)
-        .shopCard(radius: Radius.card)
+        .cardSurface()
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
     }
 
@@ -122,7 +122,8 @@ struct PurchaseMoment: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Space.m)
-        .shopCard(radius: Radius.card)
+        .cardSurface()
+        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("purchaseRefused")
     }

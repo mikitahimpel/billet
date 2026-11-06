@@ -14,6 +14,9 @@ struct LockCanvasView: View {
     @State private var choosingInk = false
     @State private var canvasSize = CGSize.zero
     @State private var sent = 0
+    @State private var coinsShown: CoinsAsk?
+    /// The coin packs the Store sheet sells, from the Home screen that presented this canvas.
+    var coinPacks: CoinPacksModel?
 
     var body: some View {
         GeometryReader { geometry in
@@ -22,15 +25,16 @@ struct LockCanvasView: View {
                     .ignoresSafeArea()
                     .accessibilityHidden(true)
 
+                // Under the chrome: a surface over the buttons takes their taps, which is how Close once did nothing.
+                drawingSurface(size: geometry.size)
+
                 VStack(spacing: 0) {
                     topBar
                     clock
+                        .allowsHitTesting(false)
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 16)
-                .allowsHitTesting(true)
-
-                drawingSurface(size: geometry.size)
+                .padding(.horizontal, Space.l)
 
                 VStack(spacing: 10) {
                     Spacer(minLength: 0)
@@ -38,7 +42,7 @@ struct LockCanvasView: View {
                     toolbar
                     homeIndicator
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Space.l)
             }
             .onAppear { canvasSize = geometry.size }
             .onChange(of: geometry.size) { _, size in canvasSize = size }
@@ -54,62 +58,69 @@ struct LockCanvasView: View {
         .onDisappear { model.disappeared() }
         // Over the canvas: an ink bought here plays its moment and Undo where it was tapped.
         .overlay { PurchaseMoment(state: state) }
+        // The Store opens over the canvas: Home's own sheet would wait under this cover.
+        .onChange(of: state.shop.coinsAsk) { _, ask in coinsShown = ask }
+        .sheet(item: $coinsShown, onDismiss: { state.shop.coinsAsk = nil }) { ask in
+            CoinsSheet(state: state, packs: coinPacks, ask: ask)
+        }
     }
 
     // MARK: The lock screen
 
     private var topBar: some View {
         HStack(alignment: .center) {
-            Button { dismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.plain)
-            .glass(.circle, interactive: true)
-            .accessibilityLabel("Close")
-            .accessibilityIdentifier("drawClose")
+            GlassIconButton(symbol: "xmark", label: "Close") { dismiss() }
+                .accessibilityIdentifier("drawClose")
 
             Spacer()
 
             VStack(spacing: 3) {
                 Text(model.partnerName)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .font(.nookiCallout.weight(.semibold))
+                    .foregroundStyle(Ink.primary)
                 if model.isPartnerDrawing {
                     HStack(spacing: 5) {
                         Circle().fill(Color(hex: 0x41D37E)).frame(width: 7, height: 7)
                         Text("\(model.partnerName) is drawing…")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.primary)
                     }
                     .transition(.opacity)
                     .accessibilityIdentifier("partnerDrawing")
                 }
             }
-            .shadow(color: .black.opacity(0.18), radius: 4, y: 1)
+            .shadow(color: .black.opacity(0.3), radius: 4, y: 1)
 
             Spacer()
 
             wallpaperMenu
         }
-        .padding(.top, 8)
+        .padding(.top, Space.s)
+        // Swiping down from the top bar dismisses; the canvas below keeps every other drag for ink.
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 24)
+                .onEnded { value in
+                    if value.translation.height > 80, abs(value.translation.width) < value.translation.height {
+                        dismiss()
+                    }
+                }
+        )
     }
 
     private var clock: some View {
         TimelineView(.everyMinute) { context in
             VStack(spacing: -6) {
                 Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
-                    .font(.system(size: 21, weight: .semibold, design: .rounded))
+                    .font(.nookiClockDate)
                 Text(context.date, format: .dateTime.hour().minute())
-                    .font(.system(size: 104, weight: .light, design: .rounded))
+                    .font(.nookiClock)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
             }
             .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.16), radius: 8, y: 2)
+            .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
         }
         .padding(.top, 18)
         .accessibilityElement(children: .combine)
@@ -117,7 +128,7 @@ struct LockCanvasView: View {
 
     private var homeIndicator: some View {
         Capsule()
-            .fill(.white.opacity(0.85))
+            .fill(.white.opacity(0.7))
             .frame(width: 134, height: 5)
             .padding(.bottom, 4)
             .accessibilityHidden(true)
@@ -142,11 +153,10 @@ struct LockCanvasView: View {
                 }
             }
         } label: {
-            Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .glass(.circle, interactive: true)
+            GlassSymbol(name: "photo.on.rectangle")
+                .frame(width: Size.control, height: Size.control)
+                .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
+                .contentShape(.circle)
         }
         .accessibilityLabel("Wallpaper")
         .accessibilityIdentifier("drawWallpaper")
@@ -174,15 +184,15 @@ struct LockCanvasView: View {
     // MARK: Tools
 
     private var toolbar: some View {
-        GlassGroup(spacing: 8) {
-            HStack(spacing: 6) {
+        GlassGroup(spacing: Space.s) {
+            HStack(spacing: Space.xs) {
                 Button { choosingInk.toggle() } label: {
                     Circle()
                         .fill(model.ink.color(onDark: true))
                         .overlay(Circle().strokeBorder(.white, lineWidth: 2.5))
                         .frame(width: 26, height: 26)
-                        .shadow(color: model.ink.color(onDark: true).opacity(0.6), radius: 5)
-                        .frame(width: 44, height: 44)
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.circle)
                 }
                 .accessibilityLabel("Ink, \(model.ink.name)")
                 .accessibilityIdentifier("drawInk")
@@ -193,28 +203,23 @@ struct LockCanvasView: View {
                 }
                 tool("trash", label: "Clear", id: "drawClear", enabled: !model.isEmpty) { model.clear() }
 
-                Spacer(minLength: 4)
+                Spacer(minLength: Space.xs)
 
                 Button { send() } label: {
-                    Group {
-                        if model.sendState == .sending {
-                            ProgressView().tint(.white)
-                        } else {
-                            Image(systemName: model.sendState == .failed ? "arrow.clockwise" : "paperplane.fill")
-                                .font(.system(size: 17, weight: .bold))
-                        }
+                    if model.sendState == .sending {
+                        ProgressView().tint(Ink.heroInk)
+                    } else {
+                        Image(systemName: model.sendState == .failed ? "arrow.clockwise" : "paperplane.fill")
+                            .font(.body.weight(.bold))
                     }
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 44)
-                    .background(Capsule().fill(.honeyGradient))
                 }
+                .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .disabled(model.isEmpty || model.sendState == .sending)
-                .opacity(model.isEmpty ? 0.5 : 1)
                 .accessibilityLabel(model.sendState == .failed ? "Try sending again" : "Send")
                 .accessibilityIdentifier("drawSend")
             }
             .buttonStyle(.plain)
-            .padding(6)
+            .padding(Space.xs)
             .warmGlass(Capsule(), interactive: true)
         }
     }
@@ -223,20 +228,22 @@ struct LockCanvasView: View {
                       action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(selected ? Color(hex: 0x3A2114) : .white)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(selected ? Color.white.opacity(0.9) : .clear))
+                .font(.body.weight(.semibold))
+                .imageScale(.large)
+                .foregroundStyle(selected ? Ink.heroInk : Ink.primary)
+                .frame(width: Size.control, height: Size.control)
+                .background(Circle().fill(selected ? Color.honey : .clear))
+                .contentShape(.circle)
         }
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.4)
+        .opacity(enabled ? 1 : 0.5)
         .accessibilityLabel(label)
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier(id)
     }
 
     private var inkPalette: some View {
-        InkPalette(state: state, selection: $model.ink, onDark: true, label: .white, openShop: { openShop(at: $0) }) {
+        InkPalette(state: state, selection: $model.ink, onDark: true, label: .white, closesForStore: false) {
             model.tool = .pen
             choosingInk = false
         }
@@ -255,10 +262,5 @@ struct LockCanvasView: View {
                 dismiss()
             }
         }
-    }
-
-    private func openShop(at ink: PaletteInk) {
-        state.openShop(.ink(ink.id))
-        dismiss()
     }
 }

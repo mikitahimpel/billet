@@ -39,7 +39,7 @@ final class UITourTests: XCTestCase {
             shot("08-profile")
             if tap(app.buttons["Edit profile"]) {
                 shot("17-profile-edit")
-                _ = tap(app.buttons["Cancel"])
+                _ = tap(app.navigationBars.buttons.element(boundBy: 0))
             }
             if tap(app.buttons["Settings"]) {
                 shot("13-settings")
@@ -120,12 +120,12 @@ final class UITourTests: XCTestCase {
         Thread.sleep(forTimeInterval: 1)
     }
 
-    /// Backs out of whatever the profile pushed, then closes it with Done; a swipe on a pushed screen can scroll it
+    /// Backs out of whatever the profile pushed, then closes it with Close; a swipe on a pushed screen can scroll it
     /// instead of closing the sheet.
     @MainActor
     private func closeProfile(_ app: XCUIApplication) {
         for _ in 0..<3 {
-            let done = app.buttons["Done"]
+            let done = app.buttons["Close"]
             if done.exists, done.isHittable {
                 done.tap()
                 Thread.sleep(forTimeInterval: 1.5)

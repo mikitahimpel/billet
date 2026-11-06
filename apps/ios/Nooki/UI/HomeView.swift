@@ -25,6 +25,8 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// A room switch is under way; another waits for it.
+    @State private var switchingRoom = false
     /// The Coins sheet's packs, once there is a server to buy them through.
     @State private var coinPacks: CoinPacksModel?
     /// The Coins sheet on screen, a moment after the shop asked for it.
@@ -104,7 +106,7 @@ struct HomeView: View {
                     UsView(state: state)
                 case .world:
                     VStack(spacing: 16) {
-                        RoomControls(state: state, select: select)
+                        RoomSwitch(state: state, select: select)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 16)
@@ -303,13 +305,8 @@ struct HomeView: View {
                 InboxView(model: inbox, state: state) { target in
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
-                .presentationDetents([.large])
-                .presentationBackground(Ink.screen)
-                .presentationDragIndicator(.visible)
             } else {
                 InboxSignedOut(petName: state.petName)
-                    .presentationBackground(Ink.screen)
-                    .presentationDragIndicator(.visible)
             }
         }
         .onChange(of: state.shop.coinsAsk) { _, ask in
@@ -329,7 +326,7 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $state.drawing) {
             LockCanvasView(
                 state: state, api: session?.api,
-                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner), coinPacks: coinPacks)
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task {
@@ -407,26 +404,43 @@ struct HomeView: View {
         }
     }
 
+    /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
+    /// new room has drawn. The City is built under the stand-in, which hides the moment it holds the main thread.
     private func select(_ room: RoomKind) {
-        guard room != state.room else { return }
+        guard room != state.room, !switchingRoom else { return }
         if room == .city { hints.done(RoomsHint()) }
-        if room == .city {
-            // Building the City holds the main thread for a moment, so it waits for the switch to finish moving;
-            // until then the home room stays on screen and running, and a tap back to it just stays there.
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                guard state.room == .city, city == nil else { return }
+        switchingRoom = true
+        worldSnapshot = Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+        var still = Transaction(animation: nil)
+        still.disablesAnimations = true
+        withTransaction(still) { roomLive = false }
+        // The switch moves at once; the room under the stand-in follows it.
+        withAnimation(.snappy(duration: 0.25)) { state.room = room }
+        Task {
+            // One pass for the stand-in to be on screen before the room under it changes.
+            try? await Task.sleep(for: .milliseconds(60))
+            if room == .city {
                 home?.stop()
                 let built = CityRoomScene()
                 city = built
                 NookiPerf.shown(built, kind: .city)
+            } else {
+                city?.stop()
+                city = nil
+                if let home { NookiPerf.shown(home, kind: .home) }
             }
-        } else {
-            city?.stop()
-            city = nil
-            if let home { NookiPerf.shown(home, kind: .home) }
+            if let scene {
+                let start = scene.frame
+                let deadline = ContinuousClock.now + .seconds(2)
+                while scene.frame == start, ContinuousClock.now < deadline {
+                    try? await Task.sleep(for: .milliseconds(8))
+                }
+            }
+            withAnimation(.easeInOut(duration: 0.25)) { roomLive = true }
+            try? await Task.sleep(for: .milliseconds(300))
+            if roomLive { worldSnapshot = nil }
+            switchingRoom = false
         }
-        withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }
 
     /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
@@ -526,48 +540,25 @@ struct HomeView: View {
     }
 }
 
-/// Switches between Mochi's rooms.
-private struct RoomControls: View {
+/// Switches between Mochi's rooms with a small glass capsule under the header; a swipe of the scene does the same.
+private struct RoomSwitch: View {
     let state: HomeState
     var select: (RoomKind) -> Void
 
     var body: some View {
         // One room has no switch: its name would be the only choice.
         if state.rooms.variant.hasRoomChoice {
-            roomSwitch.frame(maxWidth: .infinity)
+            GlassSegmented(
+                state.rooms.variant.kinds.map { ($0, $0.title) },
+                selection: Binding(get: { state.room }, set: select),
+                identifier: "roomSwitch"
+            )
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel("Room")
+            .accessibilityValue(state.room.title)
+            .accessibilityHint("Swipe the room sideways, or tap, to visit the other one")
+            .popoverTip(RoomsHint(), arrowEdge: .top)
         }
-    }
-
-    /// The room's name with a dot for each room under it; a tap visits the next one, and so does a swipe of the scene.
-    private var roomSwitch: some View {
-        let kinds = state.rooms.variant.kinds
-        return Button {
-            guard let index = kinds.firstIndex(of: state.room) else { return }
-            select(kinds[(index + 1) % kinds.count])
-        } label: {
-            VStack(spacing: 6) {
-                Text(state.room.title)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.primary)
-                    .contentTransition(.opacity)
-                HStack(spacing: 6) {
-                    ForEach(kinds, id: \.self) { room in
-                        Circle()
-                            .fill(Ink.primary.opacity(state.room == room ? 1 : 0.35))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-            }
-            .frame(minWidth: 88, minHeight: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Room")
-        .accessibilityValue(state.room.title)
-        .accessibilityIdentifier("roomSwitch")
-        .accessibilityHint("Swipe the room sideways, or tap, to visit the other one")
-        .sensoryFeedback(.selection, trigger: state.room)
-        .popoverTip(RoomsHint(), arrowEdge: .top)
     }
 }
 
