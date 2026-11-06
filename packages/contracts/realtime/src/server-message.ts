@@ -8,6 +8,7 @@ import { SharedList } from "@billet/contracts-domain/list";
 import { PickMatch } from "@billet/contracts-domain/pick-tonight";
 import { LocalDay } from "@billet/contracts-domain/coins";
 import { GuessReveal, GuessScore } from "@billet/contracts-domain/guess";
+import { Riddle } from "@billet/contracts-domain/riddle";
 import { PairShop } from "@billet/contracts-domain/shop";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
@@ -78,5 +79,10 @@ export const ServerMessage = Schema.TaggedUnion({
    * `guess: true`, the answerer's own included.
    */
   GuessRevealed: { round: LocalDay, reveal: Schema.Array(GuessReveal), score: GuessScore },
+  /**
+   * A draw-guess riddle was sent, tried, hinted or ended, as the socket's own user sees it: the
+   * guesser gets no `word` while it is open. Sent to every socket that resumed with `riddle: true`.
+   */
+  RiddleChanged: { riddle: Riddle },
 });
 export type ServerMessage = typeof ServerMessage.Type;

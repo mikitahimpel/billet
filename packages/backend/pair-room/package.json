@@ -15,6 +15,8 @@
     "./lists": "./src/lists.ts",
     "./note-id-source": "./src/note-id-source.ts",
     "./pick-tonight": "./src/pick-tonight.ts",
+    "./riddle": "./src/riddle.ts",
+    "./riddle-rules": "./src/riddle-rules.ts",
     "./room-command": "./src/room-command.ts",
     "./room-decision": "./src/room-decision.ts",
     "./room-service": "./src/room-service.ts",

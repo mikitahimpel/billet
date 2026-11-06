@@ -41,6 +41,8 @@ export const ClientMessage = Schema.TaggedUnion({
     moods: Schema.optionalKey(Schema.Boolean),
     /** Asks for `GuessProgress` and `GuessRevealed` as the pair plays Who knows who. */
     guess: Schema.optionalKey(Schema.Boolean),
+    /** Asks for `RiddleChanged` each time a draw-guess riddle is sent, tried, hinted or ended. */
+    riddle: Schema.optionalKey(Schema.Boolean),
   },
   /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },

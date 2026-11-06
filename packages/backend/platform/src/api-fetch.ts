@@ -30,6 +30,8 @@ import { PickTonightRoutes } from "@billet/backend-notes/pick-tonight-routes";
 import { PickTonightService } from "@billet/backend-notes/pick-tonight-service";
 import { GuessRoutes } from "@billet/backend-notes/guess-routes";
 import { GuessService } from "@billet/backend-notes/guess-service";
+import { RiddleRoutes } from "@billet/backend-notes/riddle-routes";
+import { RiddleService } from "@billet/backend-notes/riddle-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -105,6 +107,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ListsRoutes,
     PickTonightRoutes,
     GuessRoutes,
+    RiddleRoutes,
     TitlesRoutes,
     FlagsRoutes,
     DatesRoutes,
@@ -132,6 +135,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ListsService.layer,
         PickTonightService.layer,
         GuessService.layer,
+        RiddleService.layer,
         TitleCatalog.layer.pipe(
           Layer.provide(
             Layer.mergeAll(

@@ -190,6 +190,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_list_travel"),
       expect.stringContaining("_movie_swipes"),
       expect.stringContaining("_guess"),
+      expect.stringContaining("_riddles"),
     ]);
   });
 
@@ -765,6 +766,115 @@ describe("PairRoom realtime across eviction", () => {
     expect(after).toMatchObject({
       _tag: "Done",
       view: { answers: [], partnerAnswered: 0, score: { allTime: { mine: 0, partner: 0 } } },
+    });
+  });
+
+  it("sends a socket that resumes following Who knows who the partner's progress, then the reveal", async () => {
+    const room = await openRoom();
+    const first = await room.guess(alice, { _tag: "View" });
+    if (first._tag !== "Done") throw new Error(first.reason);
+    const { round } = first.view;
+    const answer = (by: typeof alice, question: number) =>
+      room.guess(by, { _tag: "Answer", round: round.id, question, option: 1 } as never);
+
+    for (const question of round.questions.slice(0, 2)) await answer(alice, question);
+    const late = await open(room, bob);
+    late.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, guess: true }));
+    await until(() => late.frames.some((f) => f._tag === "GuessProgress"));
+    expect(late.frames.find((f) => f._tag === "GuessProgress")).toEqual({
+      _tag: "GuessProgress",
+      round: round.id,
+      answered: 2,
+    });
+
+    for (const question of round.questions.slice(2)) await answer(alice, question);
+    for (const question of round.questions) await answer(bob, question);
+    const after = await open(room, alice);
+    after.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, guess: true }));
+    await until(() => after.frames.some((f) => f._tag === "GuessRevealed"));
+    expect(after.frames.find((f) => f._tag === "GuessRevealed")).toMatchObject({
+      round: round.id,
+      reveal: expect.any(Array),
+    });
+    expect(after.frames.some((f) => f._tag === "GuessProgress")).toBe(false);
+  });
+
+  it("sends the reveal again for a repeated last answer of a revealed round", async () => {
+    const room = await openRoom();
+    const first = await room.guess(alice, { _tag: "View" });
+    if (first._tag !== "Done") throw new Error(first.reason);
+    const { round } = first.view;
+    const answer = (by: typeof alice, question: number) =>
+      room.guess(by, { _tag: "Answer", round: round.id, question, option: 0 } as never);
+    for (const question of round.questions) await answer(alice, question);
+    const a = await open(room, alice);
+    a.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, guess: true }));
+    await until(() => a.frames.some((f) => f._tag === "Presence"));
+    for (const question of round.questions) await answer(bob, question);
+    const reveals = () => a.frames.filter((f) => f._tag === "GuessRevealed").length;
+    await until(() => reveals() === 1);
+    await answer(bob, round.questions.at(-1)!);
+    await until(() => reveals() === 2);
+  });
+
+  it("keeps draw-guess riddles in SQLite, hides the word from the guesser, pays the end and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    const notesOnly = await open(room, bob);
+    a.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, riddle: true, shop: true }));
+    b.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, riddle: true }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await until(() => a.frames.some((f) => f._tag === "ShopChanged"));
+
+    const id = (n: number) => `00000000-0000-4000-8000-00000000900${n}`;
+    const sendRiddle = (n: number, word: string) =>
+      room.riddle(alice, {
+        _tag: "Send",
+        id: id(n),
+        word,
+        compact: { version: 1, strokes: [] },
+        image: "pairs/pair/riddles/r.png",
+      } as never);
+    expect(await sendRiddle(1, "Cat")).toMatchObject({ _tag: "Changed", riddle: { word: "cat" } });
+    await until(() => b.frames.some((f) => f._tag === "RiddleChanged"));
+    await until(() => a.frames.some((f) => f._tag === "RiddleChanged"));
+    const seen = (frames: typeof a.frames) =>
+      frames.find((f) => f._tag === "RiddleChanged")?.["riddle"] as { word?: string };
+    expect(seen(a.frames).word).toBe("cat");
+    expect(seen(b.frames).word).toBeUndefined();
+    expect(JSON.stringify(b.frames)).not.toContain('"cat"');
+
+    await evictDurableObject(room);
+
+    const late = await open(room, bob);
+    late.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, riddle: true }));
+    await until(() => late.frames.some((f) => f._tag === "RiddleChanged"));
+    expect(seen(late.frames)).toMatchObject({ id: id(1), shape: [3] });
+    expect(seen(late.frames).word).toBeUndefined();
+
+    const key = "00000000-0000-4000-8000-000000000077";
+    const guess = (text: string) =>
+      room.riddle(bob, { _tag: "Guess", riddle: id(1), key, guess: text } as never);
+    expect(await guess("CAT")).toMatchObject({ _tag: "Changed", right: true });
+    expect(await guess("dog")).toMatchObject({
+      _tag: "Changed",
+      right: true,
+      riddle: { tries: 1 },
+    });
+    await until(() => a.frames.filter((f) => f._tag === "ShopChanged").length > 1);
+    const coins = await room.coins(undefined, 100);
+    expect(coins?.entries.find((entry) => entry.id === `earn:${id(1)}`)?.amount).toBe(10);
+    expect(notesOnly.frames.some((f) => f._tag === "RiddleChanged")).toBe(false);
+    expect(await room.riddle(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
+    });
+
+    await room.forgetMember(alice);
+    expect(await room.riddle(bob, { _tag: "View" })).toEqual({
+      _tag: "Listed",
+      view: { open: [], ended: [], series: 0, best: 0 },
     });
   });
 

@@ -21,6 +21,7 @@ import {
   uuid,
   vacant,
   withCat,
+  riddleOf,
 } from "./samples.ts";
 import { freeInk } from "@billet/contracts-domain/inks";
 import { CoinEntry, CoinEntryId, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
@@ -404,6 +405,12 @@ describe("tagged unions", () => {
       paid: false,
     }),
     SetMood: setMood(),
+    SaveRiddle: RoomCommand.cases.SaveRiddle.make({
+      by: bob,
+      at: 1_700_000_000_000,
+      write: { riddle: riddleOf(alice) },
+      reward: { won: true, score: 10 },
+    }),
     CreditPurchase: RoomCommand.cases.CreditPurchase.make({
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
       kind: "buy",
@@ -487,6 +494,7 @@ describe("tagged unions", () => {
     MoodSet: RoomOutput.cases.MoodSet.make({
       checkIn: { user: bob, mood: "busy", note: "deadline", at: 1_700_000_000_000 },
     }),
+    RiddleSaved: RoomOutput.cases.RiddleSaved.make({ write: { riddle: riddleOf(alice) } }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -513,6 +521,7 @@ describe("tagged unions", () => {
     ListNotFound: RoomRejection.cases.ListNotFound.make({}),
     ListItemNotFound: RoomRejection.cases.ListItemNotFound.make({}),
     MoodNoteTooLong: RoomRejection.cases.MoodNoteTooLong.make({}),
+    RoomJournalsGame: RoomRejection.cases.RoomJournalsGame.make({}),
   };
 
   it.each([

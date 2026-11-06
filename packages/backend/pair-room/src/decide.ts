@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import type { CatEntry, CatEvent } from "@billet/contracts-domain/cat";
+import { type CatEntry, type CatEvent, drawGuessGame } from "@billet/contracts-domain/cat";
 import {
   type CoinEntry,
   CoinEntryId,
@@ -456,6 +456,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "SetMood":
     case "CreditPurchase":
     case "ChangeList":
+    case "SaveRiddle":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -516,8 +517,12 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
     case "RecordCatEvent": {
       const { by } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
-      if (room.cat === undefined) return rejected(RoomRejection.cases.CatNotAdopted.make({}));
       const { id, at, event } = command;
+      // The room pays draw-guess from the round itself; from an app it would be coins for nothing.
+      if (event._tag === "GamePlayed" && event.game === drawGuessGame) {
+        return rejected(RoomRejection.cases.RoomJournalsGame.make({}));
+      }
+      if (room.cat === undefined) return rejected(RoomRejection.cases.CatNotAdopted.make({}));
       const next = journal(room.cat, { id, by, at, event });
       const after = cared(room, next.cat, next.entry);
       return accepted(after.room, after.outputs);
@@ -637,6 +642,22 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         user === by ? [checkIn] : room.moods.filter((earlier) => earlier.user === user),
       );
       return accepted({ ...room, moods }, [RoomOutput.cases.MoodSet.make({ checkIn })]);
+    }
+    case "SaveRiddle": {
+      const { by, at, write, reward } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const saved = RoomOutput.cases.RiddleSaved.make({ write });
+      if (reward === undefined) return accepted(room, [saved]);
+      const event: CatEvent = { _tag: "GamePlayed", game: drawGuessGame, ...reward };
+      const id = write.riddle.id;
+      if (room.cat === undefined) {
+        // Like a note before the cat: no journal, but the round still pays, on the UTC day.
+        const earned = earnFor(room.wallet, { id, at, event }, 0);
+        return accepted({ ...room, wallet: earned.wallet }, [saved, ...coinsEntered(earned.coins)]);
+      }
+      const played = journal(room.cat, { id, by, at, event });
+      const after = cared(room, played.cat, played.entry);
+      return accepted(after.room, [saved, ...after.outputs]);
     }
     case "CreditPurchase": {
       const { id, kind, coins, ref, at } = command;

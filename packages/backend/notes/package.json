@@ -24,6 +24,8 @@
     "./gifts-service": "./src/gifts-service.ts",
     "./guess-routes": "./src/guess-routes.ts",
     "./guess-service": "./src/guess-service.ts",
+    "./riddle-routes": "./src/riddle-routes.ts",
+    "./riddle-service": "./src/riddle-service.ts",
     "./lists-routes": "./src/lists-routes.ts",
     "./lists-service": "./src/lists-service.ts",
     "./pick-tonight-routes": "./src/pick-tonight-routes.ts",

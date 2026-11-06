@@ -36,6 +36,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   /// Both members answered the whole round of `round`: every question opened, in round order, and
   /// the score after it as this user sees it. Sent to every socket that resumed with `guess: true`.
   case guessRevealed(round: String, reveal: [GuessReveal], score: GuessScore)
+  /// A draw-guess riddle was sent, tried, hinted or ended, as this user sees it. Sent to a socket
+  /// that resumed with `riddle: true`: each open riddle on the resume, then every change.
+  case riddleChanged(Riddle)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -58,6 +61,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case answered
     case reveal
     case score
+    case riddle
   }
 
   public init(from decoder: any Decoder) throws {
@@ -107,6 +111,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .guessProgress(
         round: try container.decode(String.self, forKey: .round),
         answered: try container.decode(Int.self, forKey: .answered))
+    case "RiddleChanged":
+      self = .riddleChanged(try container.decode(Riddle.self, forKey: .riddle))
     case "GuessRevealed":
       self = .guessRevealed(
         round: try container.decode(String.self, forKey: .round),
@@ -181,6 +187,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       try container.encode(round, forKey: .round)
       try container.encode(reveal, forKey: .reveal)
       try container.encode(score, forKey: .score)
+    case .riddleChanged(let riddle):
+      try container.encode("RiddleChanged", forKey: .tag)
+      try container.encode(riddle, forKey: .riddle)
     }
   }
 }

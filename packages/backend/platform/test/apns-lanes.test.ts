@@ -10,6 +10,8 @@ import {
   guessDeliveryId,
   matchDeliveryId,
   reactionDeliveryId,
+  riddleDeliveryId,
+  riddleEndDeliveryId,
   sendPushLane,
   type PushLaneDependencies,
 } from "../src/apns-lanes.ts";
@@ -18,6 +20,7 @@ import {
   byteLength,
   liveActivityBody,
   maxPushBytes,
+  ordinal,
   widgetBody,
 } from "../src/apns-payloads.ts";
 
@@ -65,6 +68,13 @@ const deps = (overrides: Partial<PushLaneDependencies> = {}) => {
     }),
     match: async () => ({ recipient: alice, name: "Arrival" }),
     guess: async () => ({ recipient: bob, role: "subject", count: 5 }),
+    riddle: async () => ({
+      drawer: alice,
+      guesser: bob,
+      word: "north pole",
+      tries: 0,
+      state: "Open",
+    }),
     recipient: async (note) => (note.author === alice ? bob : alice),
     tokens: async () => [
       { token: "aa", environment: "production" },
@@ -297,6 +307,96 @@ describe("a finished Who knows who part", () => {
       "Abandon",
     );
     expect([...widget.sent, ...gone.sent]).toEqual([]);
+  });
+});
+
+describe("a draw-guess riddle", () => {
+  const id = "00000000-0000-4000-8000-000000000001";
+  const alertOf = (push: ApnsPush | undefined) => (push!.body as { aps: unknown }).aps;
+
+  it("is an alert to the guesser while it is open, with how many letters", async () => {
+    const sent = deps();
+    const entry = { noteId: riddleDeliveryId(id), lane: "AlertPush" } as const;
+    expect(await sendPushLane(entry, sent.dependencies)).toBe("Delivered");
+    expect(sent.sent.map((push) => push.collapseId)).toEqual([`d-${id}`, `d-${id}`]);
+    expect(alertOf(sent.sent[0])).toEqual({
+      alert: { title: "Nooki", body: "Your partner drew you a riddle. 9 letters." },
+      sound: "default",
+      "thread-id": "draw-guess",
+    });
+    const asked: Array<string> = [];
+    const tokens = deps({
+      tokens: async (user) => {
+        asked.push(user);
+        return [];
+      },
+    });
+    await sendPushLane(entry, tokens.dependencies);
+    expect(asked).toEqual([bob]);
+  });
+
+  it("tells the drawer how the round ended, and nothing on the other lanes", async () => {
+    const solved = deps({
+      riddle: async () => ({ drawer: alice, guesser: bob, word: "cat", tries: 2, state: "Solved" }),
+    });
+    const ended = { noteId: riddleEndDeliveryId(id), lane: "AlertPush" } as const;
+    expect(await sendPushLane(ended, solved.dependencies)).toBe("Delivered");
+    expect((alertOf(solved.sent[0]) as { alert: unknown }).alert).toEqual({
+      title: "Nooki",
+      body: "Your partner guessed “cat” on the 2nd try 🎉",
+    });
+    const gaveUp = deps({
+      riddle: async () => ({
+        drawer: alice,
+        guesser: bob,
+        word: "cat",
+        tries: 4,
+        state: "GivenUp",
+      }),
+    });
+    await sendPushLane(ended, gaveUp.dependencies);
+    expect((alertOf(gaveUp.sent[0]) as { alert: unknown }).alert).toEqual({
+      title: "Nooki",
+      body: "Your partner gave up on “cat”",
+    });
+    const widget = deps();
+    expect(
+      await sendPushLane({ noteId: riddleDeliveryId(id), lane: "WidgetPush" }, widget.dependencies),
+    ).toBe("Delivered");
+    expect(widget.sent).toEqual([]);
+  });
+
+  it("gives up on a riddle no longer held, a new one already ended, or an end still open", async () => {
+    const gone = deps({ riddle: async () => undefined });
+    expect(
+      await sendPushLane({ noteId: riddleDeliveryId(id), lane: "AlertPush" }, gone.dependencies),
+    ).toBe("Abandon");
+    const open = deps();
+    expect(
+      await sendPushLane({ noteId: riddleEndDeliveryId(id), lane: "AlertPush" }, open.dependencies),
+    ).toBe("Abandon");
+    const solved = deps({
+      riddle: async () => ({ drawer: alice, guesser: bob, word: "cat", tries: 1, state: "Solved" }),
+    });
+    expect(
+      await sendPushLane({ noteId: riddleDeliveryId(id), lane: "AlertPush" }, solved.dependencies),
+    ).toBe("Abandon");
+    expect([...gone.sent, ...open.sent, ...solved.sent]).toEqual([]);
+  });
+
+  it("counts tries in words", () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal)).toEqual([
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "11th",
+      "12th",
+      "13th",
+      "21st",
+      "22nd",
+      "101st",
+    ]);
   });
 });
 

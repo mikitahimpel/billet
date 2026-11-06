@@ -340,3 +340,40 @@ export const guessWeeks = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.week, table.member] })],
 );
+
+// Draw-guess riddles, each a `RiddleRow` as JSON in `body`, word included: the room decides what
+// each member may see. `drawer` and `ended_at` (null while open) are kept beside it for the reads
+// that pick the open riddles and the latest ended ones.
+export const riddles = sqliteTable(
+  "riddles",
+  {
+    id: text("id").primaryKey(),
+    drawer: text("drawer").notNull(),
+    endedAt: integer("ended_at"),
+    body: text("body").notNull(),
+  },
+  (table) => [index("riddles_ended_at").on(table.endedAt)],
+);
+
+// Every try at a riddle under the guesser's key, so a retried try answers as the first did.
+export const riddleGuesses = sqliteTable(
+  "riddle_guesses",
+  {
+    riddle: text("riddle").notNull(),
+    key: text("key").notNull(),
+    right: integer("right", { mode: "boolean" }).notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.riddle, table.key] })],
+);
+
+// The pair's draw-guess series: solves in a row since the last give-up, and the best run. One row.
+export const riddleSeries = sqliteTable(
+  "riddle_series",
+  {
+    id: integer("id").primaryKey(),
+    series: integer("series").notNull(),
+    best: integer("best").notNull(),
+  },
+  (table) => [check("riddle_series_single_row", sql`${table.id} = 1`)],
+);

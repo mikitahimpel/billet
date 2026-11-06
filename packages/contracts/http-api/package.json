@@ -16,6 +16,7 @@
     "./flags": "./src/flags.ts",
     "./gifts": "./src/gifts.ts",
     "./guess": "./src/guess.ts",
+    "./riddle": "./src/riddle.ts",
     "./coins": "./src/coins.ts",
     "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",

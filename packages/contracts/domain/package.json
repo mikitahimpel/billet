@@ -25,6 +25,7 @@
     "./activity": "./src/activity.ts",
     "./mood": "./src/mood.ts",
     "./reaction": "./src/reaction.ts",
+    "./riddle": "./src/riddle.ts",
     "./riddle-words": "./src/riddle-words.ts",
     "./shop": "./src/shop.ts"
   },

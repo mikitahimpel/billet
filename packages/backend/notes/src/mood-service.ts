@@ -97,6 +97,7 @@ export class MoodService extends Context.Service<
               case "BonusTaken":
               case "ListNotFound":
               case "ListItemNotFound":
+              case "RoomJournalsGame":
                 return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-mood" }));
             }
           }

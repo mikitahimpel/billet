@@ -6,6 +6,7 @@ import { GiftsResult } from "@billet/backend-pair-room/gifts";
 import { ListsResult } from "@billet/backend-pair-room/lists";
 import { PickTonightResult } from "@billet/backend-pair-room/pick-tonight";
 import { GuessResult } from "@billet/backend-pair-room/guess";
+import { RiddleResult } from "@billet/backend-pair-room/riddle";
 import { RoomDecision } from "@billet/backend-pair-room/room-decision";
 import { SequencedNote } from "@billet/backend-pair-room/room-state";
 import { CatEntry } from "@billet/contracts-domain/cat";
@@ -33,6 +34,7 @@ const decodeGifts = Schema.decodeUnknownEffect(GiftsResult);
 const decodeLists = Schema.decodeUnknownEffect(ListsResult);
 const decodePickTonight = Schema.decodeUnknownEffect(PickTonightResult);
 const decodeGuess = Schema.decodeUnknownEffect(GuessResult);
+const decodeRiddle = Schema.decodeUnknownEffect(RiddleResult);
 
 const unavailable = (cause: unknown) => new NotesUnavailable({ reason: "room-unavailable", cause });
 
@@ -111,6 +113,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).gifts(by, command), decodeGifts),
         pickTonight: (pairId, by, command) =>
           callRoom(() => rooms.getByName(pairId).pickTonight(by, command), decodePickTonight),
+        riddle: (pairId, by, command) =>
+          callRoom(() => rooms.getByName(pairId).riddle(by, command), decodeRiddle),
         guess: (pairId, by, command) =>
           callRoom(() => rooms.getByName(pairId).guess(by, command), decodeGuess),
         lists: (pairId, by, request) =>

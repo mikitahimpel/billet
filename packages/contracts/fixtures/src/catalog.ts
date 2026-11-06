@@ -137,6 +137,13 @@ import {
   GuessReveal,
   GuessScore,
 } from "@billet/contracts-domain/guess";
+import { Riddle } from "@billet/contracts-domain/riddle";
+import {
+  GuessRiddleRequest,
+  GuessRiddleResponse,
+  RiddlesResponse,
+  SendRiddleRequest,
+} from "@billet/contracts-http-api/riddle";
 import {
   GuessAnswerRequest,
   GuessCatalogResponse,
@@ -658,6 +665,29 @@ const guessRound = {
   questions: guessIds,
   closesAt: Date.UTC(2026, 10, 5, 23),
 };
+const riddleImage = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/riddle-1.png");
+// Bob's view of Alice's open riddle: no word. The first hint took two decoys away, the second
+// opened the "o" of "pole".
+const openRiddle = Schema.decodeUnknownSync(Riddle)({
+  id: "00000000-0000-4000-8000-0000000000d1",
+  drawer: alice,
+  shape: [5, 4],
+  tiles: ["e", "o", "r", "x", "p", "t", "n", "h", "q", "l", "o", "z"],
+  revealed: [{ index: 6, letter: "o" }],
+  removed: [3, 8],
+  hints: 2,
+  tries: 3,
+  state: { _tag: "Open" },
+  compact,
+  image: riddleImage,
+  at: 1_700_000_000_000,
+});
+const solvedRiddle = Schema.decodeUnknownSync(Riddle)({
+  ...openRiddle,
+  tries: 4,
+  state: { _tag: "Solved", at: 1_700_000_090_000 },
+  word: "north pole",
+});
 const placesToGo = Schema.decodeUnknownSync(SharedList)({
   id: "00000000-0000-4000-8000-0000000000c6",
   kind: "travel",
@@ -866,6 +896,26 @@ export const catalog: ReadonlyArray<Fixture> = [
   }),
   fixture("GuessAnswerRequest", GuessAnswerRequest, {
     default: { round: guessDay, question: guessIds[0]!, option: 3 },
+  }),
+  fixture("Riddle", Riddle, {
+    "open-for-guesser": openRiddle,
+    "open-for-drawer": { ...openRiddle, word: solvedRiddle.word! },
+    solved: solvedRiddle,
+    "given-up": { ...solvedRiddle, state: { _tag: "GivenUp", at: 1_700_000_090_000 } },
+  }),
+  fixture("RiddlesResponse", RiddlesResponse, {
+    default: { open: [openRiddle], ended: [solvedRiddle], series: 3, best: 7 },
+    empty: { open: [], ended: [], series: 0, best: 0 },
+  }),
+  fixture("SendRiddleRequest", SendRiddleRequest, {
+    default: { id: openRiddle.id, word: "North Pole", compact, image: riddleImage },
+  }),
+  fixture("GuessRiddleRequest", GuessRiddleRequest, {
+    default: { key: idempotencyKey, guess: "north pole" },
+  }),
+  fixture("GuessRiddleResponse", GuessRiddleResponse, {
+    wrong: { riddle: openRiddle, right: false },
+    right: { riddle: solvedRiddle, right: true },
   }),
   fixture("TitleSearchResponse", TitleSearchResponse, {
     default: {
@@ -1385,6 +1435,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       moods: true,
     }),
     "resume-with-guess": ClientMessage.cases.Resume.make({ lastSeq: 7, lists: true, guess: true }),
+    "resume-with-riddle": ClientMessage.cases.Resume.make({ lastSeq: 7, riddle: true }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -1435,6 +1486,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       reveal: guessReveal,
       score: guessScore,
     }),
+    "riddle-changed": ServerMessage.cases.RiddleChanged.make({ riddle: openRiddle }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

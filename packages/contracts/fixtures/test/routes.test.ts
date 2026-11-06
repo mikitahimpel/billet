@@ -131,6 +131,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/purchases",
       },
+      "getRiddles": {
+        "method": "GET",
+        "path": "/v1/riddles",
+      },
       "getShop": {
         "method": "GET",
         "path": "/v1/shop",
@@ -142,6 +146,18 @@ it("pins the routes that clients call", () => {
       "getTitle": {
         "method": "GET",
         "path": "/v1/titles/:kind/:tmdb",
+      },
+      "giveUpRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/give-up",
+      },
+      "guessRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/guess",
+      },
+      "hintRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/hint",
       },
       "listActivity": {
         "method": "GET",
@@ -230,6 +246,10 @@ it("pins the routes that clients call", () => {
       "sendNote": {
         "method": "POST",
         "path": "/v1/notes",
+      },
+      "sendRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles",
       },
       "setGiftPlan": {
         "method": "PUT",

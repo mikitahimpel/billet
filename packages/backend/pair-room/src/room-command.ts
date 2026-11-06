@@ -16,6 +16,7 @@ import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
+import { RiddleReward, RiddleWrite } from "./riddle-rules.ts";
 
 /** Who claimed the invite, and when. */
 export const RoomJoin = Schema.Struct({ user: UserId, at: EpochMillis });
@@ -94,6 +95,16 @@ export const RoomCommand = Schema.TaggedUnion({
     change: ListCommand,
     list: Schema.optionalKey(SharedList),
     paid: Schema.Boolean,
+  },
+  /**
+   * Stores one draw-guess change, decided by the riddle rules. `reward` is set for the change that
+   * ended the round: the room journals it as `by`'s `GamePlayed`, in the same write.
+   */
+  SaveRiddle: {
+    by: UserId,
+    at: EpochMillis,
+    write: RiddleWrite,
+    reward: Schema.optionalKey(RiddleReward),
   },
   CreditPurchase: {
     id: CoinEntryId,

@@ -51,7 +51,7 @@ final class InboxLink {
                 case .guessProgress(let round, let answered): await handlers.guessProgress(round, answered)
                 case .guessRevealed(let round, let reveal, let score): await handlers.guessRevealed(round, reveal, score)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catEntryAdded, .catSaved, .moodChanged:
+                     .clear, .catEntryAdded, .catSaved, .moodChanged, .riddleChanged:
                     break
                 }
             },

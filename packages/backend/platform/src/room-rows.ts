@@ -227,3 +227,26 @@ export const StoredGuessWeek = Schema.Struct({
   member: Schema.String,
   points: Schema.Int,
 });
+
+/** What a `riddles` row holds. */
+export const StoredRiddle = Schema.Struct({
+  id: Schema.String,
+  drawer: Schema.String,
+  endedAt: Schema.NullOr(Schema.Int),
+  body: Schema.String,
+});
+
+/** What a `riddle_guesses` row holds. */
+export const StoredRiddleGuess = Schema.Struct({
+  riddle: Schema.String,
+  key: Schema.String,
+  right: Schema.Boolean,
+  at: Schema.Int,
+});
+
+/** What the `riddle_series` row holds. */
+export const StoredRiddleSeries = Schema.Struct({
+  id: Schema.Int,
+  series: Schema.Int,
+  best: Schema.Int,
+});

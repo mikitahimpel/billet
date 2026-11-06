@@ -11,6 +11,8 @@ import {
   liveActivityBody,
   matchAlertBody,
   maxPushBytes,
+  riddleAlertBody,
+  riddleEndedAlertBody,
   reactionAlertBody,
   widgetBody,
 } from "./apns-payloads.ts";
@@ -77,6 +79,20 @@ export interface PushLaneDependencies {
       }
     | undefined
   >;
+  /**
+   * The draw-guess riddle `id`, if the room still holds it: who drew it, who guesses, its word,
+   * how many tries it took and how its round stands.
+   */
+  readonly riddle: (id: string) => Promise<
+    | {
+        readonly drawer: string;
+        readonly guesser: string;
+        readonly word: string;
+        readonly tries: number;
+        readonly state: "Open" | "Solved" | "GivenUp";
+      }
+    | undefined
+  >;
   /** Who receives it: the member who did not write it. */
   readonly recipient: (note: Note) => Promise<string | undefined>;
   readonly tokens: (user: string, kind: string) => Promise<ReadonlyArray<DeviceToken>>;
@@ -137,6 +153,27 @@ const guessOfDelivery = (
   const rest = deliveryId.slice(guessPrefix.length);
   const colon = rest.indexOf(":");
   return colon > 0 ? { day: rest.slice(0, colon), member: rest.slice(colon + 1) } : undefined;
+};
+
+const riddlePrefix = "riddle:";
+const riddleEndPrefix = "riddle-end:";
+
+/** The ledger key of the push that tells the guesser a riddle is waiting. */
+export const riddleDeliveryId = (id: string): string => `${riddlePrefix}${id}`;
+
+/** The ledger key of the push that tells the drawer how the round of a riddle ended. */
+export const riddleEndDeliveryId = (id: string): string => `${riddleEndPrefix}${id}`;
+
+const riddleOfDelivery = (
+  deliveryId: string,
+): { readonly id: string; readonly ended: boolean } | undefined => {
+  if (deliveryId.startsWith(riddlePrefix)) {
+    return { id: deliveryId.slice(riddlePrefix.length), ended: false };
+  }
+  if (deliveryId.startsWith(riddleEndPrefix)) {
+    return { id: deliveryId.slice(riddleEndPrefix.length), ended: true };
+  }
+  return undefined;
 };
 
 const sendToAll = async (
@@ -212,6 +249,31 @@ const sendGuessLane = async (
 };
 
 /**
+ * A riddle is an alert, and nothing on the other lanes: a new one to its guesser while it is still
+ * open, an ended one to its drawer.
+ */
+const sendRiddleLane = async (
+  lane: PushLane,
+  delivery: { readonly id: string; readonly ended: boolean },
+  deps: PushLaneDependencies,
+): Promise<DeliveryOutcome> => {
+  if (lane !== "AlertPush") return "Delivered";
+  const found = await deps.riddle(delivery.id);
+  if (found === undefined || (found.state === "Open") === delivery.ended) return "Abandon";
+  switch (found.state) {
+    case "Open": {
+      const body = riddleAlertBody(found.word.replaceAll(" ", "").length);
+      return sendToAll(found.guesser, lane, body, `d-${delivery.id}`, deps);
+    }
+    case "Solved":
+    case "GivenUp": {
+      const body = riddleEndedAlertBody(found.word, found.state === "Solved", found.tries);
+      return sendToAll(found.drawer, lane, body, `de-${delivery.id}`, deps);
+    }
+  }
+};
+
+/**
  * One try of one lane: sends the note to every device of the partner that has a token for it.
  * Delivered once any device took it; Retry while any failure may pass; Abandon when there is no
  * one to send to or nothing will ever be accepted. A dead token is dropped as it is found. A lane
@@ -228,6 +290,8 @@ export const sendPushLane = async (
   if (match !== undefined) return sendMatchLane(entry.lane, match, deps);
   const part = guessOfDelivery(entry.noteId);
   if (part !== undefined) return sendGuessLane(entry.lane, part, deps);
+  const riddle = riddleOfDelivery(entry.noteId);
+  if (riddle !== undefined) return sendRiddleLane(entry.lane, riddle, deps);
   const note = await deps.note(entry.noteId);
   if (note === undefined) return "Abandon";
   const body = bodyFor(entry.lane, note, deps.nowSeconds());

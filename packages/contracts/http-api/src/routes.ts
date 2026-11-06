@@ -116,6 +116,16 @@ export const routes = {
   answerGuess: route("POST", "/v1/guess/answers"),
   /** Every Who knows who question. No session; cached like the date catalog. */
   getGuessCatalog: route("GET", "/v1/guess/catalog"),
+  /** The pair's draw-guess riddles as the caller sees them: see `RiddlesResponse`. */
+  getRiddles: route("GET", "/v1/riddles"),
+  /** Sends a riddle to the partner; answers with it. See `SendRiddleRequest`. */
+  sendRiddle: route("POST", "/v1/riddles"),
+  /** One try at the partner's riddle: see `riddlePath` and `GuessRiddleResponse`. */
+  guessRiddle: route("POST", "/v1/riddles/:id/guess"),
+  /** Asks Mochi for a hint on the partner's riddle; answers with the riddle. */
+  hintRiddle: route("POST", "/v1/riddles/:id/hint"),
+  /** Gives up on the partner's riddle, which shows the word; answers with the riddle. */
+  giveUpRiddle: route("POST", "/v1/riddles/:id/give-up"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
@@ -151,6 +161,9 @@ export const mediaPath = (key: string): string => routes.downloadImage.path.repl
 /** The concrete path of `getTitle`. */
 export const titlePath = (kind: "movie" | "tv", tmdb: number): string =>
   routes.getTitle.path.replace(":kind", kind).replace(":tmdb", String(tmdb));
+
+/** The concrete path of `guessRiddle`, `hintRiddle` or `giveUpRiddle` for one riddle. */
+export const riddlePath = (route: Route, id: string): string => route.path.replace(":id", id);
 
 /** How a caller proves who it is, on every route except the sign-in ones. */
 export const authorizationHeader = "authorization";
