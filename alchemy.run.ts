@@ -42,6 +42,9 @@ export const Media = Cloudflare.R2.Bucket("Media");
 // and served while the database is down. The admin panel writes it (docs/maintenance.md).
 export const Status = Cloudflare.KV.Namespace("Status");
 
+// TMDB's answers for the To watch list, kept up to a week (TMDB allows six months).
+export const Titles = Cloudflare.KV.Namespace("Titles");
+
 // A deployed stage (`dev` or `prod`) keeps its state in D1, so it survives CI runners and
 // checkouts. `alchemy dev` keeps it in the gitignored `.alchemy/` folder.
 const state = Layer.unwrap(
@@ -68,6 +71,10 @@ export default Alchemy.Stack(
     const db = yield* Database;
     const media = yield* Media;
     const status = yield* Status;
+    const titles = yield* Titles;
+    // TMDB's API read access token. Without it `prod` serves no titles and every other stage
+    // serves a few built-in ones, so local dev and tests need no key.
+    const tmdbToken = yield* Config.option(Config.Redacted("TMDB_TOKEN"));
     // A token that can only read Account Analytics, for the admin's trends (docs/admin.md). Bound
     // only when the deploy has it (.env.pass.analytics-read); without it the trends use D1 alone.
     const analyticsReadToken = yield* Config.option(Config.Redacted("ANALYTICS_READ_TOKEN"));
@@ -108,6 +115,8 @@ export default Alchemy.Stack(
         DB: db,
         MEDIA: media,
         STATUS: status,
+        TITLES: titles,
+        ...(Option.isSome(tmdbToken) ? { TMDB_TOKEN: tmdbToken.value } : {}),
         EVENTS: events,
         // Shown in the admin panel's top bar, so the owner always sees which stage they change.
         // Payments read it too: only `dev` takes Xcode and mock purchases (docs/payments.md).

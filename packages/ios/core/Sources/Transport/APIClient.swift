@@ -87,6 +87,16 @@ public struct APIClient: Sendable {
   /// `.api(.notFound)` when the list or item it names is gone.
   public var lists: @Sendable () async throws(TransportError) -> ListsResponse
   public var changeList: @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse
+  /// Films and shows on TMDB matching `query`, in `language` (`en`, `pt-BR`). `.api(.unavailable)`
+  /// while TMDB is down or asks the server to slow down.
+  public var searchTitles:
+    @Sendable (_ query: String, _ language: String) async throws(TransportError) ->
+      TitleSearchResponse
+  /// One film or show, with where to watch it in `country` (ISO 3166-1 alpha-2).
+  /// `.api(.notFound)` when TMDB has no such title.
+  public var title:
+    @Sendable (_ kind: ListMediaKind, _ tmdb: Int, _ country: String, _ language: String)
+      async throws(TransportError) -> TitleDetails
   /// Replaces this user's check-in and answers with it as stored, the note trimmed.
   /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
   public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
@@ -219,6 +229,16 @@ public struct APIClient: Sendable {
       @escaping @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    searchTitles:
+      @escaping @Sendable (_ query: String, _ language: String) async throws(TransportError) ->
+      TitleSearchResponse = { (_, _) async throws(TransportError) in throw .network("offline") },
+    title:
+      @escaping @Sendable (
+        _ kind: ListMediaKind, _ tmdb: Int, _ country: String, _ language: String
+      )
+      async throws(TransportError) -> TitleDetails = {
+        (_, _, _, _) async throws(TransportError) in throw .network("offline")
+      },
     setMood:
       @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -277,6 +297,8 @@ public struct APIClient: Sendable {
     self.saveLoves = saveLoves
     self.lists = lists
     self.changeList = changeList
+    self.searchTitles = searchTitles
+    self.title = title
     self.setMood = setMood
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
@@ -497,6 +519,23 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.changeList, signed: true, body: body), as: ListsResponse.self)
       },
+      searchTitles: { (query, language) async throws(TransportError) in
+        let route = Route(
+          Routes.searchTitles.method,
+          Routes.searchTitles.path + "?" + queryString(["q": query, "lang": language]))
+        return try await http.perform(
+          try await request(route, signed: true), as: TitleSearchResponse.self)
+      },
+      title: { (kind, tmdb, country, language) async throws(TransportError) in
+        let path = Routes.getTitle.path
+          .replacingOccurrences(of: ":kind", with: kind.rawValue)
+          .replacingOccurrences(of: ":tmdb", with: String(tmdb))
+        let route = Route(
+          Routes.getTitle.method,
+          path + "?" + queryString(["country": country, "lang": language]))
+        return try await http.perform(
+          try await request(route, signed: true), as: TitleDetails.self)
+      },
       setMood: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.setMood, signed: true, body: body), as: PartnerCheckIn.self)
@@ -548,6 +587,15 @@ extension APIClient {
     if bytes.count == 12, bytes[4..<8].elementsEqual(Array("ftyp".utf8)) { return "image/heic" }
     return "image/png"
   }
+}
+
+/// `name=value` pairs joined with `&`, in name order, each value escaped.
+private func queryString(_ values: [String: String]) -> String {
+  values.sorted { $0.key < $1.key }
+    .map { name, value in
+      "\(name)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? "")"
+    }
+    .joined(separator: "&")
 }
 
 extension CharacterSet {

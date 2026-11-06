@@ -122,6 +122,10 @@ struct SettingsView: View {
             }
 
             NookiSection(footer: nil) {
+                NavigationLink { DataCreditsView() } label: {
+                    NookiRowLabel(title: "Movie and show data", symbol: "film.fill", tint: .coral) { RowChevron() }
+                }
+                .buttonStyle(PressScaleStyle())
                 NookiRowLabel(title: "Version", symbol: "info.circle.fill", tint: .honey) {
                     Text(version)
                         .font(.nookiCallout.monospacedDigit())
@@ -224,5 +228,29 @@ private struct AccountRow: View {
         case .signedIn: .sage
         case .failed: .coral
         }
+    }
+}
+
+/// Where the To watch list's posters, details and streaming services come from, as TMDB's and JustWatch's terms ask.
+private struct DataCreditsView: View {
+    var body: some View {
+        NookiForm {
+            NookiSection(header: "TMDB",
+                         footer: "This product uses the TMDB API but is not endorsed or certified by TMDB.") {
+                Link(destination: URL(string: "https://www.themoviedb.org")!) {
+                    NookiRowLabel(title: "The Movie Database", symbol: "film.stack.fill", tint: .sky) { RowChevron() }
+                }
+            }
+            NookiSection(header: "JustWatch",
+                         footer: "Where to watch comes from JustWatch, through TMDB.") {
+                Link(destination: URL(string: "https://www.justwatch.com")!) {
+                    NookiRowLabel(title: "Streaming data by JustWatch", symbol: "play.tv.fill", tint: .sun) {
+                        RowChevron()
+                    }
+                }
+            }
+        }
+        .navigationTitle("Movie and show data")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

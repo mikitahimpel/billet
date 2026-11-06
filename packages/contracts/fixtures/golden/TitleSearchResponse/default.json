@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "kind": "movie",
+      "posterPath": "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
+      "rating": 7.6,
+      "runtime": 116,
+      "title": "Arrival",
+      "tmdb": 329865,
+      "year": 2016
+    },
+    {
+      "kind": "tv",
+      "seasons": 2,
+      "title": "Severance",
+      "tmdb": 95396,
+      "year": 2022
+    },
+    {
+      "kind": "movie",
+      "title": "The Arrival",
+      "tmdb": 2
+    }
+  ]
+}

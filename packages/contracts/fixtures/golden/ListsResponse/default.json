@@ -46,7 +46,9 @@
           "id": "00000000-0000-4000-8000-0000000000c5",
           "media": {
             "kind": "movie",
-            "tmdb": 666277
+            "posterPath": "/gmTocN1iLLDyjEJir2CBnt2EhGE.jpg",
+            "tmdb": 666277,
+            "year": 2023
           },
           "text": "Past Lives",
           "wants": [

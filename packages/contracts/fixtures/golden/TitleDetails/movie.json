@@ -1,0 +1,32 @@
+{
+  "backdropPath": "/yIZ1xendyqKvY3FGeeUYUd5X9Mm.jpg",
+  "genres": [
+    "Drama",
+    "Science Fiction"
+  ],
+  "kind": "movie",
+  "overview": "A linguist is asked to talk with visitors.",
+  "posterPath": "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
+  "rating": 7.6,
+  "runtime": 116,
+  "title": "Arrival",
+  "tmdb": 329865,
+  "watch": {
+    "country": "PT",
+    "link": "https://www.themoviedb.org/movie/329865/watch?locale=PT",
+    "rentOrBuy": [
+      {
+        "id": 2,
+        "name": "Apple TV"
+      }
+    ],
+    "stream": [
+      {
+        "id": 8,
+        "logoPath": "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg",
+        "name": "Netflix"
+      }
+    ]
+  },
+  "year": 2016
+}

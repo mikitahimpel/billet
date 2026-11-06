@@ -54,6 +54,13 @@ export interface WorkerEnv {
    */
   readonly APPLE_SIGN_IN_KEY?: string;
   readonly APPLE_SIGN_IN_KEY_ID?: string;
+  /** TMDB's answers, for the To watch list's search and cards. Absent: kept for one request only. */
+  readonly TITLES?: KVNamespace;
+  /**
+   * TMDB's API read access token. Absent or empty: `prod` answers 503 for titles and every other
+   * stage answers from a few built-in ones (tmdb-live.ts).
+   */
+  readonly TMDB_TOKEN?: string;
   /** Temporary demo rooms. Bound on the dev stage only. */
   readonly DEMO_ROOM?: DurableObjectNamespace<DemoRoom>;
 }
