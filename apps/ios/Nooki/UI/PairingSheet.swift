@@ -1,5 +1,6 @@
 import FeaturePairing
 import SwiftUI
+import Design
 
 /// Pairs this phone with the partner's: one shows a code, the other types it in. Whoever shows the code waits here
 /// while the sheet checks every few seconds whether it was claimed.
@@ -91,7 +92,7 @@ struct PairingSheet: View {
             } label: {
                 Text("Get a code").frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
 
@@ -113,7 +114,7 @@ struct PairingSheet: View {
                 .padding(.vertical, Space.m)
                 .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
             Button("Pair", action: submit)
-                .buttonStyle(NookiSecondaryStyle())
+                .buttonStyle(SecondaryButtonStyle())
             .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
@@ -145,7 +146,7 @@ struct PairingSheet: View {
             ShareLink(item: "Pair with me on Nooki: \(code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
             }
-            .buttonStyle(NookiSecondaryStyle())
+            .buttonStyle(SecondaryButtonStyle())
         }
     }
 
@@ -166,7 +167,7 @@ struct PairingSheet: View {
             } label: {
                 Text("Done").frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
 
@@ -174,7 +175,7 @@ struct PairingSheet: View {
         VStack(spacing: Space.m, content: content)
             .padding(Space.gutter)
             .frame(maxWidth: .infinity)
-            .nookiCard()
+            .cardSurface()
     }
 
     private var isPaired: Bool {

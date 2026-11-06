@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 /// The soft, bright wallpapers behind the drawing. Each is one of the note papers, so the partner's widget can show

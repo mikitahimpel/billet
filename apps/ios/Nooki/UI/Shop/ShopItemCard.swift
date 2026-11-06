@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// An item on the Shop: its art large and lifted in the rarity frame, the name, what it does for Mochi, and its
 /// price pill, which buys it in one tap.

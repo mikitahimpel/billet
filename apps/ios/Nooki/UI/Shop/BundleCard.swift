@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// A bundle: its pieces joined by "+", the name with what it saves, and its price beside the struck-through sum.
 struct BundleCard: View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The week's hero offer at the top of Today: the set's pieces large on lamplight, its value against the sum of the
 /// missing parts, and a countdown to the real Monday rotation. The price pill buys it in one tap.

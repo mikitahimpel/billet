@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Which set's sheet is open: the week's featured set or a bundle.
 struct SetChoice: Identifiable {
@@ -128,7 +129,7 @@ struct SetSheet: View {
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
                 }
-                .nookiPrimary()
+                .buttonStyle(PrimaryButtonStyle())
                 if !affordable {
                     Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
                         .font(.nookiCaption)
@@ -143,7 +144,7 @@ struct SetSheet: View {
                 } label: {
                     Label("Place in your room", systemImage: "house.fill").frame(maxWidth: .infinity)
                 }
-                .nookiPrimary()
+                .buttonStyle(PrimaryButtonStyle())
                 Label("The whole set is in your closet", systemImage: "checkmark.circle.fill")
                     .font(.nookiCaption)
                     .foregroundStyle(Ink.textSecondary)

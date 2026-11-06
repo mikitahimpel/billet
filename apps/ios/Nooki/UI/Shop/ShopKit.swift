@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The Shop's own accents on the warm room palette, saturated so offers stand out against the brown.
 enum ShopInk {

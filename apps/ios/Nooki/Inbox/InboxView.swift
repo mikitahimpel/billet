@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 /// The Inbox: what happened in the pair lately, grouped by day, newest first. Opening it marks everything read
@@ -15,7 +16,7 @@ struct InboxView: View {
         NavigationStack {
             content
                 .scrollContentBackground(.hidden)
-                .background(Ink.sheet)
+                .background(Ink.screen)
                 .navigationTitle("Inbox")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
@@ -107,7 +108,7 @@ struct InboxSignedOut: View {
                 "Nothing here yet", systemImage: "tray",
                 description: Text("Once you're connected and your partner joins, what you both do with \(petName) "
                                   + "shows up here."))
-                .background(Ink.sheet)
+                .background(Ink.screen)
                 .navigationTitle("Inbox")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
@@ -138,7 +139,7 @@ private struct InboxRow: View {
                         .foregroundStyle(Ink.heroInk)
                         .frame(width: 20, height: 20)
                         .background(Color.honey, in: .circle)
-                        .overlay(Circle().stroke(Ink.sheet, lineWidth: 1.5))
+                        .overlay(Circle().stroke(Ink.screen, lineWidth: 1.5))
                         .offset(x: 4, y: 4)
                 }
             VStack(alignment: .leading, spacing: 2) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The price pill on every offer, and the buy itself: a tap buys right away and the purchase moment plays, with Undo
 /// for a few seconds. Short of coins it shakes and opens the Coins sheet; once everything is owned it reads

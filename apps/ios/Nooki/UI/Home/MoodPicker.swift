@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// "How are you?" in the header, next to the Inbox: the viewer's own mood once they've shared one today, and the
 /// partner's as a small badge.
@@ -92,7 +93,7 @@ struct MoodPicker: View {
                 Text(mood == nil ? "Pick how you feel" : "Share with \(state.profile.name(of: state.otherPartner))")
                     .frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(mood == nil)
             .accessibilityIdentifier("shareMood")
 
@@ -130,7 +131,7 @@ private struct MoodChip: View {
                     .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity, minHeight: 96)
-            .nookiCard(warm: picked)
+            .cardSurface(warm: picked)
             .overlay {
                 if picked {
                     RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -169,7 +170,7 @@ private struct PartnerLine: View {
             Spacer(minLength: 0)
         }
         .padding(Space.l)
-        .nookiCard()
+        .cardSurface()
         .accessibilityElement(children: .combine)
     }
 }

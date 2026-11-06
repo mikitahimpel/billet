@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The free gift in Today: one tap asks the server to open it, the box shakes open with the reward it gave, and a new
 /// gift comes at local midnight.

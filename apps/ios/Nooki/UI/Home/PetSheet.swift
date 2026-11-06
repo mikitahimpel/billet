@@ -1,5 +1,6 @@
 import FeatureGames
 import SwiftUI
+import Design
 import TipKit
 
 /// Mochi's avatar in the room's corner: her face inside a ring that fills toward the next level. A tap opens her sheet.

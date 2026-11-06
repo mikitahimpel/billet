@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import UIKit
 
 /// One note opened from the board: the paper big, its text or doodle, and a way to take it down.

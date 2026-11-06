@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// A collection's progress: "3/7", a bar, its pieces (missing ones greyed, a tap opens them) and the bonus, which can
 /// be collected once every piece is owned.

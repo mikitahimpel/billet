@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox and "How are you?"
 /// top-left; top-right the coins, then the couple's avatars in the corner, which open the profile. Nothing else sits
@@ -81,7 +82,7 @@ struct AppHeader: View {
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
                 PairingSheet(model: session.pairing, prefill: state.invitedCode ?? "") { session.pairingFinished() }
-                    .presentationBackground(Ink.sheet)
+                    .presentationBackground(Ink.screen)
                     .presentationDragIndicator(.visible)
             }
         }

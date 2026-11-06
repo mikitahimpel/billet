@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import UIKit
 
 /// Draws the notes and doodles pinned on the corkboard as small images the board puts on planes.

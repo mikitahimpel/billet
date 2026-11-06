@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Shared look for the Us tab and its sheets, on the style guide's tokens (apps/ios/docs/style.md).
 extension View {
@@ -11,7 +12,7 @@ extension View {
 
     /// The card for rows and tiles: the app's clay card.
     func usCard(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
-        nookiCard(radius: radius, warm: warm)
+        cardSurface(radius: radius, warm: warm)
     }
 }
 
@@ -61,7 +62,7 @@ struct UsPrimaryButton: View {
             }
             .frame(maxWidth: .infinity)
         }
-        .nookiPrimary()
+        .buttonStyle(PrimaryButtonStyle())
     }
 }
 
@@ -133,7 +134,7 @@ struct UsField: View {
             .foregroundStyle(Ink.text)
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
     }
 }
 
@@ -177,7 +178,7 @@ struct UsGlyphPicker: View {
             }
         }
         .padding(Space.m)
-        .usCard()
+        .cardSurface()
     }
 }
 
@@ -203,4 +204,8 @@ struct UsEmpty: View {
         .padding(.vertical, 40)
         .frame(maxWidth: .infinity)
     }
+}
+
+extension UsTint {
+    var color: Color { Color(hex: colors.top) }
 }

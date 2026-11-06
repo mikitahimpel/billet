@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Adds a country, searched in the phone's language and in English, or a city or place, then its country.
 struct AddPlaceSheet: View {
@@ -43,7 +44,7 @@ struct AddPlaceSheet: View {
             }
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
             .padding(.horizontal, Space.gutter)
             .padding(.top, 14)
 
@@ -57,7 +58,7 @@ struct AddPlaceSheet: View {
                                 countryRow(code)
                             }
                         }
-                        .usCard()
+                        .cardSurface()
                     } else if !trimmed.isEmpty, place != nil {
                         Text("No country by that name.")
                             .font(.nookiCallout)
@@ -150,7 +151,7 @@ struct AddPlaceSheet: View {
                 .padding(.horizontal, Space.m)
                 .frame(minHeight: 64)
                 .contentShape(.rect)
-                .usCard()
+                .cardSurface()
             }
             .buttonStyle(.plain)
         }
@@ -246,7 +247,7 @@ struct BeenSheet: View {
 
                     MonthField(month: $month)
                     photos
-                    UsPrimaryButton(title: "Save") { save() }
+                    PrimaryButton("Save") { save() }
                         .padding(.top, Space.s)
                     if been {
                         Button("Not been yet", role: .destructive) { unmark() }
@@ -313,7 +314,7 @@ struct BeenSheet: View {
             .padding(.horizontal, Space.l)
             .padding(.vertical, Space.m)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -377,7 +378,7 @@ private struct MonthField: View {
         .tint(Ink.text)
         .padding(.horizontal, Space.l)
         .frame(minHeight: 50)
-        .usCard(radius: Radius.control)
+        .cardSurface(radius: Radius.control)
     }
 }
 

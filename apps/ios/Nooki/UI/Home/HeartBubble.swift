@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 struct HeartBubble: View {
     let pulse: Int

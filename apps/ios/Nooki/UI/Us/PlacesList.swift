@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Places to go: how many of the 195 countries the pair has been to, a map of them, and the countries by tab.
 /// Places in a country show under it; a place whose country isn't on the list, or a line of text, is its own row.
@@ -34,7 +35,7 @@ struct PlacesListBody: View {
                         rowView(row)
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
         }
     }
@@ -64,7 +65,7 @@ struct PlacesListBody: View {
             }
         }
         .padding(Space.l)
-        .usCard(radius: Radius.hero, warm: true)
+        .cardSurface(radius: Radius.hero, warm: true)
     }
 
     private func legend(_ title: String, @ViewBuilder mark: () -> some View) -> some View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Transport
 import Wire
 
@@ -157,7 +158,7 @@ struct WatchListBody: View {
                 .padding(.horizontal, Space.m)
                 .frame(minHeight: 56)
                 .contentShape(.rect)
-                .usCard()
+                .cardSurface()
             }
             .buttonStyle(.plain)
             if showsWatched { grid(watched, watched: true) }
@@ -301,7 +302,7 @@ struct AddTitleSheet: View {
             }
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
             .padding(.horizontal, Space.gutter)
             .padding(.top, 14)
 
@@ -314,7 +315,7 @@ struct AddTitleSheet: View {
                                 resultRow(title)
                             }
                         }
-                        .usCard()
+                        .cardSurface()
                     } else if failed {
                         note("Search isn't reachable right now. You can still add it as text.")
                     } else if session?.titles == nil {
@@ -412,7 +413,7 @@ struct AddTitleSheet: View {
             .padding(.horizontal, Space.m)
             .frame(minHeight: 64)
             .contentShape(.rect)
-            .usCard()
+            .cardSurface()
         }
         .buttonStyle(.plain)
     }
@@ -642,7 +643,7 @@ struct MovieCard: View {
             }
         }
         .padding(14)
-        .usCard()
+        .cardSurface()
     }
 
     @ViewBuilder
@@ -660,7 +661,7 @@ struct MovieCard: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            UsPrimaryButton(title: "Watched together", symbol: "checkmark") {
+            PrimaryButton("Watched together", symbol: "checkmark") {
                 state.us.setItem(itemID, in: listID, done: true, by: state.viewer)
                 dismiss()
             }

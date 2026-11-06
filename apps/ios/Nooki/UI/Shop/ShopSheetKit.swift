@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The top of a Shop sheet: the title with its chips under it, and the close button level with the title.
 struct SheetHeader<Chips: View>: View {

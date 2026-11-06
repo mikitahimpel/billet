@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The ink dots for notes and drawings: owned inks pick, a locked one shows its price and a tap buys it, with the
 /// purchase moment's Undo. Short of coins it shakes and says how many are missing.

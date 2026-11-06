@@ -1,6 +1,7 @@
 import PetScene
 import PhotosUI
 import SwiftUI
+import Design
 import UIKit
 import Wire
 
@@ -405,7 +406,7 @@ private struct EmptyMoments: View {
                 }
                 .frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
             .padding(.top, 6)
         }
     }

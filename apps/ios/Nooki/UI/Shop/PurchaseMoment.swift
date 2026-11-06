@@ -1,5 +1,6 @@
 import AudioToolbox
 import SwiftUI
+import Design
 
 /// What plays over the app after a buy: coins burst where it happened, the pieces fly down into a card where Mochi
 /// hops at the news, a tink and a success haptic, and Undo for five seconds. Under Reduce Motion only the card shows.

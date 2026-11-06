@@ -1,5 +1,6 @@
 import PencilKit
 import SwiftUI
+import Design
 
 /// Sheet for writing a line or doodling on a piece of paper; saving pins it and earns 5 coins.
 struct NoteComposer: View {
@@ -55,7 +56,7 @@ struct NoteComposer: View {
                     .monospacedDigit()
                     .frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(isEmpty)
             .padding(.horizontal, 20)
             .padding(.bottom, 12)

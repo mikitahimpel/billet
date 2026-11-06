@@ -1,5 +1,6 @@
 import Ink
 import SwiftUI
+import Design
 import Wire
 
 /// Strokes drawn as a thick, slightly glowing marker. Coordinates and widths are fractions of the layer's width, as

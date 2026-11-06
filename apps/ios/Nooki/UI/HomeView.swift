@@ -1,5 +1,6 @@
 import FeatureGames
 import SwiftUI
+import Design
 import TipKit
 import Transport
 import WidgetBridge
@@ -303,11 +304,11 @@ struct HomeView: View {
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
                 .presentationDetents([.large])
-                .presentationBackground(Ink.sheet)
+                .presentationBackground(Ink.screen)
                 .presentationDragIndicator(.visible)
             } else {
                 InboxSignedOut(petName: state.petName)
-                    .presentationBackground(Ink.sheet)
+                    .presentationBackground(Ink.screen)
                     .presentationDragIndicator(.visible)
             }
         }

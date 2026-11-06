@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 struct ListScreen: View {
@@ -202,7 +203,7 @@ struct ListScreen: View {
                 itemRow(item, list: list, doneStyle: false)
             }
         }
-        .usCard()
+        .cardSurface()
     }
 
     @ViewBuilder
@@ -219,7 +220,7 @@ struct ListScreen: View {
                         itemRow(item, list: list, doneStyle: true, showDate: true)
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
         }
     }
@@ -323,7 +324,7 @@ private struct RenameListSheet: View {
                 UsField(placeholder: "List name", text: $title)
             }
             UsGlyphPicker(selection: $icon)
-            UsPrimaryButton(title: "Save") {
+            PrimaryButton("Save") {
                 let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
                 state.us.renameList(list.id,
                                     title: name.isEmpty ? list.title : name,
@@ -375,7 +376,7 @@ struct NewListSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 92)
-                        .usCard(radius: 18)
+                        .cardSurface(radius: 18)
                     }
                     .buttonStyle(.plain)
                 }
@@ -392,7 +393,7 @@ struct NewListSheet: View {
             }
             UsGlyphPicker(selection: $icon)
 
-            UsPrimaryButton(title: "Create") {
+            PrimaryButton("Create") {
                 createCustom()
             }
             .opacity(canCreate ? 1 : 0.5)

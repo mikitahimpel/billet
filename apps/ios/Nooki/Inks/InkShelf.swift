@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The Shop's ink colours for notes and drawings, one card each in a wrapping grid: the colour, its name and the price
 /// pill, or "Yours" once the pair owns it. A buy plays the purchase moment like any other. The Shop opened at an ink

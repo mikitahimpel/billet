@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import Design
 import TipKit
 
 struct TabBar: View {

@@ -1,6 +1,7 @@
 import FeatureGames
 import Pet
 import SwiftUI
+import Design
 
 /// Where the cat sheet reads Mochi's four needs (0...1) and tells her she ate: her brain on this phone today, the
 /// couple's cat journal on the server later, without the sheet changing.
@@ -36,7 +37,7 @@ struct NeedBars: View {
             }
         }
         .padding(Space.m + 2)
-        .nookiCard()
+        .cardSurface()
     }
 }
 
@@ -122,7 +123,7 @@ struct PetActions: View {
                         .lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, minHeight: 70)
-                    .nookiCard(radius: Radius.card, warm: true)
+                    .cardSurface(radius: Radius.card, warm: true)
                     .contentShape(.rect(cornerRadius: Radius.card))
                 }
                 .buttonStyle(PressScaleStyle())

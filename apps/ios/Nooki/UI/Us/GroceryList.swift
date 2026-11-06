@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The grocery list in aisles, each a card of rows; an aisle with nothing to buy is left out. A tap marks an item
 /// bought and moves it to "Bought" at the end; a long press opens it.
@@ -49,7 +50,7 @@ struct GroceryList: View {
                     .accessibilityAction(named: "Edit") { onEdit(item) }
             }
         }
-        .usCard()
+        .cardSurface()
     }
 }
 

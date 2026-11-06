@@ -1,5 +1,6 @@
 import PetScene
 import SwiftUI
+import Design
 
 // MARK: - Shop
 

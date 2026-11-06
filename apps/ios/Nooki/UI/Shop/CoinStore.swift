@@ -1,5 +1,6 @@
 import Payments
 import SwiftUI
+import Design
 
 /// Billet Plus, the pair's monthly subscription. What it gives isn't built yet, so a mock build turns it on for this
 /// phone only and a StoreKit build says it is coming.
@@ -229,7 +230,7 @@ private struct PackCard: View {
         }
         .padding(Space.l)
         .frame(maxWidth: .infinity)
-        .nookiCard(radius: Radius.hero, warm: true)
+        .cardSurface(radius: Radius.hero, warm: true)
         .overlay {
             if isFit {
                 RoundedRectangle(cornerRadius: Radius.hero, style: .continuous).strokeBorder(Color.honey, lineWidth: 2)

@@ -1,124 +1,64 @@
+import Design
 import SwiftUI
 
-/// Settings → Labs → Style: every token and shared component from apps/ios/docs/style.md, drawn by the same code the
-/// screens use, so the guide can be checked on a device in either appearance.
+/// Settings → Labs → Style: the design package's tokens and components, drawn by the same code the screens use,
+/// so docs/design-system.md can be checked on a device in either appearance.
 struct StyleGallery: View {
     @State private var dark = true
     @State private var chip = 0
-    @State private var level = 0.6
+    @State private var isOn = true
 
     var body: some View {
-        NookiForm {
-            NookiSection(header: "Colour", inset: Space.m + 2, padsRows: true) {
-                swatch("screen", Ink.screen)
-                swatch("surface", Ink.surface)
-                swatch("surfaceRaised", Ink.surfaceRaised)
-                swatch("separator", Ink.separator)
-                swatch("text", Ink.text)
-                swatch("textSecondary", Ink.textSecondary)
-                swatch("textTertiary", Ink.textTertiary)
-                swatch("accentText", Ink.accentText)
-                swatch("honey", .honey)
-                swatch("honeyDeep", .honeyDeep)
-                swatch("blushPink", .blushPink)
+        Page {
+            GroupedSection(header: "Colour") {
+                swatch("Ink.screen", Ink.screen)
+                swatch("Ink.surface", Ink.surface)
+                swatch("Ink.surfaceRaised", Ink.surfaceRaised)
+                swatch("Ink.accentText", Ink.accentText)
+                swatch("Color.honey", .honey)
             }
-
-            NookiSection(header: "Type", inset: Space.m + 2, padsRows: true) {
-                Text("Large title").font(.nookiLargeTitle)
-                Text("Title").font(.nookiTitle)
-                Text("Headline").font(.nookiHeadline)
-                Text("Body text for reading, in SF Pro.").font(.nookiBody)
-                Text("Callout").font(.nookiCallout)
-                Text("Caption").font(.nookiCaption).foregroundStyle(Ink.textSecondary)
-                Text("MICRO 128").font(.nookiMicro).monospacedDigit()
+            GroupedSection(header: "Type", inset: Space.l) {
+                Text("Large title").font(.nookiLargeTitle).rowCell()
+                Text("Title").font(.nookiTitle).rowCell()
+                Text("Headline").font(.nookiHeadline).rowCell()
+                Text("Body").font(.nookiBody).rowCell()
+                Text("Caption").font(.nookiCaption).foregroundStyle(Ink.textSecondary).rowCell()
             }
-            .foregroundStyle(Ink.text)
-
-            NookiSection(header: "Buttons", inset: Space.m + 2, padsRows: true) {
-                Button {} label: { Text("Primary").frame(maxWidth: .infinity) }
-                    .nookiPrimary()
-                secondary
-                Button("Tertiary") {}
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.accentText)
-                Button("Erase All Data", role: .destructive) {}
+            VStack(spacing: Space.m) {
+                PrimaryButton("Primary", symbol: "heart.fill") {}
+                PrimaryButton("Disabled primary") {}.disabled(true)
+                SecondaryButton("Secondary") {}
             }
-
-            NookiSection(header: "Rows") {
-                NookiRowLabel(title: "A row that opens a screen", symbol: "person.2.fill", tint: .sky) { RowChevron() }
-                NookiToggleRow(title: "A switch", symbol: "hand.tap.fill", tint: .honey, isOn: .constant(true))
-                NookiRowLabel(title: "Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+            GroupedSection(header: "Rows") {
+                Row("Opens a screen", symbol: "person.2.fill", tint: UsTint.sky.color) { RowChevron() }
+                ToggleRow("A switch", symbol: "hand.tap.fill", isOn: $isOn)
+                Row("Erase all data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
             }
-
-            NookiSection(header: "Shape and chips", inset: Space.m + 2, padsRows: true) {
-                HStack(spacing: Space.m) {
-                    ForEach([Radius.tag, Radius.control, Radius.card, Radius.hero], id: \.self) { radius in
-                        RoundedRectangle(cornerRadius: radius)
-                            .fill(Ink.surfaceRaised)
-                            .frame(width: 56, height: 56)
-                            .overlay { Text("\(Int(radius))").font(.nookiMicro).foregroundStyle(Ink.textSecondary) }
+            GroupedSection(header: "Chips", inset: Space.l) {
+                HStack {
+                    ForEach(["Today", "Cats", "Rooms"].indices, id: \.self) { index in
+                        FilterChip(["Today", "Cats", "Rooms"][index], isSelected: chip == index) { chip = index }
                     }
                 }
-                HStack(spacing: Space.s) {
-                    ForEach(Array(["Cozy", "Playful", "Sleepy"].enumerated()), id: \.offset) { index, title in
-                        Button(title) { withAnimation(.snappy(duration: 0.25)) { chip = index } }
-                            .font(.nookiCallout)
-                            .foregroundStyle(chip == index ? Ink.text : Ink.textSecondary)
-                            .padding(.horizontal, Space.m)
-                            .padding(.vertical, Space.s)
-                            .background(chip == index ? Ink.surfaceRaised : .clear, in: .capsule)
-                            .buttonStyle(.plain)
-                    }
+                .rowCell()
+                HStack {
+                    Chip("Rare", style: .tinted(.teal))
+                    Chip("-20%", style: .honey)
+                    Chip("Owned", symbol: "checkmark")
                 }
-                .sensoryFeedback(.selection, trigger: chip)
+                .rowCell()
             }
-
-            NookiSection(header: "Materials",
-                         footer: "Glass only over the room. Screens, forms and lists are clay cards on the screen.",
-                         padsRows: true) {
-                ZStack {
-                    LinearGradient(colors: [Color(hex: 0x5B3A2A), Color(hex: 0xC9814F), Color(hex: 0x2F4A3A)],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                    GlassGroup(spacing: Space.s) {
-                        HStack(spacing: Space.s) {
-                            Image(systemName: "tray.fill")
-                                .font(.nookiHeadline)
-                                .foregroundStyle(Ink.primary)
-                                .frame(width: 42, height: 42)
-                                .warmGlass(.circle, interactive: true)
-                            Text("Glass over the room")
-                                .font(.nookiCallout)
-                                .foregroundStyle(Ink.primary)
-                                .padding(.horizontal, Space.l)
-                                .frame(height: 42)
-                                .warmGlass(.capsule)
-                        }
-                    }
+            Card {
+                HStack {
+                    GlassIconButton(symbol: "face.smiling", label: "Mood") {}
+                    GlassIconButton(symbol: "tray", label: "Inbox", badge: true) {}
+                    Spacer()
+                    Design.PriceButton(120) {}
                 }
-                .frame(height: 120)
-                .clipShape(.rect(cornerRadius: Radius.card))
             }
-
-            NookiSection(header: "Symbols and motion", inset: Space.m + 2, padsRows: true) {
-                HStack(spacing: Space.l) {
-                    ForEach(["fork.knife", "moon.zzz.fill", "tennisball.fill", "heart.fill"], id: \.self) {
-                        Image(systemName: $0)
-                    }
-                }
-                .font(.nookiHeadline)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Color.honey)
-                ProgressView(value: level).tint(.honey)
-                Slider(value: $level.animation(.spring(duration: 0.6, bounce: 0.2)))
-            }
-
-            NookiSection(header: "Empty state", inset: Space.m + 2, padsRows: true) {
-                ContentUnavailableView {
-                    Label("No moments yet", systemImage: "photo.on.rectangle.angled")
-                } description: {
-                    Text("Your first photo together will live here.")
-                } actions: {
-                    Button("Add a moment") {}.nookiPrimary()
+            Card {
+                EmptyState(symbol: "photo.on.rectangle", title: "No moments yet", text: "Your first photo together will live here.") {
+                    PrimaryButton("Add a moment", fullWidth: false) {}
                 }
             }
         }
@@ -128,13 +68,7 @@ struct StyleGallery: View {
                 Button(dark ? "Light" : "Dark") { dark.toggle() }
             }
         }
-        // Previews the guide in either appearance; the app itself stays dark until it switches as a whole.
         .environment(\.colorScheme, dark ? .dark : .light)
-    }
-
-    private var secondary: some View {
-        Button("Secondary") {}
-            .buttonStyle(NookiSecondaryStyle())
     }
 
     private func swatch(_ name: String, _ colour: Color) -> some View {
@@ -145,5 +79,6 @@ struct StyleGallery: View {
                 .frame(width: 36, height: 28)
             Text(name).font(.nookiCallout).foregroundStyle(Ink.text)
         }
+        .rowCell()
     }
 }

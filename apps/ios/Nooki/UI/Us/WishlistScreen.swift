@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 struct WishlistScreen: View {
     let state: HomeState
@@ -464,7 +465,7 @@ private struct LovesEditor: View {
                             UsField(placeholder: row.example, text: $loves[dynamicMember: row.keyPath])
                         }
                     }
-                    UsPrimaryButton(title: String(localized: "Save")) {
+                    PrimaryButton(String(localized: "Save")) {
                         state.us.setLoves(loves, for: state.viewer)
                         dismiss()
                     }
@@ -539,7 +540,7 @@ struct WishEditor: View {
                     UsField(placeholder: String(localized: "Colour, size, details (optional)"), text: $note)
                     mostWantedToggle
                     occasionPicker
-                    UsPrimaryButton(title: String(localized: "Save")) { save() }
+                    PrimaryButton(String(localized: "Save")) { save() }
                         .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                         .disabled(trimmedTitle.isEmpty)
                         .padding(.top, 4)
@@ -621,7 +622,7 @@ struct WishEditor: View {
         .tint(.blushPink)
         .padding(.horizontal, Space.l)
         .frame(minHeight: 50)
-        .usCard(radius: Radius.control)
+        .cardSurface(radius: Radius.control)
     }
 
     /// The calendar's coming days that gifts are for: the couple's own events and their anniversaries.
@@ -665,7 +666,7 @@ struct WishEditor: View {
             }
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
         }
         .buttonStyle(.plain)
         .disabled(occasions.isEmpty && occasion == nil)

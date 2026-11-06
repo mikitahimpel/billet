@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import Design
 
 /// Editing the couple's profile: each partner's photo and name, who is holding the phone, and the day they got
 /// together. Pushed from the profile; Cancel goes back without saving.
@@ -99,7 +100,7 @@ struct ProfileEditor: View {
             }
         }
         .padding(Space.m + 2)
-        .nookiCard()
+        .cardSurface()
     }
 
     private var togetherCard: some View {
@@ -112,6 +113,6 @@ struct ProfileEditor: View {
                 .foregroundStyle(Ink.textSecondary)
         }
         .padding(Space.m + 2)
-        .nookiCard()
+        .cardSurface()
     }
 }

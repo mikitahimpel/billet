@@ -1032,6 +1032,8 @@ importers:
         specifier: workspace:*
         version: link:../contracts
 
+  packages/ios/design: {}
+
   packages/ios/features:
     dependencies:
       '@billet/ios-contracts':

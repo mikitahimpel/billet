@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The wish a shared page becomes: its title and picture fetched from the page, then the holder's price and details.
 /// Saved to the Us store in the app group; the app picks it up when it comes back, and sends it to the pair's room.
@@ -57,8 +58,8 @@ struct ShareWishView: View {
                 .tint(.blushPink)
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: 50)
-                .usCard(radius: Radius.control)
-                UsPrimaryButton(title: String(localized: "Add wish"), symbol: "gift.fill") { save() }
+                .cardSurface(radius: Radius.control)
+                PrimaryButton(String(localized: "Add wish"), symbol: "gift.fill") { save() }
                     .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                     .disabled(trimmedTitle.isEmpty)
                     .padding(.top, 4)

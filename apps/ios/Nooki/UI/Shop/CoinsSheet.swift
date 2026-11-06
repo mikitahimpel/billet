@@ -1,5 +1,6 @@
 import Payments
 import SwiftUI
+import Design
 import WidgetBridge
 import Wire
 
@@ -62,7 +63,7 @@ struct CoinsSheet: View {
             Spacer(minLength: 0)
         }
         .padding(Space.gutter)
-        .nookiCard(radius: Radius.hero, warm: true)
+        .cardSurface(radius: Radius.hero, warm: true)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("coinBalance")
     }
@@ -70,9 +71,9 @@ struct CoinsSheet: View {
     // MARK: Earning
 
     private var waysCard: some View {
-        NookiSection(header: "How to earn") {
+        GroupedSection(header: "How to earn") {
             ForEach(ways, id: \.text) { way in
-                NookiRowLabel(title: way.text, symbol: way.symbol, tint: way.tint)
+                Row(way.text, symbol: way.symbol, tint: way.tint.color)
             }
         }
     }
@@ -89,7 +90,7 @@ struct CoinsSheet: View {
 
     @ViewBuilder private var recent: some View {
         if !state.shop.history.isEmpty {
-            NookiSection(header: "Recently") {
+            GroupedSection(header: "Recently") {
                 ForEach(state.shop.history, id: \.id) { entry in
                     HistoryRow(line: CoinLine(entry))
                 }
@@ -103,8 +104,8 @@ private struct HistoryRow: View {
     let line: CoinLine
 
     var body: some View {
-        NookiRowLabel(title: line.title, detail: line.date.formatted(.relative(presentation: .named)),
-                      symbol: line.symbol, tint: line.isGain ? .honey : .sky) {
+        Row(line.title, detail: line.date.formatted(.relative(presentation: .named)),
+                      symbol: line.symbol, tint: line.isGain ? UsTint.honey.color : UsTint.sky.color) {
             Text(line.amount)
                 .font(.nookiHeadline.monospacedDigit())
                 .foregroundStyle(line.isGain ? Ink.accentText : Ink.textSecondary)

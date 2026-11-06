@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Shared calendar: a "Soon" feed of countdowns by default, a month grid as the second view.
 struct CalendarScreen: View {
@@ -82,7 +83,7 @@ struct CalendarScreen: View {
                 }
             }
             .padding(12)
-            .usCard()
+            .cardSurface()
         }
         .buttonStyle(.plain)
     }
@@ -136,7 +137,7 @@ private struct MonthGrid: View {
             }
         }
         .padding(14)
-        .usCard(radius: 24)
+        .cardSurface(radius: 24)
     }
 
     private var weekdaySymbols: [String] {
@@ -188,7 +189,7 @@ struct EventEditor: View {
                 .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
-                .usCard(radius: 16)
+                .cardSurface(radius: 16)
 
             Toggle("Every year", isOn: $event.yearly)
                 .tint(Color.honey)
@@ -196,7 +197,7 @@ struct EventEditor: View {
                 .foregroundStyle(Ink.text)
                 .padding(.horizontal, 16)
                 .frame(height: 50)
-                .usCard(radius: 16)
+                .cardSurface(radius: 16)
 
             HStack(spacing: 8) {
                 UsChip(title: "Ours", selected: event.owner == nil) { event.owner = nil }
@@ -207,7 +208,7 @@ struct EventEditor: View {
 
             Spacer(minLength: 0)
 
-            UsPrimaryButton(title: "Save") {
+            PrimaryButton("Save") {
                 state.us.upsertEvent(event)
                 dismiss()
             }

@@ -1,5 +1,6 @@
 import PhotosUI
 import SwiftUI
+import Design
 
 struct DatesScreen: View {
     let state: HomeState
@@ -114,7 +115,7 @@ struct DatesScreen: View {
             UsEmpty(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
                     text: text)
             if toPlan > 0 {
-                UsPrimaryButton(title: toPlan == 1 ? "Plan your match" : "Plan one of \(toPlan) matches") {
+                PrimaryButton(toPlan == 1 ? "Plan your match" : "Plan one of \(toPlan) matches") {
                     withAnimation(.snappy(duration: 0.25)) { mode = .dates }
                 }
             }
@@ -188,7 +189,7 @@ struct DatesScreen: View {
         VStack(spacing: 14) {
             if let idea = surpriseIdea {
                 DateIdeaCard(idea: idea)
-                UsPrimaryButton(title: "Plan it") {
+                PrimaryButton("Plan it") {
                     planner = PlannerTarget(ideaID: idea.id)
                 }
                 anotherButton
@@ -208,7 +209,7 @@ struct DatesScreen: View {
                 .background { DateScenePicture() }
                 .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
 
-                UsPrimaryButton(title: "Surprise us", symbol: "dice") { roll() }
+                PrimaryButton("Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
                     .disabled(rolling)
             }
@@ -274,7 +275,7 @@ struct DatesScreen: View {
             VStack(spacing: 12) {
                 UsEmpty(icon: .init(symbol: "heart.text.square.fill", tint: .blush), title: "No dates yet",
                         text: "Swipe together. When you both love an idea, it lands here.")
-                UsPrimaryButton(title: "Start swiping") {
+                PrimaryButton("Start swiping") {
                     withAnimation(.snappy(duration: 0.25)) { mode = .swipe }
                 }
             }
@@ -639,7 +640,7 @@ private struct DateScenePicture: View {
             }
             .overlay {
                 LinearGradient(stops: [.init(color: .clear, location: 0.35),
-                                       .init(color: Ink.sheet.opacity(0.88), location: 1)],
+                                       .init(color: Ink.screen.opacity(0.88), location: 1)],
                                startPoint: .top, endPoint: .bottom)
             }
             .clipped()
@@ -704,7 +705,7 @@ private struct DateFilterSheet: View {
             }
             .scrollIndicators(.hidden)
 
-            UsPrimaryButton(title: fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }
+            PrimaryButton(fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }
                 .disabled(fits == 0)
                 .opacity(fits == 0 ? 0.5 : 1)
                 .padding(.horizontal, 20)
@@ -893,7 +894,7 @@ private struct DatePlanCard: View {
             ratingRow
         }
         .padding(14)
-        .usCard(radius: 22)
+        .cardSurface(radius: 22)
     }
 
     @ViewBuilder
@@ -976,7 +977,7 @@ private struct DateDoneSheet: View {
                         UsField(placeholder: "Caption", text: $caption)
                     }
 
-                    UsPrimaryButton(title: photo == nil ? "Done" : "Done, add to Moments") { save() }
+                    PrimaryButton(photo == nil ? "Done" : "Done, add to Moments") { save() }
                         .padding(.top, 4)
                 }
                 .padding(.horizontal, 20)
@@ -1029,7 +1030,7 @@ private struct DateDoneSheet: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 160)
-            .usCard()
+            .cardSurface()
         }
     }
 
@@ -1089,7 +1090,7 @@ private struct DatePlannerSheet: View {
                         .foregroundStyle(Ink.text)
                         .padding(.horizontal, 16)
                         .frame(height: 50)
-                        .usCard(radius: 16)
+                        .cardSurface(radius: 16)
 
                     UsField(placeholder: "Place, e.g. our kitchen", text: $place)
 
@@ -1112,7 +1113,7 @@ private struct DatePlannerSheet: View {
                         .tint(.honey)
                         .padding(.horizontal, 16)
                         .frame(height: 50)
-                        .usCard(radius: 16)
+                        .cardSurface(radius: 16)
 
                     if surprise {
                         UsField(placeholder: "Hint, e.g. dress warm", text: $hint)
@@ -1124,9 +1125,9 @@ private struct DatePlannerSheet: View {
                         .tint(.honey)
                         .padding(.horizontal, 16)
                         .frame(minHeight: 50)
-                        .usCard(radius: 16)
+                        .cardSurface(radius: 16)
 
-                    UsPrimaryButton(title: "Save date") { save() }
+                    PrimaryButton("Save date") { save() }
                         .padding(.top, 6)
                 }
                 .padding(.horizontal, 20)

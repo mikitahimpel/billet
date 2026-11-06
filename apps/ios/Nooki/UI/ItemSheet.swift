@@ -1,6 +1,7 @@
 import Observation
 import RealityKit
 import SwiftUI
+import Design
 import UIKit
 
 // MARK: - Item sheet
@@ -143,10 +144,10 @@ struct ItemSheet: View {
                             .minimumScaleFactor(0.8)
                             .frame(maxWidth: .infinity)
                     }
-                    .nookiPrimary()
+                    .buttonStyle(PrimaryButtonStyle())
                 } else {
                     Button(action: buy) { buyLabel.frame(maxWidth: .infinity) }
-                        .nookiPrimary()
+                        .buttonStyle(PrimaryButtonStyle())
                 }
             }
             if owned {
