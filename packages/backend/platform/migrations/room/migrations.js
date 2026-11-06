@@ -14,6 +14,7 @@ import m0012 from './20261105180416_gift_occasion/migration.sql';
 import m0013 from './20261105185112_mood/migration.sql';
 import m0014 from './20261105204456_lists/migration.sql';
 import m0015 from './20261106002814_list_media/migration.sql';
+import m0016 from './20261106081041_list_travel/migration.sql';
 
   export default {
     migrations: {
@@ -32,7 +33,8 @@ import m0015 from './20261106002814_list_media/migration.sql';
 "20261105180416_gift_occasion": m0012,
 "20261105185112_mood": m0013,
 "20261105204456_lists": m0014,
-"20261106002814_list_media": m0015
+"20261106002814_list_media": m0015,
+"20261106081041_list_travel": m0016
 }
   }
   

@@ -139,7 +139,8 @@ targets:
       - path: NookiNotifications
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        excludes: [Draw/DrawingActivity.swift]
+        # Places' flags and map are for the app and its widgets.
+        excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
     info:
       path: NookiNotifications/Info.plist
       properties:
@@ -170,7 +171,8 @@ targets:
     sources:
       - path: NookiShare
       - path: Shared
-        excludes: [Draw/DrawingActivity.swift]
+        # Places' flags and map are for the app and its widgets.
+        excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
       - path: Nooki/UI/Kit/Style.swift
       - path: Nooki/UI/Us/UsKit.swift
     info:

@@ -161,9 +161,9 @@ const activityFrom = (record: ActivityRecord): Option.Option<ActivityRow> =>
 type ListRow = typeof lists.$inferSelect;
 type ListItemRow = typeof listItems.$inferSelect;
 
-const WantsJson = Schema.fromJsonString(Schema.Array(Schema.String));
-const encodeWants = Schema.encodeSync(WantsJson);
-const decodeWants = Schema.decodeOption(WantsJson);
+const IdsJson = Schema.fromJsonString(Schema.Array(Schema.String));
+const encodeIds = Schema.encodeSync(IdsJson);
+const decodeIds = Schema.decodeOption(IdsJson);
 const decodeListItem = Schema.decodeUnknownOption(ListItem);
 const decodeList = Schema.decodeUnknownOption(SharedList);
 
@@ -189,12 +189,15 @@ const listItemValues = (
   mediaYear: item.media?.year ?? null,
   mediaPoster: item.media?.posterPath ?? null,
   country: item.country ?? null,
-  wants: encodeWants(item.wants),
+  place: item.place ?? null,
+  visitedIn: item.visitedIn ?? null,
+  moments: item.moments === undefined ? null : encodeIds(item.moments),
+  wants: encodeIds(item.wants),
 });
 
 /** An item this code cannot read, such as one a newer build wrote, is left out. */
 const listItemFrom = (row: ListItemRow): Option.Option<ListItem> =>
-  Option.flatMap(decodeWants(row.wants), (wants) =>
+  Option.flatMap(decodeIds(row.wants), (wants) =>
     decodeListItem({
       id: row.id,
       text: row.text,
@@ -218,6 +221,9 @@ const listItemFrom = (row: ListItemRow): Option.Option<ListItem> =>
             },
           }),
       ...(row.country === null ? {} : { country: row.country }),
+      ...(row.place === null ? {} : { place: row.place }),
+      ...(row.visitedIn === null ? {} : { visitedIn: row.visitedIn }),
+      ...(row.moments === null ? {} : { moments: Option.getOrUndefined(decodeIds(row.moments)) }),
       wants,
     }),
   );

@@ -603,6 +603,35 @@ const toWatch = Schema.decodeUnknownSync(SharedList)({
     },
   ],
 });
+const placesToGo = Schema.decodeUnknownSync(SharedList)({
+  id: "00000000-0000-4000-8000-0000000000c6",
+  kind: "travel",
+  title: "Places to go",
+  icon: { symbol: "airplane", tint: "sky" },
+  items: [
+    {
+      id: "00000000-0000-4000-8000-0000000000c7",
+      text: "Japan",
+      author: alice,
+      addedAt: 1_700_000_300_000,
+      doneBy: bob,
+      doneAt: 1_700_000_900_000,
+      country: "JP",
+      visitedIn: "2026-10",
+      moments: ["00000000-0000-4000-8000-0000000000d1"],
+      wants: [],
+    },
+    {
+      id: "00000000-0000-4000-8000-0000000000c8",
+      text: "Kyoto",
+      author: bob,
+      addedAt: 1_700_000_400_000,
+      country: "JP",
+      place: true,
+      wants: [],
+    },
+  ],
+});
 const listCommands = {
   "create-list": {
     _tag: "CreateList",
@@ -635,6 +664,17 @@ const listCommands = {
     item: milkId,
     text: "Lisbon",
     country: "PT",
+    place: true,
+  },
+  "mark-been": {
+    _tag: "EditItem",
+    key: listKey,
+    list: groceriesId,
+    item: milkId,
+    text: "Portugal",
+    country: "PT",
+    visitedIn: "2026-10",
+    moments: ["00000000-0000-4000-8000-0000000000d1"],
   },
   "edit-item": {
     _tag: "EditItem",
@@ -715,7 +755,11 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { reactions: [heart, takenBack] },
     empty: { reactions: [] },
   }),
-  fixture("SharedList", SharedList, { default: groceries, watch: toWatch }),
+  fixture("SharedList", SharedList, {
+    default: groceries,
+    watch: toWatch,
+    travel: placesToGo,
+  }),
   fixture("ListCommand", ListCommand, decodeSamples(ListCommand, listCommands)),
   fixture("ListsResponse", ListsResponse, {
     default: { lists: [groceries, toWatch] },

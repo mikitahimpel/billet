@@ -66,6 +66,8 @@ public struct ListMedia: Codable, Hashable, Sendable {
 
 /// What a partner says about an item apart from its tick. `quantity` is up to 40 characters,
 /// `note` up to 500; `icon` and `aisle` are lowercase slugs; `country` is ISO 3166-1 alpha-2.
+/// On a travel list an item with a `country` is that country, or with `place` a city or place in
+/// it; `visitedIn` is a month such as `2026-10` and `moments` up to 10 moment ids.
 public struct ListItemDetails: Hashable, Sendable {
   public var quantity: String?
   public var note: String?
@@ -73,10 +75,14 @@ public struct ListItemDetails: Hashable, Sendable {
   public var aisle: String?
   public var media: ListMedia?
   public var country: String?
+  public var place: Bool?
+  public var visitedIn: String?
+  public var moments: [String]?
 
   public init(
     quantity: String? = nil, note: String? = nil, icon: String? = nil, aisle: String? = nil,
-    media: ListMedia? = nil, country: String? = nil
+    media: ListMedia? = nil, country: String? = nil, place: Bool? = nil, visitedIn: String? = nil,
+    moments: [String]? = nil
   ) {
     self.quantity = quantity
     self.note = note
@@ -84,10 +90,13 @@ public struct ListItemDetails: Hashable, Sendable {
     self.aisle = aisle
     self.media = media
     self.country = country
+    self.place = place
+    self.visitedIn = visitedIn
+    self.moments = moments
   }
 
   enum Keys: String, CodingKey {
-    case quantity, note, icon, aisle, media, country
+    case quantity, note, icon, aisle, media, country, place, visitedIn, moments
   }
 
   init<K: CodingKey>(from container: KeyedDecodingContainer<K>, keys: (Keys) -> K) throws {
@@ -97,6 +106,9 @@ public struct ListItemDetails: Hashable, Sendable {
     aisle = try container.decodeOptionalKey(String.self, forKey: keys(.aisle))
     media = try container.decodeOptionalKey(ListMedia.self, forKey: keys(.media))
     country = try container.decodeOptionalKey(String.self, forKey: keys(.country))
+    place = try container.decodeOptionalKey(Bool.self, forKey: keys(.place))
+    visitedIn = try container.decodeOptionalKey(String.self, forKey: keys(.visitedIn))
+    moments = try container.decodeOptionalKey([String].self, forKey: keys(.moments))
   }
 
   func encode<K: CodingKey>(to container: inout KeyedEncodingContainer<K>, keys: (Keys) -> K)
@@ -108,6 +120,9 @@ public struct ListItemDetails: Hashable, Sendable {
     try container.encodeIfPresent(aisle, forKey: keys(.aisle))
     try container.encodeIfPresent(media, forKey: keys(.media))
     try container.encodeIfPresent(country, forKey: keys(.country))
+    try container.encodeIfPresent(place, forKey: keys(.place))
+    try container.encodeIfPresent(visitedIn, forKey: keys(.visitedIn))
+    try container.encodeIfPresent(moments, forKey: keys(.moments))
   }
 }
 
@@ -140,7 +155,7 @@ public struct ListItem: Codable, Hashable, Sendable {
 
   private enum CodingKeys: String, CodingKey {
     case id, text, author, addedAt, doneBy, doneAt, wants
-    case quantity, note, icon, aisle, media, country
+    case quantity, note, icon, aisle, media, country, place, visitedIn, moments
   }
 
   private static func key(_ detail: ListItemDetails.Keys) -> CodingKeys {
@@ -151,6 +166,9 @@ public struct ListItem: Codable, Hashable, Sendable {
     case .aisle: .aisle
     case .media: .media
     case .country: .country
+    case .place: .place
+    case .visitedIn: .visitedIn
+    case .moments: .moments
     }
   }
 
@@ -232,7 +250,7 @@ public enum ListCommand: Codable, Hashable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case key, list, kind, title, icon, item, text, wants
-    case quantity, note, aisle, media, country
+    case quantity, note, aisle, media, country, place, visitedIn, moments
   }
 
   /// `icon` names the list's tile on a list and the item's icon on an item: one wire key.
@@ -244,6 +262,9 @@ public enum ListCommand: Codable, Hashable, Sendable {
     case .aisle: .aisle
     case .media: .media
     case .country: .country
+    case .place: .place
+    case .visitedIn: .visitedIn
+    case .moments: .moments
     }
   }
 

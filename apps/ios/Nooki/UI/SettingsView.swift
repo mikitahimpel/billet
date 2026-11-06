@@ -123,7 +123,7 @@ struct SettingsView: View {
 
             NookiSection(footer: nil) {
                 NavigationLink { DataCreditsView() } label: {
-                    NookiRowLabel(title: "Movie and show data", symbol: "film.fill", tint: .coral) { RowChevron() }
+                    NookiRowLabel(title: "Data and credits", symbol: "film.fill", tint: .coral) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
                 NookiRowLabel(title: "Version", symbol: "info.circle.fill", tint: .honey) {
@@ -231,7 +231,8 @@ private struct AccountRow: View {
     }
 }
 
-/// Where the To watch list's posters, details and streaming services come from, as TMDB's and JustWatch's terms ask.
+/// Where the To watch list's posters, details and streaming services come from, as TMDB's and JustWatch's terms ask,
+/// and the Places to go list's flags (MIT, which asks for its notice) and map.
 private struct DataCreditsView: View {
     var body: some View {
         NookiForm {
@@ -249,8 +250,19 @@ private struct DataCreditsView: View {
                     }
                 }
             }
+            NookiSection(header: "Flags",
+                         footer: "Round flags from circle-flags by HatScripts, MIT License. Copyright (c) 2026 HatScripts.") {
+                Link(destination: URL(string: "https://github.com/HatScripts/circle-flags")!) {
+                    NookiRowLabel(title: "circle-flags", symbol: "flag.fill", tint: .blush) { RowChevron() }
+                }
+            }
+            NookiSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {
+                Link(destination: URL(string: "https://www.naturalearthdata.com")!) {
+                    NookiRowLabel(title: "Natural Earth", symbol: "globe.europe.africa.fill", tint: .sage) { RowChevron() }
+                }
+            }
         }
-        .navigationTitle("Movie and show data")
+        .navigationTitle("Data and credits")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
