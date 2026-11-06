@@ -8,6 +8,7 @@ import {
   alertBody,
   byteLength,
   liveActivityBody,
+  matchAlertBody,
   maxPushBytes,
   reactionAlertBody,
   widgetBody,
@@ -52,6 +53,14 @@ export interface PushLaneDependencies {
   readonly reaction: (
     rev: number,
   ) => Promise<{ readonly reaction: NoteReaction; readonly note: Note } | undefined>;
+  /**
+   * The Pick tonight match the card `key` made at `at`, while both still want it: whom to tell and
+   * the card's name.
+   */
+  readonly match: (
+    key: string,
+    at: number,
+  ) => Promise<{ readonly recipient: string; readonly name: string } | undefined>;
   /** Who receives it: the member who did not write it. */
   readonly recipient: (note: Note) => Promise<string | undefined>;
   readonly tokens: (user: string, kind: string) => Promise<ReadonlyArray<DeviceToken>>;
@@ -82,6 +91,21 @@ const reactionRevOf = (deliveryId: string): number | undefined => {
   if (!deliveryId.startsWith(reactionPrefix)) return undefined;
   const rev = Number(deliveryId.slice(reactionPrefix.length));
   return Number.isInteger(rev) ? rev : undefined;
+};
+
+const matchPrefix = "match:";
+
+/** The ledger key of a Pick tonight match's delivery: the card and when the match was made. */
+export const matchDeliveryId = (key: string, at: number): string => `${matchPrefix}${at}:${key}`;
+
+const matchOfDelivery = (
+  deliveryId: string,
+): { readonly key: string; readonly at: number } | undefined => {
+  if (!deliveryId.startsWith(matchPrefix)) return undefined;
+  const rest = deliveryId.slice(matchPrefix.length);
+  const colon = rest.indexOf(":");
+  const at = Number(rest.slice(0, colon));
+  return colon > 0 && Number.isInteger(at) ? { key: rest.slice(colon + 1), at } : undefined;
 };
 
 const sendToAll = async (
@@ -128,6 +152,18 @@ const sendReactionLane = async (
   return sendToAll(note.author, lane, body, `r-${note.id}`, deps);
 };
 
+/** A match is an alert to the partner who swiped first, and nothing on the other lanes. */
+const sendMatchLane = async (
+  lane: PushLane,
+  match: { readonly key: string; readonly at: number },
+  deps: PushLaneDependencies,
+): Promise<DeliveryOutcome> => {
+  if (lane !== "AlertPush") return "Delivered";
+  const found = await deps.match(match.key, match.at);
+  if (found === undefined) return "Abandon";
+  return sendToAll(found.recipient, lane, matchAlertBody(found.name), `m-${match.key}`, deps);
+};
+
 /**
  * One try of one lane: sends the note to every device of the partner that has a token for it.
  * Delivered once any device took it; Retry while any failure may pass; Abandon when there is no
@@ -141,6 +177,8 @@ export const sendPushLane = async (
   if (!isPushLane(entry.lane)) return "Abandon";
   const rev = reactionRevOf(entry.noteId);
   if (rev !== undefined) return sendReactionLane(entry.lane, rev, deps);
+  const match = matchOfDelivery(entry.noteId);
+  if (match !== undefined) return sendMatchLane(entry.lane, match, deps);
   const note = await deps.note(entry.noteId);
   if (note === undefined) return "Abandon";
   const body = bodyFor(entry.lane, note, deps.nowSeconds());

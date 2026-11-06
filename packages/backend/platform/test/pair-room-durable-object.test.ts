@@ -188,6 +188,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_lists"),
       expect.stringContaining("_list_media"),
       expect.stringContaining("_list_travel"),
+      expect.stringContaining("_movie_swipes"),
     ]);
   });
 
@@ -653,6 +654,47 @@ describe("PairRoom realtime across eviction", () => {
 
     await room.forgetMember(alice);
     expect(await room.lists(bob)).toEqual({ _tag: "Done", lists: [] });
+  });
+
+  it("keeps Pick tonight swipes in SQLite, sends a match to both partners once, and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const follower = await open(room, alice);
+    const notesOnly = await open(room, bob);
+    follower.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, lists: true }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await until(() => follower.frames.some((f) => f._tag === "ListsChanged"));
+
+    const arrival = { _tag: "Title", kind: "movie", tmdb: 329865 } as const;
+    const swipe = (choice: "pass" | "seen" | "want") =>
+      ({ _tag: "Swipe", title: arrival, choice, name: "Arrival" }) as const;
+    expect(await room.pickTonight(alice, swipe("want"))).toMatchObject({
+      _tag: "Done",
+      view: { swipes: [{ title: arrival, choice: "want" }], partnerPicked: 0, matches: [] },
+    });
+
+    await evictDurableObject(room);
+
+    const matched = await room.pickTonight(bob, swipe("want"));
+    expect(matched).toMatchObject({
+      _tag: "Done",
+      view: { partnerPicked: 1, match: { title: arrival, name: "Arrival" } },
+    });
+    await until(() => follower.frames.some((f) => f._tag === "MatchFound"));
+    const again = await room.pickTonight(bob, swipe("want"));
+    expect(again._tag === "Done" && again.view.match).toBeUndefined();
+    expect(again._tag === "Done" && again.view.matches).toHaveLength(1);
+    expect(follower.frames.filter((f) => f._tag === "MatchFound")).toHaveLength(1);
+    expect(notesOnly.frames.some((f) => f._tag === "MatchFound")).toBe(false);
+    expect(await room.pickTonight(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
+    });
+
+    await room.forgetMember(alice);
+    expect(await room.pickTonight(bob, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { swipes: [], partnerPicked: 0, matches: [] },
+    });
   });
 
   it("stores reactions in SQLite, streams each change to sockets that follow them, and forgets them with the pair", async () => {

@@ -21,6 +21,7 @@ final class InboxLink {
         var shop: @MainActor @Sendable (ShopResponse) -> Void
         var lists: @MainActor @Sendable ([SharedList]) -> Void
         var mood: @MainActor @Sendable (PartnerCheckIn) -> Void
+        var match: @MainActor @Sendable (PickMatch) -> Void
     }
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
@@ -42,6 +43,7 @@ final class InboxLink {
                 case .shopChanged(let shop): await handlers.shop(shop)
                 case .listsChanged(let lists): await handlers.lists(lists)
                 case .moodChanged(let checkIn): await handlers.mood(checkIn)
+                case .matchFound(let match): await handlers.match(match)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
                      .clear, .catEntryAdded, .catSaved, .moodChanged:
                     break

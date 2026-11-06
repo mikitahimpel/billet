@@ -194,3 +194,13 @@ export const StoredListItem = Schema.Struct({
 });
 
 export const StoredListKey = Schema.Struct({ key: Schema.String, at: Schema.Int });
+
+/** What a `movie_swipes` row holds. */
+export const StoredMovieSwipe = Schema.Struct({
+  member: Schema.String,
+  title: Schema.String,
+  choice: Schema.String,
+  name: Schema.String,
+  posterPath: Schema.NullOr(Schema.String),
+  at: Schema.Int,
+});

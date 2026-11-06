@@ -7,6 +7,8 @@ import Wire
 struct TitleSource: Sendable {
     var search: @Sendable (_ query: String) async throws(TransportError) -> [TitleSummary]
     var details: @Sendable (_ kind: ListMediaKind, _ tmdb: Int) async throws(TransportError) -> TitleDetails
+    /// What TMDB recommends to those who liked `seeds`, the first 5 of them.
+    var recommendations: @Sendable (_ seeds: [ListMedia]) async throws(TransportError) -> [TitleSummary]
 
     static func live(_ api: APIClient, locale: Locale = .current) -> TitleSource {
         let region = locale.region?.identifier
@@ -16,6 +18,9 @@ struct TitleSource: Sendable {
             search: { (query) async throws(TransportError) in try await api.searchTitles(query, language).results },
             details: { (kind, tmdb) async throws(TransportError) in
                 try await api.title(kind, tmdb, country, language)
+            },
+            recommendations: { (seeds) async throws(TransportError) in
+                try await api.titleRecommendations(seeds, language).results
             })
     }
 

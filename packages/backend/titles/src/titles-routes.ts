@@ -8,6 +8,7 @@ import { routes } from "@billet/contracts-http-api/routes";
 import {
   TitleDetails,
   TitleDetailsQuery,
+  TitleRecommendationsQuery,
   TitleSearchQuery,
   TitleSearchResponse,
 } from "@billet/contracts-http-api/titles";
@@ -27,6 +28,13 @@ const TitleParams = Schema.Struct({
   kind: MediaKind,
   tmdb: Schema.NumberFromString.pipe(Schema.decodeTo(TmdbId)),
 });
+
+/** The seeds of a query that passed `TitleRecommendationsQuery`: `kind:tmdb`, comma-separated. */
+const seedsOf = (ids: string) =>
+  ids.split(",").map((id) => {
+    const [kind, tmdb] = id.split(":");
+    return { kind: kind === "tv" ? ("tv" as const) : ("movie" as const), tmdb: Number(tmdb) };
+  });
 
 const respondTitleFailures = <R>(
   effect: Effect.Effect<
@@ -67,6 +75,17 @@ export const TitlesRoutes = HttpRouter.use((router) =>
           return yield* respondSearch({ results: [] }, { headers: searchHeaders });
         const found = yield* catalog.search(q, lang ?? defaultLanguage);
         return yield* respondSearch(found, { headers: searchHeaders });
+      }).pipe(respondTitleFailures),
+    );
+    yield* router.add(
+      routes.titleRecommendations.method,
+      routes.titleRecommendations.path,
+      Effect.gen(function* () {
+        yield* principal;
+        const { ids, lang } =
+          yield* HttpServerRequest.schemaSearchParams(TitleRecommendationsQuery);
+        const found = yield* catalog.recommendations(seedsOf(ids), lang ?? defaultLanguage);
+        return yield* respondSearch(found, { headers: detailsHeaders });
       }).pipe(respondTitleFailures),
     );
     yield* router.add(

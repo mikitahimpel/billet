@@ -286,3 +286,22 @@ export const listKeys = sqliteTable(
   },
   (table) => [index("list_keys_at").on(table.at)],
 );
+
+// Pick tonight: each member's latest swipe on each card, `title` being `item:<id>`, `movie:<tmdb>`
+// or `tv:<tmdb>`. `name` and `poster_path` are the card's, for the match it may make. Rows older
+// than a session (24 hours) are deleted on the next swipe.
+export const movieSwipes = sqliteTable(
+  "movie_swipes",
+  {
+    member: text("member").notNull(),
+    title: text("title").notNull(),
+    choice: text("choice").notNull(),
+    name: text("name").notNull(),
+    posterPath: text("poster_path"),
+    at: integer("at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.member, table.title] }),
+    index("movie_swipes_at").on(table.at),
+  ],
+);

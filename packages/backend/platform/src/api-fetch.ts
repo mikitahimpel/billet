@@ -25,6 +25,8 @@ import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
 import { GiftsService } from "@billet/backend-notes/gifts-service";
 import { ListsRoutes } from "@billet/backend-notes/lists-routes";
 import { ListsService } from "@billet/backend-notes/lists-service";
+import { PickTonightRoutes } from "@billet/backend-notes/pick-tonight-routes";
+import { PickTonightService } from "@billet/backend-notes/pick-tonight-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -98,6 +100,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     MoodRoutes,
     GiftsRoutes,
     ListsRoutes,
+    PickTonightRoutes,
     TitlesRoutes,
     FlagsRoutes,
     DatesRoutes,
@@ -122,6 +125,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         MoodService.layer,
         GiftsService.layer,
         ListsService.layer,
+        PickTonightService.layer,
         TitleCatalog.layer.pipe(
           Layer.provide(
             Layer.mergeAll(

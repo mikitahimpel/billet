@@ -75,6 +75,18 @@ export const reactionAlertBody = (reaction: {
   ),
 });
 
+/**
+ * An alert to the partner who swiped ♥ first that the other one did too. It carries no payload,
+ * so the notification extension leaves it as it is.
+ */
+export const matchAlertBody = (name: string): unknown => ({
+  aps: {
+    alert: { title: "It's a match!", body: `You both want to watch ${name}` },
+    sound: "default",
+    "thread-id": "pick-tonight",
+  },
+});
+
 /** A WidgetKit push only asks the widgets to reload; the payload rides along for a future reader. */
 export const widgetBody = (note: Note): unknown => ({
   aps: { "content-changed": true },

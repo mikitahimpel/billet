@@ -38,6 +38,12 @@ import type { RoomState, SequencedNote } from "@billet/backend-pair-room/room-st
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { GiftsRoom, type GiftCommand, type GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { ListsResult } from "@billet/backend-pair-room/lists";
+import {
+  pickKeyOf,
+  PickTonightRoom,
+  type PickTonightCommand,
+  type PickTonightResult,
+} from "@billet/backend-pair-room/pick-tonight";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
@@ -59,6 +65,7 @@ import type { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
   enabledPushLanes,
+  matchDeliveryId,
   reactionDeliveryId,
   sendPushLane,
   type PushLaneSettings,
@@ -213,6 +220,14 @@ export class PairRoom extends DurableObject {
               ? { reaction: latest, note: stored.value.note }
               : undefined;
           },
+          match: async (key, at) => {
+            const notice = await (
+              await this.runtime
+            ).runPromise(PickTonightRoom.use((pick) => pick.notice(key, at)));
+            return notice === undefined
+              ? undefined
+              : { recipient: notice.recipient, name: notice.match.name };
+          },
           recipient: async (note) => {
             const room = await this.snapshot();
             if (room._tag !== "Active") return undefined;
@@ -266,6 +281,31 @@ export class PairRoom extends DurableObject {
         }),
       ),
     );
+  }
+
+  /**
+   * Runs one Pick tonight command for `by`. A swipe that makes a match is sent to every socket that
+   * follows the lists, the swiper's own included, and pushed to the partner who swiped first.
+   */
+  async pickTonight(by: UserId, command: PickTonightCommand): Promise<PickTonightResult> {
+    const result = await (
+      await this.runtime
+    ).runPromise(
+      PickTonightRoom.use((pick) => pick.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.pickTonight.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
+    );
+    const match = result._tag === "Done" ? result.view.match : undefined;
+    if (match !== undefined) {
+      for (const socket of this.ctx.getWebSockets()) {
+        if (attachmentOf(socket)?.lists === true) send(socket, { _tag: "MatchFound", match });
+      }
+      await this.enqueueDeliveries(matchDeliveryId(pickKeyOf(match.title), match.at));
+    }
+    return result;
   }
 
   /**
@@ -774,6 +814,7 @@ export class PairRoom extends DurableObject {
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
+    await (await this.runtime).runPromise(PickTonightRoom.use((pick) => pick.forget));
     await this.run((room) => room.forgetLists, "PairRoom.forgetLists");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
