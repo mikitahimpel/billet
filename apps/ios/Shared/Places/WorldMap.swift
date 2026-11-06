@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import UIKit
 
 /// Every country's outline from Natural Earth (public domain), simplified to half a degree, on an equirectangular

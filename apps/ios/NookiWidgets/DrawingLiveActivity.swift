@@ -1,5 +1,6 @@
 import ActivityKit
 import SwiftUI
+import Design
 import Wire
 import WidgetKit
 

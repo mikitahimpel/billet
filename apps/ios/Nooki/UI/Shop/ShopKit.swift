@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The Shop's own accents on the warm room palette, saturated so offers stand out against the brown.
 enum ShopInk {
@@ -35,6 +36,11 @@ extension ShopRarity {
         }
     }
 
+    /// The rarity's label: its tint under `Ink.text`.
+    var chip: Chip {
+        Chip(title, style: self == .common ? .quiet : .tinted(tint))
+    }
+
     /// Epic and legendary pieces glow and catch the light now and then.
     var shines: Bool { self == .epic || self == .legendary }
 }
@@ -65,25 +71,6 @@ struct RarityFrame<Content: View>: View {
                     LinearGradient(colors: [rarity.tint, rarity.tint.opacity(rarity == .common ? 0.15 : 0.45)],
                                    startPoint: .top, endPoint: .bottom),
                     lineWidth: rarity == .common ? 1 : 1.5)
-            }
-    }
-}
-
-/// Art lifted off its frame: a soft oval on the floor under it, drawn once, instead of a shadow traced around the
-/// picture.
-struct Lifted<Content: View>: View {
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        content
-            .background(alignment: .bottom) {
-                Ellipse()
-                    .fill(RadialGradient(colors: [.black.opacity(0.35), .clear], center: .center, startRadius: 0,
-                                         endRadius: 60))
-                    .frame(height: 18)
-                    .scaleEffect(x: 0.8, y: 1)
-                    .offset(y: 6)
-                    .accessibilityHidden(true)
             }
     }
 }
@@ -141,23 +128,6 @@ private struct SweepEffect: GeometryEffect {
     }
 }
 
-/// A small label in a rounded tag: rarity, NEW, a discount. Dark ink, since every tag fill is light and saturated.
-struct ShopTag: View {
-    let text: String
-    let fill: Color
-    var ink: Color = Ink.heroInk
-
-    var body: some View {
-        Text(text)
-            .font(.nookiMicro)
-            .textCase(.uppercase)
-            .foregroundStyle(ink)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(fill, in: .rect(cornerRadius: Radius.tag, style: .continuous))
-    }
-}
-
 /// A price in coins, with the old price struck through when there's a deal.
 struct CoinPrice: View {
     let price: Int
@@ -181,25 +151,6 @@ struct CoinPrice: View {
 }
 
 extension View {
-    /// A buy or claim button inside a card: a flat honey capsule, or a raised clay one when not prominent. Glass is
-    /// kept for chrome that floats over the room; a dozen glass buttons in a scrolling list would each re-sample
-    /// what is behind them on every frame.
-    func shopButton(prominent: Bool = true) -> some View {
-        buttonStyle(ShopButtonStyle(prominent: prominent))
-    }
-
-    /// A card on the Shop: a bright cream card with dark text, whatever the appearance, so the art and its rarity
-    /// colour read clearly.
-    func shopCard(radius: CGFloat = Radius.card) -> some View {
-        environment(\.colorScheme, .light)
-            .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(LinearGradient(colors: [Color(hex: 0xFFFAF3), Color(hex: 0xFBEBD8)],
-                                         startPoint: .top, endPoint: .bottom))
-                    .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
-            }
-    }
-
     /// Fades and rises a little into place as it scrolls in, straight up, never sideways; only a fade under Reduce
     /// Motion.
     func shopAppear() -> some View {
@@ -216,33 +167,6 @@ private struct ShopAppear: ViewModifier {
             content
                 .opacity(phase.isIdentity ? 1 : 0.3)
                 .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
-        }
-    }
-}
-
-/// A Shop section's title with its icon on a disc of the section's accent, and a quiet line on the right.
-struct ShopSectionHeader<Trailing: View>: View {
-    let title: String
-    let symbol: String
-    let tint: Color
-    @ViewBuilder let trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .center, spacing: Space.s) {
-            Image(systemName: symbol)
-                .font(.nookiCallout.weight(.bold))
-                .foregroundStyle(Ink.heroInk)
-                .frame(width: 30, height: 30)
-                .background(tint, in: .circle)
-                .accessibilityHidden(true)
-            Text(title)
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: Space.s)
-            trailing
-                .font(.nookiCaption)
-                .foregroundStyle(Ink.textSecondary)
         }
     }
 }
@@ -286,37 +210,5 @@ struct WrapLayout: Layout {
         }
         if !current.indices.isEmpty { rows.append(current) }
         return rows
-    }
-}
-
-private struct ShopButtonStyle: ButtonStyle {
-    let prominent: Bool
-    @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.controlSize) private var controlSize
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.nookiHeadline)
-            .foregroundStyle(prominent ? Ink.heroInk : Ink.accentText)
-            // One line, shrinking a little rather than wrapping, and one height and shape for every price or owned
-            // button.
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)
-            .padding(.horizontal, Space.m)
-            .frame(minHeight: controlSize == .large ? 50 : 44)
-            .background {
-                if prominent {
-                    Capsule().fill(.honeyGradient)
-                        .overlay(Capsule().strokeBorder(.white.opacity(0.35), lineWidth: 1))
-                } else {
-                    Capsule().fill(Ink.surfaceRaised)
-                        .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
-                }
-            }
-            .contentShape(.capsule)
-            .opacity(isEnabled ? 1 : 0.45)
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .brightness(configuration.isPressed ? -0.04 : 0)
-            .animation(.spring(duration: 0.2), value: configuration.isPressed)
     }
 }

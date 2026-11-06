@@ -1,5 +1,6 @@
 import FeaturePairing
 import SwiftUI
+import Design
 
 /// Pairs this phone with the partner's: one shows a code, the other types it in. Whoever shows the code waits here
 /// while the sheet checks every few seconds whether it was claimed.
@@ -15,31 +16,13 @@ struct PairingSheet: View {
     @FocusState private var typing: Bool
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    content
-                }
-                .padding(.horizontal, Space.gutter)
-                .padding(.vertical, Space.m)
-            }
-            .scrollIndicators(.hidden)
-            .background(Ink.screen.ignoresSafeArea())
-            .navigationTitle("Pair with your partner")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    if !isPaired {
-                        Button("Cancel") {
-                            model.cancel()
-                            dismiss()
-                        }
-                    }
-                }
+        BilletSheet("Pair with your partner") {
+            VStack(spacing: Space.l + 2) {
+                content
             }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
+        // Closing a sheet that is not paired yet gives up on the code it started.
+        .onDisappear { if !isPaired { model.cancel() } }
         .interactiveDismissDisabled(isPaired)
         .onAppear { if code.isEmpty { code = prefill } }
         .task(id: waitingCode) {
@@ -91,7 +74,7 @@ struct PairingSheet: View {
             } label: {
                 Text("Get a code").frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
 
@@ -113,7 +96,7 @@ struct PairingSheet: View {
                 .padding(.vertical, Space.m)
                 .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
             Button("Pair", action: submit)
-                .buttonStyle(NookiSecondaryStyle())
+                .buttonStyle(SecondaryButtonStyle())
             .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
         }
     }
@@ -145,7 +128,7 @@ struct PairingSheet: View {
             ShareLink(item: "Pair with me on Nooki: \(code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
             }
-            .buttonStyle(NookiSecondaryStyle())
+            .buttonStyle(SecondaryButtonStyle())
         }
     }
 
@@ -166,7 +149,7 @@ struct PairingSheet: View {
             } label: {
                 Text("Done").frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
         }
     }
 
@@ -174,7 +157,7 @@ struct PairingSheet: View {
         VStack(spacing: Space.m, content: content)
             .padding(Space.gutter)
             .frame(maxWidth: .infinity)
-            .nookiCard()
+            .cardSurface()
     }
 
     private var isPaired: Bool {

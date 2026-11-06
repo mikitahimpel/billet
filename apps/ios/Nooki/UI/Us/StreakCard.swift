@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The love streak on the Us tab: flame and day count, today's state, best streak and the milestone badge.
 struct StreakCard: View {
@@ -44,7 +45,7 @@ struct StreakCard: View {
                     Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
                 }
-                .nookiPrimary()
+                .buttonStyle(PrimaryButtonStyle())
             }
 
             HStack(spacing: 10) {
@@ -65,7 +66,7 @@ struct StreakCard: View {
             }
         }
         .padding(Space.l)
-        .usCard()
+        .cardSurface()
         .animation(.snappy(duration: 0.3), value: days)
     }
 
@@ -95,7 +96,7 @@ private struct Flame: View {
 
     var body: some View {
         Image(systemName: "flame.fill")
-            .font(.system(size: 34, weight: .semibold))
+            .font(.system(.largeTitle, weight: .semibold))
             .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
             .opacity(lit || days == 0 ? 1 : 0.45)
             .symbolEffect(.bounce, value: days)

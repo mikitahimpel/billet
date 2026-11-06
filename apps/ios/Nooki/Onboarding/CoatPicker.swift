@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The coat step's picker: the chosen cat large on a soft light, its name, and one round clay chip per coat. A tap on
 /// a chip, or a swipe across the cat, changes the coat; the cat cross-fades into the new one.

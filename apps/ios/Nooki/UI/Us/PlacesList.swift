@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Places to go: how many of the 195 countries the pair has been to, a map of them, and the countries by tab.
 /// Places in a country show under it; a place whose country isn't on the list, or a line of text, is its own row.
@@ -15,8 +16,8 @@ struct PlacesListBody: View {
         VStack(alignment: .leading, spacing: Space.m) {
             hero
             HStack(spacing: Space.s) {
-                UsChip(title: "Want to go · \(rows.want.count)", selected: tab == .want) { select(.want) }
-                UsChip(title: "Been · \(rows.been.count)", selected: tab == .been) { select(.been) }
+                FilterChip("Want to go · \(rows.want.count)", isSelected: tab == .want) { select(.want) }
+                FilterChip("Been · \(rows.been.count)", isSelected: tab == .been) { select(.been) }
             }
             .padding(.top, 2)
             let shown = tab == .want ? rows.want : rows.been
@@ -34,7 +35,7 @@ struct PlacesListBody: View {
                         rowView(row)
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
         }
     }
@@ -48,7 +49,7 @@ struct PlacesListBody: View {
         return VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("\(summary.been)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Ink.text)
                 Text("of \(Country.count) countries together · \(summary.percent)%")
                     .font(.nookiCallout)
@@ -64,7 +65,7 @@ struct PlacesListBody: View {
             }
         }
         .padding(Space.l)
-        .usCard(radius: Radius.hero, warm: true)
+        .cardSurface(radius: Radius.hero, warm: true)
     }
 
     private func legend(_ title: String, @ViewBuilder mark: () -> some View) -> some View {

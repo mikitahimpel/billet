@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import UIKit
 
 /// One note opened from the board: the paper big, its text or doodle, and a way to take it down.
@@ -13,44 +14,34 @@ struct NoteSheet: View {
     private var note: Note? { state.notes.notes.first { $0.id == id } }
 
     var body: some View {
-        VStack(spacing: 22) {
+        BilletSheet("Note", size: .fit) {
             if let note {
-                face(note)
-                    .rotationEffect(.degrees(-1))
-                    .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
-                    .padding(.horizontal, 28)
-                    .padding(.top, 30)
+                VStack(spacing: Space.l + 6) {
+                    face(note)
+                        .rotationEffect(.degrees(-1))
+                        .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
+                        .padding(.top, Space.s)
 
-                HStack(spacing: 6) {
-                    Monogram(partner: note.author, profile: state.profile, size: 20)
-                    Text(note.date.formatted(date: .long, time: .omitted))
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                }
-
-                Spacer(minLength: 0)
-
-                Button { confirmDelete = true } label: {
-                    Image(systemName: "trash")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Ink.textSecondary)
-                        .frame(width: 52, height: 52)
-                        .background(Ink.surfaceRaised, in: .circle)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete")
-                .padding(.bottom, 12)
-                .confirmationDialog("Delete this note?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                    Button("Delete", role: .destructive) {
-                        state.notes.delete(note)
-                        dismiss()
+                    HStack(spacing: 6) {
+                        Monogram(partner: note.author, profile: state.profile, size: 20)
+                        Text(note.date.formatted(date: .long, time: .omitted))
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
                     }
+
+                    SecondaryButton("Delete note", symbol: "trash") { confirmDelete = true }
+                        .confirmationDialog("Delete this note?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                            Button("Delete", role: .destructive) {
+                                state.notes.delete(note)
+                                dismiss()
+                            }
+                        }
                 }
+                .frame(maxWidth: .infinity)
             }
         }
         .animation(.snappy(duration: 0.25), value: note)
         .task(id: id) { await loadDoodle() }
-        .usSheet()
     }
 
     private func face(_ note: Note) -> some View {

@@ -1,7 +1,9 @@
 import SwiftUI
+import Design
 
 /// The ink dots for notes and drawings: owned inks pick, a locked one shows its price and a tap buys it, with the
-/// purchase moment's Undo. Short of coins it shakes and says how many are missing.
+/// purchase moment's Undo. Short of coins the tap opens the Store, finishing the buy once the coins are there; the
+/// note or canvas it sits in closes first, since the Store cannot show over it.
 struct InkPalette: View {
     let state: HomeState
     @Binding var selection: PaletteInk
@@ -9,27 +11,18 @@ struct InkPalette: View {
     var onDark = false
     /// The price under a locked dot.
     var label: Color = Ink.text
-    /// Opens the Shop at an ink the coins don't cover yet.
-    var openShop: (PaletteInk) -> Void
+    /// Closes the sheet this sits in when the Store opens, for a host that can't show it over itself. The lock-screen
+    /// canvas shows the Store over itself.
+    var closesForStore = true
     var picked: () -> Void = {}
 
-    @State private var short: PaletteInk?
-    @State private var shakes = 0
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         HStack(spacing: 10) {
             ForEach(state.shop.inks) { ink in
                 dot(ink)
             }
-        }
-        .haptic(.warning, trigger: shakes)
-        .alert(item: $short) { ink in
-            Alert(
-                title: Text("\(max(0, ink.price - state.shop.coins)) more coins to go"),
-                message: Text(
-                    "\(ink.name) ink is \(ink.price) coins. Answer today's question or open the daily gift to earn more."),
-                primaryButton: .default(Text("Open Shop")) { openShop(ink) },
-                secondaryButton: .cancel())
         }
     }
 
@@ -46,7 +39,7 @@ struct InkPalette: View {
                     .overlay {
                         if !owned {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.nookiMicro)
                                 .foregroundStyle(.white)
                                 .shadow(radius: 1)
                         }
@@ -57,7 +50,7 @@ struct InkPalette: View {
                     HStack(spacing: 2) {
                         CoinIcon(size: 9)
                         Text("\(ink.price)")
-                            .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+                            .font(.nookiMicro.monospacedDigit())
                     }
                     .foregroundStyle(label)
                 }
@@ -66,7 +59,7 @@ struct InkPalette: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(owned ? "\(ink.name) ink" : "Buy \(ink.name) ink, \(ink.price) coins")
-        .accessibilityHint(owned ? "" : "Buys it now; you can undo for a few seconds")
+        .accessibilityHint(owned ? "" : "Buys it, or opens the Store when the coins are short")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("ink-\(ink.id)")
     }
@@ -75,14 +68,11 @@ struct InkPalette: View {
         if owned {
             selection = ink
             picked()
-        } else if state.shop.coins >= ink.price {
-            if state.shop.buy(ink) {
-                selection = ink
-                picked()
-            }
-        } else {
-            shakes += 1
-            short = ink
+        } else if state.shop.buy(ink) {
+            selection = ink
+            picked()
+        } else if state.shop.coinsAsk != nil, closesForStore {
+            dismiss()
         }
     }
 }

@@ -1,5 +1,6 @@
 import Pet
 import SwiftUI
+import Design
 
 extension AppSettings {
     /// Labs: shows the cat's brain over the room.

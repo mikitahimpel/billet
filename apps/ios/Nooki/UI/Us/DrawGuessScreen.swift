@@ -1,5 +1,6 @@
 import Ink
 import SwiftUI
+import Design
 import Transport
 import Wire
 
@@ -10,7 +11,6 @@ struct DrawGuessScreen: View {
     let model: DrawGuessModel
 
     @Environment(ServerSession.self) private var session: ServerSession?
-    @Environment(\.dismiss) private var dismiss
     @State private var drawing: Word?
     @State private var ownWord = ""
     @State private var givingUp = false
@@ -25,19 +25,11 @@ struct DrawGuessScreen: View {
     }
 
     var body: some View {
-        ZStack {
-            Ink.screen.ignoresSafeArea()
+        BilletSheet("Draw & guess", scrolls: false) {
             VStack(spacing: 0) {
-                UsSheetHeader(title: "Draw & guess", subtitle: subtitle) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.nookiHeadline)
-                            .foregroundStyle(Ink.text)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(Ink.surfaceRaised))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
+                if let subtitle {
+                    SheetSubtitle(text: subtitle)
+                        .padding(.horizontal, Space.gutter)
                 }
                 content
                     .frame(maxHeight: .infinity)
@@ -45,7 +37,6 @@ struct DrawGuessScreen: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: tapped)
         .sensoryFeedback(.error, trigger: model.misses)
-        .usSheet()
         .task { await model.load() }
         .fullScreenCover(item: $drawing) { picked in
             let word = picked.text
@@ -74,14 +65,14 @@ struct DrawGuessScreen: View {
         case .loading:
             ProgressView()
         case .unpaired:
-            UsEmpty(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
+            EmptyState(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
                     text: "Draw & guess takes two: one of you draws a word, the other guesses it from the letters.")
         case .offline:
             VStack(spacing: Space.l) {
-                UsEmpty(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach your riddles",
+                EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach your riddles",
                         text: "Riddles wait in your room on the server, so the game needs a connection.")
                 Button("Try again") { Task { await model.load() } }
-                    .buttonStyle(NookiSecondaryStyle())
+                    .buttonStyle(SecondaryButtonStyle())
             }
         case .guess:
             if let riddle = model.theirs { guess(riddle) }
@@ -126,12 +117,12 @@ struct DrawGuessScreen: View {
                             Text(riddle.hints == 0 ? "Mochi's hint" : "Another hint")
                         }
                     }
-                    .buttonStyle(NookiSecondaryStyle())
+                    .buttonStyle(SecondaryButtonStyle())
                     .disabled(!model.canHint || model.busy)
                     .accessibilityLabel(riddle.hints == 0 ? "Mochi's hint: takes away some extra letters"
                                                           : "Mochi's hint: shows one letter")
                     Button("Give up") { givingUp = true }
-                        .buttonStyle(NookiSecondaryStyle())
+                        .buttonStyle(SecondaryButtonStyle())
                 }
                 Text("Each hint costs 2 of the 10 coins a solve pays.")
                     .font(.nookiCaption)
@@ -226,7 +217,7 @@ struct DrawGuessScreen: View {
                         .font(.nookiCaption)
                         .foregroundStyle(ownWord.isEmpty || typed != nil ? Ink.textTertiary : Ink.accentText)
                     Button("Draw it") { if let typed { drawing = Word(text: typed) } }
-                        .buttonStyle(NookiSecondaryStyle())
+                        .buttonStyle(SecondaryButtonStyle())
                         .disabled(typed == nil)
                 }
                 if model.unsent {
@@ -283,13 +274,13 @@ struct DrawGuessScreen: View {
                             }
                         }
                         .padding(Space.l)
-                        .usCard()
+                        .cardSurface()
                         .accessibilityElement(children: .combine)
                     }
                 }
                 .padding(.vertical, Space.l)
             }
-            UsPrimaryButton(title: "Now you draw") { model.drawNext() }
+            PrimaryButton("Now you draw") { model.drawNext() }
         }
         .padding(.horizontal, Space.gutter)
         .padding(.bottom, Space.l)
@@ -457,7 +448,7 @@ private struct RiddleTiles: View {
                 .font(.nookiTitle)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity, minHeight: 48)
-                .nookiCard(radius: Radius.control)
+                .cardSurface(radius: Radius.control)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(tile.letter)
@@ -493,7 +484,7 @@ private struct WordOption: View {
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
         .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-        .nookiCard(radius: Radius.control)
+        .cardSurface(radius: Radius.control)
         .contentShape(.rect(cornerRadius: Radius.control))
     }
 }

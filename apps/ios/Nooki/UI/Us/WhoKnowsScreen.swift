@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 /// Who knows who: today's five questions, about this user or about the partner, and the reveal once both are done.
@@ -17,26 +18,17 @@ struct WhoKnowsScreen: View {
     private var subject: String { model.isSubject ? state.viewer : state.otherPartner }
 
     var body: some View {
-        ZStack {
-            Ink.screen.ignoresSafeArea()
+        BilletSheet("Who knows who", scrolls: false) {
             VStack(spacing: 0) {
-                UsSheetHeader(title: "Who knows who", subtitle: subtitle) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.nookiHeadline)
-                            .foregroundStyle(Ink.text)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(Ink.surfaceRaised))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
+                if let subtitle {
+                    SheetSubtitle(text: subtitle)
+                        .padding(.horizontal, Space.gutter)
                 }
                 content
                     .frame(maxHeight: .infinity)
             }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: tapped)
-        .usSheet()
         .task { await refresh() }
     }
 
@@ -62,14 +54,14 @@ struct WhoKnowsScreen: View {
         case .loading:
             ProgressView()
         case .unpaired:
-            UsEmpty(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
+            EmptyState(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
                     text: "Who knows who takes two: one of you answers five questions about yourself, the other guesses.")
         case .offline:
             VStack(spacing: Space.l) {
-                UsEmpty(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach today's round",
+                EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach today's round",
                         text: "Answers stay hidden in your room on the server, so the game needs a connection.")
                 Button("Try again") { Task { await model.load() } }
-                    .buttonStyle(NookiSecondaryStyle())
+                    .buttonStyle(SecondaryButtonStyle())
             }
         case .answerAboutYou, .guessAboutPartner:
             if let round = model.response?.round, model.answers.isEmpty, introRound != round.id {
@@ -79,11 +71,11 @@ struct WhoKnowsScreen: View {
             } else if model.lacksQuestions {
                 // The catalog refresh failed or came back without today's questions.
                 VStack(spacing: Space.l) {
-                    UsEmpty(icon: UsGlyph(symbol: "questionmark.bubble.fill", tint: .honey),
+                    EmptyState(icon: UsGlyph(symbol: "questionmark.bubble.fill", tint: .honey),
                             title: "Can't load today's questions",
                             text: "Check your connection and try again.")
                     Button("Try again") { Task { await refresh() } }
-                        .buttonStyle(NookiSecondaryStyle())
+                        .buttonStyle(SecondaryButtonStyle())
                 }
             } else {
                 ProgressView()
@@ -123,7 +115,7 @@ struct WhoKnowsScreen: View {
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 0)
-            UsPrimaryButton(title: "Let's go") {
+            PrimaryButton("Let's go") {
                 withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3)) { introRound = round.id }
             }
         }
@@ -237,10 +229,10 @@ private struct WhoKnowsReveal: View {
                         .id(step)
                         .transition(reduceMotion ? .opacity : .push(from: .trailing))
                 }
-                UsPrimaryButton(title: step + 1 < reveal.count ? "Next" : "See the score") { advance() }
+                PrimaryButton(step + 1 < reveal.count ? "Next" : "See the score") { advance() }
             } else {
                 ScrollView { summary }
-                UsPrimaryButton(title: "See them again") { withAnimation(animation) { step = 0 } }
+                PrimaryButton("See them again") { withAnimation(animation) { step = 0 } }
             }
         }
         .padding(.horizontal, Space.gutter)
@@ -278,11 +270,11 @@ private struct WhoKnowsReveal: View {
                         .foregroundStyle(Ink.textSecondary)
                         .multilineTextAlignment(.center)
                     Button("Open Date night", action: openDates)
-                        .buttonStyle(NookiSecondaryStyle())
+                        .buttonStyle(SecondaryButtonStyle())
                 }
                 .frame(maxWidth: .infinity)
                 .padding(Space.l)
-                .usCard(warm: true)
+                .cardSurface(warm: true)
                 .accessibilityElement(children: .contain)
             }
 
@@ -301,7 +293,7 @@ private struct WhoKnowsReveal: View {
                 Spacer(minLength: 0)
             }
             .padding(Space.l)
-            .usCard()
+            .cardSurface()
             .accessibilityElement(children: .combine)
         }
     }
@@ -480,7 +472,7 @@ private struct WhoKnowsOption: View {
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
         .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
-        .nookiCard(radius: Radius.control)
+        .cardSurface(radius: Radius.control)
         .contentShape(.rect(cornerRadius: Radius.control))
     }
 }
