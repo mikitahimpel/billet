@@ -72,6 +72,13 @@ export const ClientEventName = Schema.Literals([
   /** A button on the widget was tapped: `pet` or `treat`. */
   "WidgetButtonTapped",
 
+  /** Pick tonight was opened: one session. */
+  "PickTonightOpened",
+  /** A Pick tonight swipe made a match. */
+  "PickTonightMatched",
+  /** A match was planned as tonight's date. */
+  "PickTonightPlanned",
+
   /** The profile ("Us") was opened. */
   "ProfileOpened",
   /** The app asked the user to sign in with Apple. */
@@ -149,6 +156,9 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   StreakOpened: { detail: "none" },
   StreakMilestoneSeen: { detail: "id", required: true },
   WidgetButtonTapped: { detail: ["pet", "treat"], required: true },
+  PickTonightOpened: { detail: "none" },
+  PickTonightMatched: { detail: "none" },
+  PickTonightPlanned: { detail: "none" },
   ProfileOpened: { detail: "none" },
   SignInPromptShown: { detail: "none" },
   SignInPromptAnswered: { detail: ["accepted", "dismissed"], required: true },

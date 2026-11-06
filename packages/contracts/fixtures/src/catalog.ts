@@ -129,6 +129,8 @@ import {
 import { ListCommand, SharedList } from "@billet/contracts-domain/list";
 import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lists";
 import { TitleDetails, TitleSearchResponse } from "@billet/contracts-http-api/titles";
+import { PickMatch, PickTitle } from "@billet/contracts-domain/pick-tonight";
+import { PickSwipeRequest, PickTonightResponse } from "@billet/contracts-http-api/pick-tonight";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -603,6 +605,21 @@ const toWatch = Schema.decodeUnknownSync(SharedList)({
     },
   ],
 });
+const pickItem = Schema.decodeUnknownSync(PickTitle)({
+  _tag: "Item",
+  item: "00000000-0000-4000-8000-0000000000c5",
+});
+const pickArrival = Schema.decodeUnknownSync(PickTitle)({
+  _tag: "Title",
+  kind: "movie",
+  tmdb: 329865,
+});
+const pickMatch = Schema.decodeUnknownSync(PickMatch)({
+  title: pickItem,
+  name: "Past Lives",
+  posterPath: "/gmTocN1iLLDyjEJir2CBnt2EhGE.jpg",
+  at: 1_700_000_300_000,
+});
 const placesToGo = Schema.decodeUnknownSync(SharedList)({
   id: "00000000-0000-4000-8000-0000000000c6",
   kind: "travel",
@@ -764,6 +781,28 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ListsResponse", ListsResponse, {
     default: { lists: [groceries, toWatch] },
     empty: { lists: [] },
+  }),
+  fixture("PickTitle", PickTitle, { item: pickItem, title: pickArrival }),
+  fixture("PickTonightResponse", PickTonightResponse, {
+    default: {
+      swipes: [
+        { title: pickItem, choice: "want", at: 1_700_000_250_000 },
+        { title: pickArrival, choice: "pass", at: 1_700_000_260_000 },
+      ],
+      partnerPicked: 3,
+      matches: [pickMatch],
+      match: pickMatch,
+    },
+    empty: { swipes: [], partnerPicked: 0, matches: [] },
+  }),
+  fixture("PickSwipeRequest", PickSwipeRequest, {
+    default: {
+      title: pickArrival,
+      choice: "seen",
+      name: "Arrival",
+      posterPath: "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
+    },
+    "without-poster": { title: pickItem, choice: "want", name: "Past Lives" },
   }),
   fixture("TitleSearchResponse", TitleSearchResponse, {
     default: {
@@ -1323,6 +1362,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       },
     }),
     "mood-changed": ServerMessage.cases.MoodChanged.make({ checkIn: missingAlice }),
+    "match-found": ServerMessage.cases.MatchFound.make({ match: pickMatch }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

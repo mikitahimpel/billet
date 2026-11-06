@@ -106,6 +106,32 @@ describe("delivery lanes", () => {
     expect(await calls(room)).toBe(1);
   });
 
+  it("enqueues a match again on a repeated ♥ whose first try stored the swipe but no delivery", async () => {
+    const room = await laneRoom();
+    const want = {
+      _tag: "Swipe",
+      title: { _tag: "Title", kind: "movie", tmdb: 329865 },
+      choice: "want",
+      name: "Arrival",
+    } as const;
+    await room.pickTonight(alice, want);
+    await room.pickTonight(bob, want);
+    // As if the second swipe failed between storing the swipe and saving its delivery.
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("DELETE FROM delivery");
+    });
+    expect(await room.pickTonight(bob, want)).toMatchObject({
+      _tag: "Done",
+      view: { matches: [{}] },
+    });
+    expect((await room.deliveries()).map((d) => d.noteId)).toEqual([
+      expect.stringMatching(/^match:/),
+    ]);
+
+    await room.pickTonight(bob, want);
+    expect(await room.deliveries()).toHaveLength(1);
+  });
+
   it("enqueues a retried send whose first try stored the note but no delivery", async () => {
     const room = await laneRoom();
     const request = photo();

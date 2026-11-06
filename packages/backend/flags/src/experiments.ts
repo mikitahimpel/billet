@@ -208,6 +208,18 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
+  // Pick tonight on the To watch list. On by default; `off` hides the button, for a pair or for
+  // everyone.
+  {
+    key: "pick-tonight",
+    kind: "flag",
+    description: "Whether To watch offers Pick tonight, the swipe deck that finds a film for both.",
+    variants: { on: 1, off: 0 },
+    default: "on",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
   {
     key: "rooms",
     kind: "experiment",

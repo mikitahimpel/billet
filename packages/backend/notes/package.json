@@ -23,7 +23,9 @@
     "./gifts-routes": "./src/gifts-routes.ts",
     "./gifts-service": "./src/gifts-service.ts",
     "./lists-routes": "./src/lists-routes.ts",
-    "./lists-service": "./src/lists-service.ts"
+    "./lists-service": "./src/lists-service.ts",
+    "./pick-tonight-routes": "./src/pick-tonight-routes.ts",
+    "./pick-tonight-service": "./src/pick-tonight-service.ts"
   },
   "scripts": {
     "lint": "oxlint .",

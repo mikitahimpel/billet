@@ -37,6 +37,8 @@ final class ServerSession {
     @ObservationIgnored private weak var lists: ListsModel?
     /// Where the room's check-ins go; set each time the socket is followed.
     @ObservationIgnored private var moods: (@MainActor (PartnerCheckIn) -> Void)?
+    /// The open Pick tonight screen's, for a match the partner's swipe made; nil while it is closed.
+    @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
     @ObservationIgnored private let backend: Backend
     /// The build's store for coin packs, over the pair's purchase routes.
@@ -125,7 +127,8 @@ final class ServerSession {
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
                         shop: { [weak self] in self?.shop?.received($0) },
                         lists: { [weak self] in self?.lists?.received($0) },
-                        mood: { [weak self] in self?.moods?($0) }))
+                        mood: { [weak self] in self?.moods?($0) },
+                        match: { [weak self] in self?.matches?($0) }))
             }
             inboxLink?.connect()
         } else {
@@ -171,6 +174,11 @@ final class ServerSession {
 
     /// The pair's shared lists in its room; nil until this account has a partner.
     var listSync: ListSync? {
+        isPaired ? .live(backend.api) : nil
+    }
+
+    /// The pair's Pick tonight session in its room; nil until this account has a partner.
+    var pickTonight: PickTonightSync? {
         isPaired ? .live(backend.api) : nil
     }
 

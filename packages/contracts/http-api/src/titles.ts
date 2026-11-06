@@ -73,3 +73,18 @@ export const TitleDetailsQuery = Schema.Struct({
   lang: Schema.optionalKey(TitleLanguage),
 });
 export type TitleDetailsQuery = typeof TitleDetailsQuery.Type;
+
+/** At most this many titles are asked for recommendations at once. */
+export const maxRecommendationSeeds = 5;
+
+/**
+ * `GET /v1/titles/recommendations?ids=&lang=`: `ids` is 1 to `maxRecommendationSeeds` titles as
+ * `kind:tmdb`, comma-separated, such as `movie:329865,tv:95396`. Answers a `TitleSearchResponse`.
+ */
+export const TitleRecommendationsQuery = Schema.Struct({
+  ids: Schema.String.check(
+    Schema.isPattern(/^(movie|tv):[1-9][0-9]{0,9}(,(movie|tv):[1-9][0-9]{0,9}){0,4}$/),
+  ),
+  lang: Schema.optionalKey(TitleLanguage),
+});
+export type TitleRecommendationsQuery = typeof TitleRecommendationsQuery.Type;

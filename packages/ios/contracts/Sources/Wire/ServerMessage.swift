@@ -26,6 +26,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   /// A member's latest check-in, sent to a socket that resumed with `moods: true`: each one the
   /// room holds on the resume, then every new one.
   case moodChanged(PartnerCheckIn)
+  /// Both partners swiped ♥ on one Pick tonight card, sent to a socket that resumed with
+  /// `lists: true`, the swiper's own included.
+  case matchFound(PickMatch)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -43,6 +46,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case shop
     case lists
     case checkIn
+    case match
   }
 
   public init(from decoder: any Decoder) throws {
@@ -86,6 +90,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .listsChanged(try container.decode([SharedList].self, forKey: .lists))
     case "MoodChanged":
       self = .moodChanged(try container.decode(PartnerCheckIn.self, forKey: .checkIn))
+    case "MatchFound":
+      self = .matchFound(try container.decode(PickMatch.self, forKey: .match))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -143,6 +149,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .moodChanged(let checkIn):
       try container.encode("MoodChanged", forKey: .tag)
       try container.encode(checkIn, forKey: .checkIn)
+    case .matchFound(let match):
+      try container.encode("MatchFound", forKey: .tag)
+      try container.encode(match, forKey: .match)
     }
   }
 }

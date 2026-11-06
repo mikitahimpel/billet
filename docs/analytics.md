@@ -38,6 +38,9 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `StreakMilestoneSeen` | the milestone's id | | How far do streaks get? |
 | `WidgetAdded` | the widget kind, when known | | Which widgets are added? Once per kind. |
 | `WidgetButtonTapped` | `pet` or `treat` | | Are the widget's buttons used? |
+| `PickTonightOpened` | none | | How many Pick tonight sessions a week? |
+| `PickTonightMatched` | none | | How many matches per session? |
+| `PickTonightPlanned` | none | | How many matches become tonight's date? |
 | `ProfileOpened` | none | | Is the profile ("Us") visited? |
 | `SignInPromptShown` | none | | How often is Sign in with Apple offered? |
 | `SignInPromptAnswered` | `accepted` or `dismissed` | | And taken up? |

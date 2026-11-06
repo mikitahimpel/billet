@@ -111,6 +111,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/pair",
       },
+      "getPickTonight": {
+        "method": "GET",
+        "path": "/v1/pick-tonight",
+      },
       "getPurchases": {
         "method": "GET",
         "path": "/v1/purchases",
@@ -230,6 +234,14 @@ it("pins the routes that clients call", () => {
       "socket": {
         "method": "GET",
         "path": "/v1/socket",
+      },
+      "swipePickTonight": {
+        "method": "POST",
+        "path": "/v1/pick-tonight/swipes",
+      },
+      "titleRecommendations": {
+        "method": "GET",
+        "path": "/v1/titles/recommendations",
       },
       "unpair": {
         "method": "DELETE",

@@ -7,6 +7,7 @@ import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload
 import type { ApnsPush, ApnsResult } from "../src/apns-client.ts";
 import {
   enabledPushLanes,
+  matchDeliveryId,
   reactionDeliveryId,
   sendPushLane,
   type PushLaneDependencies,
@@ -61,6 +62,7 @@ const deps = (overrides: Partial<PushLaneDependencies> = {}) => {
       reaction: { rev, note: id, by: bob, at: 2, reaction: "heart" },
       note: photo,
     }),
+    match: async () => ({ recipient: alice, name: "Arrival" }),
     recipient: async (note) => (note.author === alice ? bob : alice),
     tokens: async () => [
       { token: "aa", environment: "production" },
@@ -207,6 +209,43 @@ describe("one try of a reaction's push", () => {
       "Abandon",
     );
     expect(sent).toEqual([]);
+  });
+});
+
+describe("a Pick tonight match", () => {
+  const delivery = matchDeliveryId("movie:329865", 1_700_000_000_000);
+
+  it("is an alert to the partner who swiped first, naming the title", async () => {
+    const asked: Array<[string, number]> = [];
+    const { dependencies, sent } = deps({
+      match: async (key, at) => {
+        asked.push([key, at]);
+        return { recipient: alice, name: "Arrival" };
+      },
+    });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, dependencies)).toBe(
+      "Delivered",
+    );
+    expect(asked).toEqual([["movie:329865", 1_700_000_000_000]]);
+    expect(sent.map((push) => [push.pushType, push.collapseId])).toEqual([
+      ["alert", "m-movie:329865"],
+      ["alert", "m-movie:329865"],
+    ]);
+    expect((sent[0]!.body as { aps: unknown }).aps).toMatchObject({
+      alert: { title: "It's a match!", body: "You both want to watch Arrival" },
+    });
+  });
+
+  it("sends nothing on the other lanes, and gives up on a match taken back", async () => {
+    const widget = deps();
+    expect(await sendPushLane({ noteId: delivery, lane: "WidgetPush" }, widget.dependencies)).toBe(
+      "Delivered",
+    );
+    const gone = deps({ match: async () => undefined });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, gone.dependencies)).toBe(
+      "Abandon",
+    );
+    expect([...widget.sent, ...gone.sent]).toEqual([]);
   });
 });
 

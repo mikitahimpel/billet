@@ -28,6 +28,7 @@
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
     "./pair": "./src/pair.ts",
+    "./pick-tonight": "./src/pick-tonight.ts",
     "./reaction": "./src/reaction.ts",
     "./shop": "./src/shop.ts"
   },

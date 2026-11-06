@@ -16,6 +16,7 @@
     "./inks": "./src/inks.ts",
     "./metrics": "./src/metrics.ts",
     "./note": "./src/note.ts",
+    "./pick-tonight": "./src/pick-tonight.ts",
     "./delivery-lane": "./src/delivery-lane.ts",
     "./push-token": "./src/push-token.ts",
     "./coin-packs": "./src/coin-packs.ts",

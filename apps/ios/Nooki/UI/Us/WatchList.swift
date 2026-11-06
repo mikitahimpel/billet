@@ -47,6 +47,7 @@ struct WatchListBody: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     @State private var filter = WatchFilter.all
     @State private var showsWatched = false
+    @State private var picking = false
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3)
 
@@ -56,6 +57,9 @@ struct WatchListBody: View {
                 UsEmpty(icon: list.icon, title: "Nothing to watch yet",
                         text: "Add a film or a show with +. You both see this list.")
             } else {
+                if canPick {
+                    UsPrimaryButton(title: "🍿 Pick tonight") { picking = true }
+                }
                 filters
                 let shown = list.open.filter(passes)
                 if shown.isEmpty {
@@ -74,6 +78,14 @@ struct WatchListBody: View {
             guard let source = session?.titles else { return }
             await details.load(list.open.compactMap(\.media), from: source)
         }
+        .fullScreenCover(isPresented: $picking) {
+            PickTonightScreen(state: state, list: list, details: details)
+        }
+    }
+
+    /// Pick tonight is the pair's, so it needs the partner, and the server can switch it off.
+    private var canPick: Bool {
+        !list.open.isEmpty && session?.pickTonight != nil && PickTonightModel.isOn(state.rooms.remote)
     }
 
     private func bothWant(_ item: ListItem) -> Bool {
