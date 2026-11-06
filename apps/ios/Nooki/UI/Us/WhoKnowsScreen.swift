@@ -37,10 +37,12 @@ struct WhoKnowsScreen: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: tapped)
         .usSheet()
-        .task {
-            await model.load()
-            if model.lacksQuestions { await session?.refreshGuessCatalog() }
-        }
+        .task { await refresh() }
+    }
+
+    private func refresh() async {
+        await model.load()
+        if model.lacksQuestions { await session?.refreshGuessCatalog() }
     }
 
     /// The partner's progress while the round is still hidden.
@@ -74,6 +76,15 @@ struct WhoKnowsScreen: View {
                 intro(round)
             } else if let question = model.current {
                 ask(question)
+            } else if model.lacksQuestions {
+                // The catalog refresh failed or came back without today's questions.
+                VStack(spacing: Space.l) {
+                    UsEmpty(icon: UsGlyph(symbol: "questionmark.bubble.fill", tint: .honey),
+                            title: "Can't load today's questions",
+                            text: "Check your connection and try again.")
+                    Button("Try again") { Task { await refresh() } }
+                        .buttonStyle(NookiSecondaryStyle())
+                }
             } else {
                 ProgressView()
             }

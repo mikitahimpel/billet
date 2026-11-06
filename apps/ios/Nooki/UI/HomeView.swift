@@ -280,6 +280,8 @@ struct HomeView: View {
                     await textSync?.receive()
                     await state.shop.refresh()
                     await state.lists.refresh()
+                    // The room socket sends no game frames it missed while the app was away.
+                    await session?.whoKnows.load()
                 }
                 session?.reactions?.refresh()
                 session?.followInbox(
