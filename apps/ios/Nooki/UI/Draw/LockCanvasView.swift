@@ -3,11 +3,19 @@ import Transport
 import Wire
 
 /// Drawing on what looks like the partner's lock screen: their wallpaper, the big clock and date, and a glass
-/// toolbar at the bottom. When both have it open, each sees the other's ink appear as it is drawn.
+/// toolbar at the bottom. When both have it open, each sees the other's ink appear as it is drawn. With `riddle` it
+/// draws a Draw & guess word instead of a note: the word replaces the clock and Send hands the strokes to the riddle.
 struct LockCanvasView: View {
     let state: HomeState
     let api: APIClient?
     @State var model: DrawModel
+    var riddle: RiddleDrawing?
+
+    struct RiddleDrawing {
+        let word: String
+        /// Sends the strokes drawn on a canvas of the given size; says whether the riddle went.
+        let send: @MainActor ([Stroke], CGSize) async -> Bool
+    }
 
     @Environment(\.dismiss) private var dismiss
     @State private var choosingInk = false
@@ -23,7 +31,7 @@ struct LockCanvasView: View {
 
                 VStack(spacing: 0) {
                     topBar
-                    clock
+                    if let riddle { riddleWord(riddle.word) } else { clock }
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 16)
@@ -91,7 +99,11 @@ struct LockCanvasView: View {
 
             Spacer()
 
-            wallpaperMenu
+            if riddle == nil {
+                wallpaperMenu
+            } else {
+                Color.clear.frame(width: 36, height: 36)
+            }
         }
         .padding(.top, 8)
     }
@@ -112,6 +124,26 @@ struct LockCanvasView: View {
         }
         .padding(.top, 18)
         .accessibilityElement(children: .combine)
+    }
+
+    private func riddleWord(_ word: String) -> some View {
+        VStack(spacing: 6) {
+            Text("Draw")
+                .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+            Text(word)
+                .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+            Label("No letters in the drawing", systemImage: "textformat.abc.dottedunderline")
+                .font(.system(.footnote, design: .rounded, weight: .medium))
+                .foregroundStyle(.white.opacity(0.85))
+        }
+        .shadow(color: .black.opacity(0.2), radius: 6, y: 1)
+        .padding(.top, 18)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Draw \(word). No letters in the drawing.")
+        .allowsHitTesting(false)
     }
 
     private var homeIndicator: some View {
@@ -209,7 +241,7 @@ struct LockCanvasView: View {
                 }
                 .disabled(model.isEmpty || model.sendState == .sending)
                 .opacity(model.isEmpty ? 0.5 : 1)
-                .accessibilityLabel(model.sendState == .failed ? "Try sending again" : "Send")
+                .accessibilityLabel(model.sendState == .failed ? "Try sending again" : riddle == nil ? "Send" : "Send riddle")
                 .accessibilityIdentifier("drawSend")
             }
             .buttonStyle(.plain)
@@ -248,7 +280,13 @@ struct LockCanvasView: View {
 
     private func send() {
         Task {
-            if await model.send(api: api, canvas: canvasSize, state: state) {
+            if let riddle {
+                let canvas = canvasSize
+                if await model.send({ await riddle.send($0, canvas) }) {
+                    sent += 1
+                    dismiss()
+                }
+            } else if await model.send(api: api, canvas: canvasSize, state: state) {
                 sent += 1
                 state.tab = .moments
                 dismiss()

@@ -8,14 +8,16 @@ struct UsView: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     /// The round for a build without a server, which has no partner to play with.
     @State private var unpaired = WhoKnowsModel(sync: nil, viewer: nil, catalog: [])
+    @State private var unpairedRiddles = DrawGuessModel(sync: nil, viewer: nil, words: .bundled)
 
     enum Route: Identifiable, Hashable {
-        case dates, whoKnows, wishlists, calendar, list(UUID), newList
+        case dates, whoKnows, drawGuess, wishlists, calendar, list(UUID), newList
 
         var id: String {
             switch self {
             case .dates: "dates"
             case .whoKnows: "who-knows"
+            case .drawGuess: "draw-guess"
             case .wishlists: "wishlists"
             case .calendar: "calendar"
             case .list(let id): "list-\(id)"
@@ -43,11 +45,15 @@ struct UsView: View {
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
-        .task(id: session?.isPaired) { await whoKnows.load() }
+        .task(id: session?.isPaired) {
+            await whoKnows.load()
+            await drawGuess.load()
+        }
         .sheet(item: $state.usRoute) { route in
             switch route {
             case .dates: DatesScreen(state: state)
             case .whoKnows: WhoKnowsScreen(state: state, model: whoKnows)
+            case .drawGuess: DrawGuessScreen(state: state, model: drawGuess)
             case .wishlists: WishlistScreen(state: state)
             case .calendar: CalendarScreen(state: state)
             case .list(let id): ListScreen(state: state, listID: id)
@@ -57,6 +63,7 @@ struct UsView: View {
     }
 
     private var whoKnows: WhoKnowsModel { session?.whoKnows ?? unpaired }
+    private var drawGuess: DrawGuessModel { session?.drawGuess ?? unpairedRiddles }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -102,6 +109,11 @@ struct UsView: View {
             Button { state.usRoute = .whoKnows } label: {
                 WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
                              partner: state.profile.name(of: state.otherPartner))
+            }
+            .buttonStyle(.plain)
+
+            Button { state.usRoute = .drawGuess } label: {
+                DrawGuessTile(model: drawGuess, partner: state.profile.name(of: state.otherPartner))
             }
             .buttonStyle(.plain)
         }
@@ -257,6 +269,46 @@ private struct WhoKnowsTile: View {
                         .foregroundStyle(Ink.textSecondary)
                         .contentTransition(.numericText())
                         .accessibilityLabel("This week: \(me) \(week.mine), \(partner) \(week.partner)")
+                }
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textTertiary)
+        }
+        .padding(14)
+        .usCard()
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct DrawGuessTile: View {
+    let model: DrawGuessModel
+    let partner: String
+
+    var body: some View {
+        let phase = model.phase
+        HStack(spacing: 14) {
+            Image("DrawGuess-card")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 64, height: 64)
+                .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Draw & guess")
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Text(DrawGuessModel.status(phase, partner: partner, letters: model.theirs?.shape.reduce(0, +) ?? 0,
+                                           lastEnded: model.lastEnded,
+                                           endedMine: model.lastEnded.map(model.isMine) ?? false))
+                    .font(.nookiCaption)
+                    .foregroundStyle(phase == .guess ? Ink.accentText : Ink.textSecondary)
+                if phase != .unpaired, model.series > 0 {
+                    Text(DrawGuessModel.seriesLine(model.series))
+                        .font(.nookiMicro.monospacedDigit())
+                        .foregroundStyle(Ink.textSecondary)
+                        .contentTransition(.numericText())
                 }
             }
             Spacer(minLength: 0)
