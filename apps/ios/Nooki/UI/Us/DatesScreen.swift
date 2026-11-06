@@ -77,9 +77,11 @@ struct DatesScreen: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Monogram(partner: state.viewer, profile: state.profile, size: 22)
-                Text(likedAlone == nil
-                     ? "\(state.profile.name(of: state.viewer))'s turn, then \(partner)"
-                     : "Saved. If \(partner) loves it too, it's a match")
+                Text(likedAlone != nil
+                     ? "Saved. If \(partner) loves it too, it's a match"
+                     : deck.first.map { us.isSecondLook($0.id, for: state.viewer) } == true
+                     ? "Another look at the ones you skipped"
+                     : "\(state.profile.name(of: state.viewer))'s turn, then \(partner)")
                     .font(.nookiCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.opacity)
@@ -98,15 +100,15 @@ struct DatesScreen: View {
         }
     }
 
-    /// What to do once this partner has seen every card that fits.
+    /// What to do once this partner has liked every card that fits; skipped ones come back in the deck.
     private var deckEnd: some View {
         let toPlan = us.matches.count
         let partner = state.profile.name(of: state.otherPartner)
-        let partnerLeft = us.deck(for: state.otherPartner, filter: filter).count
+        let partnerLeft = us.unseenCount(for: state.otherPartner, filter: filter)
         let text = if partnerLeft > 0 {
             "\(partner) has \(partnerLeft) left to swipe. New matches land in Our dates."
         } else if filter.isEmpty {
-            "You've both seen every idea."
+            "You've liked every idea. Plan your matches or surprise each other."
         } else {
             "Loosen a filter for more."
         }

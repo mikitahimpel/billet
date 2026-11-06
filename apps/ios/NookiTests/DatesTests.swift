@@ -66,6 +66,35 @@ import Wire
         #expect(us.deck(for: "M", filter: DateFilter()).first?.id == first)
     }
 
+    @Test func skippedIdeasComeBackAfterTheNewOnesOldestSkipFirst() {
+        let (us, _, paths) = store()
+        defer { paths.forEach(removeScratch) }
+        let all = us.deck(for: "L", filter: DateFilter()).map(\.id)
+        let liked = all[0]
+        us.swipe(liked, liked: true, by: "L")
+        for id in all.dropFirst() { us.swipe(id, liked: false, by: "L") }
+
+        let again = us.deck(for: "L", filter: DateFilter()).map(\.id)
+        #expect(again == Array(all.dropFirst()))
+        #expect(us.isSecondLook(again[0], for: "L"))
+        #expect(us.unseenCount(for: "L", filter: DateFilter()) == 0)
+
+        us.swipe(again[0], liked: false, by: "L")
+        #expect(us.deck(for: "L", filter: DateFilter()).last?.id == again[0])
+        #expect(UsStore(file: paths[0]).deck(for: "L", filter: DateFilter()).last?.id == again[0])
+    }
+
+    @Test func aNewIdeaComesBeforeASkippedOne() {
+        let (us, _, paths) = store()
+        defer { paths.forEach(removeScratch) }
+        let first = us.deck(for: "L", filter: DateFilter()).first!.id
+
+        us.swipe(first, liked: false, by: "L")
+        let deck = us.deck(for: "L", filter: DateFilter())
+        #expect(deck.first?.id != first)
+        #expect(deck.last?.id == first)
+    }
+
     @Test func doneDatesMoveOutOfComingUpWithTheirPhoto() {
         let (us, earns, paths) = store()
         defer { paths.forEach(removeScratch) }

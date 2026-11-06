@@ -409,6 +409,8 @@ final class UsStore {
     private(set) var planned: [PlannedDate] = []
     /// Per partner: idea id -> liked (true) or skipped (false).
     private(set) var swipes: [String: [Int: Bool]] = [:]
+    /// Per partner: idea id -> when they last skipped it, so the deck deals skipped ideas again oldest first.
+    private var passedAt: [String: [Int: Date]] = [:]
 
     /// Told of each thing done here that the server pays coins for. The app sends it there; the widgets pass none.
     @ObservationIgnored var onEarn: (EarnEvent) -> Void
@@ -440,6 +442,8 @@ final class UsStore {
         var pendingLists: [PendingListChange]?
         /// Missing in files from builds before grocery tiles.
         var groceries: GroceryHistory?
+        /// Missing in files from builds before skipped ideas came back.
+        var passedAt: [String: [Int: Date]]?
     }
 
     init(file: String = "Us/us.json", onEarn: @escaping (EarnEvent) -> Void = { _ in }) {
@@ -462,6 +466,7 @@ final class UsStore {
             roomLists = saved.roomLists
             pendingLists = saved.pendingLists ?? []
             groceries = saved.groceries ?? GroceryHistory()
+            passedAt = saved.passedAt ?? [:]
             for i in wishes.indices {
                 guard let giver = wishes[i].legacyGiver else { continue }
                 wishes[i].legacyGiver = nil
@@ -479,7 +484,7 @@ final class UsStore {
         groceries.observe(lists)
         SharedFile.write(Snapshot(lists: lists, wishes: wishes, loves: loves, events: events, planned: planned, swipes: swipes,
                                   plans: plans, surprises: surprises, roomLists: roomLists, pendingLists: pendingLists,
-                                  groceries: groceries),
+                                  groceries: groceries, passedAt: passedAt),
                          to: file)
     }
 
@@ -830,6 +835,7 @@ final class UsStore {
     func swipe(_ ideaID: Int, liked: Bool, by partner: String) {
         let wasMatch = isMatch(ideaID)
         swipes[partner, default: [:]][ideaID] = liked
+        passedAt[partner, default: [:]][ideaID] = liked ? nil : .now
         if !wasMatch && isMatch(ideaID) { onEarn(.dateMatched(idea: String(ideaID))) }
         save()
     }
@@ -849,14 +855,29 @@ final class UsStore {
         return DateIdea.all.filter { likes[$0.id, default: 0] >= 2 && !plannedIDs.contains($0.id) }
     }
 
-    /// The deck for one partner: ideas they haven't swiped yet, in-season first.
+    /// The deck for one partner: ideas they haven't swiped yet, in-season first, then the ones they skipped, skipped
+    /// longest ago first. So the deck never runs out while something is left to like; liked ideas never come back.
     func deck(for partner: String, filter: DateFilter) -> [DateIdea] {
         let seen = swipes[partner] ?? [:]
+        let passed = passedAt[partner] ?? [:]
         let season = DateIdea.Season.current
-        return DateIdea.all
-            .filter { seen[$0.id] == nil && filter.allows($0) }
-            // Same order for both partners so they meet the same cards; in-season ideas first.
+        let fitting = DateIdea.all.filter { seen[$0.id] != true && filter.allows($0) }
+        // Same order for both partners so they meet the same cards; in-season ideas first.
+        let new = fitting.filter { seen[$0.id] == nil }
             .sorted { ($0.inSeason(season) ? 0 : 1, $0.id) < ($1.inSeason(season) ? 0 : 1, $1.id) }
+        // Skips from before `passedAt` have no date and come first.
+        let again = fitting.filter { seen[$0.id] == false }
+            .sorted { (passed[$0.id] ?? .distantPast, $0.id) < (passed[$1.id] ?? .distantPast, $1.id) }
+        return new + again
+    }
+
+    /// Whether this idea is in the partner's deck again after they skipped it.
+    func isSecondLook(_ ideaID: Int, for partner: String) -> Bool { swipes[partner]?[ideaID] == false }
+
+    /// Ideas the partner hasn't swiped at all.
+    func unseenCount(for partner: String, filter: DateFilter) -> Int {
+        let seen = swipes[partner] ?? [:]
+        return DateIdea.all.count { seen[$0.id] == nil && filter.allows($0) }
     }
 
     /// Matches first, then anything else that fits; skips ideas planned or done in the last 60 days.
