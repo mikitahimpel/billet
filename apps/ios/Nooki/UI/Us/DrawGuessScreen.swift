@@ -107,10 +107,12 @@ struct DrawGuessScreen: View {
                     .contentTransition(.numericText())
                     .animation(.snappy, value: riddle.tries)
                 RiddleBlanks(shape: riddle.shape, slots: model.slots) { slot in model.takeBack(slot) }
+                    .disabled(model.busy)
                 RiddleTiles(tiles: model.tiles, count: riddle.tiles.count, misses: model.misses) { tile in
                     tapped += 1
                     Task { await model.place(tile.index) }
                 }
+                .disabled(model.busy)
                 if model.unsent {
                     Text("That didn't reach \(partner)'s room. Try again.")
                         .font(.nookiCaption)
