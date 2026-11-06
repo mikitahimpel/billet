@@ -2,6 +2,7 @@ import FeatureOnboarding
 import Pet
 import StoreKit
 import SwiftUI
+import Design
 import WidgetBridge
 
 /// Settings, pushed from the profile, in clay-card sections: how the app feels, the account, the window, then support,
@@ -32,14 +33,14 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        NookiForm {
-            NookiSection(header: "General",
+        Page {
+            GroupedSection(header: "General",
                          footer: hintsReset
                              ? "The hints start over the next time you open Nooki."
                              : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
-                NookiToggleRow(title: "Haptics", symbol: "hand.tap.fill", tint: .lilac, isOn: $haptics)
+                ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
                 Button { hintsReset = true } label: {
-                    NookiRowLabel(title: "Show hints again", symbol: "lightbulb.fill", tint: .sun) {
+                    Row("Show hints again", symbol: "lightbulb.fill", tint: UsTint.sun.color) {
                         if hintsReset {
                             Image(systemName: "checkmark")
                                 .font(.nookiCallout.weight(.semibold))
@@ -52,48 +53,48 @@ struct SettingsView: View {
             }
 
             if let session {
-                NookiSection(header: "Account") {
+                GroupedSection(header: "Account") {
                     AccountRow(state: session.signIn.state, retry: session.signIn.retry)
                 }
             }
 
-            NookiSection(header: "Window",
+            GroupedSection(header: "Window",
                          footer: "What the City room's window looks out on. Suburbia follows the time of day.") {
-                NookiPickerRow(title: "View", symbol: "window.horizontal", tint: .sky, selection: $windowView) {
+                PickerRow("View", symbol: "window.horizontal", tint: UsTint.sky.color, selection: $windowView) {
                     ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
                 }
                 if windowView == .suburbia {
-                    NookiPickerRow(title: "Weather", symbol: "cloud.rain.fill", tint: .sky, selection: $windowWeather) {
+                    PickerRow("Weather", symbol: "cloud.rain.fill", tint: UsTint.sky.color, selection: $windowWeather) {
                         ForEach(ViewWeather.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                 }
             }
 
-            NookiSection(header: "Support") {
+            GroupedSection(header: "Support") {
                 Button { requestReview() } label: {
-                    NookiRowLabel(title: "Rate Nooki", symbol: "star.fill", tint: .sun) { RowChevron() }
+                    Row("Rate Nooki", symbol: "star.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
             }
 
-            NookiSection(header: "Privacy",
+            GroupedSection(header: "Privacy",
                          footer: session == nil
                              ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
                                + "are saved only on this phone."
                              : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
                                + "with an anonymous key kept in your iCloud Keychain, without your name or email.") {
-                NookiRowLabel(title: "Stays on this iPhone", symbol: "lock.fill", tint: .sage)
+                Row("Stays on this iPhone", symbol: "lock.fill", tint: UsTint.sage.color)
                 Button(role: .destructive) { confirmingErase = true } label: {
-                    NookiRowLabel(title: "Erase All Data", symbol: "trash.fill", tint: .coral, destructive: true)
+                    Row("Erase All Data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
                 }
                 .buttonStyle(PressScaleStyle())
             }
 
             if let session, let demo = session.demoPartner {
-                NookiSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
+                GroupedSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
                     Button { Task { await switchDemoPartner(session, paired: demo) } } label: {
-                        NookiRowLabel(title: demo ? "Remove demo partner" : "Pair with a demo partner",
-                                      symbol: "person.2.wave.2.fill", tint: .blush) {
+                        Row(demo ? "Remove demo partner" : "Pair with a demo partner",
+                                      symbol: "person.2.wave.2.fill", tint: UsTint.blush.color) {
                             if demoBusy { ProgressView() }
                         }
                     }
@@ -102,31 +103,31 @@ struct SettingsView: View {
                 }
             }
 
-            NookiSection(header: "Labs",
+            GroupedSection(header: "Labs",
                          footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
                              + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
                              + "both on this phone, whatever the test gave your pair.") {
-                NookiToggleRow(title: "Cat brain", symbol: "brain", tint: .lilac, isOn: $catBrain)
-                NookiToggleRow(title: "Cat brain card", symbol: "brain.head.profile", tint: .lilac, isOn: $brainCard)
-                NookiToggleRow(title: "Show all hints now", symbol: "lightbulb.max.fill", tint: .sun,
+                ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
+                ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
+                ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
                                isOn: $showAllHints)
                 NavigationLink { StyleGallery() } label: {
-                    NookiRowLabel(title: "Style", symbol: "paintpalette.fill", tint: .sun) { RowChevron() }
+                    Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
-                NookiPickerRow(title: "Rooms", symbol: "square.split.2x1", tint: .lilac, selection: roomsOverride) {
+                PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
                     Text("Follow the test").tag(RoomsVariant?.none)
                     ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
                 }
             }
 
-            NookiSection(footer: nil) {
+            GroupedSection(footer: nil) {
                 NavigationLink { DataCreditsView() } label: {
-                    NookiRowLabel(title: "Data and credits", symbol: "film.fill", tint: .coral) { RowChevron() }
+                    Row("Data and credits", symbol: "film.fill", tint: UsTint.coral.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
-                NookiRowLabel(title: "Version", symbol: "info.circle.fill", tint: .honey) {
+                Row("Version", symbol: "info.circle.fill", tint: UsTint.honey.color) {
                     Text(version)
                         .font(.nookiCallout.monospacedDigit())
                         .foregroundStyle(Ink.textSecondary)
@@ -183,7 +184,7 @@ private struct AccountRow: View {
     let retry: () -> Void
 
     var body: some View {
-        NookiRowLabel(title: title, detail: detail, symbol: symbol, tint: tint) {
+        Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
                 Button("Try Again", action: retry)
                     .font(.nookiCallout.weight(.semibold))
@@ -235,30 +236,30 @@ private struct AccountRow: View {
 /// and the Places to go list's flags (MIT, which asks for its notice) and map.
 private struct DataCreditsView: View {
     var body: some View {
-        NookiForm {
-            NookiSection(header: "TMDB",
+        Page {
+            GroupedSection(header: "TMDB",
                          footer: "This product uses the TMDB API but is not endorsed or certified by TMDB.") {
                 Link(destination: URL(string: "https://www.themoviedb.org")!) {
-                    NookiRowLabel(title: "The Movie Database", symbol: "film.stack.fill", tint: .sky) { RowChevron() }
+                    Row("The Movie Database", symbol: "film.stack.fill", tint: UsTint.sky.color) { RowChevron() }
                 }
             }
-            NookiSection(header: "JustWatch",
+            GroupedSection(header: "JustWatch",
                          footer: "Where to watch comes from JustWatch, through TMDB.") {
                 Link(destination: URL(string: "https://www.justwatch.com")!) {
-                    NookiRowLabel(title: "Streaming data by JustWatch", symbol: "play.tv.fill", tint: .sun) {
+                    Row("Streaming data by JustWatch", symbol: "play.tv.fill", tint: UsTint.sun.color) {
                         RowChevron()
                     }
                 }
             }
-            NookiSection(header: "Flags",
+            GroupedSection(header: "Flags",
                          footer: "Round flags from circle-flags by HatScripts, MIT License. Copyright (c) 2026 HatScripts.") {
                 Link(destination: URL(string: "https://github.com/HatScripts/circle-flags")!) {
-                    NookiRowLabel(title: "circle-flags", symbol: "flag.fill", tint: .blush) { RowChevron() }
+                    Row("circle-flags", symbol: "flag.fill", tint: UsTint.blush.color) { RowChevron() }
                 }
             }
-            NookiSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {
+            GroupedSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {
                 Link(destination: URL(string: "https://www.naturalearthdata.com")!) {
-                    NookiRowLabel(title: "Natural Earth", symbol: "globe.europe.africa.fill", tint: .sage) { RowChevron() }
+                    Row("Natural Earth", symbol: "globe.europe.africa.fill", tint: UsTint.sage.color) { RowChevron() }
                 }
             }
         }

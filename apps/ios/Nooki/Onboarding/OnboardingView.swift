@@ -1,5 +1,6 @@
 import FeaturePairing
 import SwiftUI
+import Design
 import Wire
 
 /// The first launch as a native flow on the app's warm screen: a welcome, then one step per page with a large title,
@@ -163,7 +164,7 @@ struct OnboardingView: View {
         switch step {
         case .single(let choice), .multi(let choice):
             form(subtitle: choice.subtitle?.text(for: language)) {
-                NookiSection(inset: Space.m + 2) {
+                GroupedSection(inset: Space.l) {
                     ForEach(choice.options, id: \.id) { option in
                         optionRow(option, multi: step.isMulti,
                                   picked: flow.picks[choice.id]?.contains(option.id) ?? false) {
@@ -174,7 +175,7 @@ struct OnboardingView: View {
             }
         case .range(let range):
             form(subtitle: range.subtitle?.text(for: language)) {
-                NookiSection(inset: Space.m + 2) {
+                GroupedSection(inset: Space.l) {
                     Picker(range.title.text(for: language), selection: rangeBinding(range)) {
                         ForEach(Array(stride(from: range.min, through: range.max, by: range.step)), id: \.self) { value in
                             Text(range.unit.map { "\(value) \($0.text(for: language))" } ?? "\(value)").tag(value)
@@ -182,16 +183,16 @@ struct OnboardingView: View {
                     }
                     .pickerStyle(.wheel)
                     .labelsHidden()
-                    .nookiCell()
+                    .rowCell()
                 }
             }
         case .text(let field):
             form(subtitle: field.subtitle?.text(for: language)) {
-                NookiSection(inset: Space.m + 2) {
+                GroupedSection(inset: Space.l) {
                     TextField(field.placeholder?.text(for: language) ?? "", text: textBinding(field))
                         .font(.nookiBody)
                         .submitLabel(.done)
-                        .nookiCell()
+                        .rowCell()
                 }
             }
         }
@@ -221,16 +222,16 @@ struct OnboardingView: View {
 
     private var catName: some View {
         form(say: "What should we call me?", subtitle: String(localized: "You can change it later. Skip and she stays Mochi.")) {
-            NookiSection(inset: Space.m + 2) {
+            GroupedSection(inset: Space.l) {
                 TextField(CatProfile.defaultName, text: $flow.catName)
                     .font(.nookiHeadline)
                     .submitLabel(.done)
                     .onChange(of: flow.catName) { _, new in
                         if new.count > CatProfile.nameLimit { flow.catName = String(new.prefix(CatProfile.nameLimit)) }
                     }
-                    .nookiCell()
+                    .rowCell()
             }
-            NookiSection(header: String(localized: "Ideas"), inset: Space.m + 2) {
+            GroupedSection(header: String(localized: "Ideas"), inset: Space.l) {
                 ForEach(Self.nameIdeas, id: \.self) { idea in
                     optionRow(OnboardingOption(id: OnboardingOptionId(idea), label: LocalizedText(en: idea, ru: idea)),
                               multi: false, picked: flow.catName == idea) { flow.catName = idea }
@@ -246,19 +247,19 @@ struct OnboardingView: View {
             if let pairing {
                 switch pairing.state {
                 case .waiting(let code, let expiresAt, _):
-                    NookiSection(inset: Space.m + 2) {
+                    GroupedSection(inset: Space.l) {
                         Text(PairingCopy.spaced(code))
                             .font(.system(.largeTitle, design: .monospaced, weight: .bold))
                             .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, Space.s)
                             .accessibilityLabel("Your code: \(code)")
-                            .nookiCell()
+                            .rowCell()
                         ShareLink(item: inviteMessage(code)) {
                             Label("Share invite", systemImage: "square.and.arrow.up")
                                 .font(.nookiHeadline)
                                 .foregroundStyle(Ink.accentText)
-                                .nookiCell()
+                                .rowCell()
                                 .frame(maxWidth: .infinity)
                         }
                         .simultaneousGesture(TapGesture().onEnded { flow.invited = true })
@@ -266,13 +267,13 @@ struct OnboardingView: View {
                         Text(PairingCopy.expiry(expiresAt: expiresAt, now: .now))
                     }
                 case .choosing(nil, _) where !signedIn:
-                    NookiSection { progressRow("Connecting…") }
+                    GroupedSection { progressRow("Connecting…") }
                 case .creating, .claiming:
-                    NookiSection { progressRow("Getting your code…") }
+                    GroupedSection { progressRow("Getting your code…") }
                 case .choosing(let failure, _):
                     VStack(alignment: .leading, spacing: Space.s) {
                         Button("Get my code") { pairing.createInvite() }
-                            .buttonStyle(NookiSecondaryStyle())
+                            .buttonStyle(SecondaryButtonStyle())
                         if let failure {
                             Text(PairingCopy.message(for: failure))
                                 .font(.nookiCaption)
@@ -281,8 +282,8 @@ struct OnboardingView: View {
                         }
                     }
                 case .paired:
-                    NookiSection {
-                        NookiRowLabel(title: String(localized: "You're paired!"), symbol: "heart.fill", tint: .blush)
+                    GroupedSection {
+                        Row(String(localized: "You're paired!"), symbol: "heart.fill", tint: UsTint.blush.color)
                     }
                 }
             }
@@ -290,7 +291,7 @@ struct OnboardingView: View {
                 Section {
                     Button("Try with a demo partner", action: demoPartner)
                         .font(.nookiCallout)
-                        .nookiRow()
+                        .listRowSurface()
                 }
             }
         }
@@ -299,14 +300,14 @@ struct OnboardingView: View {
     private var join: some View {
         form(say: "Who's waiting for me?",
              subtitle: String(localized: "It's in the message your partner sent, or on their screen.")) {
-            NookiSection(inset: Space.m + 2) {
+            GroupedSection(inset: Space.l) {
                 TextField("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { flow.joinCode = Self.code(from: $0) })
                     .font(.system(.title2, design: .monospaced, weight: .bold))
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .textContentType(.oneTimeCode)
                     .accessibilityLabel("Invite code")
-                    .nookiCell()
+                    .rowCell()
                 PasteButton(payloadType: String.self) { strings in
                     guard let pasted = strings.first else { return }
                     Task { @MainActor in flow.joinCode = Self.code(from: pasted) }
@@ -314,7 +315,7 @@ struct OnboardingView: View {
                 .labelStyle(.titleAndIcon)
                 .buttonBorderShape(.capsule)
                 .tint(.honey)
-                .nookiCell()
+                .rowCell()
             } footer: {
                 if case .choosing(let failure?, _) = pairing?.state {
                     Text(PairingCopy.message(for: failure))
@@ -339,12 +340,12 @@ struct OnboardingView: View {
     private var togetherSince: some View {
         form(say: "I'll count your days together!",
              subtitle: String(localized: "Only on this phone. You can change it in your profile.")) {
-            NookiSection {
+            GroupedSection {
                 DatePicker("Together since", selection: $flow.togetherSince, in: ...Date.now, displayedComponents: .date)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(maxWidth: .infinity)
-                    .nookiCell()
+                    .rowCell()
             }
         }
     }
@@ -352,13 +353,13 @@ struct OnboardingView: View {
     private var notifications: some View {
         form(say: "I'll tell you when they think of you.",
              subtitle: String(localized: "Only for your partner and \(CatProfile.name()). Never ads.")) {
-            NookiSection {
-                NookiRowLabel(title: String(localized: "Your partner drew you something"), symbol: "scribble.variable",
-                              tint: .lilac)
-                NookiRowLabel(title: String(localized: "\(CatProfile.name()) is hungry"), symbol: "fork.knife",
-                              tint: .honey)
-                NookiRowLabel(title: String(localized: "Your day together is tomorrow"), symbol: "heart.fill",
-                              tint: .blush)
+            GroupedSection {
+                Row(String(localized: "Your partner drew you something"), symbol: "scribble.variable",
+                              tint: UsTint.lilac.color)
+                Row(String(localized: "\(CatProfile.name()) is hungry"), symbol: "fork.knife",
+                              tint: UsTint.honey.color)
+                Row(String(localized: "Your day together is tomorrow"), symbol: "heart.fill",
+                              tint: UsTint.blush.color)
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Examples of notifications")
@@ -367,12 +368,12 @@ struct OnboardingView: View {
 
     private var widget: some View {
         form(subtitle: String(localized: "Notes and \(CatProfile.name()), without opening the app.")) {
-            NookiSection {
-                NookiRowLabel(title: String(localized: "Touch and hold the Home Screen"), symbol: "1.circle.fill",
-                              tint: .honey)
-                NookiRowLabel(title: String(localized: "Tap Edit, then Add Widget"), symbol: "2.circle.fill", tint: .honey)
-                NookiRowLabel(title: String(localized: "Find Nooki and pick a size"), symbol: "3.circle.fill",
-                              tint: .honey)
+            GroupedSection {
+                Row(String(localized: "Touch and hold the Home Screen"), symbol: "1.circle.fill",
+                              tint: UsTint.honey.color)
+                Row(String(localized: "Tap Edit, then Add Widget"), symbol: "2.circle.fill", tint: UsTint.honey.color)
+                Row(String(localized: "Find Nooki and pick a size"), symbol: "3.circle.fill",
+                              tint: UsTint.honey.color)
             }
         }
     }
@@ -427,7 +428,7 @@ struct OnboardingView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .nookiCell()
+        .rowCell()
         .accessibilityAddTraits(picked ? .isSelected : [])
     }
 
@@ -439,7 +440,7 @@ struct OnboardingView: View {
             Spacer()
             ProgressView().tint(Ink.accentText)
         }
-        .nookiCell()
+        .rowCell()
     }
 
     private func inviteMessage(_ code: String) -> String {
@@ -454,7 +455,7 @@ struct OnboardingView: View {
             Button(action: primaryTapped) {
                 Text(primaryTitle).frame(maxWidth: .infinity)
             }
-            .nookiPrimary()
+            .buttonStyle(PrimaryButtonStyle())
             .disabled(!canContinue)
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.s)

@@ -1,5 +1,6 @@
 import PencilKit
 import SwiftUI
+import Design
 
 /// Sheet for writing a line or doodling on a piece of paper; saving pins it and earns 5 coins.
 struct NoteComposer: View {
@@ -29,38 +30,26 @@ struct NoteComposer: View {
     }
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("New note")
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
-                .padding(.top, 22)
+        BilletSheet("New note", size: .large) {
+            VStack(spacing: Space.l + 4) {
+                Picker("Style", selection: $mode) {
+                    Text("Write").tag(Mode.write)
+                    Text("Draw").tag(Mode.draw)
+                }
+                .pickerStyle(.segmented)
 
-            Picker("Style", selection: $mode) {
-                Text("Write").tag(Mode.write)
-                Text("Draw").tag(Mode.draw)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
+                paperView
 
-            paperView
+                inkRow
 
-            inkRow
+                paperRow
 
-            Spacer(minLength: 0)
-
-            paperRow
-
-            Button(action: save) {
-                Text("Pin it · +5")
+                PrimaryButton("Pin it · +5", action: save)
                     .monospacedDigit()
-                    .frame(maxWidth: .infinity)
+                    .disabled(isEmpty)
             }
-            .nookiPrimary()
-            .disabled(isEmpty)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 12)
+            .frame(maxWidth: .infinity)
         }
-        .usSheet()
         // Over the sheet: an ink bought here plays its moment and Undo where it was tapped.
         .overlay { PurchaseMoment(state: state) }
         .onAppear { focused = mode == .write }
@@ -100,34 +89,17 @@ struct NoteComposer: View {
     private var inkRow: some View {
         HStack(spacing: 12) {
             ScrollView(.horizontal) {
-                InkPalette(state: state, selection: $ink, openShop: { _ in openShop() })
+                InkPalette(state: state, selection: $ink)
             }
             .scrollIndicators(.hidden)
             if mode == .draw { drawButtons }
         }
-        .padding(.horizontal, 20)
     }
 
     private var drawButtons: some View {
-        HStack(spacing: 12) {
-            Button { canvas.undoManager?.undo() } label: {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Ink.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Ink.surfaceRaised, in: .circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Undo")
-            Button { clear() } label: {
-                Image(systemName: "trash")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Ink.textSecondary)
-                    .frame(width: 36, height: 36)
-                    .background(Ink.surfaceRaised, in: .circle)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Clear")
+        HStack(spacing: Space.s) {
+            GlassIconButton(symbol: "arrow.uturn.backward", label: "Undo") { canvas.undoManager?.undo() }
+            GlassIconButton(symbol: "trash", label: "Clear") { clear() }
         }
     }
 
@@ -147,12 +119,7 @@ struct NoteComposer: View {
         Circle()
             .fill(color)
             .frame(width: 28, height: 28)
-            .overlay(Circle().stroke(.white, lineWidth: 2).opacity(selected ? 1 : 0))
-    }
-
-    private func openShop() {
-        state.tab = .shop
-        dismiss()
+            .overlay(Circle().stroke(Ink.text, lineWidth: 2).opacity(selected ? 1 : 0))
     }
 
     private func clear() {

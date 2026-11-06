@@ -1,3 +1,4 @@
+import Design
 import SwiftUI
 import Transport
 import Wire
@@ -19,20 +20,14 @@ struct PickTonightScreen: View {
 
     var body: some View {
         ZStack {
-            Ink.screen.ignoresSafeArea()
-            VStack(spacing: 0) {
-                UsSheetHeader(title: "Pick tonight", subtitle: subtitle) {
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.nookiHeadline)
-                            .foregroundStyle(Ink.text)
-                            .frame(width: 44, height: 44)
-                            .background(Circle().fill(Ink.surfaceRaised))
+            BilletSheet("Pick tonight", scrolls: false) {
+                VStack(spacing: 0) {
+                    if let subtitle {
+                        SheetSubtitle(text: subtitle)
+                            .padding(.horizontal, Space.gutter)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Close")
+                    content
                 }
-                content
             }
             if let model, let match = model.match {
                 let note = model.matchByPartner
@@ -64,7 +59,7 @@ struct PickTonightScreen: View {
     private var content: some View {
         if let model, !(model.loading && model.deck.isEmpty) {
             if model.deck.isEmpty {
-                UsEmpty(icon: UsGlyph(symbol: "popcorn.fill", tint: .coral), title: "That's every card",
+                EmptyState(icon: .init(symbol: "popcorn.fill", tint: .coral), title: "That's every card",
                         text: "Add more to To watch, or come back once \(partnerName) has picked.")
                     .frame(maxHeight: .infinity)
             } else {
@@ -271,7 +266,7 @@ private struct PickMatchScreen: View {
                         }
                     }
                     .frame(width: 92, height: 92)
-                    .background(Circle().fill(Ink.card))
+                    .background(Circle().fill(Ink.surface))
                     .clipShape(.circle)
                     Text("🍿")
                         .font(.system(size: 38))
@@ -298,9 +293,9 @@ private struct PickMatchScreen: View {
                     .foregroundStyle(Ink.secondary)
                 Spacer(minLength: 0)
                 VStack(spacing: Space.s) {
-                    UsPrimaryButton(title: "We're watching it tonight", action: plan)
+                    PrimaryButton("We're watching it tonight", action: plan)
                     Button("Keep swiping", action: keep)
-                        .buttonStyle(NookiSecondaryStyle())
+                        .buttonStyle(SecondaryButtonStyle())
                 }
             }
             .padding(.horizontal, Space.gutter)

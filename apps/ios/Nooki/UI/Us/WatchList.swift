@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Transport
 import Wire
 
@@ -54,11 +55,11 @@ struct WatchListBody: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.l) {
             if list.items.isEmpty {
-                UsEmpty(icon: list.icon, title: "Nothing to watch yet",
-                        text: "Add a film or a show with +. You both see this list.")
+                EmptyState(icon: list.icon, title: "Nothing to watch yet",
+                           text: "Add a film or a show with +. You both see this list.")
             } else {
                 if canPick {
-                    UsPrimaryButton(title: "🍿 Pick tonight") { picking = true }
+                    PrimaryButton("🍿 Pick tonight") { picking = true }
                 }
                 filters
                 let shown = list.open.filter(passes)
@@ -128,7 +129,7 @@ struct WatchListBody: View {
     }
 
     private func chip(_ title: String, _ value: WatchFilter) -> some View {
-        UsChip(title: title, selected: filter == value) {
+        FilterChip(title, isSelected: filter == value) {
             withAnimation(.snappy(duration: 0.2)) { filter = value }
         }
     }
@@ -169,7 +170,7 @@ struct WatchListBody: View {
                 .padding(.horizontal, Space.m)
                 .frame(minHeight: 56)
                 .contentShape(.rect)
-                .usCard()
+                .cardSurface()
             }
             .buttonStyle(.plain)
             if showsWatched { grid(watched, watched: true) }
@@ -287,19 +288,8 @@ struct AddTitleSheet: View {
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
+        BilletSheet("Add to watch", scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: "Add to watch") {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(Ink.surfaceRaised))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Close")
-            }
-
             HStack(spacing: Space.s) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Ink.textSecondary)
@@ -313,7 +303,7 @@ struct AddTitleSheet: View {
             }
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
             .padding(.horizontal, Space.gutter)
             .padding(.top, 14)
 
@@ -326,7 +316,7 @@ struct AddTitleSheet: View {
                                 resultRow(title)
                             }
                         }
-                        .usCard()
+                        .cardSurface()
                     } else if failed {
                         note("Search isn't reachable right now. You can still add it as text.")
                     } else if session?.titles == nil {
@@ -341,7 +331,7 @@ struct AddTitleSheet: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        .usSheet()
+        }
         .onAppear { focused = true }
         .task(id: trimmed) { await search(trimmed) }
     }
@@ -424,7 +414,7 @@ struct AddTitleSheet: View {
             .padding(.horizontal, Space.m)
             .frame(minHeight: 64)
             .contentShape(.rect)
-            .usCard()
+            .cardSurface()
         }
         .buttonStyle(.plain)
     }
@@ -468,14 +458,13 @@ struct MovieCard: View {
     private var item: ListItem? { state.us.list(listID)?.items.first { $0.id == itemID } }
 
     var body: some View {
-        Group {
+        BilletSheet(item?.text ?? "Title", scrolls: false) {
             if let item {
                 content(item)
             } else {
-                UsEmpty(icon: UsGlyph(symbol: "popcorn.fill", tint: .coral), title: "Gone", text: "This title is no longer on the list.")
+                EmptyState(icon: UsGlyph(symbol: "popcorn.fill", tint: .coral), title: "Gone", text: "This title is no longer on the list.")
             }
         }
-        .usSheet()
         .task { await load() }
     }
 
@@ -654,7 +643,7 @@ struct MovieCard: View {
             }
         }
         .padding(14)
-        .usCard()
+        .cardSurface()
     }
 
     @ViewBuilder
@@ -672,7 +661,7 @@ struct MovieCard: View {
             }
             .frame(maxWidth: .infinity)
         } else {
-            UsPrimaryButton(title: "Watched together", symbol: "checkmark") {
+            PrimaryButton("Watched together", symbol: "checkmark") {
                 state.us.setItem(itemID, in: listID, done: true, by: state.viewer)
                 dismiss()
             }

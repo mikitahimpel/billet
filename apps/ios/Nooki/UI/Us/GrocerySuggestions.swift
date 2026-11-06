@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Under the field while adding groceries: what the typed name may be, then "You often buy", each added in one tap.
 struct GrocerySuggestions: View {
@@ -23,7 +24,7 @@ struct GrocerySuggestions: View {
                         row(suggestion, onList: onList.contains(suggestion.id))
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
 
             let often = often(excluding: onList)
@@ -31,7 +32,7 @@ struct GrocerySuggestions: View {
                 GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
                 WrapLayout(spacing: 8) {
                     ForEach(often, id: \.self) { text in
-                        UsChip(title: text, selected: false) { onAdd(text) }
+                        FilterChip(text, isSelected: false) { onAdd(text) }
                             .accessibilityLabel("Add \(text)")
                     }
                 }

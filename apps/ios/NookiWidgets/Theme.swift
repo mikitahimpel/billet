@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The drawn room behind Mochi: scene art, not UI, so it keeps its own warm colours in either appearance. Text and
 /// controls use the app's tokens (Shared/Kit), as the widgets sit beside the app on the Home Screen.

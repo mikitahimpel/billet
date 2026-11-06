@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 struct ProgressCapsule: View {
     let value: Double

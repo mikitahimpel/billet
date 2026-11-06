@@ -1,7 +1,8 @@
 import SwiftUI
+import Design
 
 /// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, then shared lists; today's mood
-/// is in its header. Every card is a `usCard`, every icon a `UsIcon`.
+/// is in its header. Every card is a `Card` or `cardSurface`, every icon a `UsIcon`.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -112,7 +113,7 @@ struct UsView: View {
                             .buttonStyle(.plain)
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
 
             Button { state.usRoute = .newList } label: { StartListCard() }
@@ -165,7 +166,7 @@ private struct CountdownHero: View {
                     .foregroundStyle(Ink.textTertiary)
             }
             .padding(18)
-            .usCard(radius: Radius.hero, warm: true)
+            .cardSurface(radius: Radius.hero, warm: true)
         }
         .buttonStyle(.plain)
     }
@@ -193,7 +194,7 @@ private struct DatesTile: View {
                 .foregroundStyle(Ink.textTertiary)
         }
         .padding(14)
-        .usCard()
+        .cardSurface()
     }
 
     private var detail: String {
@@ -224,6 +225,6 @@ private struct SmallTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .usCard()
+        .cardSurface()
     }
 }

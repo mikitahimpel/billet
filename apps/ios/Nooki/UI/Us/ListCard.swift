@@ -1,3 +1,4 @@
+import Design
 import SwiftUI
 
 /// A list on the Us tab with a peek at what's in it: grocery names, posters or flags. An empty list says what it's
@@ -33,7 +34,7 @@ struct ListCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .usCard()
+        .cardSurface()
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)

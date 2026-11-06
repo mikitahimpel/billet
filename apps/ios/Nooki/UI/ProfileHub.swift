@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// What the avatars open: the couple at the top, then their profile, the partner invite while they are two phones
 /// apart, and the settings.
@@ -17,21 +18,21 @@ struct ProfileHub: View {
     }
 
     var body: some View {
-        NavigationStack {
-            NookiForm {
+        BilletSheet("Profile", size: .mediumLarge, scrolls: false) {
+            Page {
                 couple
-                NookiSection {
+                GroupedSection {
                     NavigationLink { ProfileEditor(profile: state.profile) } label: {
-                        NookiRowLabel(title: "Edit profile", symbol: "person.2.fill", tint: .sky) { RowChevron() }
+                        Row("Edit profile", symbol: "person.2.fill", tint: UsTint.sky.color) { RowChevron() }
                     }
                     if canInvite {
                         Button { pairing = true } label: {
-                            NookiRowLabel(title: "Invite your partner", symbol: "heart.circle.fill", tint: .blush) {
+                            Row("Invite your partner", symbol: "heart.circle.fill", tint: UsTint.blush.color) {
                                 RowChevron()
                             }
                         }
                     } else if session?.isPaired == true {
-                        NookiRowLabel(title: "Paired with your partner", symbol: "heart.fill", tint: .blush)
+                        Row("Paired with your partner", symbol: "heart.fill", tint: UsTint.blush.color)
                     }
                     NavigationLink {
                         SettingsView(state: state) {
@@ -39,27 +40,15 @@ struct ProfileHub: View {
                             erase()
                         }
                     } label: {
-                        NookiRowLabel(title: "Settings", symbol: "gearshape.fill", tint: .lilac) { RowChevron() }
+                        Row("Settings", symbol: "gearshape.fill", tint: UsTint.lilac.color) { RowChevron() }
                     }
                 }
                 .buttonStyle(.plain)
             }
-            .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
         }
-        .tint(.honey)
-        .preferredColorScheme(.dark)
         .sheet(isPresented: $pairing) {
             if let session {
                 PairingSheet(model: session.pairing) { session.pairingFinished() }
-                    .presentationBackground(Ink.sheet)
-                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -73,12 +62,11 @@ struct ProfileHub: View {
             .overlay(alignment: .bottom) {
                 // The honey link between the two.
                 Image(systemName: "heart.fill")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.nookiMicro)
                     .foregroundStyle(Ink.heroInk)
                     .frame(width: 30, height: 30)
                     .background(.honeyGradient, in: .circle)
-                    .overlay(Circle().strokeBorder(.white.opacity(0.9), lineWidth: 2))
-                    .shadow(color: .black.opacity(0.2), radius: 3, y: 2)
+                    .overlay(Circle().strokeBorder(Ink.screen, lineWidth: 2))
                     .offset(y: 8)
             }
             .padding(.bottom, Space.s)

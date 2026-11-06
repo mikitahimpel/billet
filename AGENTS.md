@@ -10,12 +10,13 @@ work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original p
 | --- | --- |
 | `apps/ios` | App, widgets, notification and share extensions. XcodeGen (`project.yml`). |
 | `apps/api` | Worker entry. |
-| `packages/ios/<layer>` | Swift packages: `contracts`, `core`, `pet`, `features`, `payments`. |
+| `packages/ios/<layer>` | Swift packages: `contracts`, `core`, `design`, `pet`, `features`, `payments`. |
 | `packages/backend/<context>` | Backend contexts and `platform`. |
 | `packages/contracts/<name>` | Effect Schema, source of truth for TS and Swift. |
 | `archive/ios-v1` | Old app, not built, with the packages only it used. Don't build on it. |
 
-App look: `apps/ios/Nooki/UI/Kit/Ink.swift`, `apps/ios/Shared/Palette.swift`.
+App look: [docs/design-system.md](docs/design-system.md), the `design` package (`packages/ios/design`). Read it
+before any UI work; no raw colours or fonts in feature code.
 [docs/design.md](docs/design.md) is the old Little House design, not the app's.
 Images for docs and mockups live in `docs/images/<topic>/` as WebP; app images stay in their bundle.
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import UIKit
 
 /// Colors of the polaroid paper family, shared by photos and the notes beside them.

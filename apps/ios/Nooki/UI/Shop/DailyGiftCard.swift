@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The free gift in Today: one tap asks the server to open it, the box shakes open with the reward it gave, and a new
 /// gift comes at local midnight.
@@ -25,14 +26,13 @@ struct DailyGiftCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if ready {
-                Button("Open") { Task { await claim() } }
-                    .shopButton()
+                PrimaryButton("Open", fullWidth: false) { Task { await claim() } }
                     .disabled(opening)
                     .accessibilityHint("Opens today's free gift")
             }
         }
         .padding(Space.m)
-        .shopCard()
+        .cardSurface()
         .overlay { GiftBurst(trigger: bursts) }
         .haptic(.success, trigger: bursts)
         .accessibilityElement(children: .contain)

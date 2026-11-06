@@ -2,6 +2,7 @@ import FeatureGames
 import Observation
 import Persistence
 import SwiftUI
+import Design
 import WidgetKit
 
 enum HomeTab: CaseIterable {
