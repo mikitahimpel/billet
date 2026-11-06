@@ -335,6 +335,22 @@ describe("RiddleRoom", () => {
     expect((await run(alice, taken)).result).toEqual({ _tag: "Refused", reason: "IdTaken" });
   });
 
+  it("still ends a riddle whose id a care entry took after it was sent, without paying", async () => {
+    for (const end of ["solve", "give up"] as const) {
+      const { run, rooms, record } = roomWith(withCat);
+      const id = riddleId(-8923);
+      await run(alice, { _tag: "Send", ...send(1, "cat"), id });
+      expect((await record({ _tag: "Petted" }))._tag).toBe("Accepted");
+      const ended =
+        end === "solve"
+          ? await run(bob, { _tag: "Guess", riddle: id, key: uuid(1), guess: "cat" })
+          : await run(bob, { _tag: "GiveUp", riddle: id });
+      expect(ended.result).toMatchObject({ riddle: { word: "cat" } });
+      expect(rooms.memory.cat.map((entry) => entry.event._tag)).toEqual(["Petted"]);
+      expect((await run(alice, { _tag: "View" })).result).toMatchObject({ view: { open: [] } });
+    }
+  });
+
   it("answers a riddle it does not hold with NotFound", async () => {
     const { run } = roomWith(active);
     expect((await run(bob, guess(9, 1, "cat"))).result).toMatchObject({ reason: "NotFound" });

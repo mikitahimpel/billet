@@ -128,6 +128,12 @@ export class RiddleRoom extends Context.Service<RiddleRoom>()(
             ? { push: { riddle, kind: "ended" as const } }
             : {};
 
+      const idHeld = (id: RiddleId) =>
+        Effect.gen(function* () {
+          if (Option.isSome(yield* room.catEntryById(id))) return true;
+          return Option.isSome(yield* room.coinEntryById(decodeEntryId(`earn:${id}`)));
+        });
+
       const apply = (by: UserId, command: RiddleCommand["_tag"], decision: RiddleDecision) =>
         Effect.gen(function* () {
           switch (decision._tag) {
@@ -138,7 +144,13 @@ export class RiddleRoom extends Context.Service<RiddleRoom>()(
               return { result: changed(riddle, by, right), ...pushOf(command, riddle, right) };
             }
             case "Stored": {
-              const { write, reward, right } = decision;
+              const { write, right } = decision;
+              // An entry recorded under the riddle's id after it was sent would make the round's own
+              // entry collide and the riddle stay open; it ends without journal or coins instead.
+              const reward =
+                decision.reward !== undefined && (yield* idHeld(write.riddle.id))
+                  ? undefined
+                  : decision.reward;
               const stored = yield* service.dispatch({
                 _tag: "SaveRiddle",
                 by,
@@ -164,12 +176,6 @@ export class RiddleRoom extends Context.Service<RiddleRoom>()(
           return Option.isNone(row)
             ? ({ _tag: "Refused", reason: "NotFound" } as const)
             : yield* decide(row.value);
-        });
-
-      const idHeld = (id: RiddleId) =>
-        Effect.gen(function* () {
-          if (Option.isSome(yield* room.catEntryById(id))) return true;
-          return Option.isSome(yield* room.coinEntryById(decodeEntryId(`earn:${id}`)));
         });
 
       const decisionFor = (by: UserId, command: Exclude<RiddleCommand, { _tag: "View" }>) =>
