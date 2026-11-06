@@ -23,6 +23,9 @@ private nonisolated final class FakePickRoom: @unchecked Sendable {
     var swipes: [PickSwipe] = []
     var partnerWants: Set<String> = []
     var offline = false
+    /// The next swipe is stored but its answer is lost, as when the connection drops on the way back.
+    var losesNextAnswer = false
+    var matches: [PickMatch] = []
 
     var sync: PickTonightSync {
         PickTonightSync(
@@ -33,9 +36,17 @@ private nonisolated final class FakePickRoom: @unchecked Sendable {
             swipe: { request throws(TransportError) in
                 if self.offline { throw .network("offline") }
                 self.swipes.append(PickSwipe(title: request.title, choice: request.choice, at: 1))
-                let match = request.choice == .want && self.partnerWants.contains(PickTonightModel.key(request.title))
+                let key = PickTonightModel.key(request.title)
+                let repeated = self.swipes.dropLast().contains { PickTonightModel.key($0.title) == key }
+                let match = request.choice == .want && self.partnerWants.contains(key) && !repeated
                     ? PickMatch(title: request.title, name: request.name, at: 2) : nil
-                return PickTonightResponse(swipes: self.swipes, partnerPicked: self.partnerWants.count, match: match)
+                if let match { self.matches.append(match) }
+                if self.losesNextAnswer {
+                    self.losesNextAnswer = false
+                    throw .network("lost")
+                }
+                return PickTonightResponse(swipes: self.swipes, partnerPicked: self.partnerWants.count,
+                                           matches: self.matches, match: match)
             })
     }
 }
@@ -114,6 +125,35 @@ struct PickTonightTests {
         model.take(card)
         #expect(await model.send(card, .want) == nil)
         #expect(room.swipes.isEmpty)
+    }
+
+    @Test func putsAnUnsentSwipeBackAndFindsItsMatchOnTheRetry() async {
+        let room = FakePickRoom()
+        let list = watchList()
+        room.partnerWants = [PickTonightModel.key(.item(UsStore.key(list.items[0].id)))]
+        let model = PickTonightModel(sync: room.sync, titles: titles([]))
+        await model.load(list, partners: ["A", "L"])
+
+        let card = model.deck[0]
+        model.take(card)
+        room.losesNextAnswer = true
+        #expect(await model.send(card, .want) == nil)
+        #expect(model.unsent)
+        #expect(model.deck.first == card)
+        #expect(model.match == nil)
+
+        model.take(card)
+        #expect(!model.unsent)
+        let match = await model.send(card, .want)
+        #expect(match?.name == "Arrival")
+        #expect(model.match == match)
+    }
+
+    @Test func cutsALongNameToWhatTheRoomTakesWithoutSplittingACharacter() {
+        #expect(PickTonightModel.wireName("Arrival") == "Arrival")
+        let long = String(repeating: "a", count: 299) + "👩‍👩‍👧"
+        #expect(PickTonightModel.wireName(long) == String(repeating: "a", count: 299))
+        #expect(PickTonightModel.wireName(String(repeating: "b", count: 400)).utf16.count == 300)
     }
 
     @Test func plansTonightAtEightOrTheNextHalfHour() throws {

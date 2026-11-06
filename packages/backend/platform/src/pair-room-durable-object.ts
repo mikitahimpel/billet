@@ -298,12 +298,23 @@ export class PairRoom extends DurableObject {
         }),
       ),
     );
-    const match = result._tag === "Done" ? result.view.match : undefined;
+    if (result._tag !== "Done") return result;
+    const match = result.view.match;
     if (match !== undefined) {
       for (const socket of this.ctx.getWebSockets()) {
         if (attachmentOf(socket)?.lists === true) send(socket, { _tag: "MatchFound", match });
       }
-      await this.enqueueDeliveries(matchDeliveryId(pickKeyOf(match.title), match.at));
+    }
+    // A repeated ♥ answers no match but hands its match over again, in case the first try stored the
+    // swipe and failed before saving the delivery. A delivery already saved is left as it is.
+    const key = command._tag === "Swipe" ? pickKeyOf(command.title) : undefined;
+    const delivered =
+      match ??
+      (command._tag === "Swipe" && command.choice === "want"
+        ? result.view.matches.find((made) => pickKeyOf(made.title) === key)
+        : undefined);
+    if (delivered !== undefined) {
+      await this.enqueueDeliveries(matchDeliveryId(pickKeyOf(delivered.title), delivered.at));
     }
     return result;
   }

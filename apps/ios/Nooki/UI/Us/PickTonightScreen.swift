@@ -103,9 +103,9 @@ struct PickTonightScreen: View {
                     round("eye.fill", label: "Seen it", honey: false) { swipe(top, .seen, model) }
                     round("heart.fill", label: "Want to", honey: true) { swipe(top, .want, model) }
                 }
-                Text("Not tonight · Seen it · Want to")
+                Text(model.unsent ? "That swipe didn't send. Try it again." : "Not tonight · Seen it · Want to")
                     .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
+                    .foregroundStyle(model.unsent ? Ink.accentText : Ink.textSecondary)
             }
         }
         .padding(.top, Space.l)
