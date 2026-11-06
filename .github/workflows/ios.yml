@@ -147,6 +147,8 @@ jobs:
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
           export TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples"
+          # Tests that need a Simulator that can draw skip themselves on GITHUB_ACTIONS.
+          export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:NookiUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
@@ -226,6 +228,7 @@ jobs:
           ONLY: ${{ inputs.shots }}
           # xcodebuild hands TEST_RUNNER_ variables to the tests without the prefix; screenshot tests run only here.
           TEST_RUNNER_UISHOTS: "1"
+          TEST_RUNNER_GITHUB_ACTIONS: "true"
         run: |
           # The newest runtime that supports the first device type whose name contains DEVICE.
           read -r runtime devtype <<<"$(xcrun simctl list -j runtimes | python3 -c '
