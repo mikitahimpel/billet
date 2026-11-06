@@ -24,7 +24,17 @@ import {
   PickTonightStore,
   pickKeyOf,
 } from "@billet/backend-pair-room/pick-tonight";
+import {
+  GuessDeck,
+  type GuessAnswerRow,
+  GuessRoom,
+  type GuessRoundRow,
+  GuessStore,
+  type GuessWeekRow,
+  withScore,
+} from "@billet/backend-pair-room/guess";
 import { RoomService } from "@billet/backend-pair-room/room-service";
+import { GuessQuestionId } from "@billet/contracts-domain/guess";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
 import type { SharedList } from "@billet/contracts-domain/list";
@@ -177,12 +187,45 @@ const makeRoom = () => {
       }),
     forget: Effect.sync(() => void (swipes = [])),
   });
+  let rounds: Array<GuessRoundRow> = [];
+  let answers: Array<GuessAnswerRow> = [];
+  let weeks: ReadonlyArray<GuessWeekRow> = [];
+  const guessStore = Layer.succeed(GuessStore, {
+    round: (day) => Effect.sync(() => Option.fromNullishOr(rounds.find((r) => r.day === day))),
+    rounds: Effect.sync(() => rounds),
+    startRound: (round) =>
+      Effect.sync(() => {
+        if (!rounds.some((r) => r.day === round.day)) rounds = [...rounds, round];
+      }),
+    answers: (day) => Effect.sync(() => answers.filter((answer) => answer.day === day)),
+    weeks: Effect.sync(() => weeks),
+    answer: (row, score) =>
+      Effect.sync(() => {
+        answers = [...answers, row];
+        if (score !== undefined) weeks = withScore(weeks, score);
+      }),
+    forget: Effect.sync(() => {
+      rounds = [];
+      answers = [];
+      weeks = [];
+    }),
+  });
+  const deck = Layer.succeed(GuessDeck, {
+    questions: [1, 2, 3, 4, 5, 6, 7].map((id) => Schema.decodeSync(GuessQuestionId)(id)),
+  });
   const room = Effect.runSync(RoomService.make.pipe(Effect.provide(Layer.merge(store, ids))));
+  const guess = Effect.runSync(
+    GuessRoom.make.pipe(
+      Effect.provide(
+        Layer.mergeAll(store, guessStore, deck, Layer.succeed(RoomService, RoomService.of(room))),
+      ),
+    ),
+  );
   const gifts = Effect.runSync(GiftsRoom.make.pipe(Effect.provide(Layer.merge(store, giftsStore))));
   const pick = Effect.runSync(
     PickTonightRoom.make.pipe(Effect.provide(Layer.merge(store, pickStore))),
   );
-  return { ...room, gifts, pick };
+  return { ...room, gifts, pick, guess };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -278,6 +321,10 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     moods: (pairId) => roomOf(pairId).moods,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
     pickTonight: (pairId, by, command) => roomOf(pairId).pick.run(by, command),
+    guess: (pairId, by, command) =>
+      roomOf(pairId)
+        .guess.run(by, command)
+        .pipe(Effect.map(({ result }) => result)),
     lists: (pairId, by, request) =>
       roomOf(pairId)
         .listsFor(by, request)

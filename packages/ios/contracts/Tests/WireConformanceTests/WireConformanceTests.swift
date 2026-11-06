@@ -114,6 +114,10 @@ let roundTrips: [String: RoundTrip] = [
   "PickTitle": codec(PickTitle.self),
   "PickTonightResponse": codec(PickTonightResponse.self),
   "PickSwipeRequest": codec(PickSwipeRequest.self),
+  "GuessQuestion": codec(GuessQuestion.self),
+  "GuessCatalogResponse": codec(GuessCatalogResponse.self),
+  "GuessResponse": codec(GuessResponse.self),
+  "GuessAnswerRequest": codec(GuessAnswerRequest.self),
   "SaveLovesRequest": codec(SaveLovesRequest.self),
 ]
 

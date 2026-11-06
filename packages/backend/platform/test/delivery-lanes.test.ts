@@ -132,6 +132,24 @@ describe("delivery lanes", () => {
     expect(await room.deliveries()).toHaveLength(1);
   });
 
+  it("enqueues a push to the partner once a member finished their part, and again on a repeated last answer", async () => {
+    const room = await laneRoom();
+    const view = await room.guess(alice, { _tag: "View" });
+    if (view._tag !== "Done") throw new Error(view.reason);
+    const { round } = view.view;
+    const answer = (question: number) =>
+      room.guess(alice, { _tag: "Answer", round: round.id, question, option: 0 } as never);
+    for (const question of round.questions.slice(0, -1)) await answer(question);
+    expect(await room.deliveries()).toEqual([]);
+    await answer(round.questions.at(-1)!);
+    expect((await room.deliveries()).map((d) => d.noteId)).toEqual([`guess:${round.id}:${alice}`]);
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("DELETE FROM delivery");
+    });
+    await answer(round.questions.at(-1)!);
+    expect(await room.deliveries()).toHaveLength(1);
+  });
+
   it("enqueues a retried send whose first try stored the note but no delivery", async () => {
     const room = await laneRoom();
     const request = photo();

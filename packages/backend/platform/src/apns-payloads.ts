@@ -87,6 +87,25 @@ export const matchAlertBody = (name: string): unknown => ({
   },
 });
 
+/**
+ * An alert to the partner that the other member finished their part of today's Who knows who
+ * round: as the subject, who answered `count` questions about themselves, or as the guesser. The
+ * server knows no names, and the extension leaves an alert without a payload as it is.
+ */
+export const guessAlertBody = (role: "subject" | "guesser", count: number): unknown => ({
+  aps: {
+    alert: {
+      title: "Who knows who",
+      body:
+        role === "subject"
+          ? `Your partner answered ${count} questions about themselves. Your turn to guess`
+          : `Your partner guessed ${count} things about you. Answer to see how they did`,
+    },
+    sound: "default",
+    "thread-id": "who-knows-who",
+  },
+});
+
 /** A WidgetKit push only asks the widgets to reload; the payload rides along for a future reader. */
 export const widgetBody = (note: Note): unknown => ({
   aps: { "content-changed": true },

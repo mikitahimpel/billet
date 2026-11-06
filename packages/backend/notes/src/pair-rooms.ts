@@ -21,6 +21,7 @@ import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
 import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { PickTonightCommand, PickTonightResult } from "@billet/backend-pair-room/pick-tonight";
+import type { GuessCommand, GuessResult } from "@billet/backend-pair-room/guess";
 import type { ListsResult } from "@billet/backend-pair-room/lists";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
@@ -188,6 +189,12 @@ export class PairRooms extends Context.Service<
       by: UserId,
       command: PickTonightCommand,
     ) => Effect.Effect<PickTonightResult, NotesUnavailable>;
+    /** Runs one Who knows who command for `by`: see `GuessRoom`. */
+    readonly guess: (
+      pairId: PairId,
+      by: UserId,
+      command: GuessCommand,
+    ) => Effect.Effect<GuessResult, NotesUnavailable>;
     /** The pair's lists for `by`, after `request` when there is one. */
     readonly lists: (
       pairId: PairId,

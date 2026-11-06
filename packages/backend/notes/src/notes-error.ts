@@ -37,6 +37,14 @@ export class BonusTaken extends Data.TaggedError("BonusTaken")<{
 /** A buy for the cat, such as a treat, before the couple adopted one. */
 export class CatNotAdopted extends Data.TaggedError("CatNotAdopted") {}
 
+/**
+ * A Who knows who answer the room would not lock: to a round whose day is over, to a question not
+ * in the round, or a second answer to one already answered.
+ */
+export class GuessRefused extends Data.TaggedError("GuessRefused")<{
+  readonly reason: "RoundClosed" | "NotInRound" | "Answered";
+}> {}
+
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{
   readonly reason: string;

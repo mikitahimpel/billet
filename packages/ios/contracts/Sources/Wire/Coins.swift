@@ -63,6 +63,11 @@ public struct BuyResponse: Codable, Hashable, Sendable {
 public enum EarnEvent: Codable, Hashable, Sendable {
   case wishReceived(wish: String)
   case dateMatched(idea: String)
+  /// A right guess in Who knows who, on `question` of the round of `round` (`YYYY-MM-DD`). The
+  /// room pays it at the reveal; the server refuses it from the app.
+  case guessHit(round: String, question: Int)
+  /// Both partners finished the round of `round`. Paid by the room, like a hit.
+  case roundPlayed(round: String)
   case dateRated(plan: String)
   case listTicked(item: String)
   case momentAdded(moment: String)
@@ -76,6 +81,8 @@ public enum EarnEvent: Codable, Hashable, Sendable {
     case item
     case moment
     case note
+    case round
+    case question
   }
 
   public init(from decoder: any Decoder) throws {
@@ -85,6 +92,12 @@ public enum EarnEvent: Codable, Hashable, Sendable {
     case "WishReceived":
       self = .wishReceived(wish: try container.decode(String.self, forKey: .wish))
     case "DateMatched": self = .dateMatched(idea: try container.decode(String.self, forKey: .idea))
+    case "GuessHit":
+      self = .guessHit(
+        round: try container.decode(String.self, forKey: .round),
+        question: try container.decode(Int.self, forKey: .question))
+    case "RoundPlayed":
+      self = .roundPlayed(round: try container.decode(String.self, forKey: .round))
     case "DateRated": self = .dateRated(plan: try container.decode(String.self, forKey: .plan))
     case "ListTicked": self = .listTicked(item: try container.decode(String.self, forKey: .item))
     case "MomentAdded":
@@ -105,6 +118,13 @@ public enum EarnEvent: Codable, Hashable, Sendable {
     case .dateMatched(let idea):
       try container.encode("DateMatched", forKey: .tag)
       try container.encode(idea, forKey: .idea)
+    case .guessHit(let round, let question):
+      try container.encode("GuessHit", forKey: .tag)
+      try container.encode(round, forKey: .round)
+      try container.encode(question, forKey: .question)
+    case .roundPlayed(let round):
+      try container.encode("RoundPlayed", forKey: .tag)
+      try container.encode(round, forKey: .round)
     case .dateRated(let plan):
       try container.encode("DateRated", forKey: .tag)
       try container.encode(plan, forKey: .plan)

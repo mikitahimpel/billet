@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
-import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
+import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
@@ -44,6 +44,7 @@ import {
   type PickTonightCommand,
   type PickTonightResult,
 } from "@billet/backend-pair-room/pick-tonight";
+import { GuessRoom, type GuessCommand, type GuessResult } from "@billet/backend-pair-room/guess";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
@@ -65,6 +66,7 @@ import type { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
   enabledPushLanes,
+  guessDeliveryId,
   matchDeliveryId,
   reactionDeliveryId,
   sendPushLane,
@@ -79,6 +81,7 @@ import { systemNow } from "./wall-clock.ts";
 export const ROOM_USER_HEADER = "x-billet-user";
 
 const decodeUser = Schema.decodeUnknownOption(UserId);
+const decodeDay = Schema.decodeUnknownOption(LocalDay);
 const decodeDemoBot = Schema.decodeUnknownOption(DemoBotState);
 
 /** Where a demo pair's room keeps its bot's plans; absent in every other room. */
@@ -123,6 +126,8 @@ interface SocketAttachment {
   readonly lists?: boolean;
   /** Whether this socket resumed with `moods: true` and is told each check-in. */
   readonly moods?: boolean;
+  /** Whether this socket resumed with `guess: true` and is told how Who knows who goes. */
+  readonly guess?: boolean;
 }
 
 /** Outputs that change what `shopOf` shows. */
@@ -228,6 +233,14 @@ export class PairRoom extends DurableObject {
               ? undefined
               : { recipient: notice.recipient, name: notice.match.name };
           },
+          guess: async (day, member) => {
+            const round = decodeDay(day);
+            const user = decodeUser(member);
+            if (round._tag === "None" || user._tag === "None") return undefined;
+            return (await this.runtime).runPromise(
+              GuessRoom.use((guess) => guess.notice(round.value, user.value)),
+            );
+          },
           recipient: async (note) => {
             const room = await this.snapshot();
             if (room._tag !== "Active") return undefined;
@@ -317,6 +330,71 @@ export class PairRoom extends DurableObject {
       await this.enqueueDeliveries(matchDeliveryId(pickKeyOf(delivered.title), delivered.at));
     }
     return result;
+  }
+
+  /**
+   * Runs one Who knows who command for `by`. A stored answer is counted to the partner's sockets
+   * that follow the game; a member who finished their part while the partner has not is pushed to
+   * the partner; the answer that completes the round sends each follower the reveal as its own user
+   * sees it, and the coins it paid to the shop's followers.
+   */
+  async guess(by: UserId, command: GuessCommand): Promise<GuessResult> {
+    const { result, progress, revealed, coins } = await (
+      await this.runtime
+    ).runPromise(
+      GuessRoom.use((guess) => guess.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.guess.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
+    );
+    if (progress === undefined) return result;
+    const { round, member, answered, of, stored } = progress;
+    if (stored) {
+      for (const socket of this.ctx.getWebSockets()) {
+        const attachment = attachmentOf(socket);
+        if (attachment?.guess === true && attachment.user !== member) {
+          send(socket, { _tag: "GuessProgress", round, answered });
+        }
+      }
+    }
+    // A repeated last answer hands its push over again, in case the first try stored the answer
+    // and failed before saving the delivery. A delivery already saved is left as it is.
+    if (answered === of && !revealed) await this.enqueueDeliveries(guessDeliveryId(round, member));
+    if (revealed && stored) await this.pushReveal();
+    const paid = coins.find(
+      (decision) =>
+        decision._tag === "Accepted" && decision.outputs.some((o) => shopOutputs.has(o._tag)),
+    );
+    if (paid !== undefined) await this.pushShop(paid);
+    return result;
+  }
+
+  /** Sends every socket that follows Who knows who the round's reveal, as its user sees it. */
+  private async pushReveal(): Promise<void> {
+    const views = new Map<string, GuessResult>();
+    for (const socket of this.ctx.getWebSockets()) {
+      const attachment = attachmentOf(socket);
+      if (attachment?.guess !== true) continue;
+      const user = attachment.user as UserId;
+      const view =
+        views.get(user) ??
+        (
+          await (
+            await this.runtime
+          ).runPromise(GuessRoom.use((guess) => guess.run(user, { _tag: "View" })))
+        ).result;
+      views.set(user, view);
+      if (view._tag === "Done" && view.view.reveal !== undefined) {
+        send(socket, {
+          _tag: "GuessRevealed",
+          round: view.view.round.id,
+          reveal: view.view.reveal,
+          score: view.view.score,
+        });
+      }
+    }
   }
 
   /**
@@ -826,6 +904,7 @@ export class PairRoom extends DurableObject {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
     await (await this.runtime).runPromise(PickTonightRoom.use((pick) => pick.forget));
+    await (await this.runtime).runPromise(GuessRoom.use((guess) => guess.forget));
     await this.run((room) => room.forgetLists, "PairRoom.forgetLists");
     const deliveries = deliveriesOf(await this.database);
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
@@ -892,8 +971,9 @@ export class PairRoom extends DurableObject {
       case "Resume": {
         // Start from what the client holds, never from more than it asks for. A client that
         // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
-        // the Inbox, nor one without `shop` the shop, nor one without `lists` the lists.
-        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, lists, moods } =
+        // the Inbox, nor one without `shop` the shop, nor one without `lists` the lists, nor one
+        // without `guess` the game.
+        const { lastSeq, lastCatSeq, activity, lastReactionRev, shop, lists, moods, guess } =
           message.value;
         socket.serializeAttachment({
           ...attachment,
@@ -904,6 +984,7 @@ export class PairRoom extends DurableObject {
           shop: shop === true,
           lists: lists === true,
           moods: moods === true,
+          guess: guess === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);

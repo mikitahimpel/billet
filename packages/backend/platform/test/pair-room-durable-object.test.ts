@@ -189,6 +189,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_list_media"),
       expect.stringContaining("_list_travel"),
       expect.stringContaining("_movie_swipes"),
+      expect.stringContaining("_guess"),
     ]);
   });
 
@@ -694,6 +695,76 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.pickTonight(bob, { _tag: "View" })).toMatchObject({
       _tag: "Done",
       view: { swipes: [], partnerPicked: 0, matches: [] },
+    });
+  });
+
+  it("keeps a Who knows who round in SQLite, counts answers to the partner, reveals to both, and forgets it with the pair", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    const notesOnly = await open(room, bob);
+    a.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, guess: true, shop: true }));
+    b.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, guess: true }));
+    notesOnly.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    await until(() => a.frames.some((f) => f._tag === "ShopChanged"));
+
+    const first = await room.guess(alice, { _tag: "View" });
+    if (first._tag !== "Done") throw new Error(first.reason);
+    const { round } = first.view;
+    expect(round.questions).toHaveLength(5);
+    const answer = (by: typeof alice, question: number, option: number) =>
+      room.guess(by, { _tag: "Answer", round: round.id, question, option } as never);
+
+    await answer(alice, round.questions[0]!, 1);
+    await until(() => b.frames.some((f) => f._tag === "GuessProgress"));
+    expect(b.frames.find((f) => f._tag === "GuessProgress")).toEqual({
+      _tag: "GuessProgress",
+      round: round.id,
+      answered: 1,
+    });
+    expect(a.frames.some((f) => f._tag === "GuessProgress")).toBe(false);
+    expect(await answer(alice, round.questions[0]!, 2)).toEqual({
+      _tag: "Refused",
+      reason: "Answered",
+    });
+
+    await evictDurableObject(room);
+
+    for (const question of round.questions.slice(1)) await answer(alice, question, 1);
+    const hidden = await room.guess(bob, { _tag: "View" });
+    expect(hidden).toMatchObject({ _tag: "Done", view: { answers: [], partnerAnswered: 5 } });
+    expect(hidden._tag === "Done" && hidden.view.reveal).toBeUndefined();
+
+    for (const question of round.questions) await answer(bob, question, 1);
+    await until(() => a.frames.some((f) => f._tag === "GuessRevealed"));
+    await until(() => b.frames.some((f) => f._tag === "GuessRevealed"));
+    const revealed = a.frames.find((f) => f._tag === "GuessRevealed");
+    expect(revealed).toMatchObject({ round: round.id, reveal: expect.any(Array) });
+    const reveal = (revealed?.reveal ?? []) as ReadonlyArray<{ hit: boolean }>;
+    expect(reveal.map((q) => q.hit)).toEqual([true, true, true, true, true]);
+    const guesserIsAlice = round.subject === bob;
+    expect(revealed?.score).toMatchObject({
+      week: guesserIsAlice ? { mine: 5, partner: 0 } : { mine: 0, partner: 5 },
+    });
+    await until(() => a.frames.filter((f) => f._tag === "ShopChanged").length > 1);
+    const coins = await room.coins(undefined, 100);
+    expect(coins?.entries.map((entry) => entry.id)).toEqual(
+      expect.arrayContaining([
+        `earn:round:${round.id}`,
+        `earn:guess:${round.id}.${round.questions[0]}`,
+      ]),
+    );
+    expect(notesOnly.frames.some((f) => f._tag.startsWith("Guess"))).toBe(false);
+    expect(await room.guess(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
+    });
+
+    await room.forgetMember(alice);
+    const after = await room.guess(bob, { _tag: "View" });
+    expect(after).toMatchObject({
+      _tag: "Done",
+      view: { answers: [], partnerAnswered: 0, score: { allTime: { mine: 0, partner: 0 } } },
     });
   });
 

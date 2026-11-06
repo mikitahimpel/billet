@@ -315,6 +315,10 @@ export const NotesRoutes = HttpRouter.use((router) =>
         const request = yield* HttpServerRequest.schemaBodyJson(EarnRequest).pipe(
           Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
         );
+        // The room pays Who knows who itself at the reveal; from the app they would be unchecked.
+        if (request.event._tag === "GuessHit" || request.event._tag === "RoundPlayed") {
+          return yield* respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 });
+        }
         return yield* respondEarn(yield* notes.earn(userId, request), { headers: shopHeaders });
       }).pipe(respondNotesFailures),
     );

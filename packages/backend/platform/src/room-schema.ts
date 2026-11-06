@@ -305,3 +305,38 @@ export const movieSwipes = sqliteTable(
     index("movie_swipes_at").on(table.at),
   ],
 );
+
+// Who knows who: the round of each room day (`day`, the cat's local day as for coins), with its
+// subject and its question ids as a JSON array. Kept for good: a pair's next questions follow
+// every round it had.
+export const guessRounds = sqliteTable("guess_rounds", {
+  day: text("day").primaryKey(),
+  subject: text("subject").notNull(),
+  questions: text("questions").notNull(),
+});
+
+// Each member's locked answer to each question of a round: `option` is 0 to 3. One row each, so a
+// second answer cannot replace the first.
+export const guessAnswers = sqliteTable(
+  "guess_answers",
+  {
+    day: text("day").notNull(),
+    member: text("member").notNull(),
+    question: integer("question").notNull(),
+    option: integer("option").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.member, table.question] })],
+);
+
+// Each member's Who knows who points per week, `week` being its Monday. Added to when a round
+// reveals; the all-time score and the best week are read from these rows.
+export const guessWeeks = sqliteTable(
+  "guess_weeks",
+  {
+    week: text("week").notNull(),
+    member: text("member").notNull(),
+    points: integer("points").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.week, table.member] })],
+);

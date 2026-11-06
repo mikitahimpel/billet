@@ -7,6 +7,10 @@ import { socketRoute } from "@billet/contracts-realtime/socket-route";
 it("pins the routes that clients call", () => {
   expect({ ...routes, socket: socketRoute }).toMatchInlineSnapshot(`
     {
+      "answerGuess": {
+        "method": "POST",
+        "path": "/v1/guess/answers",
+      },
       "appStoreNotifications": {
         "method": "POST",
         "path": "/v1/appstore/notifications",
@@ -98,6 +102,14 @@ it("pins the routes that clients call", () => {
       "getGifts": {
         "method": "GET",
         "path": "/v1/gifts",
+      },
+      "getGuess": {
+        "method": "GET",
+        "path": "/v1/guess",
+      },
+      "getGuessCatalog": {
+        "method": "GET",
+        "path": "/v1/guess/catalog",
       },
       "getLists": {
         "method": "GET",

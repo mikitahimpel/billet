@@ -110,6 +110,12 @@ export const routes = {
   getPickTonight: route("GET", "/v1/pick-tonight"),
   /** One Pick tonight swipe; answers the session after it, with the match it made. */
   swipePickTonight: route("POST", "/v1/pick-tonight/swipes"),
+  /** Today's Who knows who round as the caller sees it: see `GuessResponse`. */
+  getGuess: route("GET", "/v1/guess"),
+  /** Locks one of the caller's answers in today's round; answers the round after it. */
+  answerGuess: route("POST", "/v1/guess/answers"),
+  /** Every Who knows who question. No session; cached like the date catalog. */
+  getGuessCatalog: route("GET", "/v1/guess/catalog"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

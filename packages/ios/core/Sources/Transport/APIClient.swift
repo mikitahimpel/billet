@@ -106,6 +106,15 @@ public struct APIClient: Sendable {
   /// One Pick tonight swipe; answers the session after it, with the match it made.
   public var swipePickTonight:
     @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
+  /// Today's Who knows who round as this user sees it. `.api(.notFound)` while unpaired.
+  public var guess: @Sendable () async throws(TransportError) -> GuessResponse
+  /// Locks one answer of today's round; answers the round after it. `.api(.invalidRequest)` for
+  /// another option on a question already answered or a round whose day is over (409), or a
+  /// question not in the round (400).
+  public var answerGuess:
+    @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse
+  /// Every Who knows who question. No session.
+  public var guessCatalog: @Sendable () async throws(TransportError) -> GuessCatalogResponse
   /// Replaces this user's check-in and answers with it as stored, the note trimmed.
   /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
   public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
@@ -258,6 +267,16 @@ public struct APIClient: Sendable {
       @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    guess: @escaping @Sendable () async throws(TransportError) -> GuessResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    answerGuess:
+      @escaping @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    guessCatalog: @escaping @Sendable () async throws(TransportError) -> GuessCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
     setMood:
       @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -321,6 +340,9 @@ public struct APIClient: Sendable {
     self.titleRecommendations = titleRecommendations
     self.pickTonight = pickTonight
     self.swipePickTonight = swipePickTonight
+    self.guess = guess
+    self.answerGuess = answerGuess
+    self.guessCatalog = guessCatalog
     self.setMood = setMood
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
@@ -574,6 +596,18 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.swipePickTonight, signed: true, body: body),
           as: PickTonightResponse.self)
+      },
+      guess: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getGuess, signed: true), as: GuessResponse.self)
+      },
+      answerGuess: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.answerGuess, signed: true, body: body), as: GuessResponse.self)
+      },
+      guessCatalog: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getGuessCatalog, signed: false), as: GuessCatalogResponse.self)
       },
       setMood: { (body) async throws(TransportError) in
         try await http.perform(

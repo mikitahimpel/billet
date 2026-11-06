@@ -83,6 +83,8 @@ export const EarnRef = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9._-]{1,8
 );
 export type EarnRef = typeof EarnRef.Type;
 
+const decodeEarnRef = Schema.decodeSync(EarnRef);
+
 /**
  * Something the couple did in the app that earns coins. The server pays it once per `ref`: the same
  * wish, idea, plan, item, moment or note again earns nothing more.
@@ -92,6 +94,13 @@ export const EarnEvent = Schema.TaggedUnion({
   WishReceived: { wish: EarnRef },
   /** Both partners said yes to the same date idea. */
   DateMatched: { idea: EarnRef },
+  /**
+   * A right guess in Who knows who: `question` (a `GuessQuestionId`) of the round of `round`. The
+   * room pays it at the reveal, never the app.
+   */
+  GuessHit: { round: LocalDay, question: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)) },
+  /** Both partners finished the Who knows who round of `round`. Paid by the room, like a hit. */
+  RoundPlayed: { round: LocalDay },
   /** A planned date was rated, which marks it done. */
   DateRated: { plan: EarnRef },
   /** A "we want to" item was ticked. Groceries earn nothing, so the app never sends those. */
@@ -126,6 +135,10 @@ export const rewardForEarn = (
       return of("wish", event.wish, 20);
     case "DateMatched":
       return of("date", event.idea, 10);
+    case "GuessHit":
+      return of("guess", decodeEarnRef(`${event.round}.${event.question}`), 2);
+    case "RoundPlayed":
+      return of("round", decodeEarnRef(event.round), 10);
     case "DateRated":
       return of("plan", event.plan, 30);
     case "ListTicked":

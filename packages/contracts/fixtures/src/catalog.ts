@@ -131,6 +131,17 @@ import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lis
 import { TitleDetails, TitleSearchResponse } from "@billet/contracts-http-api/titles";
 import { PickMatch, PickTitle } from "@billet/contracts-domain/pick-tonight";
 import { PickSwipeRequest, PickTonightResponse } from "@billet/contracts-http-api/pick-tonight";
+import {
+  GuessQuestion,
+  GuessQuestionId,
+  GuessReveal,
+  GuessScore,
+} from "@billet/contracts-domain/guess";
+import {
+  GuessAnswerRequest,
+  GuessCatalogResponse,
+  GuessResponse,
+} from "@billet/contracts-http-api/guess";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -620,6 +631,33 @@ const pickMatch = Schema.decodeUnknownSync(PickMatch)({
   posterPath: "/gmTocN1iLLDyjEJir2CBnt2EhGE.jpg",
   at: 1_700_000_300_000,
 });
+const guessDay = Schema.decodeSync(LocalDay)("2026-11-05");
+const guessIds = [3, 17, 42, 88, 120].map((id) => Schema.decodeSync(GuessQuestionId)(id));
+const guessQuestion = Schema.decodeUnknownSync(GuessQuestion)({
+  id: 42,
+  guess: "What does {name} order at a restaurant they've never been to?",
+  self: "What do you order at a restaurant you've never been to?",
+  options: ["The first thing on the menu", "The waiter's pick", "Whatever's cheapest", "A burger"],
+  tag: "food",
+});
+const guessReveal: ReadonlyArray<GuessReveal> = guessIds.map((question, index) => ({
+  question,
+  truth: index % 4,
+  guess: index === 2 ? 0 : index % 4,
+  hit: index !== 2,
+}));
+const guessScore = Schema.decodeUnknownSync(GuessScore)({
+  weekOf: "2026-11-02",
+  week: { mine: 4, partner: 7 },
+  allTime: { mine: 31, partner: 12 },
+  bestWeek: { mine: 14, partner: 9 },
+});
+const guessRound = {
+  id: guessDay,
+  subject: alice,
+  questions: guessIds,
+  closesAt: Date.UTC(2026, 10, 5, 23),
+};
 const placesToGo = Schema.decodeUnknownSync(SharedList)({
   id: "00000000-0000-4000-8000-0000000000c6",
   kind: "travel",
@@ -803,6 +841,31 @@ export const catalog: ReadonlyArray<Fixture> = [
       posterPath: "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
     },
     "without-poster": { title: pickItem, choice: "want", name: "Past Lives" },
+  }),
+  fixture("GuessQuestion", GuessQuestion, { default: guessQuestion }),
+  fixture("GuessCatalogResponse", GuessCatalogResponse, {
+    default: { version: "0976f7f2a2079c4f", questions: [guessQuestion] },
+  }),
+  fixture("GuessResponse", GuessResponse, {
+    waiting: {
+      round: guessRound,
+      answers: [
+        { question: guessIds[0]!, option: 2 },
+        { question: guessIds[1]!, option: 0 },
+      ],
+      partnerAnswered: 5,
+      score: guessScore,
+    },
+    revealed: {
+      round: guessRound,
+      answers: guessReveal.map(({ question, truth }) => ({ question, option: truth })),
+      partnerAnswered: 5,
+      reveal: guessReveal,
+      score: guessScore,
+    },
+  }),
+  fixture("GuessAnswerRequest", GuessAnswerRequest, {
+    default: { round: guessDay, question: guessIds[0]!, option: 3 },
   }),
   fixture("TitleSearchResponse", TitleSearchResponse, {
     default: {
@@ -1104,6 +1167,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     "list-ticked": EarnEvent.cases.ListTicked.make({ item: earnRef("item-1") }),
     "moment-added": EarnEvent.cases.MomentAdded.make({ moment: earnRef("moment-1") }),
     "note-added": EarnEvent.cases.NoteAdded.make({ note: earnRef("note-1") }),
+    "guess-hit": EarnEvent.cases.GuessHit.make({ round: guessDay, question: 42 }),
+    "round-played": EarnEvent.cases.RoundPlayed.make({ round: guessDay }),
   }),
   fixture("EarnRequest", EarnRequest, {
     default: { event: { _tag: "ListTicked", item: earnRef("item-1") }, utcOffsetSeconds: -18000 },
@@ -1319,6 +1384,7 @@ export const catalog: ReadonlyArray<Fixture> = [
       lastReactionRev: 2,
       moods: true,
     }),
+    "resume-with-guess": ClientMessage.cases.Resume.make({ lastSeq: 7, lists: true, guess: true }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -1363,6 +1429,12 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
     "mood-changed": ServerMessage.cases.MoodChanged.make({ checkIn: missingAlice }),
     "match-found": ServerMessage.cases.MatchFound.make({ match: pickMatch }),
+    "guess-progress": ServerMessage.cases.GuessProgress.make({ round: guessDay, answered: 3 }),
+    "guess-revealed": ServerMessage.cases.GuessRevealed.make({
+      round: guessDay,
+      reveal: guessReveal,
+      score: guessScore,
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

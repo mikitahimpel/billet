@@ -242,6 +242,8 @@ describe("earning in the app", () => {
     const cases: ReadonlyArray<readonly [EarnEvent, string, number]> = [
       [{ _tag: "WishReceived", wish: ref("w1") }, "earn:wish:w1", 20],
       [{ _tag: "DateMatched", idea: ref("i1") }, "earn:date:i1", 10],
+      [{ _tag: "GuessHit", round: today, question: 7 }, "earn:guess:2026-11-05.7", 2],
+      [{ _tag: "RoundPlayed", round: today }, "earn:round:2026-11-05", 10],
       [{ _tag: "DateRated", plan: ref("p1") }, "earn:plan:p1", 30],
       [{ _tag: "ListTicked", item: ref("l1") }, "earn:list:l1", 5],
       [{ _tag: "MomentAdded", moment: ref("m1") }, "earn:moment:m1", 10],

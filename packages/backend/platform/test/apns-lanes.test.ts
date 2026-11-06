@@ -7,6 +7,7 @@ import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload
 import type { ApnsPush, ApnsResult } from "../src/apns-client.ts";
 import {
   enabledPushLanes,
+  guessDeliveryId,
   matchDeliveryId,
   reactionDeliveryId,
   sendPushLane,
@@ -63,6 +64,7 @@ const deps = (overrides: Partial<PushLaneDependencies> = {}) => {
       note: photo,
     }),
     match: async () => ({ recipient: alice, name: "Arrival" }),
+    guess: async () => ({ recipient: bob, role: "subject", count: 5 }),
     recipient: async (note) => (note.author === alice ? bob : alice),
     tokens: async () => [
       { token: "aa", environment: "production" },
@@ -242,6 +244,55 @@ describe("a Pick tonight match", () => {
       "Delivered",
     );
     const gone = deps({ match: async () => undefined });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, gone.dependencies)).toBe(
+      "Abandon",
+    );
+    expect([...widget.sent, ...gone.sent]).toEqual([]);
+  });
+});
+
+describe("a finished Who knows who part", () => {
+  const delivery = guessDeliveryId("2026-11-05", alice);
+
+  it("is an alert to the partner in its own thread, worded for the part played", async () => {
+    const asked: Array<[string, string]> = [];
+    const subject = deps({
+      guess: async (day, member) => {
+        asked.push([day, member]);
+        return { recipient: bob, role: "subject", count: 5 };
+      },
+    });
+    expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, subject.dependencies)).toBe(
+      "Delivered",
+    );
+    expect(asked).toEqual([["2026-11-05", alice]]);
+    expect(subject.sent.map((push) => [push.pushType, push.collapseId])).toEqual([
+      ["alert", "g-2026-11-05"],
+      ["alert", "g-2026-11-05"],
+    ]);
+    expect((subject.sent[0]!.body as { aps: unknown }).aps).toEqual({
+      alert: {
+        title: "Who knows who",
+        body: "Your partner answered 5 questions about themselves. Your turn to guess",
+      },
+      sound: "default",
+      "thread-id": "who-knows-who",
+    });
+
+    const guesser = deps({ guess: async () => ({ recipient: bob, role: "guesser", count: 5 }) });
+    await sendPushLane({ noteId: delivery, lane: "AlertPush" }, guesser.dependencies);
+    expect((guesser.sent[0]!.body as { aps: { alert: unknown } }).aps.alert).toEqual({
+      title: "Who knows who",
+      body: "Your partner guessed 5 things about you. Answer to see how they did",
+    });
+  });
+
+  it("sends nothing on the other lanes, and gives up once the round revealed or closed", async () => {
+    const widget = deps();
+    expect(await sendPushLane({ noteId: delivery, lane: "WidgetPush" }, widget.dependencies)).toBe(
+      "Delivered",
+    );
+    const gone = deps({ guess: async () => undefined });
     expect(await sendPushLane({ noteId: delivery, lane: "AlertPush" }, gone.dependencies)).toBe(
       "Abandon",
     );

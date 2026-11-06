@@ -123,6 +123,15 @@ describe("the coin routes", () => {
     expect(again).toEqual(first);
   });
 
+  it("refuse Who knows who earns from the app: the room pays those", async () => {
+    for (const event of [
+      { _tag: "GuessHit", round: "2026-11-05", question: 1 },
+      { _tag: "RoundPlayed", round: "2026-11-05" },
+    ]) {
+      expect((await call("POST", "/v1/coins/earn", "ana", { event })).status, event._tag).toBe(400);
+    }
+  });
+
   it("pay a complete collection's bonus once, to either partner", async () => {
     // The pieces cost more than the welcome coins, so the pair earns some first.
     for (let n = 0; n < 12; n++) {
