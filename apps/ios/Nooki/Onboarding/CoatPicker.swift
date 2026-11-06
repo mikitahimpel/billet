@@ -33,9 +33,9 @@ struct CoatPicker: View {
 
     @ViewBuilder private var stage: some View {
         if let stageHeight {
-            CoatStage(coat: coat, height: stageHeight)
+            CatStage(coat: coat, height: stageHeight)
         } else {
-            GeometryReader { geometry in CoatStage(coat: coat, height: geometry.size.height) }
+            GeometryReader { geometry in CatStage(coat: coat, height: geometry.size.height) }
                 .frame(minHeight: 170, maxHeight: 440)
         }
     }
@@ -72,30 +72,40 @@ struct CoatPicker: View {
     }
 }
 
-/// The chosen cat, seated on a little clay plinth in a warm pool of light, breathing slowly.
-private struct CoatStage: View {
+/// The cat in her coat on a warm pool of light, breathing slowly: the coat step's pick and the welcome's hero. She is
+/// billet-gpu's render of the seated splat Mochi (the same pose, light and framing for every coat), lit from the left by
+/// the room's lamp, and stands in a soft contact shadow: a tight one under the paws inside a wide, faint one.
+struct CatStage: View {
     let coat: CatCoat
     let height: CGFloat
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Where the render frames her: ears at 5% and paws at 94.75% of its 3:4 height.
+    private static let earsAt = 0.05, pawsAt = 0.9475
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            // The light behind her.
+            // The light behind her, warmer and higher on the left, where the lamp is.
             Circle()
-                .fill(RadialGradient(colors: [Color.honey.opacity(0.42), Color.honey.opacity(0.12), .clear],
-                                     center: .center, startRadius: 0, endRadius: height * 0.55))
-                .frame(width: height * 1.15, height: height * 1.15)
-                .offset(y: -height * 0.02)
-            // The plinth and her shadow on it, inside the stage so her name never sits on it.
+                .fill(RadialGradient(colors: [Color.honey.opacity(0.36), Color.honey.opacity(0.1), .clear],
+                                     center: UnitPoint(x: 0.42, y: 0.45), startRadius: 0, endRadius: height * 0.55))
+                .frame(width: height * 1.2, height: height * 1.2)
+                .offset(y: -height * 0.04)
             Ellipse()
-                .fill(Ink.surfaceRaised)
-                .frame(width: height * 0.72, height: plinth)
-                .overlay(Ellipse().fill(.black.opacity(0.28)).frame(width: height * 0.46, height: plinth * 0.42).blur(radius: 6))
+                .fill(.black.opacity(0.2))
+                .frame(width: height * 0.7, height: ground * 1.1)
+                .blur(radius: height * 0.03)
+                .offset(y: ground * 0.1)
+            Ellipse()
+                .fill(.black.opacity(0.5))
+                .frame(width: height * 0.4, height: ground * 0.4)
+                .blur(radius: height * 0.012)
+                .offset(y: -ground * 0.05)
             TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let breath = reduceMotion ? 0 : sin(t * 2 * .pi / 3.4)
                 portrait
-                    .padding(.bottom, plinth / 2)
+                    .padding(.bottom, ground / 2)
                     .scaleEffect(x: 1 - 0.006 * breath, y: 1 + 0.012 * breath, anchor: .bottom)
                     .rotationEffect(.degrees(reduceMotion ? 0 : 0.8 * sin(t * 2 * .pi / 7.5)), anchor: .bottom)
             }
@@ -104,17 +114,26 @@ private struct CoatStage: View {
         .frame(height: height)
     }
 
-    private var plinth: CGFloat { height * 0.12 }
-    /// Her height, ears to paws; the paws stand on the middle of the plinth.
-    private var cat: CGFloat { height - plinth / 2 }
+    /// The band under her paws that holds the shadow.
+    private var ground: CGFloat { height * 0.1 }
+    /// Her height, ears to paws; the paws stand in the middle of the band.
+    private var cat: CGFloat { height - ground / 2 }
 
-    /// The portrait, cut to the cat: billet-gpu's 3:4 renders all frame her the same way, paws at 1431 of 1600 rows.
     private var portrait: some View {
-        Image(uiImage: UIImage(named: coat.portrait) ?? UIImage())
-            .resizable()
+        let image = Image(uiImage: UIImage(named: coat.portrait) ?? UIImage()).resizable().interpolation(.high)
+        let tall = cat / (Self.pawsAt - Self.earsAt)
+        return image
             .scaledToFit()
-            .frame(height: cat * 1600 / 1264)
-            .offset(y: cat * (1600 - 1431) / 1264)
+            // Warm side light on her fur, brightest at the upper left, and a little shade at the lower right.
+            .overlay {
+                LinearGradient(colors: [Color(hex: 0xFFD7A6).opacity(0.55), .clear, Color(hex: 0x5A3420).opacity(0.3)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .blendMode(.softLight)
+                    .mask(image.scaledToFit())
+            }
+            .shadow(color: Color(hex: 0xFFB866).opacity(0.3), radius: height * 0.03, x: -height * 0.015)
+            .frame(height: tall)
+            .offset(y: tall * (1 - Self.pawsAt))
             .frame(height: cat, alignment: .bottom)
             .id(coat)
             .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)),
