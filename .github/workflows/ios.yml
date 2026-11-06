@@ -31,6 +31,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # xcodebuild hands the tests only TEST_RUNNER_ variables, so tests that can't run on CI's Simulators see this one.
+  TEST_RUNNER_GITHUB_ACTIONS: "true"
+
 jobs:
   check:
     if: inputs.shots == ''
