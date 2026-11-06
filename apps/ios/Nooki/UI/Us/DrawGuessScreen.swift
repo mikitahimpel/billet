@@ -125,7 +125,7 @@ struct DrawGuessScreen: View {
                         }
                     }
                     .buttonStyle(NookiSecondaryStyle())
-                    .disabled(!model.canHint)
+                    .disabled(!model.canHint || model.busy)
                     .accessibilityLabel(riddle.hints == 0 ? "Mochi's hint: takes away some extra letters"
                                                           : "Mochi's hint: shows one letter")
                     Button("Give up") { givingUp = true }

@@ -27,6 +27,9 @@ final class DrawGuessModel {
     /// The last try, hint or send didn't reach the room.
     private(set) var unsent = false
     private(set) var sending = false
+    /// A try, hint or give-up is on its way; until it answers the tiles and hints wait, so a second tap can't spend
+    /// another hint or a late answer clear tiles placed after it.
+    private(set) var busy = false
     /// The riddle this user was guessing that ended here, shown until they move on to drawing.
     private(set) var finished: Riddle?
     /// Letter slot (spaces not counted) to the tile placed in it.
@@ -123,7 +126,7 @@ final class DrawGuessModel {
 
     /// Puts tile `index` in the first empty slot. Once every slot is filled, sends the word as a try.
     func place(_ index: Int) async {
-        guard tiles.contains(where: { $0.index == index }),
+        guard !busy, tiles.contains(where: { $0.index == index }),
               let slot = slots.first(where: { $0.kind == .empty }) else { return }
         placed[slot.index] = index
         if !slots.contains(where: { $0.kind == .empty }) { await submit() }
@@ -131,6 +134,7 @@ final class DrawGuessModel {
 
     /// Takes the tile in `slot` back to the tiles.
     func takeBack(_ slot: Int) {
+        guard !busy else { return }
         placed[slot] = nil
     }
 
@@ -149,7 +153,9 @@ final class DrawGuessModel {
 
     @discardableResult
     func submit() async -> Bool {
-        guard let sync, let riddle = theirs, !slots.contains(where: { $0.kind == .empty }) else { return false }
+        guard !busy, let sync, let riddle = theirs, !slots.contains(where: { $0.kind == .empty }) else { return false }
+        busy = true
+        defer { busy = false }
         let guess = attempt
         let key = unsentTry.flatMap { $0.guess == guess ? $0.key : nil } ?? IdempotencyKey.make()
         unsent = false
@@ -177,7 +183,9 @@ final class DrawGuessModel {
     }
 
     func hint() async {
-        guard let sync, let riddle = theirs, canHint else { return }
+        guard !busy, let sync, let riddle = theirs, canHint else { return }
+        busy = true
+        defer { busy = false }
         unsent = false
         do throws(TransportError) {
             let hinted = try await sync.hint(riddle.id)
@@ -190,7 +198,9 @@ final class DrawGuessModel {
     }
 
     func giveUp() async {
-        guard let sync, let riddle = theirs else { return }
+        guard !busy, let sync, let riddle = theirs else { return }
+        busy = true
+        defer { busy = false }
         unsent = false
         do throws(TransportError) {
             apply(try await sync.giveUp(riddle.id))

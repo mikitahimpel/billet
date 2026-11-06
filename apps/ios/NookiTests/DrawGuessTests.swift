@@ -19,6 +19,10 @@ private nonisolated final class FakeRiddleRoom: @unchecked Sendable {
     /// What the next hint gives: the decoys taken away first, then the letters it shows.
     var nextRemoved: [Int] = []
     var nextReveals: [RevealedLetter] = []
+    var hintsAsked = 0
+    /// With `holding`, the next hint waits in `held` until the test answers it, like a slow network.
+    var holding = false
+    var held: CheckedContinuation<Void, Never>?
 
     /// A riddle from `drawer` for `word`, with `tiles` (the word's letters and decoys).
     @discardableResult
@@ -78,6 +82,11 @@ private nonisolated final class FakeRiddleRoom: @unchecked Sendable {
             },
             hint: { id throws(TransportError) in
                 if self.offline { throw .network("offline") }
+                self.hintsAsked += 1
+                if self.holding {
+                    self.holding = false
+                    await withCheckedContinuation { self.held = $0 }
+                }
                 return self.update(id) { riddle in
                     if riddle.hints == 0 { return FakeRiddleRoom.with(riddle, removed: self.nextRemoved, hints: 1) }
                     let letter = self.nextReveals.removeFirst()
@@ -218,6 +227,24 @@ struct DrawGuessTests {
         await model.hint()
         #expect(model.slots.map(\.kind) == [.revealed, .empty, .revealed])
         #expect(!model.canHint)
+    }
+
+    @Test func aSecondHintTapWhileOneIsOnItsWaySpendsNothing() async {
+        let room = FakeRiddleRoom()
+        room.add("cat", by: partner, tiles: catTiles)
+        room.nextRemoved = [0, 2, 4, 5]
+        let model = DrawGuessModel(sync: room.sync, viewer: me, words: words)
+        await model.load()
+
+        room.holding = true
+        let first = Task { await model.hint() }
+        while room.held == nil { await Task.yield() }
+        await model.hint()
+        #expect(room.hintsAsked == 1)
+        room.held?.resume()
+        await first.value
+        #expect(model.theirs?.hints == 1)
+        #expect(!model.busy)
     }
 
     @Test func followsTheSocketAndDropsStaleFrames() async {
