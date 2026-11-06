@@ -17,7 +17,7 @@ import {
 } from "@billet/contracts-http-api/riddle";
 import { routes } from "@billet/contracts-http-api/routes";
 import type { RiddleCommand } from "@billet/backend-pair-room/riddle";
-import type { NotesNotFound, NotesUnavailable, RiddleRefused } from "./notes-error.ts";
+import type { InvalidNote, NotesNotFound, NotesUnavailable, RiddleRefused } from "./notes-error.ts";
 import { type RiddleAnswer, RiddleService } from "./riddle-service.ts";
 
 /** A riddle's compact strokes are bounded like a drawing note's; a try is a few words. */
@@ -35,13 +35,14 @@ const headers = { "cache-control": "no-store" };
 const respondRiddleFailures = <R>(
   effect: Effect.Effect<
     HttpServerResponse.HttpServerResponse,
-    RouteFailure | NotesNotFound | NotesUnavailable | RiddleRefused,
+    RouteFailure | NotesNotFound | NotesUnavailable | RiddleRefused | InvalidNote,
     R
   >,
 ) =>
   effect.pipe(
     Effect.catchTags({
       NotesNotFound: () => respondError(ApiError.cases.NotFound.make({}), { status: 404 }),
+      InvalidNote: () => respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 }),
       // A word that is no riddle word is a bad request; a missing riddle is not found; the rest
       // conflict with what the room holds.
       RiddleRefused: ({ reason }) =>

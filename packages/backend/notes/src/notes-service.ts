@@ -53,12 +53,12 @@ export const compactBudget = 3072;
 
 const encoder = new TextEncoder();
 
-const compactFits = (compact: CompactStrokes) =>
+export const compactFits = (compact: CompactStrokes) =>
   encoder.encode(JSON.stringify(compact)).length <= compactBudget;
 
 const decodeMediaKey = Schema.decodeSync(MediaKey);
 
-const belongsTo = (pairId: PairId, key: MediaKey) => key.startsWith(mediaPrefix(pairId));
+export const belongsTo = (pairId: PairId, key: MediaKey) => key.startsWith(mediaPrefix(pairId));
 
 const decodeItemId = Schema.decodeSync(RoomItemId);
 

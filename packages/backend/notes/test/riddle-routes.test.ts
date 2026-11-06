@@ -2,7 +2,7 @@ import { Effect, Layer, Redacted, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
-import { DeviceId } from "@billet/contracts-domain/ids";
+import { DeviceId, MediaKey } from "@billet/contracts-domain/ids";
 import { Riddle } from "@billet/contracts-domain/riddle";
 import { GuessRiddleResponse, RiddlesResponse } from "@billet/contracts-http-api/riddle";
 import { riddlePath, routes, type Route } from "@billet/contracts-http-api/routes";
@@ -32,6 +32,8 @@ const FakeAuth = Layer.succeed(
 );
 
 const world = makeWorld([[pair("pair-a"), user("ana"), user("ben")]]);
+const image = "pairs/pair-a/notes/r.png";
+world.objects.set(Schema.decodeSync(MediaKey)(image), new Uint8Array([1]));
 
 const { handler, dispose } = HttpRouter.toWebHandler(
   RiddleRoutes.pipe(
@@ -64,7 +66,7 @@ const sendBody = {
   id,
   word: " Cat ",
   compact: { version: 1, strokes: [] },
-  image: "pairs/a/r.png",
+  image,
 };
 const list = (name: string) => call(name, routes.getRiddles, routes.getRiddles.path);
 const guess = (name: string, n: number, text: string) =>
@@ -82,6 +84,16 @@ describe("the draw-guess routes", () => {
     expect((await call("ana", routes.sendRiddle, routes.sendRiddle.path, sendBody)).status).toBe(
       200,
     );
+  });
+
+  it("refuse a drawing whose image is not the pair's or whose strokes are over budget", async () => {
+    const other = { ...sendBody, id: key(4) };
+    const send = (body: unknown) => call("ana", routes.sendRiddle, routes.sendRiddle.path, body);
+    expect((await send({ ...other, image: "pairs/pair-b/notes/r.png" })).status).toBe(404);
+    expect((await send({ ...other, image: "pairs/pair-a/notes/gone.png" })).status).toBe(404);
+    const points = Array.from({ length: 900 }, (_, n) => n % 1000);
+    const big = { version: 1, strokes: [{ color: "#000000", width: 4, points }] };
+    expect((await send({ ...other, compact: big })).status).toBe(400);
   });
 
   it("refuse a bad word, a second open riddle, the drawer's try and a riddle not held", async () => {

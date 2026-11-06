@@ -328,6 +328,13 @@ describe("RiddleRoom", () => {
     expect((await record(game("laser")))._tag).toBe("Accepted");
   });
 
+  it("refuses a new riddle under an id a care entry already holds", async () => {
+    const { run, record } = roomWith(withCat);
+    await record({ _tag: "Petted" });
+    const taken: RiddleCommand = { _tag: "Send", ...send(1, "cat"), id: riddleId(-8923) };
+    expect((await run(alice, taken)).result).toEqual({ _tag: "Refused", reason: "IdTaken" });
+  });
+
   it("answers a riddle it does not hold with NotFound", async () => {
     const { run } = roomWith(active);
     expect((await run(bob, guess(9, 1, "cat"))).result).toMatchObject({ reason: "NotFound" });

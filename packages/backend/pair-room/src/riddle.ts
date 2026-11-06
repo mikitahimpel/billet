@@ -1,5 +1,6 @@
 import { Clock, Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { Riddle, RiddleId } from "@billet/contracts-domain/riddle";
 import { RiddlesResponse } from "@billet/contracts-http-api/riddle";
@@ -82,6 +83,8 @@ export interface RiddleOutcome {
   readonly decision?: RoomDecision;
 }
 
+const decodeEntryId = Schema.decodeSync(CoinEntryId);
+
 /** Runs draw-guess commands against one room: load, decide, commit through the room. */
 export class RiddleRoom extends Context.Service<RiddleRoom>()(
   "@billet/backend-pair-room/RiddleRoom",
@@ -163,12 +166,23 @@ export class RiddleRoom extends Context.Service<RiddleRoom>()(
             : yield* decide(row.value);
         });
 
+      const idHeld = (id: RiddleId) =>
+        Effect.gen(function* () {
+          if (Option.isSome(yield* room.catEntryById(id))) return true;
+          return Option.isSome(yield* room.coinEntryById(decodeEntryId(`earn:${id}`)));
+        });
+
       const decisionFor = (by: UserId, command: Exclude<RiddleCommand, { _tag: "View" }>) =>
         Effect.gen(function* () {
           const at = yield* Clock.currentTimeMillis;
           switch (command._tag) {
             case "Send": {
               const existing = Option.getOrUndefined(yield* store.byId(command.id));
+              // A riddle's end journals and pays under its own id, so a new one may not take an id
+              // a note or a care entry already holds.
+              if (existing === undefined && (yield* idHeld(command.id))) {
+                return { _tag: "Refused", reason: "IdTaken" } as const;
+              }
               const { _tag, ...request } = command;
               return decideSend(existing, yield* store.open, by, request, at);
             }

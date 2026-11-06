@@ -32,7 +32,11 @@ export const SqliteRiddleStore = Layer.effect(
         .select()
         .from(riddles)
         .where(isNull(riddles.endedAt))
-        .pipe(Effect.map(riddlesFrom), Effect.orDie),
+        .pipe(
+          // `at` lives in the body, so the rows are put oldest first after decoding.
+          Effect.map((rows) => riddlesFrom(rows).toSorted((a, b) => a.at - b.at)),
+          Effect.orDie,
+        ),
       ended: (limit) =>
         db
           .select()
