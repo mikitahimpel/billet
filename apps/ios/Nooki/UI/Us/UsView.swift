@@ -117,41 +117,41 @@ private struct CountdownHero: View {
     let days: Int
     var onTap: () -> Void
 
+    private func when(_ next: Upcoming) -> String {
+        switch next.daysLeft {
+        case 0: "Today"
+        case 1: "Tomorrow"
+        default: "In \(next.daysLeft) days"
+        }
+    }
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 14) {
                 if let next { UsIcon(glyph: next.icon, size: 48) }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Day \(days) together")
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.accentText)
                     if let next {
                         Text(next.title)
                             .font(.nookiTitle)
                             .foregroundStyle(Ink.text)
                             .lineLimit(2)
-                        Text(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                            .font(.nookiCaption)
+                        // The one line about time: when it is and how far away, and no second count beside it.
+                        Text("\(when(next)) · \(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))")
+                            .font(.nookiCallout)
                             .foregroundStyle(Ink.textSecondary)
                     } else {
                         Text("Nothing planned yet")
                             .font(.nookiTitle)
                             .foregroundStyle(Ink.text)
+                        Text("Day \(days) together")
+                            .font(.nookiCallout)
+                            .foregroundStyle(Ink.textSecondary)
                     }
                 }
                 Spacer(minLength: 0)
-                if let next {
-                    VStack(spacing: 0) {
-                        Text(next.daysLeft == 0 ? "🎉" : "\(next.daysLeft)")
-                            .font(.nookiLargeTitle.monospacedDigit())
-                            .contentTransition(.numericText())
-                        Text(next.daysLeft == 0 ? "today" : next.daysLeft == 1 ? "day" : "days")
-                            .font(.nookiMicro)
-                    }
-                    .foregroundStyle(Ink.heroInk)
-                    .frame(width: 76, height: 76)
-                    .background(Circle().fill(.honeyGradient))
-                }
+                Image(systemName: "chevron.right")
+                    .font(.nookiCaption.weight(.semibold))
+                    .foregroundStyle(Ink.textTertiary)
             }
             .padding(18)
             .usCard(radius: Radius.hero, warm: true)

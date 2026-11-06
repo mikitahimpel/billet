@@ -18,16 +18,15 @@ struct ShopItemCard: View {
                 VStack(alignment: .leading, spacing: Space.s) {
                     art
                     VStack(alignment: .leading, spacing: 2) {
+                        // Both lines are always there, so the cards in a row are the same height.
                         Text(item.name)
                             .font(.nookiHeadline)
                             .foregroundStyle(Ink.text)
-                            .lineLimit(2)
-                        if let mood = item.mood {
-                            Text("\(state.petName): \(mood)")
-                                .font(.nookiCaption)
-                                .foregroundStyle(Ink.accentText)
-                                .lineLimit(1)
-                        }
+                            .lineLimit(2, reservesSpace: true)
+                        Text(item.mood.map { "\(state.petName): \($0)" } ?? " ")
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.accentText)
+                            .lineLimit(1)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
