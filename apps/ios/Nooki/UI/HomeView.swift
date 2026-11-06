@@ -15,6 +15,8 @@ struct HomeView: View {
     /// The corkboard room behind the Moments tab, built on first use and kept.
     @State private var board: BoardRoomScene?
     @State private var showcase: String?
+    /// A bare room for the games under `-uitestNoRoom`, where no real one is built.
+    @State private var standInRoom = CatRoom()
     @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
@@ -130,9 +132,9 @@ struct HomeView: View {
             }
             .opacity(state.game == nil ? 1 : 0)
 
-            if let game = state.game, let scene {
+            if let game = state.game, let room = scene ?? (Self.noRoom ? standInRoom : nil) {
                 // In the room, with nothing else of Home over it.
-                GameView(session: GameSession(game: game, room: scene, catEvents: session?.catEvents ?? .offline)) {
+                GameView(session: GameSession(game: game, room: room, catEvents: session?.catEvents ?? .offline)) {
                     state.game = nil
                 }
                 .id(game)

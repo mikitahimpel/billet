@@ -24,6 +24,11 @@ struct GameView: View {
                             .onEnded { value in
                                 touching = false
                                 session.touch(.ended, at: value.location)
+                                // A swipe down from the top edge leaves, where the stages' own drags never start.
+                                let drag = value.translation
+                                if value.startLocation.y < 140, drag.height > 90, abs(drag.width) < drag.height {
+                                    end()
+                                }
                             }
                     )
                     .accessibilityHidden(true)
@@ -40,12 +45,16 @@ struct GameView: View {
         VStack(spacing: Space.m) {
             HStack(alignment: .top) {
                 Spacer(minLength: Space.m)
+                // The glass sits behind the label and takes no touch itself: over the RealityKit room a glass view
+                // on the Button swallows the tap.
                 Button("Close", systemImage: "xmark", action: end)
                     .labelStyle(.iconOnly)
+                    .buttonStyle(.plain)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Ink.text)
-                    .frame(width: 40, height: 40)
-                    .glass(.circle, interactive: true)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.circle)
+                    .background { Color.clear.glass(.circle).allowsHitTesting(false) }
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, 60)
