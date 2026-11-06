@@ -18,6 +18,8 @@ struct HomeView: View {
     @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
+    /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
+    @State private var splashDrawn = true
     /// The screen as the World last showed it, held up on the way back until the room draws again.
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
@@ -177,20 +179,17 @@ struct HomeView: View {
         // Over the room rather than in place of it: RealityKit keeps drawing underneath, so the room is already
         // warmed up and whole when the splash lifts.
         .overlay {
-            if launching {
-                // A removed view keeps its last state while it fades, so the splash never takes taps itself; the
-                // stand-in below does, and goes the moment the splash starts to lift.
+            // Faded by state, not by a removal transition: a view on its way out keeps its last state, so it would
+            // still take touches and still be in the accessibility tree through the fade.
+            if splashDrawn {
                 LaunchSplash()
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Nooki is opening")
                     .accessibilityIdentifier("launch-splash")
-                    .allowsHitTesting(false)
-                    .transition(.opacity.combined(with: .scale(scale: 1.08)))
-                Color.clear
-                    .contentShape(.rect)
-                    .ignoresSafeArea()
-                    .accessibilityHidden(true)
-                    .transition(.identity)
+                    .opacity(launching ? 1 : 0)
+                    .scaleEffect(launching ? 1 : 1.08)
+                    .allowsHitTesting(launching)
+                    .accessibilityHidden(!launching)
             }
         }
         .task {
@@ -364,7 +363,7 @@ struct HomeView: View {
         }
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
-        withAnimation(.easeInOut(duration: 0.8)) { launching = false }
+        withAnimation(.easeInOut(duration: 0.8)) { launching = false } completion: { splashDrawn = false }
         // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
             select(.city)
