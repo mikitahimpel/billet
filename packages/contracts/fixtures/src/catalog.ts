@@ -128,6 +128,7 @@ import {
 
 import { ListCommand, SharedList } from "@billet/contracts-domain/list";
 import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lists";
+import { TitleDetails, TitleSearchResponse } from "@billet/contracts-http-api/titles";
 
 export interface Fixture {
   /** Swift type name and golden directory name. */
@@ -592,7 +593,12 @@ const toWatch = Schema.decodeUnknownSync(SharedList)({
       text: "Past Lives",
       author: alice,
       addedAt: 1_700_000_200_000,
-      media: { kind: "movie", tmdb: 666277 },
+      media: {
+        kind: "movie",
+        tmdb: 666277,
+        year: 2023,
+        posterPath: "/gmTocN1iLLDyjEJir2CBnt2EhGE.jpg",
+      },
       wants: [alice, bob],
     },
   ],
@@ -714,6 +720,53 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ListsResponse", ListsResponse, {
     default: { lists: [groceries, toWatch] },
     empty: { lists: [] },
+  }),
+  fixture("TitleSearchResponse", TitleSearchResponse, {
+    default: {
+      results: [
+        {
+          kind: "movie",
+          tmdb: 329865,
+          title: "Arrival",
+          year: 2016,
+          posterPath: "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
+          rating: 7.6,
+          runtime: 116,
+        },
+        { kind: "tv", tmdb: 95396, title: "Severance", year: 2022, seasons: 2 },
+        { kind: "movie", tmdb: 2, title: "The Arrival" },
+      ],
+    },
+    empty: { results: [] },
+  }),
+  fixture("TitleDetails", TitleDetails, {
+    movie: {
+      kind: "movie",
+      tmdb: 329865,
+      title: "Arrival",
+      year: 2016,
+      posterPath: "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
+      rating: 7.6,
+      runtime: 116,
+      backdropPath: "/yIZ1xendyqKvY3FGeeUYUd5X9Mm.jpg",
+      overview: "A linguist is asked to talk with visitors.",
+      genres: ["Drama", "Science Fiction"],
+      watch: {
+        country: "PT",
+        link: "https://www.themoviedb.org/movie/329865/watch?locale=PT",
+        stream: [{ id: 8, name: "Netflix", logoPath: "/pbpMk2JmcoNnQwx5JGpXngfoWtp.jpg" }],
+        rentOrBuy: [{ id: 2, name: "Apple TV" }],
+      },
+    },
+    "show-nowhere": {
+      kind: "tv",
+      tmdb: 95396,
+      title: "Severance",
+      seasons: 2,
+      overview: "",
+      genres: [],
+      watch: { country: "SE", stream: [], rentOrBuy: [] },
+    },
   }),
   fixture("ChangeListRequest", ChangeListRequest, {
     default: Schema.decodeUnknownSync(ChangeListRequest)({

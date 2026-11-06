@@ -32,6 +32,7 @@ struct HomeView: View {
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     /// Whether this pair has both rooms to switch between.
     private var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
+    @State private var height: CGFloat = 0
     /// The rooms already counted as opened since the app came to the front, so each is reported once.
     @State private var reportedRooms: Set<RoomKind> = []
 
@@ -106,7 +107,9 @@ struct HomeView: View {
                     .padding(.horizontal, 16)
                 }
             }
-            .transition(.opacity.combined(with: .offset(y: 12)))
+            // A short crossfade between tabs; the header and the tab bar are outside it and stay put.
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
@@ -137,17 +140,25 @@ struct HomeView: View {
             // The composer and the canvas play it over themselves while they're up.
             if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
         }
+        .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+        .simultaneousGesture(roomSwipe)
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             if state.tab == .world, state.game == nil {
-                HStack(alignment: .bottom) {
-                    PetButton(state: state, needs: { scene?.director }) { game in state.game = game }
-                    Spacer(minLength: 0)
-                    PlayAllButton(showcase: showcase) { scene?.playAll() }
+                VStack(alignment: .leading, spacing: 12) {
+                    // Above the portrait, with the arrow down at it, so the hint never covers her.
+                    TipView(PetHint(), arrowEdge: .bottom)
+                    TipView(TreatHint(), arrowEdge: .bottom)
+                    HStack(alignment: .bottom) {
+                        PetButton(state: state, needs: { scene?.director }) { game in state.game = game }
+                        Spacer(minLength: 0)
+                        PlayAllButton(showcase: showcase) { scene?.playAll() }
+                    }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
                 .padding(.bottom, 94)
-                .transition(.opacity.combined(with: .offset(y: 12)))
+                .transition(.opacity)
             }
         }
         .overlay(alignment: .topLeading) {
@@ -382,6 +393,20 @@ struct HomeView: View {
         Task { try? await api.reportEvents([ClientEvent(.roomOpened, detail: room.eventDetail)]) }
     }
 
+    /// Swiping the scene sideways visits the other room; a swipe that starts in the header or the tab bar, or that
+    /// is mostly vertical, is something else's.
+    private var roomSwipe: some Gesture {
+        DragGesture(minimumDistance: 40).onEnded { drag in
+            guard state.tab == .world, state.game == nil, !launching, hasRoomChoice,
+                  abs(drag.translation.width) > 80, abs(drag.translation.width) > abs(drag.translation.height) * 1.5,
+                  drag.startLocation.y > 120, drag.startLocation.y < height - 150 else { return }
+            let kinds = state.rooms.variant.kinds
+            guard let index = kinds.firstIndex(of: state.room) else { return }
+            let target = drag.translation.width < 0 ? index + 1 : index - 1
+            if kinds.indices.contains(target) { select(kinds[target]) }
+        }
+    }
+
     private func select(_ room: RoomKind) {
         guard room != state.room else { return }
         if room == .city { hints.done(RoomsHint()) }
@@ -507,36 +532,40 @@ private struct RoomControls: View {
     var select: (RoomKind) -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
-            // One room has no switch: its name would be the only choice.
-            if state.rooms.variant.hasRoomChoice {
-                roomSwitch
-            }
-
-            Spacer(minLength: 0)
+        // One room has no switch: its name would be the only choice.
+        if state.rooms.variant.hasRoomChoice {
+            roomSwitch.frame(maxWidth: .infinity)
         }
     }
 
+    /// The room's name with a dot for each room under it; a tap visits the next one, and so does a swipe of the scene.
     private var roomSwitch: some View {
-        HStack(spacing: 2) {
-            ForEach(state.rooms.variant.kinds, id: \.self) { room in
-                Button { select(room) } label: {
-                    Text(room.title)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.white.opacity(state.room == room ? 0.96 : 0.6))
-                        .padding(.horizontal, 14)
-                        .frame(height: 34)
-                        .background(state.room == room ? Color.honey.opacity(0.45) : .clear, in: .capsule)
-                        // 44 pt tall to the finger, though 34 to the eye; a miss would land on the room.
-                        .frame(height: 44)
-                        .contentShape(.rect)
+        let kinds = state.rooms.variant.kinds
+        return Button {
+            guard let index = kinds.firstIndex(of: state.room) else { return }
+            select(kinds[(index + 1) % kinds.count])
+        } label: {
+            VStack(spacing: 6) {
+                Text(state.room.title)
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.primary)
+                    .contentTransition(.opacity)
+                HStack(spacing: 6) {
+                    ForEach(kinds, id: \.self) { room in
+                        Circle()
+                            .fill(Ink.primary.opacity(state.room == room ? 1 : 0.35))
+                            .frame(width: 6, height: 6)
+                    }
                 }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityAddTraits(state.room == room ? .isSelected : [])
             }
+            .frame(minWidth: 88, minHeight: 44)
+            .contentShape(.rect)
         }
-        .padding(.horizontal, 3)
-        .background { Color.clear.warmGlass(.capsule).padding(.vertical, 2) }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Room")
+        .accessibilityValue(state.room.title)
+        .accessibilityIdentifier("roomSwitch")
+        .accessibilityHint("Swipe the room sideways, or tap, to visit the other one")
         .sensoryFeedback(.selection, trigger: state.room)
         .popoverTip(RoomsHint(), arrowEdge: .top)
     }

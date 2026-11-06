@@ -75,11 +75,14 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
     var isChecklist: Bool { self == .groceries }
 }
 
-/// A film or a show on TMDB.
+/// A film or a show on TMDB, with what the poster grid draws without asking TMDB.
 nonisolated struct ItemMedia: Codable, Hashable {
     enum Kind: String, Codable { case movie, tv }
     var kind: Kind
     var tmdb: Int
+    var year: Int?
+    /// A TMDB image file such as `/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg`.
+    var posterPath: String?
 }
 
 nonisolated struct ListItem: Identifiable, Codable, Hashable {
@@ -495,10 +498,16 @@ final class UsStore {
         perform(.deleteList(key: .make(), list: Self.key(id)), by: nil)
     }
 
-    func addItem(_ text: String, to listID: UUID, author: String, details: ListItemDetails = ListItemDetails()) {
+    /// A film or show added with its `media` is one the author wants to watch, so it starts with their want.
+    func addItem(_ text: String, to listID: UUID, author: String, details: ListItemDetails = ListItemDetails(),
+                 media: ItemMedia? = nil) {
         guard let text = PendingListChange.line(text, max: 300), list(listID) != nil else { return }
-        perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(UUID()), text: text, details: details),
+        let item = UUID()
+        var details = details
+        if let media { details.media = ListMedia(media) }
+        perform(.addItem(key: .make(), list: Self.key(listID), item: Self.key(item), text: text, details: details),
                 by: author)
+        if media != nil { setWant(item, in: listID, wants: true, by: author) }
     }
 
     /// Sets every detail, so one left nil is cleared.
@@ -506,6 +515,13 @@ final class UsStore {
         guard let item = list(listID)?.items.first(where: { $0.id == itemID }), item.details != details else { return }
         perform(.editItem(key: .make(), list: Self.key(listID), item: Self.key(itemID), text: item.text, details: details),
                 by: nil)
+    }
+
+    /// Says `partner` wants the item, or no longer does.
+    func setWant(_ itemID: UUID, in listID: UUID, wants: Bool, by partner: String) {
+        guard let item = list(listID)?.items.first(where: { $0.id == itemID }),
+              item.wants.contains(partner) != wants else { return }
+        perform(.wantItem(key: .make(), list: Self.key(listID), item: Self.key(itemID), wants: wants), by: partner)
     }
 
     func toggleItem(_ itemID: UUID, in listID: UUID, by partner: String? = nil) {

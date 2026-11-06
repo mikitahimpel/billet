@@ -115,7 +115,8 @@ struct OnboardingView: View {
         GeometryReader { proxy in
             ScrollView {
                 VStack(spacing: Space.l) {
-                    CatHero(size: min(proxy.size.height * 0.42, 340))
+                    CatStage(coat: flow.coat, height: min(proxy.size.height * 0.5, 400))
+                        .accessibilityHidden(true)
                         .padding(.bottom, Space.s)
                     Text("A cat for the two of you")
                         .font(.nookiLargeTitle)

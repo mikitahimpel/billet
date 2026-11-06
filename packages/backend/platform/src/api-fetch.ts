@@ -38,6 +38,9 @@ import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { PaymentsConfig, settingsForStage } from "@billet/backend-payments/payments-config";
 import { PaymentsRoutes } from "@billet/backend-payments/payments-routes";
 import { PaymentsService } from "@billet/backend-payments/payments-service";
+import { TitleCache } from "@billet/backend-titles/title-cache";
+import { TitleCatalog } from "@billet/backend-titles/title-catalog";
+import { TitlesRoutes } from "@billet/backend-titles/titles-routes";
 import { isAdminPath, respondAdmin } from "./admin-fetch.ts";
 import { respondAppLink } from "./app-links.ts";
 import { readServedStatus } from "./app-status-live.ts";
@@ -67,6 +70,8 @@ import { respondPlaceholder } from "./placeholder-fetch.ts";
 import { withRequestSpan } from "./observability.ts";
 import { limitRequest } from "./rate-limit.ts";
 import { respondSocket } from "./socket-fetch.ts";
+import { TitleCacheLive } from "./title-cache-live.ts";
+import { tmdbFor } from "./tmdb-live.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 import { type Now, systemNow } from "./wall-clock.ts";
 
@@ -93,6 +98,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     MoodRoutes,
     GiftsRoutes,
     ListsRoutes,
+    TitlesRoutes,
     FlagsRoutes,
     DatesRoutes,
     MetricsRoutes,
@@ -116,6 +122,14 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         MoodService.layer,
         GiftsService.layer,
         ListsService.layer,
+        TitleCatalog.layer.pipe(
+          Layer.provide(
+            Layer.mergeAll(
+              tmdbFor(env.TMDB_TOKEN, env.STAGE),
+              env.TITLES === undefined ? TitleCache.memory() : TitleCacheLive(env.TITLES),
+            ),
+          ),
+        ),
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),

@@ -54,6 +54,9 @@ public enum Routes {
   /// The pair's shared lists. A change answers the lists after it.
   public static let getLists = Route(.get, "/v1/lists")
   public static let changeList = Route(.post, "/v1/lists")
+  /// Films and shows on TMDB, through the Worker; `getTitle`'s `:kind` and `:tmdb` name one.
+  public static let searchTitles = Route(.get, "/v1/titles/search")
+  public static let getTitle = Route(.get, "/v1/titles/:kind/:tmdb")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let getDateCatalog = Route(.get, "/v1/dates/catalog")

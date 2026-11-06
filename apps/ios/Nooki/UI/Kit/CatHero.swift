@@ -17,7 +17,7 @@ struct CatHero: View {
                 .fill(.black.opacity(0.45))
                 .frame(width: size * 0.46, height: size * 0.06)
                 .blur(radius: size * 0.03)
-                .offset(y: size * 0.41)
+                .offset(y: size * 0.44)
 
             if let image = UIImage(named: coat.portrait) {
                 Image(uiImage: image)

@@ -35,14 +35,32 @@ public enum ListMediaKind: String, Codable, Hashable, Sendable {
   case tv
 }
 
-/// A film or a show on TMDB. Its ids are counted per kind, so the kind is part of the id.
+/// A film or a show on TMDB. Its ids are counted per kind, so the kind is part of the id. The
+/// item's text is its title; `year` and `posterPath` are what the grid draws without asking TMDB.
 public struct ListMedia: Codable, Hashable, Sendable {
   public let kind: ListMediaKind
   public let tmdb: Int
+  public let year: Int?
+  /// A TMDB image file such as `/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg`.
+  public let posterPath: String?
 
-  public init(kind: ListMediaKind, tmdb: Int) {
+  public init(kind: ListMediaKind, tmdb: Int, year: Int? = nil, posterPath: String? = nil) {
     self.kind = kind
     self.tmdb = tmdb
+    self.year = year
+    self.posterPath = posterPath
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case kind, tmdb, year, posterPath
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    kind = try container.decode(ListMediaKind.self, forKey: .kind)
+    tmdb = try container.decode(Int.self, forKey: .tmdb)
+    year = try container.decodeOptionalKey(Int.self, forKey: .year)
+    posterPath = try container.decodeOptionalKey(String.self, forKey: .posterPath)
   }
 }
 

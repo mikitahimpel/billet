@@ -118,7 +118,7 @@ extension ListItem {
     nonisolated var details: ListItemDetails {
         get {
             ListItemDetails(quantity: quantity, note: note, icon: icon, aisle: aisle,
-                            media: media.map { ListMedia(kind: $0.kind == .tv ? .tv : .movie, tmdb: $0.tmdb) },
+                            media: media.map(ListMedia.init),
                             country: country)
         }
         set {
@@ -126,9 +126,32 @@ extension ListItem {
             note = newValue.note
             icon = newValue.icon
             aisle = newValue.aisle
-            media = newValue.media.map { ItemMedia(kind: $0.kind == .tv ? .tv : .movie, tmdb: $0.tmdb) }
+            media = newValue.media.map(ItemMedia.init)
             country = newValue.country
         }
+    }
+}
+
+extension ItemMedia {
+    nonisolated init(_ wire: ListMedia) {
+        let kind: Kind = switch wire.kind {
+        case .movie: .movie
+        case .tv: .tv
+        }
+        self.init(kind: kind, tmdb: wire.tmdb, year: wire.year, posterPath: wire.posterPath)
+    }
+
+    nonisolated var wireKind: ListMediaKind {
+        switch kind {
+        case .movie: .movie
+        case .tv: .tv
+        }
+    }
+}
+
+extension ListMedia {
+    nonisolated init(_ media: ItemMedia) {
+        self.init(kind: media.wireKind, tmdb: media.tmdb, year: media.year, posterPath: media.posterPath)
     }
 }
 

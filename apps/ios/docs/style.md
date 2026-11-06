@@ -74,9 +74,13 @@ Navigation titles use SF Rounded through `NavigationBarStyle.apply()` at launch.
   It falls back to `.ultraThinMaterial` before iOS 26. Group neighbouring glass in `GlassGroup` so it blends.
 - **Screens and forms** (onboarding, profile, settings): solid `Ink.screen` with rows on clay cards (`NookiForm`).
   Never put glass on glass, and don't put glass behind reading text.
-- **Cards** (Us, the Shop, their sheets): `nookiCard()`, warm clay lit from above with a light rim along the top and
-  a soft shadow cast by the card's shape only. `warm: true` pours honey into the light for a screen's hero card.
-  `usCard()` and `shopCard()` are this card, and so is every `NookiSection`.
+- **Cards** (Us, the Coins sheet, forms, the cat's sheet): `nookiCard()`, a flat solid `Ink.surface` like a grouped
+  list's cell; `warm: true` lays a breath of honey over it for a screen's hero card. `usCard()` and every `NookiSection`
+  are this card. No gradients, rims or shadows on a card: native first, with our one honey accent, warm background and
+  the scene's art on top.
+- **Shop cards** (`shopCard()`): bright cream with dark text in either appearance, the art on a light rarity tint, never
+  on dark. The cards in a grid are one height; every price or owned button is one height and shape and keeps its
+  label on one line.
 - **The Shop** keeps its own saturated accents for selling (`ShopInk`: coral, plum, teal, gold) and rarity colours:
   common sand, rare teal, epic plum, legendary gold. Frames are lit in their colour; epic and legendary glow.
   Discounts are coral; blush stays for love.
@@ -129,3 +133,12 @@ they sit next to, and use `.fill` variants in tabs and badges. Needs: `fork.knif
 ## Copy
 Warm, short, second person to the couple and third person for Mochi ("Mochi would love a treat"). Never guilt ("Mochi is
 starving", "You forgot"), and never shout: no exclamation marks in titles. Sentence case.
+
+## Native controls
+- A choice between two or three views is the system's segmented `Picker` (Moments: Photos / Board).
+- The Shop's categories are one row that scrolls sideways; nothing else in the Shop does.
+- The room is changed by swiping the scene sideways; its name with a dot per room sits under the header, and a tap on
+  it switches too.
+- Tab switches crossfade in 0.2 s; the header and the tab bar don't move.
+- A hint about a control sits above it with its arrow down, never over it. A mini-game's instruction is a solid card
+  above the play area, a line and a second line; its close button is alone in the top corner.

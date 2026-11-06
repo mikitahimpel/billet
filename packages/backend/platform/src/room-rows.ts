@@ -184,6 +184,8 @@ export const StoredListItem = Schema.Struct({
   aisle: Schema.NullOr(Schema.String),
   mediaKind: Schema.NullOr(Schema.String),
   mediaTmdb: Schema.NullOr(Schema.Int),
+  mediaYear: Schema.NullOr(Schema.Int),
+  mediaPoster: Schema.NullOr(Schema.String),
   country: Schema.NullOr(Schema.String),
   wants: Schema.String,
 });

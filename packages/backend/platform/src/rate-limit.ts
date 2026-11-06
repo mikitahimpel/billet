@@ -24,6 +24,8 @@ export const limits = {
   purchases: 30,
   onboarding: 60,
   links: 30,
+  // Search runs as the caller types, and the list fetches a card for each title it shows.
+  titles: 120,
 } as const;
 export type LimitedGroup = keyof typeof limits;
 
@@ -36,6 +38,7 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";
   if (pathname === "/v1/media" || pathname.startsWith("/v1/media/")) return "media";
+  if (pathname.startsWith("/v1/titles/")) return "titles";
   if (isInviteLinkPath(pathname)) return "links";
   return undefined;
 };

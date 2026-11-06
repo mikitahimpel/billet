@@ -1,0 +1,4 @@
+{
+  "extends": "@billet/config-typescript/workers.json",
+  "include": ["src", "test"]
+}

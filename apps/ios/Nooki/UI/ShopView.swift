@@ -101,18 +101,22 @@ struct ShopView: View {
 
     // MARK: Categories
 
-    /// The categories wrap onto a second line rather than scrolling sideways: the Shop only ever scrolls up and down.
+    /// The categories in one row that scrolls sideways; the page under it only scrolls up and down.
     private var chips: some View {
-        WrapLayout(spacing: Space.s) {
-            ForEach(ShopCategory.allCases) { category in
-                let isSelected = selected == category
-                Button(category.title) { selected = category }
-                    .shopButton(prominent: isSelected)
-                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+        ScrollView(.horizontal) {
+            HStack(spacing: Space.s) {
+                ForEach(ShopCategory.allCases) { category in
+                    let isSelected = selected == category
+                    Button(category.title) { selected = category }
+                        .shopButton(prominent: isSelected)
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
             }
+            .padding(.horizontal, Space.l)
+            .padding(.vertical, 2)
         }
-        .padding(.vertical, 2)
-        .padding(.horizontal, Space.l)
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     // MARK: Today

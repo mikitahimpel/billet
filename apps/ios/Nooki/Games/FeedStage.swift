@@ -121,7 +121,7 @@ final class FeedStage: GameStage {
 
         let seat = spots.at(0, -0.17)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: scaleAt), id: "feed-watch")
-        deck.say("\(name) needs \(task.target) g. Tap the bowl onto the scale")
+        deck.say("\(name) needs \(task.target) g. Put the bowl on the scale")
         drawDisplay(force: true)
 
         if motion.isDeviceMotionAvailable {

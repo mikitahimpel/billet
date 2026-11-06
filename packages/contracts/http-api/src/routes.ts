@@ -100,6 +100,10 @@ export const routes = {
   getLists: route("GET", "/v1/lists"),
   /** One change to the pair's lists; answers the lists after it. */
   changeList: route("POST", "/v1/lists"),
+  /** Films and shows on TMDB matching `q`, for adding one to a list. */
+  searchTitles: route("GET", "/v1/titles/search"),
+  /** One film (`movie`) or show (`tv`) with where to watch it: see `titlePath`. */
+  getTitle: route("GET", "/v1/titles/:kind/:tmdb"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
@@ -131,6 +135,10 @@ export const inviteLinkPath = (code: InviteCode): `/i/${string}` => `${inviteLin
 
 /** The concrete path of `downloadImage` for a media key. */
 export const mediaPath = (key: string): string => routes.downloadImage.path.replace("*", key);
+
+/** The concrete path of `getTitle`. */
+export const titlePath = (kind: "movie" | "tv", tmdb: number): string =>
+  routes.getTitle.path.replace(":kind", kind).replace(":tmdb", String(tmdb));
 
 /** How a caller proves who it is, on every route except the sign-in ones. */
 export const authorizationHeader = "authorization";
