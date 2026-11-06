@@ -18,13 +18,12 @@ final class NeedBarsTests: XCTestCase {
         app.launch()
         defer { app.terminate() }
 
-        // A cold launch on CI can be slow; past a minute something is wrong. Home is hidden from accessibility while
-        // the launch splash covers it, so the button shows only once a tap can reach it.
+        // A cold launch on CI can be slow; past a minute something is wrong. The splash leaves the tree only once
+        // its fade ends; until then it takes the tap.
         let pet = app.buttons["pet"]
         XCTAssertTrue(pet.waitForExistence(timeout: 60), "the cat's button should show")
-        XCTAssertFalse(app.otherElements["launch-splash"].exists, "the splash should be gone before the tap")
-        // The splash fades out over 0.8 s.
-        Thread.sleep(forTimeInterval: 1)
+        let splash = app.descendants(matching: .any)["launch-splash"]
+        XCTAssertTrue(splash.waitForNonExistence(timeout: 30), "the launch splash should lift")
         pet.tap()
 
         // The sheet is up once its last line shows; then each bar.

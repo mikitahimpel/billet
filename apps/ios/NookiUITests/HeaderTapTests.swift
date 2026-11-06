@@ -19,8 +19,10 @@ final class HeaderTapTests: XCTestCase {
             "-uitestRoomTaps", "YES",
         ]
         app.launch()
-        // Home is hidden from accessibility under the launch splash, so this also waits for the splash to go.
+        // The splash leaves the tree only once its fade ends; until then it takes the taps.
         XCTAssertTrue(app.buttons["World"].waitForExistence(timeout: 60))
+        let splash = app.descendants(matching: .any)["launch-splash"]
+        XCTAssertTrue(splash.waitForNonExistence(timeout: 30), "the launch splash should lift")
         return app
     }
 
