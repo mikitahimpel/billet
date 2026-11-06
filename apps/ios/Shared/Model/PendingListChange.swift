@@ -119,7 +119,8 @@ extension ListItem {
         get {
             ListItemDetails(quantity: quantity, note: note, icon: icon, aisle: aisle,
                             media: media.map(ListMedia.init),
-                            country: country)
+                            country: country, place: place ? true : nil, visitedIn: visitedIn,
+                            moments: moments.isEmpty ? nil : moments.map(\.uuidString))
         }
         set {
             quantity = newValue.quantity
@@ -128,6 +129,9 @@ extension ListItem {
             aisle = newValue.aisle
             media = newValue.media.map(ItemMedia.init)
             country = newValue.country
+            place = newValue.place ?? false
+            visitedIn = newValue.visitedIn
+            moments = newValue.moments?.compactMap(UUID.init(uuidString:)) ?? []
         }
     }
 }

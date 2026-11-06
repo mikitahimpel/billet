@@ -246,7 +246,8 @@ export const lists = sqliteTable("lists", {
 
 // The items of each list, in the order they were added (`position`). `done_by` and `done_at` are
 // both set once ticked. `media_kind` and `media_tmdb` name a film or show on TMDB, with its year
-// and poster file when known; `wants` is the JSON array of the members who want it.
+// and poster file when known; `wants` is the JSON array of the members who want it. `place`,
+// `visited_in` (a month, `2026-10`) and `moments` (a JSON array of moment ids) are for travel.
 export const listItems = sqliteTable(
   "list_items",
   {
@@ -267,6 +268,9 @@ export const listItems = sqliteTable(
     mediaYear: integer("media_year"),
     mediaPoster: text("media_poster"),
     country: text("country"),
+    place: integer("place", { mode: "boolean" }),
+    visitedIn: text("visited_in"),
+    moments: text("moments"),
     wants: text("wants").notNull(),
   },
   (table) => [index("list_items_list").on(table.listId, table.position)],

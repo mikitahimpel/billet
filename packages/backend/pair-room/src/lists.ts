@@ -57,7 +57,10 @@ const itemNotFound: ListOutcome = {
   rejection: RoomRejection.cases.ListItemNotFound.make({}),
 };
 
-type Details = Pick<ListItem, "quantity" | "note" | "icon" | "aisle" | "media" | "country">;
+type Details = Pick<
+  ListItem,
+  "quantity" | "note" | "icon" | "aisle" | "media" | "country" | "place" | "visitedIn" | "moments"
+>;
 
 /** The details a change names, without the keys it leaves out. */
 const detailsOf = (source: Details): Details => ({
@@ -67,6 +70,9 @@ const detailsOf = (source: Details): Details => ({
   ...(source.aisle === undefined ? {} : { aisle: source.aisle }),
   ...(source.media === undefined ? {} : { media: source.media }),
   ...(source.country === undefined ? {} : { country: source.country }),
+  ...(source.place === undefined ? {} : { place: source.place }),
+  ...(source.visitedIn === undefined ? {} : { visitedIn: source.visitedIn }),
+  ...(source.moments === undefined ? {} : { moments: source.moments }),
 });
 
 const withItem = (list: SharedList, item: ListItem): SharedList => ({
