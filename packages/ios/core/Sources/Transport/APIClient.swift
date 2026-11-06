@@ -97,6 +97,15 @@ public struct APIClient: Sendable {
   public var title:
     @Sendable (_ kind: ListMediaKind, _ tmdb: Int, _ country: String, _ language: String)
       async throws(TransportError) -> TitleDetails
+  /// Films and shows TMDB recommends for those who liked `seeds` (1 to 5), in `language`.
+  public var titleRecommendations:
+    @Sendable (_ seeds: [ListMedia], _ language: String) async throws(TransportError) ->
+      TitleSearchResponse
+  /// The pair's Pick tonight session as this user sees it. `.api(.notFound)` while unpaired.
+  public var pickTonight: @Sendable () async throws(TransportError) -> PickTonightResponse
+  /// One Pick tonight swipe; answers the session after it, with the match it made.
+  public var swipePickTonight:
+    @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
   /// Replaces this user's check-in and answers with it as stored, the note trimmed.
   /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
   public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
@@ -239,6 +248,16 @@ public struct APIClient: Sendable {
       async throws(TransportError) -> TitleDetails = {
         (_, _, _, _) async throws(TransportError) in throw .network("offline")
       },
+    titleRecommendations:
+      @escaping @Sendable (_ seeds: [ListMedia], _ language: String) async throws(TransportError)
+      -> TitleSearchResponse = { (_, _) async throws(TransportError) in throw .network("offline") },
+    pickTonight: @escaping @Sendable () async throws(TransportError) -> PickTonightResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    swipePickTonight:
+      @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     setMood:
       @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -299,6 +318,9 @@ public struct APIClient: Sendable {
     self.changeList = changeList
     self.searchTitles = searchTitles
     self.title = title
+    self.titleRecommendations = titleRecommendations
+    self.pickTonight = pickTonight
+    self.swipePickTonight = swipePickTonight
     self.setMood = setMood
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
@@ -535,6 +557,23 @@ extension APIClient {
           path + "?" + queryString(["country": country, "lang": language]))
         return try await http.perform(
           try await request(route, signed: true), as: TitleDetails.self)
+      },
+      titleRecommendations: { (seeds, language) async throws(TransportError) in
+        let ids = seeds.prefix(5).map { "\($0.kind.rawValue):\($0.tmdb)" }.joined(separator: ",")
+        let route = Route(
+          Routes.titleRecommendations.method,
+          Routes.titleRecommendations.path + "?" + queryString(["ids": ids, "lang": language]))
+        return try await http.perform(
+          try await request(route, signed: true), as: TitleSearchResponse.self)
+      },
+      pickTonight: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getPickTonight, signed: true), as: PickTonightResponse.self)
+      },
+      swipePickTonight: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.swipePickTonight, signed: true, body: body),
+          as: PickTonightResponse.self)
       },
       setMood: { (body) async throws(TransportError) in
         try await http.perform(

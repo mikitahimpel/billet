@@ -104,6 +104,12 @@ export const routes = {
   searchTitles: route("GET", "/v1/titles/search"),
   /** One film (`movie`) or show (`tv`) with where to watch it: see `titlePath`. */
   getTitle: route("GET", "/v1/titles/:kind/:tmdb"),
+  /** Films and shows like the ones in `ids` (`movie:329865,tv:95396`), for Pick tonight's deck. */
+  titleRecommendations: route("GET", "/v1/titles/recommendations"),
+  /** The pair's Pick tonight session as the caller sees it: see `PickTonightResponse`. */
+  getPickTonight: route("GET", "/v1/pick-tonight"),
+  /** One Pick tonight swipe; answers the session after it, with the match it made. */
+  swipePickTonight: route("POST", "/v1/pick-tonight/swipes"),
   /** Credits a verified App Store transaction's coins to the caller's pair, once. */
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */

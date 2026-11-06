@@ -22,6 +22,10 @@ const day = 86_400;
 // changes where to watch, so both are kept far less.
 export const searchTtlSeconds = day;
 export const detailsTtlSeconds = 7 * day;
+export const recommendationsTtlSeconds = 7 * day;
+
+/** The most titles one ask for recommendations answers. */
+const maxRecommendations = 20;
 
 /** Holds the instant, in epoch milliseconds, before which TMDB is not asked anything. */
 export const pauseKey = "tmdb:pause";
@@ -51,6 +55,14 @@ export class TitleCatalog extends Context.Service<
       country: CountryCode,
       language: string,
     ) => Effect.Effect<TitleDetails, Failure>;
+    /**
+     * Titles TMDB recommends for those who liked `seeds`, taken in turn from each seed's list,
+     * without repeats or the seeds themselves. A seed TMDB lacks adds nothing.
+     */
+    readonly recommendations: (
+      seeds: ReadonlyArray<{ readonly kind: MediaKind; readonly tmdb: number }>,
+      language: string,
+    ) => Effect.Effect<TitleSearchResponse, TitlesBusy | TitlesUnavailable>;
   }
 >()("@billet/backend-titles/TitleCatalog") {
   static readonly layer: Layer.Layer<TitleCatalog, never, Tmdb | TitleCache> = Layer.effect(
@@ -159,6 +171,42 @@ export class TitleCatalog extends Context.Service<
               onNone: () => Effect.fail(new TitlesUnavailable({ reason: "tmdb-unreadable" })),
               onSome: Effect.succeed,
             });
+          }),
+        recommendations: (seeds, language) =>
+          Effect.gen(function* () {
+            const lists = yield* Effect.forEach(
+              seeds,
+              (seed) =>
+                fetchJson(
+                  `/${seed.kind}/${seed.tmdb}/recommendations`,
+                  { language, page: "1" },
+                  recommendationsTtlSeconds,
+                ).pipe(
+                  Effect.map((raw) =>
+                    list(record(raw)["results"]).flatMap((entry) => {
+                      const result = record(entry);
+                      const kind = result["media_type"] ?? seed.kind;
+                      return kind === "movie" || kind === "tv"
+                        ? Option.toArray(summaryOf(kind, result))
+                        : [];
+                    }),
+                  ),
+                  Effect.catchTag("TitleNotFound", () => Effect.succeed([])),
+                ),
+              { concurrency: seeds.length },
+            );
+            const seen = new Set(seeds.map((seed) => `${seed.kind}:${seed.tmdb}`));
+            const results: Array<TitleSummary> = [];
+            const longest = Math.max(0, ...lists.map((found) => found.length));
+            for (let at = 0; at < longest && results.length < maxRecommendations; at += 1) {
+              for (const found of lists) {
+                const title = found[at];
+                if (title === undefined || seen.has(`${title.kind}:${title.tmdb}`)) continue;
+                seen.add(`${title.kind}:${title.tmdb}`);
+                results.push(title);
+              }
+            }
+            return { results: results.slice(0, maxRecommendations) };
           }),
       });
     }),

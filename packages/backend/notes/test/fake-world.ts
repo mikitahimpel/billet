@@ -18,6 +18,12 @@ import {
   GiftsRoom,
   GiftsStore,
 } from "@billet/backend-pair-room/gifts";
+import {
+  type PickRow,
+  PickTonightRoom,
+  PickTonightStore,
+  pickKeyOf,
+} from "@billet/backend-pair-room/pick-tonight";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
@@ -155,9 +161,28 @@ const makeRoom = () => {
     apply: (writes) => Effect.sync(() => void (giftRows = applyGiftWrites(giftRows, writes))),
     forget: Effect.sync(() => void (giftRows = { wishes: [], plans: [], loves: [] })),
   });
+  let swipes: Array<PickRow> = [];
+  const pickStore = Layer.succeed(PickTonightStore, {
+    since: (since) => Effect.sync(() => swipes.filter((row) => row.at >= since)),
+    put: (row, pruneBefore) =>
+      Effect.sync(() => {
+        const key = pickKeyOf(row.title);
+        swipes = [
+          ...swipes.filter(
+            (old) =>
+              old.at >= pruneBefore && !(old.member === row.member && pickKeyOf(old.title) === key),
+          ),
+          row,
+        ];
+      }),
+    forget: Effect.sync(() => void (swipes = [])),
+  });
   const room = Effect.runSync(RoomService.make.pipe(Effect.provide(Layer.merge(store, ids))));
   const gifts = Effect.runSync(GiftsRoom.make.pipe(Effect.provide(Layer.merge(store, giftsStore))));
-  return { ...room, gifts };
+  const pick = Effect.runSync(
+    PickTonightRoom.make.pipe(Effect.provide(Layer.merge(store, pickStore))),
+  );
+  return { ...room, gifts, pick };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -252,6 +277,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     setMood: (pairId, by, request) => roomOf(pairId).setMood(by, request),
     moods: (pairId) => roomOf(pairId).moods,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
+    pickTonight: (pairId, by, command) => roomOf(pairId).pick.run(by, command),
     lists: (pairId, by, request) =>
       roomOf(pairId)
         .listsFor(by, request)

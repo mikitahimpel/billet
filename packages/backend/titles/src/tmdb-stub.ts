@@ -170,6 +170,13 @@ export const TmdbStub: Layer.Layer<Tmdb> = Layer.succeed(
         );
         return Effect.succeed(JSON.stringify({ page: 1, results: found.map(resultOf) }));
       }
+      const liked = titles.find(
+        (candidate) => path === `/${candidate.kind}/${candidate.id}/recommendations`,
+      );
+      if (liked !== undefined) {
+        const others = titles.filter((title) => title !== liked).map(resultOf);
+        return Effect.succeed(JSON.stringify({ page: 1, results: others }));
+      }
       const title = titles.find((candidate) => path === `/${candidate.kind}/${candidate.id}`);
       return title === undefined
         ? Effect.fail(new TitleNotFound())

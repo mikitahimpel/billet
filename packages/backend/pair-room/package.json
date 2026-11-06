@@ -13,6 +13,7 @@
     "./gifts": "./src/gifts.ts",
     "./lists": "./src/lists.ts",
     "./note-id-source": "./src/note-id-source.ts",
+    "./pick-tonight": "./src/pick-tonight.ts",
     "./room-command": "./src/room-command.ts",
     "./room-decision": "./src/room-decision.ts",
     "./room-service": "./src/room-service.ts",

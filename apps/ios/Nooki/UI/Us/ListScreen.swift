@@ -232,6 +232,8 @@ struct ListScreen: View {
     private func itemRow(_ item: ListItem, list: UsList, doneStyle: Bool, showDate: Bool = false) -> some View {
         HStack(spacing: 12) {
             checkButton(item, list: list, done: item.done != nil)
+            UsIcon(glyph: ItemIcon.glyph(for: item.text, list: list.icon), size: 30)
+                .opacity(doneStyle ? 0.55 : 1)
             Text(item.text)
                 .font(.nookiHeadline)
                 .foregroundStyle(Ink.text)
@@ -299,7 +301,7 @@ struct ListScreen: View {
     }
 
     private var divider: some View {
-        Divider().overlay(Ink.separator).padding(.leading, 52)
+        Divider().overlay(Ink.separator).padding(.leading, 94)
     }
 }
 

@@ -68,6 +68,13 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   /// A button on the widget was tapped: `pet` or `treat`.
   case widgetButtonTapped = "WidgetButtonTapped"
 
+  /// Pick tonight was opened: one session.
+  case pickTonightOpened = "PickTonightOpened"
+  /// A Pick tonight swipe made a match.
+  case pickTonightMatched = "PickTonightMatched"
+  /// A match was planned as tonight's date.
+  case pickTonightPlanned = "PickTonightPlanned"
+
   /// The profile ("Us") was opened.
   case profileOpened = "ProfileOpened"
   /// The app asked the user to sign in with Apple.
@@ -120,7 +127,8 @@ extension ClientEventName {
   public var rule: ClientEventRule {
     switch self {
     case .appOpened, .openingWatched, .openingSkipped, .catPetted, .catCalled, .decoratingOpened,
-      .shopOpened, .streakOpened, .profileOpened, .signInPromptShown, .ageGateStopped:
+      .shopOpened, .streakOpened, .profileOpened, .signInPromptShown, .ageGateStopped,
+      .pickTonightOpened, .pickTonightMatched, .pickTonightPlanned:
       ClientEventRule(detail: .none)
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)

@@ -5,6 +5,7 @@ import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { SharedList } from "@billet/contracts-domain/list";
+import { PickMatch } from "@billet/contracts-domain/pick-tonight";
 import { PairShop } from "@billet/contracts-domain/shop";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
@@ -55,5 +56,10 @@ export const ServerMessage = Schema.TaggedUnion({
    * holds on the resume, then every new one.
    */
   MoodChanged: { checkIn: MoodCheckIn },
+  /**
+   * Both partners swiped ♥ on one Pick tonight card, sent to every socket that resumed with
+   * `lists: true`, the swiper's own included.
+   */
+  MatchFound: { match: PickMatch },
 });
 export type ServerMessage = typeof ServerMessage.Type;

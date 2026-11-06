@@ -19,6 +19,8 @@
   "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
   "apps/ios/Nooki/UI/MomentsView.swift": 2,
   "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 1,
+  "apps/ios/Nooki/UI/Us/ListCard.swift": 1,
+  "apps/ios/Nooki/UI/Us/PickTonightScreen.swift": 4,
   "apps/ios/NookiWidgets/Accessory.swift": 2,
   "apps/ios/NookiWidgets/DrawingLiveActivity.swift": 2,
   "apps/ios/NookiWidgets/DrawingWidget.swift": 1,
