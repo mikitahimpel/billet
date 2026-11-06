@@ -35,7 +35,8 @@ jobs:
   check:
     if: inputs.shots == ''
     runs-on: xcode-27
-    timeout-minutes: 45
+    # About 45 min of lint, package tests and Release builds, then the app tests' own 30 min cap.
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
