@@ -606,8 +606,12 @@ extension APIClient {
           try await json(Routes.answerGuess, signed: true, body: body), as: GuessResponse.self)
       },
       guessCatalog: { () async throws(TransportError) in
+        // The route is cached for an hour; a phone that needs a newer catalog asks the server
+        // whether its copy is still current, which costs a 304 when it is.
         try await http.perform(
-          try await request(Routes.getGuessCatalog, signed: false), as: GuessCatalogResponse.self)
+          try await request(
+            Routes.getGuessCatalog, signed: false, headers: ["Cache-Control": "no-cache"]),
+          as: GuessCatalogResponse.self)
       },
       setMood: { (body) async throws(TransportError) in
         try await http.perform(

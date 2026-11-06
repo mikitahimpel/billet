@@ -51,6 +51,15 @@ import Wire
     #expect(request.headers["Authorization"] == "Bearer tok")
   }
 
+  @Test func theGuessCatalogRevalidatesWhatTheCacheHolds() async throws {
+    let server = Server(body: #"{"version":"v2","questions":[]}"#)
+    let catalog = try await Self.client(server, token: nil).guessCatalog()
+    #expect(catalog.version == "v2")
+    let request = try #require(server.requests.first)
+    #expect(request.path == "/v1/guess/catalog")
+    #expect(request.headers["Cache-Control"] == "no-cache")
+  }
+
   @Test func aSignedRouteWithoutATokenNeverLeavesTheDevice() async {
     let server = Server(status: 204, body: "")
     await #expect(throws: TransportError.api(.unauthorized)) {
