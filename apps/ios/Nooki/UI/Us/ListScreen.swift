@@ -1,4 +1,5 @@
 import SwiftUI
+import Wire
 
 struct ListScreen: View {
     let state: HomeState
@@ -12,6 +13,7 @@ struct ListScreen: View {
     @State private var confirmingDelete = false
     @State private var reward: UUID?
     @State private var rewardRising = false
+    @State private var editing: ListItem?
     @State private var watchDetails = WatchDetails()
     @State private var addingTitle = false
     @State private var openedTitle: OpenedTitle?
@@ -61,31 +63,55 @@ struct ListScreen: View {
                     .padding(.top, 14)
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    if list.kind == .watch {
-                        WatchListBody(state: state, list: list, details: watchDetails) {
-                            openedTitle = OpenedTitle(id: $0.id)
+            ScrollViewReader { scroll in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if adding(to: list) {
+                            GrocerySuggestions(draft: draft, list: list, history: state.us.groceries) {
+                                add($0, to: list)
+                            }
                         }
-                    } else if list.items.isEmpty {
-                        UsEmpty(icon: list.icon,
-                                title: "Nothing here yet",
-                                text: "Add the first one above. You both see this list.")
-                    } else if list.kind.isChecklist {
-                        checklist(list)
-                    } else {
-                        openCard(list)
-                        finishedSection(list)
+                        if list.kind == .watch {
+                            WatchListBody(state: state, list: list, details: watchDetails) {
+                                openedTitle = OpenedTitle(id: $0.id)
+                            }
+                        } else if list.items.isEmpty {
+                            if !adding(to: list) {
+                                UsEmpty(icon: list.icon,
+                                        title: "Nothing here yet",
+                                        text: "Add the first one above. You both see this list.")
+                            }
+                        } else if list.kind.isChecklist {
+                            // While a name is typed, its suggestions take the screen, as the list would push them away.
+                            if draft.isEmpty {
+                                GroceryList(list: list, state: state,
+                                            onTap: { toggle($0, in: list) },
+                                            onEdit: { editing = $0 },
+                                            onClear: {
+                                                withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
+                                            })
+                            }
+                        } else {
+                            openCard(list)
+                            finishedSection(list)
+                        }
                     }
+                    .id(Self.top)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 14)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 40)
+                .scrollIndicators(.hidden)
+                .onChange(of: focused) { _, focused in
+                    if focused { withAnimation(.snappy(duration: 0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
+                }
             }
-            .scrollIndicators(.hidden)
         }
         .usSheet()
         .onAppear { if focusesField && list.kind == .watch { addingTitle = true } }
+        .sheet(item: $editing) { item in
+            GroceryItemSheet(state: state, listID: listID, item: item)
+        }
         .sheet(isPresented: $renaming) {
             RenameListSheet(state: state, list: list)
         }
@@ -106,8 +132,13 @@ struct ListScreen: View {
         }
     }
 
+    private static let top = "top"
+
+    /// Groceries show suggestions and "You often buy" while the field is in use.
+    private func adding(to list: UsList) -> Bool { list.kind.isChecklist && focused }
+
     private func subtitle(of list: UsList) -> String {
-        if list.kind.isChecklist { return "\(list.open.count) left" }
+        if list.kind.isChecklist { return "\(list.open.count) to buy" }
         if list.kind == .watch { return "\(list.open.count) to go · \(list.finished.count) watched" }
         return "\(list.open.count) to go · \(list.finished.count) done"
     }
@@ -125,10 +156,17 @@ struct ListScreen: View {
     }
 
     private func addItem(_ list: UsList) {
-        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        add(draft, to: list)
+    }
+
+    /// A grocery the pair moved to another aisle before goes there again.
+    private func add(_ text: String, to list: UsList) {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        var details = ListItemDetails()
+        if list.kind.isChecklist { details.aisle = state.us.groceries.entry(for: text)?.aisle }
         withAnimation(.snappy(duration: 0.25)) {
-            state.us.addItem(text, to: listID, author: state.viewer)
+            state.us.addItem(text, to: listID, author: state.viewer, details: details)
         }
         draft = ""
         focused = true
@@ -142,28 +180,6 @@ struct ListScreen: View {
             }
         }
         .usCard()
-    }
-
-    private func checklist(_ list: UsList) -> some View {
-        let done = list.finished
-        return VStack(alignment: .leading, spacing: 12) {
-            VStack(spacing: 0) {
-                ForEach(Array((list.open + done).enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { divider }
-                    itemRow(item, list: list, doneStyle: item.done != nil)
-                }
-            }
-            .usCard()
-
-            if !done.isEmpty {
-                Button("Clear bought") {
-                    withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
-                }
-                .font(.nookiCallout.weight(.semibold))
-                .foregroundStyle(Color.honey)
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     @ViewBuilder
@@ -218,18 +234,7 @@ struct ListScreen: View {
         Button {
             toggle(item, in: list)
         } label: {
-            ZStack {
-                Circle()
-                    .strokeBorder(done ? .clear : Ink.textSecondary, lineWidth: 1.5)
-                if done {
-                    Circle().fill(Color.honey)
-                    Image(systemName: "checkmark")
-                        .font(.nookiMicro)
-                        .foregroundStyle(Ink.heroInk)
-                }
-            }
-            .frame(width: 26, height: 26)
-            .contentShape(.circle)
+            UsCheck(done: done)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(done ? "Mark as not done" : "Mark as done")

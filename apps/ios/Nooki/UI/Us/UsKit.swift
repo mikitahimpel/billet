@@ -102,6 +102,26 @@ struct UsChip: View {
     }
 }
 
+/// The round tick of a list row: an empty ring, honey with a checkmark once done.
+struct UsCheck: View {
+    let done: Bool
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(done ? .clear : Ink.textSecondary, lineWidth: 1.5)
+            if done {
+                Circle().fill(Color.honey)
+                Image(systemName: "checkmark")
+                    .font(.nookiMicro)
+                    .foregroundStyle(Ink.heroInk)
+            }
+        }
+        .frame(width: 26, height: 26)
+        .contentShape(.circle)
+    }
+}
+
 /// Text field styled for the dark sheet.
 struct UsField: View {
     let placeholder: String

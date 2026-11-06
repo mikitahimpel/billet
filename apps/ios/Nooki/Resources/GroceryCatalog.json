@@ -1,0 +1,3728 @@
+[
+  {
+    "words": {
+      "en": [
+        "apple"
+      ],
+      "ru": [
+        "яблоко"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "green apple",
+        "granny smith"
+      ],
+      "ru": [
+        "зелёное яблоко"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "banana"
+      ],
+      "ru": [
+        "банан"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "grape",
+        "raisin"
+      ],
+      "ru": [
+        "виноград",
+        "изюм"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "lemon"
+      ],
+      "ru": [
+        "лимон"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "lime"
+      ],
+      "ru": [
+        "лайм"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "tangerine",
+        "mandarin",
+        "clementine"
+      ],
+      "ru": [
+        "мандарин"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "orange"
+      ],
+      "ru": [
+        "апельсин"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "grapefruit"
+      ],
+      "ru": [
+        "грейпфрут"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "pear"
+      ],
+      "ru": [
+        "груша"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "peach",
+        "nectarine"
+      ],
+      "ru": [
+        "персик",
+        "нектарин"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "apricot"
+      ],
+      "ru": [
+        "абрикос"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cherry"
+      ],
+      "ru": [
+        "вишня",
+        "черешня"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "strawberry"
+      ],
+      "ru": [
+        "клубника"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "raspberry"
+      ],
+      "ru": [
+        "малина"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "blueberry",
+        "berries"
+      ],
+      "ru": [
+        "черника",
+        "голубика",
+        "ягоды"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "plum"
+      ],
+      "ru": [
+        "слива"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "watermelon"
+      ],
+      "ru": [
+        "арбуз"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "melon"
+      ],
+      "ru": [
+        "дыня"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "pineapple"
+      ],
+      "ru": [
+        "ананас"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "mango"
+      ],
+      "ru": [
+        "манго"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "kiwi"
+      ],
+      "ru": [
+        "киви"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "coconut"
+      ],
+      "ru": [
+        "кокос"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "avocado"
+      ],
+      "ru": [
+        "авокадо"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "tomato"
+      ],
+      "ru": [
+        "помидор",
+        "томат"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cherry tomato"
+      ],
+      "ru": [
+        "черри"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cucumber"
+      ],
+      "ru": [
+        "огурец"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "zucchini",
+        "courgette"
+      ],
+      "ru": [
+        "кабачок",
+        "цукини"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "carrot"
+      ],
+      "ru": [
+        "морковь",
+        "морковка"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "corn",
+        "sweetcorn"
+      ],
+      "ru": [
+        "кукуруза"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "chili",
+        "chilli",
+        "hot pepper"
+      ],
+      "ru": [
+        "перец чили",
+        "острый перец"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "bell pepper",
+        "pepper",
+        "paprika"
+      ],
+      "ru": [
+        "болгарский перец",
+        "перец",
+        "паприка"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "broccoli"
+      ],
+      "ru": [
+        "брокколи"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cauliflower"
+      ],
+      "ru": [
+        "цветная капуста"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "lettuce",
+        "salad leaves",
+        "greens"
+      ],
+      "ru": [
+        "салат",
+        "листья салата",
+        "зелень"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "spinach"
+      ],
+      "ru": [
+        "шпинат"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cabbage"
+      ],
+      "ru": [
+        "капуста"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "kale"
+      ],
+      "ru": [
+        "кейл"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "arugula",
+        "rocket"
+      ],
+      "ru": [
+        "руккола"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "garlic"
+      ],
+      "ru": [
+        "чеснок"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "onion",
+        "shallot"
+      ],
+      "ru": [
+        "лук",
+        "шалот"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "red onion"
+      ],
+      "ru": [
+        "красный лук"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "spring onion",
+        "green onion",
+        "leek"
+      ],
+      "ru": [
+        "зелёный лук",
+        "лук-порей"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "potato"
+      ],
+      "ru": [
+        "картофель",
+        "картошка"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "beetroot",
+        "beet"
+      ],
+      "ru": [
+        "свёкла"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "sweet potato"
+      ],
+      "ru": [
+        "батат"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "mushroom",
+        "champignon"
+      ],
+      "ru": [
+        "гриб",
+        "шампиньон"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "eggplant",
+        "aubergine"
+      ],
+      "ru": [
+        "баклажан"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "olive"
+      ],
+      "ru": [
+        "оливки",
+        "маслины"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "ginger"
+      ],
+      "ru": [
+        "имбирь"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "peas",
+        "green peas"
+      ],
+      "ru": [
+        "горошек",
+        "горох"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "green beans"
+      ],
+      "ru": [
+        "стручковая фасоль"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "herbs",
+        "parsley"
+      ],
+      "ru": [
+        "петрушка",
+        "травы"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "dill"
+      ],
+      "ru": [
+        "укроп"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "basil"
+      ],
+      "ru": [
+        "базилик"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cilantro",
+        "coriander"
+      ],
+      "ru": [
+        "кинза"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "mint"
+      ],
+      "ru": [
+        "мята"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "celery"
+      ],
+      "ru": [
+        "сельдерей"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "chestnut"
+      ],
+      "ru": [
+        "каштан"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "peanuts",
+        "peanut"
+      ],
+      "ru": [
+        "арахис"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "nuts",
+        "walnuts",
+        "almonds",
+        "cashews",
+        "hazelnuts"
+      ],
+      "ru": [
+        "орехи",
+        "грецкие орехи",
+        "миндаль",
+        "кешью",
+        "фундук"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "peanut butter"
+      ],
+      "ru": [
+        "арахисовая паста"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "milk"
+      ],
+      "ru": [
+        "молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "oat milk"
+      ],
+      "ru": [
+        "овсяное молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "almond milk"
+      ],
+      "ru": [
+        "миндальное молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "soy milk"
+      ],
+      "ru": [
+        "соевое молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "kefir"
+      ],
+      "ru": [
+        "кефир"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "cream",
+        "heavy cream"
+      ],
+      "ru": [
+        "сливки"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "buttermilk"
+      ],
+      "ru": [
+        "пахта",
+        "ряженка"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "cheese"
+      ],
+      "ru": [
+        "сыр"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "parmesan"
+      ],
+      "ru": [
+        "пармезан"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "mozzarella"
+      ],
+      "ru": [
+        "моцарелла"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "cheddar"
+      ],
+      "ru": [
+        "чеддер"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "feta"
+      ],
+      "ru": [
+        "фета",
+        "брынза"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "cream cheese"
+      ],
+      "ru": [
+        "сливочный сыр",
+        "творожный сыр"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "butter"
+      ],
+      "ru": [
+        "масло",
+        "сливочное масло"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "margarine"
+      ],
+      "ru": [
+        "маргарин"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "egg"
+      ],
+      "ru": [
+        "яйцо",
+        "яйца"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "yogurt",
+        "yoghurt"
+      ],
+      "ru": [
+        "йогурт"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "sour cream"
+      ],
+      "ru": [
+        "сметана"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "cottage cheese",
+        "quark"
+      ],
+      "ru": [
+        "творог"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "pudding",
+        "custard"
+      ],
+      "ru": [
+        "пудинг"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "dessert"
+      ],
+      "ru": [
+        "десерт"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "baby formula",
+        "formula"
+      ],
+      "ru": [
+        "детская смесь"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "bread",
+        "loaf"
+      ],
+      "ru": [
+        "хлеб",
+        "батон"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "toast bread",
+        "sandwich bread"
+      ],
+      "ru": [
+        "тостовый хлеб"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "rye bread"
+      ],
+      "ru": [
+        "ржаной хлеб",
+        "чёрный хлеб"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "baguette"
+      ],
+      "ru": [
+        "багет"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "croissant"
+      ],
+      "ru": [
+        "круассан"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "bagel"
+      ],
+      "ru": [
+        "бублик",
+        "бейгл"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "pretzel"
+      ],
+      "ru": [
+        "крендель",
+        "брецель"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "tortilla",
+        "wraps",
+        "pita",
+        "flatbread"
+      ],
+      "ru": [
+        "лаваш",
+        "тортилья",
+        "пита",
+        "лепёшка"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "pancakes"
+      ],
+      "ru": [
+        "блины",
+        "оладьи"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "waffles"
+      ],
+      "ru": [
+        "вафли"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "doughnut",
+        "donut"
+      ],
+      "ru": [
+        "пончик"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "cookies",
+        "biscuits"
+      ],
+      "ru": [
+        "печенье"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "cake",
+        "birthday cake"
+      ],
+      "ru": [
+        "торт"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "pastry",
+        "cake slice"
+      ],
+      "ru": [
+        "пирожное"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "muffin",
+        "cupcake"
+      ],
+      "ru": [
+        "маффин",
+        "кекс"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "pie",
+        "tart"
+      ],
+      "ru": [
+        "пирог",
+        "тарт"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "buns",
+        "rolls"
+      ],
+      "ru": [
+        "булочки",
+        "булка"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "meat"
+      ],
+      "ru": [
+        "мясо"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "beef",
+        "steak"
+      ],
+      "ru": [
+        "говядина",
+        "стейк"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "pork"
+      ],
+      "ru": [
+        "свинина"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "lamb"
+      ],
+      "ru": [
+        "баранина"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "minced meat",
+        "ground beef",
+        "mince"
+      ],
+      "ru": [
+        "фарш"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "chicken",
+        "chicken breast",
+        "chicken thighs"
+      ],
+      "ru": [
+        "курица",
+        "куриная грудка",
+        "куриные бёдра",
+        "курочка"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "turkey"
+      ],
+      "ru": [
+        "индейка"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "duck"
+      ],
+      "ru": [
+        "утка"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "ribs"
+      ],
+      "ru": [
+        "рёбрышки"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "bacon"
+      ],
+      "ru": [
+        "бекон"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "ham"
+      ],
+      "ru": [
+        "ветчина"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "salami",
+        "prosciutto"
+      ],
+      "ru": [
+        "салями",
+        "хамон",
+        "прошутто"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "sausages",
+        "hot dogs",
+        "frankfurters"
+      ],
+      "ru": [
+        "сосиски",
+        "сардельки",
+        "колбаски"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "sausage"
+      ],
+      "ru": [
+        "колбаса"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "fish"
+      ],
+      "ru": [
+        "рыба"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "salmon"
+      ],
+      "ru": [
+        "лосось",
+        "сёмга",
+        "форель"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "cod"
+      ],
+      "ru": [
+        "треска"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "tuna"
+      ],
+      "ru": [
+        "тунец"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "herring"
+      ],
+      "ru": [
+        "селёдка",
+        "сельдь"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "shrimp",
+        "prawns"
+      ],
+      "ru": [
+        "креветки"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "lobster"
+      ],
+      "ru": [
+        "лобстер",
+        "омар"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "crab",
+        "crab sticks"
+      ],
+      "ru": [
+        "краб",
+        "крабовые палочки"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "oysters",
+        "mussels"
+      ],
+      "ru": [
+        "устрицы",
+        "мидии"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "squid",
+        "calamari",
+        "octopus"
+      ],
+      "ru": [
+        "кальмар",
+        "осьминог"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "sushi"
+      ],
+      "ru": [
+        "суши"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "tofu"
+      ],
+      "ru": [
+        "тофу"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "burgers",
+        "burger patties"
+      ],
+      "ru": [
+        "бургеры",
+        "котлеты"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "ice cream"
+      ],
+      "ru": [
+        "мороженое"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "milkshake"
+      ],
+      "ru": [
+        "молочный коктейль"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "frozen yogurt"
+      ],
+      "ru": [
+        "замороженный йогурт"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "sorbet",
+        "popsicles",
+        "ice lolly"
+      ],
+      "ru": [
+        "сорбет",
+        "эскимо",
+        "фруктовый лёд"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "ice",
+        "ice cubes"
+      ],
+      "ru": [
+        "лёд"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "dumplings",
+        "pelmeni",
+        "gyoza"
+      ],
+      "ru": [
+        "пельмени",
+        "вареники",
+        "хинкали"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "pizza",
+        "frozen pizza"
+      ],
+      "ru": [
+        "пицца"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "fries",
+        "french fries",
+        "chips"
+      ],
+      "ru": [
+        "картофель фри",
+        "фри"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "fish fingers",
+        "fish sticks"
+      ],
+      "ru": [
+        "рыбные палочки"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "frozen vegetables"
+      ],
+      "ru": [
+        "замороженные овощи"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "frozen berries"
+      ],
+      "ru": [
+        "замороженные ягоды"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "coffee",
+        "coffee beans",
+        "ground coffee"
+      ],
+      "ru": [
+        "кофе",
+        "кофе в зёрнах",
+        "молотый кофе"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "cocoa",
+        "hot chocolate"
+      ],
+      "ru": [
+        "какао",
+        "горячий шоколад"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "tea",
+        "green tea",
+        "black tea"
+      ],
+      "ru": [
+        "чай",
+        "зелёный чай",
+        "чёрный чай"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "tea bags"
+      ],
+      "ru": [
+        "чайные пакетики"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "juice",
+        "orange juice",
+        "apple juice"
+      ],
+      "ru": [
+        "сок",
+        "апельсиновый сок",
+        "яблочный сок"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "soda",
+        "cola",
+        "lemonade",
+        "soft drinks"
+      ],
+      "ru": [
+        "газировка",
+        "кола",
+        "лимонад"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "iced tea",
+        "bubble tea"
+      ],
+      "ru": [
+        "холодный чай",
+        "бабл ти"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "beer"
+      ],
+      "ru": [
+        "пиво"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "wine",
+        "red wine",
+        "white wine"
+      ],
+      "ru": [
+        "вино",
+        "красное вино",
+        "белое вино"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "champagne",
+        "prosecco",
+        "sparkling wine"
+      ],
+      "ru": [
+        "шампанское",
+        "игристое",
+        "просекко"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "vermouth",
+        "liqueur"
+      ],
+      "ru": [
+        "вермут",
+        "ликёр"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "whisky",
+        "whiskey",
+        "rum",
+        "vodka",
+        "gin",
+        "cognac"
+      ],
+      "ru": [
+        "виски",
+        "ром",
+        "водка",
+        "джин",
+        "коньяк"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "smoothie"
+      ],
+      "ru": [
+        "смузи"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "kombucha",
+        "mate"
+      ],
+      "ru": [
+        "комбуча",
+        "мате"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "water",
+        "mineral water",
+        "sparkling water"
+      ],
+      "ru": [
+        "вода",
+        "минералка",
+        "минеральная вода",
+        "газированная вода"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "pasta",
+        "spaghetti",
+        "penne",
+        "noodles",
+        "macaroni"
+      ],
+      "ru": [
+        "макароны",
+        "спагетти",
+        "паста",
+        "лапша",
+        "рожки"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "rice"
+      ],
+      "ru": [
+        "рис"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "buckwheat"
+      ],
+      "ru": [
+        "гречка",
+        "гречневая крупа"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "quinoa",
+        "couscous",
+        "bulgur"
+      ],
+      "ru": [
+        "киноа",
+        "кускус",
+        "булгур"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "oats",
+        "oatmeal",
+        "porridge",
+        "granola",
+        "muesli",
+        "cereal",
+        "cornflakes"
+      ],
+      "ru": [
+        "овсянка",
+        "овсяные хлопья",
+        "каша",
+        "гранола",
+        "мюсли",
+        "хлопья"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "nori",
+        "seaweed"
+      ],
+      "ru": [
+        "нори",
+        "водоросли"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "crackers",
+        "rice cakes"
+      ],
+      "ru": [
+        "крекеры",
+        "хлебцы"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "instant noodles",
+        "ramen"
+      ],
+      "ru": [
+        "доширак",
+        "рамен"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "soup",
+        "broth",
+        "stock cubes"
+      ],
+      "ru": [
+        "суп",
+        "бульон",
+        "бульонные кубики"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "curry",
+        "curry paste"
+      ],
+      "ru": [
+        "карри"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "canned tomatoes",
+        "tinned tomatoes"
+      ],
+      "ru": [
+        "консервированные томаты"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "canned beans",
+        "beans",
+        "chickpeas",
+        "lentils"
+      ],
+      "ru": [
+        "фасоль",
+        "нут",
+        "чечевица"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "canned tuna",
+        "tinned tuna"
+      ],
+      "ru": [
+        "консервированный тунец"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "canned corn",
+        "canned food",
+        "tins"
+      ],
+      "ru": [
+        "консервы",
+        "консервированная кукуруза"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "tomato paste",
+        "passata",
+        "tomato sauce"
+      ],
+      "ru": [
+        "томатная паста",
+        "томатный соус"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "honey"
+      ],
+      "ru": [
+        "мёд"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "jam",
+        "marmalade"
+      ],
+      "ru": [
+        "варенье",
+        "джем",
+        "повидло"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "salt"
+      ],
+      "ru": [
+        "соль"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "black pepper",
+        "spices",
+        "seasoning"
+      ],
+      "ru": [
+        "чёрный перец",
+        "специи",
+        "приправа"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "sugar"
+      ],
+      "ru": [
+        "сахар"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "flour"
+      ],
+      "ru": [
+        "мука"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "baking powder",
+        "baking soda",
+        "yeast"
+      ],
+      "ru": [
+        "разрыхлитель",
+        "сода",
+        "дрожжи"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "cinnamon",
+        "vanilla"
+      ],
+      "ru": [
+        "корица",
+        "ваниль"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "olive oil",
+        "oil",
+        "sunflower oil"
+      ],
+      "ru": [
+        "оливковое масло",
+        "подсолнечное масло",
+        "растительное масло"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "vinegar",
+        "soy sauce"
+      ],
+      "ru": [
+        "уксус",
+        "соевый соус"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "mayonnaise",
+        "mayo"
+      ],
+      "ru": [
+        "майонез"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "ketchup"
+      ],
+      "ru": [
+        "кетчуп"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "mustard"
+      ],
+      "ru": [
+        "горчица"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "pesto",
+        "sauce"
+      ],
+      "ru": [
+        "песто",
+        "соус"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "pickles",
+        "gherkins"
+      ],
+      "ru": [
+        "солёные огурцы",
+        "корнишоны"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "hummus"
+      ],
+      "ru": [
+        "хумус"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "chocolate"
+      ],
+      "ru": [
+        "шоколад",
+        "шоколадка"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "sweets",
+        "candy",
+        "candies"
+      ],
+      "ru": [
+        "конфеты",
+        "сладости"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "lollipop",
+        "gummies",
+        "marshmallows"
+      ],
+      "ru": [
+        "леденцы",
+        "мармелад",
+        "зефир",
+        "пастила"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "popcorn"
+      ],
+      "ru": [
+        "попкорн"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "crisps",
+        "potato chips",
+        "snacks"
+      ],
+      "ru": [
+        "чипсы",
+        "снеки"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "biscotti"
+      ],
+      "ru": [
+        "сухари",
+        "сушки"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "sandwiches"
+      ],
+      "ru": [
+        "сэндвичи",
+        "бутерброды"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "taco shells",
+        "tacos"
+      ],
+      "ru": [
+        "тако"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "burrito"
+      ],
+      "ru": [
+        "буррито"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "ready salad"
+      ],
+      "ru": [
+        "готовый салат"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "ready meal"
+      ],
+      "ru": [
+        "готовая еда"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "takeaway",
+        "takeout"
+      ],
+      "ru": [
+        "еда на вынос"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "shawarma",
+        "kebab"
+      ],
+      "ru": [
+        "шаурма",
+        "шаверма",
+        "кебаб"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "baking paper",
+        "parchment"
+      ],
+      "ru": [
+        "пергамент",
+        "бумага для выпечки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "aluminium foil",
+        "foil"
+      ],
+      "ru": [
+        "фольга"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "cling film",
+        "plastic wrap"
+      ],
+      "ru": [
+        "пищевая плёнка"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "paper towels",
+        "kitchen roll"
+      ],
+      "ru": [
+        "бумажные полотенца"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "toilet paper",
+        "loo roll"
+      ],
+      "ru": [
+        "туалетная бумага"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "tissues",
+        "napkins"
+      ],
+      "ru": [
+        "салфетки",
+        "бумажные салфетки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "soap",
+        "hand soap"
+      ],
+      "ru": [
+        "мыло",
+        "жидкое мыло"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "dish soap",
+        "washing up liquid",
+        "dishwashing liquid"
+      ],
+      "ru": [
+        "средство для посуды",
+        "фейри"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "dishwasher tablets"
+      ],
+      "ru": [
+        "таблетки для посудомойки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "laundry detergent",
+        "washing powder",
+        "laundry pods"
+      ],
+      "ru": [
+        "стиральный порошок",
+        "гель для стирки",
+        "капсулы для стирки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "fabric softener"
+      ],
+      "ru": [
+        "кондиционер для белья"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "shampoo"
+      ],
+      "ru": [
+        "шампунь"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "conditioner"
+      ],
+      "ru": [
+        "бальзам для волос",
+        "кондиционер для волос"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "shower gel",
+        "body wash"
+      ],
+      "ru": [
+        "гель для душа"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "hand cream",
+        "lotion",
+        "body lotion"
+      ],
+      "ru": [
+        "крем для рук",
+        "крем",
+        "лосьон"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "deodorant"
+      ],
+      "ru": [
+        "дезодорант"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "cleaner",
+        "bleach",
+        "spray"
+      ],
+      "ru": [
+        "чистящее средство",
+        "отбеливатель",
+        "спрей"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "toothbrush",
+        "toothpaste"
+      ],
+      "ru": [
+        "зубная щётка",
+        "зубная паста"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "dental floss",
+        "mouthwash"
+      ],
+      "ru": [
+        "зубная нить",
+        "ополаскиватель"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "sponges",
+        "sponge",
+        "cloths"
+      ],
+      "ru": [
+        "губки",
+        "губка",
+        "тряпки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "broom",
+        "mop"
+      ],
+      "ru": [
+        "веник",
+        "швабра"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "bucket"
+      ],
+      "ru": [
+        "ведро"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "bin bags",
+        "trash bags",
+        "garbage bags"
+      ],
+      "ru": [
+        "мешки для мусора",
+        "пакеты для мусора"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "razor",
+        "razor blades",
+        "shaving foam"
+      ],
+      "ru": [
+        "бритва",
+        "лезвия",
+        "пена для бритья"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "candles"
+      ],
+      "ru": [
+        "свечи"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "light bulb",
+        "bulbs"
+      ],
+      "ru": [
+        "лампочка",
+        "лампочки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "batteries"
+      ],
+      "ru": [
+        "батарейки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "vitamins",
+        "painkillers",
+        "medicine",
+        "ibuprofen",
+        "paracetamol"
+      ],
+      "ru": [
+        "витамины",
+        "таблетки",
+        "лекарства",
+        "ибупрофен",
+        "парацетамол"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "plasters",
+        "band-aids",
+        "bandages"
+      ],
+      "ru": [
+        "пластырь",
+        "бинт"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "storage bags",
+        "zip bags",
+        "freezer bags"
+      ],
+      "ru": [
+        "зип-пакеты",
+        "пакеты"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "rubber gloves",
+        "gloves"
+      ],
+      "ru": [
+        "перчатки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "socks"
+      ],
+      "ru": [
+        "носки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "lip balm",
+        "makeup"
+      ],
+      "ru": [
+        "гигиеничка",
+        "косметика"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "cotton pads",
+        "cotton buds"
+      ],
+      "ru": [
+        "ватные диски",
+        "ватные палочки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "flowers",
+        "bouquet"
+      ],
+      "ru": [
+        "цветы",
+        "букет"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "tulips"
+      ],
+      "ru": [
+        "тюльпаны"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "plant",
+        "potting soil"
+      ],
+      "ru": [
+        "растение",
+        "грунт",
+        "земля для цветов"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "mouse trap"
+      ],
+      "ru": [
+        "мышеловка"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "plunger"
+      ],
+      "ru": [
+        "вантуз"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "toilet cleaner"
+      ],
+      "ru": [
+        "средство для унитаза"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "diapers",
+        "nappies",
+        "baby wipes"
+      ],
+      "ru": [
+        "подгузники",
+        "памперсы",
+        "детские салфетки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "shower cap"
+      ],
+      "ru": [
+        "шапочка для душа"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "cat food",
+        "wet food",
+        "pouches"
+      ],
+      "ru": [
+        "корм",
+        "кошачий корм",
+        "влажный корм",
+        "паучи"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "dry food",
+        "kibble"
+      ],
+      "ru": [
+        "сухой корм"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "cat treats",
+        "treats"
+      ],
+      "ru": [
+        "лакомство",
+        "вкусняшки"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "cat litter",
+        "litter"
+      ],
+      "ru": [
+        "наполнитель",
+        "кошачий наполнитель"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "cat toy",
+        "toy"
+      ],
+      "ru": [
+        "игрушка",
+        "игрушка для кошки"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "cat shampoo"
+      ],
+      "ru": [
+        "шампунь для кошки"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "shopping bags",
+        "bags"
+      ],
+      "ru": [
+        "пакеты для покупок",
+        "сумка"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "shopping"
+      ],
+      "ru": [
+        "покупки"
+      ]
+    },
+    "aisle": "other"
+  },
+  {
+    "words": {
+      "en": [
+        "radish"
+      ],
+      "ru": [
+        "редиска",
+        "редис"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "pumpkin",
+        "butternut squash"
+      ],
+      "ru": [
+        "тыква"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "asparagus"
+      ],
+      "ru": [
+        "спаржа"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "pomegranate"
+      ],
+      "ru": [
+        "гранат"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "persimmon"
+      ],
+      "ru": [
+        "хурма"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "figs"
+      ],
+      "ru": [
+        "инжир"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "dates",
+        "dried fruit",
+        "prunes",
+        "dried apricots"
+      ],
+      "ru": [
+        "финики",
+        "сухофрукты",
+        "чернослив",
+        "курага"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "cranberries",
+        "lingonberries"
+      ],
+      "ru": [
+        "клюква",
+        "брусника"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "currants",
+        "blackcurrants",
+        "gooseberries",
+        "blackberries"
+      ],
+      "ru": [
+        "смородина",
+        "крыжовник",
+        "ежевика"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "lemongrass"
+      ],
+      "ru": [
+        "лемонграсс"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "new potatoes"
+      ],
+      "ru": [
+        "молодая картошка"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "rosemary",
+        "thyme",
+        "oregano"
+      ],
+      "ru": [
+        "розмарин",
+        "тимьян",
+        "орегано"
+      ]
+    },
+    "aisle": "produce"
+  },
+  {
+    "words": {
+      "en": [
+        "condensed milk"
+      ],
+      "ru": [
+        "сгущёнка",
+        "сгущенное молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "ayran"
+      ],
+      "ru": [
+        "айран"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "lactose free milk"
+      ],
+      "ru": [
+        "безлактозное молоко"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "ghee"
+      ],
+      "ru": [
+        "топлёное масло"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "halloumi",
+        "brie",
+        "camembert",
+        "gouda"
+      ],
+      "ru": [
+        "халуми",
+        "бри",
+        "камамбер",
+        "гауда"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "ricotta",
+        "mascarpone"
+      ],
+      "ru": [
+        "рикотта",
+        "маскарпоне"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "skyr",
+        "greek yogurt"
+      ],
+      "ru": [
+        "скир",
+        "греческий йогурт"
+      ]
+    },
+    "aisle": "dairy"
+  },
+  {
+    "words": {
+      "en": [
+        "breadcrumbs"
+      ],
+      "ru": [
+        "панировочные сухари"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "brioche",
+        "danish pastry"
+      ],
+      "ru": [
+        "бриошь",
+        "слойка",
+        "слойки"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "quiche"
+      ],
+      "ru": [
+        "киш"
+      ]
+    },
+    "aisle": "bakery"
+  },
+  {
+    "words": {
+      "en": [
+        "chicken wings",
+        "wings"
+      ],
+      "ru": [
+        "крылышки",
+        "куриные крылья"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "liver"
+      ],
+      "ru": [
+        "печень",
+        "печёнка"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "meatballs"
+      ],
+      "ru": [
+        "фрикадельки",
+        "тефтели"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "smoked salmon"
+      ],
+      "ru": [
+        "слабосолёный лосось",
+        "копчёный лосось"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "caviar",
+        "red caviar"
+      ],
+      "ru": [
+        "икра",
+        "красная икра"
+      ]
+    },
+    "aisle": "meat"
+  },
+  {
+    "words": {
+      "en": [
+        "ice cream cones"
+      ],
+      "ru": [
+        "рожки мороженого"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "frozen pizza dough",
+        "pizza dough"
+      ],
+      "ru": [
+        "тесто для пиццы"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "puff pastry",
+        "dough"
+      ],
+      "ru": [
+        "слоёное тесто",
+        "тесто"
+      ]
+    },
+    "aisle": "frozen"
+  },
+  {
+    "words": {
+      "en": [
+        "energy drink"
+      ],
+      "ru": [
+        "энергетик"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "cider"
+      ],
+      "ru": [
+        "сидр"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "oat drink"
+      ],
+      "ru": [
+        "овсяный напиток"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "still water"
+      ],
+      "ru": [
+        "негазированная вода"
+      ]
+    },
+    "aisle": "drinks"
+  },
+  {
+    "words": {
+      "en": [
+        "semolina",
+        "millet",
+        "pearl barley"
+      ],
+      "ru": [
+        "манка",
+        "пшено",
+        "перловка"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "sunflower seeds",
+        "pumpkin seeds",
+        "chia seeds",
+        "seeds"
+      ],
+      "ru": [
+        "семечки",
+        "тыквенные семечки",
+        "семена чиа",
+        "семена"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "maple syrup",
+        "syrup"
+      ],
+      "ru": [
+        "кленовый сироп",
+        "сироп"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "cocoa powder"
+      ],
+      "ru": [
+        "какао-порошок"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "nutella",
+        "chocolate spread"
+      ],
+      "ru": [
+        "нутелла",
+        "шоколадная паста"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "tahini"
+      ],
+      "ru": [
+        "тахини"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "starch",
+        "gelatin"
+      ],
+      "ru": [
+        "крахмал",
+        "желатин"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "bay leaves"
+      ],
+      "ru": [
+        "лавровый лист"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "lasagne sheets",
+        "lasagna"
+      ],
+      "ru": [
+        "листы для лазаньи",
+        "лазанья"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "coconut milk"
+      ],
+      "ru": [
+        "кокосовое молоко"
+      ]
+    },
+    "aisle": "pantry"
+  },
+  {
+    "words": {
+      "en": [
+        "air freshener"
+      ],
+      "ru": [
+        "освежитель воздуха"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "glass cleaner"
+      ],
+      "ru": [
+        "средство для стёкол"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "matches",
+        "lighter"
+      ],
+      "ru": [
+        "спички",
+        "зажигалка"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "wet wipes"
+      ],
+      "ru": [
+        "влажные салфетки"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "pads",
+        "tampons",
+        "sanitary pads"
+      ],
+      "ru": [
+        "прокладки",
+        "тампоны"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "tape",
+        "duct tape"
+      ],
+      "ru": [
+        "скотч"
+      ]
+    },
+    "aisle": "household"
+  },
+  {
+    "words": {
+      "en": [
+        "litter bags",
+        "poop bags"
+      ],
+      "ru": [
+        "пакеты для лотка"
+      ]
+    },
+    "aisle": "pet"
+  },
+  {
+    "words": {
+      "en": [
+        "cat grass",
+        "catnip"
+      ],
+      "ru": [
+        "трава для кошек",
+        "кошачья мята"
+      ]
+    },
+    "aisle": "pet"
+  }
+]
