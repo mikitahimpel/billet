@@ -98,14 +98,25 @@ struct UsView: View {
             }
             .padding(.top, 6)
 
-            VStack(spacing: 0) {
-                ForEach(Array(us.lists.enumerated()), id: \.element.id) { index, list in
-                    if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 58) }
-                    Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
-                        .buttonStyle(.plain)
-                }
+            let layout = UsListsLayout(lists: us.lists, partner: state.otherPartner)
+            ForEach(layout.cards) { list in
+                Button { state.usRoute = .list(list.id) } label: { ListCard(list: list, state: state) }
+                    .buttonStyle(.plain)
             }
-            .usCard()
+
+            if !layout.rows.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(Array(layout.rows.enumerated()), id: \.element.id) { index, list in
+                        if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 58) }
+                        Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
+                            .buttonStyle(.plain)
+                    }
+                }
+                .usCard()
+            }
+
+            Button { state.usRoute = .newList } label: { StartListCard() }
+                .buttonStyle(.plain)
         }
     }
 }
@@ -214,34 +225,5 @@ private struct SmallTile: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .usCard()
-    }
-}
-
-private struct ListRow: View {
-    let list: UsList
-
-    var body: some View {
-        HStack(spacing: 12) {
-            UsIcon(glyph: list.icon, size: 34)
-            Text(list.title)
-                .font(.nookiHeadline)
-                .foregroundStyle(Ink.text)
-            Spacer(minLength: 0)
-            Text(counts)
-                .font(.nookiCaption.monospacedDigit())
-                .foregroundStyle(Ink.textSecondary)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textTertiary)
-        }
-        .padding(.horizontal, Space.m)
-        .frame(minHeight: 54)
-        .contentShape(.rect)
-    }
-
-    private var counts: String {
-        let open = list.open.count, done = list.finished.count
-        if list.kind.isChecklist || done == 0 { return "\(open)" }
-        return "\(open) · \(done) ✓"
     }
 }
