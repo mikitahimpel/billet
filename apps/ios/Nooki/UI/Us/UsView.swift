@@ -5,12 +5,17 @@ import SwiftUI
 struct UsView: View {
     @Bindable var state: HomeState
 
+    @Environment(ServerSession.self) private var session: ServerSession?
+    /// The round for a build without a server, which has no partner to play with.
+    @State private var unpaired = WhoKnowsModel(sync: nil, viewer: nil, catalog: [])
+
     enum Route: Identifiable, Hashable {
-        case dates, wishlists, calendar, list(UUID), newList
+        case dates, whoKnows, wishlists, calendar, list(UUID), newList
 
         var id: String {
             switch self {
             case .dates: "dates"
+            case .whoKnows: "who-knows"
             case .wishlists: "wishlists"
             case .calendar: "calendar"
             case .list(let id): "list-\(id)"
@@ -37,9 +42,11 @@ struct UsView: View {
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
+        .task(id: session?.isPaired) { await whoKnows.load() }
         .sheet(item: $state.usRoute) { route in
             switch route {
             case .dates: DatesScreen(state: state)
+            case .whoKnows: WhoKnowsScreen(state: state, model: whoKnows)
             case .wishlists: WishlistScreen(state: state)
             case .calendar: CalendarScreen(state: state)
             case .list(let id): ListScreen(state: state, listID: id)
@@ -47,6 +54,8 @@ struct UsView: View {
             }
         }
     }
+
+    private var whoKnows: WhoKnowsModel { session?.whoKnows ?? unpaired }
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -63,6 +72,12 @@ struct UsView: View {
         VStack(spacing: Space.m) {
             Button { state.usRoute = .dates } label: {
                 DatesTile(matches: us.matches.count, next: us.plannedSorted.first { $0.rating == nil })
+            }
+            .buttonStyle(.plain)
+
+            Button { state.usRoute = .whoKnows } label: {
+                WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
+                             partner: state.profile.name(of: state.otherPartner))
             }
             .buttonStyle(.plain)
 
@@ -202,6 +217,45 @@ private struct DatesTile: View {
         }
         if matches > 0 { return "\(matches) \(matches == 1 ? "match" : "matches") waiting" }
         return "Swipe ideas together or let \(CatProfile.name()) pick"
+    }
+}
+
+private struct WhoKnowsTile: View {
+    let model: WhoKnowsModel
+    let me: String
+    let partner: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image("WhoKnows-card")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 64, height: 64)
+                .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Who knows who")
+                    .font(.nookiHeadline)
+                    .foregroundStyle(Ink.text)
+                Text(WhoKnowsModel.status(model.phase, remaining: model.remaining, partner: partner))
+                    .font(.nookiCaption)
+                    .foregroundStyle(model.phase == .revealed ? Ink.accentText : Ink.textSecondary)
+                if model.phase != .unpaired, let week = model.score?.week {
+                    Text(WhoKnowsModel.scoreLine(week, me: me, partner: partner))
+                        .font(.nookiMicro.monospacedDigit())
+                        .foregroundStyle(Ink.textSecondary)
+                        .contentTransition(.numericText())
+                        .accessibilityLabel("This week: \(me) \(week.mine), \(partner) \(week.partner)")
+                }
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.nookiCaption.weight(.semibold))
+                .foregroundStyle(Ink.textTertiary)
+        }
+        .padding(14)
+        .usCard()
+        .accessibilityElement(children: .combine)
     }
 }
 

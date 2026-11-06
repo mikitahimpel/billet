@@ -11,6 +11,7 @@ import {
   DemoBotState,
   demoBotMinGapMs,
   demoBotStep,
+  guessSeen,
   nextWakeAt,
   noteSeen,
   seedOf,
@@ -156,5 +157,21 @@ describe("demo bot", () => {
   it("survives a round trip through storage", () => {
     const state = noteSeen(startDemoBot(bot, owner, t0), text("n1", owner, t0), t0);
     expect(Schema.decodeUnknownSync(DemoBotState)(structuredClone(state))).toEqual(state);
+  });
+
+  it("plays its Who knows who part 10 to 40 seconds after the owner answers, once", () => {
+    const quiet = run(startDemoBot(bot, owner, t0), t0 + hour).state;
+    const at = t0 + hour;
+    const waiting = guessSeen(quiet, owner, at);
+    expect(guessSeen(waiting, owner, at + second)).toBe(waiting);
+    expect(guessSeen(quiet, bot, at)).toBe(quiet);
+    expect(waiting.guessAt! - at).toBeGreaterThanOrEqual(10 * second);
+    expect(waiting.guessAt! - at).toBeLessThanOrEqual(40 * second);
+
+    const step = demoBotStep(waiting, nextWakeAt(waiting));
+    const options = step.action?._tag === "PlayGuess" ? step.action.options : [];
+    expect(options).toHaveLength(5);
+    expect(options.every((option) => option >= 0 && option <= 3)).toBe(true);
+    expect(step.state.guessAt).toBeUndefined();
   });
 });

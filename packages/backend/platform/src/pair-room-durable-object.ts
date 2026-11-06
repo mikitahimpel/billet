@@ -27,6 +27,7 @@ import {
   DemoBotState,
   demoBotStep,
   nextWakeAt,
+  guessSeen,
   noteSeen,
   startDemoBot,
 } from "@billet/backend-demo-partner/demo-bot";
@@ -363,6 +364,7 @@ export class PairRoom extends DurableObject {
     // and failed before saving the delivery. A delivery already saved is left as it is.
     if (answered === of && !revealed) await this.enqueueDeliveries(guessDeliveryId(round, member));
     if (revealed && stored) await this.pushReveal();
+    if (stored) await this.showDemoBotGuess(member);
     const paid = coins.find(
       (decision) =>
         decision._tag === "Accepted" && decision.outputs.some((o) => shopOutputs.has(o._tag)),
@@ -720,6 +722,16 @@ export class PairRoom extends DurableObject {
     await this.scheduleAlarm();
   }
 
+  /** Lets the bot plan its part of today's round around an answer just stored. */
+  private async showDemoBotGuess(by: UserId): Promise<void> {
+    const bot = await this.demoBot();
+    if (bot === undefined) return;
+    const next = guessSeen(bot, by, this.clock());
+    if (next === bot) return;
+    await this.ctx.storage.put(demoBotKey, next);
+    await this.scheduleAlarm();
+  }
+
   /**
    * The bot's one due action, if any. Its plans move on before it acts, so an action that fails
    * or is refused is dropped instead of retried. A room the bot no longer belongs to stops it.
@@ -754,6 +766,17 @@ export class PairRoom extends DurableObject {
       case "OpenGift":
         await this.openGift(bot, undefined);
         return;
+      case "PlayGuess": {
+        const view = await this.guess(bot, { _tag: "View" });
+        if (view._tag !== "Done") return;
+        const { round, answers } = view.view;
+        const open = round.questions.filter((q) => !answers.some((a) => a.question === q));
+        for (const [i, question] of open.entries()) {
+          const option = action.options[i % action.options.length] ?? 0;
+          await this.guess(bot, { _tag: "Answer", round: round.id, question, option });
+        }
+        return;
+      }
     }
   }
 

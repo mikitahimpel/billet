@@ -275,6 +275,36 @@ describe("delivery lanes", () => {
     expect(await alarmAt(room)).toBeNull();
   });
 
+  it("lets a demo bot play its part of the round once the owner played theirs", async () => {
+    const room = await laneRoom();
+    await room.startDemo(alice, bob);
+    const view = await room.guess(alice, { _tag: "View" });
+    if (view._tag !== "Done") throw new Error(view._tag);
+    const { round } = view.view;
+    for (const question of round.questions) {
+      await room.guess(alice, { _tag: "Answer", round: round.id, question, option: 0 });
+    }
+
+    const advance = (ms: number) =>
+      runInDurableObject(room, (instance) =>
+        (instance as unknown as { advanceClock(ms: number): void }).advanceClock(ms),
+      );
+    let now = testNowOf(env);
+    for (let i = 0; i < 10; i += 1) {
+      const after = await room.guess(alice, { _tag: "View" });
+      if (after._tag === "Done" && after.view.reveal !== undefined) break;
+      const at = (await alarmAt(room)) ?? now;
+      if (at > now) await advance(at - now);
+      now = Math.max(now, at);
+      await runAlarm(room);
+    }
+    const done = await room.guess(alice, { _tag: "View" });
+    expect(done._tag === "Done" ? done.view.reveal : undefined).toHaveLength(
+      round.questions.length,
+    );
+    expect(now - testNowOf(env)).toBeLessThanOrEqual(40 * 1000);
+  });
+
   it("does nothing for a room without lanes", async () => {
     const { PAIR_ROOM } = env as unknown as { PAIR_ROOM: DurableObjectNamespace<PairRoom> };
     const room = PAIR_ROOM.get(PAIR_ROOM.newUniqueId());

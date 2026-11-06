@@ -3,7 +3,8 @@ import Transport
 import Wire
 
 /// The room socket the app keeps while it is in front, outside the canvas: the Inbox's unread count, the partner's
-/// photos as they are sent, reactions to photos, the pair's shop and lists, and each partner's check-in. It resumes after
+/// photos as they are sent, reactions to photos, the pair's shop and lists, each partner's check-in, and how Who knows
+/// who goes. It resumes after
 /// the last note the photos
 /// looked at and leaves the cat's journal out, so no cat frames; the canvas keeps its own socket for those.
 @MainActor
@@ -22,6 +23,9 @@ final class InboxLink {
         var lists: @MainActor @Sendable ([SharedList]) -> Void
         var mood: @MainActor @Sendable (PartnerCheckIn) -> Void
         var match: @MainActor @Sendable (PickMatch) -> Void
+        /// The partner's count of locked answers in the Who knows who round of that day.
+        var guessProgress: @MainActor @Sendable (_ round: String, _ answered: Int) -> Void
+        var guessRevealed: @MainActor @Sendable (_ round: String, [GuessReveal], GuessScore) -> Void
     }
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
@@ -44,6 +48,8 @@ final class InboxLink {
                 case .listsChanged(let lists): await handlers.lists(lists)
                 case .moodChanged(let checkIn): await handlers.mood(checkIn)
                 case .matchFound(let match): await handlers.match(match)
+                case .guessProgress(let round, let answered): await handlers.guessProgress(round, answered)
+                case .guessRevealed(let round, let reveal, let score): await handlers.guessRevealed(round, reveal, score)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
                      .clear, .catEntryAdded, .catSaved, .moodChanged:
                     break
@@ -53,7 +59,8 @@ final class InboxLink {
             lastReactionRev: { await handlers.lastReactionRev() },
             followsShop: true,
             followsLists: true,
-            followsMoods: true)
+            followsMoods: true,
+            followsGuess: true)
         client = WebSocketClient(dependencies: dependencies, lastSeq: lastSeq)
     }
 

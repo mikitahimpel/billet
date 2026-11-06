@@ -83,21 +83,20 @@ The room decides, like Pick tonight (`packages/backend/pair-room/src/pick-tonigh
   in". It also shows the weekly score.
 - **Round screen:** one question at a time with four option buttons, a progress bar (1 of 5) and the
   subject's avatar. It reads "about Mia" for the guesser and "about you" for the subject.
-- **Waiting:** the cat waiting at the door, with a nudge button that resends the push at most once an
-  hour.
+- **Waiting:** the cat waiting by the phone, with the partner's live progress.
 - **Reveal:** questions open one at a time: the subject's answer, the guess, a hit or miss, and a cat
   reaction (happy on a hit, a dramatic flop on a miss). Then the round score, the week score and the
   coins earned.
-- **Unpaired:** the card shows a sample round and "Pair up to play". In the dev build, the demo
-  partner answers on its own so the game can be tried alone.
+- **Unpaired:** the card reads "Pair up to play". In the dev build, the demo partner plays its part
+  10 to 40 seconds after the owner answers, so the game can be tried alone.
 - **Look:** the app's dark tokens (`Shared/Kit/Ink.swift`), honey for the subject's true answer and
   blush for a miss, as in the carousel mock.
 
 ## Analytics
 
-`guess_round_started`, `guess_answered` (`role`, `index`), `guess_part_finished` (`role`),
-`guess_revealed` (`hits`), and `guess_nudged`. Two numbers matter most: how many rounds both partners
-finish, and how many days in a row a pair plays.
+The room already has the numbers that matter most: how many rounds both partners finish, and how many
+days in a row a pair plays. Client events (`guess_round_started`, `guess_answered`,
+`guess_revealed`) wait for a change to `ClientEventName`.
 
 ## Not in v1
 
@@ -106,6 +105,7 @@ finish, and how many days in a row a pair plays.
 - A shareable score card. This comes next: it is the user-generated content for TikTok.
 - A spicy deck.
 - A stake that does anything beyond its line of text.
+- A nudge button on the waiting screen. The push already goes out when a part is finished.
 
 ## Decided
 
