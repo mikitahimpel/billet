@@ -5,10 +5,10 @@ struct Monogram: View {
     let profile: CoupleStore
     var size: CGFloat = 46
 
-    /// First partner blue, second pink, as everywhere else in the app.
+    /// First partner honey, second terracotta: one warm family, nothing system blue or pink.
     static func colors(_ partner: String, _ profile: CoupleStore) -> [Color] {
         partner == profile.couple.partners.first
-            ? [Color(hex: 0x9DBBF5), Color(hex: 0x6C89D9)] : [Color(hex: 0xF9B8CB), Color(hex: 0xE287A9)]
+            ? [Color(hex: 0xF6C66F), Color(hex: 0xD98A2B)] : [Color(hex: 0xEE9A7E), Color(hex: 0xB9553C)]
     }
 
     var body: some View {

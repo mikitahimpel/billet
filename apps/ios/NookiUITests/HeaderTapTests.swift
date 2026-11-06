@@ -27,16 +27,16 @@ final class HeaderTapTests: XCTestCase {
     @MainActor
     func testEveryTapOnTheRoomSwitchSwitches() throws {
         let app = launch()
-        let room = app.buttons["Room"], city = app.buttons["City"]
-        XCTAssertTrue(room.waitForExistence(timeout: 10) && city.exists, "an unpaired phone has both rooms")
-        XCTAssertTrue(room.isSelected)
+        let name = app.buttons["roomSwitch"]
+        XCTAssertTrue(name.waitForExistence(timeout: 10), "an unpaired phone has both rooms")
+        XCTAssertEqual(name.value as? String, "Room")
 
-        // The pills are 34 pt to the eye; the spots near the top and bottom land outside them, in the hit area.
-        XCTAssertGreaterThanOrEqual(room.frame.height, 44, "the switch should be 44 pt tall to the finger")
+        // The spots near the edges land outside the room's name, in the 44 pt hit area.
+        XCTAssertGreaterThanOrEqual(name.frame.height, 44, "the switch should be 44 pt tall to the finger")
         for (tap, spot) in Self.spots.enumerated() {
-            let target = tap.isMultiple(of: 2) ? city : room
-            target.coordinate(withNormalizedOffset: spot).tap()
-            XCTAssertTrue(target.isSelected, "tap \(tap + 1) on \(target.label) at \(spot) should switch to it")
+            name.coordinate(withNormalizedOffset: spot).tap()
+            let expected = tap.isMultiple(of: 2) ? "City" : "Room"
+            XCTAssertEqual(name.value as? String, expected, "tap \(tap + 1) at \(spot) should switch to \(expected)")
         }
         XCTAssertEqual(app.otherElements["room"].value as? String, "0", "no tap on the switch should reach the room")
     }

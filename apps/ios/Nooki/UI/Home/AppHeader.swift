@@ -56,10 +56,10 @@ struct AppHeader: View {
             if code != nil, session?.isPaired == false { pairing = true }
         }
         .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
-            // A plain slide-up at full height: a zoom out of the round avatars would morph through the sheet's
-            // rectangle and land on a detent.
+            // A plain slide-up: a zoom out of the round avatars would morph through the sheet's rectangle. Medium
+            // fits its few rows; large is there for the Settings it pushes.
             ProfileHub(state: state, erase: erase)
-                .presentationDetents([.large])
+                .presentationDetents([.medium, .large])
                 .presentationBackground(Ink.screen)
                 .presentationDragIndicator(.visible)
         }

@@ -22,20 +22,13 @@ extension View {
         }
     }
 
-    /// The app's one card: a warm clay surface lit from above, a light rim along its top and a soft shadow. `warm`
-    /// pours honey into the light, for a screen's hero card.
+    /// The app's one card: a flat solid surface, like a grouped list's cell. `warm` lays a breath of honey over it,
+    /// for a screen's hero card.
     func nookiCard(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
-        // The shadow is the card's shape's own, not the whole card's: anything changing inside never makes it draw
-        // again.
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         return background {
-            shape
-                .fill(LinearGradient(colors: warm ? [CardSurface.warmTop, CardSurface.bottom]
-                                                  : [CardSurface.top, CardSurface.bottom],
-                                     startPoint: .top, endPoint: .bottom))
-                .shadow(color: .black.opacity(0.18), radius: 10, y: 5)
-            shape.strokeBorder(LinearGradient(colors: [.white.opacity(0.16), .white.opacity(0.02)],
-                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
+            shape.fill(Ink.surface)
+            if warm { shape.fill(Color.honey.opacity(0.14)) }
         }
     }
 
@@ -44,12 +37,6 @@ extension View {
         listRowBackground(Ink.surface)
             .listRowSeparatorTint(Ink.separator)
     }
-}
-
-private enum CardSurface {
-    static let top = Color(light: Color(hex: 0xFFFAF3), dark: Color(hex: 0x4E352A))
-    static let warmTop = Color(light: Color(hex: 0xFFEBCB), dark: Color(hex: 0x6E4630))
-    static let bottom = Color(light: Color(hex: 0xFBEBD8), dark: Color(hex: 0x3A271F))
 }
 
 /// SF Rounded navigation titles in `Ink.text`, for every navigation bar in the app. Only the title text changes; the

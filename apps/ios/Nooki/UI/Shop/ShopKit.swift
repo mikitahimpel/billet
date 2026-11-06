@@ -27,14 +27,11 @@ extension ShopRarity {
     /// The frame's fill behind the art, lit from above: the centre of the light, then its edge.
     var fill: (light: Color, edge: Color) {
         switch self {
-        case .common: (Color(light: Color(hex: 0xFFF1DE), dark: Color(hex: 0x6A4A36)),
-                       Color(light: Color(hex: 0xF3DDC2), dark: Color(hex: 0x3E2A20)))
-        case .rare: (Color(light: Color(hex: 0xDDF6FA), dark: Color(hex: 0x23707E)),
-                     Color(light: Color(hex: 0xB9E6EE), dark: Color(hex: 0x163A44)))
-        case .epic: (Color(light: Color(hex: 0xF1E3FF), dark: Color(hex: 0x6A3FA6)),
-                     Color(light: Color(hex: 0xDCC4F8), dark: Color(hex: 0x2E1C4A)))
-        case .legendary: (Color(light: Color(hex: 0xFFF0C4), dark: Color(hex: 0x9A6A1C)),
-                          Color(light: Color(hex: 0xFFDB8A), dark: Color(hex: 0x4A3210)))
+        // Always the light pair, in either appearance: the art sits on a bright tint, never on dark.
+        case .common: (Color(hex: 0xFFF1DE), Color(hex: 0xF3DDC2))
+        case .rare: (Color(hex: 0xDDF6FA), Color(hex: 0xB9E6EE))
+        case .epic: (Color(hex: 0xF1E3FF), Color(hex: 0xDCC4F8))
+        case .legendary: (Color(hex: 0xFFF0C4), Color(hex: 0xFFDB8A))
         }
     }
 
@@ -191,9 +188,16 @@ extension View {
         buttonStyle(ShopButtonStyle(prominent: prominent))
     }
 
-    /// A card on the Shop: the app's clay card.
+    /// A card on the Shop: a bright cream card with dark text, whatever the appearance, so the art and its rarity
+    /// colour read clearly.
     func shopCard(radius: CGFloat = Radius.card) -> some View {
-        nookiCard(radius: radius)
+        environment(\.colorScheme, .light)
+            .background {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: 0xFFFAF3), Color(hex: 0xFBEBD8)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .shadow(color: .black.opacity(0.16), radius: 8, y: 4)
+            }
     }
 
     /// Fades and rises a little into place as it scrolls in, straight up, never sideways; only a fade under Reduce
@@ -294,8 +298,12 @@ private struct ShopButtonStyle: ButtonStyle {
         configuration.label
             .font(.nookiHeadline)
             .foregroundStyle(prominent ? Ink.heroInk : Ink.accentText)
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, controlSize == .large ? 14 : 9)
+            // One line, shrinking a little rather than wrapping, and one height and shape for every price or owned
+            // button.
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .padding(.horizontal, Space.m)
+            .frame(minHeight: controlSize == .large ? 50 : 44)
             .background {
                 if prominent {
                     Capsule().fill(.honeyGradient)

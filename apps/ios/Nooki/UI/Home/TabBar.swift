@@ -44,7 +44,7 @@ struct TabBar: View {
                         }
                         .onEnded { drag in
                             let tab = tab(at: drag.location.x)
-                            withAnimation(.spring(duration: 0.35)) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
                                 hovered = nil
                                 state.tab = tab
                             }
@@ -97,7 +97,7 @@ struct TabBar: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
         .accessibilityAddTraits(state.tab == tab ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { withAnimation(.spring(duration: 0.35)) { state.tab = tab } }
+        .accessibilityAction { withAnimation(.easeInOut(duration: 0.2)) { state.tab = tab } }
     }
 }
 
