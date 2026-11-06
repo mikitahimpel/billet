@@ -15,7 +15,7 @@ nonisolated private let questions = (1...5).map { id in
 /// The pair's room as the model sees it: answers lock, the partner's stay hidden, and the round reveals once both
 /// have answered every question.
 private nonisolated final class FakeGuessRoom: @unchecked Sendable {
-    let round: GuessRound
+    var round: GuessRound
     var mine: [GuessAnswer] = []
     var theirs: [GuessAnswer] = []
     var offline = false
@@ -83,6 +83,16 @@ struct WhoKnowsTests {
         for option in [0, 1, 2, 3, 0] { await guessing.answer(option) }
         #expect(guessing.phase == .waitingForPartner)
         #expect(guessing.remaining == 0)
+    }
+
+    @Test func keepsTodaysRoundWhenAnAnswerAboutAnEarlierDayArrivesLate() async {
+        let room = FakeGuessRoom(subject: partner)
+        let model = WhoKnowsModel(sync: room.sync, viewer: me, catalog: questions)
+        await model.load()
+        room.round = GuessRound(id: "2026-11-05", subject: me, questions: room.round.questions, closesAt: 0)
+        await model.load()
+        #expect(model.response?.round.id == "2026-11-06")
+        #expect(model.phase == .guessAboutPartner)
     }
 
     @Test func swapsTheSubjectsNameIntoTheGuessersQuestion() {

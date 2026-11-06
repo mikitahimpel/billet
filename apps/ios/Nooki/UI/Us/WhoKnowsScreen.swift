@@ -91,7 +91,18 @@ struct WhoKnowsScreen: View {
         case .waitingForPartner:
             waiting
         case .revealed:
-            WhoKnowsReveal(state: state, model: model, openDates: openDates)
+            VStack(spacing: Space.m) {
+                if model.lacksQuestions {
+                    Button { Task { await refresh() } } label: {
+                        Label("Some questions didn't load. Try again", systemImage: "arrow.clockwise")
+                            .font(.nookiCallout)
+                            .foregroundStyle(Ink.accentText)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, Space.s)
+                }
+                WhoKnowsReveal(state: state, model: model, openDates: openDates)
+            }
         }
     }
 

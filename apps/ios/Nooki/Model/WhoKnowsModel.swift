@@ -133,6 +133,8 @@ final class WhoKnowsModel {
     /// Takes the room's view. Within one round nothing goes back: answers and the partner's count only grow and the
     /// reveal stays, so a late answer to an earlier request or socket frame can't undo a newer one.
     private func apply(_ next: GuessResponse) {
+        // Round ids are `YYYY-MM-DD`, so they order as text: a late answer about an earlier day is dropped.
+        if let old = response, next.round.id < old.round.id { return }
         guard let old = response, old.round.id == next.round.id else {
             response = next
             return

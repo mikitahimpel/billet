@@ -15,5 +15,13 @@ enum GuessCatalog {
 
     static var saved: GuessCatalogResponse? { SharedFile.read(GuessCatalogResponse.self, from: file) }
 
-    static var current: GuessCatalogResponse? { saved ?? bundled }
+    /// The saved catalog, plus any bundled question it lacks: a saved copy from before an app update can be older than
+    /// the bundle, and a round may ask a question only the bundle has.
+    static var current: GuessCatalogResponse? {
+        guard let saved else { return bundled }
+        guard let bundled else { return saved }
+        let known = Set(saved.questions.map(\.id))
+        return GuessCatalogResponse(version: saved.version,
+                                    questions: saved.questions + bundled.questions.filter { !known.contains($0.id) })
+    }
 }
