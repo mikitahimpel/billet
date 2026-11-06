@@ -52,8 +52,10 @@ import Wire
     }
 
     @Test func captionsSayWhatTMDBKnows() {
+        // The rating is written the phone's way, 7.6 or 7,6.
+        let rating = 7.6.formatted(.number.precision(.fractionLength(1)))
         #expect(TitleCaption.of(TitleSummary(kind: .movie, tmdb: 1, title: "Arrival", year: 2016, rating: 7.6,
-                                             runtime: 116)) == "2016 · Movie · 1 h 56 min · ★ 7.6")
+                                             runtime: 116)) == "2016 · Movie · 1 h 56 min · ★ \(rating)")
         #expect(TitleCaption.of(TitleSummary(kind: .tv, tmdb: 2, title: "Arrival", year: 2024, seasons: 1))
                     == "2024 · Show · 1 season")
         #expect(TitleCaption.of(TitleSummary(kind: .movie, tmdb: 3, title: "The Arrival")) == "Movie")
