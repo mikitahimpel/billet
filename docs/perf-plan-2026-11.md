@@ -81,12 +81,16 @@ Three things to read from it:
   (`cost`) and several rounds can. Every Phase 2 number has to come with its noise floor.
 - **The Shop scroll is main-thread bound in both sides** (24–63 ms of CPU per frame; Moments
   7–16 ms with the same drive), and the World return is a 0.6–1.5 s frame in every sample.
-- **After the covers the room draws nothing.** The `settled` phase runs at 60 fps with 0.14 ms
-  of main thread, where the same room idles at 5.6–6.7 ms before the covers. Either the room never
-  remounts after the drawing canvas and the Inbox close, or it comes back paused. This needs one
-  look in a Simulator (open the canvas, close it, does Mochi still breathe?). If it is real, it is
-  a user-visible bug on main since the 11-05 runs (where `settled` had the room live), and it
-  changes item 2's reading: the remount path is not just slow, it may not finish.
+- **After the covers the room draws nothing, and the reason is a system alert.** The `settled`
+  phase runs at 60 fps with 0.14 ms of main thread, where the same room idles at 5.6–6.7 ms before
+  the covers. A local Release run under the build lock reproduced it and the screenshot showed
+  why: opening the drawing canvas asks for notification permission (LockCanvasView.swift:65), the
+  system alert makes the scene `.inactive`, `roomCovered` unmounts the room, and the snapshot is
+  skipped because something is presented, so the bare bokeh shows behind the alert. On CI nothing
+  answers the alert, so every later phase ran without a room. On a phone the room comes back after
+  the tap, with the remount freeze; the same blank-behind-alert happens under any system alert over
+  the World. The harness no longer asks in a perf run, and the freeze (item 2) keeps the room live
+  under a system alert instead of blanking it.
 
 Read, from the 11-05 rows: the Shop scroll is the one phase where the app's own main thread is
 the bottleneck (34–45 ms of CPU in a 50 ms frame). The room phases are runner-bound (main thread 6–9 ms of a 60–90 ms
@@ -243,8 +247,23 @@ What it says, within what a Simulator can say:
    frame, and about half the frame time.** That is item 1's gain for every sheet that hides the
    room, before any glass decision.
 
-The iPhone 17 Pro Max arm of the same run and the sheet covers (run 42364745973: `sheet`,
-`sheet.paused`, `sheet.glass`) land after this revision; the table is updated when they do.
+**The same arms on the iPhone 17 Pro Max Simulator** (same run, runner load 475–545):
+
+| Pair | With it (launch 1 still / orbit) | Without it | With it (launch 2) | Without it |
+| --- | --- | --- | --- | --- |
+| `glass hud`: A glass vs B opaque | p50 40 / 50; main 5.4 / 5.7; proc 19 / 18 | p50 34 / 42; main 5.6 / 6.1; proc 15 / 17 | p50 53 / 45; main 5.5 / 5.9; proc 14 / 14 | p50 35 / 34; main 5.4 / 5.7; proc 13 / 14 |
+| `hud`: A bars vs D no bars | p50 64 / 117; main 6.5 / 7.2; proc 15 / 17 | **p50 23 / 26**; main 4.6 / 5.0; proc 11 / 12 | p50 41 / 47; main 5.2 / 6.7; proc 13 / 15 | **p50 25 / 26**; main 5.3 / 5.2; proc 13 / 13 |
+| `room paused`: room live vs C paused | p50 57 / 50; main 5.8 / 12.8; proc 14 / 21 | p50 113 / 94 (the paused side drew the worse load); main 4.9 / 4.2; proc 9.2 / 8.2 | p50 54 / 50; main 6.6 / 6.0; proc 15 / 14 | **p50 34 / 29; main 3.2 / 3.3; proc 6.0 / 6.2** |
+
+The larger screen says the same: the bars as a whole cost 20–90 ms of a Simulator frame, the
+glass fill against an opaque one is 6–18 ms with the same sign in both launches here (and the
+opposite sign on the SE), the CPU columns do not move with the fill, and the live room is
+2.5–3.5 ms of main thread and 8 ms of process CPU per frame.
+
+**The sheet covers** (run 42364745973) are void: every cover phase of that harness ran after the
+drawing canvas, whose notification prompt had left the app inactive and the room unmounted (see
+the baseline's third finding). The harness now never asks in a perf run and runs the sheet covers
+first; the numbers come with item 1's A/B.
 
 **Recommendation, as of this revision.** Keep the glass; it is not the cost that the Simulator
 can see. Take the room-under-sheet win (item 1) first, which the `room paused` pair proves is the
