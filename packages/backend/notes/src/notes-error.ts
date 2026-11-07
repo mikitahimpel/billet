@@ -19,6 +19,12 @@ export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
   readonly have: number;
 }> {}
 
+/**
+ * An order whose price is now above the one the buyer saw; nothing was charged. `price` is the
+ * price now.
+ */
+export class PriceChanged extends Data.TaggedError("PriceChanged")<{ readonly price: number }> {}
+
 /** A buy of something the pair already owns: an ink, a piece, or every piece of a set. */
 export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly itemId: string }> {}
 

@@ -36,6 +36,11 @@ export const ApiError = Schema.TaggedUnion({
   GiftTaken: { day: LocalDay },
   /** A collection's bonus already paid. */
   BonusTaken: { collection: CollectionId },
+  /**
+   * An order whose server price is above the `expectedPrice` the client sent: nothing was charged.
+   * `price` is the price now; show it and ask again.
+   */
+  PriceChanged: { price: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
   /** A buy for the cat, such as a treat, before the couple adopted one. */
   CatNotAdopted: {},
 });

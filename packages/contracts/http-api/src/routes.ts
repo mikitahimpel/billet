@@ -46,6 +46,10 @@ export const routes = {
   getStatus: route("GET", "/v1/status"),
   /** Every date idea. No session; the same for everyone, so cached: see `DateCatalogResponse`. */
   getDateCatalog: route("GET", "/v1/dates/catalog"),
+  /** The shop's active items. No session; cached with the catalog's version as ETag. */
+  getShopCatalog: route("GET", "/v1/shop/catalog"),
+  /** A shop item's uploaded picture, `key` as in `ShopPictureKey`. Immutable once served. */
+  getShopArt: route("GET", "/v1/shop/art/*"),
   /** The onboarding questions: see `OnboardingResponse`. Any session, anonymous included. */
   getOnboarding: route("GET", "/v1/onboarding"),
   /** Stores one step's answer or skip, once per account and step. */

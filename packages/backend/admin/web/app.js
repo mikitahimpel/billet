@@ -3922,6 +3922,509 @@ async function renderFeatures([splitArg]) {
 
 /* ---------- Router ---------- */
 
+/* ---------- Shop ---------- */
+
+const RARITIES = ["common", "rare", "epic", "legendary"];
+const SHOP_KINDS = ["furniture", "decor", "mochi", "room", "ink", "coat", "accessory"];
+const SHOP_SECTIONS = ["furniture", "decor", "mochi", "room", "inks"];
+
+const effectivePrice = (item, at = Date.now()) =>
+  item.sale && at >= item.sale.from && at < item.sale.until ? item.sale.price : item.price;
+
+const msToLocalInput = (ms) => (ms == null ? "" : toLocalInput(ms));
+const msFromLocalInput = (text) => {
+  const iso = fromLocalInput(text);
+  return iso ? new Date(iso).getTime() : null;
+};
+
+async function renderShop() {
+  const { items } = await api("/shop-items");
+  const active = items.filter((e) => e.active).length;
+  const onSale = items.filter(
+    (e) => e.active && e.item.sale && effectivePrice(e.item) !== e.item.price,
+  );
+
+  const move = async (index, by) => {
+    const ids = items.map((e) => e.item.id);
+    const to = index + by;
+    if (to < 0 || to >= ids.length) return;
+    [ids[index], ids[to]] = [ids[to], ids[index]];
+    try {
+      await api("/shop-order", { method: "PUT", body: { ids } });
+      route();
+    } catch (err) {
+      toast(errorText(err), "bad");
+    }
+  };
+
+  const statusOf = (e) =>
+    !e.active
+      ? pill("", "inactive")
+      : e.item.sale && effectivePrice(e.item) !== e.item.price
+        ? pill("warn", "on sale")
+        : pill("good", "active");
+
+  return [
+    pageHead(
+      "Shop",
+      "What the shop sells and for how much. The app fetches this on opening the shop; an item made inactive disappears from the shelves but stays owned by every pair that bought it.",
+      h("a", { class: "btn primary", href: "#/shop/new", text: "New item" }),
+    ),
+    h(
+      "div",
+      { class: "stats" },
+      statCard({ label: "Items", value: fmtNum(items.length, 0) }),
+      statCard({ label: "Active", value: fmtNum(active, 0) }),
+      statCard({ label: "On sale now", value: fmtNum(onSale.length, 0) }),
+    ),
+    section(
+      "Items",
+      "In shelf order. The arrows move an item one place; the order is what the app shows.",
+      dataTable({
+        caption: "Shop items",
+        noun: "items",
+        rows: items.map((e, index) => ({ ...e, index })),
+        sort: [0, "asc"],
+        search: (e) => `${e.item.id} ${e.item.name} ${e.item.kind} ${e.item.section}`,
+        filters: {
+          label: "State",
+          options: [
+            ["all", "All"],
+            ["active", "Active"],
+            ["inactive", "Inactive"],
+          ],
+          test: (e, f) => f === "all" || (f === "active") === e.active,
+        },
+        columns: [
+          { label: "Order", num: true, value: (e) => e.index },
+          {
+            label: "Item",
+            value: (e) => e.item.name,
+            cell: (e) => [
+              h("a", { href: `#/shop/${enc(e.item.id)}`, text: e.item.name }),
+              " ",
+              h("span", { class: "mono sub", text: e.item.id }),
+            ],
+          },
+          { label: "Kind", value: (e) => e.item.kind, cell: (e) => pill("", e.item.kind, true) },
+          { label: "Shelf", value: (e) => e.item.section },
+          { label: "Rarity", value: (e) => e.item.rarity },
+          {
+            label: "Price",
+            num: true,
+            value: (e) => effectivePrice(e.item),
+            cell: (e) =>
+              e.item.sale
+                ? `${effectivePrice(e.item)} (base ${e.item.price})`
+                : String(e.item.price),
+          },
+          {
+            label: "Deals",
+            value: (e) => (e.item.deal ? e.item.deal.discount : 0),
+            cell: (e) => (e.item.deal ? `${Math.round(e.item.deal.discount * 100)}% off` : "—"),
+          },
+          { label: "State", value: (e) => (e.active ? 1 : 0), cell: statusOf },
+          {
+            label: "Changed",
+            value: (e) => e.updatedAt,
+            cell: (e) => [ago(e.updatedAt), ` by ${e.updatedBy}`],
+          },
+          {
+            label: "Move",
+            value: () => "",
+            cell: (e) =>
+              h(
+                "span",
+                { class: "row" },
+                h("button", {
+                  type: "button",
+                  class: "btn quiet",
+                  "aria-label": `Move ${e.item.name} up`,
+                  text: "↑",
+                  disabled: e.index === 0,
+                  onclick: () => move(e.index, -1),
+                }),
+                h("button", {
+                  type: "button",
+                  class: "btn quiet",
+                  "aria-label": `Move ${e.item.name} down`,
+                  text: "↓",
+                  disabled: e.index === items.length - 1,
+                  onclick: () => move(e.index, 1),
+                }),
+              ),
+          },
+        ],
+        none: empty("No items", "Create the first one."),
+      }),
+    ),
+  ];
+}
+
+const renderShopPage = ([id]) => (id ? renderShopItem(id) : renderShop());
+
+async function renderShopItem(id) {
+  const isNew = id === "new";
+  const [{ items }, { changes }] = await Promise.all([
+    api("/shop-items"),
+    api("/shop-history?limit=500"),
+  ]);
+  const found = isNew ? null : items.find((e) => e.item.id === id);
+  const crumbs = [["Shop", "#/shop"], [isNew ? "New item" : id]];
+  if (!isNew && !found)
+    return [
+      pageHead(id, null, null, crumbs),
+      h("div", { class: "box" }, empty("No such item", "Pick one from the shop list.")),
+    ];
+  const it = found
+    ? found.item
+    : {
+        kind: "furniture",
+        section: "furniture",
+        rarity: "common",
+        price: 100,
+        sortOrder: (items.length + 1) * 10,
+        asset: { _tag: "Bundled", id: "" },
+      };
+
+  const idIn = h("input", {
+    type: "text",
+    class: "mono",
+    value: it.id || "",
+    disabled: !isNew,
+    spellcheck: "false",
+    placeholder: "armchair",
+  });
+  const nameIn = h("input", { type: "text", value: it.name || "", maxlength: "60" });
+  const blurbIn = h("textarea", { rows: "2", text: it.blurb || "" });
+  const kindIn = h("input", { type: "text", list: "shop-kinds", value: it.kind, class: "mono" });
+  const sectionIn = h("input", {
+    type: "text",
+    list: "shop-sections",
+    value: it.section,
+    class: "mono",
+  });
+  const lists = [
+    h("datalist", { id: "shop-kinds" }, ...SHOP_KINDS.map((k) => h("option", { value: k }))),
+    h("datalist", { id: "shop-sections" }, ...SHOP_SECTIONS.map((k) => h("option", { value: k }))),
+  ];
+  const rarityIn = h(
+    "select",
+    null,
+    ...RARITIES.map((r) => h("option", { value: r, text: r, selected: r === it.rarity })),
+  );
+  const priceIn = h("input", {
+    type: "number",
+    min: "0",
+    max: "100000",
+    step: "1",
+    value: String(it.price),
+  });
+  const moodIn = h("input", { type: "text", value: it.mood || "", maxlength: "20" });
+  const plusIn = h("input", { type: "checkbox", checked: !!it.plus });
+  const newIn = h("input", { type: "checkbox", checked: !!it.isNew });
+  const minBuildIn = h("input", {
+    type: "number",
+    min: "1",
+    step: "1",
+    value: it.minBuild ? String(it.minBuild) : "",
+  });
+  const saleOn = h("input", { type: "checkbox", checked: !!it.sale });
+  const salePrice = h("input", {
+    type: "number",
+    min: "0",
+    step: "1",
+    value: it.sale ? String(it.sale.price) : "",
+  });
+  const saleFrom = h("input", {
+    type: "datetime-local",
+    value: msToLocalInput(it.sale && it.sale.from),
+  });
+  const saleUntil = h("input", {
+    type: "datetime-local",
+    value: msToLocalInput(it.sale && it.sale.until),
+  });
+  const dealOn = h("input", { type: "checkbox", checked: !!it.deal });
+  const dealPct = h("input", {
+    type: "number",
+    min: "1",
+    max: "99",
+    step: "1",
+    value: it.deal ? String(Math.round(it.deal.discount * 100)) : "25",
+  });
+  const dealOrder = h("input", {
+    type: "number",
+    step: "1",
+    value: it.deal ? String(it.deal.order) : String(items.filter((e) => e.item.deal).length),
+  });
+  const activeIn = h("input", { type: "checkbox", checked: found ? found.active : true });
+
+  let picture = it.asset && it.asset._tag === "Picture" ? it.asset.key : null;
+  const assetKind = h(
+    "select",
+    null,
+    h("option", { value: "Bundled", text: "Bundled in the app", selected: !picture }),
+    h("option", { value: "Picture", text: "Uploaded picture", selected: !!picture }),
+  );
+  const bundledId = h("input", {
+    type: "text",
+    class: "mono",
+    value: !picture ? it.asset.id : "",
+    spellcheck: "false",
+  });
+  const pictureNote = h("p", {
+    class: "hint",
+    text: picture ? `Current: ${picture}` : "No picture uploaded.",
+  });
+  const pictureIn = h("input", { type: "file", accept: "image/webp,image/png,image/jpeg" });
+  pictureIn.addEventListener("change", async () => {
+    const file = pictureIn.files && pictureIn.files[0];
+    if (!file) return;
+    try {
+      const res = await fetch("/admin/api/shop-art", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": file.type },
+        body: file,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new ApiError(res.status, data);
+      picture = data.key;
+      pictureNote.textContent = `Uploaded: ${picture}`;
+    } catch (err) {
+      toast(errorText(err), "bad");
+    }
+  });
+  const preview = () =>
+    picture
+      ? h("img", {
+          src: `/v1/shop/art/${picture}`,
+          alt: "",
+          style: { "max-width": "160px", "border-radius": "8px" },
+        })
+      : null;
+
+  const msg = h("div", { class: "form-msg", role: "alert", tabindex: "-1" });
+  const save = h("button", {
+    type: "submit",
+    class: "btn primary",
+    text: isNew ? "Create item" : `Save v${found.version + 1}`,
+  });
+
+  const readItem = () => {
+    const base = {
+      id: idIn.value.trim(),
+      kind: kindIn.value.trim(),
+      name: nameIn.value.trim(),
+      rarity: rarityIn.value,
+      price: priceIn.valueAsNumber,
+      section: sectionIn.value.trim(),
+      sortOrder: it.sortOrder,
+      asset:
+        assetKind.value === "Picture"
+          ? { _tag: "Picture", key: picture || "" }
+          : { _tag: "Bundled", id: bundledId.value.trim() },
+    };
+    if (blurbIn.value.trim()) base.blurb = blurbIn.value.trim();
+    if (moodIn.value.trim()) base.mood = moodIn.value.trim();
+    if (plusIn.checked) base.plus = true;
+    if (newIn.checked) base.isNew = true;
+    if (minBuildIn.value) base.minBuild = minBuildIn.valueAsNumber;
+    if (saleOn.checked)
+      base.sale = {
+        price: salePrice.valueAsNumber,
+        from: msFromLocalInput(saleFrom.value),
+        until: msFromLocalInput(saleUntil.value),
+      };
+    if (dealOn.checked)
+      base.deal = { discount: dealPct.valueAsNumber / 100, order: dealOrder.valueAsNumber };
+    return base;
+  };
+
+  const form = h(
+    "form",
+    {
+      class: "form",
+      novalidate: true,
+      onsubmit: async (event) => {
+        event.preventDefault();
+        msg.textContent = "";
+        const item = readItem();
+        if (found && found.active && !activeIn.checked) {
+          const ok = await confirmDialog({
+            title: `Make ${item.name} inactive?`,
+            body: "It leaves the shop at once. Pairs that own it keep it.",
+            confirm: "Make inactive",
+          });
+          if (!ok) return;
+        }
+        save.disabled = true;
+        try {
+          if (isNew) {
+            await api("/shop-items", { method: "POST", body: { item, active: activeIn.checked } });
+          } else {
+            await api(`/shop-items/${enc(id)}`, {
+              method: "PUT",
+              body: { item, active: activeIn.checked, expectedVersion: found.version },
+            });
+          }
+          toast("Saved.", "good");
+          location.hash = "#/shop";
+          route();
+        } catch (err) {
+          save.disabled = false;
+          msg.textContent =
+            err instanceof ApiError && err.status === 409
+              ? err.body && err.body.error === "exists"
+                ? "An item with this id exists; ids are never reused."
+                : "Someone changed this item meanwhile. Reload and edit again."
+              : errorText(err);
+          msg.focus();
+        }
+      },
+    },
+    h(
+      "div",
+      { class: "box" },
+      h("div", { class: "box-head", text: "Item" }),
+      h(
+        "div",
+        { class: "box-pad" },
+        field(
+          "Id",
+          idIn,
+          isNew
+            ? "Lower-case words joined by hyphens. Never reused. An ink's id starts with ink-."
+            : "An id never changes.",
+        ),
+        field("Name", nameIn, "{cat} is replaced by the cat's name."),
+        field("Blurb", blurbIn, "One line under the name."),
+        field("Kind", kindIn, "What the app does with it. The app skips a kind it does not know."),
+        field("Shelf", sectionIn, "Where it is listed."),
+        field("Rarity", rarityIn),
+        field("Mood", moodIn, "The mood chip it nudges, e.g. Curious. Blank for none."),
+        h("label", { class: "check" }, plusIn, " Billet Plus only"),
+        h("label", { class: "check" }, newIn, " Show a New badge"),
+        field(
+          "Minimum build",
+          minBuildIn,
+          "The first app build that shows it. Blank for every build.",
+        ),
+        ...lists,
+      ),
+    ),
+    h(
+      "div",
+      { class: "box" },
+      h("div", { class: "box-head", text: "Picture" }),
+      h(
+        "div",
+        { class: "box-pad" },
+        field("Source", assetKind),
+        field(
+          "Bundled asset id",
+          bundledId,
+          "The 3D model or image id the app already bundles. The app skips the item if it has none.",
+        ),
+        field("Upload", pictureIn, "WebP, PNG or JPEG, at most 1 MiB."),
+        pictureNote,
+        preview(),
+      ),
+    ),
+    h(
+      "div",
+      { class: "box" },
+      h("div", { class: "box-head", text: "Price" }),
+      h(
+        "div",
+        { class: "box-pad" },
+        field(
+          "Price (coins)",
+          priceIn,
+          "The server charges this price, never what the app shows. An order is refused if the price rose after the buyer saw it.",
+        ),
+        h("label", { class: "check" }, saleOn, " On sale"),
+        field("Sale price", salePrice),
+        field("Sale starts", saleFrom, "Your local time."),
+        field("Sale ends", saleUntil, "Your local time."),
+        h("label", { class: "check" }, dealOn, " In the daily deals draw"),
+        field("Discount (%)", dealPct),
+        field(
+          "Draw order",
+          dealOrder,
+          "The draw is a function of this order: moving an item changes which deals pairs draw.",
+        ),
+      ),
+    ),
+    h(
+      "div",
+      { class: "box" },
+      h(
+        "div",
+        { class: "box-pad" },
+        h("label", { class: "check" }, activeIn, " Active (for sale)"),
+      ),
+    ),
+    msg,
+    h(
+      "div",
+      { class: "form-foot" },
+      save,
+      h("a", { class: "btn quiet", href: "#/shop", text: "Cancel" }),
+      found &&
+        h("p", { class: "hint" }, [
+          `v${found.version} · changed `,
+          ago(found.updatedAt),
+          ` by ${found.updatedBy}`,
+        ]),
+    ),
+  );
+
+  const mine = changes.filter((c) => c.itemId === id);
+  return [
+    pageHead(
+      isNew ? "New item" : [it.name, " ", h("span", { class: "mono", text: id })],
+      isNew ? null : `${it.kind} · ${it.section}`,
+      null,
+      crumbs,
+    ),
+    form,
+    !isNew &&
+      section(
+        "History",
+        "Every save of this item, newest first.",
+        mine.length === 0
+          ? empty("No changes yet", "The item is as the migration seeded it.")
+          : h(
+              "table",
+              { class: "table" },
+              h(
+                "thead",
+                null,
+                h("tr", null, ...["When", "Who", "What", "Price"].map((t) => h("th", { text: t }))),
+              ),
+              h(
+                "tbody",
+                null,
+                ...mine.map((c) =>
+                  h(
+                    "tr",
+                    null,
+                    h("td", { text: fmtWhen(c.at) }),
+                    h("td", { text: c.by }),
+                    h("td", { text: c.action }),
+                    h("td", {
+                      class: "num",
+                      text: `${c.before ? c.before.price : "—"} → ${c.after ? c.after.price : "—"}`,
+                    }),
+                  ),
+                ),
+              ),
+            ),
+      ),
+  ];
+}
+
 const ROUTES = {
   overview: renderOverview,
   events: renderEvents,
@@ -3934,6 +4437,7 @@ const ROUTES = {
   pairs: renderPairs,
   maintenance: renderMaintenance,
   purchases: renderPurchases,
+  shop: renderShopPage,
   onboarding: renderOnboarding,
   audit: renderAudit,
 };

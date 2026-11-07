@@ -11,6 +11,7 @@ import {
 import type { ListCommand } from "@billet/contracts-domain/list";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import type {
   CatResponse,
@@ -350,10 +351,23 @@ export class RoomService extends Context.Service<RoomService>()(
           return yield* decideAndCommit(command(yield* Clock.currentTimeMillis));
         }).pipe(lock.withPermits(1));
 
-      const buy = (by: UserId, id: IdempotencyKey, ink: InkId) =>
-        spendOnce(id, (at) => ({ _tag: "Buy", id, by, ink, at }));
+      const buy = (by: UserId, id: IdempotencyKey, ink: InkId, terms?: PriceTerms) =>
+        spendOnce(id, (at) => ({
+          _tag: "Buy",
+          id,
+          by,
+          ink,
+          at,
+          ...(terms === undefined ? {} : { terms }),
+        }));
 
-      const order = (by: UserId, id: IdempotencyKey, offer: ShopOffer, utcOffsetSeconds?: number) =>
+      const order = (
+        by: UserId,
+        id: IdempotencyKey,
+        offer: ShopOffer,
+        utcOffsetSeconds?: number,
+        terms?: PriceTerms,
+      ) =>
         spendOnce(id, (at) => ({
           _tag: "Order",
           id,
@@ -361,6 +375,7 @@ export class RoomService extends Context.Service<RoomService>()(
           offer,
           at,
           ...(utcOffsetSeconds === undefined ? {} : { utcOffsetSeconds }),
+          ...(terms === undefined ? {} : { terms }),
         }));
 
       // The day's gift is the pair's, so the partner opening it again answers with the first.
@@ -475,8 +490,14 @@ export class RoomService extends Context.Service<RoomService>()(
           return { result: ListsResult.cases.Done.make({ lists }), decision };
         });
 
-      const setWish = (by: UserId, item: RoomItemId, wished: boolean) =>
-        dispatch({ _tag: "SetWish", by, item, wished });
+      const setWish = (by: UserId, item: RoomItemId, wished: boolean, offered?: boolean) =>
+        dispatch({
+          _tag: "SetWish",
+          by,
+          item,
+          wished,
+          ...(offered === undefined ? {} : { offered }),
+        });
 
       // The time is taken inside the lock, so the later of two check-ins is the one kept.
       const setMood = (by: UserId, request: SetMoodRequest) =>

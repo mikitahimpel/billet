@@ -23,6 +23,7 @@ hover.
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
+| Shop | every shop item, active or not, in shelf order: kind, shelf, rarity, price (and sale price while a sale holds), deals draw, state, who changed it last and when; an item's page has its form and its history ([below](#shop-catalog)) | create an item, edit it, make it active or inactive (inactive after a confirmation), move it up or down, set its price, a sale window and its place in the daily deals, upload its picture |
 | Purchases | coin-pack purchases (owner pair or demo room, pack, coins, environment, status, flagged, dates), the coin ledger and the App Store notifications with what was done with each, newest first ([payments.md](payments.md#backend)). A flagged purchase is one whose refund found fewer stamps than the pack | nothing |
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
@@ -157,6 +158,38 @@ built by `buildExperimentMetrics` (`packages/backend/admin/src/admin-experiment-
   hand-written query on the seed. In the seed, `immersive` pairs open the app less often, so the
   page has a guardrail warning to show.
 
+## Shop catalog
+
+The shop's items and prices are rows of the D1 table `shop_items` (migration `shop_items`, which
+seeds today's twelve pieces and six sold inks at today's prices, so a deploy changes nothing). The
+panel's **Shop** page edits them; the app reads the active ones from `GET /v1/shop/catalog`
+([architecture.md](architecture.md#the-shop-catalog)).
+
+- **An item** has an id (never reused, never changed), a kind (`furniture`, `decor`, `mochi`,
+  `room`, `ink`, `coat`, `accessory`, … an app skips a kind it does not know), a name and blurb
+  (`{cat}` is the cat's name), a rarity, a price in coins, an optional sale (a price below the
+  price, from and until, in your local time), a shelf (`section`), a sort order, an optional place
+  in the daily-deals draw (discount and draw order), an optional minimum build, and its picture.
+- **Its picture** is either a model or image the app already bundles (the bundled asset id; an app
+  that does not bundle it skips the item) or a WebP, PNG or JPEG of at most 1 MiB uploaded here,
+  kept in R2 under a hash of its bytes and served at `/v1/shop/art/<hash>.<ext>`.
+- **Never deleted.** An item is made inactive: it leaves the shelves and can no longer be bought,
+  and every pair that bought it keeps it. An ink's colours live in the app, so a new ink needs a
+  release; the panel can reprice, sell or hide the ones the app has.
+- **Prices are the server's.** The room prices an order from the active items at the moment it
+  decides, a sale price only inside its window. The app sends the price it showed
+  (`expectedPrice`): a server price above it is refused with `PriceChanged {price}` and nothing is
+  charged; a lower one is charged. Changing a price therefore reaches an open Shop on its next
+  order, and the app shows the new price and asks again.
+- **The daily deals** are still drawn from a seed and the pair's day. The pool is the items that
+  have a place in the draw, taken in their draw order: moving an item or changing the pool changes
+  which deals pairs draw from then on.
+- **Saves are versioned.** A form saves against the version it read; another save in between is a
+  409 and the page asks you to reload. Every create, edit, activation, deactivation and reorder is
+  a row in `shop_item_changes` with the Access email, the time and the item before and after, shown
+  on the item's page. Writes need the panel's origin, like every other write.
+- **Agents** read `GET /admin/api/agent/shop-items` and `shop-history[?limit=<1-500>]`.
+
 ## Seed data
 
 `pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks
@@ -259,6 +292,8 @@ a Cloudflare Access **service token**. They can't change anything.
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
+| `shop-items` | Shop: every item with its state and audit fields |
+| `shop-history[?limit=<1-500>]` | Shop: the audit log (default 100) |
 | `pairs/<pair id>` | Pairs: one pair by id only, at the panel's detail |
 | `status` | Maintenance: the current service status, version, who set it |
 | `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |
