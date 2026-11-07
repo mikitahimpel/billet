@@ -15,3 +15,6 @@ Before writing or editing any SwiftUI in `apps/ios` or `packages/ios`:
    feature code. If the package lacks a part, add it there with a `#Preview`, then use it.
 4. Check the change by eye in a Simulator (`agent-device`), and keep `Settings → Labs → Style` in step when a
    component changes.
+
+5. Sheets use the native toolbar through `BilletSheet` (close leading + confirm trailing, or close trailing
+   alone); controls over the room use `Ink.glassFill`/`Ink.glassGlyph`; scroll views get `.softScrollEdges()`.

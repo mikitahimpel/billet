@@ -20,6 +20,15 @@ import { utcDay } from "@billet/backend-metrics/metrics";
 import { AppStatus } from "@billet/contracts-http-api/status";
 import { OnboardingCatalogue } from "@billet/backend-onboarding/catalogue";
 import { buildOnboardingStats } from "@billet/backend-onboarding/onboarding-stats";
+import { ShopCatalogItem } from "@billet/contracts-domain/shop-catalog";
+import {
+  ShopArt,
+  shopArtContentType,
+  shopArtMaxBytes,
+  shopArtTypeOf,
+} from "@billet/backend-shop/shop-art";
+import { ShopStore } from "@billet/backend-shop/shop-store";
+import { shopItemProblem } from "@billet/backend-shop/shop-validate";
 import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
@@ -86,6 +95,11 @@ export const adminApi = {
   statusHistory: "/admin/api/status/history",
   purchases: "/admin/api/purchases",
   onboarding: "/admin/api/onboarding",
+  shopItems: "/admin/api/shop-items",
+  shopItem: "/admin/api/shop-items/:id",
+  shopOrder: "/admin/api/shop-order",
+  shopHistory: "/admin/api/shop-history",
+  shopArt: "/admin/api/shop-art",
 } as const;
 
 /** The read-only API for agents' service tokens, under `/admin/api/agent`. GET only. */
@@ -105,6 +119,8 @@ export const agentApi = {
   statusHistory: "/admin/api/agent/status-history",
   purchases: "/admin/api/agent/purchases",
   onboarding: "/admin/api/agent/onboarding",
+  shopItems: "/admin/api/agent/shop-items",
+  shopHistory: "/admin/api/agent/shop-history",
 } as const;
 
 // Absent values go out as `null`, so the page never has to tell `undefined` from a missing field.
@@ -136,8 +152,15 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
         case "SchemaError":
         case "HttpServerError":
           return fail(400, "invalid", { message: "The request is not in the expected shape." });
+        case "ShopItemConflict":
+          return fail(409, "conflict", { current: (error as { current: number }).current });
+        case "ShopItemExists":
+          return fail(409, "exists");
+        case "ShopItemNotFound":
         case "NotFound":
           return fail(404, "not-found");
+        case "InvalidShopItem":
+          return fail(400, "invalid", { message: (error as { message: string }).message });
         default:
           return Effect.logError("admin request failed", error).pipe(
             Effect.andThen(fail(503, "unavailable")),
@@ -147,6 +170,25 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
   );
 
 class NotFound extends Data.TaggedError("NotFound")<{}> {}
+
+/** A catalog entry that breaks a rule of `shopItemProblem`; `message` says which. */
+class InvalidShopItem extends Data.TaggedError("InvalidShopItem")<{ readonly message: string }> {}
+
+const ShopItemBody = Schema.Struct({ item: ShopCatalogItem, active: Schema.Boolean });
+const SaveShopItemBody = Schema.Struct({
+  item: ShopCatalogItem,
+  active: Schema.Boolean,
+  expectedVersion: Schema.Int,
+});
+const ShopOrderBody = Schema.Struct({
+  ids: Schema.Array(Schema.String).check(Schema.isMaxLength(500)),
+});
+const ShopItemParams = Schema.Struct({ id: Schema.String });
+const ShopHistoryQuery = Schema.Struct({
+  limit: Schema.optional(
+    Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 500 })),
+  ),
+});
 
 const SaveBody = Schema.Struct({ config: FlagConfig, expectedVersion: Schema.Int });
 const StatusBody = Schema.Struct({ status: AppStatus, expectedVersion: Schema.Int });
@@ -249,6 +291,7 @@ const readHandlers = Effect.gen(function* () {
   const funnelStore = yield* FunnelStore;
   const engine = yield* AnalyticsEngineReader;
   const catalogue = yield* OnboardingCatalogue;
+  const shop = yield* ShopStore;
 
   const items = Effect.gen(function* () {
     const stored = new Map((yield* configs.all).map((row) => [row.key, row]));
@@ -450,7 +493,20 @@ const readHandlers = Effect.gen(function* () {
     return respondJson(buildOnboardingStats(catalogue.current, catalogue.native, rows, accounts));
   }).pipe(guarded);
 
+  // Every item, active or not, with who last changed it and when. Read-only here.
+  const shopItems = Effect.gen(function* () {
+    return respondJson({ items: yield* shop.all });
+  }).pipe(guarded);
+
+  const shopHistory = Effect.gen(function* () {
+    const { limit } = yield* HttpServerRequest.schemaSearchParams(ShopHistoryQuery);
+    return respondJson({ changes: yield* shop.history(limit ?? 100) });
+  }).pipe(guarded);
+
   return {
+    shopItems,
+    shopHistory,
+    shop,
     onboarding,
     flags,
     configs,
@@ -481,8 +537,10 @@ const readHandlers = Effect.gen(function* () {
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const { flags, configs, appStatus, entryOf, funnelStore, ...reads } = yield* readHandlers;
+    const { flags, configs, appStatus, entryOf, funnelStore, shop, ...reads } = yield* readHandlers;
     const admin = yield* CurrentAdmin;
+    const art = yield* ShopArt;
+    const digest = yield* Digest.Digest;
     const environment = yield* PanelEnvironment;
 
     const save = (
@@ -555,6 +613,86 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", adminApi.purchases, reads.purchases);
     yield* router.add("GET", adminApi.onboarding, reads.onboarding);
+    yield* router.add("GET", adminApi.shopItems, reads.shopItems);
+    yield* router.add("GET", adminApi.shopHistory, reads.shopHistory);
+
+    // The shop's catalog. An item is never deleted (its id stays once sold); it is made inactive,
+    // which hides it from the shop and leaves it owned by every pair that bought it. Each save is
+    // kept in the history with the Access email.
+    const checkedItem = (item: ShopCatalogItem) => {
+      const problem = shopItemProblem(item);
+      return problem === undefined
+        ? Effect.void
+        : Effect.fail(new InvalidShopItem({ message: problem }));
+    };
+    yield* router.add(
+      "POST",
+      adminApi.shopItems,
+      Effect.gen(function* () {
+        const { item, active } = yield* HttpServerRequest.schemaBodyJson(ShopItemBody);
+        yield* checkedItem(item);
+        const made = yield* shop.create({
+          item,
+          active,
+          by: admin.email,
+          at: yield* Clock.currentTimeMillis,
+        });
+        return respondJson(made, 201);
+      }).pipe(guarded),
+    );
+    yield* router.add(
+      "PUT",
+      adminApi.shopItem,
+      Effect.gen(function* () {
+        const { id } = yield* HttpRouter.schemaPathParams(ShopItemParams);
+        const body = yield* HttpServerRequest.schemaBodyJson(SaveShopItemBody);
+        if (body.item.id !== id) {
+          return respondJson({ error: "invalid", message: "An item's id never changes." }, 400);
+        }
+        yield* checkedItem(body.item);
+        const saved = yield* shop.update({
+          item: body.item,
+          active: body.active,
+          expectedVersion: body.expectedVersion,
+          by: admin.email,
+          at: yield* Clock.currentTimeMillis,
+        });
+        return respondJson(saved);
+      }).pipe(guarded),
+    );
+    yield* router.add(
+      "PUT",
+      adminApi.shopOrder,
+      Effect.gen(function* () {
+        const { ids } = yield* HttpServerRequest.schemaBodyJson(ShopOrderBody);
+        const items = yield* shop.reorder(ids, admin.email, yield* Clock.currentTimeMillis);
+        return respondJson({ items });
+      }).pipe(guarded),
+    );
+    // A picture for an item: WebP, PNG or JPEG of at most 1 MiB, kept under a hash of its bytes.
+    yield* router.add(
+      "POST",
+      adminApi.shopArt,
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest;
+        const declared = Number(request.headers["content-length"] ?? "0");
+        if (declared > shopArtMaxBytes) {
+          return respondJson({ error: "invalid", message: "The picture is over 1 MiB." }, 413);
+        }
+        const bytes = new Uint8Array(yield* request.arrayBuffer);
+        const type = shopArtTypeOf(bytes);
+        if (type === undefined || bytes.length === 0 || bytes.length > shopArtMaxBytes) {
+          return respondJson(
+            { error: "invalid", message: "Send a WebP, PNG or JPEG of at most 1 MiB." },
+            400,
+          );
+        }
+        const hash = yield* digest.digestHex(Digest.sha256, bytes).pipe(Effect.orDie);
+        const key = `${hash.slice(0, 16)}.${type}`;
+        yield* art.put(key, bytes, shopArtContentType[type]);
+        return respondJson({ key }, 201);
+      }).pipe(guarded),
+    );
 
     // Maintenance, the minimum build and the notice. Saved whole, with the version read, so two
     // tabs can't overwrite each other unseen; every save is kept in the history with the email.
@@ -660,5 +798,7 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", agentApi.purchases, reads.purchases);
     yield* router.add("GET", agentApi.onboarding, reads.onboarding);
+    yield* router.add("GET", agentApi.shopItems, reads.shopItems);
+    yield* router.add("GET", agentApi.shopHistory, reads.shopHistory);
   }),
 ).pipe(Layer.orDie);

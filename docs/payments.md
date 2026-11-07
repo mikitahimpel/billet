@@ -86,8 +86,9 @@ the phone adds coins.
   the cat's local day (`utcOffsetSeconds`), so the caps reset at the couple's midnight. A note
   sent before the cat is adopted is not journalled but earns all the same, as `earn:<note id>` on
   the UTC day.
-- **Buying:** `POST /v1/shop/buy {id, item}` (session, paired) buys one ink at its catalog price;
-  the client never sends a price. The room takes the coins (`spend:<id>`, a negative amount) and
+- **Buying:** `POST /v1/shop/buy {id, item[, expectedPrice]}` (session, paired) buys one ink at the server's
+  catalog price; `expectedPrice` is what the buyer saw, only a cap (`409 PriceChanged {price}` when
+  the price rose, nothing charged; a lower price is charged). The room takes the coins (`spend:<id>`, a negative amount) and
   adds the ink in one decision, and answers `BuyResponse {entry, balance, granted, owned}`. A retry
   with the same `id` answers with the first buy and charges nothing. `409 NotEnoughCoins {needed,
   have}` and `409 AlreadyOwned {itemId}` (also for the free ink) refuse it; an ink the catalog

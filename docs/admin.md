@@ -14,7 +14,7 @@ hover.
 | Page | Shows | Changes |
 | --- | --- | --- |
 | Overview | for the last 7, 30 or 90 days against the same span before it: daily active (mean per day), weekly active (on the last day), new pairs, pair completion (inviters whose first invite fell in the range and are now in a pair), notes per pair per day (notes over the days each pair existed), D1/D7 retention (pairs formed in the range, both partners active on day N), each with its change and a sparkline or its 95% interval; active people and notes per day; the funnel installed → signed in → paired → first note → second day (all time) with each step's conversion from the one before | nothing |
-| In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
+| In the app | every event in the contract (sent by the app or counted by the server): its count in the range against the range before, a daily sparkline, the pairs that had it in the last 7 days, people, and the first and latest day it landed; one event per day on its detail page. An event never reported shows "not seen yet". "Hints against the holdout": per hint, shown to acted for the pairs that saw it against the `hints` holdout, the lift in points and how many closed it (from `event_details`; under 5 shown, no rate). "Most chosen": the top cats, shop items, room pieces, toys and tricks over the range, with stamps spent on bought items (from `event_details`, which holds no person or pair; see [analytics.md](analytics.md)) | nothing |
 | Retention | pairs by the week they formed (UTC, from Monday), one row per week and one for all weeks, and columns for day 1, 3, 7, 14, 30 and 60 after forming. Three modes: **both active** (both partners opened the app or sent a note on day N), **either active**, and **both sent a note** (the north star at day 7). Filters: an experiment's variant (from `pair_flags`) and the build the pair formed on. Each cell is a share of the week's pairs that have reached that day, coloured from faint to strong within the view; hover shows the count and its 95% Wilson interval. A day no pair of the week has reached is hatched grey, and a share resting on only some of the week's pairs (the others are too young) is in italics. See [below](#retention-grid) | nothing |
 | Funnels | a funnel built from 2 to 6 steps picked from the closed event list, a window (the same UTC day as step 1, within 1 day, within 7 days), counted per pair or per person, for step 1 in the last 7, 30 or 90 days or all time; per step the count, the share of the step before (95% interval on hover), and the median time from the step before; split by an experiment's variants. Saved funnels as chips. See [below](#funnel-builder) | save a funnel under a name, delete one after a confirmation |
 | Trends | any event over time, by day or week: its count, unique people, unique pairs or count per pair, over 30, 90, 180 or 365 days, against the same span before (a dashed line, and the change on each total); split by app version, system or an experiment's variant (up to eight groups, the rest as "other"); every value as a table. See [below](#trends-explorer) | nothing |
@@ -23,6 +23,7 @@ hover.
 | Flags | a table of every registry entry (experiments and remote flags) with its state, what it serves, exposure, version and who changed it; on its page a form for its configuration that shows the field-by-field diff before saving, and the history of changes with who made each | weights, default, exposure, status, kill switch, targeting, description |
 | Pairs | one pair by **pair id only** (there is no search by person): members, when it formed, its Analytics Engine hash, stored variants, overrides, what it is sent now and why, event counts | set or clear an override for testing |
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
+| Shop | every shop item, active or not, in shelf order: kind, shelf, rarity, price (and sale price while a sale holds), deals draw, state, who changed it last and when; an item's page has its form and its history ([below](#shop-catalog)) | create an item, edit it, make it active or inactive (inactive after a confirmation), move it up or down, set its price, a sale window and its place in the daily deals, upload its picture |
 | Purchases | coin-pack purchases (owner pair or demo room, pack, coins, environment, status, flagged, dates), the coin ledger and the App Store notifications with what was done with each, newest first ([payments.md](payments.md#backend)). A flagged purchase is one whose refund found fewer stamps than the pack | nothing |
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
@@ -157,6 +158,38 @@ built by `buildExperimentMetrics` (`packages/backend/admin/src/admin-experiment-
   hand-written query on the seed. In the seed, `immersive` pairs open the app less often, so the
   page has a guardrail warning to show.
 
+## Shop catalog
+
+The shop's items and prices are rows of the D1 table `shop_items` (migration `shop_items`, which
+seeds today's twelve pieces and six sold inks at today's prices, so a deploy changes nothing). The
+panel's **Shop** page edits them; the app reads the active ones from `GET /v1/shop/catalog`
+([architecture.md](architecture.md#the-shop-catalog)).
+
+- **An item** has an id (never reused, never changed), a kind (`furniture`, `decor`, `mochi`,
+  `room`, `ink`, `coat`, `accessory`, … an app skips a kind it does not know), a name and blurb
+  (`{cat}` is the cat's name), a rarity, a price in coins, an optional sale (a price below the
+  price, from and until, in your local time), a shelf (`section`), a sort order, an optional place
+  in the daily-deals draw (discount and draw order), an optional minimum build, and its picture.
+- **Its picture** is either a model or image the app already bundles (the bundled asset id; an app
+  that does not bundle it skips the item) or a WebP, PNG or JPEG of at most 1 MiB uploaded here,
+  kept in R2 under a hash of its bytes and served at `/v1/shop/art/<hash>.<ext>`.
+- **Never deleted.** An item is made inactive: it leaves the shelves and can no longer be bought,
+  and every pair that bought it keeps it. An ink's colours live in the app, so a new ink needs a
+  release; the panel can reprice, sell or hide the ones the app has.
+- **Prices are the server's.** The room prices an order from the active items at the moment it
+  decides, a sale price only inside its window. The app sends the price it showed
+  (`expectedPrice`): a server price above it is refused with `PriceChanged {price}` and nothing is
+  charged; a lower one is charged. Changing a price therefore reaches an open Shop on its next
+  order, and the app shows the new price and asks again.
+- **The daily deals** are still drawn from a seed and the pair's day. The pool is the items that
+  have a place in the draw, taken in their draw order: moving an item or changing the pool changes
+  which deals pairs draw from then on.
+- **Saves are versioned.** A form saves against the version it read; another save in between is a
+  409 and the page asks you to reload. Every create, edit, activation, deactivation and reorder is
+  a row in `shop_item_changes` with the Access email, the time and the item before and after, shown
+  on the item's page. Writes need the panel's origin, like every other write.
+- **Agents** read `GET /admin/api/agent/shop-items` and `shop-history[?limit=<1-500>]`.
+
 ## Seed data
 
 `pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks
@@ -259,6 +292,8 @@ a Cloudflare Access **service token**. They can't change anything.
 | `experiments` | Experiments, with per-variant results |
 | `flags` | Flags: configuration, version, who changed it last |
 | `flag-history[?key=<key>&limit=<1-500>]` | the history of changes (default 100) |
+| `shop-items` | Shop: every item with its state and audit fields |
+| `shop-history[?limit=<1-500>]` | Shop: the audit log (default 100) |
 | `pairs/<pair id>` | Pairs: one pair by id only, at the panel's detail |
 | `status` | Maintenance: the current service status, version, who set it |
 | `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |

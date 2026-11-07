@@ -104,7 +104,12 @@ struct GameSpots {
         let direction = room.framing.direction
         toward = simd_normalize(SIMD3(direction.x, 0, direction.z))
         right = simd_normalize(simd_cross([0, 1, 0], toward))
-        if room is CityRoomScene {
+        if room is TabletopRoom {
+            floor = TabletopRoom.floorTop
+            center = [0, floor, 0.02]
+            area = FloorArea(x: -0.25...0.25, z: -0.15...0.3)
+            length = 0.22
+        } else if room is CityRoomScene {
             floor = 0.014
             center = [0.02, floor, 0.16]
             area = FloorArea(x: -0.3...0.25, z: -0.05...0.38)

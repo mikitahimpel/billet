@@ -46,6 +46,7 @@ struct UsView: View {
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
+        .softScrollEdges()
         .task(id: session?.isPaired) {
             await whoKnows.load()
             await drawGuess.load()

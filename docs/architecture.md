@@ -71,6 +71,29 @@ to it in #67.
   its domain type added to `test/schema-drift.test.ts`. Other tests apply the migrations to an empty
   database and compare `PRAGMA table_info` with each table's columns.
 
+### The shop catalog
+
+What the shop sells is data in D1 (`shop_items`, `packages/backend/shop`), set from the admin
+([admin.md](admin.md#shop-catalog)). Each item has an id, a kind, a name, a rarity, a price, an
+optional sale window, a shelf, a sort order, an optional place in the daily deals, an optional
+minimum build, an active flag and its asset: something the app bundles or a picture in R2.
+
+`GET /v1/shop/catalog` (no session) serves the active items in shelf order as
+`ShopCatalogResponse` (`packages/contracts/http-api/src/shop.ts`) with `cache-control: public,
+max-age=60` and an `etag` of the first 16 hex digits of the SHA-256 of the items; a matching
+`if-none-match` gets a 304. Uploaded pictures are at `GET /v1/shop/art/<hash>.<ext>`, immutable.
+`kind` and `section` are open strings on the wire: a client skips a kind or an asset it does not
+know. An item that stops being active leaves the answer, and every pair that bought it keeps it.
+
+**Prices.** The client's price is never trusted. When an order or an ink buy reaches the room, the
+Worker passes a `PriceBook` read from D1 at that moment (the active items, each at its sale price
+inside the sale's window, and the daily-deals pool) with the command; `decide` prices the order from
+it, and an item that is not in it is not sold. The request carries `expectedPrice`, the price the
+buyer saw: a server price above it is refused as `RoomRejection.PriceChanged` and answered `409
+PriceChanged {price}` with nothing charged; a lower price is charged. Without a book (tests) the
+room uses the canonical lists in `contracts/domain` (`roomItems`, `inks`), which are also the seed
+and the app's first catalog. A test keeps the migration's seed equal to those lists.
+
 ### Date ideas and their pictures
 
 The date ideas are data in `packages/backend/dates/src/date-catalog.json`, checked against
