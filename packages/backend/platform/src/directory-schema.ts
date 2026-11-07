@@ -194,6 +194,25 @@ export const blocks = sqliteTable(
   ],
 );
 
+// What a user keeps when their pair ends: purchases are never deleted. The coins are their share
+// of the pair's balance, the rows of `kept_items` the inks and room pieces; a new pair's room is
+// given them when the user pairs again, and the rows go. Not foreign keys: the account erasure
+// deletes them.
+export const keptWallets = sqliteTable("kept_wallets", {
+  userId: text("user_id").primaryKey(),
+  coins: integer("coins").notNull(),
+});
+
+export const keptItems = sqliteTable(
+  "kept_items",
+  {
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull(),
+    itemId: text("item_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.kind, table.itemId] })],
+);
+
 // What a user told the team about their partner. Kept after the pair or either account ends, so a
 // report can still be acted on; the pair id is not a foreign key for the same reason.
 export const partnerReports = sqliteTable(

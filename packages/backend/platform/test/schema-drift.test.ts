@@ -11,6 +11,8 @@ import { StoredDemoPartner } from "@billet/backend-demo-partner/demo-partner-rep
 import {
   StoredBlock,
   StoredInvite,
+  StoredKeptItem,
+  StoredKeptWallet,
   StoredPairMember,
   StoredPartnerReport,
 } from "@billet/backend-pairing/pairing-repository";
@@ -45,6 +47,8 @@ import {
   partnerNotices,
   partnerReports,
   blocks,
+  keptItems,
+  keptWallets,
   purchases,
   pushTokens,
   rateLimits,
@@ -156,6 +160,8 @@ const checked = [
   ["pair_members", pairMembers, StoredPairMember],
   ["partner_notices", partnerNotices, StoredPartnerNotice],
   ["blocks", blocks, StoredBlock],
+  ["kept_wallets", keptWallets, StoredKeptWallet],
+  ["kept_items", keptItems, StoredKeptItem],
   ["partner_reports", partnerReports, StoredPartnerReport],
   ["purchases", purchases, StoredPurchase],
   ["push_tokens", pushTokens, StoredPushToken],

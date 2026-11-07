@@ -55,6 +55,8 @@ export const RoomCommand = Schema.TaggedUnion({
   RecordCatEvent: { id: IdempotencyKey, by: UserId, at: EpochMillis, event: CatEvent },
   /** Gives the pair ink colours, as the wallet does once it has taken their coins. */
   GrantInks: { inks: Schema.Array(InkId) },
+  /** Gives the pair room pieces it does not have, as a kept purchase comes back after a pairing. */
+  GrantItems: { items: Schema.Array(RoomItemId) },
   /** Buys one ink with the pair's coins, at its catalog price. `id` is the buyer's, once. */
   Buy: { id: IdempotencyKey, by: UserId, ink: InkId, at: EpochMillis },
   /**

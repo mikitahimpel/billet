@@ -12,6 +12,8 @@ import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./dir
 import {
   blocks,
   invites,
+  keptItems,
+  keptWallets,
   pairMembers,
   partnerNotices,
   partnerReports,
@@ -202,6 +204,58 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
                     .where(eq(pairMembers.userId, blocker)),
                 ),
               ),
+          ]),
+        ).pipe(Effect.asVoid),
+
+      keep: (userId, { coins, inks, items }) =>
+        guarded(
+          atomically(db, [
+            db
+              .insert(keptWallets)
+              .values({ userId, coins })
+              .onConflictDoUpdate({
+                target: keptWallets.userId,
+                set: { coins: sql`${keptWallets.coins} + ${coins}` },
+              }),
+            ...(inks.length + items.length === 0
+              ? []
+              : [
+                  db
+                    .insert(keptItems)
+                    .values([
+                      ...inks.map((itemId) => ({ userId, kind: "ink", itemId })),
+                      ...items.map((itemId) => ({ userId, kind: "item", itemId })),
+                    ])
+                    .onConflictDoNothing(),
+                ]),
+          ]),
+        ).pipe(Effect.asVoid),
+
+      kept: (userId) =>
+        guarded(
+          Effect.all([
+            db
+              .select({ coins: keptWallets.coins })
+              .from(keptWallets)
+              .where(eq(keptWallets.userId, userId)),
+            db
+              .select({ kind: keptItems.kind, itemId: keptItems.itemId })
+              .from(keptItems)
+              .where(eq(keptItems.userId, userId)),
+          ]),
+        ).pipe(
+          Effect.map(([[wallet], rows]) => ({
+            coins: wallet?.coins ?? 0,
+            inks: rows.filter(({ kind }) => kind === "ink").map(({ itemId }) => itemId),
+            items: rows.filter(({ kind }) => kind === "item").map(({ itemId }) => itemId),
+          })),
+        ),
+
+      clearKept: (userId) =>
+        guarded(
+          atomically(db, [
+            db.delete(keptWallets).where(eq(keptWallets.userId, userId)),
+            db.delete(keptItems).where(eq(keptItems.userId, userId)),
           ]),
         ).pipe(Effect.asVoid),
 

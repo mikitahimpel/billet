@@ -129,8 +129,9 @@ export class PairingService extends Context.Service<
         userId: UserId,
       ): Effect.fn.Return<void, PairingUnavailable> {
         const pair = yield* repository.findPair(userId);
+        const members = Option.isSome(pair) ? yield* repository.findMembers(pair.value) : [];
         yield* repository.unpair(userId);
-        if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value));
+        if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value, members));
       });
 
       const partnerOf = Effect.fn("PairingService.partnerOf")(function* (
@@ -154,7 +155,7 @@ export class PairingService extends Context.Service<
           blocked: partner,
           at: yield* Clock.currentTimeMillis,
         });
-        yield* afterwards(observer.unpaired(pairId));
+        yield* afterwards(observer.unpaired(pairId, [userId, partner]));
       });
 
       const reportPartner = Effect.fn("PairingService.reportPartner")(function* (

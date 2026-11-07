@@ -48,6 +48,11 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** The ink colours the pair bought, in the order it got them. Never the free ink. */
     readonly inks: (pairId: PairId) => Effect.Effect<ReadonlyArray<InkId>, NotesUnavailable>;
+    /** Gives the pair room pieces it does not have yet. Safe to repeat. */
+    readonly grantItems: (
+      pairId: PairId,
+      items: ReadonlyArray<RoomItemId>,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Gives the pair ink colours it does not have yet. Safe to repeat. */
     readonly grantInks: (
       pairId: PairId,

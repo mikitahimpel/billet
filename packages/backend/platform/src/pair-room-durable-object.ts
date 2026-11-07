@@ -903,6 +903,16 @@ export class PairRoom extends DurableObject {
     );
   }
 
+  /** Gives the pair room pieces it does not have: purchases kept from an earlier pair. */
+  async grantItems(items: ReadonlyArray<RoomItemId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantItems", items }),
+      "PairRoom.grantItems",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
   /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
   async grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
     const decision = await this.run(

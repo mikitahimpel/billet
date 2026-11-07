@@ -220,6 +220,9 @@ describe("pairing routes without storage", () => {
     findMembers: () => down,
     unpair: () => down,
     block: () => down,
+    keep: () => down,
+    kept: () => down,
+    clearKept: () => down,
     saveReport: () => down,
   });
   afterAll(() => app.dispose());

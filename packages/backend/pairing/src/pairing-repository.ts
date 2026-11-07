@@ -28,6 +28,24 @@ export interface InviteClaim {
   readonly now: EpochMillis;
 }
 
+/** Purchases a user keeps when their pair ends: their coins, inks and room pieces. */
+export interface KeptPurchases {
+  readonly coins: number;
+  readonly inks: ReadonlyArray<string>;
+  readonly items: ReadonlyArray<string>;
+}
+
+export const StoredKeptWallet = Schema.Struct({
+  userId: UserId,
+  coins: Schema.Int,
+});
+
+export const StoredKeptItem = Schema.Struct({
+  userId: UserId,
+  kind: Schema.Literals(["ink", "item"]),
+  itemId: Schema.String,
+});
+
 export const StoredBlock = Schema.Struct({
   blockerId: UserId,
   blockedId: UserId,
@@ -98,6 +116,15 @@ export class PairingRepository extends Context.Service<
       readonly blocked: UserId;
       readonly at: EpochMillis;
     }) => Effect.Effect<void, PairingUnavailable>;
+    /**
+     * Adds to what `userId` keeps from ended pairs: more coins, and the inks and pieces they did
+     * not have. Safe to repeat for the items, not for the coins.
+     */
+    readonly keep: (userId: UserId, kept: KeptPurchases) => Effect.Effect<void, PairingUnavailable>;
+    /** What `userId` keeps, empty when nothing. */
+    readonly kept: (userId: UserId) => Effect.Effect<KeptPurchases, PairingUnavailable>;
+    /** Forgets what `userId` keeps, once the new pair's room has it. */
+    readonly clearKept: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
     /** Keeps a report for the team. The pair is untouched. */
     readonly saveReport: (report: PartnerReport) => Effect.Effect<void, PairingUnavailable>;
   }

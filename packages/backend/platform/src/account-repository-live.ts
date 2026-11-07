@@ -74,6 +74,8 @@ export const AccountRepositoryLive = (db: D1Database): Layer.Layer<AccountReposi
                 )
                 .bind(userId),
               db.prepare("DELETE FROM invites WHERE owner_id = ?").bind(userId),
+              db.prepare("DELETE FROM kept_wallets WHERE user_id = ?").bind(userId),
+              db.prepare("DELETE FROM kept_items WHERE user_id = ?").bind(userId),
               db
                 .prepare("DELETE FROM blocks WHERE blocker_id = ?1 OR blocked_id = ?1")
                 .bind(userId),

@@ -339,6 +339,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     inks: (pairId) =>
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
+    grantItems: (pairId, items) => roomOf(pairId).dispatch({ _tag: "GrantItems", items }),
     coins: (pairId, after, limit) =>
       Effect.all([roomOf(pairId).settled, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
         Effect.map(([state, entries]) =>

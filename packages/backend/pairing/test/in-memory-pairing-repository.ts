@@ -3,7 +3,12 @@ import type { TokenHash } from "@billet/backend-auth/auth-repository";
 import type { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import { AlreadyPaired, InvalidInvite } from "../src/pairing-error.ts";
-import type { PairingRepository, PartnerReport, StoredInvite } from "../src/pairing-repository.ts";
+import type {
+  KeptPurchases,
+  PairingRepository,
+  PartnerReport,
+  StoredInvite,
+} from "../src/pairing-repository.ts";
 
 export interface InMemoryPairingRepository {
   readonly repository: PairingRepository["Service"];
@@ -18,6 +23,7 @@ export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
   const formed = new Map<PairId, EpochMillis>();
   const blocks = new Set<string>();
   const reports: PartnerReport[] = [];
+  const keeping = new Map<UserId, KeptPurchases>();
 
   const removeInvites = (shouldRemove: (invite: StoredInvite) => boolean) => {
     for (const [hash, invite] of invites) {
@@ -80,11 +86,28 @@ export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
           if (memberPair === pairId) pairs.delete(member);
         }
       }),
+    keep: (userId, kept) =>
+      Effect.sync(() => {
+        const before = keeping.get(userId);
+        keeping.set(userId, {
+          coins: (before?.coins ?? 0) + kept.coins,
+          inks: [...new Set([...(before?.inks ?? []), ...kept.inks])],
+          items: [...new Set([...(before?.items ?? []), ...kept.items])],
+        });
+      }),
+    kept: (userId) => Effect.sync(() => keeping.get(userId) ?? { coins: 0, inks: [], items: [] }),
+    clearKept: (userId) => Effect.sync(() => void keeping.delete(userId)),
     saveReport: (report) => Effect.sync(() => void reports.push(report)),
   };
 
   const dump = Effect.sync(() =>
-    JSON.stringify({ invites: [...invites], pairs: [...pairs], blocks: [...blocks], reports }),
+    JSON.stringify({
+      invites: [...invites],
+      pairs: [...pairs],
+      blocks: [...blocks],
+      reports,
+      keeping: [...keeping],
+    }),
   );
 
   return { repository, dump };
