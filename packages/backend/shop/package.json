@@ -1,0 +1,36 @@
+{
+  "name": "@billet/backend-shop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./price-book": "./src/price-book.ts",
+    "./shop-art": "./src/shop-art.ts",
+    "./shop-seed": "./src/shop-seed.ts",
+    "./test/in-memory-shop-art": "./test/in-memory-shop-art.ts",
+    "./test/in-memory-shop-store": "./test/in-memory-shop-store.ts",
+    "./shop-routes": "./src/shop-routes.ts",
+    "./shop-store": "./src/shop-store.ts",
+    "./shop-validate": "./src/shop-validate.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

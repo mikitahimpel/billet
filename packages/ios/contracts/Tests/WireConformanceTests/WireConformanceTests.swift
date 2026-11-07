@@ -47,6 +47,8 @@ let roundTrips: [String: RoundTrip] = [
   "InksResponse": codec(InksResponse.self),
   "DateIdea": codec(DateIdea.self),
   "DateCatalogResponse": codec(DateCatalogResponse.self),
+  "ShopCatalogItem": codec(ShopCatalogItem.self),
+  "ShopCatalogResponse": codec(ShopCatalogResponse.self),
   "CoinEntry": codec(CoinEntry.self),
   "CoinsResponse": codec(CoinsResponse.self),
   "BuyRequest": codec(BuyRequest.self),

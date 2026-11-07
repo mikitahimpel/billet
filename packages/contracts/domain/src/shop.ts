@@ -1,7 +1,8 @@
 import { Schema } from "effect";
 import { LocalDay } from "./coins.ts";
 import type { EpochMillis } from "./ids.ts";
-import { InkId, KnownInkId } from "./inks.ts";
+import { InkId } from "./inks.ts";
+import type { PriceBook } from "./shop-catalog.ts";
 
 const slug = Schema.String.check(
   Schema.isPattern(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/),
@@ -109,6 +110,13 @@ export const featuredSetAt = (at: EpochMillis, utcOffsetSeconds = 0): PieceSet =
   return featuredSets[week % featuredSets.length] as PieceSet;
 };
 
+/** The piece `id` at the book's price, or at the canonical list's when there is no book. */
+export const soldIn = (id: string, book?: PriceBook): RoomItem | undefined => {
+  if (book === undefined) return roomItemOf(id);
+  const found = book.items.find((entry) => entry.id === id);
+  return found === undefined ? undefined : { id: decodeItemId(found.id), price: found.price };
+};
+
 /** Rounded to 5 coins, so a set price reads cleanly. Halves round up, as the app's do. */
 export const roundToFive = (value: number): number => Math.round(value / 5) * 5;
 
@@ -119,9 +127,10 @@ export const roundToFive = (value: number): number => Math.round(value / 5) * 5;
 export const setPrice = (
   pieces: PieceSet,
   owned: ReadonlySet<string>,
+  book?: PriceBook,
 ): { readonly price: number; readonly sum: number } | undefined => {
   const missing = pieces.items.flatMap((id) => {
-    const sold = roomItemOf(id);
+    const sold = soldIn(id, book);
     return sold === undefined || owned.has(id) ? [] : [sold];
   });
   if (missing.length === 0) return undefined;
@@ -131,8 +140,8 @@ export const setPrice = (
 
 /** What one order in the shop buys: an ink, a piece, a set's missing pieces, or a treat. */
 export const ShopOffer = Schema.TaggedUnion({
-  Ink: { ink: KnownInkId },
-  Item: { item: KnownRoomItemId },
+  Ink: { ink: InkId },
+  Item: { item: RoomItemId },
   Set: { set: KnownPieceSetId },
   Treat: {},
 });
@@ -269,14 +278,21 @@ export const dealPool: ReadonlyArray<{ readonly item: RoomItemId; readonly disco
 ];
 
 /** The day's deals, in the order they were drawn. */
-export const dealsOn = (seed: string, day: LocalDay): ReadonlyArray<Deal> => {
+export const dealsOn = (seed: string, day: LocalDay, book?: PriceBook): ReadonlyArray<Deal> => {
   const next = splitMix64(fnv1a(`${seed}|deals|${dayKey(day)}`));
-  const pool = [...dealPool];
+  const pool =
+    book === undefined
+      ? [...dealPool]
+      : book.deals.flatMap((entry) =>
+          book.items.some((sold) => sold.id === entry.item)
+            ? [{ item: decodeItemId(entry.item), discount: entry.discount }]
+            : [],
+        );
   const picked: Array<Deal> = [];
   while (picked.length < dealCount && pool.length > 0) {
     const [entry] = pool.splice(Number(next() % BigInt(pool.length)), 1);
     if (entry === undefined) break;
-    const price = roomItemOf(entry.item)?.price ?? 0;
+    const price = soldIn(entry.item, book)?.price ?? 0;
     picked.push({ ...entry, price: roundToFive(price * (1 - entry.discount)) });
   }
   return picked;
@@ -287,8 +303,9 @@ export const itemPriceOn = (
   item: RoomItem,
   seed: string,
   day: LocalDay,
+  book?: PriceBook,
 ): { readonly price: number; readonly deal?: Deal } => {
-  const deal = dealsOn(seed, day).find((entry) => entry.item === item.id);
+  const deal = dealsOn(seed, day, book).find((entry) => entry.item === item.id);
   return deal === undefined ? { price: item.price } : { price: deal.price, deal };
 };
 

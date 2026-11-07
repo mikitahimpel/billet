@@ -115,6 +115,8 @@ export const RoomRejection = Schema.TaggedUnion({
   NotSold: { ink: InkId },
   /** An order of a piece or a set the pair owns all of already. */
   OfferOwned: { offer: Schema.Union([RoomItemId, PieceSetId]) },
+  /** A buy or an order whose price is now above the one the buyer saw. Nothing was charged. */
+  PriceChanged: { price: Schema.Int },
   /** An order the catalog does not sell now: an unknown piece, or a featured set out of its week. */
   NotOffered: {},
   /** A reaction to a note the room does not hold. */

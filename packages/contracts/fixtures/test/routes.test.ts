@@ -139,6 +139,14 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/shop",
       },
+      "getShopArt": {
+        "method": "GET",
+        "path": "/v1/shop/art/*",
+      },
+      "getShopCatalog": {
+        "method": "GET",
+        "path": "/v1/shop/catalog",
+      },
       "getStatus": {
         "method": "GET",
         "path": "/v1/status",
