@@ -243,6 +243,17 @@ final class CityRoomScene: CatRoom {
         windowView.place(window: window, home: home.count == 4 ? home : window, hole: hole)
     }
 
+    /// One material per tone and roughness, shared by every part built from it.
+    private var mattes: [SIMD2<UInt32>: PhysicallyBasedMaterial] = [:]
+
+    private func matte(_ hex: UInt32, roughness: Float = 0.82) -> PhysicallyBasedMaterial {
+        let key = SIMD2(hex, roughness.bitPattern)
+        if let material = mattes[key] { return material }
+        let material = Clay.matte(hex, roughness: roughness)
+        mattes[key] = material
+        return material
+    }
+
     private func setPoint(_ entity: Entity, color: SIMD3<Float>, lumens: Float, radius: Float) {
         var p = PointLightComponent(color: Daylight.color(color), intensity: lumens, attenuationRadius: radius)
         p.attenuationFalloffExponent = 2
@@ -252,16 +263,16 @@ final class CityRoomScene: CatRoom {
     // MARK: - Structure
 
     private func buildFloor() {
-        pivot.box(1.14, 0.1, 1.14, r: 0.03, Clay.matte(Tone.woodDark), at: [-0.01, -0.05, -0.01])
+        pivot.box(1.14, 0.1, 1.14, r: 0.03, matte(Tone.woodDark), at: [-0.01, -0.05, -0.01])
         for i in 0..<7 {
             let tone = i.isMultiple(of: 2) ? Tone.wood : Tone.woodLight
-            pivot.box(1.04, 0.014, 0.146, r: 0.005, Clay.matte(tone, roughness: 0.7), at: [0, 0.007, -0.45 + Float(i) * 0.15])
+            pivot.box(1.04, 0.014, 0.146, r: 0.005, matte(tone, roughness: 0.7), at: [0, 0.007, -0.45 + Float(i) * 0.15])
         }
     }
 
     private func buildWalls() {
         let h = wallHeight
-        let wall = Clay.matte(Tone.wall, roughness: 0.95)
+        let wall = matte(Tone.wall, roughness: 0.95)
         let o = opening
         pivot.box(0.05, h, 1.06, r: 0.01, wall, at: [-0.525, h / 2, -0.03])
         // The back wall in four pieces around the window; the window's trim covers their seams.
@@ -271,7 +282,7 @@ final class CityRoomScene: CatRoom {
         pivot.box(o.right - o.left, o.bottom, 0.05, r: 0.01, wall, at: [0, o.bottom / 2, -0.525])
         pivot.box(o.right - o.left, h - o.top, 0.05, r: 0.01, wall, at: [0, (o.top + h) / 2, -0.525])
 
-        let wood = Clay.matte(Tone.wood)
+        let wood = matte(Tone.wood)
         pivot.box(0.014, 0.05, 1.0, r: 0.004, wood, at: [-0.493, 0.025, 0])
         pivot.box(1.0, 0.05, 0.014, r: 0.004, wood, at: [0, 0.025, -0.493])
 
@@ -297,8 +308,8 @@ final class CityRoomScene: CatRoom {
         self.fallback = fallback
 
         // Like the first room's round window: a wood ring, a lighter bead round the glass and wood muntins.
-        let frame = Clay.matte(Tone.wood, roughness: 0.6)
-        let bead = Clay.matte(Tone.woodLight, roughness: 0.6)
+        let frame = matte(Tone.wood, roughness: 0.6)
+        let bead = matte(Tone.woodLight, roughness: 0.6)
         let d: Float = 0.05
         pivot.box(width + 0.05, 0.03, d, r: 0.008, frame, at: [0, o.top + 0.005, -0.525])
         pivot.box(0.03, height, d, r: 0.008, frame, at: [o.left - 0.005, c.y, -0.525])
@@ -317,8 +328,8 @@ final class CityRoomScene: CatRoom {
 
         // A note taped to the middle pane, with a heart on it.
         let note = pivot.group(at: [-0.02, 0.53, -0.527], rotation: .z(0.04))
-        note.box(0.1, 0.12, 0.003, r: 0.001, Clay.matte(Tone.paper, roughness: 1), at: .zero)
-        let heart = Clay.matte(Tone.heart)
+        note.box(0.1, 0.12, 0.003, r: 0.001, matte(Tone.paper, roughness: 1), at: .zero)
+        let heart = matte(Tone.heart)
         for x: Float in [-0.006, 0.006] { note.sphere(0.008, heart, at: [x, 0.004, 0.002], scale: [1, 1, 0.2]) }
         note.box(0.013, 0.013, 0.002, r: 0, heart, at: [0, -0.002, 0.002], rotation: .z(.pi / 4))
     }
@@ -344,48 +355,48 @@ final class CityRoomScene: CatRoom {
     // MARK: - Furniture
 
     private func buildRug() {
-        pivot.cylinder(0.006, 0.22, Clay.matte(Tone.rugEdge, roughness: 1), at: [0.04, 0.016, 0.2])
-        pivot.cylinder(0.008, 0.2, Clay.matte(Tone.rug, roughness: 1), at: [0.04, 0.019, 0.2])
+        pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [0.04, 0.016, 0.2])
+        pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [0.04, 0.019, 0.2])
     }
 
     /// Along the back wall under the window, pillow on the left, blanket over the right.
     private func buildBed() {
         let bed = pivot.group(at: [-0.04, 0.014, -0.315])
-        bed.box(0.76, 0.1, 0.36, r: 0.02, Clay.matte(Tone.bedFrame), at: [0, 0.05, 0])
-        bed.box(0.72, 0.07, 0.33, r: 0.03, Clay.matte(Tone.mattress, roughness: 1), at: [0, 0.13, 0])
-        bed.box(0.44, 0.04, 0.35, r: 0.018, Clay.matte(Tone.blanket, roughness: 1), at: [0.15, 0.17, 0.005])
-        bed.box(0.04, 0.08, 0.35, r: 0.018, Clay.matte(Tone.blanket, roughness: 1), at: [0.37, 0.13, 0.005])
-        bed.box(0.15, 0.05, 0.25, r: 0.024, Clay.matte(Tone.pillow, roughness: 1), at: [-0.26, 0.19, -0.01], rotation: .y(0.08))
-        bed.box(0.12, 0.012, 0.2, r: 0.005, Clay.matte(0xF6C69E, roughness: 1), at: [-0.05, 0.172, 0.04])
+        bed.box(0.76, 0.1, 0.36, r: 0.02, matte(Tone.bedFrame), at: [0, 0.05, 0])
+        bed.box(0.72, 0.07, 0.33, r: 0.03, matte(Tone.mattress, roughness: 1), at: [0, 0.13, 0])
+        bed.box(0.44, 0.04, 0.35, r: 0.018, matte(Tone.blanket, roughness: 1), at: [0.15, 0.17, 0.005])
+        bed.box(0.04, 0.08, 0.35, r: 0.018, matte(Tone.blanket, roughness: 1), at: [0.37, 0.13, 0.005])
+        bed.box(0.15, 0.05, 0.25, r: 0.024, matte(Tone.pillow, roughness: 1), at: [-0.26, 0.19, -0.01], rotation: .y(0.08))
+        bed.box(0.12, 0.012, 0.2, r: 0.005, matte(0xF6C69E, roughness: 1), at: [-0.05, 0.172, 0.04])
     }
 
     private func buildNightstand() {
         let n = pivot.group(at: [-0.37, 0.014, -0.02])
-        let slat = Clay.matte(0xB84F30)
-        n.box(0.13, 0.15, 0.13, r: 0.008, Clay.matte(Tone.crate), at: [0, 0.075, 0])
+        let slat = matte(0xB84F30)
+        n.box(0.13, 0.15, 0.13, r: 0.008, matte(Tone.crate), at: [0, 0.075, 0])
         for y: Float in [0.04, 0.09, 0.135] { n.box(0.134, 0.012, 0.134, r: 0.004, slat, at: [0, y, 0]) }
 
-        n.cylinder(0.01, 0.03, Clay.matte(0x6D4C3A), at: [0, 0.155, 0])
-        n.cylinder(0.08, 0.005, Clay.matte(0x6D4C3A), at: [0, 0.2, 0])
+        n.cylinder(0.01, 0.03, matte(0x6D4C3A), at: [0, 0.155, 0])
+        n.cylinder(0.08, 0.005, matte(0x6D4C3A), at: [0, 0.2, 0])
         // The web shade tapers from 0.035 to 0.06; a straight one of the average radius reads the same at this size.
         lampShade = n.cylinder(0.065, 0.0475, Clay.glow(Tone.shade, intensity: 0.2), at: [0, 0.255, 0])
         lampLight = n.group(at: [0.02, 0.26, 0.03])
 
-        n.box(0.05, 0.03, 0.07, r: 0.004, Clay.matte(0x7C9A7E), at: [0.035, 0.165, 0.03], rotation: .y(0.2))
+        n.box(0.05, 0.03, 0.07, r: 0.004, matte(0x7C9A7E), at: [0.035, 0.165, 0.03], rotation: .y(0.2))
     }
 
     private func buildSillProps() {
         let plant = pivot.group(at: [-0.31, sillTop, -0.45])
-        plant.cylinder(0.045, 0.022, Clay.matte(Tone.pot), at: [0, 0.022, 0])
+        plant.cylinder(0.045, 0.022, matte(Tone.pot), at: [0, 0.022, 0])
         for i in 0..<7 {
             let a = Float(i) / 7 * 2 * .pi
-            plant.sphere(0.045, Clay.matte(i.isMultiple(of: 2) ? Tone.leaf : Tone.leafDark),
+            plant.sphere(0.045, matte(i.isMultiple(of: 2) ? Tone.leaf : Tone.leafDark),
                          at: [cos(a) * 0.012, 0.09 + Float(i % 3) * 0.015, sin(a) * 0.012],
                          scale: [0.18, 1.2, 0.08], rotation: .y(-a) * .z(-0.25 - Float(i % 3) * 0.1))
         }
-        pivot.box(0.08, 0.016, 0.06, r: 0.004, Clay.matte(0xE3B45C), at: [-0.16, sillTop + 0.008, -0.45], rotation: .y(-0.15))
-        pivot.box(0.07, 0.014, 0.055, r: 0.004, Clay.matte(0x6F8FB0), at: [-0.16, sillTop + 0.023, -0.45], rotation: .y(0.1))
-        pivot.cylinder(0.03, 0.013, Clay.matte(0xF2E6D2, roughness: 0.4), at: [0.07, sillTop + 0.015, -0.45])
+        pivot.box(0.08, 0.016, 0.06, r: 0.004, matte(0xE3B45C), at: [-0.16, sillTop + 0.008, -0.45], rotation: .y(-0.15))
+        pivot.box(0.07, 0.014, 0.055, r: 0.004, matte(0x6F8FB0), at: [-0.16, sillTop + 0.023, -0.45], rotation: .y(0.1))
+        pivot.cylinder(0.03, 0.013, matte(0xF2E6D2, roughness: 0.4), at: [0.07, sillTop + 0.015, -0.45])
     }
 
     /// Curtains, the left wall's shelf, clock and pictures, and the things lying around on the floor.
