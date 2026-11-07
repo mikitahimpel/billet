@@ -57,6 +57,7 @@ with `BILLET_API_HOST`.
 - Swift 6 strict concurrency.
 - `packages/`: `.swift-format`, 2 spaces, 100 columns. `apps/ios`: 4 spaces, up to 120, match
   the file.
+- A horizontal drag on Home never switches rooms; only the explicit control does (`RoomSwipeTests`).
 
 ## Comments
 

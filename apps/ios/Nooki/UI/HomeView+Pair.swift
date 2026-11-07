@@ -73,7 +73,13 @@ extension HomeView {
             let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
             return HintContext(
                 screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
-                canAffordTreat: state.shop.coins >= ShopModel.treatPrice)
+                canAffordTreat: state.shop.coins >= ShopModel.treatPrice,
+                petted: state.care.petsGiven > 0,
+                added: !state.notes.notes.isEmpty || !state.moments.moments.isEmpty,
+                usedMoments: !state.moments.pinned.isEmpty,
+                purchased: !state.shop.owned.isSubset(of: Wallet().owned),
+                switchedRooms: state.room == .city,
+                gaveTreat: state.care.treatsGiven > 0)
         }
     }
 

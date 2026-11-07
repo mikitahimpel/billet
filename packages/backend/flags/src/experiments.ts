@@ -233,6 +233,18 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     killed: false,
   },
   {
+    key: "hints",
+    kind: "experiment",
+    description:
+      "Whether a pair sees the hints after the onboarding: show, or hold (the holdout sees none and reports the hints it would have had). " +
+      "Primary metric: per hint, the shown to acted rate against the holdout (admin, In the app).",
+    variants: { show: 9, hold: 1 },
+    default: "show",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
     key: "home-layout",
     kind: "flag",
     description: "How Home is laid out around the room (Labs > Home).",
