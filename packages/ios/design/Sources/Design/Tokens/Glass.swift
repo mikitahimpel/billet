@@ -1,17 +1,23 @@
 import SwiftUI
 
+/// How the glass controls are drawn: Liquid Glass, or an opaque surface of the same shape with a
+/// stroke and a shadow, the arm a perf run measures the glass against (`-perf.hud opaque`).
+public enum GlassRendering: Sendable {
+  case liquid
+  case opaque
+}
+
+extension EnvironmentValues {
+  @Entry public var glassRendering: GlassRendering = .liquid
+}
+
 extension View {
   /// Liquid Glass from iOS 26, tinted when given one; earlier systems get a frosted material in the same shape.
   /// `clear` is the more see-through variant, for glass over the busy room.
-  @ViewBuilder
   public func glass<S: Shape>(
     _ shape: S, tint: Color? = nil, clear: Bool = false, interactive: Bool = false
   ) -> some View {
-    if #available(iOS 26, macOS 26, *) {
-      glassEffect((clear ? Glass.clear : .regular).tint(tint).interactive(interactive), in: shape)
-    } else {
-      background(.ultraThinMaterial, in: shape)
-    }
+    modifier(GlassModifier(shape: shape, tint: tint, clear: clear, interactive: interactive))
   }
 
   /// The see-through, honey-tinted glass for controls that float over the room.
@@ -22,6 +28,27 @@ extension View {
   /// Warm glass behind a button's label that never takes a touch itself, so the button always gets it.
   public func warmGlassBacking<S: Shape>(_ shape: S) -> some View {
     background { Color.clear.warmGlass(shape).allowsHitTesting(false) }
+  }
+}
+
+private struct GlassModifier<S: Shape>: ViewModifier {
+  let shape: S
+  let tint: Color?
+  let clear: Bool
+  let interactive: Bool
+  @Environment(\.glassRendering) private var rendering
+
+  func body(content: Content) -> some View {
+    if rendering == .opaque {
+      content
+        .background { shape.fill(Ink.surface).shadow(color: .black.opacity(0.18), radius: 8, y: 3) }
+        .overlay { shape.stroke(Ink.hairline, lineWidth: 1) }
+    } else if #available(iOS 26, macOS 26, *) {
+      content.glassEffect(
+        (clear ? Glass.clear : .regular).tint(tint).interactive(interactive), in: shape)
+    } else {
+      content.background(.ultraThinMaterial, in: shape)
+    }
   }
 }
 
