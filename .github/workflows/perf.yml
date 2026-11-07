@@ -61,6 +61,12 @@ on:
         type: choice
         options: [macos-26, xcode-27]
         default: macos-26
+      base_args:
+        description: Launch arguments for the app in the base build, such as -labs.roomShell live
+        default: ""
+      head_args:
+        description: Launch arguments for the app in the head build (and the shots), such as -labs.roomShell baked
+        default: ""
       jobs:
         description: What to run (both = ab and shots)
         type: choice
@@ -144,6 +150,8 @@ jobs:
         env:
           PERF_OUT: ${{ runner.temp }}/perf
           PERF_LOCK: ${{ runner.temp }}/sim.lock
+          PERF_BASE_APP_ARGS: ${{ inputs.base_args }}
+          PERF_NEW_APP_ARGS: ${{ inputs.head_args }}
         run: |
           [[ $ROUNDS =~ ^[0-9]+$ && $LAUNCHES =~ ^[0-9]+$ && $FULLS =~ ^[0-9]+$ ]] \
             || { echo "::error::rounds, launches and fulls must be numbers"; exit 1; }
@@ -237,6 +245,7 @@ jobs:
           PERF_LOCK: ${{ runner.temp }}/sim.lock
           PERF_DERIVED: ${{ runner.temp }}/head-derived
           PERF_DEVICE: billet-shots-${{ matrix.size }}
+          PERF_APP_ARGS: ${{ inputs.head_args }}
         run: zsh head/apps/ios/scripts/perf/shots.sh shots-${{ matrix.size }}
 
       - name: Summary

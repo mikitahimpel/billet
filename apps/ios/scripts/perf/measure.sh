@@ -143,7 +143,7 @@ attempt() {
   python3 -c 'import time; time.sleep(1.5)'
   local only=()
   [[ -n ${PERF_SWITCHES:-} ]] && only=(-perf.switches $PERF_SWITCHES)
-  xcrun simctl launch --console-pty $udid $bundle -onboardingDone YES $room_args -perf.script $script $only \
+  xcrun simctl launch --console-pty $udid $bundle -onboardingDone YES $room_args ${=PERF_APP_ARGS:-} -perf.script $script $only \
     > $log 2>&1 &
   local pid=$! started=$SECONDS
   while ! grep -q '^PERF done' $log 2>/dev/null; do

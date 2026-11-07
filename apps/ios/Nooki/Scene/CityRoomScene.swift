@@ -80,6 +80,7 @@ final class CityRoomScene: CatRoom {
 
     override init() {
         super.init()
+        useBakedShell(named: "City_shell")
         buildFloor()
         buildWalls()
         buildWindow()
@@ -165,6 +166,7 @@ final class CityRoomScene: CatRoom {
             }
         }
         applyAmbient()
+        if isBaked { tintShell(BakedShell.tint(light)) }
     }
 
     private func applyAmbient() {
@@ -245,6 +247,7 @@ final class CityRoomScene: CatRoom {
     }
 
     private func setPoint(_ entity: Entity, color: SIMD3<Float>, lumens: Float, radius: Float) {
+        guard !isBaked else { return }
         var p = PointLightComponent(color: Daylight.color(color), intensity: lumens, attenuationRadius: radius)
         p.attenuationFalloffExponent = 2
         entity.components.set(p)

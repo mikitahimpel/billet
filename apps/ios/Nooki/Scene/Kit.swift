@@ -63,11 +63,13 @@ extension Entity {
         scale: SIMD3<Float> = .one,
         rotation: simd_quatf = .identity
     ) -> ModelEntity {
+        if skipsForShell(material) { return ModelEntity() }
         let e = ModelEntity(mesh: mesh, materials: [material])
         e.position = position
         e.scale = scale
         e.orientation = rotation
         addChild(e)
+        tagForShell(e, material)
         return e
     }
 
@@ -76,6 +78,7 @@ extension Entity {
         _ w: Float, _ h: Float, _ d: Float, r: Float = 0.01,
         _ material: some Material, at position: SIMD3<Float>, rotation: simd_quatf = .identity
     ) -> ModelEntity {
+        if skipsForShell(material) { return ModelEntity() }
         let radius = min(r, min(w, min(h, d)) / 2 - 0.0005)
         return model(Meshes.box(w, h, d, cornerRadius: max(radius, 0)), material, at: position, rotation: rotation)
     }
