@@ -52,7 +52,7 @@ enum NookiPerf {
         host.scroll = { y in scrolls[state.tab]?(y) }
         // The profile sheet is Settings' way in: today's opaque sheet over the live room, the same with the room
         // paused under it, and a glass one, so the room's cost under a sheet and the glass's come apart.
-        host.covers = ["drawing", "inbox", "sheet", "sheet.paused", "sheet.glass"]
+        host.covers = ["sheet", "sheet.paused", "sheet.glass", "drawing", "inbox"]
         host.setCover = { name in
             state.drawing = name == "drawing"
             state.showsInbox = name == "inbox"
