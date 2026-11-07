@@ -57,9 +57,12 @@ const pem = async () => {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
     "sign",
   ]);
-  const der = new Uint8Array(await crypto.subtle.exportKey("pkcs8", pair.privateKey));
-  const base64 = btoa(String.fromCharCode(...der));
-  return `-----BEGIN PRIVATE KEY-----\n${base64}\n-----END PRIVATE KEY-----`;
+  if (!("privateKey" in pair)) throw new Error("ECDSA makes a key pair");
+  const exported = await crypto.subtle.exportKey("pkcs8", pair.privateKey);
+  if (!(exported instanceof ArrayBuffer)) throw new Error("pkcs8 exports bytes");
+  let binary = "";
+  for (const byte of new Uint8Array(exported)) binary += String.fromCharCode(byte);
+  return `-----BEGIN PRIVATE KEY-----\n${btoa(binary)}\n-----END PRIVATE KEY-----`;
 };
 
 describe("dead push tokens", () => {
