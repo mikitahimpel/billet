@@ -4,10 +4,10 @@ import UIKit
 import WindowViews
 
 private enum Tone {
-    static let wall: UInt32 = 0xECD9C0
-    static let floor: UInt32 = 0x9C6C4C
-    static let floorLight: UInt32 = 0xA97A58
-    static let wood: UInt32 = 0x8A5A3C
+    static let wall: UInt32 = 0xF6E4C8
+    static let wood: UInt32 = 0xB46C3C
+    static let woodDark: UInt32 = 0x8C4F2B
+    static let woodLight: UInt32 = 0xCF8E58
     static let bedFrame: UInt32 = 0xE8D2B2
     static let mattress: UInt32 = 0xFBF0DE
     static let blanket: UInt32 = 0xF0663A
@@ -22,7 +22,6 @@ private enum Tone {
     static let bulb: UInt32 = 0xFFD27A
     static let paper: UInt32 = 0xF6EFE2
     static let heart: UInt32 = 0xE0554A
-    static let frame: UInt32 = 0xF5EAD8
 }
 
 /// The second room, ported from nooki-scene/src/three/cityRoom.js: a bedroom with a wide window onto a living town,
@@ -253,9 +252,9 @@ final class CityRoomScene: CatRoom {
     // MARK: - Structure
 
     private func buildFloor() {
-        pivot.box(1.14, 0.1, 1.14, r: 0.03, Clay.matte(Tone.wood), at: [-0.01, -0.05, -0.01])
+        pivot.box(1.14, 0.1, 1.14, r: 0.03, Clay.matte(Tone.woodDark), at: [-0.01, -0.05, -0.01])
         for i in 0..<7 {
-            let tone = i.isMultiple(of: 2) ? Tone.floor : Tone.floorLight
+            let tone = i.isMultiple(of: 2) ? Tone.wood : Tone.woodLight
             pivot.box(1.04, 0.014, 0.146, r: 0.005, Clay.matte(tone, roughness: 0.7), at: [0, 0.007, -0.45 + Float(i) * 0.15])
         }
     }
@@ -265,16 +264,23 @@ final class CityRoomScene: CatRoom {
         let wall = Clay.matte(Tone.wall, roughness: 0.95)
         let o = opening
         pivot.box(0.05, h, 1.06, r: 0.01, wall, at: [-0.525, h / 2, -0.03])
-        // The back wall in four pieces around the window.
+        // The back wall in four pieces around the window; the window's trim covers their seams.
         let x0: Float = -0.555, x1: Float = 0.495
-        pivot.box(o.left - x0, h, 0.05, r: 0.004, wall, at: [(x0 + o.left) / 2, h / 2, -0.525])
-        pivot.box(x1 - o.right, h, 0.05, r: 0.004, wall, at: [(o.right + x1) / 2, h / 2, -0.525])
-        pivot.box(o.right - o.left, o.bottom, 0.05, r: 0.004, wall, at: [0, o.bottom / 2, -0.525])
-        pivot.box(o.right - o.left, h - o.top, 0.05, r: 0.004, wall, at: [0, (o.top + h) / 2, -0.525])
+        pivot.box(o.left - x0, h, 0.05, r: 0.01, wall, at: [(x0 + o.left) / 2, h / 2, -0.525])
+        pivot.box(x1 - o.right, h, 0.05, r: 0.01, wall, at: [(o.right + x1) / 2, h / 2, -0.525])
+        pivot.box(o.right - o.left, o.bottom, 0.05, r: 0.01, wall, at: [0, o.bottom / 2, -0.525])
+        pivot.box(o.right - o.left, h - o.top, 0.05, r: 0.01, wall, at: [0, (o.top + h) / 2, -0.525])
 
         let wood = Clay.matte(Tone.wood)
-        pivot.box(0.014, 0.045, 1.0, r: 0.004, wood, at: [-0.493, 0.0225, 0])
-        pivot.box(1.0, 0.045, 0.014, r: 0.004, wood, at: [0, 0.0225, -0.493])
+        pivot.box(0.014, 0.05, 1.0, r: 0.004, wood, at: [-0.493, 0.025, 0])
+        pivot.box(1.0, 0.05, 0.014, r: 0.004, wood, at: [0, 0.025, -0.493])
+
+        // Corner posts and top beams, as in the first room.
+        for (x, z) in [(-0.535, 0.52), (-0.535, -0.535), (0.52, -0.535)] as [(Float, Float)] {
+            pivot.box(0.075, h + 0.06, 0.075, r: 0.012, wood, at: [x, (h + 0.06) / 2, z])
+        }
+        pivot.box(0.085, 0.065, 1.13, r: 0.015, wood, at: [-0.535, h + 0.02, -0.01])
+        pivot.box(1.13, 0.065, 0.085, r: 0.015, wood, at: [-0.01, h + 0.02, -0.535])
     }
 
     /// The window: a hole the flat view shows through, with the town on a plane in it until then.
@@ -290,16 +296,24 @@ final class CityRoomScene: CatRoom {
         pivot.addChild(fallback)
         self.fallback = fallback
 
-        let frame = Clay.matte(Tone.frame, roughness: 0.6)
+        // Like the first room's round window: a wood ring, a lighter bead round the glass and wood muntins.
+        let frame = Clay.matte(Tone.wood, roughness: 0.6)
+        let bead = Clay.matte(Tone.woodLight, roughness: 0.6)
         let d: Float = 0.05
-        pivot.box(width + 0.03, 0.018, d, r: 0.004, frame, at: [0, o.top, -0.525])
-        pivot.box(0.018, height, d, r: 0.004, frame, at: [o.left, c.y, -0.525])
-        pivot.box(0.018, height, d, r: 0.004, frame, at: [o.right, c.y, -0.525])
-        for x in [-width / 6, width / 6] { pivot.box(0.014, height, 0.02, r: 0.004, frame, at: [x, c.y, -0.54]) }
-        pivot.box(width, 0.012, 0.02, r: 0.004, frame, at: [0, o.top - 0.11, -0.54])
+        pivot.box(width + 0.05, 0.03, d, r: 0.008, frame, at: [0, o.top + 0.005, -0.525])
+        pivot.box(0.03, height, d, r: 0.008, frame, at: [o.left - 0.005, c.y, -0.525])
+        pivot.box(0.03, height, d, r: 0.008, frame, at: [o.right + 0.005, c.y, -0.525])
+        pivot.box(width, 0.008, 0.03, r: 0.003, bead, at: [0, o.top - 0.004, -0.53])
+        for x in [o.left + 0.004, o.right - 0.004] { pivot.box(0.008, height, 0.03, r: 0.003, bead, at: [x, c.y, -0.53]) }
+        for x in [-width / 6, width / 6] { pivot.box(0.014, height, 0.014, r: 0.004, frame, at: [x, c.y, -0.54]) }
+        pivot.box(width, 0.014, 0.014, r: 0.004, frame, at: [0, o.top - 0.11, -0.54])
 
-        // Mochi sits on the sill.
-        pivot.box(width + 0.08, 0.025, 0.14, r: 0.006, frame, at: [0, o.bottom, -0.44])
+        // Mochi sits on the sill, a light wood with a rounded nose, an apron under it and two corbels.
+        pivot.box(width + 0.08, 0.025, 0.14, r: 0.007, bead, at: [0, o.bottom, -0.44])
+        pivot.box(width + 0.04, 0.034, 0.024, r: 0.008, frame, at: [0, o.bottom - 0.029, -0.382])
+        for x in [-width / 2 - 0.03, width / 2 + 0.03] {
+            pivot.box(0.022, 0.05, 0.07, r: 0.01, frame, at: [x, o.bottom - 0.037, -0.465])
+        }
 
         // A note taped to the middle pane, with a heart on it.
         let note = pivot.group(at: [-0.02, 0.53, -0.527], rotation: .z(0.04))
