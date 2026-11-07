@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { Schema } from "effect";
 import { beforeEach, describe, expect, it } from "vitest";
-import { NoteId, UserId } from "@billet/contracts-domain/ids";
+import { MediaKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns, type ApnsFetch } from "../src/apns-client.ts";
 import { sendPushLane, type PushLaneDependencies } from "../src/apns-lanes.ts";
@@ -11,12 +12,16 @@ import { resetDirectory } from "./directory-migrations.ts";
 const bob = Schema.decodeUnknownSync(UserId)("user-bob");
 const alice = Schema.decodeUnknownSync(UserId)("user-alice");
 const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
-const note = Schema.decodeUnknownSync(Note)({
-  _tag: "Text",
+const note = Note.cases.Drawing.make({
   id: noteId,
   author: alice,
-  at: 1,
-  text: "hi",
+  sentAt: 1,
+  compact: CompactStrokes.make({
+    version: 1,
+    strokes: [{ color: "#7B4FE0", width: 33, points: [10, 20, 500, 900] }],
+  }),
+  image: Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png"),
+  paper: "sky",
 });
 
 const seed = async () => {
