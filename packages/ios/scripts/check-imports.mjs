@@ -61,10 +61,10 @@ function describe(target, module) {
   const isFeature = target.startsWith("Feature");
   const isInterface = target.endsWith("Interface");
   if (isFeature && module.startsWith("Feature") && module !== target) {
-    return `${target} imports ${module}; a feature imports another only through its Interface target`;
+    return `${target} imports ${module}; a feature imports another only through its Interface`;
   }
   if (isInterface && (module.startsWith("Feature") || notInInterfaces.has(module))) {
-    return `${target} imports ${module}; an interface target holds value types and protocols only`;
+    return `${target} imports ${module}; an Interface holds value types and protocols only`;
   }
   return undefined;
 }
