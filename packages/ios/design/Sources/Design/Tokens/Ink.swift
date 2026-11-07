@@ -55,6 +55,8 @@ public enum Ink {
   /// Placeholders, never body text or a disabled label that must be read.
   public static let textTertiary = Color(
     light: Color(hex: 0x3A2114, opacity: 0.45), dark: .white.opacity(0.5))
+  /// A field that was filled in wrong: its tint, border and message. Used with an icon, never alone.
+  public static let error = Color(light: Color(hex: 0xB3361B), dark: Color(hex: 0xFF8A6B))
   /// Honey for text: links, text buttons, checkmarks. Darker on cream to keep 5:1; honey itself in dark.
   public static let accentText = Color(light: Color(hex: 0xA4521C), dark: .honey)
 
