@@ -15,7 +15,9 @@ struct BakedShellTests {
         let color: [Double]
         let roughness: Double
         let matrix: [Double]
-        let bounds: [Double]
+        let shape: String
+        let size: [Double]
+        /// A mesh no shape describes, in the pivot's space.
         let positions: [SIMD3<Float>]
         let normals: [SIMD3<Float>]
         let indices: [UInt32]
@@ -29,73 +31,75 @@ struct BakedShellTests {
 
     private static func round(_ value: Float, _ places: Double = 1e5) -> Double { (Double(value) * places).rounded() / places }
 
-    /// Builds a room with its static parts tagged and collects them, in the pivot's space.
-    private static func parts(of room: CatRoom) throws -> [Part] {
+    /// Collects a room's tagged static parts, in the pivot's space.
+    private static func parts(of room: CatRoom) -> [Part] {
         var parts: [Part] = []
         room.pivot.forEachDescendant { entity in
-            guard entity.components.has(ShellPart.self), let model = entity as? ModelEntity,
+            guard let tag = entity.components[ShellPart.self], let model = entity as? ModelEntity,
                   let component = model.model, let material = component.materials.first as? PhysicallyBasedMaterial
             else { return }
             let matrix = entity.transformMatrix(relativeTo: room.pivot)
-            let normalMatrix = simd_transpose(simd_inverse(simd_float3x3(
-                SIMD3(matrix.columns.0.x, matrix.columns.0.y, matrix.columns.0.z),
-                SIMD3(matrix.columns.1.x, matrix.columns.1.y, matrix.columns.1.z),
-                SIMD3(matrix.columns.2.x, matrix.columns.2.y, matrix.columns.2.z))))
             var rgba: (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
             material.baseColor.tint.getRed(&rgba.0, green: &rgba.1, blue: &rgba.2, alpha: &rgba.3)
             let color = [rgba.0, rgba.1, rgba.2].map { Double($0) }
             let roughness = Double(material.roughness.scale)
-            let bounds = component.mesh.bounds
-            for contentModel in component.mesh.contents.models {
-                for part in contentModel.parts {
-                    let positions = Array(part.positions.elements).map { p -> SIMD3<Float> in
-                        let world = matrix * SIMD4(p, 1)
-                        return SIMD3(world.x, world.y, world.z)
+            let key = String(format: "%.3f-%.3f-%.3f-%.2f", color[0], color[1], color[2], roughness)
+            let flat = (0..<4).flatMap { c in (0..<4).map { r in Double(matrix[c][r]) } }
+            switch tag.shape {
+            case .box(let size, let radius):
+                parts.append(Part(material: key, color: color, roughness: roughness, matrix: flat, shape: "box",
+                                  size: [size.x, size.y, size.z, radius].map(Double.init), positions: [], normals: [], indices: []))
+            case .sphere, .cylinder:
+                let name = if case .sphere = tag.shape { "sphere" } else { "cylinder" }
+                parts.append(Part(material: key, color: color, roughness: roughness, matrix: flat, shape: name,
+                                  size: [], positions: [], normals: [], indices: []))
+            case nil:
+                let normalMatrix = simd_transpose(simd_inverse(simd_float3x3(
+                    SIMD3(matrix.columns.0.x, matrix.columns.0.y, matrix.columns.0.z),
+                    SIMD3(matrix.columns.1.x, matrix.columns.1.y, matrix.columns.1.z),
+                    SIMD3(matrix.columns.2.x, matrix.columns.2.y, matrix.columns.2.z))))
+                for contentModel in component.mesh.contents.models {
+                    for part in contentModel.parts {
+                        let positions = Array(part.positions.elements).map { p -> SIMD3<Float> in
+                            let world = matrix * SIMD4(p, 1)
+                            return SIMD3(world.x, world.y, world.z)
+                        }
+                        let normals = (part.normals.map { Array($0.elements) } ?? []).map { simd_normalize(normalMatrix * $0) }
+                        parts.append(Part(material: key, color: color, roughness: roughness, matrix: flat, shape: "mesh",
+                                          size: [], positions: positions, normals: normals,
+                                          indices: part.triangleIndices.map { Array($0.elements) } ?? []))
                     }
-                    let normals = (part.normals.map { Array($0.elements) } ?? []).map { simd_normalize(normalMatrix * $0) }
-                    parts.append(Part(
-                        material: String(format: "%.3f-%.3f-%.3f-%.2f", color[0], color[1], color[2], roughness),
-                        color: color, roughness: roughness,
-                        matrix: (0..<4).flatMap { c in (0..<4).map { r in Double(matrix[c][r]) } },
-                        bounds: [bounds.min, bounds.max].flatMap { [$0.x, $0.y, $0.z] }.map { Double($0) },
-                        positions: positions, normals: normals,
-                        indices: part.triangleIndices.map { Array($0.elements) } ?? []))
                 }
             }
         }
         return parts
     }
 
-    /// What the bake was made from, independent of how finely RealityKit tessellates a box: each part's material,
-    /// transform and bounds.
+    /// What the bake was made from: each part's material, shape and transform.
     private static func fingerprint(_ parts: [Part]) -> String {
         let lines = parts.map { part in
-            ([part.material] + (part.matrix + part.bounds).map { String(format: "%.4f", $0) }).joined(separator: " ")
+            ([part.material, part.shape] + (part.matrix + part.size).map { String(format: "%.4f", $0) })
+                .joined(separator: " ")
         }
         return SHA256.hash(data: Data(lines.joined(separator: "\n").utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
-    /// The scene for the Blender bake: one mesh per material, in the pivot's space.
+    /// The scene for the Blender bake: the room's parts and their materials, in the pivot's space.
     private static func scene(_ parts: [Part]) throws -> Data {
-        var order: [String] = []
-        var grouped: [String: [Part]] = [:]
-        for part in parts {
-            if grouped[part.material] == nil { order.append(part.material) }
-            grouped[part.material, default: []].append(part)
-        }
-        let meshes: [[String: Any]] = order.map { key in
-            var positions: [Double] = [], normals: [Double] = [], indices: [UInt32] = []
-            for part in grouped[key]! {
-                let base = UInt32(positions.count / 3)
-                positions += part.positions.flatMap { [Self.round($0.x), Self.round($0.y), Self.round($0.z)] }
-                normals += part.normals.flatMap { [Self.round($0.x, 1e4), Self.round($0.y, 1e4), Self.round($0.z, 1e4)] }
-                indices += part.indices.map { $0 + base }
+        let entries: [[String: Any]] = parts.map { part in
+            var entry: [String: Any] = [
+                "material": part.material, "color": part.color, "roughness": part.roughness,
+                "shape": part.shape, "matrix": part.matrix.map { ($0 * 1e6).rounded() / 1e6 },
+            ]
+            if !part.size.isEmpty { entry["size"] = part.size }
+            if part.shape == "mesh" {
+                entry["positions"] = part.positions.flatMap { [Self.round($0.x), Self.round($0.y), Self.round($0.z)] }
+                entry["normals"] = part.normals.flatMap { [Self.round($0.x, 1e4), Self.round($0.y, 1e4), Self.round($0.z, 1e4)] }
+                entry["indices"] = part.indices
             }
-            let first = grouped[key]![0]
-            return ["material": key, "color": first.color, "roughness": first.roughness,
-                    "positions": positions, "normals": normals, "indices": indices]
+            return entry
         }
-        return try JSONSerialization.data(withJSONObject: ["meshes": meshes], options: [.sortedKeys])
+        return try JSONSerialization.data(withJSONObject: ["parts": entries], options: [.sortedKeys])
     }
 
     private static func room(_ name: String) -> CatRoom {
@@ -111,7 +115,7 @@ struct BakedShellTests {
     @Test func export() throws {
         guard let directory = ProcessInfo.processInfo.environment["BAKE_EXPORT_DIR"] else { return }
         for name in Self.rooms {
-            let parts = try Self.parts(of: Self.room(name))
+            let parts = Self.parts(of: Self.room(name))
             #expect(!parts.isEmpty)
             try Self.scene(parts).write(to: URL(fileURLWithPath: directory).appending(path: "\(name).json"))
             try Self.fingerprint(parts).write(
@@ -127,7 +131,7 @@ struct BakedShellTests {
         let recorded = try JSONDecoder().decode(
             [String: String].self, from: Data(contentsOf: repo.appending(path: "scripts/bake-room/sources.json")))
         for name in Self.rooms {
-            let parts = try Self.parts(of: Self.room(name))
+            let parts = Self.parts(of: Self.room(name))
             #expect(recorded[name] == Self.fingerprint(parts), "\(name) is stale: run scripts/bake-room/bake.sh")
         }
     }

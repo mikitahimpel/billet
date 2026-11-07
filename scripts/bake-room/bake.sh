@@ -3,8 +3,8 @@
 #
 #   scripts/bake-room/bake.sh [room|city ...] [--skip-export] [--samples N] [--size N]
 #
-# 1. The app's BakedShellTests.export builds each room with its static parts tagged and writes them as meshes
-#    (xcodebuild test on a Simulator; skipped with --skip-export when .work/ already has them).
+# 1. The app's BakedShellTests.export builds each room with its static parts tagged and writes their shapes,
+#    transforms and materials to shells/*.json (xcodebuild test on a Simulator; skipped with --skip-export).
 # 2. Blender (Cycles, headless) merges them, unwraps one atlas, bakes the light and writes the USDZ.
 # 3. scripts/bake-room/sources.json records what each shell was baked from; BakedShellTests fails when a room's
 #    static boxes no longer match it.
@@ -52,18 +52,19 @@ for devices in json.load(sys.stdin)["devices"].values():
 ' $device)
   [[ -n $udid ]] || { echo "no Simulator named $device" >&2; exit 1; }
   TEST_RUNNER_BAKE_EXPORT_DIR=$work xcodebuild test -project $repo/apps/ios/Billet.xcodeproj -scheme Billet \
-    -destination "platform=iOS Simulator,id=$udid" -only-testing:NookiTests/BakedShellTests/export \
+    -destination "platform=iOS Simulator,id=$udid" -only-testing:NookiTests/BakedShellTests/export\(\) \
     -derivedDataPath $work/derived CODE_SIGNING_ALLOWED=NO -quiet
   give_lock
+  cp $work/*.json $here/shells/
 fi
 
 for room in $rooms; do
   name=$names[$room]
-  [[ -f $work/$name.json ]] || { echo "$work/$name.json is missing: run without --skip-export" >&2; exit 1; }
+  [[ -f $here/shells/$name.json ]] || { echo "shells/$name.json is missing: run without --skip-export" >&2; exit 1; }
   extra=()
   [[ $room == room ]] && extra=(--furniture $repo/apps/ios/Nooki/Resources/Room/Room_furniture.usdz)
   take_lock
-  perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $work/$name.json $work/$name.usdz \
+  perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $here/shells/$name.json $work/$name.usdz \
     --size $size --samples $samples ${=BAKE_ARGS:-} $extra
   give_lock
   cp $work/$name.usdz $repo/apps/ios/Nooki/Resources/Room/$name.usdz

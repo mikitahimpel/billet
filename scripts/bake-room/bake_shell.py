@@ -4,8 +4,8 @@ Run by bake.sh, headless:
 
   blender -b -P bake_shell.py -- <room> <shell.json> <out.usdz> [--size 2048] [--samples 128] [--furniture <usdz>]
 
-`shell.json` is what the app's BakedShellTests.export wrote: the room's static boxes, spheres and cylinders as meshes
-in the room's own space (meters, Y up), one per material. Everything is merged into one mesh, unwrapped to one atlas
+`shell.json` is what the app's BakedShellTests.export wrote: the room's static boxes, spheres and cylinders with
+their transforms and materials, in the room's own space (meters, Y up). Everything is merged into one mesh, unwrapped to one atlas
 and baked with Cycles (direct and indirect light, ambient occlusion, the albedo) into one texture; the model carries
 that texture alone, and the app draws it unlit.
 
@@ -55,10 +55,10 @@ ROOMS = {
     "city": {
         # CityRoomScene at 15:00 with the lamps off: the sun 320 * lightIntensity, the fill 300, the sky light
         # 2500 * (1 - darkness * 0.85) at the window. The lamps are on only at night, which the tint covers.
-        "sun": {"color": 0xFFE9D0, "lux": 820, "from": (-0.9, 2.1, -1.1)},
+        "sun": {"color": 0xFFE9D0, "lux": 700, "from": (-0.9, 2.1, -1.1)},
         "fill": {"color": 0xDCE8FF, "lux": 260, "from": (1.5, 1.4, 1.6)},
         "points": [
-            {"color": 0xCDE5FF, "lumens": 2500, "at": (0.0, 0.5, -0.38), "radius": 1.2},
+            {"color": 0xCDE5FF, "lumens": 1200, "at": (0.0, 0.5, -0.38), "radius": 1.2},
         ],
         "sky": (0xFFE7C4, 0xB97A45, 0.76),
     },
@@ -66,8 +66,9 @@ ROOMS = {
 
 # RealityKit's units are not Blender's. These two factors are the calibration: a directional of N lux and a point of
 # N lumens become `N * factor` watts of Blender light.
-SUN_PER_LUX = 3.2 / 1000
-POINT_W_PER_LUMEN = 1 / 55
+SUN_PER_LUX = 0.8 / 1000
+AMBIENT = 0.6
+POINT_W_PER_LUMEN = 1 / 300
 
 
 def srgb_to_linear(c):
@@ -91,31 +92,182 @@ t0 = time.time()
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
-# ---- the shell's meshes, merged -------------------------------------------------------------------------------
+# ---- the shell's parts, merged ---------------------------------------------------------------------------------
+# RealityKit tessellates a rounded box into thousands of triangles. The app sends each part's shape and transform
+# instead, and the shapes are rebuilt here with a few: the same silhouette, and the same analytic normals, so the
+# shading reads alike.
+import numpy as np  # noqa: E402
+
+BEVEL_STEPS = 3
+SPHERE = (20, 12)
+RING = 28
+
+
+def rounded_box(size, radius):
+    """Vertices, triangles and normals of a box of `size` with corners rounded to `radius`, centered on the origin."""
+    half = np.array(size[:3]) / 2
+    inner = np.maximum(half - radius, 0)
+    # Along each axis the grid passes through the flat part's edges and then rounds the corner in BEVEL_STEPS.
+    axes = []
+    for a in range(3):
+        steps = np.linspace(0, math.pi / 2, BEVEL_STEPS + 1)
+        if radius <= 0:
+            ticks = [-half[a], half[a]]
+        else:
+            corner = inner[a] + radius * np.sin(steps)
+            ticks = sorted(set([*(-corner), *corner]))
+        axes.append(np.array(ticks))
+    verts, tris = [], []
+    for face_axis in range(3):
+        # u x v is the face's own axis, so the quads below wind outwards on the + side.
+        u, v = ((1, 2), (2, 0), (0, 1))[face_axis]
+        for sign in (-1, 1):
+            base = len(verts)
+            nu, nv = len(axes[u]), len(axes[v])
+            for iu in range(nu):
+                for iv in range(nv):
+                    p = np.zeros(3)
+                    p[face_axis] = sign * half[face_axis]
+                    p[u] = axes[u][iu]
+                    p[v] = axes[v][iv]
+                    verts.append(p)
+            for iu in range(nu - 1):
+                for iv in range(nv - 1):
+                    a0 = base + iu * nv + iv
+                    quad = (a0, a0 + nv, a0 + nv + 1, a0 + 1)
+                    tris += ([(quad[0], quad[1], quad[2]), (quad[0], quad[2], quad[3])] if sign > 0
+                             else [(quad[0], quad[2], quad[1]), (quad[0], quad[3], quad[2])])
+    verts = np.array(verts)
+    # Each vertex is pushed out to the rounded surface: the nearest point of the inner box plus `radius` along the
+    # direction away from it, which is also its normal.
+    nearest = np.clip(verts, -inner, inner)
+    away = verts - nearest
+    length = np.linalg.norm(away, axis=1, keepdims=True)
+    face_normal = np.zeros_like(verts)
+    for i, p in enumerate(verts):
+        a = int(np.argmax(np.abs(p) / np.maximum(half, 1e-9)))
+        face_normal[i, a] = np.sign(p[a])
+    normals = np.where(length > 1e-9, away / np.maximum(length, 1e-9), face_normal)
+    if radius > 0:
+        verts = np.where(length > 1e-9, nearest + normals * radius, verts)
+    return verts, np.array(tris), normals
+
+
+def sphere():
+    segments, rings = SPHERE
+    verts = [(0, 1, 0)]
+    for r in range(1, rings):
+        phi = math.pi * r / rings
+        for s in range(segments):
+            theta = 2 * math.pi * s / segments
+            verts.append((math.sin(phi) * math.cos(theta), math.cos(phi), math.sin(phi) * math.sin(theta)))
+    verts.append((0, -1, 0))
+    tris = []
+    for s in range(segments):
+        tris.append((0, 1 + s, 1 + (s + 1) % segments))
+    for r in range(rings - 2):
+        for s in range(segments):
+            a = 1 + r * segments + s
+            b = 1 + r * segments + (s + 1) % segments
+            tris += [(a, a + segments, b), (b, a + segments, b + segments)]
+    last = len(verts) - 1
+    for s in range(segments):
+        tris.append((last, last - segments + (s + 1) % segments, last - segments + s))
+    verts = np.array(verts, dtype=float)
+    return verts, np.array(tris), verts.copy()
+
+
+def cylinder():
+    """The unit cylinder: radius 1, height 1 along Y, as RealityKit's `generateCylinder(height: 1, radius: 1)`."""
+    verts, normals, tris = [], [], []
+    for y in (0.5, -0.5):
+        for s in range(RING):
+            t = 2 * math.pi * s / RING
+            verts.append((math.cos(t), y, math.sin(t)))
+            normals.append((math.cos(t), 0, math.sin(t)))
+    for s in range(RING):
+        n = (s + 1) % RING
+        tris += [(s, RING + s, n), (n, RING + s, RING + n)]
+    for y, sign in ((0.5, 1), (-0.5, -1)):
+        center = len(verts)
+        verts.append((0, y, 0))
+        normals.append((0, sign, 0))
+        ring = len(verts)
+        for s in range(RING):
+            t = 2 * math.pi * s / RING
+            verts.append((math.cos(t), y, math.sin(t)))
+            normals.append((0, sign, 0))
+        for s in range(RING):
+            n = (s + 1) % RING
+            tris.append((center, ring + s, ring + n) if sign > 0 else (center, ring + n, ring + s))
+    return np.array(verts, dtype=float), np.array(tris), np.array(normals, dtype=float)
+
+
+UNIT = {"sphere": sphere(), "cylinder": cylinder()}
+
 data = json.load(open(source))
+materials = {}
+for part in data["parts"]:
+    materials.setdefault(part["material"], {"color": part["color"], "roughness": part["roughness"], "parts": []})
+    materials[part["material"]]["parts"].append(part)
+
+
+def weld(verts, tris, normals):
+    """Shares the vertices a shape's faces have at the same place, so the unwrap sees one connected surface."""
+    _, first, inverse = np.unique(np.round(verts, 6), axis=0, return_index=True, return_inverse=True)
+    return verts[first], inverse.reshape(-1)[tris], normals[first]
+
+
+def place(part):
+    """A part's vertices, triangles and normals in Blender's space."""
+    if part["shape"] == "mesh":
+        verts = np.array(part["positions"]).reshape(-1, 3)
+        normals = np.array(part["normals"]).reshape(-1, 3)
+        tris = np.array(part["indices"]).reshape(-1, 3)
+    else:
+        if part["shape"] == "box":
+            verts, tris, normals = rounded_box(part["size"], part["size"][3])
+        else:
+            verts, tris, normals = UNIT[part["shape"]]
+        m = np.array(part["matrix"]).reshape(4, 4).T
+        verts = verts @ m[:3, :3].T + m[:3, 3]
+        normals = normals @ np.linalg.inv(m[:3, :3])
+        normals /= np.maximum(np.linalg.norm(normals, axis=1, keepdims=True), 1e-9)
+    if part["shape"] != "mesh":
+        verts, tris, normals = weld(verts, tris, normals)
+        # Triangles must wind outwards: RealityKit culls the back faces.
+        centers = verts[tris].mean(axis=1)
+        facing = np.cross(verts[tris[:, 1]] - verts[tris[:, 0]], verts[tris[:, 2]] - verts[tris[:, 0]])
+        if (np.einsum("ij,ij->i", facing, centers - verts.mean(axis=0)) > 0).mean() < 0.5:
+            tris = tris[:, ::-1]
+    # RealityKit's Y-up to Blender's Z-up: (x, y, z) -> (x, -z, y).
+    flip = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    return verts @ flip.T, tris, normals @ flip.T
+
+
 objects = []
-for mesh_data in data["meshes"]:
-    positions = mesh_data["positions"]
-    verts = [to_blender(positions[i:i + 3]) for i in range(0, len(positions), 3)]
-    idx = mesh_data["indices"]
-    faces = [tuple(idx[i:i + 3]) for i in range(0, len(idx), 3)]
-    mesh = bpy.data.meshes.new(mesh_data["material"])
-    mesh.from_pydata(verts, [], faces)
+for name, info in materials.items():
+    all_verts, all_tris, all_normals = [], [], []
+    for part in info["parts"]:
+        verts, tris, normals = place(part)
+        all_tris.append(tris + sum(len(v) for v in all_verts))
+        all_verts.append(verts)
+        all_normals.append(normals)
+    verts = np.concatenate(all_verts)
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(verts.tolist(), [], np.concatenate(all_tris).tolist())
     mesh.update()
-    normals = mesh_data["normals"]
-    if normals:
-        mesh.normals_split_custom_set_from_vertices(
-            [to_blender(normals[i:i + 3]).normalized() for i in range(0, len(normals), 3)])
     for poly in mesh.polygons:
         poly.use_smooth = True
-    obj = bpy.data.objects.new(mesh_data["material"], mesh)
+    mesh.normals_split_custom_set_from_vertices(np.concatenate(all_normals).tolist())
+    obj = bpy.data.objects.new(name, mesh)
     scene.collection.objects.link(obj)
-    material = bpy.data.materials.new(mesh_data["material"])
+    material = bpy.data.materials.new(name)
     material.use_nodes = True
     bsdf = material.node_tree.nodes["Principled BSDF"]
-    r, g, b = (srgb_to_linear(c) for c in mesh_data["color"])
+    r, g, b = (srgb_to_linear(c) for c in info["color"])
     bsdf.inputs["Base Color"].default_value = (r, g, b, 1)
-    bsdf.inputs["Roughness"].default_value = mesh_data["roughness"]
+    bsdf.inputs["Roughness"].default_value = info["roughness"]
     bsdf.inputs["Metallic"].default_value = 0
     obj.data.materials.append(material)
     objects.append(obj)
@@ -127,7 +279,7 @@ bpy.context.view_layer.objects.active = objects[0]
 bpy.ops.object.join()
 shell = bpy.context.view_layer.objects.active
 shell.name = "Shell"
-log("merged", len(objects), "meshes,", len(shell.data.polygons), "triangles", f"{time.time() - t0:.0f}s")
+log("merged", len(objects), "materials,", len(shell.data.polygons), "triangles", f"{time.time() - t0:.0f}s")
 
 # Faces nobody sees: the underside of the base slab and anything flat on the ground facing down.
 bm = bmesh.new()
@@ -210,18 +362,11 @@ top, bottom, scale = ROOMS["sky"]
 world = bpy.data.worlds.new("Sky")
 world.use_nodes = True
 nodes, links = world.node_tree.nodes, world.node_tree.links
-coords = nodes.new("ShaderNodeTexCoord")
-separate = nodes.new("ShaderNodeSeparateXYZ")
-ramp = nodes.new("ShaderNodeValToRGB")
-ramp.color_ramp.elements[0].color = (*hex_linear(bottom), 1)
-ramp.color_ramp.elements[1].color = (*hex_linear(top), 1)
-mapping = nodes.new("ShaderNodeMapping")
 background = nodes["Background"]
-background.inputs["Strength"].default_value = scale * 0.55
-links.new(coords.outputs["Generated"], mapping.inputs["Vector"])
-links.new(mapping.outputs["Vector"], separate.inputs["Vector"])
-links.new(separate.outputs["Z"], ramp.inputs["Fac"])
-links.new(ramp.outputs["Color"], background.inputs["Color"])
+# A flat ambient of the two tones' mean: the world's directions are not a usable gradient across Blender's bake.
+mean = tuple((x + y) / 2 for x, y in zip(hex_linear(top), hex_linear(bottom)))
+background.inputs["Color"].default_value = (*mean, 1)
+background.inputs["Strength"].default_value = scale * AMBIENT
 scene.world = world
 
 # ---- the bake ----------------------------------------------------------------------------------------------------
@@ -267,8 +412,11 @@ image.filepath_raw = png
 image.file_format = "JPEG"
 scene.render.image_settings.quality = QUALITY
 image.save_render(png, scene=scene)
+# The exporter copies a texture from a file, which the baked image is not until it is loaded back from it.
+image = bpy.data.images.load(png)
+image.colorspace_settings.name = "sRGB"
+tex.image = image
 
-image.pack()
 shell.data.materials.clear()
 shell.data.materials.append(atlas)
 bsdf = tree.nodes["Principled BSDF"]

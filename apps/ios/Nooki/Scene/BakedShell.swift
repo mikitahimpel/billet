@@ -21,8 +21,18 @@ struct ShellLive: Component {}
 /// The tint the room last asked of its shell, kept for a shell that loads after it.
 struct ShellTint: Component { let color: UIColor }
 
-/// A primitive the baked model replaces; only tagged while exporting.
-struct ShellPart: Component {}
+/// A primitive the baked model replaces; only tagged while exporting. The bake rebuilds the shapes it knows with
+/// fewer triangles than RealityKit's, and takes any other mesh as it is.
+struct ShellPart: Component {
+    enum Shape {
+        case box(size: SIMD3<Float>, radius: Float)
+        /// The unit sphere and cylinder meshes the entity's scale sizes.
+        case sphere
+        case cylinder
+    }
+
+    let shape: Shape?
+}
 
 extension Entity {
     fileprivate var shellKind: ShellMode.Kind? {
@@ -38,15 +48,17 @@ extension Entity {
     /// Glowing parts (bulbs, flames, lamp shades) change as the room does, so they are always built.
     private static func glows(_ material: some Material) -> Bool {
         guard let pbr = material as? PhysicallyBasedMaterial else { return false }
-        return pbr.emissiveIntensity > 0
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0
+        pbr.emissiveColor.color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+        return pbr.emissiveIntensity > 0 && red + green + blue > 0
     }
 
     func skipsForShell(_ material: some Material) -> Bool {
         shellKind == .baked && !Self.glows(material)
     }
 
-    func tagForShell(_ entity: Entity, _ material: some Material) {
-        if shellKind == .export, !Self.glows(material) { entity.components.set(ShellPart()) }
+    func tagForShell(_ entity: Entity, _ material: some Material, _ shape: ShellPart.Shape?) {
+        if shellKind == .export, !Self.glows(material) { entity.components.set(ShellPart(shape: shape)) }
     }
 }
 
