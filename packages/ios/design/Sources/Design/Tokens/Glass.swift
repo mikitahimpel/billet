@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// How the glass controls are drawn: Liquid Glass, or an opaque surface of the same shape with a
-/// stroke and a shadow, the arm a perf run measures the glass against (`-perf.hud opaque`).
+/// How the glass controls are drawn: Liquid Glass; an opaque surface of the same shape with a
+/// stroke and a shadow; or that surface flat, with no shadow. The arms a perf run measures the
+/// glass against (`-perf.hud opaque|flat`); neither opaque arm uses a `GlassEffectContainer`.
 public enum GlassRendering: Sendable {
   case liquid
   case opaque
+  case flat
 }
 
 extension EnvironmentValues {
@@ -43,6 +45,10 @@ private struct GlassModifier<S: Shape>: ViewModifier {
       content
         .background { shape.fill(Ink.surface).shadow(color: .black.opacity(0.18), radius: 8, y: 3) }
         .overlay { shape.stroke(Ink.hairline, lineWidth: 1) }
+    } else if rendering == .flat {
+      content
+        .background { shape.fill(Ink.surface) }
+        .overlay { shape.stroke(Ink.hairline, lineWidth: 1) }
     } else if #available(iOS 26, macOS 26, *) {
       content.glassEffect(
         (clear ? Glass.clear : .regular).tint(tint).interactive(interactive), in: shape)
@@ -56,6 +62,7 @@ private struct GlassModifier<S: Shape>: ViewModifier {
 public struct GlassGroup<Content: View>: View {
   let spacing: CGFloat
   let content: Content
+  @Environment(\.glassRendering) private var rendering
 
   public init(spacing: CGFloat, @ViewBuilder content: () -> Content) {
     self.spacing = spacing
@@ -63,7 +70,9 @@ public struct GlassGroup<Content: View>: View {
   }
 
   public var body: some View {
-    if #available(iOS 26, macOS 26, *) {
+    if rendering != .liquid {
+      content
+    } else if #available(iOS 26, macOS 26, *) {
       GlassEffectContainer(spacing: spacing) { content }
     } else {
       content

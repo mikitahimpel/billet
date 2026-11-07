@@ -4,16 +4,24 @@ import RealityKit
 import Synchronization
 import UIKit
 
-/// The header and the tab bar as a perf run shows them: the glass they ship with, the same controls opaque, or none
-/// at all. `-perf.hud opaque|hidden` picks one for a whole run; a `cost` run switches between them.
+/// The header and the tab bar as a perf run shows them: the glass they ship with, the same controls opaque with a
+/// shadow, flat with none, or no bars at all. `-perf.hud opaque|flat|hidden` picks one for a whole run; a `cost` run
+/// switches from that one to the others.
 enum HUDArm: String {
     case glass
     case opaque
+    case flat
     case hidden
 
     static let launch = HUDArm(rawValue: UserDefaults.standard.string(forKey: "perf.hud") ?? "") ?? .glass
 
-    var glass: GlassRendering { self == .opaque ? .opaque : .liquid }
+    var glass: GlassRendering {
+        switch self {
+        case .glass, .hidden: .liquid
+        case .opaque: .opaque
+        case .flat: .flat
+        }
+    }
 }
 
 /// Nooki's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
@@ -116,15 +124,17 @@ enum NookiPerf {
                     return "kind=\(kind == .city ? "city" : "room") skin_passes=\(skin.passes) skin_skipped=\(skin.skipped)"
                         + " skin_ms=\(String(format: "%.2f", skin.milliseconds))"
                 },
-                // "glass hud" off is the opaque header and tab bar, "hud" off is none, "room paused" off stops the
-                // room drawing under the glass: the arms of the glass-over-the-room comparison.
+                // The arms of the glass-over-the-room comparison, each off against the run's launch arm: "glass hud"
+                // off is the opaque header and tab bar, "hud shadow" off the flat one, "hud" off none, and "room
+                // paused" off stops the room drawing under them.
                 switches: ["cat shadow", "room shadows", "sun shadow", "point lights", "particles", "bloom",
-                           "glass hud", "hud", "room paused"],
+                           "glass hud", "hud shadow", "hud", "room paused"],
                 setSwitch: { name, isOn in
                     switch name {
                     case "cat shadow": room.setCatShadow(isOn)
-                    case "glass hud": setHUD(isOn ? .glass : .opaque)
-                    case "hud": setHUD(isOn ? .glass : .hidden)
+                    case "glass hud": setHUD(isOn ? .launch : .opaque)
+                    case "hud shadow": setHUD(isOn ? .launch : .flat)
+                    case "hud": setHUD(isOn ? .launch : .hidden)
                     case "room paused": room.paused = !isOn
                     default: RoomSwitches.set(name, isOn, in: room)
                     }
