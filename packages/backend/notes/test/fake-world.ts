@@ -313,7 +313,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       ),
     removeAll: (pairId) =>
       Effect.sync(() => {
-        for (const key of [...objects.keys()]) {
+        for (const key of objects.keys()) {
           if (!key.startsWith(mediaPrefix(pairId))) continue;
           objects.delete(key);
           uploaders.delete(key);
