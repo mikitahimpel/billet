@@ -204,3 +204,49 @@ export const StoredMovieSwipe = Schema.Struct({
   posterPath: Schema.NullOr(Schema.String),
   at: Schema.Int,
 });
+
+/** What a `guess_rounds` row holds. */
+export const StoredGuessRound = Schema.Struct({
+  day: Schema.String,
+  subject: Schema.String,
+  questions: Schema.String,
+});
+
+/** What a `guess_answers` row holds. */
+export const StoredGuessAnswer = Schema.Struct({
+  day: Schema.String,
+  member: Schema.String,
+  question: Schema.Int,
+  option: Schema.Int,
+  at: Schema.Int,
+});
+
+/** What a `guess_weeks` row holds. */
+export const StoredGuessWeek = Schema.Struct({
+  week: Schema.String,
+  member: Schema.String,
+  points: Schema.Int,
+});
+
+/** What a `riddles` row holds. */
+export const StoredRiddle = Schema.Struct({
+  id: Schema.String,
+  drawer: Schema.String,
+  endedAt: Schema.NullOr(Schema.Int),
+  body: Schema.String,
+});
+
+/** What a `riddle_guesses` row holds. */
+export const StoredRiddleGuess = Schema.Struct({
+  riddle: Schema.String,
+  key: Schema.String,
+  right: Schema.Boolean,
+  at: Schema.Int,
+});
+
+/** What the `riddle_series` row holds. */
+export const StoredRiddleSeries = Schema.Struct({
+  id: Schema.Int,
+  series: Schema.Int,
+  best: Schema.Int,
+});

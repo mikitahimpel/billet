@@ -242,6 +242,7 @@ export const activityOf = (
       case "CoinsRepeated":
       case "ListSaved":
       case "ListDeleted":
+      case "RiddleSaved":
         return [];
     }
   });

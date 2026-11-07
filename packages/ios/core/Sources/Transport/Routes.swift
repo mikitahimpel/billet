@@ -62,6 +62,17 @@ public enum Routes {
   /// The pair's Pick tonight session; a swipe answers the session after it.
   public static let getPickTonight = Route(.get, "/v1/pick-tonight")
   public static let swipePickTonight = Route(.post, "/v1/pick-tonight/swipes")
+  /// Today's Who knows who round; an answer answers the round after it. The catalog needs no
+  /// session.
+  public static let getGuess = Route(.get, "/v1/guess")
+  public static let answerGuess = Route(.post, "/v1/guess/answers")
+  public static let getGuessCatalog = Route(.get, "/v1/guess/catalog")
+  /// The pair's draw-guess riddles; `:id` names one.
+  public static let getRiddles = Route(.get, "/v1/riddles")
+  public static let sendRiddle = Route(.post, "/v1/riddles")
+  public static let guessRiddle = Route(.post, "/v1/riddles/:id/guess")
+  public static let hintRiddle = Route(.post, "/v1/riddles/:id/hint")
+  public static let giveUpRiddle = Route(.post, "/v1/riddles/:id/give-up")
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let getDateCatalog = Route(.get, "/v1/dates/catalog")

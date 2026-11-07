@@ -87,6 +87,57 @@ export const matchAlertBody = (name: string): unknown => ({
   },
 });
 
+/**
+ * An alert to the partner that the other member finished their part of today's Who knows who
+ * round: as the subject, who answered `count` questions about themselves, or as the guesser. The
+ * server knows no names, and the extension leaves an alert without a payload as it is.
+ */
+export const guessAlertBody = (role: "subject" | "guesser", count: number): unknown => ({
+  aps: {
+    alert: {
+      title: "Who knows who",
+      body:
+        role === "subject"
+          ? `Your partner answered ${count} questions about themselves. Your turn to guess`
+          : `Your partner guessed ${count} things about you. Answer to see how they did`,
+    },
+    sound: "default",
+    "thread-id": "who-knows-who",
+  },
+});
+
+/** "1st", "2nd", "3rd", "4th", "11th", "21st". */
+export const ordinal = (n: number): string => {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] ?? "th");
+  return `${n}${suffix}`;
+};
+
+const riddleAlert = (body: string): unknown => ({
+  aps: {
+    alert: { title: "Nooki", body },
+    sound: "default",
+    "thread-id": "draw-guess",
+  },
+});
+
+/**
+ * An alert to the guesser that the partner drew them a riddle of `letters` letters. The server
+ * knows no names, and the extension leaves an alert without a payload as it is.
+ */
+export const riddleAlertBody = (letters: number): unknown =>
+  riddleAlert(
+    `Your partner drew you a riddle. ${letters} ${letters === 1 ? "letter" : "letters"}.`,
+  );
+
+/** An alert to the drawer that the partner solved their riddle on try `tries`, or gave up. */
+export const riddleEndedAlertBody = (word: string, solved: boolean, tries: number): unknown =>
+  riddleAlert(
+    solved
+      ? `Your partner guessed “${word}” on the ${ordinal(tries)} try 🎉`
+      : `Your partner gave up on “${word}”`,
+  );
+
 /** A WidgetKit push only asks the widgets to reload; the payload rides along for a future reader. */
 export const widgetBody = (note: Note): unknown => ({
   aps: { "content-changed": true },

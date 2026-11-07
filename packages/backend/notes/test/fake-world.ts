@@ -24,7 +24,25 @@ import {
   PickTonightStore,
   pickKeyOf,
 } from "@billet/backend-pair-room/pick-tonight";
+import {
+  GuessDeck,
+  type GuessAnswerRow,
+  GuessRoom,
+  type GuessRoundRow,
+  GuessStore,
+  type GuessWeekRow,
+  withScore,
+} from "@billet/backend-pair-room/guess";
 import { RoomService } from "@billet/backend-pair-room/room-service";
+import { RiddleRoom, RiddleStore } from "@billet/backend-pair-room/riddle";
+import {
+  endedAt,
+  noRiddleSeries,
+  type RiddleGuessRow,
+  type RiddleRow,
+  type RiddleWrite,
+} from "@billet/backend-pair-room/riddle-rules";
+import { GuessQuestionId } from "@billet/contracts-domain/guess";
 import type { ActiveRoom, RoomState, SequencedNote } from "@billet/backend-pair-room/room-state";
 import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
 import type { SharedList } from "@billet/contracts-domain/list";
@@ -49,6 +67,9 @@ const makeRoom = () => {
   const reactions = new Map<string, NoteReaction>();
   let lists: Array<SharedList> = [];
   const listKeys = new Set<string>();
+  const riddles = new Map<string, RiddleRow>();
+  const riddleGuesses = new Map<string, RiddleGuessRow>();
+  let riddleSeries = noRiddleSeries;
   const store = Layer.succeed(RoomStore, {
     lists: Effect.sync(() => lists),
     listById: (id) => Effect.sync(() => Option.fromNullishOr(lists.find((list) => list.id === id))),
@@ -66,9 +87,15 @@ const makeRoom = () => {
       coinEntries: ReadonlyArray<CoinEntry>,
       changed: ReadonlyArray<NoteReaction>,
       listWrites: ReadonlyArray<ListWrite>,
+      riddleWrites: ReadonlyArray<RiddleWrite>,
     ) =>
       Effect.sync(() => {
         state = room;
+        for (const { riddle, guess, series } of riddleWrites) {
+          riddles.set(riddle.id, riddle);
+          if (guess !== undefined) riddleGuesses.set(`${guess.riddle}/${guess.key}`, guess);
+          if (series !== undefined) riddleSeries = series;
+        }
         for (const write of listWrites) {
           listKeys.add(write.key);
           const id = write._tag === "Put" ? write.list.id : write.list;
@@ -177,12 +204,71 @@ const makeRoom = () => {
       }),
     forget: Effect.sync(() => void (swipes = [])),
   });
+  let rounds: Array<GuessRoundRow> = [];
+  let answers: Array<GuessAnswerRow> = [];
+  let weeks: ReadonlyArray<GuessWeekRow> = [];
+  const guessStore = Layer.succeed(GuessStore, {
+    round: (day) => Effect.sync(() => Option.fromNullishOr(rounds.find((r) => r.day === day))),
+    rounds: Effect.sync(() => rounds),
+    startRound: (round) =>
+      Effect.sync(() => {
+        if (!rounds.some((r) => r.day === round.day)) rounds = [...rounds, round];
+      }),
+    answers: (day) => Effect.sync(() => answers.filter((answer) => answer.day === day)),
+    weeks: Effect.sync(() => weeks),
+    answer: (row, score) =>
+      Effect.sync(() => {
+        answers = [...answers, row];
+        if (score !== undefined) weeks = withScore(weeks, score);
+      }),
+    forget: Effect.sync(() => {
+      rounds = [];
+      answers = [];
+      weeks = [];
+    }),
+  });
+  const deck = Layer.succeed(GuessDeck, {
+    questions: [1, 2, 3, 4, 5, 6, 7].map((id) => Schema.decodeSync(GuessQuestionId)(id)),
+  });
   const room = Effect.runSync(RoomService.make.pipe(Effect.provide(Layer.merge(store, ids))));
+  const guess = Effect.runSync(
+    GuessRoom.make.pipe(
+      Effect.provide(
+        Layer.mergeAll(store, guessStore, deck, Layer.succeed(RoomService, RoomService.of(room))),
+      ),
+    ),
+  );
+  const riddleStore = Layer.succeed(RiddleStore, {
+    byId: (id) => Effect.sync(() => Option.fromNullishOr(riddles.get(id))),
+    open: Effect.sync(() => [...riddles.values()].filter((row) => endedAt(row) === undefined)),
+    ended: (limit) =>
+      Effect.sync(() =>
+        [...riddles.values()]
+          .filter((row) => endedAt(row) !== undefined)
+          .toSorted((a, b) => (endedAt(b) ?? 0) - (endedAt(a) ?? 0))
+          .slice(0, limit),
+      ),
+    guess: (riddle, key) =>
+      Effect.sync(() => Option.fromNullishOr(riddleGuesses.get(`${riddle}/${key}`))),
+    series: Effect.sync(() => riddleSeries),
+    forget: Effect.sync(() => {
+      riddles.clear();
+      riddleGuesses.clear();
+      riddleSeries = noRiddleSeries;
+    }),
+  });
+  const riddle = Effect.runSync(
+    RiddleRoom.make.pipe(
+      Effect.provide(
+        Layer.mergeAll(store, riddleStore, Layer.succeed(RoomService, RoomService.of(room))),
+      ),
+    ),
+  );
   const gifts = Effect.runSync(GiftsRoom.make.pipe(Effect.provide(Layer.merge(store, giftsStore))));
   const pick = Effect.runSync(
     PickTonightRoom.make.pipe(Effect.provide(Layer.merge(store, pickStore))),
   );
-  return { ...room, gifts, pick };
+  return { ...room, gifts, pick, guess, riddle };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -278,6 +364,14 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     moods: (pairId) => roomOf(pairId).moods,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
     pickTonight: (pairId, by, command) => roomOf(pairId).pick.run(by, command),
+    riddle: (pairId, by, command) =>
+      roomOf(pairId)
+        .riddle.run(by, command)
+        .pipe(Effect.map(({ result }) => result)),
+    guess: (pairId, by, command) =>
+      roomOf(pairId)
+        .guess.run(by, command)
+        .pipe(Effect.map(({ result }) => result)),
     lists: (pairId, by, request) =>
       roomOf(pairId)
         .listsFor(by, request)

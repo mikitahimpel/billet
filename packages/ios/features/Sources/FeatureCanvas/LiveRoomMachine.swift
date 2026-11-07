@@ -123,7 +123,8 @@ public enum LiveRoomMachine: Machine {
     // The canvas has nothing to do with the cat's journal, the Inbox or the moods.
     case .received(.catEntryAdded), .received(.catSaved), .received(.activityUnread),
       .received(.reactionChanged), .received(.shopChanged), .received(.listsChanged),
-      .received(.moodChanged), .received(.matchFound):
+      .received(.moodChanged), .received(.matchFound), .received(.guessProgress),
+      .received(.guessRevealed), .received(.riddleChanged):
       return (state, [])
 
     case .received(.noteReceived(let seq, let note)):

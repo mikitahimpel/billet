@@ -29,6 +29,16 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   /// Both partners swiped ♥ on one Pick tonight card, sent to a socket that resumed with
   /// `lists: true`, the swiper's own included.
   case matchFound(PickMatch)
+  /// The partner answered another question of the Who knows who round of `round` (`YYYY-MM-DD`):
+  /// `answered` is how many they have now, never which option. Sent to a socket that resumed with
+  /// `guess: true`.
+  case guessProgress(round: String, answered: Int)
+  /// Both members answered the whole round of `round`: every question opened, in round order, and
+  /// the score after it as this user sees it. Sent to every socket that resumed with `guess: true`.
+  case guessRevealed(round: String, reveal: [GuessReveal], score: GuessScore)
+  /// A draw-guess riddle was sent, tried, hinted or ended, as this user sees it. Sent to a socket
+  /// that resumed with `riddle: true`: each open riddle on the resume, then every change.
+  case riddleChanged(Riddle)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -47,6 +57,11 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case lists
     case checkIn
     case match
+    case round
+    case answered
+    case reveal
+    case score
+    case riddle
   }
 
   public init(from decoder: any Decoder) throws {
@@ -92,6 +107,17 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .moodChanged(try container.decode(PartnerCheckIn.self, forKey: .checkIn))
     case "MatchFound":
       self = .matchFound(try container.decode(PickMatch.self, forKey: .match))
+    case "GuessProgress":
+      self = .guessProgress(
+        round: try container.decode(String.self, forKey: .round),
+        answered: try container.decode(Int.self, forKey: .answered))
+    case "RiddleChanged":
+      self = .riddleChanged(try container.decode(Riddle.self, forKey: .riddle))
+    case "GuessRevealed":
+      self = .guessRevealed(
+        round: try container.decode(String.self, forKey: .round),
+        reveal: try container.decode([GuessReveal].self, forKey: .reveal),
+        score: try container.decode(GuessScore.self, forKey: .score))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -152,6 +178,18 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .matchFound(let match):
       try container.encode("MatchFound", forKey: .tag)
       try container.encode(match, forKey: .match)
+    case .guessProgress(let round, let answered):
+      try container.encode("GuessProgress", forKey: .tag)
+      try container.encode(round, forKey: .round)
+      try container.encode(answered, forKey: .answered)
+    case .guessRevealed(let round, let reveal, let score):
+      try container.encode("GuessRevealed", forKey: .tag)
+      try container.encode(round, forKey: .round)
+      try container.encode(reveal, forKey: .reveal)
+      try container.encode(score, forKey: .score)
+    case .riddleChanged(let riddle):
+      try container.encode("RiddleChanged", forKey: .tag)
+      try container.encode(riddle, forKey: .riddle)
     }
   }
 }

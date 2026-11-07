@@ -106,6 +106,29 @@ public struct APIClient: Sendable {
   /// One Pick tonight swipe; answers the session after it, with the match it made.
   public var swipePickTonight:
     @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
+  /// Today's Who knows who round as this user sees it. `.api(.notFound)` while unpaired.
+  public var guess: @Sendable () async throws(TransportError) -> GuessResponse
+  /// Locks one answer of today's round; answers the round after it. `.api(.invalidRequest)` for
+  /// another option on a question already answered or a round whose day is over (409), or a
+  /// question not in the round (400).
+  public var answerGuess:
+    @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse
+  /// Every Who knows who question. No session.
+  public var guessCatalog: @Sendable () async throws(TransportError) -> GuessCatalogResponse
+  /// The pair's draw-guess riddles as this user sees them. `.api(.notFound)` while unpaired.
+  public var riddles: @Sendable () async throws(TransportError) -> RiddlesResponse
+  /// Sends a riddle to the partner; the same `id` again answers with the first. `.api(.invalidRequest)`
+  /// for a word that is no riddle word (400) or while this user's last riddle is open (409).
+  public var sendRiddle: @Sendable (SendRiddleRequest) async throws(TransportError) -> Riddle
+  /// One try at the partner's riddle `id`, under the try's own `key`. `.api(.notFound)` for no
+  /// such riddle; `.api(.invalidRequest)` (409) for the drawer's own or one that has ended.
+  public var guessRiddle:
+    @Sendable (_ id: RiddleId, _ key: IdempotencyKey, _ guess: String) async throws(TransportError)
+      -> GuessRiddleResponse
+  /// Mochi's next hint on riddle `id`; `.api(.invalidRequest)` (409) once every hint is used.
+  public var hintRiddle: @Sendable (_ id: RiddleId) async throws(TransportError) -> Riddle
+  /// Ends riddle `id` without the word, which the answer then carries.
+  public var giveUpRiddle: @Sendable (_ id: RiddleId) async throws(TransportError) -> Riddle
   /// Replaces this user's check-in and answers with it as stored, the note trimmed.
   /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
   public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
@@ -258,6 +281,33 @@ public struct APIClient: Sendable {
       @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    guess: @escaping @Sendable () async throws(TransportError) -> GuessResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    answerGuess:
+      @escaping @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    guessCatalog: @escaping @Sendable () async throws(TransportError) -> GuessCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    riddles: @escaping @Sendable () async throws(TransportError) -> RiddlesResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    sendRiddle: @escaping @Sendable (SendRiddleRequest) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
+    guessRiddle:
+      @escaping @Sendable (RiddleId, IdempotencyKey, String) async throws(TransportError)
+      -> GuessRiddleResponse = { (_, _, _) async throws(TransportError) in
+        throw .network("offline")
+      },
+    hintRiddle: @escaping @Sendable (RiddleId) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
+    giveUpRiddle: @escaping @Sendable (RiddleId) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
     setMood:
       @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -321,6 +371,14 @@ public struct APIClient: Sendable {
     self.titleRecommendations = titleRecommendations
     self.pickTonight = pickTonight
     self.swipePickTonight = swipePickTonight
+    self.guess = guess
+    self.answerGuess = answerGuess
+    self.guessCatalog = guessCatalog
+    self.riddles = riddles
+    self.sendRiddle = sendRiddle
+    self.guessRiddle = guessRiddle
+    self.hintRiddle = hintRiddle
+    self.giveUpRiddle = giveUpRiddle
     self.setMood = setMood
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
@@ -355,6 +413,10 @@ extension APIClient {
       let unsigned = try HTTPRequest.json(route.method, path: route.path, body: body)
       return try await request(
         route, signed: signed, headers: unsigned.headers, body: unsigned.body)
+    }
+
+    @Sendable func riddleRoute(_ route: Route, _ id: RiddleId) -> Route {
+      Route(route.method, route.path.replacingOccurrences(of: ":id", with: id.rawValue))
     }
 
     return APIClient(
@@ -574,6 +636,45 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.swipePickTonight, signed: true, body: body),
           as: PickTonightResponse.self)
+      },
+      guess: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getGuess, signed: true), as: GuessResponse.self)
+      },
+      answerGuess: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.answerGuess, signed: true, body: body), as: GuessResponse.self)
+      },
+      guessCatalog: { () async throws(TransportError) in
+        // The route is cached for an hour; a phone that needs a newer catalog asks the server
+        // whether its copy is still current, which costs a 304 when it is.
+        try await http.perform(
+          try await request(
+            Routes.getGuessCatalog, signed: false, headers: ["Cache-Control": "no-cache"]),
+          as: GuessCatalogResponse.self)
+      },
+      riddles: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getRiddles, signed: true), as: RiddlesResponse.self)
+      },
+      sendRiddle: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.sendRiddle, signed: true, body: body), as: Riddle.self)
+      },
+      guessRiddle: { (id, key, guess) async throws(TransportError) in
+        try await http.perform(
+          try await json(
+            riddleRoute(Routes.guessRiddle, id), signed: true,
+            body: GuessRiddleRequest(key: key, guess: guess)),
+          as: GuessRiddleResponse.self)
+      },
+      hintRiddle: { (id) async throws(TransportError) in
+        try await http.perform(
+          try await request(riddleRoute(Routes.hintRiddle, id), signed: true), as: Riddle.self)
+      },
+      giveUpRiddle: { (id) async throws(TransportError) in
+        try await http.perform(
+          try await request(riddleRoute(Routes.giveUpRiddle, id), signed: true), as: Riddle.self)
       },
       setMood: { (body) async throws(TransportError) in
         try await http.perform(

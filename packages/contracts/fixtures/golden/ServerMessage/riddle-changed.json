@@ -1,0 +1,57 @@
+{
+  "_tag": "RiddleChanged",
+  "riddle": {
+    "at": 1700000000000,
+    "compact": {
+      "strokes": [
+        {
+          "color": "#2A1A1C",
+          "points": [
+            10,
+            20,
+            30,
+            40
+          ],
+          "width": 3
+        }
+      ],
+      "version": 1
+    },
+    "drawer": "user-alice",
+    "hints": 2,
+    "id": "00000000-0000-4000-8000-0000000000d1",
+    "image": "pairs/pair-1/notes/riddle-1.png",
+    "removed": [
+      3,
+      8
+    ],
+    "revealed": [
+      {
+        "index": 6,
+        "letter": "o"
+      }
+    ],
+    "shape": [
+      5,
+      4
+    ],
+    "state": {
+      "_tag": "Open"
+    },
+    "tiles": [
+      "e",
+      "o",
+      "r",
+      "x",
+      "p",
+      "t",
+      "n",
+      "h",
+      "q",
+      "l",
+      "o",
+      "z"
+    ],
+    "tries": 3
+  }
+}

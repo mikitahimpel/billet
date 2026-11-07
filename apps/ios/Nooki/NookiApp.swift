@@ -67,6 +67,7 @@ struct NookiApp: App {
                     .task {
                         session?.signIn.appeared()
                         await session?.refreshDateCatalog()
+                        await session?.refreshGuessCatalog()
                     }
                     .task(id: session?.isSignedIn) { await session?.checkDemoPartner() }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }

@@ -50,6 +50,7 @@
     "@billet/backend-dates": "workspace:*",
     "@billet/backend-demo-partner": "workspace:*",
     "@billet/backend-flags": "workspace:*",
+    "@billet/backend-guess": "workspace:*",
     "@billet/backend-metrics": "workspace:*",
     "@billet/backend-notes": "workspace:*",
     "@billet/backend-observability": "workspace:*",

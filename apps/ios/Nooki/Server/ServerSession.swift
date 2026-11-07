@@ -26,6 +26,10 @@ final class ServerSession {
     let inbox: InboxModel
     /// The couple's reactions to each other's photos; nil until this account has a partner.
     private(set) var reactions: ReactionsModel?
+    /// Today's Who knows who round; `unpaired` until this account has a partner.
+    private(set) var whoKnows: WhoKnowsModel
+    /// The pair's Draw & guess riddles; `unpaired` until this account has a partner.
+    private(set) var drawGuess: DrawGuessModel
     @ObservationIgnored private var inboxLink: InboxLink?
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
     /// What the room socket pages when a photo arrives; set each time the socket is followed.
@@ -58,7 +62,21 @@ final class ServerSession {
         inbox = InboxModel(api: backend.api)
         #endif
         payments = AppPayments.make(backend.purchases)
+        whoKnows = Self.whoKnowsModel(backend, paired: saved?.record.isPaired ?? false)
+        drawGuess = Self.drawGuessModel(backend, paired: saved?.record.isPaired ?? false)
         if isPaired { reactions = Self.reactionsModel(backend) }
+    }
+
+    private static func whoKnowsModel(_ backend: Backend, paired: Bool) -> WhoKnowsModel {
+        let userID = paired ? (try? backend.accounts.load())?.record.userID : nil
+        return WhoKnowsModel(sync: userID == nil ? nil : .live(backend.api), viewer: userID.map(UserId.init),
+                             catalog: GuessCatalog.current?.questions ?? [])
+    }
+
+    private static func drawGuessModel(_ backend: Backend, paired: Bool) -> DrawGuessModel {
+        let userID = paired ? (try? backend.accounts.load())?.record.userID : nil
+        return DrawGuessModel(sync: userID == nil ? nil : .live(backend.api), viewer: userID.map(UserId.init),
+                              words: .bundled)
     }
 
     nonisolated private static let reactionsKey = "moments.reactions"
@@ -128,7 +146,10 @@ final class ServerSession {
                         shop: { [weak self] in self?.shop?.received($0) },
                         lists: { [weak self] in self?.lists?.received($0) },
                         mood: { [weak self] in self?.moods?($0) },
-                        match: { [weak self] in self?.matches?($0) }))
+                        match: { [weak self] in self?.matches?($0) },
+                        guessProgress: { [weak self] in self?.whoKnows.progressed(round: $0, answered: $1) },
+                        guessRevealed: { [weak self] in self?.whoKnows.revealed(round: $0, reveal: $1, score: $2) },
+                        riddle: { [weak self] in self?.drawGuess.changed($0) }))
             }
             inboxLink?.connect()
         } else {
@@ -160,6 +181,15 @@ final class ServerSession {
         guard let catalog = try? await backend.api.dateCatalog(),
               catalog.version != (DateCatalog.saved ?? DateCatalog.bundled)?.version else { return }
         SharedFile.write(catalog, to: DateCatalog.file)
+    }
+
+    /// Gives the round the server's questions and keeps them for the next launch when they differ from the ones this
+    /// launch has. Offline, the round asks from the saved or bundled ones.
+    func refreshGuessCatalog() async {
+        guard let catalog = try? await backend.api.guessCatalog() else { return }
+        whoKnows.use(catalog.questions)
+        guard catalog.version != GuessCatalog.current?.version else { return }
+        SharedFile.write(catalog, to: GuessCatalog.file)
     }
 
     /// The pair's shop in its room; nil until this account has a partner.
@@ -213,6 +243,8 @@ final class ServerSession {
         try? backend.accounts.setPaired(false, nil)
         isPaired = false
         reactions = nil
+        whoKnows = Self.whoKnowsModel(backend, paired: false)
+        drawGuess = Self.drawGuessModel(backend, paired: false)
         demoPartner = false
     }
 
@@ -226,6 +258,8 @@ final class ServerSession {
         try? backend.accounts.setPaired(true, pairID)
         isPaired = true
         reactions = Self.reactionsModel(backend)
+        whoKnows = Self.whoKnowsModel(backend, paired: true)
+        drawGuess = Self.drawGuessModel(backend, paired: true)
         pairing = PairingModel(api: backend.api)
     }
 }

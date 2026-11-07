@@ -40,6 +40,9 @@ targets:
       # The date ideas the build ships with: the server's own catalog file (Shared/Model/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
+      # The Who knows who questions the build ships with (Nooki/Model/GuessCatalog.swift).
+      - path: ../../packages/backend/guess/src/question-catalog.json
+        buildPhase: resources
     # The launch screen is the splash's own dark warm color (Assets LaunchBackground), see LaunchSplash; the rest
     # of Info.plist is generated from the INFOPLIST_KEY_ settings below.
     info:

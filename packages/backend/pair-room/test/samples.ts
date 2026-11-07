@@ -7,6 +7,8 @@ import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { emptyWallet, RoomState, type ActiveRoom, type RoomCat } from "../src/room-state.ts";
 import { newTemper } from "../src/cat-temper.ts";
+import { type RiddleRow, tilesFor } from "../src/riddle-rules.ts";
+import { RiddleId, RiddleWord } from "@billet/contracts-domain/riddle";
 
 export const alice = Schema.decodeUnknownSync(UserId)("user-alice");
 export const bob = Schema.decodeUnknownSync(UserId)("user-bob");
@@ -72,3 +74,26 @@ export const textFrom = (author: UserId, ink: InkId, id = "note-1"): Note =>
     text: "hi",
     ink,
   });
+
+export const riddleId = (n = 1) => Schema.decodeSync(RiddleId)(uuid(9000 + n));
+export const riddleImage = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/riddles/riddle-1.png");
+
+/** An open riddle `drawer` drew of `word`. */
+export const riddleOf = (drawer: UserId, word = "cat", n = 1): RiddleRow => {
+  const id = riddleId(n);
+  const decoded = Schema.decodeSync(RiddleWord)(word);
+  return {
+    id,
+    drawer,
+    word: decoded,
+    compact: { version: 1, strokes: [] },
+    image: riddleImage,
+    tiles: tilesFor(decoded, id),
+    removed: [],
+    revealed: [],
+    hints: 0,
+    tries: 0,
+    state: { _tag: "Open" },
+    at: 1_700_000_000_000,
+  };
+};

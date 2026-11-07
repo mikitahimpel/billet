@@ -9,6 +9,15 @@ import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteIdSource } from "../src/note-id-source.ts";
 import type { ActiveRoom, RoomState, SequencedNote } from "../src/room-state.ts";
 import { RoomStore, type AppendedNote, type ListWrite } from "../src/room-store.ts";
+import { RiddleStore } from "../src/riddle.ts";
+import {
+  endedAt,
+  noRiddleSeries,
+  type RiddleGuessRow,
+  type RiddleRow,
+  type RiddleSeries,
+  type RiddleWrite,
+} from "../src/riddle-rules.ts";
 import { vacant } from "./samples.ts";
 
 /** An in-memory store. `load` yields after reading, so a fiber gives way before it commits. */
@@ -24,6 +33,9 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
     reactions: new Map<string, NoteReaction>(),
     lists: [] as Array<SharedList>,
     listKeys: new Set<string>(),
+    riddles: new Map<string, RiddleRow>(),
+    riddleGuesses: new Map<string, RiddleGuessRow>(),
+    riddleSeries: noRiddleSeries as RiddleSeries,
   };
   const newestFirst = () =>
     [...memory.activity.values()].toSorted((a, b) => (cursorOf(b) < cursorOf(a) ? -1 : 1));
@@ -37,6 +49,7 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
       coins: ReadonlyArray<CoinEntry>,
       reactions: ReadonlyArray<NoteReaction>,
       lists: ReadonlyArray<ListWrite>,
+      riddles: ReadonlyArray<RiddleWrite>,
     ) =>
       Effect.suspend(() => {
         if (options?.failCommit === true) return Effect.die("storage is down");
@@ -60,6 +73,11 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
           } else {
             memory.lists.push(write.list);
           }
+        }
+        for (const { riddle, guess, series } of riddles) {
+          memory.riddles.set(riddle.id, riddle);
+          if (guess !== undefined) memory.riddleGuesses.set(`${guess.riddle}/${guess.key}`, guess);
+          if (series !== undefined) memory.riddleSeries = series;
         }
         return Effect.void;
       }),
@@ -138,7 +156,29 @@ export const memoryStore = (options?: { readonly failCommit?: boolean }) => {
         return forgotten;
       }),
   });
-  return { memory, layer };
+  // Reads what `commit` wrote, as the room's own SQLite does.
+  const riddleLayer = Layer.succeed(RiddleStore, {
+    byId: (id) => Effect.sync(() => Option.fromNullishOr(memory.riddles.get(id))),
+    open: Effect.sync(() =>
+      [...memory.riddles.values()].filter((row) => endedAt(row) === undefined),
+    ),
+    ended: (limit) =>
+      Effect.sync(() =>
+        [...memory.riddles.values()]
+          .filter((row) => endedAt(row) !== undefined)
+          .toSorted((a, b) => (endedAt(b) ?? 0) - (endedAt(a) ?? 0))
+          .slice(0, limit),
+      ),
+    guess: (riddle, key) =>
+      Effect.sync(() => Option.fromNullishOr(memory.riddleGuesses.get(`${riddle}/${key}`))),
+    series: Effect.sync(() => memory.riddleSeries),
+    forget: Effect.sync(() => {
+      memory.riddles.clear();
+      memory.riddleGuesses.clear();
+      memory.riddleSeries = noRiddleSeries;
+    }),
+  });
+  return { memory, layer, riddleLayer };
 };
 
 export const countingIds = () => {

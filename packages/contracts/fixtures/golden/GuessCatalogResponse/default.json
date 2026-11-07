@@ -1,0 +1,17 @@
+{
+  "questions": [
+    {
+      "guess": "What does {name} order at a restaurant they've never been to?",
+      "id": 42,
+      "options": [
+        "The first thing on the menu",
+        "The waiter's pick",
+        "Whatever's cheapest",
+        "A burger"
+      ],
+      "self": "What do you order at a restaurant you've never been to?",
+      "tag": "food"
+    }
+  ],
+  "version": "0976f7f2a2079c4f"
+}

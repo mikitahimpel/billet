@@ -284,6 +284,9 @@ struct HomeView: View {
                     await state.shop.refresh()
                     await state.lists.refresh()
                 }
+                // The room socket sends no game frames it missed while the app was away. Its own task, so missed
+                // photos downloading above don't hold it up.
+                Task { await session?.whoKnows.load() }
                 session?.reactions?.refresh()
                 session?.followInbox(
                     true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,

@@ -5,10 +5,12 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   /// Inbox's unread count now and whenever it changes. `lastReactionRev` asks for every reaction
   /// change after it, and each one after; left out, none. `shop: true` asks for the pair's shop
   /// now and whenever it changes, and `lists: true` the pair's lists. `moods: true` asks for each member's latest check-in now, and
-  /// each new one.
+  /// each new one. `guess: true` asks for `guessProgress` and `guessRevealed` as the pair plays.
+  /// `riddle: true` asks for each open draw-guess riddle now, and `riddleChanged` on every change.
   case resume(
     lastSeq: Int, lastCatSeq: Int? = nil, activity: Bool? = nil, lastReactionRev: Int? = nil,
-    shop: Bool? = nil, lists: Bool? = nil, moods: Bool? = nil)
+    shop: Bool? = nil, lists: Bool? = nil, moods: Bool? = nil, guess: Bool? = nil,
+    riddle: Bool? = nil)
   /// A whole stroke at once, from a client that does not stream.
   case stroke(Stroke)
   case presence(PresenceState)
@@ -29,6 +31,8 @@ public enum ClientMessage: Codable, Hashable, Sendable {
     case shop
     case lists
     case moods
+    case guess
+    case riddle
     case stroke
     case state
     case id
@@ -49,7 +53,9 @@ public enum ClientMessage: Codable, Hashable, Sendable {
         lastReactionRev: try container.decodeOptionalKey(Int.self, forKey: .lastReactionRev),
         shop: try container.decodeOptionalKey(Bool.self, forKey: .shop),
         lists: try container.decodeOptionalKey(Bool.self, forKey: .lists),
-        moods: try container.decodeOptionalKey(Bool.self, forKey: .moods))
+        moods: try container.decodeOptionalKey(Bool.self, forKey: .moods),
+        guess: try container.decodeOptionalKey(Bool.self, forKey: .guess),
+        riddle: try container.decodeOptionalKey(Bool.self, forKey: .riddle))
     case "Stroke":
       self = .stroke(try container.decode(Stroke.self, forKey: .stroke))
     case "Presence":
@@ -74,7 +80,9 @@ public enum ClientMessage: Codable, Hashable, Sendable {
     var container = encoder.container(keyedBy: CodingKeys.self)
     switch self {
     case .resume(
-      let lastSeq, let lastCatSeq, let activity, let lastReactionRev, let shop, let lists, let moods
+      let lastSeq, let lastCatSeq, let activity, let lastReactionRev, let shop, let lists,
+      let moods,
+      let guess, let riddle
     ):
       try container.encode("Resume", forKey: .tag)
       try container.encode(lastSeq, forKey: .lastSeq)
@@ -84,6 +92,8 @@ public enum ClientMessage: Codable, Hashable, Sendable {
       try container.encodeIfPresent(shop, forKey: .shop)
       try container.encodeIfPresent(lists, forKey: .lists)
       try container.encodeIfPresent(moods, forKey: .moods)
+      try container.encodeIfPresent(guess, forKey: .guess)
+      try container.encodeIfPresent(riddle, forKey: .riddle)
     case .stroke(let stroke):
       try container.encode("Stroke", forKey: .tag)
       try container.encode(stroke, forKey: .stroke)
