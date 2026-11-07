@@ -179,9 +179,10 @@ Not in the ten, worth their own line:
   4 Hz, bloom off) and a thermal step-down (§1.9–1.10) are the energy items. Proof: `steady:
   cpuMsPerS`; a phone's Power Profiler.
 - **Opening the drawing canvas is one 4.5 s frame on CI** (0.6 s of it main-thread work, the rest
-  waiting): `LockCanvasView` builds `DrawModel` and a `CanvasView` with `drawingGroup()`
-  (CanvasView.swift:224), whose first use compiles its Metal pipeline. On a phone this is the
-  first-open hitch of the canvas; worth a signpost and a warm-up of the pipeline at launch (§1.11).
+  waiting): the candidates are `LockCanvasView`'s `DrawModel` and the `CanvasView` with
+  `drawingGroup()` (CanvasView.swift:224), whose first use builds a Metal pipeline. On a phone this
+  is the first-open hitch of the canvas; a signpost around the open names it, then a warm-up at
+  launch if it is the pipeline (§1.11).
 - **Games.** `GameCamera` and `GameSession` subscribe to `SceneEvents.Update` (fine), B17 is fixed.
   No step measures a game (H3), so nothing is claimed.
 - **Memory.** 240 MB peak on CI with the mesh cat (two 2048² colour, normal and fur maps per
