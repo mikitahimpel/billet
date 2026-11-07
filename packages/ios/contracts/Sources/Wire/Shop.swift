@@ -132,22 +132,29 @@ public struct ShopResponse: Codable, Hashable, Sendable {
 public struct OrderRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let offer: ShopOffer
+  /// The price the buyer saw. A server price above it is refused with `priceChanged`; a lower one
+  /// is charged.
+  public let expectedPrice: Int?
   public let utcOffsetSeconds: Int?
 
-  public init(id: IdempotencyKey, offer: ShopOffer, utcOffsetSeconds: Int? = nil) {
+  public init(
+    id: IdempotencyKey, offer: ShopOffer, expectedPrice: Int? = nil, utcOffsetSeconds: Int? = nil
+  ) {
     self.id = id
     self.offer = offer
+    self.expectedPrice = expectedPrice
     self.utcOffsetSeconds = utcOffsetSeconds
   }
 
   private enum CodingKeys: String, CodingKey {
-    case id, offer, utcOffsetSeconds
+    case id, offer, expectedPrice, utcOffsetSeconds
   }
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     id = try container.decode(IdempotencyKey.self, forKey: .id)
     offer = try container.decode(ShopOffer.self, forKey: .offer)
+    expectedPrice = try container.decodeOptionalKey(Int.self, forKey: .expectedPrice)
     utcOffsetSeconds = try container.decodeOptionalKey(Int.self, forKey: .utcOffsetSeconds)
   }
 }

@@ -44,6 +44,7 @@ import type {
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
+  PriceChanged,
   NotesNotFound,
   NotesUnavailable,
 } from "./notes-error.ts";
@@ -114,6 +115,7 @@ const respondNotesFailures = <R>(
     | InvalidNote
     | InkNotOwned
     | NotEnoughCoins
+    | PriceChanged
     | AlreadyOwned
     | CollectionIncomplete
     | GiftTaken
@@ -131,6 +133,8 @@ const respondNotesFailures = <R>(
         respondError(ApiError.cases.InkNotOwned.make({ ink }), { status: 400 }),
       NotEnoughCoins: ({ needed, have }) =>
         respondError(ApiError.cases.NotEnoughCoins.make({ needed, have }), { status: 409 }),
+      PriceChanged: ({ price }) =>
+        respondError(ApiError.cases.PriceChanged.make({ price }), { status: 409 }),
       AlreadyOwned: ({ itemId }) =>
         respondError(ApiError.cases.AlreadyOwned.make({ itemId }), { status: 409 }),
       CollectionIncomplete: ({ collection }) =>

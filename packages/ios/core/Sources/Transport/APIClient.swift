@@ -142,6 +142,8 @@ public struct APIClient: Sendable {
   public var removeDemoPartner: @Sendable () async throws(TransportError) -> Void
   /// Every date idea. Needs no session.
   public var dateCatalog: @Sendable () async throws(TransportError) -> DateCatalogResponse
+  /// The shop's active items. Needs no session.
+  public var shopCatalog: @Sendable () async throws(TransportError) -> ShopCatalogResponse
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -324,6 +326,9 @@ public struct APIClient: Sendable {
     },
     dateCatalog: @escaping @Sendable () async throws(TransportError) -> DateCatalogResponse = {
       () async throws(TransportError) in throw .network("offline")
+    },
+    shopCatalog: @escaping @Sendable () async throws(TransportError) -> ShopCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
     }
   ) {
     self.authChallenge = authChallenge
@@ -384,6 +389,7 @@ public struct APIClient: Sendable {
     self.createDemoPartner = createDemoPartner
     self.removeDemoPartner = removeDemoPartner
     self.dateCatalog = dateCatalog
+    self.shopCatalog = shopCatalog
   }
 }
 
