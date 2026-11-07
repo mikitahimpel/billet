@@ -24,7 +24,7 @@ Swift choices in one PR, so the app never ships a variant it cannot show.
 
 ## App: screens and settings that ship
 
-- **Settings > Labs** (`SettingsView.swift`) is in every build. It holds:
+- **Settings > Labs** (`SettingsView.swift`) is in every build; hiding it and account deletion come with #502. It holds:
   - *Cat brain* and *Cat brain card* (owner: the brain is the cat's behaviour, the card is a
     debug view of it, so the card should not ship);
   - *Show all hints now* (a testing tool: remove from release or hide behind `#if DEBUG`);
@@ -49,7 +49,7 @@ for the APNs sandbox in Debug and for production otherwise (`DrawingSync.swift`)
 
 - **`-perf.script` launch argument** (`NookiPerf.swift`, `ScenePerf`): starts a frame recorder
   and a script that drives the room. It needs a launch argument, so users and reviewers never
-  trigger it, but it is test code in the binary. Owner/manager: compile it out of Release.
+  trigger it, but it is test code in the binary. **`-perf.script` must be compiled out of Release** (#515: it touches the app and `packages/ios/pet`, and the perf CI measures Release builds, so it is not a small change).
 - **Mock store.** `BILLET_PAYMENTS` defaults to `mock`: the mock store credits coins without
   money and shows a Labs payments view. **A release build must be made with
   `BILLET_PAYMENTS=storekit`**, or the shop sells fake coins. Add this to the upload check (#37).
