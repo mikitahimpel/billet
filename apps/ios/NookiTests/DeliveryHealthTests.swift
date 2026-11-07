@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import Nooki
+@testable import Billet
 
 @Suite struct DeliveryHealthTests {
     private func health(allowed: Bool = true, token: Bool = true, widgets: Int = 0) -> DeliveryHealth {
