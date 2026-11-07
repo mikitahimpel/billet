@@ -314,6 +314,10 @@ extension APIClient {
       dateCatalog: { () async throws(TransportError) in
         try await http.perform(
           try await request(Routes.getDateCatalog, signed: false), as: DateCatalogResponse.self)
+      },
+      shopCatalog: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getShopCatalog, signed: false), as: ShopCatalogResponse.self)
       })
   }
 }

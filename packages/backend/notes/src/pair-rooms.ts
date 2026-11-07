@@ -7,6 +7,7 @@ import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -73,6 +74,7 @@ export class PairRooms extends Context.Service<
       by: UserId,
       id: IdempotencyKey,
       ink: InkId,
+      terms?: PriceTerms,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /**
      * What the pair has: balance, inks, room pieces and wishlist, or null while the room is not
@@ -89,6 +91,7 @@ export class PairRooms extends Context.Service<
       id: IdempotencyKey,
       offer: ShopOffer,
       utcOffsetSeconds?: number,
+      terms?: PriceTerms,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Opens the pair's gift of the local day, once a day for the pair. */
     readonly openGift: (
@@ -119,6 +122,7 @@ export class PairRooms extends Context.Service<
       by: UserId,
       item: RoomItemId,
       wished: boolean,
+      offered?: boolean,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (

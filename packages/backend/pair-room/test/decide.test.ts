@@ -528,6 +528,7 @@ describe("tagged unions", () => {
     CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
     InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
+    PriceChanged: RoomRejection.cases.PriceChanged.make({ price: 560 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),
     NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
     OfferOwned: RoomRejection.cases.OfferOwned.make({ offer: tower }),

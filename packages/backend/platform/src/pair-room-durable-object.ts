@@ -5,6 +5,7 @@ import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
@@ -940,8 +941,8 @@ export class PairRoom extends DurableObject {
   }
 
   /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
-  async buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
-    const decision = await this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+  async buy(by: UserId, id: IdempotencyKey, ink: InkId, terms?: PriceTerms): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.buy(by, id, ink, terms), "PairRoom.buy");
     await this.pushShop(decision);
     return decision;
   }
@@ -964,9 +965,10 @@ export class PairRoom extends DurableObject {
     id: IdempotencyKey,
     offer: ShopOffer,
     utcOffsetSeconds?: number,
+    terms?: PriceTerms,
   ): Promise<RoomDecision> {
     const decision = await this.run(
-      (room) => room.order(by, id, offer, utcOffsetSeconds),
+      (room) => room.order(by, id, offer, utcOffsetSeconds, terms),
       "PairRoom.order",
     );
     return this.afterCoins(decision, by);
@@ -1021,8 +1023,16 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  async setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
-    const decision = await this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+  async setWish(
+    by: UserId,
+    item: RoomItemId,
+    wished: boolean,
+    offered?: boolean,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.setWish(by, item, wished, offered),
+      "PairRoom.setWish",
+    );
     await this.pushShop(decision);
     return decision;
   }

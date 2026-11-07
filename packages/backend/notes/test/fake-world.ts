@@ -1,3 +1,4 @@
+import { InMemoryShopStore } from "@billet/backend-shop/test/in-memory-shop-store";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
@@ -346,18 +347,19 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
           state._tag === "Active" ? { balance: state.wallet.balance, entries } : null,
         ),
       ),
-    buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
+    buy: (pairId, by, id, ink, terms) => roomOf(pairId).buy(by, id, ink, terms),
     shop: (pairId) =>
       roomOf(pairId).settled.pipe(
         Effect.map((state) => (state._tag === "Active" ? shopOf(state) : null)),
       ),
-    order: (pairId, by, id, offer, utcOffsetSeconds) =>
-      roomOf(pairId).order(by, id, offer, utcOffsetSeconds),
+    order: (pairId, by, id, offer, utcOffsetSeconds, terms) =>
+      roomOf(pairId).order(by, id, offer, utcOffsetSeconds, terms),
     openGift: (pairId, by, utcOffsetSeconds) => roomOf(pairId).openGift(by, utcOffsetSeconds),
     claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
     earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
     creditPurchase: (pairId, credit) => roomOf(pairId).creditPurchase(credit),
-    setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
+    setWish: (pairId, by, item, wished, offered) =>
+      roomOf(pairId).setWish(by, item, wished, offered),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
     destroy: () => Effect.void,
@@ -398,6 +400,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       Layer.succeed(PairingRepository, repository),
       Layer.succeed(MediaStore, media),
       Layer.succeed(PairRooms, pairRooms),
+      InMemoryShopStore(),
       Layer.succeed(Metrics, { record: (event) => Effect.sync(() => void recorded.push(event)) }),
       SecureRandom.layerWebCrypto,
     ),

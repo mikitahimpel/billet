@@ -78,6 +78,11 @@ public enum Routes {
   public static let getFlags = Route(.get, "/v1/flags")
   public static let getStatus = Route(.get, "/v1/status")
   public static let getDateCatalog = Route(.get, "/v1/dates/catalog")
+  /// The shop's active items. Needs no session.
+  public static let getShopCatalog = Route(.get, "/v1/shop/catalog")
+  /// An uploaded shop picture: `shopArtPrefix` and its key.
+  public static let shopArtPrefix = "/v1/shop/art/"
+  public static let getShopArt = Route(.get, shopArtPrefix + "*")
   public static let reportEvents = Route(.post, "/v1/events")
   public static let getOnboarding = Route(.get, "/v1/onboarding")
   public static let saveOnboardingAnswer = Route(.post, "/v1/onboarding/answers")
