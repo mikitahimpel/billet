@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import Wire
 @testable import Billet
 
 @Suite struct HintPlanTests {
@@ -52,6 +53,21 @@ import Testing
     @Test func aSessionShowsAtMostTwo() {
         #expect(next(HintContext(screen: .shop), shown: 1) == "shop")
         #expect(next(HintContext(screen: .shop), shown: HintPlan.perSession) == nil)
+    }
+
+    @Test func aHintForAThingAlreadyDoneIsNeverDue() {
+        let used: [(String, HintContext)] = [
+            ("pet", HintContext(screen: .world, petted: true)),
+            ("add", HintContext(screen: .world, added: true)),
+            ("moments", HintContext(screen: .moments, usedMoments: true)),
+            ("shop", HintContext(screen: .shop, purchased: true)),
+            ("rooms", HintContext(screen: .world, hasRoomChoice: true, switchedRooms: true)),
+            ("treat", HintContext(screen: .world, canAffordTreat: true, gaveTreat: true)),
+        ]
+        for (id, context) in used {
+            #expect(HintPlan.skipped(context, seen: []) == [id])
+            #expect(next(context) != id)
+        }
     }
 
     @Test func everyHintIsInTheOrderOnce() {
@@ -134,4 +150,65 @@ import Testing
         hints.appeared(PetHint())
         #expect(hints.plan(HintContext(screen: .world)) == "add")
     }
+
+    @Test func aHintDoneBeforeItShowsIsSeenAndNeverShown() {
+        let hints = hints()
+        let petted = HintContext(screen: .world, petted: true)
+        #expect(hints.show(petted) == "add")
+        #expect(hints.seen.contains("pet"))
+        #expect(hints().plan(HintContext(screen: .world, added: true)) == nil)
+        HintStage.current = ""
+    }
+
+    @Test func aHintShownOnceNeverComesAgainInTheSessionOrAfter() {
+        let first = hints()
+        #expect(first.show(HintContext(screen: .shop)) == "shop")
+        #expect(first.show(HintContext(screen: .shop)) == nil)
+        #expect(hints().show(HintContext(screen: .shop)) == nil)
+        HintStage.current = ""
+    }
+
+    @Test func aSessionShowsAtMostTwoHints() {
+        let hints = hints()
+        #expect(hints.show(HintContext(screen: .shop)) == "shop")
+        #expect(hints.show(HintContext(screen: .moments)) == "moments")
+        #expect(hints.show(HintContext(screen: .world)) == nil)
+        HintStage.current = ""
+    }
+
+    @Test func theHoldoutRunsThePlanButDrawsNothingAndReportsItsOwnIds() async throws {
+        let events = Recorded()
+        let hints = Hints(report: { await events.add($0) }, defaults: defaults, isPresenting: { false })
+        hints.onboardingFinished(true)
+        hints.isHeldOut = { true }
+        #expect(hints.show(HintContext(screen: .shop)) == "shop")
+        #expect(HintStage.current == "")
+        hints.done(ShopHint())
+        try await Task.sleep(for: .milliseconds(200))
+        let sent = await events.all
+        #expect(sent.map(\.detail) == ["shop-hold", "shop-hold"])
+        #expect(sent.map(\.name) == [.tipShown, .tipAction])
+    }
+
+    @Test func anActionCountsOnlyWithin24HoursOfTheShow() async throws {
+        let clock = TestClock()
+        let events = Recorded()
+        let hints = Hints(
+            report: { await events.add($0) }, defaults: defaults, isPresenting: { false }, now: { clock.date })
+        hints.onboardingFinished(true)
+        hints.appeared(ShopHint())
+        clock.date.addTimeInterval(Hints.actionWindow + 1)
+        hints.done(ShopHint())
+        try await Task.sleep(for: .milliseconds(200))
+        #expect(await events.all.map(\.name) == [.tipShown])
+    }
+}
+
+private actor Recorded {
+    private(set) var all: [ClientEvent] = []
+    func add(_ events: [ClientEvent]) { all += events }
+}
+
+private final class TestClock: @unchecked Sendable {
+    var date = Date(timeIntervalSince1970: 1_800_000_000)
 }
