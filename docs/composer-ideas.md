@@ -1,6 +1,6 @@
 # Note composer: directions
 
-Status: proposal, no code until the owner picks. Owner: "the draw-and-write thing needs a more interesting look."
+Status: built. The owner chose all three, as Settings › Labs › Composer style (default B). Not built yet: handwriting font (the font would have to travel with the note), stickers and stamps (the canvas has a `Decoration` layer for them), and sharing the pens with the lock-screen canvas. Owner: "the draw-and-write thing needs a more interesting look."
 
 ## Today
 
