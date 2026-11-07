@@ -35,6 +35,14 @@ final class GameSession {
     func start(viewport: CGSize) {
         guard stage == nil, !ended else { return }
         lens = viewport
+        // The corner is in its view and Mochi in it a moment after the view appears.
+        if let corner = room as? TabletopRoom, !corner.isReady {
+            Task {
+                try? await Task.sleep(for: .milliseconds(60))
+                start(viewport: lens)
+            }
+            return
+        }
         room.isPlayingGame = true
         wasDirected = room.walker?.directed ?? false
         room.walker?.directed = true
@@ -115,7 +123,10 @@ final class GameSession {
         let directed = wasDirected
         room.walker?.directed = directed
         room.isPlayingGame = false
-        if let camera {
+        if room is TabletopRoom {
+            camera?.cancel()
+            done()
+        } else if let camera {
             camera.release(done)
         } else {
             done()

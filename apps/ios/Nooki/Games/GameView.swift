@@ -7,6 +7,8 @@ import Design
 /// shows meanwhile.
 struct GameView: View {
     @State var session: GameSession
+    /// The corner the game is played in, or nil for the room itself.
+    var corner: TabletopRoom?
     var close: () -> Void
     @State private var touching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -14,6 +16,7 @@ struct GameView: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack {
+                if let corner { TabletopView(room: corner) }
                 Color.clear
                     .contentShape(.rect)
                     .gesture(
