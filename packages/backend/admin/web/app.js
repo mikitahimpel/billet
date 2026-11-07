@@ -978,7 +978,9 @@ function hintRates(hints, range) {
             h(
               "tr",
               null,
-              ["Hint", "Saw it", "Holdout", "Lift", "Closed with X"].map((c) => h("th", { text: c })),
+              ["Hint", "Saw it", "Holdout", "Lift", "Closed with X"].map((c) =>
+                h("th", { text: c }),
+              ),
             ),
           ),
           h(
@@ -992,14 +994,21 @@ function hintRates(hints, range) {
                 h("td", { text: cell(x.show) }),
                 h("td", { text: cell(x.hold) }),
                 h("td", {
-                  text: x.lift == null ? "—" : `${x.lift >= 0 ? "+" : ""}${(x.lift * 100).toFixed(1)} pts`,
+                  text:
+                    x.lift == null
+                      ? "—"
+                      : `${x.lift >= 0 ? "+" : ""}${(x.lift * 100).toFixed(1)} pts`,
                 }),
                 h("td", { text: fmtNum(x.show.dismissed) }),
               ),
             ),
           ),
         )
-      : h("div", { class: "box" }, empty("No hints reported yet", "Rows appear once apps report TipShown.")),
+      : h(
+          "div",
+          { class: "box" },
+          empty("No hints reported yet", "Rows appear once apps report TipShown."),
+        ),
   );
 }
 

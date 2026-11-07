@@ -42,7 +42,8 @@ export const buildHintRates = (
   const counts = new Map<string, number>();
   for (const row of details) {
     if (row.day < from || row.day > today) continue;
-    if (row.name !== "TipShown" && row.name !== "TipDismissed" && row.name !== "TipAction") continue;
+    if (row.name !== "TipShown" && row.name !== "TipDismissed" && row.name !== "TipAction")
+      continue;
     const key = `${row.name}|${row.detail}`;
     counts.set(key, (counts.get(key) ?? 0) + row.count);
   }
@@ -60,7 +61,8 @@ export const buildHintRates = (
       hint,
       show,
       hold,
-      lift: show.actedRate === null || hold.actedRate === null ? null : show.actedRate - hold.actedRate,
+      lift:
+        show.actedRate === null || hold.actedRate === null ? null : show.actedRate - hold.actedRate,
     };
   });
 };
