@@ -11,11 +11,10 @@ public struct PrimaryButtonStyle: ButtonStyle {
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.nookiHeadline)
-      .foregroundStyle(isEnabled ? Ink.heroInk : Ink.textSecondary)
+      .foregroundStyle(isEnabled ? Ink.heroInk : Ink.disabledText)
       .padding(.horizontal, Space.xl)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
-      .background(isEnabled ? Color.honey : Ink.surfaceRaised, in: .capsule)
-      .overlay { if !isEnabled { Capsule().strokeBorder(Ink.separator, lineWidth: 0.5) } }
+      .background(isEnabled ? Color.honey : Ink.disabledFill, in: .capsule)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
       .animation(.spring(duration: 0.2), value: configuration.isPressed)
   }
@@ -31,11 +30,13 @@ public struct SecondaryButtonStyle: ButtonStyle {
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.nookiHeadline)
-      .foregroundStyle(isEnabled ? Ink.accentText : Ink.textSecondary)
+      .foregroundStyle(isEnabled ? Ink.accentText : Ink.disabledText)
       .padding(.horizontal, Space.xl)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
-      .background(Ink.surfaceRaised, in: .capsule)
-      .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
+      .background(isEnabled ? Ink.surfaceRaised : Ink.disabledFill, in: .capsule)
+      .overlay {
+        if isEnabled { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
+      }
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
       .animation(.spring(duration: 0.2), value: configuration.isPressed)
   }
@@ -124,7 +125,7 @@ public struct GlassIconButton<Content: View>: View {
     Button(action: action) {
       content
         .frame(width: Size.control, height: Size.control)
-        .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
+        .glass(.circle, tint: Ink.glassFill, clear: false, interactive: true)
         .overlay(alignment: .topTrailing) { badgeView }
         .contentShape(.circle)
     }
@@ -141,6 +142,7 @@ public struct GlassIconButton<Content: View>: View {
       Circle()
         .fill(Color.blushPink)
         .frame(width: 10, height: 10)
+        .overlay(Circle().strokeBorder(Ink.glassFill, lineWidth: 1.5))
         .offset(x: -3, y: 3)
         .accessibilityHidden(true)
     case .count(let count):
@@ -150,6 +152,7 @@ public struct GlassIconButton<Content: View>: View {
         .padding(.horizontal, 5)
         .frame(minWidth: 18, minHeight: 18)
         .background(Color.blushPink, in: .capsule)
+        .overlay(Capsule().strokeBorder(Ink.glassFill, lineWidth: 1.5))
         .offset(x: 4, y: -4)
         .accessibilityHidden(true)
     }
@@ -181,19 +184,25 @@ public struct GlassSymbol: View {
     Image(systemName: name)
       .font(.body.weight(.semibold))
       .imageScale(.large)
-      .foregroundStyle(Ink.primary)
+      .foregroundStyle(Ink.glassGlyph)
   }
 }
 
-/// A price in coins on a honey capsule.
+/// A price in coins on a honey capsule. A deal shows the old price struck through after the new one, on the same
+/// baseline inside the capsule.
 public struct PriceButton: View {
   let price: Int
+  let was: Int?
   let label: String?
   let hint: String?
   let action: () -> Void
 
-  public init(_ price: Int, label: String? = nil, hint: String? = nil, action: @escaping () -> Void) {
+  public init(
+    _ price: Int, was: Int? = nil, label: String? = nil, hint: String? = nil,
+    action: @escaping () -> Void
+  ) {
     self.price = price
+    self.was = was
     self.label = label
     self.hint = hint
     self.action = action
@@ -201,11 +210,18 @@ public struct PriceButton: View {
 
   public var body: some View {
     Button(action: action) {
-      HStack(spacing: Space.xs + 1) {
-        CoinIcon(size: 16)
+      HStack(alignment: .firstTextBaseline, spacing: Space.xs + 1) {
+        CoinIcon(size: 16).alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
         Text(price, format: .number)
           .monospacedDigit()
+        if let was {
+          Text(was, format: .number)
+            .font(.nookiCaption.monospacedDigit())
+            .strikethrough()
+            .opacity(0.7)
+        }
       }
+      .fixedSize()
       .font(.nookiCallout.weight(.bold))
       .foregroundStyle(Ink.heroInk)
       .padding(.horizontal, Space.m)
@@ -213,22 +229,26 @@ public struct PriceButton: View {
       .background(Color.honey, in: .capsule)
     }
     .buttonStyle(PressScaleStyle())
-    .accessibilityLabel(label ?? "\(price) coins")
+    .accessibilityLabel(label ?? was.map { "\(price) coins, was \($0)" } ?? "\(price) coins")
     .accessibilityHint(hint ?? "")
   }
 }
 
 #Preview("Buttons") {
-  VStack(spacing: Space.m) {
-    PrimaryButton("Share with Ilya") {}
-    PrimaryButton("Pick how you feel") {}.disabled(true)
-    SecondaryButton("Owned · Place", symbol: "mappin") {}
-    HStack {
-      GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
-      GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
-      PriceButton(120) {}
+  ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
+    VStack(spacing: Space.m) {
+      PrimaryButton("Share with Ilya") {}
+      PrimaryButton("Pick how you feel") {}.disabled(true)
+      SecondaryButton("Place", symbol: "mappin") {}
+      SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
+      HStack {
+        GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
+        GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
+        PriceButton(120) {}
+      }
     }
+    .padding(Space.gutter)
+    .background(Ink.screen)
+    .environment(\.colorScheme, scheme)
   }
-  .padding(Space.gutter)
-  .background(Ink.screen)
 }

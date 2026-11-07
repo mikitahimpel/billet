@@ -133,6 +133,16 @@ describe("one try of a push lane", () => {
     expect(dropped).toEqual(["aa"]);
   });
 
+  it("still reports a delivery when dropping a dead token fails", async () => {
+    const { dependencies, results } = deps({
+      dropToken: async () => {
+        throw new Error("D1 down");
+      },
+    });
+    results.push({ _tag: "Unregistered", reason: "Unregistered" }, { _tag: "Delivered" });
+    expect(await sendPushLane({ noteId: id, lane: "AlertPush" }, dependencies)).toBe("Delivered");
+  });
+
   it("retries while a failure may pass, and gives up when none will", async () => {
     const retry = deps();
     retry.results.push({ _tag: "Retry", reason: "429" }, { _tag: "Rejected", reason: "BadTopic" });

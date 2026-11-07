@@ -2,8 +2,8 @@ import SwiftUI
 import Design
 
 /// The buy on every offer: a tap buys right away and the purchase moment plays, with Undo for a few seconds. Short of
-/// coins it shakes and opens the Coins sheet; once everything is owned it reads "Owned · Place" and takes the couple
-/// to the room.
+/// coins it shakes and opens the Coins sheet; once everything is owned it reads "Owned" with a separate Place button that takes the
+/// couple to the room.
 struct BuyButton: View {
     let state: HomeState
     /// What the missing pieces cost and what they'd cost one by one; nil once everything is owned.
@@ -18,23 +18,15 @@ struct BuyButton: View {
 
     var body: some View {
         if let quote {
-            HStack(spacing: Space.s) {
-                Design.PriceButton(
-                    quote.price, label: "Buy \(name), \(quote.price) coins",
-                    hint: state.shop.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
-                        : "Needs \(quote.price - state.shop.coins) more coins; opens Coins"
-                ) {
-                    // Short of coins, the buy opens the Coins sheet at what's missing.
-                    if state.shop.coins < quote.price { shakes += 1 }
-                    _ = buy()
-                }
-                if quote.sum > quote.price {
-                    Text(quote.sum, format: .number)
-                        .font(.nookiCaption.monospacedDigit())
-                        .strikethrough()
-                        .foregroundStyle(Ink.textSecondary)
-                        .accessibilityHidden(true)
-                }
+            Design.PriceButton(
+                quote.price, was: quote.sum > quote.price ? quote.sum : nil,
+                label: "Buy \(name), \(quote.price) coins",
+                hint: state.shop.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
+                    : "Needs \(quote.price - state.shop.coins) more coins; opens Coins"
+            ) {
+                // Short of coins, the buy opens the Coins sheet at what's missing.
+                if state.shop.coins < quote.price { shakes += 1 }
+                _ = buy()
             }
             .keyframeAnimator(initialValue: CGFloat(0), trigger: shakes) { content, x in
                 content.offset(x: x)
@@ -49,11 +41,16 @@ struct BuyButton: View {
             .haptic(.warning, trigger: shakes)
             .frame(maxWidth: fills ? .infinity : nil, minHeight: fills ? Size.button : nil, alignment: .leading)
         } else {
-            SecondaryButton("Owned · Place", symbol: "checkmark", fullWidth: fills) {
-                state.tab = .world
+            HStack(spacing: Space.s) {
+                Chip("Owned", symbol: "checkmark")
+                SecondaryButton("Place", symbol: "mappin", fullWidth: false) {
+                    state.tab = .world
+                }
+                .fixedSize()
+                .accessibilityLabel("Place \(name)")
+                .accessibilityHint("Opens the room")
             }
-            .accessibilityLabel("\(name), owned")
-            .accessibilityHint("Opens the room")
+            .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
         }
     }
 }
