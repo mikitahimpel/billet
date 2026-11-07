@@ -1,4 +1,4 @@
-import { Context, Effect, Layer, Option, Schema } from "effect";
+import { Clock, Context, Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
 import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
@@ -43,9 +43,12 @@ import {
   InvalidNote,
   NotEnoughCoins,
   NotesNotFound,
+  PriceChanged,
   NotesUnavailable,
 } from "./notes-error.ts";
 import { PairRooms } from "./pair-rooms.ts";
+import { priceBookOf } from "@billet/backend-shop/price-book";
+import { ShopStore } from "@billet/backend-shop/shop-store";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** The most a compact rendition may take as JSON, matching the iOS encoder's budget. */
@@ -108,7 +111,7 @@ export class NotesService extends Context.Service<
       request: BuyRequest,
     ) => Effect.Effect<
       BuyResponse,
-      NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+      NotesNotFound | NotEnoughCoins | PriceChanged | AlreadyOwned | NotesUnavailable
     >;
     /** What the caller's pair has: balance, inks, room pieces and wishlist. */
     readonly shop: (
@@ -120,7 +123,12 @@ export class NotesService extends Context.Service<
       request: OrderRequest,
     ) => Effect.Effect<
       OrderResponse,
-      NotesNotFound | NotEnoughCoins | AlreadyOwned | CatNotAdopted | NotesUnavailable
+      | NotesNotFound
+      | NotEnoughCoins
+      | PriceChanged
+      | AlreadyOwned
+      | CatNotAdopted
+      | NotesUnavailable
     >;
     /** Opens the day's gift. The partner's open, or a retry, answers with the first. */
     readonly openGift: (
@@ -170,13 +178,14 @@ export class NotesService extends Context.Service<
   static readonly layer: Layer.Layer<
     NotesService,
     never,
-    PairingRepository | MediaStore | PairRooms | Metrics | SecureRandom.SecureRandom
+    PairingRepository | MediaStore | PairRooms | Metrics | ShopStore | SecureRandom.SecureRandom
   > = Layer.effect(
     NotesService,
     Effect.gen(function* () {
       const pairing = yield* PairingRepository;
       const media = yield* MediaStore;
       const rooms = yield* PairRooms;
+      const shopStore = yield* ShopStore;
       const metrics = yield* Metrics;
       const random = yield* SecureRandom.SecureRandom;
 
@@ -301,6 +310,19 @@ export class NotesService extends Context.Service<
         return yield* openedRead(pairId, () => rooms.coins(pairId, after, limit));
       });
 
+      // The room prices a buy from the catalog as it is now; the client's price only caps it.
+      const termsOf = (expectedPrice: number | undefined) =>
+        Effect.gen(function* () {
+          const items = yield* shopStore.active.pipe(
+            Effect.mapError((cause) => new NotesUnavailable({ reason: "shop-unavailable", cause })),
+          );
+          const at = yield* Clock.currentTimeMillis;
+          return {
+            book: priceBookOf(items, at),
+            ...(expectedPrice === undefined ? {} : { expectedPrice }),
+          };
+        });
+
       // A refused spend: what the client can act on, or the room's fault.
       const refusedSpend = (rejection: RoomRejection) => {
         switch (rejection._tag) {
@@ -310,6 +332,8 @@ export class NotesService extends Context.Service<
             return new AlreadyOwned({ itemId: rejection.ink });
           case "OfferOwned":
             return new AlreadyOwned({ itemId: rejection.offer });
+          case "PriceChanged":
+            return new PriceChanged({ price: rejection.price });
           case "NotSold":
           case "NotOffered":
             return new NotesNotFound();
@@ -382,11 +406,12 @@ export class NotesService extends Context.Service<
         request: BuyRequest,
       ): Effect.fn.Return<
         BuyResponse,
-        NotesNotFound | NotEnoughCoins | AlreadyOwned | NotesUnavailable
+        NotesNotFound | NotEnoughCoins | PriceChanged | AlreadyOwned | NotesUnavailable
       > {
         const pairId = yield* pairOf(userId);
+        const terms = yield* termsOf(request.expectedPrice);
         const decision = yield* inOpenRoom(pairId, () =>
-          rooms.buy(pairId, userId, request.id, request.item),
+          rooms.buy(pairId, userId, request.id, request.item, terms),
         );
         if (decision._tag === "Rejected") {
           const refused = refusedSpend(decision.rejection);
@@ -421,11 +446,17 @@ export class NotesService extends Context.Service<
         request: OrderRequest,
       ): Effect.fn.Return<
         OrderResponse,
-        NotesNotFound | NotEnoughCoins | AlreadyOwned | CatNotAdopted | NotesUnavailable
+        | NotesNotFound
+        | NotEnoughCoins
+        | PriceChanged
+        | AlreadyOwned
+        | CatNotAdopted
+        | NotesUnavailable
       > {
         const pairId = yield* pairOf(userId);
+        const terms = yield* termsOf(request.expectedPrice);
         const decision = yield* inOpenRoom(pairId, () =>
-          rooms.order(pairId, userId, request.id, request.offer, request.utcOffsetSeconds),
+          rooms.order(pairId, userId, request.id, request.offer, request.utcOffsetSeconds, terms),
         );
         if (decision._tag === "Rejected")
           return yield* Effect.fail(refusedSpend(decision.rejection));
@@ -441,8 +472,12 @@ export class NotesService extends Context.Service<
         request: WishRequest,
       ): Effect.fn.Return<ShopResponse, NotesNotFound | NotesUnavailable> {
         const pairId = yield* pairOf(userId);
+        const items = yield* shopStore.active.pipe(
+          Effect.mapError((cause) => new NotesUnavailable({ reason: "shop-unavailable", cause })),
+        );
+        const offered = items.some((item) => item.id === request.item);
         const decision = yield* inOpenRoom(pairId, () =>
-          rooms.setWish(pairId, userId, request.item, request.wished),
+          rooms.setWish(pairId, userId, request.item, request.wished, offered),
         );
         return decision._tag === "Accepted"
           ? shopOf(decision.state)

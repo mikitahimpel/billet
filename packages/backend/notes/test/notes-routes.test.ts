@@ -252,7 +252,7 @@ describe("the shop routes", () => {
     expect(seen).toMatchObject({ wishlist: ["tower"] });
   });
 
-  it("answers 409 to an order the balance cannot pay, and 400 to an unknown piece", async () => {
+  it("answers 409 to an order the balance cannot pay, and 404 to a piece the catalog does not sell", async () => {
     const order = (item: string, n: number) =>
       handler(
         request("/v1/shop/orders", "dee", {
@@ -268,7 +268,7 @@ describe("the shop routes", () => {
     const poor = await order("armchair", 2);
     expect(poor.status).toBe(409);
     expect(await poor.json()).toEqual({ _tag: "NotEnoughCoins", needed: 320, have: 20 });
-    expect((await order("throne", 3)).status).toBe(400);
+    expect((await order("throne", 3)).status).toBe(404);
   });
 
   it("answers a stranger 404", async () => {
