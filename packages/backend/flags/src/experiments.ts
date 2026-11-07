@@ -226,7 +226,8 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
   {
     key: "room-shell",
     kind: "flag",
-    description: "How the rooms' walls, floor and furniture are made: live boxes or a baked model (Labs > Room shell).",
+    description:
+      "How the rooms' walls, floor and furniture are made: live boxes or a baked model (Labs > Room shell).",
     variants: { live: 1, baked: 0 },
     default: "live",
     exposure: 100,

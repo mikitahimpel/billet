@@ -38,7 +38,9 @@ import Testing
     #expect(RoomShell.resolved(labs: nil, remote: RemoteFlags()) == .live)
     #expect(RoomShell.resolved(labs: nil, remote: remote) == .baked)
     #expect(RoomShell.resolved(labs: .live, remote: remote) == .live)
-    #expect(RoomShell.resolved(labs: nil, remote: RemoteFlags(assignments: ["room-shell": "hologram"])) == .live)
+    #expect(
+      RoomShell.resolved(labs: nil, remote: RemoteFlags(assignments: ["room-shell": "hologram"]))
+        == .live)
   }
 
   @Test func anUnknownVariantIsNoChoice() {
