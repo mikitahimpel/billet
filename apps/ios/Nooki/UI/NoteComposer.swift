@@ -1,182 +1,146 @@
-import PencilKit
 import SwiftUI
 import Design
 
-/// Sheet for writing a line or doodling on a piece of paper; saving pins it and earns 5 coins.
+/// Sheet for a note: text and ink on the same paper, in the look Labs picked (`ComposerStyle`). Sending pins it and
+/// earns 5 coins.
 struct NoteComposer: View {
+    /// Which tool the sheet opens with.
     enum Mode: String, Identifiable {
         case write, draw
         var id: String { rawValue }
     }
 
     let state: HomeState
-    @State var mode: Mode
+    let style: ComposerStyle
 
-    @Environment(\.dismiss) private var dismiss
-    @State private var text = ""
-    @State private var paper: Note.Paper = .butter
-    @State private var ink = PaletteInk.free
-    @State private var drawing = PKDrawing()
-    @State private var canvas = PKCanvasView()
+    @State private var model: ComposerModel
+    @State private var flight = 0.0
+    @State private var sending = false
+    @State private var paperSize = CGSize(width: 280, height: 280)
+    @State private var pats = 0
     @FocusState private var focused: Bool
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private static let side: CGFloat = 280
-
-    private var isEmpty: Bool {
-        switch mode {
-        case .write: text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case .draw: drawing.strokes.isEmpty
-        }
+    init(state: HomeState, mode: Mode, style: ComposerStyle = .current) {
+        self.state = state
+        self.style = style
+        _model = State(initialValue: ComposerModel(kind: style.kinds[0], drawing: mode == .draw))
     }
 
     var body: some View {
-        BilletSheet("New note", size: .large) {
-            VStack(spacing: Space.l + 4) {
-                Picker("Style", selection: $mode) {
-                    Text("Write").tag(Mode.write)
-                    Text("Draw").tag(Mode.draw)
-                }
-                .pickerStyle(.segmented)
-
-                paperView
-
-                inkRow
-
-                paperRow
-
-                PrimaryButton("Pin it · +5", action: save)
-                    .monospacedDigit()
-                    .disabled(isEmpty)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        // Over the sheet: an ink bought here plays its moment and Undo where it was tapped.
-        .overlay { PurchaseMoment(state: state) }
-        .onAppear { focused = mode == .write }
-        .onChange(of: mode) { _, new in focused = new == .write }
-    }
-
-    private var paperView: some View {
-        ZStack(alignment: .topLeading) {
-            Color(hex: paper.hex)
-            switch mode {
-            case .write:
-                VStack(spacing: 0) {
-                    TextField("", text: $text, prompt: Text("Write a little note…"), axis: .vertical)
-                        .font(.custom("Noteworthy-Bold", size: 22))
-                        .foregroundStyle(Color(hex: ink.light))
-                        .lineLimit(6)
-                        .focused($focused)
-                        .onChange(of: text) { _, value in
-                            if value.count > NoteStore.maxLength {
-                                text = String(value.prefix(NoteStore.maxLength))
+        BilletSheet("New note", size: .large, scrolls: false, onConfirm: send,
+                    canConfirm: !model.isEmpty && !sending) {
+            GeometryReader { proxy in
+                let size = paper(fitting: proxy.size)
+                ZStack {
+                    ComposerPaper(model: model, size: size, focused: $focused)
+                        .sendFlight(style: style, color: Color(hex: model.paper.hex), progress: flight)
+                        .overlay {
+                            if style == .desk {
+                                MochiOnDesk(activity: model.text.count + (model.hasInk ? 1 : 0) + pats, paper: size,
+                                            swiping: .constant(sending))
                             }
                         }
-                    Spacer(minLength: 0)
+                        .onAppear { paperSize = size }
+                        .onChange(of: size) { _, new in paperSize = new }
                 }
-                .padding(20)
-            case .draw:
-                DoodleCanvas(canvas: canvas, ink: Color(hex: ink.light)) { drawing = $0 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.xl)
+            .safeAreaInset(edge: .bottom, spacing: 0) { tools }
         }
-        .frame(width: Self.side, height: Self.side)
-        .clipShape(.rect(cornerRadius: 4))
-        .rotationEffect(.degrees(-1.5))
-        .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-        .animation(.snappy(duration: 0.2), value: mode)
+        .overlay { PurchaseMoment(state: state) }
+        .haptic(.selection, trigger: model.ink)
+        .haptic(.success, trigger: sending)
+        .onAppear { focused = !model.drawing }
+        .onChange(of: model.drawing) { _, drawing in focused = !drawing }
     }
 
-    private var inkRow: some View {
-        HStack(spacing: 12) {
-            ScrollView(.horizontal) {
-                InkPalette(state: state, selection: $ink)
+    private func paper(fitting available: CGSize) -> CGSize {
+        let room = CGSize(width: max(120, available.width), height: max(120, available.height - Space.xl))
+        let width = min(room.width, room.height * model.kind.aspect, 340)
+        return CGSize(width: width, height: width / model.kind.aspect)
+    }
+
+    private var tools: some View {
+        VStack(spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                toolToggle
+                paperColours
+                Spacer(minLength: 0)
+                if style != .sticky { kindPicker }
+                if model.hasInk {
+                    GlassIconButton(symbol: "arrow.uturn.backward", label: "Undo") { model.undo() }
+                    GlassIconButton(symbol: "trash", label: "Clear") { model.clear() }
+                }
             }
-            .scrollIndicators(.hidden)
-            if mode == .draw { drawButtons }
+            .padding(.horizontal, Space.gutter)
+            PenHolder(style: style, state: state, selection: $model.ink) { dismiss() }
         }
+        .padding(.vertical, Space.s)
+        .animation(.snappy(duration: 0.2), value: model.hasInk)
     }
 
-    private var drawButtons: some View {
-        HStack(spacing: Space.s) {
-            GlassIconButton(symbol: "arrow.uturn.backward", label: "Undo") { canvas.undoManager?.undo() }
-            GlassIconButton(symbol: "trash", label: "Clear") { clear() }
+    private var toolToggle: some View {
+        Button { model.drawing.toggle() } label: {
+            Image(systemName: model.drawing ? "pencil.tip" : "character.cursor.ibeam")
+                .font(.nookiCallout.weight(.semibold))
+                .foregroundStyle(model.drawing ? Ink.heroInk : Ink.text)
+                .frame(width: Size.control, height: Size.control)
+                .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(model.drawing ? "Pen on" : "Pen off")
+        .accessibilityHint("Switches between drawing and typing")
+        .accessibilityIdentifier("composerPen")
     }
 
-    private var paperRow: some View {
-        HStack(spacing: 12) {
+    private var paperColours: some View {
+        Menu {
             ForEach(Note.Paper.allCases, id: \.self) { option in
-                Button { paper = option } label: {
-                    dot(Color(hex: option.hex), selected: paper == option)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(option.rawValue.capitalized)
+                Button(option.rawValue.capitalized) { model.paper = option }
             }
+        } label: {
+            Circle()
+                .fill(Color(hex: model.paper.hex))
+                .overlay(Circle().strokeBorder(Ink.text.opacity(0.3), lineWidth: 1))
+                .frame(width: 28, height: 28)
+                .frame(width: Size.control, height: Size.control)
         }
+        .accessibilityLabel("Paper colour")
+        .accessibilityIdentifier("composerPaperColour")
     }
 
-    private func dot(_ color: Color, selected: Bool) -> some View {
-        Circle()
-            .fill(color)
-            .frame(width: 28, height: 28)
-            .overlay(Circle().stroke(Ink.text, lineWidth: 2).opacity(selected ? 1 : 0))
-    }
-
-    private func clear() {
-        canvas.drawing = PKDrawing()
-        drawing = PKDrawing()
-    }
-
-    private func save() {
-        switch mode {
-        case .write:
-            guard state.journal.addNote(text: text, paper: paper, ink: ink.light) else { return }
-        case .draw:
-            let frame = CGRect(x: 0, y: 0, width: Self.side, height: Self.side)
-            var image = UIImage()
-            UITraitCollection(userInterfaceStyle: .light).performAsCurrent {
-                image = canvas.drawing.image(from: frame, scale: 2)
-            }
-            guard state.journal.addNote(doodle: image, paper: paper) else { return }
+    private var kindPicker: some View {
+        Button {
+            let kinds = style.kinds
+            let next = (kinds.firstIndex(of: model.kind) ?? 0) + 1
+            withAnimation(.snappy) { model.kind = kinds[next % kinds.count] }
+            pats += 1
+        } label: {
+            Image(systemName: model.kind.symbol)
+                .font(.nookiCallout.weight(.semibold))
+                .foregroundStyle(Ink.text)
+                .frame(width: Size.control, height: Size.control)
+                .background(Ink.surface, in: .circle)
         }
-        dismiss()
-    }
-}
-
-/// PencilKit canvas with a transparent background, so the paper color shows through the strokes.
-private struct DoodleCanvas: UIViewRepresentable {
-    let canvas: PKCanvasView
-    let ink: Color
-    let onChange: (PKDrawing) -> Void
-
-    func makeUIView(context: Context) -> PKCanvasView {
-        canvas.drawingPolicy = .anyInput
-        canvas.backgroundColor = .clear
-        canvas.isOpaque = false
-        // PencilKit flips dark inks to light in dark mode; the paper is always light.
-        canvas.overrideUserInterfaceStyle = .light
-        canvas.tool = PKInkingTool(.pen, color: UIColor(ink), width: 6)
-        canvas.delegate = context.coordinator
-        return canvas
+        .buttonStyle(.plain)
+        .accessibilityLabel("Paper: \(model.kind.rawValue)")
+        .accessibilityIdentifier("composerPaperKind")
     }
 
-    func updateUIView(_ view: PKCanvasView, context: Context) {
-        view.tool = PKInkingTool(.pen, color: UIColor(ink), width: 6)
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onChange: onChange)
-    }
-
-    final class Coordinator: NSObject, PKCanvasViewDelegate {
-        private let onChange: (PKDrawing) -> Void
-
-        init(onChange: @escaping (PKDrawing) -> Void) {
-            self.onChange = onChange
-        }
-
-        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
-            onChange(canvasView.drawing)
+    private func send() {
+        guard !sending, model.save(into: state.journal, size: paperSize) else { return }
+        focused = false
+        sending = true
+        guard !reduceMotion else { return dismiss() }
+        SendFlight.playSound()
+        withAnimation(.easeIn(duration: SendFlight.duration)) { flight = 1 }
+        Task {
+            try? await Task.sleep(for: .seconds(SendFlight.duration))
+            dismiss()
         }
     }
 }
