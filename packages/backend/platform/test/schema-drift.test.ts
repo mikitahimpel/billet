@@ -8,7 +8,12 @@ import {
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
 import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
 import { StoredDemoPartner } from "@billet/backend-demo-partner/demo-partner-repository";
-import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
+import {
+  StoredBlock,
+  StoredInvite,
+  StoredPairMember,
+  StoredPartnerReport,
+} from "@billet/backend-pairing/pairing-repository";
 import {
   StoredNotification,
   StoredPurchase,
@@ -38,6 +43,8 @@ import {
   pairFlags,
   pairMembers,
   partnerNotices,
+  partnerReports,
+  blocks,
   purchases,
   pushTokens,
   rateLimits,
@@ -148,6 +155,8 @@ const checked = [
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],
   ["partner_notices", partnerNotices, StoredPartnerNotice],
+  ["blocks", blocks, StoredBlock],
+  ["partner_reports", partnerReports, StoredPartnerReport],
   ["purchases", purchases, StoredPurchase],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],

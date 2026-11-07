@@ -1,4 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
+import { getTableName, is } from "drizzle-orm";
+import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
@@ -70,6 +72,7 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import * as roomSchema from "./room-schema.ts";
 import type { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
@@ -1038,15 +1041,21 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * The pair has ended and the room goes with it: closes every socket and deletes all the room's
-   * storage, the notes, cat, shop and wallet, and the alarm. Safe to repeat. The object is empty
-   * from then on; an instance still in memory can't be used until it is evicted.
+   * The pair has ended and the room goes with it: closes every socket, cancels the alarm and
+   * deletes every row of every room table, the notes, cat, shop and wallet. The tables stay, so the
+   * object keeps working, empty, for a late request such as the account erasure that may follow.
+   * Safe to repeat.
    */
   async destroy(): Promise<void> {
     this.destroyed = true;
     await this.endSessions();
     await this.ctx.storage.deleteAlarm();
-    await this.ctx.storage.deleteAll();
+    const tables = Object.values(roomSchema).flatMap((value) =>
+      is(value, SQLiteTable) ? [value] : [],
+    );
+    this.ctx.storage.transactionSync(() => {
+      for (const table of tables) this.ctx.storage.sql.exec(`DELETE FROM "${getTableName(table)}"`);
+    });
   }
 
   /**

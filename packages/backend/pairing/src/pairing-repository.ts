@@ -1,7 +1,7 @@
 import { Context, type Effect, type Option, Schema } from "effect";
 import { TokenHash } from "@billet/backend-auth/auth-repository";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
-import type { ReportReason } from "@billet/contracts-http-api/safety";
+import { ReportReason } from "@billet/contracts-http-api/safety";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
 
@@ -27,6 +27,22 @@ export interface InviteClaim {
   readonly pairId: PairId;
   readonly now: EpochMillis;
 }
+
+export const StoredBlock = Schema.Struct({
+  blockerId: UserId,
+  blockedId: UserId,
+  createdAt: EpochMillis,
+});
+
+export const StoredPartnerReport = Schema.Struct({
+  id: Schema.String,
+  reporterId: UserId,
+  reportedId: UserId,
+  pairId: PairId,
+  reason: ReportReason,
+  details: Schema.NullOr(Schema.String),
+  createdAt: EpochMillis,
+});
 
 export interface PartnerReport {
   readonly id: string;

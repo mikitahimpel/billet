@@ -499,8 +499,6 @@ describe("PairRoom destroy", () => {
     await room.destroy();
     expect(await closed).toBe("1000 pair ended");
 
-    // An instance still in memory is unusable; eviction makes the next one start from nothing.
-    await evictDurableObject(room);
     expect(await room.notes(0, 10)).toEqual([]);
     expect(await room.snapshot()).toEqual({ _tag: "Vacant" });
   });

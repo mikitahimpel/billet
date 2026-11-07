@@ -1,6 +1,5 @@
 import {
   createExecutionContext,
-  evictDurableObject,
   runInDurableObject,
   waitOnExecutionContext,
 } from "cloudflare:test";
@@ -526,7 +525,6 @@ describe("the Api Worker", () => {
       expect(await env.MEDIA.head(key)).toBeNull();
     }
     expect((await env.MEDIA.list({ prefix: `pairs/${pairId}/` })).objects).toEqual([]);
-    await evictDurableObject(room);
     expect(await room.notes(0, 10)).toEqual([]);
     // Both partners now answer as unpaired.
     for (const token of [owner, claimer]) {
@@ -754,7 +752,7 @@ describe("note images", () => {
     const unpair = await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) });
     expect(unpair.status).toBe(204);
     expect((await readImage(key, claimer)).status).toBe(404);
-    expect(await env.MEDIA.head(key)).not.toBeNull();
+    expect(await env.MEDIA.head(key)).toBeNull();
   });
 
   it("answers 401 without a session", async () => {
