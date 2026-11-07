@@ -197,7 +197,7 @@ public enum WebSocketMachine: Machine {
     // Cat frames have their own journal `seq`, never a note's, and the Inbox count has none.
     case .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear,
       .catEntryAdded, .catSaved, .activityUnread, .reactionChanged, .shopChanged, .listsChanged,
-      .moodChanged:
+      .moodChanged, .matchFound, .guessProgress, .guessRevealed, .riddleChanged:
       return lastSeq
     }
   }

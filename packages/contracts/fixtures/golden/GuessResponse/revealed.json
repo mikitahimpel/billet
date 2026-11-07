@@ -1,0 +1,84 @@
+{
+  "answers": [
+    {
+      "option": 0,
+      "question": 3
+    },
+    {
+      "option": 1,
+      "question": 17
+    },
+    {
+      "option": 2,
+      "question": 42
+    },
+    {
+      "option": 3,
+      "question": 88
+    },
+    {
+      "option": 0,
+      "question": 120
+    }
+  ],
+  "partnerAnswered": 5,
+  "reveal": [
+    {
+      "guess": 0,
+      "hit": true,
+      "question": 3,
+      "truth": 0
+    },
+    {
+      "guess": 1,
+      "hit": true,
+      "question": 17,
+      "truth": 1
+    },
+    {
+      "guess": 0,
+      "hit": false,
+      "question": 42,
+      "truth": 2
+    },
+    {
+      "guess": 3,
+      "hit": true,
+      "question": 88,
+      "truth": 3
+    },
+    {
+      "guess": 0,
+      "hit": true,
+      "question": 120,
+      "truth": 0
+    }
+  ],
+  "round": {
+    "closesAt": 1793919600000,
+    "id": "2026-11-05",
+    "questions": [
+      3,
+      17,
+      42,
+      88,
+      120
+    ],
+    "subject": "user-alice"
+  },
+  "score": {
+    "allTime": {
+      "mine": 31,
+      "partner": 12
+    },
+    "bestWeek": {
+      "mine": 14,
+      "partner": 9
+    },
+    "week": {
+      "mine": 4,
+      "partner": 7
+    },
+    "weekOf": "2026-11-02"
+  }
+}

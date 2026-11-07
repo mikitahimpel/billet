@@ -94,6 +94,22 @@ const severance = {
   number_of_seasons: 2,
 };
 
+// Severance and an Arrival-like film for Arrival; Arrival, a new show and Severance again for Severance.
+const recommended: Readonly<Record<string, unknown>> = {
+  "/movie/329865/recommendations": {
+    page: 1,
+    results: [search.results[2], { ...search.results[0], id: 7 }],
+  },
+  "/tv/95396/recommendations": {
+    page: 1,
+    results: [
+      { media_type: "movie", id: 329865, title: "Arrival" },
+      { media_type: "tv", id: 8, name: "Silo" },
+      search.results[2],
+    ],
+  },
+};
+
 interface Call {
   readonly path: string;
   readonly params: Readonly<Record<string, string>>;
@@ -118,7 +134,7 @@ const FakeTmdb = Layer.succeed(
               ? arrival
               : path === "/tv/95396"
                 ? severance
-                : undefined;
+                : recommended[path];
         return body === undefined
           ? Effect.fail(new TitleNotFound())
           : Effect.succeed(JSON.stringify(body));
@@ -254,5 +270,38 @@ describe("title details", () => {
     expect((await get("/v1/titles/book/1")).status).toBe(400);
     expect((await get("/v1/titles/movie/0")).status).toBe(400);
     expect((await get("/v1/titles/movie/abc")).status).toBe(400);
+  });
+});
+
+describe("title recommendations", () => {
+  const recommend = async (ids: string) => {
+    const response = await get(`/v1/titles/recommendations?ids=${ids}`);
+    expect(response.status).toBe(200);
+    return Schema.decodeUnknownSync(TitleSearchResponse)(await response.json()).results;
+  };
+
+  it("takes titles in turn from each seed's list, without repeats or the seeds", async () => {
+    const found = await recommend("movie:329865,tv:95396");
+    expect(found.map((title) => `${title.kind}:${title.tmdb}`)).toEqual(["movie:7", "tv:8"]);
+    expect(calls.map((call) => call.path).toSorted()).toEqual([
+      "/movie/329865/recommendations",
+      "/tv/95396/recommendations",
+    ]);
+  });
+
+  it("is cached, and a seed TMDB lacks adds nothing", async () => {
+    await recommend("movie:329865");
+    const asked = calls.length;
+    await recommend("movie:329865");
+    expect(calls).toHaveLength(asked);
+    expect(await recommend("movie:1")).toEqual([]);
+  });
+
+  it("needs a session and 1 to 5 well-formed ids", async () => {
+    expect((await get("/v1/titles/recommendations?ids=movie:1", "bad")).status).toBe(401);
+    expect((await get("/v1/titles/recommendations")).status).toBe(400);
+    expect((await get("/v1/titles/recommendations?ids=book:1")).status).toBe(400);
+    const six = Array.from({ length: 6 }, (_, at) => `movie:${at + 1}`).join(",");
+    expect((await get(`/v1/titles/recommendations?ids=${six}`)).status).toBe(400);
   });
 });

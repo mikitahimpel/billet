@@ -36,6 +36,8 @@ export const DemoBotState = Schema.Struct({
   reactions: Schema.Array(Schema.Struct({ note: NoteId, at: EpochMillis })),
   catAt: EpochMillis,
   giftAt: EpochMillis,
+  /** When the bot plays its part of today's Who knows who round, after the owner played theirs. */
+  guessAt: Schema.optional(EpochMillis),
 });
 export type DemoBotState = typeof DemoBotState.Type;
 
@@ -44,7 +46,9 @@ export type DemoBotAction =
   | { readonly _tag: "SendNote"; readonly request: SendNoteRequest }
   | { readonly _tag: "React"; readonly request: ReactRequest }
   | { readonly _tag: "RecordCatEvent"; readonly request: RecordCatEventRequest }
-  | { readonly _tag: "OpenGift" };
+  | { readonly _tag: "OpenGift" }
+  /** Answers every question of today's round the bot has not answered, the `n`th with `options[n]`. */
+  | { readonly _tag: "PlayGuess"; readonly options: ReadonlyArray<number> };
 
 /** A 32-bit seed from the bot's id (FNV-1a), so a bot keeps its habits across restarts. */
 export const seedOf = (bot: string): number => {
@@ -130,6 +134,16 @@ export const noteSeen = (state: DemoBotState, note: Note, now: number): DemoBotS
   }
 };
 
+/**
+ * What an owner's Who knows who answer makes the bot plan: its own part 10 to 40 seconds later.
+ * More answers while that is pending change nothing.
+ */
+export const guessSeen = (state: DemoBotState, by: UserId, now: number): DemoBotState => {
+  if (by !== state.owner || state.guessAt !== undefined) return state;
+  const draw = drawer(state.seed, state.draws);
+  return { ...state, guessAt: now + draw.between(10 * second, 40 * second), draws: draw.drawn() };
+};
+
 /** Every few hours: mostly a pet, sometimes a small meal. */
 const catEvent = (draw: Drawer): CatEvent =>
   draw.unit() < 0.3 ? { _tag: "Fed", grams: draw.between(20, 60) } : { _tag: "Petted" };
@@ -137,13 +151,14 @@ const catEvent = (draw: Drawer): CatEvent =>
 const reactionOf = (draw: Drawer): Reaction =>
   draw.pick<Reaction>(["heart", "heart", "heart", "laugh", "wow", "fire"]);
 
-type Plan = "reply" | "react" | "cat" | "gift";
+type Plan = "reply" | "react" | "cat" | "gift" | "guess";
 
 const planned = (state: DemoBotState): ReadonlyArray<readonly [Plan, number]> => {
   const [photo] = state.reactions;
   return [
     ...(state.replyAt === undefined ? [] : [["reply", state.replyAt] as const]),
     ...(photo === undefined ? [] : [["react", photo.at] as const]),
+    ...(state.guessAt === undefined ? [] : [["guess", state.guessAt] as const]),
     ["cat", state.catAt],
     ["gift", state.giftAt],
   ];
@@ -203,6 +218,10 @@ export const demoBotStep = (
     case "gift": {
       const giftAt = now + draw.between(22 * hour, 26 * hour);
       return { action: { _tag: "OpenGift" }, state: acted({ giftAt }) };
+    }
+    case "guess": {
+      const options = Array.from({ length: 5 }, () => draw.between(0, 3));
+      return { action: { _tag: "PlayGuess", options }, state: acted({ guessAt: undefined }) };
     }
   }
 };

@@ -97,6 +97,38 @@ public struct APIClient: Sendable {
   public var title:
     @Sendable (_ kind: ListMediaKind, _ tmdb: Int, _ country: String, _ language: String)
       async throws(TransportError) -> TitleDetails
+  /// Films and shows TMDB recommends for those who liked `seeds` (1 to 5), in `language`.
+  public var titleRecommendations:
+    @Sendable (_ seeds: [ListMedia], _ language: String) async throws(TransportError) ->
+      TitleSearchResponse
+  /// The pair's Pick tonight session as this user sees it. `.api(.notFound)` while unpaired.
+  public var pickTonight: @Sendable () async throws(TransportError) -> PickTonightResponse
+  /// One Pick tonight swipe; answers the session after it, with the match it made.
+  public var swipePickTonight:
+    @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
+  /// Today's Who knows who round as this user sees it. `.api(.notFound)` while unpaired.
+  public var guess: @Sendable () async throws(TransportError) -> GuessResponse
+  /// Locks one answer of today's round; answers the round after it. `.api(.invalidRequest)` for
+  /// another option on a question already answered or a round whose day is over (409), or a
+  /// question not in the round (400).
+  public var answerGuess:
+    @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse
+  /// Every Who knows who question. No session.
+  public var guessCatalog: @Sendable () async throws(TransportError) -> GuessCatalogResponse
+  /// The pair's draw-guess riddles as this user sees them. `.api(.notFound)` while unpaired.
+  public var riddles: @Sendable () async throws(TransportError) -> RiddlesResponse
+  /// Sends a riddle to the partner; the same `id` again answers with the first. `.api(.invalidRequest)`
+  /// for a word that is no riddle word (400) or while this user's last riddle is open (409).
+  public var sendRiddle: @Sendable (SendRiddleRequest) async throws(TransportError) -> Riddle
+  /// One try at the partner's riddle `id`, under the try's own `key`. `.api(.notFound)` for no
+  /// such riddle; `.api(.invalidRequest)` (409) for the drawer's own or one that has ended.
+  public var guessRiddle:
+    @Sendable (_ id: RiddleId, _ key: IdempotencyKey, _ guess: String) async throws(TransportError)
+      -> GuessRiddleResponse
+  /// Mochi's next hint on riddle `id`; `.api(.invalidRequest)` (409) once every hint is used.
+  public var hintRiddle: @Sendable (_ id: RiddleId) async throws(TransportError) -> Riddle
+  /// Ends riddle `id` without the word, which the answer then carries.
+  public var giveUpRiddle: @Sendable (_ id: RiddleId) async throws(TransportError) -> Riddle
   /// Replaces this user's check-in and answers with it as stored, the note trimmed.
   /// `.api(.invalidRequest)` for a note over 80 UTF-16 code units once trimmed.
   public var setMood: @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn
@@ -239,6 +271,43 @@ public struct APIClient: Sendable {
       async throws(TransportError) -> TitleDetails = {
         (_, _, _, _) async throws(TransportError) in throw .network("offline")
       },
+    titleRecommendations:
+      @escaping @Sendable (_ seeds: [ListMedia], _ language: String) async throws(TransportError)
+      -> TitleSearchResponse = { (_, _) async throws(TransportError) in throw .network("offline") },
+    pickTonight: @escaping @Sendable () async throws(TransportError) -> PickTonightResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    swipePickTonight:
+      @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    guess: @escaping @Sendable () async throws(TransportError) -> GuessResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    answerGuess:
+      @escaping @Sendable (GuessAnswerRequest) async throws(TransportError) -> GuessResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    guessCatalog: @escaping @Sendable () async throws(TransportError) -> GuessCatalogResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    riddles: @escaping @Sendable () async throws(TransportError) -> RiddlesResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    sendRiddle: @escaping @Sendable (SendRiddleRequest) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
+    guessRiddle:
+      @escaping @Sendable (RiddleId, IdempotencyKey, String) async throws(TransportError)
+      -> GuessRiddleResponse = { (_, _, _) async throws(TransportError) in
+        throw .network("offline")
+      },
+    hintRiddle: @escaping @Sendable (RiddleId) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
+    giveUpRiddle: @escaping @Sendable (RiddleId) async throws(TransportError) -> Riddle = {
+      (_) async throws(TransportError) in throw .network("offline")
+    },
     setMood:
       @escaping @Sendable (SetMoodRequest) async throws(TransportError) -> PartnerCheckIn = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -299,262 +368,22 @@ public struct APIClient: Sendable {
     self.changeList = changeList
     self.searchTitles = searchTitles
     self.title = title
+    self.titleRecommendations = titleRecommendations
+    self.pickTonight = pickTonight
+    self.swipePickTonight = swipePickTonight
+    self.guess = guess
+    self.answerGuess = answerGuess
+    self.guessCatalog = guessCatalog
+    self.riddles = riddles
+    self.sendRiddle = sendRiddle
+    self.guessRiddle = guessRiddle
+    self.hintRiddle = hintRiddle
+    self.giveUpRiddle = giveUpRiddle
     self.setMood = setMood
     self.demoPartner = demoPartner
     self.createDemoPartner = createDemoPartner
     self.removeDemoPartner = removeDemoPartner
     self.dateCatalog = dateCatalog
-  }
-}
-
-extension APIClient {
-  /// The client over `http`. `token` is read for each signed request, so a sign-out or a new
-  /// session takes effect at once. A signed route called without a token fails as unauthorized
-  /// without leaving the device.
-  public static func live(
-    http: HTTPService, token: @escaping @Sendable () async -> String?
-  ) -> APIClient {
-    @Sendable func request(
-      _ route: Route, signed: Bool, headers: [String: String] = [:], body: Data? = nil
-    )
-      async throws(TransportError) -> HTTPRequest
-    {
-      var headers = headers
-      if signed {
-        guard let token = await token() else { throw .api(.unauthorized) }
-        headers[Routes.authorizationHeader] = Routes.bearerPrefix + token
-      }
-      return HTTPRequest(method: route.method, path: route.path, headers: headers, body: body)
-    }
-
-    @Sendable func json<Body: Encodable & Sendable>(
-      _ route: Route, signed: Bool, body: Body
-    ) async throws(TransportError) -> HTTPRequest {
-      let unsigned = try HTTPRequest.json(route.method, path: route.path, body: body)
-      return try await request(
-        route, signed: signed, headers: unsigned.headers, body: unsigned.body)
-    }
-
-    return APIClient(
-      authChallenge: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.authChallenge, signed: false), as: AuthChallengeResponse.self)
-      },
-      signInWithApple: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.authApple, signed: false, body: body), as: SessionResponse.self)
-      },
-      signOut: { () async throws(TransportError) in
-        try await http.performEmpty(try await request(Routes.authSignOut, signed: true))
-      },
-      registerPushToken: { (body) async throws(TransportError) in
-        try await http.performEmpty(
-          try await json(Routes.registerPushToken, signed: true, body: body))
-      },
-      createInvite: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.createInvite, signed: true), as: CreateInviteResponse.self)
-      },
-      claimInvite: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.claimInvite, signed: true, body: body),
-          as: ClaimInviteResponse.self)
-      },
-      unpair: { () async throws(TransportError) in
-        try await http.performEmpty(try await request(Routes.unpair, signed: true))
-      },
-      uploadImage: { (image) async throws(TransportError) in
-        try await http.perform(
-          try await request(
-            Routes.uploadImage, signed: true,
-            headers: ["Content-Type": APIClient.contentType(ofImage: image)], body: image),
-          as: UploadImageResponse.self)
-      },
-      downloadImage: { (key) async throws(TransportError) in
-        try await http.performRaw(
-          try await request(Routes.downloadImage(key: key.rawValue), signed: true))
-      },
-      sendNote: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.sendNote, signed: true, body: body), as: SendNoteResponse.self)
-      },
-      listNotes: { (after) async throws(TransportError) in
-        var route = Routes.listNotes
-        if let after { route = Route(route.method, route.path + "?after=\(after)") }
-        return try await http.perform(
-          try await request(route, signed: true), as: ListNotesResponse.self)
-      },
-      flags: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getFlags, signed: true), as: FlagsResponse.self)
-      },
-      status: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getStatus, signed: false), as: StatusResponse.self)
-      },
-      reportEvents: { (events) async throws(TransportError) in
-        try await http.performEmpty(
-          try await json(
-            Routes.reportEvents, signed: true, body: ReportEventsRequest(events: events)))
-      },
-      signInAnonymously: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.authAnonymous, signed: false, body: body),
-          as: SessionResponse.self)
-      },
-      linkApple: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.authAppleLink, signed: true, body: body),
-          as: AccountResponse.self)
-      },
-      account: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getAccount, signed: true), as: AccountResponse.self)
-      },
-      deleteAccount: { (body) async throws(TransportError) in
-        try await http.performEmpty(try await json(Routes.deleteAccount, signed: true, body: body))
-      },
-      listActivity: { (before) async throws(TransportError) in
-        var route = Routes.listActivity
-        if let before,
-          let cursor = before.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed)
-        {
-          route = Route(route.method, route.path + "?before=\(cursor)")
-        }
-        return try await http.perform(
-          try await request(route, signed: true), as: ActivityResponse.self)
-      },
-      markActivityRead: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.markActivityRead, signed: true, body: body),
-          as: ActivityUnreadResponse.self)
-      },
-      react: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.react, signed: true, body: body), as: ReactResponse.self)
-      },
-      listReactions: { (after) async throws(TransportError) in
-        let route = Route(
-          Routes.listReactions.method, Routes.listReactions.path + "?after=\(after)")
-        return try await http.perform(
-          try await request(route, signed: true), as: ListReactionsResponse.self)
-      },
-      listInks: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.listInks, signed: true), as: InksResponse.self)
-      },
-      getCoins: { (after) async throws(TransportError) in
-        var path = Routes.getCoins.path
-        if let after, let query = after.addingPercentEncoding(withAllowedCharacters: .alphanumerics)
-        {
-          path += "?after=\(query)"
-        }
-        return try await http.perform(
-          try await request(Route(Routes.getCoins.method, path), signed: true),
-          as: CoinsResponse.self)
-      },
-      buyItem: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.buyItem, signed: true, body: body), as: BuyResponse.self)
-      },
-      pair: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getPair, signed: true), as: PairResponse.self)
-      },
-      shop: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getShop, signed: true), as: ShopResponse.self)
-      },
-      placeOrder: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.placeOrder, signed: true, body: body), as: OrderResponse.self)
-      },
-      setWish: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.setWish, signed: true, body: body), as: ShopResponse.self)
-      },
-      openGift: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.openGift, signed: true, body: body), as: OpenGiftResponse.self)
-      },
-      claimBonus: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.claimBonus, signed: true, body: body),
-          as: ClaimBonusResponse.self)
-      },
-      earnCoins: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.earnCoins, signed: true, body: body), as: EarnResponse.self)
-      },
-      gifts: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getGifts, signed: true), as: GiftsResponse.self)
-      },
-      saveGiftWish: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.saveGiftWish, signed: true, body: body), as: GiftsResponse.self)
-      },
-      deleteGiftWish: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.deleteGiftWish, signed: true, body: body), as: GiftsResponse.self)
-      },
-      setGiftPlan: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.setGiftPlan, signed: true, body: body), as: GiftsResponse.self)
-      },
-      markGiftReceived: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.markGiftReceived, signed: true, body: body),
-          as: GiftsResponse.self)
-      },
-      saveLoves: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.saveLoves, signed: true, body: body), as: GiftsResponse.self)
-      },
-      lists: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getLists, signed: true), as: ListsResponse.self)
-      },
-      changeList: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.changeList, signed: true, body: body), as: ListsResponse.self)
-      },
-      searchTitles: { (query, language) async throws(TransportError) in
-        let route = Route(
-          Routes.searchTitles.method,
-          Routes.searchTitles.path + "?" + queryString(["q": query, "lang": language]))
-        return try await http.perform(
-          try await request(route, signed: true), as: TitleSearchResponse.self)
-      },
-      title: { (kind, tmdb, country, language) async throws(TransportError) in
-        let path = Routes.getTitle.path
-          .replacingOccurrences(of: ":kind", with: kind.rawValue)
-          .replacingOccurrences(of: ":tmdb", with: String(tmdb))
-        let route = Route(
-          Routes.getTitle.method,
-          path + "?" + queryString(["country": country, "lang": language]))
-        return try await http.perform(
-          try await request(route, signed: true), as: TitleDetails.self)
-      },
-      setMood: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.setMood, signed: true, body: body), as: PartnerCheckIn.self)
-      },
-      demoPartner: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getDemoPartner, signed: true), as: DemoPartnerResponse.self)
-      },
-      createDemoPartner: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.createDemoPartner, signed: true), as: PairResponse.self)
-      },
-      removeDemoPartner: { () async throws(TransportError) in
-        try await http.performEmpty(try await request(Routes.removeDemoPartner, signed: true))
-      },
-      dateCatalog: { () async throws(TransportError) in
-        try await http.perform(
-          try await request(Routes.getDateCatalog, signed: false), as: DateCatalogResponse.self)
-      })
   }
 }
 
@@ -587,19 +416,4 @@ extension APIClient {
     if bytes.count == 12, bytes[4..<8].elementsEqual(Array("ftyp".utf8)) { return "image/heic" }
     return "image/png"
   }
-}
-
-/// `name=value` pairs joined with `&`, in name order, each value escaped.
-private func queryString(_ values: [String: String]) -> String {
-  values.sorted { $0.key < $1.key }
-    .map { name, value in
-      "\(name)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryValueAllowed) ?? "")"
-    }
-    .joined(separator: "&")
-}
-
-extension CharacterSet {
-  /// What may stand unescaped in a query value: `&`, `=` and `+` are taken out of the query set.
-  fileprivate static let urlQueryValueAllowed = CharacterSet.urlQueryAllowed.subtracting(
-    CharacterSet(charactersIn: "&=+"))
 }

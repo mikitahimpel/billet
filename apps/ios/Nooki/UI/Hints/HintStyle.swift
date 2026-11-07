@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import TipKit
 
 /// The hints' look: a honey symbol, an SF Rounded title, the message and the hint's button under it, and an X. The
@@ -71,7 +72,7 @@ private struct HintLook: ViewModifier {
         } else {
             content
                 .tipViewStyle(HintStyle(hints: hints))
-                .tipBackground(Ink.sheet)
+                .tipBackground(Ink.screen)
         }
     }
 }

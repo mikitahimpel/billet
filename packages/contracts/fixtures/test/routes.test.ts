@@ -7,6 +7,10 @@ import { socketRoute } from "@billet/contracts-realtime/socket-route";
 it("pins the routes that clients call", () => {
   expect({ ...routes, socket: socketRoute }).toMatchInlineSnapshot(`
     {
+      "answerGuess": {
+        "method": "POST",
+        "path": "/v1/guess/answers",
+      },
       "appStoreNotifications": {
         "method": "POST",
         "path": "/v1/appstore/notifications",
@@ -99,6 +103,14 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/gifts",
       },
+      "getGuess": {
+        "method": "GET",
+        "path": "/v1/guess",
+      },
+      "getGuessCatalog": {
+        "method": "GET",
+        "path": "/v1/guess/catalog",
+      },
       "getLists": {
         "method": "GET",
         "path": "/v1/lists",
@@ -111,9 +123,17 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/pair",
       },
+      "getPickTonight": {
+        "method": "GET",
+        "path": "/v1/pick-tonight",
+      },
       "getPurchases": {
         "method": "GET",
         "path": "/v1/purchases",
+      },
+      "getRiddles": {
+        "method": "GET",
+        "path": "/v1/riddles",
       },
       "getShop": {
         "method": "GET",
@@ -126,6 +146,18 @@ it("pins the routes that clients call", () => {
       "getTitle": {
         "method": "GET",
         "path": "/v1/titles/:kind/:tmdb",
+      },
+      "giveUpRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/give-up",
+      },
+      "guessRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/guess",
+      },
+      "hintRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles/:id/hint",
       },
       "listActivity": {
         "method": "GET",
@@ -215,6 +247,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/notes",
       },
+      "sendRiddle": {
+        "method": "POST",
+        "path": "/v1/riddles",
+      },
       "setGiftPlan": {
         "method": "PUT",
         "path": "/v1/gifts/plans",
@@ -230,6 +266,14 @@ it("pins the routes that clients call", () => {
       "socket": {
         "method": "GET",
         "path": "/v1/socket",
+      },
+      "swipePickTonight": {
+        "method": "POST",
+        "path": "/v1/pick-tonight/swipes",
+      },
+      "titleRecommendations": {
+        "method": "GET",
+        "path": "/v1/titles/recommendations",
       },
       "unpair": {
         "method": "DELETE",

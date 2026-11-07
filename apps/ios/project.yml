@@ -21,6 +21,8 @@ packages:
     path: ../../packages/ios/contracts
   BilletCore:
     path: ../../packages/ios/core
+  BilletDesign:
+    path: ../../packages/ios/design
   BilletPet:
     path: ../../packages/ios/pet
   BilletFeatures:
@@ -37,6 +39,9 @@ targets:
       - path: Shared
       # The date ideas the build ships with: the server's own catalog file (Shared/Model/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
+        buildPhase: resources
+      # The Who knows who questions the build ships with (Nooki/Model/GuessCatalog.swift).
+      - path: ../../packages/backend/guess/src/question-catalog.json
         buildPhase: resources
     # The launch screen is the splash's own dark warm color (Assets LaunchBackground), see LaunchSplash; the rest
     # of Info.plist is generated from the INFOPLIST_KEY_ settings below.
@@ -62,6 +67,8 @@ targets:
         products: [Wire]
       - package: BilletCore
         products: [Ink, Persistence, Transport]
+      - package: BilletDesign
+        products: [Design]
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
@@ -126,6 +133,8 @@ targets:
         products: [Wire]
       - package: BilletCore
         products: [Ink]
+      - package: BilletDesign
+        products: [Design]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
@@ -159,6 +168,8 @@ targets:
         products: [Wire]
       - package: BilletCore
         products: [Ink]
+      - package: BilletDesign
+        products: [Design]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -173,7 +184,6 @@ targets:
       - path: Shared
         # Places' flags and map are for the app and its widgets.
         excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
-      - path: Nooki/UI/Kit/Style.swift
       - path: Nooki/UI/Us/UsKit.swift
     info:
       path: NookiShare/Info.plist
@@ -197,6 +207,8 @@ targets:
         products: [Wire]
       - package: BilletCore
         products: [Ink]
+      - package: BilletDesign
+        products: [Design]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.share

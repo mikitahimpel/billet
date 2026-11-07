@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// What the app opens on while the room loads: the seated cat breathing in a warm glow that blooms out of the
 /// launch screen's color, the app's name underneath and three soft dots keeping time.

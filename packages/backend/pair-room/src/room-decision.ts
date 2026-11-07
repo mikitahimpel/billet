@@ -15,6 +15,7 @@ import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { CollectionId, GiftReward, PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
+import { RiddleWrite } from "./riddle-rules.ts";
 import { RoomJoin } from "./room-command.ts";
 import { RoomState, SequencedNote } from "./room-state.ts";
 
@@ -88,6 +89,8 @@ export const RoomOutput = Schema.TaggedUnion({
   },
   /** A member's new check-in, which replaced their last one. */
   MoodSet: { checkIn: MoodCheckIn },
+  /** A draw-guess riddle to store, with the try that changed it and the series after it. */
+  RiddleSaved: { write: RiddleWrite },
 });
 export type RoomOutput = typeof RoomOutput.Type;
 
@@ -134,6 +137,8 @@ export const RoomRejection = Schema.TaggedUnion({
   ListItemNotFound: {},
   /** A check-in whose note is longer than `moodNoteMaxLength` once trimmed. */
   MoodNoteTooLong: {},
+  /** A `GamePlayed` an app sent for a game the room journals itself, such as draw-guess. */
+  RoomJournalsGame: {},
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

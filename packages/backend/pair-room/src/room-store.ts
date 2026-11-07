@@ -6,6 +6,7 @@ import type { ActivityRow } from "./activity.ts";
 import type { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
 import type { ListId, SharedList } from "@billet/contracts-domain/list";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { RiddleWrite } from "./riddle-rules.ts";
 import type { ActiveRoom, RoomState, SequencedNote } from "./room-state.ts";
 
 /** A note to store, with the key its author sent it under. */
@@ -36,8 +37,8 @@ export class RoomStore extends Context.Service<
     readonly load: Effect.Effect<RoomState>;
     /**
      * Saves the state and the cat, appends the notes, journal and wallet entries, writes the
-     * activity rows and reactions over any with the same id, and writes or deletes the lists, as
-     * one atomic write. Rows older than the retention are pruned in the same write, list keys too.
+     * activity rows and reactions over any with the same id, writes or deletes the lists, and
+     * writes the riddles with their tries and series, as one atomic write. Rows older than the retention are pruned in the same write, list keys too.
      */
     readonly commit: (
       room: ActiveRoom,
@@ -47,6 +48,7 @@ export class RoomStore extends Context.Service<
       coins: ReadonlyArray<CoinEntry>,
       reactions: ReadonlyArray<NoteReaction>,
       lists: ReadonlyArray<ListWrite>,
+      riddles: ReadonlyArray<RiddleWrite>,
     ) => Effect.Effect<void>;
     /** The pair's lists, oldest first, each with its items in the order they were added. */
     readonly lists: Effect.Effect<ReadonlyArray<SharedList>>;

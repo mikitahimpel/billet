@@ -31,6 +31,7 @@ import { newTemper } from "./cat-temper.ts";
 import { decide, isMember } from "./decide.ts";
 import { listRefusalOf, ListsResult } from "./lists.ts";
 import { NoteIdSource } from "./note-id-source.ts";
+import type { RiddleWrite } from "./riddle-rules.ts";
 import type { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
 import type { RoomState } from "./room-state.ts";
@@ -61,6 +62,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "ListDeleted":
       case "ListItemAdded":
       case "MoodSet":
+      case "RiddleSaved":
         return [];
     }
   });
@@ -76,6 +78,9 @@ const listWritesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<ListWri
 
 const reactionsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<NoteReaction> =>
   outputs.flatMap((output) => (output._tag === "ReactionSet" ? [output.reaction] : []));
+
+const riddlesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<RiddleWrite> =>
+  outputs.flatMap((output) => (output._tag === "RiddleSaved" ? [output.write] : []));
 
 const coinsIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CoinEntry> =>
   outputs.flatMap((output) => (output._tag === "CoinsEntered" ? [output.entry] : []));
@@ -162,6 +167,7 @@ export class RoomService extends Context.Service<RoomService>()(
                 coinsIn(decision.outputs),
                 reactionsIn(decision.outputs),
                 listWritesIn(decision.outputs),
+                riddlesIn(decision.outputs),
               );
               return decision;
             case "Rejected":

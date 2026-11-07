@@ -1,0 +1,40 @@
+{
+  "answers": [
+    {
+      "option": 2,
+      "question": 3
+    },
+    {
+      "option": 0,
+      "question": 17
+    }
+  ],
+  "partnerAnswered": 5,
+  "round": {
+    "closesAt": 1793919600000,
+    "id": "2026-11-05",
+    "questions": [
+      3,
+      17,
+      42,
+      88,
+      120
+    ],
+    "subject": "user-alice"
+  },
+  "score": {
+    "allTime": {
+      "mine": 31,
+      "partner": 12
+    },
+    "bestWeek": {
+      "mine": 14,
+      "partner": 9
+    },
+    "week": {
+      "mine": 4,
+      "partner": 7
+    },
+    "weekOf": "2026-11-02"
+  }
+}

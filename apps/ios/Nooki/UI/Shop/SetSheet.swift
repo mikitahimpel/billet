@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// Which set's sheet is open: the week's featured set or a bundle.
 struct SetChoice: Identifiable {
@@ -13,44 +14,35 @@ struct SetSheet: View {
     let pieces: any PieceSet
 
     @Environment(\.dismiss) private var dismiss
-    @State private var height: CGFloat = 600
 
     private var items: [ShopItem] { pieces.itemIDs.compactMap(Catalog.item) }
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: pieces, owned: state.shop.owned) }
     private var affordable: Bool { quote.map { state.shop.coins >= $0.price } ?? false }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.l) {
-            SheetHeader(title: pieces.name) {
-                if let quote, quote.sum > quote.price {
-                    ShopTag(text: "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
-                            fill: ShopInk.coral)
+        BilletSheet(pieces.name, size: .fit) {
+            VStack(alignment: .leading, spacing: Space.l) {
+                HStack(spacing: Space.s) {
+                    if let quote, quote.sum > quote.price {
+                        Chip("−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%", style: .honey)
+                    }
+                    Chip("\(items.count) pieces")
                 }
-                ShopTag(text: "\(items.count) pieces", fill: Ink.surfaceRaised, ink: Ink.text)
-            } close: { dismiss() }
 
-            art
+                art
 
-            Text(pieces.blurb)
-                .font(.nookiCallout)
-                .foregroundStyle(Ink.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+                Text(pieces.blurb)
+                    .font(.nookiCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 56 + Space.m) }
-                    row(item)
+                GroupedSection(inset: 56 + Space.m + Space.l) {
+                    ForEach(items) { item in row(item) }
                 }
+
+                actions
             }
-            .padding(.horizontal, Space.m)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
-
-            actions
         }
-        .padding(.horizontal, Space.gutter)
-        .padding(.top, Space.gutter)
-        .padding(.bottom, Space.s)
-        .shopSheet(height: $height)
         // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
@@ -60,7 +52,7 @@ struct SetSheet: View {
         HStack(alignment: .bottom, spacing: -Space.l) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 let centre = index == items.count / 2
-                Lifted {
+                Group {
                     if let image = Thumbnails.trimmed(item.thumbnail) {
                         Image(uiImage: image).resizable().scaledToFit()
                     }
@@ -107,6 +99,7 @@ struct SetSheet: View {
                     .foregroundStyle(Ink.textSecondary)
             }
         }
+        .padding(.horizontal, Space.l)
         .padding(.vertical, Space.s)
         .accessibilityElement(children: .combine)
     }
@@ -128,7 +121,7 @@ struct SetSheet: View {
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
                 }
-                .nookiPrimary()
+                .buttonStyle(PrimaryButtonStyle())
                 if !affordable {
                     Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
                         .font(.nookiCaption)
@@ -143,7 +136,7 @@ struct SetSheet: View {
                 } label: {
                     Label("Place in your room", systemImage: "house.fill").frame(maxWidth: .infinity)
                 }
-                .nookiPrimary()
+                .buttonStyle(PrimaryButtonStyle())
                 Label("The whole set is in your closet", systemImage: "checkmark.circle.fill")
                     .font(.nookiCaption)
                     .foregroundStyle(Ink.textSecondary)

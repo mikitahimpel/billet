@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The wish a shared page becomes: its title and picture fetched from the page, then the holder's price and details.
 /// Saved to the Us store in the app group; the app picks it up when it comes back, and sends it to the pair's room.
@@ -20,12 +21,28 @@ struct ShareWishView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            UsSheetHeader(title: String(localized: "Add to my wishlist"),
-                          subtitle: url?.host().map { $0.replacingOccurrences(of: "www.", with: "") }) {
-                Button(String(localized: "Cancel"), action: done)
-                    .font(.nookiCallout.weight(.semibold))
-                    .foregroundStyle(Ink.accentText)
+            ZStack {
+                VStack(spacing: 2) {
+                    Text("Add to my wishlist")
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
+                    if let host = url?.host().map({ $0.replacingOccurrences(of: "www.", with: "") }) {
+                        Text(host)
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
+                    }
+                }
+                HStack {
+                    Spacer()
+                    GlassIconButton(label: String(localized: "Close"), action: done) {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Ink.text)
+                    }
+                }
             }
+            .padding(.horizontal, Space.gutter)
+            .padding(.vertical, Space.m)
             if saved {
                 savedNote
             } else {
@@ -57,8 +74,8 @@ struct ShareWishView: View {
                 .tint(.blushPink)
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: 50)
-                .usCard(radius: Radius.control)
-                UsPrimaryButton(title: String(localized: "Add wish"), symbol: "gift.fill") { save() }
+                .cardSurface(radius: Radius.control)
+                PrimaryButton(String(localized: "Add wish"), symbol: "gift.fill") { save() }
                     .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                     .disabled(trimmedTitle.isEmpty)
                     .padding(.top, 4)
@@ -91,7 +108,7 @@ struct ShareWishView: View {
     private var savedNote: some View {
         VStack(spacing: 12) {
             Image(systemName: "heart.fill")
-                .font(.system(size: 40, weight: .semibold))
+                .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(Color.blushPink)
             Text("On your wishlist")
                 .font(.nookiTitle)

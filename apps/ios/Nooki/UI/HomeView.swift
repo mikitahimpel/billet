@@ -1,5 +1,6 @@
 import FeatureGames
 import SwiftUI
+import Design
 import TipKit
 import Transport
 import WidgetBridge
@@ -14,7 +15,7 @@ struct HomeView: View {
     @State private var city: CityRoomScene?
     /// The corkboard room behind the Moments tab, built on first use and kept.
     @State private var board: BoardRoomScene?
-    @State private var showcase: String?
+    @State var showcase: String?
     /// A bare room for the games under `-uitestNoRoom`, where no real one is built.
     @State private var standInRoom = CatRoom()
     @State private var petSentAt: Date = .distantPast
@@ -26,19 +27,21 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// A room switch is under way; another waits for it.
+    @State private var switchingRoom = false
     /// The Coins sheet's packs, once there is a server to buy them through.
     @State private var coinPacks: CoinPacksModel?
     /// The Coins sheet on screen, a moment after the shop asked for it.
     @State private var coinsShown: CoinsAsk?
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(Hints.self) private var hints
-    @Environment(ServerSession.self) private var session: ServerSession?
+    @Environment(Hints.self) var hints
+    @Environment(ServerSession.self) var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     /// Whether this pair has both rooms to switch between.
-    private var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
+    var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
     @State private var height: CGFloat = 0
     /// The rooms already counted as opened since the app came to the front, so each is reported once.
-    @State private var reportedRooms: Set<RoomKind> = []
+    @State var reportedRooms: Set<RoomKind> = []
 
     /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
@@ -105,7 +108,7 @@ struct HomeView: View {
                     UsView(state: state)
                 case .world:
                     VStack(spacing: 16) {
-                        RoomControls(state: state, select: select)
+                        RoomSwitch(state: state, select: select)
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 16)
@@ -283,6 +286,9 @@ struct HomeView: View {
                     await state.shop.refresh()
                     await state.lists.refresh()
                 }
+                // The room socket sends no game frames it missed while the app was away. Its own task, so missed
+                // photos downloading above don't hold it up.
+                Task { await session?.whoKnows.load() }
                 session?.reactions?.refresh()
                 session?.followInbox(
                     true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
@@ -304,13 +310,8 @@ struct HomeView: View {
                 InboxView(model: inbox, state: state) { target in
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
-                .presentationDetents([.large])
-                .presentationBackground(Ink.sheet)
-                .presentationDragIndicator(.visible)
             } else {
                 InboxSignedOut(petName: state.petName)
-                    .presentationBackground(Ink.sheet)
-                    .presentationDragIndicator(.visible)
             }
         }
         .onChange(of: state.shop.coinsAsk) { _, ask in
@@ -330,7 +331,7 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $state.drawing) {
             LockCanvasView(
                 state: state, api: session?.api,
-                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner))
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner), coinPacks: coinPacks)
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task {
@@ -379,21 +380,6 @@ struct HomeView: View {
         reportOpened(state.room)
     }
 
-    /// Reads the pair's variants while the account has a partner, and forgets them when it has none.
-    private func refreshRooms() {
-        guard let session else { return }
-        guard session.isPaired else { return state.rooms.forget() }
-        let rooms = state.rooms
-        Task { await rooms.refresh(session.api) }
-    }
-
-    /// Counts `RoomOpened` once per room each time the app is in front, so the test can compare the rooms.
-    private func reportOpened(_ room: RoomKind) {
-        guard let session, state.tab == .world, reportedRooms.insert(room).inserted else { return }
-        let api = session.api
-        Task { try? await api.reportEvents([ClientEvent(.roomOpened, detail: room.eventDetail)]) }
-    }
-
     /// Swiping the scene sideways visits the other room; a swipe that starts in the header or the tab bar, or that
     /// is mostly vertical, is something else's.
     private var roomSwipe: some Gesture {
@@ -408,26 +394,43 @@ struct HomeView: View {
         }
     }
 
+    /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
+    /// new room has drawn. The City is built under the stand-in, which hides the moment it holds the main thread.
     private func select(_ room: RoomKind) {
-        guard room != state.room else { return }
+        guard room != state.room, !switchingRoom else { return }
         if room == .city { hints.done(RoomsHint()) }
-        if room == .city {
-            // Building the City holds the main thread for a moment, so it waits for the switch to finish moving;
-            // until then the home room stays on screen and running, and a tap back to it just stays there.
-            Task {
-                try? await Task.sleep(for: .milliseconds(300))
-                guard state.room == .city, city == nil else { return }
+        switchingRoom = true
+        worldSnapshot = Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+        var still = Transaction(animation: nil)
+        still.disablesAnimations = true
+        withTransaction(still) { roomLive = false }
+        // The switch moves at once; the room under the stand-in follows it.
+        withAnimation(.snappy(duration: 0.25)) { state.room = room }
+        Task {
+            // One pass for the stand-in to be on screen before the room under it changes.
+            try? await Task.sleep(for: .milliseconds(60))
+            if room == .city {
                 home?.stop()
                 let built = CityRoomScene()
                 city = built
                 NookiPerf.shown(built, kind: .city)
+            } else {
+                city?.stop()
+                city = nil
+                if let home { NookiPerf.shown(home, kind: .home) }
             }
-        } else {
-            city?.stop()
-            city = nil
-            if let home { NookiPerf.shown(home, kind: .home) }
+            if let scene {
+                let start = scene.frame
+                let deadline = ContinuousClock.now + .seconds(2)
+                while scene.frame == start, ContinuousClock.now < deadline {
+                    try? await Task.sleep(for: .milliseconds(8))
+                }
+            }
+            withAnimation(.easeInOut(duration: 0.25)) { roomLive = true }
+            try? await Task.sleep(for: .milliseconds(300))
+            if roomLive { worldSnapshot = nil }
+            switchingRoom = false
         }
-        withAnimation(.snappy(duration: 0.25)) { state.room = room }
     }
 
     /// `-uitestNoRoom YES` leaves the room out (see the stand-in in `body`).
@@ -448,128 +451,6 @@ struct HomeView: View {
 
     /// The moments on the room's wall, nil until the room exists.
     private var wallPins: [Moment]? { home == nil ? nil : state.moments.pinned }
-
-    /// The ids of the newest notes on the board; a new set rebuilds their faces.
-    private var boardKey: [String] { BoardFaces.key(state: state) }
-
-    /// Photos to and from the partner; nil until this phone is paired with them.
-    /// Once paired, the monograms belong to the pair's two accounts and the shop, the gifts and the lists follow the
-    /// pair's room.
-    private func followPair() async {
-        #if DEBUG
-        if ShopFixture.isOn { return await state.shop.connect(ShopFixture(offers: state.shop.offers).sync) }
-        #endif
-        guard let session, let sync = session.shopSync else { return await leavePair() }
-        let moods = MoodSync(send: session.api.setMood, moods: state.partnerMoods, couple: state.profile)
-        do throws(TransportError) {
-            let pair = try await session.pair()
-            state.profile.adopt(
-                pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
-            state.moodSync = moods
-            await moods.follow(pair.moods)
-        } catch {
-            if error == .api(.notFound) { return await leavePair() }
-            // Offline: a phone that already took the pair keeps following it.
-            guard state.profile.couple.pair != nil else { return }
-            state.moodSync = moods
-        }
-        await state.shop.connect(sync)
-        await state.gifts.connect(session.giftSync)
-        await state.lists.connect(session.listSync)
-    }
-
-    private func leavePair() async {
-        state.moodSync = nil
-        state.profile.leavePair()
-        await state.shop.connect(nil)
-        await state.gifts.connect(nil)
-        await state.lists.connect(nil)
-    }
-
-    /// Each tab shown, and each return to the app, is a visit that may show one hint.
-    private func visitHints() {
-        hints.visit {
-            let screen: HintScreen = switch state.tab {
-            case .world: .world
-            case .moments: .moments
-            case .shop: .shop
-            case .us: .other
-            }
-            let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
-                || state.openedShopItem != nil
-            let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
-            return HintContext(
-                screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
-                canAffordTreat: state.shop.coins >= ShopModel.treatPrice)
-        }
-    }
-
-    /// Photos to and from the partner; nil until this phone is paired with them.
-    private var photoSync: PhotoSync? {
-        session?.photoSync(moments: state.moments, partner: state.otherPartner)
-    }
-
-    private var textSync: TextNoteSync? {
-        session?.textSync(notes: state.notes, partner: state.otherPartner)
-    }
-
-    /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
-    private func makeBoard() -> BoardRoomScene {
-        let room = BoardRoomScene()
-        let state = self.state
-        room.onOpen = { state.openedPin = PinRoute(id: $0) }
-        room.onDraw = { state.composingNote = .draw }
-        Task {
-            let pins = await BoardFaces.pins(state: state)
-            room.setPins(pins)
-        }
-        return room
-    }
-}
-
-/// Switches between Mochi's rooms.
-private struct RoomControls: View {
-    let state: HomeState
-    var select: (RoomKind) -> Void
-
-    var body: some View {
-        // One room has no switch: its name would be the only choice.
-        if state.rooms.variant.hasRoomChoice {
-            roomSwitch.frame(maxWidth: .infinity)
-        }
-    }
-
-    /// The room's name with a dot for each room under it; a tap visits the next one, and so does a swipe of the scene.
-    private var roomSwitch: some View {
-        let kinds = state.rooms.variant.kinds
-        return Button {
-            guard let index = kinds.firstIndex(of: state.room) else { return }
-            select(kinds[(index + 1) % kinds.count])
-        } label: {
-            VStack(spacing: 6) {
-                Text(state.room.title)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.primary)
-                    .contentTransition(.opacity)
-                HStack(spacing: 6) {
-                    ForEach(kinds, id: \.self) { room in
-                        Circle()
-                            .fill(Ink.primary.opacity(state.room == room ? 1 : 0.35))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-            }
-            .frame(minWidth: 88, minHeight: 44)
-            .contentShape(.rect)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Room")
-        .accessibilityValue(state.room.title)
-        .accessibilityIdentifier("roomSwitch")
-        .accessibilityHint("Swipe the room sideways, or tap, to visit the other one")
-        .sensoryFeedback(.selection, trigger: state.room)
-        .popoverTip(RoomsHint(), arrowEdge: .top)
-    }
 }
 
 /// Plays all Mochi's animations in turn, naming each as it plays.
@@ -596,124 +477,5 @@ private struct PlayAllButton: View {
         .buttonStyle(PressScaleStyle())
         .disabled(showcase != nil)
         .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
-    }
-}
-
-/// A snapshot from `UIView.snapshotView(afterScreenUpdates:)`, filling the view it is put in.
-private struct SnapshotView: UIViewRepresentable {
-    let view: UIView
-
-    func makeUIView(context: Context) -> UIView {
-        let holder = UIView()
-        holder.isUserInteractionEnabled = false
-        view.frame = holder.bounds
-        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        holder.addSubview(view)
-        return holder
-    }
-
-    func updateUIView(_ holder: UIView, context: Context) {}
-}
-
-/// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
-private struct WarmBackdrop: View {
-    /// Whether the bokeh moves; when it doesn't, it stays where it was.
-    var drifts = true
-    @Environment(\.scenePhase) private var scenePhase
-    /// `-uitestStill YES` holds the bokeh still: redrawn under glass every frame, it keeps the app from ever idling
-    /// on CI's GPU-less virtual Macs, and UI queries time out.
-    private static let still = UserDefaults.standard.bool(forKey: "uitestStill")
-    private var paused: Bool { scenePhase != .active || !drifts || Self.still }
-
-    var body: some View {
-        ZStack {
-            RadialGradient(
-                colors: [Color(hex: 0xF4BF7E), Color(hex: 0xB36E3A), Color(hex: 0x4A2C1B), Color(hex: 0x24150D)],
-                center: UnitPoint(x: 0.5, y: 0.48),
-                startRadius: 10,
-                endRadius: 520
-            )
-            // 10 Hz: the drift is at most 18–24 pt over half a minute, a fraction of a pixel a step, and each step
-            // redraws the full screen under the room and its glass.
-            TimelineView(.animation(minimumInterval: 1 / 10, paused: paused)) { context in
-                Canvas { ctx, size in
-                    let t = context.date.timeIntervalSinceReferenceDate
-                    for i in 0..<14 {
-                        let seed = Double(i) * 12.9898
-                        let x = (sin(seed) * 0.5 + 0.5) * size.width + sin(t * 0.15 + seed) * 18
-                        let y = (cos(seed * 1.7) * 0.5 + 0.5) * size.height + cos(t * 0.12 + seed) * 24
-                        let r = 6 + (sin(seed * 3.1) * 0.5 + 0.5) * 16
-                        let alpha = 0.18 + 0.14 * sin(t * 0.6 + seed)
-                        // A soft edge `soft` wide on either side of the rim, in place of blurring the whole canvas.
-                        let soft = 6.0, outer = r + soft
-                        let dot = Gradient(stops: [
-                            .init(color: Color(hex: 0xFFD79A, opacity: alpha), location: max(0, r - soft) / outer),
-                            .init(color: Color(hex: 0xFFD79A, opacity: 0), location: 1),
-                        ])
-                        ctx.fill(
-                            Path(ellipseIn: CGRect(x: x - outer, y: y - outer, width: outer * 2, height: outer * 2)),
-                            with: .radialGradient(dot, center: CGPoint(x: x, y: y), startRadius: 0, endRadius: outer)
-                        )
-                    }
-                }
-            }
-        }
-        .ignoresSafeArea()
-    }
-}
-
-/// Under the UI tests (`-uitestRoomTaps YES`), counts every tap that reaches the room and reports it as the room's
-/// accessibility value, so a test can tell that a tap on the tab bar never fell through. Off otherwise.
-private struct RoomTapCounter: ViewModifier {
-    @State private var taps = 0
-    private let counts = UserDefaults.standard.bool(forKey: "uitestRoomTaps")
-
-    func body(content: Content) -> some View {
-        if counts {
-            content
-                .simultaneousGesture(TapGesture().onEnded { taps += 1 })
-                .accessibilityElement()
-                .accessibilityIdentifier("room")
-                .accessibilityValue("\(taps)")
-        } else {
-            content
-        }
-    }
-}
-
-private extension View {
-    /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
-    /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
-    @ViewBuilder
-    func bars(fades: Bool, @ViewBuilder top: () -> some View, @ViewBuilder bottom: () -> some View) -> some View {
-        if #available(iOS 26, *) {
-            scrollEdgeEffectStyle(.soft, for: .vertical)
-                .safeAreaBar(edge: .top, spacing: 12, content: top)
-                .safeAreaBar(edge: .bottom, content: bottom)
-        } else {
-            safeAreaInset(edge: .top, spacing: 12) {
-                top().background { if fades { EdgeFade(edge: .top) } }
-            }
-            .safeAreaInset(edge: .bottom) {
-                bottom().background { if fades { EdgeFade(edge: .bottom) } }
-            }
-        }
-    }
-}
-
-/// Below iOS 26: material that fades out away from the screen edge, under a bar and through the status bar or the
-/// home indicator, so scrolled content softens instead of ending at a line.
-private struct EdgeFade: View {
-    let edge: VerticalEdge
-
-    var body: some View {
-        Rectangle()
-            .fill(.ultraThinMaterial)
-            .mask(LinearGradient(colors: [.black, .black, .clear],
-                                 startPoint: edge == .top ? .top : .bottom,
-                                 endPoint: edge == .top ? .bottom : .top))
-            .padding(edge == .top ? .bottom : .top, -20)
-            .ignoresSafeArea(edges: edge == .top ? .top : .bottom)
-            .allowsHitTesting(false)
     }
 }

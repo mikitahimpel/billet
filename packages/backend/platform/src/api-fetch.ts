@@ -9,6 +9,7 @@ import { AuthService } from "@billet/backend-auth/auth-service";
 import { DemoPartnerRoutes } from "@billet/backend-demo-partner/demo-partner-routes";
 import { DemoPartnerService } from "@billet/backend-demo-partner/demo-partner-service";
 import { DatesRoutes } from "@billet/backend-dates/dates-routes";
+import { GuessCatalogRoutes } from "@billet/backend-guess/guess-catalog-routes";
 import { Experiments, registry, type Experiment } from "@billet/backend-flags/experiments";
 import { FlagsRoutes } from "@billet/backend-flags/flags-routes";
 import { FlagsService } from "@billet/backend-flags/flags-service";
@@ -25,6 +26,12 @@ import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
 import { GiftsService } from "@billet/backend-notes/gifts-service";
 import { ListsRoutes } from "@billet/backend-notes/lists-routes";
 import { ListsService } from "@billet/backend-notes/lists-service";
+import { PickTonightRoutes } from "@billet/backend-notes/pick-tonight-routes";
+import { PickTonightService } from "@billet/backend-notes/pick-tonight-service";
+import { GuessRoutes } from "@billet/backend-notes/guess-routes";
+import { GuessService } from "@billet/backend-notes/guess-service";
+import { RiddleRoutes } from "@billet/backend-notes/riddle-routes";
+import { RiddleService } from "@billet/backend-notes/riddle-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
 import { ReactionService } from "@billet/backend-notes/reaction-service";
 import { CatService } from "@billet/backend-notes/cat-service";
@@ -98,9 +105,13 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     MoodRoutes,
     GiftsRoutes,
     ListsRoutes,
+    PickTonightRoutes,
+    GuessRoutes,
+    RiddleRoutes,
     TitlesRoutes,
     FlagsRoutes,
     DatesRoutes,
+    GuessCatalogRoutes,
     MetricsRoutes,
     PaymentsRoutes,
     OnboardingRoutes,
@@ -122,6 +133,9 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         MoodService.layer,
         GiftsService.layer,
         ListsService.layer,
+        PickTonightService.layer,
+        GuessService.layer,
+        RiddleService.layer,
         TitleCatalog.layer.pipe(
           Layer.provide(
             Layer.mergeAll(

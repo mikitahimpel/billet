@@ -5,6 +5,10 @@ import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { SharedList } from "@billet/contracts-domain/list";
+import { PickMatch } from "@billet/contracts-domain/pick-tonight";
+import { LocalDay } from "@billet/contracts-domain/coins";
+import { GuessReveal, GuessScore } from "@billet/contracts-domain/guess";
+import { Riddle } from "@billet/contracts-domain/riddle";
 import { PairShop } from "@billet/contracts-domain/shop";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
@@ -55,5 +59,30 @@ export const ServerMessage = Schema.TaggedUnion({
    * holds on the resume, then every new one.
    */
   MoodChanged: { checkIn: MoodCheckIn },
+  /**
+   * Both partners swiped ♥ on one Pick tonight card, sent to every socket that resumed with
+   * `lists: true`, the swiper's own included.
+   */
+  MatchFound: { match: PickMatch },
+  /**
+   * The partner answered another question of the Who knows who round of `round`: `answered` is how
+   * many they have now. Never which option. Sent to the other member's sockets that resumed with
+   * `guess: true`.
+   */
+  GuessProgress: {
+    round: LocalDay,
+    answered: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  },
+  /**
+   * Both members answered the whole round of `round`: every question opened, in round order, and
+   * the score after it as the socket's own user sees it. Sent to every socket that resumed with
+   * `guess: true`, the answerer's own included.
+   */
+  GuessRevealed: { round: LocalDay, reveal: Schema.Array(GuessReveal), score: GuessScore },
+  /**
+   * A draw-guess riddle was sent, tried, hinted or ended, as the socket's own user sees it: the
+   * guesser gets no `word` while it is open. Sent to every socket that resumed with `riddle: true`.
+   */
+  RiddleChanged: { riddle: Riddle },
 });
 export type ServerMessage = typeof ServerMessage.Type;

@@ -111,7 +111,19 @@ let roundTrips: [String: RoundTrip] = [
   "ChangeListRequest": codec(ChangeListRequest.self),
   "TitleSearchResponse": codec(TitleSearchResponse.self),
   "TitleDetails": codec(TitleDetails.self),
+  "PickTitle": codec(PickTitle.self),
+  "PickTonightResponse": codec(PickTonightResponse.self),
+  "PickSwipeRequest": codec(PickSwipeRequest.self),
+  "GuessQuestion": codec(GuessQuestion.self),
+  "GuessCatalogResponse": codec(GuessCatalogResponse.self),
+  "GuessResponse": codec(GuessResponse.self),
+  "GuessAnswerRequest": codec(GuessAnswerRequest.self),
   "SaveLovesRequest": codec(SaveLovesRequest.self),
+  "Riddle": codec(Riddle.self),
+  "RiddlesResponse": codec(RiddlesResponse.self),
+  "SendRiddleRequest": codec(SendRiddleRequest.self),
+  "GuessRiddleRequest": codec(GuessRiddleRequest.self),
+  "GuessRiddleResponse": codec(GuessRiddleResponse.self),
 ]
 
 let fixturesDirectory = URL(fileURLWithPath: #filePath)

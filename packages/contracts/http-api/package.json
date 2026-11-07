@@ -15,6 +15,8 @@
     "./events": "./src/events.ts",
     "./flags": "./src/flags.ts",
     "./gifts": "./src/gifts.ts",
+    "./guess": "./src/guess.ts",
+    "./riddle": "./src/riddle.ts",
     "./coins": "./src/coins.ts",
     "./inks": "./src/inks.ts",
     "./invite": "./src/invite.ts",
@@ -28,6 +30,7 @@
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
     "./pair": "./src/pair.ts",
+    "./pick-tonight": "./src/pick-tonight.ts",
     "./reaction": "./src/reaction.ts",
     "./shop": "./src/shop.ts"
   },

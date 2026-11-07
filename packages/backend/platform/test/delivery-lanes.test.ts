@@ -106,6 +106,50 @@ describe("delivery lanes", () => {
     expect(await calls(room)).toBe(1);
   });
 
+  it("enqueues a match again on a repeated ♥ whose first try stored the swipe but no delivery", async () => {
+    const room = await laneRoom();
+    const want = {
+      _tag: "Swipe",
+      title: { _tag: "Title", kind: "movie", tmdb: 329865 },
+      choice: "want",
+      name: "Arrival",
+    } as const;
+    await room.pickTonight(alice, want);
+    await room.pickTonight(bob, want);
+    // As if the second swipe failed between storing the swipe and saving its delivery.
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("DELETE FROM delivery");
+    });
+    expect(await room.pickTonight(bob, want)).toMatchObject({
+      _tag: "Done",
+      view: { matches: [{}] },
+    });
+    expect((await room.deliveries()).map((d) => d.noteId)).toEqual([
+      expect.stringMatching(/^match:/),
+    ]);
+
+    await room.pickTonight(bob, want);
+    expect(await room.deliveries()).toHaveLength(1);
+  });
+
+  it("enqueues a push to the partner once a member finished their part, and again on a repeated last answer", async () => {
+    const room = await laneRoom();
+    const view = await room.guess(alice, { _tag: "View" });
+    if (view._tag !== "Done") throw new Error(view.reason);
+    const { round } = view.view;
+    const answer = (question: number) =>
+      room.guess(alice, { _tag: "Answer", round: round.id, question, option: 0 } as never);
+    for (const question of round.questions.slice(0, -1)) await answer(question);
+    expect(await room.deliveries()).toEqual([]);
+    await answer(round.questions.at(-1)!);
+    expect((await room.deliveries()).map((d) => d.noteId)).toEqual([`guess:${round.id}:${alice}`]);
+    await runInDurableObject(room, (_, state) => {
+      state.storage.sql.exec("DELETE FROM delivery");
+    });
+    await answer(round.questions.at(-1)!);
+    expect(await room.deliveries()).toHaveLength(1);
+  });
+
   it("enqueues a retried send whose first try stored the note but no delivery", async () => {
     const room = await laneRoom();
     const request = photo();
@@ -229,6 +273,36 @@ describe("delivery lanes", () => {
 
     await room.stopDemo();
     expect(await alarmAt(room)).toBeNull();
+  });
+
+  it("lets a demo bot play its part of the round once the owner played theirs", async () => {
+    const room = await laneRoom();
+    await room.startDemo(alice, bob);
+    const view = await room.guess(alice, { _tag: "View" });
+    if (view._tag !== "Done") throw new Error(view._tag);
+    const { round } = view.view;
+    for (const question of round.questions) {
+      await room.guess(alice, { _tag: "Answer", round: round.id, question, option: 0 });
+    }
+
+    const advance = (ms: number) =>
+      runInDurableObject(room, (instance) =>
+        (instance as unknown as { advanceClock(ms: number): void }).advanceClock(ms),
+      );
+    let now = testNowOf(env);
+    for (let i = 0; i < 10; i += 1) {
+      const after = await room.guess(alice, { _tag: "View" });
+      if (after._tag === "Done" && after.view.reveal !== undefined) break;
+      const at = (await alarmAt(room)) ?? now;
+      if (at > now) await advance(at - now);
+      now = Math.max(now, at);
+      await runAlarm(room);
+    }
+    const done = await room.guess(alice, { _tag: "View" });
+    expect(done._tag === "Done" ? done.view.reveal : undefined).toHaveLength(
+      round.questions.length,
+    );
+    expect(now - testNowOf(env)).toBeLessThanOrEqual(40 * 1000);
   });
 
   it("does nothing for a room without lanes", async () => {

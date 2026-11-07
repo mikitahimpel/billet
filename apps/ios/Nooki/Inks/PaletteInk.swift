@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 /// One ink colour from the shop's catalog, as the palettes show it. `price` is in coins; the free ink costs nothing.

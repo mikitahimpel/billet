@@ -1,4 +1,5 @@
 import { Data } from "effect";
+import type { RiddleRefusal } from "@billet/backend-pair-room/riddle-rules";
 import type { LocalDay } from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { CollectionId } from "@billet/contracts-domain/shop";
@@ -36,6 +37,22 @@ export class BonusTaken extends Data.TaggedError("BonusTaken")<{
 
 /** A buy for the cat, such as a treat, before the couple adopted one. */
 export class CatNotAdopted extends Data.TaggedError("CatNotAdopted") {}
+
+/**
+ * A Who knows who answer the room would not lock: to a round whose day is over, to a question not
+ * in the round, or a second answer to one already answered.
+ */
+export class GuessRefused extends Data.TaggedError("GuessRefused")<{
+  readonly reason: "RoundClosed" | "NotInRound" | "Answered";
+}> {}
+
+/**
+ * A draw-guess command the room would not take: `BadWord` is a bad request, `NotFound` a riddle
+ * the room does not hold, and the rest a conflict with what it holds.
+ */
+export class RiddleRefused extends Data.TaggedError("RiddleRefused")<{
+  readonly reason: Exclude<RiddleRefusal, "NotOpen">;
+}> {}
 
 /** A dependency failed, so nothing changed. The client can retry; `reason` is a fixed label. */
 export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{

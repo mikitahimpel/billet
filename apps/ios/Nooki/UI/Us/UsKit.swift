@@ -1,104 +1,27 @@
 import SwiftUI
+import Design
 
-/// Shared look for the Us tab and its sheets, on the style guide's tokens (apps/ios/docs/style.md).
+/// A line under a sheet's title, for what the title alone doesn't say.
+struct SheetSubtitle: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.nookiCaption)
+            .foregroundStyle(Ink.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 extension View {
-    /// Sheet styled like the rest of the app, full height unless `detents` says otherwise.
-    func usSheet(detents: Set<PresentationDetent> = [.large]) -> some View {
-        presentationDetents(detents)
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Ink.screen)
-    }
-
-    /// The card for rows and tiles: the app's clay card.
-    func usCard(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
-        nookiCard(radius: radius, warm: warm)
-    }
-}
-
-/// Sheet header: big rounded title, optional trailing control.
-struct UsSheetHeader<Trailing: View>: View {
-    let title: String
-    var subtitle: String?
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.nookiTitle)
-                    .foregroundStyle(Ink.text)
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                }
+    /// The "+" of a sheet's header, in the navigation bar's leading glass.
+    func addToolbarButton(_ label: String = "Add", action: @escaping () -> Void) -> some View {
+        toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: action) { Image(systemName: "plus") }
+                    .accessibilityLabel(label)
             }
-            Spacer(minLength: 0)
-            trailing
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 26)
-    }
-}
-
-extension UsSheetHeader where Trailing == EmptyView {
-    init(title: String, subtitle: String? = nil) {
-        self.init(title: title, subtitle: subtitle) { EmptyView() }
-    }
-}
-
-/// The main action of a sheet, full width.
-struct UsPrimaryButton: View {
-    let title: String
-    var symbol: String?
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Space.s) {
-                if let symbol { Image(systemName: symbol) }
-                Text(title)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .nookiPrimary()
-    }
-}
-
-/// Small round honey "+" used in headers.
-struct UsAddButton: View {
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "plus")
-                .font(.body.weight(.bold))
-                .foregroundStyle(Ink.heroInk)
-                .frame(width: 44, height: 44)
-                .background(Circle().fill(.honeyGradient))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Add")
-    }
-}
-
-/// Selectable capsule for filters and segmented choices.
-struct UsChip: View {
-    let title: String
-    let selected: Bool
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.nookiCallout)
-                .foregroundStyle(selected ? Ink.heroInk : Ink.textSecondary)
-                .padding(.horizontal, 14)
-                .frame(minHeight: 34)
-                .background(selected ? Color.honey : Ink.surfaceRaised, in: .capsule)
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 
@@ -133,7 +56,7 @@ struct UsField: View {
             .foregroundStyle(Ink.text)
             .padding(.horizontal, Space.l)
             .frame(minHeight: 50)
-            .usCard(radius: Radius.control)
+            .cardSurface(radius: Radius.control)
     }
 }
 
@@ -143,13 +66,7 @@ struct UsIcon: View {
     var size: CGFloat = 44
 
     var body: some View {
-        let tint = Color(hex: glyph.tint.colors.top)
-        Image(systemName: glyph.symbol)
-            .font(.system(size: size * 0.44, weight: .semibold))
-            .foregroundStyle(tint)
-            .frame(width: size, height: size)
-            .background(tint.opacity(0.2), in: .circle)
-            .accessibilityHidden(true)
+        RowIcon(symbol: glyph.symbol, tint: glyph.tint.color, size: size)
     }
 }
 
@@ -177,30 +94,16 @@ struct UsGlyphPicker: View {
             }
         }
         .padding(Space.m)
-        .usCard()
+        .cardSurface()
     }
 }
 
-/// Centered empty state with a big icon.
-struct UsEmpty: View {
-    let icon: UsGlyph
-    let title: String
-    let text: String
-
-    var body: some View {
-        VStack(spacing: 10) {
-            UsIcon(glyph: icon, size: 64)
-                .padding(.bottom, 4)
-            Text(title)
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-            Text(text)
-                .font(.nookiCallout)
-                .foregroundStyle(Ink.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 32)
-        .padding(.vertical, 40)
-        .frame(maxWidth: .infinity)
+extension EmptyState where Actions == EmptyView {
+    init(icon: UsGlyph, title: String, text: String) {
+        self.init(symbol: icon.symbol, title: title, text: text, tint: icon.tint.color)
     }
+}
+
+extension UsTint {
+    var color: Color { Color(hex: colors.top) }
 }

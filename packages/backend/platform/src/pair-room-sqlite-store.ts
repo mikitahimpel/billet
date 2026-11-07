@@ -15,7 +15,9 @@ import {
 } from "@billet/backend-pair-room/room-state";
 import { ActivityRow, activityRetentionMillis, cursorOf } from "@billet/backend-pair-room/activity";
 import { RoomStore, type AppendedNote, type ListWrite } from "@billet/backend-pair-room/room-store";
+import type { RiddleWrite } from "@billet/backend-pair-room/riddle-rules";
 import type { RoomDatabase } from "./room-database.ts";
+import { writeRiddle } from "./pair-room-riddle-write.ts";
 import {
   activity,
   activityRead,
@@ -393,6 +395,7 @@ export const SqliteRoomStore = Layer.effect(
         coins: ReadonlyArray<CoinEntry>,
         reactions: ReadonlyArray<NoteReaction>,
         listWrites: ReadonlyArray<ListWrite>,
+        riddleWrites: ReadonlyArray<RiddleWrite>,
       ) =>
         db
           .transaction((tx) =>
@@ -506,6 +509,7 @@ export const SqliteRoomStore = Layer.effect(
                   .values({ key: write.key, at: write.at })
                   .onConflictDoNothing();
               }
+              for (const write of riddleWrites) yield* writeRiddle(tx, write);
               if (listWrites.length > 0) {
                 const [newest] = yield* tx.select({ at: max(listKeys.at) }).from(listKeys);
                 const cutoff = (newest?.at ?? 0) - listKeyRetentionMillis;

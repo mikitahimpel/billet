@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 struct ListScreen: View {
@@ -30,32 +31,18 @@ struct ListScreen: View {
             if let list = state.us.list(listID) {
                 content(list)
             } else {
-                UsEmpty(icon: .init(symbol: "basket.fill", tint: .sage), title: "Nothing here yet", text: "This list is gone.")
-                    .usSheet()
+                BilletSheet("List", size: .fit) {
+                    EmptyState(icon: .init(symbol: "basket.fill", tint: .sage), title: "Nothing here yet", text: "This list is gone.")
+                }
             }
         }
     }
 
     private func content(_ list: UsList) -> some View {
+        BilletSheet(list.title, scrolls: false) {
         VStack(spacing: 0) {
-            UsSheetHeader(title: list.title, subtitle: subtitle(of: list)) {
-                if list.kind == .watch {
-                    UsAddButton { addingTitle = true }
-                } else if list.kind == .travel {
-                    UsAddButton { addingPlace = true }
-                }
-                Menu {
-                    Button("Rename") { renaming = true }
-                    Button("Delete list", role: .destructive) { confirmingDelete = true }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                        .frame(width: 44, height: 44)
-                        .background(Circle().fill(Ink.surfaceRaised))
-                }
-                .accessibilityLabel("List options")
-            }
+            SheetSubtitle(text: subtitle(of: list))
+                .padding(.horizontal, Space.gutter)
 
             if !usesSheetToAdd(list) {
                 UsField(placeholder: placeholder(for: list.kind), text: $draft)
@@ -83,7 +70,7 @@ struct ListScreen: View {
                             PlacesListBody(state: state, list: list) { markingBeen = $0 }
                         } else if list.items.isEmpty {
                             if !adding(to: list) {
-                                UsEmpty(icon: list.icon,
+                                EmptyState(icon: list.icon,
                                         title: "Nothing here yet",
                                         text: "Add the first one above. You both see this list.")
                             }
@@ -113,7 +100,25 @@ struct ListScreen: View {
                 }
             }
         }
-        .usSheet()
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarLeading) {
+                if list.kind == .watch {
+                    Button { addingTitle = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add")
+                } else if list.kind == .travel {
+                    Button { addingPlace = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("Add")
+                }
+                Menu {
+                    Button("Rename") { renaming = true }
+                    Button("Delete list", role: .destructive) { confirmingDelete = true }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel("List options")
+            }
+        }
         .onAppear {
             guard focusesField else { return }
             if list.kind == .watch { addingTitle = true }
@@ -202,7 +207,7 @@ struct ListScreen: View {
                 itemRow(item, list: list, doneStyle: false)
             }
         }
-        .usCard()
+        .cardSurface()
     }
 
     @ViewBuilder
@@ -219,7 +224,7 @@ struct ListScreen: View {
                         itemRow(item, list: list, doneStyle: true, showDate: true)
                     }
                 }
-                .usCard()
+                .cardSurface()
             }
         }
     }
@@ -227,6 +232,8 @@ struct ListScreen: View {
     private func itemRow(_ item: ListItem, list: UsList, doneStyle: Bool, showDate: Bool = false) -> some View {
         HStack(spacing: 12) {
             checkButton(item, list: list, done: item.done != nil)
+            UsIcon(glyph: ItemIcon.glyph(for: item.text, list: list.icon), size: 30)
+                .opacity(doneStyle ? 0.55 : 1)
             Text(item.text)
                 .font(.nookiHeadline)
                 .foregroundStyle(Ink.text)
@@ -294,7 +301,7 @@ struct ListScreen: View {
     }
 
     private var divider: some View {
-        Divider().overlay(Ink.separator).padding(.leading, 52)
+        Divider().overlay(Ink.separator).padding(.leading, 94)
     }
 }
 
@@ -314,26 +321,21 @@ private struct RenameListSheet: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Rename list")
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-            HStack(spacing: 10) {
-                UsIcon(glyph: icon, size: 50)
-                UsField(placeholder: "List name", text: $title)
+        BilletSheet("Rename list", size: .mediumLarge, onConfirm: save) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    UsIcon(glyph: icon, size: 50)
+                    UsField(placeholder: "List name", text: $title)
+                }
+                UsGlyphPicker(selection: $icon)
             }
-            UsGlyphPicker(selection: $icon)
-            UsPrimaryButton(title: "Save") {
-                let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                state.us.renameList(list.id,
-                                    title: name.isEmpty ? list.title : name,
-                                    icon: icon)
-                dismiss()
-            }
-            Spacer(minLength: 0)
         }
-        .padding(20)
-        .usSheet(detents: [.medium, .large])
+    }
+
+    private func save() {
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        state.us.renameList(list.id, title: name.isEmpty ? list.title : name, icon: icon)
+        dismiss()
     }
 }
 
@@ -356,11 +358,8 @@ struct NewListSheet: View {
     }
 
     var body: some View {
+        BilletSheet("New list", size: .mediumLarge, onConfirm: createCustom, canConfirm: canCreate) {
         VStack(alignment: .leading, spacing: 16) {
-            Text("New list")
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(templates) { kind in
                     Button {
@@ -375,7 +374,7 @@ struct NewListSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 92)
-                        .usCard(radius: 18)
+                        .cardSurface()
                     }
                     .buttonStyle(.plain)
                 }
@@ -391,18 +390,8 @@ struct NewListSheet: View {
                 UsField(placeholder: "List name", text: $name)
             }
             UsGlyphPicker(selection: $icon)
-
-            UsPrimaryButton(title: "Create") {
-                createCustom()
-            }
-            .opacity(canCreate ? 1 : 0.5)
-            .allowsHitTesting(canCreate)
-
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 24)
-        .usSheet(detents: [.medium, .large])
+        }
     }
 
     private func createCustom() {

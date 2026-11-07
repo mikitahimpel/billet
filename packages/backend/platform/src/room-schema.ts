@@ -286,3 +286,94 @@ export const listKeys = sqliteTable(
   },
   (table) => [index("list_keys_at").on(table.at)],
 );
+
+// Pick tonight: each member's latest swipe on each card, `title` being `item:<id>`, `movie:<tmdb>`
+// or `tv:<tmdb>`. `name` and `poster_path` are the card's, for the match it may make. Rows older
+// than a session (24 hours) are deleted on the next swipe.
+export const movieSwipes = sqliteTable(
+  "movie_swipes",
+  {
+    member: text("member").notNull(),
+    title: text("title").notNull(),
+    choice: text("choice").notNull(),
+    name: text("name").notNull(),
+    posterPath: text("poster_path"),
+    at: integer("at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.member, table.title] }),
+    index("movie_swipes_at").on(table.at),
+  ],
+);
+
+// Who knows who: the round of each room day (`day`, the cat's local day as for coins), with its
+// subject and its question ids as a JSON array. Kept for good: a pair's next questions follow
+// every round it had.
+export const guessRounds = sqliteTable("guess_rounds", {
+  day: text("day").primaryKey(),
+  subject: text("subject").notNull(),
+  questions: text("questions").notNull(),
+});
+
+// Each member's locked answer to each question of a round: `option` is 0 to 3. One row each, so a
+// second answer cannot replace the first.
+export const guessAnswers = sqliteTable(
+  "guess_answers",
+  {
+    day: text("day").notNull(),
+    member: text("member").notNull(),
+    question: integer("question").notNull(),
+    option: integer("option").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.member, table.question] })],
+);
+
+// Each member's Who knows who points per week, `week` being its Monday. Added to when a round
+// reveals; the all-time score and the best week are read from these rows.
+export const guessWeeks = sqliteTable(
+  "guess_weeks",
+  {
+    week: text("week").notNull(),
+    member: text("member").notNull(),
+    points: integer("points").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.week, table.member] })],
+);
+
+// Draw-guess riddles, each a `RiddleRow` as JSON in `body`, word included: the room decides what
+// each member may see. `drawer` and `ended_at` (null while open) are kept beside it for the reads
+// that pick the open riddles and the latest ended ones.
+export const riddles = sqliteTable(
+  "riddles",
+  {
+    id: text("id").primaryKey(),
+    drawer: text("drawer").notNull(),
+    endedAt: integer("ended_at"),
+    body: text("body").notNull(),
+  },
+  (table) => [index("riddles_ended_at").on(table.endedAt)],
+);
+
+// Every try at a riddle under the guesser's key, so a retried try answers as the first did.
+export const riddleGuesses = sqliteTable(
+  "riddle_guesses",
+  {
+    riddle: text("riddle").notNull(),
+    key: text("key").notNull(),
+    right: integer("right", { mode: "boolean" }).notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.riddle, table.key] })],
+);
+
+// The pair's draw-guess series: solves in a row since the last give-up, and the best run. One row.
+export const riddleSeries = sqliteTable(
+  "riddle_series",
+  {
+    id: integer("id").primaryKey(),
+    series: integer("series").notNull(),
+    best: integer("best").notNull(),
+  },
+  (table) => [check("riddle_series_single_row", sql`${table.id} = 1`)],
+);

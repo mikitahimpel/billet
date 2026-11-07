@@ -51,6 +51,15 @@ import Wire
     #expect(request.headers["Authorization"] == "Bearer tok")
   }
 
+  @Test func theGuessCatalogRevalidatesWhatTheCacheHolds() async throws {
+    let server = Server(body: #"{"version":"v2","questions":[]}"#)
+    let catalog = try await Self.client(server, token: nil).guessCatalog()
+    #expect(catalog.version == "v2")
+    let request = try #require(server.requests.first)
+    #expect(request.path == "/v1/guess/catalog")
+    #expect(request.headers["Cache-Control"] == "no-cache")
+  }
+
   @Test func aSignedRouteWithoutATokenNeverLeavesTheDevice() async {
     let server = Server(status: 204, body: "")
     await #expect(throws: TransportError.api(.unauthorized)) {
@@ -282,5 +291,31 @@ import Wire
         #"{"balance":0,"inks":["ink-graphite"],"items":["lamp","rug"],"wishlist":[]}"#.utf8))
     #expect(shop.bonuses == [])
     #expect(shop.giftDay == nil)
+  }
+
+  @Test func aTryAndAHintGoToTheRiddlesOwnPath() async throws {
+    let id = RiddleId("00000000-0000-4000-8000-0000000000d1")
+    let key = IdempotencyKey("00000000-0000-4000-8000-0000000000aa")
+    let tried = Server(
+      body:
+        ##"{"riddle":{"at":1700000000000,"compact":{"strokes":[{"color":"#2A1A1C","points":[10,20,30,40],"width":3}],"version":1},"drawer":"user-alice","hints":2,"id":"00000000-0000-4000-8000-0000000000d1","image":"pairs/pair-1/notes/riddle-1.png","removed":[3,8],"revealed":[{"index":6,"letter":"o"}],"shape":[5,4],"state":{"_tag":"Solved","at":1700000090000},"tiles":["e","o","r","x","p","t","n","h","q","l","o","z"],"tries":4,"word":"north pole"},"right":true}"##
+    )
+    let response = try await Self.client(tried).guessRiddle(id, key, " Cat ")
+    #expect(response.right)
+    let request = try #require(tried.requests.first)
+    #expect(request.method == .post)
+    #expect(request.path == "/v1/riddles/\(id.rawValue)/guess")
+    let body = try #require(request.body)
+    let sent = try #require(try JSONSerialization.jsonObject(with: body) as? NSDictionary)
+    #expect(sent == ["key": key.rawValue, "guess": " Cat "])
+
+    let hinted = Server(
+      body:
+        ##"{"at":1700000000000,"compact":{"strokes":[{"color":"#2A1A1C","points":[10,20,30,40],"width":3}],"version":1},"drawer":"user-alice","hints":2,"id":"00000000-0000-4000-8000-0000000000d1","image":"pairs/pair-1/notes/riddle-1.png","removed":[3,8],"revealed":[{"index":6,"letter":"o"}],"shape":[5,4],"state":{"_tag":"Solved","at":1700000090000},"tiles":["e","o","r","x","p","t","n","h","q","l","o","z"],"tries":4,"word":"north pole"}"##
+    )
+    _ = try await Self.client(hinted).hintRiddle(id)
+    let hint = try #require(hinted.requests.first)
+    #expect(hint.path == "/v1/riddles/\(id.rawValue)/hint")
+    #expect(hint.body == nil)
   }
 }

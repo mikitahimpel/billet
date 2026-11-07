@@ -1,5 +1,6 @@
 import Payments
 import SwiftUI
+import Design
 import WidgetBridge
 import Wire
 
@@ -17,9 +18,8 @@ struct CoinsSheet: View {
     }
 
     var body: some View {
-        ScrollView {
+        BilletSheet("Coins", size: .large) {
             VStack(alignment: .leading, spacing: Space.section) {
-                SheetHeader(title: "Coins", chips: { EmptyView() }, close: { dismiss() })
                 balance
                 if let retry = ask.retry { ShortBanner(state: state, retry: retry) { dismiss() } }
                 if packs != nil, sellsPacks { PlusHero(mockStore: AppPayments.isMock) }
@@ -29,14 +29,7 @@ struct CoinsSheet: View {
                 waysCard
                 recent
             }
-            .padding(.horizontal, Space.gutter)
-            .padding(.vertical, Space.l)
         }
-        .scrollIndicators(.hidden)
-        .tint(.honey)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
-        .presentationBackground(Ink.screen)
         .accessibilityIdentifier("coinsSheet")
         .task { await state.shop.loadHistory() }
         .task { if sellsPacks { await packs?.load() } }
@@ -48,7 +41,6 @@ struct CoinsSheet: View {
     private var balance: some View {
         HStack(spacing: Space.l) {
             CoinIcon(size: 56)
-                .shadow(color: Color.honeyDeep.opacity(0.45), radius: 8, y: 4)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(state.shop.coins)")
                     .font(.nookiLargeTitle.monospacedDigit())
@@ -61,8 +53,8 @@ struct CoinsSheet: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(Space.gutter)
-        .nookiCard(radius: Radius.hero, warm: true)
+        .padding(Space.l)
+        .cardSurface(warm: true)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("coinBalance")
     }
@@ -70,9 +62,9 @@ struct CoinsSheet: View {
     // MARK: Earning
 
     private var waysCard: some View {
-        NookiSection(header: "How to earn") {
+        GroupedSection(header: "How to earn") {
             ForEach(ways, id: \.text) { way in
-                NookiRowLabel(title: way.text, symbol: way.symbol, tint: way.tint)
+                Row(way.text, symbol: way.symbol, tint: way.tint.color)
             }
         }
     }
@@ -89,7 +81,7 @@ struct CoinsSheet: View {
 
     @ViewBuilder private var recent: some View {
         if !state.shop.history.isEmpty {
-            NookiSection(header: "Recently") {
+            GroupedSection(header: "Recently") {
                 ForEach(state.shop.history, id: \.id) { entry in
                     HistoryRow(line: CoinLine(entry))
                 }
@@ -103,8 +95,8 @@ private struct HistoryRow: View {
     let line: CoinLine
 
     var body: some View {
-        NookiRowLabel(title: line.title, detail: line.date.formatted(.relative(presentation: .named)),
-                      symbol: line.symbol, tint: line.isGain ? .honey : .sky) {
+        Row(line.title, detail: line.date.formatted(.relative(presentation: .named)),
+                      symbol: line.symbol, tint: line.isGain ? UsTint.honey.color : UsTint.sky.color) {
             Text(line.amount)
                 .font(.nookiHeadline.monospacedDigit())
                 .foregroundStyle(line.isGain ? Ink.accentText : Ink.textSecondary)
@@ -164,6 +156,8 @@ struct CoinLine: Hashable {
         case "list": return "Ticked off a list"
         case "moment": return "A moment"
         case "note": return "A note"
+        case "guess": return "Guessed right in Who knows who"
+        case "round": return "Played Who knows who"
         default: return "Coins earned"
         }
     }
@@ -188,37 +182,36 @@ private struct ShortBanner: View {
     private var missing: Int { max(0, retry.cost - state.shop.coins) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
-            if missing > 0 {
-                Text("You need \(missing) more")
-                    .font(.nookiHeadline.monospacedDigit())
-                    .foregroundStyle(Ink.text)
-                    .contentTransition(.numericText())
-                Text("for \(retry.title), \(retry.cost) coins.")
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.textSecondary)
-            } else {
-                Text("You have enough now")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Button {
-                    if state.shop.finish(retry) { done() }
-                } label: {
-                    HStack(spacing: Space.s) {
-                        Text("Buy \(retry.title) for")
-                        CoinPrice(price: retry.cost, was: nil)
+        Card {
+            VStack(alignment: .leading, spacing: Space.s) {
+                if missing > 0 {
+                    Text("You need \(missing) more")
+                        .font(.nookiHeadline.monospacedDigit())
+                        .foregroundStyle(Ink.text)
+                        .contentTransition(.numericText())
+                    Text("for \(retry.title), \(retry.cost) coins.")
+                        .font(.nookiCallout)
+                        .foregroundStyle(Ink.textSecondary)
+                } else {
+                    Text("You have enough now")
+                        .font(.nookiHeadline)
+                        .foregroundStyle(Ink.text)
+                    Button {
+                        if state.shop.finish(retry) { done() }
+                    } label: {
+                        HStack(spacing: Space.s) {
+                            Text("Buy \(retry.title) for")
+                            CoinIcon(size: 18)
+                            Text(retry.cost, format: .number).monospacedDigit()
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("finishBuy")
                 }
-                .shopButton()
-                .accessibilityIdentifier("finishBuy")
             }
         }
-        .padding(Space.l)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .shopCard()
         .animation(.snappy, value: missing)
         .accessibilityIdentifier("shortBanner")
     }

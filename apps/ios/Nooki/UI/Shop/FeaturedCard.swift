@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 
 /// The week's hero offer at the top of Today: the set's pieces large on lamplight, its value against the sum of the
 /// missing parts, and a countdown to the real Monday rotation. The price pill buys it in one tap.
@@ -52,7 +53,7 @@ struct FeaturedCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                SetBuyButton(state: state, set: offer, ownedInk: .white)
+                SetBuyButton(state: state, set: offer)
             }
             .padding(Space.m)
             .glass(.rect(cornerRadius: Radius.card, style: .continuous), tint: Ink.heroInk.opacity(0.3))
@@ -87,7 +88,7 @@ struct FeaturedCard: View {
             HStack(alignment: .bottom, spacing: -overlap) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     let isCentre = index == items.count / 2
-                    Lifted {
+                    Group {
                         if let image = Thumbnails.trimmed(item.thumbnail) {
                             Image(uiImage: image).resizable().scaledToFit()
                         } else {

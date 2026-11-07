@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import WidgetKit
 
 /// Lock Screen: the day counter above the clock, a round countdown and a line from the smart slot.

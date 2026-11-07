@@ -1,7 +1,8 @@
 import SwiftUI
+import Design
 
-/// An item on the Shop: its art large and lifted in the rarity frame, the name, what it does for Mochi, and its
-/// price pill, which buys it in one tap.
+/// An item on the Shop: its art in the rarity frame, then one fixed layout under it: the name, one line about it
+/// and the buy. Every card has the same three lines, so a row of cards is level.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
@@ -12,20 +13,19 @@ struct ShopItemCard: View {
     private var isDeal: Bool { price < item.price }
 
     var body: some View {
-        // The art and the name open the item's sheet; the price pill under them buys it in one tap.
+        // The art and the name open the item's sheet; the buy under them buys it in one tap.
         VStack(alignment: .leading, spacing: Space.s) {
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: Space.s) {
                     art
                     VStack(alignment: .leading, spacing: 2) {
-                        // Both lines are always there, so the cards in a row are the same height.
                         Text(item.name)
                             .font(.nookiHeadline)
                             .foregroundStyle(Ink.text)
-                            .lineLimit(2, reservesSpace: true)
-                        Text(item.mood.map { "\(state.petName): \($0)" } ?? " ")
+                            .lineLimit(1)
+                        Text(item.blurb)
                             .font(.nookiCaption)
-                            .foregroundStyle(Ink.accentText)
+                            .foregroundStyle(Ink.textSecondary)
                             .lineLimit(1)
                     }
                 }
@@ -35,38 +35,34 @@ struct ShopItemCard: View {
             .buttonStyle(PressScaleStyle())
             .accessibilityElement(children: .combine)
             .accessibilityHint("Opens \(item.name)")
-            Spacer(minLength: 0)
-            PriceButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
-                        buy: { state.shop.buy(item) }, fills: true)
+            BuyButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
+                      buy: { state.shop.buy(item) }, fills: true)
         }
         .padding(Space.s + 2)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .shopCard()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardSurface()
     }
 
     private var art: some View {
         RarityFrame(rarity: item.rarity) {
             if let image = Thumbnails.image(item.thumbnail, maxPixels: 512) {
-                Lifted {
-                    Image(uiImage: image).resizable().scaledToFit()
-                }
-                .padding(Space.s)
-                .padding(.bottom, Space.xs)
+                // The thumbnail carries its own soft shadow; nothing is drawn under it.
+                Image(uiImage: image).resizable().scaledToFit()
+                    .padding(Space.s)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
             }
         }
         .aspectRatio(1.05, contentMode: .fit)
         .overlay(alignment: .topLeading) {
-            ShopTag(text: item.rarity.title, fill: item.rarity.tint).padding(Space.s)
+            item.rarity.chip.padding(Space.s)
         }
         .overlay(alignment: .topTrailing) {
             if isDeal, !owned {
-                ShopTag(text: "−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%",
-                        fill: ShopInk.coral)
+                Chip("−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%", style: .honey)
                     .padding(Space.s)
             } else if item.isNew, !owned {
-                ShopTag(text: "New", fill: .honey).padding(Space.s)
+                Chip("New", style: .honey).padding(Space.s)
             }
         }
     }

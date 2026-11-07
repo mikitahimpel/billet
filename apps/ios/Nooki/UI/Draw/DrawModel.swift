@@ -23,7 +23,8 @@ final class DrawModel {
 
     var tool = Tool.pen
     var ink = PaletteInk.free
-    var wallpaper = LockWallpaper.blush
+    var wallpaper = riddleWallpaper
+    static let riddleWallpaper = LockWallpaper.blush
     var photo: UIImage?
     private(set) var sendState = SendState.idle
 
@@ -162,31 +163,44 @@ final class DrawModel {
     /// Sends the drawing as a note (the image to /v1/media, then the compact strokes to /v1/notes) and keeps it in
     /// Moments. Without a server it only goes to Moments.
     func send(api: APIClient?, canvas: CGSize, state: HomeState) async -> Bool {
+        await send { drawing in
+            if let api {
+                do {
+                    try await Self.post(drawing, canvas: canvas, paper: wallpaper.paper, api: api)
+                } catch {
+                    return false
+                }
+            }
+            if let keepsake = DrawingImage.keepsake(drawing, canvas: canvas, wallpaper: wallpaper, photo: photo) {
+                state.journal.addMoment(keepsake, caption: "For \(partnerName)")
+            }
+            return true
+        }
+    }
+
+    /// Hands the finished drawing to `deliver`, which says whether it went, and keeps `sendState` while it runs. A
+    /// note and a Draw & guess riddle go out through it.
+    func send(_ deliver: ([Stroke]) async -> Bool) async -> Bool {
         finishStroke()
         let drawing = self.drawing
         guard !drawing.isEmpty, sendState != .sending else { return false }
         sendState = .sending
-        if let api {
-            do {
-                try await Self.post(drawing, canvas: canvas, paper: wallpaper.paper, api: api)
-            } catch {
-                sendState = .failed
-                return false
-            }
-        }
-        if let keepsake = DrawingImage.keepsake(drawing, canvas: canvas, wallpaper: wallpaper, photo: photo) {
-            state.journal.addMoment(keepsake, caption: "For \(partnerName)")
-        }
-        sendState = .idle
-        return true
+        let sent = await deliver(drawing)
+        sendState = sent ? .idle : .failed
+        return sent
     }
 
     private static func post(_ drawing: [Stroke], canvas: CGSize, paper: PaperColor, api: APIClient) async throws {
-        guard let png = DrawingImage.png(drawing, canvas: canvas) else { throw InkError.encodingFailed }
-        let compact = try InkEncoder.encodeWithinBudget(drawing)
+        let (png, compact) = try encoded(drawing, canvas: canvas)
         let upload = try await api.uploadImage(png)
         _ = try await api.sendNote(
             .drawing(key: .make(), compact: compact, image: upload.image, paper: paper))
+    }
+
+    /// The drawing as it is sent: its PNG for /v1/media and its compact strokes.
+    static func encoded(_ drawing: [Stroke], canvas: CGSize) throws -> (png: Data, compact: CompactStrokes) {
+        guard let png = DrawingImage.png(drawing, canvas: canvas) else { throw InkError.encodingFailed }
+        return (png, try InkEncoder.encodeWithinBudget(drawing))
     }
 }
 

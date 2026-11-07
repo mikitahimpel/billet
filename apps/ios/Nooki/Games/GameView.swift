@@ -1,5 +1,6 @@
 import FeatureGames
 import SwiftUI
+import Design
 
 /// A mini-game over the room: the whole screen takes the touches for the game, with a glass hint pill and a close
 /// button on top, the game's bar and button at the bottom, and its toast once it is done. Nothing else of Home
@@ -76,7 +77,7 @@ struct GameView: View {
                     }
                     if let action = session.action {
                         Button(action: session.act) { Text(action).frame(maxWidth: .infinity) }
-                            .nookiPrimary()
+                            .buttonStyle(PrimaryButtonStyle())
                     }
                 }
                 .padding(.horizontal, Space.gutter)
@@ -111,7 +112,7 @@ private struct HintCard: View {
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Ink.sheet, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .background(Ink.screen, in: .rect(cornerRadius: Radius.card, style: .continuous))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
     }
@@ -168,7 +169,7 @@ private struct Toast: View {
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .glass(.capsule, interactive: true)
                 Button(action: done) { Text("Done").frame(maxWidth: .infinity) }
-                    .nookiPrimary()
+                    .buttonStyle(PrimaryButtonStyle())
             }
         }
         .padding(Space.l)

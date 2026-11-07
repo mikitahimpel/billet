@@ -82,6 +82,7 @@ export class ReactionService extends Context.Service<
               case "ListNotFound":
               case "ListItemNotFound":
               case "MoodNoteTooLong":
+              case "RoomJournalsGame":
                 return yield* Effect.fail(
                   new NotesUnavailable({ reason: "room-refused-reaction" }),
                 );

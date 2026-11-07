@@ -1,0 +1,1680 @@
+{
+  "version": "e502835bc52e62d4",
+  "questions": [
+    {
+      "id": 1,
+      "guess": "Which animal would {name} want to be for a day?",
+      "self": "Which animal would you want to be for a day?",
+      "options": ["A lazy house cat", "A soaring eagle", "A playful dolphin", "A sleepy sloth"],
+      "tag": "dreams"
+    },
+    {
+      "id": 2,
+      "guess": "How does {name} eat a pizza crust?",
+      "self": "How do you eat a pizza crust?",
+      "options": [
+        "Every last bite",
+        "Leaves it on the plate",
+        "Dips it in something",
+        "Gives it to someone else"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 3,
+      "guess": "What does {name}'s email inbox look like?",
+      "self": "What does your email inbox look like?",
+      "options": [
+        "Inbox zero, always",
+        "A few unread",
+        "Thousands unread",
+        "Never opened, honestly"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 4,
+      "guess": "How did {name} spend summers as a kid?",
+      "self": "How did you spend summers as a kid?",
+      "options": [
+        "At the grandparents' house",
+        "Away at summer camp",
+        "Outside until dark",
+        "Inside playing video games"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 5,
+      "guess": "What's {name}'s hidden party trick?",
+      "self": "What's your hidden party trick?",
+      "options": [
+        "Perfect celebrity impressions",
+        "Juggling three things",
+        "Solving a Rubik's cube",
+        "Whistling really loudly"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 6,
+      "guess": "How did {name} get to school as a kid?",
+      "self": "How did you get to school as a kid?",
+      "options": [
+        "The yellow school bus",
+        "Walked with friends",
+        "A parent drove",
+        "Biked every day"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 7,
+      "guess": "What's at the top of {name}'s bucket list?",
+      "self": "What's at the top of your bucket list?",
+      "options": [
+        "Seeing the northern lights",
+        "Skydiving once",
+        "Running a marathon",
+        "Visiting every continent"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 8,
+      "guess": "Which genre does {name} claim to hate but secretly enjoy?",
+      "self": "Which genre do you claim to hate but secretly enjoy?",
+      "options": ["Country music", "K-pop dance tracks", "Musical soundtracks", "Seventies disco"],
+      "tag": "music"
+    },
+    {
+      "id": 9,
+      "guess": "What sauce does {name} put on almost everything?",
+      "self": "What sauce do you put on almost everything?",
+      "options": ["Hot sauce", "Plain old ketchup", "Garlic mayo", "Ranch dressing"],
+      "tag": "food"
+    },
+    {
+      "id": 10,
+      "guess": "What was {name}'s first concert?",
+      "self": "What was your first concert?",
+      "options": [
+        "A pop star arena show",
+        "A local band in a bar",
+        "A school band recital",
+        "Still waiting for one"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 11,
+      "guess": "How does {name} eat a sandwich cookie?",
+      "self": "How do you eat a sandwich cookie?",
+      "options": [
+        "Twists it apart first",
+        "Dunks it in milk",
+        "Bites it whole",
+        "Scrapes the filling out first"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 12,
+      "guess": "How would {name} sum up your relationship?",
+      "self": "How would you sum up your relationship?",
+      "options": ["Cozy and safe", "Beautifully chaotic", "Always laughing", "Like coming home"],
+      "tag": "us"
+    },
+    {
+      "id": 13,
+      "guess": "What would {name} do with $1,000 found on the street?",
+      "self": "What would you do with $1,000 found on the street?",
+      "options": [
+        "Turn it in, honestly",
+        "Save it quietly",
+        "Treat everyone to dinner",
+        "Book a weekend trip"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 14,
+      "guess": "Where would {name} fly first with a private jet for a day?",
+      "self": "Where would you fly first with a private jet for a day?",
+      "options": [
+        "Paris, just for lunch",
+        "A tropical island",
+        "To visit family far away",
+        "Somewhere random on the map"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 15,
+      "guess": "How does {name} fold a T-shirt?",
+      "self": "How do you fold a T-shirt?",
+      "options": [
+        "Like a store display",
+        "Rolled up, to save space",
+        "Folded in half, done",
+        "Not folded, into a pile"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 16,
+      "guess": "What's {name}'s go-to snack at 11 p.m.?",
+      "self": "What's your go-to snack at 11 p.m.?",
+      "options": [
+        "Cereal straight from the box",
+        "Cheese eaten over the sink",
+        "Cold leftovers from the fridge",
+        "A spoonful of peanut butter"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 17,
+      "guess": "How does {name} dance at a wedding?",
+      "self": "How do you dance at a wedding?",
+      "options": [
+        "Center of the dance floor",
+        "Only after a few songs",
+        "The same two moves",
+        "Never leaves the table"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 18,
+      "guess": "How does {name} handle a monthly budget?",
+      "self": "How do you handle a monthly budget?",
+      "options": [
+        "Spreadsheet for everything",
+        "A rough idea",
+        "No budget, just vibes",
+        "An app does it"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 19,
+      "guess": "What's always at the bottom of {name}'s bag?",
+      "self": "What's always at the bottom of your bag?",
+      "options": [
+        "Snacks for emergencies",
+        "Way too many receipts",
+        "Several lip balms",
+        "A tangle of chargers"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 20,
+      "guess": "What was {name}'s first pet?",
+      "self": "What was your first pet?",
+      "options": [
+        "A goldfish from a fair",
+        "A family dog",
+        "A hamster that escaped",
+        "No pets allowed"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 21,
+      "guess": "How many alarms does {name} set to wake up?",
+      "self": "How many alarms do you set to wake up?",
+      "options": ["Just one", "Two, to be safe", "Five or more", "No alarm needed"],
+      "tag": "habits"
+    },
+    {
+      "id": 22,
+      "guess": "What's {name}'s usual coffee order?",
+      "self": "What's your usual coffee order?",
+      "options": [
+        "Black, no nonsense",
+        "An oat milk latte",
+        "Something iced, any weather",
+        "No coffee, just tea"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 23,
+      "guess": "Which shared chore would {name} trade away first?",
+      "self": "Which shared chore would you trade away first?",
+      "options": [
+        "Doing the dishes",
+        "Taking out the trash",
+        "Scrubbing the bathroom",
+        "Grocery shopping"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 24,
+      "guess": "What did {name}'s childhood bedroom walls look like?",
+      "self": "What did your childhood bedroom walls look like?",
+      "options": [
+        "Posters everywhere",
+        "Painted a bold color",
+        "Covered in drawings",
+        "Totally plain"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 25,
+      "guess": "How does {name} pay back a friend?",
+      "self": "How do you pay back a friend?",
+      "options": [
+        "Right away, to the cent",
+        "Rounds up to be nice",
+        "Forgets until reminded",
+        "Pays with a coffee later"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 26,
+      "guess": "What must {name}'s dream house have?",
+      "self": "What must your dream house have?",
+      "options": [
+        "A huge kitchen",
+        "A home theater",
+        "A library with a ladder",
+        "A pool in the backyard"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 27,
+      "guess": "Where is {name}'s phone battery usually at?",
+      "self": "Where is your phone battery usually at?",
+      "options": ["Always above 80%", "Around half", "Red, always red", "Dead by dinner"],
+      "tag": "habits"
+    },
+    {
+      "id": 28,
+      "guess": "Which photo of you two is {name}'s favorite?",
+      "self": "Which photo of you two is your favorite?",
+      "options": [
+        "A blurry selfie",
+        "A vacation shot",
+        "One from the early days",
+        "A candid nobody planned"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 29,
+      "guess": "Which board game turns {name} into a monster?",
+      "self": "Which board game turns you into a monster?",
+      "options": [
+        "Monopoly, no mercy",
+        "Uno, card slammer",
+        "Scrabble, word arguments",
+        "Charades, very loud"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 30,
+      "guess": "Which side of the bed does {name} insist on?",
+      "self": "Which side of the bed do you insist on?",
+      "options": [
+        "Near the door",
+        "Near the window",
+        "The middle, honestly",
+        "Whichever is warmer"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 31,
+      "guess": "What's on {name}'s walking playlist?",
+      "self": "What's on your walking playlist?",
+      "options": ["High energy pop", "Old rock songs", "Podcasts, not music", "Movie soundtracks"],
+      "tag": "music"
+    },
+    {
+      "id": 32,
+      "guess": "How early does {name} get to the airport?",
+      "self": "How early do you get to the airport?",
+      "options": [
+        "Three hours, just in case",
+        "Two hours, by the book",
+        "Running to the gate",
+        "Exactly on time, somehow"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 33,
+      "guess": "What was {name} like in high school?",
+      "self": "What were you like in high school?",
+      "options": [
+        "Quiet in the back row",
+        "The class clown",
+        "The teacher's favorite",
+        "In every club possible"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 34,
+      "guess": "What does {name} play loudest in the car?",
+      "self": "What do you play loudest in the car?",
+      "options": [
+        "Throwback pop hits",
+        "Rap, windows down",
+        "A true crime podcast",
+        "Whatever the radio plays"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 35,
+      "guess": "Who would {name} have dinner with, living or not?",
+      "self": "Who would you have dinner with, living or not?",
+      "options": [
+        "A favorite musician",
+        "A famous historical figure",
+        "A grandparent, once more",
+        "A movie star"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 36,
+      "guess": "How long does {name} take to choose from a menu?",
+      "self": "How long do you take to choose from a menu?",
+      "options": [
+        "Under a minute",
+        "Until the waiter comes back twice",
+        "Decided before even arriving",
+        "Orders what the table orders"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 37,
+      "guess": "What does {name} do with loose coins?",
+      "self": "What do you do with loose coins?",
+      "options": [
+        "Jar on the shelf",
+        "Leaves them as tips",
+        "Loses them in the couch",
+        "Counts them once a year"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 38,
+      "guess": "What does {name} play to fall asleep?",
+      "self": "What do you play to fall asleep?",
+      "options": ["Rain or white noise", "A podcast on low", "Total silence", "Calm piano music"],
+      "tag": "music"
+    },
+    {
+      "id": 39,
+      "guess": "Which food would {name} never eat, even on a dare?",
+      "self": "Which food would you never eat, even on a dare?",
+      "options": [
+        "Olives of any kind",
+        "Stinky blue cheese",
+        "Anything with cilantro",
+        "Raw oysters"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 40,
+      "guess": "What does {name} say to the TV during a show?",
+      "self": "What do you say to the TV during a show?",
+      "options": [
+        "Yells at the characters",
+        "Predicts the ending",
+        "Asks who that actor is",
+        "Nothing, silently judging"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 41,
+      "guess": "What would {name} never pay full price for?",
+      "self": "What would you never pay full price for?",
+      "options": [
+        "Clothes, wait for sales",
+        "Plane tickets",
+        "Big furniture pieces",
+        "Popcorn at the movies"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 42,
+      "guess": "If {name} could live anywhere, where would it be?",
+      "self": "If you could live anywhere, where would it be?",
+      "options": [
+        "A small beach town",
+        "A big busy city",
+        "A mountain cabin",
+        "A farm with animals"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 43,
+      "guess": "What does {name} steal from you most?",
+      "self": "What do you steal from your partner most?",
+      "options": [
+        "Hoodies and sweaters",
+        "Fries off the plate",
+        "The whole blanket",
+        "The phone charger"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 44,
+      "guess": "What does {name} do with a brand new notebook?",
+      "self": "What do you do with a brand new notebook?",
+      "options": [
+        "Too pretty to use",
+        "Writes two pages, stops",
+        "Fills it with lists",
+        "Doodles on every page"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 45,
+      "guess": "What did {name} want to be when they grew up?",
+      "self": "What did you want to be when you grew up?",
+      "options": ["An astronaut, obviously", "A vet for puppies", "A famous pop star", "A teacher"],
+      "tag": "past"
+    },
+    {
+      "id": 46,
+      "guess": "What does {name} do when the Wi-Fi goes out?",
+      "self": "What do you do when the Wi-Fi goes out?",
+      "options": [
+        "Restarts the router ten times",
+        "Finally reads a book",
+        "Switches to phone data",
+        "Takes a nap instead"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 47,
+      "guess": "What does {name} listen to while working?",
+      "self": "What do you listen to while working?",
+      "options": [
+        "Lo-fi beats",
+        "Silence, please",
+        "The same album on loop",
+        "Podcasts at 2x speed"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 48,
+      "guess": "When does {name} pack for a trip?",
+      "self": "When do you pack for a trip?",
+      "options": [
+        "A week ahead, with a list",
+        "The night before",
+        "An hour before leaving",
+        "Throws things in last minute"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 49,
+      "guess": "Which dessert does {name} order every single time?",
+      "self": "Which dessert do you order every single time?",
+      "options": [
+        "A slice of cheesecake",
+        "Classic tiramisu",
+        "Chocolate lava cake",
+        "An ice cream sundae"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 50,
+      "guess": "How does {name} shop online?",
+      "self": "How do you shop online?",
+      "options": [
+        "Leaves it in the cart for weeks",
+        "Buys instantly",
+        "Reads every review first",
+        "Waits for a sale"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 51,
+      "guess": "What would {name} do with a free year off?",
+      "self": "What would you do with a free year off?",
+      "options": [
+        "Travel the whole world",
+        "Learn a new skill",
+        "Sleep and rest, mostly",
+        "Start a small business"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 52,
+      "guess": "What's the first thing {name} does after getting home?",
+      "self": "What's the first thing you do after getting home?",
+      "options": [
+        "Changes into comfy clothes",
+        "Heads straight to the fridge",
+        "Collapses on the couch",
+        "Drops everything by the door"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 53,
+      "guess": "What would {name} name a second cat?",
+      "self": "What would you name a second cat?",
+      "options": [
+        "A food, like Noodle",
+        "A human name, like Gary",
+        "A movie character",
+        "Something very fancy"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 54,
+      "guess": "What does {name} do when an unknown number calls?",
+      "self": "What do you do when an unknown number calls?",
+      "options": [
+        "Never picks up",
+        "Picks up and stays silent",
+        "Answers like a receptionist",
+        "Googles the number first"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 55,
+      "guess": "What did {name} watch after school growing up?",
+      "self": "What did you watch after school growing up?",
+      "options": [
+        "Superhero cartoons",
+        "Anime, every day",
+        "Classic Disney movies",
+        "Whatever was on TV"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 56,
+      "guess": "Which decade's music does {name} love most?",
+      "self": "Which decade's music do you love most?",
+      "options": [
+        "Eighties synth pop",
+        "Nineties everything",
+        "Early 2000s pop",
+        "Whatever's new right now"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 57,
+      "guess": "What was {name}'s go-to Halloween costume as a kid?",
+      "self": "What was your go-to Halloween costume as a kid?",
+      "options": [
+        "A witch or wizard",
+        "A superhero",
+        "A ghost made of a sheet",
+        "Whatever was cheapest"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 58,
+      "guess": "What does {name} grab first if the house is on fire? Everyone's already out.",
+      "self": "What do you grab first if the house is on fire? Everyone's already out.",
+      "options": [
+        "The phone, obviously",
+        "The laptop",
+        "An old photo album",
+        "A childhood stuffed animal"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 59,
+      "guess": "What's {name}'s strategy at a buffet?",
+      "self": "What's your strategy at a buffet?",
+      "options": [
+        "A small taste of everything",
+        "Straight to the desserts",
+        "One giant plate, done",
+        "Three trips for the mains"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 60,
+      "guess": "How does {name} react to a surprise bill?",
+      "self": "How do you react to a surprise bill?",
+      "options": [
+        "Pays it immediately",
+        "Opens it later",
+        "Calls to complain",
+        "Panics, then pays"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 61,
+      "guess": "What music did {name} love at 15?",
+      "self": "What music did you love at 15?",
+      "options": [
+        "Emo and pop punk",
+        "Boy bands, obviously",
+        "Hip hop and rap",
+        "Whatever the radio played"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 62,
+      "guess": "What would {name} do first with a time machine?",
+      "self": "What would you do first with a time machine?",
+      "options": [
+        "Visit the dinosaurs",
+        "Fix a past mistake",
+        "Peek into the future",
+        "Relive a perfect day"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 63,
+      "guess": "How does {name} deal with a spider in the house?",
+      "self": "How do you deal with a spider in the house?",
+      "options": [
+        "Catches it, sets it free",
+        "Screams for help",
+        "Leaves the room forever",
+        "Names it and moves on"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 64,
+      "guess": "What would {name} cook to impress you?",
+      "self": "What would you cook to impress your partner?",
+      "options": [
+        "A signature pasta",
+        "Something from a recipe video",
+        "Breakfast in bed",
+        "A reservation, honestly"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 65,
+      "guess": "What's {name}'s ideal weekend breakfast?",
+      "self": "What's your ideal weekend breakfast?",
+      "options": ["Just coffee", "Pancakes with syrup", "Avocado toast", "Leftover pizza"],
+      "tag": "food"
+    },
+    {
+      "id": 66,
+      "guess": "Which gift from you does {name} treasure most?",
+      "self": "Which gift from your partner do you treasure most?",
+      "options": [
+        "A handwritten note",
+        "Something small and silly",
+        "An experience together",
+        "A piece of jewelry"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 67,
+      "guess": "What happens to the clothes on {name}'s chair?",
+      "self": "What happens to the clothes on your chair?",
+      "options": [
+        "Put away the same day",
+        "The chair keeps them",
+        "Worn straight from the pile",
+        "Sorted on the weekend"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 68,
+      "guess": "Which superpower would {name} pick?",
+      "self": "Which superpower would you pick?",
+      "options": [
+        "Flying over everything",
+        "Being invisible",
+        "Teleporting anywhere",
+        "Reading minds"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 69,
+      "guess": "How does {name} tip at a restaurant?",
+      "self": "How do you tip at a restaurant?",
+      "options": [
+        "Exactly 20 percent",
+        "Generous, always",
+        "Calculates it on the phone",
+        "Whatever rounds nicely"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 70,
+      "guess": "What does {name} do when something goes missing?",
+      "self": "What do you do when something goes missing?",
+      "options": [
+        "Blames someone else",
+        "Checks the same spot three times",
+        "Gives up and buys another",
+        "Asks the room out loud"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 71,
+      "guess": "What's the most rebellious thing {name} did as a teen?",
+      "self": "What's the most rebellious thing you did as a teen?",
+      "options": [
+        "Snuck out at night",
+        "Skipped a class",
+        "Lied about a sleepover",
+        "Threw a party at home"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 72,
+      "guess": "How often does {name} make the bed?",
+      "self": "How often do you make the bed?",
+      "options": [
+        "Every morning, perfectly",
+        "Only when guests come",
+        "Just pulls the blanket up",
+        "Never, it gets messy anyway"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 73,
+      "guess": "What does {name} order at a restaurant they've never been to?",
+      "self": "What do you order at a restaurant you've never been to?",
+      "options": [
+        "The first thing the waiter recommends",
+        "Whatever sounds spiciest",
+        "The same thing as always",
+        "Two starters instead of a main"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 74,
+      "guess": "What does {name} do when a favorite song plays in a store?",
+      "self": "What do you do when a favorite song plays in a store?",
+      "options": [
+        "Sings along out loud",
+        "Taps along quietly",
+        "Hums and pretends not to",
+        "Does a little dance"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 75,
+      "guess": "When you're running late, what does {name} do?",
+      "self": "When your partner is running late, what do you do?",
+      "options": [
+        "Texts every five minutes",
+        "Orders without waiting",
+        "Waits patiently",
+        "Pretends not to mind"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 76,
+      "guess": "What would {name} write a book about?",
+      "self": "What would you write a book about?",
+      "options": [
+        "A life story, obviously",
+        "A fantasy world",
+        "A murder mystery",
+        "Family recipes"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 77,
+      "guess": "What would {name} sing at karaoke?",
+      "self": "What would you sing at karaoke?",
+      "options": [
+        "A big power ballad",
+        "A rap verse, badly",
+        "A duet with anyone",
+        "Nothing, just cheering"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 78,
+      "guess": "What did {name} spend their first paycheck on?",
+      "self": "What did you spend your first paycheck on?",
+      "options": ["New clothes", "A video game", "Eating out with friends", "Saved every penny"],
+      "tag": "money"
+    },
+    {
+      "id": 79,
+      "guess": "What scared {name} most as a kid?",
+      "self": "What scared you most as a kid?",
+      "options": [
+        "The dark hallway",
+        "Monsters under the bed",
+        "Clowns at parties",
+        "Big barking dogs"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 80,
+      "guess": "What does {name} make when it's their turn to cook?",
+      "self": "What do you make when it's your turn to cook?",
+      "options": [
+        "Pasta, always pasta",
+        "Something from a recipe video",
+        "Eggs in some form",
+        "Orders delivery instead"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 81,
+      "guess": "Which era would {name} love to live in?",
+      "self": "Which era would you love to live in?",
+      "options": [
+        "The roaring twenties",
+        "The neon eighties",
+        "Medieval castle times",
+        "The far future"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 82,
+      "guess": "What was {name}'s most embarrassing moment at school?",
+      "self": "What was your most embarrassing moment at school?",
+      "options": [
+        "Tripped in the hallway",
+        "Called the teacher Mom",
+        "Wrong answer, whole class laughed",
+        "Fell asleep in class"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 83,
+      "guess": "What's {name}'s oddly specific fear?",
+      "self": "What's your oddly specific fear?",
+      "options": ["Pigeons up close", "Deep open water", "Riding escalators", "Creepy old dolls"],
+      "tag": "quirks"
+    },
+    {
+      "id": 84,
+      "guess": "What does {name} always say they'll start on Monday?",
+      "self": "What do you always say you'll start on Monday?",
+      "options": [
+        "Going to the gym",
+        "Eating healthier",
+        "Waking up earlier",
+        "Reading before bed"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 85,
+      "guess": "What's {name} most likely to haggle over?",
+      "self": "What are you most likely to haggle over?",
+      "options": ["Nothing, too awkward", "Souvenirs at a market", "A used car", "The cable bill"],
+      "tag": "money"
+    },
+    {
+      "id": 86,
+      "guess": "Which school subject was {name} secretly good at?",
+      "self": "Which school subject were you secretly good at?",
+      "options": ["Math, without trying", "Art class", "History dates", "Spelling bees"],
+      "tag": "past"
+    },
+    {
+      "id": 87,
+      "guess": "What's {name}'s comfort food after a bad day?",
+      "self": "What's your comfort food after a bad day?",
+      "options": [
+        "Mac and cheese",
+        "A big bowl of ramen",
+        "Chocolate, lots of it",
+        "Fries from a drive-thru"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 88,
+      "guess": "When you're sick, what does {name} bring first?",
+      "self": "When your partner is sick, what do you bring first?",
+      "options": [
+        "Soup, homemade or not",
+        "Medicine and tea",
+        "A movie marathon",
+        "A gentle reminder to rest"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 89,
+      "guess": "Which subscription did {name} forget to cancel?",
+      "self": "Which subscription did you forget to cancel?",
+      "options": [
+        "A streaming service",
+        "A gym membership",
+        "A language learning app",
+        "A meal kit box"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 90,
+      "guess": "What would {name} plan for a perfect date night?",
+      "self": "What would you plan for a perfect date night?",
+      "options": [
+        "Dinner and a movie",
+        "Cooking together at home",
+        "Something adventurous outside",
+        "Couch, pizza and a series"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 91,
+      "guess": "Who tops {name}'s most-played list every year?",
+      "self": "Who tops your most-played list every year?",
+      "options": [
+        "A pop superstar",
+        "An indie band nobody knows",
+        "A rapper on repeat",
+        "A movie soundtrack composer"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 92,
+      "guess": "What's {name} doing at 1 a.m. when sleep won't come?",
+      "self": "What are you doing at 1 a.m. when sleep won't come?",
+      "options": [
+        "Scrolling the phone",
+        "Snacking in the kitchen",
+        "Rewatching a comfort show",
+        "Planning tomorrow, mentally"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 93,
+      "guess": "What does {name} always sneak into the grocery cart?",
+      "self": "What do you always sneak into the grocery cart?",
+      "options": [
+        "One more snack than planned",
+        "Fancy cheese",
+        "A new drink to try",
+        "Ice cream, every time"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 94,
+      "guess": "How long does {name} spend picking something to watch?",
+      "self": "How long do you spend picking something to watch?",
+      "options": [
+        "Five minutes, tops",
+        "Longer than the show itself",
+        "Rewatches the usual instead",
+        "Lets someone else pick"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 95,
+      "guess": "Which talent does {name} wish they had?",
+      "self": "Which talent do you wish you had?",
+      "options": [
+        "Singing really well",
+        "Playing the piano",
+        "Speaking five languages",
+        "Drawing anything"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 96,
+      "guess": "What does {name} do in an elevator with strangers?",
+      "self": "What do you do in an elevator with strangers?",
+      "options": [
+        "Stares at the floor",
+        "Makes small talk",
+        "Checks the phone",
+        "Watches the floor numbers"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 97,
+      "guess": "Where would {name} take you on a surprise trip?",
+      "self": "Where would you take your partner on a surprise trip?",
+      "options": [
+        "A beach somewhere warm",
+        "A cabin in the woods",
+        "A big new city",
+        "Back where we met"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 98,
+      "guess": "What's {name}'s weirdest food combo?",
+      "self": "What's your weirdest food combo?",
+      "options": [
+        "Fries dipped in a milkshake",
+        "Pickles with peanut butter",
+        "Ketchup on mac and cheese",
+        "Chips inside a sandwich"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 99,
+      "guess": "What business would {name} open someday?",
+      "self": "What business would you open someday?",
+      "options": ["A cozy coffee shop", "A small bakery", "A tiny bookstore", "A dog daycare"],
+      "tag": "dreams"
+    },
+    {
+      "id": 100,
+      "guess": "What did {name} collect as a kid?",
+      "self": "What did you collect as a kid?",
+      "options": ["Trading cards", "Sticker books", "Rocks and shells", "Stuffed animals"],
+      "tag": "past"
+    },
+    {
+      "id": 101,
+      "guess": "What does {name} do with a song stuck in their head?",
+      "self": "What do you do with a song stuck in your head?",
+      "options": [
+        "Plays it until it stops",
+        "Hums it all day",
+        "Replaces it with another",
+        "Sings it to annoy others"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 102,
+      "guess": "How does {name} load the dishwasher?",
+      "self": "How do you load the dishwasher?",
+      "options": [
+        "Strict system, no exceptions",
+        "Wherever there's space",
+        "Rinses everything first",
+        "Waits for someone else to"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 103,
+      "guess": "Where does {name} keep emergency cash?",
+      "self": "Where do you keep emergency cash?",
+      "options": [
+        "In the wallet",
+        "A secret spot at home",
+        "Tucked in the phone case",
+        "Never carries cash"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 104,
+      "guess": "What got {name} in trouble most as a kid?",
+      "self": "What got you in trouble most as a kid?",
+      "options": [
+        "Talking back",
+        "Staying up too late",
+        "Fighting with siblings",
+        "Grades on the report card"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 105,
+      "guess": "What happens to leftovers in {name}'s fridge?",
+      "self": "What happens to leftovers in your fridge?",
+      "options": [
+        "Eaten the next day",
+        "Forgotten until they're scary",
+        "Packed for lunch",
+        "Thrown out on Sunday"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 106,
+      "guess": "What's {name}'s favorite way to spend a Sunday together?",
+      "self": "What's your favorite way to spend a Sunday together?",
+      "options": [
+        "A long brunch out",
+        "Doing nothing at home",
+        "A walk somewhere new",
+        "Errands, but together"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 107,
+      "guess": "What does {name} do at a live concert?",
+      "self": "What do you do at a live concert?",
+      "options": [
+        "Films the whole thing",
+        "Sings every word",
+        "Stays near the bar",
+        "Pushes to the front"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 108,
+      "guess": "What would {name} become famous for?",
+      "self": "What would you become famous for?",
+      "options": [
+        "A cooking show",
+        "A viral video by accident",
+        "A bestselling book",
+        "Winning a reality show"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 109,
+      "guess": "How would {name} react to a surprise party?",
+      "self": "How would you react to a surprise party?",
+      "options": [
+        "Cries happy tears",
+        "Already knew, acts surprised",
+        "Wants to hide",
+        "Takes over as host"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 110,
+      "guess": "What would {name} name a boat?",
+      "self": "What would you name a boat?",
+      "options": [
+        "A terrible pun",
+        "Something about the sea",
+        "The cat's name",
+        "A dramatic, heroic name"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 111,
+      "guess": "How does {name} split a dinner check?",
+      "self": "How do you split a dinner check?",
+      "options": [
+        "Item by item, exactly",
+        "Split evenly, it's simpler",
+        "Grabs it for everyone",
+        "Whoever lost the bet pays"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 112,
+      "guess": "What does {name} get at the movie theater snack bar?",
+      "self": "What do you get at the movie theater snack bar?",
+      "options": [
+        "Large popcorn, extra butter",
+        "Candy smuggled from home",
+        "A giant soda",
+        "Nothing, saving room for dinner"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 113,
+      "guess": "Which dance did {name} once learn from a video?",
+      "self": "Which dance did you once learn from a video?",
+      "options": [
+        "A viral TikTok dance",
+        "A boy band routine",
+        "A Bollywood number",
+        "The Macarena, at parties"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 114,
+      "guess": "How many browser tabs does {name} have open right now?",
+      "self": "How many browser tabs do you have open right now?",
+      "options": ["Fewer than five", "About twenty", "Too many to count", "Just one, always tidy"],
+      "tag": "habits"
+    },
+    {
+      "id": 115,
+      "guess": "What did {name} think was cool at 14?",
+      "self": "What did you think was cool at 14?",
+      "options": [
+        "Wearing band T-shirts",
+        "Owning a flip phone",
+        "Skateboarding, badly",
+        "Collecting gel pens"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 116,
+      "guess": "What's {name} most likely to impulse-buy at 2 a.m.?",
+      "self": "What are you most likely to impulse-buy at 2 a.m.?",
+      "options": [
+        "A kitchen gadget",
+        "Clothes for later",
+        "An online course",
+        "Plants for the home"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 117,
+      "guess": "What happened on {name}'s first day at a new job?",
+      "self": "What happened on your first day at a new job?",
+      "options": [
+        "Got lost finding the bathroom",
+        "Forgot everyone's names",
+        "Stayed quiet all day",
+        "Made a friend at lunch"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 118,
+      "guess": "What does {name} brag to friends about you?",
+      "self": "What do you brag to friends about your partner?",
+      "options": ["Cooking skills", "Sense of humor", "Being so smart", "Patience with everything"],
+      "tag": "us"
+    },
+    {
+      "id": 119,
+      "guess": "What would {name} name a pet rock?",
+      "self": "What would you name a pet rock?",
+      "options": [
+        "A human name, like Dave",
+        "Sir Pebbles the Third",
+        "A terrible rock pun",
+        "Rocky, obviously"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 120,
+      "guess": "What's {name}'s biggest money weakness?",
+      "self": "What's your biggest money weakness?",
+      "options": [
+        "Takeout delivery fees",
+        "Sales on things not needed",
+        "Gifts for other people",
+        "Booking trips on a whim"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 121,
+      "guess": "Which word does {name} say way too often?",
+      "self": "Which word do you say way too often?",
+      "options": [
+        "Literally, about everything",
+        "Honestly, before every sentence",
+        "Like, all the time",
+        "Basically, to start stories"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 122,
+      "guess": "What would {name}'s walk-out song be?",
+      "self": "What would your walk-out song be?",
+      "options": [
+        "An epic movie theme",
+        "A hype rap song",
+        "A cheesy 80s anthem",
+        "A dramatic opera aria"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 123,
+      "guess": "What does {name} do with the last fry in the bag?",
+      "self": "What do you do with the last fry in the bag?",
+      "options": [
+        "Eats it, no questions",
+        "Offers it and hopes for a no",
+        "Splits it fairly",
+        "Leaves it there forever"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 124,
+      "guess": "What's the first app {name} opens in the morning?",
+      "self": "What's the first app you open in the morning?",
+      "options": [
+        "Instagram, still in bed",
+        "Work email, sadly",
+        "The weather app",
+        "TikTok, just for a minute"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 125,
+      "guess": "Which reality show would {name} sign up for?",
+      "self": "Which reality show would you sign up for?",
+      "options": [
+        "A baking competition",
+        "A survival show",
+        "A home makeover show",
+        "A race around the world"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 126,
+      "guess": "What would {name} buy first after winning the lottery?",
+      "self": "What would you buy first after winning the lottery?",
+      "options": [
+        "A house with a yard",
+        "A ridiculous car",
+        "A trip around the world",
+        "Gifts for the whole family"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 127,
+      "guess": "What does {name} pick for a movie night together?",
+      "self": "What do you pick for a movie night together?",
+      "options": ["A romantic comedy", "Something scary", "An action movie", "A comfort rewatch"],
+      "tag": "us"
+    },
+    {
+      "id": 128,
+      "guess": "What does {name} do with a text they don't want to answer?",
+      "self": "What do you do with a text you don't want to answer?",
+      "options": [
+        "Reads it from the notification",
+        "Opens it and forgets",
+        "Replies a week later",
+        "Answers right away anyway"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 129,
+      "guess": "Which instrument did {name} try to learn?",
+      "self": "Which instrument did you try to learn?",
+      "options": ["Piano lessons", "Guitar from videos", "The school recorder", "Drums, loudly"],
+      "tag": "music"
+    },
+    {
+      "id": 130,
+      "guess": "What does {name} miss most when you two are apart?",
+      "self": "What do you miss most when you two are apart?",
+      "options": ["Talking before sleep", "Eating together", "The hugs", "Laughing at dumb stuff"],
+      "tag": "us"
+    },
+    {
+      "id": 131,
+      "guess": "What was {name}'s very first job?",
+      "self": "What was your very first job?",
+      "options": [
+        "Behind a fast food counter",
+        "Babysitting the neighbors' kids",
+        "Folding clothes in retail",
+        "Lifeguard at the pool"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 132,
+      "guess": "How does {name} order at a drive-thru?",
+      "self": "How do you order at a drive-thru?",
+      "options": [
+        "Rehearses it first",
+        "Changes it at the window",
+        "Asks what's good",
+        "Same order, every time"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 133,
+      "guess": "What would {name} pick as their last meal on Earth?",
+      "self": "What would you pick as your last meal on Earth?",
+      "options": [
+        "A huge bowl of pasta",
+        "Grandma's home cooking",
+        "A perfect medium-rare steak",
+        "An entire sushi platter"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 134,
+      "guess": "Which song does {name} secretly know every word of?",
+      "self": "Which song do you secretly know every word of?",
+      "options": [
+        "A boy band classic",
+        "A Disney movie song",
+        "An early 2000s pop hit",
+        "A cheesy country anthem"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 135,
+      "guess": "How does {name} squeeze the toothpaste tube?",
+      "self": "How do you squeeze the toothpaste tube?",
+      "options": [
+        "Neatly from the end",
+        "Right from the middle",
+        "Rolled up like a pro",
+        "Any way, cap left off"
+      ],
+      "tag": "habits"
+    },
+    {
+      "id": 136,
+      "guess": "What would {name} invent if they could?",
+      "self": "What would you invent if you could?",
+      "options": [
+        "A self-cleaning house",
+        "A teleporter for commutes",
+        "An instant language translator",
+        "A pause button for time"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 137,
+      "guess": "What does {name} talk to when nobody's around?",
+      "self": "What do you talk to when nobody's around?",
+      "options": ["The houseplants", "The TV, out loud", "The pet", "The car GPS"],
+      "tag": "quirks"
+    },
+    {
+      "id": 138,
+      "guess": "How does {name} handle really spicy food?",
+      "self": "How do you handle really spicy food?",
+      "options": [
+        "Asks for extra heat",
+        "Sweats but keeps going",
+        "Mild, thank you",
+        "Drinks a gallon of milk"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 139,
+      "guess": "What does {name} remember most about your first date?",
+      "self": "What do you remember most about our first date?",
+      "options": [
+        "The food we ordered",
+        "The nerves, so many nerves",
+        "Something funny that happened",
+        "How long we talked"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 140,
+      "guess": "What car would {name} drive in their dream life?",
+      "self": "What car would you drive in your dream life?",
+      "options": [
+        "A vintage convertible",
+        "A big off-road truck",
+        "A tiny electric car",
+        "A camper van"
+      ],
+      "tag": "dreams"
+    },
+    {
+      "id": 141,
+      "guess": "What does {name} always grab in the checkout line?",
+      "self": "What do you always grab in the checkout line?",
+      "options": ["A pack of gum", "A candy bar", "Nothing, strong willpower", "A cold drink"],
+      "tag": "money"
+    },
+    {
+      "id": 142,
+      "guess": "How does {name} like their eggs?",
+      "self": "How do you like your eggs?",
+      "options": [
+        "Scrambled and soft",
+        "Fried with a runny yolk",
+        "Boiled, nothing fancy",
+        "Only in an omelet"
+      ],
+      "tag": "food"
+    },
+    {
+      "id": 143,
+      "guess": "What does {name} sing to pets?",
+      "self": "What do you sing to pets?",
+      "options": [
+        "Made-up songs, always",
+        "Pop songs, new lyrics",
+        "Soft lullabies",
+        "Nothing, too shy"
+      ],
+      "tag": "music"
+    },
+    {
+      "id": 144,
+      "guess": "What toy did {name} beg for and never get?",
+      "self": "What toy did you beg for and never get?",
+      "options": ["A real pony", "A game console", "A backyard trampoline", "A remote control car"],
+      "tag": "past"
+    },
+    {
+      "id": 145,
+      "guess": "What job would {name} take if money didn't matter?",
+      "self": "What job would you take if money didn't matter?",
+      "options": ["A park ranger", "A chef", "A painter or artist", "A kindergarten teacher"],
+      "tag": "dreams"
+    },
+    {
+      "id": 146,
+      "guess": "What does {name} do with the free mints at a restaurant?",
+      "self": "What do you do with the free mints at a restaurant?",
+      "options": [
+        "Takes exactly one",
+        "Grabs a whole handful",
+        "Never touches them",
+        "Saves them for later"
+      ],
+      "tag": "quirks"
+    },
+    {
+      "id": 147,
+      "guess": "What does {name} splurge on without guilt?",
+      "self": "What do you splurge on without guilt?",
+      "options": [
+        "Fancy coffee drinks",
+        "Shoes, more shoes",
+        "Concert tickets",
+        "The newest gadgets"
+      ],
+      "tag": "money"
+    },
+    {
+      "id": 148,
+      "guess": "What does {name} do after a small argument?",
+      "self": "What do you do after a small argument?",
+      "options": [
+        "Makes a joke to break it",
+        "Needs a quiet hour",
+        "Talks it out right away",
+        "Brings a snack as peace"
+      ],
+      "tag": "us"
+    },
+    {
+      "id": 149,
+      "guess": "What's the last thing that made {name} cry?",
+      "self": "What's the last thing that made you cry?",
+      "options": [
+        "A sad movie scene",
+        "A dog video online",
+        "A song out of nowhere",
+        "A really bad day"
+      ],
+      "tag": "past"
+    },
+    {
+      "id": 150,
+      "guess": "Where does {name} usually find lost keys?",
+      "self": "Where do you usually find lost keys?",
+      "options": [
+        "In yesterday's pants pocket",
+        "Still in the front door",
+        "Under the couch cushions",
+        "In the bag already checked"
+      ],
+      "tag": "habits"
+    }
+  ]
+}

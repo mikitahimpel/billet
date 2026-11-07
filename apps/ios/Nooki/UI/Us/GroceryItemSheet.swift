@@ -1,4 +1,5 @@
 import SwiftUI
+import Design
 import Wire
 
 /// A long press on a grocery: its quantity or a note, another aisle, or delete. Saved when it closes.
@@ -22,6 +23,7 @@ struct GroceryItemSheet: View {
 
     var body: some View {
         let current = aisle ?? GroceryCatalog.bundled.aisle(for: item, history: state.us.groceries)
+        BilletSheet("Item", size: .fit) {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 14) {
                 UsIcon(glyph: current.icon, size: 50)
@@ -41,11 +43,9 @@ struct GroceryItemSheet: View {
             GrocerySectionLabel(title: "Aisle")
             WrapLayout(spacing: 8) {
                 ForEach(GroceryAisle.allCases) { choice in
-                    UsChip(title: choice.title, selected: choice == current) { aisle = choice }
+                    FilterChip(choice.title, isSelected: choice == current) { aisle = choice }
                 }
             }
-
-            Spacer(minLength: 24)
 
             Button(role: .destructive) {
                 deleted = true
@@ -58,11 +58,9 @@ struct GroceryItemSheet: View {
             .foregroundStyle(Color.red.opacity(0.85))
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
+            .padding(.top, Space.xl)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 28)
-        .padding(.bottom, 12)
-        .usSheet(detents: [.medium])
+        }
         .onDisappear(perform: save)
     }
 

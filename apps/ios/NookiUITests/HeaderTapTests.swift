@@ -44,4 +44,33 @@ final class HeaderTapTests: XCTestCase {
         }
         XCTAssertEqual(report.filter { !$0.contains("after 1 tap") }, [], report.joined(separator: "; "))
     }
+
+    @MainActor
+    func testHeaderIsOneRowAndTheRoomSwitchTapsOverTheRealRoom() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoHints", "YES"]
+        app.launch()
+
+        let coins = app.buttons["coins"]
+        XCTAssertTrue(coins.waitForExistence(timeout: 60))
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.otherElements["launch-splash"])
+        wait(for: [gone], timeout: 60)
+
+        let controls = [app.buttons["Inbox"], app.buttons["mood"], coins, app.buttons["Couple"]]
+        for control in controls {
+            XCTAssertEqual(control.frame.height, 44, accuracy: 1, "\(control.identifier) should be 44 pt tall")
+            XCTAssertEqual(control.frame.midY, controls[0].frame.midY, accuracy: 1, "the header controls share one row")
+        }
+
+        let city = app.buttons["roomSwitch.City"]
+        let room = app.buttons["roomSwitch.Room"]
+        XCTAssertTrue(city.waitForExistence(timeout: 10))
+        for (tap, selected) in [(city, city), (room, room)] {
+            tap.tap()
+            let isSelected = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: selected)
+            wait(for: [isSelected], timeout: 15)
+            XCTAssertTrue(app.buttons["coins"].exists, "the header stays while the room changes")
+        }
+    }
 }

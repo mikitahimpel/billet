@@ -65,6 +65,12 @@ export const CatGameId = Schema.String.check(Schema.isPattern(/^[a-z0-9-]{1,32}$
 );
 export type CatGameId = typeof CatGameId.Type;
 
+/**
+ * Draw-guess, the drawing riddle. The room journals its `GamePlayed` itself when a round ends,
+ * with the round's coins as `score`, and refuses one sent by an app.
+ */
+export const drawGuessGame = Schema.decodeSync(CatGameId)("draw-guess");
+
 /** The most a meal may weigh, in grams. */
 export const catMealMaxGrams = 500;
 
