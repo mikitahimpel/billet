@@ -5,6 +5,7 @@ import type { PairId } from "@billet/contracts-domain/pair-id";
 import { DemoPartnerRepository } from "@billet/backend-demo-partner/demo-partner-repository";
 import { FlagsService } from "@billet/backend-flags/flags-service";
 import { Metrics } from "@billet/backend-metrics/metrics";
+import { MediaStore } from "@billet/backend-notes/media-store";
 import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
 import { spanMethods } from "@billet/backend-observability/span-methods";
@@ -12,18 +13,19 @@ import { spanMethods } from "@billet/backend-observability/span-methods";
 /**
  * What the Worker does when pairing succeeds: gives the new pair its experiment variants (if that
  * fails, the first read of the flags does it) and counts the funnel steps, and opens the pair's room with who joined. When a pair ends, it
- * closes the room's open sockets, which the directory no longer lets reconnect.
+ * closes the room's sockets and deletes the room and the pair's images with it.
  */
 export const PairingObserverLive: Layer.Layer<
   PairingObserver,
   never,
-  FlagsService | Metrics | PairRooms | DemoPartnerRepository
+  FlagsService | Metrics | PairRooms | MediaStore | DemoPartnerRepository
 > = Layer.effect(
   PairingObserver,
   Effect.gen(function* () {
     const flags = yield* FlagsService;
     const metrics = yield* Metrics;
     const rooms = yield* PairRooms;
+    const media = yield* MediaStore;
     const demos = yield* DemoPartnerRepository;
     // A demo partner is a test fixture, not a person: its invite isn't counted, and its pair is
     // kept under its own name, out of the funnel. If the lookup fails, it counts as a person.
@@ -70,7 +72,10 @@ export const PairingObserverLive: Layer.Layer<
             ],
             { discard: true },
           ),
-        unpaired: (pairId) => rooms.endSessions(pairId).pipe(Effect.orDie),
+        unpaired: (pairId) =>
+          Effect.all([rooms.destroy(pairId), media.removeAll(pairId)], { discard: true }).pipe(
+            Effect.orDie,
+          ),
       }),
     );
   }),

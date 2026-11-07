@@ -129,6 +129,11 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       user: UserId,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
+    /**
+     * Deletes everything in the room, wallet included, and closes its sockets: the pair is over.
+     * Safe to repeat.
+     */
+    readonly destroy: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Closes the room's open sockets, as the pair has ended. Safe to repeat. */
     readonly endSessions: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Adopts the cat, or renames it. `natureSeed` is used only by the adoption. */

@@ -23,6 +23,8 @@ export class MediaStore extends Context.Service<
       pairId: PairId,
       uploader: UserId,
     ) => Effect.Effect<ReadonlyArray<MediaKey>, NotesUnavailable>;
+    /** Deletes every image under the couple's prefix, whoever uploaded it. Safe to repeat. */
+    readonly removeAll: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Deletes these images. A key that is already gone is fine. */
     readonly remove: (keys: ReadonlyArray<MediaKey>) => Effect.Effect<void, NotesUnavailable>;
   }

@@ -311,6 +311,14 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
           (key) => key.startsWith(mediaPrefix(pairId)) && uploaders.get(key) === uploader,
         ),
       ),
+    removeAll: (pairId) =>
+      Effect.sync(() => {
+        for (const key of [...objects.keys()]) {
+          if (!key.startsWith(mediaPrefix(pairId))) continue;
+          objects.delete(key);
+          uploaders.delete(key);
+        }
+      }),
     remove: (keys) =>
       Effect.sync(() => {
         for (const key of keys) {
@@ -351,6 +359,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    destroy: () => Effect.void,
     endSessions: () => Effect.void,
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
     recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),

@@ -1,5 +1,6 @@
 import {
   createExecutionContext,
+  evictDurableObject,
   runInDurableObject,
   waitOnExecutionContext,
 } from "cloudflare:test";
@@ -508,6 +509,30 @@ describe("the Api Worker", () => {
 
     expect((await claimWith(owner, await inviteFrom(claimer))).status).toBe(200);
     expect(await pairRows()).toHaveLength(2);
+  });
+
+  it("deletes the room and the pair's images on unpair, for both partners", async () => {
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const ownerNote = await sentPhoto(owner);
+    const claimerNote = await sentPhoto(claimer);
+    const unsent = await uploaded(owner);
+    const room = env.PAIR_ROOM.getByName(pairId);
+    expect(await room.notes(0, 10)).toHaveLength(2);
+
+    const unpair = await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) });
+    expect(unpair.status).toBe(204);
+
+    for (const key of [ownerNote.image, claimerNote.image, unsent]) {
+      expect(await env.MEDIA.head(key)).toBeNull();
+    }
+    expect((await env.MEDIA.list({ prefix: `pairs/${pairId}/` })).objects).toEqual([]);
+    await evictDurableObject(room);
+    expect(await room.notes(0, 10)).toEqual([]);
+    // Both partners now answer as unpaired.
+    for (const token of [owner, claimer]) {
+      const notes = await call("/v1/notes", { method: "GET", headers: bearer(token) });
+      expect(notes.status).toBe(404);
+    }
   });
 
   it.each([

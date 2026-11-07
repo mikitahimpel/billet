@@ -179,6 +179,9 @@ export class PairRoom extends DurableObject {
     Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
   );
 
+  /** Set by `destroy`: the room's tables are gone, so the close of its sockets has nothing to settle. */
+  private destroyed = false;
+
   private readonly frameWindows = new WeakMap<WebSocket, FrameWindow>();
 
   private readonly runtime = this.database.then((database) =>
@@ -1035,6 +1038,18 @@ export class PairRoom extends DurableObject {
   }
 
   /**
+   * The pair has ended and the room goes with it: closes every socket and deletes all the room's
+   * storage, the notes, cat, shop and wallet, and the alarm. Safe to repeat. The object is empty
+   * from then on; an instance still in memory can't be used until it is evicted.
+   */
+  async destroy(): Promise<void> {
+    this.destroyed = true;
+    await this.endSessions();
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+  }
+
+  /**
    * Closes every open socket and stills a demo pair's bot: the pair has ended, and the Worker
    * won't route a new one here.
    */
@@ -1302,6 +1317,7 @@ export class PairRoom extends DurableObject {
    * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
    */
   override async webSocketClose(socket: WebSocket, code: number): Promise<void> {
+    if (this.destroyed) return;
     // Presence and open strokes are settled before the early return below: a dropped phone takes
     // that return.
     this.dropOpenStrokes(socket);
