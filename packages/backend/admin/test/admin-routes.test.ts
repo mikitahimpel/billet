@@ -23,6 +23,8 @@ import { makeInMemoryAppStatusStore } from "./in-memory-app-status-store.ts";
 import { makeInMemoryFunnelStore } from "./in-memory-funnel-store.ts";
 import { FunnelStore } from "../src/funnel-store.ts";
 import { AnalyticsEngineReader } from "../src/analytics-engine-reader.ts";
+import { InMemoryShopArt } from "@billet/backend-shop/test/in-memory-shop-art";
+import { InMemoryShopStore } from "@billet/backend-shop/test/in-memory-shop-store";
 
 const experiments = defineExperiments([
   {
@@ -66,6 +68,8 @@ let configs = makeInMemoryFlagConfigRepository();
 let assignments = makeInMemoryFlagsRepository();
 let appStatus = makeInMemoryAppStatusStore();
 const funnels = makeInMemoryFunnelStore();
+// One layer, so the handlers of every owner see the same items.
+const shopStore = InMemoryShopStore();
 
 const handlerFor = (email: string) =>
   HttpRouter.toWebHandler(
@@ -79,6 +83,8 @@ const handlerFor = (email: string) =>
           Layer.provideMerge(
             Layer.mergeAll(
               Layer.succeed(PairingRepository, pairing.repository),
+              shopStore,
+              InMemoryShopArt(),
               Layer.succeed(FlagsRepository, {
                 find: (pairId) => assignments.repository.find(pairId),
                 saveMissing: (pairId, rows) => assignments.repository.saveMissing(pairId, rows),
@@ -659,5 +665,104 @@ describe("onboarding", () => {
       options: [{ id: "grey", label: "grey", count: 1 }],
     });
     expect((await call(adminApi.onboarding, "POST", {})).status).toBe(404);
+  });
+});
+
+describe("the shop catalog", () => {
+  const item = (id: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    kind: "decor",
+    name: "Paper Moon",
+    rarity: "rare",
+    price: 200,
+    section: "decor",
+    sortOrder: 500,
+    asset: { _tag: "Bundled", id: "moon" },
+    ...extra,
+  });
+
+  it("lists the seeded items with their state", async () => {
+    const { status, body } = await call(adminApi.shopItems);
+    expect(status).toBe(200);
+    expect(body.items).toHaveLength(18);
+    expect(body.items[0]).toMatchObject({ active: true, version: 1, updatedBy: "migration" });
+  });
+
+  it("creates an item under the Access email, refuses a reused id and a bad sale", async () => {
+    const made = await call(adminApi.shopItems, "POST", { item: item("paper-moon"), active: true });
+    expect(made.status).toBe(201);
+    expect(made.body).toMatchObject({ version: 1, createdBy: "owner@example.com" });
+    expect(
+      (await call(adminApi.shopItems, "POST", { item: item("paper-moon"), active: true })).status,
+    ).toBe(409);
+    const badSale = item("paper-sun", { sale: { price: 250, from: 1, until: 2 } });
+    const refused = await call(adminApi.shopItems, "POST", { item: badSale, active: true });
+    expect(refused.status).toBe(400);
+    expect(refused.body.message).toMatch(/sale/i);
+  });
+
+  it("saves with the version read, keeps each save in the history, and refuses a stale one", async () => {
+    const path = adminApi.shopItem.replace(":id", "paper-moon");
+    const saved = await call(path, "PUT", {
+      item: item("paper-moon", { price: 150 }),
+      active: false,
+      expectedVersion: 1,
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body).toMatchObject({ version: 2, active: false });
+    const stale = await call(path, "PUT", {
+      item: item("paper-moon"),
+      active: true,
+      expectedVersion: 1,
+    });
+    expect(stale.status).toBe(409);
+    expect(stale.body.current).toBe(2);
+    const { body } = await call(adminApi.shopHistory);
+    expect(body.changes[0]).toMatchObject({
+      itemId: "paper-moon",
+      by: "owner@example.com",
+      action: "deactivate",
+    });
+    expect(body.changes[0].before.price).toBe(200);
+    expect(body.changes[0].after.price).toBe(150);
+  });
+
+  it("refuses to change an id and answers 404 for an unknown item", async () => {
+    const wrongId = await call(adminApi.shopItem.replace(":id", "paper-moon"), "PUT", {
+      item: item("other"),
+      active: true,
+      expectedVersion: 2,
+    });
+    expect(wrongId.status).toBe(400);
+    const missing = await call(adminApi.shopItem.replace(":id", "ghost"), "PUT", {
+      item: item("ghost"),
+      active: true,
+      expectedVersion: 1,
+    });
+    expect(missing.status).toBe(404);
+  });
+
+  it("reorders the listed items first and leaves the others", async () => {
+    const { body } = await call(adminApi.shopOrder, "PUT", {
+      ids: ["paper-moon", "armchair", "nope"],
+    });
+    expect(body.items.map((entry: { item: { id: string } }) => entry.item.id).slice(0, 2)).toEqual([
+      "paper-moon",
+      "armchair",
+    ]);
+    expect(body.items[0].item.sortOrder).toBe(10);
+  });
+
+  it("stores a picture under a hash of its bytes, and refuses anything that is not an image", async () => {
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
+    const ok = await owner.handler(
+      new Request("https://api.billet.test/admin/api/shop-art", { method: "POST", body: png }),
+    );
+    expect(ok.status).toBe(201);
+    expect(((await ok.json()) as { key: string }).key).toMatch(/^[0-9a-f]{16}\.png$/);
+    const text = await owner.handler(
+      new Request("https://api.billet.test/admin/api/shop-art", { method: "POST", body: "hello" }),
+    );
+    expect(text.status).toBe(400);
   });
 });

@@ -27,7 +27,8 @@
     "./reaction": "./src/reaction.ts",
     "./riddle": "./src/riddle.ts",
     "./riddle-words": "./src/riddle-words.ts",
-    "./shop": "./src/shop.ts"
+    "./shop": "./src/shop.ts",
+    "./shop-catalog": "./src/shop-catalog.ts"
   },
   "scripts": {
     "lint": "oxlint .",

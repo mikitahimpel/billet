@@ -1,0 +1,16 @@
+{
+  "asset": {
+    "_tag": "Bundled",
+    "id": "armchair"
+  },
+  "blurb": "Big enough for two and a cat who insists.",
+  "id": "armchair",
+  "isNew": true,
+  "kind": "furniture",
+  "mood": "Rested",
+  "name": "Cloud Armchair",
+  "price": 320,
+  "rarity": "epic",
+  "section": "furniture",
+  "sortOrder": 10
+}

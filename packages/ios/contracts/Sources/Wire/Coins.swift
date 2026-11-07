@@ -37,10 +37,14 @@ public struct CoinsResponse: Codable, Hashable, Sendable {
 public struct BuyRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let item: InkId
+  /// The price the buyer saw. A server price above it is refused with `priceChanged`; a lower one
+  /// is charged.
+  public let expectedPrice: Int?
 
-  public init(id: IdempotencyKey, item: InkId) {
+  public init(id: IdempotencyKey, item: InkId, expectedPrice: Int? = nil) {
     self.id = id
     self.item = item
+    self.expectedPrice = expectedPrice
   }
 }
 
