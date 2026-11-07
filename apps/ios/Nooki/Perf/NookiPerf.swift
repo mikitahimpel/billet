@@ -1,7 +1,28 @@
+import Design
 import PetScene
 import RealityKit
 import Synchronization
 import UIKit
+
+/// The header and the tab bar as a perf run shows them: the glass they ship with, the same controls opaque with a
+/// shadow, flat with none, or no bars at all. `-perf.hud opaque|flat|hidden` picks one for a whole run; a `cost` run
+/// switches from that one to the others.
+enum HUDArm: String {
+    case glass
+    case opaque
+    case flat
+    case hidden
+
+    static let launch = HUDArm(rawValue: UserDefaults.standard.string(forKey: "perf.hud") ?? "") ?? .glass
+
+    var glass: GlassRendering {
+        switch self {
+        case .glass, .hidden: .liquid
+        case .opaque: .opaque
+        case .flat: .flat
+        }
+    }
+}
 
 /// Nooki's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
 /// is the scene a run drives, and the tabs are the ones it switches. Silent without the launch argument.
@@ -11,8 +32,10 @@ import UIKit
 @MainActor
 enum NookiPerf {
     /// Starts the frame recorder and the script, and says how to switch tabs. Once, at launch.
-    static func start(state: HomeState) {
+    static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
+                      sheetGround: @escaping (SheetGroundStyle) -> Void) {
         guard ScenePerf.isOn else { return }
+        setHUD = hud
         seedMoments(state.moments)
         var host = ScenePerf.Host()
         host.lightings = []
@@ -27,10 +50,15 @@ enum NookiPerf {
             }
         }
         host.scroll = { y in scrolls[state.tab]?(y) }
-        host.covers = ["drawing", "inbox"]
+        // The profile sheet is Settings' way in: today's opaque sheet over the live room, the same with the room
+        // paused under it, and a glass one, so the room's cost under a sheet and the glass's come apart.
+        host.covers = ["drawing", "inbox", "sheet", "sheet.paused", "sheet.glass"]
         host.setCover = { name in
             state.drawing = name == "drawing"
             state.showsInbox = name == "inbox"
+            sheetGround(name == "sheet.glass" ? .glass : .opaque)
+            current?.paused = name == "sheet.paused"
+            state.showsProfile = name?.hasPrefix("sheet") == true
         }
         ScenePerf.host = host
         ScenePerf.start()
@@ -39,6 +67,10 @@ enum NookiPerf {
     /// Scrolls each tab's page that a run can scroll (the Shop, the Moments feed), while it is on screen; a run
     /// scrolls the one shown to measure its frames.
     static var scrolls: [HomeTab: (Double) -> Void] = [:]
+
+    private static var setHUD: (HUDArm) -> Void = { _ in }
+    /// The room on screen, for the covers and switches that pause it.
+    private static weak var current: CatRoom?
 
     /// Photos a run's Moments feed scrolls through, made once on a phone that has fewer. The first run after an
     /// install (measure.sh's warm-up) pays for them, so every measured run starts with the same feed.
@@ -80,6 +112,7 @@ enum NookiPerf {
     }
 
     private static func register(_ room: CatRoom, kind: RoomKind) {
+        current = room
         ScenePerf.shown(
             .init(
                 name: kind == .city ? "city room" : "room",
@@ -91,10 +124,20 @@ enum NookiPerf {
                     return "kind=\(kind == .city ? "city" : "room") skin_passes=\(skin.passes) skin_skipped=\(skin.skipped)"
                         + " skin_ms=\(String(format: "%.2f", skin.milliseconds))"
                 },
-                switches: ["cat shadow", "room shadows", "sun shadow", "point lights", "particles", "bloom"],
+                // The arms of the glass-over-the-room comparison, each off against the run's launch arm: "glass hud"
+                // off is the opaque header and tab bar, "hud shadow" off the flat one, "hud" off none, and "room
+                // paused" off stops the room drawing under them.
+                switches: ["cat shadow", "room shadows", "sun shadow", "point lights", "particles", "bloom",
+                           "glass hud", "hud shadow", "hud", "room paused"],
                 setSwitch: { name, isOn in
-                    if name == "cat shadow" { return room.setCatShadow(isOn) }
-                    RoomSwitches.set(name, isOn, in: room)
+                    switch name {
+                    case "cat shadow": room.setCatShadow(isOn)
+                    case "glass hud": setHUD(isOn ? .launch : .opaque)
+                    case "hud shadow": setHUD(isOn ? .launch : .flat)
+                    case "hud": setHUD(isOn ? .launch : .hidden)
+                    case "room paused": room.paused = !isOn
+                    default: RoomSwitches.set(name, isOn, in: room)
+                    }
                 }
             ))
     }

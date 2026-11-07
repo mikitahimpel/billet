@@ -352,7 +352,9 @@ public enum ScenePerf {
     await pause(1.5)
     let frames = recorder.endPhase()
     let took = reached.map { format($0 - start) } ?? "timeout"
-    emit("timing \(name) ms=\(took) \(frames)")
+    // The memory in use once the switch has settled: what the screen left behind still holds.
+    let mb = format(Recorder.footprint() / 1_048_576)
+    emit("timing \(name) ms=\(took) mb=\(mb) \(frames)")
   }
 
   private static func record(

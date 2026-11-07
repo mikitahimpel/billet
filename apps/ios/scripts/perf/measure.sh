@@ -19,6 +19,8 @@
 # --steady N    runs of `-perf.script steady`: Home left alone, then a minute of it (default 0)
 # --build-only  build, then stop
 #
+# PERF_APP_ARGS="-perf.hud opaque" adds launch arguments to every measured run, the same for every build.
+#
 # Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
 # only fair comparison on a shared Mac:
 #   PERF_DERIVED=<a>/build-perf measure.sh base --launches 3 --full 1   # then the same for new,
@@ -134,6 +136,7 @@ room=${PERF_ROOM:-room}
 [[ $room == room || $room == city ]] || { echo "PERF_ROOM must be room or city, not $room" >&2; exit 2; }
 room_args=()
 [[ $room == city ]] && room_args=(-room city)
+app_args=(${=PERF_APP_ARGS:-})
 
 # One run of the app with a script. Prints screenshots when the run asks for them.
 attempt() {
@@ -143,7 +146,7 @@ attempt() {
   python3 -c 'import time; time.sleep(1.5)'
   local only=()
   [[ -n ${PERF_SWITCHES:-} ]] && only=(-perf.switches $PERF_SWITCHES)
-  xcrun simctl launch --console-pty $udid $bundle -onboardingDone YES $room_args -perf.script $script $only \
+  xcrun simctl launch --console-pty $udid $bundle -onboardingDone YES $room_args $app_args -perf.script $script $only \
     > $log 2>&1 &
   local pid=$! started=$SECONDS
   while ! grep -q '^PERF done' $log 2>/dev/null; do
