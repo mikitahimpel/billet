@@ -58,6 +58,12 @@ struct HomeView: View {
     }
     /// The room is mounted only while it can be seen.
     private var roomOnScreen: Bool { showsRoom && !roomCovered }
+    /// The room is frozen while another tab or a cover of the app's own hides it; under a system alert (the app
+    /// inactive) it stays live, since the snapshot is skipped then and a frozen root draws nothing.
+    private var roomFrozen: Bool {
+        !showsRoom || state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile
+            || coinsShown != nil
+    }
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
@@ -88,10 +94,10 @@ struct HomeView: View {
                 // skipped, its drawables are never handed back, and every frame waits a second for one (#417);
                 // unmounted, the way back is a new view and a 0.6–1.5 s frame. Frozen, coming back is one frame,
                 // under the snapshot.
-                DioramaView(scene: scene, paused: !roomOnScreen || corner != nil, petPulse: state.care.petPulse) {
+                DioramaView(scene: scene, paused: roomFrozen || corner != nil, petPulse: state.care.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
-                .frame(width: roomOnScreen ? nil : 1, height: roomOnScreen ? nil : 1)
+                .frame(width: roomFrozen ? 1 : nil, height: roomFrozen ? 1 : nil)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .allowsHitTesting(roomOnScreen && state.game == nil)
                 .modifier(RoomTapCounter())
