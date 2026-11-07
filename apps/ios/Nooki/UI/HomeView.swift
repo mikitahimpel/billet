@@ -334,14 +334,7 @@ struct HomeView: View {
                 model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner), coinPacks: coinPacks)
         }
         .task { await DrawingSync.watchLiveActivities() }
-        .task {
-            guard coinPacks == nil, let payments = session?.payments else { return }
-            let shop = state.shop
-            coinPacks = CoinPacksModel(payments: payments) {
-                await shop.refresh()
-                await shop.loadHistory()
-            }
-        }
+        .task { loadCoinPacks() }
         .task(id: session?.isPaired) { await followPair() }
         // A new photo, or one that failed to go earlier, goes to the partner.
         .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
@@ -353,6 +346,16 @@ struct HomeView: View {
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
+        }
+    }
+
+    /// Its own method: inline in `body`, the closure tips the Release type-checker over its time limit on Xcode 26.
+    private func loadCoinPacks() {
+        guard coinPacks == nil, let payments = session?.payments else { return }
+        let shop = state.shop
+        coinPacks = CoinPacksModel(payments: payments) {
+            await shop.refresh()
+            await shop.loadHistory()
         }
     }
 
