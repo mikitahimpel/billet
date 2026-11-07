@@ -240,12 +240,44 @@ final class ServerSession {
     /// Dev server only: ends the pair with the bot partner and deletes it.
     func removeDemoPartner() async throws(TransportError) {
         try await backend.api.removeDemoPartner()
+        pairEnded()
+        demoPartner = false
+    }
+
+    /// Ends the pair on the server. What each phone saved of the couple stays on that phone.
+    func unpair() async throws(TransportError) {
+        try await backend.api.unpair()
+        pairEnded()
+    }
+
+    /// Ends the pair on the server for good: the two can't pair again.
+    func blockPartner() async throws(TransportError) {
+        try await backend.api.blockPartner()
+        pairEnded()
+    }
+
+    func reportPartner(_ reason: ReportReason, details: String?) async throws(TransportError) {
+        try await backend.api.reportPartner(ReportPartnerRequest(reason: reason, details: details))
+    }
+
+    /// Deletes the account on the server, then forgets the session and the account key on this phone, so the next
+    /// launch is a first launch. A retry after a lost answer is refused as unauthorized, which means it is gone.
+    func deleteAccount() async throws(TransportError) {
+        do {
+            try await backend.api.deleteAccount(DeleteAccountRequest())
+        } catch {
+            guard error == .api(.unauthorized) else { throw error }
+        }
+        try? backend.accounts.clear()
+        try? backend.keys.clear()
+    }
+
+    private func pairEnded() {
         try? backend.accounts.setPaired(false, nil)
         isPaired = false
         reactions = nil
         whoKnows = Self.whoKnowsModel(backend, paired: false)
         drawGuess = Self.drawGuessModel(backend, paired: false)
-        demoPartner = false
     }
 
     /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.

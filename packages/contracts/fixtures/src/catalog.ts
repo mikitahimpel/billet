@@ -24,6 +24,7 @@ import { PairId } from "@billet/contracts-domain/pair-id";
 import { PushToken } from "@billet/contracts-domain/push-token";
 import { AccountResponse, DeleteAccountRequest } from "@billet/contracts-http-api/account";
 import { ApiError } from "@billet/contracts-http-api/api-error";
+import { ReportPartnerRequest } from "@billet/contracts-http-api/safety";
 import {
   AccountKey,
   AuthChallengeResponse,
@@ -1110,6 +1111,10 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("DeleteAccountRequest", DeleteAccountRequest, {
     anonymous: {},
     linked: { appleAuthorizationCode: "c0ffee.0.abcd.code" },
+  }),
+  fixture("ReportPartnerRequest", ReportPartnerRequest, {
+    reason: { reason: "spam" },
+    "with-details": { reason: "harassment", details: "Keeps sending me messages I asked to stop." },
   }),
   fixture("SessionResponse", SessionResponse, {
     default: { sessionToken, expiresAt: 1_707_776_000_000, userId: alice, deviceId },

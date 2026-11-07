@@ -5,9 +5,9 @@ import SwiftUI
 import Design
 import WidgetBridge
 
-/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account, the window, then support,
-/// privacy and what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on
-/// this phone stands in for account deletion until it has its own row.
+/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account and its delivery health,
+/// the partner, the window, then support, privacy and what's installed. The account is anonymous and needs no sign-in
+/// (see `AccountRow`). Labs and Testing show only in a debug or TestFlight build.
 struct SettingsView: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over.
@@ -56,6 +56,10 @@ struct SettingsView: View {
                 GroupedSection(header: "Account") {
                     AccountRow(state: session.signIn.state, retry: session.signIn.retry)
                 }
+                DeliveryHealthSection()
+                PartnerAndAccountSections(session: session, erase: erase)
+            } else {
+                DeliveryHealthSection()
             }
 
             GroupedSection(header: "Window",
@@ -90,7 +94,7 @@ struct SettingsView: View {
                 .buttonStyle(PressScaleStyle())
             }
 
-            if let session, let demo = session.demoPartner {
+            if BuildFlavor.showsLabs, let session, let demo = session.demoPartner {
                 GroupedSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
                     Button { Task { await switchDemoPartner(session, paired: demo) } } label: {
                         Row(demo ? "Remove demo partner" : "Pair with a demo partner",
@@ -103,22 +107,31 @@ struct SettingsView: View {
                 }
             }
 
-            GroupedSection(header: "Labs",
-                         footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
-                             + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
-                             + "both on this phone, whatever the test gave your pair.") {
-                ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
-                ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
-                ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
-                               isOn: $showAllHints)
-                NavigationLink { StyleGallery() } label: {
-                    Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
-                }
-                .buttonStyle(PressScaleStyle())
-                PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
-                    Text("Follow the test").tag(RoomsVariant?.none)
-                    ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+            if BuildFlavor.showsLabs {
+                GroupedSection(header: "Labs",
+                             footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
+                                 + "card shows what the brain has her doing and why: her state, needs and the last thing she "
+                                 + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                                 + "both on this phone, whatever the test gave your pair.") {
+                    ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
+                    ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
+                    ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
+                                   isOn: $showAllHints)
+                    NavigationLink { StyleGallery() } label: {
+                        Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
+                        Text("Follow the test").tag(RoomsVariant?.none)
+                        ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+                    }
+                    Button {
+                        state.showcaseRequested = true
+                        state.showsProfile = false
+                    } label: {
+                        Row("Play all animations", symbol: "play.fill", tint: UsTint.sage.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
                 }
             }
 
