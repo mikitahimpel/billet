@@ -70,13 +70,20 @@ describe("set price", () => {
 describe("offer", () => {
   const decode = Schema.decodeUnknownSync(ShopOffer);
 
-  it("names only what the catalog sells", () => {
+  // Items and inks come from the admin's catalog, so any well-formed id decodes and the room
+  // refuses one it does not sell; sets are still the app's own.
+  it("takes any well-formed item or ink and only the known sets", () => {
     expect(decode({ _tag: "Item", item: "lamp" })).toEqual({ _tag: "Item", item: "lamp" });
+    expect(decode({ _tag: "Item", item: "throne" })).toEqual({ _tag: "Item", item: "throne" });
+    expect(decode({ _tag: "Ink", ink: "ink-unknown" })).toEqual({
+      _tag: "Ink",
+      ink: "ink-unknown",
+    });
     expect(decode({ _tag: "Treat" })).toEqual({ _tag: "Treat" });
     for (const bad of [
-      { _tag: "Item", item: "throne" },
+      { _tag: "Item", item: "Throne!" },
       { _tag: "Set", set: "free-stuff" },
-      { _tag: "Ink", ink: "ink-unknown" },
+      { _tag: "Ink", ink: "unknown" },
     ]) {
       expect(() => decode(bad), JSON.stringify(bad)).toThrow();
     }
