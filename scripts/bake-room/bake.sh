@@ -4,7 +4,7 @@
 #   scripts/bake-room/bake.sh [room|city ...] [--skip-export] [--samples N] [--size N]
 #
 # 1. The app's BakedShellTests.export builds each room with its static parts tagged and writes their shapes,
-#    transforms and materials to shells/*.json (xcodebuild test on a Simulator; skipped with --skip-export).
+#    transforms and materials to shells/*.shapes (xcodebuild test on a Simulator; skipped with --skip-export).
 # 2. Blender (Cycles, headless) merges them, unwraps one atlas, bakes the light and writes the USDZ.
 # 3. scripts/bake-room/sources.json records what each shell was baked from; BakedShellTests fails when a room's
 #    static boxes no longer match it.
@@ -55,16 +55,16 @@ for devices in json.load(sys.stdin)["devices"].values():
     -destination "platform=iOS Simulator,id=$udid" -only-testing:NookiTests/BakedShellTests/export\(\) \
     -derivedDataPath $work/derived CODE_SIGNING_ALLOWED=NO -quiet
   give_lock
-  cp $work/*.json $here/shells/
+  cp $work/*.json $here/shells/ && for f in $here/shells/*.json; do mv $f ${f%.json}.shapes; done
 fi
 
 for room in $rooms; do
   name=$names[$room]
-  [[ -f $here/shells/$name.json ]] || { echo "shells/$name.json is missing: run without --skip-export" >&2; exit 1; }
+  [[ -f $here/shells/$name.shapes ]] || { echo "shells/$name.shapes is missing: run without --skip-export" >&2; exit 1; }
   extra=()
   [[ $room == room ]] && extra=(--furniture $repo/apps/ios/Nooki/Resources/Room/Room_furniture.usdz)
   take_lock
-  perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $here/shells/$name.json $work/$name.usdz \
+  perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $here/shells/$name.shapes $work/$name.usdz \
     --size $size --samples $samples ${=BAKE_ARGS:-} $extra
   give_lock
   cp $work/$name.usdz $repo/apps/ios/Nooki/Resources/Room/$name.usdz

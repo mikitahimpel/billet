@@ -39,7 +39,7 @@ is unchanged; the baked shell is a second path chosen at runtime. Background and
 `scripts/bake-room/bake.sh [room|city] [--skip-export]` (one command, under the build lock):
 
 1. `BakedShellTests.export` builds each room with its static parts tagged and writes their shapes, transforms and
-   materials to `scripts/bake-room/shells/*.json` (one source: the Swift code).
+   materials to `scripts/bake-room/shells/*.shapes` (one source: the Swift code).
 2. `bake_shell.py` in headless Blender rebuilds the shapes with few triangles, merges them, unwraps one atlas, bakes
    Cycles light (sun, window, lamp, candle, sky, with the Room's furniture as a shadow caster) and writes a USDZ
    with one JPEG lightmap, 2048².
