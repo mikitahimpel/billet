@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// The gold coin. A dark ring keeps it apart from honey buttons and the coin pill, and from any dark surface.
 public struct CoinIcon: View {
   var size: CGFloat
 
@@ -7,16 +8,23 @@ public struct CoinIcon: View {
 
   public var body: some View {
     ZStack {
-      Circle()
-        .fill(
-          LinearGradient(
-            colors: [Color(hex: 0xFFE07A), Color(hex: 0xF0A92E)], startPoint: .top,
-            endPoint: .bottom))
+      Circle().fill(Palette.coinFace.color)
       Image(systemName: "star.fill")
         .font(.system(size: size * 0.42, weight: .bold))
-        .foregroundStyle(Color(hex: 0xC97C14))
+        .foregroundStyle(Ink.heroInk)
     }
     .frame(width: size, height: size)
+    .overlay { Circle().strokeBorder(Palette.coinRing.color, lineWidth: max(1.25, size * 0.09)) }
     .accessibilityHidden(true)
   }
+}
+
+#Preview("Coin") {
+  HStack(spacing: Space.l) {
+    CoinIcon(size: 24)
+    PriceButton(120) {}
+    Text("Honey").padding(Space.m).background(Color.honey, in: .capsule)
+  }
+  .padding(Space.gutter)
+  .background(Ink.screen)
 }

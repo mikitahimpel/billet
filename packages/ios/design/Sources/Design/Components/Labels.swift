@@ -6,11 +6,11 @@ public struct EmptyState<Actions: View>: View {
   let symbol: String
   let title: String
   let text: String?
-  let tint: Color
+  let tint: Color?
   let actions: Actions
 
   public init(
-    symbol: String, title: String, text: String? = nil, tint: Color = .honey,
+    symbol: String, title: String, text: String? = nil, tint: Color? = nil,
     @ViewBuilder actions: () -> Actions
   ) {
     self.symbol = symbol
@@ -44,7 +44,7 @@ public struct EmptyState<Actions: View>: View {
 }
 
 extension EmptyState where Actions == EmptyView {
-  public init(symbol: String, title: String, text: String? = nil, tint: Color = .honey) {
+  public init(symbol: String, title: String, text: String? = nil, tint: Color? = nil) {
     self.init(symbol: symbol, title: title, text: text, tint: tint) { EmptyView() }
   }
 }
@@ -53,11 +53,11 @@ extension EmptyState where Actions == EmptyView {
 public struct SectionHeader<Trailing: View>: View {
   let title: String
   let symbol: String?
-  let tint: Color
+  let tint: Color?
   let trailing: Trailing
 
   public init(
-    _ title: String, symbol: String? = nil, tint: Color = .honey,
+    _ title: String, symbol: String? = nil, tint: Color? = nil,
     @ViewBuilder trailing: () -> Trailing
   ) {
     self.title = title
@@ -71,7 +71,7 @@ public struct SectionHeader<Trailing: View>: View {
       if let symbol {
         Image(systemName: symbol)
           .font(.nookiCallout.weight(.semibold))
-          .foregroundStyle(tint)
+          .foregroundStyle(tint ?? Ink.accentText)
           .accessibilityHidden(true)
       }
       Text(title)
@@ -87,7 +87,7 @@ public struct SectionHeader<Trailing: View>: View {
 }
 
 extension SectionHeader where Trailing == EmptyView {
-  public init(_ title: String, symbol: String? = nil, tint: Color = .honey) {
+  public init(_ title: String, symbol: String? = nil, tint: Color? = nil) {
     self.init(title, symbol: symbol, tint: tint) { EmptyView() }
   }
 }

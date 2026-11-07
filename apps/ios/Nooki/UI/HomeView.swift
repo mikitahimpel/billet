@@ -148,7 +148,6 @@ struct HomeView: View {
             if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
         }
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
-        .simultaneousGesture(roomSwipe)
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             if state.tab == .world, state.game == nil {
@@ -269,6 +268,7 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
+        .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in
             switch phase {
             case .active:
@@ -378,20 +378,6 @@ struct HomeView: View {
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
         #endif
         reportOpened(state.room)
-    }
-
-    /// Swiping the scene sideways visits the other room; a swipe that starts in the header or the tab bar, or that
-    /// is mostly vertical, is something else's.
-    private var roomSwipe: some Gesture {
-        DragGesture(minimumDistance: 40).onEnded { drag in
-            guard state.tab == .world, state.game == nil, !launching, hasRoomChoice,
-                  abs(drag.translation.width) > 80, abs(drag.translation.width) > abs(drag.translation.height) * 1.5,
-                  drag.startLocation.y > 120, drag.startLocation.y < height - 150 else { return }
-            let kinds = state.rooms.variant.kinds
-            guard let index = kinds.firstIndex(of: state.room) else { return }
-            let target = drag.translation.width < 0 ? index + 1 : index - 1
-            if kinds.indices.contains(target) { select(kinds[target]) }
-        }
     }
 
     /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
