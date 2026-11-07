@@ -1,4 +1,6 @@
+import FeatureShop
 import Foundation
+import ShopInterface
 import Synchronization
 import Testing
 import Transport

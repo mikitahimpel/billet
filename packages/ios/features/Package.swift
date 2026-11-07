@@ -31,6 +31,7 @@ let widgetBridge: Target = .target(
 )
 
 let tests: [(name: String, dependencies: [String])] = [
+  ("FeatureShopTests", ["FeatureShop", "ShopInterface", "Transport", "Wire"]),
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
@@ -43,7 +44,15 @@ let tests: [(name: String, dependencies: [String])] = [
 // game puts in the cat's journal.
 let games: Target = .target(name: "FeatureGames", dependencies: dependencies(["Wire"]))
 
-let products = features + ["WidgetBridge", "FeatureGames"]
+// Coins and Shop: the interface other features see (value types, protocols) and the feature itself
+// (the machine, its store, the server client). docs/ios-architecture.md.
+let shopInterface: Target = .target(name: "ShopInterface", dependencies: dependencies(["Wire"]))
+let shop: Target = .target(
+  name: "FeatureShop",
+  dependencies: dependencies(["ShopInterface", "BilletKit", "Transport", "Wire"])
+)
+
+let products = features + ["WidgetBridge", "FeatureGames", "ShopInterface", "FeatureShop"]
 
 let package = Package(
   name: "BilletFeatures",
@@ -55,7 +64,7 @@ let package = Package(
     .package(path: "../pet"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
-    + [widgetBridge, games]
+    + [widgetBridge, games, shopInterface, shop]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]
 )
