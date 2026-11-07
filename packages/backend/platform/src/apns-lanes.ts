@@ -189,7 +189,10 @@ const sendToAll = async (
   const results = await Promise.all(
     tokens.map(async ({ token, environment }) => {
       const result = await deps.send({ token, environment, pushType, body, collapseId });
-      if (result._tag === "Unregistered") await deps.dropToken(token, kind);
+      if (result._tag === "Unregistered") {
+        // A failed delete must not lose the other devices' results; the next dead answer drops it.
+        await deps.dropToken(token, kind).catch(() => undefined);
+      }
       return result;
     }),
   );
