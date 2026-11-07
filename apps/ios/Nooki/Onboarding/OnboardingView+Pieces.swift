@@ -69,13 +69,6 @@ extension OnboardingView {
         .rowCell()
     }
 
-    func inviteMessage(_ code: String) -> String {
-        guard let link = inviteBase?.appending(path: "i/\(code)") else {
-            return String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")
-        }
-        return String(localized: "Join me in Nooki! \(link.absoluteString) or enter my code: \(code)")
-    }
-
     @ViewBuilder var bottomBar: some View {
         if flow.page != .stopped {
             Button(action: primaryTapped) {

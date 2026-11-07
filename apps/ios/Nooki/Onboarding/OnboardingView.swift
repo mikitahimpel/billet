@@ -377,6 +377,13 @@ struct OnboardingView: View {
             }
         }
     }
+
+    private func inviteMessage(_ code: String) -> String {
+        guard let link = inviteBase?.appending(path: "i/\(code)") else {
+            return String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")
+        }
+        return String(localized: "Join me in Nooki! \(link.absoluteString) or enter my code: \(code)")
+    }
 }
 
 /// A step's title: large, rounded, wrapping, and a header for VoiceOver.
