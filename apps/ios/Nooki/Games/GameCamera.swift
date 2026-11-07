@@ -81,6 +81,13 @@ final class GameCamera {
         }
     }
 
+    /// Lets go at once, for a camera nothing else steers.
+    func cancel() {
+        subscription?.cancel()
+        subscription = nil
+        onGone = nil
+    }
+
     /// Eases back to the room's own camera, then calls `done`.
     func release(_ done: @escaping () -> Void) {
         goal = 0
