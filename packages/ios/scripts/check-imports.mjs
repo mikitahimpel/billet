@@ -77,8 +77,9 @@ const violations = swiftFiles(sources).flatMap((file) => {
 if (violations.length > 0) {
   console.error(violations.join("\n"));
   console.error(
-    "The packages in packages/ios stay free of graphics engines (RealityKit belongs in apps/ios), " +
-      "and features meet only through their Interface targets (docs/ios-architecture.md).",
+    "The packages in packages/ios stay free of graphics engines (RealityKit belongs in " +
+      "apps/ios), and features meet only through their Interface targets " +
+      "(docs/ios-architecture.md).",
   );
   process.exit(1);
 }
