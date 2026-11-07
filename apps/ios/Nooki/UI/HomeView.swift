@@ -82,15 +82,18 @@ struct HomeView: View {
                     .allowsHitTesting(showsRoom)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if let scene, roomOnScreen {
-                // Only while a room can be seen: a paused RealityView left in place under the Shop, Moments, Us or a
-                // cover still runs its render loop and composites a full-screen layer every frame. The room itself
-                // stays loaded (CatRoom), so coming back only makes a new view for it.
-                DioramaView(scene: scene, paused: !showsRoom || corner != nil, petPulse: state.care.petPulse) {
+            } else if let scene {
+                // Out of sight the room stays mounted, frozen: its root disabled, so nothing animates or draws, and
+                // the view shrunk to a point, so the render server keeps compositing it. At opacity 0 the layer is
+                // skipped, its drawables are never handed back, and every frame waits a second for one (#417);
+                // unmounted, the way back is a new view and a 0.6–1.5 s frame. Frozen, coming back is one frame,
+                // under the snapshot.
+                DioramaView(scene: scene, paused: !roomOnScreen || corner != nil, petPulse: state.care.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
-                .opacity(showsRoom ? 1 : 0)
-                .allowsHitTesting(showsRoom && state.game == nil)
+                .frame(width: roomOnScreen ? nil : 1, height: roomOnScreen ? nil : 1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .allowsHitTesting(roomOnScreen && state.game == nil)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }
