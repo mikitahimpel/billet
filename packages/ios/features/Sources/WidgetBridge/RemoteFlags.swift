@@ -61,8 +61,11 @@ public enum Experiments {
   /// Which of Nooki's rooms a new pair gets: both, only the Room, or only the City.
   public static let rooms = Experiment(key: "rooms", choices: RoomsVariant.self)
 
+  /// Whether the pair sees the hints after the onboarding: `hold` is the holdout, 10% of pairs.
+  public static let hints = Experiment(key: "hints", variants: ["show", "hold"])
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, rooms,
+    roomLighting, windowView, homeLayout, rooms, hints,
   ]
 }
 

@@ -14,6 +14,13 @@ nonisolated struct HintContext: Hashable {
     /// The room switch is there to point at.
     var hasRoomChoice = false
     var canAffordTreat = false
+    /// What the person has already done, read from the stores. A hint for a thing done is never shown.
+    var petted = false
+    var added = false
+    var usedMoments = false
+    var purchased = false
+    var switchedRooms = false
+    var gaveTreat = false
 }
 
 /// Which hint, if any, a screen visit shows. Each hint has one trigger; when several are due, the first in `order`
@@ -29,7 +36,25 @@ nonisolated enum HintPlan {
 
     static func next(_ context: HintContext, seen: Set<String>, shownThisSession: Int) -> String? {
         guard context.onboarded, !context.busy, shownThisSession < perSession else { return nil }
-        return order.first { !seen.contains($0) && isDue($0, context, seen: seen) }
+        return order.first { !seen.contains($0) && !used($0, context) && isDue($0, context, seen: seen) }
+    }
+
+    /// The hint's feature was used before the hint showed.
+    static func used(_ id: String, _ context: HintContext) -> Bool {
+        switch id {
+        case PetHint.hintId: context.petted
+        case AddHint.hintId: context.added
+        case MomentsHint.hintId: context.usedMoments
+        case ShopHint.hintId: context.purchased
+        case RoomsHint.hintId: context.switchedRooms
+        case TreatHint.hintId: context.gaveTreat
+        default: false
+        }
+    }
+
+    /// The hints `context` makes pointless: they count as seen without showing.
+    static func skipped(_ context: HintContext, seen: Set<String>) -> [String] {
+        order.filter { !seen.contains($0) && used($0, context) }
     }
 
     /// The hint's own trigger.
@@ -46,4 +71,13 @@ nonisolated enum HintPlan {
         default: return false
         }
     }
+}
+
+/// The `hints` experiment's variant that sees no hints. Its pairs still run the plan and report the hints they would
+/// have had, as `<id>-hold`, so the admin can compare what they do with the pairs that saw them.
+nonisolated enum HintHoldout {
+    static let hold = "hold"
+
+    /// The id a pair in the holdout reports under.
+    static func detail(_ id: String) -> String { id + "-hold" }
 }

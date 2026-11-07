@@ -5,6 +5,7 @@ import {
   type MetricEventName,
 } from "@billet/contracts-domain/metrics";
 import { buildTopDetails, type DetailRow, type TopDetails } from "./admin-top-details.ts";
+import { buildHintRates, type HintRate } from "./admin-hint-rates.ts";
 import { rangeOf, type OverviewRange } from "./admin-overview.ts";
 
 export interface AppEvent {
@@ -33,6 +34,8 @@ export interface AppEvents {
   readonly events: ReadonlyArray<AppEvent>;
   /** The most chosen cats, items and the like over the range: see `buildTopDetails`. */
   readonly top: ReadonlyArray<TopDetails>;
+  /** Per hint, the pairs that saw it against the holdout: see `buildHintRates`. */
+  readonly hints: ReadonlyArray<HintRate>;
 }
 
 const sources: ReadonlyArray<readonly [MetricEventName, AppEvent["source"]]> = [
@@ -99,5 +102,6 @@ export const buildAppEvents = (
         a.name.localeCompare(b.name),
     ),
     top: buildTopDetails(details, today, range),
+    hints: buildHintRates(details, today, range),
   };
 };

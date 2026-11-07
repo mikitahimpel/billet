@@ -320,7 +320,7 @@ struct OnboardingView: View {
                     .autocorrectionDisabled()
                     .textContentType(.oneTimeCode)
                     .accessibilityLabel("Invite code")
-                    .foregroundStyle(failure == nil ? Ink.text : Ink.error)
+                    .foregroundStyle(failure == nil ? Ink.text : Ink.destructive)
                     .padding(Space.l)
                     .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
                     .errorField(failure != nil)
