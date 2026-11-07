@@ -23,9 +23,9 @@ const seed = async () => {
   await env.DB.batch([
     env.DB.prepare("INSERT INTO users (id, created_at) VALUES ('user-bob', 1)"),
     ...["d1", "d2", "d3"].map((device) =>
-      env.DB.prepare("INSERT INTO devices (id, user_id, created_at) VALUES (?, 'user-bob', 1)").bind(
-        device,
-      ),
+      env.DB.prepare(
+        "INSERT INTO devices (id, user_id, created_at) VALUES (?, 'user-bob', 1)",
+      ).bind(device),
     ),
     ...[
       ["d1", "alert", "dead-410"],
@@ -41,12 +41,16 @@ const seed = async () => {
 };
 
 // A fake APNs: the answer for each device token.
-const fakeApns = (answers: Record<string, { status: number; reason?: string }>): ApnsFetch =>
+const fakeApns =
+  (answers: Record<string, { status: number; reason?: string }>): ApnsFetch =>
   async (url) => {
     const answer = answers[url.slice(url.lastIndexOf("/") + 1)] ?? { status: 200 };
-    return new Response(answer.reason === undefined ? null : JSON.stringify({ reason: answer.reason }), {
-      status: answer.status,
-    });
+    return new Response(
+      answer.reason === undefined ? null : JSON.stringify({ reason: answer.reason }),
+      {
+        status: answer.status,
+      },
+    );
   };
 
 const pem = async () => {
