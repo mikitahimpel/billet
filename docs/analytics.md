@@ -48,9 +48,9 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `OnboardingStepAnswered` | the step's id | | Which steps are answered? (Never the answer: that is in `onboarding_answers`.) |
 | `OnboardingStepSkipped` | the step's id | | Which steps are skipped? |
 | `AgeGateStopped` | none | | How many are turned away for being under 13? |
-| `TipShown` | the tip's id | | Which hints after the onboarding are seen? |
+| `TipShown` | the tip's id | | Which hints after the onboarding are seen? A pair in the `hints` holdout reports the hint it would have had as `<id>-hold`. |
 | `TipDismissed` | the tip's id | | Which hints are closed without trying them? |
-| `TipAction` | the tip's id | | Which hints lead to the thing they point at? |
+| `TipAction` | the tip's id | | Which hints lead to the thing they point at? Only within 24 hours of the show. |
 | `AccountDeleted` (server) | none | | How many leave? Written to Analytics Engine only: the account's own counts are deleted with it. |
 
 The opening's cinematic is covered by `OpeningWatched` and `OpeningSkipped`.

@@ -1,9 +1,12 @@
 import SwiftUI
 
-/// A small glass capsule with one segment selected, for choosing between a few views of the same screen. The
-/// selected segment slides to the new one. Meant to float over a room, so it is glass; on a plain screen use a
-/// native picker.
+/// A capsule track with one segment selected, for choosing between a few views of the same screen. The thumb is a
+/// solid `Ink.surface` capsule with `Ink.text`; the unselected labels are `Ink.glassGlyphSecondary` on the track.
+/// Thumb and track are both capsules with one inset, so the thumb's radius is the track's minus the inset. Meant
+/// to float over a room; on a plain screen use a native picker.
 public struct GlassSegmented<Value: Hashable>: View {
+  static var inset: CGFloat { Space.xs }
+
   let segments: [(value: Value, title: String)]
   @Binding var selection: Value
   let identifier: String
@@ -28,24 +31,26 @@ public struct GlassSegmented<Value: Hashable>: View {
         } label: {
           Text(segment.title)
             .font(.nookiCallout.weight(isSelected ? .semibold : .medium))
-            .foregroundStyle(isSelected ? Ink.heroInk : Ink.primary)
+            .foregroundStyle(isSelected ? Ink.text : Ink.glassGlyphSecondary)
             .padding(.horizontal, Space.l)
-            .frame(minWidth: 72, minHeight: 36)
+            .frame(minWidth: 72, minHeight: Size.control - 2 * Self.inset)
             .background {
               if isSelected {
-                Capsule().fill(Color.honey).matchedGeometryEffect(id: "thumb", in: thumb)
+                Capsule().fill(Ink.surface)
+                  .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                  .matchedGeometryEffect(id: "thumb", in: thumb)
               }
             }
-            .frame(minHeight: Size.control)
-            .contentShape(.rect)
+            .contentShape(.capsule)
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityIdentifier("\(identifier).\(segment.title)")
       }
     }
-    .padding(Space.xs - 2)
-    .warmGlass(Capsule())
+    .padding(Self.inset)
+    .background(Ink.glassFill, in: .capsule)
+    .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
     .haptic(.selection, trigger: selection)
     .accessibilityElement(children: .contain)
   }
@@ -53,7 +58,11 @@ public struct GlassSegmented<Value: Hashable>: View {
 
 #Preview("Glass segmented") {
   @Previewable @State var room = "Room"
-  GlassSegmented([("Room", "Room"), ("City", "City")], selection: $room, identifier: "roomSwitch")
+  BothSchemes {
+    GlassSegmented(
+      [("Room", "Room"), ("City", "City")], selection: $room, identifier: "roomSwitch"
+    )
     .padding(Space.gutter)
-    .background(Color.honeyDeep)
+    .background(RoomBackdrop())
+  }
 }
