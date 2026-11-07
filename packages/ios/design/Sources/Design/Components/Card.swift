@@ -99,12 +99,12 @@ public struct Row<Trailing: View>: View {
   let title: String
   let detail: String?
   let symbol: String?
-  let tint: Color
+  let tint: Color?
   let destructive: Bool
   let trailing: Trailing
 
   public init(
-    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color = .honey,
+    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color? = nil,
     destructive: Bool = false, @ViewBuilder trailing: () -> Trailing
   ) {
     self.title = title
@@ -117,11 +117,13 @@ public struct Row<Trailing: View>: View {
 
   public var body: some View {
     HStack(spacing: 14) {
-      if let symbol { RowIcon(symbol: symbol, tint: tint) }
+      if let symbol {
+        RowIcon(symbol: symbol, tint: destructive ? Optional(Ink.destructive) : tint)
+      }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(.nookiBody)
-          .foregroundStyle(destructive ? Color.red : Ink.text)
+          .foregroundStyle(destructive ? Ink.destructive : Ink.text)
         if let detail {
           Text(detail)
             .font(.nookiCaption)
@@ -140,7 +142,7 @@ public struct Row<Trailing: View>: View {
 
 extension Row where Trailing == EmptyView {
   public init(
-    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color = .honey,
+    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color? = nil,
     destructive: Bool = false
   ) {
     self.init(title, detail: detail, symbol: symbol, tint: tint, destructive: destructive) {
@@ -149,13 +151,16 @@ extension Row where Trailing == EmptyView {
   }
 }
 
-/// The icon of a row: an SF Symbol in its tint on a circle of the same tint.
+/// The icon of a row: a full-tint SF Symbol on a soft wash of the same tint, one opacity for every tile. No
+/// tint means the accent, whose glyph is `Ink.accentText` so it reads on the wash in both themes.
 public struct RowIcon: View {
+  static let washOpacity = 0.16
+
   let symbol: String
-  let tint: Color
+  let tint: Color?
   let size: CGFloat
 
-  public init(symbol: String, tint: Color, size: CGFloat = 34) {
+  public init(symbol: String, tint: Color? = nil, size: CGFloat = 34) {
     self.symbol = symbol
     self.tint = tint
     self.size = size
@@ -164,9 +169,9 @@ public struct RowIcon: View {
   public var body: some View {
     Image(systemName: symbol)
       .font(.system(size: size * 0.44, weight: .semibold))
-      .foregroundStyle(tint)
+      .foregroundStyle(tint ?? Ink.accentText)
       .frame(width: size, height: size)
-      .background(tint.opacity(0.2), in: .circle)
+      .background((tint ?? .honey).opacity(Self.washOpacity), in: .circle)
       .accessibilityHidden(true)
   }
 }
@@ -188,11 +193,11 @@ public struct ToggleRow: View {
   let title: String
   let detail: String?
   let symbol: String?
-  let tint: Color
+  let tint: Color?
   @Binding var isOn: Bool
 
   public init(
-    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color = .honey,
+    _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color? = nil,
     isOn: Binding<Bool>
   ) {
     self.title = title
@@ -204,7 +209,7 @@ public struct ToggleRow: View {
 
   public var body: some View {
     Row(title, detail: detail, symbol: symbol, tint: tint) {
-      Toggle(title, isOn: $isOn).labelsHidden().tint(.honey)
+      Toggle(title, isOn: $isOn).labelsHidden().toggleStyle(.switch).tint(.honey)
     }
     .accessibilityElement(children: .combine)
   }
@@ -214,12 +219,12 @@ public struct ToggleRow: View {
 public struct PickerRow<Value: Hashable, Options: View>: View {
   let title: String
   let symbol: String?
-  let tint: Color
+  let tint: Color?
   @Binding var selection: Value
   let options: Options
 
   public init(
-    _ title: String, symbol: String? = nil, tint: Color = .honey, selection: Binding<Value>,
+    _ title: String, symbol: String? = nil, tint: Color? = nil, selection: Binding<Value>,
     @ViewBuilder options: () -> Options
   ) {
     self.title = title
@@ -240,13 +245,15 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
 }
 
 #Preview("Grouped section") {
-  Page {
-    GroupedSection(header: "Settings", footer: "Haptics are only on this phone.") {
-      Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }
-      ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: .constant(true))
-      Row("Erase all data", symbol: "trash.fill", tint: .red, destructive: true)
+  BothSchemes {
+    Page {
+      GroupedSection(header: "Settings", footer: "Haptics are only on this phone.") {
+        Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }
+        ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: .constant(true))
+        Row("Erase all data", symbol: "trash.fill", destructive: true)
+      }
+      Card(warm: true) { Text("A hero card").font(.nookiHeadline).foregroundStyle(Ink.text) }
     }
-    Card(warm: true) { Text("A hero card").font(.nookiHeadline) }
   }
 }
 
