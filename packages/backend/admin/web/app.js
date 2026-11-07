@@ -958,7 +958,49 @@ async function renderEvents([arg, name]) {
       "Counts come from D1 (pair_events) by UTC day. An event the app does not send yet shows “not seen yet” until its first report lands.",
     ),
     mostChosen(e.top, range),
+    hintRates(e.hints, range),
   ];
+}
+
+function hintRates(hints, range) {
+  const rate = (a) => (a.actedRate == null ? "too few" : fmtPct(a.actedRate));
+  const cell = (a) => `${rate(a)} · ${fmtNum(a.acted)} of ${fmtNum(a.shown)}`;
+  return section(
+    "Hints against the holdout",
+    `${range} · shown to acted (the action within 24 hours of the show); the holdout sees no hints and reports the ones it would have had`,
+    hints?.length
+      ? h(
+          "table",
+          { class: "table" },
+          h(
+            "thead",
+            null,
+            h(
+              "tr",
+              null,
+              ["Hint", "Saw it", "Holdout", "Lift", "Closed with X"].map((c) => h("th", { text: c })),
+            ),
+          ),
+          h(
+            "tbody",
+            null,
+            hints.map((x) =>
+              h(
+                "tr",
+                null,
+                h("td", { class: "mono", text: x.hint }),
+                h("td", { text: cell(x.show) }),
+                h("td", { text: cell(x.hold) }),
+                h("td", {
+                  text: x.lift == null ? "—" : `${x.lift >= 0 ? "+" : ""}${(x.lift * 100).toFixed(1)} pts`,
+                }),
+                h("td", { text: fmtNum(x.show.dismissed) }),
+              ),
+            ),
+          ),
+        )
+      : h("div", { class: "box" }, empty("No hints reported yet", "Rows appear once apps report TipShown.")),
+  );
 }
 
 async function renderEvent(name, days) {

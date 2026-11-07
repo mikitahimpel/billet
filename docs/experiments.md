@@ -129,6 +129,15 @@ compare notes per pair, and `RoomOpened` (which room came on screen) in the funn
 by `rooms`. On the phone it is `RoomsVariant` in `WidgetBridge`; an unknown or missing value means
 `both`.
 
+### `hints`: the hints holdout
+
+An experiment, in `draft` until the owner starts it. Variants: `show` (the default, weight 9) and `hold`
+(weight 1: 10% of pairs). A pair in `hold` runs the same plan, so its pacing and its seen set are the
+same, but nothing is drawn, and it reports `TipShown` and `TipAction` under `<id>-hold`. The admin's
+"In the app" page sets each hint's shown to acted rate (the action within 24 hours of the show) against
+the holdout's. A hint never shows for a thing the person already did (the pet, a note or photo, a pinned
+moment, a purchase, the City room, a treat): it counts as seen without showing.
+
 Not remote on purpose: the fake partner, the cat model and the on/off Labs experiments (they are
 tester tools or not yet complete and reviewable). `home-direction` (Window Seat or Sunset Lamp) is
 gone: there is one room. `shopkeeper` went with the 3D shop. A saved configuration or assignment under a key the registry no longer has
