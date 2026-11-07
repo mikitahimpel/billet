@@ -56,6 +56,7 @@ struct MomentsView: View {
                 }
                 .scrollIndicators(.hidden)
                 .scrollPosition($position)
+                .softScrollEdges()
                 .onAppear {
                     guard ScenePerf.isOn else { return }
                     NookiPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
