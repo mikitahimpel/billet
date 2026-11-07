@@ -16,6 +16,9 @@ final class Hints {
     static let showAllKey = "hintsShowAll"
     /// The hints shown, closed or done: none of them comes back.
     static let seenKey = "hintsSeen"
+    /// When each hint was shown and not yet acted on: an action counts within `actionWindow` of it.
+    static let shownAtKey = "hintsShownAt"
+    static let actionWindow: TimeInterval = 24 * 3600
 
     /// Every hint.
     static let all: [any HintTip.Type] = [
@@ -33,12 +36,17 @@ final class Hints {
     @ObservationIgnored private var lastVisit: (@MainActor () -> HintContext)?
     @ObservationIgnored private var onboarded = false
     @ObservationIgnored private let isPresenting: @MainActor () -> Bool
+    @ObservationIgnored private let now: @Sendable () -> Date
+    /// The pair is in the holdout: the plan runs and reports, but nothing is drawn.
+    @ObservationIgnored var isHeldOut: @MainActor () -> Bool = { false }
 
     init(
         report: @escaping @Sendable ([ClientEvent]) async throws(TransportError) -> Void,
         defaults: UserDefaults = .standard,
-        isPresenting: @escaping @MainActor () -> Bool = Hints.keyWindowIsPresenting
+        isPresenting: @escaping @MainActor () -> Bool = Hints.keyWindowIsPresenting,
+        now: @escaping @Sendable () -> Date = { .now }
     ) {
+        self.now = now
         self.report = report
         self.defaults = defaults
         self.isPresenting = isPresenting
@@ -51,6 +59,7 @@ final class Hints {
         if defaults.bool(forKey: resetKey) {
             try? Tips.resetDatastore()
             defaults.removeObject(forKey: seenKey)
+            defaults.removeObject(forKey: shownAtKey)
             defaults.removeObject(forKey: resetKey)
         }
         if defaults.bool(forKey: showAllKey) { Tips.showAllTipsForTesting() }
@@ -93,9 +102,10 @@ final class Hints {
     /// popover ever reports appearing, so neither a tab switch nor a relaunch brings it back.
     @discardableResult
     func show(_ context: HintContext) -> String? {
+        for id in HintPlan.skipped(context, seen: seen) { see(id) }
         let id = plan(context)
         if let id { shown(id) }
-        HintStage.current = id ?? ""
+        HintStage.current = id.flatMap { isHeldOut() ? nil : $0 } ?? ""
         return id
     }
 
@@ -109,10 +119,11 @@ final class Hints {
 
     /// The person did the thing the hint points at, whether or not it was on screen. It won't show again.
     func done<T: HintTip>(_ tip: T) {
-        if HintStage.current == T.hintId {
+        if HintStage.current == T.hintId { HintStage.current = "" }
+        if let shownAt = shownAt(T.hintId), now().timeIntervalSince(shownAt) <= Self.actionWindow {
             record(.tipAction, T.hintId)
-            HintStage.current = ""
         }
+        forgetShown(T.hintId)
         see(T.hintId)
         tip.invalidate(reason: .actionPerformed)
     }
@@ -131,7 +142,24 @@ final class Hints {
     private func shown(_ id: String) {
         guard shownThisSession.insert(id).inserted else { return }
         see(id)
+        var times = shownTimes()
+        times[id] = now().timeIntervalSince1970
+        defaults.set(times, forKey: Self.shownAtKey)
         record(.tipShown, id)
+    }
+
+    private func shownTimes() -> [String: Double] {
+        defaults.dictionary(forKey: Self.shownAtKey) as? [String: Double] ?? [:]
+    }
+
+    private func shownAt(_ id: String) -> Date? {
+        shownTimes()[id].map(Date.init(timeIntervalSince1970:))
+    }
+
+    private func forgetShown(_ id: String) {
+        var times = shownTimes()
+        guard times.removeValue(forKey: id) != nil else { return }
+        defaults.set(times, forKey: Self.shownAtKey)
     }
 
     private func see(_ id: String) {
@@ -148,7 +176,7 @@ final class Hints {
     }
 
     private func record(_ name: ClientEventName, _ id: String) {
-        pending.append(ClientEvent(name, detail: id))
+        pending.append(ClientEvent(name, detail: isHeldOut() ? HintHoldout.detail(id) : id))
         Task { await send() }
     }
 

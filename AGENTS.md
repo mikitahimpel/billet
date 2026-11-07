@@ -68,6 +68,7 @@ with `BILLET_API_HOST`.
 - The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.
+- A horizontal drag on Home never switches rooms; only the explicit control does (`RoomSwipeTests`).
 
 ## Comments
 

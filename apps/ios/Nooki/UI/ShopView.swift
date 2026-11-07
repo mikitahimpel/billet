@@ -42,6 +42,7 @@ struct ShopView: View {
             .scrollIndicators(.hidden)
             .shopScrollEdges()
             .scrollPosition($position)
+            .softScrollEdges()
             .onAppear {
                 guard ScenePerf.isOn else { return }
                 NookiPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
