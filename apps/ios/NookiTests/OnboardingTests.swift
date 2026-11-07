@@ -1,3 +1,4 @@
+import FeaturePairing
 import Foundation
 import Synchronization
 import Testing
@@ -297,5 +298,64 @@ struct AnswerQueueTests {
     @Test func theBundledQuestionsDecode() {
         let bundled = BundledOnboarding.load(from: .main)
         #expect(bundled.steps.count >= 1)
+    }
+
+    // MARK: Pairing errors, invite input, welcome script
+
+    @Test func aWrongCodeIsNeverShownOnTheInviteStep() {
+        let wrong = PairingMachine.State.choosing(failure: .invalidCode, request: 3)
+        #expect(OnboardingView.failure(in: wrong, on: .join) == .invalidCode)
+        #expect(OnboardingView.failure(in: wrong, on: .invite) == nil)
+        #expect(OnboardingView.failure(in: wrong, on: .welcome) == nil)
+        let down = PairingMachine.State.choosing(failure: .unavailable, request: 1)
+        #expect(OnboardingView.failure(in: down, on: .invite) == .unavailable)
+        #expect(OnboardingView.failure(in: .waiting(code: "A", expiresAt: 1, request: 1), on: .join) == nil)
+    }
+
+    @Test func cancellingClearsTheFailure() {
+        let wrong = PairingMachine.State.choosing(failure: .invalidCode, request: 3)
+        let (next, outputs) = PairingMachine.transition(wrong, .cancelled)
+        #expect(next == .choosing(failure: nil, request: 3))
+        #expect(outputs.isEmpty)
+    }
+
+    @Test func theInviteStepHasNoSkipSinceLaterIsItsOwnButton() {
+        let (flow, _, _) = makeFlow()
+        flow.start()
+        flow.continueTapped()
+        flow.continueTapped()
+        flow.continueTapped()
+        flow.continueTapped()
+        flow.continueTapped()
+        #expect(flow.page == .invite)
+        #expect(!flow.canSkip)
+    }
+
+    @Test func anInviteIsRecognisedInEveryShapeItComes() {
+        #expect(InviteInput.code(in: "K7QM4R2XHP") == "K7QM4R2XHP")
+        #expect(InviteInput.code(in: " k7qm 4r2x hp\n") == "K7QM4R2XHP")
+        #expect(InviteInput.code(in: "https://api.example.com/i/K7QM4R2XHP") == "K7QM4R2XHP")
+        #expect(InviteInput.code(in: "nooki://invite/K7QM4R2XHP") == "K7QM4R2XHP")
+        #expect(InviteInput.code(in: "hello there, see you at 7") == nil)
+        #expect(InviteInput.code(in: "K7QM4R2X") == nil)
+        #expect(InviteInput.code(in: "https://example.com/i/short") == nil)
+    }
+
+    @Test func theWelcomeScriptIsDeterministicAndEndsSettled() {
+        let script = WelcomeScript.standard
+        for beat in script.cues.map(\.beat) {
+            #expect(script.progress(beat, at: -1) == 0)
+            #expect(script.progress(beat, at: script.duration) == 1)
+            var last = 0.0
+            for step in 0...40 {
+                let now = script.progress(beat, at: script.duration * Double(step) / 40)
+                #expect(now >= last)
+                last = now
+            }
+        }
+        #expect(script.progress(.title, at: 1.3) == script.progress(.title, at: 1.3))
+        #expect(script.started(at: 0) == [.cat])
+        #expect(script.started(at: script.duration).count == script.cues.count)
+        #expect(script.duration < 3.5)
     }
 }
