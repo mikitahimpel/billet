@@ -6,7 +6,7 @@ import Transport
 import WidgetBridge
 import Wire
 
-/// Switches between Mochi's rooms with a small glass capsule under the header; a swipe of the scene does the same.
+/// Switches between Mochi's rooms with a small glass capsule under the header. Swiping the scene never switches rooms.
 struct RoomSwitch: View {
     let state: HomeState
     var select: (RoomKind) -> Void
@@ -22,7 +22,7 @@ struct RoomSwitch: View {
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Room")
             .accessibilityValue(state.room.title)
-            .accessibilityHint("Swipe the room sideways, or tap, to visit the other one")
+            .accessibilityHint("Tap to visit the other room")
             .popoverTip(RoomsHint(), arrowEdge: .top)
         }
     }
