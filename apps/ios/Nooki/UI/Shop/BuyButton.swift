@@ -18,7 +18,12 @@ struct BuyButton: View {
 
     var body: some View {
         if let quote {
-            Design.PriceButton(quote.price, was: quote.sum > quote.price ? quote.sum : nil) {
+            Design.PriceButton(
+                quote.price, was: quote.sum > quote.price ? quote.sum : nil,
+                label: "Buy \(name), \(quote.price) coins",
+                hint: state.shop.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
+                    : "Needs \(quote.price - state.shop.coins) more coins; opens Coins"
+            ) {
                 // Short of coins, the buy opens the Coins sheet at what's missing.
                 if state.shop.coins < quote.price { shakes += 1 }
                 _ = buy()
@@ -34,12 +39,6 @@ struct BuyButton: View {
                 }
             }
             .haptic(.warning, trigger: shakes)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Buy \(name), \(quote.price) coins")
-            .accessibilityHint(state.shop.coins >= quote.price ? "Buys it now; you can undo for a few seconds"
-                                                          : "Needs \(quote.price - state.shop.coins) more coins; opens Coins")
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { _ = buy() }
             .frame(maxWidth: fills ? .infinity : nil, minHeight: fills ? Size.button : nil, alignment: .leading)
         } else {
             HStack(spacing: Space.s) {

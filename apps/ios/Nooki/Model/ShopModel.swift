@@ -141,7 +141,14 @@ final class ShopModel {
         asGift: Bool = false
     ) -> Bool {
         let added = itemIDs.filter { !owned.contains($0) }
-        guard sync != nil, !added.isEmpty else { return false }
+        guard !added.isEmpty else { return false }
+        guard sync != nil else {
+            // Without a room to buy in, the tap says so rather than doing nothing.
+            refused = Purchase(
+                offer: offer, itemIDs: itemIDs, added: added, cost: cost, date: .now, title: title, kind: kind,
+                asGift: asGift)
+            return false
+        }
         guard coins >= cost else {
             askForCoins(
                 missing: cost - coins,
