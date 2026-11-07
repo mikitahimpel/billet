@@ -1,5 +1,16 @@
 import SwiftUI
 
+/// What a `BilletSheet` stands on: the app's screen colour, or glass over whatever is behind, the arm a perf run
+/// measures a sheet over the live room with.
+public enum SheetGroundStyle: Sendable {
+  case opaque
+  case glass
+}
+
+extension EnvironmentValues {
+  @Entry public var sheetGround: SheetGroundStyle = .opaque
+}
+
 /// How tall a `BilletSheet` opens.
 public enum SheetSize: Sendable {
   /// As tall as its content, and `.large` too when the content outgrows the screen.
@@ -36,6 +47,7 @@ public struct BilletSheet<Content: View>: View {
   let content: Content
 
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.sheetGround) private var ground
   @State private var fitHeight: CGFloat = 0
   @State private var askingToDiscard = false
 
@@ -63,7 +75,7 @@ public struct BilletSheet<Content: View>: View {
     NavigationStack {
       body(of: content)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Ink.screen)
+        .background(ground == .glass ? Color.clear : Ink.screen)
         .navigationTitle(subtitle == nil ? title : "")
         #if os(iOS)
           .navigationBarTitleDisplayMode(.inline)
@@ -80,7 +92,15 @@ public struct BilletSheet<Content: View>: View {
     .tint(.honey)
     .presentationDetents(detents)
     .presentationDragIndicator(.visible)
-    .presentationBackground(Ink.screen)
+    .presentationBackground { groundView }
+  }
+
+  @ViewBuilder private var groundView: some View {
+    if ground == .glass {
+      Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
+    } else {
+      Ink.screen.ignoresSafeArea()
+    }
   }
 
   @ViewBuilder private func body(of content: Content) -> some View {
