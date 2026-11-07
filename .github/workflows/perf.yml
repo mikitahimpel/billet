@@ -11,6 +11,7 @@ name: iOS perf
 #   gh workflow run perf.yml --ref <branch> -f room=city          # the same in the City room
 #   gh workflow run perf.yml --ref <branch> -f image=xcode-27     # on Xcode 27 and iOS 27
 #   gh workflow run perf.yml --ref <branch> -f base=<ref> -f jobs=steady  # Home left alone, A/B
+#   gh workflow run perf.yml --ref <branch> -f app_args="-perf.hud opaque"  # the header and tab bar opaque
 #
 # The runner's Simulator has no Apple7 GPU, so Mochi is drawn as the mesh cat, not the splats a phone
 # shows: the cat in these numbers and shots is not the shipped one. The room around her is.
@@ -50,6 +51,9 @@ on:
         default: "2"
       switches:
         description: Parts a cost run switches, comma-separated (empty = all)
+        default: ""
+      app_args:
+        description: Launch arguments added to every measured run, e.g. -perf.hud opaque
         default: ""
       room:
         description: Room Home opens on
@@ -92,6 +96,7 @@ env:
   PERF_RUN_LIMIT: "1500"
   # The room Home shows in every run; a pull request measures the standard one.
   PERF_ROOM: ${{ inputs.room || 'room' }}
+  PERF_APP_ARGS: ${{ inputs.app_args }}
 
 # A pull request runs only while labelled `perf`, when the label goes on or on a new push.
 jobs:
