@@ -17,6 +17,7 @@ struct ShopView: View {
     @State private var highlightedInk: String?
     /// Where the page is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
+    @AppStorage(AppSettings.shopLightKey) private var lightEffects = false
 
     private let columns = [
         GridItem(.flexible(), spacing: Space.m, alignment: .top),
@@ -42,6 +43,7 @@ struct ShopView: View {
             .scrollIndicators(.hidden)
             .shopScrollEdges()
             .scrollPosition($position)
+            .environment(\.shopLightEffects, lightEffects)
             .softScrollEdges()
             .onAppear {
                 guard ScenePerf.isOn else { return }

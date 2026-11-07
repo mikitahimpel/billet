@@ -1,6 +1,16 @@
 import SwiftUI
 import Design
 
+extension AppSettings {
+    /// Labs: the Shop without its per-card scroll animation, and solid fills where its cards use glass.
+    static let shopLightKey = "labs.shopLight"
+}
+
+extension EnvironmentValues {
+    /// Labs: the Shop's cards without the effects that cost a pass per card per scroll frame.
+    @Entry var shopLightEffects = false
+}
+
 /// The Shop's own accents on the warm room palette, saturated so offers stand out against the brown.
 enum ShopInk {
     static let coral = Color(hex: 0xFF7A59)
@@ -52,16 +62,29 @@ struct RarityFrame<Content: View>: View {
     @ViewBuilder let content: Content
 
     private let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+    /// Room around the frame for its glow in the bitmap below.
+    private static let glowPad: CGFloat = 14
 
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                // The glow comes from the frame's shape alone, so the art and the shine moving over it never have
-                // to be drawn again just to cast it.
-                shape.fill(RadialGradient(colors: [rarity.fill.light, rarity.fill.edge],
-                                          center: UnitPoint(x: 0.5, y: 0.3), startRadius: 4, endRadius: 140))
-                    .shadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
+                let fill = RadialGradient(colors: [rarity.fill.light, rarity.fill.edge],
+                                          center: UnitPoint(x: 0.5, y: 0.3), startRadius: 4, endRadius: 140)
+                if rarity.shines {
+                    // The glow is drawn once into a bitmap with the fill, as wide as the glow reaches: a live shadow
+                    // is a blur pass on every frame the card moves.
+                    GeometryReader { proxy in
+                        shape.fill(fill)
+                            .shadow(color: rarity.tint.opacity(0.5), radius: 9)
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .padding(Self.glowPad)
+                            .drawingGroup()
+                            .offset(x: -Self.glowPad, y: -Self.glowPad)
+                    }
+                } else {
+                    shape.fill(fill)
+                }
             }
             .overlay {
                 if rarity.shines { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
@@ -160,13 +183,19 @@ extension View {
 
 private struct ShopAppear: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.shopLightEffects) private var light
 
     func body(content: Content) -> some View {
-        // `.animated` springs once when the card crosses into view rather than following every scrolled point.
-        content.scrollTransition(.animated(.spring(duration: 0.5, bounce: 0.25))) { content, phase in
+        if light {
+            // The transition's phase is worked out for every card in the buffer on every scroll frame.
             content
-                .opacity(phase.isIdentity ? 1 : 0.3)
-                .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
+        } else {
+            // `.animated` springs once when the card crosses into view rather than following every scrolled point.
+            content.scrollTransition(.animated(.spring(duration: 0.5, bounce: 0.25))) { content, phase in
+                content
+                    .opacity(phase.isIdentity ? 1 : 0.3)
+                    .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
+            }
         }
     }
 }

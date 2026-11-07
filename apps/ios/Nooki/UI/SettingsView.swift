@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
+    @AppStorage(AppSettings.shopLightKey) private var lightShop = false
     @State private var confirmingErase = false
     @State private var demoBusy = false
     @State private var demoFailed = false
@@ -112,6 +113,7 @@ struct SettingsView: View {
                 ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
                 ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
                                isOn: $showAllHints)
+                ToggleRow("Shop: light effects", symbol: "bag", tint: UsTint.coral.color, isOn: $lightShop)
                 NavigationLink { StyleGallery() } label: {
                     Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }

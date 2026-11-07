@@ -11,6 +11,8 @@ struct FeaturedCard: View {
 
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.shop.owned) }
     private var items: [ShopItem] { offer.itemIDs.compactMap(Catalog.item) }
+    /// Room around the card for its glow in the bitmap below: the shadow's radius and drop.
+    private static let glowPad: CGFloat = 30
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -25,7 +27,7 @@ struct FeaturedCard: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
+                .modifier(CardGlass(shape: .capsule, tint: 0.25))
 
                 Spacer(minLength: 0)
                 if let quote, quote.price > 0, quote.sum > quote.price {
@@ -56,14 +58,21 @@ struct FeaturedCard: View {
                 SetBuyButton(state: state, set: offer)
             }
             .padding(Space.m)
-            .glass(.rect(cornerRadius: Radius.card, style: .continuous), tint: Ink.heroInk.opacity(0.3))
+            .modifier(CardGlass(shape: .rect(cornerRadius: Radius.card, style: .continuous), tint: 0.3))
         }
         .padding(Space.m)
         .background {
-            // The glow is the card's shape's own, so the countdown ticking inside never redraws it.
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
-                .fill(ShopInk.lamplight)
-                .shadow(color: ShopInk.coral.opacity(0.4), radius: 18, y: 8)
+            // The lamplight and its glow drawn once into a bitmap as wide as the glow reaches: the countdown
+            // ticking inside never redraws it, and the card scrolling never blurs it again.
+            GeometryReader { proxy in
+                RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+                    .fill(ShopInk.lamplight)
+                    .shadow(color: ShopInk.coral.opacity(0.4), radius: 18, y: 8)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .padding(Self.glowPad)
+                    .drawingGroup()
+                    .offset(x: -Self.glowPad, y: -Self.glowPad)
+            }
         }
         .overlay {
             RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
@@ -103,6 +112,24 @@ struct FeaturedCard: View {
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// Glass on the hero's own surfaces; in the Labs light Shop a solid tint of the same ink instead, since glass that
+/// scrolls re-samples what is behind it on every frame.
+private struct CardGlass<S: Shape>: ViewModifier {
+    let shape: S
+    let tint: Double
+    @Environment(\.shopLightEffects) private var light
+
+    func body(content: Content) -> some View {
+        if light {
+            content
+                .background(shape.fill(Ink.heroInk.opacity(tint + 0.25)))
+                .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 1))
+        } else {
+            content.glass(shape, tint: Ink.heroInk.opacity(tint))
+        }
     }
 }
 
