@@ -6,9 +6,12 @@ leans on are in [ios-performance.md](ios-performance.md). Phase 2 PRs cite this 
 
 ## In three lines
 
-- The tabs and lists are main-thread bound, not GPU bound: the Shop scroll spends about 40 ms of
+- The tabs and lists are main-thread bound, not GPU bound: the Shop scroll spends 24–63 ms of
   main-thread CPU per frame in a Release build (CI), with the room unmounted. Sheets over the World
-  are the one place the live room is the cost, because it keeps drawing under them.
+  are the one place the live room is the cost, because it keeps drawing under them: pausing it
+  halves the frame there (measured). The glass fill of the bars is not a measurable cost on the
+  Simulator; the bars as a whole are, and a follow-up arm says whether that is their shadows or
+  the glass containers.
 - Every return to the World freezes the whole UI for one frame of 0.3–1.1 s (CI) while a new
   RealityView mounts; #421's snapshot hides the room, not the freeze.
 - The rooms do far more per frame than they need to: 80 (Room) to 240 (City) separate entities with
@@ -53,8 +56,40 @@ added below when it lands.
 | tab → World | 280–295 ms | **worst frame 670–1140 ms** | | | | | |
 | memory peak, full run | 240 MB (mesh cat, 2048² textures) | | | | | | |
 
-Read: the Shop scroll is the one phase where the app's own main thread is the bottleneck (34–45 ms
-of CPU in a 50 ms frame). The room phases are runner-bound (main thread 6–9 ms of a 60–90 ms
+Today's baseline, run 42363291154: main (fc590241) against itself, 2 rounds, iPhone 17 Pro
+Simulator, runner load 400 falling to 130 between the two sides. The two columns are the *same
+build*, so their gap is the noise floor of one CI run:
+
+| Phase | side 1 | side 2 |
+| --- | --- | --- |
+| launch: first frame / room drawing / cat placed | 3.0 / 8.4 / 9.2 s | 3.4 / 9.2 / 10.3 s |
+| room idle: p50, mainCPU, cpuMsPerS | 53 ms, 6.7, 315 | 53 ms, 5.6, 340 |
+| Shop still | 60 fps, 2.5 ms mainCPU | 60 fps, 2.3 |
+| Shop scroll: p50, p95, fps, mainCPU | 71, 104, 14.7, **62.6** | 24.5, 46, 36, **23.7** |
+| Moments scroll: p50, p95, fps, mainCPU | 22, 46, 42, 16.2 | 16.7, 16.7, 59, 7.3 |
+| tab → Shop / → Moments / → Us, ms to on screen | 722 / 143 / 233 | 555 / 152 / 200 |
+| tab → World: worst frame | **922 ms (629–1451)** | **1081 ms (556–1209)** |
+| opening the drawing canvas: one frame of | 4.5 s (0.6 s of it main-thread work) | |
+| cover.drawing, cover.inbox | 60 fps, 0.2–0.4 ms mainCPU | same |
+| settled (after the covers) | 60 fps, **0.14 ms mainCPU, 9 ms/s** | same |
+| memory peak, full run | 254 MB | 250 MB |
+
+Three things to read from it:
+
+- **The noise floor is 2–3× on a scroll phase between two sides of one run** (62.6 vs 23.7 ms
+  of main CPU for the same Shop). Single-run A/Bs cannot settle a 30 % win; in-process pairs
+  (`cost`) and several rounds can. Every Phase 2 number has to come with its noise floor.
+- **The Shop scroll is main-thread bound in both sides** (24–63 ms of CPU per frame; Moments
+  7–16 ms with the same drive), and the World return is a 0.6–1.5 s frame in every sample.
+- **After the covers the room draws nothing.** The `settled` phase runs at 60 fps with 0.14 ms
+  of main thread, where the same room idles at 5.6–6.7 ms before the covers. Either the room never
+  remounts after the drawing canvas and the Inbox close, or it comes back paused. This needs one
+  look in a Simulator (open the canvas, close it, does Mochi still breathe?). If it is real, it is
+  a user-visible bug on main since the 11-05 runs (where `settled` had the room live), and it
+  changes item 2's reading: the remount path is not just slow, it may not finish.
+
+Read, from the 11-05 rows: the Shop scroll is the one phase where the app's own main thread is
+the bottleneck (34–45 ms of CPU in a 50 ms frame). The room phases are runner-bound (main thread 6–9 ms of a 60–90 ms
 frame), so their CI frame times say little; their `cpuMsPerS` says the room never idles.
 
 Two things in the Shop number are not the Shop: the harness drives the scroll by writing
@@ -143,6 +178,10 @@ Not in the ten, worth their own line:
   rest policy (nothing touched for 10 s and the cat asleep: skin at 30 Hz, bulbs at 10 Hz, life at
   4 Hz, bloom off) and a thermal step-down (§1.9–1.10) are the energy items. Proof: `steady:
   cpuMsPerS`; a phone's Power Profiler.
+- **Opening the drawing canvas is one 4.5 s frame on CI** (0.6 s of it main-thread work, the rest
+  waiting): `LockCanvasView` builds `DrawModel` and a `CanvasView` with `drawingGroup()`
+  (CanvasView.swift:224), whose first use compiles its Metal pipeline. On a phone this is the
+  first-open hitch of the canvas; worth a signpost and a warm-up of the pipeline at launch (§1.11).
 - **Games.** `GameCamera` and `GameSession` subscribe to `SceneEvents.Update` (fine), B17 is fixed.
   No step measures a game (H3), so nothing is claimed.
 - **Memory.** 240 MB peak on CI with the mesh cat (two 2048² colour, normal and fur maps per
@@ -177,14 +216,42 @@ whether glass adds CPU work (layout, backdrop capture) at all. A device run with
 would give the GPU ms per frame of the glass passes and the real thermal state after five
 minutes; the Simulator has no thermal model.
 
-**Results.** Runs 42363652666 (arms) and 42363655489 (sheets) were still in flight when this
-revision was written; their tables go here, with the recommendation, when they land. Until then
-the recommendation is conditional:
+**Results so far: the arms on the iPhone SE Simulator** (run 42363652666, two `cost` launches,
+runner load 400–450; each pair measured back to back in one process, order random). p50 is the
+frame interval in ms, mainCPU and procCPU are ms of CPU per frame, over a still room and an
+orbiting one:
 
-- If B (opaque) saves under 1 ms of frame time and no measurable CPU on CI, keep the glass and take
-  the room-under-sheet win (item 1) instead, which is where the room's cost actually goes.
-- If B saves 1 ms or more, or any CPU, make opaque the Low Power and `.serious` thermal variant,
-  and ask the owner about opaque everywhere with the device numbers.
+| Pair | With it (launch 1 still / orbit) | Without it | With it (launch 2) | Without it |
+| --- | --- | --- | --- | --- |
+| `glass hud`: A glass vs B opaque | p50 106 / 179; main 9.5 / 10.4; proc 23 / 24 | p50 71 / 104; main 7.0 / 10.0; proc 17 / 22 | p50 87 / 83; main 6.9 / 6.3; proc 24 / 30 | p50 109 / 35; main 8.1 / 6.2; proc 20 / 14 |
+| `hud`: A bars vs D no bars | p50 108 / 117; main 8.1 / 9.1; proc 19 / 23 | **p50 45 / 43**; main 6.4 / 6.3; proc 16 / 15 | p50 69 / 83; main 6.3 / 6.9; proc 15 / 16 | **p50 59 / 38**; main 7.5 / 5.9; proc 17 / 14 |
+| `room paused`: room live vs C paused under glass | p50 86 / 105; main 7.2 / 8.1; proc 18 / 18 | **p50 33 / 36; main 3.6 / 3.3; proc 7.4 / 6.5** | p50 63 / 214; main 6.3 / 11.1; proc 15 / 24 | **p50 20 / 44; main 3.6 / 3.6; proc 6.8 / 7.3** |
+
+What it says, within what a Simulator can say:
+
+1. **Glass against opaque is inside the noise.** The two launches disagree on the sign, and the
+   CPU columns do not move. On this GPU the Liquid Glass fill of six controls is not what the bars
+   cost.
+2. **The bars themselves cost about as much as the live room.** Without the header and the tab
+   bar the frame is 40–70 ms shorter in both launches, consistently, with the room untouched. The
+   opaque arm kept the `GlassEffectContainer`s, the `safeAreaBar`s and gave each control an 8 pt
+   shadow, so the candidates are the container and bar machinery, and the shadows (a blur pass
+   each over a backdrop that changes every frame). A third arm, flat (no shadow, no container),
+   is in run 42366963627 and separates them.
+3. **The live room under the glass is 3.5–4 ms of main thread and 11–17 ms of process CPU per
+   frame, and about half the frame time.** That is item 1's gain for every sheet that hides the
+   room, before any glass decision.
+
+The iPhone 17 Pro Max arm of the same run and the sheet covers (run 42364745973: `sheet`,
+`sheet.paused`, `sheet.glass`) land after this revision; the table is updated when they do.
+
+**Recommendation, as of this revision.** Keep the glass; it is not the cost that the Simulator
+can see. Take the room-under-sheet win (item 1) first, which the `room paused` pair proves is the
+larger term. Then decide the bars' own cost on the flat arm's numbers, and, if the container or the
+shadows carry it, keep glass for the look and drop the shadow; the `hidden` arm is the ceiling
+(what no bars at all would buy), not a proposal. A device run (Metal System Trace, five minutes
+on Home, thermal state read at the end) is still the only way to put milliseconds and degrees on
+the glass itself; the Simulator cannot.
 
 ## Baking the static shell
 
