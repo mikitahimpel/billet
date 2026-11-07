@@ -54,6 +54,8 @@ const FakePairing = Layer.succeed(PairingRepository, {
   pairedAt: () => Effect.die("unused"),
   findMembers: () => Effect.die("unused"),
   unpair: () => Effect.die("unused"),
+  block: () => Effect.die("unused"),
+  saveReport: () => Effect.die("unused"),
   findPair: (userId) =>
     Effect.succeed(
       userId.startsWith("paired")

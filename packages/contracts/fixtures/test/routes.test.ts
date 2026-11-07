@@ -35,6 +35,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/auth/sign-out",
       },
+      "blockPartner": {
+        "method": "POST",
+        "path": "/v1/pair/block",
+      },
       "buyItem": {
         "method": "POST",
         "path": "/v1/shop/buy",
@@ -222,6 +226,10 @@ it("pins the routes that clients call", () => {
       "reportEvents": {
         "method": "POST",
         "path": "/v1/events",
+      },
+      "reportPartner": {
+        "method": "POST",
+        "path": "/v1/pair/report",
       },
       "saveCat": {
         "method": "PUT",

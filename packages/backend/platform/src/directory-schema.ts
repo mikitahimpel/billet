@@ -179,6 +179,37 @@ export const pairMembers = sqliteTable(
   (table) => [index("pair_members_pair_id_index").on(table.pairId)],
 );
 
+// Who blocked whom. A block ends the pair and keeps the two from claiming each other's invites.
+// Not foreign keys: the rows go with either user in the account erasure.
+export const blocks = sqliteTable(
+  "blocks",
+  {
+    blockerId: text("blocker_id").notNull(),
+    blockedId: text("blocked_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    index("blocks_blocked_id_index").on(table.blockedId),
+  ],
+);
+
+// What a user told the team about their partner. Kept after the pair or either account ends, so a
+// report can still be acted on; the pair id is not a foreign key for the same reason.
+export const partnerReports = sqliteTable(
+  "partner_reports",
+  {
+    id: text("id").primaryKey(),
+    reporterId: text("reporter_id").notNull(),
+    reportedId: text("reported_id").notNull(),
+    pairId: text("pair_id").notNull(),
+    reason: text("reason").notNull(),
+    details: text("details"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("partner_reports_reported_id_index").on(table.reportedId)],
+);
+
 // The dev stage's demo partners: a bot user per owner, which pairs like anyone else but has no
 // device and never signs in. Deleting either user takes the row with it.
 export const demoPartners = sqliteTable("demo_partners", {

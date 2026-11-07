@@ -9,6 +9,7 @@ import {
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import type { PairResponse } from "@billet/contracts-http-api/pair";
+import type { ReportPartnerRequest } from "@billet/contracts-http-api/safety";
 import {
   type AlreadyPaired,
   type InvalidInvite,
@@ -41,6 +42,13 @@ export class PairingService extends Context.Service<
       code: InviteCode,
     ) => Effect.Effect<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+    /** Unpairs the caller from their partner for good: the two can't pair again. */
+    readonly blockPartner: (userId: UserId) => Effect.Effect<void, NotPaired | PairingUnavailable>;
+    /** Keeps a report about the caller's partner for the team. The pair stays. */
+    readonly reportPartner: (
+      userId: UserId,
+      request: ReportPartnerRequest,
+    ) => Effect.Effect<void, NotPaired | PairingUnavailable>;
     /** The caller's pair and both members, the caller first, with their latest check-ins. */
     readonly pair: (userId: UserId) => Effect.Effect<PairResponse, NotPaired | PairingUnavailable>;
   }
@@ -125,7 +133,54 @@ export class PairingService extends Context.Service<
         if (Option.isSome(pair)) yield* afterwards(observer.unpaired(pair.value));
       });
 
-      return PairingService.of({ createInvite, claimInvite, unpair, pair });
+      const partnerOf = Effect.fn("PairingService.partnerOf")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<{ pairId: PairId; partner: UserId }, NotPaired | PairingUnavailable> {
+        const found = yield* repository.findPair(userId);
+        if (Option.isNone(found)) return yield* Effect.fail(new NotPaired());
+        const partner = (yield* repository.findMembers(found.value)).find(
+          (member) => member !== userId,
+        );
+        if (partner === undefined) return yield* Effect.fail(new NotPaired());
+        return { pairId: found.value, partner };
+      });
+
+      const blockPartner = Effect.fn("PairingService.blockPartner")(function* (
+        userId: UserId,
+      ): Effect.fn.Return<void, NotPaired | PairingUnavailable> {
+        const { pairId, partner } = yield* partnerOf(userId);
+        yield* repository.block({
+          blocker: userId,
+          blocked: partner,
+          at: yield* Clock.currentTimeMillis,
+        });
+        yield* afterwards(observer.unpaired(pairId));
+      });
+
+      const reportPartner = Effect.fn("PairingService.reportPartner")(function* (
+        userId: UserId,
+        request: ReportPartnerRequest,
+      ): Effect.fn.Return<void, NotPaired | PairingUnavailable> {
+        const { pairId, partner } = yield* partnerOf(userId);
+        yield* repository.saveReport({
+          id: yield* random.uuidV4(),
+          reporter: userId,
+          reported: partner,
+          pairId,
+          reason: request.reason,
+          details: request.details,
+          at: yield* Clock.currentTimeMillis,
+        });
+      });
+
+      return PairingService.of({
+        createInvite,
+        claimInvite,
+        unpair,
+        blockPartner,
+        reportPartner,
+        pair,
+      });
     }),
   );
 }

@@ -1,6 +1,7 @@
 import { Context, type Effect, type Option, Schema } from "effect";
 import { TokenHash } from "@billet/backend-auth/auth-repository";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import type { ReportReason } from "@billet/contracts-http-api/safety";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
 
@@ -25,6 +26,16 @@ export interface InviteClaim {
   /** A new id. It becomes the pair's only if this claim wins. */
   readonly pairId: PairId;
   readonly now: EpochMillis;
+}
+
+export interface PartnerReport {
+  readonly id: string;
+  readonly reporter: UserId;
+  readonly reported: UserId;
+  readonly pairId: PairId;
+  readonly reason: ReportReason;
+  readonly details: string | undefined;
+  readonly at: EpochMillis;
 }
 
 /**
@@ -61,5 +72,17 @@ export class PairingRepository extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<UserId>, PairingUnavailable>;
     /** Removes the lookup of both partners. Does nothing for a user without a partner. */
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+    /**
+     * In one atomic write: records that `blocker` blocked `blocked` and removes the pair of
+     * `blocker`. A claim of an invite between the two, either way round, is `InvalidInvite` from
+     * then on. Safe to repeat.
+     */
+    readonly block: (block: {
+      readonly blocker: UserId;
+      readonly blocked: UserId;
+      readonly at: EpochMillis;
+    }) => Effect.Effect<void, PairingUnavailable>;
+    /** Keeps a report for the team. The pair is untouched. */
+    readonly saveReport: (report: PartnerReport) => Effect.Effect<void, PairingUnavailable>;
   }
 >()("@billet/backend-pairing/PairingRepository") {}

@@ -268,6 +268,51 @@ export const describePairingRepositoryContract = (
       expect(found).toEqual([Option.some("pair-user-d-user-c"), Option.some("pair-user-d-user-c")]);
     });
 
+    it("blocks: ends the pair and refuses a new claim either way round", async () => {
+      const repository = await make();
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana));
+          yield* repository.block({ blocker: ana, blocked: ben, at: 1_600 });
+          yield* repository.block({ blocker: ana, blocked: ben, at: 1_700 });
+          const found = yield* repository.findPair(ben);
+          yield* repository.saveInvite(invite(ana));
+          const byBlocked = yield* failureOf(repository.claimInvite(claim(ben, ana)));
+          yield* repository.saveInvite(invite(ben));
+          const byBlocker = yield* failureOf(repository.claimInvite(claim(ana, ben)));
+          yield* repository.saveInvite(invite(cal));
+          yield* repository.claimInvite(claim(ben, cal));
+          return { found, byBlocked, byBlocker, other: yield* repository.findPair(ben) };
+        }),
+      );
+      expect(result.found).toEqual(Option.none());
+      expect(result.byBlocked).toBe("InvalidInvite");
+      expect(result.byBlocker).toBe("InvalidInvite");
+      expect(result.other).toEqual(Option.some("pair-user-b-user-c"));
+    });
+
+    it("keeps a report without touching the pair", async () => {
+      const repository = await make();
+      const found = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana));
+          yield* repository.saveReport({
+            id: "report-1",
+            reporter: ana,
+            reported: ben,
+            pairId: pair("pair-user-b-user-a"),
+            reason: "spam",
+            details: undefined,
+            at: 1_600,
+          });
+          return yield* repository.findPair(ana);
+        }),
+      );
+      expect(found).toEqual(Option.some("pair-user-b-user-a"));
+    });
+
     it("lets former partners pair again, under a new pair id", async () => {
       const repository = await make();
       const found = await Effect.runPromise(

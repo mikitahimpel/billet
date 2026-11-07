@@ -31,6 +31,10 @@ export const routes = {
   createInvite: route("POST", "/v1/invites"),
   claimInvite: route("POST", "/v1/invites/claim"),
   unpair: route("DELETE", "/v1/pair"),
+  /** Unpairs the caller and keeps the two from pairing again. 404 while there is no partner. */
+  blockPartner: route("POST", "/v1/pair/block"),
+  /** Reports the caller's partner to the team. 404 while there is no partner. */
+  reportPartner: route("POST", "/v1/pair/report"),
   /** The caller's pair and both members. 404 while the caller has no partner. */
   getPair: route("GET", "/v1/pair"),
   /** Replaces the caller's check-in with how they feel now. */
