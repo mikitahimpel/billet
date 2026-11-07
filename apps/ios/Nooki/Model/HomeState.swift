@@ -97,6 +97,8 @@ final class HomeState {
     /// The mini-game being played in the room, if any.
     var game: MiniGame?
     var showsProfile = false
+    /// Settings › Labs asks Home to play every animation; Home takes the request and clears it.
+    var showcaseRequested = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.
     var invitedCode: String?
