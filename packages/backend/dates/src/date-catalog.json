@@ -1,5 +1,5 @@
 {
-  "version": "f1de9310f482a232",
+  "version": "36a816f262695ce8",
   "ideas": [
     {
       "id": 1,
@@ -491,8 +491,8 @@
       "time": "evening",
       "season": "any",
       "art": {
-        "path": "/art/dates/38-4f943445.webp",
-        "color": "#A56752"
+        "path": "/art/dates/38-a5d9161b.webp",
+        "color": "#B57458"
       }
     },
     {
@@ -530,8 +530,8 @@
       "time": "1h",
       "season": "winter",
       "art": {
-        "path": "/art/dates/41-6f7722c4.webp",
-        "color": "#AB8E87"
+        "path": "/art/dates/41-dc63204f.webp",
+        "color": "#A78E8E"
       }
     },
     {
@@ -907,8 +907,8 @@
       "time": "1h",
       "season": "any",
       "art": {
-        "path": "/art/dates/70-8e4c0ad7.webp",
-        "color": "#A57A59"
+        "path": "/art/dates/70-f9a0f36d.webp",
+        "color": "#B27A4B"
       }
     },
     {
@@ -946,8 +946,8 @@
       "time": "evening",
       "season": "summer",
       "art": {
-        "path": "/art/dates/73-78bd8caf.webp",
-        "color": "#605B5D"
+        "path": "/art/dates/73-bbf2911a.webp",
+        "color": "#725B57"
       }
     },
     {
@@ -1258,8 +1258,8 @@
       "time": "1h",
       "season": "any",
       "art": {
-        "path": "/art/dates/97-2fb294da.webp",
-        "color": "#996E48"
+        "path": "/art/dates/97-03b73b21.webp",
+        "color": "#A4714B"
       }
     },
     {
