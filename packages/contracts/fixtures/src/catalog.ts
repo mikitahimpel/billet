@@ -34,6 +34,7 @@ import {
   SignInAnonymouslyRequest,
   SignInWithAppleRequest,
 } from "@billet/contracts-http-api/auth";
+import { ShopCatalogItem } from "@billet/contracts-domain/shop-catalog";
 import { DateCatalogResponse } from "@billet/contracts-http-api/dates";
 import { RegisterPushTokenRequest } from "@billet/contracts-http-api/device";
 import { ReportEventsRequest } from "@billet/contracts-http-api/events";
@@ -54,6 +55,7 @@ import {
   OpenGiftResponse,
   OrderRequest,
   OrderResponse,
+  ShopCatalogResponse,
   ShopResponse,
   WishRequest,
 } from "@billet/contracts-http-api/shop";
@@ -314,6 +316,34 @@ const catTrick: DateIdea = {
   time: "1h",
   season: "winter",
   art: { path: "/art/dates/42.webp", color: "#a1b2c3" },
+};
+
+const cloudArmchair: ShopCatalogItem = {
+  id: "armchair",
+  kind: "furniture" as ShopCatalogItem["kind"],
+  name: "Cloud Armchair",
+  blurb: "Big enough for two and a cat who insists.",
+  mood: "Rested",
+  rarity: "epic",
+  price: 320,
+  section: "furniture" as ShopCatalogItem["section"],
+  sortOrder: 10,
+  isNew: true,
+  asset: { _tag: "Bundled", id: "armchair" },
+};
+const sunsetPrint: ShopCatalogItem = {
+  id: "sunset-print",
+  kind: "decor" as ShopCatalogItem["kind"],
+  name: "Sunset Print",
+  rarity: "rare",
+  price: 120,
+  sale: { price: 90, from: 1_700_000_000_000, until: 1_700_086_400_000 },
+  deal: { discount: 0.25, order: 8 },
+  section: "daily-deals" as ShopCatalogItem["section"],
+  sortOrder: 20,
+  plus: true,
+  asset: { _tag: "Picture", key: "0123456789abcdef.webp" },
+  minBuild: 120,
 };
 
 const catalogInk = (id: string): Ink => {
@@ -1105,6 +1135,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "gift-taken": ApiError.cases.GiftTaken.make({ day: giftDay }),
     "bonus-taken": ApiError.cases.BonusTaken.make({ collection: cozyAutumn }),
     "cat-not-adopted": ApiError.cases.CatNotAdopted.make({}),
+    "price-changed": ApiError.cases.PriceChanged.make({ price: 560 }),
   }),
   fixture("CoinEntry", CoinEntry, {
     default: earnEntry,
@@ -1114,7 +1145,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { balance: 65, entries: [earnEntry, spendEntry] },
     empty: { balance: 0, entries: [] },
   }),
-  fixture("BuyRequest", BuyRequest, { default: { id: idempotencyKey, item: rose } }),
+  fixture("BuyRequest", BuyRequest, {
+    default: { id: idempotencyKey, item: rose },
+    "expected-price": { id: idempotencyKey, item: rose, expectedPrice: 60 },
+  }),
   fixture("BuyResponse", BuyResponse, {
     default: { entry: spendEntry, balance: 65, granted: [rose], owned: [freeInk, rose] },
   }),
@@ -1127,6 +1161,14 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("DateCatalogResponse", DateCatalogResponse, {
     default: { version: "0123456789abcdef", ideas: [blanketFort, catTrick] },
     empty: { version: "fedcba9876543210", ideas: [] },
+  }),
+  fixture("ShopCatalogItem", ShopCatalogItem, {
+    default: cloudArmchair,
+    "sale-and-picture": sunsetPrint,
+  }),
+  fixture("ShopCatalogResponse", ShopCatalogResponse, {
+    default: { version: "0123456789abcdef", items: [cloudArmchair, sunsetPrint] },
+    empty: { version: "fedcba9876543210", items: [] },
   }),
   fixture("ShopOffer", ShopOffer, {
     ink: ShopOffer.cases.Ink.make({ ink: rose }),
@@ -1148,6 +1190,11 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("OrderRequest", OrderRequest, {
     default: { id: idempotencyKey, offer: ShopOffer.cases.Item.make({ item: tower }) },
     treat: { id: idempotencyKey, offer: ShopOffer.cases.Treat.make({}) },
+    "expected-price": {
+      id: idempotencyKey,
+      offer: ShopOffer.cases.Item.make({ item: tower }),
+      expectedPrice: 540,
+    },
     "local-day": {
       id: idempotencyKey,
       offer: ShopOffer.cases.Item.make({ item: yarn }),

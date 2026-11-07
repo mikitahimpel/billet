@@ -217,6 +217,28 @@ import Testing
     #expect(page.items == [item])
   }
 
+  @Test func aShopCatalogSkipsAnItemItCantRead() throws {
+    let good = ShopCatalogItem(
+      id: "lamp", kind: "decor", name: "Lamp", rarity: .rare, price: 140, section: "decor",
+      sortOrder: 10, asset: .bundled(id: "lamp"))
+    let json = String(decoding: try JSONEncoder().encode(good), as: UTF8.self)
+    let bad = json.replacingOccurrences(of: #""rarity":"rare""#, with: #""rarity":"mythic""#)
+    #expect(bad != json)
+    let catalog = try decode(
+      ShopCatalogResponse.self, #"{"version":"0123456789abcdef","items":[\#(bad),\#(json)]}"#)
+    #expect(catalog.items == [good])
+  }
+
+  @Test func aSaleHoldsOnlyInsideItsWindow() {
+    let item = ShopCatalogItem(
+      id: "lamp", kind: "decor", name: "Lamp", rarity: .rare, price: 140,
+      sale: ShopSale(price: 100, from: 1_000, until: 2_000), section: "decor", sortOrder: 10,
+      asset: .bundled(id: "lamp"))
+    #expect(item.effectivePrice(at: Date(timeIntervalSince1970: 0.9)) == 140)
+    #expect(item.effectivePrice(at: Date(timeIntervalSince1970: 1.0)) == 100)
+    #expect(item.effectivePrice(at: Date(timeIntervalSince1970: 2.0)) == 140)
+  }
+
   @Test func textCountsCharactersAsAPersonDoes() throws {
     let family = String(repeating: "👩‍👩‍👧‍👦", count: NoteText.maxCharacters)
     #expect(NoteText(validating: family) != nil)

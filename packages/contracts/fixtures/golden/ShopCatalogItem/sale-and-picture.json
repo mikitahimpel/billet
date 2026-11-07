@@ -1,0 +1,24 @@
+{
+  "asset": {
+    "_tag": "Picture",
+    "key": "0123456789abcdef.webp"
+  },
+  "deal": {
+    "discount": 0.25,
+    "order": 8
+  },
+  "id": "sunset-print",
+  "kind": "decor",
+  "minBuild": 120,
+  "name": "Sunset Print",
+  "plus": true,
+  "price": 120,
+  "rarity": "rare",
+  "sale": {
+    "from": 1700000000000,
+    "price": 90,
+    "until": 1700086400000
+  },
+  "section": "daily-deals",
+  "sortOrder": 20
+}
