@@ -2,7 +2,13 @@ import { Schema } from "effect";
 import { UtcOffsetSeconds } from "@billet/contracts-domain/cat";
 import { CoinEntry, EarnEvent } from "@billet/contracts-domain/coins";
 import { IdempotencyKey } from "@billet/contracts-domain/ids";
-import { InkId, KnownInkId } from "@billet/contracts-domain/inks";
+import { InkId } from "@billet/contracts-domain/inks";
+
+/**
+ * The price the buyer saw. The server prices every buy itself: a price above this one is refused
+ * with `PriceChanged`, a lower one is charged. Absent: the server's price, whatever it is.
+ */
+export const ExpectedPrice = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 const Balance = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
@@ -20,7 +26,11 @@ export type CoinsResponse = typeof CoinsResponse.Type;
  * `POST /v1/shop/buy`: buys one item at its catalog price. `id` is the client's, repeated on every
  * retry; a retry answers with the first buy. Only inks are sold so far.
  */
-export const BuyRequest = Schema.Struct({ id: IdempotencyKey, item: KnownInkId });
+export const BuyRequest = Schema.Struct({
+  id: IdempotencyKey,
+  item: InkId,
+  expectedPrice: Schema.optionalKey(ExpectedPrice),
+});
 export type BuyRequest = typeof BuyRequest.Type;
 
 /** The spend, the balance after it, what it granted and everything the pair now owns. */

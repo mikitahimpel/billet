@@ -18,6 +18,8 @@ struct HomeView: View {
     @State var showcase: String?
     /// A bare room for the games under `-uitestNoRoom`, where no real one is built.
     @State private var standInRoom = CatRoom()
+    /// Where feed, water and brush are played, while one is.
+    @State private var corner: TabletopRoom?
     @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
@@ -84,7 +86,7 @@ struct HomeView: View {
                 // Only while a room can be seen: a paused RealityView left in place under the Shop, Moments, Us or a
                 // cover still runs its render loop and composites a full-screen layer every frame. The room itself
                 // stays loaded (CatRoom), so coming back only makes a new view for it.
-                DioramaView(scene: scene, paused: !showsRoom, petPulse: state.care.petPulse) {
+                DioramaView(scene: scene, paused: !showsRoom || corner != nil, petPulse: state.care.petPulse) {
                     withAnimation(.spring(duration: 0.4)) { state.care.pet() }
                 }
                 .opacity(showsRoom ? 1 : 0)
@@ -145,19 +147,30 @@ struct HomeView: View {
             .opacity(state.game == nil ? 1 : 0)
 
             if let game = state.game, let room = scene ?? (Self.noRoom ? standInRoom : nil) {
-                // In the room, with nothing else of Home over it.
-                GameView(session: GameSession(game: game, room: room, catEvents: session?.catEvents ?? .offline)) {
-                    state.game = nil
+                if Self.usesCorner(game), !Self.noRoom {
+                    // Its own full-screen scene over Home, once the corner exists.
+                    if let corner {
+                        GameView(session: GameSession(game: game, room: corner, catEvents: session?.catEvents ?? .offline),
+                                 corner: corner) {
+                            closeCorner(returningTo: room)
+                        }
+                        .id(game)
+                        .transition(.opacity)
+                    }
+                } else {
+                    // In the room, with nothing else of Home over it.
+                    GameView(session: GameSession(game: game, room: room, catEvents: session?.catEvents ?? .offline)) {
+                        withAnimation(.easeInOut(duration: 0.25)) { state.game = nil }
+                    }
+                    .id(game)
+                    .transition(.opacity)
                 }
-                .id(game)
-                .transition(.opacity)
             }
 
             // The composer and the canvas play it over themselves while they're up.
             if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
         }
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
-        .simultaneousGesture(roomSwipe)
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             if state.tab == .world, state.game == nil {
@@ -166,7 +179,10 @@ struct HomeView: View {
                     TipView(PetHint(), arrowEdge: .bottom)
                     TipView(TreatHint(), arrowEdge: .bottom)
                     HStack(alignment: .bottom) {
-                        PetButton(state: state, needs: { scene?.director }) { game in state.game = game }
+                        PetButton(state: state, needs: { scene?.director }) { game in
+                            if Self.usesCorner(game), !Self.noRoom { corner = TabletopRoom() }
+                            withAnimation(.easeInOut(duration: 0.25)) { state.game = game }
+                        }
                         Spacer(minLength: 0)
                         PlayAllButton(showcase: showcase) { scene?.playAll() }
                     }
@@ -278,6 +294,7 @@ struct HomeView: View {
             Task { await session.catEvents.send([.petted]) }
         }
         .onChange(of: state.tab, initial: true) { visitHints() }
+        .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in
             switch phase {
             case .active:
@@ -390,20 +407,6 @@ struct HomeView: View {
         reportOpened(state.room)
     }
 
-    /// Swiping the scene sideways visits the other room; a swipe that starts in the header or the tab bar, or that
-    /// is mostly vertical, is something else's.
-    private var roomSwipe: some Gesture {
-        DragGesture(minimumDistance: 40).onEnded { drag in
-            guard state.tab == .world, state.game == nil, !launching, hasRoomChoice,
-                  abs(drag.translation.width) > 80, abs(drag.translation.width) > abs(drag.translation.height) * 1.5,
-                  drag.startLocation.y > 120, drag.startLocation.y < height - 150 else { return }
-            let kinds = state.rooms.variant.kinds
-            guard let index = kinds.firstIndex(of: state.room) else { return }
-            let target = drag.translation.width < 0 ? index + 1 : index - 1
-            if kinds.indices.contains(target) { select(kinds[target]) }
-        }
-    }
-
     /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
     /// new room has drawn. The City is built under the stand-in, which hides the moment it holds the main thread.
     private func select(_ room: RoomKind) {
@@ -449,6 +452,15 @@ struct HomeView: View {
     private static var keyWindow: UIWindow? {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first(where: \.isKeyWindow)
+    }
+
+    /// The laser stays in the room; the others have their own scene.
+    private static func usesCorner(_ game: MiniGame) -> Bool { game != .laser }
+
+    private func closeCorner(returningTo room: CatRoom) {
+        corner?.leave(to: room)
+        withAnimation(.easeInOut(duration: 0.25)) { state.game = nil }
+        corner = nil
     }
 
     private var scene: CatRoom? {

@@ -77,6 +77,8 @@ import Testing
       "getFlags": Routes.getFlags,
       "getStatus": Routes.getStatus,
       "getDateCatalog": Routes.getDateCatalog,
+      "getShopCatalog": Routes.getShopCatalog,
+      "getShopArt": Routes.getShopArt,
       "getCat": Routes.getCat,
       "saveCat": Routes.saveCat,
       "listCatJournal": Routes.listCatJournal,

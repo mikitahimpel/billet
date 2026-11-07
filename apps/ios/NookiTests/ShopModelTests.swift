@@ -195,6 +195,15 @@ private func settle(_ done: () -> Bool) async {
         #expect(model.coinsAsk?.retry?.kind == .treat)
     }
 
+    @Test func aBuyWithoutARoomIsRefusedOutLoudNotIgnored() throws {
+        defer { cleanUp() }
+        let (model, _) = shop(coins: 5000)
+        #expect(!model.buy(try #require(Catalog.item("yarn"))))
+        #expect(model.refused?.title == "Yarn Ball")
+        #expect(model.coins == 5000)
+        #expect(!model.owned.contains("yarn"))
+    }
+
     @Test func anOrderAlreadyOwnedOrNoLongerSoldIsTakenBackToo() async throws {
         defer { cleanUp() }
         for refusal: TransportError in [.api(.alreadyOwned(itemId: "yarn")), .api(.notFound)] {
