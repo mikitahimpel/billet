@@ -1,5 +1,6 @@
 import CoreMotion
 import FeatureGames
+import GamesInterface
 import RealityKit
 import SwiftUI
 import UIKit

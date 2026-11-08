@@ -1,4 +1,5 @@
 import FeatureGames
+import GamesInterface
 import Pet
 import SwiftUI
 import Design
@@ -11,7 +12,9 @@ protocol PetNeedsSource: AnyObject {
     func feed()
 }
 
-extension CatDirector: PetNeedsSource {}
+extension RoomController: PetNeedsSource {
+    var needs: PetNeeds? { status.needs }
+}
 
 /// Mochi's four needs as warm, chunky bars, two by two on one clay card. A low bar is an invitation, never a warning:
 /// nothing turns red, blinks or shakes.

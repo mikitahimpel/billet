@@ -1,5 +1,6 @@
 import Combine
 import FeatureGames
+import GamesInterface
 import Pet
 import RealityKit
 import SwiftUI
