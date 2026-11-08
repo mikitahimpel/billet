@@ -66,14 +66,14 @@ struct RoomGameLayer: View {
             if RoomController.usesCorner(game), !controller.isStandIn {
                 if let corner = controller.corner {
                     GameView(
-                        session: GameSession(game: game, room: corner, catEvents: controller.catEvents),
+                        session: GameSession(game: game, room: corner, catLife: controller.catLife),
                         corner: corner
                     ) { controller.endGame() }
                     .id(game)
                     .transition(.opacity)
                 }
             } else {
-                GameView(session: GameSession(game: game, room: room, catEvents: controller.catEvents)) {
+                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife)) {
                     controller.endGame()
                 }
                 .id(game)

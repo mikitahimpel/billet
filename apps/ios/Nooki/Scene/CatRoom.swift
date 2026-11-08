@@ -31,8 +31,8 @@ class CatRoom {
     private(set) var walker: CatWalker?
     /// Mochi's brain in this room, once she has loaded.
     private(set) var director: CatDirector?
-    /// The cat's life on this phone and where its changes are reported, shared by every room.
-    static let catEvents: CatEventSource = LocalCatEvents()
+    /// The cat's life every room runs on: the pair's journal once paired. `RoomController` connects it.
+    static let catLife = CatLife()
     static let catAnalytics: CatAnalytics = NoCatAnalytics()
     /// Height above the cat's origin where the speech bubble anchors.
     private var catHeadTop: Float = 0.12
@@ -241,7 +241,7 @@ class CatRoom {
             walker.needsBody = { Self.needBody($0) }
             Self.rooms.add(self)
             self.walker = walker
-            director = CatDirector(walker: walker, spots: catSpots, source: Self.catEvents, analytics: Self.catAnalytics,
+            director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
             director?.appOpened()
             catHeadTop = 0.3 * scale

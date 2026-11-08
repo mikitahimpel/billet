@@ -31,6 +31,9 @@ public struct WebSocketDependencies: Sendable {
   /// The last reaction `rev` already held, read as each socket opens. A `Resume` that names one
   /// asks for every reaction change after it; `nil` follows none.
   public var lastReactionRev: @Sendable () async -> Int?
+  /// The last cat journal `seq` already held, read as each socket opens. A `Resume` that names
+  /// one asks for every journal entry after it, then each new one; `nil` follows none.
+  public var lastCatSeq: @Sendable () async -> Int?
   /// Each `Resume` also asks for `ShopChanged`, the pair's shop, now and whenever it changes.
   public var followsShop: Bool
   /// Each `Resume` also asks for `ListsChanged`, the pair's lists, now and whenever they change.
@@ -50,6 +53,7 @@ public struct WebSocketDependencies: Sendable {
     jitter: @escaping @Sendable () -> Double = { Double.random(in: 0.8...1.2) },
     followsActivity: Bool = false,
     lastReactionRev: @escaping @Sendable () async -> Int? = { nil },
+    lastCatSeq: @escaping @Sendable () async -> Int? = { nil },
     followsShop: Bool = false,
     followsLists: Bool = false,
     followsMoods: Bool = false,
@@ -62,6 +66,7 @@ public struct WebSocketDependencies: Sendable {
     self.jitter = jitter
     self.followsActivity = followsActivity
     self.lastReactionRev = lastReactionRev
+    self.lastCatSeq = lastCatSeq
     self.followsShop = followsShop
     self.followsLists = followsLists
     self.followsMoods = followsMoods

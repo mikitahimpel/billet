@@ -220,6 +220,20 @@ export const activityOf = (
           },
         ];
       }
+      // One item per milestone day: a later report of the same day writes over it.
+      case "StreakChanged": {
+        const { streak, by, at: reachedAt, reached } = output;
+        return reached === undefined || streak.lastDay === undefined
+          ? []
+          : [
+              {
+                id: decodeId(`streak:${streak.lastDay}`),
+                at: reachedAt,
+                doer: member(by),
+                event: { _tag: "StreakReached", days: reached },
+              },
+            ];
+      }
       case "RoomOpened":
         return output.joined === undefined
           ? []

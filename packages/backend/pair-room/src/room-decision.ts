@@ -13,6 +13,7 @@ import {
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
+import { LoveStreak } from "@billet/contracts-domain/streak";
 import { CollectionId, GiftReward, PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RiddleWrite } from "./riddle-rules.ts";
@@ -87,6 +88,16 @@ export const RoomOutput = Schema.TaggedUnion({
     count: Schema.Int,
     text: ListItemText,
   },
+  /**
+   * The pair's love streak after `by`'s day grew it, or their restore. `reached` is the milestone
+   * that day made, for the Inbox.
+   */
+  StreakChanged: {
+    streak: LoveStreak,
+    by: UserId,
+    at: EpochMillis,
+    reached: Schema.optionalKey(Schema.Int),
+  },
   /** A member's new check-in, which replaced their last one. */
   MoodSet: { checkIn: MoodCheckIn },
   /** A draw-guess riddle to store, with the try that changed it and the series after it. */
@@ -141,6 +152,8 @@ export const RoomRejection = Schema.TaggedUnion({
   MoodNoteTooLong: {},
   /** A `GamePlayed` an app sent for a game the room journals itself, such as draw-guess. */
   RoomJournalsGame: {},
+  /** A restore of a streak that is alive, too short, out for longer than a day, or in cooldown. */
+  StreakNotRestorable: {},
 });
 export type RoomRejection = typeof RoomRejection.Type;
 

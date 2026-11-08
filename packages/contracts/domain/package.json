@@ -28,6 +28,7 @@
     "./riddle": "./src/riddle.ts",
     "./riddle-words": "./src/riddle-words.ts",
     "./shop": "./src/shop.ts",
+    "./streak": "./src/streak.ts",
     "./shop-catalog": "./src/shop-catalog.ts"
   },
   "scripts": {

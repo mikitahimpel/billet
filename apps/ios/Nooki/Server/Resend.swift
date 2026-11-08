@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import Transport
 
 /// Tries a send again while it reports something still waiting on the network, 2 s after the first failure and twice
 /// as long after each next one, up to `ceiling`. Ends when nothing waits or the task is cancelled.
@@ -48,5 +49,18 @@ nonisolated private final class OnlineFlag: @unchecked Sendable {
     func update(_ now: Bool) -> Bool {
         defer { online = now }
         return now && online == false
+    }
+}
+
+nonisolated extension TransportError {
+    /// The server didn't take it but may later: out of reach, down, or the session not ready yet. Anything else is
+    /// its answer, and sending the same request again gets the same one.
+    var isWorthRetrying: Bool {
+        switch self {
+        case .network, .maintenance: true
+        case .status(let code): code >= 500 || code == 429 || code == 408
+        case .api(let error): error == .unauthorized || error == .unavailable
+        case .encoding, .decoding: false
+        }
     }
 }

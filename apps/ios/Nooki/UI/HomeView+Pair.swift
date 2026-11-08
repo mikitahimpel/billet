@@ -49,6 +49,9 @@ extension HomeView {
         await state.shop.connect(sync)
         await state.gifts.connect(session.giftSync)
         await state.lists.connect(session.listSync)
+        guard let pair = state.profile.couple.catPair else { return }
+        await state.streak.follow(session.streakRemote)
+        await room.connectCat(session.catEvents, pair: pair)
     }
 
     private func leavePair() async {
@@ -57,6 +60,8 @@ extension HomeView {
         await state.shop.connect(nil)
         await state.gifts.connect(nil)
         await state.lists.connect(nil)
+        await state.streak.follow(nil)
+        await room.connectCat(nil, pair: nil)
     }
 
     /// Each tab shown, and each return to the app, is a visit that may show one hint.

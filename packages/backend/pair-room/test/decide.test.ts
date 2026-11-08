@@ -190,9 +190,9 @@ describe("decide on an active room", () => {
     );
   });
 
-  it("leaves the streak alone until #20 gives it rules", () => {
-    const room: ActiveRoom = { ...active, streakDays: 3 };
-    expect(expectAccepted(room, send()).state.streakDays).toBe(3);
+  it("leaves the streak alone when a note is sent: the phone reports its day", () => {
+    const room: ActiveRoom = { ...active, streak: { days: 3, best: 3 } };
+    expect(expectAccepted(room, send()).state.streak).toEqual({ days: 3, best: 3 });
   });
 });
 
@@ -428,6 +428,17 @@ describe("tagged unions", () => {
       paid: false,
     }),
     SetMood: setMood(),
+    RecordStreakDay: RoomCommand.cases.RecordStreakDay.make({
+      by: alice,
+      at: 1_700_000_000_000,
+      happenedAt: 1_699_999_000_000,
+      utcOffsetSeconds: 3600,
+    }),
+    RestoreStreak: RoomCommand.cases.RestoreStreak.make({
+      by: bob,
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+    }),
     SaveRiddle: RoomCommand.cases.SaveRiddle.make({
       by: bob,
       at: 1_700_000_000_000,
@@ -518,6 +529,12 @@ describe("tagged unions", () => {
       checkIn: { user: bob, mood: "busy", note: "deadline", at: 1_700_000_000_000 },
     }),
     RiddleSaved: RoomOutput.cases.RiddleSaved.make({ write: { riddle: riddleOf(alice) } }),
+    StreakChanged: RoomOutput.cases.StreakChanged.make({
+      streak: { days: 3, best: 5, lastDay: Schema.decodeSync(LocalDay)("2023-11-14") },
+      by: alice,
+      at: 1_700_000_000_000,
+      reached: 3,
+    }),
   };
   const rejections: Record<RoomRejection["_tag"], RoomRejection> = {
     DuplicateMember: RoomRejection.cases.DuplicateMember.make({}),
@@ -546,6 +563,7 @@ describe("tagged unions", () => {
     ListItemNotFound: RoomRejection.cases.ListItemNotFound.make({}),
     MoodNoteTooLong: RoomRejection.cases.MoodNoteTooLong.make({}),
     RoomJournalsGame: RoomRejection.cases.RoomJournalsGame.make({}),
+    StreakNotRestorable: RoomRejection.cases.StreakNotRestorable.make({}),
   };
 
   it.each([
@@ -587,7 +605,7 @@ describe("RoomState invariants", () => {
       pairId,
       members: [member(alice), member(bob)],
       lastSeq: 0,
-      streakDays: 0,
+      streak: { days: 0, best: 0 },
       inks: [],
       items: [],
       wishlist: [],
@@ -602,7 +620,7 @@ describe("RoomState invariants", () => {
   it.each([
     ["the same user twice", { members: [member(alice), member(alice)] }],
     ["a negative lastSeq", { lastSeq: -1 }],
-    ["a negative streakDays", { streakDays: -1 }],
+    ["a negative streak", { streak: { days: -1, best: 0 } }],
     ["an ink that is not an ink id", { inks: ["rose"] }],
     ["a piece that is not a piece id", { items: ["Lamp"] }],
   ])("rejects %s", (_, overrides) => {

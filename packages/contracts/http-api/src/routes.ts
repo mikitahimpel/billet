@@ -41,6 +41,12 @@ export const routes = {
   getPair: route("GET", "/v1/pair"),
   /** Replaces the caller's check-in with how they feel now. */
   setMood: route("PUT", "/v1/mood"),
+  /** The pair's love streak. 404 while the caller has no partner. */
+  getStreak: route("GET", "/v1/streak"),
+  /** Counts the caller's day in the pair's streak. */
+  recordStreakDay: route("POST", "/v1/streak/days"),
+  /** Brings back the pair's streak after one missed day. 409 when it can't be. */
+  restoreStreak: route("POST", "/v1/streak/restore"),
   uploadImage: route("POST", "/v1/media"),
   /** A media key has slashes in it, so it is the rest of the path: see `mediaPath`. */
   downloadImage: route("GET", "/v1/media/*"),

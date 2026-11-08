@@ -22,6 +22,8 @@ import { ActivityService } from "@billet/backend-notes/activity-service";
 import { CatRoutes } from "@billet/backend-notes/cat-routes";
 import { MoodRoutes } from "@billet/backend-notes/mood-routes";
 import { MoodService } from "@billet/backend-notes/mood-service";
+import { StreakRoutes } from "@billet/backend-notes/streak-routes";
+import { StreakService } from "@billet/backend-notes/streak-service";
 import { GiftsRoutes } from "@billet/backend-notes/gifts-routes";
 import { GiftsService } from "@billet/backend-notes/gifts-service";
 import { ListsRoutes } from "@billet/backend-notes/lists-routes";
@@ -110,6 +112,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     CatRoutes,
     ReactionRoutes,
     MoodRoutes,
+    StreakRoutes,
     GiftsRoutes,
     ListsRoutes,
     PickTonightRoutes,
@@ -143,6 +146,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         CatService.layer,
         ReactionService.layer,
         MoodService.layer,
+        StreakService.layer,
         GiftsService.layer,
         ListsService.layer,
         PickTonightService.layer,

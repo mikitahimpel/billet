@@ -133,6 +133,7 @@ export class CatService extends Context.Service<
               return yield* Effect.fail(new NotesNotFound());
             case "CatEntryIdTaken":
             case "RoomJournalsGame":
+            case "StreakNotRestorable":
               return yield* Effect.fail(new InvalidNote());
             case "NotAMember":
             case "DuplicateMember":

@@ -86,7 +86,8 @@ nonisolated extension PaymentsServer {
         case .api(.unauthorized), .api(.notFound), .api(.unavailable), .network, .status, .maintenance: .unavailable
         case .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned),
              .api(.notEnoughCoins), .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken),
-             .api(.bonusTaken), .api(.catNotAdopted), .api(.priceChanged), .encoding, .decoding:
+             .api(.bonusTaken), .api(.catNotAdopted), .api(.streakNotRestorable), .api(.priceChanged), .encoding,
+             .decoding:
             .failed("The server answered something unexpected.")
         }
     }

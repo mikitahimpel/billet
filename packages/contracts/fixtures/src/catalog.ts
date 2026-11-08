@@ -116,6 +116,12 @@ import { PushPayload } from "@billet/contracts-push/push-payload";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import { LoveStreak } from "@billet/contracts-domain/streak";
+import {
+  RecordStreakDayRequest,
+  RestoreStreakRequest,
+  StreakResponse,
+} from "@billet/contracts-http-api/streak";
 import {
   ListReactionsResponse,
   ReactRequest,
@@ -1145,6 +1151,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "gift-taken": ApiError.cases.GiftTaken.make({ day: giftDay }),
     "bonus-taken": ApiError.cases.BonusTaken.make({ collection: cozyAutumn }),
     "cat-not-adopted": ApiError.cases.CatNotAdopted.make({}),
+    "streak-not-restorable": ApiError.cases.StreakNotRestorable.make({}),
     "price-changed": ApiError.cases.PriceChanged.make({ price: 560 }),
   }),
   fixture("CoinEntry", CoinEntry, {
@@ -1294,6 +1301,19 @@ export const catalog: ReadonlyArray<Fixture> = [
     "no-moods": { pairId, members: [alice, bob], moods: [] },
   }),
   fixture("MoodCheckIn", MoodCheckIn, { default: sleepy, "with-note": missingAlice }),
+  fixture("LoveStreak", LoveStreak, {
+    default: { days: 0, best: 0 },
+    alive: { days: 12, best: 30, lastDay: giftDay, restoredOn: giftDay },
+  }),
+  fixture("StreakResponse", StreakResponse, {
+    default: { streak: { days: 4, best: 4, lastDay: giftDay } },
+  }),
+  fixture("RecordStreakDayRequest", RecordStreakDayRequest, {
+    default: { at: 1_700_000_004_000, utcOffsetSeconds: 3600 },
+  }),
+  fixture("RestoreStreakRequest", RestoreStreakRequest, {
+    default: { utcOffsetSeconds: -18000 },
+  }),
   fixture("SetMoodRequest", SetMoodRequest, {
     default: { mood: "happy" },
     "with-note": { mood: "busy", note: "  deadline till 6  " },
