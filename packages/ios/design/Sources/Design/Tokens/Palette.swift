@@ -90,6 +90,12 @@ enum Palette {
   static let glassGlyph = Adaptive(light: RGBA(hex: 0x3A2114), dark: RGBA(hex: 0xFFFFFF))
   static let glassGlyphSecondary = Adaptive(
     light: RGBA(hex: 0x6B4A36), dark: RGBA(hex: 0xFFFFFF, opacity: 0.88))
+  /// The edge of every glass surface: a lit line over the dark room, a soft one over cream.
+  static let glassRim = Adaptive(
+    light: RGBA(hex: 0xFFFFFF, opacity: 0.7), dark: RGBA(hex: 0xFFFFFF, opacity: 0.18))
+  /// The selected item inside a glass bar: the tab, the room. Its label is `glassGlyph`.
+  static let glassSelection = Adaptive(
+    light: RGBA(hex: 0xF2A65E, opacity: 0.38), dark: RGBA(hex: 0xF2A65E, opacity: 0.34))
 
   /// A disabled button: flat and quiet, its label still readable.
   static let disabledFill = Adaptive(

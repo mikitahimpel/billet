@@ -201,11 +201,8 @@ struct HomeView: View {
                 case .us:
                     UsView(state: state)
                 case .world:
-                    VStack(spacing: 16) {
-                        RoomSwitch(state: state, select: select)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 16)
+                    // The room switch is in the header's bar, so it shares the header's glass container.
+                    Color.clear
                 }
             }
             // A short crossfade between tabs; the header and the tab bar are outside it and stay put.
@@ -216,11 +213,15 @@ struct HomeView: View {
             // view runs full-bleed under both and only its content is inset.
             .bars(fades: !showsRoom) {
                 if hud != .hidden {
-                    AppHeader(state: state) {
+                    AppHeader(state: state, erase: {
                         room.stop()
                         HomeState.eraseAll()
                         state = HomeState(stores: .live())
                         Task { await followPair() }
+                    }) {
+                        if state.tab == .world {
+                            RoomSwitch(state: state, select: select).transition(.opacity)
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
@@ -426,10 +427,10 @@ private struct ShowcaseLabel: View {
                 .contentTransition(.opacity)
         }
         .font(.system(size: 14, weight: .semibold, design: .rounded))
-        .foregroundStyle(.white)
+        .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, 14)
         .frame(height: 40)
-        .warmGlass(.capsule)
+        .glass(.capsule, role: .bar)
         .frame(height: 44)
         .accessibilityLabel("Playing \(label)")
     }

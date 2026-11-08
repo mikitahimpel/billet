@@ -187,7 +187,7 @@ struct LockCanvasView: View {
         } label: {
             GlassSymbol(name: "photo.on.rectangle")
                 .frame(width: Size.control, height: Size.control)
-                .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
+                .glass(.circle, role: .control)
                 .contentShape(.circle)
         }
         .accessibilityLabel("Wallpaper")

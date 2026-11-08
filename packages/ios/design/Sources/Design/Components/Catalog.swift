@@ -93,23 +93,27 @@ private struct HeaderOverRoom: View {
   @State private var room = "Room"
 
   var body: some View {
-    HStack(spacing: Space.s) {
-      GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
-      GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
-      Spacer()
-      HStack(spacing: Space.xs) {
-        CoinIcon(size: 20)
-        Text("240").font(.nookiHeadline.monospacedDigit())
+    GlassGroup {
+      HStack(spacing: GlassMetrics.gap) {
+        GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
+        GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
+        Spacer()
+        HStack(spacing: Space.xs) {
+          CoinIcon(size: 20)
+          Text("240").font(.nookiHeadline.monospacedDigit())
+        }
+        .foregroundStyle(Ink.glassGlyph)
+        .padding(.horizontal, Space.m)
+        .frame(height: Size.control)
+        .glass(.capsule, role: .control)
       }
-      .foregroundStyle(Ink.glassGlyph)
-      .padding(.horizontal, Space.m)
-      .frame(height: Size.control)
-      .background(Ink.glassFill, in: .capsule)
-    }
-    .padding(Space.l)
-    .overlay(alignment: .bottom) {
-      GlassSegmented([("Room", "Room"), ("City", "City")], selection: $room, identifier: "catalog")
+      .padding(Space.l)
+      .overlay(alignment: .bottom) {
+        GlassSegmented(
+          [("Room", "Room"), ("City", "City")], selection: $room, identifier: "catalog"
+        )
         .padding(.bottom, Space.l)
+      }
     }
     .frame(height: 220, alignment: .top)
     .frame(maxWidth: .infinity)
