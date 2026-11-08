@@ -15,12 +15,6 @@ on:
         description: A commit on main to build instead of main's newest (empty builds the newest)
         required: false
         default: ""
-      payments:
-        description: "Store for stamp packs: mock (fake store, dev server credits) or storekit (App Store sandbox). docs/payments.md"
-        required: false
-        type: choice
-        options: [mock, storekit]
-        default: mock
 
 concurrency:
   group: testflight
@@ -151,12 +145,13 @@ jobs:
           echo "Build number: $number"
 
       # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Nooki/Server/Backend.swift).
-      # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md).
+      # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md): always StoreKit, because the binary
+      # uploaded here is the one App Review and the App Store get. BILLET_LABS stays unset, so Labs is compiled out.
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
           BILLET_API_HOST: ${{ secrets.DEMO_HOST }}
-          BILLET_PAYMENTS: ${{ inputs.payments }}
+          BILLET_PAYMENTS: storekit
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e

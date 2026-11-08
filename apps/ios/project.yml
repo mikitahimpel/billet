@@ -15,6 +15,10 @@ settings:
     # in the ENVIRONMENT, not as an xcodebuild argument: Package.swift reads the same variable to link only that
     # store (docs/payments.md).
     BILLET_PAYMENTS_MODE: $(BILLET_PAYMENTS:default=mock)
+    # Whether Settings > Labs and Testing are compiled into a Release build: "NO" unless BILLET_LABS=YES is in the
+    # environment. A Debug build always has them. The TestFlight workflow never sets it, because the binary it
+    # uploads is the one App Review and the App Store get (check-archive.sh checks BilletLabs).
+    BILLET_LABS_MODE: $(BILLET_LABS:default=NO)
     CURRENT_PROJECT_VERSION: "23"
 packages:
   BilletContracts:
@@ -54,6 +58,9 @@ targets:
           UIColorName: LaunchBackground
         # The billet server's host, from the BILLET_API_HOST environment variable at build time (see Server/Backend).
         BilletAPIHost: $(BILLET_API_HOST)
+        # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
+        BilletPayments: $(BILLET_PAYMENTS_MODE)
+        BilletLabs: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (Onboarding/InviteScanner).
         NSCameraUsageDescription: Nooki uses the camera to scan the invite code on your partner's screen.
         # nooki:// links from the widgets and controls (Shared/Widget/DeepLink.swift).
@@ -89,7 +96,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper)
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: >-
+          $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES

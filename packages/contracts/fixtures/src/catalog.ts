@@ -14,6 +14,7 @@ import {
   InviteCode,
   MediaKey,
   NoteId,
+  ReviewCode,
   UserId,
 } from "@billet/contracts-domain/ids";
 import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
@@ -76,6 +77,7 @@ import {
 import {
   ClaimInviteRequest,
   ClaimInviteResponse,
+  ClaimReviewCodeRequest,
   CreateInviteResponse,
 } from "@billet/contracts-http-api/invite";
 import {
@@ -180,6 +182,7 @@ const noteId = Schema.decodeUnknownSync(NoteId)("note-1");
 const image = Schema.decodeUnknownSync(MediaKey)("pairs/pair-1/notes/note-1.png");
 const pairId = Schema.decodeUnknownSync(PairId)("pair-1");
 const code = Schema.decodeUnknownSync(InviteCode)("ABCD2345EF");
+const reviewCode = Schema.decodeUnknownSync(ReviewCode)("ABCD2345EFGHJKLMNPQRSTUVWX");
 const experimentKey = Schema.decodeUnknownSync(ExperimentKey)("home-direction");
 const otherExperimentKey = Schema.decodeUnknownSync(ExperimentKey)("invite-card");
 const variantId = Schema.decodeUnknownSync(VariantId)("window-seat");
@@ -832,6 +835,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: { code, expiresAt: 1_700_086_400_000 },
   }),
   fixture("ClaimInviteRequest", ClaimInviteRequest, { default: { code } }),
+  fixture("ClaimReviewCodeRequest", ClaimReviewCodeRequest, { default: { code: reviewCode } }),
   fixture("ClaimInviteResponse", ClaimInviteResponse, { default: { pairId } }),
   fixture("UploadImageResponse", UploadImageResponse, { default: { image } }),
   fixture("SendNoteRequest", SendNoteRequest, {
@@ -1115,6 +1119,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ReportPartnerRequest", ReportPartnerRequest, {
     reason: { reason: "spam" },
     "with-details": { reason: "harassment", details: "Keeps sending me messages I asked to stop." },
+    note: { reason: "inappropriate", noteId },
   }),
   fixture("SessionResponse", SessionResponse, {
     default: { sessionToken, expiresAt: 1_707_776_000_000, userId: alice, deviceId },

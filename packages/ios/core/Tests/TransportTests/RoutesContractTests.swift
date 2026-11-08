@@ -35,6 +35,7 @@ import Testing
       "registerPushToken": Routes.registerPushToken,
       "createInvite": Routes.createInvite,
       "claimInvite": Routes.claimInvite,
+      "claimReviewCode": Routes.claimReviewCode,
       "unpair": Routes.unpair,
       "blockPartner": Routes.blockPartner,
       "reportPartner": Routes.reportPartner,

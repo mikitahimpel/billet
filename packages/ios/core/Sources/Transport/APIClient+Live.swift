@@ -54,9 +54,9 @@ extension APIClient {
           try await request(Routes.createInvite, signed: true), as: CreateInviteResponse.self)
       },
       claimInvite: { (body) async throws(TransportError) in
-        try await http.perform(
-          try await json(Routes.claimInvite, signed: true, body: body),
-          as: ClaimInviteResponse.self)
+        let route = body.code.isReview ? Routes.claimReviewCode : Routes.claimInvite
+        return try await http.perform(
+          try await json(route, signed: true, body: body), as: ClaimInviteResponse.self)
       },
       unpair: { () async throws(TransportError) in
         try await http.performEmpty(try await request(Routes.unpair, signed: true))

@@ -50,10 +50,24 @@ export interface NotificationRow {
   readonly receivedAt: number;
 }
 
+/** A user's report about their partner, as the panel lists it. */
+export interface ReportRow {
+  readonly id: string;
+  readonly reporterId: string;
+  readonly reportedId: string;
+  readonly pairId: string;
+  readonly reason: string;
+  /** What the reporter typed, if anything: the one place the panel shows a person's words. */
+  readonly details: string | null;
+  /** The note or photo reported, if the report is about one. */
+  readonly noteId: string | null;
+  readonly createdAt: number;
+}
+
 /**
  * What the panel reads from the directory, besides the flags services. Read-only. It never reads a
  * note, an image, an Apple subject, a push token or a typed onboarding answer: counts, pair ids,
- * purchases, picked option ids and dates only.
+ * purchases, picked option ids and dates only, and the reports users sent the team.
  */
 export class AdminData extends Context.Service<
   AdminData,
@@ -79,6 +93,13 @@ export class AdminData extends Context.Service<
      */
     readonly onboarding: Effect.Effect<
       { readonly rows: ReadonlyArray<OnboardingCountRow>; readonly accounts: number },
+      AdminUnavailable
+    >;
+    /** The newest `limit` partner reports, newest first, and how many there are in all. */
+    readonly reports: (
+      limit: number,
+    ) => Effect.Effect<
+      { readonly reports: ReadonlyArray<ReportRow>; readonly total: number },
       AdminUnavailable
     >;
     /** How many accounts are in the pair now, and when the first joined it. */

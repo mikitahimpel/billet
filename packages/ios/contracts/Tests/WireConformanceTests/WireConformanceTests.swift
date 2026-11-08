@@ -25,6 +25,7 @@ let roundTrips: [String: RoundTrip] = [
   "DeliveryLane": codec(DeliveryLane.self),
   "CreateInviteResponse": codec(CreateInviteResponse.self),
   "ClaimInviteRequest": codec(ClaimInviteRequest.self),
+  "ClaimReviewCodeRequest": codec(ClaimInviteRequest.self),
   "ClaimInviteResponse": codec(ClaimInviteResponse.self),
   "DemoPartnerResponse": codec(DemoPartnerResponse.self),
   "UploadImageResponse": codec(UploadImageResponse.self),

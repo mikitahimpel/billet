@@ -90,6 +90,22 @@ struct OnboardingFlowTests {
         #expect(sent.events.withLock { $0 }.contains(ClientEvent(.onboardingStepSkipped, detail: "goals")))
     }
 
+    @Test func leavingTheWelcomeEitherWayAcceptsTheTerms() {
+        let (flow, defaults, _) = makeFlow()
+        flow.start()
+        #expect(flow.page == .welcome)
+        #expect(!flow.termsAccepted)
+        flow.continueTapped()
+        #expect(flow.termsAccepted)
+
+        let (joiner, joinerDefaults, _) = makeFlow()
+        joiner.start()
+        joiner.join()
+        #expect(joiner.termsAccepted)
+        #expect(joinerDefaults.object(forKey: OnboardingFlow.termsAcceptedKey) is Date)
+        #expect(defaults.object(forKey: OnboardingFlow.termsAcceptedKey) is Date)
+    }
+
     @Test func continueNeedsAnAnswer() {
         let (flow, _, _) = makeFlow()
         flow.start()
@@ -337,6 +353,8 @@ struct AnswerQueueTests {
         #expect(InviteInput.code(in: "hello there, see you at 7") == nil)
         #expect(InviteInput.code(in: "K7QM4R2X") == nil)
         #expect(InviteInput.code(in: "https://example.com/i/short") == nil)
+        #expect(InviteInput.code(in: "abcd2345efghjklm npqrstuvwx") == "ABCD2345EFGHJKLMNPQRSTUVWX")
+        #expect(OnboardingView.code(from: String(repeating: "A", count: 30)).count == InviteCode.reviewLength)
     }
 
     @Test func theWelcomeScriptIsDeterministicAndEndsSettled() {
