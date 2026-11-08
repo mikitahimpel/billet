@@ -105,7 +105,10 @@ struct UnsentMark: View {
 
     var body: some View {
         Image(systemName: "icloud.slash")
-            .font(.system(size: size, weight: .semibold))
+            .resizable()
+            .scaledToFit()
+            .fontWeight(.semibold)
+            .frame(width: size, height: size)
             .foregroundStyle(tint)
             .accessibilityLabel("Not sent yet")
             .accessibilityIdentifier("unsent-mark")
