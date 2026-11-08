@@ -31,6 +31,7 @@ let widgetBridge: Target = .target(
 )
 
 let tests: [(name: String, dependencies: [String])] = [
+  ("FeatureShopTests", ["FeatureShop", "ShopInterface", "Transport", "Wire"]),
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
@@ -45,13 +46,25 @@ let tests: [(name: String, dependencies: [String])] = [
 let games: Target = .target(
   name: "FeatureGames", dependencies: dependencies(["GamesInterface", "Wire"]))
 
+// Coins and Shop: the interface other features see (value types, protocols) and the feature itself
+// (the machine, its store, the server client). docs/ios-architecture.md.
+let shopInterface: Target = .target(name: "ShopInterface", dependencies: dependencies(["Wire"]))
+let shop: Target = .target(
+  name: "FeatureShop",
+  dependencies: dependencies(["ShopInterface", "BilletKit", "Transport", "Wire"])
+)
+
 // What other features see of the games (which game, how it went) and of the room (its input, its
 // commands, the cat's coarse status). The room itself is in the app, where RealityKit is.
 let gamesInterface: Target = .target(name: "GamesInterface", dependencies: dependencies(["Wire"]))
 let roomInterface: Target = .target(
   name: "RoomInterface", dependencies: dependencies(["GamesInterface", "Pet"]))
 
-let products = features + ["WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface"]
+let products =
+  features + [
+    "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
+    "FeatureShop",
+  ]
 
 let package = Package(
   name: "BilletFeatures",
@@ -63,7 +76,7 @@ let package = Package(
     .package(path: "../pet"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
-    + [widgetBridge, games, gamesInterface, roomInterface]
+    + [widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]
 )

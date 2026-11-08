@@ -165,6 +165,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// Catches up on the journal and sends what waited offline.
     func syncCat() async { await catLife.sync() }
 
+    /// Sends what waited offline; true while something still waits on the network.
+    func flushCat() async -> Bool { await catLife.flush() }
+
     func catEntryArrived(_ entry: CatEntry) { catLife.received(entry) }
 
     /// The journal entry a room socket resumes after; nil follows none.

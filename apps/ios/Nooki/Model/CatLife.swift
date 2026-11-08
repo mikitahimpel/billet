@@ -48,6 +48,12 @@ final class CatLife: CatEventSource {
     static let petEvery: TimeInterval = 600
     /// What a treat from Labs weighs.
     static let labsTreatGrams = 30
+    /// Most events the outbox keeps; past it the oldest go, so a phone that never reaches the room doesn't grow it.
+    static let outboxLimit = 200
+    /// Where the outbox for game events alone was kept, before the journal came to this phone.
+    nonisolated static var formerOutbox: URL {
+        URL.applicationSupportDirectory.appending(path: "Outbox/cat-events.json")
+    }
 
     private let defaults: UserDefaults
     private let catName: () -> String
@@ -73,7 +79,8 @@ final class CatLife: CatEventSource {
     /// What this phone did that the room has not stored yet.
     var unsent: [RecordCatEventRequest] { saved.outbox }
 
-    init(defaults: UserDefaults = .standard, now: Date = .now, catName: @escaping () -> String = { CatProfile.name() },
+    init(defaults: UserDefaults = .standard, now: Date = .now, formerOutbox: URL = CatLife.formerOutbox,
+         catName: @escaping () -> String = { CatProfile.name() },
          catCoat: @escaping () -> String = { CatCoat.current().rawValue }) {
         self.defaults = defaults
         self.catName = catName
@@ -84,6 +91,12 @@ final class CatLife: CatEventSource {
             saved = Self.fromLocalEvents(defaults, now: now)
         }
         saved.events = saved.events.filter { now.timeIntervalSince($0.at) < Self.kept }
+        if let data = try? Data(contentsOf: formerOutbox),
+           let waiting = try? JSONDecoder().decode([RecordCatEventRequest].self, from: data) {
+            // They pay coins the phone already showed; they go under the keys they were made with.
+            enqueue(waiting)
+            try? FileManager.default.removeItem(at: formerOutbox)
+        }
     }
 
     /// The cat `LocalCatEvents` kept in the defaults before the room shared her.
@@ -123,21 +136,28 @@ final class CatLife: CatEventSource {
 
     private func send(_ request: RecordCatEventRequest) {
         guard client != nil else { return }
-        saved.outbox.append(request)
-        save()
+        enqueue([request])
         Task { await flush() }
+    }
+
+    private func enqueue(_ requests: [RecordCatEventRequest]) {
+        guard !requests.isEmpty else { return }
+        saved.outbox.append(contentsOf: requests)
+        if saved.outbox.count > Self.outboxLimit { saved.outbox.removeFirst(saved.outbox.count - Self.outboxLimit) }
+        save()
     }
 
     // MARK: - The pair's room
 
     /// Follows the pair's cat through `client`, or this phone's own with nil. A different pair than the one kept
-    /// starts her over from its journal; this phone's touches from before it never reached the room.
+    /// starts her over from its journal; this phone's touches from before it never reached the room. What waited
+    /// unpaired is this account's, from the former outbox, so it still goes.
     func connect(_ client: CatEventsClient?, pair: CatPair?) async {
         self.client = client
         let me = pair?.me ?? Self.solo
         if me != saved.me || pair?.partner != saved.partner {
             saved = Saved(seed: pair == nil ? .random(in: 1...UInt64.max) : saved.seed, born: .now, me: me,
-                          partner: pair?.partner)
+                          partner: pair?.partner, outbox: isPaired ? [] : saved.outbox)
             save()
             notify(.reset)
         }
@@ -158,7 +178,7 @@ final class CatLife: CatEventSource {
                     utcOffsetSeconds: TimeZone.current.secondsFromGMT()))
             }
             if let profile = cat.cat { take(profile) }
-            await flush()
+            _ = await flush()
             var after = max(saved.lastSeq, cat.lastSeq - Self.journalWindow)
             while true {
                 let page = try await client.journal(after)
@@ -186,21 +206,25 @@ final class CatLife: CatEventSource {
         notify(.reset)
     }
 
-    /// Sends the outbox in order. A drop keeps the rest for the next sync; anything the room refuses is let go.
-    private func flush() async {
-        guard let client, !flushing else { return }
+    /// Sends the outbox in order, and lets go of each event the room took or refused. True while one still waits
+    /// because the room couldn't take it yet; the rest stay behind it. Unpaired, nothing can go.
+    func flush() async -> Bool {
+        guard let client else { return false }
+        guard !flushing else { return !saved.outbox.isEmpty }
         flushing = true
         defer { flushing = false }
         while let request = saved.outbox.first {
+            guard !Task.isCancelled else { return true }
             do throws(TransportError) {
                 let response = try await client.record(request)
                 merge([response.entry])
-            } catch .network {
-                return
-            } catch {}
+            } catch {
+                if error.isWorthRetrying { return true }
+            }
             saved.outbox.removeAll { $0.id == request.id }
             save()
         }
+        return false
     }
 
     /// Takes entries in: the room's copy of an event replaces this phone's, so both end with its time.

@@ -351,6 +351,11 @@ struct MomentPrint: View {
                     .padding(width * 0.09)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if moment.unsent == true, session?.isPaired == true {
+                UnsentMark(size: max(10, width * 0.05)).padding(width * 0.06)
+            }
+        }
         .overlay(alignment: .top) {
             if moment.pinned {
                 WashiTape(tone: moment.id.tapeTone, width: width * 0.34)

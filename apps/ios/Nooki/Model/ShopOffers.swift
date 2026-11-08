@@ -1,4 +1,5 @@
 import Foundation
+import ShopInterface
 
 /// How rare a piece is. Only a frame and a label: every item is bought directly, never drawn at random.
 enum ShopRarity: String, CaseIterable, Codable {
@@ -58,10 +59,7 @@ struct ShopBundle: PieceSet, Hashable {
 }
 
 /// The free gift for the day: coins, or an item the couple doesn't own yet.
-enum GiftReward: Hashable {
-    case coins(Int)
-    case item(String)
-}
+typealias GiftReward = ShopInterface.GiftReward
 
 /// The Shop's rotations. Everything is a pure function of the pair and the local date, so both partners' phones show
 /// the same deals and gift without asking anyone, and every countdown ends at a real change. The server runs the same

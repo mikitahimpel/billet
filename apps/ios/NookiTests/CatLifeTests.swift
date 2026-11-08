@@ -12,6 +12,8 @@ private nonisolated final class FakeCatRoom: Sendable {
         var profile: Wire.CatProfile?
         var entries: [CatEntry] = []
         var online = true
+        /// What the room answers a recorded event with instead of storing it.
+        var refusal: TransportError?
         var adoptions: [SaveCatRequest] = []
         var records: [RecordCatEventRequest] = []
         var now = 1_800_000_000_000
@@ -48,6 +50,7 @@ private nonisolated final class FakeCatRoom: Sendable {
             record: { (request) async throws(TransportError) in
                 try self.state.withLock { (state) throws(TransportError) in
                     guard state.online else { throw .network("offline") }
+                    if let refusal = state.refusal { throw refusal }
                     state.records.append(request)
                     if let earlier = state.entries.first(where: { $0.id == request.id }) {
                         return RecordCatEventResponse(entry: earlier, temper: self.response(state).temper,
@@ -93,13 +96,14 @@ private let profile = Wire.CatProfile(
 @MainActor
 @Suite struct CatLifeTests {
     private let defaults: UserDefaults
+    private let formerOutbox = URL.temporaryDirectory.appending(path: "outbox-\(UUID().uuidString)/cat-events.json")
 
     init() {
         defaults = UserDefaults(suiteName: "CatLifeTests-\(UUID().uuidString)")!
     }
 
     private func life() -> CatLife {
-        CatLife(defaults: defaults, catName: { "Pancake" }, catCoat: { "ginger" })
+        CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { "Pancake" }, catCoat: { "ginger" })
     }
 
     /// Lets the outbox's own task run.
@@ -262,5 +266,57 @@ private let profile = Wire.CatProfile(
         #expect(life.context.born == born)
         #expect(life.events == [pet])
         #expect(life.me == CatLife.solo)
+    }
+
+    @Test func whatTheRoomRefusesIsLetGoAndWhatItCouldNotTakeWaits() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = life()
+        await life.connect(room.client, pair: pair)
+
+        room.state.withLock { $0.refusal = .api(.invalidRequest) }
+        life.record([.petted])
+        await settle()
+        #expect(life.unsent.isEmpty)
+
+        for refusal: TransportError in [.status(503), .network("lost"), .api(.unauthorized)] {
+            room.state.withLock { $0.refusal = refusal }
+            life.record([.fed(grams: 40)])
+            await settle()
+            #expect(await life.flush(), "\(refusal)")
+        }
+        #expect(life.unsent.count == 3)
+
+        room.state.withLock { $0.refusal = nil }
+        #expect(await life.flush() == false)
+        #expect(life.unsent.isEmpty)
+    }
+
+    @Test func theOutboxKeepsOnlyTheNewestPastItsLimit() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = life()
+        await life.connect(room.client, pair: pair)
+        room.set(online: false)
+
+        life.record(Array(repeating: .petted, count: CatLife.outboxLimit))
+        life.record([.fed(grams: 40)])
+        await settle()
+        #expect(life.unsent.count == CatLife.outboxLimit)
+        #expect(life.unsent.last?.event == .fed(grams: 40))
+    }
+
+    @Test func gameEventsLeftInTheFormerOutboxGoUnderTheirOwnKeys() async throws {
+        let waiting = [RecordCatEventRequest(id: .make(), event: .gamePlayed(game: "feed", score: 80, won: true))]
+        try FileManager.default.createDirectory(
+            at: formerOutbox.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(waiting).write(to: formerOutbox)
+
+        let life = life()
+        #expect(life.unsent == waiting)
+        #expect(!FileManager.default.fileExists(atPath: formerOutbox.path))
+
+        let room = FakeCatRoom(profile: profile)
+        await life.connect(room.client, pair: pair)
+        #expect(room.state.withLock { $0.records } == waiting)
+        #expect(life.unsent.isEmpty)
     }
 }

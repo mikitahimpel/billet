@@ -159,9 +159,11 @@ struct HomeView: View {
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
         .task(id: session?.isPaired) { await followPair() }
-        // A new photo, or one that failed to go earlier, goes to the partner.
-        .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
-        .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
+        .modifier(ResendsUnsent(
+            paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
+            sendPhotos: { await photoSync?.sendUnsent() ?? false },
+            sendNotes: { await textSync?.sendUnsent() ?? false },
+            sendCatEvents: { await room.flushCat() }))
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
