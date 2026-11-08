@@ -17,15 +17,31 @@ struct NookiApp: App {
         WelcomeClips.shared.preload()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
         URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
+        let parts = Self.assemble()
+        _session = State(initialValue: parts.session)
+        _hints = State(initialValue: parts.hints)
+        _onboarding = State(initialValue: parts.onboarding)
+        _home = State(initialValue: parts.home)
+    }
+
+    /// Everything a launch builds from what is on the phone; building it again after the account is deleted is a
+    /// first launch.
+    private struct Parts {
+        let session: ServerSession?
+        let hints: Hints
+        let onboarding: OnboardingFlow
+        let home: HomeState
+    }
+
+    private static func assemble() -> Parts {
         let session: ServerSession? = Self.isHostingTests ? nil : Backend.live().map { ServerSession(backend: $0) }
         let client: OnboardingClient = session?.onboarding ?? .offline
         let api: APIClient = session?.api ?? .offline
         let canInvite = session.map { !$0.isPaired } ?? false
-        _session = State(initialValue: session)
         Hints.configure()
         CatProfile.moveToAppGroup()
-        _hints = State(initialValue: Hints(report: api.reportEvents))
-        _onboarding = State(initialValue: OnboardingFlow(
+        let hints = Hints(report: api.reportEvents)
+        let onboarding = OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
             hasServer: session != nil, asksTogetherSince: true,
             togetherSinceChosen: { day in
@@ -34,8 +50,16 @@ struct NookiApp: App {
                 NotificationCenter.default.post(name: .coupleChanged, object: nil)
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
-            coatChanged: { CatRoom.forgetMochi() }))
-        _home = State(initialValue: HomeState(stores: .live()))
+            coatChanged: { CatRoom.forgetMochi() })
+        return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: .live()))
+    }
+
+    private func startOver() {
+        let parts = Self.assemble()
+        session = parts.session
+        hints = parts.hints
+        onboarding = parts.onboarding
+        home = parts.home
     }
 
     var body: some Scene {
@@ -50,6 +74,7 @@ struct NookiApp: App {
                     .preferredColorScheme(.dark)
                     .environment(session)
                     .environment(hints)
+                    .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
@@ -66,7 +91,7 @@ struct NookiApp: App {
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }
                     // Silent: the account key in the iCloud Keychain is the account, so there is nothing to ask.
-                    .task {
+                    .task(id: session.map(ObjectIdentifier.init)) {
                         session?.signIn.appeared()
                         await session?.refreshDateCatalog()
                         await session?.refreshGuessCatalog()

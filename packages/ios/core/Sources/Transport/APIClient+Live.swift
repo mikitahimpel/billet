@@ -61,6 +61,12 @@ extension APIClient {
       unpair: { () async throws(TransportError) in
         try await http.performEmpty(try await request(Routes.unpair, signed: true))
       },
+      blockPartner: { () async throws(TransportError) in
+        try await http.performEmpty(try await request(Routes.blockPartner, signed: true))
+      },
+      reportPartner: { (body) async throws(TransportError) in
+        try await http.performEmpty(try await json(Routes.reportPartner, signed: true, body: body))
+      },
       uploadImage: { (image) async throws(TransportError) in
         try await http.perform(
           try await request(
