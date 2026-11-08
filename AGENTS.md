@@ -42,6 +42,18 @@ xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
 An app change is also checked by eye in a Simulator. The app reaches a server only when built
 with `BILLET_API_HOST`.
 
+## CI
+
+macOS runners are few and shared by every agent.
+
+- The pull request's own `iOS` run is the check. Don't `gh workflow run ios.yml` for a full run;
+  a dispatch takes about an hour and holds a runner from everyone else.
+- UI tests (`NookiUITests`) run on main only. Run the ones you touch locally with
+  `-only-testing:NookiUITests/<Class>`.
+- Before you debug a red run, compare it with the latest `iOS` run on main
+  (`gh run list --workflow ios.yml --branch main`). Failures main has too aren't yours: report
+  them, don't rerun.
+
 ## Boundaries
 
 - kebab-case for folders and TS/config files; Swift files are PascalCase after their main type.
