@@ -94,6 +94,7 @@ export const adminApi = {
   status: "/admin/api/status",
   statusHistory: "/admin/api/status/history",
   purchases: "/admin/api/purchases",
+  reports: "/admin/api/reports",
   onboarding: "/admin/api/onboarding",
   shopItems: "/admin/api/shop-items",
   shopItem: "/admin/api/shop-items/:id",
@@ -487,6 +488,12 @@ const readHandlers = Effect.gen(function* () {
     return respondJson(yield* data.purchases(limit ?? 200));
   }).pipe(guarded);
 
+  // Read-only: acting on a report (blocking, deleting an account) happens outside the panel.
+  const reports = Effect.gen(function* () {
+    const { limit } = yield* HttpServerRequest.schemaSearchParams(PurchasesQuery);
+    return respondJson(yield* data.reports(limit ?? 200));
+  }).pipe(guarded);
+
   // Per-step answer counts and skip rates, served steps first, then the app's own.
   const onboarding = Effect.gen(function* () {
     const { rows, accounts } = yield* data.onboarding;
@@ -528,6 +535,7 @@ const readHandlers = Effect.gen(function* () {
     status,
     statusHistory,
     purchases,
+    reports,
   };
 });
 
@@ -612,6 +620,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.status, reads.status);
     yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", adminApi.purchases, reads.purchases);
+    yield* router.add("GET", adminApi.reports, reads.reports);
     yield* router.add("GET", adminApi.onboarding, reads.onboarding);
     yield* router.add("GET", adminApi.shopItems, reads.shopItems);
     yield* router.add("GET", adminApi.shopHistory, reads.shopHistory);

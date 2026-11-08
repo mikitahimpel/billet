@@ -17,6 +17,11 @@ import {
   StoredPartnerReport,
 } from "@billet/backend-pairing/pairing-repository";
 import {
+  StoredReviewChange,
+  StoredReviewCode,
+  StoredReviewPartner,
+} from "@billet/backend-review/review-repository";
+import {
   StoredNotification,
   StoredPurchase,
   StoredPurchaseEntry,
@@ -56,6 +61,9 @@ import {
   pushTokens,
   rateLimits,
   coinLedger,
+  reviewChanges,
+  reviewCodes,
+  reviewPartners,
   users,
 } from "../src/directory-schema.ts";
 import {
@@ -171,6 +179,9 @@ const checked = [
   ["shop_item_changes", shopItemChanges, ShopChangeRow],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
+  ["review_changes", reviewChanges, StoredReviewChange],
+  ["review_codes", reviewCodes, StoredReviewCode],
+  ["review_partners", reviewPartners, StoredReviewPartner],
   ["coin_ledger", coinLedger, StoredPurchaseEntry],
   ["activity", activity, StoredActivity],
   ["activity_read", activityRead, StoredActivityRead],

@@ -30,6 +30,8 @@ export const routes = {
   registerPushToken: route("PUT", "/v1/devices/current/push-token"),
   createInvite: route("POST", "/v1/invites"),
   claimInvite: route("POST", "/v1/invites/claim"),
+  /** Pairs the caller with the App Review partner; answers as `claimInvite` does. */
+  claimReviewCode: route("POST", "/v1/review/claim"),
   unpair: route("DELETE", "/v1/pair"),
   /** Unpairs the caller and keeps the two from pairing again. 404 while there is no partner. */
   blockPartner: route("POST", "/v1/pair/block"),
