@@ -307,6 +307,49 @@ and merge the static primitives into one `MeshResource` per material at build ti
 and loses only the lighting win (the lights stay dynamic). It is a day's work in Kit and Props,
 and the `cost` switch for it tells whether the lights are worth a bake afterwards.
 
+## Item 2, the return to the World: two arms that failed
+
+Both arms ran as `perf.yml` A/Bs on the iPhone 17 Pro Simulator, 3 rounds, against main at 7b2b9abe
+with HomeView's body split for the Xcode 26 type-checker (branch `perf/typecheck-base`; without
+the split neither side of a Release build on the macos-26 image compiles). Medians, min–max.
+
+**What the frame is.** The return frame is 0.6–1.3 s long, and the main thread works for only
+~0.1 s of it (`PERF frame long ... busyMs`, in µs: 811 ms with 96 ms busy, 649 ms with 62 ms
+busy). The main thread is blocked waiting, most likely on RealityKit setting up the new view, not
+running our code. So no change to what the shell does in that frame can shorten it.
+
+**Arm 1: keep the view mounted, root disabled, at full opacity, under the tabs and the sheets**
+(the plan's drawable-starvation test). Run 42516301926.
+
+| Phase | base | parked view |
+| --- | --- | --- |
+| switch tab.home: worst frame | 784 ms (522–1125) | **283 ms (223–526)** |
+| Shop still: fps, CPU per second | 60, 19 ms/s | **18.6 (13–43), 266 ms/s** |
+| Moments still: fps, CPU per second | 60, 10 ms/s | **25, 156 ms/s** |
+| cover.sheet: fps | 60 | 31 |
+| settled: fps | 27.7 (0.8–27.9) | **1, in all three runs** (1 s frames) |
+
+The return gets 3× shorter, but an empty RealityView costs about what the live room costs (266
+against ~300 ms of CPU a second on CI) and the 1 s stalls of #417 came back. RealityView has no
+public way to stop its render loop, so **unmounting stays the way the room freezes** when it is
+covered or left (#417, #439, #510). A Labs switch for a paused, mounted room is not worth having.
+
+**Arm 2: the World's stand-in (#421's snapshot) under the returning room instead of over it**, so
+the new view is never hidden while it starts. Run 42529129271.
+
+| Phase | base | stand-in under |
+| --- | --- | --- |
+| switch tab.home: worst frame | 1020 ms (796–1272) | 904 ms (634–1066) |
+| settled: fps | 9 (7–11) | 15 (2.9–28), one run stalled (settled.orbit max 2.9 s) |
+
+Inside the noise, and the stall still shows, so the stand-in over the room is not the cause.
+
+**The stall after the covers is on main.** One `settled` run in three on base runs at 0.8 fps
+with 1–2 s frames and almost no CPU, after the Inbox closes and the room remounts. That is the
+user-visible bug the baseline section suspected. Neither arm explains it. Next: a local
+Simulator look (close the Inbox, does Mochi still breathe?), then Instruments on a quiet Mac or
+H6, to find what the main thread waits on.
+
 ## Harness gaps
 
 Each is small and goes into the first Phase 2 PR, so every fix PR can show its number:
