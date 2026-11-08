@@ -120,7 +120,9 @@ public struct WaxSeal: View {
       WaxBlob()
         .fill(
           RadialGradient(
-            colors: [art.wax.mix(with: .white, by: 0.22), art.wax, art.wax.mix(with: .black, by: 0.25)],
+            colors: [
+              art.wax.mix(with: .white, by: 0.22), art.wax, art.wax.mix(with: .black, by: 0.25),
+            ],
             center: UnitPoint(x: 0.38, y: 0.32), startRadius: 0, endRadius: size * 0.62))
       Circle()
         .strokeBorder(art.wax.mix(with: .black, by: 0.3), lineWidth: max(1, size * 0.04))
@@ -177,13 +179,18 @@ struct Perforated: Shape {
           x: start.x + direction.dx * gap * CGFloat(index),
           y: start.y + direction.dy * gap * CGFloat(index))
         bites.addEllipse(
-          in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+          in: CGRect(
+            x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
       }
     }
-    row(from: CGPoint(x: rect.minX, y: rect.minY), along: CGVector(dx: 1, dy: 0), length: rect.width)
-    row(from: CGPoint(x: rect.minX, y: rect.maxY), along: CGVector(dx: 1, dy: 0), length: rect.width)
-    row(from: CGPoint(x: rect.minX, y: rect.minY), along: CGVector(dx: 0, dy: 1), length: rect.height)
-    row(from: CGPoint(x: rect.maxX, y: rect.minY), along: CGVector(dx: 0, dy: 1), length: rect.height)
+    row(
+      from: CGPoint(x: rect.minX, y: rect.minY), along: CGVector(dx: 1, dy: 0), length: rect.width)
+    row(
+      from: CGPoint(x: rect.minX, y: rect.maxY), along: CGVector(dx: 1, dy: 0), length: rect.width)
+    row(
+      from: CGPoint(x: rect.minX, y: rect.minY), along: CGVector(dx: 0, dy: 1), length: rect.height)
+    row(
+      from: CGPoint(x: rect.maxX, y: rect.minY), along: CGVector(dx: 0, dy: 1), length: rect.height)
     return Path(rect).subtracting(bites)
   }
 }
@@ -218,7 +225,9 @@ struct WaxBlob: Shape {
       }
       Color(hex: 0xFFE7A0)
         .frame(width: 220, height: 220)
-        .overlay { Text("miss you already").font(.nookiTitle).foregroundStyle(Color(hex: 0x2B2B2E)) }
+        .overlay {
+          Text("miss you already").font(.nookiTitle).foregroundStyle(Color(hex: 0x2B2B2E))
+        }
         .postage(stamp: .moon, seal: .rose, width: 220)
     }
   }
