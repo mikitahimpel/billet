@@ -193,11 +193,18 @@ public struct GlassSymbol: View {
 public struct PriceButton: View {
   let price: Int
   let was: Int?
+  let label: String?
+  let hint: String?
   let action: () -> Void
 
-  public init(_ price: Int, was: Int? = nil, action: @escaping () -> Void) {
+  public init(
+    _ price: Int, was: Int? = nil, label: String? = nil, hint: String? = nil,
+    action: @escaping () -> Void
+  ) {
     self.price = price
     self.was = was
+    self.label = label
+    self.hint = hint
     self.action = action
   }
 
@@ -222,7 +229,8 @@ public struct PriceButton: View {
       .background(Color.honey, in: .capsule)
     }
     .buttonStyle(PressScaleStyle())
-    .accessibilityLabel(was.map { "\(price) coins, was \($0)" } ?? "\(price) coins")
+    .accessibilityLabel(label ?? was.map { "\(price) coins, was \($0)" } ?? "\(price) coins")
+    .accessibilityHint(hint ?? "")
   }
 }
 
