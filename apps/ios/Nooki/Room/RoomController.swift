@@ -28,7 +28,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     private(set) var city: CityRoomScene?
     private(set) var board: BoardRoomScene?
     private(set) var shown: RoomScene = .home
-    @ObservationIgnored var catEvents: CatEventsClient = .offline
+    @ObservationIgnored var catEvents: CatEventOutbox?
     @ObservationIgnored let probe = RoomProbe()
 
     @ObservationIgnored private let usesStandIn: Bool

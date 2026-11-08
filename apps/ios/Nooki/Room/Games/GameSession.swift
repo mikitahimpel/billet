@@ -17,7 +17,7 @@ final class GameSession {
     private(set) var finished: GameResult?
 
     @ObservationIgnored private let room: CatRoom
-    @ObservationIgnored private let catEvents: CatEventsClient
+    @ObservationIgnored private let catEvents: CatEventOutbox?
     @ObservationIgnored private var stage: GameStage?
     @ObservationIgnored private var camera: GameCamera?
     @ObservationIgnored private var subscription: (any Cancellable)?
@@ -25,7 +25,7 @@ final class GameSession {
     @ObservationIgnored private var lens: CGSize = .zero
     @ObservationIgnored private var ended = false
 
-    init(game: MiniGame, room: CatRoom, catEvents: CatEventsClient) {
+    init(game: MiniGame, room: CatRoom, catEvents: CatEventOutbox?) {
         self.game = game
         self.room = room
         self.catEvents = catEvents
@@ -103,8 +103,7 @@ final class GameSession {
         case .water: break
         }
         let events = result.events
-        let client = catEvents
-        Task { await client.send(events) }
+        if let outbox = catEvents { Task { await outbox.send(events) } }
     }
 
     func playAgain() {
