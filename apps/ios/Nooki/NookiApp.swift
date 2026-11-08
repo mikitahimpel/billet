@@ -13,6 +13,8 @@ struct NookiApp: App {
 
     init() {
         NavigationBarStyle.apply()
+        // Mochi's welcome clips are made before the first screen, so it starts on a still and plays without a stall.
+        WelcomeClips.shared.preload()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
         URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
         let parts = Self.assemble()
@@ -102,12 +104,21 @@ struct NookiApp: App {
 
     /// Built on its own: written inline, the compiler cannot check `body`.
     private var demoPartnerPairing: (() -> Void)? {
-        guard session?.demoPartner == false else { return nil }
+        // Dev server only, and only in builds that are not the App Store's.
+        guard session?.demoPartner == false, Self.isPreReleaseBuild else { return nil }
         return { pairWithDemoPartner() }
     }
 
     private func pairWithDemoPartner() {
         Task { try? await session?.pairWithDemoPartner() }
+    }
+
+    private static var isPreReleaseBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
     }
 
     /// The app was launched to host NookiTests.
