@@ -196,6 +196,44 @@ import Testing
     _ = try decode(Note.self, textNote(#"\u0085"#))
   }
 
+  // MARK: stamps and seals
+
+  private func decorated(_ decoration: String) -> String {
+    ##"{"_tag":"Text","id":"n1","author":"u1","sentAt":0,"text":"hi",\##(decoration)}"##
+  }
+
+  @Test func aTextNoteKeepsItsStampAndSeal() throws {
+    let note = try decode(Note.self, decorated(##""stamp":"moon","seal":"rose""##))
+    #expect(
+      note
+        == .text(
+          id: NoteId("n1"), author: UserId("u1"), sentAt: 0, text: NoteText(validating: "hi")!,
+          stamp: .moon, seal: .rose))
+  }
+
+  /// A newer app may add designs; the note still arrives, plain.
+  @Test func aStampOrSealThisBuildDoesNotKnowReadsAsNone() throws {
+    let note = try decode(Note.self, decorated(##""stamp":"dragon","seal":"glitter""##))
+    #expect(
+      note
+        == .text(
+          id: NoteId("n1"), author: UserId("u1"), sentAt: 0, text: NoteText(validating: "hi")!))
+  }
+
+  @Test(arguments: [##""stamp":null"##, ##""seal":null"##, ##""stamp":3"##])
+  func aNullOrNonStringStampOrSealIsRejected(_ decoration: String) {
+    expectRejected(Note.self, decorated(decoration))
+  }
+
+  @Test func aSentTextNoteCarriesItsStampAndSeal() throws {
+    let request = SendNoteRequest.text(
+      key: IdempotencyKey("k"), text: NoteText(validating: "hi")!, stamp: .paw, seal: .night)
+    let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request))
+    let fields = try #require(object as? [String: Any])
+    #expect(fields["stamp"] as? String == "paw")
+    #expect(fields["seal"] as? String == "night")
+  }
+
   // MARK: pages skip what this build can't read
 
   @Test func aNotesPageSkipsAnUnknownKindButCountsItsSeq() throws {
