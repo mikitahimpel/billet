@@ -43,6 +43,10 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
     drags belong to the cat, the camera and the laser.
 15. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
     pair of colours gets a test there.
+16. **Motion comes from `Motion`.** A tab switch moves only the page (`.page`: in on the spring from
+    `Motion.shift` pt on the side of the new tab, the old one fading out quick) and the selection pill; the header
+    and the tab bar stay put. Animate opacity and transforms, never a frame or a padding. Under Reduce Motion
+    everything only fades. Nothing animates while the room mounts: it takes the main thread for a frame.
 
 ## Which component, when
 
@@ -85,6 +89,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
 | `.nookiLargeTitle` `.nookiTitle` `.nookiHeadline` `.nookiBody` `.nookiCallout` `.nookiCaption` `.nookiMicro` | text styles |
 | `Space.xs…xl`, `Space.gutter`, `Radius.*`, `Size.*` | spacing, corners, sizes |
+| `Motion.quick` (0.2 s), `Motion.standard` (0.35 s), `Motion.spring()`, `Motion.fade()`, `.page(_:reduceMotion:)` | every animation: one spring without overshoot, opacity alone for what leaves and under Reduce Motion |
 
 Over the room use `warmGlass`; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
 

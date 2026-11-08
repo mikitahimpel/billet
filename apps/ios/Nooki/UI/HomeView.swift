@@ -20,6 +20,14 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// The World's room may be mounted: false off the World, and on the way back until the switch has played (see
+    /// `returnRoom`).
+    @State private var roomInWorld = true
+    /// The World as it was when a tab switch left it, fading out under the page coming in.
+    @State private var worldLeaving: UIView?
+    /// The tab the last switch came from, which sets the side the new page comes in from.
+    @State private var tabFrom = HomeTab.world
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A room switch is under way; another waits for it.
     @State private var switchingRoom = false
     /// The Coins sheet's packs, once there is a server to buy them through.
@@ -50,8 +58,10 @@ struct HomeView: View {
         state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile || coinsShown != nil
             || scenePhase != .active
     }
+    /// The room's tab is up and its room may be mounted.
+    private var roomShown: Bool { state.tab == .world && roomInWorld || showsBoard }
     /// The room is mounted only while it can be seen.
-    private var roomOnScreen: Bool { showsRoom && !roomCovered }
+    private var roomOnScreen: Bool { roomShown && !roomCovered }
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
@@ -101,12 +111,18 @@ struct HomeView: View {
             if old, !new, !(showsBoard && !roomCovered) {
                 worldSnapshot =
                     Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                // A second copy: one view can't be on screen twice, and a quick return shows the first again.
+                if state.tab != .world, worldSnapshot != nil {
+                    worldLeaving = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                }
             }
             if new, room.hasHome, worldSnapshot != nil {
                 roomLive = false
+                let held = !roomInWorld
                 Task {
+                    if held, !(await returnRoom()) { return }
                     await room.nextFrame()
-                    withAnimation(.easeOut(duration: 0.2)) { roomLive = true }
+                    withAnimation(Motion.fade()) { roomLive = true }
                     try? await Task.sleep(for: .milliseconds(250))
                     if roomLive { worldSnapshot = nil }
                 }
@@ -115,6 +131,13 @@ struct HomeView: View {
         .onChange(of: state.tab) { _, tab in
             NookiPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
+            tabFrom = tab
+            if tab != .world {
+                roomInWorld = false
+            } else if worldSnapshot == nil || !room.hasHome || roomCovered {
+                // Nothing to stand in for the room, or a cover over it: no switch to play out first.
+                roomInWorld = true
+            }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
         .onChange(of: state.care.petPulse) {
@@ -192,6 +215,13 @@ struct HomeView: View {
                     .transition(.opacity)
             }
 
+            // The room goes at once when the World is left; its last frame fades with the rest of the World.
+            if state.tab != .world, let worldLeaving {
+                LeavingSnapshot(view: worldLeaving) { self.worldLeaving = nil }
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+            }
+
             Group {
                 switch state.tab {
                 case .shop:
@@ -208,9 +238,10 @@ struct HomeView: View {
                     .padding(.horizontal, 16)
                 }
             }
-            // A short crossfade between tabs; the header and the tab bar are outside it and stay put.
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.2), value: state.tab)
+            // Tab to tab, the page alone moves; the header and the tab bar are outside it and stay put. Read in the
+            // pass that switches, `tabFrom` is still the tab left.
+            .transition(.page(HomeTab.direction(from: tabFrom, to: state.tab), reduceMotion: reduceMotion))
+            .animation(Motion.spring(), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
@@ -244,22 +275,10 @@ struct HomeView: View {
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
-            if state.tab == .world, room.game == nil {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Above the portrait, with the arrow down at it, so the hint never covers her.
-                    TipView(PetHint(), arrowEdge: .bottom)
-                    TipView(TreatHint(), arrowEdge: .bottom)
-                    HStack(alignment: .bottom) {
-                        PetButton(state: state, needs: { room }) { room.play($0) }
-                        Spacer(minLength: 0)
-                        if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
-                    }
-                    .padding(.horizontal, 4)
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 94)
-                .transition(.opacity)
+            ZStack {
+                if state.tab == .world, room.game == nil { petControls }
             }
+            .animation(Motion.fade(), value: state.tab)
         }
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
@@ -287,6 +306,24 @@ struct HomeView: View {
                     .accessibilityHidden(!launching)
             }
         }
+    }
+
+    /// The pet button and the hints over it.
+    private var petControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Above the portrait, with the arrow down at it, so the hint never covers her.
+            TipView(PetHint(), arrowEdge: .bottom)
+            TipView(TreatHint(), arrowEdge: .bottom)
+            HStack(alignment: .bottom) {
+                PetButton(state: state, needs: { room }) { room.play($0) }
+                Spacer(minLength: 0)
+                if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 94)
+        .transition(.opacity)
     }
 
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
@@ -390,6 +427,16 @@ struct HomeView: View {
         }
     }
 
+    /// Mounts the World's room once the switch back to it has played: the mount holds the main thread for one long
+    /// frame, which would freeze the switch halfway; under the snapshot it freezes a still screen. False when the
+    /// World was left again meanwhile.
+    private func returnRoom() async -> Bool {
+        try? await Task.sleep(for: .seconds(Motion.quick))
+        guard state.tab == .world else { return false }
+        roomInWorld = true
+        return true
+    }
+
     private static var keyWindow: UIWindow? {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first(where: \.isKeyWindow)
@@ -398,7 +445,7 @@ struct HomeView: View {
     /// What the room is told to show, from the shell's coarse state.
     private var roomInput: RoomInput {
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
+            roomOnScreen ? .visible : (roomShown ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility)
     }
@@ -432,5 +479,19 @@ private struct ShowcaseLabel: View {
         .warmGlass(.capsule)
         .frame(height: 44)
         .accessibilityLabel("Playing \(label)")
+    }
+}
+
+/// A snapshot that starts fading out the moment it shows, and says when it is gone.
+private struct LeavingSnapshot: View {
+    let view: UIView
+    let gone: () -> Void
+    @State private var shown = true
+
+    var body: some View {
+        SnapshotView(view: view)
+            .opacity(shown ? 1 : 0)
+            .onAppear { withAnimation(Motion.fade()) { shown = false } completion: { gone() } }
+            .id(ObjectIdentifier(view))
     }
 }

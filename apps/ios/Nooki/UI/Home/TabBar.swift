@@ -10,12 +10,8 @@ struct TabBar: View {
     @State private var hovered: HomeTab?
     @State private var barWidth: CGFloat = 0
 
-    private static let tabs: [(tab: HomeTab, title: String, symbol: String)] = [
-        (.world, "World", "house.fill"),
-        (.moments, "Moments", "photo.on.rectangle"),
-        (.shop, "Shop", "bag"),
-        (.us, "Us", "heart"),
-    ]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private static let tabs = HomeTab.allCases
     private static let inset: CGFloat = 6
 
     /// The tabs only navigate; adding lives in its own button beside them, as iOS 26 places search.
@@ -24,14 +20,16 @@ struct TabBar: View {
         GlassGroup(spacing: 10) {
             HStack(spacing: 10) {
                 HStack(spacing: 0) {
-                    ForEach(Self.tabs, id: \.tab) { entry in
-                        switch entry.tab {
-                        case .moments: item(entry.tab, entry.title, entry.symbol).popoverTip(MomentsHint(), arrowEdge: .bottom)
-                        case .shop: item(entry.tab, entry.title, entry.symbol).popoverTip(ShopHint(), arrowEdge: .bottom)
-                        default: item(entry.tab, entry.title, entry.symbol)
+                    ForEach(Self.tabs, id: \.self) { tab in
+                        switch tab {
+                        case .moments: item(tab).popoverTip(MomentsHint(), arrowEdge: .bottom)
+                        case .shop: item(tab).popoverTip(ShopHint(), arrowEdge: .bottom)
+                        case .world, .us: item(tab)
                         }
                     }
                 }
+                // Only the selection moves on a switch; the page under the bar animates itself (HomeView).
+                .animation(reduceMotion ? Motion.fade() : Motion.spring(Motion.quick), value: state.tab)
                 .padding(Self.inset)
                 .contentShape(.capsule)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { barWidth = $0 }
@@ -41,14 +39,13 @@ struct TabBar: View {
                     DragGesture(minimumDistance: 0)
                         .onChanged { drag in
                             let tab = tab(at: drag.location.x)
-                            if tab != hovered { withAnimation(.snappy(duration: 0.2)) { hovered = tab } }
+                            if tab != hovered { withAnimation(Motion.spring(Motion.quick)) { hovered = tab } }
                         }
                         .onEnded { drag in
-                            let tab = tab(at: drag.location.x)
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                hovered = nil
-                                state.tab = tab
-                            }
+                            withAnimation(Motion.spring(Motion.quick)) { hovered = nil }
+                            // Outside `withAnimation`: a switch animated as a whole would also fade the room and
+                            // everything else that follows the tab.
+                            state.tab = tab(at: drag.location.x)
                         }
                 )
                 .warmGlass(.capsule, interactive: true)
@@ -74,14 +71,14 @@ struct TabBar: View {
         let slot = (barWidth - Self.inset * 2) / CGFloat(Self.tabs.count)
         guard slot > 0 else { return state.tab }
         let index = Int(((x - Self.inset) / slot).rounded(.down))
-        return Self.tabs[min(max(index, 0), Self.tabs.count - 1)].tab
+        return Self.tabs[min(max(index, 0), Self.tabs.count - 1)]
     }
 
-    private func item(_ tab: HomeTab, _ title: String, _ symbol: String) -> some View {
+    private func item(_ tab: HomeTab) -> some View {
         let shown = (hovered ?? state.tab) == tab
         return VStack(spacing: 3) {
-            Image(systemName: symbol).font(.system(size: 18, weight: .semibold))
-            Text(title).font(.system(size: 11, weight: .medium))
+            Image(systemName: tab.symbol).font(.system(size: 18, weight: .semibold))
+            Text(tab.title).font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(shown ? Ink.primary : Ink.secondary)
         .frame(maxWidth: .infinity)
@@ -90,15 +87,29 @@ struct TabBar: View {
             if shown {
                 Capsule()
                     .fill(Color.honey.opacity(hovered == nil ? 0.32 : 0.42))
-                    .matchedGeometryEffect(id: "tab", in: selection)
+                    .modifier(SlidingPill(namespace: selection, slides: !reduceMotion))
             }
         }
         .scaleEffect(hovered == tab ? 1.06 : 1)
         // The drag on the bar does the switching; VoiceOver and the UI tests get each tab as a button.
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
+        .accessibilityLabel(tab.title)
         .accessibilityAddTraits(state.tab == tab ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { withAnimation(.easeInOut(duration: 0.2)) { state.tab = tab } }
+        .accessibilityAction { state.tab = tab }
+    }
+}
+
+/// The selection pill glides from tab to tab as one shape; under Reduce Motion each tab's pill fades instead.
+private struct SlidingPill: ViewModifier {
+    let namespace: Namespace.ID
+    let slides: Bool
+
+    func body(content: Content) -> some View {
+        if slides {
+            content.matchedGeometryEffect(id: "tab", in: namespace)
+        } else {
+            content.transition(.opacity)
+        }
     }
 }
 
