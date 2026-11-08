@@ -10,6 +10,7 @@ import {
   CreateInviteResponse,
 } from "@billet/contracts-http-api/invite";
 import { PairResponse } from "@billet/contracts-http-api/pair";
+import { ReportPartnerRequest } from "@billet/contracts-http-api/safety";
 import type {
   AlreadyPaired,
   InvalidInvite,
@@ -90,6 +91,27 @@ export const PairingRoutes = HttpRouter.use((router) =>
       Effect.gen(function* () {
         const { userId } = yield* principal;
         yield* pairing.unpair(userId);
+        return HttpServerResponse.empty({ status: 204 });
+      }).pipe(respondPairingFailures),
+    );
+
+    yield* router.add(
+      routes.blockPartner.method,
+      routes.blockPartner.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        yield* pairing.blockPartner(userId);
+        return HttpServerResponse.empty({ status: 204 });
+      }).pipe(respondPairingFailures),
+    );
+
+    yield* router.add(
+      routes.reportPartner.method,
+      routes.reportPartner.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(ReportPartnerRequest);
+        yield* pairing.reportPartner(userId, request);
         return HttpServerResponse.empty({ status: 204 });
       }).pipe(respondPairingFailures),
     );

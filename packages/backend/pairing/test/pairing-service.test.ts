@@ -108,6 +108,20 @@ describe("PairingService", () => {
     expect(await Effect.runPromise(memory.repository.findPair(ana))).toEqual(Option.none());
   });
 
+  it("reports the partner, then blocks them: unpaired, and the report is kept", async () => {
+    const { memory, run } = setup();
+    const { code } = await run((service) => service.createInvite(ana));
+    await run((service) => service.claimInvite(ben, code));
+    await run((service) => service.reportPartner(ben, { reason: "harassment", details: "no" }));
+    expect(await Effect.runPromise(memory.repository.findPair(ana))).not.toEqual(Option.none());
+    await run((service) => service.blockPartner(ben));
+    expect(await Effect.runPromise(memory.repository.findPair(ana))).toEqual(Option.none());
+    const dump = JSON.parse(await Effect.runPromise(memory.dump));
+    expect(dump.reports).toHaveLength(1);
+    expect(dump.reports[0]).toMatchObject({ reporter: ben, reported: ana, reason: "harassment" });
+    expect(dump.blocks).toEqual([`${ben}>${ana}`]);
+  });
+
   describe("observer", () => {
     const observed = () => {
       const calls: Array<string> = [];

@@ -11,7 +11,7 @@ struct RoomHost: View, Equatable {
     static func == (a: Self, b: Self) -> Bool { a.input == b.input && a.controller === b.controller }
 
     var body: some View {
-        let _ = RoomProbe.hostBody()
+        let _ = controller.probe.hostBody()
         RoomStage(input: input, controller: controller)
     }
 }
@@ -22,7 +22,7 @@ private struct RoomStage: View {
     let controller: RoomController
 
     var body: some View {
-        let _ = RoomProbe.stageBody()
+        let _ = controller.probe.stageBody()
         ZStack {
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             if !controller.isStandIn, input.scene == .city, input.visibility != .hidden,

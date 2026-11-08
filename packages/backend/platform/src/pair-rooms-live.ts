@@ -59,6 +59,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         sendNote: (pairId, author, request) =>
           callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
         inks: (pairId) => callRoom(() => rooms.getByName(pairId).inks(), decodeInks),
+        grantItems: (pairId, items) =>
+          callRoom(() => rooms.getByName(pairId).grantItems(items), decodeDecision),
         grantInks: (pairId, inks) =>
           callRoom(() => rooms.getByName(pairId).grantInks(inks), decodeDecision),
         coins: (pairId, after, limit) =>
@@ -88,6 +90,11 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
         forgetMember: (pairId, user) =>
           callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
+        destroy: (pairId) =>
+          callRoom(
+            () => rooms.getByName(pairId).destroy(),
+            () => Effect.void,
+          ),
         endSessions: (pairId) =>
           callRoom(
             () => rooms.getByName(pairId).endSessions(),

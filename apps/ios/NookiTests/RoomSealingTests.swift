@@ -7,7 +7,6 @@ import UIKit
 
 /// The Room is sealed: what changes outside it doesn't re-evaluate it, and what changes inside it doesn't reach
 /// the shell. The stand-in controller is the real host and stage without RealityKit, which CI's Macs can't draw.
-/// Serialized: the probe's counters are global.
 @MainActor
 @Suite(.serialized)
 struct RoomSealingTests {
@@ -54,10 +53,10 @@ struct RoomSealingTests {
         let shell = Shell()
         let window = mount(shell, input: visible, controller: controller)
         try await settle()
-        // The first pass after mounting is SwiftUI's own, before it has an earlier host to compare with.
+        // The first pass after mounting is SwiftUI's own: it has no earlier host to compare with yet.
         shell.coins = 1
         try await settle()
-        RoomProbe.reset()
+        controller.probe.reset()
         let shellBefore = shell.bodies
 
         for coins in 2...6 {
@@ -66,8 +65,8 @@ struct RoomSealingTests {
         }
 
         #expect(shell.bodies > shellBefore, "the shell did re-evaluate for the coins")
-        #expect(RoomProbe.hostBodies == 0, "host \(RoomProbe.hostBodies) stage \(RoomProbe.stageBodies) shell \(shell.bodies - shellBefore)")
-        #expect(RoomProbe.stageBodies == 0)
+        #expect(controller.probe.hostBodies == 0)
+        #expect(controller.probe.stageBodies == 0)
         try await unmount(window)
     }
 
@@ -76,7 +75,7 @@ struct RoomSealingTests {
         let shell = Shell()
         let window = mount(shell, input: visible, controller: controller)
         try await settle()
-        RoomProbe.reset()
+        controller.probe.reset()
         let shellBefore = shell.bodies
 
         // A few seconds of ticks at 60 Hz that change nothing the shell reads.
@@ -87,7 +86,7 @@ struct RoomSealingTests {
         try await settle()
 
         #expect(shell.bodies == shellBefore)
-        #expect(RoomProbe.hostBodies == 0, "host \(RoomProbe.hostBodies) stage \(RoomProbe.stageBodies) shell \(shell.bodies - shellBefore)")
+        #expect(controller.probe.hostBodies == 0)
         #expect(controller.status == CatStatus())
         try await unmount(window)
     }
@@ -97,7 +96,7 @@ struct RoomSealingTests {
         let shell = Shell()
         let window = mount(shell, input: visible, controller: controller)
         try await settle()
-        RoomProbe.reset()
+        controller.probe.reset()
         let shellBefore = shell.bodies
 
         controller.play(.laser)
@@ -105,9 +104,9 @@ struct RoomSealingTests {
         controller.endGame()
         try await settle()
 
-        #expect(RoomProbe.stageBodies >= 1)
+        #expect(controller.probe.stageBodies >= 1)
         #expect(controller.game == nil)
-        #expect(RoomProbe.hostBodies == 0, "host \(RoomProbe.hostBodies) stage \(RoomProbe.stageBodies) shell \(shell.bodies - shellBefore)")
+        #expect(controller.probe.hostBodies == 0)
         #expect(shell.bodies == shellBefore)
         try await unmount(window)
     }
@@ -120,13 +119,13 @@ struct RoomSealingTests {
         window.rootViewController = host
         window.makeKeyAndVisible()
         try await settle()
-        RoomProbe.reset()
+        controller.probe.reset()
 
         host.rootView = ShellView(
             shell: shell, input: RoomInput(scene: .home, coat: .grey, visibility: .covered), controller: controller)
         try await settle()
 
-        #expect(RoomProbe.hostBodies == 1)
+        #expect(controller.probe.hostBodies == 1)
         try await unmount(window)
     }
 }

@@ -76,6 +76,12 @@ struct HomeView: View {
             // DioramaView swaps the root by itself; the room that was showing stops so two never drive at once.
             room.show(new ? .board : state.room.scene)
         }
+        // Settings › Labs asks for the showcase, once it is closed.
+        .onChange(of: state.showcaseRequested) { _, requested in
+            guard requested else { return }
+            state.showcaseRequested = false
+            room.playAll()
+        }
         .onChange(of: state.room) {
             room.clearShowcase()
             reportOpened(state.room)
@@ -239,7 +245,7 @@ struct HomeView: View {
                     HStack(alignment: .bottom) {
                         PetButton(state: state, needs: { room }) { room.play($0) }
                         Spacer(minLength: 0)
-                        PlayAllButton(showcase: room.showcase) { room.playAll() }
+                        if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
                     }
                     .padding(.horizontal, 4)
                 }
@@ -395,29 +401,22 @@ struct HomeView: View {
     private var wallPins: [Moment]? { room.hasHome ? state.moments.pinned : nil }
 }
 
-/// Plays all Mochi's animations in turn, naming each as it plays.
-private struct PlayAllButton: View {
-    let showcase: String?
-    var playAll: () -> Void
+/// Names the animation of the showcase that is playing.
+private struct ShowcaseLabel: View {
+    let label: String
 
     var body: some View {
-        Button(action: playAll) {
-            HStack(spacing: 6) {
-                Image(systemName: showcase == nil ? "play.fill" : "sparkles")
-                Text(showcase ?? "Play all")
-                    .contentTransition(.opacity)
-            }
-            .font(.system(size: 14, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .frame(height: 40)
-            // Not interactive: the button style answers the press; interactive glass would track the same touch.
-            .warmGlass(.capsule)
-            .frame(height: 44)
-            .contentShape(.capsule)
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text(label)
+                .contentTransition(.opacity)
         }
-        .buttonStyle(PressScaleStyle())
-        .disabled(showcase != nil)
-        .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
+        .font(.system(size: 14, weight: .semibold, design: .rounded))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(height: 40)
+        .warmGlass(.capsule)
+        .frame(height: 44)
+        .accessibilityLabel("Playing \(label)")
     }
 }
