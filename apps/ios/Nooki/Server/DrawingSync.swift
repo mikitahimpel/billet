@@ -1,6 +1,7 @@
 import ActivityKit
 import Foundation
 import Persistence
+import PetScene
 import Transport
 import UIKit
 import UserNotifications
@@ -71,7 +72,8 @@ struct DrawingSync {
     static func requestPushes(asking: Bool) async {
         let center = UNUserNotificationCenter.current()
         var status = await center.notificationSettings().authorizationStatus
-        if status == .notDetermined, asking {
+        // A perf run never asks: the system alert would make the app inactive, and nothing answers it on CI.
+        if status == .notDetermined, asking, !ScenePerf.isOn {
             _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
             status = await center.notificationSettings().authorizationStatus
         }
