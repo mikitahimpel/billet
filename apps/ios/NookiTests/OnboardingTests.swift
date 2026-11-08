@@ -324,11 +324,7 @@ struct AnswerQueueTests {
     @Test func theInviteStepHasNoSkipSinceLaterIsItsOwnButton() {
         let (flow, _, _) = makeFlow()
         flow.start()
-        flow.continueTapped()
-        flow.continueTapped()
-        flow.continueTapped()
-        flow.continueTapped()
-        flow.continueTapped()
+        for _ in 0..<4 { flow.skip() }
         #expect(flow.page == .invite)
         #expect(!flow.canSkip)
     }
