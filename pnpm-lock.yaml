@@ -325,6 +325,9 @@ importers:
       '@billet/backend-onboarding':
         specifier: workspace:*
         version: link:../onboarding
+      '@billet/backend-shop':
+        specifier: workspace:*
+        version: link:../shop
       '@billet/contracts-domain':
         specifier: workspace:*
         version: link:../../contracts/domain
@@ -587,6 +590,9 @@ importers:
       '@billet/backend-pairing':
         specifier: workspace:*
         version: link:../pairing
+      '@billet/backend-shop':
+        specifier: workspace:*
+        version: link:../shop
       '@billet/contracts-domain':
         specifier: workspace:*
         version: link:../../contracts/domain
@@ -833,6 +839,9 @@ importers:
       '@billet/backend-payments':
         specifier: workspace:*
         version: link:../payments
+      '@billet/backend-shop':
+        specifier: workspace:*
+        version: link:../shop
       '@billet/backend-titles':
         specifier: workspace:*
         version: link:../titles
@@ -882,6 +891,37 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 1.0.0-rc.5-ab785fc
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.75.0(@astrojs/compiler-rs@0.5.2)
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.90.0
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.12(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/backend/shop:
+    dependencies:
+      '@billet/contracts-domain':
+        specifier: workspace:*
+        version: link:../../contracts/domain
+      '@billet/contracts-http-api':
+        specifier: workspace:*
+        version: link:../../contracts/http-api
+      effect:
+        specifier: 'catalog:'
+        version: 4.1.1
+    devDependencies:
+      '@billet/config-typescript':
+        specifier: workspace:*
+        version: link:../../config/typescript
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 5.20261101.1
       oxfmt:
         specifier: 'catalog:'
         version: 0.75.0(@astrojs/compiler-rs@0.5.2)

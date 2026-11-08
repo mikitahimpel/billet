@@ -84,6 +84,7 @@ export class MoodService extends Context.Service<
               case "CatEntryIdTaken":
               case "InkNotOwned":
               case "NotEnoughCoins":
+              case "PriceChanged":
               case "AlreadyOwned":
               case "NotSold":
               case "OfferOwned":
