@@ -59,6 +59,7 @@ struct NoteSheet: View {
             }
         }
         .frame(width: 300, height: 300)
+        .postage(of: note, width: 300)
     }
 
     private func loadDoodle() async {

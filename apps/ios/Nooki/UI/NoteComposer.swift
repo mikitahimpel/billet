@@ -69,6 +69,7 @@ struct NoteComposer: View {
             HStack(spacing: Space.s) {
                 toolToggle
                 paperColours
+                PostagePicker(stamp: $model.stamp, seal: $model.seal)
                 Spacer(minLength: 0)
                 if style != .sticky { kindPicker }
                 if model.hasInk {
