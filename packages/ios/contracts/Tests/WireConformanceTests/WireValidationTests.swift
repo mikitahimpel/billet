@@ -289,7 +289,7 @@ import Testing
       Note.self,
       ##"{"_tag":"Drawing","id":"n1","author":"u1","sentAt":0,"compact":{"version":1,"strokes":[]},"image":"k1","paper":"blush"}"##
     )
-    guard case .drawing(_, _, _, _, _, let paper) = note else {
+    guard case .drawing(_, _, _, _, _, let paper, _, _) = note else {
       Issue.record("expected a drawing")
       return
     }
