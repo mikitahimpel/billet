@@ -1,0 +1,150 @@
+import Design
+import SwiftUI
+import Transport
+import Wire
+
+/// The partner (unpair, report, block) and the account (delete), in Settings. Each asks first; a failure says so and
+/// leaves everything as it was.
+struct PartnerAndAccountSections: View {
+    let session: ServerSession
+    /// Wipes what is saved on this phone, closes Settings and starts the app over.
+    var erase: () -> Void
+
+    @Environment(\.startOver) private var startOver
+    @State private var confirming: Action?
+    @State private var reporting = false
+    @State private var working = false
+    @State private var failed = false
+    @State private var reported = false
+
+    private enum Action: Identifiable {
+        case unpair, block, deleteAccount
+        var id: Self { self }
+    }
+
+    var body: some View {
+        Group {
+            if session.isPaired {
+                GroupedSection(header: "Partner", footer: reported
+                    ? "Thank you. We read every report."
+                    : "Unpairing ends the pair for both of you. Blocking also keeps the two of you from pairing again.") {
+                    button("Unpair", symbol: "person.2.slash.fill", tint: .honey) { confirming = .unpair }
+                    button("Report partner", symbol: "flag.fill", tint: .sun) { reporting = true }
+                    button("Block partner", symbol: "hand.raised.fill", tint: .coral, destructive: true) {
+                        confirming = .block
+                    }
+                }
+            }
+            GroupedSection(header: "Delete account",
+                           footer: "Removes your account and what you sent from the server, and takes this phone back to the start.") {
+                button("Delete account", symbol: "person.crop.circle.badge.minus", tint: .coral, destructive: true) {
+                    confirming = .deleteAccount
+                }
+            }
+        }
+        .disabled(working)
+        .confirmationDialog(title, isPresented: isConfirming, titleVisibility: .visible, presenting: confirming) { action in
+            Button(label(action), role: .destructive) { run(action) }
+        } message: { action in
+            Text(message(action))
+        }
+        .confirmationDialog("Report your partner", isPresented: $reporting, titleVisibility: .visible) {
+            ForEach(ReportReason.allCases, id: \.self) { reason in
+                Button(reason.title) { report(reason) }
+            }
+        } message: {
+            Text("What happened?")
+        }
+        .alert("That didn't work", isPresented: $failed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The server didn't answer. Nothing changed; try again in a moment.")
+        }
+    }
+
+    private func button(
+        _ title: String, symbol: String, tint: UsTint, destructive: Bool = false, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Row(title, symbol: symbol, tint: tint.color, destructive: destructive) {
+                if working { ProgressView() }
+            }
+        }
+        .buttonStyle(PressScaleStyle())
+    }
+
+    private var isConfirming: Binding<Bool> {
+        Binding(get: { confirming != nil }, set: { if !$0 { confirming = nil } })
+    }
+
+    private var title: String {
+        switch confirming {
+        case .unpair: "Unpair from your partner?"
+        case .block: "Block your partner?"
+        case .deleteAccount: "Delete your account?"
+        case nil: ""
+        }
+    }
+
+    private func label(_ action: Action) -> String {
+        switch action {
+        case .unpair: "Unpair"
+        case .block: "Block"
+        case .deleteAccount: "Delete Account"
+        }
+    }
+
+    private func message(_ action: Action) -> String {
+        switch action {
+        case .unpair: "You stop sharing with each other. You can pair again with a new code."
+        case .block: "You are unpaired, and neither of you can pair with the other again."
+        case .deleteAccount:
+            "Your account and what you sent are deleted from the server, your partner is unpaired, and "
+                + "everything on this phone is erased. This can't be undone."
+        }
+    }
+
+    private func run(_ action: Action) {
+        Task {
+            working = true
+            defer { working = false }
+            do {
+                switch action {
+                case .unpair: try await session.unpair()
+                case .block: try await session.blockPartner()
+                case .deleteAccount:
+                    try await session.deleteAccount()
+                    erase()
+                    startOver()
+                }
+            } catch {
+                failed = true
+            }
+        }
+    }
+
+    private func report(_ reason: ReportReason) {
+        Task {
+            working = true
+            defer { working = false }
+            do {
+                try await session.reportPartner(reason, details: nil)
+                reported = true
+            } catch {
+                failed = true
+            }
+        }
+    }
+}
+
+extension ReportReason {
+    var title: String {
+        switch self {
+        case .harassment: "Harassment"
+        case .inappropriate: "Inappropriate content"
+        case .unsafe: "I don't feel safe"
+        case .spam: "Spam"
+        case .other: "Something else"
+        }
+    }
+}
