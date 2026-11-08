@@ -6,15 +6,6 @@ import Observation
 nonisolated enum PartnerMood: String, Codable, CaseIterable, Sendable {
     case happy, sleepy, missing, busy
 
-    var emoji: String {
-        switch self {
-        case .happy: "😊"
-        case .sleepy: "😴"
-        case .missing: "🥺"
-        case .busy: "📚"
-        }
-    }
-
     var title: String {
         switch self {
         case .happy: "happy"

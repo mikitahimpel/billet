@@ -2,9 +2,11 @@ import Foundation
 import Wire
 
 /// What one Inbox row says: an SF Symbol and a short line, written on the phone from the item's kind and payload.
+/// A shared mood shows its cat face in place of the symbol.
 struct InboxLine: Equatable {
     let symbol: String
     let text: String
+    var mood: PartnerMood?
 
     /// The names the lines use.
     struct Names {
@@ -15,9 +17,10 @@ struct InboxLine: Equatable {
         var title: (String) -> String? = { _ in nil }
     }
 
-    init(symbol: String, text: String) {
+    init(symbol: String, text: String, mood: PartnerMood? = nil) {
         self.symbol = symbol
         self.text = text
+        self.mood = mood
     }
 
     init(_ item: ActivityItem, names: Names) {
@@ -60,9 +63,10 @@ struct InboxLine: Equatable {
                 : "\(who) reacted \(reaction.emoji) to your photo"
             self.init(symbol: "face.smiling", text: text)
         case .moodShared(let mood):
-            let feeling = PartnerMood(rawValue: mood.rawValue).map { "\($0.title) \($0.emoji)" } ?? mood.rawValue
+            let known = PartnerMood(rawValue: mood.rawValue)
+            let feeling = known?.title ?? mood.rawValue
             let text = item.actor == .me ? "You feel \(feeling)" : "\(who) feels \(feeling)"
-            self.init(symbol: "heart.text.square.fill", text: text)
+            self.init(symbol: "heart.text.square.fill", text: text, mood: known)
         case .noteSent(_, let kind):
             let thing = switch kind {
             case "Drawing": "a drawing"

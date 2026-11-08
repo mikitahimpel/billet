@@ -72,6 +72,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't force `.colorScheme(.light)` on a card to make it pop; use `Ink.surface`.
 - Don't use a 28 pt card radius, or invent a 12 or 16 one. `Radius.control` is for fields inside a card.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
+  `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 
 ## Tokens
 

@@ -116,13 +116,18 @@ private struct InboxRow: View {
         HStack(spacing: 12) {
             avatar
                 .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: line.symbol)
-                        .font(.nookiMicro)
-                        .foregroundStyle(Ink.heroInk)
-                        .frame(width: 20, height: 20)
-                        .background(Color.honey, in: .circle)
-                        .overlay(Circle().stroke(Ink.surface, lineWidth: 1.5))
-                        .offset(x: 4, y: 4)
+                    if let mood = line.mood {
+                        MoodArt(mood: mood, size: 24)
+                            .offset(x: 5, y: 5)
+                    } else {
+                        Image(systemName: line.symbol)
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.heroInk)
+                            .frame(width: 20, height: 20)
+                            .background(Color.honey, in: .circle)
+                            .overlay(Circle().stroke(Ink.surface, lineWidth: 1.5))
+                            .offset(x: 4, y: 4)
+                    }
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.text)

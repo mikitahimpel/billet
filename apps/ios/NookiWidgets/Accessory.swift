@@ -80,7 +80,7 @@ private struct AccessoryView: View {
             }
         case .mood:
             if let check = s.freshPartnerMood {
-                return ("\(s.partner) · \(check.mood.emoji) \(check.mood.title)", Text("\(Text(check.date, style: .relative)) ago"), .room)
+                return ("\(s.partner) · \(check.mood.title)", Text("\(Text(check.date, style: .relative)) ago"), .room)
             }
         case .list:
             if let list = s.list {
