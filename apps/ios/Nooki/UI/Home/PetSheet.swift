@@ -1,4 +1,5 @@
 import FeatureGames
+import GamesInterface
 import SwiftUI
 import Design
 import TipKit

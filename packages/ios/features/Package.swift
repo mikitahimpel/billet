@@ -36,14 +36,21 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
   ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
-  ("FeatureGamesTests", ["FeatureGames", "Wire"]),
+  ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Wire"]),
 ]
 
 // The mini-games' rules, apart from how they are drawn: the scale, the bowl, the dot, the brush, and what a finished
 // game puts in the cat's journal.
-let games: Target = .target(name: "FeatureGames", dependencies: dependencies(["Wire"]))
+let games: Target = .target(
+  name: "FeatureGames", dependencies: dependencies(["GamesInterface", "Wire"]))
 
-let products = features + ["WidgetBridge", "FeatureGames"]
+// What other features see of the games (which game, how it went) and of the room (its input, its
+// commands, the cat's coarse status). The room itself is in the app, where RealityKit is.
+let gamesInterface: Target = .target(name: "GamesInterface", dependencies: dependencies(["Wire"]))
+let roomInterface: Target = .target(
+  name: "RoomInterface", dependencies: dependencies(["GamesInterface", "Pet"]))
+
+let products = features + ["WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface"]
 
 let package = Package(
   name: "BilletFeatures",
@@ -55,7 +62,7 @@ let package = Package(
     .package(path: "../pet"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
-    + [widgetBridge, games]
+    + [widgetBridge, games, gamesInterface, roomInterface]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]
 )

@@ -1,4 +1,5 @@
 import FeatureGames
+import GamesInterface
 import Observation
 import Persistence
 import SwiftUI
