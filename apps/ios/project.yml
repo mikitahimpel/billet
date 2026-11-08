@@ -54,6 +54,8 @@ targets:
           UIColorName: LaunchBackground
         # The billet server's host, from the BILLET_API_HOST environment variable at build time (see Server/Backend).
         BilletAPIHost: $(BILLET_API_HOST)
+        # The invite step scans the partner's QR code (Onboarding/InviteScanner).
+        NSCameraUsageDescription: Nooki uses the camera to scan the invite code on your partner's screen.
         # nooki:// links from the widgets and controls (Shared/Widget/DeepLink.swift).
         CFBundleURLTypes:
           - CFBundleURLName: com.mikitahimpel.billet

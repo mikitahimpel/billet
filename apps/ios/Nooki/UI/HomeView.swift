@@ -35,6 +35,9 @@ struct HomeView: View {
     @State private var coinPacks: CoinPacksModel?
     /// The Coins sheet on screen, a moment after the shop asked for it.
     @State private var coinsShown: CoinsAsk?
+    /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
+    @State private var hud = HUDArm.launch
+    @State private var sheetGround = SheetGroundStyle.opaque
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -49,9 +52,12 @@ struct HomeView: View {
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
     /// The World tab and the board show a room; the others get their own screens over the backdrop.
     private var showsRoom: Bool { state.tab == .world || showsBoard }
-    /// Something hides the room whole: the canvas, the Inbox or the composer over it, or the app not in front.
+    /// Something hides the room whole, or near enough: the canvas, the Inbox, the composer, the profile with its
+    /// Settings, the Coins sheet, or the app not in front. The sheets that open at their content's height (the pet,
+    /// an item, the mood) leave the room showing, and live.
     private var roomCovered: Bool {
-        state.drawing || state.showsInbox || state.composingNote != nil || scenePhase != .active
+        state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile || coinsShown != nil
+            || scenePhase != .active
     }
     /// The room is mounted only while it can be seen.
     private var roomOnScreen: Bool { showsRoom && !roomCovered }
@@ -123,17 +129,23 @@ struct HomeView: View {
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
             .bars(fades: !showsRoom) {
-                AppHeader(state: state) {
-                    scene?.stop()
-                    HomeState.eraseAll()
-                    state = HomeState(stores: .live())
-                    Task { await followPair() }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-            } bottom: {
-                TabBar(state: state)
+                if hud != .hidden {
+                    AppHeader(state: state) {
+                        scene?.stop()
+                        HomeState.eraseAll()
+                        state = HomeState(stores: .live())
+                        Task { await followPair() }
+                    }
                     .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .environment(\.glassRendering, hud.glass)
+                }
+            } bottom: {
+                if hud != .hidden {
+                    TabBar(state: state)
+                        .padding(.horizontal, 16)
+                        .environment(\.glassRendering, hud.glass)
+                }
             }
             .opacity(state.game == nil ? 1 : 0)
 
@@ -214,7 +226,7 @@ struct HomeView: View {
             }
         }
         .task {
-            NookiPerf.start(state: state)
+            NookiPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
         }
         .task {
@@ -370,6 +382,7 @@ struct HomeView: View {
             guard let link = DeepLink(url: url) else { return }
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
         }
+        .environment(\.sheetGround, sheetGround)
     }
 
     /// Its own method: inline in `body`, the closure tips the Release type-checker over its time limit on Xcode 26.
