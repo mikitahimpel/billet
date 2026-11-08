@@ -4,6 +4,7 @@ import { LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { LoveStreak } from "@billet/contracts-domain/streak";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
@@ -59,7 +60,7 @@ export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0
  * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
  * in the store and `lastSeq` is the only part of them that a decision needs.
  *
- * `streakDays` is stored but nothing changes it yet: the rules arrive with #20.
+ * `streak` is the couple's love streak, counted from the days either partner reports.
  *
  * `inks` are the ink colours the pair has bought, in the order it got them. The free ink is
  * everyone's and never listed. `items` are the room's pieces the same way, without the starters.
@@ -72,7 +73,7 @@ export const RoomState = Schema.TaggedUnion({
     pairId: PairId,
     members: Couple,
     lastSeq: Count,
-    streakDays: Count,
+    streak: LoveStreak,
     /** Absent until one of the couple adopts the cat. */
     cat: Schema.optionalKey(RoomCat),
     inks: Schema.Array(InkId),

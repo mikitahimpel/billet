@@ -24,6 +24,10 @@ export const room = sqliteTable(
     secondPresence: text("second_presence").notNull(),
     lastSeq: integer("last_seq").notNull(),
     streakDays: integer("streak_days").notNull(),
+    streakBest: integer("streak_best").notNull().default(0),
+    // The pair's local days, YYYY-MM-DD: the last one that counted, and the last restore.
+    streakLastDay: text("streak_last_day"),
+    streakRestoredOn: text("streak_restored_on"),
     lastReactionRev: integer("last_reaction_rev"),
     // The pair's local day it last opened the daily gift on; null before the first.
     giftDay: text("gift_day"),

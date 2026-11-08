@@ -22,7 +22,7 @@ public enum PairingFailure: Equatable, Sendable {
     case .api(.unavailable), .api(.notFound), .api(.appleIdInUse), .api(.invalidPurchase),
       .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
       .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken), .api(.catNotAdopted),
-      .api(.priceChanged),
+      .api(.streakNotRestorable), .api(.priceChanged),
       .network,
       .status, .maintenance,
       .encoding,

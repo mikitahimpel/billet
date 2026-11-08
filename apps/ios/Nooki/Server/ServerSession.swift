@@ -41,6 +41,9 @@ final class ServerSession {
     @ObservationIgnored private weak var lists: ListsModel?
     /// Where the room's check-ins go; set each time the socket is followed.
     @ObservationIgnored private var moods: (@MainActor (PartnerCheckIn) -> Void)?
+    /// Where the cat's journal entries go, and the last one held; set each time the socket is followed.
+    @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
+    @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
     /// The open Pick tonight screen's, for a match the partner's swipe made; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
@@ -93,6 +96,8 @@ final class ServerSession {
 
     var onboarding: OnboardingClient { backend.onboarding }
     var catEvents: CatEventsClient { backend.catEvents }
+    /// The pair's love streak in its room.
+    var streakRemote: StreakRemote { backend.streak }
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
 
@@ -123,9 +128,12 @@ final class ServerSession {
     /// app is in front; nothing without a partner.
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
-        lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil
+        lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil,
+        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil
     ) {
         if follows, isPaired {
+            catEntry = cat
+            self.lastCatSeq = lastCatSeq
             self.photos = photos
             self.texts = texts
             self.shop = shop
@@ -149,7 +157,9 @@ final class ServerSession {
                         match: { [weak self] in self?.matches?($0) },
                         guessProgress: { [weak self] in self?.whoKnows.progressed(round: $0, answered: $1) },
                         guessRevealed: { [weak self] in self?.whoKnows.revealed(round: $0, reveal: $1, score: $2) },
-                        riddle: { [weak self] in self?.drawGuess.changed($0) }))
+                        riddle: { [weak self] in self?.drawGuess.changed($0) },
+                        catEntry: { [weak self] in self?.catEntry?($0) },
+                        lastCatSeq: { [weak self] in self?.lastCatSeq?() }))
             }
             inboxLink?.connect()
         } else {
