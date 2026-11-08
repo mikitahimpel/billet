@@ -268,6 +268,73 @@ export const describePairingRepositoryContract = (
       expect(found).toEqual([Option.some("pair-user-d-user-c"), Option.some("pair-user-d-user-c")]);
     });
 
+    it("blocks: ends the pair and refuses a new claim either way round", async () => {
+      const repository = await make();
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana));
+          yield* repository.block({ blocker: ana, blocked: ben, at: 1_600 });
+          yield* repository.block({ blocker: ana, blocked: ben, at: 1_700 });
+          const found = yield* repository.findPair(ben);
+          yield* repository.saveInvite(invite(ana));
+          const byBlocked = yield* failureOf(repository.claimInvite(claim(ben, ana)));
+          yield* repository.saveInvite(invite(ben));
+          const byBlocker = yield* failureOf(repository.claimInvite(claim(ana, ben)));
+          yield* repository.saveInvite(invite(cal));
+          yield* repository.claimInvite(claim(ben, cal));
+          return { found, byBlocked, byBlocker, other: yield* repository.findPair(ben) };
+        }),
+      );
+      expect(result.found).toEqual(Option.none());
+      expect(result.byBlocked).toBe("InvalidInvite");
+      expect(result.byBlocker).toBe("InvalidInvite");
+      expect(result.other).toEqual(Option.some("pair-user-b-user-c"));
+    });
+
+    it("keeps purchases: coins add up, items are a set, and clearing empties them", async () => {
+      const repository = await make();
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const empty = yield* repository.kept(ana);
+          yield* repository.keep(ana, { coins: 5, inks: ["ink-rose"], items: ["lamp-x"] });
+          yield* repository.keep(ana, { coins: 3, inks: ["ink-rose", "ink-sky"], items: [] });
+          const before = yield* repository.kept(ana);
+          const other = yield* repository.kept(ben);
+          yield* repository.clearKept(ana);
+          return { empty, before, other, after: yield* repository.kept(ana) };
+        }),
+      );
+      const nothing = { coins: 0, inks: [], items: [] };
+      expect(result.empty).toEqual(nothing);
+      expect(result.before.coins).toBe(8);
+      expect(result.before.inks.toSorted()).toEqual(["ink-rose", "ink-sky"]);
+      expect(result.before.items).toEqual(["lamp-x"]);
+      expect(result.other).toEqual(nothing);
+      expect(result.after).toEqual(nothing);
+    });
+
+    it("keeps a report without touching the pair", async () => {
+      const repository = await make();
+      const found = await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* repository.saveInvite(invite(ana));
+          yield* repository.claimInvite(claim(ben, ana));
+          yield* repository.saveReport({
+            id: "report-1",
+            reporter: ana,
+            reported: ben,
+            pairId: pair("pair-user-b-user-a"),
+            reason: "spam",
+            details: undefined,
+            at: 1_600,
+          });
+          return yield* repository.findPair(ana);
+        }),
+      );
+      expect(found).toEqual(Option.some("pair-user-b-user-a"));
+    });
+
     it("lets former partners pair again, under a new pair id", async () => {
       const repository = await make();
       const found = await Effect.runPromise(

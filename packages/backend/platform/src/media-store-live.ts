@@ -61,6 +61,21 @@ export const MediaStoreLive = (bucket: R2Bucket): Layer.Layer<MediaStore> =>
             } while (cursor !== undefined);
             return keys;
           }),
+        removeAll: (pairId) =>
+          guarded(async () => {
+            let cursor: string | undefined;
+            do {
+              const page = await bucket.list({
+                prefix: mediaPrefix(pairId),
+                ...(cursor === undefined ? {} : { cursor }),
+              });
+              const keys = page.objects.map(({ key }) => key);
+              for (let start = 0; start < keys.length; start += deleteBatch) {
+                await bucket.delete(keys.slice(start, start + deleteBatch));
+              }
+              cursor = page.truncated ? page.cursor : undefined;
+            } while (cursor !== undefined);
+          }),
         remove: (keys) =>
           guarded(async () => {
             for (let start = 0; start < keys.length; start += deleteBatch) {

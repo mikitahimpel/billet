@@ -18,8 +18,8 @@ export class PairingObserver extends Context.Service<
       members: ReadonlyArray<UserId>,
       joined: { readonly claimer: UserId; readonly at: EpochMillis },
     ) => Effect.Effect<void>;
-    /** `pairId` has no members any more. */
-    readonly unpaired: (pairId: PairId) => Effect.Effect<void>;
+    /** `pairId` has no members any more; `members` are the two it had. */
+    readonly unpaired: (pairId: PairId, members: ReadonlyArray<UserId>) => Effect.Effect<void>;
   }
 >()("@billet/backend-pairing/PairingObserver") {
   /** Does nothing. For tests and for a Worker without the extras. */

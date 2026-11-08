@@ -34,7 +34,9 @@ import {
 } from "@billet/contracts-http-api/note";
 import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
-import { inks as inkCatalog } from "@billet/contracts-domain/inks";
+import { InkId, inks as inkCatalog } from "@billet/contracts-domain/inks";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
+import { RoomItemId } from "@billet/contracts-domain/shop";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { PairResponse } from "@billet/contracts-http-api/pair";
 import { resetDirectory } from "./directory-migrations.ts";
@@ -510,6 +512,82 @@ describe("the Api Worker", () => {
     expect(await pairRows()).toHaveLength(2);
   });
 
+  it("deletes the room and the pair's images on unpair, for both partners", async () => {
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const ownerNote = await sentPhoto(owner);
+    const claimerNote = await sentPhoto(claimer);
+    const unsent = await uploaded(owner);
+    const room = env.PAIR_ROOM.getByName(pairId);
+    expect(await room.notes(0, 10)).toHaveLength(2);
+
+    const unpair = await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) });
+    expect(unpair.status).toBe(204);
+
+    for (const key of [ownerNote.image, claimerNote.image, unsent]) {
+      expect(await env.MEDIA.head(key)).toBeNull();
+    }
+    expect((await env.MEDIA.list({ prefix: `pairs/${pairId}/` })).objects).toEqual([]);
+    expect(await room.notes(0, 10)).toEqual([]);
+    // Both partners now answer as unpaired.
+    for (const token of [owner, claimer]) {
+      const notes = await call("/v1/notes", { method: "GET", headers: bearer(token) });
+      expect(notes.status).toBe(404);
+    }
+  });
+
+  it("keeps purchases through an unpair: each partner keeps half the coins and a copy of the pieces, and the next pair gets them", async () => {
+    const shopOf = async (token: string) =>
+      (await (await call("/v1/shop", { method: "GET", headers: bearer(token) })).json()) as {
+        balance: number;
+        inks: ReadonlyArray<string>;
+        items: ReadonlyArray<string>;
+      };
+    const baseline = await pairOf("subject-base-a", "subject-base-b");
+    const welcome = (await shopOf(baseline.owner)).balance;
+
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const room = env.PAIR_ROOM.getByName(pairId);
+    await room.grantInks([Schema.decodeSync(InkId)("ink-rose")]);
+    await room.grantItems([Schema.decodeSync(RoomItemId)("lantern")]);
+    await room.creditPurchase({
+      kind: "buy",
+      id: Schema.decodeSync(CoinEntryId)("buy:test-pack"),
+      ref: "pack",
+      coins: 101,
+    });
+    const before = await shopOf(owner);
+    expect(before.balance).toBe(welcome + 101);
+
+    expect((await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) })).status).toBe(
+      204,
+    );
+
+    const wallets = (
+      await env.DB.prepare("SELECT coins FROM kept_wallets").all<{ coins: number }>()
+    ).results.map(({ coins }) => coins);
+    expect(wallets).toHaveLength(2);
+    expect(wallets.reduce((sum, coins) => sum + coins, 0)).toBe(before.balance);
+    expect(Math.abs((wallets[0] ?? 0) - (wallets[1] ?? 0))).toBeLessThanOrEqual(1);
+    const kept = await env.DB.prepare("SELECT user_id, kind, item_id FROM kept_items").all();
+    expect(kept.results).toHaveLength(4);
+
+    // The owner pairs again: the new room has their share, the pieces and the ink, and their rows go.
+    const third = await signedInAs("subject-third");
+    expect((await claimWith(third, await inviteFrom(owner))).status).toBe(200);
+    const after = await shopOf(owner);
+    expect(after.inks).toContain("ink-rose");
+    expect(after.items).toContain("lantern");
+    expect(wallets).toContain(after.balance - welcome);
+    expect(
+      await env.DB.prepare("SELECT * FROM kept_items")
+        .all()
+        .then((r) => r.results),
+    ).toHaveLength(2);
+    expect(
+      (await env.DB.prepare("SELECT coins FROM kept_wallets").all<{ coins: number }>()).results,
+    ).toHaveLength(1);
+  });
+
   it.each([
     ["expired", { exp: longAgo }],
     ["wrong-audience", { aud: "com.example.other" }],
@@ -729,7 +807,7 @@ describe("note images", () => {
     const unpair = await call("/v1/pair", { method: "DELETE", headers: bearer(claimer) });
     expect(unpair.status).toBe(204);
     expect((await readImage(key, claimer)).status).toBe(404);
-    expect(await env.MEDIA.head(key)).not.toBeNull();
+    expect(await env.MEDIA.head(key)).toBeNull();
   });
 
   it("answers 401 without a session", async () => {
