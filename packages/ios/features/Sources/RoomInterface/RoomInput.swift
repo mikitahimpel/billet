@@ -8,13 +8,9 @@ public enum RoomScene: Equatable, Sendable {
 
 public enum RoomVisibility: Equatable, Sendable {
   case visible
-  /// Another tab or a sheet over it: its view stays, drawing an empty scene, so the way back needs
-  /// no new view. Under a sheet its last frame is shown over it.
-  case parked
-  /// The drawing canvas over it, which takes the room out of the window: not drawn, its last frame
-  /// kept for the way back.
+  /// A sheet, the canvas or the Inbox over it: not drawn, its last frame kept for the way back.
   case covered
-  /// The background, or another tab under the canvas: not drawn.
+  /// Another tab or the background: not drawn.
   case hidden
 }
 

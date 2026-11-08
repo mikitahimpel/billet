@@ -13,6 +13,8 @@ struct NookiApp: App {
 
     init() {
         NavigationBarStyle.apply()
+        // Mochi's welcome clips are made before the first screen, so it starts on a still and plays without a stall.
+        WelcomeClips.shared.preload()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
         URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
         let parts = Self.assemble()
@@ -49,9 +51,6 @@ struct NookiApp: App {
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
             coatChanged: { CatRoom.forgetMochi() })
-        // Mochi's welcome clips are made before the first screen, so it starts on a still and plays without a stall;
-        // a launch past the welcome makes no players.
-        if !onboarding.isFinished { WelcomeClips.shared.preload() }
         return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: .live()))
     }
 

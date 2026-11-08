@@ -41,20 +41,14 @@ private struct RoomStage: View {
                     .allowsHitTesting(input.visibility == .visible && controller.game == nil)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if input.visibility == .visible || input.visibility == .parked,
-                let scene = controller.scene(for: input.scene)
-            {
-                // Under another tab or a sheet the view stays, at full opacity with the room's root disabled: making a
-                // new RealityView on the way back holds the main thread for a frame of 0.3 to 1.5 s, and one at
-                // opacity 0 stalls about 1 s at a time while its drawables wait (#417). Under the canvas or in the
-                // background, where the view leaves the window, it goes; the scenes stay loaded, so coming back makes
-                // a new view.
-                let parked = input.visibility == .parked
-                DioramaView(scene: scene, paused: parked || controller.corner != nil, petPulse: controller.petPulse) {
+            } else if input.visibility == .visible, let scene = controller.scene(for: input.scene) {
+                // Only while the room can be seen: a paused RealityView left in place under the Shop, Moments, Us or
+                // a cover still runs its render loop and composites a full-screen layer every frame. The scenes stay
+                // loaded, so coming back only makes a new view for one.
+                DioramaView(scene: scene, paused: controller.corner != nil, petPulse: controller.petPulse) {
                     controller.petted()
                 }
-                .allowsHitTesting(!parked && controller.game == nil)
-                .accessibilityHidden(parked)
+                .allowsHitTesting(controller.game == nil)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
             }

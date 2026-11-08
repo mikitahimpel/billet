@@ -407,18 +407,10 @@ struct HomeView: View {
 
     /// What the room is told to show, from the shell's coarse state.
     private var roomInput: RoomInput {
-        let visibility = Self.roomVisibility(
-            onScreen: roomOnScreen, showsRoom: showsRoom, drawing: state.drawing, background: scenePhase == .background)
+        let visibility: RoomVisibility =
+            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility)
-    }
-
-    /// The room parks under the tabs and the sheets; the canvas, a full-screen cover, and the background take the
-    /// views under them out of the window, where a RealityView's drawables stall.
-    static func roomVisibility(onScreen: Bool, showsRoom: Bool, drawing: Bool, background: Bool) -> RoomVisibility {
-        if onScreen { return .visible }
-        if !drawing, !background { return .parked }
-        return showsRoom ? .covered : .hidden
     }
 
     private func handle(_ event: RoomEvent) {
