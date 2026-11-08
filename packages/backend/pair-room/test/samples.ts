@@ -34,7 +34,7 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
     { user: bob, presence: "idle" },
   ],
   lastSeq: 0,
-  streakDays: 0,
+  streak: { days: 0, best: 0 },
   inks: [],
   items: [],
   wishlist: [],

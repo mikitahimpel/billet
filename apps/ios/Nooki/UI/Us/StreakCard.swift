@@ -40,7 +40,7 @@ struct StreakCard: View {
 
             if status == .restorable {
                 Button {
-                    withAnimation(.snappy(duration: 0.3)) { store.restore() }
+                    Task { await store.restore() }
                 } label: {
                     Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
                         .frame(maxWidth: .infinity)
