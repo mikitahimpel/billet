@@ -24,27 +24,47 @@ struct OnboardingView: View {
 
     let language = Locale.current.language.languageCode?.identifier
 
+    @State private var scanning = false
+    @State private var errorTick = 0
+    @State var tapTick = 0
+    @State private var wavedTick = 0
+    @State var welcomeStart = Date()
+    /// Only with `-uitestWelcomeProbe`: counts the welcome timeline's late frames.
+    @State private var probe: HitchProbe? = ProcessInfo.processInfo.arguments.contains("-uitestWelcomeProbe")
+        ? HitchProbe() : nil
+
+    /// One persistent background and header; only the page between the header and the actions changes.
     var body: some View {
-        NavigationStack {
-            page
-                .id(flow.index)
-                .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
-                    .combined(with: .opacity))
-                // The step's title is drawn in the page as a large rounded title, so a long question wraps instead of
-                // being cut off the way a navigation bar's large title is.
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.inline)
-                .navigationBarBackButtonHidden()
-                .toolbar { toolbar }
-                .safeAreaInset(edge: .bottom) { bottomBar }
-                .background(Ink.screen.ignoresSafeArea())
+        ZStack {
+            Ink.screen.ignoresSafeArea()
+            VStack(spacing: 0) {
+                header
+                page
+                    .id(flow.index)
+                    .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+                        .combined(with: .opacity))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                actions
+            }
         }
         .tint(Ink.accentText)
         .animation(.smooth(duration: 0.35), value: flow.index)
         .sensoryFeedback(.selection, trigger: flow.picks)
         .haptic(.selection, trigger: flow.coat)
+        .haptic(.step, trigger: flow.index)
+        .haptic(.tap, trigger: tapTick)
+        .haptic(.tap, trigger: wavedTick)
+        .haptic(.confirmed, trigger: isPaired)
+        .haptic(.rejected, trigger: errorTick)
+        .overlay(alignment: .topLeading) { probeLabel }
         .task { await flow.load() }
         .onChange(of: flow.index, initial: true) { flow.appeared() }
+        // A failure belongs to the step it happened on: leaving the step clears it.
+        .onChange(of: flow.index) { clearFailure() }
+        .onChange(of: pairing?.state) { _, state in
+            if Self.failure(in: state, on: flow.page) != nil { errorTick += 1 }
+        }
         .task(id: [flow.page == .invite, signedIn]) {
             guard flow.page == .invite, signedIn, let pairing, case .choosing(nil, _) = pairing.state else { return }
             pairing.createInvite()
@@ -54,6 +74,31 @@ struct OnboardingView: View {
             flow.partnerJoined()
             if isPaired { paired() }
         }
+        .sheet(isPresented: $scanning) { scanner }
+    }
+
+    @ViewBuilder private var probeLabel: some View {
+        if let probe {
+            Text(probe.summary)
+                .font(.nookiMicro)
+                .foregroundStyle(.clear)
+                .accessibilityIdentifier("welcome.probe")
+                .accessibilityLabel(probe.summary)
+        }
+    }
+
+    /// The failure a page may show: a wrong code belongs to the code step, never to the invite.
+    static func failure(in state: PairingMachine.State?, on page: OnboardingFlow.Page) -> PairingFailure? {
+        guard case .choosing(let failure?, _)? = state else { return nil }
+        switch page {
+        case .join: return failure
+        case .invite: return failure == .invalidCode ? nil : failure
+        case .welcome, .question, .stopped, .togetherSince, .catCoat, .catName, .notifications, .widget: return nil
+        }
+    }
+
+    func clearFailure() {
+        if case .choosing(.some, _)? = pairing?.state { pairing?.cancel() }
     }
 
     private var isPaired: Bool {
@@ -75,23 +120,35 @@ struct OnboardingView: View {
         }
     }
 
-    @ToolbarContentBuilder private var toolbar: some ToolbarContent {
-        if flow.page != .welcome, flow.page != .stopped {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back", systemImage: "chevron.left") { flow.back() }
-            }
-            ToolbarItem(placement: .principal) {
+    /// Back, progress and Skip, in a row of a fixed height so the pages never move under it. The welcome and the
+    /// stop screen keep the row, empty.
+    private var header: some View {
+        HStack {
+            if showsHeader {
+                Button { flow.back() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.body.weight(.semibold))
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Back")
                 ProgressView(value: flow.progress)
-                    .frame(width: 120)
+                    .frame(maxWidth: .infinity)
                     .accessibilityLabel("Step \(flow.index) of \(flow.pages.count - 1)")
-            }
-            if flow.canSkip {
-                ToolbarItem(placement: .topBarTrailing) {
+                if flow.canSkip {
                     Button("Skip") { flow.skip() }
+                        .font(.nookiBody)
+                        .frame(minWidth: Size.control, minHeight: Size.control)
+                } else {
+                    Color.clear.frame(width: Size.control, height: Size.control)
                 }
             }
         }
+        .padding(.horizontal, Space.s)
+        .frame(height: Size.control + Space.s)
     }
+
+    private var showsHeader: Bool { flow.page != .welcome && flow.page != .stopped }
 
     // MARK: Pages
 
@@ -110,54 +167,8 @@ struct OnboardingView: View {
         }
     }
 
-    /// The hero fills the top, the rest sits under it, and the whole page centers in the space above the button;
-    /// it scrolls only when large text doesn't fit.
     private var welcome: some View {
-        GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: Space.l) {
-                    CatStage(coat: flow.coat, height: min(proxy.size.height * 0.5, 400))
-                        .accessibilityHidden(true)
-                        .padding(.bottom, Space.s)
-                    Text("A cat for the two of you")
-                        .font(.nookiLargeTitle)
-                        .foregroundStyle(Ink.text)
-                        .multilineTextAlignment(.center)
-                    Text("A few quick questions first. At the end you pick its coat and give it a name.")
-                        .font(.nookiBody)
-                        .foregroundStyle(Ink.textSecondary)
-                        .multilineTextAlignment(.center)
-                    VStack(alignment: .leading, spacing: Space.m) {
-                        welcomePoint("pawprint.fill", "Feed it, pet it and play with it together")
-                        welcomePoint("scribble.variable", "Send each other drawings and notes")
-                        welcomePoint("flame.fill", "Keep a streak going, day after day")
-                    }
-                    .padding(.top, Space.s)
-                    if pairing != nil {
-                        Button("I have an invite code") { flow.join() }
-                            .font(.nookiBody.weight(.semibold))
-                            .frame(minHeight: 44)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, Space.gutter)
-                .frame(minHeight: proxy.size.height)
-            }
-            .scrollBounceBehavior(.basedOnSize)
-        }
-    }
-
-    private func welcomePoint(_ symbol: String, _ text: LocalizedStringKey) -> some View {
-        Label {
-            Text(text)
-                .font(.nookiCallout)
-                .foregroundStyle(Ink.text)
-        } icon: {
-            Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Ink.accentText)
-                .frame(width: 24)
-        }
+        WelcomeView(start: welcomeStart, waved: { wavedTick += 1 }, probe: probe)
     }
 
     @ViewBuilder private func question(_ step: OnboardingStep) -> some View {
@@ -251,18 +262,24 @@ struct OnboardingView: View {
                         Text(PairingCopy.spaced(code))
                             .font(.system(.largeTitle, design: .monospaced, weight: .bold))
                             .foregroundStyle(Ink.text)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, Space.s)
                             .accessibilityLabel("Your code: \(code)")
                             .rowCell()
-                        ShareLink(item: inviteMessage(code)) {
-                            Label("Share invite", systemImage: "square.and.arrow.up")
-                                .font(.nookiHeadline)
-                                .foregroundStyle(Ink.accentText)
-                                .rowCell()
+                        if let image = QRCode.image(for: inviteLink(code)) {
+                            Image(uiImage: image)
+                                .interpolation(.none)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 160, height: 160)
+                                .padding(Space.s)
+                                .background(.white, in: .rect(cornerRadius: Radius.control))
                                 .frame(maxWidth: .infinity)
+                                .rowCell()
+                                .accessibilityLabel("QR code of your invite")
                         }
-                        .simultaneousGesture(TapGesture().onEnded { flow.invited = true })
                     } footer: {
                         Text(PairingCopy.expiry(expiresAt: expiresAt, now: .now))
                     }
@@ -270,16 +287,9 @@ struct OnboardingView: View {
                     GroupedSection { progressRow("Connecting…") }
                 case .creating, .claiming:
                     GroupedSection { progressRow("Getting your code…") }
-                case .choosing(let failure, _):
-                    VStack(alignment: .leading, spacing: Space.s) {
-                        Button("Get my code") { pairing.createInvite() }
-                            .buttonStyle(SecondaryButtonStyle())
-                        if let failure {
-                            Text(PairingCopy.message(for: failure))
-                                .font(.nookiCaption)
-                                .foregroundStyle(ShopInk.coral)
-                                .padding(.horizontal, Space.l)
-                        }
+                case .choosing:
+                    if let failure = Self.failure(in: pairing.state, on: .invite) {
+                        ErrorLine(PairingCopy.message(for: failure))
                     }
                 case .paired:
                     GroupedSection {
@@ -288,42 +298,78 @@ struct OnboardingView: View {
                 }
             }
             if let demoPartner, !isPaired, !alreadyPaired {
-                Section {
-                    Button("Try with a demo partner", action: demoPartner)
-                        .font(.nookiCallout)
-                        .listRowSurface()
-                }
+                Button("Try with a demo partner", action: demoPartner)
+                    .buttonStyle(SecondaryButtonStyle(fullWidth: false))
+                    .font(.nookiCallout)
+                    .frame(maxWidth: .infinity)
             }
         }
     }
 
     private var join: some View {
-        form(say: "Who's waiting for me?",
+        let failure = Self.failure(in: pairing?.state, on: .join)
+        return form(say: "Who's waiting for me?",
              subtitle: String(localized: "It's in the message your partner sent, or on their screen.")) {
-            GroupedSection(inset: Space.l) {
-                TextField("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { flow.joinCode = Self.code(from: $0) })
+            VStack(spacing: Space.s) {
+                TextField("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { typed in
+                    flow.joinCode = Self.code(from: typed)
+                    clearFailure()
+                })
                     .font(.system(.title2, design: .monospaced, weight: .bold))
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .textContentType(.oneTimeCode)
                     .accessibilityLabel("Invite code")
-                    .rowCell()
-                PasteButton(payloadType: String.self) { strings in
-                    guard let pasted = strings.first else { return }
-                    Task { @MainActor in flow.joinCode = Self.code(from: pasted) }
+                    .foregroundStyle(failure == nil ? Ink.text : Ink.destructive)
+                    .padding(Space.l)
+                    .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+                    .errorField(failure != nil)
+                if failure != nil {
+                    ErrorLine(String(localized: "This code didn't work. Check it or ask for a new one."))
                 }
-                .labelStyle(.titleAndIcon)
-                .buttonBorderShape(.capsule)
-                .tint(.honey)
-                .rowCell()
-            } footer: {
-                if case .choosing(let failure?, _) = pairing?.state {
-                    Text(PairingCopy.message(for: failure))
-                } else {
-                    Text("10 letters and digits. There's no 0, O, 1 or I.")
+                HStack(spacing: Space.s) {
+                    Button { pasteCode() } label: { Label("Paste", systemImage: "doc.on.clipboard") }
+                        .buttonStyle(SecondaryButtonStyle())
+                    if InviteScanner.isAvailable {
+                        Button { scanning = true } label: { Label("Scan", systemImage: "qrcode.viewfinder") }
+                            .buttonStyle(SecondaryButtonStyle())
+                    }
                 }
+                Text("10 letters and digits. There's no 0, O, 1 or I.")
+                    .font(.nookiCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .task { if flow.joinCode.isEmpty { pasteCode(onlyIfCode: true) } }
+    }
+
+    private var scanner: some View {
+        InviteScanner { code in
+            scanning = false
+            flow.joinCode = code
+            tapTick += 1
+        }
+        .ignoresSafeArea()
+        .overlay(alignment: .topTrailing) {
+            GlassIconButton(symbol: "xmark", label: "Close") { scanning = false }
+                .padding(Space.gutter)
+        }
+    }
+
+    /// Fills the field from the clipboard. Reading it is what asks iOS for the paste permission.
+    private func pasteCode(onlyIfCode: Bool = false) {
+        guard UIPasteboard.general.hasStrings, let text = UIPasteboard.general.string else { return }
+        if let code = InviteInput.code(in: text) {
+            flow.joinCode = code
+            clearFailure()
+        } else if !onlyIfCode {
+            flow.joinCode = Self.code(from: text)
+        }
+    }
+
+    private func inviteLink(_ code: String) -> String {
+        inviteBase?.appending(path: "i/\(code)").absoluteString ?? code
     }
 
     /// What was typed or pasted, kept to the symbols a code has.
@@ -378,7 +424,7 @@ struct OnboardingView: View {
         }
     }
 
-    private func inviteMessage(_ code: String) -> String {
+    func inviteMessage(_ code: String) -> String {
         guard let link = inviteBase?.appending(path: "i/\(code)") else {
             return String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")
         }

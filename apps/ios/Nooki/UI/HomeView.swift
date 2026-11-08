@@ -52,9 +52,12 @@ struct HomeView: View {
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
     /// The World tab and the board show a room; the others get their own screens over the backdrop.
     private var showsRoom: Bool { state.tab == .world || showsBoard }
-    /// Something hides the room whole: the canvas, the Inbox or the composer over it, or the app not in front.
+    /// Something hides the room whole, or near enough: the canvas, the Inbox, the composer, the profile with its
+    /// Settings, the Coins sheet, or the app not in front. The sheets that open at their content's height (the pet,
+    /// an item, the mood) leave the room showing, and live.
     private var roomCovered: Bool {
-        state.drawing || state.showsInbox || state.composingNote != nil || scenePhase != .active
+        state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile || coinsShown != nil
+            || scenePhase != .active
     }
     /// The room is mounted only while it can be seen.
     private var roomOnScreen: Bool { showsRoom && !roomCovered }
