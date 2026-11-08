@@ -59,9 +59,9 @@ final class WalletStore {
         }
     }
 
-    /// The pair ended: what it had was the room's, so none of it stays. Mochi's level stays where care left it.
+    /// The pair ended: what it had was the room's, so none of it stays, even when the room's answer hadn't reached the
+    /// file yet. Mochi's level stays where care left it.
     func leaveSync() {
-        guard wallet.isSynced else { return }
         update { $0 = Wallet(level: $0.level, progress: $0.progress) }
     }
 }
