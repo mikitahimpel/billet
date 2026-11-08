@@ -111,7 +111,7 @@ final class FeedStage: GameStage {
         bag = root.group(at: bagAt + [0, 0.15, 0])
         bag.box(0.1, 0.15, 0.07, r: 0.014, Clay.matte(0xD9B48A, roughness: 0.9), at: [0, -0.075, 0])
         bag.box(0.07, 0.07, 0.002, r: 0.001, Clay.matte(0xE0554A, roughness: 0.8), at: [0, -0.085, 0.036])
-        bag.box(0.094, 0.004, 0.064, r: 0.002, Clay.matte(0x5A3A22, roughness: 1), at: [0, -0.002, 0])
+        bag.box(0.094, 0.004, 0.064, r: 0.002, Clay.matte(0x5A3A22, roughness: 1), at: [0, -0.0005, 0])
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward)
 
         // The scoop, in front.

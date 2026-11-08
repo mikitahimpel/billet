@@ -14,6 +14,7 @@ import {
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
+import type { PriceBook, PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import { earnsOnTick } from "@billet/contracts-domain/list";
 import { type MoodCheckIn, moodNoteMaxLength } from "@billet/contracts-domain/mood";
 import type { Note } from "@billet/contracts-domain/note";
@@ -28,6 +29,7 @@ import {
   roomItemOf,
   type RoomItemId,
   setPrice,
+  soldIn,
   type ShopOffer,
   starterItems,
   treatGrams,
@@ -112,10 +114,21 @@ const hour = 3_600_000;
 const isFeaturedNow = (setId: string, at: EpochMillis): boolean =>
   featuredSetAt(at - 12 * hour).id === setId || featuredSetAt(at + 14 * hour).id === setId;
 
-const quoteInk = (room: ActiveRoom, ink: InkId): Quote | RoomRejection => {
-  const sold = inkOf(ink);
-  if (sold === undefined) return RoomRejection.cases.NotSold.make({ ink });
+const inkSoldIn = (ink: InkId, book: PriceBook | undefined) => {
+  if (book === undefined) return inkOf(ink);
+  const found = book.inks.find((entry) => entry.id === ink);
+  return found === undefined ? undefined : { price: found.price };
+};
+
+const quoteInk = (
+  room: ActiveRoom,
+  ink: InkId,
+  book: PriceBook | undefined,
+): Quote | RoomRejection => {
+  // Owned first: the free ink is never in the catalog, and a deactivated ink is still owned.
   if (ownsInk(room, ink)) return RoomRejection.cases.AlreadyOwned.make({ ink });
+  const sold = inkSoldIn(ink, book);
+  if (sold === undefined) return RoomRejection.cases.NotSold.make({ ink });
   return { price: sold.price, ref: ink, inks: [ink], items: [] };
 };
 
@@ -124,15 +137,16 @@ const quote = (
   offer: ShopOffer,
   at: EpochMillis,
   day: LocalDay,
+  book: PriceBook | undefined,
 ): Quote | RoomRejection => {
   switch (offer._tag) {
     case "Ink":
-      return quoteInk(room, offer.ink);
+      return quoteInk(room, offer.ink, book);
     case "Item": {
-      const sold = roomItemOf(offer.item);
+      const sold = soldIn(offer.item, book);
       if (sold === undefined) return RoomRejection.cases.NotOffered.make({});
       if (ownsItem(room, sold.id)) return RoomRejection.cases.OfferOwned.make({ offer: sold.id });
-      const { price, deal } = itemPriceOn(sold, room.pairId, day);
+      const { price, deal } = itemPriceOn(sold, room.pairId, day, book);
       return {
         price,
         ref: sold.id,
@@ -147,7 +161,11 @@ const quote = (
       const featured = featuredSets.some((entry) => entry.id === pieces.id);
       if (featured && !isFeaturedNow(pieces.id, at)) return RoomRejection.cases.NotOffered.make({});
       const owned = new Set<string>([...starterItems, ...room.items]);
-      const price = setPrice(pieces, owned);
+      // A set sells only while every piece in it is on sale.
+      if (book !== undefined && pieces.items.some((id) => soldIn(id, book) === undefined)) {
+        return RoomRejection.cases.NotOffered.make({});
+      }
+      const price = setPrice(pieces, owned, book);
       if (price === undefined) return RoomRejection.cases.OfferOwned.make({ offer: pieces.id });
       const items = pieces.items.filter((item) => !owned.has(item));
       const offered = `${featured ? "featured" : "bundle"}:${pieces.id}`;
@@ -158,6 +176,12 @@ const quote = (
       return { price: treatPrice, ref: "treat", inks: [], items: [], treat: true };
   }
 };
+
+/** Refuses a price above the one the buyer saw; a lower one stands. */
+const checked = (bought: Quote | RoomRejection, terms: PriceTerms | undefined) =>
+  !isRejection(bought) && terms?.expectedPrice !== undefined && bought.price > terms.expectedPrice
+    ? RoomRejection.cases.PriceChanged.make({ price: bought.price })
+    : bought;
 
 /**
  * Takes the price and gives what was bought. A piece bought leaves the wishlist. A treat feeds the
@@ -445,6 +469,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "SaveCat":
     case "RecordCatEvent":
     case "GrantInks":
+    case "GrantItems":
     case "Buy":
     case "Order":
     case "SetWish":
@@ -567,23 +592,32 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
             RoomOutput.cases.InksGranted.make({ inks: added }),
           ]);
     }
+    case "GrantItems": {
+      const added = [...new Set(command.items)].filter((item) => !ownsItem(room, item));
+      return added.length === 0
+        ? accepted(room)
+        : accepted({ ...room, items: [...room.items, ...added] }, [
+            RoomOutput.cases.ItemsGranted.make({ items: added }),
+          ]);
+    }
     case "Buy": {
-      const { id, by, ink, at } = command;
+      const { id, by, ink, at, terms } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
-      const bought = quoteInk(room, ink);
+      const bought = checked(quoteInk(room, ink, terms?.book), terms);
       return isRejection(bought) ? rejected(bought) : charge(room, { id, by, at }, bought);
     }
     case "Order": {
-      const { id, by, offer, at } = command;
+      const { id, by, offer, at, terms } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
       const day = localDayOf(at, offsetOf(room, command.utcOffsetSeconds));
-      const bought = quote(room, offer, at, day);
+      const bought = checked(quote(room, offer, at, day, terms?.book), terms);
       return isRejection(bought) ? rejected(bought) : charge(room, { id, by, at }, bought);
     }
     case "SetWish": {
       const { by, item, wished } = command;
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
-      if (roomItemOf(item) === undefined) return rejected(RoomRejection.cases.NotOffered.make({}));
+      if (command.offered !== true && roomItemOf(item) === undefined)
+        return rejected(RoomRejection.cases.NotOffered.make({}));
       const listed = room.wishlist.includes(item);
       if (listed === wished) return accepted(room);
       const wishlist = wished ? [...room.wishlist, item] : room.wishlist.filter((i) => i !== item);

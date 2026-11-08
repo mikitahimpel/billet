@@ -8,7 +8,14 @@ import {
 import { StoredAssignment } from "@billet/backend-flags/flags-repository";
 import { StoredDetail, StoredMetric } from "@billet/backend-metrics/metrics-repository";
 import { StoredDemoPartner } from "@billet/backend-demo-partner/demo-partner-repository";
-import { StoredInvite, StoredPairMember } from "@billet/backend-pairing/pairing-repository";
+import {
+  StoredBlock,
+  StoredInvite,
+  StoredKeptItem,
+  StoredKeptWallet,
+  StoredPairMember,
+  StoredPartnerReport,
+} from "@billet/backend-pairing/pairing-repository";
 import {
   StoredNotification,
   StoredPurchase,
@@ -17,6 +24,7 @@ import {
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
+import { ShopChangeRow, ShopItemRow } from "../src/shop-store-live.ts";
 import {
   accountKeys,
   adminFunnels,
@@ -38,6 +46,12 @@ import {
   pairFlags,
   pairMembers,
   partnerNotices,
+  partnerReports,
+  blocks,
+  keptItems,
+  keptWallets,
+  shopItemChanges,
+  shopItems,
   purchases,
   pushTokens,
   rateLimits,
@@ -148,7 +162,13 @@ const checked = [
   ["pair_flags", pairFlags, StoredAssignment],
   ["pair_members", pairMembers, StoredPairMember],
   ["partner_notices", partnerNotices, StoredPartnerNotice],
+  ["blocks", blocks, StoredBlock],
+  ["kept_wallets", keptWallets, StoredKeptWallet],
+  ["kept_items", keptItems, StoredKeptItem],
+  ["partner_reports", partnerReports, StoredPartnerReport],
   ["purchases", purchases, StoredPurchase],
+  ["shop_items", shopItems, ShopItemRow],
+  ["shop_item_changes", shopItemChanges, ShopChangeRow],
   ["push_tokens", pushTokens, StoredPushToken],
   ["rate_limits", rateLimits, StoredRateLimit],
   ["coin_ledger", coinLedger, StoredPurchaseEntry],

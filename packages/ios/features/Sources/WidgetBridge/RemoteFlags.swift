@@ -61,8 +61,15 @@ public enum Experiments {
   /// Which of Nooki's rooms a new pair gets: both, only the Room, or only the City.
   public static let rooms = Experiment(key: "rooms", choices: RoomsVariant.self)
 
+  /// How the rooms' static shell is made: built live, or loaded baked (Labs > Room shell). `live` is the
+  /// default; setting everyone to `live` is the way back.
+  public static let roomShell = Experiment(key: "room-shell", choices: RoomShell.self)
+
+  /// Whether the pair sees the hints after the onboarding: `hold` is the holdout, 10% of pairs.
+  public static let hints = Experiment(key: "hints", variants: ["show", "hold"])
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, rooms,
+    roomLighting, windowView, homeLayout, rooms, roomShell, hints,
   ]
 }
 

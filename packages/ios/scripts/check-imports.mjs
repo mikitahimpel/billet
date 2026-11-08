@@ -1,6 +1,9 @@
 // Run from one of the Swift packages in packages/ios. Fails when a Swift file under its Sources
-// imports a graphics engine: the packages stay engine-free, so the widget never links one.
-// A plain `swift build` does not enforce this (see the PR for #3), so ios:build and ios:test run it.
+// imports a graphics engine (the packages stay engine-free, so the widget never links one), when a
+// Feature target imports another Feature, or when an Interface target imports a feature, views or
+// the network. A plain `swift build` does not enforce the first (see the PR for #3), and the other
+// two are visible in the diff here where a Package.swift edit would hide them; ios:build and
+// ios:test run it.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -43,14 +46,40 @@ function importViolations(files, describe) {
 
 const engines = new Set(["RiveRuntime", "RealityKit"]);
 
-const violations = importViolations(swiftFiles(sources), (module) =>
-  engines.has(module) ? `imports the engine ${module}` : undefined,
-);
+// An interface target holds value types and protocols only: no views, no network, no feature.
+const notInInterfaces = new Set(["Design", "DesignSystem", "Transport", "SwiftUI"]);
+
+// The target a file belongs to: the first folder under Sources.
+function targetOf(file) {
+  return relative(sources, file).split("/")[0];
+}
+
+// The feature rules of docs/ios-architecture.md: a feature reaches another only through its
+// `<X>Interface` target, and an interface target depends on nothing above the layers.
+function describe(target, module) {
+  if (engines.has(module)) return `imports the engine ${module}`;
+  const isFeature = target.startsWith("Feature");
+  const isInterface = target.endsWith("Interface");
+  if (isFeature && module.startsWith("Feature") && module !== target) {
+    return `${target} imports ${module}; a feature imports another only through its Interface`;
+  }
+  if (isInterface && (module.startsWith("Feature") || notInInterfaces.has(module))) {
+    return `${target} imports ${module}; an Interface holds value types and protocols only`;
+  }
+  return undefined;
+}
+
+const violations = swiftFiles(sources).flatMap((file) => {
+  const target = targetOf(file);
+  return importViolations([file], (module) => describe(target, module));
+});
 
 if (violations.length > 0) {
   console.error(violations.join("\n"));
   console.error(
-    "The packages in packages/ios stay free of graphics engines; RealityKit belongs in apps/ios.",
+    "The packages in packages/ios stay free of graphics engines (RealityKit belongs in " +
+      "apps/ios), and features meet only through their Interface targets " +
+      "(docs/ios-architecture.md).",
   );
   process.exit(1);
 }

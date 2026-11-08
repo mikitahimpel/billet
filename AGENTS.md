@@ -57,6 +57,18 @@ with `BILLET_API_HOST`.
 - Swift 6 strict concurrency.
 - `packages/`: `.swift-format`, 2 spaces, 100 columns. `apps/ios`: 4 spaces, up to 120, match
   the file.
+- One module per feature: `Feature<X>` and `<X>Interface` targets in `packages/ios/features`.
+  A feature imports another only through its `*Interface`; the app target composes them
+  ([docs/ios-architecture.md](docs/ios-architecture.md)).
+- Screen and flow state is an `enum` with associated values, changed only through a `Machine`'s
+  `send(event)`; no `isLoading` + `error` + `items`, no optional that means a mode. The transition
+  table is tested, rejected events included.
+- Stores take every dependency in `init`; views get other features as protocols. No
+  `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
+- The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
+  through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
+  and no scene tick reaches state outside it.
+- A horizontal drag on Home never switches rooms; only the explicit control does (`RoomSwipeTests`).
 
 ## Comments
 

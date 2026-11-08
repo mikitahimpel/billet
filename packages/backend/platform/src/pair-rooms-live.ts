@@ -59,16 +59,18 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         sendNote: (pairId, author, request) =>
           callRoom(() => rooms.getByName(pairId).sendNote(author, request), decodeDecision),
         inks: (pairId) => callRoom(() => rooms.getByName(pairId).inks(), decodeInks),
+        grantItems: (pairId, items) =>
+          callRoom(() => rooms.getByName(pairId).grantItems(items), decodeDecision),
         grantInks: (pairId, inks) =>
           callRoom(() => rooms.getByName(pairId).grantInks(inks), decodeDecision),
         coins: (pairId, after, limit) =>
           callRoom(() => rooms.getByName(pairId).coins(after, limit), decodeCoins),
-        buy: (pairId, by, id, ink) =>
-          callRoom(() => rooms.getByName(pairId).buy(by, id, ink), decodeDecision),
+        buy: (pairId, by, id, ink, terms) =>
+          callRoom(() => rooms.getByName(pairId).buy(by, id, ink, terms), decodeDecision),
         shop: (pairId) => callRoom(() => rooms.getByName(pairId).shop(), decodeShop),
-        order: (pairId, by, id, offer, utcOffsetSeconds) =>
+        order: (pairId, by, id, offer, utcOffsetSeconds, terms) =>
           callRoom(
-            () => rooms.getByName(pairId).order(by, id, offer, utcOffsetSeconds),
+            () => rooms.getByName(pairId).order(by, id, offer, utcOffsetSeconds, terms),
             decodeDecision,
           ),
         openGift: (pairId, by, utcOffsetSeconds) =>
@@ -79,12 +81,20 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).earn(by, event, utcOffsetSeconds), decodeDecision),
         creditPurchase: (pairId, credit) =>
           callRoom(() => rooms.getByName(pairId).creditPurchase(credit), decodeDecision),
-        setWish: (pairId, by, item, wished) =>
-          callRoom(() => rooms.getByName(pairId).setWish(by, item, wished), decodeDecision),
+        setWish: (pairId, by, item, wished, offered) =>
+          callRoom(
+            () => rooms.getByName(pairId).setWish(by, item, wished, offered),
+            decodeDecision,
+          ),
         notesAfter: (pairId, afterSeq, limit) =>
           callRoom(() => rooms.getByName(pairId).notes(afterSeq, limit), decodeNotes),
         forgetMember: (pairId, user) =>
           callRoom(() => rooms.getByName(pairId).forgetMember(user), decodeNotes),
+        destroy: (pairId) =>
+          callRoom(
+            () => rooms.getByName(pairId).destroy(),
+            () => Effect.void,
+          ),
         endSessions: (pairId) =>
           callRoom(
             () => rooms.getByName(pairId).endSessions(),

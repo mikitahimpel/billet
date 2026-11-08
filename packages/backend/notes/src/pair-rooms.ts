@@ -7,6 +7,7 @@ import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type {
   CatResponse,
   RecordCatEventRequest,
@@ -48,6 +49,11 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** The ink colours the pair bought, in the order it got them. Never the free ink. */
     readonly inks: (pairId: PairId) => Effect.Effect<ReadonlyArray<InkId>, NotesUnavailable>;
+    /** Gives the pair room pieces it does not have yet. Safe to repeat. */
+    readonly grantItems: (
+      pairId: PairId,
+      items: ReadonlyArray<RoomItemId>,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Gives the pair ink colours it does not have yet. Safe to repeat. */
     readonly grantInks: (
       pairId: PairId,
@@ -68,6 +74,7 @@ export class PairRooms extends Context.Service<
       by: UserId,
       id: IdempotencyKey,
       ink: InkId,
+      terms?: PriceTerms,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /**
      * What the pair has: balance, inks, room pieces and wishlist, or null while the room is not
@@ -84,6 +91,7 @@ export class PairRooms extends Context.Service<
       id: IdempotencyKey,
       offer: ShopOffer,
       utcOffsetSeconds?: number,
+      terms?: PriceTerms,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Opens the pair's gift of the local day, once a day for the pair. */
     readonly openGift: (
@@ -114,6 +122,7 @@ export class PairRooms extends Context.Service<
       by: UserId,
       item: RoomItemId,
       wished: boolean,
+      offered?: boolean,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (
@@ -129,6 +138,11 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       user: UserId,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
+    /**
+     * Deletes everything in the room, wallet included, and closes its sockets: the pair is over.
+     * Safe to repeat.
+     */
+    readonly destroy: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Closes the room's open sockets, as the pair has ended. Safe to repeat. */
     readonly endSessions: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Adopts the cat, or renames it. `natureSeed` is used only by the adoption. */

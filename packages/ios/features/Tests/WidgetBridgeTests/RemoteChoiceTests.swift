@@ -27,6 +27,22 @@ import Testing
     #expect(HomeVariant(remoteVariant: variant.remoteVariant) == variant)
   }
 
+  @Test(arguments: RoomShell.allCases)
+  func everyRoomShellIsAVariantAndBack(_ shell: RoomShell) {
+    #expect(Experiments.roomShell.variants.contains(shell.remoteVariant))
+    #expect(RoomShell(remoteVariant: shell.remoteVariant) == shell)
+  }
+
+  @Test func theRoomShellDefaultsToLiveAndFollowsLabsThenTheServer() {
+    let remote = RemoteFlags(assignments: ["room-shell": "baked"])
+    #expect(RoomShell.resolved(labs: nil, remote: RemoteFlags()) == .live)
+    #expect(RoomShell.resolved(labs: nil, remote: remote) == .baked)
+    #expect(RoomShell.resolved(labs: .live, remote: remote) == .live)
+    #expect(
+      RoomShell.resolved(labs: nil, remote: RemoteFlags(assignments: ["room-shell": "hologram"]))
+        == .live)
+  }
+
   @Test func anUnknownVariantIsNoChoice() {
     #expect(RoomLighting(remoteVariant: "disco") == nil)
     #expect(RoomLighting(remoteVariant: "amberLantern") == nil)
@@ -54,7 +70,7 @@ import Testing
   @Test func everyRemoteSettingIsListed() {
     let keys = Set(Experiments.all.map(\.key))
     #expect(
-      keys == ["room-lighting", "window-view", "home-layout", "rooms"])
+      keys == ["room-lighting", "window-view", "home-layout", "rooms", "room-shell", "hints"])
   }
 
   @Test func aChoiceTheServerGaveIsRead() {

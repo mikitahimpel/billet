@@ -5,9 +5,9 @@ import SwiftUI
 import Design
 import WidgetBridge
 
-/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account, the window, then support,
-/// privacy and what's installed. The account is anonymous and needs no sign-in (see `AccountRow`); erasing the data on
-/// this phone stands in for account deletion until it has its own row.
+/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account and its delivery health,
+/// the partner, the window, then support, privacy and what's installed. The account is anonymous and needs no sign-in
+/// (see `AccountRow`). Labs and Testing show only in a debug or TestFlight build.
 struct SettingsView: View {
     let state: HomeState
     /// Wipes everything saved on this phone and starts the app over.
@@ -23,6 +23,8 @@ struct SettingsView: View {
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
+    @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
+    @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
     @State private var confirmingErase = false
     @State private var demoBusy = false
     @State private var demoFailed = false
@@ -56,6 +58,10 @@ struct SettingsView: View {
                 GroupedSection(header: "Account") {
                     AccountRow(state: session.signIn.state, retry: session.signIn.retry)
                 }
+                DeliveryHealthSection()
+                PartnerAndAccountSections(session: session, erase: erase)
+            } else {
+                DeliveryHealthSection()
             }
 
             GroupedSection(header: "Window",
@@ -90,7 +96,7 @@ struct SettingsView: View {
                 .buttonStyle(PressScaleStyle())
             }
 
-            if let session, let demo = session.demoPartner {
+            if BuildFlavor.showsLabs, let session, let demo = session.demoPartner {
                 GroupedSection(header: "Testing", footer: demoFooter(paired: demo, hasPartner: session.isPaired)) {
                     Button { Task { await switchDemoPartner(session, paired: demo) } } label: {
                         Row(demo ? "Remove demo partner" : "Pair with a demo partner",
@@ -103,22 +109,41 @@ struct SettingsView: View {
                 }
             }
 
-            GroupedSection(header: "Labs",
-                         footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
-                             + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
-                             + "both on this phone, whatever the test gave your pair.") {
-                ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
-                ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
-                ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
-                               isOn: $showAllHints)
-                NavigationLink { StyleGallery() } label: {
-                    Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
-                }
-                .buttonStyle(PressScaleStyle())
-                PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
-                    Text("Follow the test").tag(RoomsVariant?.none)
-                    ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+            if BuildFlavor.showsLabs {
+                GroupedSection(header: "Labs",
+                             footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
+                                 + "card shows what the brain has her doing and why: her state, needs and the last thing she "
+                                 + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                                 + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
+                                 + "them baked, from the next launch. Composer style is how a new note looks.") {
+                    ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
+                    ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
+                    ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
+                                   isOn: $showAllHints)
+                    NavigationLink { StyleGallery() } label: {
+                        Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    PickerRow("Composer style", symbol: "square.and.pencil", tint: UsTint.sun.color,
+                              selection: $composerStyle) {
+                        ForEach(ComposerStyle.allCases) { Text($0.title).tag($0) }
+                    }
+                    PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
+                        Text("Follow the test").tag(RoomsVariant?.none)
+                        ForEach(RoomsVariant.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+                    }
+                    Button {
+                        state.showcaseRequested = true
+                        state.showsProfile = false
+                    } label: {
+                        Row("Play all animations", symbol: "play.fill", tint: UsTint.sage.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                    PickerRow("Room shell", symbol: "cube.fill", tint: UsTint.honey.color, selection: roomShellOverride) {
+                        Text("Follow the test").tag(RoomShell?.none)
+                        Text("Live").tag(Optional(RoomShell.live))
+                        Text("Baked").tag(Optional(RoomShell.baked))
+                    }
                 }
             }
 
@@ -170,6 +195,13 @@ struct SettingsView: View {
         if !paired, hasPartner { return "Only without a partner: this account already has one." }
         return "The dev server plays a partner, so you can try Nooki alone: it answers your notes, reacts to "
             + "your photos, cares for \(CatProfile.name()) and opens the daily gift."
+    }
+
+    /// The Labs choice of room shell on this phone; "Follow the test" clears it.
+    private var roomShellOverride: Binding<RoomShell?> {
+        Binding(
+            get: { RoomShell(remoteVariant: roomShellLabs) },
+            set: { roomShellLabs = $0?.remoteVariant ?? "" })
     }
 
     /// The Labs choice of rooms on this phone; "Follow the test" clears it.

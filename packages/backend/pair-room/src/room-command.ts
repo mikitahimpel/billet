@@ -15,6 +15,7 @@ import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
+import { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RiddleReward, RiddleWrite } from "./riddle-rules.ts";
 
@@ -55,8 +56,16 @@ export const RoomCommand = Schema.TaggedUnion({
   RecordCatEvent: { id: IdempotencyKey, by: UserId, at: EpochMillis, event: CatEvent },
   /** Gives the pair ink colours, as the wallet does once it has taken their coins. */
   GrantInks: { inks: Schema.Array(InkId) },
+  /** Gives the pair room pieces it does not have, as a kept purchase comes back after a pairing. */
+  GrantItems: { items: Schema.Array(RoomItemId) },
   /** Buys one ink with the pair's coins, at its catalog price. `id` is the buyer's, once. */
-  Buy: { id: IdempotencyKey, by: UserId, ink: InkId, at: EpochMillis },
+  Buy: {
+    id: IdempotencyKey,
+    by: UserId,
+    ink: InkId,
+    at: EpochMillis,
+    terms: Schema.optionalKey(PriceTerms),
+  },
   /**
    * Buys one offer with the pair's coins, at the catalog's price: a piece at its deal price when it
    * is a deal of the pair's local day, counted `utcOffsetSeconds` from UTC (else the cat's clock,
@@ -68,8 +77,15 @@ export const RoomCommand = Schema.TaggedUnion({
     offer: ShopOffer,
     at: EpochMillis,
     utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds),
+    terms: Schema.optionalKey(PriceTerms),
   },
-  SetWish: { by: UserId, item: RoomItemId, wished: Schema.Boolean },
+  /** `offered`: the catalog sells `item`, though the canonical list does not. */
+  SetWish: {
+    by: UserId,
+    item: RoomItemId,
+    wished: Schema.Boolean,
+    offered: Schema.optionalKey(Schema.Boolean),
+  },
   /** Gives the pair its welcome coins, once: the room service sends it after an open. */
   Welcome: { at: EpochMillis },
   /** Opens the pair's free gift of the local day, once a day for the pair. */

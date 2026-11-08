@@ -1,8 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
+import { getTableName, is } from "drizzle-orm";
+import { SQLiteTable } from "drizzle-orm/sqlite-core";
 import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
@@ -70,6 +73,7 @@ import {
   type LaneHealth,
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
+import * as roomSchema from "./room-schema.ts";
 import type { Note } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
@@ -178,6 +182,9 @@ export class PairRoom extends DurableObject {
   private readonly database = this.ctx.blockConcurrencyWhile(() =>
     Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
   );
+
+  /** Set by `destroy`: the room's tables are gone, so the close of its sockets has nothing to settle. */
+  private destroyed = false;
 
   private readonly frameWindows = new WeakMap<WebSocket, FrameWindow>();
 
@@ -897,6 +904,16 @@ export class PairRoom extends DurableObject {
     );
   }
 
+  /** Gives the pair room pieces it does not have: purchases kept from an earlier pair. */
+  async grantItems(items: ReadonlyArray<RoomItemId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantItems", items }),
+      "PairRoom.grantItems",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
   /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
   async grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
     const decision = await this.run(
@@ -924,8 +941,8 @@ export class PairRoom extends DurableObject {
   }
 
   /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
-  async buy(by: UserId, id: IdempotencyKey, ink: InkId): Promise<RoomDecision> {
-    const decision = await this.run((room) => room.buy(by, id, ink), "PairRoom.buy");
+  async buy(by: UserId, id: IdempotencyKey, ink: InkId, terms?: PriceTerms): Promise<RoomDecision> {
+    const decision = await this.run((room) => room.buy(by, id, ink, terms), "PairRoom.buy");
     await this.pushShop(decision);
     return decision;
   }
@@ -948,9 +965,10 @@ export class PairRoom extends DurableObject {
     id: IdempotencyKey,
     offer: ShopOffer,
     utcOffsetSeconds?: number,
+    terms?: PriceTerms,
   ): Promise<RoomDecision> {
     const decision = await this.run(
-      (room) => room.order(by, id, offer, utcOffsetSeconds),
+      (room) => room.order(by, id, offer, utcOffsetSeconds, terms),
       "PairRoom.order",
     );
     return this.afterCoins(decision, by);
@@ -1005,8 +1023,16 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  async setWish(by: UserId, item: RoomItemId, wished: boolean): Promise<RoomDecision> {
-    const decision = await this.run((room) => room.setWish(by, item, wished), "PairRoom.setWish");
+  async setWish(
+    by: UserId,
+    item: RoomItemId,
+    wished: boolean,
+    offered?: boolean,
+  ): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.setWish(by, item, wished, offered),
+      "PairRoom.setWish",
+    );
     await this.pushShop(decision);
     return decision;
   }
@@ -1032,6 +1058,24 @@ export class PairRoom extends DurableObject {
     for (const { note } of forgotten) await Effect.runPromise(deliveries.forget(note.id));
     await this.endSessions();
     return forgotten;
+  }
+
+  /**
+   * The pair has ended and the room goes with it: closes every socket, cancels the alarm and
+   * deletes every row of every room table, the notes, cat, shop and wallet. The tables stay, so the
+   * object keeps working, empty, for a late request such as the account erasure that may follow.
+   * Safe to repeat.
+   */
+  async destroy(): Promise<void> {
+    this.destroyed = true;
+    await this.endSessions();
+    await this.ctx.storage.deleteAlarm();
+    const tables = Object.values(roomSchema).flatMap((value) =>
+      is(value, SQLiteTable) ? [value] : [],
+    );
+    this.ctx.storage.transactionSync(() => {
+      for (const table of tables) this.ctx.storage.sql.exec(`DELETE FROM "${getTableName(table)}"`);
+    });
   }
 
   /**
@@ -1302,6 +1346,7 @@ export class PairRoom extends DurableObject {
    * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
    */
   override async webSocketClose(socket: WebSocket, code: number): Promise<void> {
+    if (this.destroyed) return;
     // Presence and open strokes are settled before the early return below: a dropped phone takes
     // that return.
     this.dropOpenStrokes(socket);

@@ -75,6 +75,10 @@ export const resetDirectory = async () => {
       "flag_changes",
       "pair_flag_overrides",
       "pair_members",
+      "kept_wallets",
+      "kept_items",
+      "blocks",
+      "partner_reports",
       "partner_notices",
       "demo_partners",
       "invites",
@@ -92,6 +96,7 @@ export const resetDirectory = async () => {
       "coin_ledger",
       "app_store_notifications",
       "admin_funnels",
+      "shop_item_changes",
     ].map((table) => env.DB.prepare(`DELETE FROM ${table}`)),
   );
   // The configurations are cached at the edge; a test starts from the empty table, not the cache.

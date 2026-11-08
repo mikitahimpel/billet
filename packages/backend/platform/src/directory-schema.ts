@@ -2,6 +2,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -177,6 +178,56 @@ export const pairMembers = sqliteTable(
     createdAt: integer("created_at").notNull(),
   },
   (table) => [index("pair_members_pair_id_index").on(table.pairId)],
+);
+
+// Who blocked whom. A block ends the pair and keeps the two from claiming each other's invites.
+// Not foreign keys: the rows go with either user in the account erasure.
+export const blocks = sqliteTable(
+  "blocks",
+  {
+    blockerId: text("blocker_id").notNull(),
+    blockedId: text("blocked_id").notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.blockerId, table.blockedId] }),
+    index("blocks_blocked_id_index").on(table.blockedId),
+  ],
+);
+
+// What a user keeps when their pair ends: purchases are never deleted. The coins are their share
+// of the pair's balance, the rows of `kept_items` the inks and room pieces; a new pair's room is
+// given them when the user pairs again, and the rows go. Not foreign keys: the account erasure
+// deletes them.
+export const keptWallets = sqliteTable("kept_wallets", {
+  userId: text("user_id").primaryKey(),
+  coins: integer("coins").notNull(),
+});
+
+export const keptItems = sqliteTable(
+  "kept_items",
+  {
+    userId: text("user_id").notNull(),
+    kind: text("kind").notNull(),
+    itemId: text("item_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.kind, table.itemId] })],
+);
+
+// What a user told the team about their partner. Kept after the pair or either account ends, so a
+// report can still be acted on; the pair id is not a foreign key for the same reason.
+export const partnerReports = sqliteTable(
+  "partner_reports",
+  {
+    id: text("id").primaryKey(),
+    reporterId: text("reporter_id").notNull(),
+    reportedId: text("reported_id").notNull(),
+    pairId: text("pair_id").notNull(),
+    reason: text("reason").notNull(),
+    details: text("details"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (table) => [index("partner_reports_reported_id_index").on(table.reportedId)],
 );
 
 // The dev stage's demo partners: a bot user per owner, which pairs like anyone else but has no
@@ -413,4 +464,54 @@ export const onboardingAnswers = sqliteTable(
     primaryKey({ columns: [table.userId, table.stepId] }),
     index("onboarding_answers_step_index").on(table.stepId),
   ],
+);
+
+// The shop's catalog, as the admin panel sets it. Items are never deleted: an id stays once it has
+// been sold. `asset` is JSON (`ShopAsset`). `version` goes up by one per save, so two editors
+// cannot overwrite each other. The first rows are the shop as the app sold it before this table.
+export const shopItems = sqliteTable(
+  "shop_items",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind").notNull(),
+    name: text("name").notNull(),
+    blurb: text("blurb"),
+    mood: text("mood"),
+    rarity: text("rarity").notNull(),
+    price: integer("price").notNull(),
+    salePrice: integer("sale_price"),
+    saleFrom: integer("sale_from"),
+    saleUntil: integer("sale_until"),
+    dealDiscount: real("deal_discount"),
+    dealOrder: integer("deal_order"),
+    section: text("section").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    plus: integer("plus").notNull().default(0),
+    isNew: integer("is_new").notNull().default(0),
+    asset: text("asset").notNull(),
+    minBuild: integer("min_build"),
+    active: integer("active").notNull().default(1),
+    version: integer("version").notNull().default(1),
+    createdAt: integer("created_at").notNull(),
+    createdBy: text("created_by").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+    updatedBy: text("updated_by").notNull(),
+  },
+  (table) => [index("shop_items_order_index").on(table.sortOrder)],
+);
+
+// Every change the admin panel made to the shop, newest last: who (the Cloudflare Access email),
+// what, and the item before and after as JSON. Written in the same batch as the change itself.
+export const shopItemChanges = sqliteTable(
+  "shop_item_changes",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    itemId: text("item_id").notNull(),
+    at: integer("at").notNull(),
+    by: text("by").notNull(),
+    action: text("action").notNull(),
+    before: text("before"),
+    after: text("after"),
+  },
+  (table) => [index("shop_item_changes_item_index").on(table.itemId, table.id)],
 );

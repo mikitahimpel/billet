@@ -365,7 +365,7 @@ class CatRoom {
     }
 
     /// Moves Mochi into this room, lit by its ambient light and posed as this room's walker last left her.
-    private func adoptCat() {
+    func adoptCat() {
         guard let walker else { return }
         for rig in [walker.standing, walker.seated] + walker.bodies.values {
             guard let entity = rig.entity, entity.parent !== catModel else { continue }

@@ -220,6 +220,20 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
+  // The rooms' static shell: built from boxes at launch (`live`), or one baked lightmapped model
+  // per room (`baked`, docs/baked-shell.md). Draft with all weight on `live`: starting it changes
+  // nothing. To roll back for everyone, set `live` as the only weighted variant or kill it.
+  {
+    key: "room-shell",
+    kind: "flag",
+    description:
+      "How the rooms' walls, floor and furniture are made: live boxes or a baked model (Labs > Room shell).",
+    variants: { live: 1, baked: 0 },
+    default: "live",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
   {
     key: "rooms",
     kind: "experiment",
@@ -228,6 +242,18 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
       "Primary metric: both partners active on day 7. Set Paired since to the start, so only new pairs enter.",
     variants: { both: 1, "room-only": 1, "city-only": 1 },
     default: "both",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
+    key: "hints",
+    kind: "experiment",
+    description:
+      "Whether a pair sees the hints after the onboarding: show, or hold (the holdout sees none and reports the hints it would have had). " +
+      "Primary metric: per hint, the shown to acted rate against the holdout (admin, In the app).",
+    variants: { show: 9, hold: 1 },
+    default: "show",
     exposure: 100,
     status: "draft",
     killed: false,

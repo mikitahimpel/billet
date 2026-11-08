@@ -25,7 +25,7 @@ import {
 } from "./samples.ts";
 import { freeInk } from "@billet/contracts-domain/inks";
 import { CoinEntry, CoinEntryId, EarnRef, LocalDay } from "@billet/contracts-domain/coins";
-import { CollectionId } from "@billet/contracts-domain/shop";
+import { CollectionId, RoomItemId, starterItems } from "@billet/contracts-domain/shop";
 import { ListId } from "@billet/contracts-domain/list";
 import { moodNoteMaxLength } from "@billet/contracts-domain/mood";
 
@@ -193,6 +193,26 @@ describe("decide on an active room", () => {
   it("leaves the streak alone until #20 gives it rules", () => {
     const room: ActiveRoom = { ...active, streakDays: 3 };
     expect(expectAccepted(room, send()).state.streakDays).toBe(3);
+  });
+});
+
+describe("kept pieces", () => {
+  const lantern = Schema.decodeSync(RoomItemId)("lantern");
+  const grant = (...items: Array<typeof lantern>) => RoomCommand.cases.GrantItems.make({ items });
+
+  it("gives the pair the pieces it lacks, once, and not the starters", () => {
+    const granted = decide(active, grant(lantern, lantern, starterItems[0] as typeof lantern));
+    if (granted._tag !== "Accepted") throw new Error("grant refused");
+    expect(granted.state.items).toEqual([lantern]);
+    expect(granted.outputs).toEqual([RoomOutput.cases.ItemsGranted.make({ items: [lantern] })]);
+    const again = decide(granted.state, grant(lantern));
+    expect(again).toEqual(RoomDecision.cases.Accepted.make({ state: granted.state, outputs: [] }));
+  });
+
+  it("is refused while the room is not open", () => {
+    expect(decide(vacant, grant(lantern))).toEqual(
+      RoomDecision.cases.Rejected.make({ rejection: RoomRejection.cases.RoomNotOpen.make({}) }),
+    );
   });
 });
 
@@ -371,6 +391,9 @@ describe("tagged unions", () => {
     SaveCat: saveCat(),
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
+    GrantItems: RoomCommand.cases.GrantItems.make({
+      items: [Schema.decodeSync(RoomItemId)("lantern")],
+    }),
     Buy: RoomCommand.cases.Buy.make({ id: key, by: alice, ink: rose, at: 1_700_000_000_000 }),
     Order: RoomCommand.cases.Order.make({
       id: key,
@@ -505,6 +528,7 @@ describe("tagged unions", () => {
     CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
     InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
+    PriceChanged: RoomRejection.cases.PriceChanged.make({ price: 560 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),
     NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
     OfferOwned: RoomRejection.cases.OfferOwned.make({ offer: tower }),

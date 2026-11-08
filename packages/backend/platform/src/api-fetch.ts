@@ -65,6 +65,9 @@ import { DemoBotsLive } from "./demo-bots-live.ts";
 import { DemoPartnerRepositoryLive } from "./demo-partner-repository-live.ts";
 import { BetterAuthEngineLive } from "./better-auth-engine.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
+import { ShopArtLive } from "./shop-art-live.ts";
+import { ShopStoreLive } from "./shop-store-live.ts";
+import { ShopCatalogRoutes } from "@billet/backend-shop/shop-routes";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
 import { PairMoodsLive } from "./pair-moods-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
@@ -111,6 +114,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     TitlesRoutes,
     FlagsRoutes,
     DatesRoutes,
+    ShopCatalogRoutes,
     GuessCatalogRoutes,
     MetricsRoutes,
     PaymentsRoutes,
@@ -176,6 +180,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         Experiments.with(experiments),
         EventSinkLive(env.EVENTS),
         MediaStoreLive(env.MEDIA),
+        ShopStoreLive(env.DB),
+        ShopArtLive(env.MEDIA),
         PairRoomsLive(env.PAIR_ROOM),
         AppleIdentityLive,
         Digest.layerWebCrypto,

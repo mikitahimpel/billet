@@ -1,3 +1,4 @@
+import { InMemoryShopStore } from "@billet/backend-shop/test/in-memory-shop-store";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
 import { Effect, Layer, Option, Schema } from "effect";
 import { SecureRandom } from "effect/crypto";
@@ -311,6 +312,14 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
           (key) => key.startsWith(mediaPrefix(pairId)) && uploaders.get(key) === uploader,
         ),
       ),
+    removeAll: (pairId) =>
+      Effect.sync(() => {
+        for (const key of objects.keys()) {
+          if (!key.startsWith(mediaPrefix(pairId))) continue;
+          objects.delete(key);
+          uploaders.delete(key);
+        }
+      }),
     remove: (keys) =>
       Effect.sync(() => {
         for (const key of keys) {
@@ -331,26 +340,29 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     inks: (pairId) =>
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
+    grantItems: (pairId, items) => roomOf(pairId).dispatch({ _tag: "GrantItems", items }),
     coins: (pairId, after, limit) =>
       Effect.all([roomOf(pairId).settled, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
         Effect.map(([state, entries]) =>
           state._tag === "Active" ? { balance: state.wallet.balance, entries } : null,
         ),
       ),
-    buy: (pairId, by, id, ink) => roomOf(pairId).buy(by, id, ink),
+    buy: (pairId, by, id, ink, terms) => roomOf(pairId).buy(by, id, ink, terms),
     shop: (pairId) =>
       roomOf(pairId).settled.pipe(
         Effect.map((state) => (state._tag === "Active" ? shopOf(state) : null)),
       ),
-    order: (pairId, by, id, offer, utcOffsetSeconds) =>
-      roomOf(pairId).order(by, id, offer, utcOffsetSeconds),
+    order: (pairId, by, id, offer, utcOffsetSeconds, terms) =>
+      roomOf(pairId).order(by, id, offer, utcOffsetSeconds, terms),
     openGift: (pairId, by, utcOffsetSeconds) => roomOf(pairId).openGift(by, utcOffsetSeconds),
     claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
     earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
     creditPurchase: (pairId, credit) => roomOf(pairId).creditPurchase(credit),
-    setWish: (pairId, by, item, wished) => roomOf(pairId).setWish(by, item, wished),
+    setWish: (pairId, by, item, wished, offered) =>
+      roomOf(pairId).setWish(by, item, wished, offered),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    destroy: () => Effect.void,
     endSessions: () => Effect.void,
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
     recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),
@@ -388,6 +400,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       Layer.succeed(PairingRepository, repository),
       Layer.succeed(MediaStore, media),
       Layer.succeed(PairRooms, pairRooms),
+      InMemoryShopStore(),
       Layer.succeed(Metrics, { record: (event) => Effect.sync(() => void recorded.push(event)) }),
       SecureRandom.layerWebCrypto,
     ),

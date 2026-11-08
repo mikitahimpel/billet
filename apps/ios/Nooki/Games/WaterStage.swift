@@ -11,6 +11,8 @@ final class WaterStage: GameStage {
     private static let bowlRadius: Float = 0.042
     private static let bowlHeight: Float = 0.026
     private static let floorInside: Float = 0.005
+    /// The tip of the jug's spout, in the jug's own space.
+    private static let spoutTip: SIMD3<Float> = [0.046, 0.062, 0]
 
     private let room: CatRoom
     private let deck: GameDeck
@@ -36,7 +38,7 @@ final class WaterStage: GameStage {
         self.deck = deck
         spots = GameSpots(room: room)
         root = room.pivot.group()
-        bowlAt = spots.at(0.05, 0.04)
+        bowlAt = spots.at(0.02, 0.05)
         puddleAt = bowlAt + spots.toward * 0.07 - spots.right * 0.03
 
         let bowlGroup = root.group(at: bowlAt)
@@ -59,7 +61,7 @@ final class WaterStage: GameStage {
         water = bowlGroup.cylinder(1, Self.bowlRadius - 0.0045, waterMaterial, at: [0, Self.floorInside, 0])
         water.isEnabled = false
 
-        // The jug up to the left, its spout over the bowl.
+        // The jug waits up to the left; holding tips it over the bowl (see `draw`).
         jug = root.group(at: bowlAt - spots.right * 0.06 + [0, 0.11, 0])
         jug.cylinder(0.07, 0.024, Clay.matte(0xFFF3E2, roughness: 0.5), at: [0, 0.035, 0])
         jug.box(0.03, 0.012, 0.016, r: 0.004, Clay.matte(0xFFF3E2, roughness: 0.5), at: [0.03, 0.062, 0])
@@ -70,13 +72,14 @@ final class WaterStage: GameStage {
         puddle = root.cylinder(0.0012, 1, waterMaterial, at: puddleAt + [0, 0.0006, 0])
         puddle.isEnabled = false
 
-        let seat = spots.at(-0.12, -0.08)
+        // Behind the bowl, facing it.
+        let seat = spots.at(0, -0.13)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: bowlAt), id: "water-watch")
         say(bowl.hint)
     }
 
     var focus: [SIMD3<Float>] {
-        [bowlAt - spots.right * 0.14, bowlAt + spots.right * 0.1, bowlAt + [0, 0.18, 0], puddleAt, spots.at(-0.12, -0.1)]
+        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], puddleAt, spots.at(0, -0.13, up: 0.12)]
     }
 
     var action: String? { bowl.canServe && grip != .pour && !served ? "Serve" : nil }
@@ -140,14 +143,22 @@ final class WaterStage: GameStage {
         water.isEnabled = level > 0.01
         water.scale = [Self.bowlRadius - 0.0045, max(surface - Self.floorInside, 0.0005), Self.bowlRadius - 0.0045]
         water.position = [0, (surface + Self.floorInside) / 2, 0]
-        // The jug tips as it pours, and the stream runs from its spout to the water.
-        jug.orientation = simd_quatf(from: [1, 0, 0], to: spots.right) * simd_quatf(angle: -0.9 * flow, axis: [0, 0, 1])
-        let spout = bowlAt - spots.right * 0.03 + [0, 0.12 - 0.02 * flow, 0]
-        let bottom = bowlAt + [0, surface, 0]
+        // The jug glides over the bowl and tips as you hold, its spout kept over the water; the stream falls from that
+        // spout to the surface.
+        let eased = flow * flow * (3 - 2 * flow)
+        let tilt = simd_quatf(angle: -1.0 * eased, axis: [0, 0, 1])
+        jug.orientation = simd_quatf(from: [1, 0, 0], to: spots.right) * tilt
+        let waiting = bowlAt - spots.right * 0.075 + [0, 0.1, 0]
+        let pouring = bowlAt - spots.right * 0.016 + [0, Self.bowlHeight + 0.045, 0]
+        let spout = simd_mix(waiting, pouring, SIMD3(repeating: eased))
+        jug.position = spout - jug.orientation.act(Self.spoutTip)
+        let bottom = SIMD3<Float>(spout.x, bowlAt.y + surface, spout.z)
+        let drop = max(spout.y - bottom.y, 0.001)
+        let width = 0.0022 * flow + 0.0008
         stream.isEnabled = flow > 0.05
         stream.position = (spout + bottom) / 2
-        stream.scale = [0.0025 * flow + 0.001, max(simd_distance(spout, bottom), 0.001), 0.0025 * flow + 0.001]
-        stream.orientation = simd_quatf(from: [0, 1, 0], to: simd_normalize(spout - bottom))
+        stream.scale = [width, drop, width]
+        stream.orientation = .identity
         puddle.isEnabled = bowl.puddle > WaterBowl.dry / 4
         let r = puddleRadius
         puddle.scale = [r, 0.0012, r]
@@ -165,7 +176,7 @@ final class WaterStage: GameStage {
         grip = nil
         deck.say(bowl.rating == .perfect ? "Perfect!" : bowl.rating == .good ? "Good!" : "A bit much… she drinks anyway",
                  for: 1.6)
-        let drink = bowlAt - spots.right * 0.11
+        let drink = bowlAt - spots.toward * 0.1
         room.send(to: [drink.x, spots.floor, drink.z], facing: GameSpots.yaw(from: drink, to: bowlAt), id: "water-drink") {
             [weak self] in self?.room.walker?.behavior.perform(.slowBlink)
         }
