@@ -31,6 +31,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Nooki uses the camera to scan the invite code on your partner's screen.</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

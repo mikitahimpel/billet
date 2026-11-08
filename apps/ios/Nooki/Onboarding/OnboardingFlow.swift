@@ -215,14 +215,14 @@ final class OnboardingFlow {
 
     var canSkip: Bool {
         switch page {
-        case .welcome, .join, .stopped, .widget: false
+        case .welcome, .join, .stopped, .widget, .invite: false
         case .question(let step):
             switch step {
             case .single(let s), .multi(let s): s.skippable
             case .range(let s): s.skippable
             case .text(let s): s.skippable
             }
-        case .togetherSince, .catCoat, .catName, .invite, .notifications: true
+        case .togetherSince, .catCoat, .catName, .notifications: true
         }
     }
 
