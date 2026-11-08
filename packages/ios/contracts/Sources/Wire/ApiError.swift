@@ -23,6 +23,9 @@ public enum ApiError: Codable, Hashable, Sendable {
   case bonusTaken(collection: String)
   /// A buy for the cat, such as a treat, before the couple adopted one.
   case catNotAdopted
+  /// An order whose price is now above the `expectedPrice` sent; nothing was charged. `price` is
+  /// the price now.
+  case priceChanged(price: Int)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -32,6 +35,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case itemId
     case collection
     case day
+    case price
   }
 
   public init(from decoder: any Decoder) throws {
@@ -60,6 +64,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "BonusTaken":
       self = .bonusTaken(collection: try container.decode(String.self, forKey: .collection))
     case "CatNotAdopted": self = .catNotAdopted
+    case "PriceChanged": self = .priceChanged(price: try container.decode(Int.self, forKey: .price))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -97,6 +102,9 @@ public enum ApiError: Codable, Hashable, Sendable {
       try container.encode("BonusTaken", forKey: .tag)
       try container.encode(collection, forKey: .collection)
     case .catNotAdopted: try container.encode("CatNotAdopted", forKey: .tag)
+    case .priceChanged(let price):
+      try container.encode("PriceChanged", forKey: .tag)
+      try container.encode(price, forKey: .price)
     }
   }
 }

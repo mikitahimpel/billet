@@ -1013,7 +1013,7 @@ describe("notes", () => {
     const free = await buy("ink-graphite");
     expect(free.status).toBe(409);
     expect(await free.json()).toEqual({ _tag: "AlreadyOwned", itemId: "ink-graphite" });
-    expect((await buy("ink-nope")).status).toBe(400);
+    expect((await buy("ink-nope")).status).toBe(404);
     const badPage = await call("/v1/coins?limit=0", { method: "GET", headers: bearer(owner) });
     expect(badPage.status).toBe(400);
   });
