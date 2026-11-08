@@ -8,7 +8,8 @@
         "**/*.swift",
         "$TURBO_ROOT$/packages/ios/*/Sources/**/*.swift",
         "$TURBO_ROOT$/packages/ios/scripts/check-design.mjs",
-        "$TURBO_ROOT$/packages/ios/scripts/design-baseline.json"
+        "$TURBO_ROOT$/packages/ios/scripts/design-baseline.json",
+        "$TURBO_ROOT$/packages/ios/scripts/radius-baseline.json"
       ]
     }
   }

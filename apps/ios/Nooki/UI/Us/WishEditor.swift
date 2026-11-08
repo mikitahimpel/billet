@@ -123,9 +123,7 @@ struct WishEditor: View {
             }
         }
         .tint(.blushPink)
-        .padding(.horizontal, Space.l)
-        .frame(minHeight: 50)
-        .cardSurface(radius: Radius.control)
+        .fieldSurface()
     }
 
     /// The calendar's coming days that gifts are for: the couple's own events and their anniversaries.
@@ -167,9 +165,7 @@ struct WishEditor: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Ink.textTertiary)
             }
-            .padding(.horizontal, Space.l)
-            .frame(minHeight: 50)
-            .cardSurface(radius: Radius.control)
+            .fieldSurface()
         }
         .buttonStyle(.plain)
         .disabled(occasions.isEmpty && occasion == nil)

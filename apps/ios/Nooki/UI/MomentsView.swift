@@ -393,9 +393,9 @@ private struct WallStrip: View {
                 }
             }
         }
-        .padding(.horizontal, Space.l)
+        .padding(.horizontal, CardMetrics.padding)
         .frame(height: 50)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .cardSurface()
     }
 }
 

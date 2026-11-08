@@ -221,9 +221,9 @@ struct WishlistScreen: View {
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .padding(.horizontal, CardMetrics.padding)
+        .padding(.vertical, Space.m)
+        .cardSurface()
         .contextMenu {
             if mine {
                 Button {
@@ -309,7 +309,7 @@ private struct WishCard<Actions: View>: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: 64, height: 64)
-                        .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: 4) {

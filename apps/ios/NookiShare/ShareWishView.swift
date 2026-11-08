@@ -72,9 +72,7 @@ struct ShareWishView: View {
                     }
                 }
                 .tint(.blushPink)
-                .padding(.horizontal, Space.l)
-                .frame(minHeight: 50)
-                .cardSurface(radius: Radius.control)
+                .fieldSurface()
                 PrimaryButton(String(localized: "Add wish"), symbol: "gift.fill") { save() }
                     .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                     .disabled(trimmedTitle.isEmpty)
