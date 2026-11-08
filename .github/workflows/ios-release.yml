@@ -1,0 +1,60 @@
+name: iOS Release
+
+# The app's Release build for a device, which the Debug app tests miss: optimiser-only type-check
+# limits, and the splat code under `#if !targetEnvironment(simulator)`. Hourly when main has moved,
+# not on every merge, so it holds no macOS runner per push. TestFlight archives the same build.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 50
+
+      # The schedule fires every hour; a main without new commits since the last one needs no build.
+      - name: New commits on main
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = schedule ] && [ -z "$(git log -1 --since='65 minutes ago' --format=%H)" ]; then
+            echo "No commits in the last hour"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode from .xcode-version
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/select-xcode.sh .xcode-version
+
+      - name: Metal Toolchain
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/metal-toolchain.sh
+
+      - name: Install XcodeGen
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/install-xcodegen.sh
+
+      - name: App Release build (device, unsigned)
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          (cd apps/ios && xcodegen generate --quiet)
+          set -o pipefail
+          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
+            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'

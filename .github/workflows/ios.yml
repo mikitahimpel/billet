@@ -179,43 +179,6 @@ jobs:
             ${{ runner.temp }}/app-tests.xcresult
           retention-days: 7
 
-  # Release builds, shaders included, on main and by hand; pull requests skip them to keep the Mac queue
-  # short, and the app tests above build the app too (Debug).
-  release:
-    if: inputs.shots == '' && github.event_name != 'pull_request'
-    runs-on: xcode-27
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Select Xcode from .xcode-version
-        run: .github/scripts/select-xcode.sh .xcode-version
-
-      - name: Metal Toolchain
-        run: .github/scripts/metal-toolchain.sh
-
-      - name: Install XcodeGen
-        run: .github/scripts/install-xcodegen.sh
-
-      - name: App Release build (Simulator, unsigned)
-        run: |
-          (cd apps/ios && xcodegen generate --quiet)
-          set -o pipefail
-          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/app" \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app.log" \
-            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
-
-      # The Simulator SDK has no splat API, so the cat's splat code (under `#if !targetEnvironment(simulator)`)
-      # compiles only for a device.
-      - name: App Release build (device, unsigned)
-        run: |
-          set -o pipefail
-          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
-            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
-            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
-
   # Before/after shots for UI pull requests: runs the chosen UI tests on a small and a large iPhone and keeps
   # their screenshot attachments. Dispatch with `gh workflow run ios.yml --ref <branch> -f shots=<filter>`.
   shots:
