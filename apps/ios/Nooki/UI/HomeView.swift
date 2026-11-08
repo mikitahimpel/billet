@@ -12,7 +12,6 @@ struct HomeView: View {
     @Binding var state: HomeState
     /// The room and the cat in it: the scenes, the games, her status. Nothing here reads them.
     @State var room = RoomController()
-    @State private var petSentAt: Date = .distantPast
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
@@ -66,7 +65,6 @@ struct HomeView: View {
             room.load()
             for await event in room.events { handle(event) }
         }
-        .task { room.catEvents = session?.catEvents ?? .offline }
         // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
         .task(id: wallPins) {
             guard room.hasHome else { return }
@@ -124,12 +122,6 @@ struct HomeView: View {
             hints.done(PetHint())
         }
         .onChange(of: state.care.treatsGiven) { hints.done(TreatHint()) }
-        // A run of pets is one in the pair's journal and Inbox: one every 10 minutes at most.
-        .onChange(of: state.care.petsGiven) {
-            guard let session, Date.now.timeIntervalSince(petSentAt) > 600 else { return }
-            petSentAt = .now
-            Task { await session.catEvents.send([.petted]) }
-        }
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
@@ -167,9 +159,11 @@ struct HomeView: View {
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
         .task(id: session?.isPaired) { await followPair() }
-        // A new photo, or one that failed to go earlier, goes to the partner.
-        .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
-        .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
+        .modifier(ResendsUnsent(
+            paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
+            sendPhotos: { await photoSync?.sendUnsent() ?? false },
+            sendNotes: { await textSync?.sendUnsent() ?? false },
+            sendCatEvents: { await room.flushCat() }))
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
@@ -313,13 +307,20 @@ struct HomeView: View {
                 await state.shop.refresh()
                 await state.lists.refresh()
             }
+            // The pair's cat and streak catch up, and what this phone did offline goes. Their own task, so a slow
+            // download above doesn't hold them up.
+            Task {
+                await room.syncCat()
+                await state.streak.refresh()
+            }
             // The room socket sends no game frames it missed while the app was away. Its own task, so missed
             // photos downloading above don't hold it up.
             Task { await session?.whoKnows.load() }
             session?.reactions?.refresh()
             session?.followInbox(
                 true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-                moods: { [state] in state.moodSync?.received($0) })
+                moods: { [state] in state.moodSync?.received($0) },
+                cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
             refreshRooms()
             if !launching { reportOpened(state.room) }
         case .background:

@@ -14,6 +14,7 @@ struct Backend {
     let keys: AccountKeyStore
     var onboarding: OnboardingClient = .offline
     var catEvents: CatEventsClient = .offline
+    var streak = StreakRemote(load: { .offline }, record: { _ in .offline }, restore: { .offline })
     /// The coin pack routes; never reached in a build without a server.
     var purchases = PurchasesClient(
         purchase: { (_) async throws(TransportError) in throw .network("offline") },
@@ -48,6 +49,6 @@ struct Backend {
         return Backend(
             baseURL: baseURL, api: api, accounts: accounts, keys: keys,
             onboarding: .live(http: http, token: token), catEvents: .live(http: http, token: token),
-            purchases: .live(http: http, caller: .session(token)))
+            streak: .live(http: http, token: token), purchases: .live(http: http, caller: .session(token)))
     }
 }

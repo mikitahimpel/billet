@@ -259,7 +259,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
           ]),
         ).pipe(Effect.asVoid),
 
-      saveReport: ({ id, reporter, reported, pairId, reason, details, at }) =>
+      saveReport: ({ id, reporter, reported, pairId, reason, details, noteId, at }) =>
         guarded(
           db.insert(partnerReports).values({
             id,
@@ -268,6 +268,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
             pairId,
             reason,
             details: details ?? null,
+            noteId: noteId ?? null,
             createdAt: at,
           }),
         ).pipe(Effect.asVoid),

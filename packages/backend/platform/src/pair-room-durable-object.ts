@@ -23,6 +23,11 @@ import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
+import type {
+  RecordStreakDayRequest,
+  RestoreStreakRequest,
+} from "@billet/contracts-http-api/streak";
 import { ClientMessage, type PresenceState } from "@billet/contracts-realtime/client-message";
 import { ServerMessage } from "@billet/contracts-realtime/server-message";
 import {
@@ -606,6 +611,32 @@ export class PairRoom extends DurableObject {
   /** Each member's latest check-in; none while the room is not open. */
   moods(): Promise<ReadonlyArray<MoodCheckIn>> {
     return this.run((room) => room.moods, "PairRoom.moods");
+  }
+
+  /** Counts `by`'s day in the streak; a milestone moves the partner's Inbox count. */
+  async recordStreakDay(by: UserId, request: RecordStreakDayRequest): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.recordStreakDay(by, request),
+      "PairRoom.recordStreakDay",
+    );
+    if (
+      decision._tag === "Accepted" &&
+      decision.outputs.some(
+        (output) => output._tag === "StreakChanged" && output.reached !== undefined,
+      )
+    ) {
+      await this.pushUnread((member) => member !== by);
+    }
+    return decision;
+  }
+
+  restoreStreak(by: UserId, request: RestoreStreakRequest): Promise<RoomDecision> {
+    return this.run((room) => room.restoreStreak(by, request), "PairRoom.restoreStreak");
+  }
+
+  /** The pair's streak; null while the room is not open. */
+  streak(): Promise<LoveStreak | null> {
+    return this.run((room) => room.streak, "PairRoom.streak");
   }
 
   /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */

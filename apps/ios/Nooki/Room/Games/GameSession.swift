@@ -17,7 +17,7 @@ final class GameSession {
     private(set) var finished: GameResult?
 
     @ObservationIgnored private let room: CatRoom
-    @ObservationIgnored private let catEvents: CatEventsClient
+    @ObservationIgnored private let catLife: CatLife
     @ObservationIgnored private var stage: GameStage?
     @ObservationIgnored private var camera: GameCamera?
     @ObservationIgnored private var subscription: (any Cancellable)?
@@ -25,10 +25,10 @@ final class GameSession {
     @ObservationIgnored private var lens: CGSize = .zero
     @ObservationIgnored private var ended = false
 
-    init(game: MiniGame, room: CatRoom, catEvents: CatEventsClient) {
+    init(game: MiniGame, room: CatRoom, catLife: CatLife) {
         self.game = game
         self.room = room
-        self.catEvents = catEvents
+        self.catLife = catLife
     }
 
     var action: String? { finished == nil ? stage?.action : nil }
@@ -95,16 +95,8 @@ final class GameSession {
         finished = result
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        // On this phone at once, for her bars; on the server for both partners, and for the coins.
-        switch result.game {
-        case .feed: CatRoom.catEvents.record(.feed)
-        case .brush: CatRoom.catEvents.record(.pet)
-        case .laser: CatRoom.catEvents.record(.play)
-        case .water: break
-        }
-        let events = result.events
-        let client = catEvents
-        Task { await client.send(events) }
+        // On this phone at once, for her bars; in the pair's journal for both partners, and for the coins.
+        catLife.record(result.events)
     }
 
     func playAgain() {

@@ -94,6 +94,18 @@ export const RoomCommand = Schema.TaggedUnion({
   ClaimBonus: { by: UserId, at: EpochMillis, collection: CollectionId },
   /** Pays something the couple did in the app, within its daily cap and once per ref. */
   Earn: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds, event: EarnEvent },
+  /**
+   * Counts a day in the pair's love streak: the local day, `utcOffsetSeconds` from UTC, that
+   * `happenedAt` falls on, held within the day before `at`, the room's clock.
+   */
+  RecordStreakDay: {
+    by: UserId,
+    at: EpochMillis,
+    happenedAt: EpochMillis,
+    utcOffsetSeconds: UtcOffsetSeconds,
+  },
+  /** Brings back the pair's streak after one missed day, on `by`'s local day. */
+  RestoreStreak: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds },
   /** Replaces `by`'s check-in. `note` is as the caller sent it: the room trims and bounds it. */
   SetMood: { by: UserId, mood: Mood, note: Schema.optionalKey(Schema.String), at: EpochMillis },
   /**
