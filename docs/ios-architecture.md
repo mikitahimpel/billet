@@ -258,15 +258,11 @@ public enum ShopMachine: Machine {
   }
 
   public enum State: Equatable, Sendable {
-    /// No pair's room on the server: the wallet file as last saved, and nothing can be bought.
-    case offline(Wallet)
-    /// Following the pair's room, first read under way; `wallet` is the file meanwhile.
-    case loading(Wallet, request: Int)
+    /// No pair's room on the server: nothing can be bought or earned. A buy is refused out loud.
+    case offline(refused: Purchase?, ask: CoinsAsk?)
     case open(PairShop)
-    /// The Coins sheet over the shop: for the header's coins (`missing` 0) or for `retry`.
-    case askingCoins(PairShop, CoinsAsk)
 
-    public static func initial(wallet: Wallet) -> State { .offline(wallet) }
+    public static let initial = State.offline(refused: nil, ask: nil)
   }
 
   public enum Event: Equatable, Sendable {
@@ -451,7 +447,12 @@ public enum ShopMachine: Machine {
 }
 ```
 
-The real file lists every rejected pair; the ellipses are only in this document. Helpers
+The real file (`packages/ios/features/Sources/FeatureShop/ShopMachine.swift`) is the one to read:
+it switches over the state first and then over every event, so each pairing is written down, and
+it keeps the Coins sheet as `ask` inside both states rather than as a state of its own, because the
+sheet can open over an offline shop too and the buy it retries runs the ordinary `.buyTapped`.
+A buy's `id` and `date` arrive in the event, so the transition stays pure and a test can name them.
+The sketch above shows the shape; the ellipses are only in this document. Helpers
 (`PairShop.apply(_:)`, `Fetch.next`, `gifts(_:_:)`) are private, pure functions beside the
 transition. Prices and offers are pure too (`ShopOffers`, `ShopCatalog`), kept out of the machine.
 
